@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Make Coherence Sense connect to the nearby Mac witness automatically through a local Hati witness discovery lane, keeping manual URL entry only as a fallback.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh",
+    "sense-organ-ripening",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence",
+    "channel-loopback",
+    "host-kernel-resource-lanes"
+  ],
+  "task_ids": [
+    "android-sense-autodiscovery-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/hati_witness_discovery.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_android_sense_autodiscovery.json"
+  ],
+  "change_files": [
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/hati_witness_discovery.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_android_sense_autodiscovery.json"
+  ],
+  "evidence_refs": [
+    ".cache/android-sense-public-handshake/20260613T161035Z/android-sense-public-handshake-summary.json",
+    ".cache/android-sense-public-handshake/20260613T161035Z/mac-witness-discovery.json",
+    ".cache/android-sense-public-handshake/20260613T161035Z/mac-witness-state.json",
+    ".cache/hati-os-public-assets/20260613T161035Z/hati-os-public-assets-summary.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile experiments/coherence-sense-android/hati_witness_discovery.py experiments/coherence-sense-android/mac-witness-server.py experiments/coherence-sense-android/coherence-sense-eval.py",
+      "JAVA_HOME=\"${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}\" ./gradlew :app:assembleDebug",
+      "scripts/verify_android_sense_public_handshake.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_android_sense_autodiscovery.json"
+    ],
+    "notes": "Prompt guide passed in dirty continuation mode with no blocking risks. Wellness passed with no attention required. Python compile passed with no output. Android Gradle debug build passed; Kotlin reported deprecation warnings for NsdManager.resolveService and NsdServiceInfo.host only. Public-handshake harness passed with APK sha256 99f975a8cc2363d05da8faa1ca56b9d67d9c430f466e11e40872b37fa9fe015e, local Mac witness frames=1, present=true, organs=accel/gyro/light/mag, local Hati mesh organs_count=2, channels_count=1, android announce receipt rt_1ea98d990353, android heartbeat receipt rt_1ccae8c63998, mac witness discovery service_type=_hati-witness._tcp, mode=witness, port=49746, sense_path=/sense, state_path=/state, url=http://192.168.0.7:49746. Generated native assets also passed: macOS arm64 tarball sha256 0dc063ae5b2a6435d5e7acea443a71d8c6928ddb027a031cb29265bc5d678090, Android arm64 tarball sha256 65d072498440b1aba2a7da3f070a59b707d5a41f605f9906102b38a79c6f8864."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "This slice was proven locally. Public release upload/deploy was not run in this turn."
+  },
+  "phase_gate": {
+    "phase": "android-sense-zero-config-local-witness",
+    "gate": "Android discovers the Mac witness as a local Hati service, can start sharing without typed host configuration, and proof asserts the witness discovery descriptor alongside the physical /sense and mesh handshake receipts.",
+    "state": "local-proof-pass-ci-and-public-release-pending",
+    "can_move_next_phase": false,
+    "next": "Install the rebuilt APK on the Android device and visually confirm same-WiFi auto-fill/start against the running Mac witness, then publish updated assets when release scope is confirmed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The app no longer requires typing the Mac IP to connect. The Mac advertises a local Hati witness service, Android listens for it, fills the witness lane automatically, waits if Start sharing is tapped before discovery resolves, and keeps manual URL entry behind Settings as a fallback.",
+    "public_endpoints": [
+      "local:android-debug-apk",
+      "local:mac-witness-mdns",
+      "local:mac-witness-http-discovery",
+      "local:hati-mesh-api"
+    ],
+    "test_flows": [
+      "Run the Mac witness server and prove /.well-known/hati-witness returns service name, service type, mode, port, sense path, state path, and fallback URLs.",
+      "Build the Android debug APK with NSD discovery and multicast permission support.",
+      "Run the local public-handshake harness to prove Android APK build, Hati native public asset build, Mac witness /sense and /state receipts, local Hati mesh announce/heartbeat/list, and Android-to-Mac channel offer.",
+      "Assert the Mac witness discovery descriptor in the same proof harness so zero-config discovery is checked with the physical sample lane."
+    ],
+    "summary": "Local source build and harness proof passed. Device-side visual confirmation is still needed because adb was not available in this worktree session."
+  }
+}

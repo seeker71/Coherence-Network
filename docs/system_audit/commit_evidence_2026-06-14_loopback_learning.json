@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Add a Form-native loopback micro-learning proof that uses nearest-shape exemplar learning plus CHOICE-RECEIPT success/failure feedback to train route choices across six learning scenarios.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-os-tool-surface",
+    "hati-mesh",
+    "sense-organ-ripening",
+    "native-learning-surface"
+  ],
+  "spec_ids": [
+    "channel-loopback",
+    "choice-receipt-learning",
+    "native-ml-kernels",
+    "form-language-learning"
+  ],
+  "task_ids": [
+    "loopback-learning-micro-proof-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/loopback-learning.fk",
+    "form/form-stdlib/tests/loopback-learning-band.fk",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-model-learning-band.fk",
+    "form/form-stdlib/speech-kernel-channel.fk",
+    "form/form-stdlib/tests/speech-kernel-channel-band.fk",
+    "form/form-stdlib/tests/speech-real-candidate-race-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/loopback-learning.fk",
+    "form/form-stdlib/tests/loopback-learning-band.fk",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-model-learning-band.fk",
+    "form/form-stdlib/speech-kernel-channel.fk",
+    "form/form-stdlib/tests/speech-kernel-channel-band.fk",
+    "form/form-stdlib/tests/speech-real-candidate-race-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/loopback-learning.fk",
+    "form/form-stdlib/tests/loopback-learning-band.fk",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-model-learning-band.fk",
+    "form/form-stdlib/speech-kernel-channel.fk",
+    "form/form-stdlib/tests/speech-kernel-channel-band.fk",
+    "form/form-stdlib/tests/speech-real-candidate-race-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    ".cache/real-loopback-learning/20260613T171520Z/real-loopback-learning-summary.json",
+    ".cache/real-loopback-learning/20260613T172518Z/real-loopback-learning-summary.json",
+    "/Users/ursmuff/whisper-models/ggml-large-v3-turbo.bin sha256=1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+    "/Users/ursmuff/whisper-models/ggml-large-v3.bin sha256=64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/loopback-learning.fk form-stdlib/tests/loopback-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-model-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/speech-kernel-channel.fk form-stdlib/tests/speech-kernel-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-real-candidate-race-band.fk",
+      "curl --fail --location --continue-at - --output /Users/ursmuff/whisper-models/ggml-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json"
+    ],
+    "notes": "Prompt guide passed in dirty continuation mode; wellness had no required repair. The loopback-learning Form proof returns verdict 65535 with fourth arm four-way. speech-model-learning returns verdict 16383 with fourth arm four-way and proves local LLM oracle receipts, high-dimensional metadata lifting, native candidate racing, and optional human feedback routing. speech-kernel-channel returns verdict 511 with fourth arm four-way and proves audio frame plus local LLM oracle lanes as explicit host-kernel carriers while feature, transcript, metadata, candidate-race, and output-envelope lanes remain Form-kernel native. speech-real-candidate-race returns verdict 4095 on Go/Rust/TypeScript over checked-in observed rows from local macOS TTS audio, 16 kHz PCM conversion, and local whisper-cli transcript receipts. Observed candidate counts are audio-exact 1/3, audio-L1-full 0/3, audio-L1-spectral 1/3, teacher-transcript 3/3, text-retrieval TTS 3/3, mesh TTS+audio-L1 0/3, mesh TTS+teacher-STT 3/3. The winner is mesh:tts-text+teacher-stt. Full Whisper large-v3 and large-v3-turbo GGML model hashes remain recorded as local model assets; the current speech learning path is checked-in Form data plus Form proofs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Form-native loopback learner proof is local and four-way. No public deploy was requested or performed in this step."
+  },
+  "phase_gate": {
+    "phase": "loopback-learning-micro-proof",
+    "gate": "Learning loops must run as native Form recipes with receipt-backed route feedback before any larger model lane claims capability.",
+    "state": "local-four-way-proof-pass-plus-form-native-speech-model-and-kernel-channel-proof",
+    "can_move_next_phase": false,
+    "next": "Replace the remaining toy feature vectors with the smallest real typed codec slice: French text/utterance to Form grammar, Form tree to ASM lowering, live PCM mic/speaker loopback, FFT/chroma music windows, and video frame feature receipts. Promote the speech-real-candidate-race band to the fourth arm after the fkwu count gap is repaired, then add larger local open STT/TTS candidates only after each model is downloaded, hashed, locally run, and wired into the same Form receipt band."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes now have a four-way proven learning-floor example where channel loopback samples teach a semantic exemplar model and CHOICE-RECEIPT feedback trains the native route/protocol branch.",
+    "public_endpoints": [
+      "local:form/validate.sh:loopback-learning-band",
+      "local:form/fourth-arm-bands.txt:loopback-learning",
+      "local:form/validate.sh:speech-model-learning-band",
+      "local:form/validate.sh:speech-kernel-channel-band",
+      "local:form/validate.sh:speech-real-candidate-race-band"
+    ],
+    "test_flows": [
+      "Language cell learns French to Form, Form to ASM, and FFT music matching exemplars.",
+      "Sense cell learns TTS to STT, STT to TTS, and video shape/time exemplars.",
+      "Speech model learner races native STT/TTS/mesh candidates and routes active learning to a local LLM oracle unless metadata asks for human review.",
+      "Speech kernel channel catalog names audio PCM frames and local LLM oracle receipts as explicit host-kernel carriers.",
+      "Observed local audio rows feed speech-real-candidate-race-band as Form data and select mesh:tts-text+teacher-stt as the current best combination.",
+      "Merged model reaches 12/12 heldout correct and passes the 10/12 accuracy floor.",
+      "Each scenario route starts at generic-loopback and moves to its native route after success receipts.",
+      "Failure receipt increments selected route failure memory and roll-forward promotes short success into long memory."
+    ],
+    "summary": "The floor is native micro-learning plus Form-native speech candidate racing over observed local audio-derived rows. Full TTS/STT/FFT/video/French/Form/ASM production models are still promotion targets. The next proof lanes are larger local open speech models, live mic/speaker loopback, and real codec samples through the same receipt and promotion contract."
+  }
+}

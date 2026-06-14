@@ -4,7 +4,8 @@
   (lineage
     (rests-on tool-channel.form fourth-kernel-physical-lanes.form encoder-decoder-as-recipe.form modality-as-recipe.form video-as-recipe.form)
     (recipe form/form-stdlib/channel-loopback.fk)
-    (proof form/form-stdlib/tests/channel-loopback-band.fk -> 255))
+    (proof form/form-stdlib/tests/channel-loopback-band.fk -> 255)
+    (learning-floor loopback-learning.form))
 
   (purpose
     "A channel loopback is a cell-to-cell teaching lane: one cell's emitted channel data becomes another cell's learning input."

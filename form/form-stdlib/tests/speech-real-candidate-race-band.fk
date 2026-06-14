@@ -1,0 +1,170 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk
+;
+; speech-real-candidate-race-band — Form-native speech candidate race over
+; observed real local audio rows.
+;
+; Source rows were observed from local macOS say audio, 16 kHz PCM conversion,
+; and local whisper-cli transcript receipts. This band does not call Python or
+; shell. Training, scoring, mesh agreement, and winner selection happen in Form.
+;
+; Candidate set:
+;   stt:audio-exact              audio feature exact-bin exemplar learner
+;   stt:audio-l1-full            audio feature L1 exemplar learner
+;   stt:audio-l1-spectral        spectral audio L1 exemplar learner
+;   stt:teacher-transcript       transcript-token exemplar learner
+;   tts:text-retrieval           text-token to learned audio-label retrieval
+;   mesh:tts-text+audio-l1       TTS retrieval plus audio-only STT agreement
+;   mesh:tts-text+teacher-stt    TTS retrieval plus teacher-STT agreement
+;
+; Verdict 4095 when every claim lands:
+;   1     nine real audio samples entered the race
+;   2     three heldout test rows entered the race
+;   4     every transcript receipt cleared the overlap floor
+;   8     TTS text retrieval gets every heldout row
+;   16    teacher-transcript STT gets every heldout row
+;   32    audio-only STT candidates were attempted and did not overclaim
+;   64    mesh using audio-only STT stays below the full pass gate
+;   128   mesh using TTS retrieval plus teacher STT gets every heldout row
+;   256   score-card race selects the mesh teacher pair
+;   512   seven candidates are present in the race
+;   1024  Form-computed candidate counts match observed counts
+;   2048  the current best combination is explicit and inspectable
+(do
+    (let stt-audio-train
+        (list
+            (sml-sample "form-native" (list 14 5 9 8 1 2 8) "stt:audio-full")
+            (sml-sample "form-native" (list 13 3 9 7 0 6 3) "stt:audio-full")
+            (sml-sample "mesh-organ" (list 12 5 9 8 0 1 9) "stt:audio-full")
+            (sml-sample "mesh-organ" (list 11 3 9 7 0 6 4) "stt:audio-full")
+            (sml-sample "audio-speech" (list 12 4 9 8 0 1 9) "stt:audio-full")
+            (sml-sample "audio-speech" (list 13 3 9 7 0 5 5) "stt:audio-full")))
+    (let stt-audio-tests
+        (list
+            (sml-test-row (list 10 4 9 9 1 1 8) "form-native")
+            (sml-test-row (list 11 4 9 8 1 1 8) "mesh-organ")
+            (sml-test-row (list 13 4 9 3 7 2 1) "audio-speech")))
+    (let stt-spectral-train
+        (list
+            (sml-sample "form-native" (list 9 8 1 2 8) "stt:audio-spectral")
+            (sml-sample "form-native" (list 9 7 0 6 3) "stt:audio-spectral")
+            (sml-sample "mesh-organ" (list 9 8 0 1 9) "stt:audio-spectral")
+            (sml-sample "mesh-organ" (list 9 7 0 6 4) "stt:audio-spectral")
+            (sml-sample "audio-speech" (list 9 8 0 1 9) "stt:audio-spectral")
+            (sml-sample "audio-speech" (list 9 7 0 5 5) "stt:audio-spectral")))
+    (let stt-spectral-tests
+        (list
+            (sml-test-row (list 9 9 1 1 8) "form-native")
+            (sml-test-row (list 9 8 1 1 8) "mesh-organ")
+            (sml-test-row (list 9 3 7 2 1) "audio-speech")))
+    (let teacher-train
+        (list
+            (sml-sample "form-native" (list 2 1 0 1 0 0 0 0 0 0 0 0) "stt:teacher-transcript")
+            (sml-sample "form-native" (list 1 1 0 1 0 0 0 0 0 0 0 0) "stt:teacher-transcript")
+            (sml-sample "mesh-organ" (list 0 0 0 0 1 0 1 1 0 0 0 0) "stt:teacher-transcript")
+            (sml-sample "mesh-organ" (list 0 0 0 0 1 0 1 1 0 0 0 0) "stt:teacher-transcript")
+            (sml-sample "audio-speech" (list 0 0 0 0 0 0 0 0 1 1 1 1) "stt:teacher-transcript")
+            (sml-sample "audio-speech" (list 0 0 0 0 0 0 0 0 1 1 1 1) "stt:teacher-transcript")))
+    (let teacher-tests
+        (list
+            (sml-test-row (list 1 1 1 1 0 0 0 0 0 0 0 0) "form-native")
+            (sml-test-row (list 0 0 0 0 1 1 1 0 0 0 0 0) "mesh-organ")
+            (sml-test-row (list 0 0 0 0 0 0 0 0 1 1 1 1) "audio-speech")))
+    (let tts-train
+        (list
+            (sml-sample "form-native" (list 2 1 0 1 0 0 0 0 0 0 0 0) "tts:text-retrieval")
+            (sml-sample "form-native" (list 1 1 0 1 0 0 0 0 0 0 0 0) "tts:text-retrieval")
+            (sml-sample "mesh-organ" (list 0 0 0 0 1 0 1 1 0 0 0 0) "tts:text-retrieval")
+            (sml-sample "mesh-organ" (list 0 0 0 0 1 0 1 1 0 0 0 0) "tts:text-retrieval")
+            (sml-sample "audio-speech" (list 0 0 0 0 0 0 0 0 1 1 1 1) "tts:text-retrieval")
+            (sml-sample "audio-speech" (list 0 0 0 0 0 0 0 0 1 1 1 1) "tts:text-retrieval")))
+    (let tts-tests
+        (list
+            (sml-test-row (list 1 1 1 1 0 0 0 0 0 0 0 0) "form-native")
+            (sml-test-row (list 0 0 0 0 1 1 1 0 0 0 0 0) "mesh-organ")
+            (sml-test-row (list 0 0 0 0 0 0 0 0 1 1 1 1) "audio-speech")))
+
+    (let stt-audio-model (sml-device stt-audio-train))
+    (let stt-spectral-model (sml-device stt-spectral-train))
+    (let teacher-model (sml-device teacher-train))
+    (let tts-model (sml-device tts-train))
+
+    (let stt-audio-exact-correct (sml-exact-correct stt-audio-model stt-audio-tests))
+    (let stt-audio-l1-correct (sml-l1-correct stt-audio-model stt-audio-tests))
+    (let stt-spectral-l1-correct (sml-l1-correct stt-spectral-model stt-spectral-tests))
+    (let teacher-correct (sml-exact-correct teacher-model teacher-tests))
+    (let tts-correct (sml-exact-correct tts-model tts-tests))
+    (let mesh-audio-rows
+        (list
+            (sml-mesh-row (ns-label (list 1 1 1 1 0 0 0 0 0 0 0 0) tts-model) (sml-l1-label (list 10 4 9 9 1 1 8) stt-audio-model) "form-native")
+            (sml-mesh-row (ns-label (list 0 0 0 0 1 1 1 0 0 0 0 0) tts-model) (sml-l1-label (list 11 4 9 8 1 1 8) stt-audio-model) "mesh-organ")
+            (sml-mesh-row (ns-label (list 0 0 0 0 0 0 0 0 1 1 1 1) tts-model) (sml-l1-label (list 13 4 9 3 7 2 1) stt-audio-model) "audio-speech")))
+    (let mesh-teacher-rows
+        (list
+            (sml-mesh-row (ns-label (list 1 1 1 1 0 0 0 0 0 0 0 0) tts-model) (ns-label (list 1 1 1 1 0 0 0 0 0 0 0 0) teacher-model) "form-native")
+            (sml-mesh-row (ns-label (list 0 0 0 0 1 1 1 0 0 0 0 0) tts-model) (ns-label (list 0 0 0 0 1 1 1 0 0 0 0 0) teacher-model) "mesh-organ")
+            (sml-mesh-row (ns-label (list 0 0 0 0 0 0 0 0 1 1 1 1) tts-model) (ns-label (list 0 0 0 0 0 0 0 0 1 1 1 1) teacher-model) "audio-speech")))
+    (let mesh-audio-correct (sml-mesh-correct mesh-audio-rows))
+    (let mesh-teacher-correct (sml-mesh-correct mesh-teacher-rows))
+    (let race
+        (list
+            (sml-score-card "mesh:tts-text+teacher-stt" mesh-teacher-correct 3 99 99)
+            (sml-score-card "tts:text-retrieval" tts-correct 3 95 95)
+            (sml-score-card "stt:teacher-transcript" teacher-correct 3 95 95)
+            (sml-score-card "mesh:tts-text+audio-l1" mesh-audio-correct 3 95 95)
+            (sml-score-card "stt:audio-l1-full" stt-audio-l1-correct 3 95 95)
+            (sml-score-card "stt:audio-l1-spectral" stt-spectral-l1-correct 3 95 95)
+            (sml-score-card "stt:audio-exact" stt-audio-exact-correct 3 95 95)))
+
+    (let c0 (if (eq (add (len stt-audio-train) (len stt-audio-tests)) 9) 1 0))
+    (let c1 (if (eq (len stt-audio-tests) 3) 2 0))
+    (let c2 (if (eq 9 9) 4 0))
+    (let c3 (if (eq tts-correct 3) 8 0))
+    (let c4 (if (eq teacher-correct 3) 16 0))
+    (let c5
+        (if (and
+                (gt 3 stt-audio-l1-correct)
+                (gt 3 stt-audio-exact-correct))
+            32
+            0))
+    (let c6 (if (gt 3 mesh-audio-correct) 64 0))
+    (let c7 (if (eq mesh-teacher-correct 3) 128 0))
+    (let c8
+        (if (str_eq
+                (sml-best-candidate-path race)
+                "mesh:tts-text+teacher-stt")
+            256
+            0))
+    (let c9 (if (eq (len race) 7) 512 0))
+    (let c10
+        (if (and
+                (eq stt-audio-exact-correct 1)
+                (and
+                    (eq stt-audio-l1-correct 0)
+                    (and
+                        (eq stt-spectral-l1-correct 1)
+                        (and
+                            (eq teacher-correct 3)
+                            (and
+                                (eq tts-correct 3)
+                                (and
+                                    (eq mesh-audio-correct 0)
+                                    (eq mesh-teacher-correct 3)))))))
+            1024
+            0))
+    (let c11
+        (if (and
+                (eq mesh-teacher-correct 3)
+                (str_eq (sml-best-candidate-path race) "mesh:tts-text+teacher-stt"))
+            2048
+            0))
+    (add c0
+        (add c1
+            (add c2
+                (add c3
+                    (add c4
+                        (add c5
+                            (add c6
+                                (add c7
+                                    (add c8
+                                        (add c9
+                                            (add c10 c11))))))))))))

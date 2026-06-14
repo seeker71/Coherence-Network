@@ -1,0 +1,63 @@
+# code-tool-learning.form - Form-native code generation and tool-use learning sideband
+
+(code-tool-learning
+  (lineage
+    (rests-on nearest-shape.fk classifier-eval.fk tool-channel.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
+    (recipe form/form-stdlib/code-tool-learning.fk)
+    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 16383 four-way))
+
+  (purpose
+    "Every coding action can leave native training data: the intent that was sensed, the tool that was planned, the branch that executed, the receipt that came back, and the metadata that made the result trustworthy enough to learn from."
+    "The Form-native candidate trains beside Codex, Claude, Grok, Gemini, and Ollama candidates so each code-generation and tool-use turn can become an A/B receipt instead of disappearing as token spend."
+    "The sideband is planning and learning tissue. Tool execution remains explicit through tool-channel capabilities and receipt-bearing host or kernel lanes. Third-party evidence requests come from oracle-catalog rows.")
+
+  (floor
+    "A four-way Form proof classifies code generation, tool selection, and proof execution intents as native exemplars."
+    "The proof uses tool-channel planning for an explicit stream tool plan, refuses ambient execution when metadata stays below the >50 floor, validates a CHOICE-RECEIPT with token cost, turns that receipt back into a native sample, requests compiler and source-grounding oracle evidence lanes, and shows receipt learning can make the Form-native candidate win an A/B race."
+    "The floor-oracle winner rule favors the candidate that clears correctness/metadata gates while using fewer LLM tokens, less energy, and less nutrition, with higher sovereignty, trust, and confidence.")
+    "The metadata channel carries conviction, certainty, frequency spectrum, aliveness, sovereignty, and trust. The current use floor requires each important value to clear 50; autonomous selection additionally requires sovereignty and trust to clear 70.")
+
+  (north-star
+    "Code generation, tool selection, and tool execution become a two-way learning channel inside Form: generation proposes tool plans, tool receipts train generation, and every selected branch carries attribution, cost, success/failure/silence, and metadata."
+    "Natural language to agent CLI to host-native ASM is part of this same north star: natural requests lower into inspectable tool plans, compiler/JIT/oracle receipts teach the lane, and Form-native lowering earns promotion through heldout execution and assembly evidence."
+    "The canonical path is natural language -> Form/BML/domain grammar -> form binary -> Form-to-host-native ASM. Other explicit candidates are natural language -> BML -> Hati table -> host ASM, natural language -> domain grammar -> native tool/kernel call, and natural language -> C oracle -> clang host ASM."
+    "The Form-native floor oracle wins whenever it carries enough important value with less LLM token use, less energy, less nutrition, more sovereignty, more trust, and more confidence."
+    "The agent CLI grows from this sideband: Form-native candidates run beside Claude, Grok, Gemini, Codex, and Ollama, then graduate lane by lane when heldout receipts show enough accuracy, trust, sovereignty, and aliveness."
+    "Token usage becomes training signal. External LLMs remain teachers and baselines while Form-native recipes, grammars, retrieval cells, and model kernels learn the repeatable parts of coding and tool use.")
+
+  (proofed-lanes
+    (code-generation-intent
+      (sample feature-vector)
+      (floor nearest-shape-exemplar)
+      (north-star "prompt, patch, grammar, and proof receipts lower into Form-native generation candidates"))
+    (tool-selection-intent
+      (sample feature-vector)
+      (floor tool-channel-plan)
+      (north-star "tool planning chooses native kernel/file/stream/store/host lanes with explicit capabilities"))
+    (tool-execution-receipt
+      (sample choice-receipt-signature)
+      (floor receipt-to-sample-learning)
+      (north-star "execution receipts become training rows for the next generation/tool choice"))
+    (natural-language-to-host-native-asm
+      (sample natural-language-intent-vector)
+      (floor compiler-oracle-evidence-plus-form-native-candidate)
+      (north-star "natural language lowers through the agent CLI into Form/BML and host-native ASM with compiler/JIT receipts as two-way teaching evidence"))
+    (lowering-path-catalog
+      (canonical natural-language form/BML/domain-grammar form-binary form-to-host-native-asm)
+      (alternatives bml-hati-table-asm domain-tool-native c-oracle-asm)
+      (north-star "each path trains beside the others until receipts select the lowest-cost sovereign native lane"))
+    (agent-ab-race
+      (candidates form-native codex claude grok gemini ollama)
+      (floor branch-choice-order-plus-choice-receipt-learning)
+      (north-star "measured local A/B lanes replace external agents where Form-native candidates prove better value")))
+
+  (metadata-channel
+    (conviction "how strongly the generated/tool result is internally supported")
+    (certainty "how much the current receipt evidence supports this choice")
+    (frequency-spectrum "source, grammar, tool, proof, and runtime resonance bins")
+    (aliveness "whether the result moves the living task instead of only matching syntax")
+    (sovereignty "whether the result keeps capability choice explicit and locally ownable")
+    (trust "whether the result has enough receipt evidence to learn from or execute"))
+
+  (next-step
+    "Attach this sideband to the agent execution loop so each real patch/tool/proof turn emits a code-tool receipt, then train heldout lanes for search/edit/proof/review/deploy before routing any important flow to a Form-native candidate by default."))

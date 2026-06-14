@@ -10,6 +10,8 @@ const ASSETS: Record<string, string> = {
   "android/arm64/hati-os-android-arm64.tar.zst.sha256": "hati-os-android-arm64.tar.zst.sha256",
   "android/arm64/coherence-sense-hati-mesh-debug.apk": "coherence-sense-hati-mesh-debug.apk",
   "android/arm64/coherence-sense-hati-mesh-debug.apk.sha256": "coherence-sense-hati-mesh-debug.apk.sha256",
+  "android/arm64/coherence-sense-hati-mesh-release.apk": "coherence-sense-hati-mesh-release.apk",
+  "android/arm64/coherence-sense-hati-mesh-release.apk.sha256": "coherence-sense-hati-mesh-release.apk.sha256",
 };
 
 type Params = {

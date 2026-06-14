@@ -1,0 +1,344 @@
+; speech-model-learning.fk — native floor for racing speech learner candidates.
+;
+; This is not a full neural TTS/STT stack. It is the smallest Form-native
+; training/evaluation surface for speech lanes:
+;   - STT floor: audio feature rows learn a label through exemplar matching.
+;   - TTS floor: text feature rows retrieve a learned audio/text exemplar label.
+;   - Mesh floor: paired TTS/STT candidates only pass when they agree on the
+;     same expected label.
+; Candidate scores are ordinary branch-choice-order candidates, so learning can
+; route toward the observed winner without hiding failed candidates.
+; Metadata is carried as native data: confidence, conviction, mood, expression,
+; and active-learning need can lower trust/alignment, choose a feedback kernel,
+; and travel with the output channel.
+; Oracle receipts are native training data too: a local LLM can add labels,
+; confidence, meaning vectors, and impact vectors so human teaching becomes
+; optional instead of required.
+;
+; Proven by: form-stdlib/tests/speech-model-learning-band.fk
+
+(do
+    (defn sml-sample (label feature lane)
+        (list label feature lane))
+    (defn sml-label (sample) (nth sample 0))
+    (defn sml-feature (sample) (nth sample 1))
+    (defn sml-lane (sample) (nth sample 2))
+    (defn sml-exemplar (sample)
+        (list (sml-label sample) (sml-feature sample)))
+
+    (defn sml-learn-sample (sample model)
+        (cons (sml-exemplar sample) model))
+    (defn sml-learn-stream (samples model)
+        (if (eq (len samples) 0) model
+            (sml-learn-stream
+                (tail samples)
+                (sml-learn-sample (head samples) model))))
+    (defn sml-device (samples)
+        (sml-learn-stream samples (empty)))
+
+    (defn sml-test-row (feature label)
+        (list feature label))
+    (defn sml-test-feature (row) (nth row 0))
+    (defn sml-test-label (row) (nth row 1))
+
+    (defn sml-exact-pair (model row)
+        (list
+            (ns-label (sml-test-feature row) model)
+            (sml-test-label row)))
+    (defn sml-exact-eval (model tests)
+        (if (eq (len tests) 0) (empty)
+            (cons
+                (sml-exact-pair model (head tests))
+                (sml-exact-eval model (tail tests)))))
+    (defn sml-exact-correct (model tests)
+        (ce-correct (sml-exact-eval model tests)))
+
+    (defn sml-abs (n)
+        (if (lt n 0) (sub 0 n) n))
+    (defn sml-l1 (a b)
+        (if (eq (len a) 0) 0
+            (if (eq (len b) 0) 0
+                (add
+                    (sml-abs (sub (head a) (head b)))
+                    (sml-l1 (tail a) (tail b))))))
+    (defn sml-l1-best-loop (query prototypes best best-dist)
+        (if (eq (len prototypes) 0) best
+            (if (eq (len best) 0)
+                (sml-l1-best-loop
+                    query
+                    (tail prototypes)
+                    (head prototypes)
+                    (sml-l1 query (ns-vec-of (head prototypes))))
+                (if (lt (sml-l1 query (ns-vec-of (head prototypes))) best-dist)
+                    (sml-l1-best-loop
+                        query
+                        (tail prototypes)
+                        (head prototypes)
+                        (sml-l1 query (ns-vec-of (head prototypes))))
+                    (sml-l1-best-loop query (tail prototypes) best best-dist)))))
+    (defn sml-l1-nearest (query prototypes)
+        (sml-l1-best-loop query prototypes (empty) 0))
+    (defn sml-l1-label (query prototypes)
+        (ns-label-of (sml-l1-nearest query prototypes)))
+    (defn sml-l1-pair (model row)
+        (list
+            (sml-l1-label (sml-test-feature row) model)
+            (sml-test-label row)))
+    (defn sml-l1-eval (model tests)
+        (if (eq (len tests) 0) (empty)
+            (cons
+                (sml-l1-pair model (head tests))
+                (sml-l1-eval model (tail tests)))))
+    (defn sml-l1-correct (model tests)
+        (ce-correct (sml-l1-eval model tests)))
+
+    (defn sml-wrong (correct total)
+        (sub total correct))
+    (defn sml-score-card (path correct total alignment trust)
+        (bco-candidate
+            path
+            correct
+            (sml-wrong correct total)
+            0
+            0
+            alignment
+            trust))
+    (defn sml-best-candidate-path (score-cards)
+        (bco-choose-best-path score-cards))
+
+    (defn sml-min (a b)
+        (if (gt a b) b a))
+    (defn sml-meta (confidence conviction mood expression active-need)
+        (list confidence conviction mood expression active-need))
+    (defn sml-meta-confidence (meta) (nth meta 0))
+    (defn sml-meta-conviction (meta) (nth meta 1))
+    (defn sml-meta-mood (meta) (nth meta 2))
+    (defn sml-meta-expression (meta) (nth meta 3))
+    (defn sml-meta-active-need (meta) (nth meta 4))
+    (defn sml-meta-ready? (meta)
+        (if (and
+                (ge (sml-meta-confidence meta) 70)
+                (and
+                    (ge (sml-meta-conviction meta) 70)
+                    (lt (sml-meta-active-need meta) 70)))
+            1
+            0))
+    (defn sml-active-learning-needed? (meta)
+        (if (eq (sml-meta-ready? meta) 1) 0 1))
+    (defn sml-meta-score-card (path correct total alignment trust meta)
+        (bco-candidate
+            path
+            correct
+            (sml-wrong correct total)
+            0
+            0
+            (sml-min alignment (sml-meta-conviction meta))
+            (sml-min trust (sml-meta-confidence meta))))
+    (defn sml-output-kernel (native-kernel meta)
+        (if (str_eq (sml-meta-expression meta) "ask-human")
+            "kernel:human-feedback"
+            (if (eq (sml-active-learning-needed? meta) 1)
+                "kernel:local-llm-oracle"
+                native-kernel)))
+    (defn sml-channel-output (label candidate-path channel native-kernel meta)
+        (list
+            label
+            candidate-path
+            channel
+            (sml-output-kernel native-kernel meta)
+            meta))
+    (defn sml-output-label (output) (nth output 0))
+    (defn sml-output-candidate (output) (nth output 1))
+    (defn sml-output-channel (output) (nth output 2))
+    (defn sml-output-kernel-path (output) (nth output 3))
+    (defn sml-output-meta (output) (nth output 4))
+
+    (defn sml-meta-channel
+        (agreement margin novelty noise energy cadence arousal valence expression-force social-risk route-pressure word-frequency meaning-alignment impact-intensity)
+        (list
+            agreement
+            margin
+            novelty
+            noise
+            energy
+            cadence
+            arousal
+            valence
+            expression-force
+            social-risk
+            route-pressure
+            word-frequency
+            meaning-alignment
+            impact-intensity))
+    (defn sml-mc-agreement (channel) (nth channel 0))
+    (defn sml-mc-margin (channel) (nth channel 1))
+    (defn sml-mc-novelty (channel) (nth channel 2))
+    (defn sml-mc-noise (channel) (nth channel 3))
+    (defn sml-mc-energy (channel) (nth channel 4))
+    (defn sml-mc-cadence (channel) (nth channel 5))
+    (defn sml-mc-arousal (channel) (nth channel 6))
+    (defn sml-mc-valence (channel) (nth channel 7))
+    (defn sml-mc-expression-force (channel) (nth channel 8))
+    (defn sml-mc-social-risk (channel) (nth channel 9))
+    (defn sml-mc-route-pressure (channel) (nth channel 10))
+    (defn sml-mc-word-frequency (channel) (nth channel 11))
+    (defn sml-mc-meaning-alignment (channel) (nth channel 12))
+    (defn sml-mc-impact-intensity (channel) (nth channel 13))
+    (defn sml-invert100 (n) (sub 100 n))
+    (defn sml-lift-confidence (channel)
+        (sml-min
+            (sml-mc-agreement channel)
+            (sml-min
+                (sml-mc-margin channel)
+                (sml-min
+                    (sml-invert100 (sml-mc-noise channel))
+                    (sml-mc-meaning-alignment channel)))))
+    (defn sml-lift-conviction (channel)
+        (sml-min
+            (sml-min
+                (sml-mc-margin channel)
+                (sml-invert100 (sml-mc-novelty channel)))
+            (sml-mc-impact-intensity channel)))
+    (defn sml-lift-mood (channel)
+        (if (ge (sml-mc-arousal channel) 70)
+            (if (ge (sml-mc-valence channel) 50) "bright" "tense")
+            (if (lt (sml-mc-valence channel) 40) "low" "steady")))
+    (defn sml-lift-expression (channel)
+        (if (ge (sml-mc-social-risk channel) 70)
+            "ask-human"
+            (if (or
+                    (ge (sml-mc-expression-force channel) 70)
+                    (ge (sml-mc-impact-intensity channel) 80))
+                "emphatic"
+                (if (lt (sml-mc-energy channel) 35) "soft" "plain"))))
+    (defn sml-lift-active-need (channel)
+        (if (or
+                (lt (sml-lift-confidence channel) 70)
+                (or
+                    (lt (sml-lift-conviction channel) 70)
+                    (or
+                        (ge (sml-mc-novelty channel) 70)
+                        (or
+                            (ge (sml-mc-route-pressure channel) 70)
+                            (lt (sml-mc-word-frequency channel) 30)))))
+            90
+            20))
+    (defn sml-meta-from-channel (channel)
+        (sml-meta
+            (sml-lift-confidence channel)
+            (sml-lift-conviction channel)
+            (sml-lift-mood channel)
+            (sml-lift-expression channel)
+            (sml-lift-active-need channel)))
+
+    (defn sml-oracle-model-card (name role locality rank footprint)
+        (list name role locality rank footprint))
+    (defn sml-om-name (card) (nth card 0))
+    (defn sml-om-role (card) (nth card 1))
+    (defn sml-om-locality (card) (nth card 2))
+    (defn sml-om-rank (card) (nth card 3))
+    (defn sml-om-footprint (card) (nth card 4))
+    (defn sml-oracle-model-catalog ()
+        (list
+            (sml-oracle-model-card
+                "llama3.3:70b"
+                "receipt-generator"
+                "local"
+                10
+                "42GB")
+            (sml-oracle-model-card
+                "deepseek-r1:32b"
+                "reasoning-receipt-generator"
+                "local"
+                20
+                "19GB")
+            (sml-oracle-model-card
+                "dolphin-mixtral:8x22b-v2.9-q6_K"
+                "large-local-committee"
+                "local"
+                30
+                "115GB")
+            (sml-oracle-model-card
+                "llama3.2:3b"
+                "fast-receipt-generator"
+                "local"
+                40
+                "2GB")))
+    (defn sml-best-local-oracle-loop (cards best best-rank)
+        (if (eq (len cards) 0) best
+            (if (eq (len best) 0)
+                (sml-best-local-oracle-loop
+                    (tail cards)
+                    (head cards)
+                    (sml-om-rank (head cards)))
+                (if (lt (sml-om-rank (head cards)) best-rank)
+                    (sml-best-local-oracle-loop
+                        (tail cards)
+                        (head cards)
+                        (sml-om-rank (head cards)))
+                    (sml-best-local-oracle-loop
+                        (tail cards)
+                        best
+                        best-rank)))))
+    (defn sml-best-local-oracle-card ()
+        (sml-best-local-oracle-loop
+            (sml-oracle-model-catalog)
+            (empty)
+            0))
+    (defn sml-best-local-oracle-model ()
+        (sml-om-name (sml-best-local-oracle-card)))
+
+    (defn sml-oracle-receipt (provider model label confidence meaning-vector impact-vector)
+        (list provider model label confidence meaning-vector impact-vector))
+    (defn sml-oracle-provider (receipt) (nth receipt 0))
+    (defn sml-oracle-model (receipt) (nth receipt 1))
+    (defn sml-oracle-label (receipt) (nth receipt 2))
+    (defn sml-oracle-confidence (receipt) (nth receipt 3))
+    (defn sml-oracle-meaning (receipt) (nth receipt 4))
+    (defn sml-oracle-impact (receipt) (nth receipt 5))
+    (defn sml-oracle-valid? (receipt)
+        (if (and
+                (str_eq (sml-oracle-provider receipt) "local-llm")
+                (and
+                    (ge (sml-oracle-confidence receipt) 70)
+                    (and
+                        (gt (len (sml-oracle-meaning receipt)) 0)
+                        (gt (len (sml-oracle-impact receipt)) 0))))
+            1
+            0))
+    (defn sml-oracle-sample (receipt lane)
+        (sml-sample
+            (sml-oracle-label receipt)
+            (sml-oracle-meaning receipt)
+            lane))
+    (defn sml-oracle-receipt-from-best (label confidence meaning-vector impact-vector)
+        (sml-oracle-receipt
+            "local-llm"
+            (sml-best-local-oracle-model)
+            label
+            confidence
+            meaning-vector
+            impact-vector))
+    (defn sml-oracle-feedback-kernel (meta)
+        (if (str_eq (sml-meta-expression meta) "ask-human")
+            "kernel:human-feedback"
+            "kernel:local-llm-oracle"))
+
+    (defn sml-mesh-row (tts-label stt-label expected)
+        (list tts-label stt-label expected))
+    (defn sml-mesh-tts (row) (nth row 0))
+    (defn sml-mesh-stt (row) (nth row 1))
+    (defn sml-mesh-expected (row) (nth row 2))
+    (defn sml-mesh-hit? (row)
+        (if (and
+                (str_eq (sml-mesh-tts row) (sml-mesh-expected row))
+                (str_eq (sml-mesh-stt row) (sml-mesh-expected row)))
+            1
+            0))
+    (defn sml-mesh-correct (rows)
+        (if (eq (len rows) 0) 0
+            (add
+                (sml-mesh-hit? (head rows))
+                (sml-mesh-correct (tail rows)))))
+
+    0)

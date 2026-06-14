@@ -1,0 +1,211 @@
+; loopback-learning.fk — micro learning loops over channel loopback receipts.
+;
+; This is the floor for learning channels teaching each other without a Python
+; carrier. A sample is learned as a nearest-shape exemplar, and the route that
+; should carry the next sample is learned from CHOICE-RECEIPTs through
+; branch-choice-order feedback. Two partial device streams can therefore merge
+; into a better classifier, while each scenario's route choice learns from
+; success/failure receipts.
+;
+; Proven by: form-stdlib/tests/loopback-learning-band.fk
+
+(do
+    (defn lbl-sample (label feature route)
+        (list label feature route))
+    (defn lbl-label (sample) (nth sample 0))
+    (defn lbl-feature (sample) (nth sample 1))
+    (defn lbl-route (sample) (nth sample 2))
+    (defn lbl-exemplar (sample)
+        (list (lbl-label sample) (lbl-feature sample)))
+
+    (defn lbl-learn-sample (sample model)
+        (cons (lbl-exemplar sample) model))
+    (defn lbl-learn-stream (samples model)
+        (if (eq (len samples) 0) model
+            (lbl-learn-stream
+                (tail samples)
+                (lbl-learn-sample (head samples) model))))
+    (defn lbl-device (samples)
+        (lbl-learn-stream samples (empty)))
+    (defn lbl-merge-devices (stream-a stream-b)
+        (cl-merge (lbl-device stream-a) (lbl-device stream-b)))
+
+    (defn lbl-fr-feature () (list 9 1 1 0 0 0))
+    (defn lbl-form-asm-feature () (list 0 9 1 1 0 0))
+    (defn lbl-tts-stt-feature () (list 0 0 9 1 1 0))
+    (defn lbl-stt-tts-feature () (list 1 0 9 0 1 0))
+    (defn lbl-fft-music-feature () (list 0 1 0 9 1 1))
+    (defn lbl-video-shape-feature () (list 1 0 0 1 9 1))
+
+    (defn lbl-fr-sample ()
+        (lbl-sample "french-to-form" (lbl-fr-feature) "grammar:fr-form"))
+    (defn lbl-form-asm-sample ()
+        (lbl-sample "form-to-asm" (lbl-form-asm-feature) "lower:form-asm"))
+    (defn lbl-tts-stt-sample ()
+        (lbl-sample "tts-stt-loopback" (lbl-tts-stt-feature) "audio:tts-stt"))
+    (defn lbl-stt-tts-sample ()
+        (lbl-sample "stt-tts-loopback" (lbl-stt-tts-feature) "audio:stt-tts"))
+    (defn lbl-fft-music-sample ()
+        (lbl-sample "fft-music-match" (lbl-fft-music-feature) "spectral:fft-music"))
+    (defn lbl-video-shape-sample ()
+        (lbl-sample "video-shape-loopback" (lbl-video-shape-feature) "video:shape-time"))
+
+    (defn lbl-language-stream ()
+        (list
+            (lbl-fr-sample)
+            (lbl-form-asm-sample)
+            (lbl-fft-music-sample)))
+    (defn lbl-sense-stream ()
+        (list
+            (lbl-tts-stt-sample)
+            (lbl-stt-tts-sample)
+            (lbl-video-shape-sample)))
+    (defn lbl-all-samples ()
+        (cl-merge (lbl-language-stream) (lbl-sense-stream)))
+    (defn lbl-mesh-model ()
+        (lbl-merge-devices (lbl-language-stream) (lbl-sense-stream)))
+
+    (defn lbl-fr-query-a () (list 9 1 1 2 0 0))
+    (defn lbl-fr-query-b () (list 9 1 1 0 2 0))
+    (defn lbl-form-asm-query-a () (list 0 9 1 1 2 0))
+    (defn lbl-form-asm-query-b () (list 2 9 1 1 0 0))
+    (defn lbl-tts-stt-query-a () (list 0 0 9 1 1 2))
+    (defn lbl-tts-stt-query-b () (list 2 0 9 1 1 0))
+    (defn lbl-stt-tts-query-a () (list 1 2 9 0 1 0))
+    (defn lbl-stt-tts-query-b () (list 1 0 9 2 1 0))
+    (defn lbl-fft-music-query-a () (list 0 1 2 9 1 1))
+    (defn lbl-fft-music-query-b () (list 2 1 0 9 1 1))
+    (defn lbl-video-shape-query-a () (list 1 0 2 1 9 1))
+    (defn lbl-video-shape-query-b () (list 1 2 0 1 9 1))
+
+    (defn lbl-pair (query model actual)
+        (list (ns-label query model) actual))
+    (defn lbl-eval-pairs (model)
+        (list
+            (lbl-pair (lbl-fr-query-a) model "french-to-form")
+            (lbl-pair (lbl-fr-query-b) model "french-to-form")
+            (lbl-pair (lbl-form-asm-query-a) model "form-to-asm")
+            (lbl-pair (lbl-form-asm-query-b) model "form-to-asm")
+            (lbl-pair (lbl-tts-stt-query-a) model "tts-stt-loopback")
+            (lbl-pair (lbl-tts-stt-query-b) model "tts-stt-loopback")
+            (lbl-pair (lbl-stt-tts-query-a) model "stt-tts-loopback")
+            (lbl-pair (lbl-stt-tts-query-b) model "stt-tts-loopback")
+            (lbl-pair (lbl-fft-music-query-a) model "fft-music-match")
+            (lbl-pair (lbl-fft-music-query-b) model "fft-music-match")
+            (lbl-pair (lbl-video-shape-query-a) model "video-shape-loopback")
+            (lbl-pair (lbl-video-shape-query-b) model "video-shape-loopback")))
+    (defn lbl-correct (model)
+        (ce-correct (lbl-eval-pairs model)))
+    (defn lbl-decent? (model)
+        (ce-passes? (lbl-eval-pairs model) 10 2))
+    (defn lbl-test-row (feature label)
+        (list feature label))
+    (defn lbl-test-feature (test-row) (nth test-row 0))
+    (defn lbl-test-label (test-row) (nth test-row 1))
+    (defn lbl-eval-test-row (model test-row)
+        (list
+            (ns-label (lbl-test-feature test-row) model)
+            (lbl-test-label test-row)))
+    (defn lbl-eval-tests (model tests)
+        (if (eq (len tests) 0) (empty)
+            (cons
+                (lbl-eval-test-row model (head tests))
+                (lbl-eval-tests model (tail tests)))))
+    (defn lbl-correct-tests (model tests)
+        (ce-correct (lbl-eval-tests model tests)))
+    (defn lbl-decent-tests? (model tests min-correct max-wrong)
+        (ce-passes? (lbl-eval-tests model tests) min-correct max-wrong))
+
+    (defn lbl-initial-routes (target)
+        (list
+            (bco-candidate "generic-loopback" 1 0 2 0 90 90)
+            (bco-candidate target 0 0 0 0 95 95)))
+    (defn lbl-choice-candidate-row (candidate category)
+        (cr-choice-candidate
+            (bco-path candidate)
+            category
+            true
+            (bco-short-fail candidate)
+            (bco-score candidate)
+            "loopback-route-candidate"))
+    (defn lbl-choice-candidate-rows (candidates category)
+        (if (eq (len candidates) 0) (empty)
+            (cons
+                (lbl-choice-candidate-row (head candidates) category)
+                (lbl-choice-candidate-rows (tail candidates) category))))
+    (defn lbl-choice-value ()
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            95
+            95
+            95
+            95))
+    (defn lbl-success-receipt (category candidates selected-path)
+        (cr-choice-receipt
+            "loopback-route-choice"
+            "loopback-learning"
+            category
+            (lbl-choice-candidate-rows candidates category)
+            selected-path
+            (cr-outcome-success)
+            95
+            (lbl-choice-value)
+            "loopback sample matched oracle"
+            "loopback-learning.fk"
+            "form/form-stdlib/loopback-learning.fk"
+            20260614
+            1
+            (cr-choice-trace (len candidates) 1 0 0)))
+    (defn lbl-fail-receipt (category candidates selected-path)
+        (cr-choice-receipt
+            "loopback-route-choice"
+            "loopback-learning"
+            category
+            (lbl-choice-candidate-rows candidates category)
+            selected-path
+            (cr-outcome-fail)
+            60
+            (lbl-choice-value)
+            "loopback sample failed oracle"
+            "loopback-learning.fk"
+            "form/form-stdlib/loopback-learning.fk"
+            20260614
+            1
+            (cr-choice-trace (len candidates) 0 1 0)))
+    (defn lbl-learn-success (candidates category selected-path)
+        (crl-learn-candidates
+            candidates
+            (lbl-success-receipt category candidates selected-path)))
+    (defn lbl-repeat-success (n candidates category selected-path)
+        (if (eq n 0) candidates
+            (lbl-repeat-success
+                (sub n 1)
+                (lbl-learn-success candidates category selected-path)
+                category
+                selected-path)))
+    (defn lbl-trained-routes (target)
+        (lbl-repeat-success
+            2
+            (lbl-initial-routes target)
+            "loopback-route"
+            target))
+    (defn lbl-before-route (target)
+        (bco-choose-best-path (lbl-initial-routes target)))
+    (defn lbl-after-route (target)
+        (bco-choose-best-path (lbl-trained-routes target)))
+    (defn lbl-route-hit? (sample)
+        (if (str_eq (lbl-after-route (lbl-route sample)) (lbl-route sample)) 1 0))
+    (defn lbl-route-hits (samples)
+        (if (eq (len samples) 0) 0
+            (add
+                (lbl-route-hit? (head samples))
+                (lbl-route-hits (tail samples)))))
+    (defn lbl-cold-route-hit? (sample)
+        (if (str_eq (lbl-before-route (lbl-route sample)) (lbl-route sample)) 1 0))
+    (defn lbl-cold-route-hits (samples)
+        (if (eq (len samples) 0) 0
+            (add
+                (lbl-cold-route-hit? (head samples))
+                (lbl-cold-route-hits (tail samples)))))
+
+    0)

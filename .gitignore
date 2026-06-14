@@ -30,8 +30,10 @@ out/
 # Secrets
 *.pem
 *.key
+*.jks
 .env.*
 !.env.example
+experiments/coherence-sense-android/signing.properties
 
 # Local MCP server config — commonly embeds API tokens; keep out of git
 mcp.json

@@ -1,0 +1,312 @@
+; code-tool-learning.fk — Form-native code generation and tool-use learning sideband.
+;
+; Floor: every coding action can emit a native sample, choose a tool through
+; tool-channel planning, and turn the execution receipt back into branch-choice
+; learning data. It can also request third-party evidence lanes from
+; oracle-catalog. This file does not execute tools and does not call an LLM.
+;
+; North star: code generation, tool selection, and tool execution become a
+; two-way learning channel. External agents (Codex, Claude, Grok, Gemini,
+; Ollama) and Form-native candidates race side by side; once conviction,
+; certainty, frequency, aliveness, sovereignty, and trust clear the floor, the
+; Form-native candidate can be selected, A/B tested, and eventually replace
+; external generation on lanes it has proven. Natural language to agent CLI to
+; host-native ASM is a north-star lane in this same loop.
+;
+; Proven by: form-stdlib/tests/code-tool-learning-band.fk
+
+(do
+    (defn ctl-sample (label feature lane)
+        (list label feature lane))
+    (defn ctl-label (sample) (nth sample 0))
+    (defn ctl-feature (sample) (nth sample 1))
+    (defn ctl-lane (sample) (nth sample 2))
+    (defn ctl-exemplar (sample)
+        (list (ctl-label sample) (ctl-feature sample)))
+    (defn ctl-learn-sample (sample model)
+        (cons (ctl-exemplar sample) model))
+    (defn ctl-learn-stream (samples model)
+        (if (eq (len samples) 0) model
+            (ctl-learn-stream
+                (tail samples)
+                (ctl-learn-sample (head samples) model))))
+    (defn ctl-device (samples)
+        (ctl-learn-stream samples (empty)))
+
+    (defn ctl-row (feature label)
+        (list feature label))
+    (defn ctl-row-feature (row) (nth row 0))
+    (defn ctl-row-label (row) (nth row 1))
+    (defn ctl-pair (model row)
+        (list
+            (ns-label (ctl-row-feature row) model)
+            (ctl-row-label row)))
+    (defn ctl-eval (model rows)
+        (if (eq (len rows) 0) (empty)
+            (cons
+                (ctl-pair model (head rows))
+                (ctl-eval model (tail rows)))))
+    (defn ctl-correct (model rows)
+        (ce-correct (ctl-eval model rows)))
+
+    (defn ctl-freq-spectrum (source grammar tool proof runtime)
+        (list source grammar tool proof runtime))
+    (defn ctl-freq-source (freq) (nth freq 0))
+    (defn ctl-freq-grammar (freq) (nth freq 1))
+    (defn ctl-freq-tool (freq) (nth freq 2))
+    (defn ctl-freq-proof (freq) (nth freq 3))
+    (defn ctl-freq-runtime (freq) (nth freq 4))
+    (defn ctl-meta (conviction certainty freq aliveness sovereignty trust)
+        (list conviction certainty freq aliveness sovereignty trust))
+    (defn ctl-meta-conviction (meta) (nth meta 0))
+    (defn ctl-meta-certainty (meta) (nth meta 1))
+    (defn ctl-meta-frequency (meta) (nth meta 2))
+    (defn ctl-meta-aliveness (meta) (nth meta 3))
+    (defn ctl-meta-sovereignty (meta) (nth meta 4))
+    (defn ctl-meta-trust (meta) (nth meta 5))
+    (defn ctl-meta-floor50? (meta)
+        (if (and
+                (ge (ctl-meta-conviction meta) 51)
+                (and
+                    (ge (ctl-meta-certainty meta) 51)
+                    (and
+                        (ge (ctl-meta-aliveness meta) 51)
+                        (and
+                            (ge (ctl-meta-sovereignty meta) 51)
+                            (and
+                                (ge (ctl-meta-trust meta) 51)
+                                (gt (len (ctl-meta-frequency meta)) 0))))))
+            1
+            0))
+    (defn ctl-meta-autonomous? (meta)
+        (if (and
+                (eq (ctl-meta-floor50? meta) 1)
+                (and
+                    (ge (ctl-meta-sovereignty meta) 70)
+                    (ge (ctl-meta-trust meta) 70)))
+            1
+            0))
+
+    (defn ctl-agent (path kind carrier locality)
+        (list path kind carrier locality))
+    (defn ctl-agent-path (agent) (nth agent 0))
+    (defn ctl-agent-kind (agent) (nth agent 1))
+    (defn ctl-agent-carrier (agent) (nth agent 2))
+    (defn ctl-agent-locality (agent) (nth agent 3))
+    (defn ctl-agent-catalog ()
+        (list
+            (ctl-agent "form-native:code-tool" "native-candidate" "form-kernel" "local")
+            (ctl-agent "agent:codex" "external-agent" "llm" "remote-or-local")
+            (ctl-agent "agent:claude" "external-agent" "llm" "remote")
+            (ctl-agent "agent:grok" "external-agent" "llm" "remote")
+            (ctl-agent "agent:gemini" "external-agent" "llm" "remote")
+            (ctl-agent "ollama:local" "external-agent" "local-llm" "local")))
+
+    (defn ctl-receipt-candidates ()
+        (list
+            (cr-choice-candidate
+                "form-native:code-tool"
+                "CODE-TOOL-CHOICE"
+                true
+                0
+                90
+                "Form-native candidate answered with inspectable grammar/tool plan")
+            (cr-choice-candidate
+                "agent:codex"
+                "CODE-TOOL-CHOICE"
+                true
+                10
+                95
+                "Codex external baseline")
+            (cr-choice-candidate
+                "agent:claude"
+                "CODE-TOOL-CHOICE"
+                true
+                10
+                90
+                "Claude external baseline")
+            (cr-choice-candidate
+                "agent:grok"
+                "CODE-TOOL-CHOICE"
+                true
+                20
+                85
+                "Grok external baseline")
+            (cr-choice-candidate
+                "agent:gemini"
+                "CODE-TOOL-CHOICE"
+                true
+                20
+                85
+                "Gemini external baseline")
+            (cr-choice-candidate
+                "ollama:local"
+                "CODE-TOOL-CHOICE"
+                true
+                0
+                80
+                "Local LLM baseline")))
+    (defn ctl-choice-value (meta)
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            (ctl-meta-certainty meta)
+            (ctl-meta-sovereignty meta)
+            (ctl-meta-conviction meta)
+            (ctl-meta-trust meta)))
+    (defn ctl-success-receipt (selected meta token-cost)
+        (cr-choice-receipt
+            "generate-code+select-tool+execute-proof"
+            "code-tool-learning"
+            "CODE-TOOL-CHOICE"
+            (ctl-receipt-candidates)
+            selected
+            (cr-outcome-success)
+            (ctl-meta-certainty meta)
+            (ctl-choice-value meta)
+            "selected path produced an inspectable patch/proof receipt"
+            "code-tool-learning"
+            "form/form-stdlib/code-tool-learning.fk"
+            20260614
+            token-cost
+            (cr-choice-trace 2 1 1 0)))
+    (defn ctl-receipt-feature (receipt)
+        (list
+            (cr-receipt-certainty receipt)
+            (cr-receipt-cost receipt)
+            (cr-trace-attempts (cr-receipt-trace receipt))
+            (cr-trace-successes (cr-receipt-trace receipt))
+            (cr-trace-failures (cr-receipt-trace receipt))
+            (cr-trace-silences (cr-receipt-trace receipt))))
+    (defn ctl-receipt-sample (receipt lane)
+        (ctl-sample
+            (cr-receipt-selected-path receipt)
+            (ctl-receipt-feature receipt)
+            lane))
+    (defn ctl-oracle-request (learning-kind)
+        (oc-evidence-for-kind (oc-evidence-catalog) learning-kind))
+    (defn ctl-oracle-available? (lane)
+        (if (str_eq (oc-ev-name lane) "none") 0 1))
+    (defn ctl-oracle-remote? (lane)
+        (if (str_eq (oc-ev-trust lane) "remote-membrane") 1 0))
+
+    (defn ctl-plan-tool (tool-name capability meta)
+        (if (eq (ctl-meta-floor50? meta) 1)
+            (tc-plan-tool tool-name capability)
+            (tc-plan
+                "tool/no-plan"
+                tool-name
+                ""
+                capability
+                ""
+                "meta-below-floor")))
+    (defn ctl-native-candidate (meta short-success short-fail long-success long-fail)
+        (bco-candidate
+            "form-native:code-tool"
+            short-success
+            short-fail
+            long-success
+            long-fail
+            (ctl-meta-sovereignty meta)
+            (ctl-meta-trust meta)))
+    (defn ctl-agent-candidate (path short-success short-fail long-success long-fail alignment trust)
+        (bco-candidate
+            path
+            short-success
+            short-fail
+            long-success
+            long-fail
+            alignment
+            trust))
+    (defn ctl-floor-oracle (path llm-tokens energy nutrition sovereignty trust confidence)
+        (list path llm-tokens energy nutrition sovereignty trust confidence))
+    (defn ctl-fo-path (oracle) (nth oracle 0))
+    (defn ctl-fo-tokens (oracle) (nth oracle 1))
+    (defn ctl-fo-energy (oracle) (nth oracle 2))
+    (defn ctl-fo-nutrition (oracle) (nth oracle 3))
+    (defn ctl-fo-sovereignty (oracle) (nth oracle 4))
+    (defn ctl-fo-trust (oracle) (nth oracle 5))
+    (defn ctl-fo-confidence (oracle) (nth oracle 6))
+    (defn ctl-fo-ready? (oracle)
+        (if (and
+                (ge (ctl-fo-sovereignty oracle) 70)
+                (and
+                    (ge (ctl-fo-trust oracle) 70)
+                    (ge (ctl-fo-confidence oracle) 70)))
+            1
+            0))
+    (defn ctl-fo-lower-cost? (candidate best)
+        (if (gt (ctl-fo-tokens best) (ctl-fo-tokens candidate))
+            1
+            (if (eq (ctl-fo-tokens best) (ctl-fo-tokens candidate))
+                (if (gt (ctl-fo-energy best) (ctl-fo-energy candidate))
+                    1
+                    (if (eq (ctl-fo-energy best) (ctl-fo-energy candidate))
+                        (if (gt (ctl-fo-nutrition best) (ctl-fo-nutrition candidate)) 1 0)
+                        0))
+                0)))
+    (defn ctl-floor-winner-loop (oracles best)
+        (if (eq (len oracles) 0) best
+            (if (eq (len best) 0)
+                (ctl-floor-winner-loop (tail oracles) (head oracles))
+                (if (and
+                        (eq (ctl-fo-ready? (head oracles)) 1)
+                        (eq (ctl-fo-lower-cost? (head oracles) best) 1))
+                    (ctl-floor-winner-loop (tail oracles) (head oracles))
+                    (ctl-floor-winner-loop (tail oracles) best)))))
+    (defn ctl-floor-winner (oracles)
+        (ctl-floor-winner-loop oracles (empty)))
+    (defn ctl-lowering-path (name source grammar binary asm oracle)
+        (list name source grammar binary asm oracle))
+    (defn ctl-lp-name (path) (nth path 0))
+    (defn ctl-lp-source (path) (nth path 1))
+    (defn ctl-lp-grammar (path) (nth path 2))
+    (defn ctl-lp-binary (path) (nth path 3))
+    (defn ctl-lp-asm (path) (nth path 4))
+    (defn ctl-lp-oracle (path) (nth path 5))
+    (defn ctl-lowering-paths ()
+        (list
+            (ctl-lowering-path
+                "nl-form-binary-asm"
+                "natural-language"
+                "form/BML/domain-grammar"
+                "form-binary"
+                "form-to-host-native-asm"
+                "compiler+jit+execution-receipts")
+            (ctl-lowering-path
+                "nl-bml-hati-table-asm"
+                "natural-language"
+                "BML"
+                "hati-table"
+                "hati-table-to-host-native-asm"
+                "hati-kernel+clang-oracle-receipts")
+            (ctl-lowering-path
+                "nl-domain-tool-native"
+                "natural-language"
+                "domain-grammar"
+                "tool-plan"
+                "kernel-native-call-or-host-asm"
+                "tool+route+execution-receipts")
+            (ctl-lowering-path
+                "nl-c-oracle-asm"
+                "natural-language"
+                "C-oracle"
+                "object-file"
+                "clang-host-native-asm"
+                "compiler-oracle-receipts")))
+    (defn ctl-lowering-path-by-name (paths name)
+        (if (eq (len paths) 0)
+            (ctl-lowering-path "none" "none" "none" "none" "none" "none")
+            (if (str_eq (ctl-lp-name (head paths)) name)
+                (head paths)
+                (ctl-lowering-path-by-name (tail paths) name))))
+    (defn ctl-canonical-lowering-path ()
+        (ctl-lowering-path-by-name (ctl-lowering-paths) "nl-form-binary-asm"))
+    (defn ctl-output (label candidate tool-plan receipt meta)
+        (list label candidate tool-plan receipt meta))
+    (defn ctl-output-label (output) (nth output 0))
+    (defn ctl-output-candidate (output) (nth output 1))
+    (defn ctl-output-tool-plan (output) (nth output 2))
+    (defn ctl-output-receipt (output) (nth output 3))
+    (defn ctl-output-meta (output) (nth output 4))
+
+    0)

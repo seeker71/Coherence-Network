@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Add a Form-native code generation and tool-use learning sideband so coding turns can emit native training samples, tool plans, CHOICE-RECEIPT outcomes, token cost, and metadata for A/B learning against external agents.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-os-tool-surface",
+    "native-learning-surface",
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "native-ml-kernels",
+    "form-language-learning",
+    "choice-receipt-learning",
+    "tool-channel"
+  ],
+  "task_ids": [
+    "code-tool-learning-sideband-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/form-stdlib/oracle-catalog.fk",
+    "form/form-stdlib/tests/oracle-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_code_tool_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/form-stdlib/oracle-catalog.fk",
+    "form/form-stdlib/tests/oracle-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_code_tool_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/form-stdlib/oracle-catalog.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/code-tool-learning-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_code_tool_learning.json"
+    ],
+    "notes": "Prompt guide passed in dirty continuation mode; wellness had no required repair. code-tool-learning returned verdict 131071 and validate.sh printed fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables). The proof covers native code-generation intent learning, tool-selection intent learning, proof-execution intent learning, metadata-gated tool planning, low-metadata plan refusal, six A/B candidates (Form-native, Codex, Claude, Grok, Gemini, Ollama), valid CHOICE-RECEIPT with token cost, receipt-to-sample learning, >50 metadata floor, autonomous sovereignty/trust gate, receipt learning that makes the Form-native candidate win, output envelope metadata, explicit compiler/source-grounding oracle evidence requests through oracle-catalog, a named natural-language-to-host-native-ASM north-star intent, a floor-oracle winner rule where Form-native wins by using fewer LLM tokens, less energy, less nutrition, and higher sovereignty/trust/confidence, and an explicit lowering path catalog whose canonical path is natural language -> Form/BML/domain grammar -> form binary -> Form-to-host-native ASM."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local Form proof only. No public deploy was requested or performed in this step."
+  },
+  "phase_gate": {
+    "phase": "code-tool-learning-sideband",
+    "gate": "Coding/tool-use turns must produce explicit native receipts before a Form-native candidate can replace external LLM/tool choices on important lanes.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Attach the sideband to the real agent execution loop so patch generation, search/edit/tool plans, validation commands, and review/deploy actions emit code-tool receipts. Build heldout tasks for search, edit, proof, review, and deploy, then A/B Form-native candidates against Codex, Claude, Grok, Gemini, and Ollama before promoting any lane."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes now have a four-way-proven sideband where code generation, tool selection, and tool execution can be learned from receipt data with metadata-gated Form-native promotion.",
+    "public_endpoints": [
+      "local:form/validate.sh:code-tool-learning-band",
+      "local:form/validate.sh:oracle-catalog-band",
+      "local:form/fourth-arm-bands.txt:code-tool-learning"
+    ],
+    "test_flows": [
+      "Code-generation, tool-selection, and proof-execution intents classify through native exemplars.",
+      "Tool planning returns an explicit stream:read grep plan only when metadata clears the >50 floor.",
+      "Low metadata refuses ambient execution.",
+      "A CHOICE-RECEIPT carries selected path, outcome, token cost, witness trace, and value metadata.",
+      "Compiler and source-grounding oracle evidence lanes are requestable through oracle-catalog.",
+      "Natural-language-to-host-native-ASM intent is learned as a native exemplar and tied to compiler oracle evidence.",
+      "Form-native floor oracle wins when it clears the metadata gate with lower LLM token, energy, and nutrition cost plus higher sovereignty/trust/confidence.",
+      "Natural-language-to-host-native-ASM lowering has a canonical Form/BML/domain grammar -> form binary -> host-native ASM path plus alternate BML/Hati, domain-tool-native, and C-oracle paths.",
+      "Receipt learning can move the A/B race toward the Form-native candidate.",
+      "The output envelope carries candidate, tool plan, receipt, and conviction/certainty/frequency/aliveness/sovereignty/trust metadata."
+    ],
+    "summary": "This is a native learning/proof sideband, not a claim that Form can already replace external code-generation agents broadly. It gives the agent CLI the evidence lane needed to train, A/B test, and promote Form-native candidates lane by lane."
+  }
+}

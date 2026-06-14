@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Keep the Mac Coherence Sense witness dashboard always running through a macOS LaunchAgent and add an Android APK self-update lane backed by the public Hati asset summary.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh",
+    "sense-organ-ripening",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence",
+    "host-kernel-resource-lanes",
+    "channel-loopback"
+  ],
+  "task_ids": [
+    "macos-witness-always-on-20260614",
+    "android-sense-self-update-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "local-service-install"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/app/src/main/res/xml/file_paths.xml",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/hati_witness_discovery.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "experiments/coherence-sense-android/macos-witness-service.sh",
+    "scripts/build_hati_os_public_assets.sh",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_android_sense_autodiscovery.json",
+    "docs/system_audit/commit_evidence_2026-06-14_macos_witness_service_android_updater.json"
+  ],
+  "change_files": [
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/app/src/main/res/xml/file_paths.xml",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/hati_witness_discovery.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "experiments/coherence-sense-android/macos-witness-service.sh",
+    "scripts/build_hati_os_public_assets.sh",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_android_sense_autodiscovery.json",
+    "docs/system_audit/commit_evidence_2026-06-14_macos_witness_service_android_updater.json"
+  ],
+  "evidence_refs": [
+    "~/Library/LaunchAgents/earth.hati.coherence-sense.mac-witness.plist",
+    "~/Library/Logs/CoherenceSense/mac-witness.out.log",
+    "~/Library/Logs/CoherenceSense/mac-witness.err.log",
+    "http://localhost:8800/.well-known/hati-witness",
+    ".cache/android-sense-public-handshake/20260613T163129Z/android-sense-public-handshake-summary.json",
+    ".cache/hati-os-public-assets/20260613T163129Z/hati-os-public-assets-summary.json",
+    "https://hati.earth/downloads/hati-os/hati-os-public-assets-summary.json",
+    "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "chmod +x experiments/coherence-sense-android/macos-witness-service.sh && bash -n experiments/coherence-sense-android/macos-witness-service.sh",
+      "python3 -m py_compile experiments/coherence-sense-android/hati_witness_discovery.py experiments/coherence-sense-android/mac-witness-server.py experiments/coherence-sense-android/coherence-sense-eval.py",
+      "experiments/coherence-sense-android/macos-witness-service.sh install --mode recognition --port 8800",
+      "kill 19323 && sleep 1 && experiments/coherence-sense-android/macos-witness-service.sh restart --mode recognition --port 8800",
+      "experiments/coherence-sense-android/macos-witness-service.sh status --mode recognition --port 8800",
+      "JAVA_HOME=\"${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}\" ./gradlew :app:assembleDebug",
+      "bash -n scripts/build_hati_os_public_assets.sh && bash -n scripts/verify_android_sense_public_handshake.sh",
+      "curl -fsSL --max-time 20 https://hati.earth/downloads/hati-os/hati-os-public-assets-summary.json",
+      "scripts/verify_android_sense_public_handshake.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_macos_witness_service_android_updater.json"
+    ],
+    "notes": "Prompt guide passed in dirty continuation mode; wellness had no required repair. Python compile and shell syntax checks passed. Initial LaunchAgent install loaded but could not serve discovery because stale foreground PID 19323 (/opt/homebrew/.../Python mac-witness-server.py) already owned port 8800 and served an older dashboard. After verifying the command line, PID 19323 was stopped and the LaunchAgent restarted successfully. Final launchd status: label earth.hati.coherence-sense.mac-witness loaded, state running, pid 49871, dashboard http://localhost:8800, discovery service_type _hati-witness._tcp, mode recognition, port 8800, url http://192.168.0.7:8800. Android Gradle debug build passed with only the existing NSD deprecation warnings. Public Hati asset summary is reachable; current public summary stamp is 20260613T084039Z and lacks download_url, so the app fallback URL remains required until the next publish. Local handshake proof passed with APK sha256 c4a8ea1f8787c4f3392b3923a825407a6d7708e7ce5a7e66c8c1e3c8a6a82be3, local Mac witness frames=1, present=true, organs=accel/gyro/light/mag, local Hati mesh organs_count=2, channels_count=1, android announce receipt rt_c6e644b98175, android heartbeat receipt rt_5fc5f1ab7f17. Generated asset summary includes APK version_code=2, version_name=0.2, download_url=https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk, update_protocol=apk-download-user-consent-installer."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local service was installed and verified on this Mac. Updated APK and asset-summary metadata were built locally but not published to GitHub release or hati.earth in this turn."
+  },
+  "phase_gate": {
+    "phase": "macos-witness-service-and-android-updater",
+    "gate": "The Mac witness is kept alive by launchd with a dashboard and mDNS discovery, and Android can discover, verify, download, and hand an updated APK to the system installer through a visible consent flow.",
+    "state": "local-proof-pass-public-publish-pending",
+    "can_move_next_phase": false,
+    "next": "Publish the rebuilt APK and asset summary, then install the APK on a real Android device and verify the update button sees the next release and opens Android's installer after hash verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Mac witness no longer depends on an open terminal; it starts at login, restarts after crashes, serves http://localhost:8800, and advertises _hati-witness._tcp. The Android app now checks the public Hati asset summary, displays update state, downloads the published APK, verifies SHA-256, and opens Android's installer with user consent.",
+    "public_endpoints": [
+      "local:launchd-earth.hati.coherence-sense.mac-witness",
+      "local:http://localhost:8800",
+      "local:http://localhost:8800/.well-known/hati-witness",
+      "https://hati.earth/downloads/hati-os/hati-os-public-assets-summary.json",
+      "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk"
+    ],
+    "test_flows": [
+      "Install and restart the macOS LaunchAgent, then verify launchd running state and the local witness discovery descriptor.",
+      "Build the Android debug APK with update check, FileProvider, and REQUEST_INSTALL_PACKAGES support.",
+      "Probe the public Hati asset summary so the updater's current source endpoint is known reachable.",
+      "Run the local Android sense public handshake harness to prove APK build, generated public asset summary with update metadata, Mac witness /sense and discovery, local mesh announce/heartbeat/list, and channel offer."
+    ],
+    "summary": "Local macOS always-on service and Android updater build/proof passed. Device-side installer flow still needs real-device verification because adb/device access was not available here."
+  }
+}

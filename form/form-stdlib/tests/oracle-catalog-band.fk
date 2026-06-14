@@ -7,7 +7,7 @@
 ; and know its ground-truth role and whether sampling it crosses a membrane. Honest by construction: the
 ; counts are walked over the rows, not asserted; the remote-membrane teacher is present and flagged, not hidden.
 ;
-; Verdict 511 when every claim lands:
+; Verdict 16383 when every claim lands:
 ;   1   the catalog is a non-empty sequence of teacher rows
 ;   2   the ear's teacher is whisper-cli, installed, local
 ;   4   the voice's teacher is say, ground-truth role generate
@@ -17,6 +17,11 @@
 ;   64  exactly one teacher crosses a membrane; the rest are local
 ;   128 installed-count, walked over the rows, is the five teachers actually marked installed
 ;   256 a lane lookup returns the right teacher; an unknown lane returns an absent row, never a silent pick
+;   512 fifteen evidence-oracle lanes are known for learning loops
+;   1024 evidence lane installed and remote counts are walked, not asserted
+;   2048 compiler and package-registry oracles are separately grounded
+;   4096 source-grounding and CI-provider oracles are remote membranes
+;   8192 unknown evidence kinds return absent rows, never a silent pick
 (do
     (defn ocb-lane (lane) (oc-for-lane (oc-catalog) lane))
 
@@ -27,6 +32,12 @@
     (let inner (ocb-lane "local-llm"))
     (let remote (ocb-lane "remote-llm"))
     (let unknown (ocb-lane "taste"))
+    (let evidence (oc-evidence-catalog))
+    (let compiler (oc-evidence-for-kind evidence "code-lowering"))
+    (let package (oc-evidence-for-kind evidence "dependency-evidence"))
+    (let source (oc-evidence-for-kind evidence "source-grounding"))
+    (let ci (oc-evidence-for-kind evidence "execution-proof"))
+    (let unknown-evidence (oc-evidence-for-kind evidence "dream-proof"))
 
     (let c0 (if (gt (len cat) 0) 1 0))
     (let c1 (if (str_eq (oc-invocation ear) "whisper-cli")
@@ -45,5 +56,34 @@
     (let c7 (if (eq (oc-installed-count cat) 5) 128 0))
     (let c8 (if (str_eq (oc-organ unknown) "none")
                 (if (str_eq (oc-state unknown) "absent") 256 0) 0))
+    (let c9 (if (eq (len evidence) 15) 512 0))
+    (let c10
+        (if (and
+                (eq (oc-evidence-state-count evidence "installed") 11)
+                (eq (oc-evidence-remote-count evidence) 5))
+            1024
+            0))
+    (let c11
+        (if (and
+                (str_eq (oc-ev-invocation compiler) "clang")
+                (and
+                    (str_eq (oc-ev-state compiler) "installed")
+                    (and
+                        (str_eq (oc-ev-invocation package) "registry-api")
+                        (str_eq (oc-ev-state package) "protocol-pending"))))
+            2048
+            0))
+    (let c12
+        (if (and
+                (str_eq (oc-ev-trust source) "remote-membrane")
+                (str_eq (oc-ev-trust ci) "remote-membrane"))
+            4096
+            0))
+    (let c13
+        (if (and
+                (str_eq (oc-ev-name unknown-evidence) "none")
+                (str_eq (oc-ev-state unknown-evidence) "absent"))
+            8192
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))

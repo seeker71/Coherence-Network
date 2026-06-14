@@ -109,19 +109,25 @@ echo "== assets =="
 assert_asset \
     "hati-os-macos-arm64.tar.zst" \
     "/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst" \
-    "2874" \
+    "2858" \
     "application/octet-stream" \
     "$base_ip"
 assert_asset \
     "hati-os-android-arm64.tar.zst" \
     "/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst" \
-    "2558443" \
+    "2556719" \
     "application/octet-stream" \
     "$base_ip"
 assert_asset \
     "coherence-sense-hati-mesh-debug.apk" \
     "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk" \
-    "3485702" \
+    "3567172" \
+    "application/vnd.android.package-archive" \
+    "$base_ip"
+assert_asset \
+    "coherence-sense-hati-mesh-release.apk" \
+    "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk" \
+    "2756021" \
     "application/vnd.android.package-archive" \
     "$base_ip"
 

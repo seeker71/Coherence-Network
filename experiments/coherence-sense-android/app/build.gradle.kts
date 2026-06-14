@@ -1,7 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+val signingPropertiesFile = rootProject.file("signing.properties")
+val signingProperties = Properties()
+if (signingPropertiesFile.isFile) {
+    signingPropertiesFile.inputStream().use { signingProperties.load(it) }
+}
+val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { !signingProperties.getProperty(it).isNullOrBlank() }
+
 android {
     namespace = "com.coherence.sense"
     compileSdk = 34
@@ -12,8 +23,23 @@ android {
         versionCode = 2
         versionName = "0.2"
     }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(signingProperties.getProperty("storeFile"))
+                storePassword = signingProperties.getProperty("storePassword")
+                keyAlias = signingProperties.getProperty("keyAlias")
+                keyPassword = signingProperties.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
-        release { isMinifyEnabled = false }
+        release {
+            isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

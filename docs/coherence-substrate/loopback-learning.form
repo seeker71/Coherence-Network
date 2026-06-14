@@ -1,0 +1,99 @@
+# loopback-learning.form - native micro-learning over loopback channel receipts
+
+(loopback-learning
+  (lineage
+    (rests-on channel-loopback.form channel-protocol-choice-floor.form nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk)
+    (recipe form/form-stdlib/loopback-learning.fk)
+    (proof form/form-stdlib/tests/loopback-learning-band.fk -> 65535 four-way)
+    (speech-model-proof form/form-stdlib/tests/speech-model-learning-band.fk -> 16383 four-way)
+    (speech-kernel-channel-proof form/form-stdlib/tests/speech-kernel-channel-band.fk -> 511 four-way)
+    (real-speech-candidate-proof form/form-stdlib/tests/speech-real-candidate-race-band.fk -> 4095 three-kernel))
+
+  (purpose
+    "Let cells learn from each other's emitted channel data through the same Form surfaces used for routing and protocol choice."
+    "A loopback sample becomes a nearest-shape exemplar, while the chosen route/protocol learns from CHOICE-RECEIPT success and failure feedback."
+    "The proof keeps task learning and carrier learning separate: semantic recognition asks what kind of sample arrived; route feedback asks which native path should carry it next.")
+
+  (floor
+    "Six micro loopback scenarios run inside Form across Go/Rust/TS/fkwu: French to Form, Form to ASM, TTS to STT, STT to TTS, FFT music matching, and video shape/time classification."
+    "Two partial cells each learn three exemplars; the merged model reaches 12/12 heldout accuracy and clears a 10/12 accuracy floor."
+    "Each scenario starts on a generic loopback route, then two success receipts move selection to its native route; failure receipts and short-to-long promotion are witnessed.")
+
+  (real-local-sample-floor
+    "Observed local macOS TTS audio, 16 kHz PCM conversion, and local whisper-cli transcript receipts are checked into form/form-stdlib/tests/speech-real-candidate-race-band.fk as Form data rows."
+    "The Form band trains and scores seven candidates over those observed rows: audio-exact STT, audio-L1-full STT, audio-L1-spectral STT, teacher-transcript STT, text-retrieval TTS, mesh TTS+audio-L1, and mesh TTS+teacher-STT."
+    "Current observed counts: audio-exact 1/3, audio-L1-full 0/3, audio-L1-spectral 1/3, teacher-transcript 3/3, text-retrieval TTS 3/3, mesh TTS+audio-L1 0/3, mesh TTS+teacher-STT 3/3. The winner is mesh:tts-text+teacher-stt."
+    "Full Whisper large-v3 GGML is local at /Users/ursmuff/whisper-models/ggml-large-v3.bin sha256=64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2; large-v3-turbo is local at /Users/ursmuff/whisper-models/ggml-large-v3-turbo.bin sha256=1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69."
+    "Live microphone/speaker roundtrip remains a stricter physical lane.")
+
+  (local-speech-model-floor
+    (stt-proven
+      (whisper-large-v3 "full Whisper large-v3 GGML; largest standard Whisper family model now local and proven through whisper-cli")
+      (whisper-large-v3-turbo "fast Whisper large-v3-turbo GGML; proven through whisper-cli and suitable as the default live/interactive floor"))
+    (tts-proven
+      (macos-say "physical local OS TTS source; not an open neural TTS model, but it produces inspectable local audio slices for the current proof"))
+    (tts-open-candidates
+      (kokoro-82m "Apache-2.0 open-weight TTS candidate for the minimal open neural TTS floor")
+      (chatterbox-multilingual-v3 "MIT open-source 0.5B multilingual TTS candidate for richer local voice cloning and multilingual speech"))
+    (stt-open-candidates
+      (nvidia-canary-qwen-2_5b "larger English ASR candidate for maximum accuracy proof")
+      (nvidia-parakeet-tdt-0_6b-v3 "efficient multilingual ASR candidate for streaming/mobile proof"))
+    (oracle-lane
+      (local-llm-auto-best "local LLM receipt generator for labels, confidence, meaning vectors, and impact vectors")
+      (human-teacher "optional feedback path, selected only when metadata asks for human review")))
+
+  (north-star
+    "Every sensing, generation, translation, compiler, and model lane is a first-class learning surface: codecs, exemplars, model weights, route choices, success/failure/silence receipts, and trust gates are native Form/BML data."
+    "Large TTS, STT, FFT, vision, French to Form, and Form to ASM models grow from the same proof shape: real samples enter through typed channel codecs, local/native candidates compete with third-party oracles, receipts train routing and kernels, and promotion requires measured heldout accuracy.")
+
+  (proved-scenarios
+    (french-to-form
+      (sample feature-vector)
+      (route grammar:fr-form)
+      (floor exemplar-classification-plus-choice-receipt-route-feedback)
+      (north-star "French utterances lower through a BML/Form grammar with receipt-backed oracle comparison"))
+    (form-to-asm
+      (sample form-tree-feature-vector)
+      (route lower:form-asm)
+      (floor exemplar-classification-plus-choice-receipt-route-feedback)
+      (north-star "Form trees lower to target assembly through a native compiler learner and measured execution receipts"))
+    (tts-stt-loopback
+      (sample audio-feature-vector)
+      (route audio:tts-stt)
+      (floor exemplar-classification-plus-choice-receipt-route-feedback)
+      (north-star "Generated speech teaches speech-to-text through transcript and waveform fidelity receipts"))
+    (stt-tts-loopback
+      (sample token-feature-vector)
+      (route audio:stt-tts)
+      (floor exemplar-classification-plus-choice-receipt-route-feedback)
+      (north-star "Recognized text teaches text-to-speech through spoken-render match receipts"))
+    (fft-music-match
+      (sample spectral-feature-vector)
+      (route spectral:fft-music)
+      (floor exemplar-classification-plus-choice-receipt-route-feedback)
+      (north-star "Music matching uses native FFT/chroma/spectrum codecs with heldout-match receipts"))
+    (video-shape-loopback
+      (sample visual-feature-vector)
+      (route video:shape-time)
+      (floor exemplar-classification-plus-choice-receipt-route-feedback)
+      (north-star "Video generation and classification teach each other over 2D/3D/time/shape/distance/texture/occlusion/composition/transparency/frequency/spectrum receipts")))
+
+  (learning-contract
+    (semantic-learner nearest-shape)
+    (accuracy-gate classifier-eval)
+    (route-learner branch-choice-order)
+    (feedback choice-receipt-learning)
+    (receipt-outcomes success fail silence)
+    (promotion "short success/failure rolls into long memory only after the threshold is met")
+    (invariant "branch prediction feedback remains separate from alignment, knowing, and trust"))
+
+  (missing-physical-samples
+    (french-to-form "real utterance/text corpus plus Form grammar lowering receipts")
+    (form-to-asm "real Form programs lowered to target assembly with execution parity receipts")
+    (tts-stt-live "live speaker-to-microphone loopback with transcript-match receipts")
+    (stt-tts "real token-to-speech renders with waveform and intelligibility receipts")
+    (fft-music-match "real PCM windows, FFT/chroma features, and heldout music IDs")
+    (video-shape-loopback "real frames, feature vectors, and generation/classification loopback receipts"))
+
+  (next-step
+    "Replace each feature-vector toy sample with the smallest real typed codec slice from the matching channel, while keeping the same receipt, accuracy, route-choice, and promotion contract."))

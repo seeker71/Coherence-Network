@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk form-stdlib/speech-kernel-channel.fk
+;
+; speech-kernel-channel-band — explicit kernel speech channel capability
+; surface. The missing physical codec lane is represented as host-kernel
+; carrier tissue, while feature/model/meta/output lanes are Form-kernel native.
+;
+; Verdict 511 when every claim lands:
+;   1   seven speech kernel lanes are known
+;   2   physical audio and local LLM oracle lanes require host-kernel carriers
+;   4   five lanes are Form-kernel native
+;   8   PCM frame plan carries kernel:host-audio-frame
+;   16  metadata channel is native and discoverable
+;   32  candidate race channel is native and discoverable
+;   64  unknown lane refuses planning
+;   128 host carrier is explicit, not ambient
+;   256 local LLM oracle receipt lane is explicit and plannable
+(do
+    (let lanes (skc-lanes))
+    (let pcm-plan (skc-plan "audio:pcm16-frame"))
+    (let meta-plan (skc-plan "speech:meta-channel"))
+    (let race-plan (skc-plan "speech:candidate-race"))
+    (let oracle-plan (skc-plan "speech:llm-oracle-receipt"))
+    (let missing-plan (skc-plan "speech:ambient-python"))
+    (let c0 (if (eq (len lanes) 7) 1 0))
+    (let c1 (if (eq (skc-state-count lanes "host-kernel-carrier") 2) 2 0))
+    (let c2 (if (eq (skc-state-count lanes "form-kernel-native") 5) 4 0))
+    (let c3
+        (if (str_eq (skc-plan-protocol pcm-plan) "kernel:host-audio-frame")
+            8
+            0))
+    (let c4
+        (if (and
+                (eq (skc-form-kernel-native? "speech:meta-channel") 1)
+                (str_eq (skc-plan-protocol meta-plan) "kernel:speech-meta-vector"))
+            16
+            0))
+    (let c5
+        (if (and
+                (eq (skc-form-kernel-native? "speech:candidate-race") 1)
+                (str_eq (skc-plan-protocol race-plan) "kernel:speech-model-choice"))
+            32
+            0))
+    (let c6 (if (str_eq (head missing-plan) "speech/no-plan") 64 0))
+    (let c7
+        (if (and
+                (eq (skc-host-kernel-required? "audio:pcm16-frame") 1)
+                (eq (skc-host-kernel-required? "speech:meta-channel") 0))
+            128
+            0))
+    (let c8
+        (if (and
+                (str_eq (skc-plan-protocol oracle-plan) "kernel:local-llm-oracle")
+                (and
+                    (str_eq (skc-plan-capability oracle-plan) "cap.local.llm.oracle")
+                    (eq (skc-host-kernel-required? "speech:llm-oracle-receipt") 1)))
+            256
+            0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

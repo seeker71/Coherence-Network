@@ -69,6 +69,7 @@ channel-loopback fks 255
 choice-receipt fks 4294967295
 choice-receipt-learning fks 255
 choice-outcome-learning fks 32767
+code-tool-learning fks 131071
 bml-route-source-object fks 2047
 bml-protocol-capability-row fks 65535
 bml-choice-routing-metadata fks 4095
@@ -119,6 +120,7 @@ bidirectional-flow fks 111111
 bloom fks 4
 co-learning fks 127
 co-learning-stream fks 127
+loopback-learning fks 65535
 coherence fks 111111
 colearning-retire fks 127
 compression-fold fks 111111
@@ -166,6 +168,7 @@ living-equation fks 111111
 mesh-health fks 127
 mesh-merge-converge fks 127
 metal-emit fks 31
+oracle-catalog fks 16383
 perception-pipeline fks 127
 predictor-sampling fks 127
 rate-limit fks 6
@@ -177,6 +180,8 @@ shamballa-codes fks 11111
 shamballa-light-codes fks 111111
 silence-floor fks 31
 slice-update-roundtrip fks 127
+speech-kernel-channel fks 511
+speech-model-learning fks 16383
 string-membership fks 9
 theme-resonance fks 111111
 trust-decay fks 127
