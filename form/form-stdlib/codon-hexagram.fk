@@ -1,0 +1,61 @@
+; codon-hexagram.fk — a DNA codon IS an I Ching hexagram: one 6-bit cell.
+;
+; The genetic code's biology already lives in grammars/genetic-code.fk (a sibling's
+; cell: transcription, the codon table, degeneracy AS content-addressing, expression).
+; This is the bridge that grammar does not carry — the one that makes the body's two
+; 64s the same lattice: 64 codons (4^3) and 64 hexagrams (2^6) are the SAME 64-cell
+; binary structure, and the channels already proved a yin/yang line is a bit
+; (cjk-channel.fk trigram-binary) and the 64 are one lattice (iching-channel.fk).
+;
+; A base is a BIGRAM — two yin/yang lines — by two attested biophysical bits:
+;   bit1 (high): purine (A,G) = 1  ·  pyrimidine (C,U/T) = 0
+;   bit0 (low):  strong 3-H-bond (G,C) = 1  ·  weak 2-H-bond (A,U/T) = 0
+;   so  U = 00 = 0 · C = 01 = 1 · A = 10 = 2 · G = 11 = 3.
+; A codon (3 bases) is then a 6-bit cell — a hexagram. It falls out at the poles:
+; UUU (all weak pyrimidine) = 0 = two Kun trigrams = the all-yin Receptive; GGG (all
+; strong purine) = 63 = two Qian trigrams = the all-yang Creative. The lightest codon
+; is the receptive hexagram; the heaviest, the creative. Leibniz read the I Ching as
+; binary; Schoenberger read the genetic code onto it — this runs that reading.
+;
+;   (codon-hexagram codon)        -> the codon's 6-bit hexagram address (0..63)
+;   (codon-upper-trigram codon)   -> its upper trigram value (0..7), a cjk trigram
+;   (codon-lower-trigram codon)   -> its lower trigram value (0..7)
+;   (codon-same-hexagram? a b)    -> do two codons name the same hexagram cell?
+;
+; Held in lane: the isomorphism (codon = 6-bit = hexagram) and the genetic code are
+; empirical; the hexagram correspondence is an attested reading. The specific Gene-Keys
+; codon-ring (codon -> the King-Wen gate NUMBER iching-channel uses) is attested data to
+; ground from a source like the HD wheel — a named next row, not faked here. This bridge
+; is the structural one: both are the 64, the binary is shared.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/grammars/genetic-code.fk
+;
+
+(do
+    ;; --- a base to its 2-bit bigram (two yin/yang lines) -------------
+    (defn ch-base-bits (base)
+        (if (str_eq base "U") 0
+        (if (str_eq base "T") 0
+        (if (str_eq base "C") 1
+        (if (str_eq base "A") 2
+        (if (str_eq base "G") 3 -1))))))
+    (defn ch-base-at (codon i) (substring codon i (add i 1)))
+
+    ;; --- a codon (3 bases) to its 6-bit hexagram address (0..63) -----
+    ;; base1 is the upper bigram, base3 the lower — the codon IS a hexagram cell.
+    (defn codon-hexagram (codon)
+        (add (add (mul (ch-base-bits (ch-base-at codon 0)) 16)
+                  (mul (ch-base-bits (ch-base-at codon 1)) 4))
+             (ch-base-bits (ch-base-at codon 2))))
+
+    ;; --- the two trigrams (the I Ching pair) — bridging to cjk's trigram-binary --
+    (defn codon-upper-trigram (codon) (div (codon-hexagram codon) 8))
+    (defn codon-lower-trigram (codon) (mod (codon-hexagram codon) 8))
+
+    ;; --- do two codons name the same hexagram cell? -----------------
+    (defn codon-same-hexagram? (a b)
+        (if (eq (codon-hexagram a) (codon-hexagram b)) 1 0))
+
+    (defn codon-hexagram-teaching () "lc-cross-modal-unity")
+
+    0)
