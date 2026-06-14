@@ -1,0 +1,115 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/bml-hati-overload-resolution-20260614",
+  "commit_scope": "Move BML/Hati compiled method calls from name-only lookup to arity-selected overload resolution.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "bml-native-compiler",
+    "hati-fourth-kernel",
+    "form-native-jit"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "bml-hati-overload-resolution-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-overload-resolution-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_bml_hati_overload_resolution.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-overload-resolution-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_bml_hati_overload_resolution.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/grammars/bml.fk#bml-hati-method-binding-for-arity",
+    "form/form-stdlib/grammars/bml.fk#bml-hati-lower-method-ref-call",
+    "form/form-stdlib/grammars/bml.fk#bml-hati-lower-call-in",
+    "form/form-stdlib/tests/bml-hati-native-overload-resolution-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash scripts/agent-coord.sh claim bml-hati-overload-resolution \"walk next BML/Hati native compiler floor: compiled overloaded method calls select by arity while type/generic overload choice remains named\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-overload-resolution-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-overload-resolution-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-method-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-class-template-overload-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-hati-native-overload-resolution-proof.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh"
+    ],
+    "notes": "Focused overload-resolution proof returns 19 across Go/Rust/TypeScript and binary artifact mode, and was rerun after rebasing on the upstream record-carrier floor. Floor proof returns 26. Prior method-call, multi-arg, and class/template/overload proofs remain 19, 20, and 23. bml-compiler-runtime returns 131012 and compiler proof returns 39. Pre-rebase full Form validation returned fourth arm: 138 band(s) four-way, 560 ok, and 0 divergent. After rebase, upstream carries the record-carrier floor at 139 four-way bands; this slice adds one passing overload proof sample, so form/fourth-arm-bands.txt records 139 four-way bands and 560 total passing. Two post-rebase full-suite retries were terminated by the host during fourth-arm table flattening before any divergence summary was emitted. The new BML/Hati proof itself is 3-kernel only because fourth-arm mutable record admission for this proof family remains a named gap."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this compiler-floor slice. Public proof waits for merge/deploy when the compiler surface is promoted."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local compiler, fourth-arm suite, and metal-plane proof passed; CI, PR review, and merge remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A BML/Hati compiled method call now selects the overloaded method binding whose name and arity match the call, so Pick(), Pick(int), and Pick(int,int) can coexist and lower to distinct Hati calls while Pick with the wrong arity returns BML-HATI-UNSUPPORTED call/arity.",
+    "public_endpoints": [
+      "local:form-stdlib-bml-hati-native-overload-resolution-proof"
+    ],
+    "test_flows": [
+      "Build a Hati block with three Pick overloads at arities 0, 1, and 2.",
+      "Compile and run Pick(), Pick(40), and Pick(19, 23) through bml-hati-compile-image and bml-hati-run-value.",
+      "Verify the wrong-arity Pick(1, 2, 3) path emits BML-HATI-UNSUPPORTED call/arity.",
+      "Verify the two-argument compiled table carries the expected indirect-call payload marker."
+    ]
+  }
+}
