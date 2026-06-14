@@ -1,0 +1,72 @@
+; translation-quality.fk — a translation is accepted by essence, vitality, and trust, not equality.
+;
+; The refinement (Urs): we don't need 100% equality. We need round-trip ESSENCE capture and
+; VITALITY maintenance — not losing essence, vitality, and TRUST is the key when translating.
+; Cache the translations; let higher-quality translators spot-check and improve.
+;
+; This corrects the acceptance metric. translation-learn.fk's first A/B used champion-
+; challenger EXACT correctness — wrong for language. Here the gate is the five lenses
+; (lenses.fk) read on the round-trip: a translation passes when essence (the meaning lens),
+; vitality, and trust stay ABOVE A FLOOR — even if the surface string differs. A different
+; word that keeps the essence and the aliveness and the trust is a GOOD translation; an
+; exact-looking word that drops the trust is a bad one. The proof contract for round-trip
+; (no-collapse, reciprocal, holdout) lives in meaning-translation-receipt.fk; this adds the
+; gradient lenses it lacked.
+;
+;   (tq-accept? readings)      -> 1 if every lens reading clears the floor (not equality)
+;   (tq-refusal readings)      -> "accepted" or "lost-<lens>" (which lens fell, named honestly)
+;   (tq-key-lenses)            -> the load-bearing three: meaning (essence), vitality, trust
+;   (tq-oracle-tier i rate)    -> "high-quality" on the spot-check sample, else "bulk"
+;   (tq-cache-hit? cached)     -> 1: a cached/learned pair needs no oracle call
+;   (tq-needs-improve? readings)-> 1: below floor — re-translate with the higher-quality oracle
+;
+; The retention scores (0..100, how much of each lens survived the round-trip) come from the
+; carriers lenses.fk already routes to — meaning from the channel, vitality/trust measured —
+; this is the GATE over them, four-way. Held in lane: the floor is a tunable threshold, not a
+; truth; honest refusal names the lost lens rather than pretending the translation is whole.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/lenses.fk
+;
+
+(do
+    ;; the retention floor — pass a lens at >= floor%, never demand 100% equality
+    (defn tq-floor () 70)
+    (defn tq-lens-pass? (retention) (ge retention (tq-floor)))
+
+    ;; a per-lens reading: (lens-name, retention 0..100)
+    (defn tq-reading (lens retention) (list lens retention))
+    (defn tq-r-lens (r) (nth r 0))
+    (defn tq-r-val  (r) (nth r 1))
+
+    ;; the gate: every lens reading must clear the floor (the round-trip kept it)
+    (defn tq-all-pass? (readings)
+        (if (eq (len readings) 0) 1
+            (if (tq-lens-pass? (tq-r-val (head readings)))
+                (tq-all-pass? (tail readings))
+                0)))
+    ;; acceptance — essence + vitality + trust (and any lens given) survive; NOT equality
+    (defn tq-accept? (readings) (tq-all-pass? readings))
+
+    ;; the load-bearing lenses Urs named: essence (the meaning lens), vitality, trust
+    (defn tq-key-lenses () (list "meaning" "vitality" "trust"))
+
+    ;; honest refusal — the first lens that fell below the floor, named
+    (defn tq-refusal (readings)
+        (if (eq (len readings) 0) "accepted"
+            (if (tq-lens-pass? (tq-r-val (head readings)))
+                (tq-refusal (tail readings))
+                (str_concat "lost-" (tq-r-lens (head readings))))))
+
+    ;; --- the tiered oracle: bulk for all, higher-quality spot-check on a sample --
+    (defn tq-oracle-tier (sample-index spot-rate)
+        (if (eq (mod sample-index spot-rate) 0) "high-quality" "bulk"))
+
+    ;; --- the cache: a learned/cached pair needs no oracle call ------------------
+    (defn tq-cache-hit? (cached) (if (eq cached 1) 1 0))
+
+    ;; --- spot-check improves: below the floor -> re-translate with the better oracle --
+    (defn tq-needs-improve? (readings) (if (eq (tq-accept? readings) 1) 0 1))
+
+    (defn translation-quality-teaching () "lc-cross-modal-unity")
+
+    0)

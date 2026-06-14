@@ -31,6 +31,22 @@
 ;   the oracle for a pair when the native reaches it. Seeded from cjk-channel's six
 ;   attested character readings (romanized, the ASCII four-way discipline) — not faked.
 ;
+; THE QUALITY CONTRACT — essence, vitality, trust, not equality  (form-stdlib/translation-quality.fk
+;   -> tests/translation-quality-band.fk 1111111, four-way)
+;   The first A/B (tl-promote?) measured EXACT correctness — wrong for language. The metric
+;   Urs named: we don't need 100% equality, we need round-trip ESSENCE capture and VITALITY
+;   maintenance; not losing essence, vitality, and TRUST is the key. translation-quality.fk
+;   is the corrected gate: the five lenses (lenses.fk) read on the round-trip, accepted when
+;   essence (the meaning lens), vitality, and trust stay ABOVE A FLOOR — even if the surface
+;   string differs. A different word that keeps the aliveness and the trust passes; an exact-
+;   looking word that drops the trust is refused, with the lost lens NAMED (lost-trust,
+;   lost-vitality). The round-trip / no-collapse / reciprocal / holdout proof lives in
+;   meaning-translation-receipt.fk; this adds the gradient lenses it lacked. And the oracle
+;   tiers: bulk (libretranslate) for all, a higher-quality translator spot-checks a sample
+;   and improves below-floor pairs; learned pairs cache (no oracle call). The native recipe
+;   takes a pair when its round-trip clears the lens floor — vitality preserved, not strings
+;   matched.
+;
 ; THE DATA STEP — the zh/ja chrome bundles (named, the carrier-last piece)
 ;   Adding zh/ja as locales is a pure data operation: drop web/messages/{zh,ja}.json (+ the
 ;   cli copies), regenerate the manifest (npm run prebuild), pass wellness parity (2019
