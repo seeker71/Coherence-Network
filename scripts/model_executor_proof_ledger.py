@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -31,8 +34,9 @@ LEGACY_FIELDS = (
     "pass_fail",
     "failure_reason",
 )
-VALID_PASS_FAIL = {"pass", "fail"}
+VALID_PASS_FAIL = {"pass", "fail", "pending"}
 DEFAULT_LEDGER_DIR = Path("docs/system_audit/model_executor_run_ledger")
+DEFAULT_LEGACY_JSONL = Path("docs/system_audit/model_executor_runs.jsonl")
 
 
 class LedgerError(ValueError):
@@ -67,9 +71,11 @@ def validate_record(record: dict[str, Any], *, path: Path | None = None) -> list
     if missing:
         errors.append(f"{label}: missing required fields: {missing}")
 
-    for field in ("run_id", "thread_branch", "model_used", "failure_reason"):
+    for field in ("run_id", "thread_branch", "model_used"):
         if field in record and not _non_empty_string(record.get(field)):
             errors.append(f"{label}: {field} must be a non-empty string")
+    if "failure_reason" in record and not isinstance(record.get("failure_reason"), str):
+        errors.append(f"{label}: failure_reason must be a string")
 
     for field in ("input_tokens", "output_tokens", "attempts"):
         value = record.get(field)
@@ -107,6 +113,60 @@ def validate_record(record: dict[str, Any], *, path: Path | None = None) -> list
     return errors
 
 
+def _canonical_json(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def _legacy_signature(row: dict[str, Any]) -> str:
+    return hashlib.sha256(_canonical_json(row).encode("utf-8")).hexdigest()
+
+
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug[:48] or "legacy-row"
+
+
+def load_legacy_jsonl(jsonl_path: Path) -> list[tuple[int, dict[str, Any]]]:
+    rows: list[tuple[int, dict[str, Any]]] = []
+    if not jsonl_path.exists():
+        return rows
+    try:
+        lines = jsonl_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise LedgerError(f"{jsonl_path}: cannot read file: {exc}") from exc
+    for line_no, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError as exc:
+            raise LedgerError(f"{jsonl_path}:{line_no}: invalid JSON: {exc}") from exc
+        if not isinstance(row, dict):
+            raise LedgerError(f"{jsonl_path}:{line_no}: row must be a JSON object")
+        rows.append((line_no, row))
+    return rows
+
+
+def validate_legacy_row(row: dict[str, Any], *, label: str) -> list[str]:
+    errors: list[str] = []
+    missing = [field for field in LEGACY_FIELDS if field not in row]
+    if missing:
+        errors.append(f"{label}: missing legacy fields: {missing}")
+        return errors
+    record = {
+        "run_id": label,
+        "thread_branch": "legacy-jsonl-import",
+        "source": {"kind": "legacy-jsonl-import", "path": label},
+        "validation": {
+            "status": str(row.get("pass_fail") or "pending").strip().lower(),
+            "commands": row.get("commands_run"),
+        },
+        **{field: row[field] for field in LEGACY_FIELDS},
+    }
+    errors.extend(validate_record(record, path=Path(label)))
+    return errors
+
+
 def load_records(ledger_dir: Path) -> list[tuple[Path, dict[str, Any]]]:
     if not ledger_dir.exists():
         return []
@@ -138,15 +198,108 @@ def legacy_row(record: dict[str, Any]) -> dict[str, Any]:
 
 def export_jsonl(ledger_dir: Path) -> str:
     rows = [legacy_row(record) for _path, record in load_records(ledger_dir)]
-    return "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in rows)
+    return "".join(_canonical_json(row) + "\n" for row in rows)
+
+
+def _projection_counter(records: list[tuple[Path, dict[str, Any]]]) -> Counter[str]:
+    return Counter(_canonical_json(legacy_row(record)) for _path, record in records)
+
+
+def import_jsonl(ledger_dir: Path, jsonl_path: Path) -> list[Path]:
+    records = load_records(ledger_dir)
+    available_native_counts = Counter(_legacy_signature(legacy_row(record)) for _path, record in records)
+    written: list[Path] = []
+
+    for line_no, row in load_legacy_jsonl(jsonl_path):
+        label = f"{jsonl_path}:{line_no}"
+        errors = validate_legacy_row(row, label=label)
+        if errors:
+            raise LedgerError("; ".join(errors))
+        signature = _legacy_signature(row)
+        if available_native_counts[signature] > 0:
+            available_native_counts[signature] -= 1
+            continue
+
+        run_id = f"legacy-jsonl-{line_no:04d}-{signature[:12]}"
+        path = ledger_dir / f"{run_id}.json"
+        record = {
+            "ledger_schema": "model_executor_proof_run/v1",
+            "run_id": run_id,
+            "thread_branch": "legacy-jsonl-import",
+            "model_used": row["model_used"],
+            "input_tokens": row["input_tokens"],
+            "output_tokens": row["output_tokens"],
+            "attempts": row["attempts"],
+            "commands_run": row["commands_run"],
+            "pass_fail": row["pass_fail"],
+            "failure_reason": row["failure_reason"],
+            "source": {
+                "kind": "legacy-jsonl-import",
+                "path": f"{jsonl_path}#L{line_no}",
+            },
+            "validation": {
+                "status": str(row["pass_fail"]).strip().lower(),
+                "commands": row["commands_run"],
+            },
+            "legacy": {
+                "jsonl_path": str(jsonl_path),
+                "line": line_no,
+                "row_sha256": signature,
+                "summary": _slug(str(row["failure_reason"])),
+            },
+        }
+        errors = validate_record(record, path=path)
+        if errors:
+            raise LedgerError("; ".join(errors))
+        ledger_dir.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        written.append(path)
+    return written
+
+
+def sync_jsonl(ledger_dir: Path, jsonl_path: Path) -> str:
+    records = load_records(ledger_dir)
+    remaining = _projection_counter(records)
+    rows: list[dict[str, Any]] = []
+
+    for _line_no, row in load_legacy_jsonl(jsonl_path):
+        canonical = _canonical_json(row)
+        if remaining[canonical] <= 0:
+            continue
+        rows.append(row)
+        remaining[canonical] -= 1
+
+    for _path, record in records:
+        row = legacy_row(record)
+        canonical = _canonical_json(row)
+        if remaining[canonical] <= 0:
+            continue
+        rows.append(row)
+        remaining[canonical] -= 1
+
+    return "".join(_canonical_json(row) + "\n" for row in rows)
+
+
+def check_jsonl(ledger_dir: Path, jsonl_path: Path) -> list[str]:
+    errors: list[str] = []
+    legacy_rows = load_legacy_jsonl(jsonl_path)
+    for line_no, row in legacy_rows:
+        errors.extend(validate_legacy_row(row, label=f"{jsonl_path}:{line_no}"))
+    native = _projection_counter(load_records(ledger_dir))
+    legacy = Counter(_canonical_json(row) for _line_no, row in legacy_rows)
+    for canonical, count in sorted((native - legacy).items()):
+        errors.append(f"{jsonl_path}: missing {count} native projection row(s): {canonical}")
+    for canonical, count in sorted((legacy - native).items()):
+        errors.append(f"{jsonl_path}: has {count} row(s) without native ledger record: {canonical}")
+    return errors
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate or export native executor proof-run records")
     parser.add_argument(
         "command",
-        choices=("validate", "export-jsonl"),
-        help="validate native records or export them as legacy JSONL",
+        choices=("validate", "export-jsonl", "import-jsonl", "sync-jsonl", "check-jsonl"),
+        help="validate native records, import legacy JSONL, or sync/check the JSONL cache",
     )
     parser.add_argument(
         "--ledger-dir",
@@ -158,7 +311,13 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Write export-jsonl output to this path instead of stdout",
+        help="Write export-jsonl or sync-jsonl output to this path instead of stdout",
+    )
+    parser.add_argument(
+        "--jsonl",
+        type=Path,
+        default=DEFAULT_LEGACY_JSONL,
+        help=f"Legacy JSONL cache path (default: {DEFAULT_LEGACY_JSONL})",
     )
     args = parser.parse_args()
 
@@ -172,7 +331,29 @@ def main() -> int:
         print(f"OK: model executor proof ledger valid ({len(load_records(args.ledger_dir))} record(s))")
         return 0
 
-    payload = export_jsonl(args.ledger_dir)
+    if args.command == "import-jsonl":
+        try:
+            written = import_jsonl(args.ledger_dir, args.jsonl)
+        except LedgerError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"OK: imported {len(written)} legacy JSONL row(s) into {args.ledger_dir}")
+        return 0
+
+    if args.command == "check-jsonl":
+        try:
+            jsonl_errors = check_jsonl(args.ledger_dir, args.jsonl)
+        except LedgerError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        if jsonl_errors:
+            for error in jsonl_errors:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 1
+        print(f"OK: {args.jsonl} matches native ledger projection")
+        return 0
+
+    payload = sync_jsonl(args.ledger_dir, args.jsonl) if args.command == "sync-jsonl" else export_jsonl(args.ledger_dir)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(payload, encoding="utf-8")

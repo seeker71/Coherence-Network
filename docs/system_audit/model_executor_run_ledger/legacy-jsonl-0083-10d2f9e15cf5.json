@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "cd web && npm run build",
+    "rg scan for legacy /vision hub catalog labels and arrays"
+  ],
+  "failure_reason": "The next DB migration slice moved /vision hub data out of React arrays. A new /api/vision/{domain}/hub endpoint reads scoped graph nodes for sections, galleries, blueprints, emerging visions, and orientation words; /vision now renders that payload with explicit empty states instead of embedding the hub catalog in code.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 83,
+    "row_sha256": "10d2f9e15cf50ff104b1f943918cdb4841928a5a3b263d52a760ae2c38fce5ce",
+    "summary": "the-next-db-migration-slice-moved-vision-hub-dat"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0083-10d2f9e15cf5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L83"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "cd web && npm run build",
+      "rg scan for legacy /vision hub catalog labels and arrays"
+    ],
+    "status": "pass"
+  }
+}

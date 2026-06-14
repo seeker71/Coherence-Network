@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd web && npm install",
+    "cd web && npm test -- form-kernel-field-runtime.test.ts",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+    "cd web && npm run build",
+    "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+    "cd form/form-kernel-ts && npx tsx src/field.test.ts",
+    "cd form/form-kernel-ts && npm install",
+    "cd form/form-kernel-ts && npm run check",
+    "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts"
+  ],
+  "failure_reason": "Browser TypeScript FMF now executes fieldStep, observer intervention, reverseReceipt, lift/project, conflict residuals, and unit-carrying field laws. Go/Rust remain explicitly bounded to structural FMF constructor proof until native runtime value layers are added.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 161,
+    "row_sha256": "c7993eee3ed56cf379fc6f635822b85a2dfe0d85133faf407260b61f6a1ca764",
+    "summary": "browser-typescript-fmf-now-executes-fieldstep-ob"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0161-c7993eee3ed5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L161"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-field-runtime.test.ts",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "cd web && npm run build",
+      "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+      "cd form/form-kernel-ts && npx tsx src/field.test.ts",
+      "cd form/form-kernel-ts && npm install",
+      "cd form/form-kernel-ts && npm run check",
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim choice-outcome-learning \"walk typed BranchOutcome floor for ok/reject/condition choice learning; keep low-level fail thin; avoid learning-fabric sibling dirty lane\"",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/choice-outcome-learning-band.fk && cat form-stdlib/.cache/fourth-survey/r-choice-outcome-learning.tsv",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-outcome-learning.fk form-stdlib/tests/choice-outcome-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "cd form && scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+    "cd form && bash scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+    "cd form && ./validate.sh"
+  ],
+  "failure_reason": "Added Form-native BranchOutcome values for ok/reject/condition. Focused fourth-arm survey returns choice-outcome-learning multi-pass 32767 32767; focused validate returns choice-outcome-learning -> 32767 and channel-protocol-choice-floor -> 32767 with fourth arm: 1 band(s) four-way and 0 divergent for each. Direct fourth-arm-gate.sh invocation hit permission denied because the script is not executable; bash rerun returned PASS-4WAY for both bands. The full Form suite was attempted but stopped during the long monolithic fourth-table flatten without a verdict, so this record claims focused four-way admission rather than a completed global suite refresh.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 351,
+    "row_sha256": "4f7d26fac399d47235d72b690f6685a24c79323df063de318c3a60d85933ff87",
+    "summary": "added-form-native-branchoutcome-values-for-ok-re"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0351-4f7d26fac399",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L351"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim choice-outcome-learning \"walk typed BranchOutcome floor for ok/reject/condition choice learning; keep low-level fail thin; avoid learning-fabric sibling dirty lane\"",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/choice-outcome-learning-band.fk && cat form-stdlib/.cache/fourth-survey/r-choice-outcome-learning.tsv",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-outcome-learning.fk form-stdlib/tests/choice-outcome-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+      "cd form && bash scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}

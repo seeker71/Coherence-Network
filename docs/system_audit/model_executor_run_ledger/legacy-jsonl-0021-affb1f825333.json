@@ -1,0 +1,34 @@
+{
+  "attempts": 5,
+  "commands_run": [
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "GET /api/agent/tasks/task_806d6f4686dfa9d4"
+  ],
+  "failure_reason": "Dropping to non-root still hit permission-denied via /root/.local/bin/claude; runner now filters root-only PATH entries and promotes CLI binaries to shared executable paths.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 21,
+    "row_sha256": "affb1f8253330289dc571f1a2db23ecf9aa513b0a36c9442936e5c9a8de48f3b",
+    "summary": "dropping-to-non-root-still-hit-permission-denied"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0021-affb1f825333",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L21"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "GET /api/agent/tasks/task_806d6f4686dfa9d4"
+    ],
+    "status": "pass"
+  }
+}

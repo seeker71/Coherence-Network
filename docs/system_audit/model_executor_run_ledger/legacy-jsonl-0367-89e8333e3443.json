@@ -1,0 +1,58 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"Form-native speech learner oracle lane and proof cleanup\"",
+    "ollama list",
+    "for x in clang swiftc ffmpeg ollama git rg npm node adb whisper-cli xmllint jq curl; do printf '%-12s ' \"$x\"; command -v \"$x\" || true; done",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/loopback-learning.fk form-stdlib/tests/loopback-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-model-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/speech-kernel-channel.fk form-stdlib/tests/speech-kernel-channel-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-real-candidate-race-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/oracle-catalog.fk form-stdlib/tests/oracle-catalog-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_code_tool_learning.json",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_oracle_catalog_evidence_lanes.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Superseded the Python speech-runner path with checked-in Form-native speech/model/kernel/oracle learning surfaces. speech-model-learning now proves local LLM oracle receipts, high-dimensional metadata, and optional human feedback routing at 16383 four-way. speech-kernel-channel proves explicit audio frame and local LLM oracle host-kernel carriers at 511 four-way. speech-real-candidate-race keeps observed local audio-derived rows as Form data and returns 4095 on Go/Rust/TypeScript. code-tool-learning adds a Form-native code generation/tool-use sideband with A/B candidates, token-cost receipts, metadata gates, compiler/source-grounding oracle requests, the low-token floor-oracle winner, and the natural-language to Form/BML/domain-grammar to Form-binary to host-native-ASM lowering path at 131071 four-way. oracle-catalog names fifteen third-party evidence lanes and returns 16383 four-way. Remaining Python use in this record is repo evidence validation only, not a speech/model carrier.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 367,
+    "row_sha256": "89e8333e344351b14c0e131bde45c5b4647d2ff1559c93ca5f51a4c3e8c5997d",
+    "summary": "superseded-the-python-speech-runner-path-with-ch"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0367-89e8333e3443",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L367"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"Form-native speech learner oracle lane and proof cleanup\"",
+      "ollama list",
+      "for x in clang swiftc ffmpeg ollama git rg npm node adb whisper-cli xmllint jq curl; do printf '%-12s ' \"$x\"; command -v \"$x\" || true; done",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/loopback-learning.fk form-stdlib/tests/loopback-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-model-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/speech-kernel-channel.fk form-stdlib/tests/speech-kernel-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-real-candidate-race-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/oracle-catalog.fk form-stdlib/tests/oracle-catalog-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_code_tool_learning.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_oracle_catalog_evidence_lanes.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_executor_policy.py",
+    "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Hosted runner generated claude commands even when claude binary was unavailable, causing repeated /bin/sh: 1: claude: not found failures. Added executor availability fallback for explicit and policy-disabled defaults.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 12,
+    "row_sha256": "8e294a9a801a27b44e067002df4f0e272ee1036104d3be3f58a80b483b5431f0",
+    "summary": "hosted-runner-generated-claude-commands-even-whe"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0012-8e294a9a801a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L12"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_executor_policy.py",
+      "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

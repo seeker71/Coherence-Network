@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/dynamic-adapter-registry-band.fk form-stdlib/tests/recipe-capsule-abi-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/dynamic-adapter-registry-band.fk form-stdlib/tests/recipe-capsule-abi-band.fk"
+  ],
+  "failure_reason": "Wired existing real BMF dialects into the runtime capability registry as recipe capsules. Python, TypeScript, Go, Rust, natural language, image, audio, video, and document dialects register dynamically, parse source-object requests into Form BMF objects, and reverse Python/image objects back to source objects through the same capsule contract in source and binary modes.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 168,
+    "row_sha256": "d26b1c891d4e962bf928ab46ee3f7c5384a78e07d1223ff5115917a3d3d2fc41",
+    "summary": "wired-existing-real-bmf-dialects-into-the-runtim"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0168-d26b1c891d4e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L168"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/dynamic-adapter-registry-band.fk form-stdlib/tests/recipe-capsule-abi-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/dynamic-adapter-registry-band.fk form-stdlib/tests/recipe-capsule-abi-band.fk"
+    ],
+    "status": "pass"
+  }
+}

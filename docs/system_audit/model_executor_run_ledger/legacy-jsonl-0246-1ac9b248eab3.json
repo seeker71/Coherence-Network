@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk",
+    "cd api && python3 -m pytest -q tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py",
+    "cd api && python3 -m ruff check tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier.md --file specs/ideas-router-form-expression.md --file specs/graph-node-mutation-native-carrier.md --file specs/spec-registry-source-native.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_native_auth_parity_carrier.json",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Form-native auth parity carrier for mutable routes. auth-port.fk reads X-API-Key from kh-request/kh-header values case-insensitively, allows the configured shared API key, allows active contributor keys by sha256 raw-key hex hash, denies missing/wrong/blank keys with the FastAPI 401 detail, and denies production dev-key misconfiguration with the FastAPI 500 detail. Public mutable front-door routes intentionally remain FastAPI until direct application graph_nodes Postgres writes, revision rows, and edge cleanup are native.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 246,
+    "row_sha256": "1ac9b248eab3db926e42ab2dfacc97c158ca2dc6b08c6f7772eab2679c40fcd1",
+    "summary": "added-a-form-native-auth-parity-carrier-for-muta"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0246-1ac9b248eab3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L246"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk",
+      "cd api && python3 -m pytest -q tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "cd api && python3 -m ruff check tests/test_native_auth_parity_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier.md --file specs/ideas-router-form-expression.md --file specs/graph-node-mutation-native-carrier.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_native_auth_parity_carrier.json",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk"
+  ],
+  "failure_reason": "Corrected the selector registry from mutable known-language bindings to plugin registration. A grammar plugin now carries its capsule, dialect, surfaces, capability kinds, and selector list as Form data; registering one plugin installs one capsule and all selectors. The selector proof passes at 17100 in source and binary modes and includes a runtime-loaded dialect that was not pre-wired into registry dispatch.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 170,
+    "row_sha256": "52911e71cc6699b19d56c861869af9d733607ad8cfbd059e5d8cd69fcd3410c5",
+    "summary": "corrected-the-selector-registry-from-mutable-kno"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0170-52911e71cc66",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L170"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk"
+    ],
+    "status": "pass"
+  }
+}

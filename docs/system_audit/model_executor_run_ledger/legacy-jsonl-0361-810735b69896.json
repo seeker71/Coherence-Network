@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim bml-hati-class-field \"walk next BML native compiler floor: parse and lower a minimal class field plus method-scope field read/write through BMA and Hati; keep templates/generics for follow-on slices\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/tests/hati-os-kernel-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/hati-os-kernel-emit-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-method-calls-proof.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+    "cd form && ./validate.sh"
+  ],
+  "failure_reason": "Moved the BML/Hati native compiler floor from packed method calls to record-backed method-scope class field read/write. Hati now has fk-rget tag 97 and fk-rset tag 98 for record_get and record_set in the recipe walker and emitted C walker, the BML grammar emits __hati_field_get and __hati_field_set from this.field reads and writes, and class-shaped source is parsed through the existing declaration parser before a Hati class image runs the field-reading method against a supplied self record. The focused class-field proof returns 21; Hati kernel returns 31; Hati emit returns 15; record-band returns 176; floor proof returns 19; method-call and multi-arg proofs remain 19 and 20; compiler proof returns 39; bml-compiler-runtime returns 131012; the metal-plane audit passes Form-native CPU/GPU/ML and macOS/Android receipts; the new proof is classified bml-io by the survey; full Form validation returns fourth arm: 138 band(s) four-way with 557 ok and 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 361,
+    "row_sha256": "810735b6989697f6261dd8a34f7e9600df9ad3a09c2bd080dbee5a6279880652",
+    "summary": "moved-the-bml-hati-native-compiler-floor-from-pa"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0361-810735b69896",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L361"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-hati-class-field \"walk next BML native compiler floor: parse and lower a minimal class field plus method-scope field read/write through BMA and Hati; keep templates/generics for follow-on slices\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/tests/hati-os-kernel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/hati-os-kernel-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-method-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}

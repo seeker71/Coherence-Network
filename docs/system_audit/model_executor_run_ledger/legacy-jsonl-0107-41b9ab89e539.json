@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+    "node --check cli/bin/coh.mjs && node --check cli/lib/commands/content.mjs",
+    "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py -q",
+    "tmp=$(mktemp); printf '%s\\n' 'CLI production smoke verifies attributed editable content.' > \"$tmp\"; entity=\"codex-cli-smoke-$(date +%s)\"; node cli/bin/coh.mjs --api-url https://api.coherencycoin.com content set page \"$entity\" --lang en --file \"$tmp\" --by codex-cli-smoke-author --title \"Codex CLI smoke\"; node cli/bin/coh.mjs --api-url https://api.coherencycoin.com content views page \"$entity\"; rm -f \"$tmp\"",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_cli_content_lang_flag_fix.json",
+    "git diff --check",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Production CLI smoke found that top-level flag extraction consumed content --lang, so coh content set printed usage instead of writing attributed entity views. The follow-up preserves command-level --lang for content and translate while keeping global locale --lang before the command.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 107,
+    "row_sha256": "41b9ab89e5399421827b4088f621519c6db4a33c9a50681fcf58a3d8e8bf50da",
+    "summary": "production-cli-smoke-found-that-top-level-flag-e"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0107-41b9ab89e539",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L107"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+      "node --check cli/bin/coh.mjs && node --check cli/lib/commands/content.mjs",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py -q",
+      "tmp=$(mktemp); printf '%s\\n' 'CLI production smoke verifies attributed editable content.' > \"$tmp\"; entity=\"codex-cli-smoke-$(date +%s)\"; node cli/bin/coh.mjs --api-url https://api.coherencycoin.com content set page \"$entity\" --lang en --file \"$tmp\" --by codex-cli-smoke-author --title \"Codex CLI smoke\"; node cli/bin/coh.mjs --api-url https://api.coherencycoin.com content views page \"$entity\"; rm -f \"$tmp\"",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_cli_content_lang_flag_fix.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

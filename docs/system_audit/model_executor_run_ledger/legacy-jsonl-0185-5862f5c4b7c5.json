@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/tests/bmf-thesis-primitives-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_bmf_component_runtime.json"
+  ],
+  "failure_reason": "Added shared comp-bmf component execution for Rule, Branch, Sequence, Repeat, Tag, RuleCall, Primitive, CharRange, and CharChain objects through the character-stream matcher. The proof passes at 1023 in source and binary sibling-kernel modes, including failed-branch rollback and Cut commitment.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 185,
+    "row_sha256": "5862f5c4b7c5e0e6964c84519ecad9c53993e8f61d55879b4d15d87df81a8b39",
+    "summary": "added-shared-comp-bmf-component-execution-for-ru"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0185-5862f5c4b7c5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L185"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/tests/bmf-thesis-primitives-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_bmf_component_runtime.json"
+    ],
+    "status": "pass"
+  }
+}

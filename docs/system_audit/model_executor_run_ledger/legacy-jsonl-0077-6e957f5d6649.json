@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "rg -n \"Presence node|Presence walk|Story|Style|Message|Lineage|Natural|Visual|Walk each|Walk more|Source|graph node|Why this visual|Everyone|Presences|People|Communities|Places|Gatherings|Practices|Works|hardcoded|node\\\\.slug ===|anne-tucker|liquid-bloom|Liquid Bloom|Anne Tucker\" web/app/presence-walk/page.tsx 'web/app/presence-walk/[kind]/page.tsx' 'web/app/presence-walk/node/[slug]/page.tsx' web/app/people/page.tsx",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Follow-up direction required all remaining data to leave route/page code. Display copy, metadata defaults, section definitions, people directory grouping/filter data, composition classes, brand surface classes, and motif layer class maps were moved into data modules; route/page files now render from imported data constants.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 77,
+    "row_sha256": "6e957f5d6649f8670d60c12dd3f6c53723af3489b8fb213f2dc6f7aab8463649",
+    "summary": "follow-up-direction-required-all-remaining-data-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0077-6e957f5d6649",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L77"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "rg -n \"Presence node|Presence walk|Story|Style|Message|Lineage|Natural|Visual|Walk each|Walk more|Source|graph node|Why this visual|Everyone|Presences|People|Communities|Places|Gatherings|Practices|Works|hardcoded|node\\\\.slug ===|anne-tucker|liquid-bloom|Liquid Bloom|Anne Tucker\" web/app/presence-walk/page.tsx 'web/app/presence-walk/[kind]/page.tsx' 'web/app/presence-walk/node/[slug]/page.tsx' web/app/people/page.tsx",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

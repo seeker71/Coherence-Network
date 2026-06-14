@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord view",
+    "coord claim fourth residual record/native cluster",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-field-access-band.fk",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/record-field-access-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh record-field-access",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+    "cd form && ./validate.sh",
+    "cd form && bash scripts/fourth-arm-survey.sh",
+    "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Resolved the bounded fourth-arm record/native carrier gap. record_new now lowers to a packed entry packet with a blueprint sentinel, fkwu tag 64 installs a distinct negative-even record-table carrier, tags 65/67/68/99 carry record_get/record_has/record?/record_keys, and Hati class field helpers use the same record index decoder. record-field-access gates PASS-4WAY at 16 and is admitted to the manifest. record-fold remains four-way at 31. Full Form validation returns fourth arm: 139 band(s) four-way with 559 ok and 0 divergent. Fresh survey reports 139 in-manifest and residual record_new/get counts down to 3 blocked bands. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts; Android proof is the Form-native recipe/object minimum floor, not an APK-bundled compiler claim. Follow-on named by the user: move executor proof JSONL into a native substrate ledger with JSONL as export/cache.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 364,
+    "row_sha256": "14f1b07ba62c4c417baa7b4fa6419d05bae210c0b257ac7c10fa742f214d6892",
+    "summary": "resolved-the-bounded-fourth-arm-record-native-ca"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0364-14f1b07ba62c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L364"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord view",
+      "coord claim fourth residual record/native cluster",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-field-access-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/record-field-access-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record-field-access",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+      "cd form && ./validate.sh",
+      "cd form && bash scripts/fourth-arm-survey.sh",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

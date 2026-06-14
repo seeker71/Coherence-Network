@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "./scripts/verify_web_api_deploy.sh",
+    "POST /api/agent/tasks task_7295858a969f6ec4 (cursor help)",
+    "POST /api/agent/tasks task_c27d41ca9bf279cd (claude proof token)",
+    "POST /api/agent/tasks task_1b8d181a4ad2dfb7 (codex exec --help)",
+    "GET /api/agent/tasks/{id} + /log for proof bundle /tmp/host_runner_proof_final6_20260228T120301Z.json"
+  ],
+  "failure_reason": "Final deployed verification after PR #368 merge: host runner completed cursor, claude, and codex paths with runtime/deploy SHA parity on 60ab03f01f12aa427dfbc1b5a4e7ea4dee104699.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 32,
+    "row_sha256": "bddad90facc9085a1413547b5046034ffa507630f43f6ea398b56b257f8bbdc1",
+    "summary": "final-deployed-verification-after-pr-368-merge-h"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0032-bddad90facc9",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L32"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh",
+      "POST /api/agent/tasks task_7295858a969f6ec4 (cursor help)",
+      "POST /api/agent/tasks task_c27d41ca9bf279cd (claude proof token)",
+      "POST /api/agent/tasks task_1b8d181a4ad2dfb7 (codex exec --help)",
+      "GET /api/agent/tasks/{id} + /log for proof bundle /tmp/host_runner_proof_final6_20260228T120301Z.json"
+    ],
+    "status": "pass"
+  }
+}

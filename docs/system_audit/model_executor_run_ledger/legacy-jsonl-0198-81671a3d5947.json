@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_substrate_ingest_timeout.json"
+  ],
+  "failure_reason": "Patched Hostinger deploy roll-forward so substrate ingest cannot hang deployment after containers are already healthy. Per-file ingest now has a 120s default timeout and --all ingest has a 600s default timeout; failures remain logged and non-blocking.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 198,
+    "row_sha256": "81671a3d59477509781d3aace1698999a91df844d1aebc73b283906cfa9a3aaf",
+    "summary": "patched-hostinger-deploy-roll-forward-so-substra"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0198-81671a3d5947",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L198"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_substrate_ingest_timeout.json"
+    ],
+    "status": "pass"
+  }
+}

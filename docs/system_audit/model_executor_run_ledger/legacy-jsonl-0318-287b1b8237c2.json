@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "git diff --check",
+    "python3 yaml overlay parse/assert new BML Traefik labels"
+  ],
+  "failure_reason": "Follow-up routing repair after public smoke showed the BML handlers were compiled but not publicly routed. Added Traefik labels sending GET /api/sensings, GET /api/sensings/{sensing_id}, and GET /api/translations/{entity_type}/{entity_id} to coherence-api-kernel-bml-front-door; extended Hostinger local canaries and public deploy verification so promoted sensings and translations must return native proof headers instead of fanout-python.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 318,
+    "row_sha256": "287b1b8237c2e88938cc855a2d14fca143ea525f2b98b0c0d88b3ac3321eddb5",
+    "summary": "follow-up-routing-repair-after-public-smoke-show"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0318-287b1b8237c2",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L318"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 yaml overlay parse/assert new BML Traefik labels"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-scanner-escape-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-scanner-escape-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-runtime.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-coverage.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-grammar-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-repo-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+  ],
+  "failure_reason": "Added a Python-owned source dialect and full-file scanner entry in python-bmf.fk. form-samples/test_module.py now reads from disk, scans into 46 BMF source objects with spans, and the sample-module BMF rule consumes the complete stream into a module Form object in source and binary kernels at 23100. Also paired the TypeScript reader's carriage-return escape handling with Go/Rust.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 172,
+    "row_sha256": "8b7bb0a3145553c05ab8523c17d33e6da158b4669cfbc5d11a5125f41ba3e968",
+    "summary": "added-a-python-owned-source-dialect-and-full-fil"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0172-8b7bb0a31455",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L172"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-scanner-escape-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-scanner-escape-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-coverage.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-grammar-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-repo-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+    ],
+    "status": "pass"
+  }
+}

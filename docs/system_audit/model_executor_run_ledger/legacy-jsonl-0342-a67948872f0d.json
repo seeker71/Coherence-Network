@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"markdown/yaml source-ingestion constructor residual after PR #2978: DOC-DOC and YAML-PAIR unbound, avoiding go-jit TypeScript/BMF lanes\"",
+    "focused markdown baseline reproduced unbound DOC-DOC",
+    "focused YAML baseline reproduced unbound YAML-PAIR",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/markdown.fk form-stdlib/tests/markdown-meaning-ingestion-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/yaml.fk form-stdlib/tests/yaml-meaning-ingestion-band.fk",
+    "cd form && ./validate.sh > /tmp/coherence-form-validate-ingestion-constructors-after-pr2989-20260613.log 2>&1",
+    "make wellness",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git diff --check",
+    "cd api && python3 -m pytest -q tests/test_runtime_surface_native_routes.py -vv"
+  ],
+  "failure_reason": "Loaded seedbank/blueprint-symbol-sections.fk before the markdown and YAML meaning-ingestion grammars. Focused markdown and YAML validations now each return 1000 across Go/Rust/TypeScript. Full validation remains diagnostic rc=1 with the combined post-PR #2989 floor: fourth arm: 117 band(s) four-way, 549 ok, and 2 unrelated divergent rows: go-jit-band.fk and ts-reversible-band.fk. Wellness, local PR guard, followthrough, and diff whitespace checks passed after rebasing on origin/main. CI exposed that runtime_surface_report only scanned literal route rows and missed helper-spliced method routes; expanding referenced zero-arg route helpers makes the native-route parser test pass locally.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 342,
+    "row_sha256": "a67948872f0dfb7ba0cbe74a444a9aa0c29061fbbeb5f98233607b719f39225f",
+    "summary": "loaded-seedbank-blueprint-symbol-sections-fk-bef"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0342-a67948872f0d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L342"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"markdown/yaml source-ingestion constructor residual after PR #2978: DOC-DOC and YAML-PAIR unbound, avoiding go-jit TypeScript/BMF lanes\"",
+      "focused markdown baseline reproduced unbound DOC-DOC",
+      "focused YAML baseline reproduced unbound YAML-PAIR",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/markdown.fk form-stdlib/tests/markdown-meaning-ingestion-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/yaml.fk form-stdlib/tests/yaml-meaning-ingestion-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-ingestion-constructors-after-pr2989-20260613.log 2>&1",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check",
+      "cd api && python3 -m pytest -q tests/test_runtime_surface_native_routes.py -vv"
+    ],
+    "status": "pass"
+  }
+}

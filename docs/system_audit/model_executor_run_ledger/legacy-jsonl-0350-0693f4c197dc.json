@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "COORD_AGENT=codex@a3ec coord view",
+    "cd form && scripts/fourth-arm-survey.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-tensor-emit-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh jit-tensor-emit",
+    "cd form && ./validate.sh",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_tensor_emit_fourth_floor.json",
+    "git diff --check",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Admitted jit-tensor-emit to the fourth-arm manifest after the post-PR #3000 survey showed it as the only JIT-named row still outside the manifest, already measuring single-pass 7 7. Focused validation returns jit-tensor-emit -> 7 with 1 ok and 0 divergent; manifest gate returns PASS-4WAY; full Form validation returns fourth arm: 122 band(s) four-way, 552 ok, and 0 divergent. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts while Android's minimum JIT floor remains Form-native recipe/table execution rather than a required runtime clang binary.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 350,
+    "row_sha256": "0693f4c197dce89fbb4414de1a5be9eb1c2224de335802cec1f0fa0554c6c1d6",
+    "summary": "admitted-jit-tensor-emit-to-the-fourth-arm-manif"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0350-0693f4c197dc",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L350"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex@a3ec coord view",
+      "cd form && scripts/fourth-arm-survey.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-tensor-emit-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh jit-tensor-emit",
+      "cd form && ./validate.sh",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_tensor_emit_fourth_floor.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

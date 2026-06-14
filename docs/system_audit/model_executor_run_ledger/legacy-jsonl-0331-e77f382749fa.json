@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-mesh.fk form-stdlib/tests/hati-mesh-band.fk",
+    "cd api && python3 -m pytest -q tests/test_hati_mesh.py",
+    "cd experiments/coherence-sense-android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+    "scripts/build_hati_os_public_assets.sh",
+    "cd web && npm ci",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 331,
+    "row_sha256": "e77f382749faf524ae693e52148ff2099f6bd3b009f2b343249b95588a26a7a2",
+    "summary": "legacy-row"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0331-e77f382749fa",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L331"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-mesh.fk form-stdlib/tests/hati-mesh-band.fk",
+      "cd api && python3 -m pytest -q tests/test_hati_mesh.py",
+      "cd experiments/coherence-sense-android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+      "scripts/build_hati_os_public_assets.sh",
+      "cd web && npm ci",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

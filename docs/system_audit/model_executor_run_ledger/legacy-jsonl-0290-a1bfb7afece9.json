@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+    "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+    "python3 -m py_compile scripts/native_route_goal_loop.py",
+    "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py tests/test_runtime_web_api_provenance.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check",
+    "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json"
+  ],
+  "failure_reason": "Moved method-specific route-goal manifest classification into Form-native cells. native-route-goal-cells.fk now classifies kh-route rows as Form-native manifest state across source and binary sibling-kernel proof: no-header default rows are kernel-native-form-needs-source-lift and executable, header-gated rows are kernel-native-header-gated for ordinary traffic, and no manifest row remains python-fanout. The Python route-goal command remains only an I/O carrier in this slice. make native-route-goal-tending is a pre-existing stale direct-Rust query path on origin/main and is not pass evidence.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 290,
+    "row_sha256": "a1bfb7afece9f9759f2cfe08ddccdd417fe27ede84c1d95b754754ae45b9f3a9",
+    "summary": "moved-method-specific-route-goal-manifest-classi"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0290-a1bfb7afece9",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L290"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "python3 -m py_compile scripts/native_route_goal_loop.py",
+      "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json"
+    ],
+    "status": "pass"
+  }
+}

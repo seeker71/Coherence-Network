@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "COORD_AGENT=codex@a3ec coord join",
+    "COORD_AGENT=codex@a3ec coord share \"a3ec resuming jit-native-span fourth-arm lane; avoiding cf56 vocabulary blocker lane plus route/recipe/android-ui/dynamic-choice lanes\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-native-span-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh jit-native-span",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "cd form && ./validate.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_native_span_fourth_arm.json",
+    "git diff --check",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Closed the jit-native-span fourth-arm residual by lowering Value-ABI float/vector/string-name/JIT-offer ops into tags 81..86 and teaching fkwu matching C walker arms. Focused validation returns jit-native-span -> 255 with 1 ok and 0 divergent; manifest gate returns PASS-4WAY; full Form validation returns fourth arm: 121 band(s) four-way, 552 ok, and 0 divergent. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF oracle receipts while Android's minimum JIT floor remains Form-native recipe/table execution rather than a required runtime clang binary.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 349,
+    "row_sha256": "7d6e5a434fa1ac269feea94632e48a046dbb9a64283dec007af63f81bc49de59",
+    "summary": "closed-the-jit-native-span-fourth-arm-residual-b"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0349-7d6e5a434fa1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L349"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex@a3ec coord join",
+      "COORD_AGENT=codex@a3ec coord share \"a3ec resuming jit-native-span fourth-arm lane; avoiding cf56 vocabulary blocker lane plus route/recipe/android-ui/dynamic-choice lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-native-span-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh jit-native-span",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_native_span_fourth_arm.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

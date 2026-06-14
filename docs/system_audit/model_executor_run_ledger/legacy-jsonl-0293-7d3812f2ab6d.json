@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form/form-kernel-rust && cargo build --release",
+    "cd form/form-kernel-rust && python3 production_routes_harness.py",
+    "python3 scripts/runtime_surface_report.py --json"
+  ],
+  "failure_reason": "Released /api/utils/kernel_status from Python authority in the production kernel-router manifest. The new Form-native handler reports active=native-kernel, router=native-kernel, python_authority=false, and live router counters. production_routes_harness.py proves HTTP 200 with X-Form-Router:native-kernel for /api/utils/kernel_status while the 109 promoted compute-route checks remain value-identical to the local CPython oracle and /api/health still fans out explicitly.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 293,
+    "row_sha256": "7d3812f2ab6d278a6cf47a54ef1916e2156d3004809775fee931eead70f3cf11",
+    "summary": "released-api-utils-kernel-status-from-python-aut"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0293-7d3812f2ab6d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L293"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-rust && python3 production_routes_harness.py",
+      "python3 scripts/runtime_surface_report.py --json"
+    ],
+    "status": "pass"
+  }
+}

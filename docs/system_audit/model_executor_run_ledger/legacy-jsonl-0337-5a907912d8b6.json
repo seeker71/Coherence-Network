@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && bash scripts/fourth-arm-gate.sh channel-interface channel-flow channel-loopback tool-channel choice-receipt choice-receipt-learning branch-choice-order bml-route-source-object bml-choice-routing-metadata bml-choice-receipt-row kernel-http bml-route-choice-runtime channel-protocol-choice-floor",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_bml_choice_receipt_routing_floor.json"
+  ],
+  "failure_reason": "Closed the BML/channel route-choice fourth-arm floor. channel-interface, channel-flow, channel-loopback, tool-channel, choice-receipt, choice-receipt-learning, branch-choice-order, bml-route-source-object, bml-choice-routing-metadata, bml-choice-receipt-row, kernel-http, bml-route-choice-runtime, and channel-protocol-choice-floor all pass the fourth-arm manifest with their expected verdicts. Remaining named gaps are broader BML protocol/capability grammar, host-IO-shaped runtime dynamic capability registry, runtime receipt practice carried through every runtime choice, and production callers wired to brcr-realize.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 337,
+    "row_sha256": "5a907912d8b60cfc31df190b8ecf1a3be57deed9479f5d2f591a44c32f7a902d",
+    "summary": "closed-the-bml-channel-route-choice-fourth-arm-f"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0337-5a907912d8b6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L337"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && bash scripts/fourth-arm-gate.sh channel-interface channel-flow channel-loopback tool-channel choice-receipt choice-receipt-learning branch-choice-order bml-route-source-object bml-choice-routing-metadata bml-choice-receipt-row kernel-http bml-route-choice-runtime channel-protocol-choice-floor",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_bml_choice_receipt_routing_floor.json"
+    ],
+    "status": "pass"
+  }
+}

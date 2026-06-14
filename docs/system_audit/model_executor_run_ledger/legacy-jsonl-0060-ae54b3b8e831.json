@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "cd web && npm run build",
+    "python3 scripts/check_generated_vision_assets.py --allow-untracked",
+    "python3 scripts/sync_kb_to_db.py lc-attuned-spaces lc-circulation lc-economy lc-energy lc-nourishment lc-space --api-key dev-key",
+    "gh pr comment 1003 --repo seeker71/Coherence-Network --body 'Continuing this thread with the next deploy pass: expanding the economy surface, adding embodied-now transformations across core concepts, and hardening generated-vision asset verification before the next push.'",
+    "python3 scripts/check_generated_vision_assets.py",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-16_vision-structure-reimagining.json"
+  ],
+  "failure_reason": "Resolved three deploy blockers during local preflight: the existing codex PR had gone stale and needed live follow-through, generated concept visuals existed only locally until they were added to git and guarded by a checker, and the maintainability guard was incorrectly firing on web/app story changes even though the audit only measures backend runtime debt.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 60,
+    "row_sha256": "ae54b3b8e83177aa109f0de66149570b9ec1067c6f677a1793ef2ef541ba47f8",
+    "summary": "resolved-three-deploy-blockers-during-local-pref"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0060-ae54b3b8e831",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L60"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd web && npm run build",
+      "python3 scripts/check_generated_vision_assets.py --allow-untracked",
+      "python3 scripts/sync_kb_to_db.py lc-attuned-spaces lc-circulation lc-economy lc-energy lc-nourishment lc-space --api-key dev-key",
+      "gh pr comment 1003 --repo seeker71/Coherence-Network --body 'Continuing this thread with the next deploy pass: expanding the economy surface, adding embodied-now transformations across core concepts, and hardening generated-vision asset verification before the next push.'",
+      "python3 scripts/check_generated_vision_assets.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-16_vision-structure-reimagining.json"
+    ],
+    "status": "pass"
+  }
+}

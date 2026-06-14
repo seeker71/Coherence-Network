@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19215 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+    "curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{\"spec_id\":\"native-bind\",\"title\":\"Native Bind\",\"summary\":\"route proof\"}'",
+    "curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' --data '{\"spec_id\":\"native-bind\",\"title\":\"Native Bind\"}'",
+    "curl -sS -i -X PATCH http://127.0.0.1:19215/api/ideas/idea-123 -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{\"name\":\"Moved idea\",\"manifestation_status\":\"partial\"}'",
+    "curl -sS -i -X DELETE http://127.0.0.1:19215/api/spec-registry/native-bind -H 'X-Form-Native-Preview: 1'",
+    "python3 scripts/runtime_surface_report.py --json",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_node_port_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py tests/test_specs_source_native_route.py",
+    "cd api && python3 -m ruff check tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md --file specs/application-graph-node-sql-carrier.md --file specs/native-auth-parity-carrier.md --file specs/graph-node-mutation-native-carrier.md",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Bound method-specific mutation preview routes in the production kernel-router manifest. POST/PATCH idea and POST/PATCH/DELETE spec routes now have X-Form-Native-Preview-gated native handlers that bind request bodies and path ids to application graph SQL previews over graph_nodes, graph_node_revisions, and graph_edges while ordinary no-header mutation requests still fan out to FastAPI. runtime_surface_report.py now counts method-specific kh-route/raw 43004 rows, raising kernel-first capable API bindings to 33.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 248,
+    "row_sha256": "e7c86c1652bfb27de03052d1c8f0b01b3c9b37e362826a85653ff6372d8fb11a",
+    "summary": "bound-method-specific-mutation-preview-routes-in"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0248-e7c86c1652bf",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L248"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19215 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{\"spec_id\":\"native-bind\",\"title\":\"Native Bind\",\"summary\":\"route proof\"}'",
+      "curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' --data '{\"spec_id\":\"native-bind\",\"title\":\"Native Bind\"}'",
+      "curl -sS -i -X PATCH http://127.0.0.1:19215/api/ideas/idea-123 -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{\"name\":\"Moved idea\",\"manifestation_status\":\"partial\"}'",
+      "curl -sS -i -X DELETE http://127.0.0.1:19215/api/spec-registry/native-bind -H 'X-Form-Native-Preview: 1'",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_node_port_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py tests/test_specs_source_native_route.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md --file specs/application-graph-node-sql-carrier.md --file specs/native-auth-parity-carrier.md --file specs/graph-node-mutation-native-carrier.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}

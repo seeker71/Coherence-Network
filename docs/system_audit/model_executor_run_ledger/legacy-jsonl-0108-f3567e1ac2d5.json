@@ -1,0 +1,56 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "npm view coherence-cli version dist-tags --json",
+    "npm publish --access public",
+    "npm view coherence-cli version dist-tags --json",
+    "node --check cli/bin/coh.mjs && node --check cli/lib/commands/rest.mjs",
+    "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py::TestSmokeTests::test_cli_help_uses_current_binary_name tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+    "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py -q",
+    "cd cli && npm pack --dry-run --json",
+    "cd cli && npm publish --dry-run --access public",
+    "cd cli && node bin/coh.mjs help | sed -n '1,8p'",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git diff --check"
+  ],
+  "failure_reason": "Npm registry verification showed coherence-cli latest lagged at 0.12.1 while main contained 0.13.0. Publishing 0.13.0 succeeded, then installed package smoke exposed retired cc help text. This patch prepares 0.13.1 with coh help text before final npm publish.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 108,
+    "row_sha256": "f3567e1ac2d561872ec36f8e97541e874acb519e4435aa6aff1a34fa3a140db9",
+    "summary": "npm-registry-verification-showed-coherence-cli-l"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0108-f3567e1ac2d5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L108"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "npm view coherence-cli version dist-tags --json",
+      "npm publish --access public",
+      "npm view coherence-cli version dist-tags --json",
+      "node --check cli/bin/coh.mjs && node --check cli/lib/commands/rest.mjs",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py::TestSmokeTests::test_cli_help_uses_current_binary_name tests/test_flow_cli.py::TestSmokeTests::test_cli_content_set_preserves_command_lang_flag -q",
+      "cd api && .venv/bin/python -m pytest tests/test_flow_cli.py -q",
+      "cd cli && npm pack --dry-run --json",
+      "cd cli && npm publish --dry-run --access public",
+      "cd cli && node bin/coh.mjs help | sed -n '1,8p'",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

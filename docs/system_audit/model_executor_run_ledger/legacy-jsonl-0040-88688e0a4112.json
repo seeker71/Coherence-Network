@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "curl -sS https://coherence-network.vercel.app/flow",
+    "curl -sS https://coherence-network.vercel.app/api/inventory/flow?include_internal_ideas=true&list_item_limit=200",
+    "curl -sS https://coherence-network.vercel.app/api/ideas?include_internal=true&limit=500",
+    "cd web && npm ci --allow-git=none",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Identified stale static /flow rendering versus live API truth and forced dynamic no-store rendering with explicit full-flow scope query.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 40,
+    "row_sha256": "88688e0a4112c313833d0e2d6778a62170ce88ca183872721f2e15dcc750df3d",
+    "summary": "identified-stale-static-flow-rendering-versus-li"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0040-88688e0a4112",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L40"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "curl -sS https://coherence-network.vercel.app/flow",
+      "curl -sS https://coherence-network.vercel.app/api/inventory/flow?include_internal_ideas=true&list_item_limit=200",
+      "curl -sS https://coherence-network.vercel.app/api/ideas?include_internal=true&limit=500",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

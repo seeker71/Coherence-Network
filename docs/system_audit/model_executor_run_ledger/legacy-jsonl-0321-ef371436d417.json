@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+    "bash -n scripts/verify_web_api_deploy.sh && bash -n deploy/hostinger/auto-deploy.sh && bash -n scripts/test_hostinger_deploy_form_paths.sh",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust && target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+    "origin/main api.bml form-kernel-rust check --routes baseline comparison",
+    "python3 -m pytest -q api/tests/test_runtime_surface_native_routes.py api/tests/test_runtime_web_api_provenance.py",
+    "python3 scripts/runtime_surface_report.py --json"
+  ],
+  "failure_reason": "Promoted the next observed presence resonance relationship read family into the BML native front door. GET /api/concepts/{concept_id}/carried-by and GET /api/presences/{presence_id}/resonances now read graph_edges/graph_nodes through BML/Postgres handlers, emit native proof headers, and are wired through Traefik, Hostinger canaries, public verification, and runtime-surface tests. runtime_surface_report moved local capable routes from 87 to 89 and includes both route patterns. The generic form-kernel-rust check --routes still reports the same 14 unresolved names on this branch and origin/main, so that strict resolver failure is pre-existing catalog debt. Docker and local Postgres were unavailable, so live DB-backed native curl proof is deferred to deploy canaries/public verification.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 321,
+    "row_sha256": "ef371436d417d1526ac53a919aa016b7ba87008a06e1cf50de365980252a0b21",
+    "summary": "promoted-the-next-observed-presence-resonance-re"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0321-ef371436d417",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L321"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+      "bash -n scripts/verify_web_api_deploy.sh && bash -n deploy/hostinger/auto-deploy.sh && bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust && target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "origin/main api.bml form-kernel-rust check --routes baseline comparison",
+      "python3 -m pytest -q api/tests/test_runtime_surface_native_routes.py api/tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/runtime_surface_report.py --json"
+    ],
+    "status": "pass"
+  }
+}

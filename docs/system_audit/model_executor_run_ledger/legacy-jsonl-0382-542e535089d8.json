@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"form-native Android adb executable receipt\"",
+    "adb devices -l",
+    "adb shell getprop ro.product.model; adb shell getprop ro.product.cpu.abi; adb shell getprop ro.build.version.release",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+    "FORM_ELF_EXEC_REQUIRE_ANDROID=1 bash scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Closed the Android target-specific executable runner gap for the Form-native ELF floor. An authorized SM-S918U1 Android 16 arm64-v8a device executed the Form-emitted ELF64/aarch64 ET_EXEC image from /data/local/tmp through adb shell. The focused Form proof returned 63 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. The audit required stdout FORM ELF, empty stderr, and exit 42, while retaining fkwu-covered Form-native JIT lane, Mach-O/ELF object, form-elf-exec, lowered residual, oracle-learning, and clang-oracle macOS/Android object receipts. Remaining Android target work is package publication, sha256/source maps, richer physical-lane summary JSON, and APK mesh-organ proof.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 382,
+    "row_sha256": "542e535089d8fddcbda98ce342c41baa9e729a38a42582c44a6fe45554465cd3",
+    "summary": "closed-the-android-target-specific-executable-ru"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0382-542e535089d8",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L382"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"form-native Android adb executable receipt\"",
+      "adb devices -l",
+      "adb shell getprop ro.product.model; adb shell getprop ro.product.cpu.abi; adb shell getprop ro.build.version.release",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+      "FORM_ELF_EXEC_REQUIRE_ANDROID=1 bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

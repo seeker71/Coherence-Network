@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"model vitality fourth-arm receipt\"",
+    "cd form && bash scripts/fourth-arm-gate.sh model-vitality",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_vitality_fourth_arm.json"
+  ],
+  "failure_reason": "Admitted model-vitality to the fourth-arm manifest. fourth-arm-gate returns PASS-4WAY; focused validate returns 4095 with fourth arm: 1 band(s) four-way on fkwu and 1 ok, 0 divergent. Docs now record fourth-arm admission as closed; remaining gaps are real tensor chunk storage, carrier projection re-hash, and wellness/pulse vitality routing.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 390,
+    "row_sha256": "5496c4e299d8de60b39d3f30af3f1c335432854b19bf3072a78919600313d718",
+    "summary": "admitted-model-vitality-to-the-fourth-arm-manife"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0390-5496c4e299d8",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L390"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"model vitality fourth-arm receipt\"",
+      "cd form && bash scripts/fourth-arm-gate.sh model-vitality",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_vitality_fourth_arm.json"
+    ],
+    "status": "pass"
+  }
+}

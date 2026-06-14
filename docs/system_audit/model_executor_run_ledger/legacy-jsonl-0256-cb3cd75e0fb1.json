@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_side_effect_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_public_gate.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effect-ledger.md --file specs/native-mutation-side-effects.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-public-gate.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+    "cd api && python3 -m ruff check tests/test_native_mutation_side_effect_ledger.py",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check",
+    "make wellness",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/codex/native-mutation-public-gate-20260608"
+  ],
+  "failure_reason": "Added a source-classified side-effect ledger instead of adding more side effects. The ledger separates primary mutation, Python parity effects, reversible gate receipts, missing Python parity, and not-carried effects; it names rollback receipts as gate safety rather than domain parity, marks idea valuation audit-ledger writes as a blocker before ordinary no-header traffic can move, and passed local PR guard against the stacked base.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 256,
+    "row_sha256": "cb3cd75e0fb19a63ecce02c468f383de82ea2fb96eebefccf18e5db3ac71933d",
+    "summary": "added-a-source-classified-side-effect-ledger-ins"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0256-cb3cd75e0fb1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L256"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_side_effect_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_public_gate.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effect-ledger.md --file specs/native-mutation-side-effects.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-public-gate.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "cd api && python3 -m ruff check tests/test_native_mutation_side_effect_ledger.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/codex/native-mutation-public-gate-20260608"
+    ],
+    "status": "pass"
+  }
+}

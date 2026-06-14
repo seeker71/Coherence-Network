@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "bash -n scripts/hostinger_api_native_deploy.sh scripts/test_hostinger_api_native_deploy.sh",
+    "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-api-native-deploy.yml\"); puts \"yaml ok\"'",
+    "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_hostinger_api_native_deploy.sh",
+    "cd web && npm ci",
+    "cd web && npm run build",
+    "perl -e 'alarm shift; exec @ARGV' 10 docker version --format '{{.Server.Version}}'",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Hostinger API-native deploy carrier to avoid the failing GitHub-runner SSH/SCP transport. The script reads the existing Hostinger project compose/environment, preserves provider-side environment values, rewrites only build contexts to immutable Git SHA contexts, updates SHA values, and posts through Hostinger's Docker API. Added source-owned Dockerfile.web so the web image build is no longer a VPS-resident hidden file and can bake deployed_sha into config for web health parity. Local script/YAML/mock tests and Next production build pass. Local Docker daemon is unavailable, so image-build proof is deferred to the merged Hostinger workflow.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 234,
+    "row_sha256": "b2a4fb8268ee81c8abed2dc528cbe088fb44abbd0016a68365fa2d145515991e",
+    "summary": "added-a-hostinger-api-native-deploy-carrier-to-a"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0234-b2a4fb8268ee",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L234"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/hostinger_api_native_deploy.sh scripts/test_hostinger_api_native_deploy.sh",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-api-native-deploy.yml\"); puts \"yaml ok\"'",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_hostinger_api_native_deploy.sh",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "perl -e 'alarm shift; exec @ARGV' 10 docker version --format '{{.Server.Version}}'",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

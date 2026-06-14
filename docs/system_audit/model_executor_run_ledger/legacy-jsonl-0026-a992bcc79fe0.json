@@ -1,0 +1,34 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Cursor host-runner path failed because agent expected /usr/local/bin/node, and Codex OAuth refresh-token errors were retrying via api_key fallback. Runner now heals cursor node shim per resolved agent path and retries refresh_token_reused in OAuth mode only.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 26,
+    "row_sha256": "a992bcc79fe0183cc24c48762bc7acb0938900a5a92b96f23a2646e00886491b",
+    "summary": "cursor-host-runner-path-failed-because-agent-exp"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0026-a992bcc79fe0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L26"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

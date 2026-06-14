@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim native-proof-ledger-jsonl-to-substrate",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+    "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py"
+  ],
+  "failure_reason": "Added a native substrate ledger shape for model executor proof runs. docs/coherence-substrate/model-executor-proof-ledger.form defines the proof-run contract; docs/system_audit/model_executor_run_ledger stores per-run native records; scripts/model_executor_proof_ledger.py validates those records and exports canonical JSONL for legacy readers. The existing docs/system_audit/model_executor_runs.jsonl remains a compatibility cache while future proof writers can avoid append-only merge contention by writing per-run native records first. Focused validation passed; api/.venv/bin/pytest was unavailable in this worktree, so tests ran with python3 -m pytest.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 365,
+    "row_sha256": "19813a6e5e6bb7439ae98a779cae5a7382a482a37342b8f671d39f6bea3c769e",
+    "summary": "added-a-native-substrate-ledger-shape-for-model-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0365-19813a6e5e6b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L365"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "coord claim native-proof-ledger-jsonl-to-substrate",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+      "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py"
+    ],
+    "status": "pass"
+  }
+}

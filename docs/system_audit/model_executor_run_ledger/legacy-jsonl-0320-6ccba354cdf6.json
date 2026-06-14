@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+    "python3 scripts/runtime_surface_report.py --json",
+    "bash scripts/test_hostinger_deploy_form_paths.sh",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "bash -n scripts/verify_web_api_deploy.sh",
+    "bash -n scripts/test_hostinger_deploy_form_paths.sh",
+    "cargo build --release --bin form-kernel-rust",
+    "./form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 18080 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+    "curl /api/lenses native smoke",
+    "jq lenses built-in catalog shape check",
+    "curl /api/lenses/scientific fanout preservation smoke"
+  ],
+  "failure_reason": "Promoted GET /api/lenses into the BML native front door as the next observed /goal route. runtime_surface_report moved local kernel-first-capable routes from 86 to 87 and included /api/lenses. Local Rust serve compiled the BML catalog and advertised 54 native routes with GET /api/lenses -> native. The route returned native-kernel proof headers and a 10-item built-in lens catalog; /api/lenses/{lens_id} still selected fanout-python so Python keeps detail and mutation authority.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 320,
+    "row_sha256": "6ccba354cdf665d2a650cc97c6d79d30359a5cb63e001168136eda19e3522b0f",
+    "summary": "promoted-get-api-lenses-into-the-bml-native-fron"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0320-6ccba354cdf6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L320"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+      "python3 scripts/runtime_surface_report.py --json",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "cargo build --release --bin form-kernel-rust",
+      "./form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 18080 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl /api/lenses native smoke",
+      "jq lenses built-in catalog shape check",
+      "curl /api/lenses/scientific fanout preservation smoke"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim substrate-node fourth-arm unblocker",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/schema-band.fk",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/tree-diff-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh schema tree-diff",
+    "cd form && FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Taught the fourth-arm flattener and emitted fkwu walker explicit substrate NodeID construction/projection via make_nodeid plus node_category/node_pkg/node_level/node_type/node_inst, fixed lexical top-level constant capture inside defn bodies and across module-to-band source boundaries, and admitted schema and tree-diff to the fourth-arm manifest. Focused gate returns PASS-4WAY for schema and tree-diff. Full Form validation returns fourth arm: 136 band(s) four-way, 556 ok, and 0 divergent. The cold-cache fourth-table fallback prewarms one-by-one when missing rows exceed the batch cap, avoiding the all-table memory spike observed during the slice. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts; Android remains at the Form-native recipe/table minimum floor unless a future APK compiler binary is proven separately.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 359,
+    "row_sha256": "084ed7af310fd52418a05baca5524a117379750e97e58d3978eea5e6a19d8391",
+    "summary": "taught-the-fourth-arm-flattener-and-emitted-fkwu"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0359-084ed7af310f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L359"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim substrate-node fourth-arm unblocker",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/schema-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/tree-diff-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh schema tree-diff",
+      "cd form && FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

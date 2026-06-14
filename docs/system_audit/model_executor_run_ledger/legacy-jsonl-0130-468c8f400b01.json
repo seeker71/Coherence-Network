@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation -q",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+    "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+    "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+    "python3 scripts/build_readmes.py --check",
+    "cd cli && npm pack --dry-run",
+    "cd mcp-server && npm pack --dry-run",
+    "git diff --check"
+  ],
+  "failure_reason": "Public entry surfaces were locally consistent but not yet carrying the same /come-in invitation across GitHub, npm, API, and MCP. This task adds a shared public_entry_invitation payload, public README sections, npm package descriptions, MCP tool metadata, and focused tests so any human or agent can ask what is alive, contribute with attribution, and adapt the practice to another repo with truthful boundaries.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 130,
+    "row_sha256": "468c8f400b01addbe04bc21e2afea96523f1df5ecb39fe596f2cc2f9b5c9b0d6",
+    "summary": "public-entry-surfaces-were-locally-consistent-bu"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0130-468c8f400b01",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L130"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation -q",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+      "python3 scripts/build_readmes.py --check",
+      "cd cli && npm pack --dry-run",
+      "cd mcp-server && npm pack --dry-run",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Follow-up feedback asked to move both more data out of code and toward DB-backed records. I added a DB-backed /api/vision/aligned graph-content slice, covered it with tests that create graph nodes and reject unscoped nodes, and updated /vision/aligned to render those API records with empty states instead of embedded external catalog arrays.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 80,
+    "row_sha256": "83430fa2b59717929ec9a83c02ed95607dcaf813f2000bebd834cdfc877af347",
+    "summary": "follow-up-feedback-asked-to-move-both-more-data-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0080-83430fa2b597",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L80"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

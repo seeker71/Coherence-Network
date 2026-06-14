@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "git fetch origin main && git rebase origin/main --autostash",
+    "python3 -m py_compile docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/source_crypto_trace.py",
+    "python3 -m json.tool docs/field/urs/source-bodies/registry.json >/dev/null",
+    "ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/source_crypto_trace.py",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+    "git diff --check",
+    "python3 docs/field/urs/tools/digital_influence_inventory.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --downloads-dir /Users/ursmuff/Downloads",
+    "python3 docs/field/urs/tools/source_crypto_trace.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --downloads-dir /Users/ursmuff/Downloads"
+  ],
+  "failure_reason": "The source-body registry was technically externalized but placed under docs/field/urs/input, making custody policy feel like a script input. This task moved it into docs/field/urs/source-bodies/registry.json, added a source-bodies README, updated manifest/spec/tests/builders, and regenerated compact trace artifacts.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 155,
+    "row_sha256": "58e9885a04c5d8ac03a251a4e88701acec363881b36b131edff2d9d23ad7729a",
+    "summary": "the-source-body-registry-was-technically-externa"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0155-58e9885a04c5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L155"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main && git rebase origin/main --autostash",
+      "python3 -m py_compile docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/source_crypto_trace.py",
+      "python3 -m json.tool docs/field/urs/source-bodies/registry.json >/dev/null",
+      "ruff check api/tests/test_field_story_trace_index.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/source_crypto_trace.py",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check",
+      "python3 docs/field/urs/tools/digital_influence_inventory.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --downloads-dir /Users/ursmuff/Downloads",
+      "python3 docs/field/urs/tools/source_crypto_trace.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --downloads-dir /Users/ursmuff/Downloads"
+    ],
+    "status": "pass"
+  }
+}

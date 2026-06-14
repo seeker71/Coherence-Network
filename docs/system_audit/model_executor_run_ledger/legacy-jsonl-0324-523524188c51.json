@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "python3 scripts/wellness_check.py",
+    "python3 form/scripts/validate_primitive_registry.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_primitive_drift_channel_samples.json"
+  ],
+  "failure_reason": "Closed primitive registry drift by adding float_to_int and temp_dir rows and updating primitive-registry-band pins to 201 total, 164 lane-1, 37 lane-0. Added processes and usage as explicit host-resource tool-channel plans. Added floor/north-star declarations to primitive-registry, tool-channel, channel-loopback, and fourth-kernel physical lane docs, and named the physical samples still missing from the channel learning surface.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 324,
+    "row_sha256": "523524188c51f0c48b52cbfaaea89751854688280e2e7b697a8e72f9a2631bd3",
+    "summary": "closed-primitive-registry-drift-by-adding-float-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0324-523524188c51",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L324"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "python3 form/scripts/validate_primitive_registry.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_primitive_drift_channel_samples.json"
+    ],
+    "status": "pass"
+  }
+}

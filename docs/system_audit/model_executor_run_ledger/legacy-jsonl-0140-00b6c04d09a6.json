@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+    "cd web && npm ci --allow-git=none",
+    "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+    "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+    "git diff --check",
+    "cd web && npm run build",
+    "PORT=3122 NEXT_PUBLIC_API_URL=http://127.0.0.1:18122 npm run dev",
+    "Playwright rendered local / and /come-in and found registry-fed Bali land path copy"
+  ],
+  "failure_reason": "The Bali land path was still guarded through fixed source strings. This task introduces web/lib/entry-paths.ts as a typed registry with kind, audiences, excluded kinds, surfaces, href, tone, and copy; home and /come-in render the Bali living compound path from that registry. The guard now validates registry shape, page imports, route resolvability, locale keys, and that hospital/care-institution kinds cannot fill land-design/community-living slots. The first focused test found missing fresh-worktree dependencies; npm ci resolved it. Local rendered checks passed with expected dev API connection-refused noise because the API was not running for the visual pass.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 140,
+    "row_sha256": "00b6c04d09a67d6cef08244686269d8d75b0fd67b5daada842bd38905ea47229",
+    "summary": "the-bali-land-path-was-still-guarded-through-fix"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0140-00b6c04d09a6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L140"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+      "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "cd web && npm run build",
+      "PORT=3122 NEXT_PUBLIC_API_URL=http://127.0.0.1:18122 npm run dev",
+      "Playwright rendered local / and /come-in and found registry-fed Bali land path copy"
+    ],
+    "status": "pass"
+  }
+}

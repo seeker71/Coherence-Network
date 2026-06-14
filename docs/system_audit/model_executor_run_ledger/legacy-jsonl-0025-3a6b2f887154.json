@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "START_GATE_MAIN_FAILURE_WAIVERS_FILE=/tmp/start_gate_waivers_22516968628.json ./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 -m py_compile scripts/start_gate.py",
+    "make start-gate"
+  ],
+  "failure_reason": "None",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 25,
+    "row_sha256": "3a6b2f8871549fc486223ca9970da687863255a686d1858af53cd7cda4ef25a5",
+    "summary": "none"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0025-3a6b2f887154",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L25"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "START_GATE_MAIN_FAILURE_WAIVERS_FILE=/tmp/start_gate_waivers_22516968628.json ./scripts/auto_heal_start_gate.sh --with-rebase --with-pr-gate",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 -m py_compile scripts/start_gate.py",
+      "make start-gate"
+    ],
+    "status": "pass"
+  }
+}

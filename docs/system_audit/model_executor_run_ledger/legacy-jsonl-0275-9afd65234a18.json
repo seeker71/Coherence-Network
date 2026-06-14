@@ -1,0 +1,56 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh deploy/kernel-router/entrypoint.sh scripts/kernel_front_door_local_preflight.sh scripts/verify_web_api_deploy.sh",
+    "cd form/form-kernel-rust && cargo build --release",
+    "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+    "docker compose rendered deploy/kernel-router/docker-compose.kernel-router.yml with a temporary api service",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19123 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+    "curl -sS -i -X POST http://127.0.0.1:19123/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' --data-binary @/tmp/kernel-image-minimal-request.json",
+    "scripts/kernel_front_door_local_preflight.sh",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_image_public_native_ingress.json",
+    "jq -e . docs/system_audit/model_executor_runs.jsonl >/dev/null",
+    "git diff --check"
+  ],
+  "failure_reason": "Bound public POST /api/substrate/kernel-image/proposals to a path-specific BML front-door kernel-router service instead of Python fanout. The router image now bakes /routes/api.bml, Hostinger starts kernel-router-bml-front-door with ROUTES_FILE=/routes/api.bml, deploy-local proof checks X-Form-Router: native-kernel plus python_authority=false, and public deployment verification now fails if this endpoint is not served by the native BML handler. Local BML catalog proof returned accepted-preview with api_substrate_kernel_image_proposals and mutation_performed=false; production-routes preflight remains passing.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 275,
+    "row_sha256": "9afd65234a183f752dbb07c5c719f64a471a4696ced697a659873545fde4332f",
+    "summary": "bound-public-post-api-substrate-kernel-image-pro"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0275-9afd65234a18",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L275"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh deploy/kernel-router/entrypoint.sh scripts/kernel_front_door_local_preflight.sh scripts/verify_web_api_deploy.sh",
+      "cd form/form-kernel-rust && cargo build --release",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+      "docker compose rendered deploy/kernel-router/docker-compose.kernel-router.yml with a temporary api service",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19123 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -sS -i -X POST http://127.0.0.1:19123/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' --data-binary @/tmp/kernel-image-minimal-request.json",
+      "scripts/kernel_front_door_local_preflight.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_image_public_native_ingress.json",
+      "jq -e . docs/system_audit/model_executor_runs.jsonl >/dev/null",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

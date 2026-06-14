@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "bash -n scripts/settle_public_deploy.sh scripts/test_settle_public_deploy_dispatch.sh scripts/restart_hostinger_vps.sh scripts/test_restart_hostinger_vps.sh",
+    "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-vps-restart.yml\"); puts \"yaml ok\"'",
+    "bash scripts/test_restart_hostinger_vps.sh && bash scripts/test_settle_public_deploy_dispatch.sh",
+    "DEPLOY_SETTLE_TIMEOUT_SECONDS=720 DEPLOY_SETTLE_POLL_SECONDS=15 DEPLOY_SETTLE_MAX_DISPATCHES=1 VERIFY_REQUIRE_API_HEALTH_SHA=1 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+  ],
+  "failure_reason": "Added deploy recovery surfaces after current-main Hostinger Auto Deploy repeatedly failed at SSH/SCP sync to 187.77.152.42:22. settle_public_deploy now dispatches one bounded replacement Hostinger deploy for a failed/cancelled current-main run; restart_hostinger_vps provides an explicit Hostinger API restart path for VPS reboot via POST /api/vps/v1/virtual-machines/{virtualMachineId}/restart. Local syntax, workflow YAML, and request-shape tests pass. Public deploy remains externally blocked until the VPS SSH service accepts GitHub-runner SSH/SCP connections; observed failed runs were 26890420437, 26890807855, and post-reboot run 26891641642.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 231,
+    "row_sha256": "0c0356a2721aa99a9bc42478aa046f90e6073a2446cda3007012bd046a4d3084",
+    "summary": "added-deploy-recovery-surfaces-after-current-mai"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0231-0c0356a2721a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L231"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/settle_public_deploy.sh scripts/test_settle_public_deploy_dispatch.sh scripts/restart_hostinger_vps.sh scripts/test_restart_hostinger_vps.sh",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-vps-restart.yml\"); puts \"yaml ok\"'",
+      "bash scripts/test_restart_hostinger_vps.sh && bash scripts/test_settle_public_deploy_dispatch.sh",
+      "DEPLOY_SETTLE_TIMEOUT_SECONDS=720 DEPLOY_SETTLE_POLL_SECONDS=15 DEPLOY_SETTLE_MAX_DISPATCHES=1 VERIFY_REQUIRE_API_HEALTH_SHA=1 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "status": "pass"
+  }
+}

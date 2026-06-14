@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/python -m pytest tests/test_edge_cases_regression.py::test_cors_not_wildcard tests/test_edge_cases_regression.py::test_views_ping_allows_attribution_headers_cors_preflight -q"
+  ],
+  "failure_reason": "Per-link live audit found browser-origin /api/views/ping preflight rejected the attribution headers sent by the web client. API CORS now allows X-Contributor-Id, X-Session-Fingerprint, and X-Referrer-Contributor-Id so browser read pings can credit source contributions.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 115,
+    "row_sha256": "c0d09331d1f02956c90d151a2ce0f919647492ab5d862953e9e959093721acc5",
+    "summary": "per-link-live-audit-found-browser-origin-api-vie"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0115-c0d09331d1f0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L115"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/python -m pytest tests/test_edge_cases_regression.py::test_cors_not_wildcard tests/test_edge_cases_regression.py::test_views_ping_allows_attribution_headers_cors_preflight -q"
+    ],
+    "status": "pass"
+  }
+}

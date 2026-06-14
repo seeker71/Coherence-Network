@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PATH=\"/opt/homebrew/bin:$PATH\" make prompt-gate",
+    "curl -sS https://coherence-network.vercel.app/flow",
+    "curl -sS https://coherence-network.vercel.app/api/contributors?limit=150",
+    "curl -sS https://coherence-network.vercel.app/api/contributions?limit=400",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Identified stale Next data-cache on /flow upstream fetches and switched inventory/contributor/contribution requests to cache:no-store to force live canonical counts.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 42,
+    "row_sha256": "6eec3b1a6428318a303d8534a7fc66ef3e0e9994824f2e196402017c366a2815",
+    "summary": "identified-stale-next-data-cache-on-flow-upstrea"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0042-6eec3b1a6428",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L42"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PATH=\"/opt/homebrew/bin:$PATH\" make prompt-gate",
+      "curl -sS https://coherence-network.vercel.app/flow",
+      "curl -sS https://coherence-network.vercel.app/api/contributors?limit=150",
+      "curl -sS https://coherence-network.vercel.app/api/contributions?limit=400",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

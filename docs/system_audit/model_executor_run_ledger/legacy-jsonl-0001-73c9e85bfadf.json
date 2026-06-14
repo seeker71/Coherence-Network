@@ -1,0 +1,42 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make start-gate",
+    "./scripts/verify_worktree_local_web.sh",
+    "./scripts/verify_worktree_local_web.sh --start",
+    "make web-worktree-validate",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Initial verification failed when services were not running and preflight lacked commit evidence; added auto-heal validation path and required evidence artifact, then reran to pass.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 1,
+    "row_sha256": "73c9e85bfadfe1e62ac001d0fd9ef105e5bdb9cbd0bdc4b89d31dfd994b75b85",
+    "summary": "initial-verification-failed-when-services-were-n"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0001-73c9e85bfadf",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L1"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "./scripts/verify_worktree_local_web.sh",
+      "./scripts/verify_worktree_local_web.sh --start",
+      "make web-worktree-validate",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

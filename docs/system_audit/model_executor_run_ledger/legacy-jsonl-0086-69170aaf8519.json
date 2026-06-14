@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py before implementation (expected 404 for realize route)",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "cd web && npm run build",
+    "rg scan for removed /vision/realize core catalog identifiers"
+  ],
+  "failure_reason": "The next DB migration slice moved /vision/realize core content out of React arrays. A new /api/vision/{domain}/realize endpoint reads scoped graph nodes for vocabulary, host spaces, context pairs, and dual paths; /vision/realize now renders that payload with explicit empty states and image guards instead of embedding those core arrays in code.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 86,
+    "row_sha256": "69170aaf8519c964481d87184546cd7920209e680a0afaaaa13d6bac74669816",
+    "summary": "the-next-db-migration-slice-moved-vision-realize"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0086-69170aaf8519",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L86"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py before implementation (expected 404 for realize route)",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "cd web && npm run build",
+      "rg scan for removed /vision/realize core catalog identifiers"
+    ],
+    "status": "pass"
+  }
+}

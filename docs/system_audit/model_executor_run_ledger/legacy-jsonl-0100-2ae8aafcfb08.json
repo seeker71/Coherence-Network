@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 scripts/agent_status.py --json",
+    "python3 scripts/import_lineage.py docs/lineage/ubud-embodied-lineage.graph.json --dry-run --api https://api.coherencycoin.com",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_ubud_lineage_graph_projection.json",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Project the already-ingested Ubud embodied lineage into graph/API/web accessibility: explicit graph manifest nodes, canonical graph edges, importer edge replay, and a public /lineage/ubud-embodied-lineage page.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 100,
+    "row_sha256": "2ae8aafcfb087591954a27a1e1babbcb272f255c188cd689e2c78e6ea15c9ce6",
+    "summary": "project-the-already-ingested-ubud-embodied-linea"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pending",
+  "run_id": "legacy-jsonl-0100-2ae8aafcfb08",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L100"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 scripts/agent_status.py --json",
+      "python3 scripts/import_lineage.py docs/lineage/ubud-embodied-lineage.graph.json --dry-run --api https://api.coherencycoin.com",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_ubud_lineage_graph_projection.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pending"
+  }
+}

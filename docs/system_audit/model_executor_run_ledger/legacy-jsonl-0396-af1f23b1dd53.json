@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"physical GPU MLX Metal rehash safetensors vitality ingestion\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+    "scripts/model_carrier_rehash_audit.sh"
+  ],
+  "failure_reason": "Closed the next physical model-vitality floor on macOS arm64. The new Form band returns 65535 on host-I/O kernels by writing a tiny safetensors/MLX-style carrier file, slicing two tensor chunks by offset/length, storing and reopening both chunks in the segmented file carrier, validating a chunk-set root, checking CPU/GPU/Metal/MLX physical carrier re-hash receipt rows, rejecting a wrong chunk digest, and reading a live model-vitality store row into wellness/pulse/release-health routing. The native witness compiles Swift/Metal plus MLX C runners and proves returned-byte sha256 equality for CPU, generic GPU via Metal, Metal on Apple M4 Max, and MLX through /opt/homebrew/lib/libmlxc.dylib.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 396,
+    "row_sha256": "af1f23b1dd53485bd16b42d6e5a2f837006001b96ce0cf0ddc2e4cfb8d239ad2",
+    "summary": "closed-the-next-physical-model-vitality-floor-on"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0396-af1f23b1dd53",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L396"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"physical GPU MLX Metal rehash safetensors vitality ingestion\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+      "scripts/model_carrier_rehash_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

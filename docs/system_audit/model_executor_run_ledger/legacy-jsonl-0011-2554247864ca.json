@@ -1,0 +1,40 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+    "git fetch origin main && git -c rebase.autoStash=true rebase origin/main",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_runner_registry_api.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Runner was emitting an intermediate failed PATCH before retry scheduling, which triggered false Telegram failed alerts. Moved final task failed PATCH emission to terminal branches only and added regression coverage for retry paths.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 11,
+    "row_sha256": "2554247864ca560d9e9a9de02b93c24e04aa6ccaa10c20dd20fe2cda7ea5c692",
+    "summary": "runner-was-emitting-an-intermediate-failed-patch"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0011-2554247864ca",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L11"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+      "git fetch origin main && git -c rebase.autoStash=true rebase origin/main",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_registry_api.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

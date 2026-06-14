@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_active_recipe_tracing_form.py",
+    "cd api && /opt/homebrew/bin/ruff check tests/test_active_recipe_tracing_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/active-recipe-tracing-form.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_active_recipe_tracing_form.json",
+    "git diff --check",
+    "git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Active recipe tracing was corrected from Python endpoint shape into substrate Form. The Form artifact now declares state, library, active recipe reads, candidate selection, keep/choose outcomes, and the future trace-index query. Local PR guard returned ready_for_push=True.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 159,
+    "row_sha256": "10b564337de3642e80abfae2a66a7847c8016d0e2555d09109c1a78464681e3b",
+    "summary": "active-recipe-tracing-was-corrected-from-python-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0159-10b564337de3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L159"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_active_recipe_tracing_form.py",
+      "cd api && /opt/homebrew/bin/ruff check tests/test_active_recipe_tracing_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/active-recipe-tracing-form.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_active_recipe_tracing_form.json",
+      "git diff --check",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

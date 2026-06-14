@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --refresh-duration-metadata",
+    "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis",
+    "python3 -m py_compile docs/field/urs/tools/audible_history_spectrum.py",
+    "python3 duration-weighted invariant check for rows, metadata, and hours",
+    "git diff --check"
+  ],
+  "failure_reason": "Monthly Audible influence was still centered on event counts. This task adds Audible catalog runtime metadata and makes the effective listening trace answer monthly, author, series, and work influence by duration listened or book length, with event counts retained as secondary evidence.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 136,
+    "row_sha256": "53039d3a7da042e5b032afdcd9eb55305d462e9a87b0a8ac5c8cd8ebef2b12c9",
+    "summary": "monthly-audible-influence-was-still-centered-on-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0136-53039d3a7da0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L136"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis --refresh-duration-metadata",
+      "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis",
+      "python3 -m py_compile docs/field/urs/tools/audible_history_spectrum.py",
+      "python3 duration-weighted invariant check for rows, metadata, and hours",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "tmpdir=$(mktemp -d); mkdir -p \"$tmpdir/api/config\"; cp api/config/api.json \"$tmpdir/api/config/api.json\"; TARGET_SHA=0123456789abcdef REPO_DIR=\"$tmpdir\" python3 - <<'PY' ... PY; jq -e --arg sha 0123456789abcdef '.deployed_sha == $sha and .web.deployed_sha == $sha and .web.updated_at == $sha' \"$tmpdir/api/config/api.json\" >/dev/null; rm -rf \"$tmpdir\""
+  ],
+  "failure_reason": "Strict public deploy verification showed API SHA parity was correct but the web health proxy still reported deployed_sha=unknown. Hostinger deploys now stamp the target SHA into api/config/api.json before rebuilding so the Next health proxy can expose web SHA parity.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 112,
+    "row_sha256": "946f0d5e43836adc0a70cbe1ed32a7b663246435e4c10f3c41de676f736bf25d",
+    "summary": "strict-public-deploy-verification-showed-api-sha"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0112-946f0d5e4383",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L112"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "tmpdir=$(mktemp -d); mkdir -p \"$tmpdir/api/config\"; cp api/config/api.json \"$tmpdir/api/config/api.json\"; TARGET_SHA=0123456789abcdef REPO_DIR=\"$tmpdir\" python3 - <<'PY' ... PY; jq -e --arg sha 0123456789abcdef '.deployed_sha == $sha and .web.deployed_sha == $sha and .web.updated_at == $sha' \"$tmpdir/api/config/api.json\" >/dev/null; rm -rf \"$tmpdir\""
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"production wellness pulse ingestion from live model-vitality rows\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-production-band.fk",
+    "scripts/model_vitality_production_ingest_probe.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_vitality_production_ingestion.json"
+  ],
+  "failure_reason": "Added production pulse/runtime ingestion rows to model-vitality and proved them with a focused production band at 32767 on host-I/O kernels. The band stores a live model-vitality row, reads it back, routes it through production-derived wellness/pulse/release states, proves restore-pulse/release-health/focus-proof/serve-and-watch outcomes, rejects missing attribution and Python-authority runtime rows, and refuses missing store rows. The live public probe captured API pulse overall=strained with silences=2, pulse front door overall=breathing, and runtime-summary served by native-kernel with x-form-python-authority=false; the next north-star gap is direct fourth-kernel external HTTPS capture replacing the shell witness.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 400,
+    "row_sha256": "ee77952062dee5366e1e1fc0c2267ab1864d5522ea60543faabcfd0431148336",
+    "summary": "added-production-pulse-runtime-ingestion-rows-to"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0400-ee77952062de",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L400"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"production wellness pulse ingestion from live model-vitality rows\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-production-band.fk",
+      "scripts/model_vitality_production_ingest_probe.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_vitality_production_ingestion.json"
+    ],
+    "status": "pass"
+  }
+}

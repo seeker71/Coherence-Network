@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"yaml ok\"'",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_sync_retry.json"
+  ],
+  "failure_reason": "Patched Hostinger Auto Deploy sync so scp/ssh operations retry up to five times with explicit connection timeout and server-alive options. This addresses manual deploy run 26764349849 failing after a single scp connection timeout despite keyscan fallback succeeding.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 201,
+    "row_sha256": "5a1441ae94ac47f8c1744c15e40bf5db3b407e7ec297d6d475a8ae5aa3d5544c",
+    "summary": "patched-hostinger-auto-deploy-sync-so-scp-ssh-op"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0201-5a1441ae94ac",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L201"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"yaml ok\"'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_sync_retry.json"
+    ],
+    "status": "pass"
+  }
+}

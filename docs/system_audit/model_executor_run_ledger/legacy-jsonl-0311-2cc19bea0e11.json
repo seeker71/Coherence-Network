@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh && ./scripts/test_hostinger_deploy_form_paths.sh",
+    "cd form/form-kernel-rust && cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check"
+  ],
+  "failure_reason": "Lifted the promoted BML read-route responses from router-only proof toward full native semantic proof. A narrow api-native-ok-json(handler, node) helper now adds X-Form-Handler and X-Form-Python-Authority: false to the five promoted read handlers, and the Hostinger local canary again requires those headers for the newly built BML front-door image. The Rust source-catalog load test passed in 105.60s.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 311,
+    "row_sha256": "2cc19bea0e11f76a423610c4113415ba99df2be4e881950c2f2d7c422a3a0115",
+    "summary": "lifted-the-promoted-bml-read-route-responses-fro"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0311-2cc19bea0e11",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L311"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh && ./scripts/test_hostinger_deploy_form_paths.sh",
+      "cd form/form-kernel-rust && cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

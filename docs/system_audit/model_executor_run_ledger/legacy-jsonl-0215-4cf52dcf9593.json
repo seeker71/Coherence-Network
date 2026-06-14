@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form/form-kernel-rust && cargo build --release",
+    "cd form/form-kernel-rust && cargo test --release",
+    "cd form/form-kernel-rust && python3 test_serve.py",
+    "python3 scripts/audit_bml_bmf_kernel_natives.py",
+    "git diff --check"
+  ],
+  "failure_reason": "Forward-ported the local kernel router intent onto latest main without dropping runtime-share primitives. The proof runs form-kernel-rust serve in kernel-only and --upstream modes, proving native Form responses and Python fan-out responses with X-Form-Router headers.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 215,
+    "row_sha256": "4cf52dcf95933e3bc9ab1a9823a0f3d24a25d880f0c53698a1c03fd4b3c55152",
+    "summary": "forward-ported-the-local-kernel-router-intent-on"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0215-4cf52dcf9593",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L215"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-rust && cargo test --release",
+      "cd form/form-kernel-rust && python3 test_serve.py",
+      "python3 scripts/audit_bml_bmf_kernel_natives.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

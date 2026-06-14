@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "scripts/check_route_manifests.sh",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py",
+    "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py"
+  ],
+  "failure_reason": "Addressed the continuity gate by preserving the grok worktree, then wired the first production caller to brcr-realize. The Rust route-loader prelude now includes choice-receipt, bml-source, branch-choice-order, and bml-route-choice-runtime for route manifests. production-routes.fk exposes route_choice_signature on native mutation default/public-gate responses and inside decision_receipt, computed from brcr-realize over the same mutation kh-route rows used by the manifest. Manifest name-check and native mutation public-gate pytest pass.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 338,
+    "row_sha256": "05b3a2ae619f6b69df0f553d600f4d7cc9628b08b9f950ccf7310615453d37c7",
+    "summary": "addressed-the-continuity-gate-by-preserving-the-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0338-05b3a2ae619f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L338"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "scripts/check_route_manifests.sh",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py"
+    ],
+    "status": "pass"
+  }
+}

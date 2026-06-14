@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "./scripts/agent-coord.sh claim \"wellness tissue release\"",
+    "python3 scripts/agent_status.py --json",
+    "python3 -m py_compile scripts/wellness_check.py scripts/agent_status.py",
+    "make wellness | rg -A10 -B2 \"Form engine|what_wants_attention\"",
+    "rg -n \"agent_status\\\\.py --diff\" CLAUDE.md docs/shared/agent-start-packet.md AGENTS.md 2>/dev/null || true"
+  ],
+  "failure_reason": "Released a stale wellness attention tissue. The Form engine sense already measured 15/15 Python dispatch branches covered, but still emitted a missing-arm guidance line; the attention classifier then promoted a healthy surface into what_wants_attention. The healthy path now says the surface is symmetric without negative trigger words, moving Form engine into what_can_compost. Also corrected active orientation docs from the removed agent_status.py --diff flag to the current human/json interfaces.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 315,
+    "row_sha256": "8392cdc56910b906279f932252f5c9692af3357dc36edc20b63636cd1f85c217",
+    "summary": "released-a-stale-wellness-attention-tissue-the-f"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0315-8392cdc56910",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L315"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "./scripts/agent-coord.sh claim \"wellness tissue release\"",
+      "python3 scripts/agent_status.py --json",
+      "python3 -m py_compile scripts/wellness_check.py scripts/agent_status.py",
+      "make wellness | rg -A10 -B2 \"Form engine|what_wants_attention\"",
+      "rg -n \"agent_status\\\\.py --diff\" CLAUDE.md docs/shared/agent-start-packet.md AGENTS.md 2>/dev/null || true"
+    ],
+    "status": "pass"
+  }
+}

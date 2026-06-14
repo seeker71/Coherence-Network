@@ -1,0 +1,56 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"android live active sample receipt\"",
+    "adb devices -l",
+    "cd experiments/coherence-sense-android && ANDROID_HOME=/Users/ursmuff/.android-sdk-codex JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew installDebug",
+    "adb shell am start -n com.coherence.sense/.MainActivity",
+    "adb shell input tap 506 810",
+    "adb shell input tap 720 1458 && adb shell input text 'http://192.168.0.7:8800'",
+    "adb shell input tap 506 886",
+    "curl -sS --max-time 2 http://localhost:8800/state | jq '{frames, present, latest: {mic_rms: .latest.mic_rms, camera_luma: .latest.camera_luma, camera_samples: .latest.camera_samples, gpu_pixel: .latest.gpu_pixel, gpu_samples: .latest.gpu_samples, gpu_latency_ms: .latest.gpu_latency_ms, sample_count: .latest.body_state.sample_count, organs_active: .latest.organs_active}, checks, challenger: .challenger, chal_agree, chal_checks}'",
+    "python3 scripts/android_mesh_learning_receipt.py --start-app",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_android_live_active_receipt.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "git diff --check"
+  ],
+  "failure_reason": "Installed the current Coherence Sense debug APK on the authorized SM-S918U1 Android 16 arm64-v8a device, entered the Mac witness URL manually after mDNS discovery stayed pending, and captured the first live active-sample witness receipt. localhost:8800/state reported present=true, frames=141, nonzero mic_rms=0.007045886313547694, nonzero camera_luma=0.02805499733188006, camera_samples=2367, gpu_pixel=-13614897, gpu_samples=99, gpu_latency_ms=1.412917, body_state.sample_count=5084, checks=136, chal_agree=138, chal_checks=138, and active organs including camera, gpu, and mic. Existing Python receipt helper wrote capability/liveness JSON but does not yet export live witness counters, so this slice records the live counter proof in durable docs/evidence and leaves Form-native witness-state export as the next gap.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 395,
+    "row_sha256": "9923356908a3106d5a5e7126b5a73e7056c4acb755e8989656f11968577c960d",
+    "summary": "installed-the-current-coherence-sense-debug-apk-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0395-9923356908a3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L395"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"android live active sample receipt\"",
+      "adb devices -l",
+      "cd experiments/coherence-sense-android && ANDROID_HOME=/Users/ursmuff/.android-sdk-codex JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew installDebug",
+      "adb shell am start -n com.coherence.sense/.MainActivity",
+      "adb shell input tap 506 810",
+      "adb shell input tap 720 1458 && adb shell input text 'http://192.168.0.7:8800'",
+      "adb shell input tap 506 886",
+      "curl -sS --max-time 2 http://localhost:8800/state | jq '{frames, present, latest: {mic_rms: .latest.mic_rms, camera_luma: .latest.camera_luma, camera_samples: .latest.camera_samples, gpu_pixel: .latest.gpu_pixel, gpu_samples: .latest.gpu_samples, gpu_latency_ms: .latest.gpu_latency_ms, sample_count: .latest.body_state.sample_count, organs_active: .latest.organs_active}, checks, challenger: .challenger, chal_agree, chal_checks}'",
+      "python3 scripts/android_mesh_learning_receipt.py --start-app",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_android_live_active_receipt.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

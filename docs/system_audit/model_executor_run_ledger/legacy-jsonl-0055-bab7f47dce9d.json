@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python scripts/start_gate.py",
+    "python scripts/worktree_continuity_guard.py --fail-on-risk",
+    "python -c \"from pathlib import Path; text=Path('specs/idea-4deb5bd7c800.md').read_text(encoding='utf-8'); assert len(text) >= 500; required=['## Summary','## Requirements','## API changes','## Data model','## Verification criteria','## Risks']; missing=[h for h in required if h not in text]; assert not missing, missing\"",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_mcp-skill-registry-discovery-spec.json"
+  ],
+  "failure_reason": "The sandbox could not reach the heartbeat API and did not have the `cc` CLI installed, but the minimal spec and local evidence artifact were completed and validated.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 55,
+    "row_sha256": "bab7f47dce9d99f5299d093291b25a1c5c9adf531707360a06a679d0ddfcc0ac",
+    "summary": "the-sandbox-could-not-reach-the-heartbeat-api-an"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0055-bab7f47dce9d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L55"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python scripts/start_gate.py",
+      "python scripts/worktree_continuity_guard.py --fail-on-risk",
+      "python -c \"from pathlib import Path; text=Path('specs/idea-4deb5bd7c800.md').read_text(encoding='utf-8'); assert len(text) >= 500; required=['## Summary','## Requirements','## API changes','## Data model','## Verification criteria','## Risks']; missing=[h for h in required if h not in text]; assert not missing, missing\"",
+      "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_mcp-skill-registry-discovery-spec.json"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/runtime_surface_report.py --json",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19185 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+    "curl -sS -i http://127.0.0.1:19185/api/ideas/source-portfolio",
+    "python3 - <<'PY'\nimport json, urllib.request\nwith urllib.request.urlopen('http://127.0.0.1:19185/api/ideas/source-portfolio') as r:\n    body = json.loads(r.read())\n    print(r.status, r.headers.get('X-Form-Router'), len(body['ideas']), body['summary']['total_ideas'], body['ideas'][0]['id'], body['ideas'][-1]['id'])\nPY",
+    "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py",
+    "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md --file specs/ideas-graph-projection-form.md",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Cleaned another ideas read path from Python by adding /api/ideas/source-portfolio to the production kernel-router manifest. The route reads ideas/INDEX.md in Form, parses the 17 curated super-idea rows, maps source stage tokens to API stage values, and emits an IdeaPortfolioResponse-shaped body with X-Form-Router:native-kernel. The mutable DB-backed /api/ideas route remains FastAPI until a live graph storage carrier lands.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 243,
+    "row_sha256": "dce13f6f9220cf5af23820444fcf24a4dfe61685dc5be5d5fb5742b1e5a5642c",
+    "summary": "cleaned-another-ideas-read-path-from-python-by-a"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0243-dce13f6f9220",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L243"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19185 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -i http://127.0.0.1:19185/api/ideas/source-portfolio",
+      "python3 - <<'PY'\nimport json, urllib.request\nwith urllib.request.urlopen('http://127.0.0.1:19185/api/ideas/source-portfolio') as r:\n    body = json.loads(r.read())\n    print(r.status, r.headers.get('X-Form-Router'), len(body['ideas']), body['summary']['total_ideas'], body['ideas'][0]['id'], body['ideas'][-1]['id'])\nPY",
+      "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py",
+      "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md --file specs/ideas-graph-projection-form.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}

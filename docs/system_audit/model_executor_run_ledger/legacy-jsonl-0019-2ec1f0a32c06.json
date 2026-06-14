@@ -1,0 +1,34 @@
+{
+  "attempts": 3,
+  "commands_run": [
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "GET /api/agent/tasks/task_96363059df2cf784"
+  ],
+  "failure_reason": "Claude task failed on host runner because --dangerously-skip-permissions is rejected under root; runner now strips this flag when executing Claude commands in root context.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 19,
+    "row_sha256": "2ec1f0a32c06003fbcea0bacae7adaf0f065a9f71c9e8cf678ae95782b476ff5",
+    "summary": "claude-task-failed-on-host-runner-because-danger"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0019-2ec1f0a32c06",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L19"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "GET /api/agent/tasks/task_96363059df2cf784"
+    ],
+    "status": "pass"
+  }
+}

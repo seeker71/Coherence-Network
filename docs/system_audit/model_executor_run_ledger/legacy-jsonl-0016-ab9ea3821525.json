@@ -1,0 +1,34 @@
+{
+  "attempts": 4,
+  "commands_run": [
+    "cd api && ruff check app/services/automation_usage_service.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled\"",
+    "POST /api/automation/usage/provider-heal/run?required_providers=openai,claude-code,cursor&enable_cli_installs=true"
+  ],
+  "failure_reason": "Cursor installer completed but agent binary remained undiscoverable on PATH; added candidate-path discovery, PATH prepend, and symlink fallback after install.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 16,
+    "row_sha256": "ab9ea3821525a6593b3389dd0122f6619312990574f1ec69524846d3b9c973a0",
+    "summary": "cursor-installer-completed-but-agent-binary-rema"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0016-ab9ea3821525",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L16"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && ruff check app/services/automation_usage_service.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled\"",
+      "POST /api/automation/usage/provider-heal/run?required_providers=openai,claude-code,cursor&enable_cli_installs=true"
+    ],
+    "status": "pass"
+  }
+}

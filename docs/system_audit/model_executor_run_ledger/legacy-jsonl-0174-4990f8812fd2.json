@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-module-parse-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-module-parse-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk /tmp/python-repo-parse-small20.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk /tmp/python-repo-parse-small20.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+  ],
+  "failure_reason": "Added a reusable Python module parser entry above BMF source sensing. python-parse-module-file emits py-module and py-statement objects; python-parse-module-tree-file emits indentation-aware py-module-tree objects. The proof covers full-file sample parsing, parenthesized multiline continuation as one logical statement, and real def-body ownership in source and binary modes at 21500. Scanner coverage now includes Python 3.14 type, @=, and t-string source objects; a temporary 20-file real-repo proof passes in source and binary while larger arbitrary corpus runs expose remaining throughput work before whole-repo completion can be claimed.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 174,
+    "row_sha256": "4990f8812fd2b7a2f2c350329ebaf98de6e8f39cf82fa59ea4ad1b611e9ce25a",
+    "summary": "added-a-reusable-python-module-parser-entry-abov"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0174-4990f8812fd2",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L174"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-module-parse-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-module-parse-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-scanner-real-syntax-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk /tmp/python-repo-parse-small20.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk /tmp/python-repo-parse-small20.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+    ],
+    "status": "pass"
+  }
+}

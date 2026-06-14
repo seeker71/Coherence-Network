@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"summary route stream physical receipts\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/kernel-http.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_summary_route_stream_receipts.json"
+  ],
+  "failure_reason": "Moved summary route and stream inputs from planned coordinates to ready source-data receipts. The focused multi-source band returns 65535 as a 3-kernel only host-I/O/value proof: file uses read_file_slice, store uses cell-log-store cls-put/cls-get, route uses kernel-http route choice plus kh-response body/status/header gates, and stream uses channel-create/channel-append/channel-read-since over a .fkb cursor window. The next gap is explicitly retained: socket-served front-door route traces and backpressure-aware native event streams.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 381,
+    "row_sha256": "6576d61e38e1df0383768a95c2edd04f6534feb7b93c118edd2f0ecaf7755fce",
+    "summary": "moved-summary-route-and-stream-inputs-from-plann"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0381-6576d61e38e1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L381"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"summary route stream physical receipts\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/kernel-http.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_summary_route_stream_receipts.json"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 -m json.tool docs/field/urs/trace/influence_teaching_translator.json",
+    "python3 scripts/influence_teaching_translator.py --slug urs-field-story --limit 80 | jq '{available: .totals.available_rows, joined: .totals.joined_cc_rows, kinds: .totals.coverage_kinds}'",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py tests/test_field_story_agent_surface.py",
+    "cd api && python3 -m ruff check app/services/influence_teaching_translator_service.py tests/test_field_story_trace_index.py"
+  ],
+  "failure_reason": "The influence teaching translator had been shaped around audiobook and major-work rows. This breath expands it into the wider influence body: physical books, music, podcasts, practices, gatherings, retreats, rituals, and formative technical work, while exposing coverage_kinds through the API for efficient dynamic access.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 153,
+    "row_sha256": "c1044b7505f1499d607ff36b623ebc65f10953b3ffe269d804f01cdacdd37013",
+    "summary": "the-influence-teaching-translator-had-been-shape"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0153-c1044b7505f1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L153"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 -m json.tool docs/field/urs/trace/influence_teaching_translator.json",
+      "python3 scripts/influence_teaching_translator.py --slug urs-field-story --limit 80 | jq '{available: .totals.available_rows, joined: .totals.joined_cc_rows, kinds: .totals.coverage_kinds}'",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py tests/test_field_story_agent_surface.py",
+      "cd api && python3 -m ruff check app/services/influence_teaching_translator_service.py tests/test_field_story_trace_index.py"
+    ],
+    "status": "pass"
+  }
+}

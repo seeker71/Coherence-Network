@@ -1,0 +1,58 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-lift-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-intervene-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-conflict-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk",
+    "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+    "cd form/form-kernel-ts && npm install",
+    "cd form/form-kernel-ts && npm run check",
+    "cd form/form-kernel-ts && npx tsx src/field.test.ts",
+    "cd web && npm install",
+    "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Promoted FMF runtime into canonical Form-native BML. Runtime band returns 63 from source and binary sibling-kernel execution; focused lift/intervene/conflict bands pass; TS and browser adapters remain green and public proof markers include field-model-form-bml-runtime-proof:63.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 193,
+    "row_sha256": "b518936ea51467d8c2b26f86b102362bcfec9caf3f09f04d896dcab610fe7d90",
+    "summary": "promoted-fmf-runtime-into-canonical-form-native-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0193-b518936ea514",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L193"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-lift-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-intervene-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-conflict-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "cd form/form-kernel-ts && npm install",
+      "cd form/form-kernel-ts && npm run check",
+      "cd form/form-kernel-ts && npx tsx src/field.test.ts",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}

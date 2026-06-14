@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"ts-reversible-band section-source residual after PR #2992: source-compiler leaves raw section [form.bmf] uncompiled/unbound; grok TypeScript-BMF claim is quiet 137h, so taking only this full-suite residual and will pivot if grok returns active.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/ts-reversible-band.fk",
+    "cd form && ./validate.sh > /tmp/coherence-form-validate-ts-reversible-20260613.log 2>&1",
+    "rg -n \"fourth arm:| ok,|divergent\" /tmp/coherence-form-validate-ts-reversible-20260613.log",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/ts-reversible-band.fk",
+    "cd form && ./validate.sh > /tmp/coherence-form-validate-ts-reversible-rebased-20260613.log 2>&1",
+    "rg -n \"fourth arm:| ok,|divergent\" /tmp/coherence-form-validate-ts-reversible-20260613.log /tmp/coherence-form-validate-ts-reversible-rebased-20260613.log"
+  ],
+  "failure_reason": "Converted ts-reversible-band.fk from a raw section [form.bmf] body containing high-level statements into a section [form.action] body with TypeScript-BMF preludes, BMF capture objects, NodeID category checks, and one reverse source-stream check. Focused validation passes at 105 before and after rebase. Full Form validation returns validate_rc=0 with fourth arm: 118 band(s) four-way, 551 ok, and 0 divergent before and after rebase. macOS arm64 and Android arm64 object receipts passed through the metal-plane audit; Android JIT remains supported at the Form-native recipe/table floor, with APK-shipped compiler binaries reserved for optional measured acceleration/oracle evidence.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 344,
+    "row_sha256": "935dd180cd15b237634bfc010013d3fe6843f249bb0c4c1aac01fe9fc630f3c6",
+    "summary": "converted-ts-reversible-band-fk-from-a-raw-secti"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0344-935dd180cd15",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L344"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"ts-reversible-band section-source residual after PR #2992: source-compiler leaves raw section [form.bmf] uncompiled/unbound; grok TypeScript-BMF claim is quiet 137h, so taking only this full-suite residual and will pivot if grok returns active.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/ts-reversible-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-ts-reversible-20260613.log 2>&1",
+      "rg -n \"fourth arm:| ok,|divergent\" /tmp/coherence-form-validate-ts-reversible-20260613.log",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/ts-reversible-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-ts-reversible-rebased-20260613.log 2>&1",
+      "rg -n \"fourth arm:| ok,|divergent\" /tmp/coherence-form-validate-ts-reversible-20260613.log /tmp/coherence-form-validate-ts-reversible-rebased-20260613.log"
+    ],
+    "status": "pass"
+  }
+}

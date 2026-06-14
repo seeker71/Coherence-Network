@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk",
+    "form/scripts/application-graph-response-projection-test.sh",
+    "cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "cd api && python3 -m ruff check tests/test_application_graph_response_projection.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md --file specs/native-graph-mutation-live-db-proof.md --file specs/native-mutation-ab-observation-gate.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md --file specs/graph-node-form-port.md --file specs/application-graph-node-sql-carrier.md --file specs/native-auth-parity-carrier.md --file specs/graph-node-mutation-native-carrier.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "make wellness",
+    "git diff --check"
+  ],
+  "failure_reason": "Proved Form-native mutation response projection from live application graph rows. application-graph-response-projection.fk emits IdeaWithScore and SpecRegistryEntry-shaped JSON with scoring, ROI, vectors, and row parsing without FastAPI service calls. The sibling-kernel band returned 111 across Go/Rust/TypeScript, and application-graph-response-projection-test.sh returned verdict 111111 against a throwaway Postgres after Form-native graph writes and pg_query readback. Ordinary public mutation traffic remains on FastAPI until cache/side-effect proof, contributor-key audit proof, and a reversible public flip gate are complete.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 251,
+    "row_sha256": "62ca2efe3929173553de0f24ae0a9ea850134dcce605cfcdc0e3d586ec766d07",
+    "summary": "proved-form-native-mutation-response-projection-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0251-62ca2efe3929",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L251"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk form-stdlib/tests/application-graph-response-projection-band.fk",
+      "form/scripts/application-graph-response-projection-test.sh",
+      "cd api && python3 -m pytest -q tests/test_application_graph_response_projection.py tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_application_graph_response_projection.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md --file specs/native-graph-mutation-live-db-proof.md --file specs/native-mutation-ab-observation-gate.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md --file specs/graph-node-form-port.md --file specs/application-graph-node-sql-carrier.md --file specs/native-auth-parity-carrier.md --file specs/graph-node-mutation-native-carrier.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

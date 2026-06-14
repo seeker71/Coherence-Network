@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "curl public /api/inventory/flow after PR #2676 showed no X-Form-Router and no native_observation",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "git diff --check"
+  ],
+  "failure_reason": "Added the missing public ingress for the inventory lineage grammar. The BML front-door service now mounts the production config carrier, depends on postgres, and has a narrow GET /api/inventory/flow Traefik rule. auto-deploy locally proves the native inventory route before declaring kernel-router canary readiness, and verify_web_api_deploy now fails unless public inventory flow returns X-Form-Router: native-kernel with handler api_inventory_flow and python_authority=false.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 279,
+    "row_sha256": "5ccc0de9ae0fa88db466420308377aecf051d09ed119cecc315f9b2277057647",
+    "summary": "added-the-missing-public-ingress-for-the-invento"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0279-5ccc0de9ae0f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L279"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "curl public /api/inventory/flow after PR #2676 showed no X-Form-Router and no native_observation",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

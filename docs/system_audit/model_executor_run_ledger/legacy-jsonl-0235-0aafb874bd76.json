@@ -1,0 +1,50 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/scan_form_blueprints.py --check --json",
+    "python3 form/scripts/validate_form_ontology.py",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+    "git diff --check"
+  ],
+  "failure_reason": "Registered BML lowerer runtime record blueprints and BML-COMPILER-IMAGE, regenerated Go/Rust/TypeScript bp tables, replaced raw lowerer constructor NodeIDs with bp lookups, added BMLCompilerImageEmitter in high-level BML source, and proved the first source-derived BML compiler .fkb checkpoint. Initial image proof tried to embed parsed BML model list data under intern_node and failed because image children must be NodeIDs; narrowed the checkpoint payload to NodeID-safe source metadata and parsed counts. Final image proof returns 24; ratchet/lowerer/source/runtime proofs remain 26, 34, 42, 31, and 68; blueprint scan reports no unregistered type-99 NodeIDs.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 235,
+    "row_sha256": "0aafb874bd763d845407149be89dedda4b604c36adcaa3e688e4c4cde679179e",
+    "summary": "registered-bml-lowerer-runtime-record-blueprints"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0235-0aafb874bd76",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L235"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py --check --json",
+      "python3 form/scripts/validate_form_ontology.py",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-bootstrap-image-ratchet-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}
