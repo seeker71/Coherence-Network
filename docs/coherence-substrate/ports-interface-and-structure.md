@@ -214,6 +214,17 @@ already computes with `intern_node`. Testing is the payoff: unit tests run
 `carrier-memory` (instant, no I/O); integration tests swap in `carrier-file` or
 `carrier-db` over the *identical* logic.
 
+### BML/native declaration metadata floor
+
+`form/form-stdlib/bml-native-interface-package-import.fk` now carries a narrow
+declaration floor for package, import, and interface metadata. The row shape
+keeps the source receipt, import selector, interface member list, and optional
+port-shape linkage as executable Form data. This does not claim namespace
+resolution, symbol import execution, or interface method dispatch; it gives
+those lowerers a native cell target and names the next exact code point:
+`form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native
+namespace/import/interface lowering`.
+
 ## See also
 
 - [`form-language.md`](form-language.md) §Views — the `|>` projection operator;

@@ -1,0 +1,76 @@
+; tests/bml-native-interface-package-import-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk
+;
+; Verdict 255 when package/import/interface declarations are executable Form
+; metadata cells, with language/source receipts, import selectors, interface
+; member lists, port-shape linkage, and an explicit next compiler code point.
+;
+(do
+    (let bml-source (bnii-source "bml" "form-stdlib/bml/bmf-bml-compiler-picture.bml" 1))
+    (let go-source (bnii-source "go" "form/form-stdlib/seedbank/grammars/go.fk" 6))
+    (let ts-source (bnii-source "typescript" "form/form-stdlib/seedbank/grammars/typescript.fk" 8))
+
+    (let package-row (bnii-package "demo.core" bml-source))
+    (let go-package-row (bnii-package "main" go-source))
+    (let bml-import-row (bnii-import "demo.lib" ".*" bml-source))
+    (let go-import-row (bnii-import "fmt" "" go-source))
+    (let ts-import-row (bnii-import "./view" "default:View" ts-source))
+    (let interface-row
+        (bnii-interface
+            "Runnable"
+            "Base"
+            (list "Run" "Stop")
+            (efferent-text)
+            bml-source))
+    (let ts-interface-row
+        (bnii-interface
+            "ViewProps"
+            ""
+            (list "title" "render")
+            (afferent-text)
+            ts-source))
+    (let unit
+        (bnii-unit
+            package-row
+            (list bml-import-row go-import-row ts-import-row)
+            (list interface-row ts-interface-row)))
+
+    (let c0
+        (if (eq (bnii-package? package-row) 1)
+            (if (str_eq (bnii-unit-package-name unit) "demo.core") 1 0)
+            0))
+    (let c1
+        (if (eq (bnii-package? go-package-row) 1)
+            (if (str_eq (bnii-source-language (bnii-package-source go-package-row)) "go") 2 0)
+            0))
+    (let c2
+        (if (eq (bnii-import? bml-import-row) 1)
+            (if (eq (bnii-import-star? bml-import-row) 1) 4 0)
+            0))
+    (let c3
+        (if (eq (bnii-import? ts-import-row) 1)
+            (if (str_eq (bnii-import-selector ts-import-row) "default:View") 8 0)
+            0))
+    (let c4
+        (if (eq (bnii-interface? interface-row) 1)
+            (if (str_eq (bnii-interface-parent interface-row) "Base") 16 0)
+            0))
+    (let c5
+        (if (eq (len (bnii-interface-members ts-interface-row)) 2)
+            (if (str_eq (head (bnii-interface-members ts-interface-row)) "title") 32 0)
+            0))
+    (let c6
+        (if (eq (bnii-interface-uses-port? interface-row (efferent-text)) 1)
+            (if (eq (bnii-interface-uses-port? interface-row (afferent-text)) 0) 64 0)
+            0))
+    (let c7
+        (if (eq (bnii-unit-import-count unit) 3)
+            (if (str_eq
+                    (bnii-next-code-point)
+                    "form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native namespace/import/interface lowering")
+                128
+                0)
+            0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
