@@ -45,7 +45,7 @@ defn model_executor_proof_ledger_contract() = {
     record_home: "docs/system_audit/model_executor_run_ledger/*.json",
     legacy_cache: "docs/system_audit/model_executor_runs.jsonl",
     import_rule: "Each run has a stable run_id and its own record file, so unrelated agents do not contend on one append-only file.",
-    export_rule: "scripts/model_executor_proof_ledger.py sync-jsonl refreshes the compatibility cache from native records and check-jsonl proves both sides carry the same projected rows.",
+    export_rule: "form/form-stdlib/model-executor-proof-ledger.fk validates native records and their legacy JSONL projection shape; JSONL refresh is a compatibility export, not the authority.",
     sister_node_rule: "Evidence, PR text, and floor manifests should cite the native ledger record first; JSONL rows stay aligned as compatibility exports.",
     required_fields: [
         "run_id",

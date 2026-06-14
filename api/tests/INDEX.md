@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 275
+**Total files**: 273
 
 | File | Purpose |
 |---|---|
@@ -146,7 +146,6 @@
 | [test_mcp_substrate_tools.py](test_mcp_substrate_tools.py) | MCP exposure for the coherence-substrate: every sibling agent reaches Form. |
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
 | [test_modality_blueprints.py](test_modality_blueprints.py) | Tests for the cross-modal canonical-shape interner. |
-| [test_model_executor_proof_ledger.py](test_model_executor_proof_ledger.py) | _no top-of-file purpose_ |
 | [test_models_learning_dashboard.py](test_models_learning_dashboard.py) | _no top-of-file purpose_ |
 | [test_monitor_pipeline_stale_running.py](test_monitor_pipeline_stale_running.py) | Stale-running pipeline monitoring tests. |
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
@@ -281,5 +280,4 @@
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
 | [test_vision_content.py](test_vision_content.py) | _no top-of-file purpose_ |
 | [test_wellness_chain_duplicates.py](test_wellness_chain_duplicates.py) | Regression test: the chain organ tolerates duplicate ``test:`` keys. |
-| [test_witness_oracle_emission_ledger.py](test_witness_oracle_emission_ledger.py) | Tests for witness oracle emission ledger carrier records. |
 | [test_worktree_continuity_guard.py](test_worktree_continuity_guard.py) | _no top-of-file purpose_ |
