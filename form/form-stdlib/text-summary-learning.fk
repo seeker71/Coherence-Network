@@ -4,7 +4,9 @@
 ; metadata, oracle evidence requests, and CHOICE-RECEIPT outcomes are explicit
 ; Form rows. A cell can learn summary intent, choose a summary candidate, refuse
 ; below-floor summaries, and turn successful receipts back into native training
-; samples without a Python carrier or ambient LLM authority.
+; samples without a Python carrier or ambient LLM authority. The current real
+; source floor can read an actual repo file through kernel-native file natives,
+; verify byte slices as citations, and bind those citations to a summary receipt.
 ;
 ; North star: summarization becomes a native two-way teaching channel. Text,
 ; code, proof logs, runtime events, dialogue, and memory cells lower through
@@ -20,12 +22,14 @@
         (list
             "source, summary, citation, quality, metadata, receipt, and oracle rows are Form data"
             "a summary passes only with coverage, factuality, citations, compression, confidence, trust, sovereignty, and no contradiction"
-            "successful summary receipts become native training samples"))
+            "successful summary receipts become native training samples"
+            "real source files can be read through kernel-native file natives and cited by byte slice"))
     (defn tsl-north-star ()
         (list
             "native summary grammars and kernels summarize text, code, proof logs, runtime events, dialogue, and memory cells"
             "external LLMs and source-search lanes are teachers until Form-native summaries win heldout receipts"
-            "the winning summary candidate uses fewer tokens and less energy while carrying more sovereignty, trust, and aliveness"))
+            "the winning summary candidate uses fewer tokens and less energy while carrying more sovereignty, trust, and aliveness"
+            "file, store, route, and stream sources lower into claim spans without host-tool execution"))
 
     (defn tsl-spectrum (token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding)
         (list token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding))
@@ -278,7 +282,16 @@
     (defn tsl-plan-floor (plan) (nth plan 5))
     (defn tsl-plan-north-star (plan) (nth plan 6))
     (defn tsl-plan-request (request)
-        (if (str_eq request "text:summarize")
+        (if (str_eq request "text:summarize-file")
+            (tsl-plan
+                "summary/plan"
+                request
+                "host:file"
+                "cap.host.file.read"
+                "read_file+read_file_slice"
+                "file size, text length, prefix, and citation slices must match before learning"
+                "native source grammar extracts claim spans directly from file, store, route, or stream sources")
+            (if (str_eq request "text:summarize")
             (tsl-plan
                 "summary/plan"
                 request
@@ -294,7 +307,130 @@
                 "none"
                 "none"
                 "unknown summary request refused"
-                "add a typed request row before execution")))
+                "add a typed request row before execution"))))
+
+    (defn tsl-source-read (path)
+        (list
+            path
+            (file_size path)
+            (str_len (read_file path))
+            (read_file_slice path 0 67)
+            "kernel-native-file"
+            "file-size plus prefix and citation-slice receipts"
+            "source grammars extract exact claim spans without a host tool exec carrier"))
+    (defn tsl-source-read-path (read) (nth read 0))
+    (defn tsl-source-read-file-size (read) (nth read 1))
+    (defn tsl-source-read-text-len (read) (nth read 2))
+    (defn tsl-source-read-prefix (read) (nth read 3))
+    (defn tsl-source-read-carrier (read) (nth read 4))
+    (defn tsl-source-read-floor (read) (nth read 5))
+    (defn tsl-source-read-north-star (read) (nth read 6))
+    (defn tsl-source-read-valid? (read expected-prefix min-bytes)
+        (if (and
+                (str_eq (tsl-source-read-prefix read) expected-prefix)
+                (and
+                    (ge (tsl-source-read-file-size read) min-bytes)
+                    (eq (tsl-source-read-file-size read) (tsl-source-read-text-len read))))
+            1
+            0))
+
+    (defn tsl-source-citation (path offset length quote claim line)
+        (list path offset length quote claim line))
+    (defn tsl-citation-path (citation) (nth citation 0))
+    (defn tsl-citation-offset (citation) (nth citation 1))
+    (defn tsl-citation-length (citation) (nth citation 2))
+    (defn tsl-citation-quote (citation) (nth citation 3))
+    (defn tsl-citation-claim (citation) (nth citation 4))
+    (defn tsl-citation-line (citation) (nth citation 5))
+    (defn tsl-citation-file-slice (citation)
+        (read_file_slice
+            (tsl-citation-path citation)
+            (tsl-citation-offset citation)
+            (tsl-citation-length citation)))
+    (defn tsl-citation-match? (citation)
+        (if (str_eq (tsl-citation-file-slice citation) (tsl-citation-quote citation)) 1 0))
+    (defn tsl-citations-match? (citations)
+        (if (eq (len citations) 0) 1
+            (if (eq (tsl-citation-match? (head citations)) 1)
+                (tsl-citations-match? (tail citations))
+                0)))
+
+    (defn tsl-real-source-citations (path)
+        (list
+            (tsl-source-citation
+                path
+                0
+                67
+                "# text-summary-learning.form - native text summarizer learning lane"
+                "source names the native summarizer lane"
+                1)
+            (tsl-source-citation
+                path
+                494
+                79
+                "Make summarization a native learning lane instead of an opaque LLM side effect."
+                "purpose rejects opaque LLM side effects"
+                11)
+            (tsl-source-citation
+                path
+                1047
+                40
+                "A summary passes only when it has claims"
+                "floor requires summary quality gates"
+                17)
+            (tsl-source-citation
+                path
+                2328
+                46
+                "External LLMs, source search, model committees"
+                "north star keeps teachers explicit"
+                25)))
+    (defn tsl-real-source-path ()
+        "../docs/coherence-substrate/text-summary-learning.form")
+    (defn tsl-real-source-read ()
+        (tsl-source-read (tsl-real-source-path)))
+    (defn tsl-real-source-summary (meta)
+        (tsl-summary
+            (tsl-real-source-path)
+            "form-native:summary"
+            "real-source-summary"
+            4
+            4
+            4
+            72
+            92
+            90
+            0
+            88
+            96
+            meta
+            "summary cites exact byte slices from the source file and preserves purpose, floor, and north-star claims"
+            "source-reader summaries feed retrieval, memory, and agent context from native file/store/route/stream codecs"))
+    (defn tsl-real-source-receipt (summary meta)
+        (cr-choice-receipt
+            "summarize-real-source-file"
+            "text-summary-learning"
+            "summary-real-source"
+            (tsl-choice-candidate-rows (tsl-summary-candidates) "summary-real-source")
+            (tsl-summary-candidate summary)
+            (cr-outcome-success)
+            (tsl-summary-confidence summary)
+            (tsl-choice-value meta)
+            "kernel-native file read and citation slices matched source bytes"
+            "text-summary-learning"
+            (tsl-real-source-path)
+            20260614
+            (tsl-summary-token-cost summary)
+            (cr-choice-trace 4 1 0 0)))
+    (defn tsl-real-source-output (read citations summary receipt meta)
+        (list read citations summary receipt meta))
+    (defn tsl-real-source-output-read (output) (nth output 0))
+    (defn tsl-real-source-output-citations (output) (nth output 1))
+    (defn tsl-real-source-output-summary (output) (nth output 2))
+    (defn tsl-real-source-output-receipt (output) (nth output 3))
+    (defn tsl-real-source-output-meta (output) (nth output 4))
+    (defn tsl-real-source-proof-level ()
+        "3-kernel-host-io-read-file")
 
     (defn tsl-repo-code-tool-source ()
         (tsl-source
