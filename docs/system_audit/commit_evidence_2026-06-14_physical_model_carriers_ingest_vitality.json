@@ -1,0 +1,123 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/physical-model-carrier-ingest-vitality-20260614",
+  "commit_scope": "Add physical CPU/GPU/Metal/MLX carrier re-hash witness, multi-chunk safetensors/MLX ingest floor, and live model-vitality store-row routing.",
+  "files_owned": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-physical-band.fk",
+    "scripts/model_carrier_rehash_audit.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+        "result": "pass",
+        "output": "✓ core.fk+model-vitality.fk+model-vitality-band.fk -> 4095; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent — kernels agree on every sample."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+        "result": "pass",
+        "output": "✓ core.fk+sha256.fk+cell-log-store.fk+model-vitality.fk+model-vitality-storage-band.fk -> 8191; 1 ok, 0 divergent — kernels agree on every sample.",
+        "kernel_scope": "host-I/O kernels; no fourth-arm claim is made for this file-backed band"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+        "result": "pass",
+        "output": "✓ core.fk+sha256.fk+cell-log-store.fk+model-vitality.fk+model-vitality-physical-band.fk -> 65535; 1 ok, 0 divergent — kernels agree on every sample.",
+        "kernel_scope": "host-I/O kernels; proves real file slices/store reads and Form receipt validation, while physical accelerator execution is proven by scripts/model_carrier_rehash_audit.sh"
+      },
+      {
+        "command": "scripts/model_carrier_rehash_audit.sh",
+        "result": "pass",
+        "output": "PASS cpu:buffer physical-rehash-ok bytes=20 sha256=7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014; PASS gpu:buffer physical-rehash-ok bytes=20 sha256=7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014 device=Apple M4 Max carrier=metal; PASS metal:buffer physical-rehash-ok bytes=20 sha256=7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014 device=Apple M4 Max; PASS mlx:array physical-rehash-ok bytes=20 sha256=7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014 device=gpu:0 lib=/opt/homebrew/lib/libmlxc.dylib"
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Not run before local evidence creation; PR/CI gate will cover after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Docs/Form/script proof only; no deploy performed yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI/deploy not yet run for this branch."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "real-tensor-chunk-storage",
+    "physical-model-carrier-rehash"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality"
+  ],
+  "task_ids": [
+    "2026-06-14-physical-model-carriers-ingest-vitality"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-band.fk -> 4095 four-way",
+    "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191 host-I/O",
+    "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535 host-I/O",
+    "scripts/model_carrier_rehash_audit.sh -> CPU/GPU/Metal/MLX returned-byte sha256 match"
+  ],
+  "change_files": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-physical-band.fk",
+    "scripts/model_carrier_rehash_audit.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Model-vitality can now ingest two real safetensors/MLX-style file slices into chunk cells, validate a chunk-set root, prove CPU/GPU/Metal/MLX materialize-dematerialize returned-byte re-hash on macOS arm64, and read a live model-vitality store row into wellness/pulse routing.",
+    "public_endpoints": [
+      "n/a: Form stdlib and local native carrier proof surface"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+      "scripts/model_carrier_rehash_audit.sh"
+    ]
+  }
+}

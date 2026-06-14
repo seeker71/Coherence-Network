@@ -16,6 +16,12 @@
 ; reopen it, read the bytes back, and verify the content digest. GPU/MLX/Metal
 ; carrier rows are cache/projection receipts: a carrier must return bytes whose
 ; re-hash matches the source chunk digest before the body treats it as faithful.
+;
+; Physical carrier floor: CPU, generic GPU via Metal, Metal, and MLX may now be
+; proven by local native witnesses that materialize bytes into carrier memory,
+; dematerialize them back, and re-hash the returned bytes. If another host lacks
+; one carrier, that absence is a named implementation gap rather than hidden as
+; model truth.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
@@ -28,6 +34,10 @@
     (defn mv-kind-chunk-storage () "model/chunk-storage")
     (defn mv-kind-carrier-projection () "model/carrier-projection")
     (defn mv-kind-vitality-route () "model/vitality-route")
+    (defn mv-kind-ingest-source () "model/ingest-source")
+    (defn mv-kind-ingest-chunk () "model/ingest-chunk")
+    (defn mv-kind-chunk-set-root () "model/chunk-set-root")
+    (defn mv-kind-live-vitality-row () "model/live-vitality-row")
 
     (defn mv-floor () (list
         "floor"
@@ -430,6 +440,302 @@
                  (eq (mv-bytes-eq?
                         (mv-carrier-projection-source-digest r)
                         (mv-carrier-projection-returned-digest r)) 1))))))
+            false))
+
+    ;; ---- multi-chunk safetensors / MLX ingest rows ----------------------
+    (defn mv-ingest-source (source-kind source-id path format header-digest total-bytes tensor-count floor north)
+        (list
+            "model-ingest-source"
+            source-kind
+            source-id
+            path
+            format
+            header-digest
+            total-bytes
+            tensor-count
+            floor
+            north))
+    (defn mv-ingest-source? (value) (mv-row? value "model-ingest-source" 10))
+    (defn mv-ingest-source-kind (s) (nth s 1))
+    (defn mv-ingest-source-id (s) (nth s 2))
+    (defn mv-ingest-source-path (s) (nth s 3))
+    (defn mv-ingest-source-format (s) (nth s 4))
+    (defn mv-ingest-source-header-digest (s) (nth s 5))
+    (defn mv-ingest-source-total-bytes (s) (nth s 6))
+    (defn mv-ingest-source-tensor-count (s) (nth s 7))
+    (defn mv-ingest-source-floor (s) (nth s 8))
+    (defn mv-ingest-source-north (s) (nth s 9))
+    (defn mv-ingest-source-valid? (s)
+        (if (mv-ingest-source? s)
+            (and (mv-nonempty? (mv-ingest-source-kind s))
+            (and (mv-nonempty? (mv-ingest-source-id s))
+            (and (mv-nonempty? (mv-ingest-source-path s))
+            (and (mv-nonempty? (mv-ingest-source-format s))
+            (and (gt (len (mv-ingest-source-header-digest s)) 0)
+            (and (gt (mv-ingest-source-total-bytes s) 0)
+            (and (gt (mv-ingest-source-tensor-count s) 0)
+            (and (gt (len (mv-ingest-source-floor s)) 0)
+                 (gt (len (mv-ingest-source-north s)) 0)))))))))
+            false))
+
+    (defn mv-ingest-chunk-spec
+        (tensor-id chunk-index offset length shape strides format provenance expected-digest)
+        (list
+            "model-ingest-chunk-spec"
+            tensor-id
+            chunk-index
+            offset
+            length
+            shape
+            strides
+            format
+            provenance
+            expected-digest))
+    (defn mv-ingest-chunk-spec? (value) (mv-row? value "model-ingest-chunk-spec" 10))
+    (defn mv-ingest-chunk-tensor-id (c) (nth c 1))
+    (defn mv-ingest-chunk-index (c) (nth c 2))
+    (defn mv-ingest-chunk-offset (c) (nth c 3))
+    (defn mv-ingest-chunk-length (c) (nth c 4))
+    (defn mv-ingest-chunk-shape (c) (nth c 5))
+    (defn mv-ingest-chunk-strides (c) (nth c 6))
+    (defn mv-ingest-chunk-format (c) (nth c 7))
+    (defn mv-ingest-chunk-provenance (c) (nth c 8))
+    (defn mv-ingest-chunk-expected-digest (c) (nth c 9))
+    (defn mv-ingest-chunk-spec-valid? (c)
+        (if (mv-ingest-chunk-spec? c)
+            (and (mv-nonempty? (mv-ingest-chunk-tensor-id c))
+            (and (ge (mv-ingest-chunk-index c) 0)
+            (and (ge (mv-ingest-chunk-offset c) 0)
+            (and (gt (mv-ingest-chunk-length c) 0)
+            (and (gt (len (mv-ingest-chunk-shape c)) 0)
+            (and (gt (len (mv-ingest-chunk-strides c)) 0)
+            (and (mv-nonempty? (mv-ingest-chunk-format c))
+            (and (mv-nonempty? (mv-ingest-chunk-provenance c))
+                 (gt (len (mv-ingest-chunk-expected-digest c)) 0)))))))))
+            false))
+
+    (defn mv-ingest-chunk-read (source spec)
+        (do
+            (let payload (read_file_slice
+                (mv-ingest-source-path source)
+                (mv-ingest-chunk-offset spec)
+                (mv-ingest-chunk-length spec)))
+            (let digest (mv-payload-digest payload))
+            (let chunk (mv-tensor-chunk
+                (mv-ingest-chunk-tensor-id spec)
+                (mv-ingest-chunk-index spec)
+                (mv-ingest-chunk-shape spec)
+                (mv-ingest-chunk-strides spec)
+                (mv-ingest-chunk-format spec)
+                (mv-ingest-chunk-provenance spec)
+                (str_concat "sha256:"
+                    (str_concat (mv-ingest-source-id source)
+                    (str_concat ":chunk-" (cls-int-str (mv-ingest-chunk-index spec)))))
+                1
+                (mv-ingest-chunk-length spec)
+                0))
+            (list
+                "model-ingest-chunk-read"
+                (mv-ingest-source-id source)
+                chunk
+                (mv-ingest-chunk-offset spec)
+                (mv-ingest-chunk-length spec)
+                digest
+                (mv-ingest-chunk-expected-digest spec)
+                payload
+                (if (eq (mv-bytes-eq? digest (mv-ingest-chunk-expected-digest spec)) 1)
+                    "chunk-digest-ok"
+                    "chunk-digest-mismatch"))))
+    (defn mv-ingest-chunk-read? (value) (mv-row? value "model-ingest-chunk-read" 9))
+    (defn mv-ingest-read-source-id (r) (nth r 1))
+    (defn mv-ingest-read-chunk (r) (nth r 2))
+    (defn mv-ingest-read-offset (r) (nth r 3))
+    (defn mv-ingest-read-length (r) (nth r 4))
+    (defn mv-ingest-read-digest (r) (nth r 5))
+    (defn mv-ingest-read-expected-digest (r) (nth r 6))
+    (defn mv-ingest-read-payload (r) (nth r 7))
+    (defn mv-ingest-read-status (r) (nth r 8))
+    (defn mv-ingest-chunk-read-valid? (r)
+        (if (mv-ingest-chunk-read? r)
+            (and (mv-nonempty? (mv-ingest-read-source-id r))
+            (and (mv-tensor-chunk-valid? (mv-ingest-read-chunk r))
+            (and (gt (mv-ingest-read-length r) 0)
+            (and (eq (str_len (mv-ingest-read-payload r)) (mv-ingest-read-length r))
+            (and (str_eq (mv-ingest-read-status r) "chunk-digest-ok")
+                 (eq (mv-bytes-eq? (mv-ingest-read-digest r) (mv-ingest-read-expected-digest r)) 1))))))
+            false))
+
+    (defn mv-store-ingest-chunk (store read)
+        (mv-store-chunk store (mv-ingest-read-chunk read) (mv-ingest-read-payload read)))
+
+    (defn mv-chunk-set-root (source reads root-digest total-bytes)
+        (list
+            "model-chunk-set-root"
+            (mv-ingest-source-id source)
+            (len reads)
+            total-bytes
+            root-digest
+            reads))
+    (defn mv-chunk-set-root? (value) (mv-row? value "model-chunk-set-root" 6))
+    (defn mv-chunk-set-source-id (r) (nth r 1))
+    (defn mv-chunk-set-count (r) (nth r 2))
+    (defn mv-chunk-set-total-bytes (r) (nth r 3))
+    (defn mv-chunk-set-root-digest (r) (nth r 4))
+    (defn mv-chunk-set-reads (r) (nth r 5))
+    (defn mv-chunk-set-root-valid? (r)
+        (if (mv-chunk-set-root? r)
+            (and (mv-nonempty? (mv-chunk-set-source-id r))
+            (and (gt (mv-chunk-set-count r) 1)
+            (and (gt (mv-chunk-set-total-bytes r) 0)
+            (and (gt (len (mv-chunk-set-root-digest r)) 0)
+                 (eq (len (mv-chunk-set-reads r)) (mv-chunk-set-count r))))))
+            false))
+
+    ;; ---- physical carrier materialize/dematerialize receipts -------------
+    (defn mv-physical-carrier-rehash
+        (carrier host device codec chunk source-digest materialized-bytes returned-payload witness)
+        (do
+            (let returned-digest (mv-payload-digest returned-payload))
+            (list
+                "model-physical-carrier-rehash"
+                carrier
+                host
+                device
+                codec
+                (mv-chunk-merkle chunk)
+                source-digest
+                returned-digest
+                materialized-bytes
+                (str_len returned-payload)
+                witness
+                (if (eq (mv-bytes-eq? source-digest returned-digest) 1)
+                    "physical-rehash-ok"
+                    "physical-rehash-mismatch"))))
+    (defn mv-physical-carrier-rehash? (value)
+        (mv-row? value "model-physical-carrier-rehash" 12))
+    (defn mv-physical-carrier-name (r) (nth r 1))
+    (defn mv-physical-carrier-host (r) (nth r 2))
+    (defn mv-physical-carrier-device (r) (nth r 3))
+    (defn mv-physical-carrier-codec (r) (nth r 4))
+    (defn mv-physical-carrier-source-digest (r) (nth r 6))
+    (defn mv-physical-carrier-returned-digest (r) (nth r 7))
+    (defn mv-physical-carrier-materialized-bytes (r) (nth r 8))
+    (defn mv-physical-carrier-returned-bytes (r) (nth r 9))
+    (defn mv-physical-carrier-witness (r) (nth r 10))
+    (defn mv-physical-carrier-status (r) (nth r 11))
+    (defn mv-physical-carrier-valid? (r)
+        (if (mv-physical-carrier-rehash? r)
+            (and (eq (mv-carrier-known? (mv-physical-carrier-name r)) 1)
+            (and (mv-nonempty? (mv-physical-carrier-host r))
+            (and (mv-nonempty? (mv-physical-carrier-device r))
+            (and (mv-nonempty? (mv-physical-carrier-codec r))
+            (and (gt (mv-physical-carrier-materialized-bytes r) 0)
+            (and (eq (mv-physical-carrier-materialized-bytes r) (mv-physical-carrier-returned-bytes r))
+            (and (mv-nonempty? (mv-physical-carrier-witness r))
+            (and (str_eq (mv-physical-carrier-status r) "physical-rehash-ok")
+                 (eq (mv-bytes-eq?
+                        (mv-physical-carrier-source-digest r)
+                        (mv-physical-carrier-returned-digest r)) 1)))))))))
+            false))
+
+    (defn mv-physical-carrier-gap (carrier host wanted available evidence next-step)
+        (list
+            "model-physical-carrier-gap"
+            carrier
+            host
+            wanted
+            available
+            evidence
+            next-step))
+    (defn mv-physical-carrier-gap? (value)
+        (mv-row? value "model-physical-carrier-gap" 7))
+    (defn mv-physical-carrier-gap-carrier (g) (nth g 1))
+    (defn mv-physical-carrier-gap-host (g) (nth g 2))
+    (defn mv-physical-carrier-gap-wanted (g) (nth g 3))
+    (defn mv-physical-carrier-gap-available (g) (nth g 4))
+    (defn mv-physical-carrier-gap-evidence (g) (nth g 5))
+    (defn mv-physical-carrier-gap-next-step (g) (nth g 6))
+    (defn mv-physical-carrier-gap-valid? (g)
+        (if (mv-physical-carrier-gap? g)
+            (and (eq (mv-carrier-known? (mv-physical-carrier-gap-carrier g)) 1)
+            (and (mv-nonempty? (mv-physical-carrier-gap-host g))
+            (and (mv-nonempty? (mv-physical-carrier-gap-wanted g))
+            (and (mv-nonempty? (mv-physical-carrier-gap-available g))
+            (and (mv-nonempty? (mv-physical-carrier-gap-evidence g))
+                 (mv-nonempty? (mv-physical-carrier-gap-next-step g)))))))
+            false))
+
+    ;; ---- live model-vitality rows from the store -------------------------
+    (defn mv-live-vitality-key (body-read)
+        (str_concat "model-vitality:" (nth body-read 1)))
+    (defn mv-live-vitality-text (body-read)
+        (str_concat (nth body-read 1)
+            (str_concat "|"
+            (str_concat (mv-body-read-focus body-read)
+            (str_concat "|"
+            (str_concat (mv-body-read-eval-merkle body-read) "|row"))))))
+    (defn mv-body-read-eval-merkle (body-read) (nth body-read 5))
+    (defn mv-store-live-vitality-row (store body-read)
+        (do
+            (let key (mv-live-vitality-key body-read))
+            (let text (mv-live-vitality-text body-read))
+            (let digest (mv-payload-digest text))
+            (let next-store (cls-put store key text))
+            (list
+                "model-live-vitality-store-row"
+                next-store
+                key
+                body-read
+                digest
+                (str_len text)
+                "stored")))
+    (defn mv-live-vitality-store-row? (value)
+        (mv-row? value "model-live-vitality-store-row" 7))
+    (defn mv-live-row-store (r) (nth r 1))
+    (defn mv-live-row-key (r) (nth r 2))
+    (defn mv-live-row-body-read (r) (nth r 3))
+    (defn mv-live-row-digest (r) (nth r 4))
+    (defn mv-live-row-bytes (r) (nth r 5))
+    (defn mv-live-row-status (r) (nth r 6))
+    (defn mv-live-row-valid? (r)
+        (if (mv-live-vitality-store-row? r)
+            (and (mv-nonempty? (mv-live-row-key r))
+            (and (mv-body-read-valid? (mv-live-row-body-read r))
+            (and (gt (len (mv-live-row-digest r)) 0)
+            (and (gt (mv-live-row-bytes r) 0)
+                 (str_eq (mv-live-row-status r) "stored")))))
+            false))
+
+    (defn mv-read-live-vitality-route (store row wellness-state pulse-state release-state)
+        (do
+            (let got (cls-get store (mv-live-row-key row)))
+            (let found (cls-found? got))
+            (let payload (if (eq found 1) (cls-value got) ""))
+            (let digest (if (eq found 1) (mv-payload-digest payload) (list)))
+            (let route (mv-vitality-route (mv-live-row-body-read row) wellness-state pulse-state release-state))
+            (list
+                "model-live-vitality-route-read"
+                (mv-live-row-key row)
+                found
+                digest
+                (mv-live-row-digest row)
+                route
+                (if (eq (mv-bytes-eq? digest (mv-live-row-digest row)) 1)
+                    "live-row-digest-ok"
+                    "live-row-digest-mismatch"))))
+    (defn mv-live-vitality-route-read? (value)
+        (mv-row? value "model-live-vitality-route-read" 7))
+    (defn mv-live-route-found (r) (nth r 2))
+    (defn mv-live-route-digest (r) (nth r 3))
+    (defn mv-live-route-expected-digest (r) (nth r 4))
+    (defn mv-live-route-route (r) (nth r 5))
+    (defn mv-live-route-status (r) (nth r 6))
+    (defn mv-live-vitality-route-read-valid? (r)
+        (if (mv-live-vitality-route-read? r)
+            (and (eq (mv-live-route-found r) 1)
+            (and (str_eq (mv-live-route-status r) "live-row-digest-ok")
+            (and (mv-vitality-route-valid? (mv-live-route-route r))
+                 (eq (mv-bytes-eq? (mv-live-route-digest r) (mv-live-route-expected-digest r)) 1))))
             false))
 
     ;; ---- wellness/pulse routing over model vitality ----------------------
