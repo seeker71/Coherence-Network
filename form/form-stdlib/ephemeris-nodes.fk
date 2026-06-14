@@ -12,7 +12,7 @@
 ;   Rahu  = Omega        (north node)
 ;   Ketu  = Omega + 180  (south node)
 ;
-;   (rahu-longitude y m d) / (ketu-longitude y m d)   -> integer deg in [0,360)
+;   (rahu-longitude y m d) / (ketu-longitude y m d)   -> float deg in [0,360)
 ;   (rahu-sign-tropical ...) / (rahu-sign-sidereal ...) / (ketu-sign-tropical ...)
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk
@@ -22,10 +22,11 @@
     ;; the mean ascending node (degrees), retrograde
     (defn node-omega-raw (d) (sub 125.0445 (mul 0.05295377 d)))
 
+    ;; full float, never int-truncated — the sign/gate reductions floor the precise value.
     (defn rahu-longitude (y m d)
-        (round (fnorm360 (node-omega-raw (ephem-n y m d)))))
+        (fnorm360 (node-omega-raw (ephem-n y m d))))
     (defn ketu-longitude (y m d)
-        (round (fnorm360 (add (node-omega-raw (ephem-n y m d)) 180.0))))
+        (fnorm360 (add (node-omega-raw (ephem-n y m d)) 180.0)))
 
     (defn rahu-sign-tropical (y m d) (tropical-sign-of (rahu-longitude y m d)))
     (defn rahu-sign-sidereal (y m d) (sidereal-sign-of (rahu-longitude y m d) (lahiri-ayanamsa-2000)))
