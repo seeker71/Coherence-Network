@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "claude/fkwu-server-input",
+  "commit_scope": "Build the fk_src structured-input channel for fkwu offload, and realign the FKWU_NATIVE_DISPATCH plan after a second Grok review. FkwuEvalWithInput (form/form-kernel-go/fkwu_bridge.go) stages a byte bundle into fk_src (argv[3] -> the buffer the persistent server main also fills from a socket); TestFkwuOffloadInput proves a program that reads it with fk-buf (tag 17, fkcount) returns a value that DEPENDS on the bundle (0->0, 11->11, 26->26). Grounded the real input mechanism: fk-buf/tag-17 is the input read; input-aware programs are hati-os responder programs loaded as tables; the input ABI is bytes-in-fk_src (text parsed in-recipe), not the durable write_form_binary format. Realigned the doc per Grok: persistent fkwu-server is the production shape (subprocess is the carrier proof); the input-carrying four-way proof harness is the honest gate (baking a fixed test input is a trap); profile the /api/ideas slice (and the row->bundle marshalling cost) before authoring it.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "fkwu-offload-input-channel-20260614"
+  ],
+  "files_owned": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/form-kernel-go/fkwu_bridge_test.go"
+  ],
+  "change_files": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/form-kernel-go/fkwu_bridge_test.go",
+    "kernels/FKWU_NATIVE_DISPATCH.md"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "agent:grok",
+      "contributor_type": "machine",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/form-kernel-go/fkwu_bridge_test.go",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "kernels/FKWU_NATIVE_DISPATCH.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "go build ./... -> OK; go vet . -> OK (form/form-kernel-go)",
+      "go test -run TestFkwuOffload -v . -> PASS (6.99s): TestFkwuOffloadBridge (content-address value-parity) + TestFkwuOffloadInput (fkcount byte-count over fk_src: 0->0, 11->11, 26->26)",
+      "Manual: emit fkwu, emit (fkc-table-file (fkcount-fns)), run 'fkwu table 0 inputfile' -> byte count of inputfile, confirming the argv[3]->fk_src input channel read via fk-buf (tag 17)"
+    ],
+    "notes": "fkcount is the minimal input-dependent program (counts fk_src bytes via fk-buf). It proves the carrier can pass structured input to fkwu and get an input-bound value. fkcount is NOT yet four-way: fk-buf/tag-17 reads a settable buffer only on fkwu; proving an input-dependent program four-way needs the same read on Go/Rust/TS + validate.sh feeding the identical bundle to all four legs. That is the explicit next gate (build order step 3), named honestly, not faked with a baked constant."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks run after push. validate.sh four-way is unaffected (no band/walker change); the Go bridge tests run where clang is present and skip otherwise."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Not wired into the serving path yet — no deploy. The input channel + the persistent server + the four-way input-proof harness precede route wiring."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Go kernel can offload a computation OVER STRUCTURED INPUT to fkwu: it stages a byte bundle into fk_src and the offloaded program reads it with fk-buf, returning an input-dependent value. Proven with fkcount (byte count of the bundle); not yet wired to a public route, and not yet four-way (the input-carrying proof harness is the next gate).",
+    "public_endpoints": [
+      "local-only: Go kernel offload input channel proven with fkcount over fk_src; no public HTTP endpoint changed yet"
+    ],
+    "test_flows": [
+      "go test -run TestFkwuOffloadInput . -> PASS: FkwuEvalWithInput stages bundle -> fkcount returns byte count (input-dependent)",
+      "go test -run TestFkwuOffloadBridge . -> PASS: carrier->fkwu->value parity on content-address (four-way band, unchanged)"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Input channel landed. Next: the persistent fkwu-server (production shape) and the input-carrying four-way proof harness (the honest gate), then profile the /api/ideas slice before authoring it."
+  }
+}
