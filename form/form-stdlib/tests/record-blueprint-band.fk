@@ -1,0 +1,17 @@
+; tests/record-blueprint-band.fk — record blueprint identity through fkwu.
+;
+; preludes: form-stdlib/core.fk
+;
+; This is the narrow record carrier floor between record-field access and full
+; mutable aliasing: record_new stores a blueprint NodeID sentinel, and
+; record_blueprint reads it back without treating the record carrier as a list.
+
+(do
+    (let bp (make_nodeid 1 2 99 9001))
+    (let other-bp (make_nodeid 1 2 99 9002))
+    (let r (record_new bp "x" 10))
+    (let other (record_new other-bp "x" 20))
+    (let s1 (if (node_eq (record_blueprint r) bp) 1 0))
+    (let s2 (if (node_eq (record_blueprint other) other-bp) 2 0))
+    (let s3 (if (record? r) 4 0))
+    (add s1 (add s2 s3)))
