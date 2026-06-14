@@ -1,0 +1,161 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-sibling-node-residuals-20260614",
+  "commit_scope": "Admit the doc-xpath, concept-xpath, dns, and session sibling node residuals to the fourth-arm manifest.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-node-substrate-floor",
+    "connected-tissue-north-star"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "substrate-node-vocabulary",
+    "model-executor-proof-ledger",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-sibling-node-residuals-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-fourth-floor-guidance",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "parallel_delegation": {
+    "coord_recorded": true,
+    "sidecars": [
+      {
+        "agent": "Russell",
+        "scope": "symbols recipe-byte bridge",
+        "status": "read-only task card recorded",
+        "next_branch": "symbols should move on a clean branch after this sibling floor lands; its coherent ratchet is bytes_to_recipe/recipe_to_bytes plus NodeID parity, not wrapper lifting."
+      },
+      {
+        "agent": "Aristotle",
+        "scope": "record, method, and field-model-form residual split",
+        "status": "read-only task card recorded",
+        "next_branch": "record carrier completion can target _plus and record_blueprint for list-of-record-reduction and record; method dispatch and field-model-form constructors stay separate."
+      },
+      {
+        "agent": "Archimedes",
+        "scope": "float, walk, substrate, and socket residual split",
+        "status": "read-only task cards recorded",
+        "next_branch": "float-natives is the clean parallel-safe pure value-ABI lane; walk/env/cache/substrate/socket work needs isolated runtime or host receipts."
+      }
+    ],
+    "local_lane": "codex@a3ec keeps doc-xpath, concept-xpath, dns, and session wrapper-lift floor validation/evidence only."
+  },
+  "files_owned": [
+    "form/form-stdlib/doc-xpath.fk",
+    "form/form-stdlib/concept-xpath.fk",
+    "form/form-stdlib/dns.fk",
+    "form/form-stdlib/session.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_sibling_node_residuals.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-sibling-node-residuals-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/doc-xpath.fk",
+    "form/form-stdlib/concept-xpath.fk",
+    "form/form-stdlib/dns.fk",
+    "form/form-stdlib/session.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_sibling_node_residuals.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-sibling-node-residuals-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt#doc-xpath",
+    "form/fourth-arm-bands.txt#concept-xpath",
+    "form/fourth-arm-bands.txt#dns",
+    "form/fourth-arm-bands.txt#session",
+    "docs/system_audit/model_executor_run_ledger/fourth-sibling-node-residuals-20260614.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord view",
+      "coord claim fourth-sibling-node-residuals \"inspect sibling node/substrate residuals after xpath floor; avoid BML/Hati, route/stream, Android mesh, and host socket lanes\"",
+      "coord share \"delegated parallel residual mapping: Russell= symbols recipe-byte bridge; Aristotle= record/method/field-model residuals; Archimedes= float/walk/substrate/socket classification. a3ec continues local doc/concept/dns/session floor validation and evidence. Delegates are read-only sidecars; no branch file edits expected.\"",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/doc-xpath.fk form-stdlib/tests/doc-xpath-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/concept-xpath.fk form-stdlib/tests/concept-xpath-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/dns.fk form-stdlib/tests/dns-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/session.fk form-stdlib/tests/session-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/doc-xpath-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/concept-xpath-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/dns-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/session-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/symbols-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh doc-xpath concept-xpath dns session",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_sibling_node_residuals.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ],
+    "notes": "The failing sibling modules had callable definitions nested inside a module-level do, unlike the already-passing xpath.fk top-level shape. Lifting only the outer wrapper keeps behavior unchanged for Go/Rust/TypeScript and lets fkwu register the functions as callable rows. The focused manifest gate passed for dns, session, doc-xpath, and concept-xpath after the rebase. symbols remains outside this admission because it still mismatches at 5/1 due the recipe_to_bytes/bytes_to_recipe wire path. A concurrent sibling worktree ran a broad pkill/full-validation cycle during an attempted aggregate run; that invalid aggregate reported 183 four-way, 584 ok, and 1 divergent after bml-thesis-char-escapes-source-proof lost Go/Rust/TypeScript children. This focused release intentionally avoids spending more nutrition on repeated full-suite validation under shared-runner contention."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this Form manifest floor slice."
+  },
+  "phase_gate": {
+    "phase": "fourth-sibling-node-residuals",
+    "gate": "doc-xpath, concept-xpath, dns, and session validate across Go, Rust, TypeScript, and fkwu.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push PR, wait for checks, merge when checks allow, then continue on a clean non-overlapping branch: symbols recipe-byte bridge, record carrier completion, or float-native value ABI."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The focused fourth-arm manifest floor moves to 189 admitted four-way rows after adding doc-xpath, concept-xpath, dns, and session on top of the current sister floors. The connected-tissue north star stays aligned by recording the exact focused gate, the latest quiet-host aggregate before this ratchet, the native proof ledger, and the JSONL compatibility row without making repeated full-suite validation the release bottleneck.",
+    "public_endpoints": [
+      "local:form-fourth-arm-manifest",
+      "local:sibling-node-residual-floor",
+      "local:model-executor-proof-ledger",
+      "local:bml-form-jit-metal-planes-audit"
+    ],
+    "test_flows": [
+      "Focused validations pass for doc-xpath, concept-xpath, dns, and session.",
+      "Fourth-arm surveys report doc-xpath 10/10, concept-xpath 9/9, dns 5/5, and session 9/9.",
+      "symbols remains outside the manifest with symbols 5/1.",
+      "Run fourth-arm-gate doc-xpath concept-xpath dns session and confirm PASS-4WAY for all four.",
+      "Use the latest quiet-host aggregate as context only: sibling validation reported 183 four-way, 587 ok, 0 divergent before this focused ratchet."
+    ],
+    "macos_android_evidence": {
+      "status": "deferred_for_focused_release",
+      "macos_arm64": [
+        "Not rerun in this focused wrapper-lift release. macOS metal-plane receipts are covered by sister native/JIT lanes and should be refreshed in a quiet-host aggregate/audit pass."
+      ],
+      "android_arm64": [
+        "Not rerun in this focused wrapper-lift release. Android adb/ELF receipts are covered by sister Android mesh and native executable lanes and should be refreshed in a quiet-host aggregate/audit pass."
+      ]
+    }
+  }
+}
