@@ -24,6 +24,12 @@
 ;     scripts/model_carrier_rehash_audit.sh physically compiles/runs the CPU, Metal, and MLX C carrier
 ;     witnesses on macOS arm64; on this host CPU, generic GPU via Metal, Metal, and MLX all returned the
 ;     same sha256 for the sample payload.
+;     model-vitality-production-band now returns 32767 on the host-I/O kernels: it stores a live
+;     model-vitality row, reads it back, and routes it through production pulse/runtime rows that carry
+;     attribution, observed timestamp, latency, byte count, native-kernel router, and Python-authority
+;     refusal. scripts/model_vitality_production_ingest_probe.sh captures the current public pulse and
+;     runtime-summary slices; on 2026-06-14T08:56:18Z API pulse was strained with 2 silences, the pulse
+;     front door was breathing, and runtime-summary was native-kernel with x-form-python-authority=false.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -33,10 +39,11 @@
 ;     sovereignty, and trust, plus accuracy, confidence, energy, latency, memory pressure, sample
 ;     coverage, freshness, mergeability, and promotion readiness, then focuses attention from that row.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     optimizer-step cells, durable eval-receipt query path, production wellness/pulse ingestion from
-;     deployed live model-vitality rows, and mesh-scale merkle slice sharing are still not closed. The
-;     small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, and local
-;     live-row route read are now closed receipts, not future claims.
+;     optimizer-step cells, durable eval-receipt query path, fourth-kernel-native external HTTPS capture
+;     replacing the shell production witness, and mesh-scale merkle slice sharing are still not closed.
+;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
+;     live-row route read, and production pulse/runtime row ingestion are now closed receipts, not
+;     future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.
