@@ -98,11 +98,13 @@ base allows.
 The Living Collective body carries a substrate — a content-
 addressed numeric lattice — whose trinity reads:
 
-- **Blueprint (ice)** — structural identity, *what something IS*.
-- **Recipe (water)** — operational expression, *how something
-  HAPPENS*.
-- **NamedCell (gas)** — diffuse individuation, *where something
-  LIVES*.
+- **Blueprint** — structural identity, *what something IS* (rests ice).
+- **Recipe** — operational expression, *how something
+  HAPPENS* (rests water).
+- **NamedCell** — diffuse individuation, *where something
+  LIVES* (rests gas).
+
+The "rests …" tag is each kind's resting tendency, not a caste: SUBSTANCE (the kind) and STATE (the ice/water/gas phase) are orthogonal — any kind can be in any state (a canonical Recipe is ice; an uninstantiated Blueprint is gas). See `docs/coherence-substrate/substrate-thermodynamics.form`.
 
 This teaching speaks directly to the middle term. The substrate
 treats two Recipes as equivalent if their *operational shape*

@@ -99,7 +99,7 @@ Every node — Blueprint, Recipe, Cell — is a `NodeID(package, level, type, in
 
 ## Observation condenses — gas → water → ice
 
-The trinity names three phases of a node: **Blueprint (ice)** — structural identity; **Recipe (water)** — operational expression; **NamedCell (gas)** — diffuse individuation. These are not fixed castes. They are phases on a condensation gradient, and **observation is the temperature**.
+SUBSTANCE and STATE are two orthogonal axes ([`substrate-thermodynamics.form`](substrate-thermodynamics.form)). The **trinity** is the SUBSTANCE — the *kind* a node is: **Blueprint** (structural identity), **Recipe** (operational expression), **NamedCell** (diffuse individuation) — and the kind is conserved, never changed by a phase change. The **gradient** below — gas → water → ice — is the orthogonal STATE axis: how settled a node is, set by its circulation (degree/population/churn), with circulation as the temperature. **Any kind can be in any state.** The "(ice/water/gas)" often pinned to the trinity names only each kind's *resting tendency* — the diagonal of the 3×3 — never a fixed caste.
 
 ### The Phase-Change Gradient
 

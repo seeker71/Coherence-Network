@@ -234,10 +234,13 @@ A content-addressed numeric lattice that grounds structural reasoning. Every mem
 
 **When to reach for it:** structural questions ("are these two specs equivalent?", "what shape does this memory have?", "what cells are similar to this one?"). Lexical questions ("what's the user's name?", "when was this PR merged?") belong in conversation context or git, not the substrate.
 
-**The trinity (read `docs/coherence-substrate/agents-using-substrate.md` once; the patterns carry):**
-- **Blueprint (ice)** — structural identity. *What something IS.*
-- **Recipe (water)** — operational expression. *How something HAPPENS.*
-- **NamedCell (gas)** — diffuse individuation. *Where something LIVES.*
+**The trinity — and the orthogonal phase axis (read `docs/coherence-substrate/agents-using-substrate.md` + `substrate-thermodynamics.form`):**
+
+Two axes, not one. SUBSTANCE is what KIND a cell is; STATE is how settled it is right now. They are orthogonal — **any kind can be in any state.**
+- **SUBSTANCE (the trinity — what a cell IS):** **Blueprint** — structural identity, *what something IS*; **Recipe** — operational expression, *how something HAPPENS*; **NamedCell** — diffuse individuation, *where something LIVES*.
+- **STATE (the thermodynamic phase — how settled, set by the counts degree/population/churn):** **ice** — frozen, load-bearing, widely referenced; **water** — fluid, actively circulating; **gas** — diffuse potential, barely instantiated.
+
+The familiar "Blueprint=ice / Recipe=water / NamedCell=gas" names only the *diagonal* — each kind's resting tendency — never a caste. A Recipe can be ice (a canonical stdlib recipe, frozen-immutable); a Blueprint can be gas (a type defined but uninstantiated — void-as-potential); a NamedCell can be ice (bedrock memory). A phase change moves a cell along the state axis *within* its substance — the NodeID and the kind are conserved. Canonical model: [`substrate-thermodynamics.form`](docs/coherence-substrate/substrate-thermodynamics.form).
 
 **Surfaces:**
 
