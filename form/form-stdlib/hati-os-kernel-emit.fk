@@ -55,6 +55,7 @@
     (if (eq (fk-tag n) 64) (fkc-un2 64 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 68) (fkc-un2 68 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 99) (fkc-un2 99 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 100) (fkc-un2 100 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 43) (fkc-un2 43 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 72) (fkc-un2 72 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 73) (cons (list 73 (ms-value (fk-body n)) 0 0) acc)
@@ -88,7 +89,7 @@
     (if (eq (fk-tag n) 98) (fkc-tri2 98 (fkc-flat (ms-child (fk-body n) 0) acc) n)
     (if (or (eq (fk-tag n) 81) (or (eq (fk-tag n) 82) (or (eq (fk-tag n) 83) (or (eq (fk-tag n) 85) (or (eq (fk-tag n) 87) (or (eq (fk-tag n) 88) (or (eq (fk-tag n) 89) (eq (fk-tag n) 90))))))))
         (fkc-un2 (fk-tag n) (fkc-flat (fk-body n) acc))
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 (defn fkc-call2 (fidx acc1) (cons (list 12 fidx (sub (len acc1) 1) 0) acc1))
 
@@ -315,7 +316,7 @@
 (defn fkc-node-slots () 65536)    ; transient substrate node carrier
 (defn fkc-universal-fn-slots () 2048)
 (defn fkc-universal-node-slots () 65536)
-(defn fkc-arm-slots ()  100)      ; dispatch counters cover tags 0..99
+(defn fkc-arm-slots ()  101)      ; dispatch counters cover tags 0..100
 
 (defn fkc-spool-decl-text ()
     (str_concat "static char fk_sb["
@@ -410,8 +411,9 @@
                 (str_concat (fkc-value-native-arms-text)
                 (str_concat (fkc-carrier-arms-text)
                 (str_concat (fkc-record-field-arms-text)
+                (str_concat (fkc-record-blueprint-arms-text)
                 (str_concat (fkc-jit-lower-arms-text)
-                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } return 0; } "))))))))))))
+                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } return 0; } ")))))))))))))
 
 ; figure-ops arms (tags 34..42), emitted: each mirrors the walking kernels'
 ; native bit-for-bit — band/bor/bxor/mul are int64 ops; the *_u32 family
@@ -446,6 +448,9 @@
 
 (defn fkc-record-field-arms-text ()
     "if (t == 97) { long long r = fk_ridx(fk_walk(fk_node[i][1], fp)); long long key = fk_walk(fk_node[i][2], fp) >> 1; if (r < 1 || r >= 256) { return 0; } long long j = 0; while (j < fk_rcnt[r]) { if (fk_keyeq(fk_rkey[r][j], key)) { return fk_rval[r][j]; } j = j + 1; } return 0; } if (t == 98) { long long rec = fk_walk(fk_node[i][1], fp); long long r = fk_ridx(rec); long long key = fk_walk(fk_node[i][2], fp) >> 1; long long val = fk_walk(fk_node[i][3], fp); if (r < 1 || r >= 256) { return 0; } long long j = 0; while (j < fk_rcnt[r]) { if (fk_keyeq(fk_rkey[r][j], key)) { fk_rval[r][j] = val; return 0; } j = j + 1; } if (fk_rcnt[r] < 128) { fk_rkey[r][fk_rcnt[r]] = key; fk_rval[r][fk_rcnt[r]] = val; fk_rcnt[r] = fk_rcnt[r] + 1; } return 0; } ")
+
+(defn fkc-record-blueprint-arms-text ()
+    "if (t == 100) { long long r = fk_ridx(fk_walk(fk_node[i][1], fp)); if (r < 1 || r >= 256) { return 0; } return fk_rbp[r]; } ")
 
 (defn fkc-jit-lower-arms-text ()
     "if (t == 70) { long long a70 = fk_walk(fk_node[i][1], fp); long long b70 = fk_walk(fk_node[i][2], fp); if (a70 != 0 && b70 != 0) { return 2; } return 0; } if (t == 71) { long long a71 = fk_walk(fk_node[i][1], fp); long long b71 = fk_walk(fk_node[i][2], fp); if (a71 != 0 || b71 != 0) { return 2; } return 0; } if (t == 72) { if (fk_walk(fk_node[i][1], fp) == 0) { return 2; } return 0; } if (t == 73) { return fk_node[i][1] << 1; } if (t == 74) { return fk_walk(fk_node[i][1], fp); } if (t == 75) { return fk_walk(fk_node[i][1], fp); } if (t == 76) { return fk_walk(fk_node[i][1], fp); } if (t == 77) { return fk_walk(fk_node[i][2], fp); } if (t == 78) { return fk_walk(fk_node[i][1], fp); } if (t == 79) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } ")

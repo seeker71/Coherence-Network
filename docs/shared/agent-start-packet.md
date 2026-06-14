@@ -104,6 +104,12 @@ carry the direction; native executor ledger records carry proof-run coordination
 JSONL is only the compatibility export/cache; commit evidence ties the current
 breath to exact validation output.
 
+Record carrier boundary: the fourth arm now carries record construction, get,
+set, has, keys, predicate, blueprint access, folds, field access, and
+list-of-record reduction through focused rows. Full `record-band` remains the
+honest next gap because flattener let-inlining re-evaluates `record_new` instead
+of preserving a shared mutable record cell.
+
 Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
 executable stdlib logic. Seedbank code keeps those names in
 `form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude

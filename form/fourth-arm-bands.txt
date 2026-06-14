@@ -31,26 +31,27 @@
 #
 # Current floor (2026-06-14 content-address + sibling-node floor): the admitted
 # manifest carries content-address, durable substrate-core, and the doc-xpath,
-# concept-xpath, dns, session, and list-of-record-reduction rows among its
-# focused four-way rows, and android-mesh-learning now carries active
-# mic/camera/GPU sample rows at focused verdict 32767. The latest completed
-# full `cd form && ./validate.sh` on a quiet sibling branch read 183 four-way
-# bands and 587 total passing workloads with 0 residual divergent bands;
-# refresh the full aggregate on a quiet host after focused release rather than
-# spending repeated validation cycles under shared-runner contention. Literal
-# bp registry aliases now fold through make_nodeid for the audit-log, hex,
-# token, url-encode, uuid, and generic xpath rows. Token's blueprint
-# reservation now lives inside its module body so fkwu executes the recipe
-# verdict, and its fixed positional accessors use direct projections. Generic
-# xpath, doc-xpath, concept-xpath, dns, and session now prove registered NodeID
-# constructor/query floors after lifting module-level function wrappers to the
-# same top-level shape as xpath.fk. list-of-record-reduction now rides the same
-# record carrier after _plus lowers to the existing add arm. Symbol wire
-# serialization remains the named sibling residual. Record field access now
-# rides a
+# concept-xpath, dns, session, list-of-record-reduction, and record-blueprint
+# rows among its focused four-way rows, and android-mesh-learning now carries
+# active mic/camera/GPU sample rows at focused verdict 32767. The latest
+# completed full `cd form && ./validate.sh` on a quiet sibling branch read 183
+# four-way bands and 587 total passing workloads with 0 residual divergent
+# bands; refresh the full aggregate on a quiet host after focused release
+# rather than spending repeated validation cycles under shared-runner
+# contention. Literal bp registry aliases now fold through make_nodeid for the
+# audit-log, hex, token, url-encode, uuid, and generic xpath rows. Token's
+# blueprint reservation now lives inside its module body so fkwu executes the
+# recipe verdict, and its fixed positional accessors use direct projections.
+# Generic xpath, doc-xpath, concept-xpath, dns, and session now prove
+# registered NodeID constructor/query floors after lifting module-level function
+# wrappers to the same top-level shape as xpath.fk. list-of-record-reduction
+# now rides the same record carrier after _plus lowers to the existing add arm,
+# and record_blueprint lowers to emitted record-table tag 100. Symbol wire
+# serialization remains the named sibling residual. Record field access now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
-# then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
-# without aliasing ints, lists, nodes, or floats. BranchOutcome carries
+# then fkwu tags 64/65/66/67/68/99/100 carry construction, get, set, has,
+# record?, keys, and blueprint access without aliasing ints, lists, nodes, or
+# floats. BranchOutcome carries
 # ok/reject/condition results and learnable rejected evidence through the
 # fourth arm; the BML protocol/capability and runtime-choice rows ride the
 # choice floor, raising channel-protocol-choice-floor to 262143. The JIT native
@@ -254,9 +255,12 @@ witness-to-co-regulate fks 127
 # record_new lowers (form-flatten.fk special form) to a cons-chain packet with a
 # -1 blueprint sentinel plus (key value) entries. The emitted fourth walker
 # initializes a distinct negative-even record carrier from that packet, so
-# record?, record_get, record_has, and record_keys no longer collide with ints,
-# lists, nodes, or float boxes. The remaining record bands wait on broader
-# mutable aliasing, blueprint equality, and list-of-record reduction parity.
+# record?, record_get, record_set, record_has, record_keys, and
+# record_blueprint no longer collide with ints, lists, nodes, or float boxes.
+# The remaining full record band waits on let-bound mutable identity; the
+# current flattener intentionally inlines pure lets, which re-evaluates
+# record_new instead of preserving an aliasable record cell.
+record-blueprint fks 7
 record-fold fks 31
 record-field-access fks 16
 list-of-record-reduction fks 22
