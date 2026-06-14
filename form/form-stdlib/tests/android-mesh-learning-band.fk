@@ -1,0 +1,89 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk
+;
+; android-mesh-learning-band - Mac + Android senses feed native-first learning.
+;
+; Verdict 4095 when every claim lands:
+;   1     floor and north-star declarations exist
+;   2     Android and Mac organs name physical surfaces
+;   4     sensor and presence protocols are known
+;   8     at least two channels are native-ready at the capability floor
+;   16    thirteen high-cost LLM/model features are known
+;   32    summarize can route native-first when quality/cost/trust gates pass
+;   64    vision stays oracle-teacher until physical samples are present
+;   128   intermediate speech quality samples the oracle rather than retiring it
+;   256   stream merge composes co-learning-stream breadth
+;   512   long-window native parity retires the third-party oracle
+;   1024  too few samples blocks retirement
+;   2048  24/7 readiness requires both app and witness liveness
+(do
+    (let android (aml-android-organ))
+    (let mac (aml-mac-organ))
+    (let reached (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 0 0) (list 0 0)))
+    (let few (list (list 0 1) (list 0 1) (list 0 1) (list 0 1) (list 1 1)))
+    (let speechq (list 5 0 0))
+    (let musicq (list 0 5 0))
+    (let mac-stream (list (list "speech" speechq)))
+    (let android-stream (list (list "music" musicq)))
+
+    (let c0
+        (if (and
+                (gt (len (aml-floor)) 0)
+                (gt (len (aml-north-star)) 0))
+            1
+            0))
+    (let c1
+        (if (and
+                (str_eq (aml-organ-surface android) "adb+coherence-sense")
+                (str_eq (aml-organ-surface mac) "launchagent+form-kernel"))
+            2
+            0))
+    (let c2
+        (if (and
+                (eq (aml-protocol-known? (aml-channels) "sensor:signal") 1)
+                (eq (aml-protocol-known? (aml-channels) "hati.mesh:presence") 1))
+            4
+            0))
+    (let c3
+        (if (ge (aml-ready-channel-count (aml-channels)) 2)
+            8
+            0))
+    (let c4
+        (if (eq (aml-known-feature-count (aml-high-cost-features)) 13)
+            16
+            0))
+    (let c5
+        (if (str_eq (aml-route-choice "summarize" 84 8 42 80) "native-first")
+            32
+            0))
+    (let c6
+        (if (str_eq (aml-route-choice "vision-describe" 45 30 55 80) "oracle-teacher-until-physical-samples")
+            64
+            0))
+    (let c7
+        (if (str_eq (aml-route-choice "speech-transcribe" 72 12 30 78) "native-first-sample-oracle")
+            128
+            0))
+    (let c8
+        (if (eq (aml-merged-breadth mac-stream android-stream) 2)
+            256
+            0))
+    (let c9
+        (if (and
+                (eq (aml-retire? reached 12 0) 1)
+                (str_eq (aml-authority reached 12 0) "native"))
+            512
+            0))
+    (let c10
+        (if (eq (aml-retire? few 12 0) 0)
+            1024
+            0))
+    (let c11
+        (if (and
+                (eq (aml-24-7-ready? 1 1 1 1) 1)
+                (eq (aml-24-7-ready? 1 1 0 1) 0))
+            2048
+            0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))

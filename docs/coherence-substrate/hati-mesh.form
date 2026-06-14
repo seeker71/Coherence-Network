@@ -14,7 +14,8 @@
 
   (floor
     "The public API accepts organ announcements, organ heartbeats, and channel offers, records runtime receipts, and lists recent organs/channels."
-    "The Android app now creates a stable install-scoped organ id, can explicitly bind a user-entered cell/email label, announces to the public API, heartbeats while listening, polls for other mesh organs, offers a sensor channel, and displays local sensor flow rates plus recent channel rows.")
+    "The Android app now creates a stable install-scoped organ id, can explicitly bind a user-entered cell/email label, announces to the public API, heartbeats while listening, polls for other mesh organs, offers a sensor channel, and displays local sensor flow rates plus recent channel rows."
+    "A real adb-connected Android device can now be sampled as a mesh-learning organ receipt without storing raw sensor values, location coordinates, package inventory, or the adb serial. The current physical floor observed SM-S918U1 Android 16 arm64-v8a, Coherence Sense installed/running, 39 hardware sensors, camera, microphone, GPS, WiFi, Bluetooth LE, NFC, Vulkan compute, and Mac witness liveness.")
 
   (north-star
     "Each organ carries a signed self-sovereign identity, explicit steward/cell relation, revocable capabilities, nearby-cell discovery, negotiated offer/ack interfaces, typed media codecs, and measured information flow rates.")
@@ -86,6 +87,7 @@
     (offerable-flow screen:write audio:pcm16 video:rgba-time)
     (visualization identity-receipt channel-list sensor-samples-per-second bytes-per-second)
     (dashboard gps motion mic camera disk network cpu ram gpu dsp mlx inner-cells qr-offer)
+    (physical-learning-receipt scripts/android_mesh_learning_receipt.py)
     (install-signing-floor "release APK is signed by the Hati mesh app key and verified before publish")
     (install-signing-north-star "same identity key also signs mesh announcements, channel offers, sensor receipts, and update manifests")
     (public-asset https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk))

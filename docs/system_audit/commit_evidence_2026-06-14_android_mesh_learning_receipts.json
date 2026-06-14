@@ -1,0 +1,121 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/android-mesh-learning-receipts-20260614",
+  "commit_scope": "Make the connected Android phone and Mac witness a repeatable mesh-learning receipt feeding Form-native native-first/oracle-retirement routing.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "android-mesh-learning",
+    "form-native-oracle-retirement",
+    "hati-mesh-sensing-organs",
+    "llm-feature-cost-reduction"
+  ],
+  "spec_ids": [
+    "hati-mesh",
+    "channel-loopback",
+    "co-learning-stream",
+    "colearning-retire",
+    "llm-feature-channel-floor",
+    "oracle-catalog"
+  ],
+  "task_ids": [
+    "android-mesh-learning-receipts-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-device-provider",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/android_mesh_learning_receipt.py",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "experiments/coherence-sense-android/README.md",
+    "docs/system_audit/commit_evidence_2026-06-14_android_mesh_learning_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/android_mesh_learning_receipt.py",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "experiments/coherence-sense-android/README.md",
+    "docs/system_audit/commit_evidence_2026-06-14_android_mesh_learning_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "scripts/android_mesh_learning_receipt.py#physical-adb-receipt",
+    "form/form-stdlib/android-mesh-learning.fk#native-first-route-choice",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk#4095-four-way",
+    "docs/coherence-substrate/android-mesh-learning.form#24-7-operation",
+    ".cache/android-mesh-learning/latest.json#local-private-cache"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"android mac mesh learning receipts\"",
+      "python3 -m py_compile scripts/android_mesh_learning_receipt.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning",
+      "python3 scripts/android_mesh_learning_receipt.py --start-app"
+    ],
+    "notes": "Focused Form validation returned 4095 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The manifest gate returned `PASS-4WAY  android-mesh-learning`. The adb receipt launched Coherence Sense and recorded SM-S918U1 Android 16 arm64-v8a with Coherence Sense installed/running, 39 hardware sensors, camera, microphone, GPS, WiFi, Bluetooth LE, NFC, Vulkan compute, and Mac witness liveness. Speech, vision, and multimodal alignment route native-first with oracle sampling; summarize, code-lower, tool-select, and distill-retire route native-first. An attempted full `cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh` was externally terminated by SIGTERM while child `run_one_indexed` jobs were active, so no full-suite aggregate pass is claimed from that attempt."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this local Android/Mac physical receipt slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local proof and physical adb receipt passed; full-suite aggregate was SIGTERM-interrupted under host contention, and CI/review/merge remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The repository now has a repeatable physical Android/Mac receipt that can run once or continuously, launches the Coherence Sense app through adb, records safe capability/liveness summaries, and maps expensive LLM/model/compiler feature lanes to native-first, native-first-with-oracle-sampling, or teacher-until-samples routing.",
+    "public_endpoints": [
+      "local:adb-android-device",
+      "local:mac-witness-service",
+      "local:android-mesh-learning-receipt"
+    ],
+    "test_flows": [
+      "Compile the receipt script.",
+      "Validate the Form-native android-mesh-learning band at 4095 with fourth-arm proof.",
+      "Admit the band through the fourth-arm manifest gate.",
+      "Launch Coherence Sense on the authorized Android device and write a safe summary JSON receipt.",
+      "Inspect the receipt for device ABI/model, app liveness, sensor categories, feature categories, Mac witness liveness, and route decisions."
+    ]
+  }
+}
