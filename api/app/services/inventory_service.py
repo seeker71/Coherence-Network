@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import time
+from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -4244,23 +4245,80 @@ def _source_path_aliases(file_path: str) -> set[str]:
     return {item for item in out if item}
 
 
+def _iter_api_route_leaves(
+    routes: Iterable[Any],
+    prefix: str = "",
+    _depth: int = 0,
+) -> Iterator[tuple[str, Any]]:
+    """Yield ``(full_path, api_route)`` for every leaf APIRoute reachable from ``routes``.
+
+    Works across FastAPI inclusion styles. Older FastAPI (< ~0.135 / Starlette
+    0.52) flattens ``include_router(prefix=…)`` so every APIRoute already sits at
+    the top level carrying its full ``/api/…`` path. Newer FastAPI (0.137+ /
+    Starlette 1.x) keeps routers nested behind ``_IncludedRouter`` (and sub-apps
+    behind ``Mount``), so a leaf ``APIRoute.path`` is only the router-relative
+    tail (``/ping``, ``/ideas/{idea_id}``). This walks the route tree and
+    accumulates each enclosing container's prefix down to the leaf,
+    reconstructing the externally observed full path in both regimes — detected
+    by structure, not by a pinned dependency version.
+
+    A router's *own* ``prefix=`` is already baked into its leaf paths, so only
+    the inclusion-time prefix (``_IncludedRouter.include_context.prefix``) and
+    the mount path are accumulated here.
+    """
+    from fastapi.routing import APIRoute
+    from starlette.routing import Mount
+
+    if _depth > 25:  # guard against pathological cycles; real trees are shallow
+        return
+    for route in routes or []:
+        if isinstance(route, APIRoute):
+            yield f"{prefix}{route.path}", route
+            continue
+        # New FastAPI nests included routers behind _IncludedRouter, whose
+        # include_context carries the inclusion prefix and the child router.
+        include_context = getattr(route, "include_context", None)
+        if include_context is not None:
+            child_prefix = str(getattr(include_context, "prefix", "") or "")
+            included_router = getattr(include_context, "included_router", None)
+            child_routes = getattr(included_router, "routes", None)
+            if child_routes:
+                yield from _iter_api_route_leaves(
+                    child_routes, f"{prefix}{child_prefix}", _depth + 1
+                )
+            continue
+        # Mounted sub-apps (Starlette Mount) carry their prefix in ``.path``.
+        if isinstance(route, Mount):
+            mount_path = str(getattr(route, "path", "") or "")
+            child_routes = getattr(route, "routes", None)
+            if child_routes:
+                yield from _iter_api_route_leaves(
+                    child_routes, f"{prefix}{mount_path}", _depth + 1
+                )
+            continue
+        # Fallback: any other container that exposes nested routes (a bare
+        # APIRouter without an include_context on some versions). Prefix is
+        # left unchanged since none is discoverable on the container itself.
+        nested = getattr(route, "routes", None)
+        if nested is None:
+            nested = getattr(getattr(route, "router", None), "routes", None)
+        if nested:
+            yield from _iter_api_route_leaves(nested, prefix, _depth + 1)
+
+
 def _discover_api_endpoints_from_runtime() -> list[dict[str, Any]]:
     try:
-        from fastapi.routing import APIRoute
         from app.main import app as main_app
     except Exception:
         return []
 
     grouped: dict[str, dict[str, Any]] = {}
-    for route in main_app.routes:
-        if not isinstance(route, APIRoute):
-            continue
-        path = str(route.path or "")
+    for path, route in _iter_api_route_leaves(main_app.routes):
         if not (path.startswith("/api") or path.startswith("/v1")):
             continue
         methods = sorted(
             method
-            for method in (route.methods or set())
+            for method in (getattr(route, "methods", None) or set())
             if method in {"GET", "POST", "PUT", "PATCH", "DELETE"}
         )
         if not methods:
