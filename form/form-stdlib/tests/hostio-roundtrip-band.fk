@@ -1,0 +1,59 @@
+; tests/hostio-roundtrip-band.fk — ONE deterministic host-io round-trip,
+; authored to cross the fourth arm (fkwu) as well as Go/Rust/TS.
+;
+; preludes: form-stdlib/core.fk
+;
+; The named wall this opens: the fourth-arm flattener drops bare do-statements
+; and re-walks let-bound side effects under eq/and/le lowering (each lowers an
+; operand twice) and under multi-reference. A side-effecting host-io op must
+; therefore be walked EXACTLY ONCE and observed only through single-walk
+; primitives (str_eq tag 26, add tag 3, mul tag 42, int_to_str tag 32) — never
+; through eq (which lowers to two le's, doubling its operand) and never
+; referenced twice.
+;
+; Determinism discipline so all four kernels print the identical verdict:
+;   - the scratch path comes from temp_dir (native fkwu arm, tag 100); the path
+;     string folds into effects only, never the verdict.
+;   - the file is removed FIRST inside the value path: (mul cleaned 0) forces the
+;     fs_remove to walk once and discards its return (unlink is -1 when the file
+;     is absent on a fresh run, 0 when present — neither must touch the verdict),
+;     then add's right operand (the size check) walks the single append. add
+;     evaluates left-to-right, so remove precedes write. A reused per-leg TMPDIR
+;     across runs therefore cannot accumulate stale bytes.
+;   - ONE append of a known byte sequence, its size bound once and read once via
+;     int_to_str+str_eq (the write fires exactly once on every kernel).
+;   - the read-back is read_file (pure/idempotent); comparing it twice is safe.
+;
+; The strange edge: a single write→read of "ABC" where the clean-slate remove
+; and the write are chained through add+mul so each side effect walks once, in
+; order — the smallest shape that proves bytes survive a real filesystem
+; boundary identically on four kernels, with no reliance on dropped statements.
+;
+; Band verdict: 111 when every assertion holds across all four kernels.
+;   remove-then-write: file_append_bytes returns size 3 ("ABC")    → 1
+;   read-back content equals "ABC" (bytes survived the boundary)    → 10
+;   a second independent read returns the SAME content (stable)      → 100
+
+(do
+    (let path (str_concat (temp_dir) "/fk-hostio-roundtrip.bin"))
+
+    ;; clean slate INSIDE the value path, bound + referenced once. (mul cleaned 0)
+    ;; forces the unlink to walk exactly once and zeroes its return so a missing
+    ;; file (-1) or present file (0) leaves the verdict untouched. A bare
+    ;; (fs_remove path) statement would be dropped by the fourth-arm flattener.
+    (let cleaned (fs_remove path))
+
+    ;; ONE append of "ABC" (65,66,67) → size 3. Bound + referenced once.
+    (let wrote (file_append_bytes path (list 65 66 67)))
+
+    ;; read the bytes back (pure; reading again is idempotent)
+    (let back1 (read_file path))
+    (let back2 (read_file path))
+
+    ;; verdict. The first add operand folds (mul cleaned 0) so the remove walks
+    ;; FIRST, then the size check walks the single append; both via single-walk
+    ;; ops (mul tag 42, add tag 3, int_to_str tag 32, str_eq tag 26) — no eq/le/
+    ;; and lowering ever touches a side-effecting binding.
+    (add (add (mul cleaned 0) (if (str_eq (int_to_str wrote) "3") 1 0))
+    (add (if (str_eq back1 "ABC") 10 0)
+         (if (str_eq back2 "ABC") 100 0))))
