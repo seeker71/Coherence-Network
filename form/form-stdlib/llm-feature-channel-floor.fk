@@ -1,0 +1,164 @@
+; llm-feature-channel-floor.fk - floor and north-star catalog for Form-native LLM features.
+;
+; Floor: each high-level LLM-like capability is a named native channel row with
+; input codec, output codec, grammar, carrier, receipt shape, quality floor,
+; teacher lane, native-candidate flag, and explicit floor/north-star text. Cells
+; and recipes can ask for a request plan and receive a native channel plan or an
+; explicit no-plan.
+;
+; North star: summarization, retrieval, generation, planning, tool use, code
+; lowering, dialogue, memory, speech, vision, and multimodal alignment are all
+; first-class Form language surfaces. External models are oracle teachers; the
+; Form-native candidates graduate when heldout receipts show enough quality,
+; lower token/energy/nutrition cost, sovereignty, trust, aliveness, and safe
+; abstention.
+;
+; Proven by: form-stdlib/tests/llm-feature-channel-floor-band.fk
+
+(do
+    (defn lfcf-floor ()
+        (list
+            "every LLM-like feature has a typed channel row with floor and north-star text"
+            "request planning returns kernel/tool/channel plans only for known capability rows"
+            "summary readiness composes the text-summary-learning quality gate"))
+    (defn lfcf-north-star ()
+        (list
+            "Form-native language grammar, model kernels, receipts, and stores replace opaque LLM features lane by lane"
+            "external teachers become explicit oracle lanes, not hidden authority"
+            "the lowest-token sovereign native candidate wins after heldout quality and trust gates pass"))
+
+    (defn lfcf-channel (name input-codec output-codec grammar carrier receipt metric-floor floor north-star teacher native-candidate)
+        (list name input-codec output-codec grammar carrier receipt metric-floor floor north-star teacher native-candidate))
+    (defn lfcf-name (channel) (nth channel 0))
+    (defn lfcf-input-codec (channel) (nth channel 1))
+    (defn lfcf-output-codec (channel) (nth channel 2))
+    (defn lfcf-grammar (channel) (nth channel 3))
+    (defn lfcf-carrier (channel) (nth channel 4))
+    (defn lfcf-receipt (channel) (nth channel 5))
+    (defn lfcf-metric-floor (channel) (nth channel 6))
+    (defn lfcf-floor-text (channel) (nth channel 7))
+    (defn lfcf-north-star-text (channel) (nth channel 8))
+    (defn lfcf-teacher (channel) (nth channel 9))
+    (defn lfcf-native-candidate? (channel) (nth channel 10))
+
+    (defn lfcf-catalog ()
+        (list
+            (lfcf-channel "summarize" "text:tokens+citations" "summary:claims+citations" "summary-receipt-grammar" "form-kernel+oracle-catalog" "choice-receipt" 80 "source claims must be compressed, cited, factual, covered, and contradiction-free" "native summary grammars distill durable memory and proof traces without opaque LLM dependence" "llm-receipt" 1)
+            (lfcf-channel "retrieve" "query:tokens+intent" "source:ranked-cells" "retrieval-grammar" "store:query+kernel:call" "choice-receipt" 75 "queries return attributed ranked cells, not ungrounded prose" "content-addressed retrieval and embeddings become Form/store-native route choices" "source-grounding" 1)
+            (lfcf-channel "extract" "source:text-or-tree" "facts:typed-fields" "extraction-grammar" "form-kernel" "choice-receipt" 80 "typed fields carry source coordinates and refusal on missing evidence" "domain grammars extract structured facts directly from native codecs" "data-shape" 1)
+            (lfcf-channel "classify" "sample:features" "label:confidence" "classifier-grammar" "form-kernel" "choice-receipt" 80 "classification emits label, confidence, and heldout receipt" "nearest-shape and learned model kernels classify across modalities with receipts" "llm-receipt" 1)
+            (lfcf-channel "rank" "candidates:scored" "order:chosen" "branch-choice-order" "form-kernel" "choice-receipt" 75 "ranking keeps prediction feedback separate from trust and alignment" "branch choice learns from success/fail/silence receipts across every agent path" "model-judge" 1)
+            (lfcf-channel "plan" "goal:constraints" "steps:recipes" "recipe-plan-grammar" "form-kernel" "choice-receipt" 75 "plans are inspectable recipe choices with capability gates" "natural language lowers into recipe graphs and executable Form plans" "llm-receipt" 1)
+            (lfcf-channel "generate" "intent:grammar" "artifact:patch-or-text" "generation-grammar" "form-kernel+oracle-catalog" "choice-receipt" 80 "generated output must name grammar, candidate, receipt, and source ground" "Form-native generators race external models and retire them lane by lane" "llm-receipt" 1)
+            (lfcf-channel "revise" "artifact+receipt" "artifact:improved" "revision-grammar" "form-kernel" "choice-receipt" 75 "revision only learns from before/after receipts" "native critique and repair loops improve code, docs, and model outputs without hidden state" "model-judge" 1)
+            (lfcf-channel "critique" "artifact+criteria" "findings:ranked" "review-grammar" "form-kernel+oracle-catalog" "choice-receipt" 80 "critique emits evidence-backed findings and uncertainty" "review lanes become native proof readers with optional external committees" "model-judge" 1)
+            (lfcf-channel "dialogue" "turn:context" "turn:response+state" "dialogue-grammar" "form-kernel" "choice-receipt" 75 "dialogue carries intent, attribution, uncertainty, and memory write choices" "conversation becomes a receipt-bearing native state machine instead of token-only context" "llm-receipt" 1)
+            (lfcf-channel "memory-update" "event+receipt" "cell:update-or-refuse" "memory-grammar" "store:query+kernel:call" "choice-receipt" 80 "memory writes require source, reason, scope, and refusal path" "agent memory becomes native cell mutation with provenance and compost gates" "source-grounding" 1)
+            (lfcf-channel "tool-select" "intent+capability" "tool:plan" "tool-channel" "tool/channel" "choice-receipt" 75 "tool selection returns a capability-explicit native plan or no-plan" "tools are grammar-level options across host, kernel, route, stream, store, and file lanes" "tool-selection" 1)
+            (lfcf-channel "tool-execute" "tool:plan+consent" "execution:receipt" "tool-channel" "tool/channel" "choice-receipt" 80 "execution requires an explicit plan, capability, consent boundary, and receipt" "execution receipts teach tool choice and generation while host access remains non-ambient" "execution-proof" 1)
+            (lfcf-channel "code-lower" "source:form-or-bml" "binary-or-asm:host" "lowering-grammar" "form-kernel+jit" "choice-receipt" 80 "code lowering keeps compiler/JIT receipts and host target explicit" "natural language lowers through Form/BML/domain grammar to form binary and host-native ASM" "code-lowering" 1)
+            (lfcf-channel "translate-transduce" "source:language-or-codec" "target:language-or-codec" "transduction-grammar" "form-kernel" "choice-receipt" 75 "translation preserves source alignment and can abstain" "French/Form/ASM/speech/video codecs teach each other through typed loopbacks" "llm-receipt" 1)
+            (lfcf-channel "embed-index" "source:cells" "coordinate:index" "embedding-grammar" "store:query+form-kernel" "choice-receipt" 75 "embeddings are named coordinates with source and distance receipts" "content-addressed coordinates and shape kernels replace opaque vector-only memory" "llm-receipt" 1)
+            (lfcf-channel "cite-ground" "claim+source" "grounding:receipt" "citation-grammar" "http:request+store:query+kernel:call" "choice-receipt" 80 "claims require source date, coordinate, and contradiction gate" "grounding becomes native citation/source cells with freshness-aware retrieval" "source-grounding" 1)
+            (lfcf-channel "distill-retire" "teacher+native-receipts" "promotion:decision" "distillation-grammar" "form-kernel" "choice-receipt" 85 "retirement requires heldout win, lower token/energy/nutrition, trust, and rollback path" "external oracle lanes retire only when native candidates prove better value" "model-judge" 1)
+            (lfcf-channel "abstain-uncertainty" "request+evidence" "abstain-or-ask" "uncertainty-grammar" "form-kernel" "choice-receipt" 75 "uncertainty is an output channel with reasons and next evidence request" "native agents choose silence, ask, or refuse as first-class language values" "llm-receipt" 1)
+            (lfcf-channel "speech-transcribe" "audio:frames+spectrum" "text:tokens+confidence" "speech-grammar" "stream:read+kernel:call" "choice-receipt" 80 "STT samples carry frame, transcript, confidence, and oracle receipt" "Form-native STT learns from whisper and live loopback until it wins audio categories" "speech-stt" 1)
+            (lfcf-channel "speech-synthesize" "text+expression" "audio:frames" "speech-grammar" "kernel:call+stream:write" "choice-receipt" 75 "TTS samples carry text, expression, audio frame, and intelligibility receipt" "Form-native TTS and STT teach each other through speaker/mic loopbacks" "media-codec" 1)
+            (lfcf-channel "vision-describe" "video:frames+geometry" "labels:objects+motion" "vision-grammar" "stream:read+kernel:call" "choice-receipt" 80 "vision samples carry frame, shape, time, occlusion, and confidence" "video generation and classification teach each other across 2D, 3D, time, texture, and composition" "media-codec" 1)
+            (lfcf-channel "multimodal-align" "audio+video+text+sensor" "aligned:events" "alignment-grammar" "form-kernel+stream" "choice-receipt" 80 "modalities align only with timestamp, source, and confidence receipts" "all sense organs share typed channel data so cells learn across audio, video, text, and sensors" "model-judge" 1)))
+
+    (defn lfcf-find (rows name)
+        (if (eq (len rows) 0)
+            (lfcf-channel "none" "none" "none" "none" "none" "none" 0 "unknown capability refused" "add a channel row before planning" "none" 0)
+            (if (str_eq (lfcf-name (head rows)) name)
+                (head rows)
+                (lfcf-find (tail rows) name))))
+    (defn lfcf-channel-by-name (name)
+        (lfcf-find (lfcf-catalog) name))
+    (defn lfcf-known? (name)
+        (if (str_eq (lfcf-name (lfcf-channel-by-name name)) "none") 0 1))
+    (defn lfcf-row-has-floor-north? (channel)
+        (if (and
+                (not (str_eq (lfcf-floor-text channel) ""))
+                (not (str_eq (lfcf-north-star-text channel) "")))
+            1
+            0))
+    (defn lfcf-all-rows-have-floor-north? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (lfcf-row-has-floor-north? (head rows)) 1)
+                (lfcf-all-rows-have-floor-north? (tail rows))
+                0)))
+    (defn lfcf-count-native (rows)
+        (if (eq (len rows) 0) 0
+            (add
+                (if (eq (lfcf-native-candidate? (head rows)) 1) 1 0)
+                (lfcf-count-native (tail rows)))))
+    (defn lfcf-count-receipt (rows)
+        (if (eq (len rows) 0) 0
+            (add
+                (if (str_eq (lfcf-receipt (head rows)) "none") 0 1)
+                (lfcf-count-receipt (tail rows)))))
+    (defn lfcf-channel-ready? (name observed-quality)
+        (if (ge observed-quality (lfcf-metric-floor (lfcf-channel-by-name name))) 1 0))
+    (defn lfcf-essential-names ()
+        (list
+            "summarize"
+            "retrieve"
+            "extract"
+            "classify"
+            "rank"
+            "plan"
+            "generate"
+            "revise"
+            "critique"
+            "dialogue"
+            "memory-update"
+            "tool-select"
+            "tool-execute"
+            "code-lower"
+            "translate-transduce"
+            "embed-index"
+            "cite-ground"
+            "distill-retire"
+            "abstain-uncertainty"))
+    (defn lfcf-essential-known-count (names)
+        (if (eq (len names) 0) 0
+            (add
+                (lfcf-known? (head names))
+                (lfcf-essential-known-count (tail names)))))
+
+    (defn lfcf-plan (status channel protocol capability receipt floor north-star)
+        (list status channel protocol capability receipt floor north-star))
+    (defn lfcf-plan-status (plan) (nth plan 0))
+    (defn lfcf-plan-channel (plan) (nth plan 1))
+    (defn lfcf-plan-protocol (plan) (nth plan 2))
+    (defn lfcf-plan-capability (plan) (nth plan 3))
+    (defn lfcf-plan-receipt (plan) (nth plan 4))
+    (defn lfcf-plan-floor (plan) (nth plan 5))
+    (defn lfcf-plan-north-star (plan) (nth plan 6))
+    (defn lfcf-request-plan (request)
+        (if (str_eq request "summarize")
+            (lfcf-plan "feature/plan" "summarize" "kernel:call" "cap.summary.receipt" "choice-receipt" (lfcf-floor-text (lfcf-channel-by-name "summarize")) (lfcf-north-star-text (lfcf-channel-by-name "summarize")))
+            (if (str_eq request "tool-select")
+                (lfcf-plan "feature/plan" "tool-select" "tool/channel" "cap.tool.plan" "choice-receipt" (lfcf-floor-text (lfcf-channel-by-name "tool-select")) (lfcf-north-star-text (lfcf-channel-by-name "tool-select")))
+                (if (str_eq request "tool-execute")
+                    (lfcf-plan "feature/plan" "tool-execute" "tool/channel" "cap.tool.execute.receipt" "choice-receipt" (lfcf-floor-text (lfcf-channel-by-name "tool-execute")) (lfcf-north-star-text (lfcf-channel-by-name "tool-execute")))
+                    (if (str_eq request "code-lower")
+                        (lfcf-plan "feature/plan" "code-lower" "kernel:call" "cap.code.lower" "choice-receipt" (lfcf-floor-text (lfcf-channel-by-name "code-lower")) (lfcf-north-star-text (lfcf-channel-by-name "code-lower")))
+                        (lfcf-plan "feature/no-plan" request "none" "none" "none" "unknown feature request refused" "add an explicit channel row before planning"))))))
+    (defn lfcf-summary-plan (summary)
+        (if (eq (tsl-summary-pass? summary) 1)
+            (lfcf-request-plan "summarize")
+            (lfcf-plan "feature/no-plan" "summarize" "none" "none" "none" "summary metric floor not met" "improve or ask an oracle before routing")))
+    (defn lfcf-oracle-kind (name)
+        (if (str_eq name "summarize") "llm-receipt"
+            (if (str_eq name "code-lower") "code-lowering"
+                (if (str_eq name "cite-ground") "source-grounding"
+                    (if (str_eq name "tool-execute") "execution-proof"
+                        "none")))))
+    (defn lfcf-oracle-for-channel (name)
+        (if (str_eq (lfcf-oracle-kind name) "none")
+            (oc-evidence-lane "none" "none" "none" "none" "none" "none" "absent" "none" "none")
+            (oc-evidence-for-kind (oc-evidence-catalog) (lfcf-oracle-kind name))))
+
+    0)
