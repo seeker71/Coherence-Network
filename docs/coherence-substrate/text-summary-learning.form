@@ -20,7 +20,7 @@
     "A valid CHOICE-RECEIPT preserves token cost and becomes a native training sample. The current candidate race shows `form-native:summary` winning over remote-model and local-LLM teachers because it clears quality gates with lower token, energy, and nutrition cost."
     "Oracle lanes are explicit: source grounding crosses a remote membrane, and local Ollama is a local LLM receipt teacher. Neither is ambient authority."
     "The real-source floor reads this checked-in .form file through kernel-native `read_file`, `file_size`, and `read_file_slice`, verifies exact byte slices as citations, and only then emits the summary receipt."
-    "The multi-source floor adds dynamic source-coordinate rows for file, store, route, and stream sources. File and file-backed store receipts are physically read today; route and stream coordinates are explicit planned lanes until native source readers exist.")
+    "The multi-source floor adds dynamic source-coordinate rows for file, store, route, and stream sources. File slices, file-backed store reads, kernel-http response bodies, and .fkb channel cursor windows are physically read into the same source receipt shape.")
 
   (north-star
     "Every durable text surface, code patch, proof log, runtime event stream, dialogue, and memory cell can distill into native summary claim rows with source coordinates and citations."
@@ -65,10 +65,9 @@
       (proof-level three-kernel-host-io)
       (sample summary:real-source-receipt))
     (multi-source-reader
-      (ready-sources host:file store:query)
-      (planned-sources kernel:route stream:read)
+      (ready-sources host:file store:query kernel:route stream:read)
       (coordinate-fields protocol capability locator selector offset length codec carrier)
-      (carrier read_file_slice cell-log-store)
+      (carrier read_file_slice cell-log-store kernel-http channel-read-since)
       (token-cost 120)
       (proof-level three-kernel-host-io)
       (sample summary:multi-source-receipt))
@@ -82,7 +81,7 @@
       (unknown summary/no-plan)))
 
   (next-physical-proof-gaps
-    (source-reader "extend dynamic source-coordinate receipts from file and file-backed store to physical kernel route response bodies and stream cursor windows")
+    (source-reader "move kernel:route from native kh-response bodies to socket-served front-door route traces, and move stream:read from .fkb cursor windows to backpressure-aware event streams")
     (heldout-corpus "run real source/doc/proof/event summaries through local LLM and Form-native candidates with retained receipts")
     (memory-update "write passing summary claim rows into native memory cells with rollback and compost receipts")
     (abstention "prove low-evidence summaries ask for source grounding rather than generating plausible prose")))
