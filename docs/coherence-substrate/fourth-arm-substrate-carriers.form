@@ -1,0 +1,38 @@
+# fourth-arm-substrate-carriers.form - substrate carriers on the emitted fourth kernel (fkwu)
+#
+# Why this cell exists: the per-band "what crossed and why" floor used to live as
+# free prose in the fourth-arm-bands.txt header, where concurrent rebases kept
+# dropping it. The manifest rows are the proof; this STRUCTURED cell is the
+# durable floor/north-star/gate for the substrate-carrier arc, so the story is
+# read from tokens (append-friendly, per-arc, low rebase pressure), not prose.
+
+(fourth-arm-substrate-carriers
+  (north-star
+    (sentence "The content-addressed substrate is durable across REAL carriers on all four kernels: the same substrate-core module crosses four-way over the in-memory, segmented-FILE, and Postgres carriers, so content-addressing survives a process and persistence boundary, not only memory — one engine, no parallel paths.")
+    (connected-tissue "Harmonizes with form/fourth-arm-bands.txt (the floor source for four-way coverage), hati-os.form (the kernel surface), the native executor proof ledger, and commit evidence so the sister nodes name one current floor and one next gap.")
+    (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let single-walk-comparison sequenced-effects native-host-io)
+    (proof-shape same-shape-same-nodeid durable-content-key-roundtrip four-way-0-divergent))
+
+  (floor
+    (sentence "A durable-carrier claim is allowed only when the band crosses four-way on fkwu with 0 divergence and its remaining gate is named; a divergence is never buried by leaving the band out of the manifest.")
+    (no-silent-zero unsupported-lowering-must-not-be-a-valid-table)
+    (current-supported
+      content-address-intern_node-tag-47        # same (category,children) -> same NodeID via live-table dedup, the C image of the Go byHash
+      node_eq-tag-80-structural                 # node equality reads as structural identity
+      trivial-intern-dedup-tags-43-46           # same value -> same trivial cell, so let-inlining re-walks stay bounded
+      durable-substrate-core-memory-carrier     # intern + named cells + equivalence durable over the functional assoc-list carrier (band substrate-core)
+      sequenced-bare-do-tag-69                  # bare do-statements fire exactly once in order (band do-effect-seq)
+      single-walk-eq-lt-tags-102-103            # eq/lt evaluate each operand exactly once (band eq-effect-once)
+      host-io-temp_dir-tag-101                  # $TMPDIR resolution as a native arm
+      host-io-fs-carriers-tags-55-63            # open/read/write/close/lseek/mkdir/rmdir/unlink/rename/size/append/slice
+      host-io-real-roundtrip)                   # real filesystem write -> read crosses four-way deterministically (band hostio-roundtrip)
+    (current-unsupported
+      effect-once-let                           # fkwu inlines a let, re-walking its bound value at every use
+      write_file_text file_mtime scan_run       # broader host-io write/read recipes
+      segmented-file-carrier-four-way           # gated on effect-once-let: store-threading binds effectful values through let
+      postgres-carrier-four-way))               # gated on effect-once-let and the broader host-io recipes
+
+  (next-step
+    (sentence "Land effect-once let so a let value is computed once instead of re-walked; then substrate-core threaded over the segmented-FILE carrier crosses four-way, then Postgres.")
+    (gate effect-once-let)
+    (why "statement-level effects already fire once (sequenced bare-do, tag 69) and operand-level effects already fire once (single-walk eq/lt, tags 102/103); the remaining piece is the let binding itself, which the carrier store-threading (s1 -> s2 -> s3) relies on. Once a let value is bound once rather than re-walked at each use, write_file_text and the file/Postgres carriers ride the same content-key durability the memory carrier already proves four-way.")))
