@@ -110,10 +110,26 @@ data, framebuffer traces, carrier-tissue reads, edge-category counts,
 wellness output, and source repetition as introspection. Lift only with proof:
 a Form/BML band, a native route trace, or an evidence record that shows the old
 low-level shape is now carried by a simpler reusable cell. Form/BML runtime
-proof walks toward the four-kernel floor: Go, Rust, TypeScript, and the emitted
-`fkwu` arm when `form/fourth-arm-bands.txt` covers the band. Evidence names its
-level exactly: `fourth arm: ... four-way` for covered bands, or `3-kernel only`
-with the fourth-arm gap that keeps the band out of the manifest.
+proof walks the four-kernel floor: Go, Rust, TypeScript, and the emitted `fkwu`
+arm. Run every new band on all four arms before shipping — the fourth is a
+kernel, not a footnote; a band that never touched it is not proven. When fkwu
+disagrees, name which kind it is, because they are not the same and only one is
+acceptable to ship:
+- A **divergence** — fkwu HAS the ops but computes a DIFFERENT answer than the
+  three walkers — means one of our four kernels is wrong. It is a correctness
+  bug and a hard gate: diagnose it to root cause and resolve it to four-way (fix
+  the recipe shape, or the walker) before merge. Never ship a divergence as a
+  "named gap," and never hide it by leaving the band out of the manifest — that
+  buries the disagreement instead of resolving it. If the real fix is deeper
+  than the change at hand (e.g. a walker-emitter change), the divergence is
+  still root-caused, owned, and tracked to a specific fix — never waved at.
+- An **unsupported op** — fkwu lacks the op FAMILY (the node/substrate, host-io,
+  and multi-line standing walls named in `form/fourth-arm-bands.txt`) — is a
+  known limitation, not a wrong answer. `3-kernel only` is honest here, and only
+  here, with the specific missing op named.
+Evidence names the level exactly: `fourth arm: ... four-way` for covered bands,
+or `3-kernel only — <unsupported op>` with that op named. A divergence dressed
+as a gap is the precise shape this rule forbids.
 
 **Connected tissue stays aligned.** The same north star should read coherently
 from sister nodes: `form/fourth-arm-bands.txt`, substrate `.form` north-star
