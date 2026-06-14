@@ -8,9 +8,17 @@
 ; Two lanes live here:
 ;   · core mirrors — nil?/sum/append/abs/min2/max2/range/take/drop/
 ;     reverse/maximum/minimum/product, each the first-order image of the
-;     core.fk definition (foldl-shaped originals rewritten as direct
-;     recursion; higher-order core stays outside the walker's reach until
-;     defunctionalization)
+;     core.fk definition
+;   · higher-order core — map/filter/foldl/foldr (and the even?/odd?/zero?
+;     predicates they pair with), the EXACT generic recipes core.fk runs on
+;     the three reference kernels. A function name in argument position
+;     lowers to a function-ref value (flt-fref: cons of (fn-index, arity)),
+;     and the combinator's call to its function PARAMETER lowers to an
+;     indirect call (tag 44) that reads (fn-index, arity) and dispatches —
+;     arity 1 reads the single arg, arity ≥ 2 rides the packed-args list
+;     like a direct call. No defunctionalization, no per-call-site monomorph;
+;     one engine carries the function-value through map/filter's forward
+;     recursion and foldl's two-arg step.
 ;   · string stones — substring/int_to_str/str_to_int/str_find composed
 ;     from char_at (the BYTE2S∘SCHAR lowering), str_concat, and ord:
 ;     tags 24..29 carry every byte; these recipes carry the shapes
@@ -39,6 +47,21 @@
     (defn maximum (xs) (if (nil? (tail xs)) (head xs) (max2 (head xs) (maximum (tail xs)))))
     (defn minimum (xs) (if (nil? (tail xs)) (head xs) (min2 (head xs) (minimum (tail xs)))))
     (defn append (xs ys) (if (nil? xs) ys (cons (head xs) (append (tail xs) ys))))
+    ; ── higher-order core (function-as-argument, indirect call tag 44) ──
+    ; The same generic recipes as core.fk's map/filter/foldl/foldr. The
+    ; function parameter (f/pred) arrives as a function-ref value; the body's
+    ; (f ...) / (pred ...) calls lower to indirect calls the walker dispatches.
+    (defn even? (n) (eq (mod n 2) 0))
+    (defn odd? (n) (eq (mod n 2) 1))
+    (defn zero? (n) (eq n 0))
+    (defn map (f xs) (if (nil? xs) (empty) (cons (f (head xs)) (map f (tail xs)))))
+    (defn filter (pred xs)
+        (if (nil? xs) (empty)
+            (if (pred (head xs))
+                (cons (head xs) (filter pred (tail xs)))
+                (filter pred (tail xs)))))
+    (defn foldl (f init xs) (if (nil? xs) init (foldl f (f init (head xs)) (tail xs))))
+    (defn foldr (f init xs) (if (nil? xs) init (f (head xs) (foldr f init (tail xs)))))
     (defn range (start end) (if (ge start end) (empty) (cons start (range (add start 1) end))))
     (defn take (n xs) (if (or (le n 0) (nil? xs)) (empty) (cons (head xs) (take (sub n 1) (tail xs)))))
     (defn drop (n xs) (if (le n 0) xs (if (nil? xs) (empty) (drop (sub n 1) (tail xs)))))
