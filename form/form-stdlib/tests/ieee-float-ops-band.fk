@@ -1,0 +1,36 @@
+; tests/ieee-float-ops-band.fk — the IEEE float-op surface across the native kernels.
+;
+; Float support is core, not a special case to route around. This pins the float ops —
+; the rounding family, the transcendentals (sqrt/exp/log), float arithmetic, compare,
+; and remainder — so any recipe may reach for them. Proven three-way on Go/Rust/TS.
+;
+; FOURTH-ARM STATUS (named, not hidden): the emitted walker fkwu does not yet carry a
+; float-op band — it returns 0 wholesale on this one. Two reasons, both real: (1) the
+; flatten tag space is full (form-flatten.fk uses tags 0..99; fkc-arm-slots = 100), so
+; abs and math_pow have no tag at all; (2) the walker bails on the float-heavy band even
+; for already-tagged ops, a structural gap above the per-op tags. Completing the fourth
+; arm — expanding the dispatch slot count, adding abs/math_pow dispatch in
+; hati-os-kernel-emit.fk, and resolving the walker's float-band handling — is the named
+; next row. Kept 3-kernel-only with the blocker named (the AUTHORING convention) rather
+; than registered red.
+;
+; Verdict 1111111 (127) when every claim holds across Go/Rust/TS.
+;   floor: 3.7->3, -2.3->-3                                       -> 1
+;   ceil: 3.2->4, -2.7->-2                                        -> 10
+;   trunc: -3.7->-3, 3.7->3                                       -> 100
+;   round half-away-from-zero: 2.5->3, -2.5->-3                   -> 1000
+;   abs preserves type: |-4.2|->4.2 (x10=42), |-7 int|->7        -> 10000
+;   sqrt/exp/log: sqrt2 (x1000)=1414, e (x1000)=2718, ln(e^5)=5  -> 100000
+;   float div/mod/compare/pow: 22/7 (x100)=314, 7 mod 3=1, 2^10  -> 1000000
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (let floor-ok (if (eq (round (floor 3.7)) 3) (if (eq (round (floor (sub 0.0 2.3))) -3) 1 0) 0))
+    (let ceil-ok  (if (eq (round (ceil 3.2)) 4) (if (eq (round (ceil (sub 0.0 2.7))) -2) 10 0) 0))
+    (let trunc-ok (if (eq (round (trunc (sub 0.0 3.7))) -3) (if (eq (round (trunc 3.7)) 3) 100 0) 0))
+    (let round-ok (if (eq (round 2.5) 3) (if (eq (round (sub 0.0 2.5)) -3) 1000 0) 0))
+    (let abs-ok   (if (eq (round (mul 10.0 (abs (sub 0.0 4.2)))) 42) (if (eq (round (abs (sub 0 7))) 7) 10000 0) 0))
+    (let trans-ok (if (eq (round (mul 1000.0 (math_sqrt 2.0))) 1414) (if (eq (round (mul 1000.0 (math_exp 1.0))) 2718) (if (eq (round (math_log (math_exp 5.0))) 5) 100000 0) 0) 0))
+    (let arith-ok (if (eq (round (mul 100.0 (div 22.0 7.0))) 314) (if (eq (round (mod 7.0 3.0)) 1) (if (eq (round (pow 2.0 10.0)) 1024) 1000000 0) 0) 0))
+    (sum (list floor-ok ceil-ok trunc-ok round-ok abs-ok trans-ok arith-ok)))
