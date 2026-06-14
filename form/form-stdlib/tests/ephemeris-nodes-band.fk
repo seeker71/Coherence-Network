@@ -13,7 +13,7 @@
 
 (do
     ;; --- 1. Rahu longitude --------------------------------------------
-    (let rahu-ok (if (eq (rahu-longitude 2000 1 1) 125) 1 0))
+    (let rahu-ok (if (eq (round (rahu-longitude 2000 1 1)) 125) 1 0))
 
     ;; --- 2. Rahu sign in both zodiacs ---------------------------------
     (let rt (eq (rahu-sign-tropical 2000 1 1) 4))
@@ -21,21 +21,21 @@
     (let rsign-ok (if rt (if rs 10 0) 0))
 
     ;; --- 3. Ketu, the opposite node -----------------------------------
-    (let kl (eq (ketu-longitude 2000 1 1) 305))
+    (let kl (eq (round (ketu-longitude 2000 1 1)) 305))
     (let kt (eq (ketu-sign-tropical 2000 1 1) 10))
     (let ketu-ok (if kl (if kt 100 0) 0))
 
     ;; --- 4. the axis is always 180 deg apart --------------------------
     (let axis-ok
-        (if (eq (mod (add (rahu-longitude 2000 1 1) 180) 360) (ketu-longitude 2000 1 1)) 1000 0))
+        (if (eq (round (mod (add (rahu-longitude 2000 1 1) 180.0) 360.0)) (round (ketu-longitude 2000 1 1))) 1000 0))
 
     ;; --- 5. retrograde: a year on, Rahu has moved back ~19 deg --------
-    (let r2001 (rahu-longitude 2001 1 1))
+    (let r2001 (round (rahu-longitude 2001 1 1)))
     (let retro-ok
         (if (eq r2001 106) (if (eq (sub 125 r2001) 19) 10000 0) 0))
 
     ;; --- 6. it keeps regressing: two years on ------------------------
-    (let r2002 (rahu-longitude 2002 1 1))
+    (let r2002 (round (rahu-longitude 2002 1 1)))
     (let keeps-ok (if (eq r2002 86) (if (gt r2001 r2002) 100000 0) 0))
 
     (sum (list rahu-ok rsign-ok ketu-ok axis-ok retro-ok keeps-ok)))

@@ -11,16 +11,17 @@
 ; contains 0 deg Aries. Gate 41 begins at 302.000 deg (2 deg Aquarius) — the Human Design
 ; New Year, the canonical anchor.
 ;
-;   (gate-at-longitude lon)  -> the gate at an ecliptic degree (integer-degree resolution)
+;   (gate-at-longitude lon)  -> the gate at an ecliptic longitude (float, sub-degree)
 ;   (sun-gate y m d)         -> the gate the Sun activates on a date (ephemeris -> wheel)
 ;   (sun-gate-speak y m d)   -> that gate's Human Design keynote (-> iching-channel)
 ;
 ; This closes the activation chain end to end: a date becomes the Sun's longitude
 ; (ephemeris-sun.fk), the longitude becomes a gate (this wheel), the gate becomes its
-; attested meaning (iching-channel.fk). The index is exact integer arithmetic in eighths
-; of a degree (5.625 = 45/8, 358.25 = 2866/8), so no float floor is needed and it crosses
-; the fourth arm. Sub-degree boundary precision waits on a finer longitude than the
-; integer ephemeris gives — a named next row.
+; attested meaning (iching-channel.fk). The wheel boundaries are exact (5.625 = 45/8,
+; 358.25 = 2866/8) and the index floors the FULL-FLOAT longitude over them, so a body
+; within a fraction of a degree of a 5.625-deg gate boundary lands on the right gate —
+; the float ephemeris resolves the sub-degree place the boundary needs. It crosses the
+; fourth arm on float floor plus the trig the longitude rides.
 ;
 ; Sources: geodetheseeker/human-design-py (HD_START_DEGREE 358.25); CReizner/
 ; SharpAstrology.HumanDesign; bonniesorsby.com + barneyandflow.com degree tables; Jovian
@@ -37,11 +38,11 @@
               1 43 14 34 9 5 26 11 10 58 38 54 61 60 41 19 13 49 30 55
               37 63 22 36))
 
-    ;; the wheel index for an integer ecliptic degree. Eighths-of-a-degree keeps it
-    ;; exact integer: 5.625 deg = 45 eighths, 358.25 deg = 2866 eighths, 360 = 2880.
-    ;;   index = floor( ((lon*8 - 2866) mod 2880) / 45 )   (integer div floors)
+    ;; the wheel index for an ecliptic degree — full float, never int-truncated, so a body
+    ;; within a fraction of a degree of a 5.625-deg gate boundary lands on the right gate.
+    ;;   index = floor( ((lon - 358.25) mod 360) / 5.625 )    (fnorm360 lifts negatives)
     (defn hd-gate-index (lon)
-        (div (mod (add (sub (mul lon 8) 2866) 2880) 2880) 45))
+        (floor (div (fnorm360 (sub lon 358.25)) 5.625)))
 
     (defn gate-at-longitude (lon) (nth (hd-wheel) (hd-gate-index lon)))
 

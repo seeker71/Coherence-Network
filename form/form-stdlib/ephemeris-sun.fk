@@ -14,7 +14,7 @@
 ;   g = 357.528 + 0.9856003 n     mean anomaly     (deg)
 ;   lambda = L + 1.915 sin g + 0.020 sin 2g        ecliptic longitude (deg)
 ;
-;   (sun-longitude y m d)       -> ecliptic longitude, integer degrees in [0,360)
+;   (sun-longitude y m d)       -> ecliptic longitude, float degrees in [0,360)
 ;   (sun-sign-tropical y m d)   -> Western sign index 0..11 (the season's sign)
 ;   (sun-sign-sidereal y m d)   -> Vedic sign index (the fixed-star sign)
 ;
@@ -49,9 +49,10 @@
             (let r (sub x (mul 360.0 (round (div x 360.0)))))
             (if (lt r 0.0) (add r 360.0) r)))
 
-    ;; the Sun's ecliptic longitude, integer degrees in [0,360)
+    ;; the Sun's ecliptic longitude, in degrees [0,360) — full float, never int-truncated,
+    ;; so the sign and gate reductions floor the precise value (round only for a verdict).
     (defn sun-longitude (y m d)
-        (round (fnorm360 (sun-longitude-raw (ephem-n y m d)))))
+        (fnorm360 (sun-longitude-raw (ephem-n y m d))))
 
     ;; the Sun's sign, in each astrology — the live position feeding the channels
     (defn sun-sign-tropical (y m d) (tropical-sign-of (sun-longitude y m d)))
