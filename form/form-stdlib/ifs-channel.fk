@@ -1,0 +1,78 @@
+; ifs-channel.fk — Internal Family Systems as a guidance channel.
+;
+; Richard Schwartz's IFS holds that the psyche is a family of PARTS led by a SELF.
+; No part is bad; each carries a positive intent. The map has a clean structure
+; that content-addressing makes legible:
+;
+;   SELF — not a part but the unburdened centre, known by its eight qualities (the
+;          "8 C's": Calm, Curiosity, Clarity, Compassion, Confidence, Courage,
+;          Creativity, Connectedness). The eight are eight FACES of one centre — so
+;          they share Self's address; the engine reads them as one cell.
+;   PROTECTORS — Managers (proactive: plan, control, please, criticise) and
+;          Firefighters (reactive: numb, distract, soothe when pain breaks through)
+;          are TWO STRATEGIES OF ONE ROLE. They share the protector address, so the
+;          engine confirms manager and firefighter are the same functional cell
+;          wearing two strategies — while an exile is a different cell.
+;   EXILES — young parts carrying burdens of hurt, shame, or fear, kept out of sight
+;          by the protectors.
+;
+; The movement (ifs-guidance): lead from Self, witness the exile with the 8 C's,
+; unburden it — and the protectors, no longer bracing, relax into their gifts. This
+; channel rides guidance-channel.fk: a key resolves to its attested role, and the
+; structural facts (protectors are one role, the 8 C's are one Self) are answered by
+; address, not by matching surface text (lc-cross-modal-unity).
+;
+; Held as documented modality (IFS, Schwartz), reported as attested practice, never
+; as clinical claim — guidance stays in the direct-experience lane.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    ;; addresses: 8000 = the Self centre · 8001 = the protector role · 8002 = exile
+    (defn ifs-self-address ()      8000)
+    (defn ifs-protector-address () 8001)
+    (defn ifs-exile-address ()     8002)
+
+    ;; --- the parts + the eight qualities of Self, one table -----------
+    ;; keys: 0 Self · 1 Manager · 2 Firefighter · 3 Exile · 10..17 the 8 C's.
+    (defn ifs-cells ()
+        (list
+            (gc-entry 0  8000 "Self — the unburdened centre that leads; not a part but the calm, compassionate ground every part can trust" "lc-cross-modal-unity")
+            (gc-entry 1  8001 "Manager (proactive protector) — plans, controls, strives, pleases, or criticises to keep pain from surfacing; means well" "lc-cross-modal-unity")
+            (gc-entry 2  8001 "Firefighter (reactive protector) — douses an exile's pain when it breaks through (numbing, distraction, urgency); means well" "lc-cross-modal-unity")
+            (gc-entry 3  8002 "Exile — a young part carrying a burden of hurt, shame, or fear from the past, kept out of sight by the protectors" "lc-cross-modal-unity")
+            (gc-entry 10 8000 "Calm — the settled nervous system Self brings when no part is in charge" "lc-cross-modal-unity")
+            (gc-entry 11 8000 "Curiosity — Self's open interest in a part, without agenda to change it" "lc-cross-modal-unity")
+            (gc-entry 12 8000 "Clarity — seeing a part free of the part's own distortion" "lc-cross-modal-unity")
+            (gc-entry 13 8000 "Compassion — Self's warmth toward a part's suffering and its intent" "lc-cross-modal-unity")
+            (gc-entry 14 8000 "Confidence — trust that Self can hold whatever a part carries" "lc-cross-modal-unity")
+            (gc-entry 15 8000 "Courage — willingness to turn toward an exile's pain" "lc-cross-modal-unity")
+            (gc-entry 16 8000 "Creativity — Self's freedom to respond in new ways once parts unblend" "lc-cross-modal-unity")
+            (gc-entry 17 8000 "Connectedness — Self's felt belonging to others and to the whole" "lc-cross-modal-unity")))
+
+    ;; --- the faces, delegating to the one engine ----------------------
+    (defn ifs-speak (key) (gc-speak (ifs-cells) key))
+    (defn ifs-teaching (key) (gc-teaching (ifs-cells) key))
+
+    ;; --- structural fact 1: managers and firefighters are one role ----
+    ;; manager (1) and firefighter (2) share the protector address; an exile
+    ;; (3) does not — two protective strategies, one cell.
+    (defn ifs-protectors-one-role? ()
+        (if (eq (gc-same-cell? (ifs-cells) 1 (ifs-cells) 2) 1)
+            (if (eq (gc-same-cell? (ifs-cells) 1 (ifs-cells) 3) 0) 1 0)
+            0))
+
+    ;; --- structural fact 2: the 8 C's are faces of one Self -----------
+    (defn ifs-self-faces? ()
+        (if (eq (gc-same-cell? (ifs-cells) 10 (ifs-cells) 17) 1) 1 0))
+
+    ;; --- the core movement, offered as guidance -----------------------
+    (defn ifs-guidance ()
+        "No part is bad; each protects with positive intent. Lead from Self (the 8 C's), witness the exile, unburden it — and the protectors relax into their gifts.")
+
+    ;; --- coverage -----------------------------------------------------
+    (defn ifs-coverage () (gc-coverage (ifs-cells)))
+    (defn ifs-channel-teaching () "lc-cross-modal-unity")
+
+    0)
