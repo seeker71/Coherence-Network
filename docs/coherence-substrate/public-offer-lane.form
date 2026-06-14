@@ -28,11 +28,20 @@
 # An offer is an afferent offer whose payload is a submission. It is held
 # as `offered`, queryable at once, and grounded into the canonical body
 # only by a tending act — never on arrival.
+#
+# The lifecycle is proven four-way (Go/Rust/TypeScript/fkwu) in the value lane:
+#   form-stdlib/offer-lane.fk -> tests/offer-lane-band.fk -> 1111111
+# The safety property the band pins: a submission is NEVER canonical on arrival
+# (offer-arrives is OFFERED + UNCLAIMED; canonical? is 0 until a ground act);
+# grounding (OFFERED -> GROUNDED + CLAIMED) is the only path to the body, and it
+# is idempotent. The node-level offer (afferent-offer.fk / offer-acknowledge.fk)
+# proves the same shape in the 3-kernel substrate lane.
 
 (public-offer-lane
 
   (lineage
     (named-by    urs)                               # "let a stranger offer, without git"
+    (proven-by   offer-lane.fk)                     # the lifecycle, four-way (1111111)
     (offer-of    offer-and-acknowledge.form)        # the contract: offer ↦ ack
     (afferent-of afferent-offer.fk)                 # unsolicited; the body waits, never asks
     (attributed  contributor.claimed=false)         # a door held open for the stranger

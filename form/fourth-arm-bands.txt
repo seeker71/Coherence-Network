@@ -343,6 +343,7 @@ ieee-float-ops fks 1111111
 codon-hexagram fks 1111111
 codon-rings fks 1111111
 ratio-bridge fks 1111111
+offer-lane fks 1111111
 translation-learn fks 1111111
 translation-quality fks 1111111
 chart-cast fks 1111111

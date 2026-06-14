@@ -1,0 +1,63 @@
+; offer-lane.fk — a stranger's submission is an OFFER, never a canonical edit.
+;
+; The WRITE half of the public front door (docs/coherence-substrate/public-offer-lane.form),
+; proven in the four-kernel-safe value lane. The safety property a public door must carry:
+; a submission is NEVER canonical on arrival — it is held as OFFERED, and only a tending
+; act GROUNDS it into the body. This recipe is that lifecycle as pure value logic, so it
+; crosses the fourth arm (no node/substrate op; the node-level offer is afferent-offer.fk /
+; offer-acknowledge.fk, which prove the same shape in the 3-kernel substrate lane).
+;
+; A cell's lane-state is a two-element list [status claimed]:
+;   status  — OFFERED (0, held apart) | GROUNDED (1, in the canonical body)
+;   claimed — UNCLAIMED (0, a door held open) | CLAIMED (1, the offerer walked in)
+;
+;   (offer-arrives)        -> a fresh arrival: [OFFERED UNCLAIMED]
+;   (canonical? cell)      -> 1 iff GROUNDED (only grounded cells are in the body)
+;   (in-offer-lane? cell)  -> 1 iff OFFERED  (visible at once, apart from canonical)
+;   (door-ack known?)      -> axiom-5 ack: ACK-RECEIVED for a known domain, ACK-DECLINED else
+;   (door-ack-twin here?)  -> ACK-COUNTER when the same shape already lives here (idempotent intern)
+;   (ground cell)          -> the tending act: OFFERED -> GROUNDED + CLAIMED; idempotent
+;
+; Held in lane: the ack vocabulary's value encoding (declined 0 / received 1 / counter 2 /
+; silence 3) is the value-lane reading of offer-and-acknowledge's nothing/0/1/node; `silence`
+; (a timeout) stays the always-available nothing, never an error.
+;
+; preludes: form-stdlib/core.fk
+;
+
+(do
+    ;; --- the two lanes a cell can live in -----------------------------
+    (defn OFFERED ()  0)              ; held in the offer lane, apart from canonical
+    (defn GROUNDED () 1)             ; tended into the canonical body
+
+    ;; --- attribution: a door held open until the offerer claims it ----
+    (defn UNCLAIMED () 0)
+    (defn CLAIMED ()   1)
+
+    ;; --- a cell's lane-state is [status claimed] ----------------------
+    (defn offer-arrives ()   (list (OFFERED) (UNCLAIMED)))
+    (defn lane-status (cell)  (nth cell 0))
+    (defn lane-claimed (cell) (nth cell 1))
+
+    ;; --- visibility: only grounded cells are in the canonical body ----
+    (defn canonical? (cell)     (if (eq (lane-status cell) (GROUNDED)) 1 0))
+    (defn in-offer-lane? (cell) (if (eq (lane-status cell) (OFFERED)) 1 0))
+
+    ;; --- the public door's acknowledgment (axiom-5 vocabulary) --------
+    (defn ACK-DECLINED () 0)         ; 0: outside what this door accepts
+    (defn ACK-RECEIVED () 1)         ; 1: received and held as an offer
+    (defn ACK-COUNTER ()  2)         ; node: this shape already lives here
+    (defn ACK-SILENCE ()  3)         ; nothing: the pacing breath; a timeout IS nothing
+    (defn door-ack (known-domain?)
+        (if (eq known-domain? 1) (ACK-RECEIVED) (ACK-DECLINED)))
+    (defn door-ack-twin (already-here?)
+        (if (eq already-here? 1) (ACK-COUNTER) (ACK-RECEIVED)))
+
+    ;; --- grounding: the tending act, offered -> grounded; idempotent --
+    (defn ground (cell)
+        (if (eq (lane-status cell) (OFFERED))
+            (list (GROUNDED) (CLAIMED))   ; tended in: status grounded, door claimed
+            cell))                         ; already grounded -> unchanged
+
+    (defn offer-lane-teaching () "public-offer-lane")
+    0)

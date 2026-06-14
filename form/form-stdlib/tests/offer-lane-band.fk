@@ -1,0 +1,45 @@
+; tests/offer-lane-band.fk — a stranger's submission is an offer, never a canonical edit.
+;
+; Verdict 1111111 when every claim holds across all four kernels.
+;   an offer arrives offered + unclaimed                              -> 1
+;   it is NEVER canonical on arrival; it lives in the offer lane      -> 10   (the safety property)
+;   the door acks: known domain received, unknown declined           -> 100
+;   the same shape twice is a counter-offer; a new shape received     -> 1000
+;   grounding moves offered -> grounded (now canonical)               -> 10000
+;   grounding claims the door: unclaimed -> claimed                   -> 100000
+;   grounding is idempotent: ground twice == ground once             -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/offer-lane.fk
+;
+
+(do
+    ;; --- 1. an offer arrives offered + unclaimed ----------------------
+    (let arrive (offer-arrives))
+    (let c1 (if (eq (lane-status arrive) (OFFERED))
+                (if (eq (lane-claimed arrive) (UNCLAIMED)) 1 0) 0))
+
+    ;; --- 2. never canonical on arrival; it lives in the offer lane ----
+    (let c2 (if (eq (canonical? arrive) 0)
+                (if (eq (in-offer-lane? arrive) 1) 10 0) 0))
+
+    ;; --- 3. the door acks: known domain received, unknown declined ----
+    (let c3 (if (eq (door-ack 1) (ACK-RECEIVED))
+                (if (eq (door-ack 0) (ACK-DECLINED)) 100 0) 0))
+
+    ;; --- 4. same shape twice is a counter-offer; a new shape received -
+    (let c4 (if (eq (door-ack-twin 1) (ACK-COUNTER))
+                (if (eq (door-ack-twin 0) (ACK-RECEIVED)) 1000 0) 0))
+
+    ;; --- 5. grounding moves offered -> grounded (now canonical) -------
+    (let grounded (ground arrive))
+    (let c5 (if (eq (canonical? grounded) 1) 10000 0))
+
+    ;; --- 6. grounding claims the door: unclaimed -> claimed -----------
+    (let c6 (if (eq (lane-claimed grounded) (CLAIMED)) 100000 0))
+
+    ;; --- 7. grounding is idempotent: ground twice == ground once ------
+    (let grounded2 (ground grounded))
+    (let c7 (if (eq (lane-status grounded2) (GROUNDED))
+                (if (eq (lane-claimed grounded2) (CLAIMED)) 1000000 0) 0))
+
+    (sum (list c1 c2 c3 c4 c5 c6 c7)))
