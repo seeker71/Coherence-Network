@@ -1,0 +1,34 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "record-blueprint-floor-20260614",
+  "thread_branch": "codex/fourth-record-blueprint-floor-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-record-blueprint-floor",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh record record-fold record-field-access list-of-record-reduction",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-blueprint-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh record-blueprint record-fold record-field-access list-of-record-reduction"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Lowered record_blueprint to emitted record-table tag 100 and admitted the focused record-blueprint band at 7. The full record-band remains outside the manifest because the diagnostic gate still reports fourth=0 when let-bound record_new is re-evaluated instead of preserving mutable alias identity.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/record-blueprint-floor-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-blueprint-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record-blueprint record-fold record-field-access list-of-record-reduction",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_blueprint_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ]
+  }
+}

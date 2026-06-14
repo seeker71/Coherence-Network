@@ -67,7 +67,7 @@
           (list "read_file" 1 63)
           (list "record_get" 2 65) (list "record_set" 3 66)
           (list "record_has" 2 67) (list "record?" 1 68)
-          (list "record_keys" 1 99)
+          (list "record_keys" 1 99) (list "record_blueprint" 1 100)
           (list "div" 2 10) (list "mod" 2 11)
           (list "band" 2 34) (list "bor" 2 35) (list "bxor" 2 36)
           (list "shl_u32" 2 37) (list "shr_u32" 2 38) (list "rotr_u32" 2 39)
