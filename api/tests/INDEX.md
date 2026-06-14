@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 268
+**Total files**: 269
 
 | File | Purpose |
 |---|---|
@@ -253,6 +253,7 @@
 | [test_task_chain_correlation.py](test_task_chain_correlation.py) | Cross-task-outcome-correlation (6 requirements in 3 flows). |
 | [test_task_dedup_service.py](test_task_dedup_service.py) | Tests for the task dedup service — prevents duplicate tasks per idea+phase. |
 | [test_timeout_adaptive_service.py](test_timeout_adaptive_service.py) | _no top-of-file purpose_ |
+| [test_tool_embodiment_rows.py](test_tool_embodiment_rows.py) | Real tool telemetry groups into the rows the Form embodiment gate consumes. |
 | [test_trace_symbol_spaces_form.py](test_trace_symbol_spaces_form.py) | Proof that trace symbol spaces stay grounded in raw field traces. |
 | [test_translations_router.py](test_translations_router.py) | Tests for POST /api/translations and GET /api/translations/{entity_type}/{entity_id}. |
 | [test_utils_breath_balance.py](test_utils_breath_balance.py) | Tests for /api/utils/breath_balance — the first kernel-served route to use a transcendental native (ln). |

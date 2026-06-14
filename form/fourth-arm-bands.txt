@@ -104,7 +104,7 @@ choice-receipt fks 4294967295
 choice-receipt-learning fks 255
 choice-outcome-learning fks 32767
 code-tool-learning fks 131071
-tool-embodiment fks 63
+tool-embodiment fks 127
 text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
 android-mesh-learning fks 4095

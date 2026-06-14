@@ -9,7 +9,7 @@
 ; lane keeps the body; above it the Form-native lane embodies. The flip IS
 ; "embodied when vitality asks for it," computed from measurement, not asserted.
 ;
-; Verdict 63 when every claim lands:
+; Verdict 127 when every claim lands:
 ;   1   remote telemetry projects to a costed, low-sovereignty oracle row
 ;   2   local telemetry projects to a zero-token, high-sovereignty oracle row
 ;   4   a Form-native lane below the trust gate has NOT earned embodiment
@@ -17,6 +17,8 @@
 ;   16  the verdict flips external -> form-native exactly as trust crosses the gate
 ;   32  the multi-lane winner (te-verdict) agrees: incumbent keeps the body
 ;       under a young challenger, the ripe challenger takes it
+;   64  the carrier entry te-embody-lanes — fed RAW (lane locality completed
+;       failed runtime-ms) rows, the exact runner telemetry shape — flips too
 (do
     ; one external incumbent: 9/10 terminal successes, 1200ms, remote membrane.
     (let ext (te-telemetry-oracle "external:claude" "remote" 9 1 1200))
@@ -54,5 +56,20 @@
                 (str_eq (te-embodied-path (list ext fn-young)) "external:claude")
                 (str_eq (te-embodied-path (list ext fn-ripe)) "form-native:search"))
             32 0))
+    ; 64 — the carrier entry: RAW telemetry rows (the shape the Python fan-out
+    ;      hands over) project + decide entirely in Form, flipping at the gate.
+    (let raw-young
+        (list
+            (list "external:claude" "remote" 9 1 1200)
+            (list "form-native:search" "local" 6 4 400)))
+    (let raw-ripe
+        (list
+            (list "external:claude" "remote" 9 1 1200)
+            (list "form-native:search" "local" 8 2 400)))
+    (let c6
+        (if (and
+                (str_eq (te-embody-lanes raw-young) "external:claude")
+                (str_eq (te-embody-lanes raw-ripe) "form-native:search"))
+            64 0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
