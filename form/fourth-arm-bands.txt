@@ -17,6 +17,14 @@
 # the milestone proofs the first rows crossed through. A band leaves this
 # file only when its source moves outside the walker's op families.
 #
+# A band is out of this manifest for exactly ONE honest reason: it uses an op
+# FAMILY fkwu does not yet carry (the standing walls below). A *divergence* —
+# fkwu has the ops but computes a different answer than Go/Rust/TS — is NEVER a
+# reason to leave a band unregistered. That is a correctness bug: one kernel is
+# wrong. Root-cause it and resolve to four-way (recipe shape or walker) before
+# the work ships; if the fix is a deeper walker-emitter change, the divergence
+# is still owned and tracked to that fix, never buried by omission here.
+#
 # The standing walls (what keeps a band out today, by blocked-band count):
 #   remaining node/substrate family — generated bp table parity beyond the
 #     current literal registry floor, the symbol wire sibling constructor,
