@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-let-effect-once",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/let-effect-once-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh let-effect-once eq-effect-once do-effect-seq hostio-roundtrip record",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_let_effect_once.json"
+  ],
+  "failure_reason": "Nested do-let effect-once moved through the fourth arm by snapshotting effecting carrier values with fk-store/fk-load while preserving inline lowering for pure recursive/local values. The full Form floor is 208 four-way bands, 611 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-let-effect-once-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-let-effect-once-20260614",
+  "validation": {
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/let-effect-once-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh let-effect-once eq-effect-once do-effect-seq hostio-roundtrip record",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
