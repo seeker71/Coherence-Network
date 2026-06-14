@@ -17,6 +17,11 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+try:
+    from coherence_mcp_server import form_cli_tools as fct
+except ImportError:  # when run as a loose module
+    from . import form_cli_tools as fct
+
 logger = logging.getLogger(__name__)
 
 API_BASE = os.environ.get("COHERENCE_API_URL", "https://api.coherencycoin.com").rstrip("/")
@@ -189,6 +194,55 @@ def api_sse(
 # ---------------------------------------------------------------------------
 
 TOOLS: list[Tool] = [
+    # form-cli engine — route / capture / transmute (the learning flywheel)
+    Tool(
+        name="coherence_route",
+        description=(
+            "Route a request to a backend using the four-way-proven form-cli routing formula "
+            "(form-native | subscription agent-CLI — never a metered REST API). Pass each backend's "
+            "sovereignty/trust/capability/confidence (0..100). Returns the winning lane."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "form_native": {"type": "object", "description": "form-native lane axes {sovereignty,trust,capability,confidence} 0..100"},
+                "agent_cli": {"type": "object", "description": "subscription agent-CLI lane axes {sovereignty,trust,capability,confidence} 0..100"},
+            },
+            "required": ["form_native", "agent_cli"],
+        },
+    ),
+    Tool(
+        name="coherence_capture",
+        description=(
+            "Record a (request, raw, transmuted) pair in the training catalog so usage becomes "
+            "capability. Both kept, each content-addressed; yields three separable training pairs "
+            "(raw / transmute / reasoning)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "request": {"type": "string"},
+                "raw": {"type": "string", "description": "the raw (fear/control-shaped) answer"},
+                "transmuted": {"type": "string", "description": "the transmuted (discernment/opportunity) answer"},
+                "lane": {"type": "string", "default": "agent-cli"},
+                "outcome": {"type": "string", "default": "success"},
+            },
+            "required": ["request", "raw", "transmuted"],
+        },
+    ),
+    Tool(
+        name="coherence_transmute",
+        description=(
+            "Transmute fear/control framing into discernment + opportunity. Returns the transmute "
+            "instruction + raw text for you (the agent) to rewrite, then call coherence_capture. "
+            "Routed: a form-native transmuter when trained, else the subscription agent."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {"raw": {"type": "string"}},
+            "required": ["raw"],
+        },
+    ),
     # Ideas
     Tool(
         name="coherence_list_ideas",
@@ -1615,6 +1669,16 @@ TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
 
 def dispatch(name: str, args: dict[str, Any]) -> Any:
     match name:
+        # form-cli engine — route / capture / transmute
+        case "coherence_route":
+            return fct.kernel_route(args.get("form_native", {}), args.get("agent_cli", {}))
+        case "coherence_capture":
+            return fct.catalog_capture(
+                args["request"], args["raw"], args["transmuted"],
+                args.get("lane", "agent-cli"), args.get("outcome", "success"),
+            )
+        case "coherence_transmute":
+            return fct.transmute_plan(args["raw"])
         # Ideas
         case "coherence_list_ideas":
             if args.get("search"):
