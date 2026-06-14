@@ -1,0 +1,50 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "fourth-xpath-bp-alias-floor-20260614",
+  "thread_branch": "codex/fourth-node-substrate-constructor-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join",
+    "coord view",
+    "coord claim fourth-node-substrate-constructor",
+    "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/xpath-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/symbols.fk form-stdlib/xpath.fk form-stdlib/tests/xpath-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh xpath",
+    "cd form && ln -sf validate.sh .a3ec-validator && VALIDATE_JOBS=4 ./.a3ec-validator",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_xpath_bp_alias_floor.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+    "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+    "rm -f form/.a3ec-validator",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Admitted the generic xpath node/substrate constructor band to the fourth-arm manifest at verdict 9 by extending literal bp lowering for the registered xpath/doc/concept/dns/symbol sibling NodeID families. Focused xpath validate passes four-way, the manifest gate returns PASS-4WAY, rebased full Form validation reaches 179 four-way bands with 585 ok and 0 divergent, and the metal-plane audit passes macOS/Android receipts. Sister fourth-arm rows remain honest residuals: concept-xpath, doc-xpath, dns, symbols, and session still mismatch or lack manifest eligibility.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/fourth-xpath-bp-alias-floor-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/xpath-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/symbols.fk form-stdlib/xpath.fk form-stdlib/tests/xpath-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh xpath",
+      "cd form && ln -sf validate.sh .a3ec-validator && VALIDATE_JOBS=4 ./.a3ec-validator",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_xpath_bp_alias_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "rm -f form/.a3ec-validator",
+      "git diff --check"
+    ]
+  }
+}
