@@ -4,7 +4,7 @@
   (lineage
     (rests-on hati-mesh.form channel-loopback.form co-learning-stream.form colearning-retire.form llm-feature-channel-floor.form oracle-catalog.form)
     (recipe form/form-stdlib/android-mesh-learning.fk)
-    (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 4095)
+    (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 32767)
     (physical-receipt scripts/android_mesh_learning_receipt.py))
 
   (purpose
@@ -15,7 +15,8 @@
   (floor
     "A real authorized Android device is sampled through adb without storing raw sensor values, location coordinates, package inventory, or the adb serial."
     "The receipt records device model/ABI/Android release, battery summary, safe capability inventory, sensor-category inventory, Coherence Sense installed/running state, Mac host/tool summary, Mac witness service state, typed channel rows, and high-cost feature route decisions."
-    "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, and per-category oracle retirement.")
+    "The Android carrier can emit active mic RMS, camera luma, and GPU EGL readback summaries while sharing; it does not store raw audio, frames, or GPU buffers."
+    "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, and active mic/camera/GPU sample rows that lift speech, vision, and multimodal routing to native-first when those lanes are present.")
 
   (north-star
     "Mac and Android run continuously: Mac LaunchAgent keeps the witness and local Form learners available; Android keeps Coherence Sense sharing permissioned samples."
@@ -34,9 +35,9 @@
 
   (channels
     (sensor:signal android-phone macos-binary "ready inventory; active sample flow when app shares")
-    (audio:pcm16 android-phone macos-binary "permissioned offered lane; active mic/speaker samples still require sample receipts")
-    (video:rgba-time android-phone macos-binary "permissioned offered lane; active frame samples still require sample receipts")
-    (gpu:compute android-phone macos-binary "Vulkan catalog lane; active kernel receipts remain next")
+    (audio:pcm16 android-phone macos-binary "permissioned active mic RMS summary lane; no raw audio storage")
+    (video:rgba-time android-phone macos-binary "permissioned active camera luma summary lane; no frame storage")
+    (gpu:compute android-phone macos-binary "active OpenGL ES/EGL readback summary lane; no buffer storage")
     (hati.mesh:presence macos-binary android-phone "ready presence/liveness channel"))
 
   (learning-route
@@ -60,8 +61,9 @@
     (handoff "future service should write native substrate ledger records, with JSON summaries as export/cache"))
 
   (next-physical-gaps
-    (mic "permissioned RMS/frame receipts joined to speech-transcribe learning")
-    (camera "permissioned frame receipts joined to vision-describe learning")
-    (accelerator "Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
+    (live-receipt "unlocked phone with Start sharing tapped, so adb/Mac witness captures nonzero active mic/camera/GPU counters")
+    (mic "RMS summaries joined to speech-transcribe heldout learning beyond route readiness")
+    (camera "luma summaries joined to vision-describe heldout learning beyond route readiness")
+    (accelerator "EGL readback summaries extended to Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
     (stream "Mac witness event stream joined to app flow counters and Form-native source-data receipts")
     (retirement "one narrow category with enough heldout native wins to stop sampling the teacher")))

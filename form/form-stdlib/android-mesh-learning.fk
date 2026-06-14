@@ -108,6 +108,75 @@
                 "native-first-sample-oracle"
                 "oracle-teacher-until-physical-samples")))
 
+    (defn aml-active-sample (lane protocol codec count metric trust privacy active)
+        (list lane protocol codec count metric trust privacy active))
+    (defn aml-sample-lane (sample) (nth sample 0))
+    (defn aml-sample-protocol (sample) (nth sample 1))
+    (defn aml-sample-codec (sample) (nth sample 2))
+    (defn aml-sample-count (sample) (nth sample 3))
+    (defn aml-sample-metric (sample) (nth sample 4))
+    (defn aml-sample-trust (sample) (nth sample 5))
+    (defn aml-sample-privacy (sample) (nth sample 6))
+    (defn aml-sample-active? (sample) (nth sample 7))
+
+    (defn aml-mic-rms-sample (count rms)
+        (aml-active-sample "mic" "audio:pcm16" "rms-summary" count rms 78 "summary-only/no-raw-audio" 1))
+    (defn aml-camera-luma-sample (count luma)
+        (aml-active-sample "camera" "video:rgba-time" "luma-summary" count luma 76 "summary-only/no-frame" 1))
+    (defn aml-gpu-readback-sample (count latency-ms)
+        (aml-active-sample "gpu" "gpu:compute" "egl-readback-summary" count latency-ms 74 "summary-only/no-buffer" 1))
+    (defn aml-active-sample-valid? (sample)
+        (if (and
+                (eq (aml-sample-active? sample) 1)
+                (and
+                    (gt (aml-sample-count sample) 0)
+                    (and
+                        (gt (aml-sample-trust sample) 0)
+                        (not (str_eq (aml-sample-privacy sample) "")))))
+            1
+            0))
+    (defn aml-active-lane-count (samples)
+        (if (eq (len samples) 0) 0
+            (add
+                (aml-active-sample-valid? (head samples))
+                (aml-active-lane-count (tail samples)))))
+    (defn aml-has-active-lane? (samples lane)
+        (if (eq (len samples) 0) 0
+            (if (and
+                    (str_eq (aml-sample-lane (head samples)) lane)
+                    (eq (aml-active-sample-valid? (head samples)) 1))
+                1
+                (aml-has-active-lane? (tail samples) lane))))
+    (defn aml-all-summary-only? (samples)
+        (if (eq (len samples) 0) 1
+            (if (and
+                    (not (str_eq (aml-sample-privacy (head samples)) ""))
+                    (eq (aml-active-sample-valid? (head samples)) 1))
+                (aml-all-summary-only? (tail samples))
+                0)))
+    (defn aml-active-media-floor? (samples)
+        (if (and
+                (eq (aml-has-active-lane? samples "mic") 1)
+                (and
+                    (eq (aml-has-active-lane? samples "camera") 1)
+                    (eq (aml-has-active-lane? samples "gpu") 1)))
+            1
+            0))
+    (defn aml-active-route-choice (feature samples native-cost oracle-cost trust)
+        (if (str_eq feature "speech-transcribe")
+            (if (eq (aml-has-active-lane? samples "mic") 1)
+                (aml-route-choice feature 82 native-cost oracle-cost trust)
+                (aml-route-choice feature 72 native-cost oracle-cost trust))
+            (if (str_eq feature "vision-describe")
+                (if (eq (aml-has-active-lane? samples "camera") 1)
+                    (aml-route-choice feature 82 native-cost oracle-cost trust)
+                    (aml-route-choice feature 72 native-cost oracle-cost trust))
+                (if (str_eq feature "multimodal-align")
+                    (if (eq (aml-active-media-floor? samples) 1)
+                        (aml-route-choice feature 84 native-cost oracle-cost trust)
+                        (aml-route-choice feature 76 native-cost oracle-cost trust))
+                    (aml-route-choice feature 80 native-cost oracle-cost trust)))))
+
     (defn aml-retire? (history min-samples margin)
         (clr-retire? history min-samples margin))
     (defn aml-authority (history min-samples margin)

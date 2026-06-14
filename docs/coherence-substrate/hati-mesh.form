@@ -15,6 +15,7 @@
   (floor
     "The public API accepts organ announcements, organ heartbeats, and channel offers, records runtime receipts, and lists recent organs/channels."
     "The Android app now creates a stable install-scoped organ id, can explicitly bind a user-entered cell/email label, announces to the public API, heartbeats while listening, polls for other mesh organs, offers a sensor channel, and displays local sensor flow rates plus recent channel rows."
+    "When sharing is active and permissions are granted, the Android app now samples mic RMS, camera luma, and GPU EGL readback summaries as first-class channel data without retaining raw audio, frames, or GPU buffers."
     "A real adb-connected Android device can now be sampled as a mesh-learning organ receipt without storing raw sensor values, location coordinates, package inventory, or the adb serial. The current physical floor observed SM-S918U1 Android 16 arm64-v8a, Coherence Sense installed/running, 39 hardware sensors, camera, microphone, GPS, WiFi, Bluetooth LE, NFC, Vulkan compute, and Mac witness liveness.")
 
   (north-star
@@ -46,21 +47,21 @@
     (lanes
       (motion sensor:signal "accelerometer/gyroscope samples")
       (gps sensor:signal "permission state and last-known location when granted")
-      (mic audio:pcm16 "permission state, offered-not-sampling")
+      (mic audio:pcm16 "active RMS summaries when granted and sharing")
       (speaker audio:pcm16 "offered output channel")
-      (camera video:rgba-time "permission state, offered-not-sampling")
+      (camera video:rgba-time "active luma summaries when granted and sharing")
       (screen screen:write "dashboard plus QR identity offer")
       (disk host:usage "StatFs free/total sample")
       (network host:usage "TrafficStats byte counters")
       (cpu host:usage "processor-count floor")
       (ram host:usage "Runtime memory sample")
-      (gpu gpu:compute "cataloged-no-active-sample")
+      (gpu gpu:compute "active EGL readback summaries when sharing")
       (dsp dsp:signal "cataloged-no-active-sample")
       (mlx mlx:array "cataloged-no-active-sample; unsupported on Android")
       (inner-cells kernel:call "created/updated/freed app counters")))
 
   (accelerator-awareness
-    (floor "GPU, DSP, and MLX/equivalent lanes are visible on the mesh surface even before active compute samples exist")
+    (floor "GPU, DSP, and MLX/equivalent lanes are visible on the mesh surface; Android now has an active EGL readback summary floor while DSP/NPU and MLX/equivalent remain catalog rows")
     (macos "GPU=Metal floor; DSP=Accelerate/AudioToolbox signal floor; MLX=MLX+Metal target row")
     (android "GPU=Vulkan/OpenGL ES floor; DSP/NPU=NNAPI/vendor delegate floor; MLX=explicit unsupported row with Android equivalent routed to GPU/NNAPI")
     (north-star "accelerator lanes carry native dispatch receipts, pressure counters, input/output codec hashes, and refusal data when unavailable"))
@@ -85,6 +86,7 @@
     (channel-list GET-/api/hati/mesh/channels)
     (active-flow sensor:signal)
     (offerable-flow screen:write audio:pcm16 video:rgba-time)
+    (active-summary-flow audio:pcm16 video:rgba-time gpu:compute)
     (visualization identity-receipt channel-list sensor-samples-per-second bytes-per-second)
     (dashboard gps motion mic camera disk network cpu ram gpu dsp mlx inner-cells qr-offer)
     (physical-learning-receipt scripts/android_mesh_learning_receipt.py)
@@ -99,10 +101,10 @@
     (north-star "screenshot, accessibility, flow-rate, and reviewer receipts are first-class release evidence"))
 
   (missing-physical-samples
-    (audio:pcm16 "permissioned mic capture and speaker playback samples from the Android app")
-    (video:rgba-time "permissioned camera frame samples from the Android app")
+    (live-active-receipt "unlocked phone sharing receipt with nonzero mic RMS, camera luma, and GPU readback counters")
+    (speaker:pcm16 "speaker playback samples from the Android app")
     (nearby-local-discovery "LAN/Bluetooth/Nearby discovery receipts, beyond public mesh recent-presence polling")
     (signed-identity "public-key signature verification over announcements and channel offers")
-    (accelerator-dispatch "GPU, DSP/NPU, and MLX/equivalent active compute sample receipts from real devices")
+    (accelerator-dispatch "Vulkan/NNAPI/DSP active compute receipts from real devices beyond the EGL readback summary floor")
     (visual-review-automation "automated screenshot and sister-review receipts wired into the release gate")
     (channel-ack "accepted/open/refused acknowledgements from the receiving organ")))
