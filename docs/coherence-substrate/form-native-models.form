@@ -35,12 +35,14 @@
 ;     runtime authority headers case-insensitively, rejects transport failure, and rejects Python-authority
 ;     runtime rows. scripts/model_vitality_native_http_capture_probe.sh source-compiles core and runs live
 ;     Go/Rust/TypeScript HTTPS captures against the public pulse/runtime endpoints without curl; on
-;     2026-06-14T11:43:38Z all three native kernels returned verdict 127, API pulse status=200 with
+;     2026-06-14T15:38:53Z all three native kernels returned verdict 127, API pulse status=200 with
 ;     nonzero body bytes and kernel-native-http-get authority, and runtime-summary was native-kernel with
 ;     x-form-python-authority=false. The same probe also runs Go/Rust/TypeScript/fkwu against
 ;     http://example.com/ and https://example.com/ and all four kernels returned verdict 63. The fkwu
 ;     HTTP path is native DNS/TCP/socket/read/write; the fkwu HTTPS path uses runtime-loaded
-;     OpenSSL-compatible TLS. Neither is a shell/Python carrier. The same probe now proves fkwu
+;     OpenSSL-compatible TLS. Neither is a shell/Python carrier. The same probe proves all-kernel
+;     request-header forwarding with verdict 127 against https://httpbin.org/headers using
+;     X-Form-Trace: codex-request-header-20260614. The same probe now proves fkwu
 ;     fourth-runtime-authority with verdict 127: it captures production runtime response headers,
 ;     reads native-kernel and x-form-python-authority=false through model-vitality rows, and carries the
 ;     authority receipt without Go/Rust/TypeScript assistance.
@@ -53,9 +55,9 @@
 ;     sovereignty, and trust, plus accuracy, confidence, energy, latency, memory pressure, sample
 ;     coverage, freshness, mergeability, and promotion readiness, then focuses attention from that row.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     optimizer-step cells, durable eval-receipt query path, request-header forwarding, measured
-;     fourth-arm duration, larger native HTTP body policy, streaming/backpressure receipts, and mesh-scale
-;     merkle slice sharing are still not closed.
+;     optimizer-step cells, durable eval-receipt query path, measured fourth-arm duration, larger native
+;     HTTP body policy, streaming/backpressure receipts, and mesh-scale merkle slice sharing are still not
+;     closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
 ;     live-row route read, production pulse/runtime row ingestion, Go/Rust/TypeScript production HTTPS
 ;     capture, and all-kernel plaintext HTTP plus verified HTTPS body capture are now closed receipts,
