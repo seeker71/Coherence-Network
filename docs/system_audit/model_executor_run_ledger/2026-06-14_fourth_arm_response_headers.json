@@ -1,0 +1,33 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "fourth-arm-response-headers-20260614",
+  "thread_branch": "codex/fourth-arm-response-headers-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"fourth-arm native response-header row capture\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/hati-os-band.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Closed the fourth-arm response-header row capture gap for production authority receipts. The emitted fkwu native HTTP/TLS carrier now parses response headers, carries them in the http_get dict, and supports native _get over dict/list receipts so model-vitality rows can read production runtime authority headers inside the emitted binary.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/2026-06-14_fourth_arm_response_headers.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/hati-os-band.fk",
+      "scripts/model_vitality_native_http_capture_probe.sh"
+    ]
+  }
+}
