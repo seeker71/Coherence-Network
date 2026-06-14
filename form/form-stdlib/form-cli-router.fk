@@ -1,0 +1,73 @@
+; form-cli-router.fk — the ONE routing formula, as a recipe.
+;
+; preludes: form-stdlib/core.fk
+;
+; Every request the form-cli (or the MCP surface inside another agent) handles is
+; routed to exactly one backend. There are only TWO backends, by design — no
+; metered LLM REST API exists in this body:
+;   form-native    a local Form recipe / trained lane (fully ours; ~0 cost)
+;   agent-cli      the subscription agent CLI already running (claude/codex/...);
+;                  flat-rate, not per-token — the cost that matters is already paid
+;
+; The choice is ONE formula over four axes (each 0..100): sovereignty (how much
+; this backend is ours), trust (its measured success rate on this shape),
+; capability (can it do this category AT ALL — a hard gate), confidence (the
+; local lane's accumulated certainty). Sovereignty and trust weigh highest — they
+; are the core values; capability and confidence lift. The weights are a DATA
+; cell (fcr-weights), tunable without touching the formula.
+;
+; The flywheel is emergent, not coded: form-native starts with capability 0 for
+; the hard categories, so the formula routes to the agent CLI AND every such call
+; is captured to train the local lane (training-catalog.fk). As learning raises
+; form-native's capability and confidence, its max-sovereignty advantage overtakes
+; the agent CLI and the same request flips to local — the more we use the oracle,
+; the less we need it.
+;
+; This composes the same axes tool-embodiment.fk's gate already reads (sovereignty
+; local 90 / remote 40, trust = success rate); fcr-fitness names them as one
+; explicit, tunable scalar for the per-request route.
+;
+; Proven by: form-stdlib/tests/form-cli-router-band.fk
+
+; the tunable weights: (w-sovereignty w-trust w-capability w-confidence divisor).
+; sovereignty and trust are the core values (weight 2); capability and confidence
+; lift (weight 1). Change the body's behavior by changing this data, not the math.
+(defn fcr-weights () (list 2 2 1 1 6))
+
+; a backend is (name, sovereignty, trust, capability, confidence).
+(defn fcr-backend (name sovereignty trust capability confidence)
+    (list name sovereignty trust capability confidence))
+(defn fcr-name        (b) (nth b 0))
+(defn fcr-sovereignty (b) (nth b 1))
+(defn fcr-trust       (b) (nth b 2))
+(defn fcr-capability  (b) (nth b 3))
+(defn fcr-confidence  (b) (nth b 4))
+
+; THE one formula: a single fitness score from the four axes. Capability is a
+; hard gate — a backend that cannot do this category at all scores 0, whatever
+; its other axes. Among capable backends, the weighted sum decides.
+(defn fcr-fitness (b)
+    (if (eq (fcr-capability b) 0)
+        0
+        (div (add (add (mul (nth (fcr-weights) 0) (fcr-sovereignty b))
+                       (mul (nth (fcr-weights) 1) (fcr-trust b)))
+                  (add (mul (nth (fcr-weights) 2) (fcr-capability b))
+                       (mul (nth (fcr-weights) 3) (fcr-confidence b))))
+             (nth (fcr-weights) 4))))
+
+; route to the fitter backend; a tie goes to form-native — prefer what is ours.
+; Only two backends are ever weighed: form-native and the subscription agent CLI.
+(defn fcr-route (form-native agent-cli)
+    (if (ge (fcr-fitness form-native) (fcr-fitness agent-cli))
+        (fcr-name form-native)
+        (fcr-name agent-cli)))
+
+; the flywheel made checkable: the SAME request, routed before vs after learning
+; raised form-native's capability/confidence, flips agent-cli -> form-native.
+(defn fcr-flips-local? (fn-before fn-after agent-cli)
+    (if (and (str_eq (fcr-route fn-before agent-cli) "agent-cli")
+             (str_eq (fcr-route fn-after  agent-cli) "form-native"))
+        1 0))
+
+; a route is sovereign when it landed on form-native (no external lane touched).
+(defn fcr-sovereign? (winner-name) (if (str_eq winner-name "form-native") 1 0))
