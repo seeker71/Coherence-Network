@@ -248,3 +248,5 @@ ephemeris-sun fks 1111111
 lenses fks 1111111
 ephemeris-moon fks 1111111
 ephemeris-nodes fks 111111
+geometry fks 1111111
+hd-mandala-wheel fks 1111111

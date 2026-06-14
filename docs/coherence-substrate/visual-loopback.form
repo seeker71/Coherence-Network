@@ -1,0 +1,88 @@
+; visual-loopback.form — seeing, learned the way hearing was: oracle -> native -> A/B -> promote.
+;
+; THE ASK (Urs, 2026-06-14):
+;   "Look at geometry, image generation, image recognition, depth perception, texture
+;    generation and perception, shape generation and perception, light and shadow
+;    generation and perception through a video-frame loopback generator/learner —
+;    starting with third-party generators and classifiers, then creating Form-native
+;    versions and A/B testing them until they are proven trainable and usable as
+;    alternatives."
+;
+;   This is not a new architecture. It is the loopback-learning pattern the body already
+;   runs for hearing (TTS <-> STT, oracle -> native -> champion/challenger -> retire),
+;   turned toward seeing. The body has ALREADY DECLARED the visual shape; what was
+;   missing is the native cells. This completes the declared shape, it does not sibling it.
+;
+; THE SHAPE ALREADY DECLARED  (the seams to complete, not invent)
+;   - loopback-learning.fk: lbl-video-shape-sample / lbl-video-shape-feature — a video
+;     loop already sits beside the TTS<->STT loops, learning a frame as a nearest-shape
+;     exemplar; the feature vector is a placeholder awaiting a real extractor.
+;   - channel-loopback.fk: the codec video:features already names the axes —
+;     "shape + distance + texture + obstruction + occlusion + composition + transparency
+;     + frequency + spectrum" — and the loops video-gen-teaches-classifier /
+;     video-classifier-teaches-gen state the bidirectional teaching.
+;   - oracle-catalog.fk: the teacher eye/camera/vision_classify.swift and the ffmpeg
+;     media codec are the third-party bootstrap; "source-pending" marks where the native
+;     recipe will take over.
+;   - image-grammar.form (pixel-grid -> edge-map -> region -> object -> scene-graph) and
+;     video-as-recipe.form (six parallel tracks) are the visual domain grammars.
+;   - the LEARNING engine is modality-agnostic and proven: nearest-shape.fk (recognise a
+;     feature vector), recognition-router.fk (fuse model readings), co-learning.fk /
+;     co-learning-stream.fk (fold an oracle stream into exemplars, merge across devices),
+;     champion-challenger.fk (native vs oracle head-to-head), colearning-retire.fk (the
+;     oracle stops once the native wins over a long window), jit-oracle-learning.form (the
+;     parity-first contract: native must MATCH the oracle before speed counts).
+;
+; THE LOOP (one cell per frame, the same shape as the speech loop)
+;   frame --(ffmpeg, host)--> pixels --(3rd-party gen/classify oracle)--> labels/render
+;        \--(Form-native recipe)--> labels/render        <- both run, both sampled
+;        A/B by jit-oracle-learning parity + champion-challenger; when the native matches
+;        the oracle and then beats it on cost/latency over a window, colearning-retire
+;        stops the oracle for that category. Seeing becomes the body's own.
+;
+; THE FIRST NATIVE CELL, SHIPPED  (geometry — the computable floor)
+;   form-stdlib/geometry.fk -> tests/geometry-band.fk 1111111, four-way (Go/Rust/TS/fkwu).
+;   Under depth, shape, and light/shadow is pure geometry, and geometry is float math, so
+;   it is Form-native and four-way from the start (trig.fk's fsqrt is the only need):
+;     vectors        v3 vadd vsub vscale vdot vlen vnorm
+;     DEPTH          (ray-sphere-t o d c r) — distance to the front surface, or -1 on miss
+;     LIGHT/SHADOW   (lambert n l) — max(0, n.l); a face turned away is dark
+;     RENDER         (render-pixel o d c r l) — one ray-traced pixel: shape (the
+;                    silhouette), depth (the hit), light (the shade) in one computed value
+;   This is the GENERATOR side: the native makes the same pixel a third-party renderer
+;   makes, so the loopback has something to A/B. It is also the perception side: a depth
+;   and a normal are what a classifier reads.
+;
+; THE STAGED PATH  (by tractability — most computable native first; heaviest host last)
+;   1. GEOMETRY (depth, shape, light/shadow) — SHIPPED. Pure float+trig, four-way.
+;   2. TEXTURE (frequency, roughness, pattern) — a 2D extension of spectrum.fk's Goertzel
+;      recurrence; the same shape as the audio spectrum, scaled to image patches. Next.
+;   3. RECOGNITION (shape/object from a feature vector) — nearest-shape.fk + recognition-
+;      router.fk unchanged once a real visual feature-vector exists (video-feature.fk,
+;      mirroring feature-vector.fk). The classifiers are already modality-agnostic.
+;   4. GENERATION (diffusion, NeRF) — the heaviest, and honestly host-carrier: the model
+;      WEIGHTS are data the host serves; the Form recipe composes the call and reads back
+;      pixels. Native parity here is a model-as-recipe question (form-native-models), not
+;      a geometry question — named, not promised.
+;
+; THE HONEST BOUNDARY  (host carrier vs four-way recipe)
+;   HOST CARRIER (model weights / external deps, proven by receipt, not by four-way):
+;     video decode (ffmpeg), object detection (YOLO/DETR), face landmarks (MediaPipe),
+;     diffusion inference, optical flow.
+;   FOUR-WAY RECIPE (Form-native, the body's own):
+;     geometry projection/depth/shading (geometry.fk), texture spectrum (spectrum.fk 2D),
+;     edge/region from pixel differences, nearest-shape recognition, recognition-router
+;     fusion, the whole co-learning / A/B / retire arc.
+;   The carrier handles the stateful and the heavy; Form handles the structure, the
+;   learning, the routing, and the cross-modal equivalence — the same division the speech
+;   loop already lives by.
+;
+; LINEAGE
+;   kin: loopback-learning.fk (the speech loop this mirrors), channel-loopback.fk (the
+;        declared video codecs/loops), oracle-catalog.fk (the bootstrap teachers),
+;        co-learning.fk / champion-challenger.fk / colearning-retire.fk (the A/B->retire
+;        arc), jit-oracle-learning.form (parity-first), nearest-shape.fk / recognition-
+;        router.fk (the modality-agnostic classifiers), image-grammar.form /
+;        video-as-recipe.form (the visual domain grammars), geometry.fk (the first native
+;        cell), trig.fk (fsqrt/fsin under the geometry).
+;   source: requested by Urs 2026-06-14, completing the visual loopback the body declared.
