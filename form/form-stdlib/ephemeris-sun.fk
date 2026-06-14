@@ -1,0 +1,62 @@
+; ephemeris-sun.fk — the Sun's real ecliptic longitude, computed natively.
+;
+; The one piece modality-lattices.form g8 left to a third-party oracle: a live
+; position. Here is its first honest step, fully Form-native and four-way — because
+; the fourth arm already carries float and trig (trig fks 127, float-conversions fks
+; 31). No ephemeris library, no host call.
+;
+; The recipe is the standard low-precision solar formula (USNO Astronomical Almanac,
+; "Low-Precision Formulas for the Sun", good to ~0.01 deg for ~1900..2100), riding
+; trig.fk's fsin and celestial-pole-channel.fk's jdn + sign reduction:
+;
+;   n = JD - 2451545              days from J2000
+;   L = 280.460 + 0.9856474 n     mean longitude   (deg)
+;   g = 357.528 + 0.9856003 n     mean anomaly     (deg)
+;   lambda = L + 1.915 sin g + 0.020 sin 2g        ecliptic longitude (deg)
+;
+;   (sun-longitude y m d)       -> ecliptic longitude, integer degrees in [0,360)
+;   (sun-sign-tropical y m d)   -> Western sign index 0..11 (the season's sign)
+;   (sun-sign-sidereal y m d)   -> Vedic sign index (the fixed-star sign)
+;
+; This closes the gap's first cell: from a date, the Sun's true place, which the
+; zodiac / Human-Design / Gene-Keys channels then read. Moon and planets are the
+; next rows (more terms, same trig.fk footing); gate activation needs the Human
+; Design mandala wheel (a data row), named not faked. Latitude is ~0 for the Sun.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk
+;
+
+(do
+    ;; days from the J2000 epoch (jdn is the noon JDN; good to the day)
+    (defn ephem-n (y m d) (sub (jdn y m d) 2451545))
+
+    ;; mean longitude and mean anomaly, in degrees
+    (defn ephem-L (n) (add 280.460 (mul 0.9856474 n)))
+    (defn ephem-g (n) (add 357.528 (mul 0.9856003 n)))
+
+    ;; degrees -> radians, for trig.fk's fsin
+    (defn deg2rad (deg) (mul deg 0.017453292519943295))
+
+    ;; the equation of centre folded in: lambda = L + 1.915 sin g + 0.020 sin 2g
+    (defn sun-longitude-raw (n)
+        (add (ephem-L n)
+            (add (mul 1.915 (fsin (deg2rad (ephem-g n))))
+                 (mul 0.020 (fsin (deg2rad (mul 2.0 (ephem-g n))))))))
+
+    ;; fold any degree value into [0,360): round-based reduction, then lift negatives
+    (defn fnorm360 (x)
+        (do
+            (let r (sub x (mul 360.0 (round (div x 360.0)))))
+            (if (lt r 0.0) (add r 360.0) r)))
+
+    ;; the Sun's ecliptic longitude, integer degrees in [0,360)
+    (defn sun-longitude (y m d)
+        (round (fnorm360 (sun-longitude-raw (ephem-n y m d)))))
+
+    ;; the Sun's sign, in each astrology — the live position feeding the channels
+    (defn sun-sign-tropical (y m d) (tropical-sign-of (sun-longitude y m d)))
+    (defn sun-sign-sidereal (y m d) (sidereal-sign-of (sun-longitude y m d) (lahiri-ayanamsa-2000)))
+
+    (defn ephemeris-sun-teaching () "lc-cross-modal-unity")
+
+    0)

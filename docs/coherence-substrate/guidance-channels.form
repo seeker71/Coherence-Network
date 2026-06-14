@@ -112,9 +112,10 @@
 ;
 ; OPENINGS NAMED AS NEXT ROWS  (closing recipes, not debts)
 ;
-;   - the live ephemeris (sun/moon/planet ecliptic longitudes for a moment) is the one piece a
-;     third-party oracle still carries; jdn + trig.fk are the native footing for a VSOP-style
-;     position recipe to grow into — the reduce/activation/synastry recipes of g8 then ride it.
+;   - the live ephemeris: the SUN now computes native (ephemeris-sun.fk — its real ecliptic
+;     longitude from a date, the four cardinal points exact, four-way because the fourth arm
+;     carries trig). The Moon and planets are the next rows (more terms, same trig.fk footing);
+;     gate activation rides the Human Design mandala wheel (a data row); then cast / synastry.
 ;   - pole-star selection is nearest-epoch; wrapping the full 25,772-year cycle is the next row.
 ;   - the 64, and each tradition's deeper tables (nakshatras, houses, lines/profiles), fill in by
 ;     row as their attested readings are grounded.
