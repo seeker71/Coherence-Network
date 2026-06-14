@@ -295,3 +295,5 @@ geometry fks 1111111
 hd-mandala-wheel fks 1111111
 ieee-float-ops fks 1111111
 codon-hexagram fks 1111111
+codon-rings fks 1111111
+ratio-bridge fks 1111111

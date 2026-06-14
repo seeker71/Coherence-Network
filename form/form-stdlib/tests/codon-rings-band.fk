@@ -1,0 +1,53 @@
+; tests/codon-rings-band.fk — the Gene Keys Codon Rings, grounded and content-addressed.
+;
+; The labelled layer of the codon-hexagram bridge: gates grouped by amino acid, the
+; attested Gene Keys rings. The band pins the cross-checked anchors (Gate 41 = Met start,
+; Gate 14 = Lys, the three Stops), the content-addressing (gates in one ring share an
+; amino acid), the degeneracy match (ring size = codon count), and the complete partition.
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   the anchors: Gate 41 = Met (start), Gate 14 = Lys                -> 1
+;   the Stop ring: 12, 33, 56 all Stop, one ring                     -> 10
+;   content-addressing: gates 10 and 51 share Arg; 10 and 41 do not  -> 100
+;   gate 25 (the bridge's headline) is Arg, the Ring of Humanity     -> 1000
+;   degeneracy: Leucine ring = 6 gates, Methionine = 1               -> 10000
+;   the partition is complete: all 64 gates covered                  -> 100000
+;   two singleton rings stay distinct: Trp (35) != Met (41)          -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/codon-rings.fk
+;
+
+(do
+    ;; --- 1. the cross-checked anchors --------------------------------
+    (let anchor-ok
+        (if (str_eq (gate-amino 41) "Met")
+            (if (str_eq (gate-amino 14) "Lys") 1 0) 0))
+
+    ;; --- 2. the Stop ring: three terminators, one ring ---------------
+    (let stop-ok
+        (if (str_eq (gate-amino 12) "Stop")
+            (if (eq (same-ring? 12 33) 1)
+                (if (eq (same-ring? 12 56) 1) 10 0) 0) 0))
+
+    ;; --- 3. content-addressing by amino acid -------------------------
+    (let ca-ok
+        (if (eq (same-ring? 10 51) 1)
+            (if (eq (same-ring? 10 41) 0) 100 0) 0))
+
+    ;; --- 4. gate 25 — the bridge's headline gate ---------------------
+    (let g25-ok (if (str_eq (gate-amino 25) "Arg") 1000 0))
+
+    ;; --- 5. ring size IS codon degeneracy ----------------------------
+    (let degen-ok
+        (if (eq (ring-size "Leu") 6)
+            (if (eq (ring-size "Met") 1) 10000 0) 0))
+
+    ;; --- 6. the partition is complete: all 64 gates ------------------
+    (let cover-ok (if (eq (codon-rings-coverage) 64) 100000 0))
+
+    ;; --- 7. distinct singleton rings stay distinct -------------------
+    (let distinct-ok
+        (if (str_eq (gate-amino 35) "Trp")
+            (if (eq (same-ring? 35 41) 0) 1000000 0) 0))
+
+    (sum (list anchor-ok stop-ok ca-ok g25-ok degen-ok cover-ok distinct-ok)))
