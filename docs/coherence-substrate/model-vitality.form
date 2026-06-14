@@ -32,6 +32,20 @@
 ;   sha256 7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014
 ;   for CPU bytes, generic GPU bytes via Metal, Metal bytes on Apple M4 Max, and
 ;   MLX bytes through /opt/homebrew/lib/libmlxc.dylib.
+;   Production ingestion floor: cd form && ./validate.sh form-stdlib/core.fk
+;   form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
+;   form-stdlib/tests/model-vitality-production-band.fk -> 32767. This proof
+;   stores a live model-vitality row in the segmented store, reads it back, and
+;   routes it through explicit production pulse/runtime rows. It proves current
+;   focus outcomes for restore-pulse, release-health, focus-proof, and
+;   serve-and-watch, rejects missing production attribution, rejects Python as
+;   runtime authority for this front door, and refuses a missing live store row.
+;   Live production witness: scripts/model_vitality_production_ingest_probe.sh
+;   captured public API pulse, public pulse front-door, and runtime-summary
+;   slices into .cache/model-vitality-production. On 2026-06-14T08:56:18Z the
+;   API pulse read overall=strained with silences=2, the pulse front door read
+;   overall=breathing, and runtime-summary returned native-kernel with
+;   x-form-python-authority=false and handler api_runtime_endpoints_summary.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -52,6 +66,11 @@
 ;   Carrier projection rule: a CPU, GPU, MLX, or Metal buffer is faithful only
 ;   when its returned bytes re-hash to the source chunk digest. The source chunk
 ;   stays the substrate cell/store object; the carrier buffer is never truth.
+;   Production ingestion rule: public pulse and runtime/front-door readings are
+;   rows with attribution, observed timestamp, byte count, latency, and authority
+;   headers. A shell probe may witness HTTPS today; the semantic carrier is the
+;   Form row, and the north star is direct fourth-kernel HTTPS capture into that
+;   same row shape.
 ;
 ; REVIEW TRACE:
 ;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
@@ -67,11 +86,12 @@
 ;   This floor now stores real tensor chunks in the segmented file-backed cell
 ;   store, ingests two safetensors/MLX-style chunks by byte offset, proves CPU,
 ;   generic GPU, Metal, and MLX returned-byte re-hash receipts on this host, and
-;   routes a live model-vitality store row through wellness/pulse signals.
+;   routes a live model-vitality store row through wellness/pulse signals and
+;   production pulse/runtime telemetry rows.
 ;   Remaining gaps: full safetensors header parsing for arbitrary model files,
-;   real MLX tensor package ingest beyond the tiny carrier witness, production
-;   wellness/pulse ingestion from deployed live model-vitality rows, and large
-;   multi-segment model sharing by merkle across mesh peers.
+;   real MLX tensor package ingest beyond the tiny carrier witness,
+;   fourth-kernel-native external HTTPS capture replacing the shell witness,
+;   and large multi-segment model sharing by merkle across mesh peers.
 
 (model-vitality-surface
   (floor
@@ -88,7 +108,9 @@
     (fourth-arm four-way)
     (real-storage-proof "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
     (physical-carrier-proof "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
+    (production-ingestion-proof "form/form-stdlib/tests/model-vitality-production-band.fk -> 32767")
     (native-carrier-witness "scripts/model_carrier_rehash_audit.sh")
+    (production-live-witness "scripts/model_vitality_production_ingest_probe.sh")
     (release-health smallest-focused-proof-first))
   (north-star
     (source-of-truth substrate-cells)
@@ -100,4 +122,6 @@
     (physical-carriers cpu-buffer gpu-buffer metal-buffer mlx-array)
     (ingest-carriers safetensors mlx-package)
     (wellness-pulse-routing model-vitality-row-chooses-focus)
+    (production-ingestion pulse-runtime-frontdoor-rows)
+    (external-https-north-star fourth-kernel-native-capture)
     (release-vitality fast-proofed-release-cadence)))

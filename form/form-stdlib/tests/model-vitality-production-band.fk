@@ -1,0 +1,163 @@
+; preludes: form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
+;
+; model-vitality-production-band - production pulse/runtime ingestion route proof.
+;
+; Floor: production pulse and runtime/front-door telemetry are explicit Form
+; rows. A live model-vitality row stored in the segmented cell store can be read
+; back and routed with production-derived wellness, pulse, and release states.
+; This proof uses concrete public-sample-shaped rows; scripts capture live
+; public slices and must not become the semantic carrier.
+;
+; North star: deployed wellness, pulse, front-door, model-vitality, and release
+; readings flow into one content-addressed body-readable vitality door. The
+; body focuses on restore-pulse, release-health, focus-proof, or serve-and-watch
+; from observed rows, not from stale docs or hidden ambient host state.
+;
+; Verdict 32767 when production-shaped vitality ingestion routes hold.
+
+(do
+    (let dir (str_concat (temp_dir) "/model-vitality-production-band.d"))
+    (fs_rmdir dir)
+
+    (let good (mv-eval-receipt
+        "model:prod-summary-router"
+        "merkle:dataset-prod"
+        90 88 91 89 87 92 18 16 25 84 94 85 91 64
+        "merkle:eval-prod"))
+    (let body-read (mv-body-read (mv-vitality-receipt good)))
+    (let st0 (cls-open dir))
+    (let live-row (mv-store-live-vitality-row st0 body-read))
+    (let c0 (if (mv-live-row-valid? live-row) 1 0))
+
+    (let prod-floor (mv-floor))
+    (let prod-north (mv-north-star))
+    (let api-pulse (mv-production-pulse-sample
+        "api-pulse"
+        "https://api.coherencycoin.com/api/pulse/now"
+        "2026-06-14T08:52:05Z"
+        "strained"
+        1
+        38
+        900
+        prod-floor
+        prod-north))
+    (let runtime (mv-production-runtime-telemetry
+        "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+        200
+        "api_runtime_endpoints_summary"
+        "native-kernel"
+        "false"
+        226
+        2347
+        prod-floor
+        prod-north))
+    (let c1 (if (mv-production-pulse-valid? api-pulse) 2 0))
+    (let c2 (if (mv-production-runtime-valid? runtime) 4 0))
+    (let c3 (if (str_eq (mv-production-wellness-state api-pulse) "strained") 8 0))
+    (let c4 (if (str_eq (mv-production-pulse-state api-pulse) "silent") 16 0))
+    (let c5 (if (str_eq (mv-production-release-state runtime) "fast") 32 0))
+
+    (let prod-route (mv-production-vitality-route
+        (mv-live-row-store live-row)
+        live-row
+        api-pulse
+        runtime))
+    (let prod-live (mv-production-vitality-route-live-read prod-route))
+    (let prod-focus (mv-vitality-route-focus-result (mv-live-route-route prod-live)))
+    (let c6 (if (mv-production-vitality-route-valid? prod-route)
+                (if (str_eq prod-focus "restore-pulse") 64 0)
+                0))
+
+    (let clear-pulse (mv-production-pulse-sample
+        "pulse"
+        "https://pulse.coherencycoin.com/pulse/now"
+        "2026-06-14T08:52:04Z"
+        "breathing"
+        0
+        191
+        1800
+        prod-floor
+        prod-north))
+    (let c7 (if (str_eq (mv-production-pulse-state clear-pulse) "breathing") 128 0))
+
+    (let slow-runtime (mv-production-runtime-telemetry
+        "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+        200
+        "api_runtime_endpoints_summary"
+        "native-kernel"
+        "false"
+        1505
+        2347
+        prod-floor
+        prod-north))
+    (let slow-route (mv-production-vitality-route
+        (mv-live-row-store live-row)
+        live-row
+        clear-pulse
+        slow-runtime))
+    (let slow-live (mv-production-vitality-route-live-read slow-route))
+    (let slow-focus (mv-vitality-route-focus-result (mv-live-route-route slow-live)))
+    (let c8 (if (str_eq (mv-production-release-state slow-runtime) "slow")
+                (if (str_eq slow-focus "focus-proof") 256 0)
+                0))
+
+    (let deploy-pulse (mv-production-pulse-sample
+        "wellness"
+        "https://pulse.coherencycoin.com/pulse/now"
+        "2026-06-14T08:52:04Z"
+        "deploy-lag"
+        0
+        191
+        1800
+        prod-floor
+        prod-north))
+    (let deploy-route (mv-production-vitality-route
+        (mv-live-row-store live-row)
+        live-row
+        deploy-pulse
+        runtime))
+    (let deploy-live (mv-production-vitality-route-live-read deploy-route))
+    (let deploy-focus (mv-vitality-route-focus-result (mv-live-route-route deploy-live)))
+    (let c9 (if (str_eq deploy-focus "release-health") 512 0))
+
+    (let serve-route (mv-production-vitality-route
+        (mv-live-row-store live-row)
+        live-row
+        clear-pulse
+        runtime))
+    (let serve-live (mv-production-vitality-route-live-read serve-route))
+    (let serve-focus (mv-vitality-route-focus-result (mv-live-route-route serve-live)))
+    (let c10 (if (str_eq serve-focus "serve-and-watch") 1024 0))
+
+    (let bad-pulse (mv-production-pulse-sample
+        ""
+        "https://api.coherencycoin.com/api/pulse/now"
+        "2026-06-14T08:52:05Z"
+        "strained"
+        1
+        38
+        900
+        prod-floor
+        prod-north))
+    (let c11 (if (not (mv-production-pulse-valid? bad-pulse)) 2048 0))
+
+    (let bad-runtime (mv-production-runtime-telemetry
+        "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+        200
+        "api_runtime_endpoints_summary"
+        "native-kernel"
+        "true"
+        226
+        2347
+        prod-floor
+        prod-north))
+    (let c12 (if (not (mv-production-runtime-valid? bad-runtime)) 4096 0))
+
+    (let missing-store (cls-open (str_concat dir "/missing")))
+    (let missing-route (mv-production-vitality-route missing-store live-row clear-pulse runtime))
+    (let c13 (if (not (mv-production-vitality-route-valid? missing-route)) 8192 0))
+
+    (let c14 (if (str_eq (mv-kind-production-vitality-ingest) "model/production-vitality-ingest") 16384 0))
+
+    (fs_rmdir dir)
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14)))

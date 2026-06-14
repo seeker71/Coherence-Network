@@ -1,0 +1,162 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/model-vitality-production-ingestion-20260614",
+  "commit_scope": "Add production pulse/runtime ingestion rows to model-vitality, a focused Form proof band, and a live public probe for production row evidence.",
+  "files_owned": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-production-band.fk",
+    "scripts/model_vitality_production_ingest_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+        "result": "pass",
+        "output": "\u2713 core.fk+model-vitality.fk+model-vitality-band.fk -> 4095; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+        "result": "pass",
+        "output": "\u2713 core.fk+sha256.fk+cell-log-store.fk+model-vitality.fk+model-vitality-storage-band.fk -> 8191; 1 ok, 0 divergent.",
+        "kernel_scope": "host-I/O kernels"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-physical-band.fk",
+        "result": "pass",
+        "output": "\u2713 core.fk+sha256.fk+cell-log-store.fk+model-vitality.fk+model-vitality-physical-band.fk -> 65535; 1 ok, 0 divergent.",
+        "kernel_scope": "host-I/O kernels"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-production-band.fk",
+        "result": "pass",
+        "output": "\u2713 core.fk+sha256.fk+cell-log-store.fk+model-vitality.fk+model-vitality-production-band.fk -> 32767; 1 ok, 0 divergent.",
+        "kernel_scope": "host-I/O kernels"
+      },
+      {
+        "command": "scripts/model_vitality_production_ingest_probe.sh",
+        "result": "pass",
+        "output": "PASS production-pulse source=api-pulse overall=strained silences=2 latency_ms=54 bytes=710 instance=local as_of=2026-06-14T08:56:18Z; PASS production-witness-pulse source=pulse-front-door overall=breathing bytes=3032 checked_at=2026-06-14T08:56:18Z; PASS production-runtime status=200 router=native-kernel handler=api_runtime_endpoints_summary python_authority=false latency_ms=145 bytes=2332; PASS model-vitality-production-row wellness_state=strained pulse_state=silent release_state=fast cache=.cache/model-vitality-production/20260614T085617Z/production-model-vitality-row.json"
+      }
+    ]
+  },
+  "live_production_probe": {
+    "status": "pass",
+    "observed_at": "2026-06-14T08:56:18Z",
+    "cache": ".cache/model-vitality-production/20260614T085617Z/production-model-vitality-row.json",
+    "api_pulse": {
+      "url": "https://api.coherencycoin.com/api/pulse/now",
+      "overall": "strained",
+      "silences": 2,
+      "sample_duration_ms": 54,
+      "body_bytes": 710,
+      "instance_id": "local"
+    },
+    "witness_pulse": {
+      "url": "https://pulse.coherencycoin.com/pulse/now",
+      "overall": "breathing",
+      "body_bytes": 3032
+    },
+    "runtime_summary": {
+      "url": "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5",
+      "status": 200,
+      "x_form_router": "native-kernel",
+      "x_form_handler": "api_runtime_endpoints_summary",
+      "x_form_python_authority": "false",
+      "latency_ms": 145,
+      "body_bytes": 2332
+    },
+    "derived_route_states": {
+      "wellness_state": "strained",
+      "pulse_state": "silent",
+      "release_state": "fast"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Live production endpoints were read as witnesses. No deploy was performed by this branch yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Form proof and live public probe passed; PR/CI and deploy catch-up still need to run after push."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "production-pulse-runtime-ingestion"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality"
+  ],
+  "task_ids": [
+    "2026-06-14-model-vitality-production-ingestion"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-band.fk -> 4095 four-way",
+    "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191 host-I/O",
+    "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535 host-I/O",
+    "form/form-stdlib/tests/model-vitality-production-band.fk -> 32767 host-I/O",
+    "scripts/model_vitality_production_ingest_probe.sh -> public pulse/runtime native-kernel witness"
+  ],
+  "change_files": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-production-band.fk",
+    "scripts/model_vitality_production_ingest_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-14_model_vitality_production_ingestion.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Model-vitality can now represent production pulse and runtime/front-door readings as explicit Form rows, derive wellness/pulse/release route states from those rows, and route a live model-vitality store row with public production evidence.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://pulse.coherencycoin.com/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "test_flows": [
+      "Focused production Form band proves production row validation and focus routing.",
+      "Live public probe captures pulse/runtime slices and verifies native-kernel runtime-summary authority."
+    ]
+  }
+}
