@@ -1,16 +1,20 @@
-; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/text-summary-learning.fk
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/kernel-http.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk
 ;
 ; text-summary-multi-source-band - dynamic source-coordinate summary floor.
 ;
-; Floor: file and file-backed store sources both emit the same native
-; source-coordinate receipt shape. The file lane reads a real checked-in source
-; byte slice; the store lane writes to a temporary segmented cell-log store and
-; reads the value back through the store query path before learning.
+; Floor: file, file-backed store, kernel route response, and stream cursor
+; windows all emit the same native source-coordinate receipt shape. The file
+; lane reads a real checked-in source byte slice; the store lane writes to a
+; temporary segmented cell-log store and reads the value back; the route lane
+; lowers a kernel-http route choice into a kh-response body; the stream lane
+; writes and reads a .fkb channel cursor window.
 ;
 ; North star: file, store, route, and stream sources all feed one summary
 ; learner through dynamic coordinates: protocol, capability, locator, selector,
-; offset, length, codec, carrier, floor, and north star. Route and stream stay
-; planned in this band until their native source readers exist.
+; offset, length, codec, carrier, floor, and north star. The current floor still
+; names the next pressure honestly: route is a native value/body receipt, not
+; yet a socket-served front-door trace; stream is a file-backed channel cursor,
+; not yet a backpressure-aware event stream.
 ;
 ; Verdict 65535 when every claim lands:
 ;   1     expanded floor and north-star declarations name source coordinates
@@ -19,16 +23,16 @@
 ;   8     store coordinate is ready store:query with dynamic key coordinates
 ;   16    store receipt is read from a real temporary segmented store
 ;   32    ready receipts are valid and aggregate claims/citations
-;   64    route coordinate is planned, not falsely executed
-;   128   stream coordinate is planned, not falsely executed
+;   64    route coordinate and receipt are ready from kernel-http response body
+;   128   stream coordinate and receipt are ready from channel-read-since window
 ;   256   file/store/route/stream request plans expose protocols and caps
 ;   512   multi-source summary passes existing summary quality gates
 ;   1024  summary claim and citation counts equal aggregated receipts
 ;   2048  multi-source CHOICE-RECEIPT is valid and keeps token cost
 ;   4096  receipt becomes a native training sample
 ;   8192  output envelope carries coordinates, receipts, summary, receipt, and metadata
-;   16384 proof level names file/store physical floor plus route/stream planning
-;   32768 two coordinates are ready and two remain planned
+;   16384 proof level names file/store/route/stream physical source floor
+;   32768 all four coordinates are ready and none remain planned
 (do
     (let meta
         (tsl-meta
@@ -73,10 +77,91 @@
             2
             "cell-log-store cls-get returned the stored source value"))
 
-    (let route-coordinate (tsl-route-source-coordinate "/api/runtime/events?limit=1" "body"))
-    (let stream-coordinate (tsl-stream-source-coordinate "runtime/events" "cursor:latest"))
+    (let route-request
+        (kh-request
+            "GET"
+            "/api/runtime/events"
+            (list
+                (kh-header "Accept" "application/json")
+                (kh-header "Host" "localhost"))
+            (list (kh-field "limit" "2"))
+            ""))
+    (let route-exact
+        (kh-route
+            "runtime-events-summary"
+            "GET"
+            "/api/runtime/events"
+            9
+            "kh-runtime-events-summary"
+            "Accept"
+            25))
+    (let route-fallback
+        (kh-route
+            "runtime-api-fallback"
+            "ANY"
+            "/api/runtime/*"
+            1
+            "kh-runtime-api-fallback"
+            ""
+            80))
+    (let route-choice (kh-route-choice-for-request (list route-fallback route-exact) route-request))
+    (let selected-route (kh-route-candidate-route (kh-route-choice-selected route-choice)))
+    (let route-body
+        (str_concat
+            "{\"route\":\""
+            (str_concat
+                (kh-route-name selected-route)
+                (str_concat
+                    "\",\"handler\":\""
+                    (str_concat
+                        (kh-route-handler selected-route)
+                        (str_concat
+                            "\",\"request\":\""
+                            (str_concat (kh-request-path route-request) "\"}")))))))
+    (let route-response
+        (kh-response
+            200
+            (list
+                (kh-header "Content-Type" "application/json")
+                (kh-header "X-Form-Route" (kh-route-name selected-route)))
+            route-body))
+    (let route-coordinate
+        (tsl-route-source-coordinate
+            (kh-request-path route-request)
+            (kh-route-handler selected-route)))
+    (let route-receipt
+        (tsl-route-source-data-receipt
+            route-coordinate
+            (kh-response-body route-response)
+            (kh-response-status route-response)
+            (len (kh-response-headers route-response))
+            2
+            1
+            "kernel-http route choice selected a native route and produced a response body"))
+
+    (let stream-path (str_concat (temp_dir) "/text-summary-multi-source-stream.fkb"))
+    (fs_remove stream-path)
+    (channel-create stream-path)
+    (channel-append stream-path (channel-message (intern_trivial_string "warmup event before cursor")))
+    (channel-append stream-path (channel-message (intern_trivial_string "runtime route response became summary source")))
+    (channel-append stream-path (channel-message (intern_trivial_string "stream cursor window became summary source")))
+    (let stream-window (channel-read-since stream-path 1))
+    (let stream-event-a (node_value (channel-msg-payload (head stream-window))))
+    (let stream-event-b (node_value (channel-msg-payload (head (tail stream-window)))))
+    (let stream-body (str_concat stream-event-a (str_concat "\n" stream-event-b)))
+    (let stream-next-cursor (add 1 (len stream-window)))
+    (let stream-coordinate (tsl-stream-source-coordinate stream-path "cursor:1"))
+    (let stream-receipt
+        (tsl-stream-source-data-receipt
+            stream-coordinate
+            stream-body
+            (len stream-window)
+            stream-next-cursor
+            2
+            2
+            "channel-read-since returned two ordered payloads after cursor 1"))
     (let coordinates (list file-coordinate store-coordinate route-coordinate stream-coordinate))
-    (let ready-receipts (list file-receipt store-receipt))
+    (let ready-receipts (list file-receipt store-receipt route-receipt stream-receipt))
     (let summary (tsl-multi-source-summary ready-receipts meta))
     (let receipt (tsl-multi-source-receipt summary meta))
     (let receipt-sample (tsl-receipt-sample receipt "summary:multi-source-receipt"))
@@ -127,24 +212,32 @@
         (if (and
                 (eq (tsl-source-data-all-valid? ready-receipts) 1)
                 (and
-                    (eq (tsl-source-data-claims-total ready-receipts) 3)
-                    (eq (tsl-source-data-citations-total ready-receipts) 3)))
+                    (eq (tsl-source-data-claims-total ready-receipts) 7)
+                    (eq (tsl-source-data-citations-total ready-receipts) 6)))
             32
             0))
     (let c6
         (if (and
                 (str_eq (tsl-source-coordinate-protocol route-coordinate) "kernel:route")
                 (and
-                    (eq (tsl-source-coordinate-planned? route-coordinate) 1)
-                    (str_eq (tsl-source-coordinate-carrier route-coordinate) "pending-kernel-route-source-reader")))
+                    (eq (tsl-source-coordinate-ready? route-coordinate) 1)
+                    (and
+                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "kernel-http:kh-response-body")
+                        (and
+                            (kh-response-valid? route-response)
+                            (eq (tsl-source-data-valid? route-receipt) 1)))))
             64
             0))
     (let c7
         (if (and
                 (str_eq (tsl-source-coordinate-protocol stream-coordinate) "stream:read")
                 (and
-                    (eq (tsl-source-coordinate-planned? stream-coordinate) 1)
-                    (str_eq (tsl-source-coordinate-carrier stream-coordinate) "pending-stream-cursor-reader")))
+                    (eq (tsl-source-coordinate-ready? stream-coordinate) 1)
+                    (and
+                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+cursor-window")
+                        (and
+                            (eq (len stream-window) 2)
+                            (eq (tsl-source-data-valid? stream-receipt) 1)))))
             128
             0))
     (let c8
@@ -153,8 +246,8 @@
                 (and
                     (str_eq (tsl-plan-capability store-plan) "cap.store.query")
                     (and
-                        (str_eq (tsl-plan-protocol route-plan) "kernel:route")
-                        (str_eq (tsl-plan-capability stream-plan) "cap.stream.read"))))
+                        (str_eq (tsl-plan-carrier route-plan) "kernel-http:kh-response-body")
+                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+cursor-window"))))
             256
             0))
     (let c9
@@ -183,7 +276,7 @@
         (if (and
                 (eq (len (tsl-multi-source-output-coordinates output)) 4)
                 (and
-                    (eq (len (tsl-multi-source-output-receipts output)) 2)
+                    (eq (len (tsl-multi-source-output-receipts output)) 4)
                     (and
                         (str_eq
                             (tsl-summary-kind (tsl-multi-source-output-summary output))
@@ -198,15 +291,16 @@
     (let c14
         (if (str_eq
                 (tsl-multi-source-proof-level)
-                "3-kernel-host-io-file-store-plus-planned-route-stream")
+                "3-kernel-host-io-file-store-route-stream")
             16384
             0))
     (let c15
         (if (and
-                (eq (tsl-source-coordinates-ready-count coordinates) 2)
-                (eq (tsl-source-coordinates-planned-count coordinates) 2))
+                (eq (tsl-source-coordinates-ready-count coordinates) 4)
+                (eq (tsl-source-coordinates-planned-count coordinates) 0))
             32768
             0))
 
+    (fs_remove stream-path)
     (fs_rmdir store-dir)
     (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
