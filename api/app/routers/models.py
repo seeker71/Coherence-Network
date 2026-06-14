@@ -14,6 +14,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.services.native_training_receipts import NativeTrainingArtifact, collect_native_training_artifacts
+
 router = APIRouter(prefix="/models", tags=["models"])
 log = logging.getLogger("coherence.api")
 
@@ -23,6 +25,7 @@ _CONFIG_DIR = _API_ROOT / "config"
 _ROUTING_PATH = _CONFIG_DIR / "model_routing.json"
 _EVIDENCE_DIR = _REPO_ROOT / "docs" / "system_audit"
 _PROOF_LEDGER_DIR = _EVIDENCE_DIR / "model_executor_run_ledger"
+_NATIVE_TRAINING_RECEIPT_DIR = _EVIDENCE_DIR / "native_training_receipts"
 
 _LEARNING_EVIDENCE_KEYWORDS = (
     "learning",
@@ -108,6 +111,7 @@ class LearningDashboardResponse(BaseModel):
     north_star: str
     floor: str
     models: list[LearningDashboardModel]
+    native_training_artifacts: list[NativeTrainingArtifact]
     learning_surfaces: list[LearningSurface]
     recent_proof_runs: list[LearningProofRun]
     guidance: list[str]
@@ -463,14 +467,13 @@ async def get_learning_dashboard() -> LearningDashboardResponse:
     """Expose routed models, proof runs, and learning receipts in one dashboard shape."""
     config = _load_routing()
     models = _collect_models(config)
+    native_artifacts = collect_native_training_artifacts(_NATIVE_TRAINING_RECEIPT_DIR, _REPO_ROOT)
     surfaces = _collect_learning_surfaces()
     proof_runs = _collect_recent_proof_runs()
     proof_pass_count = sum(1 for run in proof_runs if run.pass_fail == "pass")
     proven_floor_count = sum(1 for surface in surfaces if surface.proof_status == "pass")
     blocked_or_pending_count = sum(1 for surface in surfaces if surface.proof_status in {"pending", "blocked", "fail"})
-    trained_native_model_count = sum(
-        1 for surface in surfaces if bool(surface.training_metadata.get("trained_native_weights"))
-    )
+    trained_native_model_count = len(native_artifacts)
 
     return LearningDashboardResponse(
         summary=LearningDashboardSummary(
@@ -487,16 +490,18 @@ async def get_learning_dashboard() -> LearningDashboardResponse:
             "third-party oracles, and retire oracle dependence only after sustained native wins."
         ),
         floor=(
-            "The current floor exposes configured executor models, recent proof runs, and learning "
-            "surface evidence; no native weight artifact is claimed until a receipt names one."
+            "The current floor exposes configured executor models, recent proof runs, learning "
+            "surface evidence, and committed native weight/data/eval receipts. A native trained "
+            "artifact is counted only when its receipt names weights, data, eval, and passing proof."
         ),
         models=models,
+        native_training_artifacts=native_artifacts,
         learning_surfaces=surfaces,
         recent_proof_runs=proof_runs,
         guidance=[
             "Treat configured provider models as teachers or routes, not trained native artifacts.",
             "Move attention to surfaces with pass receipts and explicit next steps before broadening scope.",
-            "Promote a surface from proof floor to trained model only when the ledger names weights, data, evals, and retirement criteria.",
+            "Promote a surface from proof floor to trained model only when the ledger names weights, data, evals, and comparable oracle criteria.",
         ],
     )
 

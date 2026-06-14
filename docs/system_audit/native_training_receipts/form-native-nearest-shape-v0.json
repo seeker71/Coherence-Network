@@ -1,0 +1,108 @@
+{
+  "artifact_id": "form-native-nearest-shape-v0",
+  "artifact_kind": "nearest-shape-prototype",
+  "continuous_cycle_count": 1,
+  "data": {
+    "format": "summary-only-feature-vectors",
+    "hash": "sha256:bd2044ddcde57f6a5c1596dbe9749423440630dc403c781424633fda6a182047",
+    "heldout_count": 4,
+    "privacy": "summary-only; no raw mic/camera/sensor payloads",
+    "sample_count": 6
+  },
+  "eval": {
+    "correct_count": 4,
+    "hash": "sha256:bbd6c35cb32c6bdc350421e01115a14d7530ca0c704120394b8b196492042074",
+    "heldout_count": 4,
+    "native_accuracy_ppm": 1000000,
+    "oracle_accuracy_ppm": 750000,
+    "predictions": [
+      {
+        "actual": "speech",
+        "predicted": "speech",
+        "vector": [
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "actual": "music",
+        "predicted": "music",
+        "vector": [
+          0,
+          5,
+          0
+        ]
+      },
+      {
+        "actual": "quiet",
+        "predicted": "quiet",
+        "vector": [
+          0,
+          0,
+          5
+        ]
+      },
+      {
+        "actual": "speech",
+        "predicted": "speech",
+        "vector": [
+          5,
+          0,
+          0
+        ]
+      }
+    ],
+    "wrong_count": 0
+  },
+  "model_family": "Form-native nearest-shape",
+  "observed_at": "2026-06-14T00:00:00Z",
+  "proof_band_path": "form/form-stdlib/tests/native-training-receipt-band.fk",
+  "receipt_schema": "form_native_training_receipt/v1",
+  "recipe_path": "form/form-stdlib/native-training-receipt.fk",
+  "status": "active",
+  "training": {
+    "native_beats_oracle": true,
+    "next_cycle": "append a new receipt when live witness samples update weights or heldout eval",
+    "source": "Form-native receipt floor",
+    "strategy": "prototype admission over summary feature vectors"
+  },
+  "validation": {
+    "commands": [
+      "python3 scripts/form_native_training_receipt.py --check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt"
+    ],
+    "status": "pass"
+  },
+  "weights": {
+    "format": "prototype-vector-list",
+    "hash": "sha256:8b34af7a10d9160469d7fe3367c22b6aef0a4d762e44e80c1ea4e9492c7b04ab",
+    "rows": [
+      {
+        "label": "speech",
+        "vector": [
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "label": "music",
+        "vector": [
+          0,
+          5,
+          0
+        ]
+      },
+      {
+        "label": "quiet",
+        "vector": [
+          0,
+          0,
+          5
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk
+;
+; native-training-receipt-band - one tiny native trained artifact with weights,
+; data, eval, and receipt proof.
+;
+; Verdict 511 when the prototype weights classify heldout samples, the eval
+; counts close, and the receipt is an active native artifact that beats the
+; oracle bar named in the receipt.
+
+(do
+    (let speech (list 5 0 0))
+    (let music (list 0 5 0))
+    (let quiet (list 0 0 5))
+    (let weights
+        (list
+            (list "speech" speech)
+            (list "music" music)
+            (list "quiet" quiet)))
+    (let evals
+        (list
+            (list (ns-label (list 5 0 0) weights) "speech")
+            (list (ns-label (list 0 5 0) weights) "music")
+            (list (ns-label (list 0 0 5) weights) "quiet")
+            (list (ns-label (list 5 0 0) weights) "speech")))
+    (let receipt
+        (ntr-row
+            "form-native-nearest-shape-v0"
+            "nearest-shape-prototype"
+            "form/form-stdlib/native-training-receipt.fk"
+            "sha256:8b34af7a10d9160469d7fe3367c22b6aef0a4d762e44e80c1ea4e9492c7b04ab"
+            "sha256:bd2044ddcde57f6a5c1596dbe9749423440630dc403c781424633fda6a182047"
+            "sha256:bbd6c35cb32c6bdc350421e01115a14d7530ca0c704120394b8b196492042074"
+            1 6 4
+            (ce-correct evals)
+            (ce-wrong evals)
+            1000000
+            750000
+            "active"))
+    (let c0 (if (ntr-row? receipt) 1 0))
+    (let c1 (if (str_eq (ns-label (list 5 0 0) weights) "speech") 2 0))
+    (let c2 (if (str_eq (ns-label (list 0 5 0) weights) "music") 4 0))
+    (let c3 (if (str_eq (ns-label (list 0 0 5) weights) "quiet") 8 0))
+    (let c4 (if (eq (ce-correct evals) 4) 16 0))
+    (let c5 (if (eq (ce-wrong evals) 0) 32 0))
+    (let c6 (if (ce-passes? evals 4 0) 64 0))
+    (let c7 (if (ntr-trained? receipt) 128 0))
+    (let c8 (if (ntr-beats-oracle? receipt) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
