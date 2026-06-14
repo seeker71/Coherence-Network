@@ -1,0 +1,39 @@
+; form-cli-loop.fk — the form-cli decision loop, as a running recipe.
+;
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk
+;
+; The form-cli does what codex/claude/grok/gemini CLIs do, but local Form-native
+; FIRST and a remote LLM oracle ONLY when the internal flow state is uncertain —
+; the choice-feedback-receipt confidence is below threshold. Every oracle call is
+; captured (io-match) and learned from, so confidence rises and the oracle is
+; needed less. The flywheel: the more we use LLMs, the less we need them.
+;
+; This file composes the proven organs into that one loop:
+;   confidence (from accumulated learning)  -> route local | oracle   (this file)
+;   captured oracle call                    -> io-match learning      (io-match.fk)
+;   local lane that works, cheap, sovereign -> embodiment             (tool-embodiment.fk)
+; The richer routing layer (BML choiceReceipt metadata -> fast route vs slower
+; oracle escalation) is bml-route-choice-runtime.fk / channel-protocol-choice-floor;
+; fcl-route is the minimal confidence gate that names the same rule for the loop.
+;
+; Proven by: form-stdlib/tests/form-cli-loop-band.fk
+
+; learned confidence is the measured pass-rate of the local lane (0..100): the
+; capability it has accumulated from real usage, including oracle-taught attempts.
+(defn fcl-confidence (passes attempts)
+    (if (eq attempts 0) 0 (div (mul passes 100) attempts)))
+
+; the routing rule: run local when confident enough, else consult the oracle.
+(defn fcl-route (confidence threshold)
+    (if (ge confidence threshold) "local" "oracle"))
+
+; route directly from accumulated learning — as passes grow (oracle calls taught
+; the lane), confidence crosses the threshold and the same class flips to local.
+(defn fcl-route-learned (passes attempts threshold)
+    (fcl-route (fcl-confidence passes attempts) threshold))
+
+; the verdict over [oracle-incumbent, local-candidate]: te-embody-lanes runs the
+; proven gate — the oracle keeps the body until the local lane works, cheaply and
+; sovereignly. (build the local row with io-match's iom-candidate-row.)
+(defn fcl-verdict (oracle-row local-row)
+    (te-embody-lanes (list oracle-row local-row)))
