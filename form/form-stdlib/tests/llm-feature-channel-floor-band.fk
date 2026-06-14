@@ -1,0 +1,171 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk
+;
+; llm-feature-channel-floor-band - Form-native floor tracking for LLM-like channels.
+;
+; Floor: every high-level feature is a queryable channel row with native codec,
+; grammar, receipt, metric floor, teacher lane, native-candidate flag, floor,
+; and north-star text. Requests become native plans or explicit no-plan.
+;
+; North star: the full LLM feature surface becomes grammar-level Form tissue,
+; with external teachers sampled only through explicit oracle lanes and native
+; candidates promoted by heldout quality, cost, trust, sovereignty, and
+; aliveness receipts.
+;
+; Verdict 131071 when every claim lands:
+;   1      catalog-level floor and north-star declarations are present
+;   2      twenty-three LLM feature channels are known
+;   4      summarize row carries summary codecs, floor, and north star
+;   8      a passing text-summary-learning summary yields a native summarize plan
+;   16     nineteen essential LLM features are known
+;   32     every channel row carries floor and north-star text
+;   64     every channel row is a native-candidate row with a receipt shape
+;   128    tool-select and tool-execute are explicit tool/channel plans
+;   256    code-lower names the Form/BML/domain-to-host-native-ASM north-star lane
+;   512    cite-ground source oracle is a remote membrane
+;   1024   distill-retire has a stricter promotion floor
+;   2048   memory-update is explicit store+kernel with choice receipt
+;   4096   abstain/uncertainty is a first-class channel
+;   8192   speech and vision channels are present for multimodal learning
+;   16384  local LLM oracle is available for summarize
+;   32768  ready/deny metric gates work
+;   65536  unknown feature request returns explicit no-plan
+(do
+    (let catalog (lfcf-catalog))
+    (let summarize (lfcf-channel-by-name "summarize"))
+    (let code-lower (lfcf-channel-by-name "code-lower"))
+    (let distill (lfcf-channel-by-name "distill-retire"))
+    (let memory (lfcf-channel-by-name "memory-update"))
+    (let abstain (lfcf-channel-by-name "abstain-uncertainty"))
+    (let speech-transcribe (lfcf-channel-by-name "speech-transcribe"))
+    (let speech-synthesize (lfcf-channel-by-name "speech-synthesize"))
+    (let vision (lfcf-channel-by-name "vision-describe"))
+    (let good-meta
+        (tsl-meta
+            86
+            84
+            62
+            78
+            (tsl-spectrum 77 88 72 12 43 91)
+            92
+            86
+            83))
+    (let good-summary (tsl-repo-code-tool-summary good-meta))
+    (let summary-plan (lfcf-summary-plan good-summary))
+    (let tool-select-plan (lfcf-request-plan "tool-select"))
+    (let tool-execute-plan (lfcf-request-plan "tool-execute"))
+    (let no-plan (lfcf-request-plan "dream"))
+    (let cite-oracle (lfcf-oracle-for-channel "cite-ground"))
+    (let summarize-oracle (lfcf-oracle-for-channel "summarize"))
+
+    (let c0
+        (if (and
+                (gt (len (lfcf-floor)) 0)
+                (gt (len (lfcf-north-star)) 0))
+            1
+            0))
+    (let c1
+        (if (eq (len catalog) 23)
+            2
+            0))
+    (let c2
+        (if (and
+                (str_eq (lfcf-input-codec summarize) "text:tokens+citations")
+                (and
+                    (str_eq (lfcf-output-codec summarize) "summary:claims+citations")
+                    (and
+                        (gt (len (lfcf-floor-text summarize)) 0)
+                        (gt (len (lfcf-north-star-text summarize)) 0))))
+            4
+            0))
+    (let c3
+        (if (and
+                (eq (tsl-summary-pass? good-summary) 1)
+                (and
+                    (str_eq (lfcf-plan-status summary-plan) "feature/plan")
+                    (str_eq (lfcf-plan-protocol summary-plan) "kernel:call")))
+            8
+            0))
+    (let c4
+        (if (eq (lfcf-essential-known-count (lfcf-essential-names)) 19)
+            16
+            0))
+    (let c5
+        (if (eq (lfcf-all-rows-have-floor-north? catalog) 1)
+            32
+            0))
+    (let c6
+        (if (and
+                (eq (lfcf-count-native catalog) 23)
+                (eq (lfcf-count-receipt catalog) 23))
+            64
+            0))
+    (let c7
+        (if (and
+                (str_eq (lfcf-plan-protocol tool-select-plan) "tool/channel")
+                (and
+                    (str_eq (lfcf-plan-capability tool-select-plan) "cap.tool.plan")
+                    (and
+                        (str_eq (lfcf-plan-protocol tool-execute-plan) "tool/channel")
+                        (str_eq (lfcf-plan-capability tool-execute-plan) "cap.tool.execute.receipt"))))
+            128
+            0))
+    (let c8
+        (if (and
+                (str_eq (lfcf-grammar code-lower) "lowering-grammar")
+                (and
+                    (str_eq (lfcf-teacher code-lower) "code-lowering")
+                    (gt (len (lfcf-north-star-text code-lower)) 0)))
+            256
+            0))
+    (let c9
+        (if (and
+                (str_eq (oc-ev-name cite-oracle) "public-doc-search")
+                (str_eq (oc-ev-trust cite-oracle) "remote-membrane"))
+            512
+            0))
+    (let c10
+        (if (ge (lfcf-metric-floor distill) 85)
+            1024
+            0))
+    (let c11
+        (if (and
+                (str_eq (lfcf-carrier memory) "store:query+kernel:call")
+                (str_eq (lfcf-receipt memory) "choice-receipt"))
+            2048
+            0))
+    (let c12
+        (if (and
+                (str_eq (lfcf-name abstain) "abstain-uncertainty")
+                (str_eq (lfcf-output-codec abstain) "abstain-or-ask"))
+            4096
+            0))
+    (let c13
+        (if (and
+                (str_eq (lfcf-name speech-transcribe) "speech-transcribe")
+                (and
+                    (str_eq (lfcf-name speech-synthesize) "speech-synthesize")
+                    (str_eq (lfcf-name vision) "vision-describe")))
+            8192
+            0))
+    (let c14
+        (if (and
+                (str_eq (oc-ev-name summarize-oracle) "ollama-local")
+                (str_eq (oc-ev-state summarize-oracle) "installed"))
+            16384
+            0))
+    (let c15
+        (if (and
+                (eq (lfcf-channel-ready? "summarize" 82) 1)
+                (eq (lfcf-channel-ready? "summarize" 70) 0))
+            32768
+            0))
+    (let c16
+        (if (and
+                (str_eq (lfcf-plan-status no-plan) "feature/no-plan")
+                (and
+                    (str_eq (lfcf-plan-protocol no-plan) "none")
+                    (gt (len (lfcf-plan-north-star no-plan)) 0)))
+            65536
+            0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16)))

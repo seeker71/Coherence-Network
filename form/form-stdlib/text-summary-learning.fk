@@ -1,0 +1,333 @@
+; text-summary-learning.fk - Form-native text summarizer learning lane.
+;
+; Floor: source text, summary claims, citations, quality metrics, spectrum
+; metadata, oracle evidence requests, and CHOICE-RECEIPT outcomes are explicit
+; Form rows. A cell can learn summary intent, choose a summary candidate, refuse
+; below-floor summaries, and turn successful receipts back into native training
+; samples without a Python carrier or ambient LLM authority.
+;
+; North star: summarization becomes a native two-way teaching channel. Text,
+; code, proof logs, runtime events, dialogue, and memory cells lower through
+; typed summary grammars; local LLMs, remote committees, source search, and
+; optional humans are teachers; the Form-native candidate wins lane by lane when
+; it reaches enough factuality, coverage, confidence, sovereignty, trust, and
+; aliveness with fewer LLM tokens, less energy, and less nutrition.
+;
+; Proven by: form-stdlib/tests/text-summary-learning-band.fk
+
+(do
+    (defn tsl-floor ()
+        (list
+            "source, summary, citation, quality, metadata, receipt, and oracle rows are Form data"
+            "a summary passes only with coverage, factuality, citations, compression, confidence, trust, sovereignty, and no contradiction"
+            "successful summary receipts become native training samples"))
+    (defn tsl-north-star ()
+        (list
+            "native summary grammars and kernels summarize text, code, proof logs, runtime events, dialogue, and memory cells"
+            "external LLMs and source-search lanes are teachers until Form-native summaries win heldout receipts"
+            "the winning summary candidate uses fewer tokens and less energy while carrying more sovereignty, trust, and aliveness"))
+
+    (defn tsl-spectrum (token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding)
+        (list token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding))
+    (defn tsl-spectrum-token-frequency (spectrum) (nth spectrum 0))
+    (defn tsl-spectrum-meaning-impact (spectrum) (nth spectrum 1))
+    (defn tsl-spectrum-expression-rhythm (spectrum) (nth spectrum 2))
+    (defn tsl-spectrum-uncertainty (spectrum) (nth spectrum 3))
+    (defn tsl-spectrum-novelty (spectrum) (nth spectrum 4))
+    (defn tsl-spectrum-source-grounding (spectrum) (nth spectrum 5))
+
+    (defn tsl-meta (conviction confidence mood expression spectrum sovereignty trust aliveness)
+        (list conviction confidence mood expression spectrum sovereignty trust aliveness))
+    (defn tsl-meta-conviction (meta) (nth meta 0))
+    (defn tsl-meta-confidence (meta) (nth meta 1))
+    (defn tsl-meta-mood (meta) (nth meta 2))
+    (defn tsl-meta-expression (meta) (nth meta 3))
+    (defn tsl-meta-spectrum (meta) (nth meta 4))
+    (defn tsl-meta-sovereignty (meta) (nth meta 5))
+    (defn tsl-meta-trust (meta) (nth meta 6))
+    (defn tsl-meta-aliveness (meta) (nth meta 7))
+    (defn tsl-meta-floor? (meta)
+        (if (and
+                (ge (tsl-meta-conviction meta) 70)
+                (and
+                    (ge (tsl-meta-confidence meta) 70)
+                    (and
+                        (ge (tsl-meta-sovereignty meta) 70)
+                        (and
+                            (ge (tsl-meta-trust meta) 70)
+                            (and
+                                (ge (tsl-meta-aliveness meta) 70)
+                                (ge (tsl-spectrum-meaning-impact (tsl-meta-spectrum meta)) 70))))))
+            1
+            0))
+
+    (defn tsl-source (source-id token-count source-claims source-citations modality floor north-star)
+        (list source-id token-count source-claims source-citations modality floor north-star))
+    (defn tsl-source-id (source) (nth source 0))
+    (defn tsl-source-token-count (source) (nth source 1))
+    (defn tsl-source-claims (source) (nth source 2))
+    (defn tsl-source-citations (source) (nth source 3))
+    (defn tsl-source-modality (source) (nth source 4))
+    (defn tsl-source-floor (source) (nth source 5))
+    (defn tsl-source-north-star (source) (nth source 6))
+
+    (defn tsl-summary (source-id candidate summary-kind summary-claims source-claims citations compression factuality coverage contradiction confidence token-cost meta floor north-star)
+        (list source-id candidate summary-kind summary-claims source-claims citations compression factuality coverage contradiction confidence token-cost meta floor north-star))
+    (defn tsl-summary-source-id (summary) (nth summary 0))
+    (defn tsl-summary-candidate (summary) (nth summary 1))
+    (defn tsl-summary-kind (summary) (nth summary 2))
+    (defn tsl-summary-claims (summary) (nth summary 3))
+    (defn tsl-summary-source-claims (summary) (nth summary 4))
+    (defn tsl-summary-citations (summary) (nth summary 5))
+    (defn tsl-summary-compression (summary) (nth summary 6))
+    (defn tsl-summary-factuality (summary) (nth summary 7))
+    (defn tsl-summary-coverage (summary) (nth summary 8))
+    (defn tsl-summary-contradiction (summary) (nth summary 9))
+    (defn tsl-summary-confidence (summary) (nth summary 10))
+    (defn tsl-summary-token-cost (summary) (nth summary 11))
+    (defn tsl-summary-meta (summary) (nth summary 12))
+    (defn tsl-summary-floor (summary) (nth summary 13))
+    (defn tsl-summary-north-star (summary) (nth summary 14))
+    (defn tsl-summary-pass? (summary)
+        (if (and
+                (gt (tsl-summary-claims summary) 0)
+                (and
+                    (gt (tsl-summary-citations summary) 0)
+                    (and
+                        (ge (tsl-summary-compression summary) 50)
+                        (and
+                            (ge (tsl-summary-factuality summary) 80)
+                            (and
+                                (ge (tsl-summary-coverage summary) 80)
+                                (and
+                                    (eq (tsl-summary-contradiction summary) 0)
+                                    (and
+                                        (ge (tsl-summary-confidence summary) 70)
+                                        (eq (tsl-meta-floor? (tsl-summary-meta summary)) 1))))))))
+            1
+            0))
+
+    (defn tsl-summary-feature (summary)
+        (list
+            (tsl-summary-coverage summary)
+            (tsl-summary-factuality summary)
+            (tsl-summary-citations summary)
+            (if (eq (tsl-summary-contradiction summary) 0) 100 0)
+            (tsl-summary-compression summary)
+            (tsl-summary-confidence summary)
+            (tsl-meta-sovereignty (tsl-summary-meta summary))
+            (tsl-meta-trust (tsl-summary-meta summary))
+            (tsl-meta-aliveness (tsl-summary-meta summary))))
+
+    (defn tsl-sample (label feature lane)
+        (list label feature lane))
+    (defn tsl-label (sample) (nth sample 0))
+    (defn tsl-feature (sample) (nth sample 1))
+    (defn tsl-lane (sample) (nth sample 2))
+    (defn tsl-exemplar (sample)
+        (list (tsl-label sample) (tsl-feature sample)))
+    (defn tsl-learn-sample (sample model)
+        (cons (tsl-exemplar sample) model))
+    (defn tsl-learn-stream (samples model)
+        (if (eq (len samples) 0) model
+            (tsl-learn-stream
+                (tail samples)
+                (tsl-learn-sample (head samples) model))))
+    (defn tsl-device (samples)
+        (tsl-learn-stream samples (empty)))
+
+    (defn tsl-source-doc-feature () (list 9 1 1 0 2 1))
+    (defn tsl-proof-log-feature () (list 1 9 1 0 2 1))
+    (defn tsl-runtime-event-feature () (list 1 1 9 0 2 1))
+    (defn tsl-dialogue-feature () (list 1 0 1 9 2 1))
+    (defn tsl-summary-samples ()
+        (list
+            (tsl-sample "summary:source-doc" (tsl-source-doc-feature) "text:source-doc")
+            (tsl-sample "summary:proof-log" (tsl-proof-log-feature) "text:proof-log")
+            (tsl-sample "summary:runtime-events" (tsl-runtime-event-feature) "text:runtime-events")
+            (tsl-sample "summary:dialogue" (tsl-dialogue-feature) "text:dialogue")))
+    (defn tsl-summary-model ()
+        (tsl-device (tsl-summary-samples)))
+    (defn tsl-row (feature label)
+        (list feature label))
+    (defn tsl-row-feature (row) (nth row 0))
+    (defn tsl-row-label (row) (nth row 1))
+    (defn tsl-pair (model row)
+        (list
+            (ns-label (tsl-row-feature row) model)
+            (tsl-row-label row)))
+    (defn tsl-eval (model rows)
+        (if (eq (len rows) 0) (empty)
+            (cons
+                (tsl-pair model (head rows))
+                (tsl-eval model (tail rows)))))
+    (defn tsl-correct (model rows)
+        (ce-correct (tsl-eval model rows)))
+
+    (defn tsl-candidate (path teacher llm-tokens energy nutrition coverage factuality confidence sovereignty trust)
+        (list path teacher llm-tokens energy nutrition coverage factuality confidence sovereignty trust))
+    (defn tsl-candidate-path (candidate) (nth candidate 0))
+    (defn tsl-candidate-teacher (candidate) (nth candidate 1))
+    (defn tsl-candidate-tokens (candidate) (nth candidate 2))
+    (defn tsl-candidate-energy (candidate) (nth candidate 3))
+    (defn tsl-candidate-nutrition (candidate) (nth candidate 4))
+    (defn tsl-candidate-coverage (candidate) (nth candidate 5))
+    (defn tsl-candidate-factuality (candidate) (nth candidate 6))
+    (defn tsl-candidate-confidence (candidate) (nth candidate 7))
+    (defn tsl-candidate-sovereignty (candidate) (nth candidate 8))
+    (defn tsl-candidate-trust (candidate) (nth candidate 9))
+    (defn tsl-candidate-ready? (candidate)
+        (if (and
+                (ge (tsl-candidate-coverage candidate) 80)
+                (and
+                    (ge (tsl-candidate-factuality candidate) 80)
+                    (and
+                        (ge (tsl-candidate-confidence candidate) 70)
+                        (and
+                            (ge (tsl-candidate-sovereignty candidate) 70)
+                            (ge (tsl-candidate-trust candidate) 70)))))
+            1
+            0))
+    (defn tsl-candidate-lower-cost? (candidate best)
+        (if (gt (tsl-candidate-tokens best) (tsl-candidate-tokens candidate))
+            1
+            (if (eq (tsl-candidate-tokens best) (tsl-candidate-tokens candidate))
+                (if (gt (tsl-candidate-energy best) (tsl-candidate-energy candidate))
+                    1
+                    (if (eq (tsl-candidate-energy best) (tsl-candidate-energy candidate))
+                        (if (gt (tsl-candidate-nutrition best) (tsl-candidate-nutrition candidate)) 1 0)
+                        0))
+                0)))
+    (defn tsl-winner-loop (candidates best)
+        (if (eq (len candidates) 0) best
+            (if (eq (tsl-candidate-ready? (head candidates)) 1)
+                (if (eq (len best) 0)
+                    (tsl-winner-loop (tail candidates) (head candidates))
+                    (if (eq (tsl-candidate-lower-cost? (head candidates) best) 1)
+                        (tsl-winner-loop (tail candidates) (head candidates))
+                        (tsl-winner-loop (tail candidates) best)))
+                (tsl-winner-loop (tail candidates) best))))
+    (defn tsl-winner (candidates)
+        (tsl-winner-loop candidates (empty)))
+    (defn tsl-summary-candidates ()
+        (list
+            (tsl-candidate "remote:model-committee" "remote-llm-teacher" 2600 80 80 95 95 92 55 76)
+            (tsl-candidate "ollama:local" "local-llm-teacher" 900 42 42 88 86 83 78 78)
+            (tsl-candidate "form-native:summary" "native-candidate" 160 12 12 86 84 81 92 84)
+            (tsl-candidate "human:optional" "human-teacher" 0 20 20 90 90 90 40 90)))
+
+    (defn tsl-choice-candidate-row (candidate category)
+        (cr-choice-candidate
+            (tsl-candidate-path candidate)
+            category
+            true
+            0
+            (tsl-candidate-confidence candidate)
+            "summary-candidate-receipt"))
+    (defn tsl-choice-candidate-rows (candidates category)
+        (if (eq (len candidates) 0) (empty)
+            (cons
+                (tsl-choice-candidate-row (head candidates) category)
+                (tsl-choice-candidate-rows (tail candidates) category))))
+    (defn tsl-choice-value (meta)
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            (tsl-meta-confidence meta)
+            (tsl-meta-sovereignty meta)
+            (tsl-meta-conviction meta)
+            (tsl-meta-trust meta)))
+    (defn tsl-summary-receipt (selected meta token-cost)
+        (cr-choice-receipt
+            "summarize-source-with-citations"
+            "text-summary-learning"
+            "summary-choice"
+            (tsl-choice-candidate-rows (tsl-summary-candidates) "summary-choice")
+            selected
+            (cr-outcome-success)
+            (tsl-meta-confidence meta)
+            (tsl-choice-value meta)
+            "selected summary carried citations, coverage, factuality, and native metadata"
+            "text-summary-learning"
+            "form/form-stdlib/text-summary-learning.fk"
+            20260614
+            token-cost
+            (cr-choice-trace 4 1 0 0)))
+    (defn tsl-receipt-feature (receipt)
+        (list
+            (cr-receipt-certainty receipt)
+            (cr-receipt-cost receipt)
+            (cr-trace-attempts (cr-receipt-trace receipt))
+            (cr-trace-successes (cr-receipt-trace receipt))
+            (cr-trace-failures (cr-receipt-trace receipt))
+            (cr-trace-silences (cr-receipt-trace receipt))))
+    (defn tsl-receipt-sample (receipt lane)
+        (tsl-sample
+            (cr-receipt-selected-path receipt)
+            (tsl-receipt-feature receipt)
+            lane))
+
+    (defn tsl-oracle-request (learning-kind)
+        (oc-evidence-for-kind (oc-evidence-catalog) learning-kind))
+    (defn tsl-plan (status request protocol capability carrier floor north-star)
+        (list status request protocol capability carrier floor north-star))
+    (defn tsl-plan-status (plan) (nth plan 0))
+    (defn tsl-plan-request-name (plan) (nth plan 1))
+    (defn tsl-plan-protocol (plan) (nth plan 2))
+    (defn tsl-plan-capability (plan) (nth plan 3))
+    (defn tsl-plan-carrier (plan) (nth plan 4))
+    (defn tsl-plan-floor (plan) (nth plan 5))
+    (defn tsl-plan-north-star (plan) (nth plan 6))
+    (defn tsl-plan-request (request)
+        (if (str_eq request "text:summarize")
+            (tsl-plan
+                "summary/plan"
+                request
+                "kernel:call"
+                "cap.summary.receipt"
+                "text-summary-learning"
+                "quality gates plus CHOICE-RECEIPT before learning"
+                "native summary grammar and kernel candidate wins heldout lanes")
+            (tsl-plan
+                "summary/no-plan"
+                request
+                "none"
+                "none"
+                "none"
+                "unknown summary request refused"
+                "add a typed request row before execution")))
+
+    (defn tsl-repo-code-tool-source ()
+        (tsl-source
+            "docs/coherence-substrate/code-tool-learning.form"
+            850
+            6
+            6
+            "text/form-doc"
+            "extract floor/north-star/proof/candidate claims with source citation"
+            "summarize every durable Form surface into claim rows that train native memory"))
+    (defn tsl-repo-code-tool-summary (meta)
+        (tsl-summary
+            "docs/coherence-substrate/code-tool-learning.form"
+            "form-native:summary"
+            "surface-summary"
+            5
+            6
+            3
+            68
+            91
+            88
+            0
+            86
+            180
+            meta
+            "claim summary cites the source and preserves the floor/north-star contract"
+            "durable docs continuously distill into native memory, retrieval, and agent guidance"))
+    (defn tsl-output (source summary receipt winner meta)
+        (list source summary receipt winner meta))
+    (defn tsl-output-source (output) (nth output 0))
+    (defn tsl-output-summary (output) (nth output 1))
+    (defn tsl-output-receipt (output) (nth output 2))
+    (defn tsl-output-winner (output) (nth output 3))
+    (defn tsl-output-meta (output) (nth output 4))
+
+    0)

@@ -1,0 +1,65 @@
+# llm-feature-channel-floor.form - native floor tracking for LLM-like feature channels
+
+(llm-feature-channel-floor
+  (lineage
+    (rests-on text-summary-learning.fk oracle-catalog.fk choice-receipt.fk tool-channel.fk loopback-learning.fk code-tool-learning.fk)
+    (recipe form/form-stdlib/llm-feature-channel-floor.fk)
+    (proof form/form-stdlib/tests/llm-feature-channel-floor-band.fk -> 131071 four-way))
+
+  (purpose
+    "Answer what a full Form-native LLM feature surface needs by making each feature a queryable language/channel row."
+    "A row carries input codec, output codec, grammar, carrier, receipt shape, metric floor, floor text, north-star text, teacher lane, and native-candidate flag."
+    "Cells and recipes can ask for a plan and receive either a native channel plan or an explicit no-plan. Unknown features do not become ambient model calls.")
+
+  (floor
+    "Twenty-three feature channels are known: summarize, retrieve, extract, classify, rank, plan, generate, revise, critique, dialogue, memory-update, tool-select, tool-execute, code-lower, translate-transduce, embed-index, cite-ground, distill-retire, abstain-uncertainty, speech-transcribe, speech-synthesize, vision-describe, and multimodal-align."
+    "Every row has floor and north-star text, a receipt shape, and a native-candidate flag."
+    "Planning is currently proven for summarize, tool-select, tool-execute, and code-lower. Unknown requests return `feature/no-plan` with floor/north-star guidance."
+    "The summarize plan composes `text-summary-learning.fk`, so a below-floor summary cannot route as ready. Metric gates prove ready and deny outcomes."
+    "Oracle mapping is explicit: summarize uses local LLM receipts, code-lower uses compiler evidence, cite-ground uses source grounding, and tool-execute uses execution-proof lanes.")
+
+  (north-star
+    "The LLM surface becomes grammar-level Form tissue: retrieval, generation, planning, code lowering, tool use, dialogue, memory, speech, vision, and multimodal alignment are native channels with typed receipts."
+    "External models are sampled teachers and judges, never invisible authority. Each oracle retires per lane only after native candidates win heldout quality, cost, sovereignty, trust, aliveness, and abstention receipts."
+    "Natural language can lower through Form/BML/domain grammar into recipes, tool plans, form binaries, host-native ASM, memory updates, and multimodal channel data."
+    "The winning candidate uses fewer LLM tokens, less energy, less nutrition, more sovereignty, more confidence, and more trust while preserving source grounding and the ability to abstain.")
+
+  (essential-channels
+    (summarize "distill text/code/proof/runtime/dialogue into cited claim rows")
+    (retrieve "find attributed source cells and ranked context")
+    (extract "turn text or trees into typed fields with coordinates")
+    (classify "label samples with confidence and heldout receipts")
+    (rank "choose branches while separating prediction feedback from trust")
+    (plan "lower goals and constraints into inspectable recipe choices")
+    (generate "produce text, patches, or artifacts with grammar and receipt")
+    (revise "repair artifacts through before/after receipts")
+    (critique "emit evidence-backed findings and uncertainty")
+    (dialogue "carry turn intent, response, state, and memory choices")
+    (memory-update "write or refuse cell updates with source, scope, and reason")
+    (tool-select "choose explicit native tool/channel plans")
+    (tool-execute "execute only from explicit plans and return receipts")
+    (code-lower "lower Form/BML/domain code toward binaries and host-native ASM")
+    (translate-transduce "move between language/codecs while preserving alignment")
+    (embed-index "turn source cells into content-addressed coordinate indexes")
+    (cite-ground "bind claims to source/date/coordinate and contradiction checks")
+    (distill-retire "promote native candidates and retire external teachers per lane")
+    (abstain-uncertainty "make asking, silence, and refusal first-class outputs")
+    (speech-transcribe "audio frames to text/confidence receipts")
+    (speech-synthesize "text/expression to audio frames and intelligibility receipts")
+    (vision-describe "video frames to object/motion/geometry receipts")
+    (multimodal-align "align audio, video, text, and sensor events by source/time/confidence"))
+
+  (planning-contract
+    (summarize kernel:call cap.summary.receipt choice-receipt)
+    (tool-select tool/channel cap.tool.plan choice-receipt)
+    (tool-execute tool/channel cap.tool.execute.receipt choice-receipt)
+    (code-lower kernel:call cap.code.lower choice-receipt)
+    (unknown feature/no-plan))
+
+  (next-physical-proof-gaps
+    (retrieve "query real substrate/store cells and record ranked-source receipts")
+    (generate "race Form-native and local/remote model candidates over real heldout tasks")
+    (tool-execute "bind actual execution receipts from tool-channel into the feature row")
+    (code-lower "prove natural-language -> Form/BML/domain grammar -> binary -> host-native ASM on real programs")
+    (speech-vision "feed real audio/video frames from the sensing lanes into the catalog rows")
+    (distill-retire "record enough heldout wins to retire an oracle on one narrow lane")))
