@@ -65,5 +65,12 @@
     (proof form/form-stdlib/tests/tool-embodiment-band.fk -> 127 four-way)
     (rule "a Form-native lane embodies — replaces the external tool — only when ctl-fo-ready? clears sovereignty/trust/confidence >= 70 AND it is cheaper than the incumbent; until its measured success rate crosses the gate, the external lane keeps the body. No assertion replaces a tool; only a measured receipt does."))
 
+  (capture-and-learn
+    "io-match.fk closes the loop the embodiment gate needs a source for: it makes real LLM/tool usage LEARNABLE instead of only paid for. One captured call is an io-match record (input-sig output-sig lane tokens outcome) — content-addressed in/out (sha256.fk over the real prompt and completion; substrate Blueprint equivalence is the richer match). A Form-native candidate is REPLAYED on the same input-sig and scored by whether it reproduces the LLM's output-sig; its match-rate becomes its trust in tool-embodiment.fk (completed = matches, failed = mismatches). A lane that learns to match — cheaper and sovereign — earns the body and replaces the LLM it learned from."
+    (recipe form/form-stdlib/io-match.fk)
+    (proof form/form-stdlib/tests/io-match-band.fk -> 31 four-way)
+    (carrier "the Mac binary channel — form-macho.fk emits the native arm64 binary — intercepts the agent's real reasoning/tool calls for input/output matching and writes io-match records; that interception carrier is authored last, the learning body is here")
+    (why "the model cost is not maintainable; switching tool and LLM use to Form-native, learned from real usage, is how we keep access to the highest-value capability when the external lane is no longer affordable"))
+
   (next-step
-    "tool-embodiment.fk turns the live runner's per-tool telemetry into a measured embodiment verdict. The remaining carrier is a read door that runs te-verdict over the current get_usage_summary() by-tool rows, then trains heldout lanes for search/edit/proof/review/deploy before routing any important flow to a Form-native candidate by default."))
+    "io-match.fk turns captured I/O into a learnable match score that feeds the embodiment gate; the remaining carrier is the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by match-rate, cost, and sovereignty before any important flow routes to them by default."))

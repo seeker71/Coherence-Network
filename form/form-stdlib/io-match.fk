@@ -1,0 +1,69 @@
+; io-match.fk — content-addressed input/output capture so LLM/tool usage becomes
+; LEARNABLE, not just paid for.
+;
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk
+;
+; Today usage is paid for and discarded: automation_usage counts tokens, the
+; learning sample carries only a feature-vector — never the actual (input,
+; output) pair. So we cannot LEARN to reproduce what the LLM did; we just pay
+; for it again. This file closes that: one captured call is an io-match record
+;   (input-sig output-sig lane tokens outcome)
+; where input-sig / output-sig are content addresses (sha256.fk over the real
+; prompt and completion bytes; structural equivalence via the substrate is the
+; richer match). The Mac binary channel (form-macho.fk emits the native arm64
+; binary) is the carrier that intercepts the agent's real reasoning/tool calls
+; and writes these records; this recipe is the body that turns them into learning.
+;
+; The bridge to embodiment: a Form-native candidate is REPLAYED on the same
+; input-sig, and scored by whether it reproduces the LLM's output-sig. Its
+; match-rate becomes its trust in the embodiment gate (tool-embodiment.fk):
+; completed = outputs that matched the LLM, failed = mismatches. A lane that
+; learns to match — cheaper (0 external tokens) and sovereign (local) — earns
+; the body and replaces the LLM it learned from. That is how we keep the
+; capability when the model cost is no longer maintainable.
+;
+; Proven by: form-stdlib/tests/io-match-band.fk
+
+; one captured call: content-addressed in/out, the lane, its cost, its outcome.
+(defn iom-record (input-sig output-sig lane tokens outcome)
+    (list input-sig output-sig lane tokens outcome))
+(defn iom-in (r) (nth r 0))
+(defn iom-out (r) (nth r 1))
+(defn iom-lane (r) (nth r 2))
+(defn iom-tokens (r) (nth r 3))
+(defn iom-outcome (r) (nth r 4))
+
+; did a candidate reproduce the recorded output? exact content match is the
+; floor; substrate Blueprint equivalence is the richer match the carrier can use.
+(defn iom-match? (candidate-out recorded-out)
+    (if (str_eq candidate-out recorded-out) 1 0))
+
+; over a candidate's outputs for ONE input, how many matched the LLM's output.
+; explicit recursion (named callee, no function-as-argument) so it crosses the
+; fourth arm.
+(defn iom-matches (recorded-out candidate-outs)
+    (if (nil? candidate-outs)
+        0
+        (add (iom-match? (head candidate-outs) recorded-out)
+             (iom-matches recorded-out (tail candidate-outs)))))
+(defn iom-attempts (candidate-outs) (len candidate-outs))
+(defn iom-mismatches (recorded-out candidate-outs)
+    (sub (iom-attempts candidate-outs) (iom-matches recorded-out candidate-outs)))
+
+; the bridge: a candidate lane's match record becomes a telemetry row the
+; embodiment gate reads — (lane locality completed failed runtime-ms) — where
+; completed = matches against the LLM, failed = mismatches. Its match-rate IS
+; its measured trust.
+(defn iom-candidate-row (lane locality recorded-out candidate-outs runtime-ms)
+    (list lane locality
+        (iom-matches recorded-out candidate-outs)
+        (iom-mismatches recorded-out candidate-outs)
+        runtime-ms))
+
+; the full verdict: given the LLM incumbent's own row and a learned candidate's
+; match record, which lane holds the body now? (te-embody-lanes runs the proven
+; gate; the LLM keeps the body until the candidate learns to match cheaply and
+; sovereignly.)
+(defn iom-embodied-path (llm-row lane locality recorded-out candidate-outs runtime-ms)
+    (te-embody-lanes
+        (list llm-row (iom-candidate-row lane locality recorded-out candidate-outs runtime-ms))))
