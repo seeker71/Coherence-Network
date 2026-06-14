@@ -1,0 +1,51 @@
+# real-mesh-training-carrier.form - real mesh training authority gate
+
+(real-mesh-training-carrier
+  (lineage
+    (rests-on android-mesh-learning.form witness-state-receipt.form native-training-receipt.fk autoresearch-loop.fk pareto.fk)
+    (recipe form/form-stdlib/real-mesh-training-carrier.fk)
+    (proof form/form-stdlib/tests/real-mesh-training-carrier-band.fk -> 65535)
+    (four-way "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-carrier"))
+
+  (purpose
+    "Stop treating tiny proof rows as training."
+    "A mesh training window becomes authority only when live resource carriers, real process receipts, full model lanes, heldout windows, label counts, and AutoML/autoresearch all pass in Form."
+    "Host tools can perform physical IO; Form owns the receipt validity, routing decision, and authority change.")
+
+  (floor
+    "At least 300 MiB captured training bytes."
+    "At least 100 MiB heldout bytes."
+    "At least 10,000 labels."
+    "Resource receipts must be live, local/consented, content-addressed, and not fixture/mock/toy/synthetic-only."
+    "Summary-only windows do not satisfy the real training gate."
+    "Process receipts must carry command, provider, model, exit code, stdout/stderr bytes, duration, and completed status."
+    "Fixture/mock/toy providers are refused."
+    "The required model lanes are speech-to-text, text-to-speech, sentiment, conviction, confidence, nl-to-nl, vision-describe, multimodal-align, automl-router, and autoresearch."
+    "A real window can emit a native-training-receipt row only when its eval rows close and beat the oracle floor."
+    "Route authority chooses native-first-with-oracle-sampling only after the real window passes; otherwise it keeps collecting real windows before authority."
+    "AutoML/autoresearch must show an improving frozen-evaluator experiment under the same real window.")
+
+  (north-star
+    "Mac and Android run continuous live witness training cycles over real local data."
+    "STT, TTS, sentiment, conviction, confidence, NL-to-NL, vision, multimodal, AutoML, and autoresearch lanes train from the same receipt grammar."
+    "Native recipes compete against sampled third-party oracles and local model teachers on heldout windows."
+    "Routing metadata learns from data size, confidence, conviction, cost, trust, sovereignty, vitality, latency, and accuracy."
+    "The dashboard, agent mesh, and recipe library read the same Form-native receipts, not sidecar scripts.")
+
+  (current-proof
+    (form-recipe "form/form-stdlib/real-mesh-training-carrier.fk")
+    (band "form/form-stdlib/tests/real-mesh-training-carrier-band.fk")
+    (manifest "form/fourth-arm-bands.txt: real-mesh-training-carrier fks 65535")
+    (verdict "PASS-4WAY real-mesh-training-carrier"))
+
+  (what-this-unblocks
+    (capture "large local raw+derived windows can be admitted as training data when consented and content-addressed")
+    (models "local STT/TTS/affect/NL/vision/multimodal/AutoML processes have one receipt contract")
+    (mesh "Mac/Android/agent organs can compare model candidates through one Form-native window")
+    (routing "choice can route native-first with oracle sampling after real heldout proof"))
+
+  (next-carrier-work
+    (physical-capture "wire Mac/Android witness services to emit this row shape continuously")
+    (model-runners "bind actual local STT, TTS, affect, NL-to-NL, vision, and multimodal process receipts")
+    (storage "chunk 100s of MiB data into content-addressed substrate/model-vitality rows")
+    (dashboard "show real-window bytes, heldout bytes, labels, processes, lanes, AutoML progress, and authority state")))
