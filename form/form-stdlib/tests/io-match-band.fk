@@ -1,4 +1,4 @@
-; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/sha256.fk form-stdlib/io-match.fk
 ;
 ; io-match-band — captured LLM/tool usage becomes learning by EFFICACY, not by
 ; copying the teacher. The learning signal generalizes: a Form-native candidate
@@ -8,12 +8,14 @@
 ; byte-match REJECTS the correct re-wording, structural Blueprint-match ACCEPTS
 ; it. That is why exact-match overfits and outcome/structural generalize.
 ;
-; Verdict 31 when every claim lands:
+; Verdict 127 when every claim lands:
 ;   1   outcome scoring: a candidate's OWN successes are counted (8 of 10), no LLM compare
 ;   2   structural match accepts same-blueprint, rejects different-blueprint
 ;   4   OVERFIT SHOWN: same node, different bytes — exact says no, structural says yes
 ;   8   outcome-default: a candidate that WORKS 8/10, local and cheap, takes the body
 ;   16  a candidate that works only 6/10 leaves the body with the LLM
+;   32  capture content-addresses real I/O: same input bytes -> same sig, different -> different
+;   64  a captured record round-trips — its outcome and blueprint read back
 (do
     (let S (cr-outcome-success))
     (let F (cr-outcome-fail))
@@ -48,4 +50,18 @@
     (let c4
         (if (str_eq (iom-embodied-path llm-row young-row) "external:claude") 16 0))
 
-    (add c0 (add c1 (add c2 (add c3 c4)))))
+    ; capture two real calls. "abc" twice (same input), and a different input.
+    (let rec-abc  (iom-capture (list 97 98 99) (list 79 75) "bp:add" "form-native:gen" 0 S))
+    (let rec-abc2 (iom-capture (list 97 98 99) (list 88)    "bp:sub" "form-native:gen" 0 F))
+    (let rec-abd  (iom-capture (list 97 98 100) (list 79 75) "bp:add" "external:claude" 60 S))
+    ; 32 — content-addressing: same input bytes -> equal sig; different input -> unequal.
+    (let c5
+        (if (and (eq (iom-sig-eq? (iom-in rec-abc) (iom-in rec-abc2)) 1)
+                 (eq (iom-sig-eq? (iom-in rec-abc) (iom-in rec-abd)) 0))
+            32 0))
+    ; 64 — a captured record round-trips: its outcome and blueprint read back.
+    (let c6
+        (if (and (str_eq (iom-outcome rec-abc) S) (str_eq (iom-bp rec-abd) "bp:add"))
+            64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
