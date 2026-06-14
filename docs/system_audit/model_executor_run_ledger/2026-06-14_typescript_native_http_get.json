@@ -1,0 +1,30 @@
+{
+  "run_id": "2026-06-14-typescript-native-http-get",
+  "thread_branch": "codex/typescript-native-http-get-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"typescript non-shell http_get carrier\"",
+    "cd form/form-kernel-ts && npm ci && npm run check",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Replaced the TypeScript kernel http_get curl projection with a worker-backed Node HTTP carrier that returns the same Form dict shape as Go/Rust: status_code, body, error, duration_ms, headers. TypeScript type-check passes after installing declared dev dependencies. The model-vitality native HTTP band remains 4095 across Go/Rust/TypeScript, and the live public probe now returns go=127 rust=127 typescript=127 with native-kernel runtime authority. Fourth-arm external HTTPS remains the named carrier gap.",
+  "source": {
+    "kind": "commit-evidence",
+    "path": "docs/system_audit/commit_evidence_2026-06-14_typescript_native_http_get.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-ts && npm ci && npm run check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+      "scripts/model_vitality_native_http_capture_probe.sh"
+    ]
+  }
+}

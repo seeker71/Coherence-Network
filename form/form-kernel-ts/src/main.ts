@@ -14,6 +14,7 @@ import {
   Frame,
   Kernel,
   serializeRecipeArtifact,
+  shutdownHTTPWorker,
   shutdownSocketWorker,
   Trace,
   walk,
@@ -244,8 +245,9 @@ async function runTrace(args: string[]): Promise<void> {
 
 main()
   .then(() => {
-    // Terminate the socket worker (if any) so the process exits promptly;
-    // its net handles otherwise keep Node's event loop alive.
+    // Terminate worker-backed native carriers so the process exits promptly;
+    // socket net handles and HTTP worker state otherwise keep the loop alive.
+    shutdownHTTPWorker();
     shutdownSocketWorker();
   })
   .catch(async (err: unknown) => {
@@ -261,6 +263,7 @@ main()
     if (tracePath !== null) {
       console.error(`form-kernel-ts: crash trace: ${tracePath}`);
     }
+    shutdownHTTPWorker();
     shutdownSocketWorker();
     process.exit(1);
   });

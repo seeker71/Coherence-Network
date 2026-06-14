@@ -1,0 +1,165 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/typescript-native-http-get-20260614",
+  "commit_scope": "Replace the TypeScript kernel http_get curl projection with a non-shell Node HTTP worker carrier and prove Go/Rust/TypeScript native HTTPS capture.",
+  "files_owned": [
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-ts/src/main.ts",
+    "form/form-stdlib/model-vitality.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_typescript_native_http_get.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form/form-kernel-ts && npm ci && npm run check",
+        "result": "pass",
+        "output": "npm ci installed declared dev dependencies; npm run check -> tsc --noEmit passed. npm audit reported 1 high severity vulnerability in dependencies but did not block type-check.",
+        "notes": "Initial npm run check failed before npm ci because tsc was absent from node_modules; npx tsc fetched the placeholder package and was not accepted as a type-check."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+        "result": "pass",
+        "output": "core.fk+json.fk+model-vitality.fk+model-vitality-native-http-band.fk -> 4095; 1 ok, 0 divergent.",
+        "kernel_scope": "3-kernel only Go/Rust/TypeScript sibling kernels; deterministic no-network grammar proof; fourth-arm external HTTP carrier is a named gap"
+      },
+      {
+        "command": "scripts/model_vitality_native_http_capture_probe.sh",
+        "result": "pass",
+        "output": "PASS native-http-capture go=127 rust=127 typescript=127 cache=.cache/model-vitality-native-http/20260614T094656Z/native-http-capture-summary.txt; PASS go api_status=200 api_capture_authority=kernel-native-http-get api_bytes=695 api_latency_ms=162 runtime_status=200 runtime_router=native-kernel runtime_handler=api_runtime_endpoints_summary runtime_python_authority=false runtime_latency_ms=93; PASS rust api_status=200 api_capture_authority=kernel-native-http-get api_bytes=695 api_latency_ms=168 runtime_status=200 runtime_router=native-kernel runtime_handler=api_runtime_endpoints_summary runtime_python_authority=false runtime_latency_ms=137; PASS typescript api_status=200 api_capture_authority=kernel-native-http-get api_bytes=695 api_latency_ms=187 runtime_status=200 runtime_router=native-kernel runtime_handler=api_runtime_endpoints_summary runtime_python_authority=false runtime_latency_ms=84; GAP fourth-arm-http-get native-carrier=missing next=fourth-kernel-channel-support"
+      }
+    ]
+  },
+  "live_native_http_probe": {
+    "status": "pass",
+    "observed_at": "2026-06-14T09:46:56Z",
+    "cache": ".cache/model-vitality-native-http/20260614T094656Z/native-http-capture-summary.txt",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "go": {
+      "verdict": 127,
+      "api_status": 200,
+      "api_capture_authority": "kernel-native-http-get",
+      "api_bytes": 695,
+      "api_latency_ms": 162,
+      "runtime_status": 200,
+      "runtime_router": "native-kernel",
+      "runtime_handler": "api_runtime_endpoints_summary",
+      "runtime_python_authority": "false",
+      "runtime_latency_ms": 93
+    },
+    "rust": {
+      "verdict": 127,
+      "api_status": 200,
+      "api_capture_authority": "kernel-native-http-get",
+      "api_bytes": 695,
+      "api_latency_ms": 168,
+      "runtime_status": 200,
+      "runtime_router": "native-kernel",
+      "runtime_handler": "api_runtime_endpoints_summary",
+      "runtime_python_authority": "false",
+      "runtime_latency_ms": 137
+    },
+    "typescript": {
+      "verdict": 127,
+      "api_status": 200,
+      "api_capture_authority": "kernel-native-http-get",
+      "api_bytes": 695,
+      "api_latency_ms": 187,
+      "runtime_status": 200,
+      "runtime_router": "native-kernel",
+      "runtime_handler": "api_runtime_endpoints_summary",
+      "runtime_python_authority": "false",
+      "runtime_latency_ms": 84
+    },
+    "named_gaps": [
+      "Fourth-arm external HTTPS channel support is still absent from this proof."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Live public endpoints were read by Go/Rust/TypeScript kernel-native http_get. No deploy was performed by this branch yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local type-check, deterministic Form proof, and live Go/Rust/TypeScript native HTTPS probe passed; PR/CI and deploy catch-up still need to run after push."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "kernel-native-http-capture"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality"
+  ],
+  "task_ids": [
+    "2026-06-14-typescript-native-http-get"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095 sibling-kernel deterministic proof",
+    "scripts/model_vitality_native_http_capture_probe.sh -> Go/Rust/TypeScript kernel-native http_get public HTTPS witness",
+    ".cache/model-vitality-native-http/20260614T094656Z/native-http-capture-summary.txt"
+  ],
+  "change_files": [
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-ts/src/main.ts",
+    "form/form-stdlib/model-vitality.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_typescript_native_http_get.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_typescript_native_http_get.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The TypeScript kernel no longer routes http_get through curl. It uses a worker-backed Node HTTP client and returns the same status/body/error/duration/headers dict shape as Go and Rust, allowing the model-vitality native HTTP capture proof to pass across all three sibling kernels.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "test_flows": [
+      "TypeScript type-check proves the new worker code compiles.",
+      "Focused deterministic Form band proves native HTTP capture row validation and refusal cases across Go/Rust/TypeScript.",
+      "Live public probe source-compiles core, invokes Go/Rust/TypeScript kernels, and has each kernel fetch public HTTPS with native http_get."
+    ]
+  }
+}
