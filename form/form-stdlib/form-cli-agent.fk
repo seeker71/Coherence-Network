@@ -64,3 +64,104 @@
 
 ; a step is sovereign (no external tokens) when its lane is local.
 (defn fca-sovereign? (a) (if (str_eq (fca-action-lane a) "local") 1 0))
+
+; ── the loop as a NATIVE BINARY the recipe emits (foc-emit pattern) ───────────
+; The decision shape above is the body; this is the body made RUNNABLE with zero
+; Python. fa-emit returns the agent loop as a C program (a host carrier, like the
+; C ABI in form-os-channel.fk / form-macho.fk); a shell witness compiles it with
+; cc and runs it. The loop talks to the oracle by piping the prompt into a host
+; command given as argv — `ollama run <model>` (local, no key, sovereign) or
+; `claude -p` (the strong CLI you are using). No paid API endpoint, no Python.
+; The oracle answers in a line protocol the kernel can read without a JSON host
+; bridge: one of BASH / READ / WRITE / DONE per step.
+(defn fa-system ()
+    "You are form-cli, a coding agent. Reply with EXACTLY ONE line, one of:\nBASH <shell command>\nREAD <path>\nWRITE <path> ::: <content>\nDONE <final answer>\nAfter BASH/READ/WRITE you receive an OBSERVATION line; keep going until DONE. No prose, no code fences — just the one line.\n\n")
+
+(defn fa-emit ()
+    "#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/* form-cli agent loop, emitted by form-cli-agent.fk (fa-emit). The body is the
+   Form recipe that produced this; C is the host carrier, cc the named compiler.
+   Oracle = argv[2], a host command reading the prompt on stdin (ollama run <m>,
+   claude -p). Line protocol: BASH/READ/WRITE/DONE. No openrouter, no Python. */
+
+static const char *SYS =
+  \"You are form-cli, a coding agent. Reply with EXACTLY ONE line, one of:\\n\"
+  \"BASH <shell command>\\n\"
+  \"READ <path>\\n\"
+  \"WRITE <path> ::: <content>\\n\"
+  \"DONE <final answer>\\n\"
+  \"After BASH/READ/WRITE you receive an OBSERVATION line; keep going until DONE. \"
+  \"No prose, no code fences -- just the one line.\\n\\n\";
+
+static int run_oracle(const char *oracle, const char *prompt, char *out, int outsz){
+  char tmpl[] = \"/tmp/faprompt.XXXXXX\";
+  int fd = mkstemp(tmpl);
+  if(fd < 0) return -1;
+  FILE *pf = fdopen(fd, \"w\"); fputs(prompt, pf); fclose(pf);
+  char cmd[8192];
+  snprintf(cmd, sizeof cmd, \"%s < %s 2>/dev/null\", oracle, tmpl);
+  FILE *p = popen(cmd, \"r\");
+  if(!p){ remove(tmpl); return -1; }
+  int n = fread(out, 1, outsz - 1, p);
+  out[n > 0 ? n : 0] = 0;
+  pclose(p); remove(tmpl);
+  return n;
+}
+
+static void cap(const char *cmd, char *out, int outsz){
+  FILE *p = popen(cmd, \"r\");
+  if(!p){ snprintf(out, outsz, \"(popen failed)\"); return; }
+  int n = fread(out, 1, outsz - 1, p); out[n > 0 ? n : 0] = 0; pclose(p);
+}
+
+static void rd(const char *path, char *out, int outsz){
+  FILE *f = fopen(path, \"r\");
+  if(!f){ snprintf(out, outsz, \"(no such file: %s)\", path); return; }
+  int n = fread(out, 1, outsz - 1, f); out[n > 0 ? n : 0] = 0; fclose(f);
+}
+
+static void wr(const char *path, const char *content){
+  FILE *f = fopen(path, \"w\"); if(!f) return; fputs(content, f); fclose(f);
+}
+
+int main(int argc, char **argv){
+  if(argc < 3){ printf(\"usage: form-agent <task> <oracle-cmd> [max-steps]\\n\"); return 1; }
+  const char *task = argv[1];
+  const char *oracle = argv[2];
+  int maxsteps = argc > 3 ? atoi(argv[3]) : 8;
+
+  static char transcript[1 << 16];
+  static char prompt[1 << 17];
+  static char reply[1 << 15];
+  static char obs[1 << 15];
+  static char cwd[4096];
+  if(!getcwd(cwd, sizeof cwd)) cwd[0] = 0;
+  snprintf(transcript, sizeof transcript, \"TASK: %s\\n\", task);
+
+  int step;
+  for(step = 1; step <= maxsteps; step++){
+    snprintf(prompt, sizeof prompt, \"%sWorking directory: %s (use paths relative to it).\\n%s\\nNext line:\", SYS, cwd, transcript);
+    if(run_oracle(oracle, prompt, reply, sizeof reply) < 0){ printf(\"(oracle failed)\\n\"); return 3; }
+    char *line = reply;
+    while(*line == '\\n' || *line == '\\r' || *line == ' ') line++;
+    char *nl = strchr(line, '\\n'); if(nl) *nl = 0;
+    fprintf(stderr, \"[form-agent] step %d: %.70s\\n\", step, line);
+    if(strncmp(line, \"DONE\", 4) == 0){ printf(\"%s\\n\", line + 4 + (line[4] == ' ' ? 1 : 0)); return 0; }
+    else if(strncmp(line, \"BASH \", 5) == 0){ cap(line + 5, obs, sizeof obs); }
+    else if(strncmp(line, \"READ \", 5) == 0){ rd(line + 5, obs, sizeof obs); }
+    else if(strncmp(line, \"WRITE \", 6) == 0){
+      char *sep = strstr(line + 6, \" ::: \");
+      if(sep){ *sep = 0; wr(line + 6, sep + 5); snprintf(obs, sizeof obs, \"wrote %s\", line + 6); }
+      else snprintf(obs, sizeof obs, \"(WRITE needs ' ::: ' between path and content)\");
+    } else { snprintf(obs, sizeof obs, \"(unknown action; use BASH/READ/WRITE/DONE)\"); }
+    int len = strlen(transcript);
+    snprintf(transcript + len, sizeof transcript - len, \"ACTION %d: %s\\nOBSERVATION: %.1200s\\n\", step, line, obs);
+  }
+  printf(\"(reached max-steps without DONE)\\n\");
+  return 0;
+}
+")

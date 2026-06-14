@@ -23,16 +23,17 @@
   (trunk
     (loop-shape "reason -> run a tool-channel -> observe -> repeat -> answer — the same loop every agent CLI runs, so form-cli is a drop-in for the work, not just a logger.")
     (step-recipe form/form-stdlib/form-cli-agent.fk
-        "fca-next decides the SHAPE of one step (run a channel | consult the oracle | finish), composing the proven organs: fcl-route (who answers — local|oracle) + tc-plan (the named tool is a real host channel). The carrier never decides these; it serves the action this recipe returns. Proof: tests/form-cli-agent-band.fk -> 31 four-way.")
-    (channels tool-channel.fk "the tools are real named channels: bash (host:exec), read_file/write_file (host:file), search (stream:read/grep). tool-channel plans; the carrier executes the plan.")
+        "fca-next decides the SHAPE of one step (run a channel | consult the oracle | finish), composing the proven organs: fcl-route (who answers — local|oracle) + tc-plan (the named tool is a real host channel). Proof: tests/form-cli-agent-band.fk -> 31 four-way.")
+    (channels tool-channel.fk "the tools are real named channels: bash (host:exec), read/write (host:file), search (stream:read/grep). tool-channel plans the call; the emitted binary runs it.")
+    (body-is-form-the-binary-is-emitted
+        "The loop body is a Form recipe — fa-emit (form-cli-agent.fk) emits the whole loop as a native binary (C is a host carrier, like the C ABI in form-os-channel.fk; cc compiles it; the foc-emit pattern). There is no Python loop. The oracle answers in a line protocol (BASH/READ/WRITE/DONE) so the body needs no JSON host bridge. Witness: scripts/form_agent.sh emits -> compiles -> runs.")
     (oracle-ladder
-        "north-star order, the loop identical at each rung, only the backend differs:"
+        "north-star order, the loop identical at each rung, only the host command piped the prompt differs. No paid API endpoint."
         "1 form-native — a local Form recipe handles the step (the destination; empty until the lane learns)"
-        "2 ollama — a local model, no key, sovereign (the default oracle while the native lane learns — most aligned)"
-        "3 openrouter — frontier models; the auto-research 'try >= 2 models' rung"
-        "4 cli:<claude|codex|gemini|grok> — wrap an installed agent CLI: 'the cli you are using' as the oracle")
-    (running "Demonstrated live on ollama llama3.2:3b (local, no key): the loop wrote a file, read it back, finished, and captured the run — a coding agent on local hardware + local model. Bootstrap carrier scripts/form_cli.py (subcommand `agent`); the native form-macho binary running this loop directly is the destination.")
-    (every-call-learns "Each step writes an io-match row; each run's final answer is captured raw AND transmuted (training-catalog.fk). The drop-in agent IS the data source: every use fills the corpus that trains the local lane toward rung 1."))
+        "2 ollama run <model> — a local model, no key, sovereign (the mechanism runs here, though small local models are not yet strong enough for real coding)"
+        "3 claude -p / codex / gemini — the strong CLI you are already using, piped the prompt on stdin; no separate key, no metered endpoint")
+    (running "Demonstrated live: fa-emit emitted the loop as native C (compiled by cc, no Python); with `claude -p` as oracle the binary wrote a file, read it back, and finished (DONE) in three steps. The zero-clang path (form-macho.fk emits the binary directly) is the next rung.")
+    (every-call-learns "Each run is a teacher: its (request, raw, transmuted) reasoning is the training corpus (training-catalog.fk). The drop-in agent IS the data source — every use fills the corpus that trains the local lane toward rung 1."))
 
   ; ── what no other agent CLI can do (the real differentiator) ─────────────────
   ; The host-tool reflexes other models are trained into are crutches, not the
