@@ -1,0 +1,41 @@
+; cross-domain-ratio.form — one reduced ratio is one cell, across music, geometry, chemistry.
+;
+; THE ASK (Urs, 2026-06-14): the sciences side of the "single expression" — unifying
+; ratio / frequency / geometry across chemistry and harmonics.
+;
+; THE BODY ALREADY HELD MOST OF IT (read first, extend, do not duplicate):
+;   - harmonic-geometry.fk reduces intervals between the seven shapes (ng-gcd, ng-ratio-str):
+;     monad 1:1, dyad 2:1 octave, triad 3:2 fifth, tetrad 4:3 fourth, pentad 5:4 third.
+;   - synesthesia.fk proves a C-major chord (4:5:6) and an image triangle (4:5:6) dedup at
+;     ONE content-addressed cell — the substrate is the synesthete (3-kernel, node ops).
+;   - cross-domain-universal-transit.form documents exactly this combination.
+;   - field-domain-grammars.form's chemistry domain carries the molecular graph (bonds,
+;     stoichiometry) — but the ratio bridge did not yet reach it.
+;
+; THE EXTENSION  (runnable: form-stdlib/ratio-bridge.fk -> tests/ratio-bridge-band.fk 1111111, four-way)
+;
+;   Generalise the shape-internal reduction to ARBITRARY reduced ratios, add CHEMISTRY as a
+;   domain, and carry it FOUR-WAY (the cell is an integer-reduced string, no node op — so it
+;   crosses the fourth arm, where synesthesia's node content-addressing stays 3-kernel; same
+;   fact, two lanes). The single expression is the reduced ratio itself:
+;     (musical-interval 2 1) = (chemical-stoichiometry 2 1) = (geometric-proportion 2 1)
+;   — the OCTAVE, water's H:O, and a 2:1 rectangle are ONE cell. The perfect FIFTH (3:2)
+;   and a 3:2 atom ratio are one cell. A frequency ratio is an interval (880:440 = octave).
+;   Reciprocals stay distinct: 1:2 (CO2's C:O) is not the octave. Reduction folds
+;   equivalents: 6:4 -> 3:2, 8:6 -> 4:3.
+;
+; HELD IN LANE: the small-integer ratios (octave, fifth — just intonation) are exact and
+; attested; stoichiometric ratios are empirical; the claim is a shared STRUCTURE (the
+; reduced ratio), not a shared cause. Unified in structure is not unified in truth-status.
+;
+; NEXT ROWS (named): real frequencies (chakra-column.fk's 174..963 Hz, the Solfeggio set)
+; are not just-intonation integers — bridging them wants a cents / log-frequency reduction
+; or float ratio support, a named row. And the chemistry domain's bond-order and
+; stoichiometry recipes can emit ratio-cells directly, lifting molecules into the bridge.
+;
+; LINEAGE
+;   kin: lc-cross-modal-unity (same shape, many modalities — the mechanism), harmonic-
+;        geometry.fk (the reducer this reuses), synesthesia.fk (the node-lane proof),
+;        cross-domain-universal-transit.form (the documented combination), field-domain-
+;        grammars.form chemistry (the domain newly reached).
+;   source: requested by Urs 2026-06-14; the sciences side of the single expression.
