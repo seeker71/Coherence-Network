@@ -220,8 +220,12 @@
     (if (ge pos (fp-len s)) (list val pos)
     (if (eq (fp-at s pos) 41) (list val (add pos 1))
     (if (str_eq (flt-peek s pos) "let") (flt-do-let s pos fns env val)
-        (flt-do-e s (flt-expr s pos fns env) fns env)))))
-(defn flt-do-e (s ee fns env) (flt-do2 s (fp-skip s (nth ee 1)) fns env (nth ee 0)))
+        (flt-do-e s (flt-expr s pos fns env) fns env val)))))
+; A bare do-statement is an EFFECT, not dead weight: sequence the running value
+; before the new expression (t==69 walks the left for effect, returns the right),
+; so every statement fires exactly once in order and the last is the do's value.
+; The initial (fk-lit 0) sentinel rides as a harmless first left-walk.
+(defn flt-do-e (s ee fns env val) (flt-do2 s (fp-skip s (nth ee 1)) fns env (flt-sequence val (nth ee 0))))
 
 ; (let name value) inside a do — value parses under the CURRENT env, then
 ; binds for the remaining items (shadowing outer bindings by name)
@@ -422,8 +426,11 @@
     (if (eq (fp-at s pos) 41) (list fns rbodies main (add pos 1) env)
     (if (str_eq (flt-peek s pos) "defn") (flt-defn s pos fns rbodies env main)
     (if (str_eq (flt-peek s pos) "let") (flt-let s pos fns rbodies env main)
-        (flt-main s (flt-expr s pos fns env) fns rbodies env))))))
-(defn flt-main (s ee fns rbodies env) (flt-items s (nth ee 1) fns rbodies env (nth ee 0)))
+        (flt-main s (flt-expr s pos fns env) fns rbodies env main))))))
+; Top-level bare statements are effects too: sequence the running main before the
+; new expression so a do-block's intermediate statements fire once in order and
+; the last is the program value (same discipline as flt-do-e for nested do).
+(defn flt-main (s ee fns rbodies env main) (flt-items s (nth ee 1) fns rbodies env (flt-sequence main (nth ee 0))))
 
 ; (defn name (p0 p1 ...) body) — pos arrives at the form's '('. The param
 ; LIST reads whole first so the function row carries (name index arity)
