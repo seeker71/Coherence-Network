@@ -81,8 +81,11 @@ fourth_band_stem() {
 # fallback when no prelude is declared).
 fourth_band_srcs() {
     local stem="$1" band="form-stdlib/tests/$stem-band.fk" mods
+    # Drop ONLY the exact core.fk prelude (the shim mirrors it). Anchor the match
+    # to a path boundary so sibling-named modules — substrate-core.fk, bmf-core.fk
+    # — keep their place in the source list instead of vanishing as substrings.
     mods="$(grep -E '^; preludes:' "$band" 2>/dev/null | head -1 | sed 's/^; preludes://' \
-        | tr ' ' '\n' | grep -v 'core\.fk' | grep . || true)"
+        | tr ' ' '\n' | grep -vE '(^|/)core\.fk$' | grep . || true)"
     [[ -z "$mods" && -f "form-stdlib/$stem.fk" ]] && mods="form-stdlib/$stem.fk"
     printf '%s\n' $mods "$band"
 }

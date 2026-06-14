@@ -29,12 +29,13 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 guidance + Form-native executable floor): the
-# admitted manifest now contains 180 focused four-way rows after
-# android-mesh-learning passed the manifest gate. The latest completed full
-# `cd form && ./validate.sh` reading before this row reached 179 four-way bands
-# and 585 total passing workloads, with 0 residual divergent bands; refresh the
-# full aggregate on a quiet host. Literal bp registry aliases now fold through
+# Current floor (2026-06-14 content-address + durable-substrate floor): the
+# admitted manifest carries content-address and durable substrate-core among its
+# focused four-way rows. The latest completed full `cd form && ./validate.sh` on
+# this branch read 183 four-way bands and 587 total passing workloads with 0
+# residual divergent bands; concurrent sibling merges (codon, android-mesh,
+# float-complete) keep adding rows, so refresh the full aggregate on a quiet
+# host. Literal bp registry aliases now fold through
 # make_nodeid for the audit-log, hex, token, url-encode, uuid, and generic xpath
 # rows. Token's blueprint reservation now lives inside its module body so fkwu
 # executes the recipe verdict, and its fixed positional accessors use direct
@@ -55,7 +56,18 @@
 # ELF executable shape, native CLI emit, and generic metal emit through the fourth arm. Schema/tree-diff now carry explicit
 # NodeID construction/projection plus lexical top-level constant capture across
 # source modules through the fourth arm. Conditional and map lowering bands now
-# ride the same fourth-arm floor as the core and recursive lowerer. Connected
+# ride the same fourth-arm floor as the core and recursive lowerer. intern_node
+# (tag 47) is now CONTENT-ADDRESSED: a fresh intern scans the live node table and
+# returns the existing cell on a (category, children) shape match — the C image
+# of the Go kernel's byHash content address — and trivial interns (tags 43/46)
+# dedup the same way so the flattener's let-inlining re-walks stay bounded. The
+# content-address band proves same-shape identity, distinct-shape difference, and
+# node projections four-way; node_eq (tag 80) reads as structural identity. The
+# storage-durable substrate-core band makes that identity DURABLE — interning
+# through the storage port and reading the SAME content key back across a
+# functional carrier — and crosses four-way too. fourth_band_srcs anchors its
+# core.fk filter to a path boundary so sibling-named preludes (substrate-core.fk,
+# bmf-core.fk) keep their place instead of vanishing as substrings. Connected
 # tissue north star: the manifest, substrate north-star nodes, native proof-run
 # ledger, JSONL compatibility export, and commit evidence all tell the same
 # floor story. Every stdlib band is either listed here and validated four-way,
@@ -253,6 +265,22 @@ token fks 3
 url-encode fks 16
 uuid fks 15
 xpath fks 9
+
+# ── content-address lane — intern_node is content-addressed in the walker ──
+# The substrate headline (same structural shape → same NodeID) crosses the
+# fourth arm. fkwu's intern arm (tag 47) scans the live node table and returns
+# the existing cell on a (category, children) shape match — the C image of the
+# Go kernel's byHash content address; trivial interns (tags 43/46) dedup the
+# same way so the flattener's let-inlining re-walks stay bounded. node_eq (tag
+# 80) reads as structural identity. content-address proves the portable contract
+# (same-shape identity, distinct-shape difference, projections) with relative and
+# structural claims only — absolute NodeID inst counts each kernel's parse-time
+# interns and is not portable. substrate-core then makes that identity DURABLE:
+# it interns through the storage port and reads the SAME content key back across
+# a functional carrier — node content-addressing + first-class carrier dispatch
+# (storage-put → (carrier-put carrier) indirect call) both ride the fourth arm.
+content-address fks 1111111111
+substrate-core fks 11111
 ephemeris-sun fks 1111111
 lenses fks 1111111
 ephemeris-moon fks 1111111
