@@ -1,0 +1,91 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/native-proof-ledger-20260614",
+  "commit_scope": "Add a native substrate ledger shape for model executor proof runs while keeping JSONL export compatibility.",
+  "change_intent": "process_only",
+  "idea_ids": [
+    "native-proof-ledger",
+    "substrate-native-evidence",
+    "jsonl-export-cache"
+  ],
+  "spec_ids": [
+    "model-executor-proof-ledger",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "native-proof-ledger-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "native-substrate-ledger-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/system_audit/model_executor_run_ledger/README.md",
+    "docs/system_audit/model_executor_run_ledger/native-proof-ledger-20260614.json",
+    "scripts/model_executor_proof_ledger.py",
+    "api/tests/test_model_executor_proof_ledger.py",
+    "docs/system_audit/commit_evidence_2026-06-14_native_proof_ledger.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/system_audit/model_executor_run_ledger/README.md",
+    "docs/system_audit/model_executor_run_ledger/native-proof-ledger-20260614.json",
+    "scripts/model_executor_proof_ledger.py",
+    "api/tests/test_model_executor_proof_ledger.py",
+    "docs/system_audit/commit_evidence_2026-06-14_native_proof_ledger.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/system_audit/model_executor_run_ledger/native-proof-ledger-20260614.json",
+    "scripts/model_executor_proof_ledger.py",
+    "api/tests/test_model_executor_proof_ledger.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim native-proof-ledger-jsonl-to-substrate",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+      "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py"
+    ],
+    "notes": "Native ledger validation reports one valid proof-run record. JSONL export emits the compatibility row for legacy readers. Focused pytest reports 2 passed. The repo-local api/.venv/bin/pytest command was unavailable in this worktree, so validation used python3 -m pytest."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this process-only commit."
+  },
+  "phase_gate": {
+    "phase": "native-proof-ledger",
+    "gate": "Executor proof runs have a native substrate record shape and a JSONL export bridge.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Wire future proof writers to create per-run native ledger records first, then export or append JSONL only as a compatibility cache until the legacy proof contract is retired."
+  }
+}
