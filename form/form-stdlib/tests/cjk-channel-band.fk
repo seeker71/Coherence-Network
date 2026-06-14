@@ -1,0 +1,43 @@
+; tests/cjk-channel-band.fk — Chinese/Japanese symbols encode, decode, translate.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   READ: the mountain character speaks its Chinese reading                → 1
+;   READ: the same character speaks its Japanese kun reading 'yama'        → 10
+;   TRANSLATE: the three tongues of one character are one cell             → 100
+;   ENCODE: grove and forest share the tree radical (composition)          → 1000
+;   DECODE: the tree-radical address returns the whole family              → 10000
+;   PRIMITIVE: trigram binary — Qian=7 (all yang), Kun=0 (all yin),
+;     and composing yang/yin/yin bottom-up = Zhen = 4                       → 100000
+;   honest absence for an unseeded character                               → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk
+;
+
+(do
+    ;; --- 1. Chinese reading -------------------------------------------
+    (let cn-ok (if (ge (str_find (cjk-chinese-speak 1) "mountain" 0) 0) 1 0))
+
+    ;; --- 2. Japanese kun reading --------------------------------------
+    (let jp-ok (if (ge (str_find (cjk-japanese-speak 1) "yama" 0) 0) 10 0))
+
+    ;; --- 3. translate: three tongues, one cell ------------------------
+    (let tr-ok (if (eq (cjk-one-character? 1) 1) 100 0))
+
+    ;; --- 4. encode: grove and forest share the tree radical -----------
+    (let rad-ok
+        (if (eq (gc-same-cell? (cjk-tree-family) 7 (cjk-tree-family) 8) 1) 1000 0))
+
+    ;; --- 5. decode: the tree-radical family ---------------------------
+    (let fam (cjk-radical-decode (cjk-tree-radical)))
+    (let dec-ok (if (eq (len fam) 4) 10000 0))
+
+    ;; --- 6. the 0/1 primitive: trigram binary -------------------------
+    (let qian (eq (trigram-binary "qian") 7))
+    (let kun  (eq (trigram-binary "kun") 0))
+    (let zhen (eq (trigram-of (yang) (yin) (yin)) 4))
+    (let bin-ok (if qian (if kun (if zhen 100000 0) 0) 0))
+
+    ;; --- 7. honest absence --------------------------------------------
+    (let absent-ok (if (ge (str_find (cjk-chinese-speak 99) "honest absence" 0) 0) 1000000 0))
+
+    (sum (list cn-ok jp-ok tr-ok rad-ok dec-ok bin-ok absent-ok)))

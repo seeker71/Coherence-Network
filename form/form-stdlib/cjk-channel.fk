@@ -1,0 +1,131 @@
+; cjk-channel.fk — Chinese and Japanese symbols in the encode / decode / translate space.
+;
+; The question: where do Chinese and Japanese symbols sit in this engine? They sit at
+; its centre — a CJK character is the clearest "one cell, many tongues" there is, and
+; it adds the one thing the gate-numbers lacked: a character genuinely COMPOSES from
+; parts, so encoding is content-addressed composition, not just an index.
+;
+; THREE FACES OF THE SYMBOL SPACE, all riding guidance-channel.fk:
+;
+;   1. READINGS = TRANSLATE.  One character is one cell read through many tongues.
+;      The mountain glyph is Chinese "shan", Japanese on "san/sen", Japanese kun
+;      "yama", English "mountain" — DIFFERENT surfaces, ONE cell. cjk-chinese and
+;      cjk-japanese key the same character at the same address, so the engine
+;      confirms the translation by content-address (lc-cross-modal-unity). This is
+;      exactly the kanji fact: a borrowed Chinese character carries both an on'yomi
+;      (Chinese-derived sound) and a kun'yomi (native Japanese meaning-reading) —
+;      two readings of one cell.
+;
+;   2. RADICALS = ENCODE (compose).  A character is built from radicals. tree, then
+;      two trees = grove, then three trees = forest: same component composed, a new
+;      cell whose meaning derives from its parts. Characters sharing the tree radical
+;      share a radical-address, so decoding that address returns the whole family —
+;      content-addressed composition, the substrate's structure-first discipline in a
+;      3,000-year-old writing system. (Full set: the 214 Kangxi radicals, by row.)
+;
+;   3. TRIGRAMS = the 0/1 PRIMITIVE.  The I Ching's line is yin or yang — nothing or
+;      one — the substrate's first axiom (states 0/1). A trigram is a 3-bit cell, a
+;      hexagram a 6-bit cell; 2^6 = 64, the gates of iching-channel.fk. Leibniz read
+;      the Fu Xi arrangement as binary: Kun (all yin) = 0, Qian (all yang) = 7, each
+;      trigram's binary value (bottom line = high bit) IS its content-address. So the
+;      Chinese symbol system bottoms out in the same 0/1 the kernel does.
+;
+; The glyphs ride in the teaching comments; the executable strings romanize (pinyin /
+; romaji / gloss), the ASCII-safe four-way discipline gematria-channel and
+; sanskrit-channel already keep. Carrying the glyph itself in the runtime string waits
+; on proven UTF-8 string parity across the four kernels — a named next row.
+;
+; Held as documented language scholarship, reported as attested; the readings are
+; lexicographic fact, the radical families structural fact, the binary an attested
+; reading (Leibniz/Shao Yong) — never a verdict.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    ;; ================================================================
+    ;; FACE 1 — READINGS (translate): one character, many tongues
+    ;; ================================================================
+    ;; key = character id; address = 5000 + id (kept clear of the 1..64 gates).
+    ;; Chinese face: glyph (pinyin) — gloss.
+    (defn cjk-chinese ()
+        (list
+            (gc-entry 1 5001 "shan (mountain glyph) — Chinese 'shan': mountain" "lc-cross-modal-unity")
+            (gc-entry 2 5002 "shui (water glyph) — Chinese 'shui': water" "lc-cross-modal-unity")
+            (gc-entry 3 5003 "mu (tree glyph) — Chinese 'mu': tree, wood" "lc-cross-modal-unity")
+            (gc-entry 4 5004 "xin (heart glyph) — Chinese 'xin': heart, mind" "lc-cross-modal-unity")
+            (gc-entry 5 5005 "dao (way glyph) — Chinese 'dao': the way, the path, the Dao" "lc-cross-modal-unity")
+            (gc-entry 6 5006 "ai (love glyph) — Chinese 'ai': love" "lc-cross-modal-unity")))
+    ;; Japanese face: same characters, on'yomi + kun'yomi — gloss.
+    (defn cjk-japanese ()
+        (list
+            (gc-entry 1 5001 "Japanese on 'san/sen', kun 'yama' — mountain" "lc-cross-modal-unity")
+            (gc-entry 2 5002 "Japanese on 'sui', kun 'mizu' — water" "lc-cross-modal-unity")
+            (gc-entry 3 5003 "Japanese on 'boku/moku', kun 'ki' — tree, wood" "lc-cross-modal-unity")
+            (gc-entry 4 5004 "Japanese on 'shin', kun 'kokoro' — heart, mind" "lc-cross-modal-unity")
+            (gc-entry 5 5005 "Japanese on 'do/to', kun 'michi' — way, path" "lc-cross-modal-unity")
+            (gc-entry 6 5006 "Japanese on 'ai' — love" "lc-cross-modal-unity")))
+    ;; English face: the shared meaning.
+    (defn cjk-english ()
+        (list
+            (gc-entry 1 5001 "mountain" "lc-cross-modal-unity")
+            (gc-entry 2 5002 "water" "lc-cross-modal-unity")
+            (gc-entry 3 5003 "tree, wood" "lc-cross-modal-unity")
+            (gc-entry 4 5004 "heart, mind" "lc-cross-modal-unity")
+            (gc-entry 5 5005 "way, path" "lc-cross-modal-unity")
+            (gc-entry 6 5006 "love" "lc-cross-modal-unity")))
+
+    (defn cjk-chinese-speak  (id) (gc-speak (cjk-chinese) id))
+    (defn cjk-japanese-speak (id) (gc-speak (cjk-japanese) id))
+    (defn cjk-english-speak  (id) (gc-speak (cjk-english) id))
+    ;; one character read in every tongue — translation as a single call.
+    (defn cjk-read (id)
+        (list (cjk-chinese-speak id) (cjk-japanese-speak id) (cjk-english-speak id)))
+    ;; the structural fact: the three tongues are one cell (share the char address).
+    (defn cjk-one-character? (id)
+        (if (eq (gc-same-cell? (cjk-chinese) id (cjk-japanese) id) 1)
+            (if (eq (gc-same-cell? (cjk-japanese) id (cjk-english) id) 1) 1 0)
+            0))
+
+    ;; ================================================================
+    ;; FACE 2 — RADICALS (encode/compose): the tree-radical family
+    ;; ================================================================
+    ;; address 6000 = the tree radical. Characters built from it share it, so
+    ;; decoding 6000 returns the family — composition as content-addressing.
+    (defn cjk-tree-radical () 6000)
+    (defn cjk-tree-family ()
+        (list
+            (gc-entry 3 6000 "tree (one tree) — the radical itself" "lc-cross-modal-unity")
+            (gc-entry 7 6000 "grove (two trees composed) — Chinese 'lin', Japanese kun 'hayashi'" "lc-cross-modal-unity")
+            (gc-entry 8 6000 "forest (three trees composed) — Chinese 'sen', Japanese kun 'mori'" "lc-cross-modal-unity")
+            (gc-entry 9 6000 "root/origin (tree marked at the base) — Chinese 'ben', Japanese 'moto'" "lc-cross-modal-unity")))
+    (defn cjk-tree-family-speak (id) (gc-speak (cjk-tree-family) id))
+    ;; every character that composes from the tree radical (content-addressed family).
+    (defn cjk-radical-decode (radical-address)
+        (gc-equivalents (list (cjk-tree-family)) radical-address))
+
+    ;; ================================================================
+    ;; FACE 3 — TRIGRAMS: the yin/yang line is the 0/1 primitive
+    ;; ================================================================
+    ;; Fu Xi binary value, bottom line = high bit, yang = 1, yin = 0:
+    ;;   Kun 0 (000) · Gen 1 (001) · Kan 2 (010) · Xun 3 (011) ·
+    ;;   Zhen 4 (100) · Li 5 (101) · Dui 6 (110) · Qian 7 (111).
+    ;; The value IS the content-address; the hexagram is two of these (6 bits, 64).
+    (defn trigram-binary (name)
+        (if (str_eq name "kun")  0
+        (if (str_eq name "gen")  1
+        (if (str_eq name "kan")  2
+        (if (str_eq name "xun")  3
+        (if (str_eq name "zhen") 4
+        (if (str_eq name "li")   5
+        (if (str_eq name "dui")  6
+        (if (str_eq name "qian") 7 -1)))))))))
+    ;; the line is the state: yang=1 (one), yin=0 (nothing) — the substrate's axiom.
+    (defn yin () 0)
+    (defn yang () 1)
+    ;; compose three lines (bottom, middle, top) into a trigram's binary value.
+    (defn trigram-of (bottom middle top) (add (add (mul bottom 4) (mul middle 2)) top))
+
+    (defn cjk-channel-teaching () "lc-cross-modal-unity")
+
+    0)

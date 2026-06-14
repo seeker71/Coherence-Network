@@ -78,6 +78,8 @@ iching-channel fks 1111111
 celestial-pole-channel fks 1111111
 ifs-channel fks 1111111
 zodiac-channel fks 1111111
+cjk-channel fks 1111111
+channels-registry fks 1111111
 choice-receipt fks 4294967295
 choice-receipt-learning fks 255
 choice-outcome-learning fks 32767

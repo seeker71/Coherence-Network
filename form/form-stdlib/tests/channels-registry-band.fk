@@ -1,0 +1,42 @@
+; tests/channels-registry-band.fk — one query interface, asked across systems.
+;
+; A worked query session: ask different belief systems through one surface, translate
+; between them, decode an address into every face that names it.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   QUERY routes to the right system (iching 25 -> Innocence)              → 1
+;   QUERY reaches CJK (cjk-japanese 1 -> yama)                             → 10
+;   TRANSLATE across the 64 (human-design 25 == gene-keys 25)              → 100
+;   TRANSLATE a CJK character (cjk-chinese 1 == cjk-english 1)             → 1000
+;   DECODE address 25 -> three faces (iching, human-design, gene-keys)     → 10000
+;   DECODE address 5001 -> the mountain character in three tongues         → 100000
+;   the registry lists its systems, and refuses an unknown one            → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/iching-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/ifs-channel.fk form-stdlib/zodiac-channel.fk form-stdlib/cjk-channel.fk form-stdlib/channels-registry.fk
+;
+
+(do
+    ;; --- 1. query routes to the right system --------------------------
+    (let q1 (if (ge (str_find (registry-query "iching" 25) "Innocence" 0) 0) 1 0))
+
+    ;; --- 2. query reaches CJK -----------------------------------------
+    (let q2 (if (ge (str_find (registry-query "cjk-japanese" 1) "yama" 0) 0) 10 0))
+
+    ;; --- 3. translate across the 64 -----------------------------------
+    (let t1 (if (eq (registry-translate "human-design" 25 "gene-keys" 25) 1) 100 0))
+
+    ;; --- 4. translate a CJK character ---------------------------------
+    (let t2 (if (eq (registry-translate "cjk-chinese" 1 "cjk-english" 1) 1) 1000 0))
+
+    ;; --- 5. decode address 25 -> three faces of the gate --------------
+    (let d1 (if (eq (len (registry-decode 25)) 3) 10000 0))
+
+    ;; --- 6. decode address 5001 -> three tongues of one character -----
+    (let d2 (if (eq (len (registry-decode 5001)) 3) 100000 0))
+
+    ;; --- 7. lists its systems AND refuses an unknown one --------------
+    (let lists (eq (registry-coverage) 10))
+    (let refuses (ge (str_find (registry-query "tarot" 1) "unknown system" 0) 0))
+    (let s1 (if lists (if refuses 1000000 0) 0))
+
+    (sum (list q1 q2 t1 t2 d1 d2 s1)))
