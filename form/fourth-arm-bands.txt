@@ -160,6 +160,8 @@ tool-embodiment fks 127
 io-match fks 127
 training-catalog fks 31
 form-cli-loop fks 31
+form-cli-router fks 31
+form-freq-check fks 31
 text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
 android-mesh-learning fks 131071

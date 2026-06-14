@@ -391,6 +391,26 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
 
 
 @pytest.fixture(autouse=True)
+def _restore_app_routes_between_tests():
+    """Isolate the shared FastAPI app's route table.
+
+    Some tests mutate ``app.router.routes`` on the module-level app (e.g.
+    ``include_router`` / mounting a sub-app). Without restoration, the route a
+    later test resolves can shift — e.g. a request to ``/api/ping`` resolving to
+    a route whose ``.path`` is ``/ping`` — which made the runtime-provenance and
+    monitor-resolution tests order-dependent (green ~50% of CI runs). Snapshot
+    the route list before each test and restore it after, so route mutations
+    cannot leak across tests. Cheap: ``app.main`` is already imported.
+    """
+    from app.main import app
+    before = list(app.router.routes)
+    try:
+        yield
+    finally:
+        app.router.routes[:] = before
+
+
+@pytest.fixture(autouse=True)
 def _mirror_env_style_overrides_into_config(monkeypatch: pytest.MonkeyPatch) -> None:
     original_setenv = pytest.MonkeyPatch.setenv
     original_delenv = pytest.MonkeyPatch.delenv

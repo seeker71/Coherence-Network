@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 273
+**Total files**: 274
 
 | File | Purpose |
 |---|---|
@@ -107,6 +107,7 @@
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
 | [test_form_cli_ask.py](test_form_cli_ask.py) | form_cli `ask` front door: serve Form-native, route the rest, capture for learning. |
 | [test_form_cli_capture.py](test_form_cli_capture.py) | form_cli `capture` — live training catalog: request + raw + transmuted, both kept. |
+| [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
 | [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
 | [test_form_practice_runner.py](test_form_practice_runner.py) | Generic Form practice runner creates cells, recipes, and ledger entries. |

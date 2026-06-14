@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk
+;
+; form-cli-router-band — the ONE routing formula runs: two backends only
+; (form-native | subscription agent CLI, never a metered REST API), chosen by a
+; single fitness score over sovereignty/trust/capability/confidence, with the
+; flywheel emergent (capability/confidence rise -> the same request flips local).
+;
+; Verdict 31 when every claim lands:
+;   1   a capable, sovereign, trusted form-native beats the agent CLI -> local
+;   2   a form-native that cannot do it yet (capability 0) routes to the agent CLI
+;   4   THE FLYWHEEL: the same request flips agent-cli -> form-native once learning
+;       raises form-native's capability and confidence
+;   8   among capable backends the COMBINED fitness decides, not raw sovereignty:
+;       a low-trust low-confidence local still loses to the agent CLI
+;   16  capability is a HARD GATE: capability 0 loses to any capable backend,
+;       whatever its other axes
+(do
+    ; form-native lanes at different stages of learning
+    (let fn-strong (fcr-backend "form-native" 100 80 80 80))  ; fitness (200+160+80+80)/6 = 86
+    (let fn-blind  (fcr-backend "form-native" 100 100 0 100)) ; capability 0 -> fitness 0
+    (let fn-weak   (fcr-backend "form-native" 100 20 50 20))  ; fitness (200+40+50+20)/6 = 51
+    ; the subscription agent CLI: high capability + trust, lower sovereignty
+    (let cli       (fcr-backend "agent-cli"   50 90 100 100)) ; fitness (100+180+100+100)/6 = 80
+    (let cli-barely(fcr-backend "agent-cli"   0  0  10  0))   ; fitness (0+0+10+0)/6 = 1
+
+    ; 1 — a learned, sovereign form-native wins on the combined formula.
+    (let c0 (if (str_eq (fcr-route fn-strong cli) "form-native") 1 0))
+    ; 2 — a form-native that cannot do it yet routes to the agent CLI.
+    (let c1 (if (str_eq (fcr-route fn-blind cli) "agent-cli") 2 0))
+    ; 4 — the flywheel: same request, blind -> strong flips agent-cli -> form-native.
+    (let c2 (if (eq (fcr-flips-local? fn-blind fn-strong cli) 1) 4 0))
+    ; 8 — combined fitness, not raw sovereignty: a weak local still loses.
+    (let c3 (if (str_eq (fcr-route fn-weak cli) "agent-cli") 8 0))
+    ; 16 — capability hard gate: cap 0 (max everything else) loses to a barely-capable lane.
+    (let c4 (if (str_eq (fcr-route fn-blind cli-barely) "agent-cli") 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
