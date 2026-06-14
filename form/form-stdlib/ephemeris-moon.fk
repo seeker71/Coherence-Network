@@ -18,7 +18,7 @@
 ;   lambda = L' + 6.289 sin M + 1.274 sin(2D-M) + 0.658 sin 2D
 ;              + 0.214 sin 2M - 0.186 sin Ms - 0.114 sin 2F
 ;
-;   (moon-longitude y m d)     -> ecliptic longitude, integer deg in [0,360)
+;   (moon-longitude y m d)     -> ecliptic longitude, float deg in [0,360)
 ;   (moon-sign-tropical y m d) -> the Moon's Western sign
 ;   (moon-elongation y m d)    -> Moon - Sun angle: 0 new, 180 full (the lunar phase)
 ;   (moon-phase-octant y m d)  -> 0..7: 0 new, 2 first quarter, 4 full, 6 last quarter
@@ -48,18 +48,19 @@
             (add (mul -0.186 (fsin (deg2rad (moon-Ms d))))
                  (mul -0.114 (fsin (deg2rad (mul 2.0 (moon-F d))))))))))))
 
+    ;; full float, never int-truncated — the sign/gate reductions floor the precise value.
     (defn moon-longitude (y m d)
-        (round (fnorm360 (moon-longitude-raw (ephem-n y m d)))))
+        (fnorm360 (moon-longitude-raw (ephem-n y m d))))
     (defn moon-sign-tropical (y m d) (tropical-sign-of (moon-longitude y m d)))
     (defn moon-sign-sidereal (y m d) (sidereal-sign-of (moon-longitude y m d) (lahiri-ayanamsa-2000)))
 
     ;; --- lunar phase: the Moon-Sun angle, coupling to the proven Sun ----
     (defn moon-elongation (y m d)
-        (round (fnorm360 (sub (moon-longitude-raw (ephem-n y m d))
-                              (sun-longitude-raw (ephem-n y m d))))))
-    ;; phase octant 0..7 (0 new, 2 first quarter, 4 full, 6 last quarter)
+        (fnorm360 (sub (moon-longitude-raw (ephem-n y m d))
+                       (sun-longitude-raw (ephem-n y m d)))))
+    ;; phase octant 0..7 (0 new, 2 first quarter, 4 full, 6 last quarter) — float floor
     (defn moon-phase-octant (y m d)
-        (div (mod (add (moon-elongation y m d) 22) 360) 45))
+        (floor (div (mod (add (moon-elongation y m d) 22.0) 360.0) 45.0)))
 
     (defn ephemeris-moon-teaching () "lc-cross-modal-unity")
 

@@ -20,7 +20,7 @@
 
 (do
     ;; --- 1. longitude -------------------------------------------------
-    (let lon-ok (if (eq (moon-longitude 2000 1 1) 223) 1 0))
+    (let lon-ok (if (eq (round (moon-longitude 2000 1 1)) 223) 1 0))
 
     ;; --- 2. the tropical/sidereal split on the Moon -------------------
     (let trop (eq (moon-sign-tropical 2000 1 1) 7))
@@ -28,7 +28,7 @@
     (let sign-ok (if trop (if sid 10 0) 0))
 
     ;; --- 3. daily motion ~13 deg --------------------------------------
-    (let motion-ok (if (eq (moon-longitude 2000 1 2) 235) 100 0))
+    (let motion-ok (if (eq (round (moon-longitude 2000 1 2)) 235) 100 0))
 
     ;; --- 4. new moon: phase octant 0 ----------------------------------
     (let new-ok (if (eq (moon-phase-octant 2000 1 6) 0) 1000 0))
@@ -38,7 +38,7 @@
 
     ;; --- 6. full moon: octant 4, elongation ~180 ----------------------
     (let full-oct (eq (moon-phase-octant 2000 1 21) 4))
-    (let full-elong (eq (moon-elongation 2000 1 21) 184))
+    (let full-elong (eq (round (moon-elongation 2000 1 21)) 184))
     (let full-ok (if full-oct (if full-elong 100000 0) 0))
 
     ;; --- 7. last quarter: phase octant 6 ------------------------------

@@ -67,8 +67,10 @@
     ;; ayanamsa to read the fixed (sidereal) stars — so a degree that is
     ;; early Aries to a Western chart is late Pisces to a Vedic one.
     (defn lahiri-ayanamsa-2000 () 24)
-    (defn tropical-sign-of (lon) (div (mod lon 360) 30))
-    (defn sidereal-sign-of (lon ayan) (div (mod (add (sub lon ayan) 360) 360) 30))
+    ;; full-float reduction: floor the FLOAT longitude, never an int-truncated degree, so a
+    ;; body near a sign boundary lands on the right side. floor returns the integer index.
+    (defn tropical-sign-of (lon) (floor (div (mod lon 360.0) 30.0)))
+    (defn sidereal-sign-of (lon ayan) (floor (div (mod (add (sub lon ayan) 360.0) 360.0) 30.0)))
 
     ;; --- the pole star moves: who holds the pole in a given era -------
     ;; Each row is (epoch-year, attested star). Epoch = year of closest
