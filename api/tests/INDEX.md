@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 277
+**Total files**: 276
 
 | File | Purpose |
 |---|---|
@@ -105,7 +105,6 @@
 | [test_flow_reactions.py](test_flow_reactions.py) | Flow tests for reactions — emoji + comment across any entity. |
 | [test_flow_vitality.py](test_flow_vitality.py) | Flow-centric tests for the Workspace Vitality + related sensing |
 | [test_flow_workspaces.py](test_flow_workspaces.py) | Flow-centric tests for the Workspace tenant primitive. |
-| [test_form_cli_agent.py](test_form_cli_agent.py) | form_cli `agent` — the drop-in agent loop: reason -> tool-channel -> observe -> repeat. |
 | [test_form_cli_ask.py](test_form_cli_ask.py) | form_cli `ask` front door: serve Form-native, route the rest, capture for learning. |
 | [test_form_cli_capture.py](test_form_cli_capture.py) | form_cli `capture` — live training catalog: request + raw + transmuted, both kept. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
