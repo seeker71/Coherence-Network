@@ -9,9 +9,19 @@
 (form-cli-north-star
 
   (destination
-    "One native binary — the form-cli — is a coding/agent CLI on par with codex, claude, grok, and gemini, but its body is Form: recipes, grammars, and learned local candidates run first; remote LLMs are oracles of last resort, not the engine."
+    "One native binary — the form-cli — is a coding/agent CLI on par with codex, claude, grok, and gemini, and categorically beyond them (see self-extension): its body is Form: recipes, grammars, and learned local candidates run first; remote LLMs are oracles of last resort, not the engine."
     "It uses local resources as native as the host allows (form-macho/form-elf emit the runnable binary; GPU/DSP/MLX lanes are tool-channel protocols) and keeps capability choice sovereign and inspectable."
     "Its purpose is to shift LLM cost into internal learning: each oracle call is a teacher whose result is captured, so future flows of the same shape run local. Usage decreases as the body learns.")
+
+  ; ── what no other agent CLI can do (the real differentiator) ─────────────────
+  ; The host-tool reflexes other models are trained into are crutches, not the
+  ; destination. We do not make them Form-native; we transcend the need for them.
+  (self-extension
+    "Does its own math and runs its own code. An LLM reaches for python to do math because it cannot do math itself; the form-cli does math directly in Form (format-arith.fk, trig.fk, tensor-quant.fk) and runs and JITs code and specs natively (jit-lower.fk, jit-tensor-emit.fk). There is no python excuse and no external interpreter to shell to."
+    "Grows its own tools. It can craft a tool on the fly for a repeated task — author it as a Form recipe, content-address it, and persist it as a durable substrate cell that crosses session boundaries (the offer/expansion channel form-os-channel.form; recipes are content-addressed cells, durable by construction). The tool's code lives directly in the body, not behind a foreign runtime."
+    "Mints its own building blocks. New primitives, new grammars, offer-grammars, domain grammars (grammar-as-recipe.form, field-domain-grammars.form, afferent-offer.form): the language the agent works in is itself editable by the agent."
+    "This is the categorical difference. Codex/Claude/Gemini CLIs shell to host tools each turn, cannot run code without an external interpreter, cannot author a tool that outlives the session, cannot embed tool code directly, and cannot extend their own primitives or grammar. The form-cli is a self-extending Form-native organism, not a shell over host tools."
+    (level "The building blocks are proven four-way — math, JIT, grammar-as-recipe, the offer/expansion channel, content-addressed persistence. The assembled self-extending flow (author a tool -> persist it -> reuse it next session as one live loop) is the north star this walks toward; it is not a shipped end-to-end demonstration yet."))
 
   ; ── the decision loop (running, proven) ──────────────────────────────────────
   (loop
