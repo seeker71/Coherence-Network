@@ -1,0 +1,118 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/real-mesh-training-carriers-20260615",
+  "commit_scope": "Establish the Form-native real mesh training resource/process carrier gate.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "real-mesh-training",
+    "android-mesh-learning",
+    "native-training-receipts",
+    "autoresearch-loop",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "commit-evidence-contract",
+    "agent-start-packet"
+  ],
+  "task_ids": [
+    "real-mesh-training-carrier-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-correction",
+        "meaningful-scope-demand"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@real-mesh-training-carriers-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "form-recipe-authoring",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/commit_evidence_2026-06-15_real_mesh_training_carrier.json",
+    "form/form-stdlib/real-mesh-training-carrier.fk",
+    "form/form-stdlib/tests/real-mesh-training-carrier-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/commit_evidence_2026-06-15_real_mesh_training_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/real-mesh-training-carrier.fk",
+    "form/form-stdlib/tests/real-mesh-training-carrier-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"real mesh training resource carriers\"",
+      "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-carrier",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/tests/real-mesh-training-carrier-band.fk"
+    ],
+    "notes": "real-mesh-training-carrier now PASS-4WAY at verdict 65535; focused validate output includes `fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)` and `1 ok, 0 divergent`. The band proves required STT/TTS/sentiment/conviction/confidence/NL-to-NL/vision/multimodal/AutoML/autoresearch lanes, live local resource receipts, real process receipts, >=300 MiB training bytes, >=100 MiB heldout bytes, >=10k labels, native-training-receipt projection, native-first-with-oracle-sampling route choice, AutoML/autoresearch improvement, and refusals for tiny windows, fixture providers, and summary-only capture."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Future real mesh training loops now have a Form-native authority gate instead of ad hoc small receipt rows.",
+    "public_endpoints": [
+      "n/a: Form-native carrier proof"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-carrier"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/real-mesh-training-carrier.fk",
+    "form/form-stdlib/tests/real-mesh-training-carrier-band.fk",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "form/fourth-arm-bands.txt"
+  ],
+  "phase_gate": {
+    "phase": "real-mesh-training-carrier",
+    "gate": "Real mesh training authority must require MB-scale live resource/process receipts, full model lanes, heldout windows, and AutoML/autoresearch improvement.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Wire physical Mac/Android capture and local model runners to emit this row shape continuously."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Form receipts could prove small native training artifacts and summary witness counters, but no single gate refused toy training claims across data size, process receipts, model lanes, heldout windows, and AutoML.",
+    "current_observed_floor": "A real mesh training window must satisfy >=300 MiB train bytes, >=100 MiB heldout bytes, >=10k labels, live local/consented content-addressed resources, real process receipts, ten required model lanes, native receipt projection, route choice, and AutoML/autoresearch improvement.",
+    "new_bands": [
+      "real-mesh-training-carrier -> 65535 four-way"
+    ],
+    "retuned_north_star": [
+      "continuous Mac/Android capture emits this Form row shape",
+      "local STT/TTS/affect/NL/vision/multimodal runners write process receipts",
+      "large data chunks land in substrate/model-vitality storage rows",
+      "routing authority moves only through heldout proof and AutoML/autoresearch improvement"
+    ],
+    "blocked_trials": []
+  }
+}
