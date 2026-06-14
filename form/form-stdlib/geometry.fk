@@ -1,0 +1,70 @@
+; geometry.fk — 3D geometry primitives: the computable floor of depth, shape, light, shadow.
+;
+; Under "image generation / depth / shape / light and shadow" is geometry, and geometry
+; is pure float math — so it is Form-native and four-way from the start (trig.fk's fsqrt
+; is the only transcendental needed). This is the FIRST native cell of the visual loopback
+; (visual-loopback.form): the generator side. A third-party renderer makes a frame; this
+; recipe makes the same pixel from geometry; the loopback A/B's them until the native is
+; proven. No image library, no GPU host call for the math itself.
+;
+;   vectors:  v3 vadd vsub vscale vdot vlen vnorm
+;   DEPTH:    (ray-sphere-t o d c r)  -> distance along ray d (from o) to a sphere
+;             (center c, radius r), or -1 on miss. Depth perception is "how far to the
+;             surface"; this is exactly that.
+;   LIGHT:    (lambert n l)           -> max(0, n.l): surface brightness facing a light;
+;             0 is dark (a face turned away, or in shadow).
+;   RENDER:   (render-pixel o d c r l) -> one ray-traced pixel: 0 on miss, else the
+;             Lambert shade of the lit sphere surface. Shape (the sphere's silhouette),
+;             depth (the hit), and light/shadow (the shade) in one computed pixel.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk
+;
+
+(do
+    ;; --- a 3-vector is (list x y z) ----------------------------------
+    (defn v3 (x y z) (list x y z))
+    (defn vx (v) (nth v 0))
+    (defn vy (v) (nth v 1))
+    (defn vz (v) (nth v 2))
+    (defn vadd (a b) (v3 (add (vx a) (vx b)) (add (vy a) (vy b)) (add (vz a) (vz b))))
+    (defn vsub (a b) (v3 (sub (vx a) (vx b)) (sub (vy a) (vy b)) (sub (vz a) (vz b))))
+    (defn vscale (s a) (v3 (mul s (vx a)) (mul s (vy a)) (mul s (vz a))))
+    (defn vdot (a b) (add (add (mul (vx a) (vx b)) (mul (vy a) (vy b))) (mul (vz a) (vz b))))
+    (defn vlen (a) (fsqrt (vdot a a)))
+    (defn vnorm (a) (vscale (div 1.0 (vlen a)) a))
+
+    ;; --- DEPTH: ray-sphere intersection ------------------------------
+    ;; ray origin o, UNIT direction d; sphere center c, radius r.
+    ;; oc = o - c; near root t = -(oc.d) - sqrt((oc.d)^2 - (oc.oc - r^2)).
+    ;; returns t > 0 (the depth to the front surface) or -1.0 on miss / behind.
+    (defn ray-sphere-t (o d c r)
+        (do
+            (let oc (vsub o c))
+            (let b (vdot oc d))
+            (let disc (sub (mul b b) (sub (vdot oc oc) (mul r r))))
+            (if (lt disc 0.0) -1.0
+                (do
+                    (let t (sub (sub 0.0 b) (fsqrt disc)))
+                    (if (gt t 0.0) t -1.0)))))
+
+    ;; --- LIGHT / SHADOW: Lambert shading -----------------------------
+    ;; brightness of a surface with unit normal n lit from unit direction l.
+    ;; max(0, n.l): a face turned away (or shadowed) is 0 (dark).
+    (defn lambert (n l)
+        (do (let i (vdot n l)) (if (gt i 0.0) i 0.0)))
+
+    ;; --- RENDER: one ray-traced pixel --------------------------------
+    ;; miss -> 0.0; hit -> Lambert shade at the surface point. l is the unit
+    ;; direction from the surface toward the light.
+    (defn render-pixel (o d c r l)
+        (do
+            (let t (ray-sphere-t o d c r))
+            (if (lt t 0.0) 0.0
+                (do
+                    (let p (vadd o (vscale t d)))
+                    (let n (vnorm (vsub p c)))
+                    (lambert n l)))))
+
+    (defn geometry-teaching () "lc-cross-modal-unity")
+
+    0)

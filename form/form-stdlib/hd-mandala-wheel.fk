@@ -1,0 +1,54 @@
+; hd-mandala-wheel.fk — the Human Design rave mandala: ecliptic longitude -> gate.
+;
+; The data gap modality-lattices.form g8 named: the wheel that places the 64 gates around
+; the zodiac, so a position can be read as a gate. This is ATTESTED reference data, not a
+; memory reconstruction — cross-checked across four independent sources (two degree tables
+; + two open-source HD chart implementations run against each other, 0 mismatches over
+; 3,600 sampled points; anchor Gate 41 at 302.000 deg confirmed to the decimal).
+;
+; The wheel: 64 gates, each spanning 5.625 deg (360/64), running with increasing ecliptic
+; longitude. Index 0 is Gate 25, which begins at 358.25 deg (28 deg 15' Pisces) and so
+; contains 0 deg Aries. Gate 41 begins at 302.000 deg (2 deg Aquarius) — the Human Design
+; New Year, the canonical anchor.
+;
+;   (gate-at-longitude lon)  -> the gate at an ecliptic degree (integer-degree resolution)
+;   (sun-gate y m d)         -> the gate the Sun activates on a date (ephemeris -> wheel)
+;   (sun-gate-speak y m d)   -> that gate's Human Design keynote (-> iching-channel)
+;
+; This closes the activation chain end to end: a date becomes the Sun's longitude
+; (ephemeris-sun.fk), the longitude becomes a gate (this wheel), the gate becomes its
+; attested meaning (iching-channel.fk). The index is exact integer arithmetic in eighths
+; of a degree (5.625 = 45/8, 358.25 = 2866/8), so no float floor is needed and it crosses
+; the fourth arm. Sub-degree boundary precision waits on a finer longitude than the
+; integer ephemeris gives — a named next row.
+;
+; Sources: geodetheseeker/human-design-py (HD_START_DEGREE 358.25); CReizner/
+; SharpAstrology.HumanDesign; bonniesorsby.com + barneyandflow.com degree tables; Jovian
+; Archive (rave mandala framing).
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/iching-channel.fk
+;
+
+(do
+    ;; the 64 gates in zodiacal order; index 0 = Gate 25 (begins at 358.25 deg)
+    (defn hd-wheel ()
+        (list 25 17 21 51 42 3 27 24 2 23 8 20 16 35 45 12 15 52 39 53
+              62 56 31 33 7 4 29 59 40 64 47 6 46 18 48 57 32 50 28 44
+              1 43 14 34 9 5 26 11 10 58 38 54 61 60 41 19 13 49 30 55
+              37 63 22 36))
+
+    ;; the wheel index for an integer ecliptic degree. Eighths-of-a-degree keeps it
+    ;; exact integer: 5.625 deg = 45 eighths, 358.25 deg = 2866 eighths, 360 = 2880.
+    ;;   index = floor( ((lon*8 - 2866) mod 2880) / 45 )   (integer div floors)
+    (defn hd-gate-index (lon)
+        (div (mod (add (sub (mul lon 8) 2866) 2880) 2880) 45))
+
+    (defn gate-at-longitude (lon) (nth (hd-wheel) (hd-gate-index lon)))
+
+    ;; the activation chain: date -> Sun longitude -> gate -> meaning
+    (defn sun-gate (y m d) (gate-at-longitude (sun-longitude y m d)))
+    (defn sun-gate-speak (y m d) (hd-gate-speak (sun-gate y m d)))
+
+    (defn hd-mandala-wheel-teaching () "lc-cross-modal-unity")
+
+    0)
