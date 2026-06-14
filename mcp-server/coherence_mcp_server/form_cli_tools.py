@@ -114,14 +114,59 @@ def catalog_capture(request: str, raw: str, transmuted: str, lane: str, outcome:
     return entry
 
 
-def transmute_plan(raw: str) -> dict:
-    """Transmute is a ROUTED reasoning op. Until a form-native transmuter is
-    trained, it routes to the subscription agent CLI: return the instruction + the
-    raw text for the caller (the agent) to rewrite, then capture the pair. No
-    metered API, no fake transmute done here."""
-    return {
-        "route": "agent-cli",
-        "instruction": _TRANSMUTE_INSTRUCTION,
-        "raw": raw,
-        "then": "call coherence_capture with request, raw, and your transmuted text",
-    }
+# the sovereign default reasoner for the transmute rewrite — a LOCAL model, no
+# key, no metered API. Override with FORM_CLI_TRANSMUTE_ORACLE (e.g. "claude -p"
+# to use the subscription CLI). A rewrite is light enough for a small local model.
+_TRANSMUTE_ORACLE = os.environ.get("FORM_CLI_TRANSMUTE_ORACLE", "ollama run llama3.2:3b")
+
+
+def _reason(prompt: str, oracle_cmd: str, timeout: float = 120.0) -> str:
+    """Run a reasoner — a host command reading the prompt on stdin (ollama run
+    <model> | claude -p). The subscription/local lane, never a metered endpoint."""
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as f:
+        f.write(prompt)
+        path = f.name
+    try:
+        proc = subprocess.run(f"{oracle_cmd} < {path}", shell=True,
+                              capture_output=True, text=True, timeout=timeout)
+        return (proc.stdout or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def transmute_text(raw: str, request: str = "") -> dict:
+    """Actually transmute fear/control -> discernment/opportunity. ROUTED by the
+    proven formula: a form-native transmuter when trained (capability > 0), else
+    the configured sovereign reasoner. A hook CAN reason — this is how. Returns
+    {transmuted, reasoned_by, route}. Falls back to the instruction (for the agent
+    to do it) only if no reasoner is reachable."""
+    decision = kernel_route(
+        # the form-native transmuter: capability 0 until trained from the corpus.
+        {"sovereignty": 100, "trust": 50, "capability": 0, "confidence": 0},
+        # the configured reasoner (local ollama by default; subscription CLI if set).
+        {"sovereignty": 40, "trust": 80, "capability": 100, "confidence": 80},
+    )
+    winner = decision.get("winner", "agent-cli")
+    # form-native transmuter not built yet -> reason with the configured oracle.
+    out = _reason(_TRANSMUTE_INSTRUCTION + "\n\n" + raw, _TRANSMUTE_ORACLE)
+    if out:
+        return {"transmuted": out, "reasoned_by": _TRANSMUTE_ORACLE, "route": winner}
+    # no reasoner reachable: hand the instruction back so the agent can do it.
+    return {"transmuted": "", "instruction": _TRANSMUTE_INSTRUCTION, "raw": raw,
+            "route": winner, "note": "no reasoner reachable; agent should transmute then capture"}
+
+
+def transmute_and_capture(request: str, raw: str, lane: str = "agent-cli:claude-code") -> dict:
+    """The hook's real work: transmute the turn (routed reasoner), then capture
+    the full (request, raw, transmuted) pair. If the reasoner is down, capture raw
+    so the corpus still grows."""
+    t = transmute_text(raw, request)
+    transmuted = t.get("transmuted", "")
+    by = t.get("reasoned_by", "")
+    outcome = "turn" if transmuted else "turn-raw"
+    return catalog_capture(request, raw, transmuted, f"{lane}|transmute:{by}", outcome)

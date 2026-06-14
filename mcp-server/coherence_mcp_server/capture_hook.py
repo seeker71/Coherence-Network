@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """Claude Code Stop hook — the flywheel inside every session.
 
-On every completed turn, capture the (request, response) pair into the form-cli
-training catalog. Usage becomes capability: the corpus this fills is what trains
-the form-native lane the router (form-cli-router.fk) graduates to over time.
+On every completed turn, transmute the response (fear/control -> discernment +
+opportunity) and capture the (request, raw, transmuted) pair into the form-cli
+training catalog. Usage becomes capability: the corpus trains the form-native
+lane the router (form-cli-router.fk) graduates to over time.
 
-Transmutation (fear/control -> discernment/opportunity) is a separate ROUTED
-step — a hook cannot reason — so the raw turn is captured with transmuted left
-pending (outcome "turn-raw"); a transmute pass fills it later. Carrier only: the
-catalog shape is training-catalog.fk. Never blocks the agent — any error is
-swallowed and the hook exits 0.
+A hook CAN reason — it just must not BLOCK. So this hook does NO reasoning inline:
+it extracts the turn, spawns a DETACHED worker (capture_worker.py) that transmutes
+via the routed reasoner and writes the full pair, and returns immediately. The
+agent is never slowed. Any error is swallowed; the hook exits 0.
 """
 
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # mcp-server/
@@ -67,8 +69,17 @@ def main() -> int:
     if not (user.strip() and assistant.strip()):
         return 0
     try:
-        from coherence_mcp_server import form_cli_tools as fct
-        fct.catalog_capture(user, assistant, "", "agent-cli:claude-code", "turn-raw")
+        # hand the turn to a detached worker that reasons (transmutes) + captures,
+        # so the agent is never blocked by the reasoner's latency.
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({"request": user, "raw": assistant, "lane": "agent-cli:claude-code"}, f)
+            tmp = f.name
+        worker = Path(__file__).resolve().parent / "capture_worker.py"
+        subprocess.Popen(
+            [sys.executable, str(worker), tmp],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True,  # detach so it survives the hook returning
+        )
     except Exception:  # noqa: BLE001 — never block the agent
         return 0
     return 0

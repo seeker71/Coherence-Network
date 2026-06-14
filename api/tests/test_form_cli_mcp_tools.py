@@ -42,12 +42,33 @@ def test_capture_appends_durably(tmp_path, monkeypatch):
     assert json.loads(lines[1])["request"] == "R2"
 
 
-def test_transmute_is_routed_not_faked():
-    plan = fct.transmute_plan("this is too dangerous to attempt")
-    # transmute routes to the agent (no metered API, no fake rewrite here)
-    assert plan["route"] == "agent-cli"
-    assert "opportunity" in plan["instruction"]
-    assert plan["raw"] == "this is too dangerous to attempt"
+def test_transmute_routes_and_reasons(monkeypatch):
+    # transmute is ROUTED (form-native transmuter vs the sovereign reasoner) and
+    # actually reasons — no metered API, no fake rewrite. With a reasoner present
+    # it returns transmuted text; without one it hands back the instruction.
+    monkeypatch.setattr(fct, "kernel_route", lambda a, b: {"winner": "agent-cli"})
+    monkeypatch.setattr(fct, "_reason", lambda prompt, oracle, timeout=120.0:
+                        "An opportunity with clear next data.")
+    out = fct.transmute_text("this is too dangerous to attempt")
+    assert out["route"] == "agent-cli"
+    assert out["transmuted"] == "An opportunity with clear next data."
+
+    # reasoner unreachable -> instruction handed back, never faked
+    monkeypatch.setattr(fct, "_reason", lambda *a, **k: "")
+    out2 = fct.transmute_text("this is risky")
+    assert out2["transmuted"] == ""
+    assert "opportunity" in out2["instruction"]
+
+
+def test_transmute_and_capture_writes_full_pair(tmp_path, monkeypatch):
+    monkeypatch.setattr(fct, "_CATALOG", tmp_path / "tc.jsonl")
+    monkeypatch.setattr(fct, "kernel_route", lambda a, b: {"winner": "agent-cli"})
+    monkeypatch.setattr(fct, "_reason", lambda *a, **k: "the gradient we walk")
+    e = fct.transmute_and_capture("plan it", "this blocks us", "agent-cli:test")
+    assert e["raw"] == "this blocks us"
+    assert e["transmuted"] == "the gradient we walk"
+    assert e["outcome"] == "turn"
+    assert e["raw_sig"] != e["transmuted_sig"]
 
 
 def test_route_uses_the_kernel_recipe(tmp_path):
@@ -63,8 +84,9 @@ def test_route_uses_the_kernel_recipe(tmp_path):
         assert out["winner"] == "form-native" and out["sovereign"] is True
 
 
-def test_stop_hook_captures_a_turn(tmp_path, monkeypatch):
-    monkeypatch.setattr(fct, "_CATALOG", tmp_path / "hook.jsonl")
+def test_stop_hook_spawns_detached_worker(tmp_path, monkeypatch):
+    # the hook does NOT reason inline (no blocking) — it extracts the turn and
+    # spawns a detached worker with the (request, raw) handed off in a temp file.
     transcript = tmp_path / "t.jsonl"
     transcript.write_text("\n".join(json.dumps(r) for r in [
         {"type": "user", "message": {"role": "user", "content": "plan the routing"}},
@@ -77,13 +99,27 @@ def test_stop_hook_captures_a_turn(tmp_path, monkeypatch):
     hook = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(hook)
 
+    spawned: dict = {}
+
+    def fake_popen(argv, **kwargs):
+        spawned["argv"] = argv
+        spawned["detached"] = kwargs.get("start_new_session")
+        payload = json.loads(Path(argv[2]).read_text(encoding="utf-8"))
+        spawned["payload"] = payload
+        Path(argv[2]).unlink()  # we consume the temp; worker would too
+
+        class _P:  # a stand-in process handle
+            pass
+        return _P()
+
+    monkeypatch.setattr(hook.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(sys, "stdin",
                         _Stdin(json.dumps({"transcript_path": str(transcript)})))
     assert hook.main() == 0
-    entry = json.loads((tmp_path / "hook.jsonl").read_text().strip())
-    assert entry["request"] == "plan the routing"
-    assert entry["raw"] == "Here is a risky plan."
-    assert entry["outcome"] == "turn-raw" and entry["transmuted"] == ""
+    assert spawned["detached"] is True
+    assert spawned["argv"][1].endswith("capture_worker.py")
+    assert spawned["payload"]["request"] == "plan the routing"
+    assert spawned["payload"]["raw"] == "Here is a risky plan."
 
 
 class _Stdin:

@@ -1678,7 +1678,7 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 args.get("lane", "agent-cli"), args.get("outcome", "success"),
             )
         case "coherence_transmute":
-            return fct.transmute_plan(args["raw"])
+            return fct.transmute_text(args["raw"], args.get("request", ""))
         # Ideas
         case "coherence_list_ideas":
             if args.get("search"):
