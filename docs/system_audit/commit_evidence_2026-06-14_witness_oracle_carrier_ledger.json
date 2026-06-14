@@ -1,0 +1,123 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/witness-oracle-carrier-ledger-20260614",
+  "commit_scope": "Add a live witness oracle emission ledger carrier with stale-state refusal.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "llm-feature-channel-floor"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "witness-state-receipt",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "witness-oracle-carrier-ledger-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/witness_oracle_emission_ledger.py",
+    "api/tests/test_witness_oracle_emission_ledger.py",
+    "experiments/coherence-sense-android/README.md",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "api/tests/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_oracle_carrier_ledger.json",
+    "docs/system_audit/model_executor_run_ledger/witness-oracle-carrier-ledger-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/witness_oracle_emission_ledger.py",
+    "api/tests/test_witness_oracle_emission_ledger.py",
+    "experiments/coherence-sense-android/README.md",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "api/tests/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_oracle_carrier_ledger.json",
+    "docs/system_audit/model_executor_run_ledger/witness-oracle-carrier-ledger-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "scripts/witness_oracle_emission_ledger.py",
+    "api/tests/test_witness_oracle_emission_ledger.py",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    ".cache/witness-oracle-emissions/latest.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"witness oracle carrier ledger\"",
+      "python3 -m py_compile scripts/witness_oracle_emission_ledger.py",
+      "python3 -m pytest -q api/tests/test_witness_oracle_emission_ledger.py",
+      "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1",
+      "python3 scripts/generate_repo_indexes.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk"
+    ],
+    "notes": "The carrier compiles, focused tests pass, and the witness-state Form contract still returns 16777215 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The live localhost witness probe wrote a blocked receipt because the Android stream was stale: present=false and both sampled cycles had seq=1522. That refusal is the intended behavior for non-live state."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this local carrier slice. Public pulse was breathing at start."
+  },
+  "phase_gate": {
+    "phase": "witness-oracle-carrier-ledger",
+    "gate": "Emission cycle records must be written from live witness counters and refuse stale state.",
+    "state": "local-proof-pass-with-live-stale-refusal",
+    "can_move_next_phase": false,
+    "next": "Install the oracle emission loop beside the macOS witness service and replace summary-label carriers with full STT/vision model-backed labels."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A local command now turns live witness /state summaries into source-backed oracle emission ledger records. Active states write pass records with increasing cycles; stale/non-live states write blocked receipts and exit non-zero.",
+    "public_endpoints": [
+      "local:http://localhost:8800/state",
+      "local:.cache/witness-oracle-emissions/latest.json",
+      "local:form/validate.sh:witness-state-receipt-band"
+    ],
+    "test_flows": [
+      "Two active witness state objects produce increasing native-witness-export cycles with running non-fixture oracle process rows.",
+      "A stale present=false witness state is blocked by default.",
+      "The record writer creates records/latest/events ledger files.",
+      "The existing Form witness receipt contract remains 16777215 four-way."
+    ],
+    "summary": "The established floor is a real local carrier command for witness oracle emission ledger records. Remaining gaps are service installation and full model-backed STT/vision oracle labels."
+  }
+}
