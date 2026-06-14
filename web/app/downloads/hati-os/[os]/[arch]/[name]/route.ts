@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const RELEASE_TAG = "hati-os-v0.1.0-20260613";
+const RELEASE_TAG = "hati-os-v0.2.0-20260614";
 const RELEASE_BASE = `https://github.com/seeker71/Coherence-Network/releases/download/${RELEASE_TAG}`;
 
 const ASSETS: Record<string, string> = {
