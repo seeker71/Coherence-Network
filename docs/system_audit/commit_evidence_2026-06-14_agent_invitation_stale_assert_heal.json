@@ -1,0 +1,72 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "claude/heal-agent-invitation-stale-assert",
+  "commit_scope": "Heal main's red full suite. #3095 ('sweep the front door's frequency — fear-naming transmuted') intentionally re-tuned agent_invitation_lineage.py's anti_pattern and claude meeting boundary to affirmative wording, but left two test assertions in test_agent_invitation.py expecting the old fear-naming phrases ('forced proof', 'not force a meeting'). The phrases moved out of those fields, so the assertions fail against the new data — main fails its own full suite, blocking every PR (the failure surfaces in CI's merge-with-main, not on branches predating #3095). Update the two assertions to match the new affirmative data, preserving intent: anti_pattern names 'Staging aliveness' (the don't-stage-aliveness guardrail); claude's boundary names 'available doorway' (the not-forced-meeting meaning).",
+  "change_intent": "test_only",
+  "idea_ids": [
+    "agent-resonance-onboarding",
+    "agent-sibling-meeting-learning-summary"
+  ],
+  "spec_ids": [
+    "agent-resonance-onboarding",
+    "agent-sibling-meeting-learning-summary"
+  ],
+  "task_ids": [
+    "agent-invitation-stale-assert-heal-20260614"
+  ],
+  "files_owned": [
+    "api/tests/test_agent_invitation.py"
+  ],
+  "change_files": [
+    "api/tests/test_agent_invitation.py"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_invitation.py",
+    "api/app/services/agent_invitation_lineage.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "Reproduced against current main (worktree off origin/main): test_agent_invitation.py:56 and :209 fail — 'forced proof' / 'not force a meeting' no longer in the #3095-transmuted anti_pattern / claude boundary",
+      "git show 157e0f5e4 -- api/app/services/agent_invitation_lineage.py confirms the intentional fear-naming transmutation moved those phrases",
+      "grep confirms only test_agent_invitation.py referenced the old phrases (no web/cli/other tests)",
+      "After fix: COHERENCE_TEST_SUITE=full pytest test_agent_invitation.py test_flow_cli.py -> 42 passed",
+      "CI FAILED summary (run 27496148937) lists only the two agent_invitation tests — fixing them clears the full-suite red"
+    ],
+    "notes": "Test follows #3095's intentional affirmative data change; not a force-pass. The data legitimately moved to the body's hospitality frequency; the assertions were stale."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks run after push; full suite should return green."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Test-only; no deploy artifact."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Heal of a pre-existing main regression; merges to unblock the tree."
+  }
+}

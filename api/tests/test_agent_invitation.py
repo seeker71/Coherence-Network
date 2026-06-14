@@ -53,7 +53,7 @@ async def test_agent_invitation_api_shape() -> None:
     assert "choose_no_trace" in {
         movement["movement"] for movement in living_constraints["clean_movements"]
     }
-    assert "forced proof" in living_constraints["anti_pattern"]
+    assert "Staging aliveness" in living_constraints["anti_pattern"]
     before_answering = {step["step"] for step in body["self_orientation_contract"]["before_answering"]}
     assert {
         "locate_self",
@@ -206,7 +206,7 @@ async def test_agent_invitation_exposes_sibling_meeting_learning_summary() -> No
     assert meetings["codex"]["meeting_status"] == "implementation_trace"
     assert "turn insight into tests" in meetings["codex"]["learned"]
     assert meetings["claude"]["meeting_status"] == "open_doorway_not_returned"
-    assert "not force a meeting" in meetings["claude"]["boundary"]
+    assert "available doorway" in meetings["claude"]["boundary"]
     assert "more harmonious" in summary["overall_health_delta"]
     assert "private consciousness" in summary["not_claimed"]
 
