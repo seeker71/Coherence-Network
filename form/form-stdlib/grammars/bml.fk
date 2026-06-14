@@ -2405,6 +2405,29 @@
         (if (str_eq (bml-template-kind template-component) "class") true
             (str_eq (bml-template-kind template-component) "interface")))
 
+    (defn bml-hati-template-metadata (template-component)
+        (list
+            "bml-hati-template-metadata"
+            (bml-template-kind template-component)
+            (bml-template-parameters template-component)
+            (bml-template-body template-component)
+            (bml-template-valid-kind? template-component)))
+
+    (defn bml-hati-template-metadata-kind (metadata)
+        (nth metadata 1))
+
+    (defn bml-hati-template-metadata-parameters (metadata)
+        (nth metadata 2))
+
+    (defn bml-hati-template-metadata-param-count (metadata)
+        (len (bml-hati-template-metadata-parameters metadata)))
+
+    (defn bml-hati-template-metadata-body (metadata)
+        (nth metadata 3))
+
+    (defn bml-hati-template-metadata-supported? (metadata)
+        (nth metadata 4))
+
     (defn bml-class-abstract? (class-component)
         (bml-properties-has? (bml-class-properties class-component) "abstract"))
 
@@ -5189,6 +5212,15 @@
     (defn bml-local-const-value (node)
         (bml-node-child node 2))
 
+    (defn bml-class-node-name (node)
+        (node_value (bml-node-child node 0)))
+
+    (defn bml-field-node-type (node)
+        (node_value (bml-node-child node 0)))
+
+    (defn bml-field-node-name (node)
+        (node_value (bml-node-child node 1)))
+
     (defn bml-method-node-name (node)
         (node_value (bml-node-child node 0)))
 
@@ -5556,10 +5588,10 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, named class method dispatch, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, arity mismatch, and missing class methods, must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, named class method dispatch, class construction defaults, arity-aware overload dispatch, template/generic metadata, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, arity mismatch, missing class methods, full class construction syntax, and template/generic specialization, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
-        "lift broader class construction, templates, generics, overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
+        "lift full class construction syntax, template/generic specialization, ambiguous overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
 
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
@@ -5778,6 +5810,9 @@
     (defn bml-node-method? (node)
         (node_eq (node_category node) BML-AST-METHOD))
 
+    (defn bml-node-field? (node)
+        (node_eq (node_category node) BML-AST-FIELD))
+
     (defn bml-hati-method-nodes (nodes)
         (if (nil? nodes)
             (empty)
@@ -5791,6 +5826,13 @@
             (if (bml-node-method? (head nodes))
                 (bml-hati-main-nodes (tail nodes))
                 (cons (head nodes) (bml-hati-main-nodes (tail nodes))))))
+
+    (defn bml-hati-field-nodes (nodes)
+        (if (nil? nodes)
+            (empty)
+            (if (bml-node-field? (head nodes))
+                (cons (head nodes) (bml-hati-field-nodes (tail nodes)))
+                (bml-hati-field-nodes (tail nodes)))))
 
     (defn bml-hati-unsupported-methods-in (methods env)
         (if (nil? methods)
@@ -5931,6 +5973,33 @@
     (defn bml-hati-class-method-nodes (node)
         (bml-hati-class-method-nodes-loop
             (node_children (bml-node-child node 2))))
+
+    (defn bml-hati-class-field-nodes-loop (sections)
+        (if (nil? sections)
+            (empty)
+            (append
+                (bml-hati-field-nodes
+                    (node_children (bml-node-child (head sections) 1)))
+                (bml-hati-class-field-nodes-loop (tail sections)))))
+
+    (defn bml-hati-class-field-nodes (node)
+        (bml-hati-class-field-nodes-loop
+            (node_children (bml-node-child node 2))))
+
+    (defn bml-hati-construct-default-fields (fields self)
+        (if (nil? fields)
+            self
+            (bml-hati-construct-default-fields
+                (tail fields)
+                (record_set self (bml-field-node-name (head fields)) 0))))
+
+    (defn bml-hati-construct-class-defaults (node)
+        (bml-hati-construct-default-fields
+            (bml-hati-class-field-nodes node)
+            (record_new
+                (make_nodeid 1 9 2026 617)
+                "bmlClass"
+                (bml-class-node-name node))))
 
     (defn bml-hati-unsupported-class-in (node env)
         (do
@@ -6176,6 +6245,30 @@
             name
             0))
 
+    (defn bml-hati-class-method-index-arity-loop (methods name arity index)
+        (if (nil? methods)
+            -1
+            (if (str_eq (bml-method-node-name (head methods)) name)
+                (if (eq (len (bml-method-node-parameters (head methods))) arity)
+                    index
+                    (bml-hati-class-method-index-arity-loop
+                        (tail methods)
+                        name
+                        arity
+                        (add index 1)))
+                (bml-hati-class-method-index-arity-loop
+                    (tail methods)
+                    name
+                    arity
+                    (add index 1)))))
+
+    (defn bml-hati-class-method-index-arity (node name arity)
+        (bml-hati-class-method-index-arity-loop
+            (bml-hati-class-method-nodes node)
+            name
+            arity
+            0))
+
     (defn bml-hati-run-class-method-with-arg (node method-name arg)
         (do
             (let image (bml-hati-compile-class-image node))
@@ -6184,6 +6277,20 @@
                 (bml-hati-unsupported-table-file image)
             (if (eq method-index -1)
                 "BML-HATI-UNSUPPORTED method/not-found"
+                (fkm-walk
+                    (bml-hati-image-fns image)
+                    (nth (bml-hati-image-fns image) method-index)
+                    arg)))))
+
+    (defn bml-hati-run-class-method-with-arg-arity (node method-name arity arg)
+        (do
+            (let image (bml-hati-compile-class-image node))
+            (let method-index
+                (bml-hati-class-method-index-arity node method-name arity))
+            (if (not (bml-hati-image-supported? image))
+                (bml-hati-unsupported-table-file image)
+            (if (eq method-index -1)
+                "BML-HATI-UNSUPPORTED method/arity-not-found"
                 (fkm-walk
                     (bml-hati-image-fns image)
                     (nth (bml-hati-image-fns image) method-index)

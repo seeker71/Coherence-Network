@@ -28,7 +28,7 @@
 #     one value through fk_pr)
 #
 # Current floor (2026-06-14 form lowering pass admission): full
-# `cd form && ./validate.sh` reaches 138 four-way bands and 556 total passing
+# `cd form && ./validate.sh` reaches 138 four-way bands and 559 total passing
 # workloads, with 0 residual divergent bands. BranchOutcome carries
 # ok/reject/condition results and learnable rejected evidence through the
 # fourth arm; the BML protocol/capability and runtime-choice rows ride the
