@@ -9,9 +9,10 @@
   (native-tool-proof form/form-stdlib/tests/tool-channel-band.fk -> 255)
   (native-tool-grammar-proof form/form-stdlib/tests/tool-channel-grammar-band.fk -> 255)
   (native-http-floor
-    (floor "all kernels carry non-shell plaintext external http_get; fkwu uses tag 105 with DNS/TCP/socket/read/write")
-    (north-star "all kernels carry non-shell TLS/HTTPS http_get with the same dict row shape")
-    (proof "scripts/model_vitality_native_http_capture_probe.sh -> go=63 rust=63 typescript=63 fourth=63"))
+    (floor "all kernels carry non-shell plaintext and verified TLS external http_get body capture; fkwu uses tag 105 with DNS/TCP/socket/read/write for http and runtime-loaded OpenSSL-compatible TLS for https")
+    (north-star "all kernels carry non-shell TLS/HTTPS http_get with status, body, duration, error, and response-header rows in the same dict shape")
+    (proof "scripts/model_vitality_native_http_capture_probe.sh -> http go=63 rust=63 typescript=63 fourth=63; https go=63 rust=63 typescript=63 fourth=63")
+    (gap "fourth-arm response-header row capture"))
 
   (compatibility
     (reason "older source-map entries and agents still ask for fourth-kernel.form")
