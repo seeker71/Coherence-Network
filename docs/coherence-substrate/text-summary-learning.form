@@ -4,7 +4,8 @@
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
     (recipe form/form-stdlib/text-summary-learning.fk)
-    (proof form/form-stdlib/tests/text-summary-learning-band.fk -> 262143 four-way))
+    (proof form/form-stdlib/tests/text-summary-learning-band.fk -> 262143 four-way)
+    (proof form/form-stdlib/tests/text-summary-real-source-band.fk -> 8191 three-kernel-host-io))
 
   (purpose
     "Make summarization a native learning lane instead of an opaque LLM side effect."
@@ -16,7 +17,8 @@
     "A summary passes only when it has claims, citations, compression >= 50, factuality >= 80, coverage >= 80, contradiction = 0, confidence >= 70, and metadata that clears conviction, confidence, sovereignty, trust, aliveness, and meaning/impact floors."
     "The band proves three refusals: missing citations, contradiction, and low coverage. It also proves low-trust metadata refuses learning even when the surface metrics look good."
     "A valid CHOICE-RECEIPT preserves token cost and becomes a native training sample. The current candidate race shows `form-native:summary` winning over remote-model and local-LLM teachers because it clears quality gates with lower token, energy, and nutrition cost."
-    "Oracle lanes are explicit: source grounding crosses a remote membrane, and local Ollama is a local LLM receipt teacher. Neither is ambient authority.")
+    "Oracle lanes are explicit: source grounding crosses a remote membrane, and local Ollama is a local LLM receipt teacher. Neither is ambient authority."
+    "The real-source floor reads this checked-in .form file through kernel-native `read_file`, `file_size`, and `read_file_slice`, verifies exact byte slices as citations, and only then emits the summary receipt.")
 
   (north-star
     "Every durable text surface, code patch, proof log, runtime event stream, dialogue, and memory cell can distill into native summary claim rows with source coordinates and citations."
@@ -53,6 +55,13 @@
       (selected form-native:summary)
       (token-cost 180)
       (sample summary:receipt))
+    (real-source-reader
+      (source docs/coherence-substrate/text-summary-learning.form)
+      (carrier read_file read_file_slice file_size)
+      (citations 4)
+      (token-cost 96)
+      (proof-level three-kernel-host-io)
+      (sample summary:real-source-receipt))
     (candidate-race
       (teachers remote-model-committee ollama:local human:optional)
       (native form-native:summary)
@@ -63,7 +72,7 @@
       (unknown summary/no-plan)))
 
   (next-physical-proof-gaps
-    (source-reader "load real source text through a native file/source codec instead of checking a source-id row into the band")
+    (source-reader "broaden the proven source-reader from one checked-in .form file to multiple file, store, route, and stream sources with dynamic source coordinates")
     (heldout-corpus "run real source/doc/proof/event summaries through local LLM and Form-native candidates with retained receipts")
     (memory-update "write passing summary claim rows into native memory cells with rollback and compost receipts")
     (abstention "prove low-evidence summaries ask for source grounding rather than generating plausible prose")))
