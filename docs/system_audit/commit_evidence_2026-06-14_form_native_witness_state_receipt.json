@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/form-native-witness-state-export-20260614",
+  "commit_scope": "Promote live Android/Mac witness counters into a Form-native witness-state receipt row.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "llm-feature-channel-floor"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "witness-state-receipt",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "form-native-witness-state-export-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_form_native_witness_state_receipt.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_form_native_witness_state_receipt.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "local:http://localhost:8800/state"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"form native witness state exporter\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+    ],
+    "notes": "Focused validation returned 4095 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The manifest gate returned `PASS-4WAY witness-state-receipt`. The receipt row encodes the previously observed live witness counters with integer-scaled summary metrics: frames 141, mic_rms_ppm 7045, camera_luma_ppm 28054, camera_samples 2367, gpu_samples 99, gpu_latency_us 1412, and sample_count 5084. No Python receipt helper was extended; Python use in this slice is limited to repository evidence validation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form recipe slice."
+  },
+  "phase_gate": {
+    "phase": "form-native-witness-state-receipt",
+    "gate": "Live Android/Mac witness counters must be represented as native Form rows before heldout speech, vision, multimodal, and GPU learners consume them as samples.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Wire the running Mac witness to emit native receipt cells continuously, then join the summary rows to heldout speech, vision, multimodal, and accelerator learners."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The live witness-state proof is no longer only a docs/JQ observation. A Form recipe can validate the summary-only live counters, lower them into android-mesh-learning active sample rows, route speech, vision, and multimodal lanes native-first, and still refuse to retire an oracle without enough heldout samples.",
+    "public_endpoints": [
+      "local:form/validate.sh:witness-state-receipt-band",
+      "local:form/fourth-arm-bands.txt:witness-state-receipt"
+    ],
+    "test_flows": [
+      "A live state row must be present and have frames.",
+      "Mic, camera, and GPU counters require matching active organs and nonzero summaries.",
+      "Privacy must be summary-only and reject raw-media storage.",
+      "The Form-native exporter source is accepted while the Python helper is not the source of authority.",
+      "Speech, vision, and multimodal routes become native-first only after active media samples are present.",
+      "Heldout retirement remains false for too-few samples."
+    ],
+    "summary": "The established floor is a Form-native witness-state receipt row with four-way proof. The remaining gaps are continuous native witness export, heldout learner joins, and deeper Vulkan/NNAPI/Metal accelerator receipts."
+  }
+}

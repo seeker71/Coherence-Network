@@ -1,0 +1,132 @@
+; witness-state-receipt.fk - Form-native live witness counter receipt rows.
+;
+; Floor: live Mac witness /state counters are represented as summary-only Form
+; rows that can be validated and turned into android-mesh-learning active sample
+; rows without extending the Python receipt helper.
+;
+; North star: the witness exports these rows directly into the substrate/native
+; recipe ledger, so speech, vision, multimodal, GPU, and model learners consume
+; live counters as first-class receipts instead of ad hoc JSON/JQ evidence.
+;
+; Proven by: form-stdlib/tests/witness-state-receipt-band.fk
+
+(do
+    (defn wsr-floor ()
+        (list
+            "live witness state counters have a Form-native receipt row"
+            "mic camera and gpu counters lower into summary-only active sample rows"
+            "the exporter source is Form-native; Python remains only a compatibility helper"))
+    (defn wsr-north-star ()
+        (list
+            "Mac witness writes native receipt cells continuously"
+            "Android and Mac active counters feed heldout speech vision multimodal and gpu learners"
+            "raw audio frames and buffers stay outside durable receipt storage"))
+
+    (defn wsr-state (source present frames mic-rms-ppm camera-luma-ppm camera-samples gpu-samples gpu-latency-us sample-count active-organs privacy)
+        (list source present frames mic-rms-ppm camera-luma-ppm camera-samples gpu-samples gpu-latency-us sample-count active-organs privacy))
+    (defn wsr-source (state) (nth state 0))
+    (defn wsr-present? (state) (nth state 1))
+    (defn wsr-frames (state) (nth state 2))
+    (defn wsr-mic-rms-ppm (state) (nth state 3))
+    (defn wsr-camera-luma-ppm (state) (nth state 4))
+    (defn wsr-camera-samples (state) (nth state 5))
+    (defn wsr-gpu-samples (state) (nth state 6))
+    (defn wsr-gpu-latency-us (state) (nth state 7))
+    (defn wsr-sample-count (state) (nth state 8))
+    (defn wsr-active-organs (state) (nth state 9))
+    (defn wsr-privacy (state) (nth state 10))
+
+    (defn wsr-live? (state)
+        (if (and
+                (eq (wsr-present? state) 1)
+                (gt (wsr-frames state) 0))
+            1
+            0))
+    (defn wsr-summary-only? (state)
+        (if (and
+                (not (str_eq (wsr-privacy state) ""))
+                (not (str_eq (wsr-privacy state) "raw-media")))
+            1
+            0))
+    (defn wsr-export-native? (state)
+        (if (and
+                (str_eq (wsr-source state) "form-native-witness-state")
+                (not (str_eq (wsr-source state) "python-helper")))
+            1
+            0))
+
+    (defn wsr-has-organ? (organs name)
+        (if (eq (len organs) 0) 0
+            (if (str_eq (head organs) name)
+                1
+                (wsr-has-organ? (tail organs) name))))
+    (defn wsr-mic-active? (state)
+        (if (and
+                (gt (wsr-mic-rms-ppm state) 0)
+                (eq (wsr-has-organ? (wsr-active-organs state) "mic") 1))
+            1
+            0))
+    (defn wsr-camera-active? (state)
+        (if (and
+                (gt (wsr-camera-luma-ppm state) 0)
+                (and
+                    (gt (wsr-camera-samples state) 0)
+                    (eq (wsr-has-organ? (wsr-active-organs state) "camera") 1)))
+            1
+            0))
+    (defn wsr-gpu-active? (state)
+        (if (and
+                (gt (wsr-gpu-samples state) 0)
+                (and
+                    (gt (wsr-gpu-latency-us state) 0)
+                    (eq (wsr-has-organ? (wsr-active-organs state) "gpu") 1)))
+            1
+            0))
+
+    (defn wsr-active-samples (state)
+        (list
+            (aml-mic-rms-sample (wsr-frames state) (wsr-mic-rms-ppm state))
+            (aml-camera-luma-sample (wsr-camera-samples state) (wsr-camera-luma-ppm state))
+            (aml-gpu-readback-sample (wsr-gpu-samples state) (wsr-gpu-latency-us state))))
+    (defn wsr-active-media-floor? (state)
+        (if (and
+                (eq (wsr-live? state) 1)
+                (and
+                    (eq (wsr-summary-only? state) 1)
+                    (and
+                        (eq (wsr-mic-active? state) 1)
+                        (and
+                            (eq (wsr-camera-active? state) 1)
+                            (eq (wsr-gpu-active? state) 1)))))
+            1
+            0))
+    (defn wsr-count-floor? (state min-frames min-camera min-gpu min-total)
+        (if (and
+                (ge (wsr-frames state) min-frames)
+                (and
+                    (ge (wsr-camera-samples state) min-camera)
+                    (and
+                        (ge (wsr-gpu-samples state) min-gpu)
+                        (ge (wsr-sample-count state) min-total))))
+            1
+            0))
+    (defn wsr-routes-native-first? (state)
+        (if (and
+                (str_eq (aml-active-route-choice "speech-transcribe" (wsr-active-samples state) 12 30 78) "native-first")
+                (and
+                    (str_eq (aml-active-route-choice "vision-describe" (wsr-active-samples state) 30 55 80) "native-first")
+                    (str_eq (aml-active-route-choice "multimodal-align" (wsr-active-samples state) 30 70 80) "native-first")))
+            1
+            0))
+    (defn wsr-heldout-retirement-ready? (history min-samples margin)
+        (aml-retire? history min-samples margin))
+    (defn wsr-learning-ready? (state)
+        (if (and
+                (eq (wsr-active-media-floor? state) 1)
+                (and
+                    (eq (wsr-export-native? state) 1)
+                    (eq (wsr-routes-native-first? state) 1)))
+            1
+            0))
+
+    0)
