@@ -43,17 +43,31 @@
 ;            equality; meaning preserved == convergence to the shared cell (node_eq) — so the
 ;            generator and the acceptance check share ONE substrate.
 ;
-; DATA OUTSIDE THE RECIPE (the constraint, and its honest seam):
-;   - corpus pairs (oracle output + attested seeds) AND learned weights (embeddings, denoiser,
-;     render maps) live as content-addressed SUBSTRATE CELLS through the storage ports — NOT
-;     in the .fk source. The recipe is the ENGINE; it LOADS data/weights at runtime. Editing
-;     the model = learning, not typing rows.
-;   - HONEST SEAM: the loader is a carrier (read_file / substrate node ops are fkwu standing
-;     walls today, so the loader is 3-kernel). The model's COMPUTE (encode, denoise,
-;     embedding-distance, gate) is the body and stays four-way. Carrier loads; engine proves.
+; WEIGHTS ARE DATA CELLS, NOT RECIPES — and the recipe is the engine over them:
+;   - the WEIGHTS are content-addressed DATA CELLS (the learned parameters: embeddings,
+;     denoiser, render maps). They are DATA, not recipes. The RECIPE is the engine — the
+;     forward/backward computation that READS the weight-cells. "Data outside the recipe"
+;     means exactly this: the weights are cells, the engine is the .fk. Editing the model =
+;     changing cells (learning), never typing rows of source. (The corpus — oracle output +
+;     attested seeds — is likewise DATA CELLS.)
+;   - BASE WEIGHTS REST IN ICE: frozen, immutable, SHARED, sharable WITHOUT SERIALIZATION.
+;     Because cells are content-addressed, a model is shared by referencing its weight-cell
+;     NodeIDs (like git objects by hash) — no checkpoint file format, no serialize/deserialize,
+;     no byte-transfer. Two models with overlapping weights share the overlap automatically.
+;   - LEARNING IS A PHASE CHANGE UNDER PRESSURE: nothing melts until there is new learning
+;     pressure (a loss signal / new data). Then ONLY the affected weight-cells melt ice ->
+;     water (mutable), update, and REFREEZE water -> ice as a new immutable content-addressed
+;     checkpoint. Content-addressing makes the new checkpoint SHARE every unchanged weight-cell
+;     with the prior — checkpoints are incremental and dedup'd for free; only the cells that
+;     actually changed get new NodeIDs.
+;   - HONEST SEAM: the model's COMPUTE (encode, denoise, embedding-distance, gate) is the body,
+;     four-way. Sharing weights needs NO serialization (content-address by NodeID); where
+;     cross-process persistence needs a host carrier, that carrier is 3-kernel (host-io
+;     standing wall). Carrier persists; engine proves; content-address shares.
 ;
 ; AUTO-RESEARCH + AUTO-ML (the model improves itself, no human typing rows):
-;   the architecture is recipe-data, so auto-ml SEARCHES architecture space: variants
+;   the ARCHITECTURE is the recipe (the engine — recipe-data); the WEIGHTS are data cells
+;   (above). Auto-ml SEARCHES the architecture space: variants
 ;   (denoising schedule, attractor radius, embedding arity, render map) are candidate recipes;
 ;   champion-challenger.fk A/Bs them; model-vitality.fk + translation-quality.fk score them;
 ;   colearning-retire.fk promotes the winner. field-auto-research.fk frames the open questions
