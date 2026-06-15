@@ -159,6 +159,7 @@ code-tool-learning fks 131071
 tool-embodiment fks 127
 io-match fks 127
 training-catalog fks 31
+form-train-step fks 31
 form-cli-loop fks 31
 form-cli-router fks 31
 form-freq-check fks 31

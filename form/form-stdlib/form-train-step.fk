@@ -1,0 +1,58 @@
+; form-train-step.fk — the SGD ATOM of form-native training.
+;
+; preludes: form-stdlib/core.fk
+;
+; This is the smallest real piece of learning that runs four-way in pure Form: a
+; single gradient-descent update of a one-feature linear model. It is the SEED,
+; not the tree. The genuine large build is the form-native transformer training
+; loop — the freq-check detector / the transmuter, ~100M+ parameters — which
+; learns by composing MANY of these atoms through the CHAIN RULE: backprop walks
+; the gradient of the loss back through every attention + FFN layer, and at each
+; weight it lands on exactly this shape — w := w - lr * (dLoss/dw). That backprop
+; loop over the whole network is the heavy thing; this cell is the one weight's
+; worth of it, proven in isolation so the loop can be trusted to be built from it.
+; North stars: docs/coherence-substrate/form-native-agent-shape.form (the two
+; tiers — prototype atom vs the transformer it composes into) and
+; docs/coherence-substrate/freq-check-model.form (the real ~100M+ model this
+; training loop exists to fit).
+;
+; Kernel arithmetic is INTEGER, so every real number is fixed-point at scale
+; 1000: w = 1500 means 1.5, lr = 100 means 0.1. A product of two scaled values
+; carries scale^2, so each multiply is followed by /1000 to return to scale 1000.
+; Watch the truncation: a/1000 floors toward zero, so the fixture in the band is
+; chosen so the learning terms divide cleanly and never collapse to a degenerate
+; step. (sub) goes negative for under-prediction; that is fine — form-freq-check.fk
+; uses (sub) with negatives and validates four-way, so signed arithmetic is sound.
+;
+; Proven by: form-stdlib/tests/form-train-step-band.fk
+
+; prediction: w * x, brought back to scale 1000.
+(defn fts-pred (w x)
+    (div (mul w x) 1000))
+
+; error: prediction minus target (signed — negative when under-predicting).
+(defn fts-err (w x y)
+    (sub (fts-pred w x) y))
+
+; squared-error loss, kept at scale 1000 (err is scale 1000, so err*err is
+; scale^2 -> /1000). Always >= 0; squaring restores the sign of the error.
+(defn fts-loss (w x y)
+    (div (mul (fts-err w x y) (fts-err w x y)) 1000))
+
+; gradient dLoss/dw = 2 * err * x, back to scale 1000. This is the local slope
+; backprop would deliver to this one weight inside the larger network.
+(defn fts-grad (w x y)
+    (div (mul (mul 2 (fts-err w x y)) x) 1000))
+
+; one SGD update: w := w - lr * grad. lr is scale 1000 (lr=100 -> 0.1), grad is
+; scale 1000, so lr*grad is scale^2 -> /1000 returns the scale-1000 nudge.
+(defn fts-step (w x y lr)
+    (sub w (div (mul lr (fts-grad w x y)) 1000)))
+
+; apply fts-step n times — monomorphic recursion (fourth-arm safe; no higher-order
+; map). This is one training run over a single example repeated n epochs; the real
+; loop folds this over a corpus, but the descent shape is identical.
+(defn fts-steps (w x y lr n)
+    (if (eq n 0)
+        w
+        (fts-steps (fts-step w x y lr) x y lr (sub n 1))))
