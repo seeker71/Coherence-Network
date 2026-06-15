@@ -1,0 +1,99 @@
+; form-native-agent-shape.form — the shape the borrowed loop becomes on a
+; Form-native engine, and how it cross-trains itself from a local oracle.
+;
+; form-agent-protocol.form is the FLOOR: the linear, forward-only, fixed-tool,
+; opaque-branching loop opencode/OpenClaw/Hermes converge on — built for a
+; stateless token-streaming LLM. This cell is the north star ABOVE it: the richer
+; shape our engine already has the organs for, of which the borrowed loop is the
+; degenerate projection. Reviewed against the real recipes (peers: a Form-native
+; architect read the tissue; codex/grok attempted, headless-flaky this round).
+
+(form-native-agent-shape
+
+  ; ── the shape: a signal-guided search over a content-addressed recipe tree ────
+  (shape
+    (node    "a content-addressed state — search-harness.fk h1c-state (query + fact-ledger + budget), interned to its NodeID")
+    (edge    "a realized recipe applied to a parent node -> a child node — h1c-apply (pure: parent-state, fact -> child-state); the parent is never mutated")
+    (checkpoint "just a node's NodeID — backtrack = make an earlier NodeID the frontier head; no undo needed")
+    (memoize "identical sub-paths intern to the same child NodeID — a beam re-exploring a shared prefix pays once")
+    (transcript "one root->leaf path, recovered as a PROJECTION (h1c-render-context) — not the state itself"))
+
+  (action
+    "tool_call generalizes to recipe-realize (recipe-choice-runtime.fk rcr-realize):"
+    "the realized recipe may be CHOSEN from the registry OR newly MINTED"
+    "(static-to-dynamic-cells.fk: the minted cell carries successor + proof_command +"
+    "release_gate), content-addressed and persisted so next session it is a known tool."
+    "A tool_call is the degenerate case: catalog recipe, no minting.")
+
+  (control
+    "forward-loop becomes best-first / beam SEARCH. Each edge yields a choice-receipt"
+    "(choice-receipt.fk: outcome/confidence/trust + witness trace). The frontier is"
+    "ordered by branch-choice-order.fk bco-score (short+long feedback) with alignment/"
+    "trust as a GATE — a hot-but-misaligned branch refuses (bco-core-ready?). Expansion"
+    "is autoresearch-loop.fk auto-evolve-once (frontier ∪ variants, dominated dropped) —"
+    "the proven, monotone beam-prune. signal-derivative.fk sd-moving? reads the frontier's"
+    "rate of change: a flat (non-improving) frontier is the backtrack/abandon trigger.")
+
+  (stop
+    "a disjunction, not a token count: outcome=success with trust above the gate (accept);"
+    "OR the frontier sd-moving? falls below floor (stalled); OR budget exhausted (halt)."
+    "ap-next's execute|done|halt generalizes to expand|accept|backtrack|halt.")
+
+  (llm-compat-projection
+    "the borrowed linear loop IS this shape with four knobs pinned to their poorest"
+    "setting: beam-width 1, minting disabled (catalog-only tc-plan), branch = sampling"
+    "(no bco learning/gate), and never select a non-leaf NodeID (no backtrack). Then the"
+    "tree degenerates to a single root->leaf transcript and recipe-realize to tool_call."
+    "So when fcr-route picks the agent-CLI (LLM) lane, the engine COLLAPSES to the floor"
+    "to talk to it; when it picks the form-native lane, the full search runs. One shape.")
+
+  (highest-leverage-first-step
+    "Author the next form-agent-protocol step so the action returns a (child-NodeID,"
+    "choice-receipt) PAIR — compose rcr-realize + h1c-apply — instead of appending a"
+    "message. That single move turns the transcript into a tree AND the receipt stream"
+    "into a trainable signal; beam-width, minting, and bco-gating then drop in as policy"
+    "over an already-branchable substrate. Appending messages first re-bakes the linear"
+    "assumption the other three features would then have to fight.")
+
+  ; ── cross-training: the form-native lanes learn from a local oracle ───────────
+  ; The machinery already exists; this names how the form-cli's lanes plug in.
+  (cross-training
+    (oracle    "the best LOCAL tool-calling model as champion/teacher — qwen2.5:72b for"
+               "tool-use/routing, deepseek-r1:32b for reasoning/transmute. Local, no key,"
+               "no metered API. The champion is never copied token-for-token.")
+    (label     "predictor-sampling.fk fuses the oracle (a circle of models) into ONE"
+               "ground-truth label per sample, gating contested ones out.")
+    (signal    "io-match.fk scores by EFFICACY (did the candidate's output WORK), not by"
+               "reproducing the oracle's exact output — efficacy generalizes; exact overfits.")
+    (grow      "predictor-train.fk pt-learn interns each (label, feature-vector) into the"
+               "Form-native challenger's prototype set — the challenger GROWS toward the"
+               "champion from ground truth, not by copying it.")
+    (infer     "nearest-shape.fk routes a live query to the nearest interned shape — the"
+               "form-native lane's own answer.")
+    (prove     "native-training-receipt.fk: recipe + weight/prototype digest + data digest +"
+               "eval digest + sample/heldout counts + native-vs-oracle score. Authority"
+               "starts only when the receipt proves weights, data, and eval together.")
+    (graduate  "as native-vs-oracle rises and the lane's pass-rate crosses the threshold,"
+               "form-cli-router.fk fcr-route flips that shape local — the more we use the"
+               "oracle, the less we need it."))
+
+  (two-tiers
+    (prototype   "router + recognizers: predictor-train/nearest-shape — online exemplar"
+                 "interning, cheap, starts accumulating TODAY from real usage.")
+    (transformer "freq-check (~100M+, freq-check-model.form) + transmuter: real semantic"
+                 "models needing actual backprop EPOCHS on transformer-block.fk. The block"
+                 "exists; the training loop (forward/loss/step over the corpus) is the real"
+                 "build. This is where 'days of usage + actual epochs' applies."))
+
+  (timescale
+    "Honest: this is days, not minutes. The mesh training-carrier floors quantify"
+    "'enough' — order >=10k labels and >=100 MiB heldout before a lane's receipt is"
+    "trustworthy. The corpus fills from live sessions (the Stop-hook capture ->"
+    "training-catalog.fk). The first move is to point the oracle at qwen2.5:72b and let"
+    "real usage accumulate; eval is the native-vs-oracle score rising over the heldout"
+    "window across days. We measure, we don't assume.")
+
+  (composition
+    "On main already: fcr-route (lane), form-agent-protocol (the turn shape + Hermes/"
+    "native encodings), tool-channel (tc-plan), freq-check head + voice, training-catalog"
+    "+ the capture hook. This cell is the search/cross-train layer those compose into."))
