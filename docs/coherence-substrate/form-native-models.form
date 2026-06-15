@@ -140,6 +140,17 @@
 ;     (arch-capacity-band → 31), the fp32 GPU, and the fp32 CPU mirror all crown width 2 — the architect timing
 ;     real candidates on the silicon, capacity discovered, not assumed. The huge underfit gap makes the crown
 ;     robust to fp32. The architect's layer learns on the silicon and the search now runs there too.
+;     AND THE TYPE AXIS IS NOW COVERED ON THE GPU: jte-attn-train-msl emits the architect's OTHER layer kind —
+;     the cross-attention-residual block h = x + Wo·attend(Wq·LN(x), ks, vs, scale), tbp-layer-step on an "attn"
+;     layer, updating Wq and Wo. It composes every attention-core gradient (softmax-back, the dv partition, the
+;     dq weighted-key sum) plus the pre-LN and the residual highway, with the recipe's exact folds (tb-dot
+;     downward, the attention sums forward, tn-max-subtract softmax over the recipe's own fexp). Byte-stable
+;     three-way: tests/attn-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_attn_audit.sh trains a d=4,
+;     3-key attention layer on the M4 Max: loss 2.72 → 1.8e-12 in 200 steps at 0.24 ms/step, the GPU weights
+;     within fp32 epsilon (max|ΔW|=3.0e-7) of the fp32 CPU mirror. Both architect layer kinds — FFN-residual and
+;     attention-residual — now train on the silicon, so arch-search's full (depth × width × TYPE) grid can be
+;     timed on the GPU. The attention kernel runs the small per-key/projection work in one thread; parallelizing
+;     across keys and projection rows is the named follow-up.
 ;     autodiff-gradient-cell now returns 4095 four-way: a bounded scalar affine prediction/loss recipe
 ;     emits weight and bias gradient cells, and those gradients feed optimizer-step's SGD receipt.
 ;     adam-step-cell now returns 4095 four-way: bounded fixed-point first/second moment rows, integer
@@ -462,9 +473,13 @@
 ;   runs the architect's capacity search ON the GPU: it trains each width over the d=4 reversal dataset and
 ;   crowns width 2 — the SAME crown the fp64 Form recipe ac-min-width (arch-capacity-band → 31) and the fp32 CPU
 ;   mirror reach. Three executions, one crown; tests/mlp-train-emit-band.fk + tests/resid-train-emit-band.fk → 7
-;   three-way. The search now times real candidates on the silicon. Next ring: the GPU search over the FULL
-;   (depth × width × type) grid — attention candidates trained on the GPU too, so every arm of arch-search the
-;   silicon can fit is timed there.
+;   three-way. And both architect layer kinds now train on the silicon: jte-attn-train-msl emits the
+;   attention-residual block (Wq/Wo through softmax-back, the dv partition, the pre-LN and residual) —
+;   scripts/metal_attn_audit.sh trains a d=4 attention layer on the M4 Max (loss 2.7→1.8e-12 at 0.24 ms/step,
+;   within fp32 epsilon of the recipe's own softmax; tests/attn-train-emit-band.fk → 7 three-way). The full
+;   (depth × width × TYPE) grid can now be timed on the GPU. Next ring: arch-search itself dispatching the GPU
+;   trainers per candidate over a mixed FFN/attention grid, and parallelizing the attention kernel across keys
+;   and projection rows.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
