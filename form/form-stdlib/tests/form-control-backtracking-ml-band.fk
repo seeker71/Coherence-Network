@@ -1,0 +1,168 @@
+; tests/form-control-backtracking-ml-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/form-control-backtracking-ml.fk
+;
+; Verdict 65535 when the ML-kernel floor proves Form-native control and
+; backtracking directly: conditionals, recursion/fold, any/all, reversible
+; cells, task success/failure states, match/fail/fail-cut/cut/stop/choice,
+; capture, opt rollback, and star repetition.
+;
+(do
+    (defn bool-score (b bit) (if b bit 0))
+    (defn int-score (actual expected bit) (if (eq actual expected) bit 0))
+    (defn str-score (actual expected bit) (if (str_eq actual expected) bit 0))
+
+    (defn fcml-even-score (n)
+        (if (even? n) 1 0))
+
+    (defn fcml-inverse (c)
+        (cell-origin c))
+
+    (let control-count-ok
+        (int-score (fcml-required-control-count) 8 1))
+    (let backtracking-count-ok
+        (int-score (fcml-required-backtracking-count) 9 2))
+    (let requirement-ok
+        (bool-score
+            (str_eq
+                (fcml-ml-kernel-requirement)
+                "form-ML-kernels/layers/models require 100% Form-native control-flow and 100% Form-native backtracking coverage before native model research depends on the floor")
+            4))
+
+    ; Form-native control flow.
+    (let if-ok
+        (bool-score
+            (and (eq (if true 11 0) 11)
+                 (eq (if false 0 13) 13))
+            8))
+    (let recursion-fold-ok
+        (bool-score
+            (and (eq (sum (range 1 6)) 15)
+                 (eq (foldl plus 0 (list 2 3 4)) 9))
+            16))
+    (let any-all-ok
+        (bool-score
+            (and (any? even? (list 1 3 4))
+                 (all? positive? (list 1 2 3)))
+            32))
+
+    ; Reversible cells and task state are core Form control surfaces.
+    (let reversible (cell "ml-step" 21 7 fcml-inverse))
+    (let cell-ok
+        (bool-score
+            (and (eq (cell-do reversible) 21)
+                 (eq (cell-undo reversible) 7))
+            64))
+    (let task-ok
+        (do
+            (let pending (task-pending "origin" identity))
+            (let resolved (task-resolve pending 33))
+            (let failed (task-reject pending "no-route"))
+            (bool-score
+                (and (task-ready? resolved)
+                (and (eq (task-await resolved) 33)
+                (and (task-failed? failed)
+                     (str_eq (task-value failed) "no-route"))))
+                128)))
+
+    ; Form/BMF engine backtracking over object streams.
+    (let a (bmf-object "tok" "a" (empty) identity))
+    (let b (bmf-object "tok" "b" (empty) identity))
+    (let c (bmf-object "tok" "c" (empty) identity))
+    (let stream-b (list b))
+    (let stream-bb (list b b))
+    (let stream-bc (list b c))
+
+    (let fail-result (match-object-pattern (object-lit "tok" "a") stream-b))
+    (let fail-ok (bool-score (fail? fail-result) 256))
+
+    (let choice-result
+        (match-object-pattern
+            (list "choice" (object-lit "tok" "a") (object-lit "tok" "b"))
+            stream-b))
+    (let choice-ok
+        (bool-score
+            (and (match? choice-result)
+                 (eq (len (match-rest choice-result)) 0))
+            512))
+
+    (let cut-commit-result
+        (match-object-pattern
+            (list "choice"
+                (list "sequence"
+                    (object-lit "tok" "b")
+                    (list "cut")
+                    (object-lit "tok" "c"))
+                (object-lit "tok" "b"))
+            stream-b))
+    (let cut-ok
+        (bool-score (fail? cut-commit-result) 1024))
+
+    (let stop-result (match-object-pattern (list "stop") stream-b))
+    (let stop-ok
+        (bool-score
+            (and (fail? stop-result)
+                 (str_eq (fail-reason stop-result) "stop"))
+            2048))
+
+    (let capture-result
+        (match-object-pattern
+            (list "capture" "seen" (object-lit "tok" "b"))
+            stream-b))
+    (let capture-ok
+        (bool-score
+            (and (match? capture-result)
+                 (str_eq (cap-get (match-caps capture-result) "seen") "b"))
+            4096))
+
+    (let opt-result
+        (match-object-pattern
+            (list "opt" (object-lit "tok" "a"))
+            stream-b))
+    (let opt-ok
+        (bool-score
+            (and (match? opt-result)
+                 (eq (len (match-rest opt-result)) 1))
+            8192))
+
+    (let star-result
+        (match-object-pattern
+            (list "star" (object-lit "tok" "b"))
+            stream-bb))
+    (let star-ok
+        (bool-score
+            (and (match? star-result)
+                 (eq (len (match-rest star-result)) 0))
+            16384))
+
+    (let sequence-cut-success
+        (match-object-pattern
+            (list "sequence"
+                (object-lit "tok" "b")
+                (list "cut")
+                (object-lit "tok" "c"))
+            stream-bc))
+    (let sequence-cut-ok
+        (bool-score
+            (and (match? sequence-cut-success)
+                 (eq (len (match-rest sequence-cut-success)) 0))
+            32768))
+
+    (sum
+        (list
+            control-count-ok
+            backtracking-count-ok
+            requirement-ok
+            if-ok
+            recursion-fold-ok
+            any-all-ok
+            cell-ok
+            task-ok
+            fail-ok
+            choice-ok
+            cut-ok
+            stop-ok
+            capture-ok
+            opt-ok
+            star-ok
+            sequence-cut-ok)))

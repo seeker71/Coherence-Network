@@ -24,6 +24,7 @@
     (runs-on        form-native-models.form)         # the deterministic numeric substrate [RUNS]
     (value-abi      hati-os.form tagged-ABI)   # {nothing,0,1,node} = {null-ref,int,int,ref} [RUNS]
     (cross-learn    co-learning.form federated-slices.form)  # the oracle + merge mechanisms [RUNS]
+    (wall-groups    fourth-kernel-wall-groups.form) # grouped fourth-kernel compiler/model/router/mesh gaps [RUNS map]
     (grounds        cell-numerics.form numeric-formats.canonical.json))
 
   # ── 1. Embedding: a coordinate, not an opaque vector ────────────────
@@ -45,6 +46,9 @@
   (attention
     (dense-llm   softmax over all-pairs O(n-squared) dense-float-everything-weighted)
     (form-native CHOICE the relevant cells, FAIL the irrelevant, CUT to the match, STOP when resolved)  # [INFER]
+    (control-floor [RUNS] form-control-backtracking-ml.fk proves the Form-native primitive vocabulary for this path:
+                   conditionals, recursion/folds, any/all, reversible cells, task states,
+                   match/fail/fail-cut/cut/stop/choice, capture, opt rollback, and star repetition four-way)
     (mechanism   content-addressed retrieval — attend by shape-match / NodeID kinship, not dot-product)
     (sparsity    nothing is a FIRST-CLASS value (axiom-1) — a position can be NOTHING, genuine
                  zero-cost absence, not a softmax weight rounding toward zero)  # [RUNS: nothing in the 4th kernel]
