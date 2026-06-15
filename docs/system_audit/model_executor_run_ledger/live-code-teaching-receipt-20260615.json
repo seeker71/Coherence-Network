@@ -1,0 +1,16 @@
+{
+  "task_id": "2026-06-15-live-code-teaching-receipt",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim live-code-teaching-receipt \"Follow-up after PR #3199: add a bounded host-carrier script that emits a real coding-act receipt JSON from a committed code turn and validation evidence; avoid live-cycle, Android/audio, oracle-distillation, and broad compiler lanes.\"",
+    "python3 -m py_compile scripts/code_tool_learning_receipt.py",
+    "python3 scripts/code_tool_learning_receipt.py --commit HEAD --verify \"code-tool-learning-band::cd form && ./validate.sh ...\" --verify \"code-tool-learning-gate::cd form && bash scripts/fourth-arm-gate.sh code-tool-learning\"",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added the live committed-turn carrier for code-tool-learning. The carrier emitted a pass receipt for merged PR #3199 commit 8d17b86ce6ca with 7 source surfaces, 7 touched files, 2 verifier receipts, trust 62->74, sample_count=1, accepted=1, raw_patch_retained=0, and raw verifier output retained=0."
+}
