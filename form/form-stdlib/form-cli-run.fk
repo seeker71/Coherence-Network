@@ -1,0 +1,132 @@
+; form-cli-run.fk — the RUNNER: form-cli emitted as a native binary that actually
+; does agent work. The recipe is the body; C is the host carrier (foc-emit pattern,
+; like form-os-channel.fk); cc compiles it; it runs native. No Python.
+;
+; It walks the protocol form-agent-protocol.fk standardized on — the HERMES encoding
+; (<tool_call>{json}</tool_call> / <tool_response>{json}</tool_response>) — which the
+; cross-training oracle qwen2.5:72b emits NATIVELY, so the oracle's output drops
+; straight in. The oracle is a host command on argv (qwen2.5:72b local, or claude -p);
+; no metered API. Every turn is captured raw to the corpus the form-native lanes train
+; on (predictor-train / training-catalog), accumulating with use.
+;
+; This is the carrier that turns the proven cells into a working agent: route is the
+; oracle ladder (local first), the turn shape is form-agent-protocol, tools are the
+; tool-channel families (bash/file/grep). The richer tree-search (form-agent-tree.fk
+; fat-step + beam/backtrack) is the next refinement over this forward floor.
+;
+; Witness: scripts/form_cli_run.sh emits -> compiles -> runs.
+
+(defn fcrun-emit ()
+    "#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/* form-cli runner, emitted by form-cli-run.fk (fcrun-emit). Hermes tool protocol;
+   oracle = argv[2] (qwen2.5:72b local, or claude -p); no Python, no metered API. */
+
+static const char *SYS =
+  \"You are form-cli, a coding agent. Available tools:\\n\"
+  \"<tools>\\n\"
+  \"{\\\"name\\\":\\\"bash\\\",\\\"arguments\\\":{\\\"cmd\\\":\\\"<shell command>\\\"}}\\n\"
+  \"{\\\"name\\\":\\\"read_file\\\",\\\"arguments\\\":{\\\"path\\\":\\\"<path>\\\"}}\\n\"
+  \"{\\\"name\\\":\\\"write_file\\\",\\\"arguments\\\":{\\\"path\\\":\\\"<path>\\\",\\\"content\\\":\\\"<text>\\\"}}\\n\"
+  \"{\\\"name\\\":\\\"search\\\",\\\"arguments\\\":{\\\"pattern\\\":\\\"<regex>\\\"}}\\n\"
+  \"</tools>\\n\"
+  \"To use a tool, reply with EXACTLY one line and nothing else:\\n\"
+  \"<tool_call>{\\\"name\\\":\\\"<tool>\\\",\\\"arguments\\\":{...}}</tool_call>\\n\"
+  \"After each call you receive a <tool_response>. When the task is done, reply with your\\n\"
+  \"final answer as plain text (no <tool_call>).\\n\\n\";
+
+static int run_oracle(const char *oracle, const char *prompt, char *out, int outsz){
+  char tmpl[] = \"/tmp/fcrun.XXXXXX\";
+  int fd = mkstemp(tmpl); if(fd < 0) return -1;
+  FILE *pf = fdopen(fd, \"w\"); fputs(prompt, pf); fclose(pf);
+  char cmd[8192]; snprintf(cmd, sizeof cmd, \"%s < %s 2>/dev/null\", oracle, tmpl);
+  FILE *p = popen(cmd, \"r\"); if(!p){ remove(tmpl); return -1; }
+  int n = fread(out, 1, outsz - 1, p); out[n > 0 ? n : 0] = 0;
+  pclose(p); remove(tmpl); return n;
+}
+
+/* extract a \"key\":\"value\" string from a json fragment (minimal — fits the tool schema) */
+static int json_str(const char *src, const char *key, char *out, int outsz){
+  char pat[64]; snprintf(pat, sizeof pat, \"\\\"%s\\\"\", key);
+  char *k = strstr(src, pat); if(!k) return 0; k += strlen(pat);
+  while(*k && *k != ':') k++; if(*k) k++;
+  while(*k == ' ' || *k == '\\t') k++;
+  if(*k != '\\\"') return 0; k++;
+  int i = 0;
+  while(*k && *k != '\\\"' && i < outsz - 1){
+    if(*k == '\\\\' && k[1]){ k++; out[i++] = (*k=='n'?'\\n':(*k=='t'?'\\t':(*k=='r'?'\\r':*k))); k++; }
+    else { out[i++] = *k++; }
+  }
+  out[i] = 0; return 1;
+}
+
+static void cap(const char *cmd, char *out, int outsz){
+  FILE *p = popen(cmd, \"r\"); if(!p){ snprintf(out, outsz, \"(popen failed)\"); return; }
+  int n = fread(out, 1, outsz - 1, p); out[n > 0 ? n : 0] = 0; pclose(p);
+}
+
+/* append the raw turn to the corpus the form-native lanes train on */
+static void capture(const char *transcript, const char *reply){
+  char path[4096]; const char *home = getenv(\"HOME\");
+  snprintf(path, sizeof path, \"%s/.coherence-network/form-cli-runs.log\", home ? home : \"/tmp\");
+  FILE *f = fopen(path, \"a\"); if(!f) return;
+  fprintf(f, \"===REQUEST===\\n%s\\n===REPLY===\\n%s\\n===END===\\n\", transcript, reply);
+  fclose(f);
+}
+
+int main(int argc, char **argv){
+  if(argc < 2){ printf(\"usage: form-cli-run <task> [oracle-cmd] [max-steps]\\n\"); return 1; }
+  const char *task = argv[1];
+  const char *oracle = argc > 2 ? argv[2] : \"ollama run qwen2.5:72b\";
+  int maxsteps = argc > 3 ? atoi(argv[3]) : 10;
+
+  static char transcript[1 << 16], prompt[1 << 17], reply[1 << 15];
+  static char obs[1 << 15], name[256], a1[8192], a2[1 << 14], scmd[1 << 14];
+  static char cwd[4096]; if(!getcwd(cwd, sizeof cwd)) cwd[0] = 0;
+  snprintf(transcript, sizeof transcript, \"TASK: %s\\n\", task);
+
+  int step;
+  for(step = 1; step <= maxsteps; step++){
+    snprintf(prompt, sizeof prompt, \"%sWorking directory: %s (use relative paths).\\n%s\\nYour reply:\",
+             SYS, cwd, transcript);
+    if(run_oracle(oracle, prompt, reply, sizeof reply) < 0){ printf(\"(oracle failed)\\n\"); return 3; }
+    capture(transcript, reply);
+
+    char *a = strstr(reply, \"<tool_call>\");
+    char *b = a ? strstr(a, \"</tool_call>\") : 0;
+    if(!a || !b){
+      fprintf(stderr, \"[form-cli-run] step %d: final\\n\", step);
+      printf(\"%s\\n\", reply);
+      return 0;
+    }
+    *b = 0;
+    char *tc = a + strlen(\"<tool_call>\");
+    if(!json_str(tc, \"name\", name, sizeof name)) snprintf(obs, sizeof obs, \"(no tool name)\");
+    else if(strcmp(name, \"bash\") == 0 && json_str(tc, \"cmd\", a1, sizeof a1)) cap(a1, obs, sizeof obs);
+    else if(strcmp(name, \"read_file\") == 0 && json_str(tc, \"path\", a1, sizeof a1)){
+      FILE *f = fopen(a1, \"r\");
+      if(!f) snprintf(obs, sizeof obs, \"(no such file: %s)\", a1);
+      else { int n = fread(obs, 1, sizeof obs - 1, f); obs[n > 0 ? n : 0] = 0; fclose(f); }
+    }
+    else if(strcmp(name, \"write_file\") == 0 && json_str(tc, \"path\", a1, sizeof a1) && json_str(tc, \"content\", a2, sizeof a2)){
+      FILE *f = fopen(a1, \"w\"); if(f){ fputs(a2, f); fclose(f); snprintf(obs, sizeof obs, \"wrote %s\", a1); }
+      else snprintf(obs, sizeof obs, \"(could not write %s)\", a1);
+    }
+    else if(strcmp(name, \"search\") == 0 && json_str(tc, \"pattern\", a1, sizeof a1)){
+      snprintf(scmd, sizeof scmd, \"grep -rn -- '%s' . 2>/dev/null | head -40\", a1); cap(scmd, obs, sizeof obs);
+    }
+    else snprintf(obs, sizeof obs, \"(unknown or malformed tool: %s)\", name);
+
+    fprintf(stderr, \"[form-cli-run] step %d: %s\\n\", step, name);
+    int len = strlen(transcript);
+    snprintf(transcript + len, sizeof transcript - len,
+             \"<tool_call>%s</tool_call>\\n<tool_response>{\\\"name\\\":\\\"%s\\\",\\\"content\\\":\\\"%.1200s\\\"}</tool_response>\\n\",
+             tc, name, obs);
+  }
+  printf(\"(reached max-steps=%d without a final answer)\\n\", maxsteps);
+  return 0;
+}
+")
