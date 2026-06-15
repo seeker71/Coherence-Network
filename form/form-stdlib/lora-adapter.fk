@@ -1,0 +1,62 @@
+; lora-adapter.fk — a low-rank diff: the adapter is B·A (rank r), tiny vs the base.
+;
+; preludes: form-stdlib/core.fk
+;
+; model-compose.fk proved a diff STACKS over a base. This proves the diff can be
+; LOW-RANK — the reason "only diffs needed" is cheap: a base weight matrix W
+; (d×d) gets a new capability from an adapter B·A where B is d×r and A is r×d,
+; r ≪ d. The whole capability is 2·d·r numbers, not d·d. The load-bearing
+; identity (LoRA / adapter_forward, named in cell-numerics.form + slice-merge.fk
+; as τ = θ_local − θ_base):
+;
+;     (W + B·A)·x  ==  W·x + B·(A·x)
+;
+; computed the RIGHT way: never form the d×d diff; do A·x (an r-vector) then
+; B·that (a d-vector) — O(d·r), not O(d·d). Adapters stack: W·x + Σ Bk·(Ak·x).
+;
+; Smallest honest size: rank-1 (B, A are d-vectors), d = 3, fixed-size so the
+; ops use only nth/list/add/sub/mul/div (all four-way proven). Integer
+; fixed-point scale 1000. The chunked/general-d form is the next stone over this.
+;
+; Proven by: form-stdlib/tests/lora-adapter-band.fk
+
+; a·b dot (scale 1000)
+(defn la-dot3 (a b)
+    (add (div (mul (nth a 0) (nth b 0)) 1000)
+    (add (div (mul (nth a 1) (nth b 1)) 1000)
+         (div (mul (nth a 2) (nth b 2)) 1000))))
+
+; v·s scale (scale 1000)
+(defn la-scale3 (v s)
+    (list (div (mul (nth v 0) s) 1000)
+          (div (mul (nth v 1) s) 1000)
+          (div (mul (nth v 2) s) 1000)))
+
+; a + b (vectors)
+(defn la-add3 (a b)
+    (list (add (nth a 0) (nth b 0))
+          (add (nth a 1) (nth b 1))
+          (add (nth a 2) (nth b 2))))
+
+; W·x — W = (list row0 row1 row2)
+(defn la-matvec3 (W x)
+    (list (la-dot3 (nth W 0) x)
+          (la-dot3 (nth W 1) x)
+          (la-dot3 (nth W 2) x)))
+
+; the rank-1 diff matrix B⊗A — row_i = A * B[i]  (never needed for the forward,
+; only to show the low-rank form reconstructs the full diff)
+(defn la-outer3 (B A)
+    (list (la-scale3 A (nth B 0))
+          (la-scale3 A (nth B 1))
+          (la-scale3 A (nth B 2))))
+
+; matrix add (base + diff matrix)
+(defn la-madd3 (W M)
+    (list (la-add3 (nth W 0) (nth M 0))
+          (la-add3 (nth W 1) (nth M 1))
+          (la-add3 (nth W 2) (nth M 2))))
+
+; adapter_forward: (W + B·A)·x computed the LOW-RANK way — W·x + B·(A·x)
+(defn la-forward (W B A x)
+    (la-add3 (la-matvec3 W x) (la-scale3 B (la-dot3 A x))))
