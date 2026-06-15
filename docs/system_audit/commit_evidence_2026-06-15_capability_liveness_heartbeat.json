@@ -1,0 +1,141 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/live-cycle-capability-liveness-20260615",
+  "commit_scope": "Keep Android-to-Mac capability liveness real during backgrounded sensing and make the live-cycle projection name the remaining inactive-window floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "real-mesh-training",
+    "android-mesh-learning",
+    "capability-liveness",
+    "foreground-heartbeat",
+    "world-model-live-cycle"
+  ],
+  "spec_ids": [
+    "commit-evidence-contract",
+    "fourth-arm-bands",
+    "real-mesh-training-carrier"
+  ],
+  "task_ids": [
+    "live-cycle-capability-liveness-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-correction",
+        "android-mesh-training-demand"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@live-cycle-capability-liveness-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "android-carrier-authoring",
+        "witness-carrier-mending",
+        "runtime-proof",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-15_capability_liveness_heartbeat.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/CapabilityHeartbeatService.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-15_capability_liveness_heartbeat.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/CapabilityHeartbeatService.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim live-cycle-capability-liveness \"Close capability_liveness_missing by adding Android foreground capability heartbeat and Mac witness merge proof.\"",
+      "python3 -m py_compile experiments/coherence-sense-android/mac-witness-server.py experiments/coherence-sense-android/coherence-sense-eval.py",
+      "bash -n scripts/real_mesh_training_emitters.sh",
+      "JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11 ANDROID_HOME=/opt/homebrew/share/android-commandlinetools ./gradlew :app:assembleDebug",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk",
+      "curl proof: POST rich /sense, POST capability heartbeat /sense, GET /state on http://127.0.0.1:18800",
+      "scripts/real_mesh_training_emitters.sh --out .cache/real-mesh-training/windows/capability-liveness-live-loop-20260615 --witness-url http://127.0.0.1:18800/state --run-models --label-count 12 --channel-evidence android-mac-loopback wifi .cache/capability-liveness-proof/channel-evidence.txt 1 --native-teacher-receipt .cache/capability-liveness-proof/native-teacher-receipt.json --world-growth-receipt .cache/capability-liveness-proof/world-growth-receipt.json",
+      "git diff --check"
+    ],
+    "notes": "Android debug APK builds with the foreground capability heartbeat service. The Mac witness proof preserved mic/camera/GPU latest summaries after a heartbeat-only POST and returned present=true. The real mesh emitter proof reported projection capability_ready=1, observed=5, native_wins=1, growth_status=embodied, and only window_floor_missing at cycle level. Form proof output: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No production deploy requested for this Android/Mac local carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "After Android sharing starts, a foreground service keeps the Mac witness /sense liveness fresh with summary-only capability heartbeats while Activity mic/camera/GPU samplers pause in the background. Mac witnesses merge heartbeat-only packets into the latest rich summary instead of erasing active sensor evidence. The emitter can now clear capability_liveness_missing when the heartbeat is continuous.",
+    "public_endpoints": [
+      "n/a: local Mac witness on http://127.0.0.1:18800 during proof"
+    ],
+    "test_flows": [
+      "POST rich sensor summary then heartbeat-only packet to /sense and confirm /state present=true with retained mic/camera/GPU summaries",
+      "Run real_mesh_training_emitters.sh against the live witness with native-teacher and world-growth receipts"
+    ]
+  },
+  "evidence_refs": [
+    ".cache/capability-liveness-proof/state.json",
+    ".cache/real-mesh-training/windows/capability-liveness-live-loop-20260615/real-mesh-training-window.json",
+    "experiments/coherence-sense-android/app/build/outputs/apk/debug/app-debug.apk",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/CapabilityHeartbeatService.kt",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "phase_gate": {
+    "phase": "capability-liveness-heartbeat",
+    "gate": "Capability liveness must be maintained by actual Android-to-Mac heartbeat traffic, not by bypassing witness present=false.",
+    "state": "local-proof-pass-with-full-window-still-held",
+    "can_move_next_phase": false,
+    "next": "Install the rebuilt APK on the physical Android device, run the same emitter against the phone-driven witness, then add Whisper and large train/heldout roots for --require-active."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Native-teacher and world-growth receipts could be earned, but live-cycle projection still blocked on capability_liveness_missing when the Android app paused or the witness went stale.",
+    "current_observed_floor": "Android has a foreground summary-only capability heartbeat, Mac witnesses preserve rich summaries across heartbeat-only packets, and the real emitter proof clears capability_liveness_missing under a continuous heartbeat loop.",
+    "new_bands": [
+      "real-mesh-training-emitter -> 65535 four-way"
+    ],
+    "retuned_north_star": [
+      "Mac and Android maintain continuous liveness without adb communication",
+      "full active training windows add Whisper, hundreds of MiB of train/heldout roots, and 10k labels",
+      "dashboard and route choice read the same Form-native world_model_live_cycle projection"
+    ],
+    "remaining_blocks": [
+      "whisper_model_not_configured",
+      "below_training_floor",
+      "below_heldout_floor",
+      "below_label_floor"
+    ],
+    "cleared_blocks": [
+      "capability_liveness_missing"
+    ]
+  }
+}
