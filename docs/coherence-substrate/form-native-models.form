@@ -412,8 +412,15 @@
 ;   (depth·width) architecture that fits — Occam over architectures. On a d=4 dataset it crowns (depth 1,
 ;   width 2): (1,1) and (2,1) both underfit (width-1 is the bottleneck — depth does NOT compensate for it),
 ;   (1,2) fits at cost 2, and the over-large (2,2) at cost 4 is rejected. So the body reads that THIS task
-;   needs width, not depth, and picks the smallest model that solves it. Next ring: add the layer-TYPE axis
-;   to the joint grid (mixed attention/ffn per slot), and the GPU as the trainer underneath the search.
+;   needs width, not depth, and picks the smallest model that solves it. And the layer-TYPE axis is now
+;   proven [arch-type-band.fk → 31 three-way]: size is capacity, TYPE is the shape of the computation, and
+;   the architect discovers which kind's inductive bias the task wants. On a RETRIEVAL task (output = a value
+;   selected from a fixed context), an ATTENTION layer — content-based retrieval — fits in 5 steps (loss
+;   ~1e-5) while an FFN that must MEMORIZE the input→value map is still at 1.79 at step 5 and 0.033 at step 30;
+;   the architect trains one candidate of each type and crowns "attn" — reading that this task wants attention,
+;   not a feed-forward block. So the body now searches depth, width, AND type — picking both the size and the
+;   shape a task wants. Next ring: a single joint grid over (depth × width × type) with mixed attention/ffn
+;   per slot, and the GPU as the trainer underneath the whole search.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
