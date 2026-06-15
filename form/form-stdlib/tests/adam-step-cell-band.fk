@@ -1,0 +1,36 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk
+;
+; adam-step-cell-band — bounded Adam-style first/second moment receipts, four-way.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let weights (list 100 50))
+    (let m1s (list 0 0))
+    (let m2s (list 0 0))
+    (let grads (list 10 5))
+    (let adam (os-adam-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 1))
+    (let zero-grad (os-adam-receipt "model-alpha" weights m1s m2s (list 0 0) 2 8 9 10 1))
+    (let bad-scale (os-adam-receipt "model-alpha" weights m1s m2s grads 2 8 9 0 1))
+    (let bad-epsilon (os-adam-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 0))
+    (let bad-beta (os-adam-receipt "model-alpha" weights m1s m2s grads 2 11 9 10 1))
+    (let bad-len (os-adam-receipt "model-alpha" weights (list 0) m2s grads 2 8 9 10 1))
+    (let ag (ag-receipt "model-alpha" 3 4 1 9))
+    (let ag-adam (os-adam-receipt "model-alpha" (list 3 1) (list 0 0) (list 0 0) (ag-receipt-vector ag) 2 8 9 10 1))
+
+    (let c0 (if (eq (os-isqrt 10) 3) 1 0))
+    (let c1 (if (eq (nth (os-adam-next-m1 adam) 0) 2) 2 0))
+    (let c2 (if (eq (nth (os-adam-next-m2 adam) 0) 10) 4 0))
+    (let c3 (if (eq (nth (os-adam-after adam) 0) 99) 8 0))
+    (let c4 (if (eq (nth (os-adam-next-m1 adam) 1) 1) 16 0))
+    (let c5 (if (eq (nth (os-adam-next-m2 adam) 1) 2) 32 0))
+    (let c6 (if (eq (nth (os-adam-after adam) 1) 49) 64 0))
+    (let c7 (if (eq (os-adam-valid? adam) 1) 128 0))
+    (let c8 (if (eq (os-adam-valid? zero-grad) 0) 256 0))
+    (let c9 (if (eq (os-adam-valid? bad-scale) 0) 512 0))
+    (let c10 (if (eq (os-adam-valid? bad-epsilon) 0)
+                 (if (eq (os-adam-valid? bad-beta) 0)
+                     (if (eq (os-adam-valid? bad-len) 0) 1024 0)
+                     0)
+                 0))
+    (let c11 (if (eq (os-adam-valid? ag-adam) 1) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
