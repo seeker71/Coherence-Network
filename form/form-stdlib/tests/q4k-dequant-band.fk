@@ -1,0 +1,43 @@
+; preludes: form-stdlib/core.fk form-stdlib/q4k-dequant.fk
+;
+; q4k-dequant-band — the Form Q4_K superblock unpack against the gguf reference, on a REAL llama3.2:3b
+; superblock (blk.0.ffn_gate.weight, the same Q4_K tensor that ran on the M4 GPU in PR #3219). The fixture
+; is that superblock's raw bytes: f16->f32 super-scale d and super-min dmin, the 12 packed scale bytes, and
+; the 128 packed quant bytes. Expected values are round(w * 1e6) from gguf.quants.dequantize (cross-checked
+; bit-exact, max_abs_diff 0.0). The 12 sample indices span both get_scale_min_k4 packing branches (sub-block
+; index j<4 reads two separate bytes; j>=4 stitches a 6-bit field across byte boundaries) and both nibble
+; halves (low = q & 0xF, high = q >> 4) — the strange-minimal set that exercises every path of the unpack.
+;
+; Verdict 4095 when all twelve real-weight dequant values land, the last one via the full 256-list walk:
+;   1     i=0   sidx0 j<4  low  -> -2871        64    i=128 sidx4 j>=4 low  -> 24084
+;   2     i=31  sidx0 j<4  low  -> -10722       128   i=159 sidx4 j>=4 low  -> 5623
+;   4     i=32  sidx1 j<4  high -> 1656         256   i=160 sidx5 j>=4 high -> 29026
+;   8     i=63  sidx1 j<4  high -> 28180        512   i=191 sidx5 j>=4 high -> -5137
+;   16    i=64  sidx2 j<4  low  -> -34391       1024  i=200 sidx6 j>=4 low  -> -6369
+;   32    i=127 sidx3 j<4  high -> 33826        2048  len(q4k-dequant)=256 AND list[255] -> 18738
+(do
+    (let d    0.00010609626770019531)
+    (let dmin 0.0009484291076660156)
+    (let SCALES (list 229 178 240 255 160 107 239 191 26 174 22 179))
+    (let QS (list 135 151 157 85 141 119 132 25 148 67 236 75 75 167 115 128 174 96 117 181 88 109 101 142
+                  159 152 85 156 10 167 235 213 146 203 140 191 96 14 137 172 203 135 167 205 186 152 140 104
+                  105 206 186 155 173 116 185 249 234 213 153 236 74 153 105 231 185 130 215 82 135 196 38 164
+                  99 99 85 43 227 52 4 143 40 178 50 41 40 68 35 182 104 119 144 218 54 134 1 70 58 118 95 195
+                  183 37 121 198 151 151 119 118 105 149 136 0 246 133 186 151 162 154 150 168 180 87 25 135
+                  119 107 201 187))
+    (let full (q4k-dequant d dmin SCALES QS))
+    (let c0  (if (eq (round (mul (q4k-at 0   d dmin SCALES QS) 1000000.0)) -2871)  1 0))
+    (let c1  (if (eq (round (mul (q4k-at 31  d dmin SCALES QS) 1000000.0)) -10722) 2 0))
+    (let c2  (if (eq (round (mul (q4k-at 32  d dmin SCALES QS) 1000000.0)) 1656)   4 0))
+    (let c3  (if (eq (round (mul (q4k-at 63  d dmin SCALES QS) 1000000.0)) 28180)  8 0))
+    (let c4  (if (eq (round (mul (q4k-at 64  d dmin SCALES QS) 1000000.0)) -34391) 16 0))
+    (let c5  (if (eq (round (mul (q4k-at 127 d dmin SCALES QS) 1000000.0)) 33826)  32 0))
+    (let c6  (if (eq (round (mul (q4k-at 128 d dmin SCALES QS) 1000000.0)) 24084)  64 0))
+    (let c7  (if (eq (round (mul (q4k-at 159 d dmin SCALES QS) 1000000.0)) 5623)   128 0))
+    (let c8  (if (eq (round (mul (q4k-at 160 d dmin SCALES QS) 1000000.0)) 29026)  256 0))
+    (let c9  (if (eq (round (mul (q4k-at 191 d dmin SCALES QS) 1000000.0)) -5137)  512 0))
+    (let c10 (if (eq (round (mul (q4k-at 200 d dmin SCALES QS) 1000000.0)) -6369)  1024 0))
+    (let c11 (if (and (eq (len full) 256)
+                      (eq (round (mul (nth full 255) 1000000.0)) 18738)) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
