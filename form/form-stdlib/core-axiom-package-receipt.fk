@@ -1,0 +1,82 @@
+; core-axiom-package-receipt.fk — package/install receipt for the Mac+Android
+; native core-axiom pair.
+;
+; scripts/android_mac_core_axiom_receipt.sh writes package-latest.json after the
+; channel proof. The package receipt names script/source/binary/receipt hash
+; presence, channel duration, sample window, and remote cleanup. Form validates
+; the receipt shape; the live hashes and adb cleanup remain explicit carriers.
+
+(do
+    (defn cap-receipt (script-hash-len source-hash-len mac-hash-len android-hash-len channel-hash-len duration-ms samples width cleanup status)
+        (list
+            "core-axiom-native-package-receipt"
+            script-hash-len
+            source-hash-len
+            mac-hash-len
+            android-hash-len
+            channel-hash-len
+            duration-ms
+            samples
+            width
+            cleanup
+            status))
+
+    (defn cap-receipt? (value)
+        (if (eq (len value) 11)
+            (str_eq (nth value 0) "core-axiom-native-package-receipt")
+            0))
+    (defn cap-script-hash-len (r) (nth r 1))
+    (defn cap-source-hash-len (r) (nth r 2))
+    (defn cap-mac-hash-len (r) (nth r 3))
+    (defn cap-android-hash-len (r) (nth r 4))
+    (defn cap-channel-hash-len (r) (nth r 5))
+    (defn cap-duration-ms (r) (nth r 6))
+    (defn cap-samples (r) (nth r 7))
+    (defn cap-width (r) (nth r 8))
+    (defn cap-cleanup (r) (nth r 9))
+    (defn cap-status (r) (nth r 10))
+
+    (defn cap-hash-lens-valid? (r)
+        (if (eq (cap-script-hash-len r) 64)
+            (if (eq (cap-source-hash-len r) 64)
+                (if (eq (cap-mac-hash-len r) 64)
+                    (if (eq (cap-android-hash-len r) 64)
+                        (if (eq (cap-channel-hash-len r) 64) 1 0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn cap-valid? (r)
+        (if (cap-receipt? r)
+            (if (cap-hash-lens-valid? r)
+                (if (gt (cap-duration-ms r) 0)
+                    (if (gt (cap-samples r) 0)
+                        (if (gt (cap-width r) 0)
+                            (if (str_eq (cap-cleanup r) "pass")
+                                (if (str_eq (cap-status r) "pass") 1 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn cap-left-expands? (older newer)
+        (if (cap-valid? older)
+            (if (cap-valid? newer)
+                (if (gt (cap-samples newer) (cap-samples older))
+                    (if (eq (cap-width newer) (cap-width older)) 1 0)
+                    0)
+                0)
+            0))
+
+    (defn cap-floor ()
+        (list
+            "script/source/binary/receipt sha256 lengths are visible"
+            "channel duration is receipt-visible"
+            "sample window is receipt-visible"
+            "remote Android binary cleanup is receipt-visible"
+            "package receipt is separate from APK/distribution signing"))
+
+    0)
