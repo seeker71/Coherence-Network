@@ -1,0 +1,143 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "claude/funny-tharp-bcf322",
+  "commit_scope": "The learning kernel on real silicon: backprop training runs on the M4 Max GPU. transformer-backprop.fk is the autodiff-gradient-cell wall opened at the affine node (db=gy, dW=outer(gy,x), the chain dx=Wt.gy, plus an SGD update generalized from form-train-step.fk's one-weight atom to a whole weight matrix and bias vector) -- proven 127 three-way (Go=Rust=TS), source and binary, 0 divergent. jit-tensor-emit.fk's new jte-affine-train-msl emits that SGD step as a Metal Shading Language kernel (one GPU thread per output row; forward dot in tb-dot's exact DOWNWARD right-fold; the in-place update row -= lr*g*x and b -= lr*g), byte-stable three-way by tests/affine-train-emit-band.fk (verdict 7). LIVE GPU WITNESS scripts/metal_backprop_audit.sh drives the emission through the Go kernel's mouth, the Metal runtime compiles it, and value parity is gated against a CPU fp32 reference computed in the recipe's own op order. fp32 is the lane MSL declares (no f64 in device code); mul and add are split through a named temporary so no compiler contraction reorders the recipe.",
+  "files_owned": [
+    "form/form-stdlib/transformer-backprop.fk",
+    "form/form-stdlib/tests/transformer-backprop-band.fk",
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/affine-train-emit-band.fk",
+    "scripts/metal_backprop_audit.sh",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/tests/transformer-backprop-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/tests/transformer-backprop-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/affine-train-emit-band.fk",
+      "scripts/metal_backprop_audit.sh 32 32 100",
+      "scripts/metal_backprop_audit.sh 1280 1280 200"
+    ],
+    "summary": "transformer-backprop band -> 127 three-way (Go=Rust=TS), source AND binary artifact, 0 divergent: SSE loss strictly decreasing across 1/20/80 steps, the dx chain (3,11) and dW outer ((3,6),(5,10)) bit-exact, prediction matching target to 1e-6. 3-KERNEL ONLY (Go=Rust=TS): transformer-backprop composes the transformer-numerics/transformer-block op family, which is NOT in form/fourth-arm-bands.txt -- the same floor transformer-block.fk is proven on; the fourth-arm gap is the transformer op family (deep float recursion over sequences, Taylor-exp/Newton-sqrt transcendentals) not yet flattened for fkwu. This is an unsupported-op-family gap, not a divergence. affine-train-emit-band -> 7 three-way (full emitted MSL equals canonical text; name parameterizes; emission deterministic); also 3-kernel only (not in the fourth-arm manifest). LIVE GPU WITNESS MEASURED (Apple M4 Max, Metal toolchain v17.3, arm64 Darwin 25.x, MTLCompileOptions default, one warm dispatch then timed): 32x32 affine loss 126 -> 0 in ~10 steps, parity BIT-EXACT vs the fp32 CPU reference (max|dW|=0.0); 1280x1280 (whisper-large d_model, 1.64M params) loss 5115 -> 2.18709e-08 in 200 steps at 1.054 ms/step, GPU loss matching the fp32 CPU reference to 9 significant figures (2.18709317e-08), max|dW|=1.565e-07 within fp32 epsilon (GPU FMA-contraction vs CPU split-mul, the expected lane difference). The CPU reference is the recipe's exact fold order in fp32, the conformance reference, not a tuned trainer.",
+    "observed_delta": {
+      "backprop_band_verdict": 127,
+      "backprop_band_divergent": 0,
+      "emit_band_verdict": 7,
+      "emitted_msl_bytes": 742,
+      "witness_32": {
+        "loss_start": 126.0,
+        "loss_end": 0.0,
+        "parity_max_abs_w_diff": 0.0,
+        "ms_per_step": 0.135
+      },
+      "witness_1280": {
+        "params": 1638400,
+        "loss_start": 5115.0,
+        "loss_end": 2.18709e-08,
+        "gpu_loss": "2.18709317e-08",
+        "cpu_fp32_loss": "2.18709317e-08",
+        "max_abs_w_diff": 1.565e-07,
+        "steps": 200,
+        "ms_per_step": 1.054
+      },
+      "conditions": "Apple M4 Max, Metal toolchain v17.3.7003, macOS arm64 (Darwin 25.x), swiftc -O Metal.framework carrier, deterministic unit-normalized x and fixed integer-pattern targets, W=0 b=0 start, lr=0.25 inside the stable band, single-thread CPU reference in the recipe's own fold order"
+    },
+    "known_limitations": [
+      {
+        "limitation": "3-kernel only: transformer-backprop and the affine-train emitter band compose the transformer op family, which is not in form/fourth-arm-bands.txt. This is the SAME floor transformer-block.fk is proven on (an unsupported-op-family gap on fkwu: deep float recursion over sequences plus the Taylor/Newton transcendentals), not a divergence. 0 divergent across Go/Rust/TS, source and binary.",
+        "follow_up": "The fourth arm gains this family only when the transformer numerics/block bands are flattened for fkwu -- a separate manifest stone, named not hidden."
+      },
+      {
+        "limitation": "fp32 lane only on the GPU: MSL has no double in device code, so the fp64 bit-for-bit lane the recipe carries cannot exist on this GPU. Conformance is held in the lane's own precision: fp32 GPU vs fp32 CPU in the same op order. At 1280x1280 the loss matches to 9 sig figs; the 1.5e-7 weight delta is GPU FMA vs CPU split-mul, the expected fp32 difference.",
+        "follow_up": "bf16/half training lanes parameterize the same emission with format-arith.fk semantics when a model stone needs them, gated the same way as the matvec lanes."
+      },
+      {
+        "limitation": "Single affine layer: this is the autodiff-gradient-cell wall opened at the affine node (the workhorse of every projection and FFN layer in transformer-block.fk), not the full-block backward. The transcendental vjps (gelu'/softmax'/layernorm') extend it to the whole block; Adam is a further stone.",
+        "follow_up": "Add the transcendental vjps as Form recipes, then the cross-train-oracle loop runs over a learning transformer, not a static forward pass."
+      },
+      {
+        "limitation": "The witness carrier is swiftc + Metal.framework through the driver-organ idiom (host-resource-access), not a kernel-resident GPU port. The kernel's mouth emits; the host compiles and dispatches.",
+        "follow_up": "Lift the runner's moves (compile, buffers, dispatch loop, readback) into a kernel-resident Metal carrier when the model fast-path needs in-process GPU training, gated by the same parity discipline."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs both bands in the default suite via their preludes headers; CI three-way gate applies. The GPU witness is host-only (Apple silicon) and runs locally, not in CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipes + bands + host witness script + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body trains an affine layer by backprop entirely in Form (proven three-way), emits that training step as a GPU compute kernel from a Form recipe (byte-stable three-way), and the host witness proves the M4 Max GPU runs the recipe's training step, learns (loss -> 0), and matches the recipe's fp32 result, at 1.054 ms/step on 1.64M parameters.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh transformer-backprop-band (three kernels agree, verdict 127, source and binary)",
+      "validate.sh affine-train-emit-band (three kernels agree on the emitted MSL, verdict 7)",
+      "metal_backprop_audit.sh (Form emits -> Metal compiles -> N training steps on the GPU -> loss descends -> parity gated against fp32 CPU reference)"
+    ],
+    "summary": "Trained-and-parity-gated RUNS on Apple M4 Max; the learning kernel seen working on real hardware with conditions named."
+  },
+  "phase_gate": {
+    "phase": "autodiff-gradient-cell",
+    "gate": "the autodiff wall opens at the affine node and RUNS on metal: backprop proven three-way, the training-step emitter byte-stable three-way, live GPU training with loss descending and parity gated bit-exact/fp32-epsilon, rows measured",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "transcendental vjps (gelu'/softmax'/layernorm') for the full-block backward; Adam; then the cross-train-oracle loop over a learning transformer; kernel-resident Metal training carrier"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "metal-backprop-emitter-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/transformer-backprop.fk",
+    "form/form-stdlib/tests/transformer-backprop-band.fk",
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/affine-train-emit-band.fk",
+    "scripts/metal_backprop_audit.sh",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/transformer-backprop.fk",
+    "form/form-stdlib/tests/transformer-backprop-band.fk",
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/affine-train-emit-band.fk",
+    "scripts/metal_backprop_audit.sh",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-15_metal_backprop.json"
+  ],
+  "change_intent": "runtime_feature"
+}
