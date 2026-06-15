@@ -168,3 +168,44 @@
 (defn jte-mlp-train-msl-fmt (fname fmt) (jte-mlp-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
 
 (defn jte-mlp-train-msl (fname) (jte-mlp-train-msl-fmt fname "f32"))
+
+; --- FFN-RESIDUAL (one pre-LN layer) TRAINING-STEP kernel, emitted as a Form recipe — the architect's ACTUAL
+; layer on Metal. tbp-stk-step over one "ffn" layer is the algorithm (fp64, proven three-way): the residual
+; block y = h + (W2*gelu(W1*LN(h) + b1) + b2), exactly what ac-ffn-layer builds and ac-train trains. This is
+; the FFN core kernel (jte-mlp-train-msl) wrapped with the two pieces the architect's block adds: a pre-LN of
+; the input (z = LN(h), computed by thread 0 with tn-mean/tn-var/tn-sqrt's exact folds — biased variance, eps
+; inside a 50-iteration Newton sqrt) and the residual highway (y = h + ffn, so the output-gradient gy = 2(y-t)
+; flows straight to the FFN as gout). The FFN reads z, and the W1 update uses z, not the raw input. Same
+; recipe-own exp/tanh (jte-mlp-helpers); same downward forward folds and forward dh1 column fold; same
+; barriered single-threadgroup phases plus phase 0 for the layernorm. Proven byte-stable by
+; tests/resid-train-emit-band.fk; trained live and capacity-searched on the M4 Max by scripts/metal_arch_search_audit.sh.
+
+(defn jte-resid-sig (fname el ac)
+  (str_concat "kernel void " (str_concat fname (str_concat "(device " (str_concat el (str_concat "* w1 [[buffer(0)]], device " (str_concat el (str_concat "* b1 [[buffer(1)]], device " (str_concat el (str_concat "* w2 [[buffer(2)]], device " (str_concat el (str_concat "* b2 [[buffer(3)]], device const " (str_concat el (str_concat "* h [[buffer(4)]], device const " (str_concat el (str_concat "* t [[buffer(5)]], device " (str_concat ac (str_concat "* loss [[buffer(6)]], device " (str_concat ac (str_concat "* h1 [[buffer(7)]], device " (str_concat ac (str_concat "* a [[buffer(8)]], device " (str_concat ac (str_concat "* gy [[buffer(9)]], device " (str_concat ac (str_concat "* dh1 [[buffer(10)]], device " (str_concat ac (str_concat "* z [[buffer(11)]], constant uint& indim [[buffer(12)]], constant uint& hid [[buffer(13)]], constant uint& outd [[buffer(14)]], constant " (str_concat ac (str_concat "& lr [[buffer(15)]], constant " (str_concat ac "& eps [[buffer(16)]], uint tid [[thread_position_in_threadgroup]], uint tgs [[threads_per_threadgroup]]) { ")))))))))))))))))))))))))))))))
+
+(defn jte-resid-ln (el ac)
+  (str_concat "if (tid == 0) { " (str_concat ac (str_concat " sm = 0.0f; uint j = 0; while (j < indim) { sm = sm + " (str_concat ac (str_concat "(h[j]); j += 1; } " (str_concat ac (str_concat " mean = sm / " (str_concat ac (str_concat "(indim); " (str_concat ac (str_concat " va = 0.0f; j = 0; while (j < indim) { " (str_concat ac (str_concat " dm = " (str_concat ac (str_concat "(h[j]) - mean; va = va + dm * dm; j += 1; } " (str_concat ac (str_concat " varv = va / " (str_concat ac (str_concat "(indim); " (str_concat ac (str_concat " sd = varv + eps; " (str_concat ac (str_concat " g = sd; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sd / g); } " (str_concat ac (str_concat " inv = 1.0f / g; j = 0; while (j < indim) { z[j] = (" (str_concat ac "(h[j]) - mean) * inv; j += 1; } } threadgroup_barrier(mem_flags::mem_device); ")))))))))))))))))))))))))))
+
+(defn jte-resid-fwd1 (el ac)
+  (str_concat "for (uint k = tid; k < hid; k += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint j = indim; while (j > 0) { j -= 1; acc = " (str_concat ac (str_concat "(w1[k * indim + j]) * z[j] + acc; } " (str_concat ac (str_concat " hk = acc + " (str_concat ac "(b1[k]); h1[k] = hk; a[k] = fgelu(hk); } threadgroup_barrier(mem_flags::mem_device); ")))))))))
+
+(defn jte-resid-fwd2 (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint k = hid; while (k > 0) { k -= 1; acc = " (str_concat ac (str_concat "(w2[i * hid + k]) * a[k] + acc; } " (str_concat ac (str_concat " ffn = acc + " (str_concat ac (str_concat "(b2[i]); " (str_concat ac (str_concat " yi = " (str_concat ac (str_concat "(h[i]) + ffn; " (str_concat ac (str_concat " d = yi - " (str_concat ac "(t[i]); loss[i] = d * d; gy[i] = 2.0f * d; } threadgroup_barrier(mem_flags::mem_device); ")))))))))))))))))
+
+(defn jte-resid-dh1 (el ac)
+  (str_concat "for (uint k = tid; k < hid; k += tgs) { " (str_concat ac (str_concat " s = 0.0f; uint i = 0; while (i < outd) { s = s + gy[i] * " (str_concat ac "(w2[i * hid + k]); i += 1; } dh1[k] = s * fgelud(h1[k]); } threadgroup_barrier(mem_flags::mem_device); ")))))
+
+(defn jte-resid-upd (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { uint k = hid; while (k > 0) { k -= 1; w2[i * hid + k] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(w2[i * hid + k]) - lr * gy[i] * a[k]); } b2[i] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(b2[i]) - lr * gy[i]); } for (uint k = tid; k < hid; k += tgs) { uint j = indim; while (j > 0) { j -= 1; w1[k * indim + j] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(w1[k * indim + j]) - lr * dh1[k] * z[j]); } b1[k] = " (str_concat el (str_concat "(" (str_concat ac "(b1[k]) - lr * dh1[k]); } }")))))))))))))))))
+
+(defn jte-resid-train-msl-spine (fname el ac)
+  (str_concat (jte-mlp-helpers ac)
+  (str_concat (jte-resid-sig fname el ac)
+  (str_concat (jte-resid-ln el ac)
+  (str_concat (jte-resid-fwd1 el ac)
+  (str_concat (jte-resid-fwd2 el ac)
+  (str_concat (jte-resid-dh1 el ac) (jte-resid-upd el ac))))))))
+
+(defn jte-resid-train-msl-fmt (fname fmt) (jte-resid-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+
+(defn jte-resid-train-msl (fname) (jte-resid-train-msl-fmt fname "f32"))

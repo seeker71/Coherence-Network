@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/gpu-arch-search",
+  "commit_scope": "The architect's capacity search now runs on the silicon. jit-tensor-emit.fk gains jte-resid-train-msl, a Form recipe that emits the architect's ACTUAL layer -- the pre-LN residual block y = h + (W2*gelu(W1*LN(h)+b1)+b2), tbp-stk-step on one 'ffn' layer, exactly what ac-ffn-layer builds and ac-train trains -- as one Metal kernel (the FFN-core kernel wrapped with a pre-LN of the input and the residual highway). scripts/metal_arch_search_audit.sh runs arch-capacity.fk's ac-min-width ON the GPU: it trains each candidate width over the d=4 reversal dataset on the M4 Max and crowns the smallest that fits. This also corrects the #3218 scope: that kernel (jte-mlp-train-msl) trains the FFN CORE (tbp-mlp-step), the two-layer MLP inside the architect's block; this one trains the residual block the architect actually builds.",
+  "files_owned": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/resid-train-emit-band.fk",
+    "scripts/metal_arch_search_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/resid-train-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/arch-capacity-band.fk",
+      "scripts/metal_arch_search_audit.sh"
+    ],
+    "summary": "resid-train-emit-band -> 7 three-way (Go=Rust=TS), 0 divergent: the residual-block training-step emitter is byte-identical across kernels (3167-byte canonical MSL), name-parameterized, deterministic. The FFN-core emitter (mlp-train-emit-band) and the affine sibling stay green (the helpers fexp/ftanh/fgelu/fgelud are shared, unchanged). LIVE GPU WITNESS scripts/metal_arch_search_audit.sh on this M4 Max: emits the residual-block kernel, then runs arch-capacity's ac-min-width search ON the GPU over the d=4 reversal dataset (4 examples, target = input reversed, lr 0.05, 150 epochs, efit 0.001). THREE executions, ONE crown -- the fp64 Form recipe ac-min-width (arch-capacity-band -> 31, crowns 2), the fp32 GPU, and the fp32 CPU mirror all crown WIDTH 2: width 1 underfits (GPU loss 7.59, CPU 7.12, both >> efit), width 2 fits (GPU 4.8e-7, CPU 4.8e-7), widths 3/4 also fit. Weights start from ac-w computed in fp64 and narrowed to fp32 so the GPU and the recipe begin from the same point. 3-KERNEL ONLY (Go=Rust=TS): gated alongside the fp64 transformer op family; the Metal/Swift witness is Darwin+swiftc only (soft-skips elsewhere).",
+    "observed_delta": {
+      "band_verdict": 7,
+      "band_divergent": 0,
+      "emitted_msl_bytes": 3167,
+      "dataset": "d=4 reversal, 4 examples, 150 epochs",
+      "width1_gpu_loss": 7.59,
+      "width2_gpu_loss": 4.8e-7,
+      "crown_recipe_fp64": 2,
+      "crown_gpu_fp32": 2,
+      "crown_cpu_fp32": 2
+    },
+    "known_limitations": [
+      {
+        "limitation": "The width-1 GPU loss (7.59) and CPU loss (7.12) differ by ~7% because the underfit trajectory is sensitive to fp32 rounding; this does NOT affect the crown -- both are >> efit (0.001), so both correctly reject width 1, and the fitting widths agree to ~6 sig figs (width 4: 0.000062784 vs 0.000062783). The discrimination gap (underfit 7.x vs fit 1e-7) is large enough that fp32 cannot flip the crown.",
+        "follow_up": "None needed; the crown is the discrete output and it is robust. A tighter fp32 reduction would narrow the underfit-trajectory gap but does not change the result."
+      },
+      {
+        "limitation": "Single threadgroup (barriered phases over device-memory scratch), so per-layer width is bounded by max threads per threadgroup (1024 here) for the wider of {hid, d}. The layernorm phase 0 runs on thread 0 (d is small in the architect's blocks). Larger widths/dims want a multi-threadgroup variant.",
+        "follow_up": "A multi-threadgroup reduction for the LN, the dh1 column sum, and the matvecs when hid/d exceed one group."
+      },
+      {
+        "limitation": "The search loop (train each width, crown minimal-that-fits) lives in the Swift carrier, mirroring ac-min-width; the crowning DECISION matches the fp64 Form recipe (ac-min-width via arch-capacity-band), but the loop itself is host code, not a Form recipe driving Metal. The GPU is the trainer; the search orchestration is the carrier.",
+        "follow_up": "Attention candidates trained on the GPU too (the full depth x width x type grid timed on the silicon), and a tighter Form-to-carrier handoff for the search loop."
+      },
+      {
+        "limitation": "3-kernel only: gated alongside the fp64 transformer op family; the Metal/Swift live witness is Darwin+swiftc only.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "resid-train-emit-band rides the default validate.sh suite via its '; preludes:' header (jit-tensor-emit.fk); CI three-way gate applies. The Metal witness is host-only and not part of CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib emitter recipe + band + a host GPU audit script; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The architect's capacity search -- ac-min-width over the d=4 reversal dataset -- now runs on the M4 Max GPU training the architect's actual residual block, and crowns the same width (2) the fp64 Form recipe and the fp32 CPU mirror crown.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh resid-train-emit-band (three kernels agree, verdict 7): the residual-block training-step MSL emitter is deterministic and byte-identical three-way",
+      "metal_arch_search_audit.sh: the emitted residual kernel compiles, trains each width over the dataset on the GPU, and crowns width 2 -- matching arch-capacity-band's fp64 recipe crown and the fp32 CPU mirror"
+    ],
+    "summary": "Proven three-way (emitter) and live on the M4 Max GPU (the architect's capacity search crowns width 2 on the silicon, matching the recipe)."
+  },
+  "phase_gate": {
+    "phase": "m7-gpu-arch-search",
+    "gate": "the architect's capacity search runs on Metal: jte-resid-train-msl emits the architect's actual pre-LN residual block (byte-stable three-way), and the live M4 Max witness trains each candidate width over the d=4 reversal dataset and crowns width 2 -- the same crown the fp64 recipe ac-min-width and the fp32 CPU mirror reach",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "attention candidates trained on the GPU too -- the full (depth x width x type) grid timed on the silicon; a multi-threadgroup variant for widths beyond one group"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "metal-arch-search-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/resid-train-emit-band.fk",
+    "scripts/metal_arch_search_audit.sh",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/resid-train-emit-band.fk",
+    "scripts/metal_arch_search_audit.sh",
+    "docs/coherence-substrate/form-native-models.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-16_metal_arch_search.json"
+  ],
+  "change_intent": "runtime_feature"
+}
