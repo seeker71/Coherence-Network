@@ -1,0 +1,53 @@
+; arch-capacity.fk — capacity-based architecture search: at d ≥ 4 (where layernorm keeps enough structure),
+; a dataset of several examples needs ENOUGH hidden width to fit. A narrow FFN-residual layer underfits the
+; dataset; a wider one fits it. The architect generates layers of configurable WIDTH, trains each over the
+; whole dataset (multi-example), and discovers the smallest width that fits — capacity discovered, not assumed.
+;
+; This is the deeper proof the 2-D fixtures could not give: in 2-D, layernorm collapses any input to one of
+; two normalized directions, so width does not discriminate over a dataset. At d=4 it does.
+;
+; Weights are deterministic (the kernel has no RNG): a pseudo-random float per (seed) via the fractional part
+; of seed·12.9898, in [-0.15, 0.15) — distinct so hidden units are not redundant, reproducible so the band is
+; bit-stable three-way. A width-H FFN-residual layer at dim d: W1 is H×d, b1 is H, W2 is d×H, b2 is d.
+;
+; Preludes: transformer-numerics.fk transformer-block.fk transformer-backprop.fk
+; Proven by: form-stdlib/tests/arch-capacity-band.fk
+
+(do
+    ; --- deterministic pseudo-random float weights ---
+    (defn ac-frac (x) (sub x (floor x)))
+    (defn ac-w (seed) (mul (sub (ac-frac (mul seed 12.9898)) 0.5) 0.3))      ; in [-0.15, 0.15)
+    (defn ac-row (n seed) (if (eq n 0) (empty) (cons (ac-w seed) (ac-row (sub n 1) (add seed 1.7)))))
+    (defn ac-mat (rows cols seed)
+        (if (eq rows 0) (empty) (cons (ac-row cols seed) (ac-mat (sub rows 1) cols (add seed 7.3)))))
+
+    ; --- a width-H FFN-residual layer at dim d (an "ffn" layer-cell the stack engine trains). ---
+    (defn ac-ffn-layer (d h seed)
+        (list "ffn" (ac-mat h d seed) (tb-zeros h) (ac-mat d h (add seed 100.0)) (tb-zeros d)))
+    (defn ac-arch (d h seed) (list (ac-ffn-layer d h seed)))                  ; a one-layer arch of width H
+
+    ; --- MULTI-EXAMPLE training: one epoch = one stack-step per (x,t) in the dataset; train E epochs. ---
+    (defn ac-epoch (layers data lr eps)
+        (if (eq (len data) 0) layers
+            (ac-epoch (tbp-stk-step layers (nth (head data) 0) (nth (head data) 1) lr eps)
+                      (tail data) lr eps)))
+    (defn ac-train (layers data lr eps epochs)
+        (if (eq epochs 0) layers (ac-train (ac-epoch layers data lr eps) data lr eps (sub epochs 1))))
+    (defn ac-set-loss (layers data eps)
+        (if (eq (len data) 0) 0.0
+            (add (tbp-stk-loss layers (nth (head data) 0) (nth (head data) 1) eps)
+                 (ac-set-loss layers (tail data) eps))))
+
+    ; --- the architect's capacity fitness: total dataset loss after training a width-H arch. ---
+    (defn ac-fit (d h seed data lr eps epochs)
+        (ac-set-loss (ac-train (ac-arch d h seed) data lr eps epochs) data eps))
+
+    ; --- crown the smallest width (1..maxh) whose trained dataset loss clears a fit threshold. ---
+    (defn ac-min-width-acc (h maxh d seed data lr eps epochs efit)
+        (if (gt h maxh) 0
+            (if (lt (ac-fit d h seed data lr eps epochs) efit) h
+                (ac-min-width-acc (add h 1) maxh d seed data lr eps epochs efit))))
+    (defn ac-min-width (maxh d seed data lr eps epochs efit)
+        (ac-min-width-acc 1 maxh d seed data lr eps epochs efit))
+
+    0)

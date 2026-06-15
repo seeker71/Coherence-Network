@@ -1,0 +1,40 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk
+;
+; arch-capacity-band — capacity-based architecture search, three-way: at d=4 (where layernorm keeps enough
+; structure), a 4-example dataset needs ENOUGH hidden width. A width-1 FFN-residual layer UNDERFITS the
+; dataset (it cannot represent four distinct input→target maps with one gelu unit); a width-2+ layer FITS.
+; The architect trains each width over the whole dataset (multi-example) and discovers the smallest width
+; that fits — capacity discovered, not assumed. This is the proof 2-D could not give: in 2-D layernorm
+; collapses any input to one of two directions, so width does not discriminate; at d=4 it does.
+; Dataset: four d=4 inputs, each target the input reversed (a demanding per-example map). lr 0.05, 150 epochs.
+;
+; Verdict 31 when every claim lands:
+;   1    a d=4 width-2 layer's forward is deterministic: y[0] → 2026539 (×1e6)
+;   2    capacity MATTERS: width 1 UNDERFITS the dataset (total loss > 0.5 — one gelu unit is not enough)
+;   4    width 2 FITS the dataset (total loss < 0.001)
+;   8    the architect discovers the MINIMAL fitting width: ac-min-width(maxh=4) = 2 (not 1, which underfits)
+;   16   a wider width (4) also fits (total loss < 0.001) — capacity sufficient, the search confirms it
+(do
+    (let data (list (list (list 2.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 2.0))
+                    (list (list 0.0 2.0 1.0 0.0) (list 0.0 1.0 2.0 0.0))
+                    (list (list 0.0 0.0 2.0 1.0) (list 1.0 2.0 0.0 0.0))
+                    (list (list 1.0 0.0 0.0 2.0) (list 2.0 0.0 0.0 1.0))))
+    (let seed 0.3)
+    (let lr 0.05)
+    (let eps 0.00001)
+    (let epochs 150)
+    (let efit 0.001)
+
+    (let y0   (tbp-stk-fwd (ac-arch 4 2 seed) (list 2.0 1.0 0.0 0.0) eps))
+    (let l1   (ac-fit 4 1 seed data lr eps epochs))
+    (let l2   (ac-fit 4 2 seed data lr eps epochs))
+    (let l4   (ac-fit 4 4 seed data lr eps epochs))
+    (let minw (ac-min-width 4 4 seed data lr eps epochs efit))
+
+    (let c0 (if (eq (round (mul (nth y0 0) 1000000.0)) 2026539) 1 0))
+    (let c1 (if (gt l1 0.5) 2 0))
+    (let c2 (if (lt l2 0.001) 4 0))
+    (let c3 (if (eq minw 2) 8 0))
+    (let c4 (if (lt l4 0.001) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
