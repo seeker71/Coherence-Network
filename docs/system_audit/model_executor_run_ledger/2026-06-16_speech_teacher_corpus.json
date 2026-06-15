@@ -1,0 +1,18 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "git switch -c codex/speech-teacher-corpus-floor-20260616 origin/main",
+    "coord claim speech-teacher-corpus-floor",
+    "make wellness",
+    "bash -n scripts/speech_teacher_corpus_receipt.sh && scripts/speech_teacher_corpus_receipt.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-teacher-corpus-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh speech-teacher-corpus",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-teacher-receipt-band.fk"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a physical local speech teacher corpus floor. The live no-Python witness collected four macOS say/local whisper-cli receipts into one corpus row with min_overlap=100, total_duration_ms=7763, and corpus hash; Form lowered the corpus into native training samples and proved the corpus band at 16383 four-way."
+}
