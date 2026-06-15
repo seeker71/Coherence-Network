@@ -9,10 +9,10 @@
   (native-tool-proof form/form-stdlib/tests/tool-channel-band.fk -> 255)
   (native-tool-grammar-proof form/form-stdlib/tests/tool-channel-grammar-band.fk -> 255)
   (native-http-floor
-    (floor "all kernels carry non-shell plaintext and verified TLS external http_get body capture; fkwu uses tag 105 with DNS/TCP/socket/read/write for http, runtime-loaded OpenSSL-compatible TLS for https, native response-header row parsing, filtered explicit request-header forwarding, and tag 106 _get so recipes can read the returned dict/list receipts inside the emitted binary")
+    (floor "all kernels carry non-shell plaintext and verified TLS external http_get body capture; fkwu uses tag 105 with DNS/TCP/socket/read/write for http, runtime-loaded OpenSSL-compatible TLS for https, native response-header row parsing, filtered explicit request-header forwarding, native elapsed duration timing, and tag 106 _get so recipes can read the returned dict/list receipts inside the emitted binary")
     (north-star "all kernels carry non-shell TLS/HTTPS http_get with request headers, response headers, status, body, duration, error, streaming/backpressure rows, and production authority receipts in the same native dict/row shape")
-    (proof "scripts/model_vitality_native_http_capture_probe.sh -> http go=63 rust=63 typescript=63 fourth=63; https go=63 rust=63 typescript=63 fourth=63; request-headers go=127 rust=127 typescript=127 fourth=127; fourth-runtime-authority fourth=127 runtime_headers=14 runtime_router=native-kernel runtime_python_authority=false")
-    (gap "measured fourth-arm duration, larger body policy, and streaming/backpressure rows"))
+    (proof "scripts/model_vitality_native_http_capture_probe.sh -> http go=63 rust=63 typescript=63 fourth=63 with duration_ms>0; https go=63 rust=63 typescript=63 fourth=63 with duration_ms>0; request-headers go=127 rust=127 typescript=127 fourth=127; fourth-runtime-authority fourth=127 runtime_router=native-kernel runtime_handler=api_health runtime_python_authority=false")
+    (gap "larger body policy and streaming/backpressure rows"))
 
   (compatibility
     (reason "older source-map entries and agents still ask for fourth-kernel.form")
