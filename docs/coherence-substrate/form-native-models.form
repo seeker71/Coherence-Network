@@ -393,9 +393,16 @@
 ;   transformer-backprop.fk's stack engine, and crowns the one that fits — the no-op (depth 0, y=x) cannot
 ;   fit a target ≠ input (loss stays 0.34) and is rejected, while generated depth-1/2 architectures train to
 ;   loss → 0. So the system designs the architecture AND learns it: the same generate-then-search shape that
-;   composes experts (recipe-gen) now does NAS over layer-stacks, trained by the proven backward. Next ring:
-;   richer architecture spaces (mixed layer types, widths, attention vs ffn per task) and champion-challenger
-;   flipping serving authority to a synthesized-and-trained architecture once it earns it.
+;   composes experts (recipe-gen) now does NAS over layer-stacks, trained by the proven backward.
+;   And the SERVING loop is now closed [arch-champion-challenger-band.fk → 31 three-way]: the architect's
+;   challenger replaces the served champion ONLY when it EARNS it. A deeper challenger fits the task's targets
+;   faster (closer in 5 steps), strictly exceeds the champion across the window (score 3 > 1), and
+;   champion-challenger.fk flips authority to it ("challenger"); a same-architecture challenger only TIES, so
+;   the served champion is protected ("champion", not promoted). This is M7's infer-best-while-searching-better
+;   in full: generate challenger architectures, train them, promote only the earned winner — improving the
+;   model without ever degrading what is served now. Next ring: richer architecture spaces (mixed layer types,
+;   widths, attention vs ffn per task), multi-example capacity selection at higher dim (LN collapses 2-D inputs
+;   to two directions), and the GPU as the trainer underneath the search.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
