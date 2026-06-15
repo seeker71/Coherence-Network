@@ -214,3 +214,48 @@
 (defn tbp-stack-train-loss (ba bb x t lr eps n)
   (do (let s (tbp-stack-train ba bb x t lr eps n))
       (tbp-stack-loss (tbp-stack-A s) (tbp-stack-B s) x t eps)))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE ATTENTION CORE BACKWARD — the steepest gradient: through softmax-weighted value mixing.
+; ─────────────────────────────────────────────────────────────────────────────
+; transformer-block.fk's attention (single query): s_j = scale·(q·k_j); α = softmax(s); o = Σ α_j v_j.
+; Given the output-grad do, the backward walks the mixing in reverse:
+;   dv_j = α_j·do          the value-grads PARTITION do — Σ dv_j = do, since Σα = 1
+;   dα_j = <do, v_j>       output-grad dotted with each value
+;   ds   = softmax'(α, dα) reuse tbp-softmax-back; Σ ds = 0
+;   dq   = scale·Σ ds_j·k_j     weighted sum of keys
+;   dk_j = scale·ds_j·q
+; The q/k/v projections wrapping this are affine vjps (already proven); this is the genuinely new node.
+
+(defn tbp-attn-weights (q ks scale) (tn-softmax (tb-scores q ks scale)))     ; α
+(defn tbp-attn-out (q ks vs scale) (tb-attend-one q ks vs scale))           ; o (reuse forward)
+
+; dv_j = α_j·dout, as a list of vectors; and their sum (the partition invariant target).
+; (the upstream output-grad is named dout — `do` is the reserved do-block keyword.)
+(defn tbp-attn-dv-acc (alpha dout)
+  (if (eq (len alpha) 0) (empty) (cons (tn-scale dout (head alpha)) (tbp-attn-dv-acc (tail alpha) dout))))
+(defn tbp-attn-dv (q ks vs scale dout) (tbp-attn-dv-acc (tbp-attn-weights q ks scale) dout))
+(defn tbp-vsum (vs) (if (eq (len vs) 1) (head vs) (tb-vec-add (head vs) (tbp-vsum (tail vs)))))
+
+; dα_j = <dout, v_j>
+(defn tbp-attn-dalpha (dout vs)
+  (if (eq (len vs) 0) (empty) (cons (tb-dot dout (head vs)) (tbp-attn-dalpha dout (tail vs)))))
+
+; dq = scale · Σ ds_j·k_j  (ds = softmax-back of dα; weighted sum of keys, then scaled)
+(defn tbp-attn-dq-acc (ds ks acc)
+  (if (eq (len ds) 0) acc
+      (tbp-attn-dq-acc (tail ds) (tail ks) (tb-vec-add acc (tn-scale (head ks) (head ds))))))
+(defn tbp-attn-dq (q ks vs scale dout)
+  (tn-scale
+    (tbp-attn-dq-acc (tbp-softmax-back (tbp-attn-weights q ks scale) (tbp-attn-dalpha dout vs))
+                     ks (tb-zeros (len q)))
+    scale))
+
+; --- train the QUERY to steer attention onto a target (keys, values fixed): exercises dq -> ds -> softmax'. ---
+(defn tbp-attn-loss (q ks vs scale t) (tbp-sse (tb-attend-one q ks vs scale) t))
+(defn tbp-attn-q-step (q ks vs scale t lr)
+  (tbp-vsub q (tn-scale (tbp-attn-dq q ks vs scale (tn-scale (tbp-vsub (tb-attend-one q ks vs scale) t) 2.0)) lr)))
+(defn tbp-attn-q-train (q ks vs scale t lr n)
+  (if (eq n 0) q (tbp-attn-q-train (tbp-attn-q-step q ks vs scale t lr) ks vs scale t lr (sub n 1))))
+(defn tbp-attn-q-train-loss (q ks vs scale t lr n)
+  (tbp-attn-loss (tbp-attn-q-train q ks vs scale t lr n) ks vs scale t))

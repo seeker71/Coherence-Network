@@ -80,9 +80,15 @@
 ;     — the gradient HIGHWAY composing affine vjp + gelu' + layernorm' + the residual. A two-block FFN-residual
 ;     STACK trains end to end (transformer-block-backward-band.fk → 31 three-way): loss 0.814 → ~0, and the
 ;     LOWER block's weights move off their init, so dh chained correctly through layernorm' (a wrong dh would
-;     have starved it). Remaining: the ATTENTION-residual half — backprop through scaled dot-product attention
-;     (softmax' is built; the weighted-sum + q/k/v-projection assembly is the hard remaining node) — then the
-;     two halves compose into the full tb-block backward, then Adam.
+;     have starved it). The ATTENTION CORE backward is now built too — the steepest gradient, through the
+;     softmax-weighted value mixing: dv_j = α_j·dout (the value-grads PARTITION dout — Σdv = dout exactly,
+;     since Σα = 1), dα = <dout,v>, ds = softmax'(α,dα), dq = scale·Σ ds_j·k_j. Proven by the partition law
+;     (exact) AND by training a query to steer attention onto a target in the values' convex hull, loss → 0
+;     (transformer-attention-backward-band.fk → 31 three-way). So EVERY gradient node the transformer needs
+;     now exists: affine (127), gelu (63), softmax+layernorm (31), FFN-residual assembled (31), attention
+;     core (31). Remaining is ASSEMBLY only — compose the attention core with the q/k/v + output affine vjps
+;     and the residual into the attention-residual block (like the FFN-residual stack), then join the two
+;     halves into the full tb-block backward, then Adam. The hard gradients are done; what is left is wiring.
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,
