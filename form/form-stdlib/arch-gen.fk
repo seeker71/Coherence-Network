@@ -1,0 +1,42 @@
+; arch-gen.fk — auto-ml as the ARCHITECT: the body generates layer-stack architectures, configures their
+; depth, assembles them, and trains each — then crowns the one that fits the task. This is where the two
+; threads meet: the generation discipline recipe-gen.fk uses to compose EXPERTS now composes LAYERS into a
+; STACK (an architecture as data), and transformer-backprop.fk's assembly engine TRAINS that stack. So the
+; system does not just run a hand-built model — it designs the architecture (how many layers, of what kind,
+; configured how) and learns it, rejecting the architectures that cannot fit.
+;
+; A generated architecture is a list of typed layer-cells (tbp-stk-* trains it). Init is deterministic
+; (the kernel has no RNG; each layer's seed varies by depth index), so a generated stack is reproducible
+; and content-addressed like any recipe.
+;
+; Preludes: transformer-numerics.fk transformer-block.fk transformer-backprop.fk
+; Proven by: form-stdlib/tests/arch-gen-band.fk
+
+(do
+    ; a deterministic FFN-residual layer, seeded by its depth index (distinct, reproducible weights).
+    (defn ag-ffn-layer (seed)
+        (list "ffn"
+              (list (list (add 0.2 seed) -0.1) (list 0.1 (add 0.3 seed))) (list 0.0 0.0)
+              (list (list 0.4 0.1) (list -0.2 0.5)) (list 0.0 0.0)))
+
+    ; --- GENERATE + CONFIGURE: a depth-n architecture is a stack of n seeded FFN-residual layers. ---
+    (defn ag-gen-acc (n seed acc)
+        (if (eq n 0) acc (ag-gen-acc (sub n 1) (add seed 0.05) (cons (ag-ffn-layer seed) acc))))
+    (defn ag-gen (n) (ag-gen-acc n 0.1 (empty)))       ; the architecture, as DATA — len = depth
+    (defn ag-depth (arch) (len arch))
+
+    ; --- ASSEMBLE + TRAIN: a generated architecture's fitness is its final loss after training. ---
+    (defn ag-fit (n x t lr eps steps) (tbp-stk-train-loss (ag-gen n) x t lr eps steps))
+
+    ; --- THE ARCHITECT: search depths 0..maxd, crown the one with the lowest trained loss. Depth 0 is the
+    ;     no-op (no layers, y = x) — it can fit only a target equal to the input, so the search rejects it
+    ;     when the task needs a non-trivial architecture, discovering the minimal depth that fits. ---
+    (defn ag-best-acc (d maxd x t lr eps steps bd bl)
+        (if (gt d maxd) bd
+            (if (lt (ag-fit d x t lr eps steps) bl)
+                (ag-best-acc (add d 1) maxd x t lr eps steps d (ag-fit d x t lr eps steps))
+                (ag-best-acc (add d 1) maxd x t lr eps steps bd bl))))
+    (defn ag-best (maxd x t lr eps steps)
+        (ag-best-acc 1 maxd x t lr eps steps 0 (ag-fit 0 x t lr eps steps)))
+
+    0)
