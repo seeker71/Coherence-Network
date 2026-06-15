@@ -59,7 +59,16 @@
 ;     policy row, provenance, and substrate-cell authority. Optimizer-step math remains separate.
 ;     optimizer-step now returns 4095 four-way: exact integer fixed-point SGD and momentum receipts update
 ;     small model vectors deterministically and refuse invalid scale/length inputs before computation.
-;     Autodiff gradient cells and Adam remain separate walls.
+;     transformer-backprop now returns 127 three-way: the REVERSE pass over the transformer's affine node
+;     (the workhorse of every q/k/v/out projection and FFN layer in transformer-block.fk) — db = gy,
+;     dW = outer(gy, x), and the chain dx = Wᵀ·gy (bit-exact) — composed with an SGD update generalized
+;     from form-train-step.fk's one-weight atom to a whole weight MATRIX and bias VECTOR. The band trains
+;     a 2→2 affine from W=0 to fit a target with strictly decreasing loss, the dx chain and dW outer both
+;     bit-exact, prediction matching target to 1e-6. fp64, reusing transformer-block.fk's own forward ops;
+;     3-kernel only (Go=Rust=TS), the SAME floor transformer-block is proven on (the transformer op family
+;     is not in the fourth-arm manifest). This is the autodiff-gradient-cell wall, opened at the affine
+;     node; the remaining walls are the transcendental vjps (gelu'/softmax'/layernorm') that extend it to
+;     the full-block backward, and Adam.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -72,7 +81,9 @@
 ;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     autodiff gradient cells, Adam optimizer cells, durable eval-receipt query path, measured fourth-arm duration, larger native
+;     autodiff gradient cells for the transcendental ops (gelu'/softmax'/layernorm') and the full-block
+;     backward — the affine-node vjp is closed (transformer-backprop.fk → 127 three-way) — Adam optimizer
+;     cells, durable eval-receipt query path, measured fourth-arm duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
 ;     live chunk-range merkle transport/proof is still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local

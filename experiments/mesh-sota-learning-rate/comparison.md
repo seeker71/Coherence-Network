@@ -92,7 +92,15 @@ in *kind* of transformer:
 > **router-tier floor**, honestly measured. The fidelity gap to SOTA closes through the
 > **already-built** transformer tier trained by the cross-train-oracle loop, not through a
 > learner we lack. What we have that SOTA does not: a transformer whose *body is legible,
-> portable across six ISAs, and trust-observed*. The next step is not "build the model" —
-> it is run the cross-train-oracle loop on `transformer-block.fk` against a real corpus and
-> read the native-vs-oracle score rise. The model is here; the training loop over it is the
-> seed that grows next.
+> portable across six ISAs, and trust-observed*.
+>
+> **Update (the training loop over it is no longer just a seed):** the backward pass over
+> the transformer's affine node is now built and proven —
+> `form/form-stdlib/transformer-backprop.fk` → **127 three-way** (Go=Rust=TS): the chain
+> rule `dx = Wᵀ·gy` bit-exact, `dW = outer(gy,x)` bit-exact, SGD generalized from the
+> one-weight atom to a weight matrix, training a 2→2 affine to fit a target with strictly
+> decreasing loss. That affine node is the workhorse of every projection and FFN layer in
+> `transformer-block.fk`. What remains is the transcendental vjps (gelu'/softmax'/layernorm')
+> for the full-block backward, then the cross-train-oracle loop runs over a learning model,
+> not just a static forward pass. The model was here; now the gradient walk that trains it
+> is here too.
