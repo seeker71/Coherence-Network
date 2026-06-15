@@ -1,0 +1,38 @@
+; preludes: form-stdlib/core.fk form-stdlib/core-axiom-native-receipt.fk
+;
+; core-axiom-native-receipt-band — receipt floor for the Mac + Android native
+; channel pair.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let mac (can-endpoint "macos-host" "macos-arm64" "adb-forward-tcp" 64 8 64 0 1234567 6 0 0 "pass"))
+    (let android (can-endpoint "android-device" "android-arm64" "adb-forward-tcp" 64 8 64 0 7654321 6 0 0 "pass"))
+    (let mac-big (can-endpoint "macos-host" "macos-arm64" "adb-forward-tcp" 128 8 128 0 2222222 6 0 0 "pass"))
+    (let android-big (can-endpoint "android-device" "android-arm64" "adb-forward-tcp" 128 8 128 0 3333333 6 0 0 "pass"))
+    (let good (can-channel-receipt mac android 1 "pass"))
+    (let bigger (can-channel-receipt mac-big android-big 1 "pass"))
+    (let bad-peer (can-channel-receipt mac android 0 "pass"))
+    (let bad-role (can-channel-receipt android mac 1 "pass"))
+    (let bad-samples (can-channel-receipt mac android-big 1 "pass"))
+    (let bad-bg (can-channel-receipt mac (can-endpoint "android-device" "android-arm64" "adb-forward-tcp" 64 8 64 0 7 6 0 1 "pass") 1 "pass"))
+    (let bad-self (can-channel-receipt (can-endpoint "macos-host" "macos-arm64" "adb-forward-tcp" 64 8 64 0 7 6 1 0 "pass") android 1 "pass"))
+    (let bad-status (can-channel-receipt mac android 1 "fail"))
+    (let bad-kind (list "not-core-axiom-native-channel-receipt" "adb-forward-tcp" mac android 1 "pass"))
+
+    (let c0 (if (can-endpoint? mac) 1 0))
+    (let c1 (if (can-valid-endpoint? mac) 2 0))
+    (let c2 (if (can-valid-endpoint? android) 4 0))
+    (let c3 (if (can-channel-receipt? good) 8 0))
+    (let c4 (if (can-valid-channel? good) 16 0))
+    (let c5 (if (can-left-expands? good bigger) 32 0))
+    (let c6 (if (eq (can-valid-channel? bad-peer) 0) 64 0))
+    (let c7 (if (eq (can-valid-channel? bad-role) 0) 128 0))
+    (let c8 (if (eq (can-valid-channel? bad-samples) 0) 256 0))
+    (let c9 (if (eq (can-valid-channel? bad-bg) 0) 512 0))
+    (let c10 (if (eq (can-valid-channel? bad-self) 0)
+                 (if (eq (can-valid-channel? bad-status) 0)
+                     (if (eq (can-channel-receipt? bad-kind) 0) 1024 0)
+                     0)
+                 0))
+    (let c11 (if (eq (len (can-floor)) 6) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

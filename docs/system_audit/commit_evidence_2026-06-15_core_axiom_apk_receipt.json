@@ -1,0 +1,140 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/core-axiom-apk-receipt-20260615",
+  "commit_scope": "Add an APK native-library packaging receipt for the Android core-axiom proof library.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "core-axioms",
+    "kernel-on-android",
+    "hati-os-targets",
+    "form-native-models",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "android-sense-organ",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "core-axiom-apk-receipt-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-package-prioritization",
+        "native-carrier-floor"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/android_core_axiom_apk_receipt.sh",
+    "form/form-stdlib/core-axiom-apk-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-apk-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_core_axiom_apk_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-apk-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/android_core_axiom_apk_receipt.sh",
+    "form/form-stdlib/core-axiom-apk-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-apk-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_core_axiom_apk_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-apk-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim core-axiom-apk-receipt \"Next carrier lane after PR #3185: inspect/prove APK or Android app packaging surface for the core-axiom native receipt binary/lib; avoid Wi-Fi/non-adb transport, sensor/raw media, BML/compiler, and world-model lanes.\"",
+      "bash -n scripts/android_core_axiom_apk_receipt.sh",
+      "scripts/android_core_axiom_apk_receipt.sh 2048 8",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/core-axiom-apk-receipt.fk form-stdlib/tests/core-axiom-apk-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh core-axiom-apk-receipt"
+    ],
+    "notes": "The APK proof script generated an Android arm64 shared object from C, staged it into experiments/coherence-sense-android/app/src/main/jniLibs/arm64-v8a for a clean Gradle debug build, verified the APK contains lib/arm64-v8a/libcoherence_core_axiom_receipt.so, extracted that entry, and checked the extracted entry SHA equals the generated library SHA. Receipt: kind=core-axiom-apk-native-lib-receipt, apk_sha256=a37a275e47a9a470cf8f9b4d9a77c99410371c4db3de9137fd323920b8e6015c, entry_sha256=fca60ee43d4fd6b7d3f35ffc21c40099afd8a1ba5e892b0a719005aef7f20515, generated_source_sha256=d563eda0d05611166a4f776298e6fba9755435b9493be1cb2f44328b0a2271c7, library_sha256=fca60ee43d4fd6b7d3f35ffc21c40099afd8a1ba5e892b0a719005aef7f20515, abi=arm64-v8a, samples=2048, width=8, packaged=true, executed_on_device=false, status=pass. Focused Form validation returned 4095 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. fourth-arm-gate returned PASS-4WAY core-axiom-apk-receipt."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy requested; this is a local APK native-library packaging receipt proof."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Android app packaging lane can now carry a generated native core-axiom receipt library inside the APK and verify the packaged lib entry by SHA before any JNI or installed-app execution claim is made.",
+    "public_endpoints": [
+      "n/a: local Gradle APK build and local generated native library"
+    ],
+    "test_flows": [
+      "Build an Android arm64-v8a shared object from generated C.",
+      "Stage the shared object into Coherence Sense jniLibs for one clean APK build.",
+      "Verify the APK contains the native lib entry and that the extracted entry SHA matches the generated library SHA.",
+      "Validate the APK receipt shape four-way through fkwu."
+    ]
+  },
+  "evidence_refs": [
+    "scripts/android_core_axiom_apk_receipt.sh",
+    "form/form-stdlib/core-axiom-apk-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-apk-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-apk-receipt-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "core-axiom-apk-receipt",
+    "gate": "APK carriage of native receipt code must be verified before claiming JNI load/call or installed-app execution.",
+    "state": "local-apk-native-lib-package-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add a Kotlin/JNI load-and-call receipt from the app process or an installed-app instrumentation receipt on the authorized Android phone."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Mac+Android native receipt/package evidence existed over adb-forward-tcp, while APK native-library carriage for that receipt code was still unproven.",
+    "current_observed_floor": "core-axiom-apk-receipt returns 4095 four-way, and latest.json records APK SHA, native lib entry SHA, generated source SHA, library SHA, ABI, sample window, packaged=true, and executed_on_device=false.",
+    "new_bands": [
+      "core-axiom-apk-receipt -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "JNI load/call from Kotlin",
+      "installed-app native execution",
+      "non-adb mesh transport",
+      "runtime clang bundled in APK",
+      "background service",
+      "self-modifying binary"
+    ]
+  }
+}

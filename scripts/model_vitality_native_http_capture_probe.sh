@@ -13,8 +13,9 @@
 # plaintext external HTTP plus verified TLS body capture, and the fourth arm
 # carries direct HTTPS production response headers into model-vitality rows.
 # All kernels now also forward explicit request-header rows and prove the echo
-# through a live HTTPS header endpoint. Next floor: measured fourth-arm
-# duration, larger body policy, and streaming/backpressure receipt rows.
+# through a live HTTPS header endpoint. The emitted fourth arm measures elapsed
+# request duration inside the native carrier. Next floor: larger body policy and
+# streaming/backpressure receipt rows.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -81,7 +82,7 @@ cat > "$verdict_fk" <<'FK'
     (let floor (mv-floor))
     (let north (mv-north-star))
     (let pulse-url "https://api.coherencycoin.com/api/pulse/now")
-    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let runtime-url "https://api.coherencycoin.com/api/health")
     (let headers (list (mv-http-header "Accept" "application/json")))
     (let pulse-response (http_get pulse-url headers 8000))
     (let runtime-response (http_get runtime-url headers 8000))
@@ -102,7 +103,7 @@ cat > "$detail_fk" <<'FK'
     (let floor (mv-floor))
     (let north (mv-north-star))
     (let pulse-url "https://api.coherencycoin.com/api/pulse/now")
-    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let runtime-url "https://api.coherencycoin.com/api/health")
     (let headers (list (mv-http-header "Accept" "application/json")))
     (let pulse-response (http_get pulse-url headers 8000))
     (let runtime-response (http_get runtime-url headers 8000))
@@ -179,7 +180,7 @@ write_external_http_band() {
     (let c2 (if (gt (str_len body) 100) 4 0))
     (let c3 (if (str_eq err "") 8 0))
     (let c4 (if (ge (str_find body "Example Domain" 0) 0) 16 0))
-    (let c5 (if (ge duration 0) 32 0))
+    (let c5 (if (gt duration 0) 32 0))
     (sum (list c0 c1 c2 c3 c4 c5)))
 FK
 
@@ -214,6 +215,28 @@ all_https_detail_fk="$out_dir/all-kernel-https-detail.fk"
 write_external_http_band "http://example.com/" "$all_http_fk" "$all_http_detail_fk"
 write_external_http_band "https://example.com/" "$all_https_fk" "$all_https_detail_fk"
 
+write_http_duration_band() {
+    local target_url="$1"
+    local duration_path="$2"
+    cat > "$duration_path" <<FK
+(do
+    (defn dict-get-pairs (xs key)
+        (if (eq (len xs) 0)
+            0
+            (if (str_eq (head xs) key)
+                (head (tail xs))
+                (dict-get-pairs (tail (tail xs)) key))))
+    (defn dict-get (d key) (dict-get-pairs (tail d) key))
+    (let response (http_get "$target_url" (list) 8000))
+    (dict-get response "duration_ms"))
+FK
+}
+
+all_http_duration_fk="$out_dir/all-kernel-http-duration.fk"
+all_https_duration_fk="$out_dir/all-kernel-https-duration.fk"
+write_http_duration_band "http://example.com/" "$all_http_duration_fk"
+write_http_duration_band "https://example.com/" "$all_https_duration_fk"
+
 write_request_header_band() {
     local target_url="$1"
     local verdict_path="$2"
@@ -238,8 +261,8 @@ write_request_header_band() {
         (and (eq (ord (char_at s 5)) 116)
         (and (eq (ord (char_at s 6)) 95)
              (eq (ord (char_at s 7)) 95))))))))))
-    (let trace "codex-request-header-20260614")
-    (let response (http_get "$target_url" (list (h "Accept" "application/json") (h "X-Form-Trace" trace)) 8000))
+    (let trace "codex-request-header-20260615")
+    (let response (http_get "$target_url" (list (h "Accept" "application/json") (h "User-Agent" "hati-fkwu/1") (h "X-Form-Trace" trace)) 8000))
     (let status (dict-get response "status_code"))
     (let body (dict-get response "body"))
     (let err (dict-get response "error"))
@@ -248,7 +271,7 @@ write_request_header_band() {
     (let c1 (if (eq status 200) 2 0))
     (let c2 (if (gt (str_len body) 100) 4 0))
     (let c3 (if (str_eq err "") 8 0))
-    (let c4 (if (ge (str_find body "X-Form-Trace" 0) 0) 16 0))
+    (let c4 (if (ge (str_find body "x-form-trace" 0) 0) 16 0))
     (let c5 (if (ge (str_find body trace 0) 0) 32 0))
     (let c6 (if (gt (len headers) 0) 64 0))
     (sum (list c0 c1 c2 c3 c4 c5 c6)))
@@ -264,8 +287,8 @@ FK
                 (head (tail xs))
                 (dict-get-pairs (tail (tail xs)) key))))
     (defn dict-get (d key) (dict-get-pairs (tail d) key))
-    (let trace "codex-request-header-20260614")
-    (let response (http_get "$target_url" (list (h "Accept" "application/json") (h "X-Form-Trace" trace)) 8000))
+    (let trace "codex-request-header-20260615")
+    (let response (http_get "$target_url" (list (h "Accept" "application/json") (h "User-Agent" "hati-fkwu/1") (h "X-Form-Trace" trace)) 8000))
     (let status (dict-get response "status_code"))
     (let body (dict-get response "body"))
     (let err (dict-get response "error"))
@@ -280,7 +303,7 @@ FK
                 (str_concat " error=" err)
                 (str_concat " duration_ms=" (int_to_str duration))))
         (str_concat
-            (str_concat " echoed_name=" (int_to_str (str_find body "X-Form-Trace" 0)))
+            (str_concat " echoed_name=" (int_to_str (str_find body "x-form-trace" 0)))
             (str_concat
                 (str_concat " echoed_value=" (int_to_str (str_find body trace 0)))
                 (str_concat " response_headers=" (int_to_str (len headers)))))))
@@ -289,7 +312,23 @@ FK
 
 request_header_fk="$out_dir/all-kernel-request-header-verdict.fk"
 request_header_detail_fk="$out_dir/all-kernel-request-header-detail.fk"
-write_request_header_band "https://httpbin.org/headers" "$request_header_fk" "$request_header_detail_fk"
+write_request_header_band "https://postman-echo.com/headers" "$request_header_fk" "$request_header_detail_fk"
+
+request_header_duration_fk="$out_dir/all-kernel-request-header-duration.fk"
+cat > "$request_header_duration_fk" <<'FK'
+(do
+    (defn h (name value) (list 43001 name value))
+    (defn dict-get-pairs (xs key)
+        (if (eq (len xs) 0)
+            0
+            (if (str_eq (head xs) key)
+                (head (tail xs))
+                (dict-get-pairs (tail (tail xs)) key))))
+    (defn dict-get (d key) (dict-get-pairs (tail d) key))
+    (let trace "codex-request-header-20260615")
+    (let response (http_get "https://postman-echo.com/headers" (list (h "Accept" "application/json") (h "User-Agent" "hati-fkwu/1") (h "X-Form-Trace" trace)) 8000))
+    (dict-get response "duration_ms"))
+FK
 
 run_http_kernel() {
     local name="$1"
@@ -339,6 +378,7 @@ run_http_kernel http-rust "$RS_BIN"
 run_http_kernel http-typescript run_ts
 run_fourth_http "$all_http_fk" "$out_dir/http-fourth.http.verdict" "$out_dir/http-fourth.http.verdict.err"
 run_fourth_http "$all_http_detail_fk" "$out_dir/http-fourth.http.detail" "$out_dir/http-fourth.http.detail.err"
+run_fourth_http "$all_http_duration_fk" "$out_dir/http-fourth.http.duration" "$out_dir/http-fourth.http.duration.err"
 
 run_https_kernel() {
     local name="$1"
@@ -360,6 +400,7 @@ run_https_kernel https-rust "$RS_BIN"
 run_https_kernel https-typescript run_ts
 run_fourth_http "$all_https_fk" "$out_dir/https-fourth.https.verdict" "$out_dir/https-fourth.https.verdict.err"
 run_fourth_http "$all_https_detail_fk" "$out_dir/https-fourth.https.detail" "$out_dir/https-fourth.https.detail.err"
+run_fourth_http "$all_https_duration_fk" "$out_dir/https-fourth.https.duration" "$out_dir/https-fourth.https.duration.err"
 
 run_request_header_kernel() {
     local name="$1"
@@ -381,6 +422,7 @@ run_request_header_kernel header-rust "$RS_BIN"
 run_request_header_kernel header-typescript run_ts
 run_fourth_http "$request_header_fk" "$out_dir/header-fourth.request-header.verdict" "$out_dir/header-fourth.request-header.verdict.err"
 run_fourth_http "$request_header_detail_fk" "$out_dir/header-fourth.request-header.detail" "$out_dir/header-fourth.request-header.detail.err"
+run_fourth_http "$request_header_duration_fk" "$out_dir/header-fourth.request-header.duration" "$out_dir/header-fourth.request-header.duration.err"
 
 fourth_runtime_fk="$out_dir/fourth-runtime-authority-verdict.fk"
 fourth_runtime_detail_fk="$out_dir/fourth-runtime-authority-detail.fk"
@@ -388,7 +430,7 @@ cat > "$fourth_runtime_fk" <<'FK'
 (do
     (let floor (mv-floor))
     (let north (mv-north-star))
-    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let runtime-url "https://api.coherencycoin.com/api/health")
     (let headers (list (mv-http-header "Accept" "application/json")))
     (let response (http_get runtime-url headers 8000))
     (let runtime (mv-native-http-runtime-telemetry runtime-url response floor north))
@@ -396,7 +438,7 @@ cat > "$fourth_runtime_fk" <<'FK'
     (let c1 (if (mv-production-runtime-valid? runtime) 2 0))
     (let c2 (if (str_eq (mv-production-runtime-router runtime) "native-kernel") 4 0))
     (let c3 (if (str_eq (mv-production-runtime-python-authority runtime) "false") 8 0))
-    (let c4 (if (str_eq (mv-production-runtime-handler runtime) "api_runtime_endpoints_summary") 16 0))
+    (let c4 (if (str_eq (mv-production-runtime-handler runtime) "api_health") 16 0))
     (let c5 (if (gt (mv-production-runtime-body-bytes runtime) 0) 32 0))
     (let c6 (if (gt (len (mv-native-http-capture-headers (mv-native-http-capture runtime-url response floor north))) 0) 64 0))
     (sum (list c0 c1 c2 c3 c4 c5 c6)))
@@ -406,7 +448,7 @@ cat > "$fourth_runtime_detail_fk" <<'FK'
 (do
     (let floor (mv-floor))
     (let north (mv-north-star))
-    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let runtime-url "https://api.coherencycoin.com/api/health")
     (let headers (list (mv-http-header "Accept" "application/json")))
     (let response (http_get runtime-url headers 8000))
     (let capture (mv-native-http-capture runtime-url response floor north))
@@ -486,6 +528,14 @@ if [[ "$fourth_runtime_v" != "127" ]]; then
     exit 1
 fi
 
+http_fourth_duration="$(cat "$out_dir/http-fourth.http.duration")"
+https_fourth_duration="$(cat "$out_dir/https-fourth.https.duration")"
+header_fourth_duration="$(cat "$out_dir/header-fourth.request-header.duration")"
+if (( http_fourth_duration <= 0 || https_fourth_duration <= 0 || header_fourth_duration <= 0 )); then
+    echo "FAIL fourth duration receipts http=$http_fourth_duration https=$https_fourth_duration header=$header_fourth_duration cache=$out_dir"
+    exit 1
+fi
+
 cat > "$out_dir/native-http-capture-summary.txt" <<EOF
 https_model_vitality:
 go: $(cat "$out_dir/go.detail")
@@ -495,17 +545,17 @@ all_kernel_plain_http:
 go: $(cat "$out_dir/http-go.http.detail")
 rust: $(cat "$out_dir/http-rust.http.detail")
 typescript: $(cat "$out_dir/http-typescript.http.detail")
-fourth: $(cat "$out_dir/http-fourth.http.detail")
+fourth: duration_ms=$http_fourth_duration raw_detail=$(cat "$out_dir/http-fourth.http.detail")
 all_kernel_verified_https:
 go: $(cat "$out_dir/https-go.https.detail")
 rust: $(cat "$out_dir/https-rust.https.detail")
 typescript: $(cat "$out_dir/https-typescript.https.detail")
-fourth: $(cat "$out_dir/https-fourth.https.detail")
+fourth: duration_ms=$https_fourth_duration raw_detail=$(cat "$out_dir/https-fourth.https.detail")
 all_kernel_request_headers:
 go: $(cat "$out_dir/header-go.request-header.detail")
 rust: $(cat "$out_dir/header-rust.request-header.detail")
 typescript: $(cat "$out_dir/header-typescript.request-header.detail")
-fourth: $(cat "$out_dir/header-fourth.request-header.detail")
+fourth: duration_ms=$header_fourth_duration raw_detail=$(cat "$out_dir/header-fourth.request-header.detail")
 fourth_runtime_authority:
 fourth: $(cat "$out_dir/fourth-runtime-authority.detail")
 EOF
@@ -518,16 +568,16 @@ echo "PASS all-kernel-external-http go=63 rust=63 typescript=63 fourth=63 url=ht
 echo "PASS http-go $(cat "$out_dir/http-go.http.detail")"
 echo "PASS http-rust $(cat "$out_dir/http-rust.http.detail")"
 echo "PASS http-typescript $(cat "$out_dir/http-typescript.http.detail")"
-echo "PASS http-fourth $(cat "$out_dir/http-fourth.http.detail")"
+echo "PASS http-fourth duration_ms=$http_fourth_duration raw_detail=$(cat "$out_dir/http-fourth.http.detail")"
 echo "PASS all-kernel-external-https go=63 rust=63 typescript=63 fourth=63 url=https://example.com/"
 echo "PASS https-go $(cat "$out_dir/https-go.https.detail")"
 echo "PASS https-rust $(cat "$out_dir/https-rust.https.detail")"
 echo "PASS https-typescript $(cat "$out_dir/https-typescript.https.detail")"
-echo "PASS https-fourth $(cat "$out_dir/https-fourth.https.detail")"
-echo "PASS all-kernel-request-headers go=127 rust=127 typescript=127 fourth=127 url=https://httpbin.org/headers"
+echo "PASS https-fourth duration_ms=$https_fourth_duration raw_detail=$(cat "$out_dir/https-fourth.https.detail")"
+echo "PASS all-kernel-request-headers go=127 rust=127 typescript=127 fourth=127 url=https://postman-echo.com/headers"
 echo "PASS header-go $(cat "$out_dir/header-go.request-header.detail")"
 echo "PASS header-rust $(cat "$out_dir/header-rust.request-header.detail")"
 echo "PASS header-typescript $(cat "$out_dir/header-typescript.request-header.detail")"
-echo "PASS header-fourth $(cat "$out_dir/header-fourth.request-header.detail")"
+echo "PASS header-fourth duration_ms=$header_fourth_duration raw_detail=$(cat "$out_dir/header-fourth.request-header.detail")"
 echo "PASS fourth-arm-https native-tls=openssl-dlopen verified=true"
 echo "PASS fourth-runtime-authority fourth=127 $(cat "$out_dir/fourth-runtime-authority.detail")"

@@ -1,0 +1,155 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "codex/speech-teacher-receipt-floor-20260616",
+  "commit_scope": "Add a physical local speech teacher receipt floor so macOS TTS audio and local Whisper STT transcripts become Form-native training data.",
+  "files_owned": [
+    "scripts/speech_teacher_receipt.sh",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-teacher-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/speech-teacher-receipt.form",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_speech_teacher_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-16_speech_teacher_receipt.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "make prompt-guide",
+        "result": "pass",
+        "output": "Prompt guide passed; worktree continued safely."
+      },
+      {
+        "command": "make wellness",
+        "result": "pass",
+        "output": "Wellness passed with no attention wanted."
+      },
+      {
+        "command": "bash -n scripts/speech_teacher_receipt.sh && scripts/speech_teacher_receipt.sh",
+        "result": "pass",
+        "output": "PASS speech-teacher receipt=/Users/ursmuff/.codex/worktrees/1bc1/Coherence-Network/.cache/speech-teacher-receipt/20260615T160958Z/speech-teacher-receipt.json overlap=100 wav_bytes=69530 samples=32717 rms_ppm=164725 model=ggml-large-v3-turbo.bin"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-teacher-receipt-band.fk",
+        "result": "pass",
+        "output": "core.fk+nearest-shape.fk+classifier-eval.fk+branch-choice-order.fk+speech-model-learning.fk+speech-teacher-receipt-band.fk -> 4095; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && bash scripts/fourth-arm-gate.sh speech-teacher-receipt",
+        "result": "pass",
+        "output": "PASS-4WAY speech-teacher-receipt"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-model-learning-band.fk",
+        "result": "pass",
+        "output": "speech-model-learning-band.fk -> 16383; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy performed by this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The physical local TTS/STT receipt is proven locally; native macOS/Android audio API lanes and native STT/TTS candidates remain next gaps."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "speech-teacher-receipt",
+    "loopback-learning",
+    "oracle-distillation-learning"
+  ],
+  "spec_ids": [
+    "coherence-substrate-speech-teacher-receipt",
+    "coherence-substrate-loopback-learning"
+  ],
+  "task_ids": [
+    "2026-06-16-speech-teacher-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "physical-proof-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "scripts/speech_teacher_receipt.sh -> live no-Python macOS say/afconvert/sox/whisper-cli witness",
+    ".cache/speech-teacher-receipt/20260615T160958Z/speech-teacher-receipt.json -> live receipt with overlap=100, wav_bytes=69530, samples=32717, duration_ms=2045",
+    "form/form-stdlib/speech-model-learning.fk -> receipt row, validity gate, feature lowering, sample lowering, score card",
+    "form/form-stdlib/tests/speech-teacher-receipt-band.fk -> 4095 four-way proof",
+    "docs/coherence-substrate/speech-teacher-receipt.form -> body-readable floor, north star, not-claimed, and next gaps"
+  ],
+  "change_files": [
+    "scripts/speech_teacher_receipt.sh",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-teacher-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/speech-teacher-receipt.form",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_speech_teacher_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-16_speech_teacher_receipt.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes can now consume a physical local TTS/STT teacher receipt as explicit Form-native speech training data while refusing missing or low-quality receipt rows.",
+    "public_endpoints": [
+      "not-applicable: local hardware/model carrier proof only"
+    ],
+    "test_flows": [
+      "Generate macOS TTS audio with say.",
+      "Lower audio to 16 kHz mono PCM with afconvert.",
+      "Measure physical audio features with sox.",
+      "Transcribe the retained WAV with local whisper-cli and ggml-large-v3-turbo.",
+      "Hash WAV and transcript artifacts, write a JSON receipt, and require at least 80 percent expected-token overlap.",
+      "Validate the receipt shape four-way in Form and lower it into a native training sample."
+    ]
+  },
+  "floor_update": {
+    "previous_observed_floor": "Speech learning had static observed local audio rows and oracle-distillation rows, but no repeatable live no-Python TTS/STT teacher receipt witness.",
+    "current_observed_floor": "A local Mac can emit a live macOS say -> 16 kHz PCM -> local whisper-cli receipt with overlap=100, nonzero audio metrics, retained artifact hashes, and Form four-way acceptance as native training data.",
+    "new_receipts": [
+      "speech-teacher-receipt 20260615T160958Z overlap=100 wav_bytes=69530 samples=32717 duration_ms=2045 rms_ppm=164725 rough_hz=731"
+    ],
+    "not_claimed": [
+      "Form-native neural STT",
+      "Form-native neural TTS",
+      "Android native audio API receipt",
+      "microphone/speaker acoustic loopback for this speech-teacher lane"
+    ]
+  }
+}

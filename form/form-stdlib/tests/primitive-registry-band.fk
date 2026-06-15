@@ -8,17 +8,17 @@
 ; ksat-part discipline applied to the primitive surface itself. This band
 ; is the circle: it runs every lane-1 verification on all three kernels and
 ; refuses a part that claims an outside its recipe cannot produce. Lane-0
-; entries (37) stay declared and visible — panic-contract, socket-carrier,
-; sweep-hazard, toolchain, sibling-gap — counted here, gated against kernel
+; entries (40) stay declared and visible — panic-contract, host-io,
+; socket-carrier, sweep-hazard, toolchain, sibling-gap — counted here, gated against kernel
 ; source by form/scripts/validate_primitive_registry.py and surfaced by the
 ; wellness primitive-coverage sense.
 ;
 ; Band verdict 63 when every claim lands:
-;   1   shape: 201 entries, every one well-formed (7 fields, nonempty
+;   1   shape: 204 entries, every one well-formed (7 fields, nonempty
 ;       name + spec, known category token), no duplicate names
 ;   2   every lane-1 verification recipe yields its declared outside
 ;       (164 of 164 — one false claim anywhere drops this bit)
-;   4   the lanes are pinned: 164 in-band + 37 carrier-declared = 201;
+;   4   the lanes are pinned: 164 in-band + 40 carrier-declared = 204;
 ;       a new native or lane flip must touch these numbers consciously
 ;   8   a part claiming a wrong outside is REFUSED: verification compares
 ;       against the declaration, never against what the recipe happens
@@ -33,8 +33,8 @@
     (let reg (prim-registry))
 
     ; ── 1: shape — every entry well-formed, no duplicates ──
-    (let c0 (if (and (eq (len reg) 201)
-                 (and (eq (prim-shapes-ok-count reg) 201)
+    (let c0 (if (and (eq (len reg) 204)
+                 (and (eq (prim-shapes-ok-count reg) 204)
                       (eq (prim-dup-count reg) 0)))
                 1 0))
 
@@ -43,7 +43,7 @@
 
     ; ── 4: the lanes are pinned numbers, not drift ──
     (let c2 (if (and (eq (prim-mode-count reg 1) 164)
-                     (eq (prim-mode-count reg 0) 37))
+                     (eq (prim-mode-count reg 0) 40))
                 4 0))
 
     ; ── 8: a wrong claimed outside is refused ──

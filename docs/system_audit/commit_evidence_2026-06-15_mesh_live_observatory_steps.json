@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/mesh-live-observatory-steps-20260615",
+  "commit_scope": "Move the mesh dashboard from a visible topology floor toward live mesh observability with discovery readiness, route-quality topology, and model-training control measurements.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "real-mesh-training",
+    "android-mesh-learning",
+    "channel-protocol-choice",
+    "mesh-observatory",
+    "native-training-receipts"
+  ],
+  "spec_ids": [
+    "commit-evidence-contract",
+    "hati-mesh-api",
+    "learning-dashboard"
+  ],
+  "task_ids": [
+    "mesh-live-observatory-steps-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-correction",
+        "visual-review-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@mesh-live-observatory-steps-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "api-carrier-authoring",
+        "dashboard-authoring",
+        "browser-visual-review",
+        "measurement",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "api/app/routers/hati_mesh.py",
+    "api/tests/test_hati_mesh.py",
+    "web/app/dashboard/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-15_mesh_live_observatory_steps.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/routers/hati_mesh.py",
+    "api/tests/test_hati_mesh.py",
+    "web/app/dashboard/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-15_mesh_live_observatory_steps.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"mesh live observatory 3-step dashboard\"",
+      "python3 -m pytest -q api/tests/test_hati_mesh.py",
+      "python3 -m pytest -q api/tests/test_hati_mesh.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m py_compile api/app/routers/hati_mesh.py api/app/routers/models.py",
+      "python3 -m ruff check api/app/routers/hati_mesh.py api/tests/test_hati_mesh.py",
+      "python3 scripts/generate_repo_indexes.py --check && git diff --check",
+      "cd web && npm ci --cache ../.cache/npm --prefer-offline && npm run build",
+      "cd web && npm run build",
+      "cd form/form-kernel-rust && cargo build --release --quiet",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "The first web build in the fresh worktree failed because next was not installed; npm ci installed the declared web dependencies and the build passed. The first local PR guard failed because the fresh worktree had not built form/form-kernel-rust/target/release/form-kernel-rust; after cargo build --release --quiet, the local PR guard passed with ready_for_push=True. Existing Next warnings remained unchanged: middleware convention, typeless package JSON, and NFT tracing warning."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; remote Thread Gates have not run for this branch yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No production deploy requested for this dashboard/API compatibility slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The mesh dashboard now distinguishes node discovery/readiness states, shows trust/signal/battery/power receipt measurements, renders route-quality topology with signal rings and channel legends, and exposes model-training control decisions beside the topology.",
+    "public_endpoints": [
+      "GET /api/hati/mesh/organs?limit=80",
+      "GET /api/hati/mesh/channels?limit=120",
+      "GET /api/models/learning-dashboard",
+      "GET /dashboard"
+    ],
+    "test_flows": [
+      "Step 1 browser review against seeded local receipts measured 4 nodes, 3 channels, 102.5 KB/s flow, 2 streaming/training nodes, 73.5% average signal, and 1 ready route.",
+      "Step 2 browser review confirmed topology legend, channel legend, route quality labels, all 4 node labels, and average route quality visible on the field map.",
+      "Step 3 browser review confirmed model training control with 1/1 native wins, 0 oracle reliance, 3 cycles, 12 heldout samples, 11 attention surfaces, and a choose-native current winner."
+    ]
+  },
+  "evidence_refs": [
+    "api/app/routers/hati_mesh.py",
+    "api/tests/test_hati_mesh.py",
+    "web/app/dashboard/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "phase_gate": {
+    "phase": "mesh-live-observatory-steps",
+    "gate": "The mesh observatory must show live-shaped topology, route readiness, and model training control before larger continuous training can be directed well.",
+    "state": "local-api-web-browser-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Attach persistent live channel probes so the dashboard updates from Wi-Fi, Bluetooth, audio, optical, and loopback measurements rather than seeded local receipts."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The dashboard could show a multi-node mesh field, typed channels, and model training health, but every visible node and route had the same operational weight.",
+    "current_observed_floor": "The dashboard can inspect discovery state, stream/trust readiness, signal strength, battery, power cost, route quality, topology labels, channel modality, native wins, oracle reliance, cycles, heldout windows, and current training decision.",
+    "new_bands": [
+      "hati mesh discovery readiness receipts",
+      "dashboard route-quality topology surface",
+      "dashboard model-training control surface"
+    ],
+    "retuned_north_star": [
+      "devices should be discovered and ranked by live evidence, not only declared presence",
+      "routes should show quality, power, trust, latency, error, payload, and model linkage on the topology",
+      "model training should expose choice pressure: native wins, oracle reliance, heldout windows, cycles, branch success, and attention"
+    ],
+    "blocked_trials": []
+  }
+}

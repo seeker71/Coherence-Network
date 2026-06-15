@@ -172,4 +172,78 @@
                 "blocked-honest-receipt"
                 "invalid-receipt")))
 
+    (defn rmt-emitter-cycle-projection
+        (cycle-id status observed absent nothing heldout-count capability-ready native-wins growth-status form-recipe blocks)
+        (list cycle-id status observed absent nothing heldout-count capability-ready native-wins growth-status form-recipe blocks))
+    (defn rmt-emitter-cycle-id (row) (nth row 0))
+    (defn rmt-emitter-cycle-status (row) (nth row 1))
+    (defn rmt-emitter-cycle-observed (row) (nth row 2))
+    (defn rmt-emitter-cycle-absent (row) (nth row 3))
+    (defn rmt-emitter-cycle-nothing (row) (nth row 4))
+    (defn rmt-emitter-cycle-heldout-count (row) (nth row 5))
+    (defn rmt-emitter-cycle-capability-ready? (row) (nth row 6))
+    (defn rmt-emitter-cycle-native-wins? (row) (nth row 7))
+    (defn rmt-emitter-cycle-growth-status (row) (nth row 8))
+    (defn rmt-emitter-cycle-form-recipe (row) (nth row 9))
+    (defn rmt-emitter-cycle-blocks (row) (nth row 10))
+    (defn rmt-emitter-cycle-recipe? (row)
+        (not (str_eq (rmt-emitter-cycle-form-recipe row) "")))
+
+    (defn rmt-native-teacher-receipt (id status samples min-samples margin native-correct oracle-correct merkle)
+        (list id status samples min-samples margin native-correct oracle-correct merkle))
+    (defn rmt-native-teacher-id (row) (nth row 0))
+    (defn rmt-native-teacher-status (row) (nth row 1))
+    (defn rmt-native-teacher-samples (row) (nth row 2))
+    (defn rmt-native-teacher-min-samples (row) (nth row 3))
+    (defn rmt-native-teacher-margin (row) (nth row 4))
+    (defn rmt-native-teacher-native-correct (row) (nth row 5))
+    (defn rmt-native-teacher-oracle-correct (row) (nth row 6))
+    (defn rmt-native-teacher-merkle (row) (nth row 7))
+    (defn rmt-native-teacher-status-won? (row)
+        (if (str_eq (rmt-native-teacher-status row) "won") 1
+            (if (str_eq (rmt-native-teacher-status row) "retired") 1 0)))
+    (defn rmt-native-teacher-wins? (row)
+        (if (str_eq (rmt-native-teacher-id row) "") 0
+            (if (not (eq (rmt-native-teacher-status-won? row) 1)) 0
+                (if (lt (rmt-native-teacher-samples row) (rmt-native-teacher-min-samples row)) 0
+                    (if (lt
+                            (add (rmt-native-teacher-native-correct row) (rmt-native-teacher-margin row))
+                            (rmt-native-teacher-oracle-correct row))
+                        0
+                        (if (str_eq (rmt-native-teacher-merkle row) "") 0 1))))))
+
+    (defn rmt-world-growth-receipt (id status reason part-count merkle)
+        (list id status reason part-count merkle))
+    (defn rmt-world-growth-id (row) (nth row 0))
+    (defn rmt-world-growth-status (row) (nth row 1))
+    (defn rmt-world-growth-reason (row) (nth row 2))
+    (defn rmt-world-growth-part-count (row) (nth row 3))
+    (defn rmt-world-growth-merkle (row) (nth row 4))
+    (defn rmt-world-growth-embodied? (row)
+        (if (str_eq (rmt-world-growth-id row) "") 0
+            (if (not (str_eq (rmt-world-growth-status row) "embodied")) 0
+                (if (not (str_eq (rmt-world-growth-reason row) "follow")) 0
+                    (if (lt (rmt-world-growth-part-count row) 3) 0
+                        (if (str_eq (rmt-world-growth-merkle row) "") 0 1))))))
+
+    (defn rmt-emitter-cycle-active? (row)
+        (if (not (str_eq (rmt-emitter-cycle-status row) "emitted")) 0
+            (if (lt (rmt-emitter-cycle-observed row) 5) 0
+                (if (lt (rmt-emitter-cycle-heldout-count row) 12) 0
+                    (if (not (eq (rmt-emitter-cycle-capability-ready? row) 1)) 0
+                        (if (not (eq (rmt-emitter-cycle-native-wins? row) 1)) 0
+                            (if (not (str_eq (rmt-emitter-cycle-growth-status row) "embodied")) 0
+                                (if (not (eq (rmt-emitter-cycle-recipe? row) 1)) 0 1))))))))
+    (defn rmt-emitter-cycle-blocked? (row)
+        (if (not (str_eq (rmt-emitter-cycle-status row) "blocked")) 0
+            (if (not (eq (rmt-emitter-cycle-recipe? row) 1)) 0
+                (if (eq (len (rmt-emitter-cycle-blocks row)) 0) 0
+                    (rmt-emitter-blocks-real? (rmt-emitter-cycle-blocks row))))))
+    (defn rmt-emitter-cycle-verdict (row)
+        (if (eq (rmt-emitter-cycle-active? row) 1)
+            "cycle-emitted"
+            (if (eq (rmt-emitter-cycle-blocked? row) 1)
+                "cycle-blocked-honestly"
+                "cycle-invalid")))
+
     0)

@@ -1,0 +1,151 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/fourth-arm-duration-20260615",
+  "commit_scope": "Close the measured fourth-arm duration gap so fkwu native http_get returns elapsed duration_ms from inside the emitted native carrier.",
+  "files_owned": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/model-vitality.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/2026-06-15_fourth_arm_duration.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+        "result": "pass",
+        "output": "core.fk+json.fk+model-vitality.fk+model-vitality-native-http-band.fk -> 4095; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/hati-os-band.fk",
+        "result": "pass",
+        "output": "core.fk+minimal-surface.fk+hati-os-kernel.fk+hati-os-kernel-emit.fk+form-parse.fk+form-flatten.fk+hati-os-band.fk -> 9; 1 ok, 0 divergent."
+      },
+      {
+        "command": "scripts/model_vitality_native_http_capture_probe.sh",
+        "result": "pass",
+        "output": "PASS native-http-capture go=127 rust=127 typescript=127; PASS all-kernel-external-http go=63 rust=63 typescript=63 fourth=63; PASS http-fourth duration_ms=60 raw_detail=48; PASS all-kernel-external-https go=63 rust=63 typescript=63 fourth=63; PASS https-fourth duration_ms=180 raw_detail=48; PASS all-kernel-request-headers go=127 rust=127 typescript=127 fourth=127 url=https://postman-echo.com/headers; PASS header-fourth duration_ms=449 raw_detail=71; PASS fourth-runtime-authority fourth=127.",
+        "cache": ".cache/model-vitality-native-http/20260615T095030Z/native-http-capture-summary.txt"
+      }
+    ]
+  },
+  "live_native_http_probe": {
+    "status": "pass",
+    "observed_at": "2026-06-15T09:50:30Z",
+    "cache": ".cache/model-vitality-native-http/20260615T095030Z/native-http-capture-summary.txt",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/health",
+      "http://example.com/",
+      "https://example.com/",
+      "https://postman-echo.com/headers"
+    ],
+    "fourth_arm_duration_receipts": {
+      "http_example_ms": 60,
+      "https_example_ms": 180,
+      "request_header_https_ms": 449
+    },
+    "production_authority_receipt": {
+      "url": "https://api.coherencycoin.com/api/health",
+      "status": 200,
+      "router": "native-kernel",
+      "handler": "api_health",
+      "python_authority": "false"
+    },
+    "drift_resolved": [
+      "The previous runtime-summary authority target currently returns fanout-python in production; the proof now reads api/health, which currently carries native-kernel authority headers.",
+      "The previous httpbin/header echo target was flaky across kernels; the proof now sends explicit Accept, User-Agent, and X-Form-Trace rows to postman-echo.com/headers."
+    ],
+    "named_gaps": [
+      "larger native HTTP body policy",
+      "streaming/backpressure receipts"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy was performed by this branch; live public endpoints were read through kernel-native carriers."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused Form proof and live fourth-arm duration receipts passed locally; PR/CI and deploy freshness remain pending after push."
+  },
+  "idea_ids": [
+    "body-readable-model-vitality",
+    "kernel-native-http-capture",
+    "fourth-arm-production-authority-receipts",
+    "explicit-native-request-headers"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality",
+    "coherence-substrate-fourth-kernel"
+  ],
+  "task_ids": [
+    "2026-06-15-fourth-arm-duration"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095 deterministic native HTTP row proof",
+    "form/form-stdlib/tests/hati-os-band.fk -> 9 walker/lowering proof",
+    "scripts/model_vitality_native_http_capture_probe.sh -> all-kernel native HTTP/TLS and fkwu duration witness",
+    ".cache/model-vitality-native-http/20260615T095030Z/native-http-capture-summary.txt"
+  ],
+  "change_files": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/model-vitality.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_fourth_arm_duration.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-15_fourth_arm_duration.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The emitted fourth-arm fkwu binary now measures elapsed native HTTP/TLS request duration and returns it in the shared http_get duration_ms dict field.",
+    "public_endpoints": [
+      "http://example.com/",
+      "https://example.com/",
+      "https://postman-echo.com/headers",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "Focused Hati-OS band proves the emitter and walker still compile and agree.",
+      "Live probe has fkwu return positive numeric duration_ms receipts for plaintext HTTP, verified HTTPS, and request-header HTTPS.",
+      "Live probe retains production authority header capture through a currently native public health route."
+    ]
+  }
+}

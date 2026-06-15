@@ -95,10 +95,13 @@
 ;     gradient chains correctly BETWEEN different layer types. This is auto-ml's assembly knowledge realized:
 ;     the architecture is a SEQUENCE of typed layer-cells, the dynamic-recipe advantage applied to the
 ;     transformer — the same shape recipe-gen.fk uses to compose experts now composes LAYERS into a trained
-;     block, so the generator can assemble and configure architectures, not just hand-built ones. Remaining:
-;     Adam (beyond plain SGD), the full T-position sequence self-attention (k/v also projected, cross-query
-;     gradient accumulation), and the convergence — a trainable transformer-block layer as an MoE expert kind,
-;     trained by this backward on the GPU.
+;     block, so the generator can assemble and configure architectures, not just hand-built ones. Adam itself
+;     is already built FOUR-WAY in the sibling scalar lane below (adam-step-cell / adam-bias-correction,
+;     fixed-point), so the optimizer beyond SGD exists; remaining is wiring that Adam onto these fp64 tensor
+;     gradients, the full T-position sequence self-attention (k/v also projected, cross-query gradient
+;     accumulation), and the convergence — a trainable transformer-block layer as an MoE expert kind, trained
+;     by this backward on the GPU. (These fp64 tensor gradients are the TENSOR-SCALE autodiff wall the scalar
+;     tensor-autodiff-verifier below names as separate — now opened, three-way.)
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,
@@ -109,6 +112,34 @@
 ;     (ΔW within fp32 epsilon — GPU FMA vs CPU split-mul). The fp64 recipe is the proven algorithm; the
 ;     fp32 MSL is its GPU carrier, conformance-gated in the lane's own semantics. The learning kernel runs
 ;     on the silicon — host-kernel.form's "drive the organ" realized for backprop.
+;     autodiff-gradient-cell now returns 4095 four-way: a bounded scalar affine prediction/loss recipe
+;     emits weight and bias gradient cells, and those gradients feed optimizer-step's SGD receipt.
+;     adam-step-cell now returns 4095 four-way: bounded fixed-point first/second moment rows, integer
+;     square-root denominator, and scalar autodiff gradient-vector handoff.
+;     adam-bias-correction now returns 4095 four-way: bounded fixed-point Adam bias-corrected moments
+;     and weight updates.
+;     tensor-autodiff-verifier now returns 4095 four-way for the Form receipt and generates a native
+;     host verifier binary that checked 4096 tiny affine-loss gradient samples at width 8. Tensor-scale
+;     autodiff cells remain a separate wall; the verifier carrier can now ask for larger windows.
+;     core-axiom-native-receipt now returns 4095 four-way for the Form receipt and generates native
+;     macOS arm64 + Android arm64 binaries from one C source. The phone binary and Mac binary exchanged
+;     a receipt over adb-forward TCP and both verified 2048 width-8 affine-loss samples with matching
+;     checksums. This is the minimum explicit left-expanding binary floor: rerun with a larger sample
+;     window to grow evidence; no background service, self-modification, or APK-bundled compiler is
+;     claimed.
+;     core-axiom-package-receipt now returns 4095 four-way for package/install evidence around that
+;     pair: script/source/binary/channel-receipt SHA-256 lengths, channel duration, sample window, and
+;     remote Android binary cleanup. APK signing/distribution and non-adb transport remain separate.
+;     core-axiom-apk-receipt now returns 4095 four-way for an APK native-library packaging receipt:
+;     a generated arm64-v8a .so is staged into Coherence Sense, the APK is built, and the extracted
+;     lib/arm64-v8a entry SHA matches the generated library SHA. JNI load/call and installed-app
+;     execution remain separate walls.
+;     A Wi-Fi TCP receipt attempt is now instrumented with a Mac listener readiness gate, but it is
+;     blocked by the current local network shape: one run saw Mac en0 and Android wlan0 both report
+;     192.168.0.7; after Android moved to 192.168.0.4, the direct TCP client timed out against the
+;     Mac listener at 192.168.0.7, and the IPv6 link-local probe timed out. The model/mesh floor
+;     therefore keeps adb-forward as the proven carrier while naming non-adb transport as the next
+;     receipt wall.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -121,17 +152,20 @@
 ;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     autodiff gradient cells for softmax' and layernorm' and the full-block backward — the affine-node
-;     vjp is closed (transformer-backprop.fk → 127) and the gelu' vjp / FFN sub-block backward is closed
-;     (transformer-backprop-ffn-band.fk → 63), both three-way — Adam optimizer cells, durable eval-receipt
-;     query path, measured fourth-arm duration, larger native
+;     the FOUR-WAY tensor-scale autodiff (the fp64 transformer backward — every node and the full-block
+;     assembly — is closed three-way; the scalar autodiff + Adam are four-way; the four-way TENSOR lane stays
+;     open), the full T-position sequence self-attention, durable eval-receipt query path, measured fourth-arm
+;     duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
 ;     live chunk-range merkle transport/proof is still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
 ;     live-row route read, production pulse/runtime row ingestion, Go/Rust/TypeScript production HTTPS
 ;     capture, all-kernel plaintext HTTP plus verified HTTPS body capture, and bounded model-slice
 ;     request/re-address/apply/merge receipt, chunk-range slice policy, optimizer-state delta-slice
-;     receipt, and fixed-point SGD/momentum optimizer step are now closed receipts, not future claims.
+;     receipt, fixed-point SGD/momentum optimizer step, scalar affine gradient cells, bounded Adam
+;     moment cells, bounded Adam bias correction, the native tensor-autodiff sample verifier, the
+;     Mac+Android native channel receipt, and its package/install checksum cleanup receipt are now
+;     closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.

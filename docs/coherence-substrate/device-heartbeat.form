@@ -23,6 +23,9 @@
 ;            No AP needed, device-to-device.             [BUILDABLE — platform carrier, not yet wired]
 ;   audio  — data over sound: speaker emits an FSK/chirp beat, mic decodes it (ggwave-style acoustic
 ;            networking). Low bandwidth, works across a room with no pairing. [BUILDABLE — real, niche carrier]
+;            Receipt floor now exists in public-audio-rendezvous.fk: audible/near-ultrasonic nonce
+;            detection must report SNR, confidence, latency, and raw-audio-retained=0 before it can
+;            count as co-presence.
 ;   video  — screen shows a QR/anim beat, another device's camera reads it. One-way, line-of-sight,
 ;            needs no radio at all.                       [BUILDABLE — carrier]
 ;   The body never changes when a channel is added; a new transport is a new carrier emitting/decoding
@@ -48,6 +51,9 @@
 ;     band, drift-detect, self-grounding) are already proven three-way.
 ;   BUILDABLE — the per-channel carriers (wifi heartbeat first — the app already POSTs over wifi; then
 ;     BLE advertise/scan, audio FSK, video QR), and the live observability dashboard (Mac + app).
+;   PROVEN RECEIPT SHAPE — public-audio-rendezvous.fk -> 32767 four-way names public rendezvous +
+;     audio co-presence + bottleneck measurement; live Mac speaker→microphone FSK receipt passed
+;     with 12/12 decoded bits, SNR 44.75 dB, confidence 99, latency 3390 ms, raw_audio_retained=0.
 ;   CARRIER-NEXT — wiring the heartbeat emit/decode into the app + the Mac witness server, and the
 ;     dashboard rendering state/organs/surprise/inference-error live.
 ;

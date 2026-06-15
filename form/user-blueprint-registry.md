@@ -175,6 +175,8 @@ The circle protocol lets groups of cells communicate without falling into broadc
 - `1.2.99.1726 SATSANG-SILENCE` — truth-oriented silence held in the circle.
 - `1.2.99.1727 SATSANG-INQUIRY` — inquiry offered inside the circle.
 - `1.2.99.1728 SATSANG-POINTING` — non-command pointing offered inside the circle.
+- `1.2.99.28 WORLD-MODULE-MODEL` — loadable world-model receipt carrying model id, identity, observed claim verdict, vulnerability reveal count, and trusted-core reason.
+- `1.2.99.29 WORLD-MODEL-GROWTH` — world-model growth receipt root carrying sensed readings digested into blueprint, recipe, and named-cell parts, embodied only after trusted-core follow.
 
 **Operating shape**: A cell may offer a circle. Another cell may join only when invited. A share stays inside unless `CIRCLE-EXPORT-CONSENT` names recipient, fidelity, purpose, expiry, and a passed consensus. A circle may refuse a contact only when an observed action exceeds the offered interface and consensus has passed.
 

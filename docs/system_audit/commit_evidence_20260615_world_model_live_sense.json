@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/world-model-live-sense-20260615",
+  "commit_scope": "Add a Form-native live receipt bridge so Android/Mac active samples, capability receipts, and model eval receipts feed world-model growth as inspectable wmg-sense rows.",
+  "files_owned": [
+    "form/form-stdlib/world-model-live-sense.fk",
+    "form/form-stdlib/tests/world-model-live-sense-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_20260615_world_model_live_sense.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim world-model-live-sense",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/model-vitality.fk form-stdlib/world-model-live-sense.fk form-stdlib/tests/world-model-live-sense-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh world-model-live-sense",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "notes": "Focused Form validation returned 8191 across Go, Rust, TypeScript, and fkwu. The dedicated fourth-arm check returned PASS-4WAY world-model-live-sense. Wellness reported what_wants_attention: none."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "No public HTTP endpoint behavior changes are expected; deploy validation remains pending until merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way proof and wellness pass; CI and post-merge deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "mesh-learning",
+    "world-model-growth"
+  ],
+  "spec_ids": [
+    "form-native-live-sense",
+    "android-mesh-learning",
+    "model-vitality"
+  ],
+  "task_ids": [
+    "coord:world-model-live-sense",
+    "thread:world-model-live-sense-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/world-model-live-sense-band.fk",
+    "cd form && ./validate.sh ... world-model-live-sense-band.fk -> 8191; kernels agree on every sample",
+    "cd form && bash scripts/fourth-arm-gate.sh world-model-live-sense -> PASS-4WAY world-model-live-sense",
+    "form emitted walker: fkwu"
+  ],
+  "change_files": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/world-model-live-sense-band.fk",
+    "form/form-stdlib/world-model-live-sense.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Live Android/Mac active samples, capability receipts, and model eval receipts can now be converted into wmg-sense rows, preserving observed/absent/nothing semantics and inspectable metadata before world-model growth digests and embodies them.",
+    "public_endpoints": [
+      "local-only: Form-native receipt bridge; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Valid active sample, ready capability receipt, and high-quality model eval produce observed senses.",
+      "Inactive sample, capability floor without liveness, and low-quality eval produce absent senses.",
+      "Timeout sense remains nothing and is not conflated with absent.",
+      "Live sense lists fold into world-model-growth and embody only when the trusted-core world-module model follows."
+    ]
+  }
+}

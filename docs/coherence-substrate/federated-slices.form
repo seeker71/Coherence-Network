@@ -19,7 +19,17 @@
 ;     optimizer-delta-slice adds the matching optimizer-state delta receipt: valid optimizer cell ref,
 ;     before/after state ids, nonzero delta, chunk-range tie, and substrate-cell authority.
 ;     optimizer-step adds the exact integer SGD/momentum update math for the small vectors those slices
-;     carry. Autodiff and Adam remain model-kernel walls.
+;     carry.
+;     autodiff-gradient-cell adds the bounded scalar affine loss gradient rows that feed optimizer-step.
+;     adam-step-cell adds bounded first/second moment update rows with an integer square-root denominator
+;     and scalar autodiff gradient-vector handoff.
+;     adam-bias-correction adds bounded fixed-point Adam bias-corrected moment and weight update rows.
+;     tensor-autodiff-verifier adds a generated native host verifier binary plus a Form receipt for
+;     many-sample affine-loss gradient checks. Tensor-scale autodiff remains a model-kernel wall.
+;     core-axiom-native-receipt adds a generated Mac+Android native channel verifier: a macOS arm64
+;     binary and Android arm64 binary exchange receipt rows over adb-forward TCP and agree on a bounded
+;     left-expanding sample window. Live mesh slice transport is still separate; this proves the first
+;     two-endpoint native receipt channel without raw sensor data or background persistence.
 ;   NORTH STAR: every federated update is a content-addressed slice over a known base merkle root:
 ;     (base-merkle, layer-ref, tensor-chunk-range, format-ref, quantization-context, delta-cell,
 ;     optimizer-state-delta, eval-receipt-ref, vitality-ref, n-samples, origin, ancestor-merge-refs).
@@ -27,7 +37,7 @@
 ;     compatibility, provenance compatibility, freshness, resonance, vitality, sovereignty, and trust.
 ;     Merge receipts record the elected sign, weight inputs, ancestor set, and output merkle root so the
 ;     mesh can avoid double counting and explain refusal without hidden policy.
-;   GAP: chunk-range merkle proof over live payloads, chunk-aware live transport, autodiff/Adam optimizer math, durable eval-receipt trust inputs,
+;   GAP: chunk-range merkle proof over live payloads, chunk-aware live transport, tensor-autodiff, durable eval-receipt trust inputs,
 ;     merge-receipt ancestry, privacy/conflict policy, and body-readable vitality routing are not yet
 ;     real mesh payloads. The next proof should merge one tensor chunk-range slice, emit ancestry, and
 ;     update model vitality.
@@ -92,13 +102,26 @@
 ;       ref, before/after ids, nonzero delta, chunk-range tie, and substrate authority. Optimizer-step math
 ;       remains a model-kernel wall.
 ;   M4  optimizer-step math — SHIPPED: optimizer-step -> 4095 four-way for fixed-point SGD and momentum
-;       receipts over small vectors; autodiff gradients and Adam remain later model-kernel walls.
-;   M5  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
+;       receipts over small vectors.
+;   M5  scalar affine gradient cells — SHIPPED: autodiff-gradient-cell -> 4095 four-way for prediction,
+;       squared loss, dw/db gradient cells, and SGD handoff.
+;   M6  bounded Adam moment cells — SHIPPED: adam-step-cell -> 4095 four-way for fixed-point first/second
+;       moment updates, integer square-root denominator, and scalar autodiff gradient-vector handoff.
+;   M7  Adam bias correction — SHIPPED: adam-bias-correction -> 4095 four-way for fixed-point corrected
+;       moments and corrected weight updates.
+;   M8  native tensor-autodiff verifier — SHIPPED: tensor-autodiff-verifier -> 4095 four-way for receipt
+;       shape, with scripts/tensor_autodiff_native_verifier.sh generating a host binary that checked
+;       4096 affine-loss gradient samples at width 8. Tensor-scale autodiff cells remain later.
+;   M8a Mac+Android native receipt channel — SHIPPED: core-axiom-native-receipt -> 4095 four-way for
+;       receipt shape, with scripts/android_mac_core_axiom_receipt.sh generating macOS arm64 and
+;       Android arm64 binaries that exchanged a pass receipt over adb-forward TCP for 2048 width-8
+;       samples. Live mesh transport and payload merkle proof remain later.
+;   M9  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
 ;       third merges both and applies it — assert mesh-merge NodeID == local-merge NodeID (gossip
 ;       convergence as a content-addressed proof).
-;   M6  trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
-;   M7  consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
-;   M8  apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
+;   M10 trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
+;   M11 consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
+;   M12 apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
 ;       merge demonstrably changes a model's behavior. Joins form-native-models.form M4 (the real block).
 ;
 ; KIN: form-native-models.form (the model-as-recipe + M1-M6; this is its distributed face) ·

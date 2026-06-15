@@ -1,0 +1,46 @@
+# oracle-distillation-learning.form - oracle calls as native teaching data
+
+(oracle-distillation-learning
+  (lineage
+    (rests-on nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk form-freq-check.fk)
+    (recipe form/form-stdlib/oracle-distillation-learning.fk)
+    (proof form/form-stdlib/tests/oracle-distillation-learning-band.fk -> 4095 four-way))
+
+  (purpose
+    "Move attention from speculative carrier work to actual learning gaps."
+    "Every oracle call that helps summarize, translate natural language, write Form, check frequency, transcribe speech, or render speech should become training data."
+    "The oracle is a teacher. The native recipe is the candidate. The receipt decides whether oracle reliance drops.")
+
+  (floor
+    "Five lane rows are first-class: summary:nl-to-nl, nl-to-form, freq-check, stt, and tts."
+    "Each lane carries input, oracle output, native output, teacher candidate, native candidate, selected path, success/failure feedback, cost, and CHOICE-RECEIPT."
+    "The focused proof trains a native nearest-shape model on all five lane features and classifies all five heldout rows."
+    "Summary, NL-to-Form, and freq-check native candidates reduce oracle budget only after passing quality/confidence/sovereignty/trust/vitality floors with lower token, energy, and nutrition cost."
+    "STT and TTS remain teacher-led in the floor because their native candidates have not yet cleared real audio quality. They still emit receipts and training rows instead of pretending to be solved.")
+
+  (north-star
+    "NL-to-NL, NL-to-Form, Form-to-ASM, freq-check, STT, TTS, code/tool choice, and multimodal channels learn from every oracle call."
+    "Whisper, local TTS engines, local LLMs, remote LLMs, compilers, source search, model committees, and optional humans all teach through the same explicit receipt membrane."
+    "Per lane, the native candidate retires the oracle only when heldout receipts prove enough accuracy, trust, sovereignty, vitality, and lower resource cost."
+    "The training row carries spectrum and meaning-impact metadata so confidence, conviction, expression, mood, aliveness, sovereignty, and trust can be lifted from numeric channels instead of decorative labels.")
+
+  (proved-contract
+    (micro-learning
+      (lanes summary:nl-to-nl nl-to-form freq-check stt tts)
+      (classifier nearest-shape)
+      (heldout 5/5))
+    (distillation-receipts
+      (native-budget-drop summary:nl-to-nl nl-to-form freq-check)
+      (teacher-led stt tts)
+      (refuse unknown-lane failed-low-feedback))
+    (choice-learning
+      (receipt CHOICE-RECEIPT)
+      (selected-success-increments-native-branch)
+      (failed-receipt-does-not-reduce-oracle-budget)))
+
+  (next-physical-proof-gaps
+    (stt "Run a local Whisper/whisper.cpp teacher over real consented audio snippets and store transcript receipts with audio feature hashes.")
+    (tts "Run a local TTS teacher over the same text labels, capture audio/prosody feature receipts, and loop them into STT.")
+    (nl-to-form "Feed real Codex/agent natural-language-to-Form turns into this receipt shape and compare against a Form-native grammar candidate.")
+    (freq-check "Use real reply pairs and oracle judgments to train the semantic signature model that feeds form-freq-check.fk.")
+    (release-rule "Do not add carrier work unless one of these live training proofs is blocked by a missing native receipt.")))

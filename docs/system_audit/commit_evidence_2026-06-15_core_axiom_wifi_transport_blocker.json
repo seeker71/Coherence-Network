@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/core-axiom-wifi-transport-receipt-20260615",
+  "commit_scope": "Add direct Wi-Fi transport instrumentation for the Mac + Android core-axiom receipt helper and record the observed non-adb transport blocker without moving the floor.",
+  "change_intent": "process_only",
+  "idea_ids": [
+    "core-axioms",
+    "kernel-on-android",
+    "mesh-networking",
+    "form-native-models",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "hati-os-targets",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "core-axiom-wifi-transport-blocker-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "native-channel-prioritization",
+        "android-device-access"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_core_axiom_wifi_transport_blocker.json",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-wifi-transport-blocker-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_core_axiom_wifi_transport_blocker.json",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-wifi-transport-blocker-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/android_mac_core_axiom_receipt.sh",
+      "git diff --check -- scripts/android_mac_core_axiom_receipt.sh",
+      "scripts/android_mac_core_axiom_receipt.sh 2048 8 wifi-tcp",
+      "python3 -m http.server <port> --bind 0.0.0.0; adb shell \"ip route; toybox nc ...\"",
+      "python3 -m http.server <port> --bind ::; adb shell \"toybox nc -6 ...\"",
+      "scripts/android_mac_core_axiom_receipt.sh 2048 8 adb-forward-tcp"
+    ],
+    "notes": "The helper now accepts a third transport argument: adb-forward-tcp or wifi-tcp. The wifi-tcp mode starts a Mac native listener, waits for a readiness marker written after listen(2), rejects a selected Mac address that equals Android wlan0, and launches the Android native client under /system/bin/timeout 8 with adb used only for provisioning/launch. The live wifi-tcp proof did not pass: an early run reported connect refused to host=192.168.0.7 while diagnostics showed Mac en0 and Android wlan0 both using IPv4 192.168.0.7, so the Android client was connecting to itself; after Android moved to 192.168.0.4, the bounded wifi-tcp run returned rc=124 timeout to Mac host=192.168.0.7. A separate IPv6 link-local probe from Android to Mac fe80::85a:e20c:f469:86e3%wlan0 timed out. The existing adb-forward-tcp package receipt still passed on SM-S918U1 Android 16 arm64-v8a with script_sha256=7abc13ef19ef35f15c663cd419109e2a93e7054811ac2362a796a17dad1f9249, 2048 width-8 samples, checksum 8613732184965110171, channel_duration_ms=284, and remote_cleanup=pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy requested; this is local Mac + authorized Android transport instrumentation and blocker evidence."
+  },
+  "evidence_refs": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-wifi-transport-blocker-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "core-axiom-wifi-transport",
+    "gate": "Non-adb Mac+Android native transport must produce a passing receipt before the physical floor widens beyond adb-forward.",
+    "state": "blocked-by-local-peer-addressing",
+    "can_move_next_phase": false,
+    "next": "Fix peer addressing so Mac and Android have distinct reachable LAN addresses, or choose another native carrier such as BLE/RFCOMM, Wi-Fi Direct, audio, or USB accessory, then rerun scripts/android_mac_core_axiom_receipt.sh 2048 8 wifi-tcp or the matching carrier proof."
+  },
+  "floor_update": {
+    "previous_observed_floor": "core-axiom-native-receipt and core-axiom-package-receipt prove Mac+Android native receipt/package evidence over adb-forward-tcp.",
+    "current_observed_floor": "Unchanged: adb-forward-tcp remains the passing Mac+Android native receipt/package carrier. wifi-tcp is instrumented but blocked by duplicate-address and direct-reachability timeout evidence.",
+    "new_bands": [],
+    "not_claimed": [
+      "non-adb mesh transport pass",
+      "APK signing or Play-distributable packaging",
+      "runtime clang bundled in APK",
+      "background service",
+      "self-modifying binary",
+      "raw sensor learning"
+    ]
+  }
+}

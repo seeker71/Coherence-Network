@@ -1,6 +1,6 @@
 # Current Frequency Spectrum
 
-Generated from `/Users/ursmuff/CoherenceFieldAnalysis/output/ten_year_events.jsonl` using now = 2026-05-07.
+Generated from `~/CoherenceFieldAnalysis/output/ten_year_events.jsonl` using now = 2026-05-07.
 
 - Total trace events: 28174
 - Dated last 90 days: 2933

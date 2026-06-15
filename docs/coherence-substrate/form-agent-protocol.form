@@ -66,5 +66,5 @@
   (openings
     "The JSON codec for the hermes-tags body (build + parse the {name,arguments}"
     "object) is the json grammar's job — wire it to ap-hermes-wrap and a parse"
-    "recipe. The loop driver that walks ap-next is the next carrier (it replaces"
-    "the earlier line-protocol stopgap), emitted native via the foc-emit path."))
+    "recipe. The loop driver is form-native-run.fk (fnr-run): a PURE FORM recipe the"
+    "kernel runs via its host-io builtins (host-exec/read/write) — no C, no Python."))

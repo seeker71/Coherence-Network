@@ -1,0 +1,51 @@
+; preludes: form-stdlib/core.fk form-stdlib/public-audio-rendezvous.fk
+;
+; public-audio-rendezvous-band — public rendezvous plus audio co-presence and
+; measurement pressure floor.
+;
+; Verdict 32767 when every claim lands.
+(do
+    (let pub-api (par-public "coherence-public-api" "public-rendezvous-cell" 64 40 45 60000 1 "pass"))
+    (let pub-paste (par-public "pastebin-public-page" "public-rendezvous-cell" 64 160 170 1800000 1 "pass"))
+    (let pub-archive (par-public "archive-org-public-item" "public-rendezvous-cell" 64 220 230 3600000 1 "pass"))
+    (let audio-out (par-audio "audio-audible-fsk" "mac-to-android" 64 18 91 180 0 "pass"))
+    (let audio-back (par-audio "audio-near-ultrasonic" "android-to-mac" 64 16 88 210 0 "pass"))
+    (let live-mac-audio (par-audio "audio-audible-fsk" "mac-speaker-to-microphone" 64 44 99 3390 0 "pass"))
+    (let measure (par-measure 14 9 420 180 90 "tool" 240 "pass"))
+    (let good (par-session pub-api pub-archive audio-out audio-back measure 1 "pass"))
+    (let good-paste (par-session pub-api pub-paste audio-out audio-back measure 1 "pass"))
+
+    (let bad-public (par-public "private-file" "public-rendezvous-cell" 64 40 45 60000 1 "pass"))
+    (let bad-audio (par-audio "wifi-tcp" "mac-to-android" 64 18 91 180 0 "pass"))
+    (let bad-direction (par-audio "audio-audible-fsk" "unknown" 64 18 91 180 0 "pass"))
+    (let retained-audio (par-audio "audio-audible-fsk" "mac-to-android" 64 18 91 180 1 "pass"))
+    (let low-snr (par-audio "audio-audible-fsk" "mac-to-android" 64 4 91 180 0 "pass"))
+    (let bad-measure (par-measure 14 9 120 500 90 "tool" 240 "pass"))
+    (let zero-oracle-measure (par-measure 14 9 420 180 0 "tool" 240 "pass"))
+    (let no-oracle (par-session pub-api pub-archive audio-out audio-back measure 0 "pass"))
+    (let bad-kind (list "not-public-audio-rendezvous-session" pub-api pub-archive audio-out audio-back measure 1 "pass"))
+
+    (let c0 (if (par-public-valid? pub-api) 1 0))
+    (let c1 (if (par-public-valid? pub-paste) 2 0))
+    (let c2 (if (par-public-valid? pub-archive) 4 0))
+    (let c3 (if (par-audio-valid? audio-out) 8 0))
+    (let c4 (if (par-audio-valid? audio-back) 16 0))
+    (let c5 (if (par-measure-valid? measure) 32 0))
+    (let c6 (if (par-session-valid? good) 64 0))
+    (let c7 (if (eq (par-public-valid? bad-public) 0) 128 0))
+    (let c8 (if (eq (par-audio-valid? bad-audio) 0) 256 0))
+    (let c9 (if (eq (par-audio-valid? bad-direction) 0) 512 0))
+    (let c10 (if (eq (par-measure-valid? bad-measure) 0)
+                 (if (eq (par-measure-valid? zero-oracle-measure) 0)
+                     (if (eq (par-session-valid? no-oracle) 0) 1024 0)
+                     0)
+                 0))
+    (let c11 (if (eq (par-audio-valid? retained-audio) 0)
+                 (if (eq (par-audio-valid? low-snr) 0)
+                     (if (eq (par-session-valid? bad-kind) 0) 2048 0)
+                     0)
+                 0))
+    (let c12 (if (eq (len (par-floor)) 5) 4096 0))
+    (let c13 (if (par-session-valid? good-paste) 8192 0))
+    (let c14 (if (par-audio-valid? live-mac-audio) 16384 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 c14)))))))))))))))

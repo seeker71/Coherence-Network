@@ -1,0 +1,118 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/live-cycle-emission-20260615",
+  "commit_scope": "Emit the Form-native world-model live training-cycle projection from the real mesh training runtime window, with source-backed senses, heldout/process/channel counts, and honest block reasons.",
+  "files_owned": [
+    "scripts/real_mesh_training_emitters.sh",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "experiments/coherence-sense-android/README.md",
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "docs/system_audit/commit_evidence_20260615_live_cycle_emission.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/real_mesh_training_emitters.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter",
+      "scripts/real_mesh_training_emitters.sh --out .cache/real-mesh-training/windows/live-cycle-probe-20260615c",
+      "jq '{status, cycle_status:.world_model_live_cycle.status, cycle_counts:.world_model_live_cycle.sense_counts, cycle_blocks:.world_model_live_cycle.block_reasons, projection:.world_model_live_cycle.projection_row}' .cache/real-mesh-training/windows/live-cycle-probe-20260615c/real-mesh-training-window.json",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness"
+    ],
+    "notes": "Focused Form validation returned 16383 across Go, Rust, TypeScript, and fkwu. The dedicated fourth-arm check returned PASS-4WAY real-mesh-training-emitter. The runtime probe emitted world_model_live_cycle.status=blocked with observed=3, absent=2, heldout_count=7779, capability_ready=0, native_wins=0, growth_status=held, and explicit cycle block reasons."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "No public HTTP endpoint behavior changes are expected; deploy validation remains pending until merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local syntax, four-way Form proof, runtime projection emission, blueprint/index checks, and wellness pass; CI and post-merge deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "mesh-learning",
+    "world-model-growth"
+  ],
+  "spec_ids": [
+    "real-mesh-training-carrier",
+    "world-model-live-sense",
+    "real-mesh-training-emitter"
+  ],
+  "task_ids": [
+    "coord:live-cycle-emission",
+    "thread:live-cycle-emission-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "cd form && ./validate.sh ... real-mesh-training-emitter-band.fk -> 16383; kernels agree on every sample; fourth arm: 1 band(s) four-way",
+    "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter -> PASS-4WAY real-mesh-training-emitter",
+    ".cache/real-mesh-training/windows/live-cycle-probe-20260615c/real-mesh-training-window.json -> world_model_live_cycle.status=blocked, observed=3, absent=2, blocks=capability_liveness_missing/process_receipt_floor_missing/native_teacher_retirement_unproven/world_growth_embodiment_unproven",
+    "form emitted walker: fkwu"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Every real mesh training window now carries a world_model_live_cycle projection aligned with wmls-training-cycle. The projection lowers live Mac/Android witness summaries, capability/process/channel/heldout counts, native-teacher and world-growth state, and explicit block reasons into a row that the Form emitter band can validate.",
+    "public_endpoints": [
+      "local-only: scripts/real_mesh_training_emitters.sh writes real-mesh-training-window.json; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "A complete emitted cycle requires observed live senses, at least twelve heldout rows, capability readiness, a native win, embodied growth, and a Form recipe reference.",
+      "A blocked runtime cycle remains acceptable when it carries real block reasons and the Form recipe reference.",
+      "Malformed blocked cycle projections without reasons are rejected.",
+      "The runtime probe projected the live witness source into a blocked cycle with concrete missing capability/process/native/world-growth proof instead of marking it ready."
+    ]
+  }
+}

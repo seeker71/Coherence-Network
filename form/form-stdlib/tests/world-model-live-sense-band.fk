@@ -1,0 +1,334 @@
+; preludes: form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/model-vitality.fk form-stdlib/world-model-live-sense.fk
+;
+; world-model-live-sense-band - live mesh/model receipts feed growth.
+;
+; Verdict 524287 when every claim lands:
+;   1     valid active samples become observed wmg-sense rows
+;   2     inactive/invalid active samples become verified absent rows
+;   4     timeout senses remain first-class nothing
+;   8     capability learning-ready becomes observed
+;   16    capability floor without liveness becomes absent
+;   32    high-quality model eval becomes observed
+;   64    low-quality model eval becomes absent
+;   128   source payload metadata remains inspectable
+;   256   live ingestion folds every sense into growth state
+;   512   observed/absent/nothing counts stay distinct
+;   1024  sense kind counts expose active/capability/model lanes
+;   2048  live growth embodies when trusted core follows
+;   4096  hidden vulnerability still holds even with live receipts
+;   8192  witness-state counters lower into observed live senses
+;   16384 one source-backed witness cycle carries senses and growth
+;   32768 cycle records a 12-sample heldout window
+;   65536 cycle can retire one source-backed oracle teacher
+;   131072 capability liveness blocks cycle embodiment status
+;   262144 hidden vulnerability still holds the cycle growth
+(do
+    (let offer (sat-circle-interface))
+    (let identity-readings (list (ov-reading 1 1 5) (ov-reading 1 1 6)))
+    (let live-identity (wmm-identity "core:self" 10 12 10 5 identity-readings))
+    (let field
+        (list
+            (sf-member "trusted-core" (list (m-witness) (m-reflect) (m-be-seen) (m-invite)))
+            (sf-member "world-module" (list (m-be-seen) (m-invite)))))
+    (let claim (ov-reading 1 1 5))
+    (let vulnerability
+        (wmm-vulnerability
+            "live-lane-uncertain"
+            (ov-reading 1 1 7)
+            10
+            3
+            (m-be-seen)
+            "live receipts are named before growth"))
+    (let hidden-vulnerability
+        (wmm-vulnerability
+            "hidden-live-gap"
+            (ov-reading 0 0 0)
+            10
+            3
+            (m-be-seen)
+            "silence is held"))
+    (let model (wmm-model "world-module-live" live-identity claim 10 (list vulnerability) field 91 80))
+    (let hidden-model (wmm-model "world-module-live" live-identity claim 10 (list hidden-vulnerability) field 91 80))
+
+    (let mic (aml-mic-rms-sample 4 12))
+    (let inactive (aml-active-sample "camera" "video:rgba-time" "luma-summary" 0 0 76 "summary-only/no-frame" 0))
+    (let mic-sense (wmls-from-active-sample mic 10 5))
+    (let inactive-sense (wmls-from-active-sample inactive 10 5))
+    (let timeout-sense (wmls-timeout-sense "ble-presence" "presence" 10 (list "timeout" "bluetooth-le")))
+
+    (let cap (aml-capability-receipt 1 1 1 1 1 39 1 1 1 1 1))
+    (let cap-held (aml-capability-receipt 1 1 0 1 1 39 1 1 1 1 1))
+    (let cap-sense (wmls-from-capability-receipt cap 10 5))
+    (let cap-held-sense (wmls-from-capability-receipt cap-held 10 5))
+
+    (let good-eval (mv-eval-receipt
+        "model:tiny-transformer"
+        "merkle:dataset-a"
+        88
+        86
+        90
+        87
+        88
+        91
+        20
+        18
+        30
+        82
+        93
+        84
+        90
+        64
+        "merkle:eval-good"))
+    (let low-eval (mv-eval-receipt
+        "model:tiny-transformer"
+        "merkle:dataset-a"
+        55
+        58
+        62
+        57
+        59
+        61
+        20
+        18
+        30
+        50
+        93
+        60
+        65
+        64
+        "merkle:eval-low"))
+    (let good-eval-sense (wmls-from-model-eval good-eval 75 10 5))
+    (let low-eval-sense (wmls-from-model-eval low-eval 75 10 5))
+
+    (let organs (list "accelerometer" "camera" "gps" "gpu" "gyroscope" "light" "magnetometer" "mic" "network" "screen"))
+    (let live-state
+        (wsr-state
+            "form-native-witness-state"
+            1
+            141
+            7045
+            28054
+            2367
+            99
+            1412
+            5084
+            organs
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let native-export
+        (wsr-export-row
+            "native-witness-export"
+            "substrate:receipt-cell"
+            42
+            141
+            5084
+            "sha256:live-summary-5084"
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let speech-label (wsr-oracle-label "speech-transcribe" "whisper-oracle" "oracle:stt" "speech-present" 84 42 "mic:141" "summary-only/no-raw-audio-frame-buffer"))
+    (let speech-process (wsr-oracle-process "speech-transcribe" "whisper-oracle" "oracle:stt" "running" 80 "summary-only/no-raw-audio-frame-buffer"))
+    (let vision-process (wsr-oracle-process "vision-describe" "vision-oracle" "oracle:vision" "running" 80 "summary-only/no-frame"))
+    (let multimodal-process (wsr-oracle-process "multimodal-align" "multimodal-oracle" "oracle:multimodal" "running" 80 "summary-only/no-raw-audio-frame-buffer"))
+    (let gpu-process (wsr-oracle-process "gpu-readback-kernel" "gpu-oracle" "oracle:gpu" "running" 80 "summary-only/no-buffer"))
+    (let processes (list speech-process vision-process multimodal-process gpu-process))
+    (let win-row (wsr-heldout-from-oracle-label speech-label live-state 86 1))
+    (let cycle-labels
+        (list
+            speech-label speech-label speech-label speech-label
+            speech-label speech-label speech-label speech-label
+            speech-label speech-label speech-label speech-label))
+    (let cycle-rows
+        (list
+            win-row win-row win-row win-row
+            win-row win-row win-row win-row
+            win-row win-row win-row win-row))
+    (let emission-cycle
+        (wsr-emission-cycle
+            42
+            native-export
+            cycle-labels
+            processes
+            cycle-rows
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let witness-senses (wmls-active-sample-senses (wsr-active-samples live-state) 10 5))
+    (let cycle
+        (wmls-training-cycle
+            "cycle-42"
+            live-state
+            emission-cycle
+            cap
+            (list good-eval low-eval)
+            75
+            10
+            5
+            (wmg-empty "live-world" model)
+            offer))
+    (let cap-held-cycle
+        (wmls-training-cycle
+            "cycle-42-held-capability"
+            live-state
+            emission-cycle
+            cap-held
+            (list good-eval low-eval)
+            75
+            10
+            5
+            (wmg-empty "live-world" model)
+            offer))
+    (let hidden-cycle
+        (wmls-training-cycle
+            "cycle-42-hidden"
+            live-state
+            emission-cycle
+            cap
+            (list good-eval low-eval)
+            75
+            10
+            5
+            (wmg-empty "live-world" hidden-model)
+            offer))
+
+    (let senses
+        (list
+            mic-sense
+            inactive-sense
+            timeout-sense
+            cap-sense
+            cap-held-sense
+            good-eval-sense
+            low-eval-sense))
+    (let ingested (wmls-ingest-live (wmg-empty "live-world" model) senses))
+    (let embodied (wmls-grow-from-live (wmg-empty "live-world" model) senses offer))
+    (let held (wmls-grow-from-live (wmg-empty "live-world" hidden-model) senses offer))
+    (let active-payload (wmg-sense-payload mic-sense))
+    (let cap-payload (wmg-sense-payload cap-sense))
+    (let eval-payload (wmg-sense-payload good-eval-sense))
+
+    (let c0
+        (wmls-score
+            (and
+                (str_eq (wmg-sense-name mic-sense) "mic:active-sample")
+                (str_eq (wmg-sense-verdict mic-sense) "observed"))
+            1))
+    (let c1
+        (wmls-score
+            (and
+                (str_eq (wmg-sense-kind inactive-sense) "camera")
+                (str_eq (wmg-sense-verdict inactive-sense) "absent"))
+            2))
+    (let c2
+        (wmls-score
+            (str_eq (wmg-sense-verdict timeout-sense) "nothing")
+            4))
+    (let c3
+        (wmls-score
+            (and
+                (str_eq (wmls-capability-status cap) "learning-ready")
+                (str_eq (wmg-sense-verdict cap-sense) "observed"))
+            8))
+    (let c4
+        (wmls-score
+            (and
+                (str_eq (wmls-capability-status cap-held) "capability-floor-held")
+                (str_eq (wmg-sense-verdict cap-held-sense) "absent"))
+            16))
+    (let c5
+        (wmls-score
+            (and
+                (ge (mv-quality-score good-eval) 75)
+                (str_eq (wmg-sense-verdict good-eval-sense) "observed"))
+            32))
+    (let c6
+        (wmls-score
+            (and
+                (lt (mv-quality-score low-eval) 75)
+                (str_eq (wmg-sense-verdict low-eval-sense) "absent"))
+            64))
+    (let c7
+        (wmls-score
+            (and
+                (str_eq (nth active-payload 0) "active-sample")
+                (and
+                    (str_eq (nth active-payload 7) "summary-only/no-raw-audio")
+                    (and
+                        (str_eq (nth cap-payload 0) "capability-receipt")
+                        (str_eq (nth eval-payload 0) "model-eval-receipt"))))
+            128))
+    (let c8
+        (wmls-score
+            (eq (len (wmg-state-senses ingested)) 7)
+            256))
+    (let c9
+        (wmls-score
+            (and
+                (eq (wmg-count-senses (wmg-state-senses ingested) "observed") 3)
+                (and
+                    (eq (wmg-count-senses (wmg-state-senses ingested) "absent") 3)
+                    (eq (wmg-count-senses (wmg-state-senses ingested) "nothing") 1)))
+            512))
+    (let c10
+        (wmls-score
+            (and
+                (eq (wmls-count-kind senses "mic") 1)
+                (and
+                    (eq (wmls-count-kind senses "capability") 2)
+                    (eq (wmls-count-kind senses "model-eval") 2)))
+            1024))
+    (let c11
+        (wmls-score
+            (and
+                (str_eq (wmg-state-status embodied) "embodied")
+                (and
+                    (str_eq (wmg-state-reason embodied) "follow")
+                    (eq (len (wmg-state-parts embodied)) 3)))
+            2048))
+    (let c12
+        (wmls-score
+            (and
+                (str_eq (wmg-state-status held) "held")
+                (and
+                    (str_eq (wmg-state-reason held) "vulnerability-not-revealed")
+                    (eq (len (wmg-state-parts held)) 0)))
+            4096))
+    (let c13
+        (wmls-score
+            (and
+                (eq (len witness-senses) 3)
+                (and
+                    (eq (wmg-count-senses witness-senses "observed") 3)
+                    (eq (wmls-count-kind witness-senses "gpu") 1)))
+            8192))
+    (let c14
+        (wmls-score
+            (and
+                (eq (wmls-cycle-source-backed? cycle) 1)
+                (and
+                    (str_eq (wmls-cycle-status cycle) "live-training-cycle-embodied")
+                    (and
+                        (eq (wmg-count-senses (wmls-cycle-sense-list cycle) "observed") 5)
+                        (eq (wmg-count-senses (wmls-cycle-sense-list cycle) "absent") 1))))
+            16384))
+    (let c15
+        (wmls-score
+            (and
+                (eq (wmls-cycle-heldout-count cycle) 12)
+                (eq (wmls-cycle-heldout-window-ready? cycle 12) 1))
+            32768))
+    (let c16
+        (wmls-score
+            (eq (wmls-cycle-native-wins? cycle 12 0) 1)
+            65536))
+    (let c17
+        (wmls-score
+            (and
+                (eq (wmls-cycle-source-backed? cap-held-cycle) 0)
+                (str_eq (wmls-cycle-status cap-held-cycle) "live-training-cycle-held"))
+            131072))
+    (let c18
+        (wmls-score
+            (and
+                (str_eq (wmls-cycle-status hidden-cycle) "live-training-cycle-held")
+                (and
+                    (str_eq (wmg-state-status (wmls-cycle-growth hidden-cycle)) "held")
+                    (str_eq (wmg-state-reason (wmls-cycle-growth hidden-cycle)) "vulnerability-not-revealed")))
+            262144))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18)))

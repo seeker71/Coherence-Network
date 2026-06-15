@@ -1,0 +1,20 @@
+{
+  "task_id": "tensor-autodiff-native-verifier-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim tensor-autodiff-native-verifier \"Next model-kernel wall: generate/use a native host verifier binary path for tensor/autodiff sample receipts; ask for many bounded samples; avoid live mesh transport, chunk payload merkle proof, durable eval query, privacy/conflict, router/audio, and BML compiler lanes.\"",
+    "scripts/tensor_autodiff_native_verifier.sh 4096 8",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tensor-autodiff-verifier.fk form-stdlib/tests/tensor-autodiff-verifier-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh tensor-autodiff-verifier",
+    "python3 form/scripts/validate_primitive_registry.py",
+    "cd form && ./validate.sh form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a generated native host verifier binary path and a Form receipt contract for tensor/autodiff samples. The native verifier checked 4096 width-8 affine-loss gradient samples against finite differences and returned pass; the Form receipt band proved the receipt shape four-way. The host-exec/host-read/host-write carrier primitives are now registered as lane-0 host-io entries, leaving full tensor-scale autodiff cells, live training loops, durable query, live mesh transport, payload merkle proof, privacy, and conflict policy explicit as next walls."
+}

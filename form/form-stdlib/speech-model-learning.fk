@@ -14,8 +14,13 @@
 ; Oracle receipts are native training data too: a local LLM can add labels,
 ; confidence, meaning vectors, and impact vectors so human teaching becomes
 ; optional instead of required.
+; Speech teacher receipts are physical local training data: macOS say can
+; render text to inspectable PCM, whisper-cli can transcribe it locally, and the
+; receipt can train Form rows while native STT/TTS candidates remain teacher-led
+; until heldout receipts prove otherwise.
 ;
 ; Proven by: form-stdlib/tests/speech-model-learning-band.fk
+;            form-stdlib/tests/speech-teacher-receipt-band.fk
 
 (do
     (defn sml-sample (label feature lane)
@@ -323,6 +328,95 @@
         (if (str_eq (sml-meta-expression meta) "ask-human")
             "kernel:human-feedback"
             "kernel:local-llm-oracle"))
+
+    (defn sml-speech-teacher-floor ()
+        (list
+            "local TTS audio must be generated and retained as a hashed training slice"
+            "local STT transcript must overlap expected text before becoming a teacher row"
+            "native STT/TTS candidates remain teacher-led until heldout receipts pass"))
+    (defn sml-speech-teacher-north-star ()
+        (list
+            "Whisper, macOS say, and open TTS/STT models teach native recipes through receipts"
+            "native speech candidates retire teachers only after accuracy, trust, sovereignty, vitality, and lower-cost floors"
+            "speech metadata becomes numeric channel data for confidence, conviction, expression, and active learning"))
+    (defn sml-speech-teacher-receipt
+        (status tts-provider stt-provider stt-model expected transcript overlap wav-bytes samples duration-ms rms-ppm rough-hz audio-sha transcript-sha raw-audio-retained floor north-star)
+        (list status tts-provider stt-provider stt-model expected transcript overlap wav-bytes samples duration-ms rms-ppm rough-hz audio-sha transcript-sha raw-audio-retained floor north-star))
+    (defn sml-str-nonempty? (value) (gt (str_len value) 0))
+    (defn sml-str-sha? (value) (gt (str_len value) 16))
+    (defn sml-str-status (receipt) (nth receipt 0))
+    (defn sml-str-tts-provider (receipt) (nth receipt 1))
+    (defn sml-str-stt-provider (receipt) (nth receipt 2))
+    (defn sml-str-stt-model (receipt) (nth receipt 3))
+    (defn sml-str-expected (receipt) (nth receipt 4))
+    (defn sml-str-transcript (receipt) (nth receipt 5))
+    (defn sml-str-overlap (receipt) (nth receipt 6))
+    (defn sml-str-wav-bytes (receipt) (nth receipt 7))
+    (defn sml-str-samples (receipt) (nth receipt 8))
+    (defn sml-str-duration-ms (receipt) (nth receipt 9))
+    (defn sml-str-rms-ppm (receipt) (nth receipt 10))
+    (defn sml-str-rough-hz (receipt) (nth receipt 11))
+    (defn sml-str-audio-sha (receipt) (nth receipt 12))
+    (defn sml-str-transcript-sha (receipt) (nth receipt 13))
+    (defn sml-str-raw-audio-retained (receipt) (nth receipt 14))
+    (defn sml-str-floor (receipt) (nth receipt 15))
+    (defn sml-str-north-star (receipt) (nth receipt 16))
+    (defn sml-speech-teacher-receipt-valid? (receipt)
+        (if (and
+                (str_eq (sml-str-status receipt) "pass")
+                (and
+                    (str_eq (sml-str-tts-provider receipt) "macos-say")
+                    (and
+                        (str_eq (sml-str-stt-provider receipt) "whisper-cli")
+                        (and
+                            (sml-str-nonempty? (sml-str-stt-model receipt))
+                            (and
+                                (sml-str-nonempty? (sml-str-expected receipt))
+                                (and
+                                    (sml-str-nonempty? (sml-str-transcript receipt))
+                                    (and
+                                        (ge (sml-str-overlap receipt) 80)
+                                        (and
+                                            (gt (sml-str-wav-bytes receipt) 0)
+                                            (and
+                                                (gt (sml-str-samples receipt) 0)
+                                                (and
+                                                    (gt (sml-str-duration-ms receipt) 0)
+                                                    (and
+                                                        (gt (sml-str-rms-ppm receipt) 0)
+                                                        (and
+                                                            (gt (sml-str-rough-hz receipt) 0)
+                                                            (and
+                                                                (sml-str-sha? (sml-str-audio-sha receipt))
+                                                                (and
+                                                                    (sml-str-sha? (sml-str-transcript-sha receipt))
+                                                                    (and
+                                                                        (eq (sml-str-raw-audio-retained receipt) 1)
+                                                                        (and
+                                                                            (gt (len (sml-str-floor receipt)) 0)
+                                                                            (gt (len (sml-str-north-star receipt)) 0)))))))))))))))))
+            1
+            0))
+    (defn sml-speech-teacher-feature (receipt)
+        (list
+            (sml-str-overlap receipt)
+            (sml-str-rms-ppm receipt)
+            (sml-str-duration-ms receipt)
+            (sml-str-rough-hz receipt)
+            (sml-str-wav-bytes receipt)
+            (sml-str-samples receipt)))
+    (defn sml-speech-teacher-sample (label receipt)
+        (sml-sample
+            label
+            (sml-speech-teacher-feature receipt)
+            "speech:teacher-receipt"))
+    (defn sml-speech-teacher-score-card (path receipt trust)
+        (sml-score-card
+            path
+            (if (eq (sml-speech-teacher-receipt-valid? receipt) 1) 1 0)
+            1
+            95
+            trust))
 
     (defn sml-mesh-row (tts-label stt-label expected)
         (list tts-label stt-label expected))

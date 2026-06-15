@@ -3,7 +3,7 @@
 ; code-tool-learning-band — Form-native sideband for code generation,
 ; tool selection, and tool execution learning.
 ;
-; Verdict 131071 when every claim lands:
+; Verdict 262143 when every claim lands:
 ;   1     code-generation intent is learned as a native exemplar
 ;   2     tool-selection intent is learned as a native exemplar
 ;   4     proof-execution intent is learned as a native exemplar
@@ -21,6 +21,7 @@
 ;   16384 natural language to host-native ASM is a named learnable north-star intent
 ;   32768 Form-native floor oracle wins on lower token/energy/nutrition cost with high sovereignty/trust/confidence
 ;   65536 canonical natural-language to host-native ASM lowering path is explicit with alternatives
+;   131072 coding-act receipt connects source listening, patch speaking, verifier feedback, and learned delta
 (do
     (let samples
         (list
@@ -80,6 +81,49 @@
             (ctl-floor-oracle "form-native:code-tool" 600 20 20 91 86 83)))
     (let floor-winner (ctl-floor-winner floor-oracles))
     (let lowering-path (ctl-canonical-lowering-path))
+    (let listened-source
+        (ctl-code-surface
+            "source-code"
+            "Form"
+            "form/form-stdlib/code-tool-learning.fk"
+            "sha256:code-tool-learning-before"
+            "bp:code-tool-learning-row"
+            "form/BML"))
+    (let spoken-patch
+        (ctl-patch-recipe
+            "add-coding-act-receipt"
+            "Form"
+            "sha256:coding-act-patch"
+            3
+            1))
+    (let syntax-proof
+        (ctl-verifier
+            "validate-code-tool-learning-band"
+            "pass"
+            140
+            "sha256:validate-output"))
+    (let evidence-proof
+        (ctl-verifier
+            "validate-commit-evidence"
+            "pass"
+            90
+            "sha256:evidence-output"))
+    (let learned-delta
+        (ctl-learned-delta
+            "form-native:code-tool"
+            1
+            62
+            74
+            1))
+    (let coding-act
+        (ctl-coding-act
+            "listen-speak-verify-learn"
+            listened-source
+            spoken-patch
+            (list syntax-proof evidence-proof)
+            receipt
+            learned-delta))
+    (let coding-act-sample (ctl-coding-act-sample coding-act))
 
     (let c0
         (if (str_eq
@@ -197,6 +241,18 @@
                             (eq (len (ctl-lowering-paths)) 4)))))
             65536
             0))
+    (let c17
+        (if (and
+                (eq (ctl-coding-act-valid? coding-act) 1)
+                (and
+                    (str_eq (ctl-label coding-act-sample) "listen-speak-verify-learn")
+                    (and
+                        (str_eq (ctl-lane coding-act-sample) "code:coding-act")
+                        (and
+                            (eq (ctl-ld-trust-after learned-delta) 74)
+                            (eq (ctl-v-duration-ms syntax-proof) 140)))))
+            131072
+            0))
     (add c0
         (add c1
             (add c2
@@ -212,4 +268,5 @@
                                                     (add c12
                                                         (add c13
                                                             (add c14
-                                                                (add c15 c16)))))))))))))))))
+                                                                (add c15
+                                                                    (add c16 c17))))))))))))))))))

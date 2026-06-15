@@ -1,0 +1,145 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/tensor-autodiff-native-verifier-20260615",
+  "commit_scope": "Add a native host verifier and Form receipt for tensor autodiff samples.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-models",
+    "federated-slices",
+    "fourth-kernel-wall-groups",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "tensor-autodiff-native-verifier-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "native-verifier-prioritization",
+        "sample-window-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_tensor_autodiff_native_verifier.json",
+    "docs/system_audit/model_executor_run_ledger/tensor-autodiff-native-verifier-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tensor-autodiff-verifier.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/tests/tensor-autodiff-verifier-band.fk",
+    "scripts/tensor_autodiff_native_verifier.sh"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_tensor_autodiff_native_verifier.json",
+    "docs/system_audit/model_executor_run_ledger/tensor-autodiff-native-verifier-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tensor-autodiff-verifier.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/tests/tensor-autodiff-verifier-band.fk",
+    "scripts/tensor_autodiff_native_verifier.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim tensor-autodiff-native-verifier \"Next model-kernel wall: generate/use a native host verifier binary path for tensor/autodiff sample receipts; ask for many bounded samples; avoid live mesh transport, chunk payload merkle proof, durable eval query, privacy/conflict, router/audio, and BML compiler lanes.\"",
+      "scripts/tensor_autodiff_native_verifier.sh 4096 8",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tensor-autodiff-verifier.fk form-stdlib/tests/tensor-autodiff-verifier-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh tensor-autodiff-verifier",
+      "python3 form/scripts/validate_primitive_registry.py",
+      "cd form && ./validate.sh form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "The generated native Go verifier returned `{\"kind\":\"tensor-autodiff-native-verifier\",\"samples\":4096,\"width\":8,\"passed\":4096,\"failed\":0,\"checksum\":-3482749882191804621,\"status\":\"pass\"}`. Focused Form validation returned `core.fk+tensor-autodiff-verifier.fk+tensor-autodiff-verifier-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY tensor-autodiff-verifier`. Primitive registry validation returned `natives: 204`, `lanes: 164 in-band verified · 40 carrier-declared`; the registry band returned 63."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form/native verifier floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The model-kernel floor now has a generated native host binary verifier for many tiny tensor affine-loss gradient samples, plus a Form-readable receipt contract admitted four-way.",
+    "public_endpoints": [
+      "n/a: local Form/native verifier proof"
+    ],
+    "test_flows": [
+      "scripts/tensor_autodiff_native_verifier.sh 4096 8",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tensor-autodiff-verifier.fk form-stdlib/tests/tensor-autodiff-verifier-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh tensor-autodiff-verifier"
+    ]
+  },
+  "evidence_refs": [
+    "scripts/tensor_autodiff_native_verifier.sh",
+    "form/form-stdlib/tensor-autodiff-verifier.fk",
+    "form/form-stdlib/tests/tensor-autodiff-verifier-band.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/system_audit/model_executor_run_ledger/tensor-autodiff-native-verifier-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "tensor-autodiff-native-verifier",
+    "gate": "A native verifier carrier with visible sample receipts must exist before tensor-scale autodiff claims are widened from hand-picked scalar examples to larger sample windows.",
+    "state": "local-native-and-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add tensor autodiff gradient cells that consume verifier sample receipts, then widen to live chunk payload merkle proof, mesh transport, durable eval query, and privacy/conflict receipts."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Scalar autodiff, SGD, Adam moments, and Adam bias correction existed, while tensor-autodiff remained a named next wall with no native sample verifier carrier.",
+    "current_observed_floor": "tensor-autodiff-verifier returns 4095 four-way for receipt validation and the generated host binary verifies 4096 width-8 affine-loss gradient samples.",
+    "new_bands": [
+      "tensor-autodiff-verifier -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "full tensor-scale autodiff cells",
+      "live training loop authority",
+      "live mesh slice transport",
+      "chunk-range payload merkle proof over a live carrier",
+      "durable eval-receipt query path",
+      "privacy boundary",
+      "conflict policy"
+    ]
+  }
+}

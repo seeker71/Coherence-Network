@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 241
+**Total files**: 248
 
 | File | Purpose |
 |---|---|
@@ -13,6 +13,8 @@
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | Add Task Card and Research Inputs sections to spec files that don't have them. |
 | [agent-coord.sh](agent-coord.sh) | agent-coord.sh — the carrier for agent-coordination-membrane.form. |
 | [agent_status.py](agent_status.py) | Show active work across all coding agents (worktrees + tasks). |
+| [android_core_axiom_apk_receipt.sh](android_core_axiom_apk_receipt.sh) | Build a native arm64 core-axiom receipt library into the Android APK and |
+| [android_mac_core_axiom_receipt.sh](android_mac_core_axiom_receipt.sh) | Build and run a native Mac + Android core-axiom receipt pair. |
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
 | [asm_pl_human_demo.sh](asm_pl_human_demo.sh) | asm_pl_human_demo.sh — an assembly -> programming language -> human language |
@@ -47,6 +49,7 @@
 | [check_web_docker_context.py](check_web_docker_context.py) | Catch web/ imports reaching above the Docker build context. |
 | [clear_queue_and_start_flow.sh](clear_queue_and_start_flow.sh) | Clear agent task queue and reset PM so the next pipeline run starts in the right order |
 | [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
+| [code_tool_learning_receipt.py](code_tool_learning_receipt.py) | Emit a bounded code-tool-learning coding-act receipt for a committed turn. |
 | [coh_substrate.py](coh_substrate.py) | coh substrate — unified CLI for the coherence-substrate. |
 | [coherence_reach.py](coherence_reach.py) | coherence_reach — measure where an identity is named across the body. |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |
@@ -77,7 +80,6 @@
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
-| [form_cli_run.sh](form_cli_run.sh) | form_cli_run.sh — the form-cli RUNNER as a native binary, emitted by a Form recipe |
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
@@ -86,6 +88,7 @@
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
 | [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [form_native_run.sh](form_native_run.sh) | form_native_run.sh — run the PURE FORM agent runner (form-stdlib/form-native-run.fk) |
 | [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface. Emit a native binary from |
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
 | [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |
@@ -130,6 +133,7 @@
 | [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
+| [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
 | [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
@@ -151,6 +155,7 @@
 | [prompt_entry_gate.sh](prompt_entry_gate.sh) | _no top-of-file purpose_ |
 | [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | prose_recipe_roundtrip.py — the bidirectional test, walking. |
 | [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
+| [public_api_rendezvous_receipt.sh](public_api_rendezvous_receipt.sh) | public_api_rendezvous_receipt.sh — live public API nonce-hash rendezvous receipt. |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
@@ -191,6 +196,7 @@
 | [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
 | [source_gh_token.sh](source_gh_token.sh) | _no top-of-file purpose_ |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
+| [speech_teacher_receipt.sh](speech_teacher_receipt.sh) | speech_teacher_receipt.sh - live local TTS -> STT teacher receipt. |
 | [sqlite_driver_demo.sh](sqlite_driver_demo.sh) | sqlite_driver_demo.sh — the 4th kernel's SQLite driver (carrier first). Emit a |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | strategy_after_rupture_recipe_proof.py — rupture-recovery primitives compose |
@@ -209,6 +215,7 @@
 | [sync_presences_to_db.py](sync_presences_to_db.py) | Sync presence markdown files -> Graph DB via API. |
 | [sync_substrate_vocabulary.py](sync_substrate_vocabulary.py) | Sync the substrate's own numeric vocabulary -> DB as NamedCells. |
 | [teaching_recipe_proof.py](teaching_recipe_proof.py) | teaching_recipe_proof.py — teachings compose into Recipes whose |
+| [tensor_autodiff_native_verifier.sh](tensor_autodiff_native_verifier.sh) | Build and run a native host verifier for tiny tensor autodiff samples. |
 | [tessera_external_witness_probe.py](tessera_external_witness_probe.py) | Probe Tessera's public data surface as a compact external witness. |
 | [test_hostinger_api_native_deploy.sh](test_hostinger_api_native_deploy.sh) | _no top-of-file purpose_ |
 | [test_hostinger_deploy_form_paths.sh](test_hostinger_deploy_form_paths.sh) | _no top-of-file purpose_ |

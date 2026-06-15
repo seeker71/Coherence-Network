@@ -4,22 +4,25 @@
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk tool-channel.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
     (recipe form/form-stdlib/code-tool-learning.fk)
-    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 131071 four-way))
+    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 262143 four-way))
 
   (purpose
     "Every coding action can leave native training data: the intent that was sensed, the tool that was planned, the branch that executed, the receipt that came back, and the metadata that made the result trustworthy enough to learn from."
     "The Form-native candidate trains beside Codex, Claude, Grok, Gemini, and Ollama candidates so each code-generation and tool-use turn can become an A/B receipt instead of disappearing as token spend."
+    "A coding act is now an explicit Form row: source surface listened to, patch/recipe spoken, verifier receipts returned, CHOICE-RECEIPT attached, and learned delta accepted only when trust rises from evidence."
     "The sideband is planning and learning tissue. Tool execution remains explicit through tool-channel capabilities and receipt-bearing host or kernel lanes. Third-party evidence requests come from oracle-catalog rows.")
 
   (floor
     "A four-way Form proof classifies code generation, tool selection, and proof execution intents as native exemplars."
     "The proof uses tool-channel planning for an explicit stream tool plan, refuses ambient execution when metadata stays below the >50 floor, validates a CHOICE-RECEIPT with token cost, turns that receipt back into a native sample, requests compiler and source-grounding oracle evidence lanes, and shows receipt learning can make the Form-native candidate win an A/B race."
+    "The proof now requires a coding-act receipt that connects source-code listening, Form patch speaking, two verifier receipts, and a learned trust delta from 62 to 74 before the new arm lands."
     "The floor-oracle winner rule favors the candidate that clears correctness/metadata gates while using fewer LLM tokens, less energy, and less nutrition, with higher sovereignty, trust, and confidence.")
     "The metadata channel carries conviction, certainty, frequency spectrum, aliveness, sovereignty, and trust. The current use floor requires each important value to clear 50; autonomous selection additionally requires sovereignty and trust to clear 70.")
 
   (north-star
     "Code generation, tool selection, and tool execution become a two-way learning channel inside Form: generation proposes tool plans, tool receipts train generation, and every selected branch carries attribution, cost, success/failure/silence, and metadata."
     "Natural language to agent CLI to host-native ASM is part of this same north star: natural requests lower into inspectable tool plans, compiler/JIT/oracle receipts teach the lane, and Form-native lowering earns promotion through heldout execution and assembly evidence."
+    "Concepts, ideas, specs, source code, and image descriptions use the same listen -> lift -> speak -> verify -> learn shape: the surface changes, but the receipt contract stays native and comparable."
     "The canonical path is natural language -> Form/BML/domain grammar -> form binary -> Form-to-host-native ASM. Other explicit candidates are natural language -> BML -> Hati table -> host ASM, natural language -> domain grammar -> native tool/kernel call, and natural language -> C oracle -> clang host ASM."
     "The Form-native floor oracle wins whenever it carries enough important value with less LLM token use, less energy, less nutrition, more sovereignty, more trust, and more confidence."
     "The agent CLI grows from this sideband: Form-native candidates run beside Claude, Grok, Gemini, Codex, and Ollama, then graduate lane by lane when heldout receipts show enough accuracy, trust, sovereignty, and aliveness."
@@ -38,6 +41,10 @@
       (sample choice-receipt-signature)
       (floor receipt-to-sample-learning)
       (north-star "execution receipts become training rows for the next generation/tool choice"))
+    (coding-act-receipt
+      (sample source-surface patch-recipe verifiers choice-receipt learned-delta)
+      (floor listen-speak-verify-learn)
+      (north-star "every agent coding turn becomes a reversible native learning receipt before it can teach the body"))
     (natural-language-to-host-native-asm
       (sample natural-language-intent-vector)
       (floor compiler-oracle-evidence-plus-form-native-candidate)
@@ -68,6 +75,8 @@
   (capture-and-learn
     "io-match.fk closes the loop the embodiment gate needs a source for: it makes real LLM/tool usage LEARNABLE instead of only paid for. One captured call is an io-match record (input-sig output-sig output-bp lane tokens outcome) — content-addressed in/out (sha256.fk over the real prompt and output), the output's Blueprint NodeID when it is a structured Form node, and whether the call WORKED."
     "A Form-native candidate earns trust by its OWN efficacy, not by copying the teacher. Three modes by what 'succeeded' means: outcome (DEFAULT, generalizes) — the candidate's output worked, its proof passed / tool succeeded; this is aliveness, not syntax. structural (natural-language -> Form node) — the candidate's output shares the target's canonical Blueprint NodeID, so two wordings that parse to the same node both pass (the substrate's same-shape -> same-NodeID premise). exact (NARROW) — identical bytes; overfits except where the output is itself canonical, never the default. The candidate's pass-rate (its own successes) becomes its trust in tool-embodiment.fk."
+    "scripts/code_tool_learning_receipt.py is the bounded host carrier for committed coding turns: it reads a commit against its first parent, hashes the patch without retaining it, hashes touched source surfaces into node signatures, runs explicit verifier commands, stores verifier output hashes without raw output retention, and emits one coding-act receipt with choice_receipt and learned_delta rows."
+    "Live carrier proof for merged PR #3199: commit 8d17b86ce6cab02086175f1f151a921142613b54 produced status=pass with 7 source surfaces, 7 touched files, verifiers code-tool-learning-band and code-tool-learning-gate both pass, trust 62->74, sample_count=1, raw_patch_retained=0."
     "A lane that WORKS — cheaper (0 external tokens) and sovereign (local) — earns the body and replaces the LLM it learned from."
     "Capture is itself a recipe: iom-capture takes the real input/output BYTES of a call and content-addresses them with sha256.fk (the same content-addressing the substrate is built on), so identity comes for free — same input -> same sig (iom-sig-eq?, a fourth-arm-safe digest compare), repeat calls group and dedup."
     (recipe form/form-stdlib/io-match.fk)
@@ -79,4 +88,4 @@
     "form-cli-north-star.form names the destination this sideband serves: the form-cli ground-floor binary that runs local Form-native first and a remote LLM oracle only when confidence is low, learning from every oracle call so the oracle is needed less. Its decision loop runs as form-cli-loop.fk (proof tests/form-cli-loop-band.fk -> 31 four-way).")
 
   (next-step
-    "io-match.fk turns captured I/O into a learnable efficacy score that feeds the embodiment gate; the remaining carrier is the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by pass-rate, cost, and sovereignty before any important flow routes to them by default."))
+    "The committed-turn carrier now writes coding-act receipts. The remaining carrier is the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by pass-rate, cost, and sovereignty before any important flow routes to them by default."))

@@ -50,10 +50,10 @@ should be read), and ice (a Blueprint whose structure captures the
 file's content shape — Python AST for `.py`, JSON schema for `.json`,
 INDEX entries for KB pages).
 
-The Trinity already in CLAUDE.md (SUBSTANCE — the *kind*; the ice/water/gas tags are each kind's resting tendency, orthogonal to the STATE phase axis — any kind can be in any state; see `substrate-thermodynamics.form`):
-- **Blueprint** — structural identity (rests ice)
-- **Recipe** — operational expression (rests water)
-- **NamedCell** — diffuse individuation (rests gas)
+The Trinity already in CLAUDE.md:
+- **Blueprint (ice)** — structural identity
+- **Recipe (water)** — operational expression
+- **NamedCell (gas)** — diffuse individuation
 
 **Gas is enough to start.** A file's gas-cell is the minimum
 participation: the body knows the file exists, knows its path, can

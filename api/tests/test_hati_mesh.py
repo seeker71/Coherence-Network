@@ -40,6 +40,11 @@ def test_hati_mesh_organs_lists_announced_organ() -> None:
         "location_label": "ridge room",
         "map_x": 31.0,
         "map_y": 47.0,
+        "discovery_state": "trusted",
+        "trust_score_ppm": 910000,
+        "signal_strength_ppm": 780000,
+        "battery_level_ppm": 660000,
+        "power_cost_ppm": 180000,
         "capabilities": ["cap.video.frame"],
         "lanes": ["video:rgba-time"],
     }
@@ -54,9 +59,12 @@ def test_hati_mesh_organs_lists_announced_organ() -> None:
     assert organ["display_name"] == "Mac witness A"
     assert organ["dwelling_name"] == "North house"
     assert organ["map_x"] == 31.0
+    assert organ["discovery_state"] == "trusted"
+    assert organ["trust_score_ppm"] == 910000
+    assert organ["signal_strength_ppm"] == 780000
 
 
-def test_hati_mesh_channel_offer_records_flow_receipt() -> None:
+def test_hati_mesh_channel_offer_records_flow_and_route_receipt() -> None:
     client = TestClient(app)
     payload = {
         "from_organ_id": "hati-organ-test-android-002",
@@ -75,6 +83,10 @@ def test_hati_mesh_channel_offer_records_flow_receipt() -> None:
         "packet_loss_ppm": 1000,
         "branch_success_rate_ppm": 860000,
         "infer_error_rate_ppm": 120000,
+        "signal_strength_ppm": 760000,
+        "power_cost_ppm": 220000,
+        "trust_score_ppm": 820000,
+        "route_quality_ppm": 790000,
         "model_id": "speech-native-v0",
     }
 
@@ -93,6 +105,10 @@ def test_hati_mesh_channel_offer_records_flow_receipt() -> None:
     assert channel["latency_ms"] == 18.5
     assert channel["branch_success_rate_ppm"] == 860000
     assert channel["infer_error_rate_ppm"] == 120000
+    assert channel["signal_strength_ppm"] == 760000
+    assert channel["power_cost_ppm"] == 220000
+    assert channel["trust_score_ppm"] == 820000
+    assert channel["route_quality_ppm"] == 790000
 
 
 def test_hati_mesh_heartbeat_marks_organ_listening() -> None:
@@ -107,6 +123,9 @@ def test_hati_mesh_heartbeat_marks_organ_listening() -> None:
             "active_channels": ["sensor:signal"],
             "sample_rate_hz": 1.5,
             "bytes_per_second": 480.0,
+            "discovery_state": "seen",
+            "trust_score_ppm": 500000,
+            "signal_strength_ppm": 720000,
         },
     )
     assert response.status_code == 201
@@ -116,4 +135,6 @@ def test_hati_mesh_heartbeat_marks_organ_listening() -> None:
     assert listed.status_code == 200
     organ = next(item for item in listed.json()["items"] if item["organ_id"] == organ_id)
     assert organ["listening"] is True
+    assert organ["discovery_state"] == "streaming"
     assert organ["active_channels"] == ["sensor:signal"]
+    assert organ["signal_strength_ppm"] == 720000

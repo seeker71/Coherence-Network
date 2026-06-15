@@ -1,0 +1,127 @@
+; core-axiom-native-receipt.fk — Mac + Android native receipt/channel floor.
+;
+; scripts/android_mac_core_axiom_receipt.sh builds two native binaries from one
+; C source: a macOS localhost receipt server and an Android arm64 client pushed
+; through adb. They communicate over an explicit adb-forward TCP channel, verify
+; the same bounded sample window, write a JSON receipt, and clean up the phone
+; binary. Form carries the receipt shape and the floor gate; the native socket
+; and adb transport remain explicit carriers.
+
+(do
+    (defn can-endpoint (role platform channel samples width passed failed checksum trace-count self-modifying background-service status)
+        (list
+            "core-axiom-native-receipt"
+            role
+            platform
+            channel
+            samples
+            width
+            passed
+            failed
+            checksum
+            trace-count
+            self-modifying
+            background-service
+            status))
+
+    (defn can-endpoint? (value)
+        (if (eq (len value) 13)
+            (str_eq (nth value 0) "core-axiom-native-receipt")
+            0))
+    (defn can-role (r) (nth r 1))
+    (defn can-platform (r) (nth r 2))
+    (defn can-channel (r) (nth r 3))
+    (defn can-samples (r) (nth r 4))
+    (defn can-width (r) (nth r 5))
+    (defn can-passed (r) (nth r 6))
+    (defn can-failed (r) (nth r 7))
+    (defn can-checksum (r) (nth r 8))
+    (defn can-trace-count (r) (nth r 9))
+    (defn can-self-modifying (r) (nth r 10))
+    (defn can-background-service (r) (nth r 11))
+    (defn can-status (r) (nth r 12))
+
+    (defn can-valid-endpoint? (r)
+        (if (can-endpoint? r)
+            (if (gt (can-samples r) 0)
+                (if (gt (can-width r) 0)
+                    (if (eq (can-passed r) (can-samples r))
+                        (if (eq (can-failed r) 0)
+                            (if (not (eq (can-checksum r) 0))
+                                (if (gt (can-trace-count r) 5)
+                                    (if (eq (can-self-modifying r) 0)
+                                        (if (eq (can-background-service r) 0)
+                                            (if (str_eq (can-status r) "pass") 1 0)
+                                            0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn can-channel-receipt (mac android peer-valid status)
+        (list
+            "core-axiom-native-channel-receipt"
+            "adb-forward-tcp"
+            mac
+            android
+            peer-valid
+            status))
+
+    (defn can-channel-receipt? (value)
+        (if (eq (len value) 6)
+            (str_eq (nth value 0) "core-axiom-native-channel-receipt")
+            0))
+    (defn can-channel-name (r) (nth r 1))
+    (defn can-channel-mac (r) (nth r 2))
+    (defn can-channel-android (r) (nth r 3))
+    (defn can-channel-peer-valid (r) (nth r 4))
+    (defn can-channel-status (r) (nth r 5))
+
+    (defn can-valid-channel? (r)
+        (if (can-channel-receipt? r)
+            (if (str_eq (can-channel-name r) "adb-forward-tcp")
+                (if (can-valid-endpoint? (can-channel-mac r))
+                    (if (can-valid-endpoint? (can-channel-android r))
+                        (if (str_eq (can-role (can-channel-mac r)) "macos-host")
+                            (if (str_eq (can-platform (can-channel-mac r)) "macos-arm64")
+                                (if (str_eq (can-role (can-channel-android r)) "android-device")
+                                    (if (str_eq (can-platform (can-channel-android r)) "android-arm64")
+                                        (if (eq (can-samples (can-channel-mac r)) (can-samples (can-channel-android r)))
+                                            (if (eq (can-width (can-channel-mac r)) (can-width (can-channel-android r)))
+                                                (if (eq (can-channel-peer-valid r) 1)
+                                                    (if (str_eq (can-channel-status r) "pass") 1 0)
+                                                    0)
+                                                0)
+                                            0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn can-left-expands? (older newer)
+        (if (can-valid-channel? older)
+            (if (can-valid-channel? newer)
+                (if (gt (can-samples (can-channel-mac newer)) (can-samples (can-channel-mac older)))
+                    (if (eq (can-width (can-channel-mac newer)) (can-width (can-channel-mac older))) 1 0)
+                    0)
+                0)
+            0))
+
+    (defn can-floor ()
+        (list
+            "two native binaries from one source"
+            "explicit adb-forward TCP channel"
+            "bounded left-expanding sample window"
+            "receipt-before-trust across both endpoints"
+            "no self-modifying or background service claim"
+            "remote binary cleanup after run"))
+
+    0)

@@ -2,7 +2,7 @@
 
 Building-knowledge synthesis from a deep walk of the source 2026-05-08. The earlier `README.md` carries the architectural narrative; this file carries the implementation detail an agent needs to *build* a NUMS-shaped substrate, not just describe one.
 
-Source paths below are absolute against `/Users/ursmuff/source/NUMS.Go`.
+Source paths below are absolute against `~/source/NUMS.Go`.
 
 ## Three layers, each with a clear API surface
 
