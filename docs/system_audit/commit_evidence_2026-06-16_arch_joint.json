@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/arch-joint-search",
+  "commit_scope": "The architect searches the JOINT (depth x width) space and crowns the minimal-cost architecture that fits. arch-joint.fk composes arch-gen's depth search and arch-capacity's width search into one grid search over (depth, width) candidates: it trains each over the dataset (ac-train) and keeps the lowest-cost (depth*width) candidate whose loss clears the fit threshold -- Occam over architectures, the smallest model that solves the task, not the biggest that can. Reuses arch-capacity.fk's layer + multi-example training; only the joint search is new.",
+  "files_owned": [
+    "form/form-stdlib/arch-joint.fk",
+    "form/form-stdlib/tests/arch-joint-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/arch-joint.fk form-stdlib/tests/arch-joint-band.fk"
+    ],
+    "summary": "arch-joint-band -> 31 three-way (Go=Rust=TS), 0 divergent. On a d=4 dataset of 4 examples, grid candidates (1,1) and (2,1) UNDERFIT (total loss 5.65 / 9.56 -- width-1 is the bottleneck and depth does NOT compensate), (1,2) and (2,2) FIT (loss -> 0), and the joint search crowns (depth 1, width 2) -- the minimal-cost (depth*width=2) architecture, rejecting the underfitters AND the over-large (2,2) at cost 4. So the body reads that THIS task needs width, not depth, and picks the smallest model that solves it. 3-KERNEL ONLY (Go=Rust=TS): composes the fp64 transformer-backward op family, not in the fourth-arm manifest -- same floor as transformer-block.fk / arch-capacity.fk. Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "fit_1x1": "5.65 (underfit)",
+      "fit_2x1": "9.56 (underfit -- depth does not compensate for width-1)",
+      "fit_1x2": "~0 (fits)",
+      "fit_2x2": "~0 (fits)",
+      "crowned": "(depth 1, width 2), cost 2",
+      "rejected_overlarge": "(2,2) cost 4"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The joint grid here is (depth, width) of FFN-residual layers. The layer-TYPE axis (attention vs ffn per slot) is the next dimension of the same grid search; the heterogeneous stack engine already trains mixed [attn, ffn] stacks, so type is an added column, not a new engine.",
+        "follow_up": "Add the type axis to the candidate grid; search over mixed attention/ffn stacks per task."
+      },
+      {
+        "limitation": "Cost is depth*width (a compute proxy); ties keep the first-found at that cost. Real serving cost (latency, memory) would refine the cost function, and champion-challenger (already built) gates promotion of the crowned architecture against the served one.",
+        "follow_up": "Refine the cost function with measured latency/memory; wire the crowned architecture through arch-champion-challenger for earned promotion."
+      },
+      {
+        "limitation": "3-kernel only: the fp64 transformer-backward op family is not in the fourth-arm manifest. Same floor as transformer-block.fk, arch-capacity.fk. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs arch-joint-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body searches the joint (depth, width) architecture space and crowns the minimal-cost model that fits a task -- discovering whether a task needs depth or width, and picking the smallest model that solves it.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh arch-joint-band (three kernels agree, verdict 31): underfitters rejected, minimal-cost (1,2) crowned over the over-large (2,2)"
+    ],
+    "summary": "Proven three-way: joint depth x width architecture search -- the smallest model that fits, discovered."
+  },
+  "phase_gate": {
+    "phase": "m7-architect-joint-search",
+    "gate": "the architect searches the joint (depth x width) space and crowns the minimal-cost architecture that fits, discovering whether a task needs depth or width -- Occam over architectures, three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "add the layer-type axis (attention vs ffn per slot) to the joint grid; the GPU as the trainer underneath the search; wire the crowned architecture through champion-challenger"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arch-joint-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/arch-joint.fk",
+    "form/form-stdlib/tests/arch-joint-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/arch-joint.fk",
+    "form/form-stdlib/tests/arch-joint-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-16_arch_joint.json"
+  ],
+  "change_intent": "runtime_feature"
+}
