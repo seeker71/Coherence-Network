@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/mutable-locals-floor-20260615",
+  "commit_scope": "Add a narrow BML/native mutable-local frame floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "bml-native-mutable-local-frame",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "mutable-locals-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-15_mutable_locals_floor.json",
+    "docs/system_audit/model_executor_run_ledger/mutable-locals-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bml-native-mutable-locals.fk",
+    "form/form-stdlib/tests/bml-native-mutable-locals-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-15_mutable_locals_floor.json",
+    "docs/system_audit/model_executor_run_ledger/mutable-locals-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bml-native-mutable-locals.fk",
+    "form/form-stdlib/tests/bml-native-mutable-locals-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/bml-native-mutable-locals.fk form-stdlib/tests/bml-native-mutable-locals-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-mutable-locals",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_mutable_locals_floor.json",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned verdict 1023 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  bml-native-mutable-locals`; blueprint scan returned 0 unregistered type-99 literals."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML-native lowering now has an executable mutable-local frame target with source receipts, declaration, assignment, reads, alias-visible mutation, and separate-frame isolation.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/bml-native-mutable-locals.fk form-stdlib/tests/bml-native-mutable-locals-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-mutable-locals"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bml-native-mutable-locals.fk",
+    "form/form-stdlib/tests/bml-native-mutable-locals-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/model_executor_run_ledger/mutable-locals-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "native-mutable-local-frame",
+    "gate": "General BML assignment/reassign lowering needs an executable mutable frame target before source syntax can lower safely.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Implement form/form-stdlib/grammars/bml.fk general assignment/reassign source nodes -> bnml frame operations."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Lexical const/name binding and Form let-effect-once existed; BML-native mutable locals remained a broad unsupported label.",
+    "current_observed_floor": "Dedicated bml-native-mutable-locals row proves mutable local frame declaration, assignment, read, aliasing, frame isolation, source receipt, and next-code-point four-way.",
+    "new_bands": [
+      "bml-native-mutable-locals -> 1023 four-way"
+    ],
+    "not_claimed": [
+      "general BML assignment source lowering",
+      "reassign syntax lowering",
+      "unresolved names",
+      "general arrays",
+      "general calls"
+    ]
+  }
+}
