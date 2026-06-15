@@ -1,0 +1,20 @@
+{
+  "title": "A real llama layer runs through the Form-native GPU matvec — fp32 parity on real trained weights",
+  "date": "2026-06-16",
+  "advances": "form-native-models.form / transformer-kernel.fk 'toward ollama: real GGUF weights replacing the toy LCG'. The model's COMPUTE now runs Form-native on the GPU over REAL trained weights, not synthetic ones.",
+  "device": "Apple M4 Max (40-core GPU), arm64 Darwin 26.3.1",
+  "model": "llama3.2:3b (GGUF v3, llama arch, d_model 3072, FFN 8192, vocab 128256) from ~/.ollama/models/blobs",
+  "tensor": "blk.0.ffn_gate.weight — the real FFN gate projection, ggml type Q4_K, logical shape [8192 rows x 3072 cols]",
+  "dequant": "trusted reference gguf.quants.dequantize (Q4_K superblock unpack) in a venv — the weight unpacking is borrowed known-good; the Form-native k-quant dequant (read_file_bytes + Form recipe) is the remaining rung, to be verified against this same reference",
+  "compute": "the body's Form-emitted MSL matvec (form/form-stdlib/jit-tensor-emit.fk jte-matvec-msl, f32 lane) — every byte authored by the Form recipe; the Swift host harness is the allowed Metal driver-access carrier per host-kernel.form host-resource-access",
+  "result": {
+    "operation": "y(8192) = Wgate(8192x3072) . x(3072), real weights",
+    "gpu_y_head": [0.47751328, 0.039173782, 0.039676394],
+    "cpu_y_head": [0.4775134, 0.039173690, 0.039676294],
+    "max_abs_diff": 7.153e-07,
+    "verdict": "fp32 parity — max_abs_diff 7.15e-07 is the expected accumulation epsilon for a 3072-term fp32 dot; GPU == CPU walker on real trained weights",
+    "perf": "0.811 ms/dispatch, ~62 GFLOP/s (memory-bound matvec)"
+  },
+  "reading": "End to end: a real language model's weights (llama3.2:3b, Q4_K) -> dequant -> the body's Form-emitted GPU kernel -> fp32-exact with the CPU walker, on the M4 Max GPU. The single model's compute is recipe-data lowered to native Metal, now proven over REAL weights. Remaining toward full real-model inference: Form-native k-quant dequant (verified vs gguf), then the full transformer block (attention/softmax/SwiGLU) on the GPU, then generation.",
+  "reproduce": "python venv: gguf+numpy dequant blk.0.ffn_gate to f32; swiftc real_matvec_gpu.swift with jte-matvec-msl; max_abs_diff < 1e-6"
+}
