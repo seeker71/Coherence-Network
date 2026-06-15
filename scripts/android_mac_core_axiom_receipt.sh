@@ -2,17 +2,19 @@
 # Build and run a native Mac + Android core-axiom receipt pair.
 #
 # The Android side is a one-shot arm64 binary pushed to /data/local/tmp. The
-# Mac side is a one-shot localhost client. They communicate through adb forward
-# over TCP, write an explicit JSON receipt, then clean up the remote binary.
+# Mac side is a one-shot peer. Default mode communicates through adb forward
+# over TCP. `wifi-tcp` mode uses adb only to provision/launch the Android binary;
+# the receipt bytes travel over the local network.
 #
 # Usage:
-#   scripts/android_mac_core_axiom_receipt.sh [samples] [width]
+#   scripts/android_mac_core_axiom_receipt.sh [samples] [width] [adb-forward-tcp|wifi-tcp]
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SAMPLES="${1:-1024}"
 WIDTH="${2:-8}"
+TRANSPORT="${3:-${CORE_AXIOM_TRANSPORT:-adb-forward-tcp}}"
 WORK="$ROOT/.cache/android_mac_core_axiom_receipt"
 SRC="$WORK/core_axiom_receipt.c"
 MAC_BIN="$WORK/core-axiom-receipt-macos"
@@ -24,8 +26,10 @@ SERVER_STDERR="$WORK/android-server.stderr"
 MAC_CLIENT_STDOUT="$WORK/mac-client.stdout"
 MAC_CLIENT_STDERR="$WORK/mac-client.stderr"
 ANDROID_RC="$WORK/android-server.rc"
+READY_FILE="$WORK/listener.ready"
 PORT="${CORE_AXIOM_RECEIPT_PORT:-$((41730 + ($$ % 2000)))}"
 REMOTE="/data/local/tmp/coherence-core-axiom-receipt-$$"
+REMOTE_READY="/data/local/tmp/coherence-core-axiom-ready-$$"
 
 mkdir -p "$WORK"
 
@@ -41,8 +45,38 @@ json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
+default_wifi_host() {
+  local iface
+  iface="$(route -n get default 2>/dev/null | awk '/interface:/{print $2; exit}')"
+  if [[ -n "$iface" ]]; then
+    ipconfig getifaddr "$iface" 2>/dev/null && return 0
+  fi
+  ipconfig getifaddr en0 2>/dev/null && return 0
+  hostname -I 2>/dev/null | awk '{print $1}'
+}
+
+wait_for_ready_file() {
+  local ready_file="$1"
+  local pid="$2"
+  local i
+  for i in $(seq 1 50); do
+    if [[ -s "$ready_file" ]]; then
+      return 0
+    fi
+    if ! kill -0 "$pid" >/dev/null 2>&1; then
+      return 1
+    fi
+    sleep 0.1
+  done
+  return 1
+}
+
 if [[ "$SAMPLES" -le 0 || "$WIDTH" -le 0 || "$WIDTH" -gt 32 ]]; then
   echo "samples and width must be positive; width <= 32" >&2
+  exit 2
+fi
+if [[ "$TRANSPORT" != "adb-forward-tcp" && "$TRANSPORT" != "wifi-tcp" ]]; then
+  echo "transport must be adb-forward-tcp or wifi-tcp" >&2
   exit 2
 fi
 
@@ -182,19 +216,21 @@ static void write_endpoint_json(char *buf, size_t n, const char *role, const cha
         proof.failed, proof.checksum, status);
 }
 
-static int contains_endpoint(const char *body, const char *role, const char *platform, int samples) {
+static int contains_endpoint(const char *body, const char *role, const char *platform, const char *channel, int samples) {
     char sample_need[64];
     char passed_need[64];
     char role_need[96];
     char platform_need[96];
+    char channel_need[96];
     snprintf(sample_need, sizeof(sample_need), "\"samples\":%d", samples);
     snprintf(passed_need, sizeof(passed_need), "\"passed\":%d", samples);
     snprintf(role_need, sizeof(role_need), "\"role\":\"%s\"", role);
     snprintf(platform_need, sizeof(platform_need), "\"platform\":\"%s\"", platform);
+    snprintf(channel_need, sizeof(channel_need), "\"channel\":\"%s\"", channel);
     return strstr(body, "\"kind\":\"core-axiom-native-receipt\"") &&
            strstr(body, role_need) &&
            strstr(body, platform_need) &&
-           strstr(body, "\"channel\":\"adb-forward-tcp\"") &&
+           strstr(body, channel_need) &&
            strstr(body, "\"axiom_trace_count\":6") &&
            strstr(body, sample_need) &&
            strstr(body, passed_need) &&
@@ -278,14 +314,29 @@ static int listen_on(const char *host, int port) {
         close(fd);
         return -1;
     }
+    const char *ready_path = getenv("CORE_AXIOM_READY_FILE");
+    if (ready_path && ready_path[0] != '\0') {
+        FILE *ready = fopen(ready_path, "w");
+        if (ready) {
+            fprintf(ready, "ready\n");
+            fclose(ready);
+        }
+    }
     return fd;
 }
 
-static int run_android_client(const char *host, int port, int samples, int width) {
+static const char *carrier_for_channel(const char *channel) {
+    if (strcmp(channel, "wifi-tcp") == 0) {
+        return "macos-android-wifi-tcp";
+    }
+    return "macos-localhost-to-android-adb-forward";
+}
+
+static int run_android_client(const char *host, int port, int samples, int width, const char *channel) {
     char json[BUF_SIZE];
     char ack[256];
     Proof proof = run_proof(samples, width);
-    write_endpoint_json(json, sizeof(json), "android-device", "adb-forward-tcp", proof);
+    write_endpoint_json(json, sizeof(json), "android-device", channel, proof);
 
     int fd = connect_to(host, port);
     if (fd < 0) {
@@ -309,12 +360,12 @@ static int run_android_client(const char *host, int port, int samples, int width
     return strstr(ack, "ACK pass") && proof.failed == 0 ? 0 : 1;
 }
 
-static int run_mac_server(const char *host, int port, int samples, int width, const char *out_path) {
+static int run_mac_server(const char *host, int port, int samples, int width, const char *out_path, const char *channel) {
     signal(SIGPIPE, SIG_IGN);
     char mac_json[BUF_SIZE];
     char peer_json[BUF_SIZE];
     Proof proof = run_proof(samples, width);
-    write_endpoint_json(mac_json, sizeof(mac_json), "macos-host", "adb-forward-tcp", proof);
+    write_endpoint_json(mac_json, sizeof(mac_json), "macos-host", channel, proof);
 
     int listener = listen_on(host, port);
     if (listener < 0) {
@@ -330,7 +381,7 @@ static int run_mac_server(const char *host, int port, int samples, int width, co
         close(fd);
         return 1;
     }
-    int peer_valid = contains_endpoint(peer_json, "android-device", "android-arm64", samples);
+    int peer_valid = contains_endpoint(peer_json, "android-device", "android-arm64", channel, samples);
     int ok = peer_valid && proof.failed == 0;
     dprintf(fd, "ACK %s\n", ok ? "pass" : "fail");
     close(fd);
@@ -342,26 +393,26 @@ static int run_mac_server(const char *host, int port, int samples, int width, co
     }
     fprintf(out,
         "{\"kind\":\"core-axiom-native-channel-receipt\","
-        "\"channel\":\"adb-forward-tcp\","
-        "\"carrier\":\"macos-localhost-to-android-adb-forward\","
+        "\"channel\":\"%s\","
+        "\"carrier\":\"%s\","
         "\"mac\":%s,"
         "\"android\":%s,"
         "\"peer_valid\":%s,"
         "\"endpoint_count\":2,"
         "\"samples_per_endpoint\":%d,"
         "\"status\":\"%s\"}\n",
-        mac_json, peer_json, peer_valid ? "true" : "false", samples, ok ? "pass" : "fail");
+        channel, carrier_for_channel(channel), mac_json, peer_json, peer_valid ? "true" : "false", samples, ok ? "pass" : "fail");
     fclose(out);
     printf("%s\n", ok ? "pass" : "fail");
     return ok ? 0 : 1;
 }
 
-static int run_android_server(const char *host, int port, int samples, int width) {
+static int run_android_server(const char *host, int port, int samples, int width, const char *channel) {
     signal(SIGPIPE, SIG_IGN);
     char android_json[BUF_SIZE];
     char peer_json[BUF_SIZE];
     Proof proof = run_proof(samples, width);
-    write_endpoint_json(android_json, sizeof(android_json), "android-device", "adb-forward-tcp", proof);
+    write_endpoint_json(android_json, sizeof(android_json), "android-device", channel, proof);
 
     int listener = listen_on(host, port);
     if (listener < 0) {
@@ -377,7 +428,7 @@ static int run_android_server(const char *host, int port, int samples, int width
         close(fd);
         return 1;
     }
-    int peer_valid = contains_endpoint(peer_json, "macos-host", "macos-arm64", samples);
+    int peer_valid = contains_endpoint(peer_json, "macos-host", "macos-arm64", channel, samples);
     if (write(fd, android_json, strlen(android_json)) < 0 || write(fd, "\n", 1) < 0) {
         perror("write android receipt");
         close(fd);
@@ -388,11 +439,11 @@ static int run_android_server(const char *host, int port, int samples, int width
     return peer_valid && proof.failed == 0 ? 0 : 1;
 }
 
-static int run_mac_client(const char *host, int port, int samples, int width, const char *out_path) {
+static int run_mac_client(const char *host, int port, int samples, int width, const char *out_path, const char *channel) {
     char mac_json[BUF_SIZE];
     char peer_json[BUF_SIZE];
     Proof proof = run_proof(samples, width);
-    write_endpoint_json(mac_json, sizeof(mac_json), "macos-host", "adb-forward-tcp", proof);
+    write_endpoint_json(mac_json, sizeof(mac_json), "macos-host", channel, proof);
 
     int fd = connect_to(host, port);
     if (fd < 0) {
@@ -409,7 +460,7 @@ static int run_mac_client(const char *host, int port, int samples, int width, co
     }
     close(fd);
 
-    int peer_valid = contains_endpoint(peer_json, "android-device", "android-arm64", samples);
+    int peer_valid = contains_endpoint(peer_json, "android-device", "android-arm64", channel, samples);
     int ok = peer_valid && proof.failed == 0;
     FILE *out = fopen(out_path, "w");
     if (!out) {
@@ -418,15 +469,15 @@ static int run_mac_client(const char *host, int port, int samples, int width, co
     }
     fprintf(out,
         "{\"kind\":\"core-axiom-native-channel-receipt\","
-        "\"channel\":\"adb-forward-tcp\","
-        "\"carrier\":\"macos-localhost-to-android-adb-forward\","
+        "\"channel\":\"%s\","
+        "\"carrier\":\"%s\","
         "\"mac\":%s,"
         "\"android\":%s,"
         "\"peer_valid\":%s,"
         "\"endpoint_count\":2,"
         "\"samples_per_endpoint\":%d,"
         "\"status\":\"%s\"}\n",
-        mac_json, peer_json, peer_valid ? "true" : "false", samples, ok ? "pass" : "fail");
+        channel, carrier_for_channel(channel), mac_json, peer_json, peer_valid ? "true" : "false", samples, ok ? "pass" : "fail");
     fclose(out);
     printf("%s\n", ok ? "pass" : "fail");
     return ok ? 0 : 1;
@@ -438,32 +489,32 @@ int main(int argc, char **argv) {
         return 2;
     }
     if (strcmp(argv[1], "android-client") == 0) {
-        if (argc != 6) {
-            fprintf(stderr, "usage: %s android-client host port samples width\n", argv[0]);
+        if (argc != 7) {
+            fprintf(stderr, "usage: %s android-client host port samples width channel\n", argv[0]);
             return 2;
         }
-        return run_android_client(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
+        return run_android_client(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6]);
     }
     if (strcmp(argv[1], "mac-server") == 0) {
-        if (argc != 7) {
-            fprintf(stderr, "usage: %s mac-server host port samples width out.json\n", argv[0]);
+        if (argc != 8) {
+            fprintf(stderr, "usage: %s mac-server host port samples width out.json channel\n", argv[0]);
             return 2;
         }
-        return run_mac_server(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6]);
+        return run_mac_server(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6], argv[7]);
     }
     if (strcmp(argv[1], "android-server") == 0) {
-        if (argc != 6) {
-            fprintf(stderr, "usage: %s android-server host port samples width\n", argv[0]);
+        if (argc != 7) {
+            fprintf(stderr, "usage: %s android-server host port samples width channel\n", argv[0]);
             return 2;
         }
-        return run_android_server(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]));
+        return run_android_server(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6]);
     }
     if (strcmp(argv[1], "mac-client") == 0) {
-        if (argc != 7) {
-            fprintf(stderr, "usage: %s mac-client host port samples width out.json\n", argv[0]);
+        if (argc != 8) {
+            fprintf(stderr, "usage: %s mac-client host port samples width out.json channel\n", argv[0]);
             return 2;
         }
-        return run_mac_client(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6]);
+        return run_mac_client(argv[2], atoi(argv[3]), atoi(argv[4]), atoi(argv[5]), argv[6], argv[7]);
     }
     fprintf(stderr, "unknown mode: %s\n", argv[1]);
     return 2;
@@ -504,10 +555,10 @@ if ! grep -q "arm64" <<<"$abi"; then
   exit 1
 fi
 
-rm -f "$OUT" "$PACKAGE_OUT" "$SERVER_STDOUT" "$SERVER_STDERR" "$MAC_CLIENT_STDOUT" "$MAC_CLIENT_STDERR" "$ANDROID_RC"
+rm -f "$OUT" "$PACKAGE_OUT" "$SERVER_STDOUT" "$SERVER_STDERR" "$MAC_CLIENT_STDOUT" "$MAC_CLIENT_STDERR" "$ANDROID_RC" "$READY_FILE"
 cleanup() {
   adb -s "$serial" forward --remove "tcp:$PORT" >/dev/null 2>&1 || true
-  adb -s "$serial" shell "rm -f '$REMOTE'" >/dev/null 2>&1 || true
+  adb -s "$serial" shell "rm -f '$REMOTE' '$REMOTE_READY'" >/dev/null 2>&1 || true
   if [[ "${server_pid:-}" != "" ]] && kill -0 "$server_pid" >/dev/null 2>&1; then
     kill "$server_pid" >/dev/null 2>&1 || true
   fi
@@ -516,14 +567,47 @@ trap cleanup EXIT
 
 adb -s "$serial" push "$ANDROID_BIN" "$REMOTE" >/dev/null
 adb -s "$serial" shell "chmod 755 '$REMOTE'"
-adb -s "$serial" forward "tcp:$PORT" "tcp:$PORT" >/dev/null
-adb -s "$serial" shell "'$REMOTE' android-server 127.0.0.1 '$PORT' '$SAMPLES' '$WIDTH'" >"$SERVER_STDOUT" 2>"$SERVER_STDERR" || echo $? >"$ANDROID_RC" &
-server_pid=$!
-sleep 0.5
-channel_start_ms="$(now_ms)"
-"$MAC_BIN" mac-client 127.0.0.1 "$PORT" "$SAMPLES" "$WIDTH" "$OUT" >"$MAC_CLIENT_STDOUT" 2>"$MAC_CLIENT_STDERR"
-channel_end_ms="$(now_ms)"
-wait "$server_pid"
+if [[ "$TRANSPORT" == "adb-forward-tcp" ]]; then
+  adb -s "$serial" forward "tcp:$PORT" "tcp:$PORT" >/dev/null
+  adb -s "$serial" shell "CORE_AXIOM_READY_FILE='$REMOTE_READY' '$REMOTE' android-server 127.0.0.1 '$PORT' '$SAMPLES' '$WIDTH' '$TRANSPORT'" >"$SERVER_STDOUT" 2>"$SERVER_STDERR" || echo $? >"$ANDROID_RC" &
+  server_pid=$!
+  sleep 0.5
+  channel_start_ms="$(now_ms)"
+  "$MAC_BIN" mac-client 127.0.0.1 "$PORT" "$SAMPLES" "$WIDTH" "$OUT" "$TRANSPORT" >"$MAC_CLIENT_STDOUT" 2>"$MAC_CLIENT_STDERR"
+  channel_end_ms="$(now_ms)"
+  wait "$server_pid"
+  success_stdout="$MAC_CLIENT_STDOUT"
+  success_role="Mac receipt client"
+else
+  wifi_host="${CORE_AXIOM_WIFI_HOST:-$(default_wifi_host)}"
+  if [[ -z "$wifi_host" ]]; then
+    echo "Could not determine Mac Wi-Fi/LAN host; set CORE_AXIOM_WIFI_HOST" >&2
+    exit 1
+  fi
+  android_wifi_host="$(adb -s "$serial" shell "ip -4 addr show wlan0 2>/dev/null | awk '/inet / { sub(/\\/.*/, \"\", \$2); print \$2; exit }'" | tr -d '\r[:space:]')"
+  if [[ -n "$android_wifi_host" && "$wifi_host" == "$android_wifi_host" ]]; then
+    echo "Direct Wi-Fi receipt blocked: selected Mac host $wifi_host matches Android wlan0 $android_wifi_host; set CORE_AXIOM_WIFI_HOST to a distinct reachable Mac address or repair LAN addressing" >&2
+    exit 1
+  fi
+  CORE_AXIOM_READY_FILE="$READY_FILE" "$MAC_BIN" mac-server 0.0.0.0 "$PORT" "$SAMPLES" "$WIDTH" "$OUT" "$TRANSPORT" >"$SERVER_STDOUT" 2>"$SERVER_STDERR" &
+  server_pid=$!
+  if ! wait_for_ready_file "$READY_FILE" "$server_pid"; then
+    cleanup
+    echo "Mac Wi-Fi receipt server did not become ready stdout=$(cat "$SERVER_STDOUT") stderr=$(cat "$SERVER_STDERR") host=0.0.0.0 port=$PORT" >&2
+    exit 1
+  fi
+  channel_start_ms="$(now_ms)"
+  adb -s "$serial" shell "/system/bin/timeout 8 '$REMOTE' android-client '$wifi_host' '$PORT' '$SAMPLES' '$WIDTH' '$TRANSPORT'" >"$MAC_CLIENT_STDOUT" 2>"$MAC_CLIENT_STDERR" || echo $? >"$ANDROID_RC"
+  channel_end_ms="$(now_ms)"
+  if [[ -s "$ANDROID_RC" ]]; then
+    cleanup
+    echo "Android Wi-Fi receipt client failed rc=$(cat "$ANDROID_RC") stdout=$(cat "$MAC_CLIENT_STDOUT") stderr=$(cat "$MAC_CLIENT_STDERR") host=$wifi_host port=$PORT" >&2
+    exit 1
+  fi
+  wait "$server_pid"
+  success_stdout="$SERVER_STDOUT"
+  success_role="Mac Wi-Fi receipt server"
+fi
 trap - EXIT
 cleanup
 remote_state="$(adb -s "$serial" shell "if [ -e '$REMOTE' ]; then echo present; else echo absent; fi" | tr -d '\r[:space:]')"
@@ -536,8 +620,8 @@ if [[ -s "$ANDROID_RC" ]]; then
   echo "Android receipt server failed rc=$(cat "$ANDROID_RC") stderr=$(cat "$SERVER_STDERR")" >&2
   exit 1
 fi
-if [[ "$(cat "$MAC_CLIENT_STDOUT" | tr -d '\r\n')" != "pass" ]]; then
-  echo "Mac receipt client failed stdout=$(cat "$MAC_CLIENT_STDOUT") stderr=$(cat "$MAC_CLIENT_STDERR")" >&2
+if [[ "$(cat "$success_stdout" | tr -d '\r\n')" != "pass" ]]; then
+  echo "$success_role failed stdout=$(cat "$success_stdout") stderr=$(cat "$SERVER_STDERR") $(cat "$MAC_CLIENT_STDERR")" >&2
   exit 1
 fi
 if ! grep -q '"kind":"core-axiom-native-channel-receipt"' "$OUT" || ! grep -q '"status":"pass"' "$OUT"; then
@@ -563,11 +647,11 @@ abi_json="$(json_escape "$abi")"
 android_version_json="$(json_escape "$android_version")"
 
 cat > "$PACKAGE_OUT" <<JSON
-{"kind":"core-axiom-native-package-receipt","script_sha256":"$script_sha","generated_source_sha256":"$generated_source_sha","mac_binary_sha256":"$mac_sha","android_binary_sha256":"$android_sha","channel_receipt_sha256":"$channel_receipt_sha","mac_file":"$mac_desc_json","android_file":"$android_desc_json","device_model":"$model_json","android_version":"$android_version_json","android_abi":"$abi_json","channel":"adb-forward-tcp","channel_duration_ms":$channel_duration_ms,"samples":$SAMPLES,"width":$WIDTH,"remote_path":"$REMOTE","remote_cleanup":"$remote_cleanup","status":"pass"}
+{"kind":"core-axiom-native-package-receipt","script_sha256":"$script_sha","generated_source_sha256":"$generated_source_sha","mac_binary_sha256":"$mac_sha","android_binary_sha256":"$android_sha","channel_receipt_sha256":"$channel_receipt_sha","mac_file":"$mac_desc_json","android_file":"$android_desc_json","device_model":"$model_json","android_version":"$android_version_json","android_abi":"$abi_json","channel":"$TRANSPORT","channel_duration_ms":$channel_duration_ms,"samples":$SAMPLES,"width":$WIDTH,"remote_path":"$REMOTE","remote_cleanup":"$remote_cleanup","status":"pass"}
 JSON
 
-printf 'PASS mac=%s android=%s model=%s android_version=%s abi=%s channel=adb-forward-tcp samples=%s width=%s receipt=%s\n' \
-  "$mac_desc" "$android_desc" "$model" "$android_version" "$abi" "$SAMPLES" "$WIDTH" "$OUT"
+printf 'PASS mac=%s android=%s model=%s android_version=%s abi=%s channel=%s samples=%s width=%s receipt=%s\n' \
+  "$mac_desc" "$android_desc" "$model" "$android_version" "$abi" "$TRANSPORT" "$SAMPLES" "$WIDTH" "$OUT"
 cat "$OUT"
 printf 'PACKAGE receipt=%s sha256=%s channel_duration_ms=%s remote_cleanup=%s\n' "$PACKAGE_OUT" "$channel_receipt_sha" "$channel_duration_ms" "$remote_cleanup"
 cat "$PACKAGE_OUT"

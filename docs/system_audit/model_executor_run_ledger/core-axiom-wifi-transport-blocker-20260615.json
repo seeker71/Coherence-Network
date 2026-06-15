@@ -1,0 +1,16 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "bash -n scripts/android_mac_core_axiom_receipt.sh",
+    "git diff --check -- scripts/android_mac_core_axiom_receipt.sh",
+    "scripts/android_mac_core_axiom_receipt.sh 2048 8 wifi-tcp",
+    "python3 -m http.server <port> --bind 0.0.0.0; adb shell \"ip route; toybox nc ...\"",
+    "python3 -m http.server <port> --bind ::; adb shell \"toybox nc -6 ...\"",
+    "scripts/android_mac_core_axiom_receipt.sh 2048 8 adb-forward-tcp"
+  ],
+  "pass_fail": "blocked",
+  "failure_reason": "Direct wifi-tcp carrier is instrumented but not proven. One run saw Mac en0 and Android wlan0 both report IPv4 192.168.0.7, so Android connected to itself and refused the receipt socket; after Android moved to 192.168.0.4, the bounded direct TCP client timed out against Mac 192.168.0.7; the IPv6 link-local probe to the Mac address timed out too. Existing adb-forward-tcp carrier proof still passed with 2048 width-8 samples and remote cleanup."
+}

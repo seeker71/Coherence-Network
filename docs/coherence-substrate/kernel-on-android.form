@@ -25,6 +25,12 @@
 ;   a combined receipt plus package/install evidence: script/source/binary/channel SHA-256s, channel
 ;   duration, and remote cleanup. This is not an APK install, sensor service, or self-modifying
 ;   runtime; it is the minimum explicit Mac+Android native channel/package floor.
+;   A direct Wi-Fi TCP variant exists in the receipt helper, but the 2026-06-15 live attempts did
+;   NOT widen the floor: first the Mac and Android wlan0 both reported IPv4 192.168.0.7, so Android
+;   connected to itself and refused the socket; after Android moved to 192.168.0.4, the bounded
+;   Android client timed out reaching the Mac listener at 192.168.0.7; the IPv6 link-local probe to
+;   the Mac address also timed out. Non-adb transport stays a named carrier wall until peer
+;   addressing/firewall or another native channel has a passing receipt.
 ;
 ;
 ; ── PATH A: RUST -> ANDROID via the NDK ──  [the carrier most of this stands on]

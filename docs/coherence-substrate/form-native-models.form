@@ -77,6 +77,12 @@
 ;     core-axiom-package-receipt now returns 4095 four-way for package/install evidence around that
 ;     pair: script/source/binary/channel-receipt SHA-256 lengths, channel duration, sample window, and
 ;     remote Android binary cleanup. APK signing/distribution and non-adb transport remain separate.
+;     A Wi-Fi TCP receipt attempt is now instrumented with a Mac listener readiness gate, but it is
+;     blocked by the current local network shape: one run saw Mac en0 and Android wlan0 both report
+;     192.168.0.7; after Android moved to 192.168.0.4, the direct TCP client timed out against the
+;     Mac listener at 192.168.0.7, and the IPv6 link-local probe timed out. The model/mesh floor
+;     therefore keeps adb-forward as the proven carrier while naming non-adb transport as the next
+;     receipt wall.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
