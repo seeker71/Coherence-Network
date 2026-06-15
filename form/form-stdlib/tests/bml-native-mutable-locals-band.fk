@@ -1,0 +1,58 @@
+; tests/bml-native-mutable-locals-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/bml-native-mutable-locals.fk
+;
+; Verdict 1023 when BML-native mutable local frames carry source receipts,
+; declare/assign/read named slots, preserve shared mutable identity through an
+; alias, isolate separate frames, and expose the next compiler code point.
+;
+(do
+    (let source (bnml-source "bml" "container-Rule.bml" 42))
+    (let frame (bnml-frame source))
+    (let alias frame)
+    (let other (bnml-frame (bnml-source "bml" "container-Rule.bml" 84)))
+
+    (let c0
+        (if (record? frame)
+            (if (node_eq (record_blueprint frame) (bnml-frame-bp)) 1 0)
+            0))
+    (let c1
+        (if (str_eq (bnml-source-path (bnml-frame-source frame)) "container-Rule.bml") 2 0))
+    (let c2
+        (if (bnml-has? frame "count") 0 4))
+
+    (bnml-declare frame "count" 1)
+    (let c3
+        (if (bnml-has? frame "count")
+            (if (eq (bnml-read frame "count") 1) 8 0)
+            0))
+
+    (bnml-assign alias "count" 7)
+    (let c4
+        (if (eq (bnml-read frame "count") 7) 16 0))
+
+    (bnml-assign frame "label" "hot")
+    (let c5
+        (if (str_eq (bnml-read alias "label") "hot") 32 0))
+
+    (bnml-declare other "count" 100)
+    (let c6
+        (if (eq (bnml-read frame "count") 7)
+            (if (eq (bnml-read other "count") 100) 64 0)
+            0))
+
+    (let c7
+        (if (eq (bnml-source-line (bnml-frame-source frame)) 42) 128 0))
+
+    (let c8
+        (if (str_eq
+                (bnml-next-code-point)
+                "form/form-stdlib/grammars/bml.fk:general assignment/reassign source nodes -> bnml frame operations")
+            256
+            0))
+
+    (bnml-assign alias "count" (add (bnml-read alias "count") 1))
+    (let c9
+        (if (eq (bnml-read frame "count") 8) 512 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))

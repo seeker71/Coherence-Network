@@ -1,0 +1,36 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "mutable-locals-floor-20260615",
+  "thread_branch": "codex/mutable-locals-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim mutable-locals-floor \"Unblock BML/native mutable locals floor after PR #3144; avoid control/backtracking and interface metadata lanes\"",
+    "make wellness",
+    "python3 scripts/scan_form_blueprints.py --check",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/bml-native-mutable-locals.fk form-stdlib/tests/bml-native-mutable-locals-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-native-mutable-locals",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_mutable_locals_floor.json",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a narrow Form-native mutable-local frame carrier for BML lowering. The frame carries source receipts, declare/assign/read operations, alias-visible mutation, separate-frame isolation, and a next compiler code point while leaving general assignment/reassign source lowering explicit.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/mutable-locals-floor-20260615.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/bml-native-mutable-locals.fk form-stdlib/tests/bml-native-mutable-locals-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-mutable-locals",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_mutable_locals_floor.json",
+      "git diff --check"
+    ]
+  }
+}

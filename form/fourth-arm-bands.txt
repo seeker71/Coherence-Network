@@ -223,6 +223,7 @@ resource-port fks 1111111
 application-graph-node-port fks 1111
 auth-port fks 1111
 bml-native-interface-package-import fks 255
+bml-native-mutable-locals fks 1023
 self-grounding-classifier fks 63
 self-translate-universal fks 15
 sequence-predictor fks 127
