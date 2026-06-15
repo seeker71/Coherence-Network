@@ -297,6 +297,20 @@
 ;   bias appended as pure data is measurable immediately, federated memories compose to strictly
 ;   exceed each cell alone, and a curiosity floor meets every style before retrying any. See
 ;   learning-style-space.form.
+;   M7's MIXTURE-OF-EXPERTS GATE [SHIPPED: moe-router.fk + tests/moe-router-band.fk → 127, three-way]:
+;   the style-space's research crowns one winner per TASK; the MoE serves per INPUT. Experts are the
+;   heterogeneous KINDS (mesh = diffusion, attn = sparse attention, conv = CNN, raw = memorizer); the
+;   GATE is a Form-native choice — recognition-router fan-and-select for the simple gate, and a LEARNED
+;   gating network (nearest-shape over raw inputs → the region's specialist, the specialist DISCOVERED by
+;   ls-best, never asserted) for the reliable one. On a MIXED task no single bias fits (a diffusion-shaped
+;   region + an attention-shaped region), every single expert tops out at 6/8 on held-out, but per-input
+;   routing wins BOTH regions 8/8 — the routing payoff, measured: we SEE which kind wins where (mesh the
+;   diffusion region, attn the attention region). The honest finding the band records: raw confidence
+;   mis-routes on tiny data; the gating network that learns from the no-free-lunch research is what beats
+;   the single experts. OPEN, by the same appended-row discipline: new expert KINDS — a compute expert
+;   (runs recipes), short-term (water) and long-term (ice) MEMORY experts (substrate-thermodynamics.form),
+;   a recipe-GENERATING expert (the dynamic-recipe advantage) — drop in as rows and the gate discovers
+;   them; champion-challenger.fk flips serving authority to a challenger kind only on earned competition.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
