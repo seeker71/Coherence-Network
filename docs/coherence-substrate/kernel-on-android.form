@@ -18,6 +18,12 @@
 ;   (recognition-router-band -> 127, shared-sensing.fk -> 127). So "the kernel on Android" is not
 ;   "port the logic"; the logic is done and proven. It is "carry one of three existing kernels onto
 ;   ARM and feed it the device's senses." That is a build, not a research question.
+;   A separate native carrier floor now runs on the authorized phone:
+;   scripts/android_mac_core_axiom_receipt.sh builds one macOS arm64 binary and one Android arm64
+;   binary from a shared C source, pushes the Android executable to /data/local/tmp, connects both
+;   ends over adb-forward TCP, verifies a bounded left-expanding affine-loss sample window, and writes
+;   a combined receipt. This is not an APK install, sensor service, or self-modifying runtime; it is
+;   the minimum explicit Mac+Android native channel floor.
 ;
 ;
 ; ── PATH A: RUST -> ANDROID via the NDK ──  [the carrier most of this stands on]
