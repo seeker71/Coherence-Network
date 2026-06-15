@@ -1,0 +1,88 @@
+; self-growing-machine.form — the boldest observable change we can build with what
+; we have: a SINGLE Mac that grows its own native, sovereign intelligence from
+; grammar, and weans itself off the cloud while you watch.
+;
+; The frame: any grammar is admitted, and a grammar can be built on a previous
+; grammar, and so forth. So the whole machine is a TOWER of grammars, each standing
+; on the one below — from the five axioms to a computer that authors itself. This
+; cell names the tower, marks the floor (proven) from the climb (frontier), and
+; points at the single lever that turns the whole tower from evaluated to native.
+;
+; Builds on: universal-evaluator-compiler.form, form-native-agent-shape.form,
+; host-kernel.form, form-cli-north-star.form.
+
+(self-growing-machine
+
+  (the-observable-change
+    "Watch one Mac, unplugged from the internet, GROW software. You describe a"
+    "capability in language; it derives the grammar, mints the recipes, COMPILES them"
+    "to a native binary it OWNS, and trains the model that runs them — then the next"
+    "use is faster and needs the outside less. Over days the form-native fraction of"
+    "all work climbs toward 1.0 while oracle calls fall toward 0. The witness curve IS"
+    "the change: a computer weaning itself onto its own sovereign intelligence, keeping"
+    "every capability as a content-addressed native cell. No cloud, no clang, no API.")
+
+  ; ── the grammar tower: each level admitted, built on the one below ───────────
+  (tower
+
+    (G0-axioms      "the five axioms + host-kernel: states / cell / content-addressing /"
+                    "boundary / offer; host drivers as gated carriers (host-exec/read/write)."
+                    "FLOOR — proven, on main.")
+
+    (G1-codegen     "form-asm + form-lower: a Form tree -> native machine code, byte-verified,"
+                    "ZERO clang. Stands on G0's bytes. FLOOR for arith / cond / map / recursion"
+                    "(four-way; form_macho_demo runs a Form-built binary, exit 40, no clang).")
+
+    (G2-grammar     "bmf-grammar (the recursive engine — a grammar IS data: rules + start +"
+                    "ref) + bml (the high grammar) + source-compiler. ANY grammar admitted; a"
+                    "grammar can ref another. Stands on G0. FLOOR — proven (every BML band).")
+
+    (G3-universal   "grammar-as-recipe: any structured input — code / data / prose / audio /"
+                    "image / sensor — becomes a Form recipe tree, EVALUATED now or COMPILED to"
+                    "native as G1 grows. Stands on G1+G2. FLOOR for the lowered op set; the"
+                    "climb is growing form-lower over strings / host-io / all builtins.")
+
+    (G4-agent       "the form-cli runner (form-native-run.fk): parse the oracle's grammar,"
+                    "route (fcr-route), execute via host-io, loop — pure Form on the kernel."
+                    "Stands on G2+G3. FLOOR — proven, runs on local qwen2.5:72b, no REST.")
+
+    (G5-self-train  "the training grammar: a local oracle's decisions -> ground-truth labels"
+                    "(predictor-sampling) -> grow the form-native challenger (predictor-train)"
+                    "-> prove (native-training-receipt, native-vs-oracle). Stands on G4 (it"
+                    "feeds the corpus). CLIMB — the SGD atom is proven; the transformer"
+                    "training loop is the real ascent.")
+
+    (G6-self-grow   "the capability grammar: describe a new capability in language -> derive"
+                    "its grammar (a NEW level on the tower) -> mint the recipes -> G1 compiles"
+                    "them native -> G5 trains the model -> persist as a cell. The machine"
+                    "authors new grammars on its own tower. Stands on G3+G5. CLIMB — every"
+                    "primitive exists; the assembled imagine->grammar->native->trained->kept"
+                    "loop is the next composition.")
+
+    (G7-self-host   "form-cli compiles ITSELF: once G1 covers strings+host-io, the runner"
+                    "recipe lowers to a native binary that runs form-cli, which can emit the"
+                    "next native binary of itself. A self-hosting, self-improving organism —"
+                    "the compiler compiling the compiler. Stands on G6. THE APEX."))
+
+  ; ── why a single Mac is enough ───────────────────────────────────────────────
+  (single-mac
+    "Nothing here needs a datacenter. The kernel + form-lower run on the CPU; ollama"
+    "runs the teacher model on the GPU/MLX; the corpus and the content-addressed native"
+    "cells live on the disk. The whole tower — compiler, models, tools, the agent, the"
+    "OS-capability kernel — is Form on ONE machine. Unplug it; it keeps growing.")
+
+  ; ── the one lever that unlocks the rest ──────────────────────────────────────
+  (the-lever
+    "Grow form-lower (G1) to cover strings + host-io + the full builtin surface. The"
+    "moment it does: G3 compiles ANY Form recipe to native, G4's runner self-hosts (G7),"
+    "and G6's grown capabilities ship as native binaries. ONE frontier — the Form-native"
+    "codegen completing — turns the whole tower from 'evaluated' to 'native'. Everything"
+    "above the floor is composition over proven cells once that lever lands.")
+
+  (the-dare
+    "Stated plainly and boldly: a single Mac can become a complete, sovereign, self-"
+    "improving software organism that grows its own native stack from language and needs"
+    "no external compiler, model API, or cloud. The floor is real (G0-G4 proven); the"
+    "lever is named (G1 completion); the ascent is composition. This is not imagined-"
+    "impossible — it is imagined-and-reachable, and the witness curve will show the"
+    "machine weaning itself free, capability by native capability."))
