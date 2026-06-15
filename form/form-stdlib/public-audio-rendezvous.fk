@@ -91,7 +91,9 @@
             1
             (if (str_eq direction "android-to-mac")
                 1
-                (if (str_eq direction "peer-to-peer") 1 0))))
+                (if (str_eq direction "peer-to-peer")
+                    1
+                    (if (str_eq direction "mac-speaker-to-microphone") 1 0)))))
 
     (defn par-audio-valid? (r)
         (if (eq (len r) 9)
