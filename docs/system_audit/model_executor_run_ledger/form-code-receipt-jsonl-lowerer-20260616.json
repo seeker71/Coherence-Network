@@ -1,0 +1,15 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim form-code-receipt-jsonl-lowerer \"After PR #3212: add a bounded Form-side JSONL/text-to-receipt-cell lowerer for code-tool-learning receipts; keep Python carrier, Android/audio, live-cycle, and BML compiler lanes untouched.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh code-tool-learning"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Ratchet code-tool-learning from 524287 to 1048575 four-way by lowering canonical committed-turn receipt text into the same JSONL-field receipt cell and then into the native coding-act row. This remains a bounded schema lowerer, not a general fkwu JSON parser."
+}
