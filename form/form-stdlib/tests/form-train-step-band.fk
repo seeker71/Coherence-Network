@@ -1,0 +1,42 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-train-step.fk
+;
+; form-train-step-band — the SGD atom actually LEARNS, four-way in pure Form.
+; Fixture: the true relationship is y = 2*x (so the true weight is w = 2000 at
+; scale 1000), probed with one example x = 1000 (1.0), y = 2000 (2.0), starting
+; from w = 0 with learning rate lr = 100 (0.1). All values are fixed-point /1000.
+;
+; Hand-traced fixed-point arithmetic (a/1000 floors toward zero):
+;   start  w=0     loss = 4000
+;   step1  w=400   (grad = -4000, lr*grad/1000 = -400, w = 0 - (-400) = 400)
+;          loss(400) = 2560
+;   step8  w=1665  loss = 112   |2000 - w| = 335
+;   at true value w=2000: grad = 0 exactly, step keeps w = 2000, loss = 0
+;
+; Verdict 31 when every claim lands:
+;   1   an under-predicting start has positive loss            (loss(0)   > 0)
+;   2   ONE step moves w UP toward 2000                        (step(0)   > 0)
+;   4   loss is LESS after one step — learning happened        (2560 < 4000)
+;   8   after several steps w is closer to 2000 than after one (|2000-w8| < |2000-w1|)
+;   16  a w already AT the true value has ~zero gradient       (grad(2000) = 0, step barely moves)
+(do
+    (let x  1000)
+    (let y  2000)
+    (let lr 100)
+
+    ; the weights along the run
+    (let w0 0)
+    (let w1 (fts-step w0 x y lr))            ; after one step  -> 400
+    (let w8 (fts-steps w0 x y lr 8))         ; after eight steps -> 1665
+
+    ; 1 — under-predicting start carries positive loss
+    (let b0 (if (gt (fts-loss w0 x y) 0) 1 0))
+    ; 2 — one step pushes w up off zero toward the true 2000
+    (let b1 (if (gt w1 0) 2 0))
+    ; 4 — loss strictly decreases after that step (the learning)
+    (let b2 (if (lt (fts-loss w1 x y) (fts-loss w0 x y)) 4 0))
+    ; 8 — convergence: |true - w| shrinks from step1 to step8
+    (let b3 (if (lt (abs (sub 2000 w8)) (abs (sub 2000 w1))) 8 0))
+    ; 16 — at the true value the gradient vanishes and the step is a fixed point
+    (let b4 (if (and (eq (fts-grad 2000 x y) 0) (eq (fts-step 2000 x y lr) 2000)) 16 0))
+
+    (add b0 (add b1 (add b2 (add b3 b4)))))
