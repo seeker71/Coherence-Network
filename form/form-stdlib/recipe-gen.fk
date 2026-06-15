@@ -1,0 +1,48 @@
+; recipe-gen.fk — the expert that COMES UP WITH executable recipes: it synthesizes new expert recipes by
+; composing pool × core primitives, runs each through the one engine, and crowns the one that fits the task.
+;
+; learning-style-space proves a COMPOSED row (e.g. conv.attn = conv pool over attention mixing) works as
+; pure DATA. This cell is the generator that WRITES those rows: it enumerates pool × core pairs into new
+; (id, pool, core) recipes — recipes that were never pre-built — each immediately executable (ls-row-feature
+; runs it) and content-addressed. On a task no base expert fits, the generator's search can crown a SYNTHESIZED
+; composition that beats every base. This is the dynamic-recipe advantage as an expert: the body writes the
+; model it needs. The primitive vocabulary is itself open — pools/cores from learning-style-space + the
+; compute core/pool from moe-router; a new primitive is one appended row, and the generator's space grows.
+;
+; Preludes: transformer-numerics.fk geometric-learning.fk nearest-shape.fk learning-arc.fk
+;           learning-style-space.fk recognition-router.fk moe-router.fk
+; Proven by: form-stdlib/tests/recipe-gen-band.fk
+
+(do
+    ; the primitive vocabulary, as (name fn) so a generated recipe's id reads as its composition.
+    (defn rg-pools ()
+        (list (list "id" ls-pool-id) (list "conv" ls-pool-conv) (list "chart" ls-pool-chart)
+              (list "meanmax" ls-pool-meanmax) (list "bell" ls-pool-bell) (list "sort" ls-pool-sort)
+              (list "altlast" moe-pool-last)))
+    (defn rg-cores ()
+        (list (list "id" ls-core-id) (list "attn" ls-core-attn) (list "mesh" ls-core-mesh)
+              (list "alt" moe-core-compute)))
+
+    ; --- GENERATE: a (pool, core) pair becomes a new executable (id, pool-fn, core-fn) recipe row. ---
+    (defn rg-row (p c)
+        (list (str_concat (nth p 0) (str_concat "." (nth c 0))) (nth p 1) (nth c 1)))
+    (defn rg-rows-for-pool (p cores)
+        (if (eq (len cores) 0) (empty) (cons (rg-row p (head cores)) (rg-rows-for-pool p (tail cores)))))
+    (defn rg-gen-acc (pools cores out)
+        (if (eq (len pools) 0) out
+            (rg-gen-acc (tail pools) cores (gl-cat out (rg-rows-for-pool (head pools) cores)))))
+    (defn rg-generate () (rg-gen-acc (rg-pools) (rg-cores) (empty)))    ; every pool × core, as recipe DATA
+
+    ; --- SEARCH: research the generated space on a task, crown the best-fitting synthesized recipe. ---
+    (defn rg-research (task k) (ls-research (rg-generate) task k))
+    (defn rg-best (task k) (ls-best (rg-research task k)))
+    (defn rg-best-score (task k) (ls-score-of (rg-research task k) (rg-best task k)))
+    (defn rg-count () (len (rg-generate)))                              ; how many recipes the body can write
+
+    ; --- the synthesized recipe is itself an expert row — fetch it by id to RUN it. ---
+    (defn rg-row-by-id (rows id)
+        (if (eq (len rows) 0) (empty)
+            (if (str_eq (ls-row-id (head rows)) id) (head rows) (rg-row-by-id (tail rows) id))))
+    (defn rg-best-row (task k) (rg-row-by-id (rg-generate) (rg-best task k)))
+
+    0)
