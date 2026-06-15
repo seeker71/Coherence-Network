@@ -63,6 +63,14 @@ def _event(kind, detail):
     del state["events"][60:]
 
 
+def _merge_snapshot(snap):
+    if isinstance(snap.get("capability_heartbeat"), dict):
+        merged = dict(state["latest"] or {})
+        merged.update(snap)
+        return merged
+    return snap
+
+
 def kernel_eval(recipes, expr):
     """Run one Form expression through the kernel against one or more recipes. Returns the printed value (str)."""
     if not state["kernel_ok"]:
@@ -190,16 +198,17 @@ class Server(BaseHTTPRequestHandler):
             return self._send(400, json.dumps({"error": str(e)}))
 
         now = time.time()
-        present = [k for k in ("accel", "gyro", "light", "mag") if k in snap]
+        merged = _merge_snapshot(snap)
+        present = [k for k in ("accel", "gyro", "light", "mag") if k in merged]
         if state["device"] is None:
             state["device"] = "phone"; state["first_ts"] = now; _event("peer", "a body connected")
         for o in present:
             if o not in state["organs"]:
                 _event("organ", f"{o} came online")
-        state["organs"] = present; state["latest"] = snap
+        state["organs"] = present; state["latest"] = merged
         state["frames"] += 1; state["last_ts"] = now; state["present"] = True
 
-        recognized, predicted = recognize(snap)
+        recognized, predicted = recognize(merged)
         state["recognized"] = recognized
         state["predicted"] = predicted
 
