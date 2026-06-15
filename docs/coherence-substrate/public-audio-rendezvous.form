@@ -1,0 +1,46 @@
+; public-audio-rendezvous.form — public rendezvous plus audio co-presence.
+;
+; The carrier split is deliberate:
+;   - public API / public paste / public archive style pages carry rendezvous cells;
+;   - audio proves local physical co-presence through speaker/mic nonce exchange;
+;   - oracle calls may teach candidates, but measurements decide what to keep.
+;
+; FLOOR [MEASURED IN FORM, 2026-06-15]
+;   public-audio-rendezvous.fk returns 16383 four-way. The receipt validates:
+;     - public rendezvous receipts from coherence-public-api, pastebin-public-page,
+;       or archive-org-public-item;
+;     - nonce hash visibility, public readability, TTL, write/read timing;
+;     - audio co-presence receipts over audio-audible-fsk or audio-near-ultrasonic;
+;     - Mac-to-Android, Android-to-Mac, or peer-to-peer direction receipts;
+;     - SNR/confidence/latency thresholds and raw-audio-retained = 0;
+;     - measured shape cells, recipe steps, tool/reasoning/oracle time, nonzero oracle time, bottleneck,
+;       and pressure;
+;     - oracle-used as a measured teacher row, not authority.
+;
+; WHAT THIS DOES NOT CLAIM
+;   No microphone capture has run in this slice. No public API POST, Pastebin
+;   write, or archive.org upload has run in this slice. No raw audio is retained.
+;   The floor is the Form-native receipt shape and bottleneck policy the live
+;   carriers must return.
+;
+; NORTH STAR
+;   Each carrier call emits a receipt: shape, recipe, cell count, start/end time,
+;   tool duration, reasoning duration, oracle duration, public visibility, local
+;   co-presence confidence, and pressure. Once the receipt is Form-native, the
+;   body can inspect every segment, find the tight spot, try another carrier or
+;   recipe, and keep only what improves measured vitality.
+;
+; NEXT CARRIER PROOFS
+;   1. Public API rendezvous: write a nonce cell to the existing public API,
+;      read it back from the other device, and return the public receipt.
+;   2. Audio detection: Mac emits a short FSK/chirp nonce; Android detects it by
+;      correlation/FFT and replies; both return SNR/confidence/latency receipts.
+;   3. Public fallback services: add pastebin-public-page or archive-org-public-
+;      item only as public-read fallback carriers with the same receipt shape.
+;   4. Bottleneck learning: compare tool/reasoning/oracle durations and choose
+;      the next experiment from the pressure row rather than intuition alone.
+;
+; KIN
+;   device-heartbeat.form, channel-loopback.form, real-mesh-training-carrier.form,
+;   tool-channel.form, oracle-catalog.form, code-tool-learning.form,
+;   fourth-kernel-wall-groups.form.

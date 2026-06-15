@@ -1,0 +1,132 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/public-audio-rendezvous-floor-20260615",
+  "commit_scope": "Add a Form-native public rendezvous plus audio co-presence receipt floor with timing and pressure measurements.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "public-rendezvous",
+    "audio-copresence",
+    "oracle-learning",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "mesh-networking",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "public-audio-rendezvous-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "carrier-expansion",
+        "measurement-north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/public-audio-rendezvous.fk",
+    "form/form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/device-heartbeat.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_public_audio_rendezvous_floor.json",
+    "docs/system_audit/model_executor_run_ledger/public-audio-rendezvous-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/public-audio-rendezvous.fk",
+    "form/form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/device-heartbeat.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_public_audio_rendezvous_floor.json",
+    "docs/system_audit/model_executor_run_ledger/public-audio-rendezvous-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim public-audio-rendezvous-floor \"Add Form-native floor for public rendezvous carriers plus audio co-presence detection receipts and measurement/pressure rows; avoid live-cycle-emission runtime files, APK/JNI, BML compiler, and raw sensor lanes.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/public-audio-rendezvous.fk form-stdlib/tests/public-audio-rendezvous-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh public-audio-rendezvous"
+    ],
+    "notes": "Focused Form validation returned 16383 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. fourth-arm-gate returned PASS-4WAY public-audio-rendezvous. The receipt floor separates public rendezvous carriers from audio co-presence, validates public API/paste/archive carrier classes, checks audio direction, requires raw-audio-retained=0, and records shape cells, recipe steps, tool/reasoning/oracle time, bottleneck, and pressure. No live microphone capture, public API POST, Pastebin write, or archive.org upload is claimed in this slice."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy requested; this is a Form-native receipt floor for future live public/audio carrier proofs."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The mesh carrier map now has a four-way receipt shape for public rendezvous plus audio co-presence and bottleneck measurement before live public-service or microphone carriers are claimed.",
+    "public_endpoints": [
+      "n/a: Form-native receipt floor only"
+    ],
+    "test_flows": [
+      "Validate public rendezvous rows for public API, paste-style page, and archive-style page carrier classes.",
+      "Validate audio co-presence rows for audible/near-ultrasonic nonce detection with SNR, confidence, latency, and raw-audio-retained=0.",
+      "Validate measurement rows for shape cells, recipe steps, tool/reasoning/oracle time, bottleneck, and pressure.",
+      "Validate the composed session four-way through fkwu."
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/public-audio-rendezvous.fk",
+    "form/form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/device-heartbeat.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/public-audio-rendezvous-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "public-audio-rendezvous-floor",
+    "gate": "Live public rendezvous and live audio detection must return this receipt shape before non-adb co-presence or public-service exchange is claimed.",
+    "state": "form-receipt-floor-pass",
+    "can_move_next_phase": false,
+    "next": "Add a live public API rendezvous nonce proof or a live Mac/Android audio chirp detection receipt with no raw audio retention."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Mesh floors had loopback/native HTTP/adb-forward receipts and audio listed as buildable, but no combined public rendezvous plus audio co-presence measurement shape.",
+    "current_observed_floor": "public-audio-rendezvous returns 16383 four-way and names public carrier receipts, audio co-presence receipts, oracle-teacher allowance, and timing/pressure measurement rows.",
+    "new_bands": [
+      "public-audio-rendezvous -> 16383 four-way"
+    ],
+    "not_claimed": [
+      "live microphone capture",
+      "raw audio retention",
+      "public API write/read proof",
+      "Pastebin write proof",
+      "archive.org upload proof",
+      "durable identity proof"
+    ]
+  }
+}

@@ -94,8 +94,8 @@
     (id model-router-nl-audio)
     (status available)
     (why "NL->NL, TTS, STT, and model routers need streaming decode, token/audio front ends, confidence/vitality routing, and backpressure receipts. The fourth kernel must carry the control and route proof even when heavy model execution uses a native/GPU carrier.")
-    (current-floor model-vitality-routing native-http-capture request-header-forwarding control-backtracking-primitive-floor)
-    (next-walls tokenizer-carrier audio-frame-carrier streaming-decode-loop backpressure-receipt route-confidence-choice tts-stt-envelope)
+    (current-floor model-vitality-routing native-http-capture request-header-forwarding control-backtracking-primitive-floor public-audio-rendezvous-receipt)
+    (next-walls tokenizer-carrier live-audio-detection-receipt audio-frame-carrier streaming-decode-loop backpressure-receipt route-confidence-choice tts-stt-envelope)
     (parallel-card
       (goal "Add one bounded token/audio/router carrier receipt whose routing decision is readable in Form.")
       (files_allowed form/form-stdlib/*audio*.fk form/form-stdlib/*model*.fk form/form-stdlib/*route*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-llm.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
@@ -117,9 +117,10 @@
     (id mesh-networking)
     (status available)
     (why "Mesh networking is first class only when peer identity, transport receipts, subscription/sync, conflict resolution, and model-slice flow are visible to Form rather than hidden in host services.")
-    (current-floor loopback-channel native-http-https-capture request-header-forwarding production-runtime-authority adb-forward-mac-android-native-receipt)
+    (current-floor loopback-channel native-http-https-capture request-header-forwarding production-runtime-authority adb-forward-mac-android-native-receipt public-audio-rendezvous-receipt)
     (observed-wall mac-android-direct-wifi "Current local LAN proof is blocked by direct reachability: duplicate IPv4 peer address 192.168.0.7 was observed first; after Android moved to 192.168.0.4, Mac listener reachability still timed out; IPv6 link-local also timed out. Fix peer addressing/firewall/routing or choose BLE/RFCOMM/Wi-Fi Direct/audio/USB-accessory before claiming non-adb transport.")
-    (next-walls peer-handshake non-adb-transport-receipt live-subscription conflict-resolution streaming-slice-transfer retry-backoff transport-authority-ledger)
+    (closed-now public-rendezvous-plus-audio-copresence-receipt-shape)
+    (next-walls peer-handshake live-public-api-rendezvous live-audio-copresence-capture non-adb-transport-receipt live-subscription conflict-resolution streaming-slice-transfer retry-backoff transport-authority-ledger)
     (parallel-card
       (goal "Add one live mesh transport receipt that returns a Form-readable trace and bounded authority row.")
       (files_allowed form/form-stdlib/*mesh*.fk form/form-stdlib/*channel*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
