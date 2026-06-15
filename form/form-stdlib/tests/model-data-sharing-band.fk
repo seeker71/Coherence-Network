@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk
+;
+; model-data-sharing-band — bounded model-slice sharing floor, four-way.
+;
+; A receiver has delta d1 for model M/base B. A peer offers d1 and d2. The
+; receiver requests only d2, accepts only the arrival whose re-addressed payload
+; matches d2, applies it, and then merges two trusted task-vector slices through
+; slice-merge. The source-of-truth guard accepts substrate-cell and refuses file
+; cache authority.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let offer      (list "d1" "d2"))
+    (let have       (list "d1"))
+    (let have-after (list "d1" "d2"))
+    (let arrivals   (list (list "d2" "d2") (list "d1" "tampered")))
+    (let want       (mds-missing offer have))
+
+    (let sA (mds-slice "model-alpha" "base-root" "d1" "node-a" "eval-a" 2 (list 3 -2 5) "substrate-cell"))
+    (let sB (mds-slice "model-alpha" "base-root" "d2" "node-b" "eval-b" 1 (list 1 4 -5) "substrate-cell"))
+    (let merge-slices (list (mds-merge-slice sA) (mds-merge-slice sB)))
+    (let receipt (mds-receipt "d2" offer have have-after arrivals "substrate-cell" merge-slices))
+    (let merge0 (mds-receipt-merge0 receipt))
+
+    (let c0  (if (eq (mds-request-count offer have) 1) 1 0))
+    (let c1  (if (eq (mds-request? "d2" offer have) 1) 2 0))
+    (let c2  (if (eq (mds-request? "d1" offer have) 0) 4 0))
+    (let c3  (if (eq (cs-has? "d2" want) 1) 8 0))
+    (let c4  (if (eq (mds-accept-count arrivals) 1) 16 0))
+    (let c5  (if (eq (mds-applied? "d2" have-after) 1) 32 0))
+    (let c6  (if (eq (mds-source-ok? "substrate-cell") 1) 64 0))
+    (let c7  (if (eq (mds-source-ok? "file-cache") 0) 128 0))
+    (let c8  (if (eq (mds-merge-num merge-slices 0) 7) 256 0))
+    (let c9  (if (eq (mds-merge-den merge-slices 0) 3) 512 0))
+    (let c10 (if (eq (mds-merge-num merge-slices 1) -4) 1024 0))
+    (let c11 (if (eq (nth merge0 1) 3) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

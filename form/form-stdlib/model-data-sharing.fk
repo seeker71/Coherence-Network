@@ -1,0 +1,66 @@
+; model-data-sharing.fk — a model slice is shared as substrate data, not a cache.
+;
+; This is the smallest fourth-kernel floor for the model-data sharing wall. It
+; composes the two already-proven pieces:
+;   - slice-update-roundtrip: offer -> request-if-missing -> re-address verify -> apply
+;   - slice-merge: trust-weighted TIES/FedAvg over integer task-vector deltas
+;
+; The carrier boundary is explicit: a file, GPU buffer, MLX array, or downloaded
+; package may be an ingest/projection cache, but the source of truth for a shared
+; model slice is the substrate cell address. Durable query, privacy policy, live
+; transport, optimizer-state deltas, and conflict policy remain separate walls.
+
+(do
+    ; A model slice row is intentionally small: enough identity/provenance to
+    ; share and merge, without claiming the large-tensor north star is closed.
+    (defn mds-slice (model base delta origin proof weight vector source)
+        (list model base delta origin proof weight vector source))
+    (defn mds-model  (s) (nth s 0))
+    (defn mds-base   (s) (nth s 1))
+    (defn mds-delta  (s) (nth s 2))
+    (defn mds-origin (s) (nth s 3))
+    (defn mds-proof  (s) (nth s 4))
+    (defn mds-weight (s) (nth s 5))
+    (defn mds-vector (s) (nth s 6))
+    (defn mds-source (s) (nth s 7))
+
+    ; The update path is the cell-sync roundtrip, named for model slices.
+    (defn mds-missing (offer have) (sur-missing offer have))
+    (defn mds-request-count (offer have) (sur-request-count offer have))
+    (defn mds-request? (addr offer have) (sur-request? addr offer have))
+    (defn mds-accept-count (items) (sur-accept-count items))
+    (defn mds-applied? (addr have-after) (sur-applied? addr have-after))
+
+    ; Source-of-truth guard. Cache carriers can project or ingest, never own.
+    (defn mds-substrate-source? (source) (if (str_eq source "substrate-cell") 1 0))
+    (defn mds-cache-source? (source)
+        (if (str_eq source "file-cache") 1
+            (if (str_eq source "gpu-buffer") 1
+                (if (str_eq source "mlx-array") 1 0))))
+    (defn mds-source-ok? (source)
+        (if (eq (mds-substrate-source? source) 1)
+            (if (eq (mds-cache-source? source) 0) 1 0)
+            0))
+
+    ; Merge rows reuse slice-merge's stable (weight vector) shape.
+    (defn mds-merge-slice (s) (list (mds-weight s) (mds-vector s)))
+    (defn mds-merge-num (slices j) (sm-num slices j))
+    (defn mds-merge-den (slices j) (sm-den slices j))
+    (defn mds-merge-coord (slices j) (sm-merge-coord slices j))
+
+    ; Compact receipt: request count, accepted count, applied bit, source bit,
+    ; and the first merge coordinate as exact rational evidence.
+    (defn mds-receipt (addr offer have have-after arrivals source merge-slices)
+        (list
+            (mds-request-count offer have)
+            (mds-accept-count arrivals)
+            (mds-applied? addr have-after)
+            (mds-source-ok? source)
+            (mds-merge-coord merge-slices 0)))
+    (defn mds-receipt-requested (r) (nth r 0))
+    (defn mds-receipt-accepted  (r) (nth r 1))
+    (defn mds-receipt-applied   (r) (nth r 2))
+    (defn mds-receipt-source-ok (r) (nth r 3))
+    (defn mds-receipt-merge0    (r) (nth r 4))
+
+    0)

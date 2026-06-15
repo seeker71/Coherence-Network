@@ -1,0 +1,17 @@
+{
+  "task_id": "model-data-sharing-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim model-data-sharing-floor \"Remaining fourth wall lane: add bounded Form-native model data sharing receipt; avoid ML execution/router/mesh transport and BML compiler lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk form-stdlib/tests/model-data-sharing-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh model-data-sharing",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a bounded Form-native model data sharing receipt. The new floor composes request-if-missing, re-address verification, apply, substrate-source guard, and deterministic TIES/FedAvg merge into one four-way band while leaving live transport, durable query, optimizer deltas, privacy, conflict policy, and chunk-range merkle sharing explicit as next walls."
+}
