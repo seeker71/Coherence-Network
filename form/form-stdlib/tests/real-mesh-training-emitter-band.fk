@@ -2,7 +2,7 @@
 ;
 ; real-mesh-training-emitter-band - real host emitter pass/block receipt floor.
 ;
-; Verdict 2047:
+; Verdict 16383:
 ;   1   live sources with hashes are accepted
 ;   2   complete active emitter window passes the hard floor
 ;   4   blocked windows with explicit reasons are accepted as honest
@@ -14,6 +14,9 @@
 ;   256 loopback/wifi/bluetooth/audio/video/screen runtime channels satisfy communication without adb
 ;   512 adb install-only receipts do not satisfy runtime communication
 ;   1024 presence-only channels are evidence but not enough for bidirectional training
+;   2048 active live-cycle projection requires heldout, capability, native win, and embodied growth
+;   4096 blocked live-cycle projections are accepted when reasons are explicit
+;   8192 malformed blocked live-cycle projections are rejected
 
 (do
     (let lanes (rmt-required-lanes))
@@ -165,6 +168,47 @@
             lanes
             (list)
             "sha256:empty-blocked"))
+    (let active-cycle
+        (rmt-emitter-cycle-projection
+            "cycle-active"
+            "emitted"
+            5
+            1
+            0
+            12
+            1
+            1
+            "embodied"
+            "form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle"
+            (list)))
+    (let blocked-cycle
+        (rmt-emitter-cycle-projection
+            "cycle-blocked"
+            "blocked"
+            3
+            0
+            1
+            4
+            1
+            0
+            "held"
+            "form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle"
+            (list
+                (rmt-emitter-block "heldout_window_missing" "cycle has fewer than twelve heldout rows")
+                (rmt-emitter-block "native_teacher_retirement_unproven" "native challenger has not reached the oracle yet"))))
+    (let malformed-cycle
+        (rmt-emitter-cycle-projection
+            "cycle-malformed"
+            "blocked"
+            3
+            0
+            1
+            4
+            1
+            0
+            "held"
+            "form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle"
+            (list)))
 
     (let c0 (if (eq (rmt-emitter-sources-live? sources) 1) 1 0))
     (let c1 (if (eq (rmt-emitter-active? active-window) 1) 2 0))
@@ -198,5 +242,21 @@
                     "runtime-channel-one-way-only"))
             1024
             0))
+    (let c11
+        (if (and
+                (eq (rmt-emitter-cycle-active? active-cycle) 1)
+                (str_eq (rmt-emitter-cycle-verdict active-cycle) "cycle-emitted"))
+            2048
+            0))
+    (let c12
+        (if (and
+                (eq (rmt-emitter-cycle-blocked? blocked-cycle) 1)
+                (str_eq (rmt-emitter-cycle-verdict blocked-cycle) "cycle-blocked-honestly"))
+            4096
+            0))
+    (let c13
+        (if (str_eq (rmt-emitter-cycle-verdict malformed-cycle) "cycle-invalid")
+            8192
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))

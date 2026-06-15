@@ -209,6 +209,15 @@ bidirectional runtime-channel sources, completed local process receipts, and all
 required lanes. Use `--require-active` when a release job should fail unless
 that floor is met.
 
+Every emitted `real-mesh-training-window.json` now also carries
+`world_model_live_cycle`, a runtime projection of
+`form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle`. That projection
+names the witness source, active mic/camera/GPU sense summaries, capability
+liveness, heldout count, local model-process eval sense, native teacher status,
+world-growth status, and exact block reasons. A stale phone, missing model
+processes, unproven native teacher retirement, or unembodied growth stays
+`blocked`; the cycle is still inspectable by dashboard and mesh readers.
+
 The receipt shape is validated by:
 
 ```bash
