@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 244
+**Total files**: 246
 
 | File | Purpose |
 |---|---|
@@ -132,6 +132,7 @@
 | [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
+| [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
 | [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
@@ -153,6 +154,7 @@
 | [prompt_entry_gate.sh](prompt_entry_gate.sh) | _no top-of-file purpose_ |
 | [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | prose_recipe_roundtrip.py — the bidirectional test, walking. |
 | [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
+| [public_api_rendezvous_receipt.sh](public_api_rendezvous_receipt.sh) | public_api_rendezvous_receipt.sh — live public API nonce-hash rendezvous receipt. |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
