@@ -1,0 +1,109 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "claude/funny-tharp-bcf322",
+  "commit_scope": "The recipe-GENERATING expert: the body comes up with executable recipes. recipe-gen.fk composes pool x core primitives into new (id, pool, core) recipes -- recipes never written by hand -- each immediately runnable (ls-row-feature runs it) and content-addressed. It is the dynamic-recipe advantage realized as an expert (M7's GENERATE step): on a task no pre-built style fits, the generator searches its synthesized recipes and crowns one that works. The primitive vocabulary is open (pools/cores from learning-style-space + the compute core/pool from moe-router); a new primitive is one appended row and the generator's space grows. This completes the MoE vision's expert KINDS: diffusion, sparse attention, CNN, memorizer, compute, short/long-term memory, and recipe-generation.",
+  "files_owned": [
+    "form/form-stdlib/recipe-gen.fk",
+    "form/form-stdlib/tests/recipe-gen-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk form-stdlib/recognition-router.fk form-stdlib/moe-router.fk form-stdlib/recipe-gen.fk form-stdlib/tests/recipe-gen-band.fk"
+    ],
+    "summary": "recipe-gen-band -> 63 three-way (Go=Rust=TS), 0 divergent. The generator WRITES 28 recipes (7 pools x 4 cores), far past the 5 pre-built base styles. On the alt-task (classes share a near-constant multiset, separable only by the signed alternating fold), EVERY pre-built base style scores 0 (raw=conv=mesh=attn=bell=0); the generator searches its synthesized recipes and crowns 'chart.alt' (chart-pool over the compute core) scoring 4 -- a recipe the body wrote, not one pre-built -- and that synthesized recipe is EXECUTABLE (predicts 'B' for a held-out B-shaped input). The search ADAPTS: a different task (shift) crowns a different synthesized recipe. 3-KERNEL ONLY (Go=Rust=TS): composes the geometric-learning / learning-style-space / recognition-router family not in form/fourth-arm-bands.txt (the gl-* graph-learning + warmed-fold op family is not yet flattened for fkwu). Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 63,
+      "band_divergent": 0,
+      "recipes_generated": 28,
+      "base_styles_best_on_alt": 0,
+      "synthesized_winner": "chart.alt",
+      "synthesized_score": 4,
+      "synthesized_executable_prediction": "B (correct)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The generated space is the cross product pool x core over the current vocabulary (7 pools x 4 cores = 28). Deeper composition (core over core, multi-stage stacks, NAS over sequences of block-cells) is the next ring -- the same generate-search shape, a wider space.",
+        "follow_up": "Extend the generator to compose stacks (sequences of cells) and to grow the primitive vocabulary as new cores/pools are proven; content-addressing dedups equivalent generated architectures so the search never re-evaluates one twice."
+      },
+      {
+        "limitation": "The search is exhaustive over the 28 candidates (small). For a large generated space, the auto-ml signals (surprise, infer-error, trust) prioritize which recipes to evaluate -- autoresearch-loop.fk is the loop, turned on architectures. Not wired here; the exhaustive search suffices for this vocabulary.",
+        "follow_up": "Wire autoresearch-loop.fk + the surprise/error/trust signals to guide generation for a large space; champion-challenger flips serving authority to a synthesized challenger only on earned competition."
+      },
+      {
+        "limitation": "3-kernel only: the gl-* graph-learning cores and the warmed predict-then-learn fold are not in the fourth-arm manifest. Same honest floor as learning-style-space.fk and moe-router.fk. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when geometric-learning / learning-style-space are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs recipe-gen-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body GENERATES executable recipes -- it composes primitives into new model recipes never written by hand, and on a task its pre-built repertoire cannot solve, it synthesizes one that does and runs it.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh recipe-gen-band (three kernels agree, verdict 63): 28 recipes generated, base styles fail alt (0), synthesized chart.alt scores 4 and predicts correctly, search adapts per task"
+    ],
+    "summary": "Proven three-way: the body writes the executable recipe it needs and it works where no pre-built style does."
+  },
+  "phase_gate": {
+    "phase": "m7-recipe-generating-expert",
+    "gate": "the dynamic-recipe advantage realized as an expert: the body composes primitives into new executable recipes, and on a task no pre-built style fits, synthesizes one that scores 4 and runs -- completing the MoE vision's expert kinds, three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "compose deeper (stacks of cells / NAS over sequences); wire autoresearch-loop + surprise/error/trust to guide generation over a large space; champion-challenger flips authority to a synthesized challenger on earned competition"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "recipe-gen-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/recipe-gen.fk",
+    "form/form-stdlib/tests/recipe-gen-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/recipe-gen.fk",
+    "form/form-stdlib/tests/recipe-gen-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-15_recipe_gen.json"
+  ],
+  "change_intent": "runtime_feature"
+}

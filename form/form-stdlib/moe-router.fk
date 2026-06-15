@@ -1,0 +1,148 @@
+; moe-router.fk — a Mixture of Experts whose GATE is a Form-native choice and whose EXPERTS are
+; heterogeneous model KINDS. The whole cell is composition, no new engine:
+;   experts  = learning-style-space.fk style-kinds — attention (gl-attn-edges), diffusion (gl-diffuse,
+;              the "mesh" core), conv (CNN), value-iteration (RL), … each a (id, pool, core) data row,
+;              trained into its own memory (nearest-shape prototypes via learning-arc).
+;   gate     = recognition-router.fk — fan every expert at one input, each returns a confidence, SELECT
+;              the strongest (top-1 routing); fail-fast below a floor; the choice is attributed.
+;   measure  = per-expert win counts over a task: which KIND was routed-to AND correct. "We see which
+;              is more successful" is a receipt, not an opinion.
+;
+; THE PAYOFF (why MoE, not one model): on a MIXED task — inputs from regions that want DIFFERENT
+; inductive biases — a single expert carries one bias and wins only its region; the per-input gate
+; routes each input to its specialist and wins BOTH. learning-style-space proved different TASKS crown
+; different styles (no free lunch, global); this routes per-INPUT, so one served model beats every
+; single expert on a task no single bias fits. Authority-flip to a winning challenger is champion-
+; challenger.fk's job (named next); this cell is the gate + the measured competition.
+;
+; Confidence is NORMALIZED (agreeing-bins · 100 / feature-length) so experts whose pools emit different
+; feature dimensions compare fairly on the recognition-router 0..100 scale — the gate must not reward an
+; expert merely for emitting a longer vector.
+;
+; Preludes: transformer-numerics.fk geometric-learning.fk nearest-shape.fk learning-arc.fk
+;           learning-style-space.fk recognition-router.fk
+; Proven by: form-stdlib/tests/moe-router-band.fk (three-way at validate.sh)
+
+(do
+    ; an expert = a style-kind trained into a memory: (list style protos).
+    (defn moe-expert     (style protos) (list style protos))
+    (defn moe-ex-style   (e) (nth e 0))
+    (defn moe-ex-protos  (e) (nth e 1))
+    (defn moe-ex-id      (e) (ls-row-id (moe-ex-style e)))
+
+    ; an expert's features for an input, under its own pool∘core.
+    (defn moe-ex-feats   (e x) (ls-row-feature (moe-ex-style e) x))
+
+    ; NORMALIZED confidence 0..100: how much of this expert's feature vector the nearest prototype
+    ; matches. Empty memory -> 0 (no opinion). Integer arithmetic: strength·100 / len.
+    (defn moe-conf (feats protos)
+        (if (eq (len protos) 0) 0
+            (if (eq (len feats) 0) 0
+                (div (mul (ns-strength feats protos) 100) (len feats)))))
+
+    ; one expert's GATE READING at x, in recognition-router shape:
+    ;   (list expert-id (list (list predicted-label normalized-confidence)))
+    (defn moe-reading (e x)
+        (list (moe-ex-id e)
+              (list (list (la-predict (moe-ex-feats e x) (moe-ex-protos e))
+                          (moe-conf   (moe-ex-feats e x) (moe-ex-protos e))))))
+    (defn moe-readings (experts x)
+        (if (eq (len experts) 0) (empty)
+            (cons (moe-reading (head experts) x) (moe-readings (tail experts) x))))
+
+    ; --- THE GATE: route x to the strongest expert (recognition-router select). ---
+    (defn moe-route   (experts x floor) (rr-route (moe-readings experts x) floor))
+    (defn moe-expert-of (experts x floor) (rr-source       (moe-route experts x floor)))  ; WHICH kind handled it
+    (defn moe-predict   (experts x floor) (rr-flow-label    (moe-route experts x floor)))  ; the MoE's answer
+    (defn moe-strength  (experts x floor) (rr-flow-strength (moe-route experts x floor)))  ; the winning confidence
+
+    ; --- TRAIN: each style-kind learns its own memory on the task (ls-train per row). ---
+    (defn moe-train-acc (styles task)
+        (if (eq (len styles) 0) (empty)
+            (cons (moe-expert (head styles) (ls-train (head styles) task))
+                  (moe-train-acc (tail styles) task))))
+    (defn moe-train (styles task) (moe-train-acc styles task))
+
+    ; --- EVAL: per-input route+predict, count agreements with the oracle (a task = (list (list input label) …)). ---
+    (defn moe-eval-acc (experts task floor agree)
+        (if (eq (len task) 0) agree
+            (moe-eval-acc experts (tail task) floor
+                (add agree (if (str_eq (moe-predict experts (nth (head task) 0) floor)
+                                       (nth (head task) 1)) 1 0)))))
+    (defn moe-eval (experts task floor) (moe-eval-acc experts task floor 0))
+
+    ; --- THE COMPETITION RECEIPT: for an expert id, how many inputs it both WON (was routed-to) and got
+    ;     RIGHT. Summed over kinds this attributes the task's success to the biases that earned it. ---
+    (defn moe-wins-acc (experts task floor id n)
+        (if (eq (len task) 0) n
+            (moe-wins-acc experts (tail task) floor id
+                (add n (if (str_eq (moe-expert-of experts (nth (head task) 0) floor) id)
+                           (if (str_eq (moe-predict experts (nth (head task) 0) floor)
+                                       (nth (head task) 1)) 1 0)
+                           0)))))
+    (defn moe-wins (experts task floor id) (moe-wins-acc experts task floor id 0))
+
+    ; how many times a kind was ROUTED-TO at all (won the gate), right or wrong — the routing share.
+    (defn moe-routed-acc (experts task floor id n)
+        (if (eq (len task) 0) n
+            (moe-routed-acc experts (tail task) floor id
+                (add n (if (str_eq (moe-expert-of experts (nth (head task) 0) floor) id) 1 0)))))
+    (defn moe-routed (experts task floor id) (moe-routed-acc experts task floor id 0))
+
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; A COMPUTE EXPERT KIND — a core that RUNS an executable recipe, not just pools.
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; The geometric experts MIX (diffusion) or POOL (attention/CNN); none can COMPUTE an order-and-sign
+    ; dependent function. The compute core runs a real recipe — the signed alternating fold a-b+c-d as
+    ; alternating prefix sums [a, a-b, a-b+c, a-b+c-d] — and the pool keeps the computed result (the final
+    ; alternating sum). On a task whose classes share a multiset but differ in alternating sum, NO pool or
+    ; mix can separate them (same values, same statistics, same local structure) — only the computation can.
+    ; This is "an expert can compute things / run executable recipes" as a drop-in (id, pool, core) ROW.
+    (defn moe-alt (xs sign acc)
+        (if (eq (len xs) 0) (empty)
+            (cons (add acc (mul sign (head xs)))
+                  (moe-alt (tail xs) (sub 0.0 sign) (add acc (mul sign (head xs)))))))
+    (defn moe-core-compute (x) (moe-alt x 1.0 0.0))     ; the executable recipe: alternating prefix sums
+    (defn moe-last (xs)
+        (if (eq (len xs) 0) 0.0 (if (eq (len xs) 1) (head xs) (moe-last (tail xs)))))
+    (defn moe-pool-last (x) (list (moe-last x)))         ; keep the computed result (the final alternating sum)
+    (defn moe-compute-style () (list "compute" moe-pool-last moe-core-compute))
+
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; THE LEARNED GATE — a gating network, because raw confidence mis-routes.
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; The confidence gate above is honest but naive: on tiny data a memorizer or an off-specialist can
+    ; be confidently-correct and steal a region. The reliable router learns WHICH KIND owns a region from
+    ; the no-free-lunch research itself: ls-research crowns each region's specialist (ls-best), and the
+    ; gate is a nearest-shape memory over RAW inputs -> that specialist's id. A new input routes to the
+    ; specialist of the nearest known region. The region's winner is DISCOVERED (ls-best), never asserted.
+    ;
+    ; A region = (list research-task seed-inputs): the task ls-research crowns a winner on, and the raw
+    ; inputs to anchor that winner in the gate's memory.
+    (defn moe-region-specialist (styles region-task k) (ls-best (ls-research styles region-task k)))
+    (defn moe-gate-anchor (spec inputs gate)
+        (if (eq (len inputs) 0) gate
+            (moe-gate-anchor spec (tail inputs) (ns-intern gate spec (ls-r6map (head inputs))))))
+    (defn moe-gate-add (styles region gate k)
+        (moe-gate-anchor (moe-region-specialist styles (nth region 0) k) (nth region 1) gate))
+    (defn moe-gate-build-acc (styles regions gate k)
+        (if (eq (len regions) 0) gate
+            (moe-gate-build-acc styles (tail regions) (moe-gate-add styles (head regions) gate k) k)))
+    (defn moe-gate-build (styles regions k) (moe-gate-build-acc styles regions (empty) k))
+
+    ; route by the learned gate: nearest known region -> its specialist id -> that expert predicts.
+    (defn moe-gate-expert-id (gate x) (ns-label (ls-r6map x) gate))
+    (defn moe-expert-by-id (experts id)
+        (if (eq (len experts) 0) (empty)
+            (if (str_eq (moe-ex-id (head experts)) id) (head experts)
+                (moe-expert-by-id (tail experts) id))))
+    (defn moe-gate-predict (experts gate x)
+        (la-predict (moe-ex-feats   (moe-expert-by-id experts (moe-gate-expert-id gate x)) x)
+                    (moe-ex-protos  (moe-expert-by-id experts (moe-gate-expert-id gate x)))))
+    (defn moe-gate-eval-acc (experts gate task n)
+        (if (eq (len task) 0) n
+            (moe-gate-eval-acc experts gate (tail task)
+                (add n (if (str_eq (moe-gate-predict experts gate (nth (head task) 0)) (nth (head task) 1)) 1 0)))))
+    (defn moe-gate-eval (experts gate task) (moe-gate-eval-acc experts gate task 0))
+
+    0)

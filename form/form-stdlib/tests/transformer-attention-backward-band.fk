@@ -1,0 +1,38 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-attention-backward-band — the steepest gradient in the transformer: backprop through
+; softmax-weighted value mixing. Forward (single query): s_j = scale·(q·k_j); α = softmax(s); o = Σ α_j v_j.
+; Backward: dv_j = α_j·dout (the value-grads PARTITION dout — Σ dv = dout, since Σα = 1); dα_j = <dout,v_j>;
+; ds = softmax'(α,dα); dq = scale·Σ ds_j·k_j. Proven two ways — the partition law (exact) and by TRAINING
+; the query to steer attention onto a target inside the values' convex hull (loss → 0 only if dq → ds →
+; softmax' → dα all compose). Fixture: keys/values the standard basis (so o = α exactly), scale 1, query
+; (0.5,0.5) → equal attention o=(0.5,0.5); target (0.7,0.3) is the convex combination α=(0.7,0.3).
+;
+; Verdict 31 when every claim lands:
+;   1    the value-grads PARTITION the output-grad: Σ dv = dout exactly (both components)
+;   2    the score-gradient is right: dq = (-0.2, 0.2) — α⊙dα weighted into the keys (hand-checkable)
+;   4    the unfit attention carries positive loss
+;   8    ONE step of query training lowers it — the gradient steers attention
+;   16   it converges: after 50 steps the loss rounds to 0 — attention is steered onto the target
+(do
+    (let ks (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let vs (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let q  (list 0.5 0.5))
+    (let t  (list 0.7 0.3))
+    (let dout (tn-scale (tbp-vsub (tb-attend-one q ks vs 1.0) t) 2.0))
+    (let sdv (tbp-vsum (tbp-attn-dv q ks vs 1.0 dout)))
+    (let dq  (tbp-attn-dq q ks vs 1.0 dout))
+
+    (let l0  (tbp-attn-loss q ks vs 1.0 t))
+    (let l1  (tbp-attn-q-train-loss q ks vs 1.0 t 1.0 1))
+    (let l50 (tbp-attn-q-train-loss q ks vs 1.0 t 1.0 50))
+
+    (let c0 (if (eq (round (mul (sub (nth sdv 0) (nth dout 0)) 1000000.0)) 0)
+                (if (eq (round (mul (sub (nth sdv 1) (nth dout 1)) 1000000.0)) 0) 1 0) 0))
+    (let c1 (if (eq (round (mul (nth dq 0) 1000000.0)) -200000)
+                (if (eq (round (mul (nth dq 1) 1000000.0)) 200000) 2 0) 0))
+    (let c2 (if (gt l0 0.0) 4 0))
+    (let c3 (if (lt l1 l0) 8 0))
+    (let c4 (if (eq (round (mul l50 1000000.0)) 0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

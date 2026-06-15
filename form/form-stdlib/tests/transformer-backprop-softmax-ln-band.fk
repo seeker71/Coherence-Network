@@ -1,0 +1,32 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-backprop-softmax-ln-band — the two remaining gradient nodes, proven by their CONSERVATION
+; LAWS. With these and the affine vjp + gelu' already proven, every node in transformer-block.fk's pre-LN
+; block has its backward, so the whole proven forward block trains end to end. Each gradient is checked
+; against its own exact algebraic invariant — correctness by conservation, not by tolerance:
+;   softmax'  dz = s ⊙ (g - <g,s>):   Σ dz = 0   (softmax conserves probability mass — exact)
+;   layernorm' dx = (1/σ)[g - mean(g) - y·mean(g⊙y)]:
+;       Σ dx = 0          (orthogonal to the mean direction — exact, since Σy = 0)
+;       <dx, y> ≈ 0       (orthogonal to the scale — exact only in infinite precision; here ~4e-6 because
+;                          the body's σ carries eps and a 50-step Newton sqrt, so y is not exactly unit-variance)
+;
+; Verdict 31 when every claim lands:
+;   1    softmax' conserves mass: Σ dz = 0 (exact)
+;   2    softmax' pinned: dz[0] → 224483 (×1e6)
+;   4    layernorm' mean-orthogonal: Σ dx = 0 (exact)
+;   8    layernorm' pinned: dx[0] → 571545 (×1e6)
+;   16   layernorm' scale-orthogonal to ~4e-6: |<dx,y>·1e6| ≤ 10 (near-zero with the eps/Newton reason named)
+(do
+    (let s  (tn-softmax (list 1.0 2.0 0.5)))
+    (let dz (tbp-softmax-back s (list 0.5 -1.0 0.3)))
+    (let y  (tn-layernorm (list 1.0 2.0 3.0) 0.00001))
+    (let dx (tbp-ln-back (list 1.0 2.0 3.0) (list 0.5 -1.0 0.3) 0.00001))
+    (let dxy (round (mul (tb-dot dx y) 1000000.0)))
+
+    (let c0 (if (eq (round (mul (tn-sum dz) 1000000.0)) 0) 1 0))
+    (let c1 (if (eq (round (mul (nth dz 0) 1000000.0)) 224483) 2 0))
+    (let c2 (if (eq (round (mul (tn-sum dx) 1000000.0)) 0) 4 0))
+    (let c3 (if (eq (round (mul (nth dx 0) 1000000.0)) 571545) 8 0))
+    (let c4 (if (gt dxy -10) (if (lt dxy 10) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
