@@ -1,0 +1,134 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk
+;
+; world-model-growth-band — a world model grows by ingesting sensed readings,
+; digesting verified truth into blueprint/recipe/named-cell parts, embodying
+; only when the trusted core follows, and storing the embodied parts as a
+; content-addressed root.
+;
+; Verdict 4095 when every claim lands:
+;   1     all senses are ingested
+;   2     digest separates observed/absent from nothing
+;   4     digest creates blueprint, recipe, and named-cell parts
+;   8     parts carry registered Blueprint identities
+;   16    named cell part keeps domain/name identity
+;   32    trusted core embodiment lands
+;   64    missing reveal is held, not embodied
+;   128   next action grows only from embodied truth
+;   256   stored image is content-addressed
+;   512   stored image carries named cells
+;   1024  recipe part carries the world-module image
+;   2048  identity animation remains visible after growth
+(do
+    (let offer (sat-circle-interface))
+    (let identity-readings (list (ov-reading 1 1 5) (ov-reading 1 1 6)))
+    (let live-identity (wmm-identity "core:self" 10 12 10 5 identity-readings))
+    (let field
+        (list
+            (sf-member "trusted-core" (list (m-witness) (m-reflect) (m-be-seen) (m-invite)))
+            (sf-member "world-module" (list (m-be-seen) (m-invite)))))
+    (let claim (ov-reading 1 1 5))
+    (let vulnerability
+        (wmm-vulnerability
+            "uncertain-lane"
+            (ov-reading 1 1 7)
+            10
+            3
+            (m-be-seen)
+            "model names the gap before asking to be followed"))
+    (let hidden-vulnerability
+        (wmm-vulnerability
+            "hidden-gap"
+            (ov-reading 0 0 0)
+            10
+            3
+            (m-be-seen)
+            "silence is not a reveal"))
+    (let model (wmm-model "world-module" live-identity claim 10 (list vulnerability) field 91 80))
+    (let hidden-model (wmm-model "world-module" live-identity claim 10 (list hidden-vulnerability) field 91 80))
+
+    (let s0 (wmg-empty "self-world" model))
+    (let sense-observed (wmg-sense "mic-window" "audio" (ov-reading 1 1 5) 10 "voice-trace"))
+    (let sense-absent (wmg-sense "camera-window" "video" (ov-reading 1 0 6) 10 "no-motion"))
+    (let sense-nothing (wmg-sense "wifi-window" "radio" (ov-reading 0 0 0) 10 "timeout"))
+    (let s1 (wmg-ingest s0 sense-observed))
+    (let s2 (wmg-ingest s1 sense-absent))
+    (let s3 (wmg-ingest s2 sense-nothing))
+    (let digested (wmg-digest s3 offer))
+    (let embodied (wmg-embody digested offer))
+    (let held (wmg-embody (wmg-state "self-world" hidden-model (wmg-state-senses s3) (empty) "ingested" "observed") offer))
+
+    (let parts (wmg-state-parts embodied))
+    (let bp-part (nth parts 0))
+    (let recipe-part (nth parts 1))
+    (let cell-part (nth parts 2))
+    (let image-a (wmg-store-image embodied))
+    (let image-b (wmg-store-image embodied))
+    (let image-kids (node_children image-a))
+    (let stored-cells (tail (tail (tail image-kids))))
+    (let animation (wmm-identity-animation (wmg-state-model embodied) offer))
+
+    (let c0 (wmg-score (eq (len (wmg-state-senses s3)) 3) 1))
+    (let c1
+        (wmg-score
+            (and (eq (wmg-count-senses (wmg-state-senses s3) "observed") 1)
+             (and (eq (wmg-count-senses (wmg-state-senses s3) "absent") 1)
+                  (eq (wmg-count-senses (wmg-state-senses s3) "nothing") 1)))
+            2))
+    (let c2
+        (wmg-score
+            (and (eq (len parts) 3)
+             (and (str_eq (wmg-part-kind bp-part) "blueprint")
+              (and (str_eq (wmg-part-kind recipe-part) "recipe")
+                   (str_eq (wmg-part-kind cell-part) "named-cell"))))
+            4))
+    (let c3
+        (wmg-score
+            (and (node_eq (wmg-part-blueprint bp-part) (bp "WORLD-MODEL-GROWTH"))
+             (and (node_eq (wmg-part-blueprint recipe-part) (bp "WORLD-MODULE-MODEL"))
+                  (node_eq (wmg-part-blueprint cell-part) (bp "WORLD-MODEL-GROWTH"))))
+            8))
+    (let named-cell (wmg-part-cell cell-part))
+    (let c4
+        (wmg-score
+            (and (str_eq (cell-name named-cell) "world-module")
+                 (str_eq (cell-domain named-cell) "world-model"))
+            16))
+    (let c5
+        (wmg-score
+            (and (str_eq (wmg-state-status embodied) "embodied")
+                 (str_eq (wmg-state-reason embodied) "follow"))
+            32))
+    (let c6
+        (wmg-score
+            (and (str_eq (wmg-state-status held) "held")
+             (and (str_eq (wmg-state-reason held) "vulnerability-not-revealed")
+                  (eq (len (wmg-state-parts held)) 0)))
+            64))
+    (let c7
+        (wmg-score
+            (and (str_eq (wmg-next-action embodied) "grow-from-embodied-truth")
+                 (str_eq (wmg-next-action held) "hold-and-observe"))
+            128))
+    (let c8
+        (wmg-score
+            (and (node_eq image-a image-b)
+                 (node_eq (node_category image-a) (bp "WORLD-MODEL-GROWTH")))
+            256))
+    (let c9
+        (wmg-score
+            (and (eq (len stored-cells) 3)
+                 (str_eq (cell-domain (nth stored-cells 2)) "world-model"))
+            512))
+    (let c10
+        (wmg-score
+            (and (node_eq (wmg-part-recipe recipe-part) (wmm-image model offer))
+                 (str_eq (node_value (head (node_children (wmg-part-recipe recipe-part)))) "world-module"))
+            1024))
+    (let c11
+        (wmg-score
+            (and (eq (len animation) 3)
+             (and (str_eq (wmm-frame-state (nth animation 1)) "revealed")
+                  (str_eq (wmm-frame-state (nth animation 2)) "follow")))
+            2048))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

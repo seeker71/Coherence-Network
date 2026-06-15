@@ -1,0 +1,171 @@
+; world-model-growth.fk — ingest, digest, embody, and store a world model.
+;
+; The growth rule is deliberately inspectable:
+;   ingest any sensed reading,
+;   digest only verified readings into named parts,
+;   embody only a world-module model that the trusted-core receipt follows,
+;   store the embodied truth as Blueprint, Recipe, and NamedCell parts.
+;
+; Composes: world-module-model.fk for follow/refuse, persistence.fk for the
+;           NamedCell recipe, and content-addressed intern_node for storage.
+; Proven by: form-stdlib/tests/world-model-growth-band.fk
+
+(do
+    (defn wmg-score (ok n) (if ok n 0))
+    (defn wmg-append (xs ys)
+        (if (eq (len xs) 0)
+            ys
+            (cons (head xs) (wmg-append (tail xs) ys))))
+
+    ; ── sensed readings -------------------------------------------------
+    (defn wmg-sense (name kind reading deadline payload)
+        (list "wmg-sense" name kind reading deadline payload))
+    (defn wmg-sense-name (s) (nth s 1))
+    (defn wmg-sense-kind (s) (nth s 2))
+    (defn wmg-sense-reading (s) (nth s 3))
+    (defn wmg-sense-deadline (s) (nth s 4))
+    (defn wmg-sense-payload (s) (nth s 5))
+    (defn wmg-sense-verdict (s)
+        (obs-verify (wmg-sense-reading s) (wmg-sense-deadline s)))
+    (defn wmg-sense-trusted? (s)
+        (eq (obs-trusted? (wmg-sense-verdict s)) 1))
+
+    (defn wmg-count-senses (senses verdict)
+        (if (eq (len senses) 0)
+            0
+            (add
+                (if (str_eq (wmg-sense-verdict (head senses)) verdict) 1 0)
+                (wmg-count-senses (tail senses) verdict))))
+
+    (defn wmg-trusted-senses (senses)
+        (if (eq (len senses) 0)
+            (empty)
+            (if (wmg-sense-trusted? (head senses))
+                (cons (head senses) (wmg-trusted-senses (tail senses)))
+                (wmg-trusted-senses (tail senses)))))
+
+    ; ── parts: blueprint, recipe, named-cell ---------------------------
+    (defn wmg-part (kind name blueprint recipe cell)
+        (list "wmg-part" kind name blueprint recipe cell))
+    (defn wmg-part-kind (p) (nth p 1))
+    (defn wmg-part-name (p) (nth p 2))
+    (defn wmg-part-blueprint (p) (nth p 3))
+    (defn wmg-part-recipe (p) (nth p 4))
+    (defn wmg-part-cell (p) (nth p 5))
+
+    (defn wmg-blueprint-part (m offer)
+        (wmg-part
+            "blueprint"
+            (str_concat (wmm-model-name m) ":blueprint")
+            (bp "WORLD-MODEL-GROWTH")
+            (wmm-image m offer)
+            (make-cell-recipe
+                (str_concat (wmm-model-name m) ":blueprint")
+                "world-model-part"
+                (bp "WORLD-MODEL-GROWTH")
+                (wmm-image m offer))))
+
+    (defn wmg-recipe-part (m offer)
+        (wmg-part
+            "recipe"
+            (str_concat (wmm-model-name m) ":recipe")
+            (bp "WORLD-MODULE-MODEL")
+            (wmm-image m offer)
+            (make-cell-recipe
+                (str_concat (wmm-model-name m) ":recipe")
+                "world-model-part"
+                (bp "WORLD-MODULE-MODEL")
+                (wmm-image m offer))))
+
+    (defn wmg-cell-part (m offer)
+        (wmg-part
+            "named-cell"
+            (wmm-model-name m)
+            (bp "WORLD-MODEL-GROWTH")
+            (wmm-image m offer)
+            (make-cell-recipe
+                (wmm-model-name m)
+                "world-model"
+                (bp "WORLD-MODEL-GROWTH")
+                (wmm-image m offer))))
+
+    (defn wmg-digest-parts (m offer)
+        (list
+            (wmg-blueprint-part m offer)
+            (wmg-recipe-part m offer)
+            (wmg-cell-part m offer)))
+
+    ; ── growth state ----------------------------------------------------
+    (defn wmg-state (name model senses parts status reason)
+        (list "wmg-state" name model senses parts status reason))
+    (defn wmg-state-name (s) (nth s 1))
+    (defn wmg-state-model (s) (nth s 2))
+    (defn wmg-state-senses (s) (nth s 3))
+    (defn wmg-state-parts (s) (nth s 4))
+    (defn wmg-state-status (s) (nth s 5))
+    (defn wmg-state-reason (s) (nth s 6))
+
+    (defn wmg-empty (name model)
+        (wmg-state name model (empty) (empty) "empty" "no-senses"))
+
+    (defn wmg-ingest (state sense)
+        (wmg-state
+            (wmg-state-name state)
+            (wmg-state-model state)
+            (wmg-append (wmg-state-senses state) (list sense))
+            (wmg-state-parts state)
+            "ingested"
+            (wmg-sense-verdict sense)))
+
+    (defn wmg-digest (state offer)
+        (do
+            (let trusted (wmg-trusted-senses (wmg-state-senses state)))
+            (wmg-state
+                (wmg-state-name state)
+                (wmg-state-model state)
+                (wmg-state-senses state)
+                (if (gt (len trusted) 0)
+                    (wmg-digest-parts (wmg-state-model state) offer)
+                    (empty))
+                (if (gt (len trusted) 0) "digested" "held")
+                (if (gt (len trusted) 0) "trusted-senses" "no-trusted-senses"))))
+
+    (defn wmg-embody (state offer)
+        (if (wmm-core-follow? (wmg-state-model state) offer)
+            (wmg-state
+                (wmg-state-name state)
+                (wmg-state-model state)
+                (wmg-state-senses state)
+                (wmg-digest-parts (wmg-state-model state) offer)
+                "embodied"
+                "follow")
+            (wmg-state
+                (wmg-state-name state)
+                (wmg-state-model state)
+                (wmg-state-senses state)
+                (empty)
+                "held"
+                (wmm-core-reason (wmg-state-model state) offer))))
+
+    (defn wmg-next-action (state)
+        (if (str_eq (wmg-state-status state) "embodied")
+            "grow-from-embodied-truth"
+            "hold-and-observe"))
+
+    ; ── stored image: content-addressed root for the embodied parts -----
+    (defn wmg-part-cell-list (parts)
+        (if (eq (len parts) 0)
+            (empty)
+            (cons (wmg-part-cell (head parts)) (wmg-part-cell-list (tail parts)))))
+
+    (defn wmg-store-image (state)
+        (intern_node (bp "WORLD-MODEL-GROWTH")
+            (cons
+                (intern_trivial_string (wmg-state-name state))
+                (cons
+                    (intern_trivial_string (wmg-state-status state))
+                    (cons
+                        (intern_trivial_string (wmg-state-reason state))
+                        (wmg-part-cell-list (wmg-state-parts state)))))))
+
+    0)

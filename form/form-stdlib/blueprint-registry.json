@@ -897,6 +897,20 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 29,
+      "name": "WORLD-MODEL-GROWTH",
+      "meaning": "World-model growth receipt root: sensed readings digested into blueprint, recipe, and named-cell parts, embodied only after trusted-core follow.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/world-model-growth.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 30,
       "name": "FORM-LIST",
       "meaning": "an S-expression list",
