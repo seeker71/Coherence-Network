@@ -95,15 +95,18 @@ int main(int argc, char **argv){
     if(run_oracle(oracle, prompt, reply, sizeof reply) < 0){ printf(\"(oracle failed)\\n\"); return 3; }
     capture(transcript, reply);
 
+    /* a tool call is <tool_call>{json}</tool_call> OR bare {json} carrying a
+       name+arguments — some local models (e.g. qwen2.5) drop the tags. Accept both. */
     char *a = strstr(reply, \"<tool_call>\");
     char *b = a ? strstr(a, \"</tool_call>\") : 0;
-    if(!a || !b){
+    char *tc;
+    if(a && b){ *b = 0; tc = a + strlen(\"<tool_call>\"); }
+    else if(strstr(reply, \"\\\"name\\\"\") && strstr(reply, \"\\\"arguments\\\"\")){ tc = reply; }
+    else {
       fprintf(stderr, \"[form-cli-run] step %d: final\\n\", step);
       printf(\"%s\\n\", reply);
       return 0;
     }
-    *b = 0;
-    char *tc = a + strlen(\"<tool_call>\");
     if(!json_str(tc, \"name\", name, sizeof name)) snprintf(obs, sizeof obs, \"(no tool name)\");
     else if(strcmp(name, \"bash\") == 0 && json_str(tc, \"cmd\", a1, sizeof a1)) cap(a1, obs, sizeof obs);
     else if(strcmp(name, \"read_file\") == 0 && json_str(tc, \"path\", a1, sizeof a1)){
