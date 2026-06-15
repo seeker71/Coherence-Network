@@ -1,0 +1,109 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/arch-type-axis",
+  "commit_scope": "The architect adds the layer-TYPE axis: size (depth, width) is capacity, TYPE is the shape of the computation, and the body discovers which kind's inductive bias a task wants. arch-type.fk trains one candidate of each type (an FFN-residual and a cross-attention-residual) over a dataset and crowns the better fit. On a retrieval task (output = a value selected from a fixed context), the attention layer's content-based retrieval bias fits far faster than an FFN that must memorize the input->value map, so the architect crowns attention. Reuses arch-capacity's multi-example training and the heterogeneous stack engine; only the type-choice is new.",
+  "files_owned": [
+    "form/form-stdlib/arch-type.fk",
+    "form/form-stdlib/tests/arch-type-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/arch-type.fk form-stdlib/tests/arch-type-band.fk"
+    ],
+    "summary": "arch-type-band -> 31 three-way (Go=Rust=TS), 0 divergent. On a retrieval task (context = three magnitude-3 basis values, queries aligned to each key, target = the retrieved value), the ATTENTION layer fits in 5 epochs (total loss ~1e-5) while the FFN layer is still at 1.79 at epoch 5 and 0.033 at epoch 30 -- attention's content-based retrieval bias matches the task, the FFN must memorize and lags. The architect crowns 'attn' (the better fit), and attention's loss is strictly below the FFN's at 30 epochs. 3-KERNEL ONLY (Go=Rust=TS): composes the fp64 transformer-backward op family, not in the fourth-arm manifest -- same floor as transformer-block.fk / arch-capacity.fk. Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "attn_loss_epoch5": "~1e-5 (fits fast -- bias matches)",
+      "ffn_loss_epoch5": "1.79 (must memorize, lags)",
+      "attn_loss_epoch30": "~0",
+      "ffn_loss_epoch30": "0.033",
+      "architect_crowned_type": "attn"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Type discrimination is by fit-speed from inductive bias (attention's content-based retrieval matches a retrieval task), not a structural impossibility -- a high-capacity FFN can eventually memorize a fixed dataset. The honest claim is which TYPE's bias the task WANTS, measured by how fast/well each fits; on a retrieval task that is unambiguously attention.",
+        "follow_up": "A held-out generalization split would show attention's bias also generalizes from fewer examples; the converse (an FFN-shaped task where attention does not help) crowns ffn."
+      },
+      {
+        "limitation": "The type choice here is a binary between two single-layer candidates. The full joint grid over (depth x width x type) with mixed attention/ffn per slot is the next consolidation -- the heterogeneous stack engine already trains mixed stacks, so type is an added axis, not a new engine.",
+        "follow_up": "Fold depth, width, and type into one candidate grid; search mixed attention/ffn stacks per task."
+      },
+      {
+        "limitation": "3-kernel only: the fp64 transformer-backward op family is not in the fourth-arm manifest. Same floor as transformer-block.fk, arch-capacity.fk. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs arch-type-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body discovers the layer TYPE a task wants -- it trains a candidate of each kind and crowns the one whose inductive bias fits, picking attention for a retrieval task over a feed-forward block.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh arch-type-band (three kernels agree, verdict 31): attention fits a retrieval task fast, ffn lags, the architect crowns attn"
+    ],
+    "summary": "Proven three-way: the architect picks the layer type whose bias matches the task."
+  },
+  "phase_gate": {
+    "phase": "m7-architect-type-axis",
+    "gate": "the architect discovers the layer TYPE a task wants: on a retrieval task attention's content-based bias fits far faster than a memorizing FFN, and the architect crowns attn -- size is capacity, type is the shape, three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "one joint grid over (depth x width x type) with mixed attention/ffn per slot; the GPU as the trainer underneath the search"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arch-type-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/arch-type.fk",
+    "form/form-stdlib/tests/arch-type-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/arch-type.fk",
+    "form/form-stdlib/tests/arch-type-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-16_arch_type.json"
+  ],
+  "change_intent": "runtime_feature"
+}

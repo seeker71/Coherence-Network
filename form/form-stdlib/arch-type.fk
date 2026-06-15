@@ -1,0 +1,23 @@
+; arch-type.fk — the architect adds the layer-TYPE axis to its search: it discovers WHICH layer kind's
+; inductive bias fits a task. Size (depth, width) is capacity; TYPE is the shape of the computation. On a
+; retrieval task — output = a value selected from a fixed context — an ATTENTION layer (content-based
+; retrieval, output a convex mix of context values) fits far faster than an FFN layer that must MEMORIZE
+; the input→value map. The architect trains one candidate of each type over the dataset and crowns the
+; better fit. This is the dynamic-recipe advantage on the type dimension: the body picks the computation
+; shape the task wants, not a fixed one. Reuses arch-capacity.fk's multi-example training; only the
+; type-choice is new, and the heterogeneous stack engine (transformer-backprop.fk) already trains both kinds.
+;
+; Preludes: transformer-numerics.fk transformer-block.fk transformer-backprop.fk arch-capacity.fk
+; Proven by: form-stdlib/tests/arch-type-band.fk
+
+(do
+    ; candidate architectures of each type (1-layer), and their trained dataset fitness.
+    (defn at-ffn-cand (dim w seed) (list (ac-ffn-layer dim w seed)))
+    (defn at-attn-cand (wq wo ks vs scale) (list (list "attn" wq wo ks vs scale)))
+    (defn at-fit (arch data lr eps epochs) (ac-set-loss (ac-train arch data lr eps epochs) data eps))
+
+    ; --- crown the layer TYPE whose trained dataset loss is lower (the bias that matches the task). ---
+    (defn at-best-type (ffn-arch attn-arch data lr eps epochs)
+        (if (lt (at-fit attn-arch data lr eps epochs) (at-fit ffn-arch data lr eps epochs)) "attn" "ffn"))
+
+    0)
