@@ -17,11 +17,25 @@
 ;       and pressure;
 ;     - oracle-used as a measured teacher row, not authority.
 ;
+; LIVE CARRIER PROOF [COHERENCE PUBLIC API, 2026-06-15]
+;   scripts/public_api_rendezvous_receipt.sh writes a nonce hash as a public
+;   runtime event and reads it back from GET /api/runtime/events without auth.
+;   Receipt 20260615T152919Z:
+;     carrier=coherence-public-api
+;     event_id=rt_13fdae655ee1
+;     nonce_hash_len=64
+;     write_ms=139
+;     read_ms=3876
+;     ttl_ms=600000
+;     public_readable=1
+;     raw_nonce_retained=0
+;     status=pass
+;
 ; WHAT THIS DOES NOT CLAIM
-;   No microphone capture has run in this slice. No public API POST, Pastebin
-;   write, or archive.org upload has run in this slice. No raw audio is retained.
-;   The floor is the Form-native receipt shape and bottleneck policy the live
-;   carriers must return.
+;   No microphone capture has run in this slice. No Pastebin write or archive.org
+;   upload has run in this slice. No raw audio or raw nonce is retained. The
+;   public API carrier is live; paste/archive and audio carriers still must
+;   return this same receipt shape before they are claimed.
 ;
 ; NORTH STAR
 ;   Each carrier call emits a receipt: shape, recipe, cell count, start/end time,
@@ -31,13 +45,11 @@
 ;   recipe, and keep only what improves measured vitality.
 ;
 ; NEXT CARRIER PROOFS
-;   1. Public API rendezvous: write a nonce cell to the existing public API,
-;      read it back from the other device, and return the public receipt.
-;   2. Audio detection: Mac emits a short FSK/chirp nonce; Android detects it by
+;   1. Audio detection: Mac emits a short FSK/chirp nonce; Android detects it by
 ;      correlation/FFT and replies; both return SNR/confidence/latency receipts.
-;   3. Public fallback services: add pastebin-public-page or archive-org-public-
+;   2. Public fallback services: add pastebin-public-page or archive-org-public-
 ;      item only as public-read fallback carriers with the same receipt shape.
-;   4. Bottleneck learning: compare tool/reasoning/oracle durations and choose
+;   3. Bottleneck learning: compare tool/reasoning/oracle durations and choose
 ;      the next experiment from the pressure row rather than intuition alone.
 ;
 ; KIN
