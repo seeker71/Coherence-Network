@@ -217,6 +217,10 @@ liveness, heldout count, local model-process eval sense, native teacher status,
 world-growth status, and exact block reasons. A stale phone, missing model
 processes, unproven native teacher retirement, or unembodied growth stays
 `blocked`; the cycle is still inspectable by dashboard and mesh readers.
+When Form-native learning does prove those last two conditions, attach the
+hashed receipts with `--native-teacher-receipt` and `--world-growth-receipt`;
+the emitter validates sample floor, oracle reach, followed growth parts, and
+content hashes before the cycle can claim `emitted`.
 
 The receipt shape is validated by:
 
