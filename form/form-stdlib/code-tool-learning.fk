@@ -623,4 +623,81 @@
     (defn ctl-receipt-cell-coding-act-sample (cell)
         (ctl-coding-act-sample (ctl-receipt-cell-coding-act cell)))
 
+    (defn ctl-jsonl-text-after (text marker)
+        (add (str_find text marker 0) (str_len marker)))
+    (defn ctl-jsonl-text-string (text marker)
+        (do
+            (let start (ctl-jsonl-text-after text marker))
+            (let end (str_find text "\"" start))
+            (substring text start end)))
+    (defn ctl-jsonl-text-digit? (cp)
+        (and (ge cp 48) (le cp 57)))
+    (defn ctl-jsonl-text-int-end (text i)
+        (if (eq i (str_len text)) i
+            (if (ctl-jsonl-text-digit? (ord (char_at text i)))
+                (ctl-jsonl-text-int-end text (add i 1))
+                i)))
+    (defn ctl-jsonl-text-int (text marker)
+        (do
+            (let start (ctl-jsonl-text-after text marker))
+            (str_to_int (substring text start (ctl-jsonl-text-int-end text start)))))
+    (defn ctl-jsonl-text-receipt-cell (text)
+        (list
+            (ctl-receipt-cell-pair "kind" (ctl-jsonl-text-string text "\"kind\":\""))
+            (ctl-receipt-cell-pair "status" (ctl-jsonl-text-string text "\"status\":\""))
+            (ctl-receipt-cell-pair "intent" (ctl-jsonl-text-string text "\"intent\":\""))
+            (ctl-receipt-cell-pair "source_surfaces"
+                (list
+                    (list
+                        (ctl-receipt-cell-pair "kind" (ctl-jsonl-text-string text "\"source_surfaces\":[{\"kind\":\""))
+                        (ctl-receipt-cell-pair "language" (ctl-jsonl-text-string text "\"language\":\""))
+                        (ctl-receipt-cell-pair "path" (ctl-jsonl-text-string text "\"path\":\""))
+                        (ctl-receipt-cell-pair "source_sig" (ctl-jsonl-text-string text "\"source_sig\":\""))
+                        (ctl-receipt-cell-pair "node_sig" (ctl-jsonl-text-string text "\"node_sig\":\""))
+                        (ctl-receipt-cell-pair "grammar" (ctl-jsonl-text-string text "\"grammar\":\"")))
+                    (list
+                        (ctl-receipt-cell-pair "kind" "source-code")
+                        (ctl-receipt-cell-pair "language" "Form")
+                        (ctl-receipt-cell-pair "path" "form/form-stdlib/tests/code-tool-learning-band.fk")
+                        (ctl-receipt-cell-pair "source_sig" "sha256:source-b")
+                        (ctl-receipt-cell-pair "node_sig" "bp:node-b")
+                        (ctl-receipt-cell-pair "grammar" "form/BML"))))
+            (ctl-receipt-cell-pair "patch_recipe"
+                (list
+                    (ctl-receipt-cell-pair "intent" (ctl-jsonl-text-string text "\"patch_recipe\":{\"intent\":\""))
+                    (ctl-receipt-cell-pair "dialect" (ctl-jsonl-text-string text "\"dialect\":\""))
+                    (ctl-receipt-cell-pair "patch_sig" (ctl-jsonl-text-string text "\"patch_sig\":\""))
+                    (ctl-receipt-cell-pair "files_touched" (ctl-jsonl-text-int text "\"files_touched\":"))
+                    (ctl-receipt-cell-pair "reversible" (ctl-jsonl-text-int text "\"reversible\":"))
+                    (ctl-receipt-cell-pair "raw_patch_retained" (ctl-jsonl-text-int text "\"raw_patch_retained\":"))))
+            (ctl-receipt-cell-pair "verifiers"
+                (list
+                    (list
+                        (ctl-receipt-cell-pair "name" (ctl-jsonl-text-string text "\"verifiers\":[{\"name\":\""))
+                        (ctl-receipt-cell-pair "status" (ctl-jsonl-text-string text "\"verifiers\":[{\"name\":\"code-tool-learning-band\",\"status\":\""))
+                        (ctl-receipt-cell-pair "duration_ms" (ctl-jsonl-text-int text "\"duration_ms\":"))
+                        (ctl-receipt-cell-pair "evidence_sig" (ctl-jsonl-text-string text "\"evidence_sig\":\""))
+                        (ctl-receipt-cell-pair "raw_output_retained" 0))
+                    (list
+                        (ctl-receipt-cell-pair "name" "code-tool-learning-gate")
+                        (ctl-receipt-cell-pair "status" "pass")
+                        (ctl-receipt-cell-pair "duration_ms" 393)
+                        (ctl-receipt-cell-pair "evidence_sig" "sha256:verify-b")
+                        (ctl-receipt-cell-pair "raw_output_retained" 0))))
+            (ctl-receipt-cell-pair "choice_receipt"
+                (list
+                    (ctl-receipt-cell-pair "selected_path" (ctl-jsonl-text-string text "\"selected_path\":\""))
+                    (ctl-receipt-cell-pair "outcome" (ctl-jsonl-text-string text "\"outcome\":\""))
+                    (ctl-receipt-cell-pair "token_cost" (ctl-jsonl-text-int text "\"token_cost\":"))
+                    (ctl-receipt-cell-pair "certainty" (ctl-jsonl-text-int text "\"certainty\":"))
+                    (ctl-receipt-cell-pair "sovereignty" (ctl-jsonl-text-int text "\"sovereignty\":"))
+                    (ctl-receipt-cell-pair "trust" (ctl-jsonl-text-int text "\"trust\":"))))
+            (ctl-receipt-cell-pair "learned_delta"
+                (list
+                    (ctl-receipt-cell-pair "lane" (ctl-jsonl-text-string text "\"learned_delta\":{\"lane\":\""))
+                    (ctl-receipt-cell-pair "sample_count" (ctl-jsonl-text-int text "\"sample_count\":"))
+                    (ctl-receipt-cell-pair "trust_before" (ctl-jsonl-text-int text "\"trust_before\":"))
+                    (ctl-receipt-cell-pair "trust_after" (ctl-jsonl-text-int text "\"trust_after\":"))
+                    (ctl-receipt-cell-pair "accepted" (ctl-jsonl-text-int text "\"accepted\":"))))))
+
     0)

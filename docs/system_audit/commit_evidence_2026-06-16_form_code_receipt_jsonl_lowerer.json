@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "codex/form-code-receipt-jsonl-lowerer-20260616",
+  "commit_scope": "Add a bounded Form lowerer from canonical committed-turn receipt text into code-tool-learning receipt cells, raising the fourth-kernel code-learning floor to 1048575.",
+  "files_owned": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_form_code_receipt_jsonl_lowerer.json",
+    "docs/system_audit/model_executor_run_ledger/form-code-receipt-jsonl-lowerer-20260616.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "make prompt-guide",
+        "result": "pass",
+        "output": "Prompt guide passed on branch codex/form-code-receipt-jsonl-lowerer-20260616; blocking_risk_count=0."
+      },
+      {
+        "command": "make wellness",
+        "result": "pass",
+        "output": "Wellness passed with what_wants_attention: none and deploy aligned at bd8b8669."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+        "result": "pass",
+        "output": "code-tool-learning-band.fk -> 1048575; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && bash scripts/fourth-arm-gate.sh code-tool-learning",
+        "result": "pass",
+        "output": "PASS-4WAY code-tool-learning"
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy performed by this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way floor is complete; PR CI and deployment validation are pending. This is a bounded committed-turn receipt-text lowerer, not a general JSON parser."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "oracle-distillation-learning",
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "coherence-substrate-code-tool-learning",
+    "coherence-substrate-form-cli-north-star"
+  ],
+  "task_ids": [
+    "2026-06-16-form-code-receipt-jsonl-lowerer"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "floor-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/code-tool-learning.fk -> ctl-jsonl-text-* bounded extraction helpers and receipt-text-to-cell lowerer",
+    "form/form-stdlib/tests/code-tool-learning-band.fk -> 1048575 four-way proof including canonical text lowering",
+    "form/fourth-arm-bands.txt -> code-tool-learning fks 1048575",
+    "docs/coherence-substrate/code-tool-learning.form -> floor and north star aligned to bounded receipt-text lowerer",
+    "docs/coherence-substrate/INDEX.md -> sister node summary aligned to the 1048575 floor"
+  ],
+  "change_files": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_form_code_receipt_jsonl_lowerer.json",
+    "docs/system_audit/model_executor_run_ledger/form-code-receipt-jsonl-lowerer-20260616.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Canonical committed-turn receipt text can lower into a code-tool-learning receipt cell and then validate as the same native coding-act row across Go, Rust, TypeScript, and fkwu.",
+    "public_endpoints": [
+      "not-applicable: Form floor and fourth-kernel validation only"
+    ],
+    "test_flows": [
+      "Construct canonical committed-turn receipt text carrying source_surfaces, patch_recipe, verifiers, choice_receipt, and learned_delta fields.",
+      "Lower the text through ctl-jsonl-text-receipt-cell into a receipt-cell row.",
+      "Validate that the lowered cell becomes a valid coding-act sample with raw_patch_retained=0 and trust_after=74.",
+      "Require code-tool-learning verdict 1048575 on all four kernels."
+    ]
+  },
+  "floor_update": {
+    "previous_observed_floor": "code-tool-learning-band proved receipt-cell ingestion at 524287 four-way, but canonical receipt text still had no bounded Form lowerer into that cell.",
+    "current_observed_floor": "code-tool-learning-band proves 1048575 four-way, adding bounded text extraction from canonical committed-turn receipt text into the substrate receipt cell and then into the coding-act row.",
+    "new_receipts": [
+      "code-tool-learning 1048575 four-way",
+      "PASS-4WAY code-tool-learning"
+    ],
+    "not_claimed": [
+      "general JSON parser inside fkwu",
+      "arbitrary receipt schema parsing",
+      "live Mac binary interception of agent tool/reasoning calls",
+      "default routing of important coding flows to Form-native candidates"
+    ]
+  }
+}

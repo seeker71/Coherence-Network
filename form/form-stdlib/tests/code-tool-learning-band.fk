@@ -3,7 +3,7 @@
 ; code-tool-learning-band — Form-native sideband for code generation,
 ; tool selection, and tool execution learning.
 ;
-; Verdict 524287 when every claim lands:
+; Verdict 1048575 when every claim lands:
 ;   1     code-generation intent is learned as a native exemplar
 ;   2     tool-selection intent is learned as a native exemplar
 ;   4     proof-execution intent is learned as a native exemplar
@@ -23,6 +23,7 @@
 ;   65536 canonical natural-language to host-native ASM lowering path is explicit with alternatives
 ;   131072 coding-act receipt connects source listening, patch speaking, verifier feedback, and learned delta
 ;   262144 live carrier JSONL-field receipt cell ingests into the same coding-act row
+;   524288 canonical receipt text lowers into the JSONL-field receipt cell
 (do
     (let samples
         (list
@@ -184,6 +185,10 @@
                     (ctl-receipt-cell-pair "trust_after" 74)
                     (ctl-receipt-cell-pair "accepted" 1)))))
     (let live-cell-sample (ctl-receipt-cell-coding-act-sample live-receipt-cell))
+    (let receipt-text
+        "{\"kind\":\"code-tool-learning/coding-act-receipt\",\"status\":\"pass\",\"intent\":\"form: add self-teaching coding receipt\",\"source_surfaces\":[{\"kind\":\"source-code\",\"language\":\"Form\",\"path\":\"form/form-stdlib/code-tool-learning.fk\",\"source_sig\":\"sha256:source-a\",\"node_sig\":\"bp:node-a\",\"grammar\":\"form/BML\"},{\"kind\":\"source-code\",\"language\":\"Form\",\"path\":\"form/form-stdlib/tests/code-tool-learning-band.fk\",\"source_sig\":\"sha256:source-b\",\"node_sig\":\"bp:node-b\",\"grammar\":\"form/BML\"}],\"patch_recipe\":{\"intent\":\"form: add self-teaching coding receipt\",\"dialect\":\"git-patch\",\"patch_sig\":\"sha256:patch-a\",\"files_touched\":2,\"reversible\":1,\"raw_patch_retained\":0},\"verifiers\":[{\"name\":\"code-tool-learning-band\",\"status\":\"pass\",\"duration_ms\":374,\"evidence_sig\":\"sha256:verify-a\",\"raw_output_retained\":0},{\"name\":\"code-tool-learning-gate\",\"status\":\"pass\",\"duration_ms\":393,\"evidence_sig\":\"sha256:verify-b\",\"raw_output_retained\":0}],\"choice_receipt\":{\"selected_path\":\"form-native:code-tool\",\"outcome\":\"success\",\"token_cost\":0,\"certainty\":78,\"sovereignty\":91,\"trust\":74},\"learned_delta\":{\"lane\":\"form-native:code-tool\",\"sample_count\":1,\"trust_before\":62,\"trust_after\":74,\"accepted\":1}}")
+    (let lowered-text-cell (ctl-jsonl-text-receipt-cell receipt-text))
+    (let lowered-text-sample (ctl-receipt-cell-coding-act-sample lowered-text-cell))
 
     (let c0
         (if (str_eq
@@ -325,6 +330,18 @@
                             (eq (len (ctl-receipt-cell-get live-receipt-cell "verifiers")) 2)))))
             262144
             0))
+    (let c19
+        (if (and
+                (eq (ctl-receipt-cell-coding-act-valid? lowered-text-cell) 1)
+                (and
+                    (str_eq (ctl-receipt-cell-get lowered-text-cell "intent") "form: add self-teaching coding receipt")
+                    (and
+                        (eq (head (ctl-feature lowered-text-sample)) 2)
+                        (and
+                            (eq (ctl-receipt-cell-get (ctl-receipt-cell-get lowered-text-cell "patch_recipe") "raw_patch_retained") 0)
+                            (eq (ctl-ld-trust-after (ctl-receipt-cell-learned-delta lowered-text-cell)) 74)))))
+            524288
+            0))
     (add c0
         (add c1
             (add c2
@@ -342,4 +359,5 @@
                                                             (add c14
                                                                 (add c15
                                                                     (add c16
-                                                                        (add c17 c18)))))))))))))))))))
+                                                                        (add c17
+                                                                            (add c18 c19))))))))))))))))))))
