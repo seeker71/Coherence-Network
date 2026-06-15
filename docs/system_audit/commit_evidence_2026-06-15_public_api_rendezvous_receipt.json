@@ -1,0 +1,121 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/public-api-rendezvous-receipt-20260615",
+  "commit_scope": "Add a live public API rendezvous nonce-hash receipt script and update the public rendezvous floor evidence.",
+  "change_intent": "process_only",
+  "idea_ids": [
+    "hati-mesh",
+    "public-rendezvous",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "mesh-networking",
+    "commit-evidence-contract",
+    "public-audio-rendezvous"
+  ],
+  "task_ids": [
+    "public-api-rendezvous-receipt-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-carrier-permission",
+        "measurement-north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/public_api_rendezvous_receipt.sh",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_public_api_rendezvous_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/public-api-rendezvous-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/public_api_rendezvous_receipt.sh",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_public_api_rendezvous_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/public-api-rendezvous-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim public-api-rendezvous-receipt \"Next carrier proof after PR #3192: add bounded live public API rendezvous nonce receipt using existing public/API surfaces; avoid audio capture, Pastebin/archive posting, APK/JNI, BML compiler, and live-cycle runtime lanes.\"",
+      "bash -n scripts/public_api_rendezvous_receipt.sh",
+      "scripts/public_api_rendezvous_receipt.sh"
+    ],
+    "notes": "The live script posted a nonce hash to https://api.coherencycoin.com/api/runtime/events and read it back from GET /api/runtime/events without auth. Receipt event_id=rt_13fdae655ee1, nonce_hash_len=64, write_ms=139, read_ms=3876, ttl_ms=600000, public_readable=1, raw_nonce_retained=0, status=pass. The raw nonce stayed local in .cache and is not committed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "The proof used the already deployed public API at https://api.coherencycoin.com."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A public rendezvous nonce hash can be written to the public API and read back from the public runtime event window as a bounded receipt.",
+    "public_endpoints": [
+      "POST https://api.coherencycoin.com/api/runtime/events",
+      "GET https://api.coherencycoin.com/api/runtime/events?limit=200&source=worker&force_refresh=true"
+    ],
+    "test_flows": [
+      "Generate a local nonce and SHA-256 nonce hash.",
+      "Post only the nonce hash and bounded metadata to the public runtime event route.",
+      "Read the public runtime event window and match rendezvous_id plus nonce_hash.",
+      "Write a local receipt JSON with write/read timing, status, and public readability."
+    ]
+  },
+  "evidence_refs": [
+    "scripts/public_api_rendezvous_receipt.sh",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    ".cache/public-api-rendezvous/20260615T152919Z/public-api-rendezvous-receipt.json"
+  ],
+  "phase_gate": {
+    "phase": "public-api-rendezvous-receipt",
+    "gate": "The public API carrier must write and read back a nonce-hash rendezvous cell without retaining the raw nonce.",
+    "state": "live-public-api-pass",
+    "can_move_next_phase": false,
+    "next": "Add live audio chirp detection or paste/archive fallback carriers using the same Form receipt shape."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The public-audio-rendezvous floor validated the receipt shape but did not claim a live public API write/read proof.",
+    "current_observed_floor": "The public API carrier has a live nonce-hash write/read receipt through existing runtime events, with public readability and no raw nonce retention.",
+    "new_receipts": [
+      "public-api-rendezvous 20260615T152919Z event rt_13fdae655ee1"
+    ],
+    "not_claimed": [
+      "live microphone capture",
+      "Pastebin write proof",
+      "archive.org upload proof",
+      "durable peer identity proof",
+      "raw nonce retention"
+    ]
+  }
+}
