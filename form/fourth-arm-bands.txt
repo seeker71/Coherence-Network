@@ -225,6 +225,7 @@ application-graph-node-port fks 1111
 auth-port fks 1111
 bml-native-interface-package-import fks 255
 bml-native-mutable-locals fks 1023
+bml-native-source-control fks 2047
 form-control-backtracking-ml fks 65535
 self-grounding-classifier fks 63
 self-translate-universal fks 15
