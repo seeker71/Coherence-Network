@@ -1,0 +1,29 @@
+; form-control-backtracking-ml.fk - Form-native ML control/backtracking floor.
+;
+; Form-ML-kernels/layers/models need full control-flow and backtracking as
+; Form substrate tissue. This file names the Form-native primitive floor model
+; research may depend on.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk
+;
+(do
+    (defn fcml-required-control-primitives ()
+        (list
+            "if" "recursion" "fold" "any/all" "task-resolve" "task-reject"
+            "cell-do" "cell-undo"))
+
+    (defn fcml-required-control-count ()
+        (len (fcml-required-control-primitives)))
+
+    (defn fcml-required-backtracking-primitives ()
+        (list
+            "match" "fail" "fail-cut" "cut" "stop" "choice"
+            "capture" "opt-rollback" "star-repeat"))
+
+    (defn fcml-required-backtracking-count ()
+        (len (fcml-required-backtracking-primitives)))
+
+    (defn fcml-ml-kernel-requirement ()
+        "form-ML-kernels/layers/models require 100% Form-native control-flow and 100% Form-native backtracking coverage before native model research depends on the floor")
+
+    0)

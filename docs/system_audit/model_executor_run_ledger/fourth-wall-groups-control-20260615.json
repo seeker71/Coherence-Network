@@ -1,0 +1,22 @@
+{
+  "task_id": "fourth-wall-groups-control-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord view",
+    "coord claim fourth-walls-roadmap-groups \"Document grouped fourth-kernel walls ... start group 1 Form-native callable/control value fix\"",
+    "coord share \"fourth wall groups map added in a3ec: lanes are control/backtracking active here; dynamic grammar; BML compiler surface; ML kernel/layer/model; model-router/NL/audio; model-data sharing; mesh networking. Please claim one lane before editing; avoid BMA path, use Form-native primitives/carriers/receipts.\"",
+    "coord share \"available lane card: dynamic-grammar -> add a fourth-kernel grammar carrier receipt for one dynamic rule extension and parse/lower trace. Files: form/form-stdlib/grammar*.fk, field-*.fk, tests/*grammar*-band.fk, docs/coherence-substrate/fourth-kernel-wall-groups.form.\"",
+    "coord share \"available lane card: BML compiler surface -> ratchet one source family from metadata/floor to executable fourth-kernel lowering. Candidate walls: namespace/import resolution, interface method dispatch, constructors/generics, arrays/calls, source mutable locals, source control blocks.\"",
+    "coord share \"available lane card: ML/model/router/mesh -> promote one bounded carrier receipt at a time: optimizer or tensor data, token/audio/router receipt, model slice sharing, or live mesh transport. Keep Form cells as truth; files/caches/native/GPU are carriers with rehash/authority receipts.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/form-control-backtracking-ml.fk form-stdlib/tests/form-control-backtracking-ml-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh form-control-backtracking-ml",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Grouped the fourth-kernel walls into parallel work families, delegated the available lanes through coord, and closed the active Form-native primitive control/backtracking group. The new form-control-backtracking-ml band returns 65535 four-way and the fourth-arm gate returns PASS-4WAY. Remaining source-level break/continue/try/throw/while/for/switch lowering is documented as the next BML compiler wall rather than claimed as floor."
+}

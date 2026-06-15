@@ -54,6 +54,9 @@
 ;     runtimes, the NodeID stays local. The body reads each model through resonance, vitality,
 ;     sovereignty, and trust, plus accuracy, confidence, energy, latency, memory pressure, sample
 ;     coverage, freshness, mergeability, and promotion readiness, then focuses attention from that row.
+;     docs/coherence-substrate/fourth-kernel-wall-groups.form groups the remaining fourth-kernel walls
+;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
+;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
 ;     optimizer-step cells, durable eval-receipt query path, measured fourth-arm duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, and mesh-scale merkle slice sharing are still not
@@ -65,6 +68,13 @@
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.
+;   CONTROL/BACKTRACKING HEALTH: form-ML-kernels/layers/models require 100% runtime control-flow and
+;     100% backtracking coverage before native model research can depend on a layer floor. The current
+;     executable gate is form-stdlib/form-control-backtracking-ml.fk +
+;     tests/form-control-backtracking-ml-band.fk -> 65535 four-way: Form-native conditionals,
+;     recursion/folds, any/all, reversible cells, task states, match/fail/fail-cut/cut/stop/choice,
+;     capture, opt rollback, and star repetition. Remaining source syntax work is named in
+;     bml-native-north-star.form as source-control-block lowering, not hidden inside model claims.
 ;
 ; ── THE PROVEN FOUNDATION (measured, in the body today) ──
 ;   FLOAT COMPUTE IS DETERMINISTIC THREE-WAY. Go=Rust=TS agree bit-for-bit:

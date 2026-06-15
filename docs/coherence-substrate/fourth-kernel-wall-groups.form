@@ -1,0 +1,95 @@
+; fourth-kernel-wall-groups.form — grouped fourth-kernel walls for BMF/BML/ML work
+;
+; Reviewed 2026-06-15 after the 183/585 fourth-floor gap discussion. This map keeps
+; the floor aligned with the BML/BMF compiler north star, the Form-native model
+; north star, and sister nodes that need parallel work without stepping on one
+; another. BMA is historical thesis context only; the current path is Form-native
+; primitives, recipes, cells, carriers, and receipts.
+
+(fourth-kernel-wall-groups
+  (north-star
+    (sentence "The fourth kernel can carry a BMF/BML compiler, ML kernels, ML layers, ML models, model routers, dynamic grammars, NL<->NL, TTS/STT, model-data sharing, and mesh networking when each semantic family has a Form-native primitive floor plus a receipt-bearing carrier path.")
+    (connected-tissue bml-native-north-star form-native-models form-native-llm fourth-arm-bands fourth-kernel-physical-lanes fourth-arm-substrate-carriers)
+    (process "Close families in parallel as separate lanes. Each lane names the source wall, adds the smallest four-way band or bounded host-carrier receipt, updates the floor/north-star docs, records evidence, and only then widens the claim."))
+
+  (current-floor
+    (control-backtracking "form-control-backtracking-ml now proves the Form-native primitive vocabulary needed by model layers: if, recursion/fold, any/all, reversible cells, task states, match/fail/fail-cut/cut/stop/choice, capture, opt rollback, and star repetition.")
+    (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
+    (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
+
+  (group
+    (id control-and-backtracking)
+    (status active)
+    (why "A useful ML kernel/layer/model needs total control flow and total backtracking. Without this, training loops, decode loops, parser recovery, reversible state, retry, and route choice cannot be trusted on the fourth kernel.")
+    (closed-now primitive-control-and-engine-backtracking)
+    (next-walls source-break source-continue source-try source-throw source-catch arbitrary-while for switch source-restore-spelling)
+    (parallel-card
+      (goal "Lower remaining source-level BML control blocks into the proven Form-native control/backtracking primitives.")
+      (files_allowed form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "one source-level control family runs four-way and the north star names the new floor"))))
+
+  (group
+    (id dynamic-grammar)
+    (status available)
+    (why "BMF/BML, full dynamic grammar support, NL grammars, audio grammars, and model-router grammars all require grammar rules to be carried as substrate data instead of frozen host-side assumptions.")
+    (current-floor grammar-recipes field-domain-grammars bmf-engine-backtracking)
+    (next-walls grammar-rule-carrier grammar-extension-receipt source-to-parser-table lowering-back-to-form)
+    (parallel-card
+      (goal "Add a fourth-kernel grammar carrier receipt for one dynamic rule extension and its parse/lower trace.")
+      (files_allowed form/form-stdlib/grammar*.fk form/form-stdlib/field-*.fk form/form-stdlib/tests/*grammar*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "one dynamic grammar extension is data-carried and validated by a four-way or bounded native receipt"))))
+
+  (group
+    (id bml-compiler-surface)
+    (status available)
+    (why "The compiler can only be first class when packages, imports, interfaces, mutable locals, class construction, generic specialization, calls, arrays, and control blocks lower into table rows rather than compatibility paths.")
+    (current-floor interface-package-import-metadata native-mutable-local-frame class-dispatch-template-overload-metadata)
+    (next-walls namespace-resolution import-symbol-resolution interface-method-dispatch full-constructor-syntax generic-specialization arrays general-calls source-mutable-local-lowering)
+    (parallel-card
+      (goal "Ratchet one BML source family from metadata/floor into executable fourth-kernel lowering.")
+      (files_allowed form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "the chosen BML source family has a four-way band and is moved from unsupported to current-supported"))))
+
+  (group
+    (id ml-kernel-layer-model)
+    (status available)
+    (why "Model research needs tensors, optimizer state, decode loops, mutable/reversible training state, eval receipts, and carrier conformance as first-class Form cells.")
+    (current-floor format-arith tensor-quant transformer-numerics transformer-block jit-tensor-emitter-as-recipe model-vitality-storage physical-carrier-rehash)
+    (next-walls optimizer-step-cells large-tensor-policy full-safetensors-header full-mlx-package-ingest jit-buffer-bridge fourth-arm-duration conformance-ledger)
+    (parallel-card
+      (goal "Promote one ML model data or execution wall into a receipt-bearing Form-native floor.")
+      (files_allowed form/form-stdlib/*model*.fk form/form-stdlib/*tensor*.fk form/form-stdlib/tests/*model*-band.fk form/form-stdlib/tests/*tensor*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "the ML wall has a focused proof and model north-star floor text names the exact carrier boundary"))))
+
+  (group
+    (id model-router-nl-audio)
+    (status available)
+    (why "NL->NL, TTS, STT, and model routers need streaming decode, token/audio front ends, confidence/vitality routing, and backpressure receipts. The fourth kernel must carry the control and route proof even when heavy model execution uses a native/GPU carrier.")
+    (current-floor model-vitality-routing native-http-capture request-header-forwarding control-backtracking-primitive-floor)
+    (next-walls tokenizer-carrier audio-frame-carrier streaming-decode-loop backpressure-receipt route-confidence-choice tts-stt-envelope)
+    (parallel-card
+      (goal "Add one bounded token/audio/router carrier receipt whose routing decision is readable in Form.")
+      (files_allowed form/form-stdlib/*audio*.fk form/form-stdlib/*model*.fk form/form-stdlib/*route*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-llm.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "one router/NL/audio receipt runs on the supported kernels and documents its native carrier boundary"))))
+
+  (group
+    (id model-data-sharing)
+    (status available)
+    (why "ML model data sharing needs chunk cells, merkle roots, delta slices, optimizer state, provenance, local NodeID handles, durable queries, and mesh-safe slice exchange.")
+    (current-floor tensor-chunk-store chunk-set-root carrier-projection-rehash model-vitality-production-row)
+    (next-walls optimizer-delta-slices durable-eval-query mesh-slice-request-response conflict-policy privacy-boundary)
+    (parallel-card
+      (goal "Turn one model-data sharing wall into a substrate receipt with provenance and rehash proof.")
+      (files_allowed form/form-stdlib/*model*.fk form/form-stdlib/*store*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "a stored/shared slice can be re-read, rehashed, and routed without treating a file cache as source of truth"))))
+
+  (group
+    (id mesh-networking)
+    (status available)
+    (why "Mesh networking is first class only when peer identity, transport receipts, subscription/sync, conflict resolution, and model-slice flow are visible to Form rather than hidden in host services.")
+    (current-floor loopback-channel native-http-https-capture request-header-forwarding production-runtime-authority)
+    (next-walls peer-handshake live-subscription conflict-resolution streaming-slice-transfer retry-backoff transport-authority-ledger)
+    (parallel-card
+      (goal "Add one live mesh transport receipt that returns a Form-readable trace and bounded authority row.")
+      (files_allowed form/form-stdlib/*mesh*.fk form/form-stdlib/*channel*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
+      (done_when "one mesh receipt proves peer/transport/authority shape without a hidden Python/source-of-truth carrier")))))
