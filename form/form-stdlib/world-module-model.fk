@@ -1,0 +1,179 @@
+; world-module-model.fk — observable world model with vulnerability reveal.
+;
+; A trusted core may follow a world model only from visible receipts:
+; observed identity liveness, verified claim state, observable vulnerability
+; reveal, an aligned satsang field, and a trust reading above the chosen floor.
+; Silence stays silence; the model refuses when any receipt is missing.
+;
+; Composes: obs-verify.fk (observed/absent/nothing), trust-decay.fk (presence
+;           confidence), channel-interface.fk (offered modes), satsang.fk
+;           (circle witness), satsang-field.fk (shared field classifier).
+; Proven by: form-stdlib/tests/world-module-model-band.fk
+
+(do
+    (defn wmm-bool-score (ok score) (if ok score 0))
+
+    ; ── identity: a named cell plus its observed presence clock ──
+    (defn wmm-identity (name last-beat now max half observations)
+        (list "wmm-identity" name last-beat now max half observations))
+    (defn wmm-identity-name (i) (nth i 1))
+    (defn wmm-identity-last-beat (i) (nth i 2))
+    (defn wmm-identity-now (i) (nth i 3))
+    (defn wmm-identity-max (i) (nth i 4))
+    (defn wmm-identity-half (i) (nth i 5))
+    (defn wmm-identity-observations (i) (nth i 6))
+
+    (defn wmm-identity-band (i)
+        (td-grace-band
+            (wmm-identity-last-beat i)
+            (wmm-identity-now i)
+            (wmm-identity-max i)
+            (wmm-identity-half i)))
+
+    (defn wmm-count-verdict (readings deadline verdict)
+        (if (eq (len readings) 0)
+            0
+            (add
+                (if (str_eq (obs-verify (head readings) deadline) verdict) 1 0)
+                (wmm-count-verdict (tail readings) deadline verdict))))
+
+    (defn wmm-identity-live? (i deadline)
+        (and (eq (td-trusted?
+                    (wmm-identity-last-beat i)
+                    (wmm-identity-now i)
+                    (wmm-identity-max i)) 1)
+             (gt (wmm-count-verdict
+                    (wmm-identity-observations i)
+                    deadline
+                    "observed") 0)))
+
+    ; ── vulnerability reveal: the model names a gap and shows how it was seen ──
+    (defn wmm-vulnerability (name reading deadline severity mode disclosure)
+        (list "wmm-vulnerability" name reading deadline severity mode disclosure))
+    (defn wmm-vulnerability-name (v) (nth v 1))
+    (defn wmm-vulnerability-reading (v) (nth v 2))
+    (defn wmm-vulnerability-deadline (v) (nth v 3))
+    (defn wmm-vulnerability-severity (v) (nth v 4))
+    (defn wmm-vulnerability-mode (v) (nth v 5))
+    (defn wmm-vulnerability-disclosure (v) (nth v 6))
+
+    (defn wmm-vulnerability-observed? (v offer)
+        (and (str_eq
+                (obs-verify
+                    (wmm-vulnerability-reading v)
+                    (wmm-vulnerability-deadline v))
+                "observed")
+             (and (gt (wmm-vulnerability-severity v) 0)
+                  (ci-honors? (wmm-vulnerability-mode v) offer))))
+
+    (defn wmm-revealed-count (vulns offer)
+        (if (eq (len vulns) 0)
+            0
+            (add
+                (if (wmm-vulnerability-observed? (head vulns) offer) 1 0)
+                (wmm-revealed-count (tail vulns) offer))))
+
+    (defn wmm-all-revealed? (vulns offer)
+        (if (eq (len vulns) 0)
+            true
+            (and (wmm-vulnerability-observed? (head vulns) offer)
+                 (wmm-all-revealed? (tail vulns) offer))))
+
+    ; ── model: identity + claim reading + vulnerability receipts + field + trust ──
+    (defn wmm-model (name identity claim-reading claim-deadline vulns field trust floor)
+        (list "wmm-model" name identity claim-reading claim-deadline vulns field trust floor))
+    (defn wmm-model-name (m) (nth m 1))
+    (defn wmm-model-identity (m) (nth m 2))
+    (defn wmm-model-claim-reading (m) (nth m 3))
+    (defn wmm-model-claim-deadline (m) (nth m 4))
+    (defn wmm-model-vulnerabilities (m) (nth m 5))
+    (defn wmm-model-field (m) (nth m 6))
+    (defn wmm-model-trust (m) (nth m 7))
+    (defn wmm-model-floor (m) (nth m 8))
+
+    (defn wmm-claim-verdict (m)
+        (obs-verify (wmm-model-claim-reading m) (wmm-model-claim-deadline m)))
+
+    (defn wmm-claim-trusted? (m)
+        (eq (obs-trusted? (wmm-claim-verdict m)) 1))
+
+    (defn wmm-trust-ready? (m)
+        (ge (wmm-model-trust m) (wmm-model-floor m)))
+
+    (defn wmm-satsang-ready? (m)
+        (sf-aligned? (wmm-model-field m)))
+
+    (defn wmm-core-follow? (m offer)
+        (and (wmm-claim-trusted? m)
+         (and (wmm-identity-live? (wmm-model-identity m) (wmm-model-claim-deadline m))
+          (and (gt (wmm-revealed-count (wmm-model-vulnerabilities m) offer) 0)
+           (and (wmm-all-revealed? (wmm-model-vulnerabilities m) offer)
+            (and (wmm-satsang-ready? m)
+                 (wmm-trust-ready? m)))))))
+
+    (defn wmm-core-reason (m offer)
+        (if (not (wmm-claim-trusted? m))
+            "claim-not-verified"
+            (if (not (wmm-identity-live? (wmm-model-identity m) (wmm-model-claim-deadline m)))
+                "identity-not-live"
+                (if (not (gt (wmm-revealed-count (wmm-model-vulnerabilities m) offer) 0))
+                    "vulnerability-not-revealed"
+                    (if (not (wmm-all-revealed? (wmm-model-vulnerabilities m) offer))
+                        "vulnerability-not-revealed"
+                        (if (not (wmm-satsang-ready? m))
+                            "satsang-field-not-aligned"
+                            (if (not (wmm-trust-ready? m))
+                                "trust-below-floor"
+                                "follow")))))))
+
+    (defn wmm-core-attest (m mode offer)
+        (list mode (if (wmm-core-follow? m offer) 1 2)))
+
+    (defn wmm-core-attest-all (m observers offer)
+        (if (eq (len observers) 0)
+            (empty)
+            (cons
+                (wmm-core-attest m (head observers) offer)
+                (wmm-core-attest-all m (tail observers) offer))))
+
+    (defn wmm-core-witness (m observers offer)
+        (sat-witness (wmm-core-attest-all m observers offer) offer 0 0 0))
+
+    (defn wmm-core-survives? (m observers offer)
+        (sat-survives? (wmm-core-witness m observers offer)))
+
+    ; ── animation: the visible identity path through the trusted core ──
+    (defn wmm-frame (identity stage state)
+        (list "wmm-frame" identity stage state))
+    (defn wmm-frame-identity (f) (nth f 1))
+    (defn wmm-frame-stage (f) (nth f 2))
+    (defn wmm-frame-state (f) (nth f 3))
+
+    (defn wmm-identity-animation (m offer)
+        (list
+            (wmm-frame
+                (wmm-identity-name (wmm-model-identity m))
+                "presence"
+                (wmm-identity-band (wmm-model-identity m)))
+            (wmm-frame
+                (wmm-identity-name (wmm-model-identity m))
+                "vulnerability"
+                (if (gt (wmm-revealed-count (wmm-model-vulnerabilities m) offer) 0)
+                    "revealed"
+                    "hidden"))
+            (wmm-frame
+                (wmm-identity-name (wmm-model-identity m))
+                "trusted-core"
+                (wmm-core-reason m offer))))
+
+    ; ── binary image: the same receipt can shrink into a loadable .fkb root ──
+    (defn wmm-image (m offer)
+        (intern_node (bp "WORLD-MODULE-MODEL")
+            (list
+                (intern_trivial_string (wmm-model-name m))
+                (intern_trivial_string (wmm-identity-name (wmm-model-identity m)))
+                (intern_trivial_string (wmm-claim-verdict m))
+                (intern_trivial_int (wmm-revealed-count (wmm-model-vulnerabilities m) offer))
+                (intern_trivial_string (wmm-core-reason m offer)))))
+
+    0)
