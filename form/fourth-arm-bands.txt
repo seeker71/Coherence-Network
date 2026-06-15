@@ -322,6 +322,7 @@ optimizer-step fks 4095
 autodiff-gradient-cell fks 4095
 adam-step-cell fks 4095
 adam-bias-correction fks 4095
+tensor-autodiff-verifier fks 4095
 sqlite-read fks 31
 speech-kernel-channel fks 511
 speech-model-learning fks 16383
