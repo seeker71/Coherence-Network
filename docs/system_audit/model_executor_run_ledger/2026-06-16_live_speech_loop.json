@@ -1,0 +1,21 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "coord claim live-dual-mic-speech-loop",
+    "scripts/live_speech_loop_receipt.sh \"form native speech loop listens with two microphones\"",
+    "python3 -m py_compile experiments/coherence-sense-android/coherence-sense-eval.py experiments/coherence-sense-android/mac-witness-server.py experiments/coherence-sense-android/hati_witness_discovery.py",
+    "experiments/coherence-sense-android/macos-witness-service.sh install --mode recognition --port 8800 --python /opt/homebrew/bin/python3",
+    "curl -sS --max-time 3 http://127.0.0.1:8800/state | jq '{present,kernel_ok,recognized,predicted,speech_loop}'",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-live-loop-band.fk",
+    "bash -n scripts/live_speech_loop_receipt.sh && cd form && bash scripts/fourth-arm-gate.sh speech-live-loop",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/scan_form_blueprints.py --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Promoted the speech teacher from file-rendered TTS/STT into a live room loop: macOS say played known text through the Mac speaker, rec captured the Mac microphone, local whisper-cli transcribed the room recording with 100 percent overlap, and the Android witness contributed 28 mic telemetry samples during the same window. Form accepted the live dual-mic receipt floor at 255 four-way. The Mac witness dashboard now exposes the latest speech loop receipt in /state and the visible browser panel."
+}

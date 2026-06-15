@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "codex/live-speech-loop-20260616",
+  "commit_scope": "Promote the speech teacher lane from file-only macOS TTS/STT receipts into a live speaker-to-room loop with Mac mic STT and Android mic co-witness telemetry.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-models",
+    "speech-teacher-receipt",
+    "loopback-learning",
+    "android-mac-local-carrier"
+  ],
+  "spec_ids": [
+    "coherence-substrate-speech-teacher-receipt",
+    "coherence-substrate-loopback-learning",
+    "android-sense-organ"
+  ],
+  "task_ids": [
+    "2026-06-16-live-dual-mic-speech-loop"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "physical-proof-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "files_owned": [
+    "scripts/live_speech_loop_receipt.sh",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-live-loop-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-16_live_speech_loop.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-16_live_speech_loop.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/live_speech_loop_receipt.sh",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-live-loop-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-16_live_speech_loop.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-16_live_speech_loop.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    ".cache/live-speech-loop/20260615T173944Z/live-speech-loop-receipt.json",
+    ".cache/live-speech-loop/20260615T173944Z/mac-mic-room.wav",
+    ".cache/live-speech-loop/20260615T173944Z/android-mic-window.jsonl",
+    ".cache/live-speech-loop/screens/mac-witness-live-speech-loop.png",
+    "http://127.0.0.1:8800/state",
+    "local:adb-device-R5CW20DK17A"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "coord claim live-dual-mic-speech-loop \"Promote speech teacher from file TTS receipt to live speaker->Mac mic plus Android mic witness receipt; no new toy stack.\"",
+      "curl -sS --max-time 3 http://127.0.0.1:8800/state | jq '{present,frames,sample_frames,heartbeat_frames,kernel_ok,latest:{mic_rms:.latest.mic_rms,channels_offered:.latest.channels_offered,organs_active:.latest.organs_active,body_state:.latest.body_state}}'",
+      "scripts/live_speech_loop_receipt.sh \"form native speech loop listens with two microphones\"",
+      "jq '{status,text,transcript,transcript_overlap_percent,mac_mic_samples,duration_ms,mac_mic_rms_ppm,android_mic_samples,android_mic_min_rms_ppm,android_mic_max_rms_ppm,android_mic_avg_rms_ppm}' .cache/live-speech-loop/20260615T173944Z/live-speech-loop-receipt.json",
+      "python3 -m py_compile experiments/coherence-sense-android/coherence-sense-eval.py experiments/coherence-sense-android/mac-witness-server.py experiments/coherence-sense-android/hati_witness_discovery.py",
+      "experiments/coherence-sense-android/macos-witness-service.sh install --mode recognition --port 8800 --python /opt/homebrew/bin/python3",
+      "curl -sS --max-time 3 http://127.0.0.1:8800/state | jq '{present,kernel_ok,recognized,predicted,speech_loop}'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-live-loop-band.fk",
+      "bash -n scripts/live_speech_loop_receipt.sh && cd form && bash scripts/fourth-arm-gate.sh speech-live-loop",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide first reported a sibling continuity blocker in /Users/ursmuff/source/Coherence-Network on branch claude/metal-m4-silicon-proven. User said continue; the documented temporary bypass PROMPT_GATE_SKIP_CONTINUITY=1 was used and start-gate passed in linked worktree mode. Wellness passed with unrelated witness-trace latency attention. Live Android/Mac witness was already present at http://127.0.0.1:8800/state with Android mic active. The live loop played known text through the Mac speaker, recorded the room through the Mac microphone, transcribed the Mac mic WAV with local whisper-cli ggml-large-v3-turbo, and sampled the Android witness mic lane during the same window. Receipt passed: transcript_overlap_percent=100, mac_mic_samples=81600, duration_ms=5100, mac_mic_rms_ppm=10544, android_mic_samples=28, android_mic_min_rms_ppm=1151, android_mic_max_rms_ppm=9354, android_mic_avg_rms_ppm=1720. The Mac witness was restarted from this worktree and /state exposes speech_loop.status=pass, overlap=100, mac_mic_samples=81600, android_mic_samples=28. The in-app browser dashboard showed SPEECH LOOP pass · 100% with Mac and Android mic metrics. Form validation returned 255 with fourth arm: 1 band(s) four-way; 1 ok, 0 divergent. The manifest gate returned PASS-4WAY speech-live-loop."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy in this slice. The local Mac speaker/mic, local Whisper model, and live Android witness were used as the physical proof surface."
+  },
+  "phase_gate": {
+    "phase": "live-dual-mic-speech-loop",
+    "gate": "Known text must be played through a real speaker, heard by the Mac mic, transcribed locally, and co-witnessed by Android mic telemetry before becoming live speech training data.",
+    "state": "local-proof-pass-ci-pending",
+    "can_move_next_phase": false,
+    "next": "Add Android raw PCM upload or Android-side STT so both mics can produce transcript/error receipts, not only Mac transcript plus Android RMS co-witness telemetry."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The speech teacher lane now has a repeatable live acoustic training loop: text to TTS speaker playback, Mac mic STT transcript/error receipt, Android mic co-witness metrics, and Form-native four-way acceptance as a live dual-mic speech sample.",
+    "public_endpoints": [
+      "local:http://127.0.0.1:8800/state",
+      "local:mac-speaker",
+      "local:mac-microphone",
+      "local:android-witness-mic"
+    ],
+    "test_flows": [
+      "Render known text with macOS say.",
+      "Play the audio through the Mac speaker while recording the Mac microphone.",
+      "Poll the Android witness mic lane during the same window.",
+      "Transcribe the Mac microphone recording with local whisper-cli and compare to expected text.",
+      "Hash retained audio/transcript artifacts and write a live speech loop receipt.",
+      "Lower the receipt through Form and prove the live dual-mic sample four-way."
+    ],
+    "summary": "Local end-to-end live speech loop passed with real speaker playback, Mac mic recording, local Whisper transcript, and Android mic co-witness telemetry."
+  }
+}

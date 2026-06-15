@@ -553,6 +553,63 @@
             1
             0))
 
+    (defn sml-live-speech-loop-floor ()
+        (list
+            "known text is played through a real speaker into the room"
+            "Mac microphone audio is retained, hashed, and transcribed by local STT"
+            "Android microphone telemetry co-witnesses the same speech window"))
+    (defn sml-live-speech-loop-north-star ()
+        (list
+            "speech training windows carry multi-device mic paths as native data"
+            "TTS/STT teachers retire only after native candidates win heldout dual-mic receipts"
+            "Android raw PCM, Mac raw PCM, and future mesh mics lower into the same receipt family"))
+    (defn sml-live-speech-loop-receipt
+        (teacher-receipt speaker-channel mac-mic-channel android-mic-samples android-min-rms android-max-rms android-avg-rms android-present floor north-star)
+        (list teacher-receipt speaker-channel mac-mic-channel android-mic-samples android-min-rms android-max-rms android-avg-rms android-present floor north-star))
+    (defn sml-lsl-teacher (receipt) (nth receipt 0))
+    (defn sml-lsl-speaker (receipt) (nth receipt 1))
+    (defn sml-lsl-mac-mic (receipt) (nth receipt 2))
+    (defn sml-lsl-android-samples (receipt) (nth receipt 3))
+    (defn sml-lsl-android-min-rms (receipt) (nth receipt 4))
+    (defn sml-lsl-android-max-rms (receipt) (nth receipt 5))
+    (defn sml-lsl-android-avg-rms (receipt) (nth receipt 6))
+    (defn sml-lsl-android-present (receipt) (nth receipt 7))
+    (defn sml-lsl-floor (receipt) (nth receipt 8))
+    (defn sml-lsl-north-star (receipt) (nth receipt 9))
+    (defn sml-live-speech-loop-valid? (receipt)
+        (if (and
+                (eq (sml-speech-teacher-receipt-valid? (sml-lsl-teacher receipt)) 1)
+                (and
+                    (str_eq (sml-lsl-speaker receipt) "mac-speaker")
+                    (and
+                        (str_eq (sml-lsl-mac-mic receipt) "mac-microphone")
+                        (and
+                            (ge (sml-lsl-android-samples receipt) 3)
+                            (and
+                                (ge (sml-lsl-android-present receipt) 1)
+                                (and
+                                    (gt (sml-lsl-android-avg-rms receipt) 0)
+                                    (and
+                                        (ge (sml-lsl-android-max-rms receipt) (sml-lsl-android-min-rms receipt))
+                                        (and
+                                            (gt (len (sml-lsl-floor receipt)) 0)
+                                            (gt (len (sml-lsl-north-star receipt)) 0)))))))))
+            1
+            0))
+    (defn sml-live-speech-loop-feature (receipt)
+        (list
+            (sml-str-overlap (sml-lsl-teacher receipt))
+            (sml-str-rms-ppm (sml-lsl-teacher receipt))
+            (sml-lsl-android-avg-rms receipt)
+            (sml-lsl-android-max-rms receipt)
+            (sml-lsl-android-samples receipt)
+            (sml-str-duration-ms (sml-lsl-teacher receipt))))
+    (defn sml-live-speech-loop-sample (label receipt)
+        (sml-sample
+            label
+            (sml-live-speech-loop-feature receipt)
+            "speech:live-dual-mic"))
+
     (defn sml-mesh-row (tts-label stt-label expected)
         (list tts-label stt-label expected))
     (defn sml-mesh-tts (row) (nth row 0))
