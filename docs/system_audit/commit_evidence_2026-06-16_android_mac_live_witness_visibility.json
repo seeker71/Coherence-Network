@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "codex/android-install-run-20260616",
+  "commit_scope": "Make the Android Coherence Sense app count the local Mac witness as a visible peer/channel and make the Mac witness dashboard show live Form-kernel recognition plus audio, video, GPU, screen, and channel receipts.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "hati-mesh",
+    "sense-organ-ripening",
+    "form-native-live-witness",
+    "android-mac-local-carrier"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence",
+    "host-kernel-resource-lanes",
+    "channel-loopback"
+  ],
+  "task_ids": [
+    "android-local-witness-peer-count-20260616",
+    "mac-witness-live-receipts-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "local-device-proof"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-16_android_mac_live_witness_visibility.json"
+  ],
+  "change_files": [
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/coherence-sense-eval.py",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-16_android_mac_live_witness_visibility.json"
+  ],
+  "evidence_refs": [
+    "http://127.0.0.1:8800",
+    "http://192.168.0.7:8800",
+    "local:launchd-earth.hati.coherence-sense.mac-witness",
+    ".cache/android-install-run/mac-witness-8800-form-kernel-live-final.png",
+    ".cache/android-install-run/android-coherence-sense-0.4-live-kernel-witness.png",
+    ".cache/android-install-run/android-coherence-sense-0.4-live-channels-kernel-witness.png"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "adb devices -l",
+      "curl -sS --max-time 3 http://127.0.0.1:8800/state | jq '{present,frames,sample_frames,heartbeat_frames,kernel_ok,recognized,predicted,latest:{mic_rms:.latest.mic_rms,camera_luma:.latest.camera_luma,camera_samples:.latest.camera_samples,gpu_samples:.latest.gpu_samples,channels_offered:.latest.channels_offered,organs_active:.latest.organs_active}}'",
+      "python3 -m py_compile experiments/coherence-sense-android/mac-witness-server.py experiments/coherence-sense-android/coherence-sense-eval.py experiments/coherence-sense-android/hati_witness_discovery.py",
+      "git diff --check",
+      "JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11 ANDROID_HOME=/opt/homebrew/share/android-commandlinetools ./gradlew :app:assembleDebug",
+      "cargo build --release",
+      "experiments/coherence-sense-android/macos-witness-service.sh restart --mode recognition --port 8800 --python /opt/homebrew/bin/python3",
+      "adb exec-out screencap -p > .cache/android-install-run/android-coherence-sense-0.4-live-kernel-witness.png"
+    ],
+    "notes": "Prompt guide passed in dirty continuation mode with no blocking risk. ADB showed SM-S918U1 device R5CW20DK17A. Duplicate 18800 witness advertising was stopped for this session so Android discovers one Mac witness at http://192.168.0.7:8800. The Mac witness launchd service is running at http://127.0.0.1:8800 and advertises _hati-witness._tcp mode recognition. The local Form kernel release binary was built successfully. Final witness state after restart: present=true, sample_frames=12, heartbeat_frames=4, kernel_ok=true, recognized=still, predicted=still, checks=11, errors=0, challenger=still, chal_checks=13, protos=14. Latest live receipt included mic_rms=0.002248507300374206, camera_luma=0.0035968527538403896, camera_samples=8522, gpu_samples=353, channels_offered=[wifi,screen,ble,audio,video], and organs_active=[accelerometer,camera,gps,gpu,gyroscope,light,magnetometer,mic,network,screen]. Android screenshot shows state 'local Mac witness connected; public mesh quiet', present peers 1, connected channels 1, offered 5, best shared carrier wifi:mac-witness. Android channels screenshot shows 10 organs, mic granted/rms, camera granted/luma, screen QR/write active, Bluetooth enabled, and body peers 1."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The Mac LaunchAgent and the real Android phone were updated and verified locally. Public APK/release publishing is not part of this slice."
+  },
+  "phase_gate": {
+    "phase": "android-mac-live-witness-visibility",
+    "gate": "Android must show the local Mac witness as an actual peer/channel when public mesh is quiet, and the Mac app must show the live Form-kernel recognition stream with audio/video/GPU/screen receipts.",
+    "state": "local-proof-pass-ci-pending",
+    "can_move_next_phase": false,
+    "next": "Push the branch, run CI, and publish/install the signed Android artifact when release scope is opened."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Android app no longer reports zero peers/channels when it is connected to the local Mac witness. The Mac app at http://127.0.0.1:8800 shows the live phone stream, Form-kernel recognition and learning counters, and visible audio, video, GPU, screen, channel, and active-organ receipts.",
+    "public_endpoints": [
+      "local:http://127.0.0.1:8800",
+      "lan:http://192.168.0.7:8800",
+      "local:adb-device-R5CW20DK17A"
+    ],
+    "test_flows": [
+      "Run one Mac witness service at 8800 and verify mDNS descriptor plus /state.",
+      "Open Android app on the real phone, let it auto-discover http://192.168.0.7:8800, and verify the visible Mesh panel reports local witness peer/channel instead of zero.",
+      "Capture Android channel lanes proving mic, camera, screen, Bluetooth, body peers, and sensor organs are visible.",
+      "Open the Mac dashboard in the in-app browser and verify kernel recognition, prediction, challenger agreement, sample/heartbeat counts, and latest field receipts."
+    ],
+    "summary": "Local end-to-end Mac plus Android witness visibility passed with real phone samples and a local Form-kernel recognition witness."
+  }
+}
