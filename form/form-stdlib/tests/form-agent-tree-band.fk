@@ -1,0 +1,36 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-agent-protocol.fk form-stdlib/choice-receipt.fk form-stdlib/form-agent-tree.fk
+;
+; form-agent-tree-band — the step that makes the agent a TREE, not a transcript:
+; it forks a new state from the parent (leaving the parent a checkpoint) AND emits a
+; trainable choice-receipt — the pair the borrowed linear loop discards.
+;
+; Verdict 31 when every claim lands:
+;   1   the step FORKS: the child state has the new tool message the parent lacked
+;   2   the step emits a real cr-choice-receipt (the trainable signal) -> fat-node? holds
+;   4   the receipt carries the OUTCOME (success) — learnable, not opaque
+;   8   the receipt carries the realized RECIPE (selected-path = the tool name) — recipe-realize provenance
+;   16  BACKTRACK: fat-step is pure — a second step from the SAME parent yields another
+;       child, and the parent is UNCHANGED (still a checkpoint). The tree forks.
+(do
+    (let S (cr-outcome-success))
+    (let parent (list (ap-msg "user" (list (ap-text "list the files")))))
+    (let callA  (ap-tool-call "c1" "bash" "ls"))
+    (let callB  (ap-tool-call "c2" "read_file" "README.md"))
+    (let nodeA  (fat-step parent callA "a.txt b.txt" S 80 1))
+    (let nodeB  (fat-step parent callB "# readme" S 70 1))
+
+    ; 1 — the child forked: it has one more message than the parent
+    (let c0 (if (eq (len (fat-node-state nodeA)) (add (len parent) 1)) 1 0))
+    ; 2 — a real receipt rode along (fat-node? checks the cr-choice-receipt)
+    (let c1 (if (eq (fat-node? nodeA) 1) 2 0))
+    ; 4 — the outcome is readable for training
+    (let c2 (if (str_eq (cr-receipt-outcome (fat-node-receipt nodeA)) "success") 4 0))
+    ; 8 — the realized recipe is recorded (selected-path = the tool name)
+    (let c3 (if (str_eq (cr-receipt-selected-path (fat-node-receipt nodeA)) "bash") 8 0))
+    ; 16 — backtrack: two children from one parent differ, and the parent is untouched
+    (let c4 (if (and (eq (len parent) 1)
+                     (and (str_eq (cr-receipt-selected-path (fat-node-receipt nodeB)) "read_file")
+                          (eq (len (fat-node-state nodeB)) 2)))
+                16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
