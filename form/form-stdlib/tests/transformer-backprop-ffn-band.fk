@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-backprop-ffn-band — backprop composes THROUGH the gelu nonlinearity, three-way in pure
+; Form. The FFN sub-block y = W2·gelu(W1·x + b1) + b2 is the affine vjp twice with ONE new node between
+; them: the elementwise gelu derivative. gelu' is composed from tn-tanh (the SAME z and constants tn-gelu
+; uses), so it is exact-bit-deterministic across kernels. The 2→2→2 MLP trains from a non-trivial init
+; (so the chain through gelu is genuinely exercised) with lr=0.1 (fp64) and the loss falls toward 0.
+;
+; Verdict 63 when every claim lands:
+;   1    gelu'(0) = 0.5 exactly — the bit-anchor (z=0, tanh(0)=0 -> 0.5·(1+0))
+;   2    gelu'(1) = 1.082964 — the body's deterministic value; gelu' is NOT identity (the nonlinearity
+;        modulates the gradient, which is the whole reason the chain node exists)
+;   4    gelu'(-0.75) = 0.001062 — the dip near gelu's minimum where the slope nearly vanishes (strange edge)
+;   8    the FFN's unfit start carries positive loss
+;   16   ONE SGD step through the gelu chain lowers the loss — learning happened through the nonlinearity
+;   32   thirty steps lower it further — it converges through the nonlinearity
+(do
+    (let w1 (list (list 0.3 -0.2) (list 0.1 0.4)))
+    (let b1 (list 0.0 0.0))
+    (let w2 (list (list 0.5 0.2) (list -0.3 0.6)))
+    (let b2 (list 0.0 0.0))
+    (let x  (list 1.0 0.5))
+    (let t  (list 0.4 -0.2))
+    (let lr 0.1)
+
+    (let l0  (tbp-mlp-loss w1 b1 w2 b2 x t))
+    (let l1  (tbp-mlp-train-loss w1 b1 w2 b2 x t lr 1))
+    (let l30 (tbp-mlp-train-loss w1 b1 w2 b2 x t lr 30))
+
+    (let c0 (if (eq (round (mul (tbp-gelu-d1 0.0) 1000000.0)) 500000) 1 0))
+    (let c1 (if (eq (round (mul (tbp-gelu-d1 1.0) 1000000.0)) 1082964) 2 0))
+    (let c2 (if (eq (round (mul (tbp-gelu-d1 -0.75) 1000000.0)) 1062) 4 0))
+    (let c3 (if (gt l0 0.0) 8 0))
+    (let c4 (if (lt l1 l0) 16 0))
+    (let c5 (if (lt l30 l1) 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

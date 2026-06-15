@@ -1,10 +1,11 @@
 {
   "date": "2026-06-15",
   "thread_branch": "claude/funny-tharp-bcf322",
-  "commit_scope": "The learning kernel on real silicon: backprop training runs on the M4 Max GPU. transformer-backprop.fk is the autodiff-gradient-cell wall opened at the affine node (db=gy, dW=outer(gy,x), the chain dx=Wt.gy, plus an SGD update generalized from form-train-step.fk's one-weight atom to a whole weight matrix and bias vector) -- proven 127 three-way (Go=Rust=TS), source and binary, 0 divergent. jit-tensor-emit.fk's new jte-affine-train-msl emits that SGD step as a Metal Shading Language kernel (one GPU thread per output row; forward dot in tb-dot's exact DOWNWARD right-fold; the in-place update row -= lr*g*x and b -= lr*g), byte-stable three-way by tests/affine-train-emit-band.fk (verdict 7). LIVE GPU WITNESS scripts/metal_backprop_audit.sh drives the emission through the Go kernel's mouth, the Metal runtime compiles it, and value parity is gated against a CPU fp32 reference computed in the recipe's own op order. fp32 is the lane MSL declares (no f64 in device code); mul and add are split through a named temporary so no compiler contraction reorders the recipe.",
+  "commit_scope": "The learning kernel on real silicon: backprop training runs on the M4 Max GPU. transformer-backprop.fk is the autodiff-gradient-cell wall opened at the affine node (db=gy, dW=outer(gy,x), the chain dx=Wt.gy, plus an SGD update generalized from form-train-step.fk's one-weight atom to a whole weight matrix and bias vector) -- proven 127 three-way (Go=Rust=TS), source and binary, 0 divergent. jit-tensor-emit.fk's new jte-affine-train-msl emits that SGD step as a Metal Shading Language kernel (one GPU thread per output row; forward dot in tb-dot's exact DOWNWARD right-fold; the in-place update row -= lr*g*x and b -= lr*g), byte-stable three-way by tests/affine-train-emit-band.fk (verdict 7). LIVE GPU WITNESS scripts/metal_backprop_audit.sh drives the emission through the Go kernel's mouth, the Metal runtime compiles it, and value parity is gated against a CPU fp32 reference computed in the recipe's own op order. fp32 is the lane MSL declares (no f64 in device code); mul and add are split through a named temporary so no compiler contraction reorders the recipe. The autodiff wall then advances past the affine node: the gelu' vjp (composed from tn-tanh) and the FFN sub-block backward (y = W2.gelu(W1.x+b1)+b2, dh1 = da elementwise-times gelu'(h1)) train a 2-2-2 MLP through the nonlinearity with strictly decreasing loss, gelu'(0)=0.5 / gelu'(1)=1.082964 / gelu'(-0.75)=0.001062 pinned bit-exact -- tests/transformer-backprop-ffn-band.fk -> 63 three-way (source and binary), 3-kernel only on the same transformer-family floor.",
   "files_owned": [
     "form/form-stdlib/transformer-backprop.fk",
     "form/form-stdlib/tests/transformer-backprop-band.fk",
+    "form/form-stdlib/tests/transformer-backprop-ffn-band.fk",
     "form/form-stdlib/jit-tensor-emit.fk",
     "form/form-stdlib/tests/affine-train-emit-band.fk",
     "scripts/metal_backprop_audit.sh",
@@ -16,6 +17,7 @@
       "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/tests/transformer-backprop-band.fk",
       "cd form && ./validate.sh --binary form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/tests/transformer-backprop-band.fk",
       "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/affine-train-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/tests/transformer-backprop-ffn-band.fk",
       "scripts/metal_backprop_audit.sh 32 32 100",
       "scripts/metal_backprop_audit.sh 1280 1280 200"
     ],
@@ -23,6 +25,11 @@
     "observed_delta": {
       "backprop_band_verdict": 127,
       "backprop_band_divergent": 0,
+      "ffn_backprop_band_verdict": 63,
+      "gelu_prime_0": 0.5,
+      "gelu_prime_1": 1.082964,
+      "gelu_prime_neg075": 0.001062,
+      "ffn_mlp_loss_trajectory": "0.169459 -> 0.085189 (step 1) -> ~0 (step 30)",
       "emit_band_verdict": 7,
       "emitted_msl_bytes": 742,
       "witness_32": {
@@ -125,6 +132,7 @@
   "evidence_refs": [
     "form/form-stdlib/transformer-backprop.fk",
     "form/form-stdlib/tests/transformer-backprop-band.fk",
+    "form/form-stdlib/tests/transformer-backprop-ffn-band.fk",
     "form/form-stdlib/jit-tensor-emit.fk",
     "form/form-stdlib/tests/affine-train-emit-band.fk",
     "scripts/metal_backprop_audit.sh",
@@ -133,6 +141,7 @@
   "change_files": [
     "form/form-stdlib/transformer-backprop.fk",
     "form/form-stdlib/tests/transformer-backprop-band.fk",
+    "form/form-stdlib/tests/transformer-backprop-ffn-band.fk",
     "form/form-stdlib/jit-tensor-emit.fk",
     "form/form-stdlib/tests/affine-train-emit-band.fk",
     "scripts/metal_backprop_audit.sh",
