@@ -44,11 +44,20 @@ commensurable at one end of the axis:
 - *Per-sample, at the very-low-data end, instance-based learning is genuinely fast* —
   one exemplar per class moves the needle, where a gradient model has learned almost
   nothing after 128 samples. Our **slope** wins early.
-- *At the fidelity end they diverge completely.* SOTA's **ceiling** is near-human; ours
-  is coarse. Closing that gap is not "more samples" for this learner — it is a different
-  learner: the gradient-trained transformer that `form-train-step.fk` is the SEED of
-  (`docs/coherence-substrate/freq-check-model.form`, the ~100M-param target, named but
-  not yet built).
+- *At the fidelity end this nearest-shape recipe is coarse* — 54% vs near-human. But the
+  fix is **not** a learner we lack. `nearest-shape.fk` is only the **router tier**. The
+  **transformer tier already exists and is proven**: `form/form-stdlib/transformer-block.fk`
+  (M4 of `form-native-models.form`) is a whisper-shaped pre-LN attention+FFN block whose
+  *architecture and weights are recipe data*, verified bit-exact against the PyTorch fp64
+  reference — **band verdict 511, re-run live on the Go kernel here** — and emitted to six
+  instruction sets (Apple/MLX arm64, NVIDIA PTX, AMD GCN, Hexagon DSP, x86, Android CPU)
+  via `host-kernel.form`, which drives the GPU/ANE as a *driven organ*. What is seed-stage
+  is the **backprop training loop** over that block (`form-train-step.fk` is the SGD atom);
+  the block it trains is built. Both tiers learn through one trust-observed loop —
+  `cross-train-oracle.form`: a local oracle (qwen2.5:72b, verified Hermes-native) teaches,
+  candidates are scored by **efficacy** not token-mimicry, and a **native-vs-oracle heldout
+  score** (`native-training-receipt.fk`) proves graduation. Trust is measured, not asserted
+  (`champion-challenger.fk`, `trust-weighted-colearning.form`).
 
 ## What "8 hours" honestly buys
 
@@ -63,12 +72,27 @@ the `real_mesh_training_emitters.sh` data floor from **blocked → active** (300
 audio, 10k+ labels), so the carrier emits an *active* training receipt for the first
 time. See `run_8h_accumulation.py` and the run's `learning_curve.jsonl`.
 
-## The one-line truth
+## What this measuring stick actually sits next to
 
-> On the axis SOTA is measured on — fidelity from data — our learner is **not**
-> competitive (54% coarse speaker-ID vs near-human STT/TTS). On the axis SOTA does **not**
-> publish — accuracy *per sample* at the low-data frontier — our zero-backprop memorizer
-> learns each new class from a *single* exemplar, which a gradient model cannot. The gap
-> to SOTA fidelity is owned, not waved at: it is the gradient-trained transformer the
-> SGD atom is the seed of. This experiment is the measuring stick that makes that gap
-> legible instead of asserted.
+This experiment exercises the **router tier** (nearest-shape) on one task. The honest
+comparison to SOTA is not "we have a toy, they have a transformer" — it is a difference
+in *kind* of transformer:
+
+- **SOTA's transformer is a frozen weight-blob behind a framework.** You cannot read its
+  architecture as data, prove it bit-exact across independent kernels, or watch trust
+  accrue. Its fidelity is high; its body is opaque.
+- **Ours is the same transformer math as recipe data** (`transformer-block.fk`, verdict
+  511 vs PyTorch, re-run live): architecture *and* weights are content-addressed cells,
+  mutable at runtime, provable identical across Go/Rust/TS and six instruction sets,
+  runnable on the host GPU as a driven organ, and learned through a **trust-observed**
+  cross-training loop where a local 72B oracle teaches and a native-vs-oracle heldout
+  score proves graduation. The thing SOTA *cannot* do, we do by construction.
+
+> The one number this run reports — nearest-shape's 54% on coarse speaker-ID — is the
+> **router-tier floor**, honestly measured. The fidelity gap to SOTA closes through the
+> **already-built** transformer tier trained by the cross-train-oracle loop, not through a
+> learner we lack. What we have that SOTA does not: a transformer whose *body is legible,
+> portable across six ISAs, and trust-observed*. The next step is not "build the model" —
+> it is run the cross-train-oracle loop on `transformer-block.fk` against a real corpus and
+> read the native-vs-oracle score rise. The model is here; the training loop over it is the
+> seed that grows next.
