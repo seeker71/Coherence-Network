@@ -132,4 +132,81 @@
     (defn mds-chunk-range-receipt-count (r) (nth r 7))
     (defn mds-chunk-range-receipt-valid-bit (r) (nth r 8))
 
+    ; Optimizer-state delta slices: share the state change as a substrate
+    ; slice beside the weight delta. This validates the cell/ref/provenance
+    ; boundary; optimizer-step math is a separate ML-kernel wall.
+    (defn mds-nonzero-vector? (xs)
+        (if (eq (len xs) 0) 0
+            (if (eq (head xs) 0) (mds-nonzero-vector? (tail xs)) 1)))
+    (defn mds-optimizer-state-ref? (ref)
+        (if (mv-cell-ref-valid? ref)
+            (if (str_eq (mv-cell-kind ref) (mv-kind-optimizer-state)) 1 0)
+            0))
+    (defn mds-optimizer-delta-slice
+        (model base optimizer-ref before-state after-state step delta range-slice proof source)
+        (list
+            "model-optimizer-delta-slice"
+            model
+            base
+            optimizer-ref
+            before-state
+            after-state
+            step
+            delta
+            range-slice
+            proof
+            source))
+    (defn mds-optimizer-delta-slice? (value) (mv-row? value "model-optimizer-delta-slice" 11))
+    (defn mds-opt-model (r) (nth r 1))
+    (defn mds-opt-base (r) (nth r 2))
+    (defn mds-opt-ref (r) (nth r 3))
+    (defn mds-opt-before (r) (nth r 4))
+    (defn mds-opt-after (r) (nth r 5))
+    (defn mds-opt-step (r) (nth r 6))
+    (defn mds-opt-delta (r) (nth r 7))
+    (defn mds-opt-range (r) (nth r 8))
+    (defn mds-opt-proof (r) (nth r 9))
+    (defn mds-opt-source (r) (nth r 10))
+    (defn mds-optimizer-delta-valid? (r)
+        (if (mds-optimizer-delta-slice? r)
+            (if (mds-source-ok? (mds-opt-source r))
+                (if (mv-nonempty? (mds-opt-model r))
+                    (if (mv-nonempty? (mds-opt-base r))
+                        (if (mds-optimizer-state-ref? (mds-opt-ref r))
+                            (if (mv-nonempty? (mds-opt-before r))
+                                (if (mv-nonempty? (mds-opt-after r))
+                                    (if (not (str_eq (mds-opt-before r) (mds-opt-after r)))
+                                        (if (gt (mds-opt-step r) 0)
+                                            (if (mds-nonzero-vector? (mds-opt-delta r))
+                                                (if (mds-chunk-range-valid? (mds-opt-range r))
+                                                    (if (mv-nonempty? (mds-opt-proof r)) 1 0)
+                                                    0)
+                                                0)
+                                            0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn mds-optimizer-delta-receipt (delta-slice)
+        (list
+            "model-optimizer-delta-receipt"
+            (mds-opt-model delta-slice)
+            (mv-cell-id (mds-opt-ref delta-slice))
+            (mds-opt-before delta-slice)
+            (mds-opt-after delta-slice)
+            (mds-opt-step delta-slice)
+            (len (mds-opt-delta delta-slice))
+            (mds-range-root (mds-opt-range delta-slice))
+            (mds-optimizer-delta-valid? delta-slice)))
+    (defn mds-optimizer-delta-receipt? (value) (mv-row? value "model-optimizer-delta-receipt" 9))
+    (defn mds-optimizer-delta-receipt-step (r) (nth r 5))
+    (defn mds-optimizer-delta-receipt-width (r) (nth r 6))
+    (defn mds-optimizer-delta-receipt-root (r) (nth r 7))
+    (defn mds-optimizer-delta-receipt-valid-bit (r) (nth r 8))
+
     0)
