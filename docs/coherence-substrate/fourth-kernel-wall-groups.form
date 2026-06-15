@@ -14,15 +14,17 @@
 
   (current-floor
     (control-backtracking "form-control-backtracking-ml now proves the Form-native primitive vocabulary needed by model layers: if, recursion/fold, any/all, reversible cells, task states, match/fail/fail-cut/cut/stop/choice, capture, opt rollback, and star repetition.")
+    (source-control-transfer "bml-native-source-control now proves bounded BML source control-transfer rows for break, continue, throw, and try/catch as Form-native stop/choice/fail/return effects.")
     (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
     (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
 
   (group
     (id control-and-backtracking)
     (status active)
     (why "A useful ML kernel/layer/model needs total control flow and total backtracking. Without this, training loops, decode loops, parser recovery, reversible state, retry, and route choice cannot be trusted on the fourth kernel.")
-    (closed-now primitive-control-and-engine-backtracking)
-    (next-walls source-break source-continue source-try source-throw source-catch arbitrary-while for switch source-restore-spelling)
+    (closed-now primitive-control-and-engine-backtracking bounded-source-control-transfer)
+    (next-walls general-break-continue-source-lowering general-try/throw-catch-source-lowering arbitrary-while for switch source-restore-spelling)
     (parallel-card
       (goal "Lower remaining source-level BML control blocks into the proven Form-native control/backtracking primitives.")
       (files_allowed form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/bml-*-band.fk docs/coherence-substrate/bml-native-north-star.form docs/coherence-substrate/fourth-kernel-wall-groups.form)

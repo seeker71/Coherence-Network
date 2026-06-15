@@ -1,0 +1,45 @@
+; tests/bml-native-source-control-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/bml-native-source-control.fk
+;
+; Verdict 2047 when BML-native source control carries source receipts for break,
+; continue, throw, and try/catch into Form-native effect rows with bounded loop
+; transfer behavior and an explicit next compiler code point.
+;
+(do
+    (let source (bnsc-source "bml" "container-Rule.bml" 12))
+    (let break-row (bnsc-break "scan" source))
+    (let continue-row (bnsc-continue "scan" source))
+    (let throw-row (bnsc-throw 41 (bnsc-source "bml" "container-Rule.bml" 18)))
+    (let init (bnsc-loop-state "running" "scan" 3 0 source))
+    (let after-continue (bnsc-loop-step init continue-row))
+    (let after-break (bnsc-loop-step after-continue break-row))
+    (let after-throw (bnsc-loop-step init throw-row))
+    (let caught (bnsc-try-catch throw-row 99 source))
+    (let passthrough (bnsc-try-catch (bnsc-value 7 source) 99 source))
+
+    (sum
+        (list
+            (if (eq (bnsc-effect? break-row) 1) 1 0)
+            (if (str_eq (bnsc-effect-primitive break-row) "stop") 2 0)
+            (if (str_eq (bnsc-effect-primitive continue-row) "choice") 4 0)
+            (if (str_eq (bnsc-effect-primitive throw-row) "fail") 8 0)
+            (if (str_eq (bnsc-loop-mode after-continue) "running")
+                (if (eq (bnsc-loop-cursor after-continue) 4) 16 0)
+                0)
+            (if (str_eq (bnsc-loop-mode after-break) "stopped")
+                (if (str_eq (bnsc-loop-label after-break) "scan") 32 0)
+                0)
+            (if (str_eq (bnsc-loop-mode after-throw) "failed")
+                (if (eq (bnsc-loop-value after-throw) 41) 64 0)
+                0)
+            (if (str_eq (bnsc-effect-kind caught) "value")
+                (if (eq (bnsc-effect-value caught) 99) 128 0)
+                0)
+            (if (eq (bnsc-effect-value passthrough) 7) 256 0)
+            (if (eq (bnsc-source-line (bnsc-effect-source throw-row)) 18) 512 0)
+            (if (str_eq
+                    (bnsc-next-code-point)
+                    "form/form-stdlib/grammars/bml.fk:general break/continue/throw/try-catch source nodes -> bml-native-source-control effects")
+                1024
+                0))))

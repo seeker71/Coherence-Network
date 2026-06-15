@@ -1,0 +1,71 @@
+; bml-native-source-control.fk - bounded source-control transfer floor.
+;
+; This is the minimum executable row for BML source control transfer before the
+; broad grammar lowerer is complete: source receipts become Form-native break,
+; continue, throw, and try/catch effect rows. It does not claim arbitrary
+; while/for/switch lowering.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (defn bnsc-source (language path line)
+        (list "source" language path line))
+    (defn bnsc-source-language (source) (nth source 1))
+    (defn bnsc-source-path (source) (nth source 2))
+    (defn bnsc-source-line (source) (nth source 3))
+
+    (defn bnsc-effect (kind label value primitive source)
+        (list "bml-native-source-control-effect" kind label value primitive source))
+    (defn bnsc-effect? (row)
+        (if (eq (len row) 6)
+            (str_eq (nth row 0) "bml-native-source-control-effect")
+            0))
+    (defn bnsc-effect-kind (row) (nth row 1))
+    (defn bnsc-effect-label (row) (nth row 2))
+    (defn bnsc-effect-value (row) (nth row 3))
+    (defn bnsc-effect-primitive (row) (nth row 4))
+    (defn bnsc-effect-source (row) (nth row 5))
+
+    (defn bnsc-break (label source)
+        (bnsc-effect "break" label 0 "stop" source))
+    (defn bnsc-continue (label source)
+        (bnsc-effect "continue" label 0 "choice" source))
+    (defn bnsc-throw (value source)
+        (bnsc-effect "throw" "" value "fail" source))
+    (defn bnsc-value (value source)
+        (bnsc-effect "value" "" value "return" source))
+
+    (defn bnsc-loop-state (mode label cursor value source)
+        (list "bml-native-source-control-loop" mode label cursor value source))
+    (defn bnsc-loop-mode (state) (nth state 1))
+    (defn bnsc-loop-label (state) (nth state 2))
+    (defn bnsc-loop-cursor (state) (nth state 3))
+    (defn bnsc-loop-value (state) (nth state 4))
+    (defn bnsc-loop-source (state) (nth state 5))
+
+    (defn bnsc-loop-step (state effect)
+        (if (str_eq (bnsc-effect-kind effect) "break")
+            (bnsc-loop-state "stopped" (bnsc-effect-label effect) (bnsc-loop-cursor state) 0 (bnsc-effect-source effect))
+            (if (str_eq (bnsc-effect-kind effect) "continue")
+                (bnsc-loop-state "running" (bnsc-effect-label effect) (add (bnsc-loop-cursor state) 1) 0 (bnsc-effect-source effect))
+                (if (str_eq (bnsc-effect-kind effect) "throw")
+                    (bnsc-loop-state "failed" (bnsc-loop-label state) (bnsc-loop-cursor state) (bnsc-effect-value effect) (bnsc-effect-source effect))
+                    (bnsc-loop-state "running" (bnsc-loop-label state) (bnsc-loop-cursor state) (bnsc-effect-value effect) (bnsc-loop-source state))))))
+
+    (defn bnsc-catch (effect handler-value source)
+        (if (str_eq (bnsc-effect-kind effect) "throw")
+            (bnsc-value handler-value source)
+            effect))
+
+    (defn bnsc-try-catch (body-effect handler-value source)
+        (bnsc-catch body-effect handler-value source))
+
+    (defn bnsc-required-primitives (_x)
+        (list "stop" "choice" "fail" "return"))
+    (defn bnsc-required-primitive-count (_x)
+        (len (bnsc-required-primitives 0)))
+
+    (defn bnsc-next-code-point ()
+        "form/form-stdlib/grammars/bml.fk:general break/continue/throw/try-catch source nodes -> bml-native-source-control effects")
+
+    0)

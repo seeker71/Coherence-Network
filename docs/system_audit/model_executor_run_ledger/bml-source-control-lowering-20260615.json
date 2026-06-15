@@ -1,0 +1,18 @@
+{
+  "task_id": "bml-source-control-lowering-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord view",
+    "coord claim bml-source-control-lowering \"Next grouped wall after PR #3151: lower one remaining BML source-control family onto proven Form-native control/backtracking primitives; avoid dynamic grammar/model/router/mesh lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bml-native-source-control.fk form-stdlib/tests/bml-native-source-control-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-native-source-control",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a bounded Form-native BML source-control transfer row for break, continue, throw, and try/catch effects. The row carries source receipts and maps the transfer family to stop/choice/fail/return effects with loop/catch behavior proven four-way at verdict 2047. Broad grammar lowering for arbitrary while/for/switch and general source-control blocks remains a named next wall."
+}
