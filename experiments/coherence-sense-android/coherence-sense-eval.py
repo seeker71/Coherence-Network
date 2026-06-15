@@ -47,6 +47,7 @@ PROTO_MAX = 60                                    # bounded exemplar memory (the
 
 state = {
     "device": None, "frames": 0, "first_ts": None, "last_ts": None,
+    "sample_frames": 0, "heartbeat_frames": 0,
     "organs": [], "latest": {}, "events": [], "present": False,
     "recognized": "—", "predicted": "—", "errors": 0, "checks": 0, "kernel_ok": os.path.exists(KERNEL),
     "challenger": "—", "chal_agree": 0, "chal_checks": 0, "protos": 0,   # the live learning arc
@@ -65,9 +66,22 @@ def _event(kind, detail):
 
 def _merge_snapshot(snap):
     if isinstance(snap.get("capability_heartbeat"), dict):
-        merged = dict(state["latest"] or {})
+        previous = dict(state["latest"] or {})
+        merged = dict(previous)
         merged.update(snap)
+        for key in ("organs_active", "channels_offered"):
+            values = []
+            for item in previous.get(key, []):
+                if item not in values:
+                    values.append(item)
+            for item in snap.get(key, []):
+                if item not in values:
+                    values.append(item)
+            if values:
+                merged[key] = values
+        merged["last_frame_kind"] = "capability-heartbeat"
         return merged
+    snap["last_frame_kind"] = "sample"
     return snap
 
 
@@ -198,6 +212,7 @@ class Server(BaseHTTPRequestHandler):
             return self._send(400, json.dumps({"error": str(e)}))
 
         now = time.time()
+        heartbeat = isinstance(snap.get("capability_heartbeat"), dict)
         merged = _merge_snapshot(snap)
         present = [k for k in ("accel", "gyro", "light", "mag") if k in merged]
         if state["device"] is None:
@@ -206,7 +221,12 @@ class Server(BaseHTTPRequestHandler):
             if o not in state["organs"]:
                 _event("organ", f"{o} came online")
         state["organs"] = present; state["latest"] = merged
-        state["frames"] += 1; state["last_ts"] = now; state["present"] = True
+        state["frames"] += 1
+        if heartbeat:
+            state["heartbeat_frames"] += 1
+        else:
+            state["sample_frames"] += 1
+        state["last_ts"] = now; state["present"] = True
 
         recognized, predicted = recognize(merged)
         state["recognized"] = recognized
@@ -234,7 +254,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8><title>Coherence S
  .pill{display:inline-block;background:#182430;color:#9ad6ca;border:1px solid #28475c;border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0}
  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
  .on{background:#34d399;box-shadow:0 0 8px #34d399} .gone{background:#5b6470}
- table{width:100%;border-collapse:collapse} td{padding:2px 0} td.k{color:#7a8696;width:64px}
+ table{width:100%;border-collapse:collapse} td{padding:2px 0} td.k{color:#7a8696;width:84px;padding-right:10px}
  .ev{border-left:2px solid #2a3340;padding:1px 0 1px 10px;margin:2px 0;color:#aeb9c6}
  .ev .t{color:#566} .ev.organ{border-color:#2c4a35} .ev.peer{border-color:#3a4a66} .ev.surprise{border-color:#7c5cff;color:#cdbcff}
 </style></head><body>
@@ -257,7 +277,7 @@ async function tick(){
  const pres=document.getElementById("presence");
  pres.innerHTML='<span class="dot '+(s.present?"on":"gone")+'"></span>'+(s.present?((s.device||"a body")+" present"):"quiet");
  const dur=s.first_ts&&s.last_ts?Math.round(s.last_ts-s.first_ts):0;
- document.getElementById("frames").textContent=(s.frames||0)+" frames · "+dur+"s alive"+(s.kernel_ok?"":"  (kernel not built)");
+ document.getElementById("frames").textContent=(s.frames||0)+" frames · "+(s.sample_frames||0)+" full / "+(s.heartbeat_frames||0)+" heartbeat · "+dur+"s alive"+(s.kernel_ok?"":"  (kernel not built)");
  document.getElementById("recog").textContent=s.recognized||"—";
  document.getElementById("pred").textContent=s.predicted||"—";
  const rate=s.checks?Math.round(100*(s.checks-s.errors)/s.checks):0;
@@ -268,7 +288,18 @@ async function tick(){
  document.getElementById("organs").innerHTML=ALL.map(o=>'<span class="organ'+(s.organs&&s.organs.includes(o)?"":" off")+'">'+o+'</span>').join("");
  const w=s.witness||{};
  document.getElementById("discovery").innerHTML='<div class=dim>'+((w.service_type||"_hati-witness._tcp")+" · "+(w.mode||"recognition"))+'</div>'+((w.urls||[]).map(u=>'<span class=pill>'+u+'</span>').join("")||'<span class=dim>waiting for LAN address</span>');
- const f=s.latest||{}; document.getElementById("field").innerHTML=ALL.filter(o=>o in f).map(o=>'<tr><td class=k>'+o+'</td><td>'+vec(f[o])+'</td></tr>').join("")||'<tr><td class=dim>no field yet</td></tr>';
+ const f=s.latest||{};
+ const channelRows=[
+  ["frame", f.last_frame_kind||"—"],
+  ["audio", ("mic_rms" in f)?(+f.mic_rms).toFixed(4):"offered"],
+  ["video", ("camera_luma" in f)?(("luma "+(+f.camera_luma).toFixed(3))+" · "+(f.camera_samples||0)+" frames"):"offered"],
+  ["gpu", ("gpu_samples" in f)?((f.gpu_samples||0)+" samples · "+(+f.gpu_latency_ms||0).toFixed(2)+"ms"):"waiting"],
+  ["screen", "dashboard+qr/write offered"],
+  ["channels", (f.channels_offered||[]).join(",")||"—"],
+  ["organs", (f.organs_active||[]).join(",")||"—"]
+ ];
+ const fieldRows=ALL.filter(o=>o in f).map(o=>'<tr><td class=k>'+o+'</td><td>'+vec(f[o])+'</td></tr>');
+ document.getElementById("field").innerHTML=fieldRows.concat(channelRows.map(r=>'<tr><td class=k>'+r[0]+'</td><td>'+r[1]+'</td></tr>')).join("")||'<tr><td class=dim>no field yet</td></tr>';
  document.getElementById("events").innerHTML=(s.events||[]).map(e=>'<div class="ev '+e.kind+'"><span class=t>'+e.t+'</span> '+e.detail+'</div>').join("")||'<div class=dim>waiting…</div>';
 }
 setInterval(tick,800); tick();
