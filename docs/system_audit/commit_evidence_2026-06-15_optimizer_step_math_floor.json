@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/optimizer-step-math-floor-20260615",
+  "commit_scope": "Add a bounded optimizer-step math floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-models",
+    "federated-slices",
+    "model-data-sharing",
+    "fourth-kernel-wall-groups",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "optimizer-step-math-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-wall-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_optimizer_step_math_floor.json",
+    "docs/system_audit/model_executor_run_ledger/optimizer-step-math-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/optimizer-step.fk",
+    "form/form-stdlib/tests/optimizer-step-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_optimizer_step_math_floor.json",
+    "docs/system_audit/model_executor_run_ledger/optimizer-step-math-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/optimizer-step.fk",
+    "form/form-stdlib/tests/optimizer-step-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim optimizer-step-math-floor \"Next model-kernel/data wall: add bounded optimizer-step math receipt over integer vectors; avoid live mesh transport, durable eval query, payload merkle proof, privacy/conflict, router/audio, and BML compiler lanes.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/tests/optimizer-step-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh optimizer-step",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+model-vitality.fk+optimizer-step.fk+optimizer-step-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  optimizer-step`. An initial invalid-input proof crashed sibling kernels on divide-by-zero; the receipt was made total by refusing invalid scale/length before computing after-vectors. Wellness reported no attention items; it also observed production deploy lagged one commit behind origin/main at that moment."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-native model kernels now have a bounded fixed-point SGD and momentum optimizer-step receipt over small integer vectors.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/tests/optimizer-step-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh optimizer-step"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/optimizer-step.fk",
+    "form/form-stdlib/tests/optimizer-step-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/system_audit/model_executor_run_ledger/optimizer-step-math-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "optimizer-step-math-floor",
+    "gate": "A small deterministic optimizer step must exist before autodiff/Adam/live training loops can claim first-class Form-native model-kernel status.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add autodiff gradient cells, Adam optimizer cells, live chunk payload merkle proof, mesh transport, durable eval query, and privacy/conflict receipts as separate bounded lanes."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Optimizer-state delta slices were shareable receipts, while optimizer-step math remained a named next wall.",
+    "current_observed_floor": "optimizer-step returns 4095 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "optimizer-step -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "autodiff gradient cells",
+      "Adam optimizer cells",
+      "live training loop authority",
+      "live mesh slice transport",
+      "chunk-range payload merkle proof over a live carrier",
+      "durable eval-receipt query path",
+      "privacy boundary",
+      "conflict policy"
+    ]
+  }
+}

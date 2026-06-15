@@ -1,0 +1,113 @@
+; optimizer-step.fk — bounded optimizer step math for Form-native model kernels.
+;
+; Floor: exact integer vector SGD and momentum receipts. This proves the model
+; kernel can compute a small optimizer step deterministically on all four
+; kernels. It does not claim autodiff, Adam, live training loops, durable eval
+; query, or mesh transport.
+;
+; Convention: learning rates and momentum use integer fixed-point scale.
+;   sgd:      w' = w - (lr * grad) / scale
+;   momentum: v' = (momentum * v + lr * grad) / scale; w' = w - v'
+
+(do
+    (defn os-nonzero-vector? (xs)
+        (if (eq (len xs) 0) 0
+            (if (eq (head xs) 0) (os-nonzero-vector? (tail xs)) 1)))
+
+    (defn os-same-len? (a b) (eq (len a) (len b)))
+    (defn os-valid-scale? (scale) (gt scale 0))
+    (defn os-sgd-input-valid? (weights grads scale)
+        (if (os-valid-scale? scale)
+            (if (os-same-len? weights grads) 1 0)
+            0))
+    (defn os-momentum-input-valid? (weights velocities grads scale)
+        (if (os-valid-scale? scale)
+            (if (os-same-len? weights velocities)
+                (if (os-same-len? weights grads) 1 0)
+                0)
+            0))
+    (defn os-step-delta (grad lr scale) (div (mul lr grad) scale))
+    (defn os-sgd-value (weight grad lr scale) (sub weight (os-step-delta grad lr scale)))
+    (defn os-sgd (weights grads lr scale)
+        (if (eq (len weights) 0) (empty)
+            (cons
+                (os-sgd-value (head weights) (head grads) lr scale)
+                (os-sgd (tail weights) (tail grads) lr scale))))
+
+    (defn os-momentum-velocity-value (velocity grad lr momentum scale)
+        (div (add (mul momentum velocity) (mul lr grad)) scale))
+    (defn os-momentum-value (weight velocity grad lr momentum scale)
+        (sub weight (os-momentum-velocity-value velocity grad lr momentum scale)))
+    (defn os-momentum-velocity (velocities grads lr momentum scale)
+        (if (eq (len velocities) 0) (empty)
+            (cons
+                (os-momentum-velocity-value (head velocities) (head grads) lr momentum scale)
+                (os-momentum-velocity (tail velocities) (tail grads) lr momentum scale))))
+    (defn os-momentum-weights (weights velocities grads lr momentum scale)
+        (if (eq (len weights) 0) (empty)
+            (cons
+                (os-momentum-value (head weights) (head velocities) (head grads) lr momentum scale)
+                (os-momentum-weights (tail weights) (tail velocities) (tail grads) lr momentum scale))))
+
+    (defn os-sgd-receipt (model weights grads lr scale)
+        (list
+            "optimizer-sgd-receipt"
+            model
+            weights
+            grads
+            lr
+            scale
+            (if (eq (os-sgd-input-valid? weights grads scale) 1)
+                (os-sgd weights grads lr scale)
+                (empty))
+            (if (eq (os-sgd-input-valid? weights grads scale) 1)
+                (os-nonzero-vector? grads)
+                0)))
+    (defn os-sgd-receipt? (value) (mv-row? value "optimizer-sgd-receipt" 8))
+    (defn os-sgd-model (r) (nth r 1))
+    (defn os-sgd-weights (r) (nth r 2))
+    (defn os-sgd-grads (r) (nth r 3))
+    (defn os-sgd-lr (r) (nth r 4))
+    (defn os-sgd-scale (r) (nth r 5))
+    (defn os-sgd-after (r) (nth r 6))
+    (defn os-sgd-valid-bit (r) (nth r 7))
+    (defn os-sgd-valid? (r)
+        (if (os-sgd-receipt? r)
+            (if (mv-nonempty? (os-sgd-model r))
+                (if (eq (os-sgd-valid-bit r) 1) 1 0)
+                0)
+            0))
+
+    (defn os-momentum-receipt (model weights velocities grads lr momentum scale)
+        (list
+            "optimizer-momentum-receipt"
+            model
+            weights
+            velocities
+            grads
+            lr
+            momentum
+            scale
+            (if (eq (os-momentum-input-valid? weights velocities grads scale) 1)
+                (os-momentum-velocity velocities grads lr momentum scale)
+                (empty))
+            (if (eq (os-momentum-input-valid? weights velocities grads scale) 1)
+                (os-momentum-weights weights velocities grads lr momentum scale)
+                (empty))
+            (if (eq (os-momentum-input-valid? weights velocities grads scale) 1)
+                (os-nonzero-vector? grads)
+                0)))
+    (defn os-momentum-receipt? (value) (mv-row? value "optimizer-momentum-receipt" 11))
+    (defn os-momentum-model (r) (nth r 1))
+    (defn os-momentum-scale (r) (nth r 7))
+    (defn os-momentum-next-velocity (r) (nth r 8))
+    (defn os-momentum-after (r) (nth r 9))
+    (defn os-momentum-valid-bit (r) (nth r 10))
+    (defn os-momentum-valid? (r)
+        (if (os-momentum-receipt? r)
+            (if (mv-nonempty? (os-momentum-model r))
+                (if (eq (os-momentum-valid-bit r) 1) 1 0)
+                0)
+            0))
+
+    0)
