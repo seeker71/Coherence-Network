@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 241
+**Total files**: 242
 
 | File | Purpose |
 |---|---|
@@ -209,6 +209,7 @@
 | [sync_presences_to_db.py](sync_presences_to_db.py) | Sync presence markdown files -> Graph DB via API. |
 | [sync_substrate_vocabulary.py](sync_substrate_vocabulary.py) | Sync the substrate's own numeric vocabulary -> DB as NamedCells. |
 | [teaching_recipe_proof.py](teaching_recipe_proof.py) | teaching_recipe_proof.py — teachings compose into Recipes whose |
+| [tensor_autodiff_native_verifier.sh](tensor_autodiff_native_verifier.sh) | Build and run a native host verifier for tiny tensor autodiff samples. |
 | [tessera_external_witness_probe.py](tessera_external_witness_probe.py) | Probe Tessera's public data surface as a compact external witness. |
 | [test_hostinger_api_native_deploy.sh](test_hostinger_api_native_deploy.sh) | _no top-of-file purpose_ |
 | [test_hostinger_deploy_form_paths.sh](test_hostinger_deploy_form_paths.sh) | _no top-of-file purpose_ |

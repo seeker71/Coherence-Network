@@ -758,6 +758,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "VID-PAIR": [1, 2, 99, 12],
   "VIDEO-FILE": [1, 2, 99, 710],
   "VIDEO-META-FILE": [1, 2, 99, 711],
+  "WORLD-MODULE-MODEL": [1, 2, 99, 28],
   "XML-ARR": [1, 2, 99, 11],
   "XML-NULL": [1, 2, 99, 13],
   "XML-OBJ": [1, 2, 99, 10],
