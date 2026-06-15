@@ -1,0 +1,57 @@
+; affine-corpus-fit.fk — the native training loop fit on REAL corpus data,
+; evaluated against a baseline oracle. The eval layer on top of affine-train.fk.
+;
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk
+;
+; affine-train.fk proved the LOOP learns on a clean fixture. This proves it
+; learns a REAL signal and beats a baseline: the EN->FR UI-string length
+; expansion in the body's own i18n corpus (web/messages/{en,fr}.json — the real
+; ~1.17x expansion). A handful of real (en_len, fr_len) pairs, feature-scaled by
+; 50 so the proven scale-1000 aff-step conditions cleanly (raw lengths 8..44
+; would either diverge or truncation-collapse — the classic fixed-point
+; conditioning the scale-1000 atom is tuned for), train an affine model; the
+; learned model is then scored against held-out real pairs and compared to a
+; predict-the-mean oracle. These counts are exactly the native-training-receipt
+; eval fields (sample / heldout / correct / wrong), computed natively, never
+; asserted by configuration.
+;
+; The oracle is the train-set mean predictor — the honest "no learning" baseline
+; (lc-sense-organ-ripening: a sense earns native authority only by beating the
+; teacher/baseline on held-out data, not by being declared). Scale 1000; div
+; truncates toward zero.
+;
+; Proven by: form-stdlib/tests/affine-corpus-fit-band.fk
+
+; a native prediction is a HIT when |pred - y| <= tol (tolerance in scaled units)
+(defn acf-native-hit (w b x y tol)
+    (if (ge tol (abs (sub (aff-pred w b x) y))) 1 0))
+
+; the oracle predicts a constant m (the train mean); same tolerance gate
+(defn acf-oracle-hit (m x y tol)
+    (if (ge tol (abs (sub m y))) 1 0))
+
+; count native hits over a held-out corpus (fold) — the receipt's correct-count
+(defn acf-native-correct (s held tol)
+    (if (eq (len held) 0)
+        0
+        (add
+            (acf-native-hit (aff-w s) (aff-b s) (nth (head held) 0) (nth (head held) 1) tol)
+            (acf-native-correct s (tail held) tol))))
+
+; count oracle hits over the same held-out corpus (fold)
+(defn acf-oracle-correct (m held tol)
+    (if (eq (len held) 0)
+        0
+        (add
+            (acf-oracle-hit m (nth (head held) 0) (nth (head held) 1) tol)
+            (acf-oracle-correct m (tail held) tol))))
+
+; sum of targets over a corpus (fold) — for the mean-predictor oracle
+(defn acf-sum-y (corpus)
+    (if (eq (len corpus) 0)
+        0
+        (add (nth (head corpus) 1) (acf-sum-y (tail corpus)))))
+
+; the oracle predictor = mean target over the training corpus
+(defn acf-mean-y (corpus)
+    (div (acf-sum-y corpus) (len corpus)))
