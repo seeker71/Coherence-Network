@@ -64,3 +64,67 @@
 (defn tbp-train-loss (w b x t lr n)
   (tbp-sse (tbp-forward (tbp-W (tbp-train w b x t lr n))
                         (tbp-b (tbp-train w b x t lr n)) x) t))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE FFN SUB-BLOCK BACKWARD — backprop composing THROUGH the gelu nonlinearity.
+; ─────────────────────────────────────────────────────────────────────────────
+; transformer-block.fk's FFN is y = W2·gelu(W1·x + b1) + b2. Its backward is the affine
+; vjp above, TWICE, with ONE new node between them: the elementwise gelu derivative. That
+; is the only genuinely new piece — the chain rule walking through a transcendental, the
+; shape that extends to softmax'/layernorm' next. gelu' is composed from tn-tanh (the SAME
+; z and constants tn-gelu uses), so it is exact-bit-deterministic three-way like the forward.
+; Needs the transformer-numerics + transformer-block preludes (tn-tanh, tb-affine, tb-gelu-map,
+; tb-vec-mul) already loaded — the FFN backward stands on the proven forward, not beside it.
+;
+;   gelu(x)  = 0.5·x·(1 + tanh(z)),  z = C·(x + a·x³)   C=0.7978845608028654  a=0.044715
+;   gelu'(x) = 0.5·(1 + tanh(z)) + 0.5·x·(1 - tanh(z)²)·C·(1 + 3a·x²)         3a=0.134145
+;   (sanity: gelu'(0) = 0.5 exactly — the band's bit-anchor.)
+
+(defn tbp-gelu-z (x)
+  (mul 0.7978845608028654 (add x (mul 0.044715 (mul x (mul x x))))))
+(defn tbp-gelu-d1 (x)
+  (add
+    (mul 0.5 (add 1.0 (tn-tanh (tbp-gelu-z x))))
+    (mul (mul 0.5 x)
+         (mul (sub 1.0 (mul (tn-tanh (tbp-gelu-z x)) (tn-tanh (tbp-gelu-z x))))
+              (mul 0.7978845608028654 (add 1.0 (mul 0.134145 (mul x x))))))))
+(defn tbp-gelu-d (xs)
+  (if (eq (len xs) 0) (empty) (cons (tbp-gelu-d1 (head xs)) (tbp-gelu-d (tail xs)))))
+
+; --- forward: h1 = W1·x+b1 ; a = gelu(h1) ; y = W2·a+b2  (reuse tb-affine + tb-gelu-map) ---
+(defn tbp-mlp-h1 (w1 b1 x) (tb-affine w1 b1 x))
+(defn tbp-mlp-a  (w1 b1 x) (tb-gelu-map (tbp-mlp-h1 w1 b1 x)))
+(defn tbp-mlp-fwd (w1 b1 w2 b2 x) (tb-affine w2 b2 (tbp-mlp-a w1 b1 x)))
+(defn tbp-mlp-loss (w1 b1 w2 b2 x t) (tbp-sse (tbp-mlp-fwd w1 b1 w2 b2 x) t))
+
+; --- one SGD step over all four params. The forward intermediates and the two gradients are
+;     computed ONCE (let-bound) and reused — backprop's whole point is to reuse the forward pass,
+;     not recompute it. gy = 2(y-t) at the output; da = W2ᵀ·gy; dh1 = da ⊙ gelu'(h1) is the chain
+;     through the nonlinearity; then layer-2 from (gy,a) and layer-1 from (dh1,x). ---
+(defn tbp-mlp-step (w1 b1 w2 b2 x t lr)
+  (do
+    (let h1  (tb-affine w1 b1 x))
+    (let a   (tb-gelu-map h1))
+    (let y   (tb-affine w2 b2 a))
+    (let gy  (tn-scale (tbp-vsub y t) 2.0))
+    (let dh1 (tb-vec-mul (tbp-dx w2 gy) (tbp-gelu-d h1)))
+    (list
+      (tbp-sgd-mat w1 (tbp-outer dh1 x) lr)
+      (tbp-sgd-vec b1 dh1 lr)
+      (tbp-sgd-mat w2 (tbp-outer gy a) lr)
+      (tbp-sgd-vec b2 gy lr))))
+(defn tbp-mlp-W1 (s) (nth s 0))
+(defn tbp-mlp-b1 (s) (nth s 1))
+(defn tbp-mlp-W2 (s) (nth s 2))
+(defn tbp-mlp-b2 (s) (nth s 3))
+
+; --- training loop: n steps, step computed once per epoch (monomorphic, fourth-arm-safe). ---
+(defn tbp-mlp-train-next (s x t lr n)
+  (tbp-mlp-train (tbp-mlp-W1 s) (tbp-mlp-b1 s) (tbp-mlp-W2 s) (tbp-mlp-b2 s) x t lr (sub n 1)))
+(defn tbp-mlp-train (w1 b1 w2 b2 x t lr n)
+  (if (eq n 0) (list w1 b1 w2 b2)
+      (tbp-mlp-train-next (tbp-mlp-step w1 b1 w2 b2 x t lr) x t lr n)))
+(defn tbp-mlp-train-loss-s (s x t)
+  (tbp-mlp-loss (tbp-mlp-W1 s) (tbp-mlp-b1 s) (tbp-mlp-W2 s) (tbp-mlp-b2 s) x t))
+(defn tbp-mlp-train-loss (w1 b1 w2 b2 x t lr n)
+  (tbp-mlp-train-loss-s (tbp-mlp-train w1 b1 w2 b2 x t lr n) x t))

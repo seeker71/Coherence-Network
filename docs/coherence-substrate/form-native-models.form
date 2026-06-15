@@ -67,8 +67,11 @@
 ;     bit-exact, prediction matching target to 1e-6. fp64, reusing transformer-block.fk's own forward ops;
 ;     3-kernel only (Go=Rust=TS), the SAME floor transformer-block is proven on (the transformer op family
 ;     is not in the fourth-arm manifest). This is the autodiff-gradient-cell wall, opened at the affine
-;     node; the remaining walls are the transcendental vjps (gelu'/softmax'/layernorm') that extend it to
-;     the full-block backward, and Adam.
+;     node. The gelu' vjp is now built too: the FFN sub-block y = W2·gelu(W1·x+b1)+b2 trains by backprop
+;     THROUGH the nonlinearity (dh1 = da ⊙ gelu'(h1), gelu' composed from tn-tanh) — a 2→2→2 MLP fits a
+;     target with strictly decreasing loss, gelu'(0)=0.5 / gelu'(1)=1.082964 / gelu'(-0.75)=0.001062 (the
+;     dip) pinned bit-exact, tests/transformer-backprop-ffn-band.fk → 63 three-way (source and binary).
+;     The remaining walls are softmax' (attention) and layernorm', then the full-block backward, and Adam.
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,
@@ -91,9 +94,10 @@
 ;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     autodiff gradient cells for the transcendental ops (gelu'/softmax'/layernorm') and the full-block
-;     backward — the affine-node vjp is closed (transformer-backprop.fk → 127 three-way) — Adam optimizer
-;     cells, durable eval-receipt query path, measured fourth-arm duration, larger native
+;     autodiff gradient cells for softmax' and layernorm' and the full-block backward — the affine-node
+;     vjp is closed (transformer-backprop.fk → 127) and the gelu' vjp / FFN sub-block backward is closed
+;     (transformer-backprop-ffn-band.fk → 63), both three-way — Adam optimizer cells, durable eval-receipt
+;     query path, measured fourth-arm duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
 ;     live chunk-range merkle transport/proof is still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
