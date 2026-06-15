@@ -400,9 +400,15 @@
 ;   champion-challenger.fk flips authority to it ("challenger"); a same-architecture challenger only TIES, so
 ;   the served champion is protected ("champion", not promoted). This is M7's infer-best-while-searching-better
 ;   in full: generate challenger architectures, train them, promote only the earned winner — improving the
-;   model without ever degrading what is served now. Next ring: richer architecture spaces (mixed layer types,
-;   widths, attention vs ffn per task), multi-example capacity selection at higher dim (LN collapses 2-D inputs
-;   to two directions), and the GPU as the trainer underneath the search.
+;   model without ever degrading what is served now. And CAPACITY-based search is now proven at d=4
+;   [arch-capacity-band.fk → 31 three-way]: the architect generates layers of configurable WIDTH, trains each
+;   over a 4-example DATASET (multi-example, not one target), and discovers the smallest width that fits — a
+;   width-1 FFN-residual UNDERFITS the dataset (total loss 5.65, one gelu unit is not enough), width-2 fits
+;   (loss → 0), and ac-min-width crowns 2. This is the proof 2-D could not give (in 2-D layernorm collapses
+;   any input to one of two directions, so width does not discriminate; at d=4 it does). So the body now
+;   discovers BOTH the depth and the width a task needs, trains them, and promotes only the earned architecture.
+;   Next ring: richer architecture spaces (mixed layer types, attention vs ffn per task), and the GPU as the
+;   trainer underneath the search.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·

@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/arch-capacity",
+  "commit_scope": "Capacity-based architecture search at d=4: the architect generates layers of configurable WIDTH, trains each over a multi-example DATASET, and discovers the smallest width that fits. arch-capacity.fk adds deterministic pseudo-random weight generators (fractional part of seed*12.9898, no RNG needed), width-H FFN-residual layers at any dim, multi-example training (one epoch = a stack-step per (x,t)), and ac-min-width which crowns the minimal fitting width. This closes the limitation named in the prior PR: in 2-D layernorm collapses any input to one of two normalized directions, so width cannot discriminate over a dataset; at d=4 it does. The body now discovers BOTH depth (arch-gen) and width (this) a task needs.",
+  "files_owned": [
+    "form/form-stdlib/arch-capacity.fk",
+    "form/form-stdlib/tests/arch-capacity-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/tests/arch-capacity-band.fk"
+    ],
+    "summary": "arch-capacity-band -> 31 three-way (Go=Rust=TS), 0 divergent. On a d=4 dataset of 4 examples (targets are the input reversed, lr 0.05, 150 epochs): a width-1 FFN-residual UNDERFITS (total loss 5.65 -- one gelu unit cannot represent four distinct input->target maps), width-2 FITS (total loss -> 0), width-4 also fits, and ac-min-width crowns the minimal fitting width 2. A d=4 width-2 layer's forward is deterministic (y[0]=2.026539). 3-KERNEL ONLY (Go=Rust=TS): composes the fp64 transformer-backward op family (with floor for the deterministic weight gen), not in the fourth-arm manifest -- same floor as transformer-block.fk / arch-gen.fk. Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "width1_dataset_loss": "5.65 (underfits)",
+      "width2_dataset_loss": "~0 (fits)",
+      "width4_dataset_loss": "~0 (fits)",
+      "architect_crowned_min_width": 2,
+      "dim": 4,
+      "dataset_size": 4
+    },
+    "known_limitations": [
+      {
+        "limitation": "Capacity search here varies WIDTH of a single FFN-residual layer; arch-gen varies DEPTH. The full architecture space (width x depth x layer type x attention-vs-ffn per slot) is the richer search, the same generate-then-search shape over a wider config vocabulary.",
+        "follow_up": "Generate over the joint (depth, width, type) space; mixed attention/ffn stacks per task."
+      },
+      {
+        "limitation": "Weights are deterministic (no RNG): a pseudo-random float per seed via the fractional part of seed*12.9898. This makes the band bit-stable three-way but the capacity comparison is on one fixed init.",
+        "follow_up": "Sample inits when a host RNG carrier is wired; until then deterministic seeds keep the proof bit-stable."
+      },
+      {
+        "limitation": "3-kernel only: the fp64 transformer-backward op family (plus floor) is not in the fourth-arm manifest. Same floor as transformer-block.fk, arch-gen.fk. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs arch-capacity-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body discovers the WIDTH (capacity) a task needs -- it generates width-configurable layers, trains each over a dataset, and crowns the smallest that fits, rejecting widths that underfit.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh arch-capacity-band (three kernels agree, verdict 31): width-1 underfits a d=4 dataset, width-2 fits, the architect crowns minimal width 2"
+    ],
+    "summary": "Proven three-way: capacity-based architecture search -- the body finds the width a dataset needs."
+  },
+  "phase_gate": {
+    "phase": "m7-architect-capacity",
+    "gate": "the architect discovers WIDTH as well as depth: at d=4, width-1 underfits a multi-example dataset, width-2 fits, and ac-min-width crowns the minimal fitting width -- capacity-based NAS, three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "joint (depth, width, type) architecture space; mixed attention/ffn stacks; the GPU as the trainer underneath the search"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arch-capacity-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/arch-capacity.fk",
+    "form/form-stdlib/tests/arch-capacity-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/arch-capacity.fk",
+    "form/form-stdlib/tests/arch-capacity-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-16_arch_capacity.json"
+  ],
+  "change_intent": "runtime_feature"
+}
