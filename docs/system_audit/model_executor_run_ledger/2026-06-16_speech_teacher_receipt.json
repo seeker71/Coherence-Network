@@ -1,0 +1,17 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim speech-teacher-receipt-floor \"Actual learning-gap lane: add real local TTS/STT teacher receipt floor for speech learning, using physical/local tool evidence where available; keep missing teachers explicit and avoid speculative carrier work.\"",
+    "bash -n scripts/speech_teacher_receipt.sh && scripts/speech_teacher_receipt.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-teacher-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh speech-teacher-receipt",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-model-learning-band.fk"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a physical local speech teacher receipt floor. The live no-Python witness generated macOS say audio, lowered it to 16 kHz mono PCM, measured it with sox, transcribed it with local whisper-cli ggml-large-v3-turbo, wrote retained artifact hashes, and Form accepted the receipt as native training data with verdict 4095 four-way."
+}

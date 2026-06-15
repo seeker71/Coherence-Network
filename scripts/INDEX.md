@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 247
+**Total files**: 248
 
 | File | Purpose |
 |---|---|
@@ -196,6 +196,7 @@
 | [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
 | [source_gh_token.sh](source_gh_token.sh) | _no top-of-file purpose_ |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
+| [speech_teacher_receipt.sh](speech_teacher_receipt.sh) | speech_teacher_receipt.sh - live local TTS -> STT teacher receipt. |
 | [sqlite_driver_demo.sh](sqlite_driver_demo.sh) | sqlite_driver_demo.sh — the 4th kernel's SQLite driver (carrier first). Emit a |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | strategy_after_rupture_recipe_proof.py — rupture-recovery primitives compose |
