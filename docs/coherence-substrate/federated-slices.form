@@ -26,6 +26,10 @@
 ;     adam-bias-correction adds bounded fixed-point Adam bias-corrected moment and weight update rows.
 ;     tensor-autodiff-verifier adds a generated native host verifier binary plus a Form receipt for
 ;     many-sample affine-loss gradient checks. Tensor-scale autodiff remains a model-kernel wall.
+;     core-axiom-native-receipt adds a generated Mac+Android native channel verifier: a macOS arm64
+;     binary and Android arm64 binary exchange receipt rows over adb-forward TCP and agree on a bounded
+;     left-expanding sample window. Live mesh slice transport is still separate; this proves the first
+;     two-endpoint native receipt channel without raw sensor data or background persistence.
 ;   NORTH STAR: every federated update is a content-addressed slice over a known base merkle root:
 ;     (base-merkle, layer-ref, tensor-chunk-range, format-ref, quantization-context, delta-cell,
 ;     optimizer-state-delta, eval-receipt-ref, vitality-ref, n-samples, origin, ancestor-merge-refs).
@@ -108,6 +112,10 @@
 ;   M8  native tensor-autodiff verifier — SHIPPED: tensor-autodiff-verifier -> 4095 four-way for receipt
 ;       shape, with scripts/tensor_autodiff_native_verifier.sh generating a host binary that checked
 ;       4096 affine-loss gradient samples at width 8. Tensor-scale autodiff cells remain later.
+;   M8a Mac+Android native receipt channel — SHIPPED: core-axiom-native-receipt -> 4095 four-way for
+;       receipt shape, with scripts/android_mac_core_axiom_receipt.sh generating macOS arm64 and
+;       Android arm64 binaries that exchanged a pass receipt over adb-forward TCP for 2048 width-8
+;       samples. Live mesh transport and payload merkle proof remain later.
 ;   M9  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
 ;       third merges both and applies it — assert mesh-merge NodeID == local-merge NodeID (gossip
 ;       convergence as a content-addressed proof).
