@@ -1,0 +1,129 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/model-slice-chunk-range-floor-20260615",
+  "commit_scope": "Add a bounded model slice chunk-range floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "model-data-sharing",
+    "federated-slices",
+    "form-native-models",
+    "fourth-kernel-wall-groups",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "model-slice-chunk-range-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-wall-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_model_slice_chunk_range_floor.json",
+    "docs/system_audit/model_executor_run_ledger/model-slice-chunk-range-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/model-data-sharing.fk",
+    "form/form-stdlib/tests/model-slice-chunk-range-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_model_slice_chunk_range_floor.json",
+    "docs/system_audit/model_executor_run_ledger/model-slice-chunk-range-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/model-data-sharing.fk",
+    "form/form-stdlib/tests/model-slice-chunk-range-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim model-slice-chunk-range-floor \"Next model-data wall after PR #3156: add bounded chunk-range slice policy receipt; avoid live mesh transport, durable eval query, optimizer deltas, privacy/conflict, router/audio, and BML compiler lanes.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk form-stdlib/tests/model-slice-chunk-range-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh model-slice-chunk-range",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+model-vitality.fk+cell-sync.fk+slice-update-roundtrip.fk+slice-merge.fk+model-data-sharing.fk+model-slice-chunk-range-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  model-slice-chunk-range`. Wellness reported no attention items."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Model data sharing now has a bounded chunk-range slice policy receipt over existing tensor chunk rows and chunk-set roots.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk form-stdlib/tests/model-slice-chunk-range-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh model-slice-chunk-range"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/model-data-sharing.fk",
+    "form/form-stdlib/tests/model-slice-chunk-range-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/system_audit/model_executor_run_ledger/model-slice-chunk-range-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "model-slice-chunk-range-floor",
+    "gate": "Chunk-range slice policy must be explicit before live mesh payload transport or chunk-range merkle proof can be claimed as first-class.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add live chunk payload merkle proof, mesh transport, durable eval query, optimizer-state delta rows, and privacy/conflict receipts as separate bounded lanes."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Model data sharing had request/re-address/apply/source/merge receipts, but chunk-range slice policy remained a named next wall.",
+    "current_observed_floor": "model-slice-chunk-range returns 4095 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "model-slice-chunk-range -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "live mesh slice transport",
+      "chunk-range payload merkle proof over a live carrier",
+      "durable eval-receipt query path",
+      "optimizer-state delta slices",
+      "privacy boundary",
+      "conflict policy"
+    ]
+  }
+}
