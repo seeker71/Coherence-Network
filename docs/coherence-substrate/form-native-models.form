@@ -57,6 +57,9 @@
 ;     optimizer-delta-slice now returns 4095 four-way: an optimizer-state delta slice must carry a valid
 ;     optimizer cell ref, before/after state ids, positive step, nonzero integer delta, valid chunk-range
 ;     policy row, provenance, and substrate-cell authority. Optimizer-step math remains separate.
+;     optimizer-step now returns 4095 four-way: exact integer fixed-point SGD and momentum receipts update
+;     small model vectors deterministically and refuse invalid scale/length inputs before computation.
+;     Autodiff gradient cells and Adam remain separate walls.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -69,14 +72,14 @@
 ;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     optimizer-step cells, durable eval-receipt query path, measured fourth-arm duration, larger native
+;     autodiff gradient cells, Adam optimizer cells, durable eval-receipt query path, measured fourth-arm duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
 ;     live chunk-range merkle transport/proof is still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
 ;     live-row route read, production pulse/runtime row ingestion, Go/Rust/TypeScript production HTTPS
 ;     capture, all-kernel plaintext HTTP plus verified HTTPS body capture, and bounded model-slice
-;     request/re-address/apply/merge receipt, chunk-range slice policy, and optimizer-state delta-slice
-;     receipt are now closed receipts, not future claims.
+;     request/re-address/apply/merge receipt, chunk-range slice policy, optimizer-state delta-slice
+;     receipt, and fixed-point SGD/momentum optimizer step are now closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.
