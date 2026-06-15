@@ -1,0 +1,42 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-backprop-band — the BACKWARD pass over the affine node actually LEARNS, three-way in
+; pure Form, on the same floor transformer-block.fk is proven on. Fixture: a 2->2 affine y = W·x + b,
+; x = (1, 2), started from W=0 b=0, trained by SGD (lr = 0.1) to fit target t = (1, -1). lr = 0.1 is
+; inside the stable band (2/λmax = 2/12 ≈ 0.166), so the loss falls monotonically toward 0.
+;
+; Verdict 127 when every claim lands:
+;   1    an unfit start carries positive loss                         (sse(W0,b0) > 0)
+;   2    ONE SGD step lowers the loss — learning happened             (sse@1  < sse@0)
+;   4    twenty steps lower it further — it converges                 (sse@20 < sse@1)
+;   8    eighty steps lower it further still                          (sse@80 < sse@20)
+;   16   the dx CHAIN is bit-exact: Wᵀ·gy for W=((1,2),(0,1)) gy=(3,5) = (3, 11)
+;   32   the dW OUTER is bit-exact: outer(gy=(3,5), x=(1,2)) = ((3,6),(5,10))
+;   64   at the fit the prediction matches the target to 1e-6         (sse@80 rounds to 0)
+(do
+    (let x  (list 1.0 2.0))
+    (let w0 (list (list 0.0 0.0) (list 0.0 0.0)))
+    (let b0 (list 0.0 0.0))
+    (let t  (list 1.0 -1.0))
+    (let lr 0.1)
+
+    (let l0  (tbp-sse (tbp-forward w0 b0 x) t))
+    (let l1  (tbp-train-loss w0 b0 x t lr 1))
+    (let l20 (tbp-train-loss w0 b0 x t lr 20))
+    (let l80 (tbp-train-loss w0 b0 x t lr 80))
+
+    ; the chain: dx = Wᵀ·gy, and the weight grad: dW = outer(gy, x)
+    (let dx (tbp-dx (list (list 1.0 2.0) (list 0.0 1.0)) (list 3.0 5.0)))
+    (let dW (tbp-outer (list 3.0 5.0) (list 1.0 2.0)))
+
+    (let c0 (if (gt l0 0.0) 1 0))
+    (let c1 (if (lt l1 l0) 2 0))
+    (let c2 (if (lt l20 l1) 4 0))
+    (let c3 (if (lt l80 l20) 8 0))
+    (let c4 (if (eq (round (mul (nth dx 0) 1000000.0)) 3000000)
+                (if (eq (round (mul (nth dx 1) 1000000.0)) 11000000) 16 0) 0))
+    (let c5 (if (eq (round (mul (nth (nth dW 0) 1) 1000000.0)) 6000000)
+                (if (eq (round (mul (nth (nth dW 1) 0) 1000000.0)) 5000000) 32 0) 0))
+    (let c6 (if (eq (round (mul l80 1000000.0)) 0) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

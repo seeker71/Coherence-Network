@@ -1,0 +1,66 @@
+; transformer-backprop.fk — the BACKWARD pass over the transformer's affine node, in pure Form.
+;
+; transformer-block.fk (M4) is the proven FORWARD block: every attention projection (q/k/v/out)
+; and every FFN layer is a tb-affine — y = W·x + b — built on tb-matvec. This cell is the REVERSE
+; of that node: reverse-mode autodiff at the matvec, plus the SGD update that closes the loop.
+; form-train-step.fk is the one-weight SGD atom; this is the SAME descent generalized to a whole
+; weight MATRIX and bias VECTOR — the shape backprop lands on at every affine in the block.
+;
+; The chain rule, made concrete. Given the upstream gradient gy = dL/dy at an affine node:
+;   db = gy                            the bias gradient IS the upstream gradient
+;   dW = outer(gy, x)                  row i is gy[i] · x   (the weight gradient)
+;   dx = Wᵀ · gy                       the gradient handed to the PREVIOUS layer — THIS is the chain;
+;                                      = Σ_i gy[i]·W_row_i, whose j-th term is Σ_i W[i][j] gy[i].
+; With dx, the same three lines compose backward through a STACK of affines (and, as their vjps
+; land next, through softmax / gelu / layernorm): backprop is this node, walked in reverse. No new
+; arithmetic — fp64, reusing transformer-block.fk's own tb-affine / tb-vec-add / tb-dot / tb-zeros
+; and transformer-numerics.fk's tn-scale, so every kernel computes the same bits (determinism is the
+; feature). Loss is sum-of-squared-error so the gradient is exact and integer-clean for the band.
+;
+; Proven by: form-stdlib/tests/transformer-backprop-band.fk (three-way at validate.sh, the floor
+; transformer-block is proven on; loss strictly decreases and the dx chain is bit-exact).
+
+; --- residual + loss: L = Σ (y - t)², gy = dL/dy = 2(y - t) ---
+(defn tbp-vsub (a b)
+  (if (eq (len a) 0) (empty) (cons (sub (head a) (head b)) (tbp-vsub (tail a) (tail b)))))
+(defn tbp-resid (y t) (tbp-vsub y t))
+(defn tbp-sse (y t) (tb-dot (tbp-resid y t) (tbp-resid y t)))   ; scalar loss
+(defn tbp-dy (y t) (tn-scale (tbp-resid y t) 2.0))             ; upstream grad gy
+
+; --- the affine node's vector-Jacobian products ---
+; dW = outer(gy, x): row i is x scaled by gy[i].
+(defn tbp-outer (gy x)
+  (if (eq (len gy) 0) (empty) (cons (tn-scale x (head gy)) (tbp-outer (tail gy) x))))
+; dx = Wᵀ·gy: accumulate gy[i]·W_row_i — its j-th component is Σ_i W[i][j] gy[i]. THE CHAIN.
+(defn tbp-wt-gy-acc (rows gy acc)
+  (if (eq (len rows) 0) acc
+      (tbp-wt-gy-acc (tail rows) (tail gy)
+                     (tb-vec-add acc (tn-scale (head rows) (head gy))))))
+(defn tbp-dx (w gy) (tbp-wt-gy-acc w gy (tb-zeros (len (head w)))))
+
+; --- SGD update: param := param - lr · grad, for a bias VECTOR and a weight MATRIX ---
+(defn tbp-sgd-vec (v g lr) (tbp-vsub v (tn-scale g lr)))
+(defn tbp-sgd-mat (rows grows lr)
+  (if (eq (len rows) 0) (empty)
+      (cons (tbp-sgd-vec (head rows) (head grows) lr)
+            (tbp-sgd-mat (tail rows) (tail grows) lr))))
+
+; --- one training step over (W, b) fitting target t from input x -> (list W' b') ---
+(defn tbp-forward (w b x) (tb-affine w b x))             ; y = W·x + b  (reuse the forward node)
+(defn tbp-step-gy (w b x gy lr)
+  (list (tbp-sgd-mat w (tbp-outer gy x) lr) (tbp-sgd-vec b gy lr)))
+(defn tbp-step (w b x t lr)
+  (tbp-step-gy w b x (tbp-dy (tbp-forward w b x) t) lr))
+(defn tbp-W (s) (nth s 0))
+(defn tbp-b (s) (nth s 1))
+
+; --- training loop: n steps, computing the step ONCE per epoch (monomorphic, fourth-arm-safe) ---
+(defn tbp-train-next (s x t lr n)
+  (tbp-train (tbp-W s) (tbp-b s) x t lr (sub n 1)))
+(defn tbp-train (w b x t lr n)
+  (if (eq n 0) (list w b) (tbp-train-next (tbp-step w b x t lr) x t lr n)))
+
+; convenience: the loss after n training steps (forward of the trained params on x vs t).
+(defn tbp-train-loss (w b x t lr n)
+  (tbp-sse (tbp-forward (tbp-W (tbp-train w b x t lr n))
+                        (tbp-b (tbp-train w b x t lr n)) x) t))
