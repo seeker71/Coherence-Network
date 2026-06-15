@@ -1,0 +1,126 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/bml-source-control-lowering-20260615",
+  "commit_scope": "Add a bounded BML-native source-control transfer floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "bml-native-source-control-transfer",
+    "fourth-kernel-wall-groups",
+    "form-native-control-backtracking-ml",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "bml-source-control-lowering-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "control-flow-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_bml_source_control_lowering.json",
+    "docs/system_audit/model_executor_run_ledger/bml-source-control-lowering-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/bml-native-source-control.fk",
+    "form/form-stdlib/tests/bml-native-source-control-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_bml_source_control_lowering.json",
+    "docs/system_audit/model_executor_run_ledger/bml-source-control-lowering-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/bml-native-source-control.fk",
+    "form/form-stdlib/tests/bml-native-source-control-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord view",
+      "coord claim bml-source-control-lowering",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bml-native-source-control.fk form-stdlib/tests/bml-native-source-control-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-source-control",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+bml-native-source-control.fk+bml-native-source-control-band.fk -> 2047` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  bml-native-source-control`. Wellness reported no attention items."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML source-control transfer now has a Form-native executable row for break, continue, throw, and try/catch effects with source receipts and bounded loop/catch behavior.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bml-native-source-control.fk form-stdlib/tests/bml-native-source-control-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-source-control"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bml-native-source-control.fk",
+    "form/form-stdlib/tests/bml-native-source-control-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/model_executor_run_ledger/bml-source-control-lowering-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "bml-native-source-control-transfer",
+    "gate": "BML source-control lowering needs an executable target row for break/continue/throw/try-catch transfer effects before broad source blocks can lower safely.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Implement general break/continue/throw/try-catch source-node lowering in form/form-stdlib/grammars/bml.fk, then arbitrary while/for/switch lowering."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The fourth kernel had primitive control/backtracking coverage, but BML source-control transfer still lacked a Form-native target row outside the historical BMA VM path.",
+    "current_observed_floor": "bml-native-source-control returns 2047 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "bml-native-source-control -> 2047 four-way"
+    ],
+    "not_claimed": [
+      "general break/continue source-node lowering in bml.fk",
+      "general try/throw/catch source-node lowering in bml.fk",
+      "arbitrary while lowering",
+      "general for lowering",
+      "general switch lowering",
+      "source restore spelling"
+    ]
+  }
+}
