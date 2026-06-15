@@ -4,7 +4,7 @@
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk tool-channel.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
     (recipe form/form-stdlib/code-tool-learning.fk)
-    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 524287 four-way))
+    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 1048575 four-way))
 
   (purpose
     "Every coding action can leave native training data: the intent that was sensed, the tool that was planned, the branch that executed, the receipt that came back, and the metadata that made the result trustworthy enough to learn from."
@@ -17,6 +17,7 @@
     "The proof uses tool-channel planning for an explicit stream tool plan, refuses ambient execution when metadata stays below the >50 floor, validates a CHOICE-RECEIPT with token cost, turns that receipt back into a native sample, requests compiler and source-grounding oracle evidence lanes, and shows receipt learning can make the Form-native candidate win an A/B race."
     "The proof now requires a coding-act receipt that connects source-code listening, Form patch speaking, two verifier receipts, and a learned trust delta from 62 to 74 before the new arm lands."
     "The live-carrier floor now also accepts a JSONL-field receipt cell lowered onto the substrate: keyed source_surfaces, patch_recipe, verifiers, choice_receipt, and learned_delta rows ingest into the same coding-act row without retaining raw patch or raw verifier output."
+    "The canonical committed-turn receipt text now has a bounded Form lowerer that extracts the receipt schema into that substrate cell before coding-act validation."
     "The floor-oracle winner rule favors the candidate that clears correctness/metadata gates while using fewer LLM tokens, less energy, and less nutrition, with higher sovereignty, trust, and confidence."
     "The metadata channel carries conviction, certainty, frequency spectrum, aliveness, sovereignty, and trust. The current use floor requires each important value to clear 50; autonomous selection additionally requires sovereignty and trust to clear 70.")
 
@@ -50,6 +51,10 @@
       (sample jsonl-field-cell source-surfaces patch-recipe verifiers choice-receipt learned-delta)
       (floor substrate-lowered-receipt-ingest)
       (north-star "committed-turn JSONL receipts lower into static substrate cells first, then the same Form row validates across Go, Rust, TypeScript, and fkwu"))
+    (canonical-receipt-text-lowerer
+      (sample committed-turn-receipt-text jsonl-field-cell)
+      (floor bounded-text-to-substrate-cell)
+      (north-star "canonical JSONL receipt text becomes native cells through bounded Form extraction while a general JSON parser remains a separate carrier goal"))
     (natural-language-to-host-native-asm
       (sample natural-language-intent-vector)
       (floor compiler-oracle-evidence-plus-form-native-candidate)
@@ -82,7 +87,7 @@
     "A Form-native candidate earns trust by its OWN efficacy, not by copying the teacher. Three modes by what 'succeeded' means: outcome (DEFAULT, generalizes) — the candidate's output worked, its proof passed / tool succeeded; this is aliveness, not syntax. structural (natural-language -> Form node) — the candidate's output shares the target's canonical Blueprint NodeID, so two wordings that parse to the same node both pass (the substrate's same-shape -> same-NodeID premise). exact (NARROW) — identical bytes; overfits except where the output is itself canonical, never the default. The candidate's pass-rate (its own successes) becomes its trust in tool-embodiment.fk."
     "scripts/code_tool_learning_receipt.py is the bounded host carrier for committed coding turns: it reads a commit against its first parent, hashes the patch without retaining it, hashes touched source surfaces into node signatures, runs explicit verifier commands, stores verifier output hashes without raw output retention, and emits one coding-act receipt with choice_receipt and learned_delta rows."
     "Live carrier proof for merged PR #3199: commit 8d17b86ce6cab02086175f1f151a921142613b54 produced status=pass with 7 source surfaces, 7 touched files, verifiers code-tool-learning-band and code-tool-learning-gate both pass, trust 62->74, sample_count=1, raw_patch_retained=0."
-    "The Form read door now names the lowered receipt-cell side: JSONL/text is a carrier boundary, then the native substrate cell with the same field names becomes the learning row. Raw JSON parsing inside fkwu remains a separate parser-carrier gap; the four-way floor is the substrate cell it should produce."
+    "The Form read door now names two bounded sides: canonical JSONL receipt text can lower into a receipt cell, and carrier-native cells with the same field names become the learning row. General raw JSON parsing inside fkwu remains a separate parser-carrier gap; the four-way floor is the committed-turn receipt schema and the substrate cell it should produce."
     "A lane that WORKS — cheaper (0 external tokens) and sovereign (local) — earns the body and replaces the LLM it learned from."
     "Capture is itself a recipe: iom-capture takes the real input/output BYTES of a call and content-addresses them with sha256.fk (the same content-addressing the substrate is built on), so identity comes for free — same input -> same sig (iom-sig-eq?, a fourth-arm-safe digest compare), repeat calls group and dedup."
     (recipe form/form-stdlib/io-match.fk)
@@ -94,4 +99,4 @@
     "form-cli-north-star.form names the destination this sideband serves: the form-cli ground-floor binary that runs local Form-native first and a remote LLM oracle only when confidence is low, learning from every oracle call so the oracle is needed less. Its decision loop runs as form-cli-loop.fk (proof tests/form-cli-loop-band.fk -> 31 four-way).")
 
   (next-step
-    "The committed-turn carrier now writes coding-act receipts and the Form floor ingests the lowered receipt cell four-way. The remaining carriers are the JSONL/text-to-cell native lowerer, the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by pass-rate, cost, and sovereignty before any important flow routes to them by default."))
+    "The committed-turn carrier now writes coding-act receipts, the Form floor ingests the lowered receipt cell four-way, and a bounded canonical receipt-text lowerer feeds that cell. The remaining carriers are the general JSON parser/text-to-cell native lowerer, the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by pass-rate, cost, and sovereignty before any important flow routes to them by default."))
