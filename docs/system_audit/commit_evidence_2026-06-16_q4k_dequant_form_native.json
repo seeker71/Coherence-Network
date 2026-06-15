@@ -1,0 +1,15 @@
+{
+  "title": "GGUF Q4_K superblock dequant is now a Form recipe — four-way proven, bit-exact vs gguf on real llama weights",
+  "date": "2026-06-16",
+  "advances": "form-native-models.form rung (1) toward full real-model inference: the weight LOAD (Q4_K -> f32 unpack) was the python carrier (gguf.quants.dequantize) behind PR #3219's GPU matvec; the unpack ARITHMETIC is now Form-native and proven, so the model's weights become cells through a recipe, not a borrowed library.",
+  "device": "Apple M4 Max (40-core GPU), arm64 Darwin 26.3.1 — proof is host-independent (pure arithmetic band)",
+  "fixture": "a REAL llama3.2:3b Q4_K superblock — blk.0.ffn_gate.weight (the same tensor that ran on the M4 GPU in PR #3219), first 144-byte block: f16->f32 d=0.00010609626770019531, dmin=0.0009484291076660156, scales[12], qs[128]",
+  "recipe": "form/form-stdlib/q4k-dequant.fk — get_scale_min_k4 + the per-sub-block w = (d*scale)*nib - (dmin*min) walk, every bit-op expressed as an integer-arithmetic identity (& = mod, >> = div, << = mul, | of disjoint fields = add), so the band proves on the four-way arithmetic floor with NO bitwise primitive",
+  "band": "form/form-stdlib/tests/q4k-dequant-band.fk — 12 sample indices spanning both get_scale_min_k4 packing branches (j<4 reads two bytes; j>=4 stitches a 6-bit field across a byte boundary) and both nibble halves; expected values are round(w*1e6) from gguf.quants.dequantize",
+  "reference": "numpy reimplementation of llama.cpp dequantize_row_q4_K, cross-checked against gguf.quants.dequantize on the same block bytes: max_abs_diff = 0.0 (bit-exact). The band's expected ints are this authoritative reference.",
+  "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/q4k-dequant.fk form-stdlib/tests/q4k-dequant-band.fk -> 4095, fourth arm: 1 band four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent",
+  "verdict": "FOUR-WAY 4095, 0 divergent — Go, Rust, TypeScript, and the emitted fkwu walker all reproduce the gguf reference dequant of a real Q4_K superblock, bit-for-bit",
+  "manifest": "registered in form/fourth-arm-bands.txt as 'q4k-dequant fks 4095'",
+  "reading": "The k-quant unpack — the one piece of real-model weight loading still carried by an external python library — is now a proven Form recipe. d/dmin enter as f32 (the f16->f32 decode is the next adjacent rung); the byte-reading carrier (read_file_bytes) remains host I/O, but the dequant MATH is Form-native and four-way verified against the canonical reference. Remaining toward full real-model inference: Form-native f16->f32 decode for d/dmin, the full transformer block (attention/softmax/SwiGLU) on the GPU, then the generation loop.",
+  "reproduce": "venv with gguf+numpy; read blk.0.ffn_gate.weight first 144 bytes from ~/.ollama/models/blobs (llama3.2:3b); the band fixture is those bytes; validate.sh four-way == 4095"
+}

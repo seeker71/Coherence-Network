@@ -1,0 +1,56 @@
+; q4k-dequant.fk — rung (1) toward real-model inference: GGUF Q4_K superblock dequant as a Form recipe.
+;
+; The body's compute already runs Form-native on the GPU over real llama weights (the matvec, PR #3219),
+; but the weight LOAD — unpacking a Q4_K superblock to f32 — was carried by python's gguf.quants.dequantize.
+; This recipe lifts that dequant into Form. The format (llama.cpp block_q4_K, QK_K=256): a superblock holds
+; a super-scale d, a super-min dmin, eight 6-bit block-scales and eight 6-bit block-mins packed into 12 bytes
+; (scales[12]), and 256 4-bit quants packed into 128 bytes (qs[128]). For each of the 8 sub-blocks of 32
+; weights: w = (d * scale) * nib - (dmin * min), where nib is the weight's 4-bit code.
+;
+; The 6-bit (scale,min) unpack is llama.cpp's get_scale_min_k4 — and every bit-op is an integer-arithmetic
+; identity, so the recipe needs no bitwise primitive and proves on the four-way arithmetic floor:
+;   x & 63  = (mod x 64)      x & 0xF = (mod x 16)      x >> 6 = (div x 64)      x >> 4 = (div x 16)
+;   x << 4  = (mul x 16)      a | b (disjoint fields) = (add a b)
+; mod is itself floor-div (x - (x/n)*n) so the only primitives are div/mul/add/sub/nth/round — the floor
+; the affine and tensor-quant bands already cross four-way. d and dmin enter as f32 (the f16->f32 decode is
+; the adjacent rung); the arithmetic under proof is the superblock unpack, bit-exact against gguf's reference.
+
+; integer mod via floor-div — bytes are non-negative, so div truncates == floors
+(defn q4k-mod (a n) (sub a (mul (div a n) n)))
+
+; get_scale_min_k4(j, scales) — the 6-bit packed block-scale for sub-block j (0..7)
+(defn q4k-scale (j q)
+  (if (lt j 4)
+      (q4k-mod (nth q j) 64)
+      (add (q4k-mod (nth q (add j 4)) 16)
+           (mul (div (nth q (sub j 4)) 64) 16))))
+; ... and the 6-bit packed block-min for sub-block j
+(defn q4k-min (j q)
+  (if (lt j 4)
+      (q4k-mod (nth q (add j 4)) 64)
+      (add (div (nth q (add j 4)) 16)
+           (mul (div (nth q j) 64) 16))))
+
+; the 4-bit quant code: low nibble for the first 32 of a 64-chunk, high nibble for the next 32
+(defn q4k-nib (qb half) (if (eq half 0) (q4k-mod qb 16) (div qb 16)))
+
+; index decomposition for output i (0..255): chunk c, half (low/high nibble), scale-pair index, quant byte
+(defn q4k-c (i) (div i 64))
+(defn q4k-within (i) (q4k-mod i 64))
+(defn q4k-half (i) (div (q4k-within i) 32))
+(defn q4k-l (i) (q4k-mod (q4k-within i) 32))
+(defn q4k-sidx (i) (add (mul 2 (q4k-c i)) (q4k-half i)))
+(defn q4k-qb (i qs) (nth qs (add (mul (q4k-c i) 32) (q4k-l i))))
+
+; the dequantized weight at output index i:  w = (d * scale) * nib - (dmin * min)
+(defn q4k-at (i d dmin scales qs)
+  (sub (mul (mul d (q4k-scale (q4k-sidx i) scales))
+            (q4k-nib (q4k-qb i qs) (q4k-half i)))
+       (mul dmin (q4k-min (q4k-sidx i) scales))))
+
+; the whole superblock as a 256-long list (the full dequant walk)
+(defn q4k-dequant-from (i n d dmin scales qs)
+  (if (eq i n) (empty)
+      (cons (q4k-at i d dmin scales qs)
+            (q4k-dequant-from (add i 1) n d dmin scales qs))))
+(defn q4k-dequant (d dmin scales qs) (q4k-dequant-from 0 256 d dmin scales qs))
