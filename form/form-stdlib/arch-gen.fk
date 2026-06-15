@@ -39,4 +39,25 @@
     (defn ag-best (maxd x t lr eps steps)
         (ag-best-acc 1 maxd x t lr eps steps 0 (ag-fit 0 x t lr eps steps)))
 
+    ; --- SERVE: champion-challenger over architectures. A synthesized-and-trained challenger replaces the
+    ;     served champion ONLY when it EARNS it — fitting the task's targets better (closer in fixed steps)
+    ;     across enough samples — never on a tie, so the served model is never degraded. This is M7's
+    ;     infer-best-while-searching-better: the architect generates challengers, champion-challenger.fk
+    ;     gates the promotion. (Needs champion-challenger.fk preluded: cc-exceeds?, cc-champ/chall-score.) ---
+    (defn ag-correct? (depth x t lr eps steps efit)          ; 1 if this architecture fits t within efit
+        (if (lt (ag-fit depth x t lr eps steps) efit) 1 0))
+    (defn ag-trials (cd dd x targets lr eps steps efit)      ; per-target (champ-correct chall-correct)
+        (if (eq (len targets) 0) (empty)
+            (cons (list (ag-correct? cd x (head targets) lr eps steps efit)
+                        (ag-correct? dd x (head targets) lr eps steps efit))
+                  (ag-trials cd dd x (tail targets) lr eps steps efit))))
+    ; promote the challenger architecture iff the window is long enough AND it STRICTLY exceeds the champion
+    ; (cc-exceeds? — strict, so a same-architecture challenger ties and the champion is protected).
+    (defn ag-promote? (cd dd x targets lr eps steps efit min-samples)
+        (if (and (ge (len (ag-trials cd dd x targets lr eps steps efit)) min-samples)
+                 (eq (cc-exceeds? (ag-trials cd dd x targets lr eps steps efit)) 1))
+            1 0))
+    (defn ag-authority (cd dd x targets lr eps steps efit min-samples)
+        (if (eq (ag-promote? cd dd x targets lr eps steps efit min-samples) 1) "challenger" "champion"))
+
     0)

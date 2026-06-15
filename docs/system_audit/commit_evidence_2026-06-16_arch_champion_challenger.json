@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/arch-champion-challenger",
+  "commit_scope": "The auto-ml SERVING loop, closed: the architect (arch-gen.fk) generates a challenger architecture, trains it through the proven backward, and champion-challenger.fk flips serving authority to it ONLY when it EARNS it. A deeper challenger fits the task's targets faster (closer in fixed steps) and strictly exceeds the champion across the window; a same-architecture challenger only ties, so the served champion is protected. This is M7's infer-best-while-searching-better in full -- improve the model without ever degrading what is served now -- composing arch-gen with the existing champion-challenger cell (cc-exceeds? gates promotion strictly).",
+  "files_owned": [
+    "form/form-stdlib/arch-gen.fk",
+    "form/form-stdlib/tests/arch-champion-challenger-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/champion-challenger.fk form-stdlib/arch-gen.fk form-stdlib/tests/arch-champion-challenger-band.fk",
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-gen.fk form-stdlib/tests/arch-gen-band.fk"
+    ],
+    "summary": "arch-champion-challenger-band -> 31 three-way (Go=Rust=TS), 0 divergent. Over three targets (5 training steps each, fit threshold 0.005), the depth-2 challenger fits all three while the depth-1 champion fits one -- trials [[0,1],[0,1],[1,1]], champ score 1, chall score 3. champion-challenger PROMOTES the earned challenger (cc-exceeds? strict + min-samples=3 -> authority 'challenger') and PROTECTS the served champion against a same-depth challenger (a tie, no strict gain -> authority 'champion', not promoted). Prior arch-gen-band unchanged -> 31. 3-KERNEL ONLY (Go=Rust=TS): composes the fp64 transformer-backward op family, not in the fourth-arm manifest -- same floor as transformer-block.fk / arch-gen.fk. Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "trials_depth1_vs_depth2": "[[0,1],[0,1],[1,1]]",
+      "champ_score": 1,
+      "chall_score": 3,
+      "promote_deeper_challenger": 1,
+      "promote_same_depth_challenger": 0,
+      "authority_earned": "challenger",
+      "authority_tie": "champion"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Promotion uses cc-exceeds? (strict) rather than the cell's default cc-promote? (match-or-exceed) because both arms are OUR architectures: a tie should not churn the served model. This is a deliberate composition choice; the cell's reaches/margin path stays available for the foreign-champion-retire case it was built for.",
+        "follow_up": "Expose a margin so near-ties within a tolerance can be configured per task."
+      },
+      {
+        "limitation": "Discrimination is by fit-speed (a deeper architecture is closer in fixed steps), proven on single-target-per-sample training. Multi-example capacity-based selection is the deeper proof but needs higher input dim: in 2-D the layernorm collapses any input to one of two normalized directions, so 2-D FFN-residual capacity does not discriminate over a dataset. At d>=4 LN preserves enough structure for a capacity gap.",
+        "follow_up": "Lift the architecture fixtures to d>=4 and train over a multi-example dataset for capacity-based champion-challenger; richer architecture spaces (mixed layer types, widths)."
+      },
+      {
+        "limitation": "3-kernel only: the fp64 transformer-backward op family is not in the fourth-arm manifest. Same floor as transformer-block.fk and arch-gen.fk. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs arch-champion-challenger-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body improves its own served model by generating challenger architectures, training them, and promoting only an earned winner -- never degrading what is served now.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh arch-champion-challenger-band (three kernels agree, verdict 31): deeper challenger fits faster, strictly exceeds, promoted; same-depth challenger ties, champion protected"
+    ],
+    "summary": "Proven three-way: the auto-ml serving loop -- generate, train, promote only the earned challenger."
+  },
+  "phase_gate": {
+    "phase": "m7-architect-serving-loop",
+    "gate": "infer-best-while-searching-better closed for architectures: the architect generates challengers, trains them, and champion-challenger promotes only an earned winner while protecting the served champion, three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "richer architecture spaces (mixed types, widths); multi-example capacity selection at d>=4; the GPU as the trainer underneath the search"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arch-champion-challenger-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/arch-gen.fk",
+    "form/form-stdlib/tests/arch-champion-challenger-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/arch-gen.fk",
+    "form/form-stdlib/tests/arch-champion-challenger-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-16_arch_champion_challenger.json"
+  ],
+  "change_intent": "runtime_feature"
+}
