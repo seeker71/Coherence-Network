@@ -119,6 +119,20 @@ def catalog_capture(request: str, raw: str, transmuted: str, lane: str, outcome:
 # to use the subscription CLI). A rewrite is light enough for a small local model.
 _TRANSMUTE_ORACLE = os.environ.get("FORM_CLI_TRANSMUTE_ORACLE", "ollama run llama3.2:3b")
 
+# the CROSS-TRAINING oracle — the best LOCAL tool-calling model as the teacher whose
+# decisions become ground-truth labels (predictor-sampling -> predictor-train). Local,
+# no key, no metered API. qwen2.5:72b is the strongest local function-caller available
+# and emits the Hermes <tool_call>{...}</tool_call> tags natively, so its output drops
+# straight into form-agent-protocol's hermes encoding. Quality over speed here: this is
+# the teacher generating labels, not the hot transmute path. See
+# docs/coherence-substrate/cross-train-oracle.form.
+_CROSS_TRAIN_ORACLE = os.environ.get("FORM_CLI_ORACLE", "ollama run qwen2.5:72b")
+
+
+def cross_train_oracle() -> str:
+    """The local tool-calling teacher whose decisions label the cross-training corpus."""
+    return _CROSS_TRAIN_ORACLE
+
 
 def _reason(prompt: str, oracle_cmd: str, timeout: float = 120.0) -> str:
     """Run a reasoner — a host command reading the prompt on stdin (ollama run

@@ -1,0 +1,48 @@
+; cross-train-oracle.form — the local teacher the form-native lanes learn from.
+;
+; The cross-training loop is form-native-agent-shape.form: a local oracle's decisions
+; become ground-truth labels (predictor-sampling.fk) that grow the form-native
+; challenger (predictor-train.fk) toward the champion, proven by native-vs-oracle score
+; (native-training-receipt.fk). This cell names the teacher and its status.
+
+(cross-train-oracle
+
+  (teacher
+    "qwen2.5:72b, run locally via ollama — the strongest local tool-calling model"
+    "available. Local, no key, no metered API. Set as _CROSS_TRAIN_ORACLE in"
+    "mcp-server/coherence_mcp_server/form_cli_tools.py (env FORM_CLI_ORACLE to override)."
+    "deepseek-r1:32b is the reasoning/transmute teacher when reasoning depth matters.")
+
+  (verified
+    "Probed live: given a tool and a request, qwen2.5:72b emitted exactly"
+    "<tool_call>{\"name\":\"bash\",\"arguments\":{\"cmd\":\"ls\"}}</tool_call> — it"
+    "speaks the Hermes tag encoding form-agent-protocol.fk standardized on, NATIVELY."
+    "So the teacher's raw output drops straight into the protocol's hermes lane with no"
+    "translation: the label and the wire format are already aligned.")
+
+  (loop
+    (decide   "the teacher makes a routing / tool-use decision on a real request")
+    (label    "predictor-sampling.fk fuses it (a circle of models) into ONE ground-truth label, gating contested ones")
+    (score    "io-match.fk scores by EFFICACY — did the candidate's output WORK — not by reproducing the teacher's exact tokens")
+    (grow     "predictor-train.fk pt-learn interns (label, feature-vector) into the form-native challenger")
+    (infer    "nearest-shape.fk routes the live query to the nearest interned shape")
+    (prove    "native-training-receipt.fk: native-vs-oracle score over a heldout window")
+    (graduate "fcr-route flips the shape local once the lane's pass-rate crosses threshold"))
+
+  (corpus
+    "The corpus fills from live sessions via the Stop-hook capture (capture_hook.py ->"
+    "training-catalog.fk), on main now. Honest status at this writing: empty — the hook"
+    "fires only for Claude Code sessions that load settings AFTER it merged, so"
+    "accumulation begins with fresh sessions, not retroactively. The days-clock starts"
+    "there: no labels yet, so no receipt is trustworthy yet.")
+
+  (timescale
+    "Days, measured not assumed. The mesh training-carrier floors quantify 'enough'"
+    "(order >=10k labels, >=100 MiB heldout) before a lane's native-training-receipt is"
+    "trusted. We read the native-vs-oracle score rising over the heldout window across"
+    "days; that number — not a claim — tells us how well the form-native version learned.")
+
+  (next
+    "Two tiers learn from this teacher: the router (prototype: predictor-train/"
+    "nearest-shape, can converge online as labels arrive) and the freq-check/transmuter"
+    "(transformer: real backprop epochs on transformer-block.fk — the genuine build)."))
