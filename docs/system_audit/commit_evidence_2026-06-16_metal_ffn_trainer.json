@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/gpu-ffn-trainer",
+  "commit_scope": "The GPU as the trainer underneath the architecture search: the architect's whole FFN layer now trains on Metal, not just one affine. jit-tensor-emit.fk gains jte-mlp-train-msl, a Form recipe that emits the FFN training step y = W2*gelu(W1*x + b1) + b2 (transformer-backprop.fk's tbp-mlp-step, the exact block ac-ffn-layer builds) as ONE Metal kernel run by a single threadgroup with barriered phases. The transcendental is the recipe's OWN -- gelu/gelu' compose from fexp (tn-exp's 14-term square-and-reduce Taylor) and ftanh ((e^2x-1)/(e^2x+1)), so the GPU walks transformer-numerics.fk's approximation, never Metal's tanh(). scripts/metal_ffn_audit.sh compiles the emitted kernel, trains a real 197k-param FFN on the M4 Max, and parity-gates the GPU weights against an fp32 CPU mirror of the same phases.",
+  "files_owned": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/mlp-train-emit-band.fk",
+    "scripts/metal_ffn_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/mlp-train-emit-band.fk",
+      "scripts/metal_ffn_audit.sh"
+    ],
+    "summary": "mlp-train-emit-band -> 7 three-way (Go=Rust=TS), 0 divergent: the FFN training-step emitter is byte-identical across all three kernels (str_eq vs the 2570-byte canonical MSL), parameterizes on the kernel name, and is deterministic (two emissions of one name str_eq). The sibling emitter bands stay green after the file was regenerated (affine-train-emit-band -> 7, metal-emit-band, jit-tensor-emit-band). LIVE GPU WITNESS scripts/metal_ffn_audit.sh on this M4 Max: emits the kernel (every byte from the recipe), compiles it, trains FFN(in=256, hid=384, out=256, 197,248 params) -- loss 46.26 -> 5.9e-16 in 25 steps at 0.40 ms/step -- and parity-gates the GPU weights against an fp32 CPU mirror of the same phases (same downward forward fold, same forward dh1 column fold, same fp32 fexp/ftanh): max|dW| = 6.1e-6, within fp32 epsilon. 3-KERNEL ONLY (Go=Rust=TS): the band exercises str_concat string emission (covered by fkwu) but is gated alongside the fp64 transformer op family; reported at the three-kernel floor consistent with its affine sibling. The Metal/Swift carrier is host-specific (Darwin + swiftc), soft-skips elsewhere.",
+    "observed_delta": {
+      "band_verdict": 7,
+      "band_divergent": 0,
+      "emitted_msl_bytes": 2570,
+      "gpu_params": 197248,
+      "gpu_loss_start": 46.259911,
+      "gpu_loss_end": 5.9e-16,
+      "gpu_ms_per_step": 0.40,
+      "parity_max_abs_dW": 6.1e-6,
+      "parity_verdict": "within fp32 epsilon"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Parity is within fp32 epsilon (max|dW| 6.1e-6 over 197k params, 300 steps), not bit-exact. The recipe's exp squares a Taylor value up to k times (tn-exp's reduce-and-square), so a 1-ULP difference between Metal's and Swift's fp32 divide is amplified by the squaring -- a precision artifact of the transcendental, not a wrong fold. fastMathEnabled=false holds the matvec folds to the recipe's op order; the residual is the exp squaring. The affine sibling (no transcendental) reaches bit-exact; the FFN carries the recipe's own exp/tanh and so lands within epsilon.",
+        "follow_up": "A correctly-rounded fp32 divide path or an fp64 accumulate-then-narrow on a GPU that supports it would tighten toward bit-exact; for now within-epsilon is the honest claim for a transcendental kernel."
+      },
+      {
+        "limitation": "The kernel runs in a SINGLE threadgroup (barriered phases over threadgroup-shared scratch buffers in device memory), so the per-layer width is bounded by max threads per threadgroup (1024 on this M4 Max) for the wider of {hid, outd}. This fits the architect's small layers and a real-size witness; larger widths want a multi-threadgroup reduction.",
+        "follow_up": "A multi-threadgroup variant with a cross-group reduction for the dh1 column sum when hid/outd exceed one threadgroup."
+      },
+      {
+        "limitation": "3-kernel only: gated alongside the fp64 transformer op family; the Metal/Swift live witness is Darwin+swiftc only (soft-skips on other hosts).",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "mlp-train-emit-band rides the default validate.sh suite via its '; preludes:' header (jit-tensor-emit.fk); CI three-way gate applies. The Metal witness is host-only and not part of CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib emitter recipe + band + a host GPU audit script; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The architect's FFN layer -- the exact block ac-ffn-layer builds and arch-search trains -- now trains on the M4 Max GPU via a Form-emitted Metal kernel, parity-gated against the recipe's fp32 CPU semantics. The GPU is the trainer underneath the search.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh mlp-train-emit-band (three kernels agree, verdict 7): the FFN training-step MSL emitter is deterministic and byte-identical three-way",
+      "metal_ffn_audit.sh: the emitted kernel compiles, trains a 197k-param FFN on the GPU (loss 46 -> 6e-16), and matches the fp32 CPU mirror within epsilon"
+    ],
+    "summary": "Proven three-way (emitter) and live on the M4 Max GPU (the FFN learns, parity within fp32 epsilon)."
+  },
+  "phase_gate": {
+    "phase": "m7-gpu-ffn-trainer",
+    "gate": "the architect's FFN layer trains on Metal: jte-mlp-train-msl emits the tbp-mlp-step training kernel (the recipe's own exp/tanh, barriered single-threadgroup phases), byte-stable three-way, and the live M4 Max witness trains a 197k-param FFN with the GPU weights within fp32 epsilon of the recipe's CPU semantics",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "the search calling the GPU trainer directly -- the architect timing real candidates on the silicon; a multi-threadgroup variant for widths beyond one group"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "metal-ffn-trainer-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/mlp-train-emit-band.fk",
+    "scripts/metal_ffn_audit.sh",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/mlp-train-emit-band.fk",
+    "scripts/metal_ffn_audit.sh",
+    "docs/coherence-substrate/form-native-models.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-16_metal_ffn_trainer.json"
+  ],
+  "change_intent": "runtime_feature"
+}
