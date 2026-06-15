@@ -1,0 +1,16 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim core-axiom-package-receipt \"Next narrow lane after PR #3174: add package/install receipt around Mac+Android core-axiom native pair with binary/source checksums, adb-forward channel timing, and remote cleanup proof; avoid sensor/mesh/BML/compiler lanes.\"",
+    "scripts/android_mac_core_axiom_receipt.sh 2048 8",
+    "python3 -m json.tool .cache/android_mac_core_axiom_receipt/package-latest.json",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/core-axiom-package-receipt.fk form-stdlib/tests/core-axiom-package-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh core-axiom-package-receipt"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Extended the Mac+Android core-axiom native runner to emit package-latest.json with script/source/binary/channel-receipt SHA-256s, channel duration, sample window, Android device metadata, and remote cleanup status. The live package receipt passed on SM-S918U1 Android 16 arm64-v8a with channel_duration_ms=156 and remote_cleanup=pass. The package Form band returns 4095 four-way."
+}

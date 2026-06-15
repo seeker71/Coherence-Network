@@ -18,6 +18,7 @@ SRC="$WORK/core_axiom_receipt.c"
 MAC_BIN="$WORK/core-axiom-receipt-macos"
 ANDROID_BIN="$WORK/core-axiom-receipt-android-arm64"
 OUT="$WORK/latest.json"
+PACKAGE_OUT="$WORK/package-latest.json"
 SERVER_STDOUT="$WORK/android-server.stdout"
 SERVER_STDERR="$WORK/android-server.stderr"
 MAC_CLIENT_STDOUT="$WORK/mac-client.stdout"
@@ -27,6 +28,18 @@ PORT="${CORE_AXIOM_RECEIPT_PORT:-$((41730 + ($$ % 2000)))}"
 REMOTE="/data/local/tmp/coherence-core-axiom-receipt-$$"
 
 mkdir -p "$WORK"
+
+now_ms() {
+  perl -MTime::HiRes=time -e 'printf "%d\n", time() * 1000'
+}
+
+sha256_file() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
 
 if [[ "$SAMPLES" -le 0 || "$WIDTH" -le 0 || "$WIDTH" -gt 32 ]]; then
   echo "samples and width must be positive; width <= 32" >&2
@@ -491,7 +504,7 @@ if ! grep -q "arm64" <<<"$abi"; then
   exit 1
 fi
 
-rm -f "$OUT" "$SERVER_STDOUT" "$SERVER_STDERR" "$MAC_CLIENT_STDOUT" "$MAC_CLIENT_STDERR" "$ANDROID_RC"
+rm -f "$OUT" "$PACKAGE_OUT" "$SERVER_STDOUT" "$SERVER_STDERR" "$MAC_CLIENT_STDOUT" "$MAC_CLIENT_STDERR" "$ANDROID_RC"
 cleanup() {
   adb -s "$serial" forward --remove "tcp:$PORT" >/dev/null 2>&1 || true
   adb -s "$serial" shell "rm -f '$REMOTE'" >/dev/null 2>&1 || true
@@ -507,10 +520,17 @@ adb -s "$serial" forward "tcp:$PORT" "tcp:$PORT" >/dev/null
 adb -s "$serial" shell "'$REMOTE' android-server 127.0.0.1 '$PORT' '$SAMPLES' '$WIDTH'" >"$SERVER_STDOUT" 2>"$SERVER_STDERR" || echo $? >"$ANDROID_RC" &
 server_pid=$!
 sleep 0.5
+channel_start_ms="$(now_ms)"
 "$MAC_BIN" mac-client 127.0.0.1 "$PORT" "$SAMPLES" "$WIDTH" "$OUT" >"$MAC_CLIENT_STDOUT" 2>"$MAC_CLIENT_STDERR"
+channel_end_ms="$(now_ms)"
 wait "$server_pid"
 trap - EXIT
 cleanup
+remote_state="$(adb -s "$serial" shell "if [ -e '$REMOTE' ]; then echo present; else echo absent; fi" | tr -d '\r[:space:]')"
+remote_cleanup="fail"
+if [[ "$remote_state" == "absent" ]]; then
+  remote_cleanup="pass"
+fi
 
 if [[ -s "$ANDROID_RC" ]]; then
   echo "Android receipt server failed rc=$(cat "$ANDROID_RC") stderr=$(cat "$SERVER_STDERR")" >&2
@@ -525,7 +545,29 @@ if ! grep -q '"kind":"core-axiom-native-channel-receipt"' "$OUT" || ! grep -q '"
   cat "$OUT" >&2 || true
   exit 1
 fi
+if [[ "$remote_cleanup" != "pass" ]]; then
+  echo "Remote binary cleanup failed: $REMOTE is still present" >&2
+  exit 1
+fi
+
+script_sha="$(sha256_file "$0")"
+generated_source_sha="$(sha256_file "$SRC")"
+mac_sha="$(sha256_file "$MAC_BIN")"
+android_sha="$(sha256_file "$ANDROID_BIN")"
+channel_receipt_sha="$(sha256_file "$OUT")"
+channel_duration_ms=$((channel_end_ms - channel_start_ms))
+mac_desc_json="$(json_escape "$mac_desc")"
+android_desc_json="$(json_escape "$android_desc")"
+model_json="$(json_escape "$model")"
+abi_json="$(json_escape "$abi")"
+android_version_json="$(json_escape "$android_version")"
+
+cat > "$PACKAGE_OUT" <<JSON
+{"kind":"core-axiom-native-package-receipt","script_sha256":"$script_sha","generated_source_sha256":"$generated_source_sha","mac_binary_sha256":"$mac_sha","android_binary_sha256":"$android_sha","channel_receipt_sha256":"$channel_receipt_sha","mac_file":"$mac_desc_json","android_file":"$android_desc_json","device_model":"$model_json","android_version":"$android_version_json","android_abi":"$abi_json","channel":"adb-forward-tcp","channel_duration_ms":$channel_duration_ms,"samples":$SAMPLES,"width":$WIDTH,"remote_path":"$REMOTE","remote_cleanup":"$remote_cleanup","status":"pass"}
+JSON
 
 printf 'PASS mac=%s android=%s model=%s android_version=%s abi=%s channel=adb-forward-tcp samples=%s width=%s receipt=%s\n' \
   "$mac_desc" "$android_desc" "$model" "$android_version" "$abi" "$SAMPLES" "$WIDTH" "$OUT"
 cat "$OUT"
+printf 'PACKAGE receipt=%s sha256=%s channel_duration_ms=%s remote_cleanup=%s\n' "$PACKAGE_OUT" "$channel_receipt_sha" "$channel_duration_ms" "$remote_cleanup"
+cat "$PACKAGE_OUT"

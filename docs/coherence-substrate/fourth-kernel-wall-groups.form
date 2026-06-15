@@ -25,6 +25,7 @@
     (adam-bias-correction "adam-bias-correction now proves bounded fixed-point Adam bias-corrected moments and weight updates over the same receipt family.")
     (tensor-autodiff-verifier "tensor-autodiff-verifier now proves a native host binary verifier carrier can check many tiny affine-loss gradient samples and return a Form-valid receipt.")
     (core-axiom-native-receipt "core-axiom-native-receipt now proves a generated macOS arm64 binary and generated Android arm64 binary can communicate over an explicit adb-forward TCP native channel, verify the same bounded left-expanding sample window, and return a Form-valid combined receipt with no self-modifying/background-service claim.")
+    (core-axiom-package-receipt "core-axiom-package-receipt now proves the same Mac+Android native pair has package/install evidence: script/source/binary/channel-receipt SHA-256s, channel duration, sample window, and remote Android cleanup.")
     (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/dynamic-grammar-carrier.fk + tests/dynamic-grammar-carrier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
@@ -37,6 +38,7 @@
     (four-way-proof "form/form-stdlib/optimizer-step.fk + tests/adam-bias-correction-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/tensor-autodiff-verifier.fk + tests/tensor-autodiff-verifier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/tensor_autodiff_native_verifier.sh 4096 8 -> native receipt pass.")
     (four-way-proof "form/form-stdlib/core-axiom-native-receipt.fk + tests/core-axiom-native-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_mac_core_axiom_receipt.sh 2048 8 -> macOS arm64 + Android arm64 native channel receipt pass.")
+    (four-way-proof "form/form-stdlib/core-axiom-package-receipt.fk + tests/core-axiom-package-receipt-band.fk -> 4095 on Go/Rust/TypeScript/fkwu; scripts/android_mac_core_axiom_receipt.sh 2048 8 -> package-latest.json with SHA-256 and remote cleanup receipt pass.")
     (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
 
   (group
@@ -77,8 +79,8 @@
     (id ml-kernel-layer-model)
     (status available)
     (why "Model research needs tensors, optimizer state, decode loops, mutable/reversible training state, eval receipts, and carrier conformance as first-class Form cells.")
-    (current-floor format-arith tensor-quant transformer-numerics transformer-block jit-tensor-emitter-as-recipe model-vitality-storage physical-carrier-rehash optimizer-step autodiff-gradient-cell adam-step-cell adam-bias-correction tensor-autodiff-verifier core-axiom-native-receipt)
-    (closed-now optimizer-step-fixed-point-sgd optimizer-step-fixed-point-momentum scalar-affine-gradient-cells bounded-adam-moment-cells bounded-adam-bias-correction native-gradient-sample-verifier mac-android-native-channel-receipt)
+    (current-floor format-arith tensor-quant transformer-numerics transformer-block jit-tensor-emitter-as-recipe model-vitality-storage physical-carrier-rehash optimizer-step autodiff-gradient-cell adam-step-cell adam-bias-correction tensor-autodiff-verifier core-axiom-native-receipt core-axiom-package-receipt)
+    (closed-now optimizer-step-fixed-point-sgd optimizer-step-fixed-point-momentum scalar-affine-gradient-cells bounded-adam-moment-cells bounded-adam-bias-correction native-gradient-sample-verifier mac-android-native-channel-receipt mac-android-package-install-receipt)
     (next-walls tensor-autodiff-gradient-cells large-tensor-policy full-safetensors-header full-mlx-package-ingest jit-buffer-bridge fourth-arm-duration conformance-ledger)
     (parallel-card
       (goal "Promote one ML model data or execution wall into a receipt-bearing Form-native floor.")
