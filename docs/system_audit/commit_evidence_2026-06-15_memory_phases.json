@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "claude/funny-tharp-bcf322",
+  "commit_scope": "Short-term (water) and long-term (ice) memory as two recall recipes over one stream, the user's 'use short term and long term memory' made runnable and the next MoE expert KINDS. memory-phases.fk reads one stream of (key,value) writes two ways: SHORT-TERM (water) returns the most recent value for a key within the last K writes -- plastic, tracks drift, and FORGETS (a key written only long ago has evaporated past the window, recall ''); LONG-TERM (ice) returns the MAJORITY value across the whole history -- load-bearing, noise-robust, never forgets. On a key whose truth drifted (old majority A, fresh B) the phases DIVERGE (water B, ice A); on an old key, water has evaporated while ice still holds. This is substrate-thermodynamics.form's water/ice axis as runnable recall, two phases over one substrate rather than two stores.",
+  "files_owned": [
+    "form/form-stdlib/memory-phases.fk",
+    "form/form-stdlib/tests/memory-phases-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/memory-phases.fk form-stdlib/tests/memory-phases-band.fk"
+    ],
+    "summary": "memory-phases-band -> 31 FOUR-WAY: validate.sh reports 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', 0 divergent -- Go=Rust=TS=fkwu agree byte for byte. This is the FULL floor (not 3-kernel only): the band is pure string/list/int ops (cons, nth, str_eq, eq, len, head, tail, add, gt, sub), all in the fourth-arm op family, so it crosses fkwu honestly; added to form/fourth-arm-bands.txt as 'memory-phases fks 31'. The five claims: water recalls the fresh value on the drifted key (short X k=2 = B), ice recalls the persistent majority (long X = A), the phases diverge on drift (B != A), water forgets the old key past its window (short Y k=2 = ''), ice still holds it (long Y = yval).",
+    "observed_delta": {
+      "band_verdict": 31,
+      "fourth_arm": "1 band four-way (fkwu + pre-flattened tables), 0 divergent",
+      "short_term_drifted_key": "B (recent)",
+      "long_term_drifted_key": "A (majority)",
+      "short_term_old_key": "'' (evaporated)",
+      "long_term_old_key": "yval (persists)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Long-term recall is MAJORITY over the whole history; an alternative ice reading is first-write primacy (the bedrock original). Both are honest 'persistence' readings; majority is the noise-robust one and is what shipped.",
+        "follow_up": "Add a primacy reader if a task needs the original-write semantics rather than the majority."
+      },
+      {
+        "limitation": "These are memory PHASES (recall recipes); wiring them as competing MoE experts with per-input routing has a subtlety -- which phase is right is often a property of the task's generative process (drift vs stable+noise) rather than the individual input, so the gate routes at the task/region level, not per-token. The clean per-input MoE routing already shipped (moe-router) is over the geometric/compute experts; memory-phase selection composes with champion-challenger at the task level.",
+        "follow_up": "Compose memory-phase choice with champion-challenger.fk for task-level phase authority; or a temporal gate that reads recent drift-rate to choose the phase."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs memory-phases-band in the default suite via its preludes header AND gates it four-way via the fourth-arm-bands.txt row on every suite run; CI four-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + manifest row + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body has two runnable memory phases over one stream -- short-term (water, recency + forgetting) and long-term (ice, persistent majority + never forgetting) -- that give correct, divergent answers for their purposes, proven four-way.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh memory-phases-band (four kernels agree, verdict 31, fourth arm four-way): water tracks drift and forgets, ice holds the majority and persists"
+    ],
+    "summary": "Four-way proven: short-term and long-term memory as two recall recipes over one substrate."
+  },
+  "phase_gate": {
+    "phase": "memory-phases-water-ice",
+    "gate": "substrate-thermodynamics' two memory phases are runnable recall recipes: short-term (recency + forgetting) and long-term (majority + persistence) give correct divergent answers, proven FOUR-WAY (Go=Rust=TS=fkwu)",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "recipe-generating expert (the dynamic-recipe advantage); compose memory-phase choice with champion-challenger for task-level phase authority"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "memory-phases-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/memory-phases.fk",
+    "form/form-stdlib/tests/memory-phases-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/memory-phases.fk",
+    "form/form-stdlib/tests/memory-phases-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-15_memory_phases.json"
+  ],
+  "change_intent": "runtime_feature"
+}

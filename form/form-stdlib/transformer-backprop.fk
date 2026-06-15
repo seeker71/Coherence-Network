@@ -1,0 +1,327 @@
+; transformer-backprop.fk — the BACKWARD pass over the transformer's affine node, in pure Form.
+;
+; transformer-block.fk (M4) is the proven FORWARD block: every attention projection (q/k/v/out)
+; and every FFN layer is a tb-affine — y = W·x + b — built on tb-matvec. This cell is the REVERSE
+; of that node: reverse-mode autodiff at the matvec, plus the SGD update that closes the loop.
+; form-train-step.fk is the one-weight SGD atom; this is the SAME descent generalized to a whole
+; weight MATRIX and bias VECTOR — the shape backprop lands on at every affine in the block.
+;
+; The chain rule, made concrete. Given the upstream gradient gy = dL/dy at an affine node:
+;   db = gy                            the bias gradient IS the upstream gradient
+;   dW = outer(gy, x)                  row i is gy[i] · x   (the weight gradient)
+;   dx = Wᵀ · gy                       the gradient handed to the PREVIOUS layer — THIS is the chain;
+;                                      = Σ_i gy[i]·W_row_i, whose j-th term is Σ_i W[i][j] gy[i].
+; With dx, the same three lines compose backward through a STACK of affines (and, as their vjps
+; land next, through softmax / gelu / layernorm): backprop is this node, walked in reverse. No new
+; arithmetic — fp64, reusing transformer-block.fk's own tb-affine / tb-vec-add / tb-dot / tb-zeros
+; and transformer-numerics.fk's tn-scale, so every kernel computes the same bits (determinism is the
+; feature). Loss is sum-of-squared-error so the gradient is exact and integer-clean for the band.
+;
+; Proven by: form-stdlib/tests/transformer-backprop-band.fk (three-way at validate.sh, the floor
+; transformer-block is proven on; loss strictly decreases and the dx chain is bit-exact).
+
+; --- residual + loss: L = Σ (y - t)², gy = dL/dy = 2(y - t) ---
+(defn tbp-vsub (a b)
+  (if (eq (len a) 0) (empty) (cons (sub (head a) (head b)) (tbp-vsub (tail a) (tail b)))))
+(defn tbp-resid (y t) (tbp-vsub y t))
+(defn tbp-sse (y t) (tb-dot (tbp-resid y t) (tbp-resid y t)))   ; scalar loss
+(defn tbp-dy (y t) (tn-scale (tbp-resid y t) 2.0))             ; upstream grad gy
+
+; --- the affine node's vector-Jacobian products ---
+; dW = outer(gy, x): row i is x scaled by gy[i].
+(defn tbp-outer (gy x)
+  (if (eq (len gy) 0) (empty) (cons (tn-scale x (head gy)) (tbp-outer (tail gy) x))))
+; dx = Wᵀ·gy: accumulate gy[i]·W_row_i — its j-th component is Σ_i W[i][j] gy[i]. THE CHAIN.
+(defn tbp-wt-gy-acc (rows gy acc)
+  (if (eq (len rows) 0) acc
+      (tbp-wt-gy-acc (tail rows) (tail gy)
+                     (tb-vec-add acc (tn-scale (head rows) (head gy))))))
+(defn tbp-dx (w gy) (tbp-wt-gy-acc w gy (tb-zeros (len (head w)))))
+
+; --- SGD update: param := param - lr · grad, for a bias VECTOR and a weight MATRIX ---
+(defn tbp-sgd-vec (v g lr) (tbp-vsub v (tn-scale g lr)))
+(defn tbp-sgd-mat (rows grows lr)
+  (if (eq (len rows) 0) (empty)
+      (cons (tbp-sgd-vec (head rows) (head grows) lr)
+            (tbp-sgd-mat (tail rows) (tail grows) lr))))
+
+; --- one training step over (W, b) fitting target t from input x -> (list W' b') ---
+(defn tbp-forward (w b x) (tb-affine w b x))             ; y = W·x + b  (reuse the forward node)
+(defn tbp-step-gy (w b x gy lr)
+  (list (tbp-sgd-mat w (tbp-outer gy x) lr) (tbp-sgd-vec b gy lr)))
+(defn tbp-step (w b x t lr)
+  (tbp-step-gy w b x (tbp-dy (tbp-forward w b x) t) lr))
+(defn tbp-W (s) (nth s 0))
+(defn tbp-b (s) (nth s 1))
+
+; --- training loop: n steps, computing the step ONCE per epoch (monomorphic, fourth-arm-safe) ---
+(defn tbp-train-next (s x t lr n)
+  (tbp-train (tbp-W s) (tbp-b s) x t lr (sub n 1)))
+(defn tbp-train (w b x t lr n)
+  (if (eq n 0) (list w b) (tbp-train-next (tbp-step w b x t lr) x t lr n)))
+
+; convenience: the loss after n training steps (forward of the trained params on x vs t).
+(defn tbp-train-loss (w b x t lr n)
+  (tbp-sse (tbp-forward (tbp-W (tbp-train w b x t lr n))
+                        (tbp-b (tbp-train w b x t lr n)) x) t))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE FFN SUB-BLOCK BACKWARD — backprop composing THROUGH the gelu nonlinearity.
+; ─────────────────────────────────────────────────────────────────────────────
+; transformer-block.fk's FFN is y = W2·gelu(W1·x + b1) + b2. Its backward is the affine
+; vjp above, TWICE, with ONE new node between them: the elementwise gelu derivative. That
+; is the only genuinely new piece — the chain rule walking through a transcendental, the
+; shape that extends to softmax'/layernorm' next. gelu' is composed from tn-tanh (the SAME
+; z and constants tn-gelu uses), so it is exact-bit-deterministic three-way like the forward.
+; Needs the transformer-numerics + transformer-block preludes (tn-tanh, tb-affine, tb-gelu-map,
+; tb-vec-mul) already loaded — the FFN backward stands on the proven forward, not beside it.
+;
+;   gelu(x)  = 0.5·x·(1 + tanh(z)),  z = C·(x + a·x³)   C=0.7978845608028654  a=0.044715
+;   gelu'(x) = 0.5·(1 + tanh(z)) + 0.5·x·(1 - tanh(z)²)·C·(1 + 3a·x²)         3a=0.134145
+;   (sanity: gelu'(0) = 0.5 exactly — the band's bit-anchor.)
+
+(defn tbp-gelu-z (x)
+  (mul 0.7978845608028654 (add x (mul 0.044715 (mul x (mul x x))))))
+(defn tbp-gelu-d1 (x)
+  (add
+    (mul 0.5 (add 1.0 (tn-tanh (tbp-gelu-z x))))
+    (mul (mul 0.5 x)
+         (mul (sub 1.0 (mul (tn-tanh (tbp-gelu-z x)) (tn-tanh (tbp-gelu-z x))))
+              (mul 0.7978845608028654 (add 1.0 (mul 0.134145 (mul x x))))))))
+(defn tbp-gelu-d (xs)
+  (if (eq (len xs) 0) (empty) (cons (tbp-gelu-d1 (head xs)) (tbp-gelu-d (tail xs)))))
+
+; --- forward: h1 = W1·x+b1 ; a = gelu(h1) ; y = W2·a+b2  (reuse tb-affine + tb-gelu-map) ---
+(defn tbp-mlp-h1 (w1 b1 x) (tb-affine w1 b1 x))
+(defn tbp-mlp-a  (w1 b1 x) (tb-gelu-map (tbp-mlp-h1 w1 b1 x)))
+(defn tbp-mlp-fwd (w1 b1 w2 b2 x) (tb-affine w2 b2 (tbp-mlp-a w1 b1 x)))
+(defn tbp-mlp-loss (w1 b1 w2 b2 x t) (tbp-sse (tbp-mlp-fwd w1 b1 w2 b2 x) t))
+
+; --- one SGD step over all four params. The forward intermediates and the two gradients are
+;     computed ONCE (let-bound) and reused — backprop's whole point is to reuse the forward pass,
+;     not recompute it. gy = 2(y-t) at the output; da = W2ᵀ·gy; dh1 = da ⊙ gelu'(h1) is the chain
+;     through the nonlinearity; then layer-2 from (gy,a) and layer-1 from (dh1,x). ---
+(defn tbp-mlp-step (w1 b1 w2 b2 x t lr)
+  (do
+    (let h1  (tb-affine w1 b1 x))
+    (let a   (tb-gelu-map h1))
+    (let y   (tb-affine w2 b2 a))
+    (let gy  (tn-scale (tbp-vsub y t) 2.0))
+    (let dh1 (tb-vec-mul (tbp-dx w2 gy) (tbp-gelu-d h1)))
+    (list
+      (tbp-sgd-mat w1 (tbp-outer dh1 x) lr)
+      (tbp-sgd-vec b1 dh1 lr)
+      (tbp-sgd-mat w2 (tbp-outer gy a) lr)
+      (tbp-sgd-vec b2 gy lr))))
+(defn tbp-mlp-W1 (s) (nth s 0))
+(defn tbp-mlp-b1 (s) (nth s 1))
+(defn tbp-mlp-W2 (s) (nth s 2))
+(defn tbp-mlp-b2 (s) (nth s 3))
+
+; --- training loop: n steps, step computed once per epoch (monomorphic, fourth-arm-safe). ---
+(defn tbp-mlp-train-next (s x t lr n)
+  (tbp-mlp-train (tbp-mlp-W1 s) (tbp-mlp-b1 s) (tbp-mlp-W2 s) (tbp-mlp-b2 s) x t lr (sub n 1)))
+(defn tbp-mlp-train (w1 b1 w2 b2 x t lr n)
+  (if (eq n 0) (list w1 b1 w2 b2)
+      (tbp-mlp-train-next (tbp-mlp-step w1 b1 w2 b2 x t lr) x t lr n)))
+(defn tbp-mlp-train-loss-s (s x t)
+  (tbp-mlp-loss (tbp-mlp-W1 s) (tbp-mlp-b1 s) (tbp-mlp-W2 s) (tbp-mlp-b2 s) x t))
+(defn tbp-mlp-train-loss (w1 b1 w2 b2 x t lr n)
+  (tbp-mlp-train-loss-s (tbp-mlp-train w1 b1 w2 b2 x t lr n) x t))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE TWO REMAINING GRADIENT NODES — softmax' (attention) and layernorm' (pre-LN).
+; ─────────────────────────────────────────────────────────────────────────────
+; With these and the affine vjp + gelu' above, every node in transformer-block.fk's pre-LN block has
+; its backward, so the whole proven forward block can train end to end. Both are exact closed forms
+; composed from transformer-numerics.fk; each carries an algebraic INVARIANT the band checks bit-for-bit,
+; so correctness is proven by the gradient's own conservation law, not a tolerance.
+;
+; softmax':  s = softmax(z), upstream g  ->  dz_j = s_j (g_j - <g,s>).
+;   Invariant: Σ dz = 0 — softmax conserves total probability, so its gradient sums to zero exactly.
+(defn tbp-softmax-back (s g)
+  (tb-vec-mul s (tn-sub-scalar g (tb-dot g s))))
+
+; layernorm':  y = (x-μ)/σ (γ=1),  upstream g  ->  dx = (1/σ)[ g - mean(g) - y·mean(g⊙y) ].
+;   Invariants: Σ dx = 0 (orthogonal to the mean direction) and Σ(dx⊙y) = 0 (orthogonal to the scale),
+;   both because Σy = 0 and Σy² = N. y here is tn-layernorm's own output (the body's normalizer).
+(defn tbp-ln-back (x g eps)
+  (tn-scale
+    (tbp-vsub (tn-sub-scalar g (tn-mean g))
+              (tn-scale (tn-layernorm x eps)
+                        (tn-mean (tb-vec-mul g (tn-layernorm x eps)))))
+    (div 1.0 (tn-sqrt (add (tn-var x) eps)))))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE FULL-BLOCK BACKWARD — the four node-gradients assembled into a residual block.
+; ─────────────────────────────────────────────────────────────────────────────
+; transformer-block.fk's FFN residual block (single position, pre-LN): y = h + FFN(LN(h)), where
+; FFN(z) = W2·gelu(W1·z + b1) + b2. Its backward is the gradient HIGHWAY — the upstream dy flows straight
+; through the residual to the FFN AND straight to dh; the branch goes FFN-back then layernorm'-back:
+;   dh = dy + LN'(h, FFN_in(LN(h), dy))
+; That composition uses every node-gradient proven above — affine vjp, gelu', layernorm' — and the residual.
+; A STACK of two such blocks trains end to end only if dh is right: a wrong dh starves the lower block, so
+; convergence of the stack IS the proof the assembly composes. A block = (list w1 b1 w2 b2).
+
+(defn tbp-resid-fwd (w1 b1 w2 b2 h eps)
+  (tb-vec-add h (tbp-mlp-fwd w1 b1 w2 b2 (tn-layernorm h eps))))           ; y = h + FFN(LN(h))
+
+; backprop the FFN's output-gradient gout to its INPUT z: W1ᵀ·((W2ᵀ·gout) ⊙ gelu'(W1·z+b1)).
+(defn tbp-ffn-din (w1 b1 w2 z gout)
+  (tbp-dx w1 (tb-vec-mul (tbp-dx w2 gout) (tbp-gelu-d (tb-affine w1 b1 z)))))
+
+; a block and its accessors.
+(defn tbp-bk (w1 b1 w2 b2) (list w1 b1 w2 b2))
+(defn tbp-bk-w1 (b) (nth b 0))
+(defn tbp-bk-b1 (b) (nth b 1))
+(defn tbp-bk-w2 (b) (nth b 2))
+(defn tbp-bk-b2 (b) (nth b 3))
+(defn tbp-bk-fwd (b h eps) (tbp-resid-fwd (tbp-bk-w1 b) (tbp-bk-b1 b) (tbp-bk-w2 b) (tbp-bk-b2 b) h eps))
+
+; the block's FFN parameter gradients given its output-grad gout (the FFN input is LN(h)).
+(defn tbp-bk-pgrads (b h gout eps)
+  (do
+    (let z   (tn-layernorm h eps))
+    (let h1  (tb-affine (tbp-bk-w1 b) (tbp-bk-b1 b) z))
+    (let dh1 (tb-vec-mul (tbp-dx (tbp-bk-w2 b) gout) (tbp-gelu-d h1)))
+    (list (tbp-outer dh1 z) dh1 (tbp-outer gout (tb-gelu-map h1)) gout)))   ; dW1 db1 dW2 db2
+
+(defn tbp-bk-update (b g lr)
+  (tbp-bk (tbp-sgd-mat (tbp-bk-w1 b) (nth g 0) lr) (tbp-sgd-vec (tbp-bk-b1 b) (nth g 1) lr)
+          (tbp-sgd-mat (tbp-bk-w2 b) (nth g 2) lr) (tbp-sgd-vec (tbp-bk-b2 b) (nth g 3) lr)))
+
+; the block's INPUT gradient dh — the residual highway + the FFN/LN branch (uses layernorm').
+(defn tbp-bk-dh (b h dy eps)
+  (tb-vec-add dy
+    (tbp-ln-back h (tbp-ffn-din (tbp-bk-w1 b) (tbp-bk-b1 b) (tbp-bk-w2 b) (tn-layernorm h eps) dy) eps)))
+
+; --- one SGD step over a TWO-block stack fitting target t from input x. ---
+(defn tbp-stack-step (ba bb x t lr eps)
+  (do
+    (let h1 (tbp-bk-fwd ba x eps))
+    (let y  (tbp-bk-fwd bb h1 eps))
+    (let gy (tn-scale (tbp-vsub y t) 2.0))
+    (let dh1 (tbp-bk-dh bb h1 gy eps))                                      ; chains through layernorm'
+    (list (tbp-bk-update ba (tbp-bk-pgrads ba x dh1 eps) lr)
+          (tbp-bk-update bb (tbp-bk-pgrads bb h1 gy eps) lr))))
+(defn tbp-stack-A (s) (nth s 0))
+(defn tbp-stack-B (s) (nth s 1))
+(defn tbp-stack-loss (ba bb x t eps) (tbp-sse (tbp-bk-fwd bb (tbp-bk-fwd ba x eps) eps) t))
+(defn tbp-stack-train-next (s x t lr eps n)
+  (tbp-stack-train (tbp-stack-A s) (tbp-stack-B s) x t lr eps (sub n 1)))
+(defn tbp-stack-train (ba bb x t lr eps n)
+  (if (eq n 0) (list ba bb) (tbp-stack-train-next (tbp-stack-step ba bb x t lr eps) x t lr eps n)))
+(defn tbp-stack-train-loss (ba bb x t lr eps n)
+  (do (let s (tbp-stack-train ba bb x t lr eps n))
+      (tbp-stack-loss (tbp-stack-A s) (tbp-stack-B s) x t eps)))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE ATTENTION CORE BACKWARD — the steepest gradient: through softmax-weighted value mixing.
+; ─────────────────────────────────────────────────────────────────────────────
+; transformer-block.fk's attention (single query): s_j = scale·(q·k_j); α = softmax(s); o = Σ α_j v_j.
+; Given the output-grad do, the backward walks the mixing in reverse:
+;   dv_j = α_j·do          the value-grads PARTITION do — Σ dv_j = do, since Σα = 1
+;   dα_j = <do, v_j>       output-grad dotted with each value
+;   ds   = softmax'(α, dα) reuse tbp-softmax-back; Σ ds = 0
+;   dq   = scale·Σ ds_j·k_j     weighted sum of keys
+;   dk_j = scale·ds_j·q
+; The q/k/v projections wrapping this are affine vjps (already proven); this is the genuinely new node.
+
+(defn tbp-attn-weights (q ks scale) (tn-softmax (tb-scores q ks scale)))     ; α
+(defn tbp-attn-out (q ks vs scale) (tb-attend-one q ks vs scale))           ; o (reuse forward)
+
+; dv_j = α_j·dout, as a list of vectors; and their sum (the partition invariant target).
+; (the upstream output-grad is named dout — `do` is the reserved do-block keyword.)
+(defn tbp-attn-dv-acc (alpha dout)
+  (if (eq (len alpha) 0) (empty) (cons (tn-scale dout (head alpha)) (tbp-attn-dv-acc (tail alpha) dout))))
+(defn tbp-attn-dv (q ks vs scale dout) (tbp-attn-dv-acc (tbp-attn-weights q ks scale) dout))
+(defn tbp-vsum (vs) (if (eq (len vs) 1) (head vs) (tb-vec-add (head vs) (tbp-vsum (tail vs)))))
+
+; dα_j = <dout, v_j>
+(defn tbp-attn-dalpha (dout vs)
+  (if (eq (len vs) 0) (empty) (cons (tb-dot dout (head vs)) (tbp-attn-dalpha dout (tail vs)))))
+
+; dq = scale · Σ ds_j·k_j  (ds = softmax-back of dα; weighted sum of keys, then scaled)
+(defn tbp-attn-dq-acc (ds ks acc)
+  (if (eq (len ds) 0) acc
+      (tbp-attn-dq-acc (tail ds) (tail ks) (tb-vec-add acc (tn-scale (head ks) (head ds))))))
+(defn tbp-attn-dq (q ks vs scale dout)
+  (tn-scale
+    (tbp-attn-dq-acc (tbp-softmax-back (tbp-attn-weights q ks scale) (tbp-attn-dalpha dout vs))
+                     ks (tb-zeros (len q)))
+    scale))
+
+; --- train the QUERY to steer attention onto a target (keys, values fixed): exercises dq -> ds -> softmax'. ---
+(defn tbp-attn-loss (q ks vs scale t) (tbp-sse (tb-attend-one q ks vs scale) t))
+(defn tbp-attn-q-step (q ks vs scale t lr)
+  (tbp-vsub q (tn-scale (tbp-attn-dq q ks vs scale (tn-scale (tbp-vsub (tb-attend-one q ks vs scale) t) 2.0)) lr)))
+(defn tbp-attn-q-train (q ks vs scale t lr n)
+  (if (eq n 0) q (tbp-attn-q-train (tbp-attn-q-step q ks vs scale t lr) ks vs scale t lr (sub n 1))))
+(defn tbp-attn-q-train-loss (q ks vs scale t lr n)
+  (tbp-attn-loss (tbp-attn-q-train q ks vs scale t lr n) ks vs scale t))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; ASSEMBLY — layers as cells, composed into a stack by one engine (auto-ml's knowledge).
+; ─────────────────────────────────────────────────────────────────────────────
+; Every gradient node is proven; assembling them is configuration, not derivation. A LAYER is a cell with
+; a uniform interface — fwd: x -> y ; step: (layer, x_in, dy, lr) -> (new-layer, dx) — so a heterogeneous
+; STACK (attention then FFN, the transformer block) trains through one generic fold. This is the dynamic-
+; recipe advantage on the transformer: the architecture is a SEQUENCE of typed layer-cells, and the same
+; engine that recipe-gen.fk uses to compose experts composes these. Two layer kinds here: "attn" (a cross-
+; attention-residual block over a fixed context) and "ffn" (the FFN-residual block above).
+
+; --- the "attn" layer: h = x + Wo·attend(Wq·LN(x), ks, vs, scale). A layer = (list "attn" wq wo ks vs scale). ---
+(defn tbp-att-fwd (wq wo x ks vs scale eps)
+  (tb-vec-add x (tb-matvec wo (tb-attend-one (tb-matvec wq (tn-layernorm x eps)) ks vs scale))))
+; one step over (wq, wo) fitting dy at the output; returns (list new-wq new-wo dx) — dx chains to a lower layer.
+(defn tbp-att-grads (wq wo x ks vs scale eps dh)
+  (do
+    (let n    (tn-layernorm x eps))
+    (let q    (tb-matvec wq n))
+    (let att  (tb-attend-one q ks vs scale))
+    (let datt (tbp-dx wo dh))                         ; Woᵀ·dh — grad to the attention output
+    (let dq   (tbp-attn-dq q ks vs scale datt))       ; through the attention core (the hard gradient)
+    (let dn   (tbp-dx wq dq))                          ; Wqᵀ·dq — grad to LN(x)
+    (list (tbp-outer dq n) (tbp-outer dh att) (tb-vec-add dh (tbp-ln-back x dn eps)))))  ; dWq dWo dx(residual+LN')
+
+; --- the layer dispatch: a layer is (list type ...). fwd and step branch on the type. ---
+(defn tbp-lt (layer) (nth layer 0))
+(defn tbp-layer-fwd (layer x eps)
+  (if (str_eq (tbp-lt layer) "attn")
+      (tbp-att-fwd (nth layer 1) (nth layer 2) x (nth layer 3) (nth layer 4) (nth layer 5) eps)
+      (tbp-bk-fwd (tbp-bk (nth layer 1) (nth layer 2) (nth layer 3) (nth layer 4)) x eps)))
+; step a layer: returns (list new-layer dx).
+(defn tbp-layer-step (layer x dy lr eps)
+  (if (str_eq (tbp-lt layer) "attn")
+      (do (let g (tbp-att-grads (nth layer 1) (nth layer 2) x (nth layer 3) (nth layer 4) (nth layer 5) eps dy))
+          (list (list "attn" (tbp-sgd-mat (nth layer 1) (nth g 0) lr) (tbp-sgd-mat (nth layer 2) (nth g 1) lr)
+                      (nth layer 3) (nth layer 4) (nth layer 5))
+                (nth g 2)))
+      (do (let b (tbp-bk (nth layer 1) (nth layer 2) (nth layer 3) (nth layer 4)))
+          (let nb (tbp-bk-update b (tbp-bk-pgrads b x dy eps) lr))
+          (list (list "ffn" (tbp-bk-w1 nb) (tbp-bk-b1 nb) (tbp-bk-w2 nb) (tbp-bk-b2 nb))
+                (tbp-bk-dh b x dy eps)))))
+
+; --- the generic STACK engine: forward remembers each layer's input; backward folds in reverse. ---
+(defn tbp-stk-fwd-acc (layers x eps acc)   ; acc = reversed list of (input) seen; returns (list outputs-input-list y)
+  (if (eq (len layers) 0) (list acc x)
+      (tbp-stk-fwd-acc (tail layers) (tbp-layer-fwd (head layers) x eps) eps (cons x acc))))
+(defn tbp-stk-fwd (layers x eps) (nth (tbp-stk-fwd-acc layers x eps (empty)) 1))     ; the stack output
+(defn tbp-stk-loss (layers x t eps) (tbp-sse (tbp-stk-fwd layers x eps) t))
+; one training step over the whole stack: forward to y, dy=2(y-t), backprop in reverse updating each layer.
+(defn tbp-stk-back (layers ins dy lr eps)   ; layers & ins both in REVERSE order (deepest last fed first)
+  (if (eq (len layers) 0) (empty)
+      (do (let r (tbp-layer-step (head layers) (head ins) dy lr eps))
+          (cons (nth r 0) (tbp-stk-back (tail layers) (tail ins) (nth r 1) lr eps)))))
+(defn tbp-revacc (xs acc) (if (eq (len xs) 0) acc (tbp-revacc (tail xs) (cons (head xs) acc))))
+(defn tbp-rev (xs) (tbp-revacc xs (empty)))
+(defn tbp-stk-step (layers x t lr eps)
+  (do
+    (let fa (tbp-stk-fwd-acc layers x eps (empty)))   ; (rev-inputs, y)
+    (let y  (nth fa 1))
+    (let dy (tn-scale (tbp-vsub y t) 2.0))
+    ; layers reversed + inputs already reversed (acc is rev) → backprop deepest-first, then re-reverse layers
+    (tbp-rev (tbp-stk-back (tbp-rev layers) (nth fa 0) dy lr eps))))
+(defn tbp-stk-train (layers x t lr eps n)
+  (if (eq n 0) layers (tbp-stk-train (tbp-stk-step layers x t lr eps) x t lr eps (sub n 1))))
+(defn tbp-stk-train-loss (layers x t lr eps n) (tbp-stk-loss (tbp-stk-train layers x t lr eps n) x t eps))

@@ -71,3 +71,54 @@
 
 (defn jte-matvec-msl-fmt (fname fmt) (jte-matvec-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
 (defn jte-matvec-msl (fname) (jte-matvec-msl-fmt fname "f32"))
+
+; --- affine-layer TRAINING-STEP kernel, emitted as a Form recipe (the learning kernel on metal) ---
+; One GPU thread per output row i of y = W·x + b. It computes the forward dot (the SAME downward
+; right-fold as tb-dot / the matvec spine, so the order matches the recipe), the SSE residual and
+; per-row loss, the upstream grad g = 2(y_i - t_i), then applies the SGD update IN PLACE:
+;   row_i[j] -= lr · g · x[j]   (this row of dW = outer(g, x))      b[i] -= lr · g   (db = g).
+; This is transformer-backprop.fk's tbp-step, one row, on the GPU: every thread owns row i, reads
+; its whole row before writing it, so there is no cross-thread aliasing. The Form recipe transformer-
+; backprop.fk (fp64, proven 127 three-way) is the algorithm; this is its GPU carrier, gated bit-exact
+; against an fp32 CPU reference in the lane's own semantics (metal_backprop_audit.sh). Buffers: w,b,x,t
+; in the lane elem type; loss, lr, and every accumulator in the fp32 acc type (accumulate-wide).
+(defn jte-train-msl-sig (fname el ac)
+  (str_concat "kernel void "
+  (str_concat fname
+  (str_concat "(device "
+  (str_concat el
+  (str_concat "* w [[buffer(0)]], device "
+  (str_concat el
+  (str_concat "* b [[buffer(1)]], device const "
+  (str_concat el
+  (str_concat "* x [[buffer(2)]], device const "
+  (str_concat el
+  (str_concat "* t [[buffer(3)]], device "
+  (str_concat ac
+  (str_concat "* loss [[buffer(4)]], constant uint& rows [[buffer(5)]], constant uint& cols [[buffer(6)]], constant "
+  (str_concat ac
+  "& lr [[buffer(7)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; ")))))))))))))))
+(defn jte-train-msl-fwd (el ac)
+  (str_concat "device " (str_concat el
+  (str_concat "* row = w + i * cols; " (str_concat ac
+  (str_concat " acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; " (str_concat ac
+  (str_concat " p = " (str_concat ac
+  (str_concat "(row[j]) * " (str_concat ac
+  (str_concat "(x[j]); acc = p + acc; } " (str_concat ac
+  (str_concat " y = acc + " (str_concat ac
+  (str_concat "(b[i]); " (str_concat ac
+  (str_concat " d = y - " (str_concat ac
+  (str_concat "(t[i]); loss[i] = d * d; " (str_concat ac
+  " g = 2.0f * d; ")))))))))))))))))))))
+(defn jte-train-msl-upd (el ac)
+  (str_concat "uint k = cols; while (k > 0) { k -= 1; row[k] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  (str_concat "(row[k]) - lr * g * " (str_concat ac
+  (str_concat "(x[k])); } b[i] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  "(b[i]) - lr * g); }")))))))))))
+(defn jte-affine-train-msl-spine (fname el ac)
+  (str_concat (jte-train-msl-sig fname el ac)
+  (str_concat (jte-train-msl-fwd el ac) (jte-train-msl-upd el ac))))
+(defn jte-affine-train-msl-fmt (fname fmt) (jte-affine-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+(defn jte-affine-train-msl (fname) (jte-affine-train-msl-fmt fname "f32"))
