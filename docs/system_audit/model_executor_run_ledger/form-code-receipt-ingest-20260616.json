@@ -1,0 +1,16 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim form-code-receipt-ingest \"After PR #3200: make code-tool-learning ingest committed-turn receipt JSON cells into native coding-act rows with a four-way proof; avoid changing Python carrier, live-cycle, Android/audio, and speech teacher lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh code-tool-learning",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Ratchet code-tool-learning from 262143 to 524287 four-way by ingesting a live-carrier JSONL-field receipt cell into the same native coding-act row. The fkwu wall is raw JSON text parsing/dynamic JSON-node interning, so the fourth-safe floor proves the substrate cell that the native JSONL carrier should produce."
+}

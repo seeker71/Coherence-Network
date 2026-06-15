@@ -1,0 +1,139 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "codex/form-code-receipt-ingest-20260616",
+  "commit_scope": "Move code-tool-learning's fourth-kernel floor from coding-act receipts to live-carrier receipt-cell ingestion, aligning committed-turn JSONL fields with substrate-native coding-act rows.",
+  "files_owned": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_form_code_receipt_ingest.json",
+    "docs/system_audit/model_executor_run_ledger/form-code-receipt-ingest-20260616.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "make prompt-guide",
+        "result": "pass",
+        "output": "Prompt guide passed after the primary workspace unblock; coord lane codex@a3ec owns form-code-receipt-ingest."
+      },
+      {
+        "command": "make wellness",
+        "result": "pass",
+        "output": "Wellness passed with what_wants_attention: none; edited durable docs carry destination, not journey."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+        "result": "pass",
+        "output": "code-tool-learning-band.fk -> 524287; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && bash scripts/fourth-arm-gate.sh code-tool-learning",
+        "result": "pass",
+        "output": "PASS-4WAY code-tool-learning"
+      },
+      {
+        "command": "git diff --check",
+        "result": "pass",
+        "output": "No whitespace errors."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy performed by this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The local code-tool-learning fourth-kernel floor now ingests a live-carrier JSONL-field receipt cell into the native coding-act row; PR CI and any deploy/public validation remain pending. Raw JSON text parsing inside fkwu remains a separate parser-carrier gap, not a blocker for this substrate-cell floor."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "oracle-distillation-learning",
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "coherence-substrate-code-tool-learning",
+    "coherence-substrate-form-cli-north-star"
+  ],
+  "task_ids": [
+    "2026-06-16-form-code-receipt-ingest"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "floor-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/code-tool-learning.fk -> JSON node helpers plus fourth-safe receipt-cell helpers for keyed live-carrier fields",
+    "form/form-stdlib/tests/code-tool-learning-band.fk -> 524287 four-way proof including live-carrier receipt-cell ingest",
+    "form/fourth-arm-bands.txt -> code-tool-learning fks 524287",
+    "docs/coherence-substrate/code-tool-learning.form -> floor and north star aligned to lowered receipt-cell ingestion and parser-carrier gap",
+    "docs/coherence-substrate/INDEX.md -> sister node summary aligned to the 524287 floor"
+  ],
+  "change_files": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_form_code_receipt_ingest.json",
+    "docs/system_audit/model_executor_run_ledger/form-code-receipt-ingest-20260616.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Committed-turn receipt fields can now be represented as a substrate-native receipt cell and ingested into the same code-tool-learning coding-act row across Go, Rust, TypeScript, and fkwu.",
+    "public_endpoints": [
+      "not-applicable: Form floor and fourth-kernel validation only"
+    ],
+    "test_flows": [
+      "Construct a receipt cell carrying kind, status, source_surfaces, patch_recipe, verifiers, choice_receipt, and learned_delta fields.",
+      "Validate that the receipt cell lowers into ctl-coding-act with source listening, patch speaking, verifier receipts, choice receipt, and learned delta.",
+      "Require the code-tool-learning band verdict to ratchet from 262143 to 524287 on all four kernels."
+    ]
+  },
+  "floor_update": {
+    "previous_observed_floor": "code-tool-learning-band proved coding-act receipt rows at 262143 four-way, while committed-turn JSONL fields still needed a Form-side read door.",
+    "current_observed_floor": "code-tool-learning-band proves 524287 four-way, adding a JSONL-field receipt cell that ingests into the same coding-act row with two source surfaces, two verifier rows, raw_patch_retained=0, and learned trust 62->74.",
+    "new_receipts": [
+      "code-tool-learning 524287 four-way",
+      "PASS-4WAY code-tool-learning"
+    ],
+    "not_claimed": [
+      "raw JSON text parsing inside fkwu",
+      "live Mac binary interception of agent tool/reasoning calls",
+      "default routing of important coding flows to Form-native candidates",
+      "heldout pass-rate promotion for search/edit/proof/review/deploy lanes"
+    ]
+  }
+}
