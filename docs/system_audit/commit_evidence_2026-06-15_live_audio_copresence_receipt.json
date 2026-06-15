@@ -1,0 +1,133 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/live-audio-copresence-receipt-20260615",
+  "commit_scope": "Add a live Mac speaker-to-microphone FSK nonce receipt and ratchet public-audio-rendezvous to include the observed audio direction.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "audio-copresence",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "mesh-networking",
+    "public-audio-rendezvous",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "live-audio-copresence-receipt-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "audio-copresence-priority",
+        "measurement-north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/live_audio_copresence_receipt.sh",
+    "form/form-stdlib/public-audio-rendezvous.fk",
+    "form/form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/device-heartbeat.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_live_audio_copresence_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/live-audio-copresence-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/live_audio_copresence_receipt.sh",
+    "form/form-stdlib/public-audio-rendezvous.fk",
+    "form/form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    "docs/coherence-substrate/device-heartbeat.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_live_audio_copresence_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/live-audio-copresence-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim live-audio-copresence-receipt \"Next carrier proof after PR #3194: bounded live audio chirp/nonce co-presence receipt with SNR/confidence/latency and raw-audio-retained=0; avoid public API, paste/archive, APK/JNI, BML compiler, and oracle-distillation lanes.\"",
+      "bash -n scripts/live_audio_copresence_receipt.sh",
+      "scripts/live_audio_copresence_receipt.sh 1 12",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/public-audio-rendezvous.fk form-stdlib/tests/public-audio-rendezvous-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh public-audio-rendezvous"
+    ],
+    "notes": "The live Mac speaker-to-microphone proof emitted an audible FSK nonce-hash prefix, recorded through the built-in microphone, decoded 12/12 bits, and wrote a derived receipt with nonce_hash_len=64, snr_db=44.75, confidence=99, latency_ms=3390, raw_audio_retained=0, status=pass. A stricter 16-bit attempt observed the live path but blocked at 15/16 bits with snr_db=46.07 and confidence=95, so the first stable floor is 12 bits. Focused Form validation returned 32767 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent; fourth-arm-gate returned PASS-4WAY public-audio-rendezvous."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "No public deploy required for the local Mac acoustic carrier proof; public floor docs and Form receipts are validated locally."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The public-audio-rendezvous floor now has a live acoustic FSK carrier receipt from Mac speaker to built-in microphone with no raw audio retention.",
+    "public_endpoints": [
+      "n/a: local hardware audio carrier"
+    ],
+    "test_flows": [
+      "Generate a local nonce and SHA-256 nonce hash.",
+      "Encode a nonce-hash prefix as audible FSK tones.",
+      "Play the FSK tones through MacBook speakers while recording from the built-in microphone.",
+      "Decode the captured audio, compute SNR/confidence/latency, write a derived receipt, and delete raw audio files.",
+      "Validate the Form receipt direction four-way."
+    ]
+  },
+  "evidence_refs": [
+    "scripts/live_audio_copresence_receipt.sh",
+    "form/form-stdlib/public-audio-rendezvous.fk",
+    "form/form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/public-audio-rendezvous.form",
+    ".cache/live-audio-copresence/20260615T154700Z/live-audio-copresence-receipt.json"
+  ],
+  "phase_gate": {
+    "phase": "live-audio-copresence-receipt",
+    "gate": "The local acoustic carrier must decode a nonce-hash prefix from speaker to microphone with SNR, confidence, latency, and raw-audio-retained=0.",
+    "state": "live-mac-audio-pass",
+    "can_move_next_phase": false,
+    "next": "Add Android two-device audio chirp detection or reply path using the same receipt shape."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The public-audio-rendezvous floor had a Form receipt shape plus live public API nonce proof but no live audio capture proof.",
+    "current_observed_floor": "The local Mac acoustic carrier has a live audible-FSK speaker-to-microphone nonce-hash receipt, and public-audio-rendezvous returns 32767 four-way.",
+    "new_receipts": [
+      "live-audio-copresence 20260615T154700Z decoded 12/12 bits, SNR 44.75 dB, confidence 99, latency 3390 ms"
+    ],
+    "not_claimed": [
+      "Android two-device audio exchange",
+      "near-ultrasonic proof",
+      "raw audio retention",
+      "Pastebin write proof",
+      "archive.org upload proof"
+    ]
+  }
+}

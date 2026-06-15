@@ -1,0 +1,16 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim live-audio-copresence-receipt \"Next carrier proof after PR #3194: bounded live audio chirp/nonce co-presence receipt with SNR/confidence/latency and raw-audio-retained=0; avoid public API, paste/archive, APK/JNI, BML compiler, and oracle-distillation lanes.\"",
+    "bash -n scripts/live_audio_copresence_receipt.sh",
+    "scripts/live_audio_copresence_receipt.sh 1 12",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/public-audio-rendezvous.fk form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh public-audio-rendezvous"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a live Mac speaker-to-microphone audible-FSK nonce receipt. The 12-bit nonce-hash prefix decoded 12/12 with SNR 44.75 dB, confidence 99, latency 3390 ms, raw_audio_retained=0, and status=pass. The Form floor now accepts mac-speaker-to-microphone and public-audio-rendezvous returns 32767 four-way."
+}
