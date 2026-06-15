@@ -1,0 +1,36 @@
+; preludes: form-stdlib/core.fk form-stdlib/core-axiom-package-receipt.fk
+;
+; core-axiom-package-receipt-band — package/install receipt floor for the
+; Mac+Android native channel pair.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let good (cap-receipt 64 64 64 64 64 100 2048 8 "pass" "pass"))
+    (let bigger (cap-receipt 64 64 64 64 64 120 4096 8 "pass" "pass"))
+    (let bad-script-hash (cap-receipt 63 64 64 64 64 100 2048 8 "pass" "pass"))
+    (let bad-source-hash (cap-receipt 64 63 64 64 64 100 2048 8 "pass" "pass"))
+    (let bad-mac-hash (cap-receipt 64 64 63 64 64 100 2048 8 "pass" "pass"))
+    (let bad-android-hash (cap-receipt 64 64 64 63 64 100 2048 8 "pass" "pass"))
+    (let bad-channel-hash (cap-receipt 64 64 64 64 63 100 2048 8 "pass" "pass"))
+    (let bad-duration (cap-receipt 64 64 64 64 64 0 2048 8 "pass" "pass"))
+    (let bad-cleanup (cap-receipt 64 64 64 64 64 100 2048 8 "fail" "pass"))
+    (let bad-status (cap-receipt 64 64 64 64 64 100 2048 8 "pass" "fail"))
+    (let bad-kind (list "not-core-axiom-native-package-receipt" 64 64 64 64 64 100 2048 8 "pass" "pass"))
+
+    (let c0 (if (cap-receipt? good) 1 0))
+    (let c1 (if (cap-hash-lens-valid? good) 2 0))
+    (let c2 (if (cap-valid? good) 4 0))
+    (let c3 (if (cap-left-expands? good bigger) 8 0))
+    (let c4 (if (eq (cap-valid? bad-script-hash) 0) 16 0))
+    (let c5 (if (eq (cap-valid? bad-source-hash) 0) 32 0))
+    (let c6 (if (eq (cap-valid? bad-mac-hash) 0) 64 0))
+    (let c7 (if (eq (cap-valid? bad-android-hash) 0) 128 0))
+    (let c8 (if (eq (cap-valid? bad-channel-hash) 0) 256 0))
+    (let c9 (if (eq (cap-valid? bad-duration) 0) 512 0))
+    (let c10 (if (eq (cap-valid? bad-cleanup) 0)
+                 (if (eq (cap-valid? bad-status) 0)
+                     (if (eq (cap-receipt? bad-kind) 0) 1024 0)
+                     0)
+                 0))
+    (let c11 (if (eq (len (cap-floor)) 5) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
