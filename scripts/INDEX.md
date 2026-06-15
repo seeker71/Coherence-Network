@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 250
+**Total files**: 251
 
 | File | Purpose |
 |---|---|
@@ -108,6 +108,7 @@
 | [ghx.sh](ghx.sh) | _no top-of-file purpose_ |
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
+| [git_training_corpus.py](git_training_corpus.py) | Feed git (commit message -> diff) pairs into the form-cli training catalog. |
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [grounded_cost_endpoint_probe.py](grounded_cost_endpoint_probe.py) | Focused end-to-end probe for /api/utils/grounded_cost. |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
