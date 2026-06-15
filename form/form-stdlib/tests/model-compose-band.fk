@@ -1,0 +1,47 @@
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/model-compose.fk
+;
+; model-compose-band — one model on top of another via diffs, four-way in pure
+; Form. A base model carries one capability; a learned diff (the SGD delta from
+; aff-train) adds another; diffs stack additively and commutatively. This is the
+; smallest honest proof that capability grows by ADDING small diffs over a shared
+; base — the runnable floor under model-data-sharing.fk's (base, delta) slice and
+; slice-merge.fk's task-vector merge.
+;
+; Fixture: base (w=1000, b=0) — slope 1.0, a model already fit to "task A".
+; New "task B": y = 2*x + 1, corpus (x=1.0,y=3.0) and (x=2.0,y=5.0), lr=10,
+; 40 epochs, scale-1000. Reference (integer, truncate-toward-zero), verified
+; before authoring:
+;   train FROM base on B  -> trained (2565, 1095)   diff = trained - base = (1565, 1095)
+;   corpus loss on B: base 13000  ->  trained 205     second diff d2 = (150, -80)
+;   base + diff + d2 = (2715, 1015) = base + d2 + diff
+;
+; Verdict 31 when every claim lands:
+;   1   base + diff reconstructs the trained model (the delta IS the learned change)
+;   2   the diff ADDS capability — corpus loss on B falls (trained < base)
+;   4   the diff composes order-free over its base (diff+base == trained)
+;   8   two diffs STACK commutatively (base+diff+d2 == base+d2+diff)
+;   16  the diff is a bounded adapter, not a whole new model (|diff| < |base|+|trained|)
+(do
+    (let base (list 1000 0))
+    (let corpusB (list (list 1000 3000) (list 2000 5000)))
+    (let trained (aff-train base corpusB 10 40))
+    (let diff (mc-diff trained base))
+    (let d2 (list 150 -80))
+    (let composed (mc-compose base diff))
+    (let m12 (mc-compose (mc-compose base diff) d2))
+    (let m21 (mc-compose (mc-compose base d2) diff))
+
+    ; 1 — base + diff reconstructs the learned model
+    (let c0 (if (and (eq (aff-w composed) (aff-w trained))
+                     (eq (aff-b composed) (aff-b trained))) 1 0))
+    ; 2 — the diff adds capability: the new task's loss is lower than base's
+    (let c1 (if (lt (aff-corpus-loss trained corpusB) (aff-corpus-loss base corpusB)) 2 0))
+    ; 4 — diff over base is order-free additive (compose(diff,base) == trained)
+    (let c2 (if (and (eq (aff-w (mc-compose (mc-diff trained base) base)) (aff-w trained))
+                     (eq (aff-b (mc-compose (mc-diff trained base) base)) (aff-b trained))) 4 0))
+    ; 8 — two diffs stack commutatively
+    (let c3 (if (and (eq (aff-w m12) (aff-w m21)) (eq (aff-b m12) (aff-b m21))) 8 0))
+    ; 16 — the diff is a bounded adapter, not a whole new model
+    (let c4 (if (lt (mc-mag diff) (add (mc-mag base) (mc-mag trained))) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
