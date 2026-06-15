@@ -151,3 +151,66 @@
               (tn-scale (tn-layernorm x eps)
                         (tn-mean (tb-vec-mul g (tn-layernorm x eps)))))
     (div 1.0 (tn-sqrt (add (tn-var x) eps)))))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE FULL-BLOCK BACKWARD — the four node-gradients assembled into a residual block.
+; ─────────────────────────────────────────────────────────────────────────────
+; transformer-block.fk's FFN residual block (single position, pre-LN): y = h + FFN(LN(h)), where
+; FFN(z) = W2·gelu(W1·z + b1) + b2. Its backward is the gradient HIGHWAY — the upstream dy flows straight
+; through the residual to the FFN AND straight to dh; the branch goes FFN-back then layernorm'-back:
+;   dh = dy + LN'(h, FFN_in(LN(h), dy))
+; That composition uses every node-gradient proven above — affine vjp, gelu', layernorm' — and the residual.
+; A STACK of two such blocks trains end to end only if dh is right: a wrong dh starves the lower block, so
+; convergence of the stack IS the proof the assembly composes. A block = (list w1 b1 w2 b2).
+
+(defn tbp-resid-fwd (w1 b1 w2 b2 h eps)
+  (tb-vec-add h (tbp-mlp-fwd w1 b1 w2 b2 (tn-layernorm h eps))))           ; y = h + FFN(LN(h))
+
+; backprop the FFN's output-gradient gout to its INPUT z: W1ᵀ·((W2ᵀ·gout) ⊙ gelu'(W1·z+b1)).
+(defn tbp-ffn-din (w1 b1 w2 z gout)
+  (tbp-dx w1 (tb-vec-mul (tbp-dx w2 gout) (tbp-gelu-d (tb-affine w1 b1 z)))))
+
+; a block and its accessors.
+(defn tbp-bk (w1 b1 w2 b2) (list w1 b1 w2 b2))
+(defn tbp-bk-w1 (b) (nth b 0))
+(defn tbp-bk-b1 (b) (nth b 1))
+(defn tbp-bk-w2 (b) (nth b 2))
+(defn tbp-bk-b2 (b) (nth b 3))
+(defn tbp-bk-fwd (b h eps) (tbp-resid-fwd (tbp-bk-w1 b) (tbp-bk-b1 b) (tbp-bk-w2 b) (tbp-bk-b2 b) h eps))
+
+; the block's FFN parameter gradients given its output-grad gout (the FFN input is LN(h)).
+(defn tbp-bk-pgrads (b h gout eps)
+  (do
+    (let z   (tn-layernorm h eps))
+    (let h1  (tb-affine (tbp-bk-w1 b) (tbp-bk-b1 b) z))
+    (let dh1 (tb-vec-mul (tbp-dx (tbp-bk-w2 b) gout) (tbp-gelu-d h1)))
+    (list (tbp-outer dh1 z) dh1 (tbp-outer gout (tb-gelu-map h1)) gout)))   ; dW1 db1 dW2 db2
+
+(defn tbp-bk-update (b g lr)
+  (tbp-bk (tbp-sgd-mat (tbp-bk-w1 b) (nth g 0) lr) (tbp-sgd-vec (tbp-bk-b1 b) (nth g 1) lr)
+          (tbp-sgd-mat (tbp-bk-w2 b) (nth g 2) lr) (tbp-sgd-vec (tbp-bk-b2 b) (nth g 3) lr)))
+
+; the block's INPUT gradient dh — the residual highway + the FFN/LN branch (uses layernorm').
+(defn tbp-bk-dh (b h dy eps)
+  (tb-vec-add dy
+    (tbp-ln-back h (tbp-ffn-din (tbp-bk-w1 b) (tbp-bk-b1 b) (tbp-bk-w2 b) (tn-layernorm h eps) dy) eps)))
+
+; --- one SGD step over a TWO-block stack fitting target t from input x. ---
+(defn tbp-stack-step (ba bb x t lr eps)
+  (do
+    (let h1 (tbp-bk-fwd ba x eps))
+    (let y  (tbp-bk-fwd bb h1 eps))
+    (let gy (tn-scale (tbp-vsub y t) 2.0))
+    (let dh1 (tbp-bk-dh bb h1 gy eps))                                      ; chains through layernorm'
+    (list (tbp-bk-update ba (tbp-bk-pgrads ba x dh1 eps) lr)
+          (tbp-bk-update bb (tbp-bk-pgrads bb h1 gy eps) lr))))
+(defn tbp-stack-A (s) (nth s 0))
+(defn tbp-stack-B (s) (nth s 1))
+(defn tbp-stack-loss (ba bb x t eps) (tbp-sse (tbp-bk-fwd bb (tbp-bk-fwd ba x eps) eps) t))
+(defn tbp-stack-train-next (s x t lr eps n)
+  (tbp-stack-train (tbp-stack-A s) (tbp-stack-B s) x t lr eps (sub n 1)))
+(defn tbp-stack-train (ba bb x t lr eps n)
+  (if (eq n 0) (list ba bb) (tbp-stack-train-next (tbp-stack-step ba bb x t lr eps) x t lr eps n)))
+(defn tbp-stack-train-loss (ba bb x t lr eps n)
+  (do (let s (tbp-stack-train ba bb x t lr eps n))
+      (tbp-stack-loss (tbp-stack-A s) (tbp-stack-B s) x t eps)))
