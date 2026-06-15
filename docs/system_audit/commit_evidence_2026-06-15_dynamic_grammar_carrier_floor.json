@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/dynamic-grammar-carrier-floor-20260615",
+  "commit_scope": "Add a pure dynamic grammar carrier floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "dynamic-grammar-carrier",
+    "fourth-kernel-wall-groups",
+    "form-native-grammar-rules",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "dynamic-grammar-carrier-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-wall-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_dynamic_grammar_carrier_floor.json",
+    "docs/system_audit/model_executor_run_ledger/dynamic-grammar-carrier-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/dynamic-grammar-carrier.fk",
+    "form/form-stdlib/tests/dynamic-grammar-carrier-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_dynamic_grammar_carrier_floor.json",
+    "docs/system_audit/model_executor_run_ledger/dynamic-grammar-carrier-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/dynamic-grammar-carrier.fk",
+    "form/form-stdlib/tests/dynamic-grammar-carrier-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord view",
+      "coord claim dynamic-grammar-carrier-floor",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/dynamic-grammar-carrier.fk form-stdlib/tests/dynamic-grammar-carrier-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh dynamic-grammar-carrier",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+dynamic-grammar-carrier.fk+dynamic-grammar-carrier-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  dynamic-grammar-carrier`. Wellness reported no attention items."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Dynamic grammar support now has a pure Form-native carrier receipt for rule extension data, selector registration, parse trace, and lower trace.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/dynamic-grammar-carrier.fk form-stdlib/tests/dynamic-grammar-carrier-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh dynamic-grammar-carrier"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/dynamic-grammar-carrier.fk",
+    "form/form-stdlib/tests/dynamic-grammar-carrier-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/model_executor_run_ledger/dynamic-grammar-carrier-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "dynamic-grammar-carrier-floor",
+    "gate": "Dynamic grammar work needs a pure Form-native carrier for rule extensions before host file/config plugin loading or parser-table generation can be claimed as first-class.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Connect runtime-grammar.fk host file/config plugin loading to dynamic-grammar-carrier receipts, then add parser-table generation and lowering-back-to-form proofs."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Runtime grammar registry and host config loading existed, but the dynamic grammar wall still lacked a small fourth-arm rule-extension carrier receipt.",
+    "current_observed_floor": "dynamic-grammar-carrier returns 4095 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "dynamic-grammar-carrier -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "runtime-grammar host file/config loading as a fourth-arm floor",
+      "source-to-parser-table generation",
+      "richer rule patterns",
+      "lowering back to executable Form recipes"
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "task_id": "dynamic-grammar-carrier-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord view",
+    "coord claim dynamic-grammar-carrier-floor \"Remaining fourth wall lane: add bounded Form-native dynamic grammar carrier receipt for one rule extension and parse/lower trace; avoid BML class/source-control, model/router/data, and mesh lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/dynamic-grammar-carrier.fk form-stdlib/tests/dynamic-grammar-carrier-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh dynamic-grammar-carrier",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a pure Form-native dynamic grammar carrier floor. A rule extension is carried as data, registered by selector, parsed into an object trace, and lowered into a Form-readable trace without treating host file/config plugin loading as source of truth. The band returns 4095 four-way; richer runtime-grammar file/config loading and parser-table generation remain named next walls."
+}
