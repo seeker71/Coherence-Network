@@ -26,6 +26,7 @@ import tempfile
 import time
 from argparse import ArgumentParser
 from collections import deque
+from glob import glob
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from hati_witness_discovery import start_mdns_advertisement, witness_descriptor
@@ -83,6 +84,29 @@ def _merge_snapshot(snap):
         return merged
     snap["last_frame_kind"] = "sample"
     return snap
+
+
+def latest_speech_loop():
+    paths = glob(os.path.join(REPO, ".cache", "live-speech-loop", "*", "live-speech-loop-receipt.json"))
+    if not paths:
+        return {}
+    path = max(paths, key=os.path.getmtime)
+    try:
+        with open(path, encoding="utf-8") as f:
+            receipt = json.load(f)
+    except Exception as exc:
+        return {"status": "unreadable", "path": path, "error": str(exc)}
+    return {
+        "status": receipt.get("status"),
+        "text": receipt.get("text"),
+        "transcript": receipt.get("transcript"),
+        "overlap": receipt.get("transcript_overlap_percent"),
+        "mac_mic_samples": receipt.get("mac_mic_samples"),
+        "mac_mic_rms_ppm": receipt.get("mac_mic_rms_ppm"),
+        "android_mic_samples": receipt.get("android_mic_samples"),
+        "android_mic_avg_rms_ppm": receipt.get("android_mic_avg_rms_ppm"),
+        "path": path,
+    }
 
 
 def kernel_eval(recipes, expr):
@@ -197,6 +221,7 @@ class Server(BaseHTTPRequestHandler):
             state["present"] = bool(state["last_ts"] and (now - state["last_ts"] < 4.0))
             if was and not state["present"]:
                 _event("peer", f"{state['device']} went quiet")
+            state["speech_loop"] = latest_speech_loop()
             return self._send(200, json.dumps(state))
         if self.path.startswith("/.well-known/hati-witness") or self.path.startswith("/discover"):
             return self._send(200, json.dumps(state["witness"]))
@@ -249,6 +274,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8><title>Coherence S
  .card{background:#12161b;border:1px solid #1e252d;border-radius:10px;padding:14px}
  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a8696;margin:0 0 10px}
  .big{font-size:26px;color:#eaf0f6} .dim{color:#7a8696} .accent{color:#86efac}
+ .wrap{white-space:pre-wrap}
  .organ{display:inline-block;background:#1b2a1f;color:#86efac;border:1px solid #2c4a35;border-radius:6px;padding:2px 9px;margin:2px 4px 2px 0}
  .organ.off{background:#1a1d22;color:#566;border-color:#262b32}
  .pill{display:inline-block;background:#182430;color:#9ad6ca;border:1px solid #28475c;border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0}
@@ -264,6 +290,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8><title>Coherence S
  <div class=card><h2>presence</h2><div class=big id=presence>&mdash;</div><div class=dim id=frames></div></div>
  <div class=card><h2>recognition (kernel)</h2><div class=big id=recog>&mdash;</div><div class=dim>predicts next: <span class=accent id=pred>&mdash;</span></div><div class=dim id=err></div></div>
  <div class=card><h2>learning — challenger vs champion</h2><div class=big id=chal>&mdash;</div><div class=dim id=chalrate></div></div>
+ <div class=card><h2>speech loop</h2><div class=big id=speech>&mdash;</div><div class="dim wrap" id=speechmeta></div></div>
  <div class=card><h2>organs active</h2><div id=organs></div></div>
  <div class=card><h2>nearby discovery</h2><div id=discovery></div><div class=dim>Android listens for _hati-witness._tcp; fallback URLs stay visible here.</div></div>
  <div class=card><h2>events / surprises</h2><div id=events></div></div>
@@ -285,6 +312,9 @@ async function tick(){
  const crate=s.chal_checks?Math.round(100*s.chal_agree/s.chal_checks):0;
  document.getElementById("chal").textContent=s.challenger||"—";
  document.getElementById("chalrate").textContent=s.chal_checks?("agrees with champion "+crate+"%  ("+s.chal_agree+"/"+s.chal_checks+")  · "+(s.protos||0)+" exemplars learned"):("learning… ("+(s.protos||0)+" exemplars)");
+ const sl=s.speech_loop||{};
+ document.getElementById("speech").textContent=sl.status?(sl.status+" · "+(sl.overlap||0)+"%"):"waiting";
+ document.getElementById("speechmeta").textContent=sl.status?("text: "+(sl.text||"—")+"\\nmac mic: "+(sl.mac_mic_samples||0)+" samples rms "+(sl.mac_mic_rms_ppm||0)+"ppm\\nandroid mic: "+(sl.android_mic_samples||0)+" samples avg "+(sl.android_mic_avg_rms_ppm||0)+"ppm"):"no live speech receipt yet";
  document.getElementById("organs").innerHTML=ALL.map(o=>'<span class="organ'+(s.organs&&s.organs.includes(o)?"":" off")+'">'+o+'</span>').join("");
  const w=s.witness||{};
  document.getElementById("discovery").innerHTML='<div class=dim>'+((w.service_type||"_hati-witness._tcp")+" · "+(w.mode||"recognition"))+'</div>'+((w.urls||[]).map(u=>'<span class=pill>'+u+'</span>').join("")||'<span class=dim>waiting for LAN address</span>');
