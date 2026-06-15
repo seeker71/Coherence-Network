@@ -1,0 +1,77 @@
+; affine-train.fk — the first END-TO-END native training loop in pure Form:
+; an affine model y = w*x + b fit by SGD folded over a corpus, fixed-point
+; scale 1000.
+;
+; preludes: form-stdlib/core.fk
+;
+; This composes the proven SGD atom (form-train-step.fk) into the two
+; generalizations the real training loop needs: (1) a SECOND parameter b —
+; affine, not just linear — updated simultaneously from the same error, and
+; (2) a CORPUS FOLD: one epoch walks a list of (x y) examples applying the
+; update at each, and training repeats the epoch. The descent shape at each
+; weight is identical to fts-step: p := p - lr * (dLoss/dp). Two examples with
+; different x pin down BOTH w and b, so the loop learns a relationship, not
+; just a point. The form-native transformer training loop
+; (form-native-models.form M4+) is this same fold over millions of weights via
+; backprop; this cell is the loop proven on the smallest affine model — the
+; missing connective tissue between the proven SGD atom and a populated
+; native-training-receipt.
+;
+; Kernel arithmetic is INTEGER, fixed-point at scale 1000 (w=1500 means 1.5);
+; div truncates toward zero. State is (list w b). Monomorphic recursion only
+; (fourth-arm safe; no higher-order map).
+;
+; Proven by: form-stdlib/tests/affine-train-band.fk
+
+; prediction p = (w*x + b) / 1000, raw units (w,b scale 1000; x scale 1000).
+(defn aff-pred (w b x)
+    (div (add (mul w x) b) 1000))
+
+; error = prediction - target (signed; negative when under-predicting).
+(defn aff-err (w b x y)
+    (sub (aff-pred w b x) y))
+
+; squared-error loss, kept at scale 1000 (err is scale 1000 -> /1000). Always >= 0.
+(defn aff-loss (w b x y)
+    (div (mul (aff-err w b x y) (aff-err w b x y)) 1000))
+
+; gradients backprop would deliver to each weight:
+;   dLoss/dw = 2*err*x  (scale^2 -> /1000)     dLoss/db = 2*err  (scale 1000)
+(defn aff-grad-w (w b x y)
+    (div (mul (mul 2 (aff-err w b x y)) x) 1000))
+(defn aff-grad-b (w b x y)
+    (mul 2 (aff-err w b x y)))
+
+; state accessors — state is (list w b).
+(defn aff-w (s) (nth s 0))
+(defn aff-b (s) (nth s 1))
+
+; one SGD update on one example: both params nudged from the ORIGINAL (w,b)
+; (simultaneous update). lr*grad is scale^2 -> /1000 returns the scale-1000 nudge.
+(defn aff-step (s x y lr)
+    (list
+        (sub (aff-w s) (div (mul lr (aff-grad-w (aff-w s) (aff-b s) x y)) 1000))
+        (sub (aff-b s) (div (mul lr (aff-grad-b (aff-w s) (aff-b s) x y)) 1000))))
+
+; one epoch: fold the update across the corpus (a list of (x y) points).
+(defn aff-epoch (s corpus lr)
+    (if (eq (len corpus) 0)
+        s
+        (aff-epoch
+            (aff-step s (nth (head corpus) 0) (nth (head corpus) 1) lr)
+            (tail corpus)
+            lr)))
+
+; train: repeat the epoch n times — monomorphic recursion (fourth-arm safe).
+(defn aff-train (s corpus lr epochs)
+    (if (eq epochs 0)
+        s
+        (aff-train (aff-epoch s corpus lr) corpus lr (sub epochs 1))))
+
+; corpus total loss (fold) — the held-out eval probe the receipt reads.
+(defn aff-corpus-loss (s corpus)
+    (if (eq (len corpus) 0)
+        0
+        (add
+            (aff-loss (aff-w s) (aff-b s) (nth (head corpus) 0) (nth (head corpus) 1))
+            (aff-corpus-loss s (tail corpus)))))

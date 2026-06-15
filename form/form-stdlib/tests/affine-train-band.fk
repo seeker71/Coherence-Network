@@ -1,0 +1,45 @@
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk
+;
+; affine-train-band — the affine training LOOP actually learns BOTH params over
+; a CORPUS, four-way in pure Form. This is the generalization of
+; form-train-step-band (one weight, one example) to two weights folded over a
+; corpus — the first end-to-end native training run.
+;
+; Fixture: true relationship y = 2*x + 1 (true w = 2000, b = 1000 at scale
+; 1000), two examples (x=1.0, y=3.0) and (x=2.0, y=5.0), start (w,b) = (0,0),
+; lr = 10 (0.01), 12 epochs. Reference fixed-point trace (div floors toward
+; zero), verified against an integer reference before authoring:
+;   start            corpus loss = 34000
+;   after 1 epoch    corpus loss = 27695
+;   after 12 epochs  corpus loss = 3090   w12 = 1839 (-> 2000)  b12 = 1150 (-> 1000)
+;
+; Verdict 31 when every claim lands:
+;   1   an under-fit start carries positive corpus loss          (l0 > 0)
+;   2   corpus loss DROPS after one full epoch — the fold learned (l1 < l0)
+;   4   corpus loss is even lower after 12 epochs — it keeps learning (l12 < l1)
+;   8   w moved toward true 2000 — the slope was learned          (|2000-w12| < |2000-w0|)
+;   16  b moved toward true 1000 — the SECOND param was learned    (|1000-b12| < |1000-b0|)
+;       (affine, not just linear: the corpus fold pinned down both)
+(do
+    (let corpus (list (list 1000 3000) (list 2000 5000)))
+    (let lr 10)
+    (let s0 (list 0 0))
+    (let s1 (aff-epoch s0 corpus lr))
+    (let s12 (aff-train s0 corpus lr 12))
+
+    (let l0 (aff-corpus-loss s0 corpus))
+    (let l1 (aff-corpus-loss s1 corpus))
+    (let l12 (aff-corpus-loss s12 corpus))
+
+    ; 1 — under-fit start carries positive loss
+    (let c0 (if (gt l0 0) 1 0))
+    ; 2 — one full epoch over the corpus lowers the loss
+    (let c1 (if (lt l1 l0) 2 0))
+    ; 4 — convergence: more epochs lower it further
+    (let c2 (if (lt l12 l1) 4 0))
+    ; 8 — the slope w moved toward its true value
+    (let c3 (if (lt (abs (sub 2000 (aff-w s12))) (abs (sub 2000 (aff-w s0)))) 8 0))
+    ; 16 — the intercept b moved toward its true value (the affine generalization)
+    (let c4 (if (lt (abs (sub 1000 (aff-b s12))) (abs (sub 1000 (aff-b s0)))) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
