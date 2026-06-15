@@ -1,0 +1,129 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/model-data-sharing-floor-20260615",
+  "commit_scope": "Add a bounded Form-native model data sharing floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "model-data-sharing",
+    "federated-slices",
+    "fourth-kernel-wall-groups",
+    "form-native-models",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "model-data-sharing-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-wall-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_model_data_sharing_floor.json",
+    "docs/system_audit/model_executor_run_ledger/model-data-sharing-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/model-data-sharing.fk",
+    "form/form-stdlib/tests/model-data-sharing-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_model_data_sharing_floor.json",
+    "docs/system_audit/model_executor_run_ledger/model-data-sharing-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/model-data-sharing.fk",
+    "form/form-stdlib/tests/model-data-sharing-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim model-data-sharing-floor \"Remaining fourth wall lane: add bounded Form-native model data sharing receipt; avoid ML execution/router/mesh transport and BML compiler lanes.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk form-stdlib/tests/model-data-sharing-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh model-data-sharing",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+cell-sync.fk+slice-update-roundtrip.fk+slice-merge.fk+model-data-sharing.fk+model-data-sharing-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  model-data-sharing`. Wellness reported no attention items."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Model data sharing now has a bounded fourth-kernel receipt for missing-slice request, re-address verification, apply, substrate source authority, and deterministic merge.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk form-stdlib/tests/model-data-sharing-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh model-data-sharing"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/model-data-sharing.fk",
+    "form/form-stdlib/tests/model-data-sharing-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/system_audit/model_executor_run_ledger/model-data-sharing-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "model-data-sharing-floor",
+    "gate": "Model data sharing needs a composed receipt before live mesh transport, durable query, optimizer deltas, privacy, or conflict policy can be claimed as first-class.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add chunk-range slice policy, optimizer-state delta rows, durable eval query, live mesh slice transport, and privacy/conflict receipts as separate bounded lanes."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Slice update roundtrip and deterministic slice merge were proven separately, while the model-data-sharing wall still lacked one composed receipt and a source-of-truth guard.",
+    "current_observed_floor": "model-data-sharing returns 4095 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "model-data-sharing -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "live mesh slice transport",
+      "durable eval-receipt query path",
+      "optimizer-state delta slices",
+      "privacy boundary",
+      "conflict policy",
+      "chunk-range merkle slice sharing"
+    ]
+  }
+}

@@ -46,6 +46,11 @@
 ;     fourth-runtime-authority with verdict 127: it captures production runtime response headers,
 ;     reads native-kernel and x-form-python-authority=false through model-vitality rows, and carries the
 ;     authority receipt without Go/Rust/TypeScript assistance.
+;     model-data-sharing.fk now returns 4095 four-way: it composes the existing slice-update roundtrip
+;     and slice-merge floors into one model-slice sharing receipt. A peer offers d1/d2, the receiver
+;     requests only the missing d2, accepts only the arrival that re-addresses to d2, applies it, refuses
+;     file-cache authority as source of truth, and merges two trusted task-vector slices with exact
+;     TIES/FedAvg rational evidence.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -59,12 +64,12 @@
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
 ;     optimizer-step cells, durable eval-receipt query path, measured fourth-arm duration, larger native
-;     HTTP body policy, streaming/backpressure receipts, and mesh-scale merkle slice sharing are still not
-;     closed.
+;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
+;     and chunk-range merkle slice sharing are still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
 ;     live-row route read, production pulse/runtime row ingestion, Go/Rust/TypeScript production HTTPS
-;     capture, and all-kernel plaintext HTTP plus verified HTTPS body capture are now closed receipts,
-;     not future claims.
+;     capture, all-kernel plaintext HTTP plus verified HTTPS body capture, and bounded model-slice
+;     request/re-address/apply/merge receipt are now closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.
