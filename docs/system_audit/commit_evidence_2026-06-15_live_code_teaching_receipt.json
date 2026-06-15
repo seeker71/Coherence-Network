@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/live-code-teaching-receipt-20260615",
+  "commit_scope": "Add a bounded host carrier that emits a live code-tool-learning coding-act receipt from a committed code turn and verifier evidence.",
+  "files_owned": [
+    "scripts/code_tool_learning_receipt.py",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-15_live_code_teaching_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/live-code-teaching-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "python3 -m py_compile scripts/code_tool_learning_receipt.py",
+        "result": "pass",
+        "output": "Script compiles."
+      },
+      {
+        "command": "python3 scripts/code_tool_learning_receipt.py --commit HEAD --verify \"code-tool-learning-band::cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk\" --verify \"code-tool-learning-gate::cd form && bash scripts/fourth-arm-gate.sh code-tool-learning\"",
+        "result": "pass",
+        "output": "PASS code-tool-learning-receipt status=pass commit=8d17b86ce6ca files=7 verifiers=2 trust=62->74 cache=.cache/code-tool-learning/20260615T161004Z/coding-act-receipt.json"
+      },
+      {
+        "command": "python3 scripts/generate_repo_indexes.py",
+        "result": "pass",
+        "output": "Updated 2 index file(s): scripts/INDEX.md, MANIFEST.md."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy performed by this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Live local receipt proof passed; PR/CI and deploy freshness remain pending after push."
+  },
+  "idea_ids": [
+    "form-native-code-learning",
+    "self-teaching-coding-act",
+    "code-tool-learning"
+  ],
+  "spec_ids": [
+    "coherence-substrate-code-tool-learning",
+    "coherence-substrate-form-cli-north-star"
+  ],
+  "task_ids": [
+    "2026-06-15-live-code-teaching-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "priority-correction"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "scripts/code_tool_learning_receipt.py -> committed-turn host carrier",
+    ".cache/code-tool-learning/latest.json -> live local receipt, not committed",
+    "docs/coherence-substrate/code-tool-learning.form -> carrier proof and next gap",
+    "docs/system_audit/model_executor_runs.jsonl -> executor proof row"
+  ],
+  "change_files": [
+    "scripts/code_tool_learning_receipt.py",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-15_live_code_teaching_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/live-code-teaching-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A committed coding turn can now emit a derived code-tool-learning receipt with hashed source surfaces, hashed patch recipe, verifier hashes, choice receipt, and accepted learned trust delta.",
+    "public_endpoints": [
+      "not-applicable: local host-carrier proof only"
+    ],
+    "test_flows": [
+      "The script compiles under Python.",
+      "The script inspects merged PR #3199 commit 8d17b86ce6cab02086175f1f151a921142613b54 against its first parent.",
+      "The receipt reports 7 source surfaces and 7 touched files.",
+      "The script runs two explicit verifier commands and stores status, duration, and output hashes without raw output retention.",
+      "The receipt reports trust 62->74, sample_count=1, accepted=1, and raw_patch_retained=0."
+    ]
+  }
+}
