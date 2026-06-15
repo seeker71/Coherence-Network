@@ -18,9 +18,12 @@
 ; render text to inspectable PCM, whisper-cli can transcribe it locally, and the
 ; receipt can train Form rows while native STT/TTS candidates remain teacher-led
 ; until heldout receipts prove otherwise.
+; Corpus receipts group several real teacher rows into one training window so
+; the next native candidate races against a heldout corpus, not a single phrase.
 ;
 ; Proven by: form-stdlib/tests/speech-model-learning-band.fk
 ;            form-stdlib/tests/speech-teacher-receipt-band.fk
+;            form-stdlib/tests/speech-teacher-corpus-band.fk
 
 (do
     (defn sml-sample (label feature lane)
@@ -417,6 +420,138 @@
             1
             95
             trust))
+    (defn sml-speech-teacher-corpus-floor ()
+        (list
+            "at least three real local speech teacher receipts form one corpus window"
+            "every receipt must pass the single-receipt floor before training authority increases"
+            "aggregate hashes, totals, and retained audio keep the corpus replayable"))
+    (defn sml-speech-teacher-corpus-north-star ()
+        (list
+            "speech corpora are native channel training windows, not shell transcript dumps"
+            "heldout corpus wins retire teacher authority only when native STT/TTS candidates clear accuracy, trust, sovereignty, vitality, and lower-cost floors"
+            "macOS, Android, and mesh organs emit the same corpus row through native OS audio APIs"))
+    (defn sml-receipts-valid-count (receipts)
+        (if (eq (len receipts) 0) 0
+            (add
+                (sml-speech-teacher-receipt-valid? (head receipts))
+                (sml-receipts-valid-count (tail receipts)))))
+    (defn sml-receipts-min-overlap-loop (receipts current)
+        (if (eq (len receipts) 0) current
+            (sml-receipts-min-overlap-loop
+                (tail receipts)
+                (sml-min current (sml-str-overlap (head receipts))))))
+    (defn sml-receipts-min-overlap (receipts)
+        (if (eq (len receipts) 0) 0
+            (sml-receipts-min-overlap-loop
+                (tail receipts)
+                (sml-str-overlap (head receipts)))))
+    (defn sml-receipts-sum-wav (receipts)
+        (if (eq (len receipts) 0) 0
+            (add (sml-str-wav-bytes (head receipts)) (sml-receipts-sum-wav (tail receipts)))))
+    (defn sml-receipts-sum-samples (receipts)
+        (if (eq (len receipts) 0) 0
+            (add (sml-str-samples (head receipts)) (sml-receipts-sum-samples (tail receipts)))))
+    (defn sml-receipts-sum-duration (receipts)
+        (if (eq (len receipts) 0) 0
+            (add (sml-str-duration-ms (head receipts)) (sml-receipts-sum-duration (tail receipts)))))
+    (defn sml-speech-teacher-corpus
+        (status receipts count pass-count min-overlap total-wav total-samples total-duration corpus-sha raw-audio-retained floor north-star)
+        (list status receipts count pass-count min-overlap total-wav total-samples total-duration corpus-sha raw-audio-retained floor north-star))
+    (defn sml-stc-status (corpus) (nth corpus 0))
+    (defn sml-stc-receipts (corpus) (nth corpus 1))
+    (defn sml-stc-count (corpus) (nth corpus 2))
+    (defn sml-stc-pass-count (corpus) (nth corpus 3))
+    (defn sml-stc-min-overlap (corpus) (nth corpus 4))
+    (defn sml-stc-total-wav (corpus) (nth corpus 5))
+    (defn sml-stc-total-samples (corpus) (nth corpus 6))
+    (defn sml-stc-total-duration (corpus) (nth corpus 7))
+    (defn sml-stc-corpus-sha (corpus) (nth corpus 8))
+    (defn sml-stc-raw-audio-retained (corpus) (nth corpus 9))
+    (defn sml-stc-floor (corpus) (nth corpus 10))
+    (defn sml-stc-north-star (corpus) (nth corpus 11))
+    (defn sml-speech-teacher-corpus-from-receipts (receipts corpus-sha)
+        (do
+            (let count (len receipts))
+            (let pass-count (sml-receipts-valid-count receipts))
+            (let min-overlap (sml-receipts-min-overlap receipts))
+            (sml-speech-teacher-corpus
+                (if (and
+                        (ge count 3)
+                        (and
+                            (eq pass-count count)
+                            (sml-str-sha? corpus-sha)))
+                    "pass"
+                    "blocked")
+                receipts
+                count
+                pass-count
+                min-overlap
+                (sml-receipts-sum-wav receipts)
+                (sml-receipts-sum-samples receipts)
+                (sml-receipts-sum-duration receipts)
+                corpus-sha
+                1
+                (sml-speech-teacher-corpus-floor)
+                (sml-speech-teacher-corpus-north-star))))
+    (defn sml-speech-teacher-corpus-valid? (corpus)
+        (if (and
+                (str_eq (sml-stc-status corpus) "pass")
+                (and
+                    (ge (sml-stc-count corpus) 3)
+                    (and
+                        (eq (sml-stc-pass-count corpus) (sml-stc-count corpus))
+                        (and
+                            (ge (sml-stc-min-overlap corpus) 80)
+                            (and
+                                (gt (sml-stc-total-wav corpus) 0)
+                                (and
+                                    (gt (sml-stc-total-samples corpus) 0)
+                                    (and
+                                        (gt (sml-stc-total-duration corpus) 0)
+                                        (and
+                                            (sml-str-sha? (sml-stc-corpus-sha corpus))
+                                            (and
+                                                (eq (sml-stc-raw-audio-retained corpus) 1)
+                                                (and
+                                                    (gt (len (sml-stc-floor corpus)) 0)
+                                                    (gt (len (sml-stc-north-star corpus)) 0)))))))))))
+            1
+            0))
+    (defn sml-speech-teacher-sample-from-receipt (receipt)
+        (sml-speech-teacher-sample (sml-str-expected receipt) receipt))
+    (defn sml-speech-teacher-corpus-samples (receipts)
+        (if (eq (len receipts) 0) (empty)
+            (cons
+                (sml-speech-teacher-sample-from-receipt (head receipts))
+                (sml-speech-teacher-corpus-samples (tail receipts)))))
+    (defn sml-speech-teacher-receipts-to-tests (receipts)
+        (if (eq (len receipts) 0) (empty)
+            (cons
+                (sml-test-row
+                    (sml-speech-teacher-feature (head receipts))
+                    (sml-str-expected (head receipts)))
+                (sml-speech-teacher-receipts-to-tests (tail receipts)))))
+    (defn sml-speech-teacher-corpus-score-card (path corpus trust)
+        (sml-score-card
+            path
+            (if (eq (sml-speech-teacher-corpus-valid? corpus) 1)
+                (sml-stc-pass-count corpus)
+                0)
+            (sml-stc-count corpus)
+            95
+            trust))
+    (defn sml-speech-teacher-corpus-retire-teacher? (corpus native-correct native-total native-trust native-sovereignty)
+        (if (and
+                (eq (sml-speech-teacher-corpus-valid? corpus) 1)
+                (and
+                    (ge native-total (sml-stc-count corpus))
+                    (and
+                        (eq native-correct native-total)
+                        (and
+                            (ge native-trust 90)
+                            (ge native-sovereignty 90)))))
+            1
+            0))
 
     (defn sml-mesh-row (tts-label stt-label expected)
         (list tts-label stt-label expected))

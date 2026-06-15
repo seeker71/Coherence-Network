@@ -1,0 +1,208 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk
+;
+; speech-teacher-corpus-band - physical local speech corpus training floor.
+;
+; Floor: several observed macOS say -> 16 kHz PCM -> whisper-cli receipts become
+; one native corpus window only when every sample passes the single-receipt
+; floor and aggregate corpus metrics remain replayable.
+;
+; North star: speech corpora are native channel training windows across macOS,
+; Android, and mesh organs; teacher authority retires only after native STT/TTS
+; candidates win heldout corpus receipts with higher trust and sovereignty.
+;
+; Verdict 16383:
+;   1     corpus floor and north-star are present
+;   2     observed four-sample corpus passes
+;   4     aggregate counts, overlap, and totals match observed live receipt
+;   8     corpus SHA and retained-audio flag are carried
+;   16    low-overlap member blocks the corpus
+;   32    empty corpus is refused
+;   64    corpus lowers into four native training samples
+;   128   sample labels and speech lane survive lowering
+;   256   exact exemplar model learns all four corpus rows
+;   512   L1 model classifies a near heldout phrase row
+;   1024  valid corpus score beats invalid corpus score
+;   2048  weak native candidate cannot retire teacher authority
+;   4096  perfect heldout native candidate can retire teacher authority
+;   8192  local Whisper model identity is carried in the corpus
+(do
+    (let r0
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "form native speech teacher receipt"
+            " Form native speech teacher receipt."
+            100
+            69530
+            32717
+            2045
+            164725
+            731
+            "sha256:7a9962b938745113b49ffafef1d083b1b01737aed727c1b90e4b79e59854d5bd"
+            "sha256:892c6be68c65c21180539f76683c99cd0d53c017e7c465b249ad0b092763b98a"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let r1
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "cells learn from real audio"
+            " Cells learn from real audio."
+            100
+            55830
+            25867
+            1617
+            180676
+            523
+            "sha256:8a4b35a3c9e29906259c844ba8ad5ed76238adfba8998e7478abd0574bf4025e"
+            "sha256:cd68990ffe07af2118bf95d9a143383709c6b81a972b131611ac7e253f09dab8"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let r2
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "the local model returns a transcript"
+            " The local model returns a transcript."
+            100
+            72842
+            34373
+            2148
+            167796
+            599
+            "sha256:d220ab8d84ded3a3faafdc2555ec54bdc02eb03fa34842b72e69694a2a939c67"
+            "sha256:5e2e5193d7ab32b199e5d6a6164309a63ff92494454d07304fe4a7d580aa347c"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let r3
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "speech receipts guide native learning"
+            " Speech receipts guide native learning."
+            100
+            66582
+            31243
+            1953
+            162734
+            628
+            "sha256:07d63c67bf10208d47b359160ad89e689f9ccfa1bd9a85f4c5600ee3dbd7ab4d"
+            "sha256:a08a3d5cfb25e3adcf832382ac6224693776061c9f5bbe660ef76a38455108e5"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let low-overlap
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "speech receipts guide native learning"
+            "unrelated words"
+            25
+            66582
+            31243
+            1953
+            162734
+            628
+            "sha256:07d63c67bf10208d47b359160ad89e689f9ccfa1bd9a85f4c5600ee3dbd7ab4d"
+            "sha256:a08a3d5cfb25e3adcf832382ac6224693776061c9f5bbe660ef76a38455108e5"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let receipts (list r0 r1 r2 r3))
+    (let corpus
+        (sml-speech-teacher-corpus-from-receipts
+            receipts
+            "sha256:7b5a134a3d08859e0bf5815c24b94f0f6c27a08f8aadc251ed44d5d856040edd"))
+    (let invalid-corpus
+        (sml-speech-teacher-corpus-from-receipts
+            (list r0 r1 r2 low-overlap)
+            "sha256:7b5a134a3d08859e0bf5815c24b94f0f6c27a08f8aadc251ed44d5d856040edd"))
+    (let empty-corpus
+        (sml-speech-teacher-corpus-from-receipts
+            (empty)
+            "sha256:7b5a134a3d08859e0bf5815c24b94f0f6c27a08f8aadc251ed44d5d856040edd"))
+    (let samples (sml-speech-teacher-corpus-samples (sml-stc-receipts corpus)))
+    (let tests (sml-speech-teacher-receipts-to-tests (sml-stc-receipts corpus)))
+    (let model (sml-device samples))
+    (let heldout
+        (sml-test-row
+            (list 100 181000 1620 524 56000 25900)
+            "cells learn from real audio"))
+    (let valid-score (sml-speech-teacher-corpus-score-card "teacher:corpus" corpus 95))
+    (let invalid-score (sml-speech-teacher-corpus-score-card "teacher:invalid-corpus" invalid-corpus 95))
+
+    (let c0
+        (if (and
+                (gt (len (sml-speech-teacher-corpus-floor)) 0)
+                (gt (len (sml-speech-teacher-corpus-north-star)) 0))
+            1
+            0))
+    (let c1 (if (eq (sml-speech-teacher-corpus-valid? corpus) 1) 2 0))
+    (let c2
+        (if (and
+                (eq (sml-stc-count corpus) 4)
+                (and
+                    (eq (sml-stc-pass-count corpus) 4)
+                    (and
+                        (eq (sml-stc-min-overlap corpus) 100)
+                        (and
+                            (eq (sml-stc-total-wav corpus) 264784)
+                            (and
+                                (eq (sml-stc-total-samples corpus) 124200)
+                                (eq (sml-stc-total-duration corpus) 7763))))))
+            4
+            0))
+    (let c3
+        (if (and
+                (sml-str-sha? (sml-stc-corpus-sha corpus))
+                (eq (sml-stc-raw-audio-retained corpus) 1))
+            8
+            0))
+    (let c4 (if (eq (sml-speech-teacher-corpus-valid? invalid-corpus) 0) 16 0))
+    (let c5 (if (eq (sml-speech-teacher-corpus-valid? empty-corpus) 0) 32 0))
+    (let c6 (if (eq (len samples) 4) 64 0))
+    (let c7
+        (if (and
+                (str_eq (sml-label (head samples)) "form native speech teacher receipt")
+                (str_eq (sml-lane (head samples)) "speech:teacher-receipt"))
+            128
+            0))
+    (let c8 (if (eq (sml-exact-correct model tests) 4) 256 0))
+    (let c9
+        (if (str_eq
+                (sml-l1-label (sml-test-feature heldout) model)
+                "cells learn from real audio")
+            512
+            0))
+    (let c10
+        (if (gt (bco-score valid-score) (bco-score invalid-score))
+            1024
+            0))
+    (let c11
+        (if (eq (sml-speech-teacher-corpus-retire-teacher? corpus 0 4 95 95) 0)
+            2048
+            0))
+    (let c12
+        (if (eq (sml-speech-teacher-corpus-retire-teacher? corpus 4 4 95 95) 1)
+            4096
+            0))
+    (let c13
+        (if (str_eq
+                (sml-str-stt-model r3)
+                "ggml-large-v3-turbo.bin")
+            8192
+            0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))

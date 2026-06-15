@@ -1,0 +1,154 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "codex/speech-teacher-corpus-floor-20260616",
+  "commit_scope": "Add a physical local speech teacher corpus floor so multiple macOS TTS/local Whisper STT receipts become one Form-native training window.",
+  "files_owned": [
+    "scripts/speech_teacher_corpus_receipt.sh",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-teacher-corpus-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/speech-teacher-receipt.form",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_speech_teacher_corpus.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-16_speech_teacher_corpus.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+        "result": "pass",
+        "output": "Prompt guide passed after the gate's own continuity bypass path; the blocking sibling was /Users/ursmuff/source/Coherence-Network branch=claude/affine-train-loop."
+      },
+      {
+        "command": "make wellness",
+        "result": "pass",
+        "output": "Wellness completed; one unrelated production health reachability signal was reported."
+      },
+      {
+        "command": "bash -n scripts/speech_teacher_corpus_receipt.sh && scripts/speech_teacher_corpus_receipt.sh",
+        "result": "pass",
+        "output": "PASS speech-teacher-corpus receipt=/Users/ursmuff/.codex/worktrees/1bc1/Coherence-Network/.cache/speech-teacher-corpus/20260615T164203Z/speech-teacher-corpus-receipt.json samples=4 min_overlap=100 total_duration_ms=7763 sha=sha256:7b5a134a3d08859e0bf5815c24b94f0f6c27a08f8aadc251ed44d5d856040edd"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-teacher-corpus-band.fk",
+        "result": "pass",
+        "output": "speech-teacher-corpus-band.fk -> 16383; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && bash scripts/fourth-arm-gate.sh speech-teacher-corpus",
+        "result": "pass",
+        "output": "PASS-4WAY speech-teacher-corpus"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speech-teacher-receipt-band.fk",
+        "result": "pass",
+        "output": "speech-teacher-receipt-band.fk -> 4095; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy performed by this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The physical local speech corpus is proven; native macOS/Android audio API corpus emission and native STT/TTS heldout wins remain next gaps."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "speech-teacher-corpus",
+    "loopback-learning",
+    "oracle-distillation-learning"
+  ],
+  "spec_ids": [
+    "coherence-substrate-speech-teacher-receipt",
+    "coherence-substrate-loopback-learning"
+  ],
+  "task_ids": [
+    "2026-06-16-speech-teacher-corpus"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "corpus-learning-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "scripts/speech_teacher_corpus_receipt.sh -> live no-Python corpus witness over the single-receipt carrier",
+    ".cache/speech-teacher-corpus/20260615T164203Z/speech-teacher-corpus-receipt.json -> live corpus with samples=4, min_overlap=100, total_duration_ms=7763",
+    "form/form-stdlib/speech-model-learning.fk -> corpus row, aggregate validity gate, corpus samples, score card, and teacher-retirement gate",
+    "form/form-stdlib/tests/speech-teacher-corpus-band.fk -> 16383 four-way proof",
+    "docs/coherence-substrate/speech-teacher-receipt.form -> body-readable corpus floor, north star, not-claimed, and next gaps"
+  ],
+  "change_files": [
+    "scripts/speech_teacher_corpus_receipt.sh",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/tests/speech-teacher-corpus-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/speech-teacher-receipt.form",
+    "docs/coherence-substrate/loopback-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-16_speech_teacher_corpus.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-16_speech_teacher_corpus.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes can now consume several physical local TTS/STT teacher receipts as one explicit Form-native speech corpus training window while refusing too-small or invalid corpora.",
+    "public_endpoints": [
+      "not-applicable: local hardware/model carrier proof only"
+    ],
+    "test_flows": [
+      "Generate four macOS TTS audio samples through the single speech teacher receipt witness.",
+      "Lower each sample to 16 kHz mono PCM and transcribe with local whisper-cli.",
+      "Aggregate sample receipts into one corpus receipt with count, pass count, minimum overlap, total bytes, total samples, total duration, and corpus hash.",
+      "Validate the corpus shape four-way in Form and lower each receipt into native training samples.",
+      "Prove a weak native candidate cannot retire teacher authority and a perfect heldout native candidate can."
+    ]
+  },
+  "floor_update": {
+    "previous_observed_floor": "Speech learning had one live no-Python TTS/STT receipt accepted as native training data.",
+    "current_observed_floor": "Four local Mac TTS/STT receipts form one corpus window with min overlap 100, total_wav_bytes=264784, total_samples=124200, total_duration_ms=7763, and a four-way Form corpus proof.",
+    "new_receipts": [
+      "speech-teacher-corpus 20260615T164203Z samples=4 min_overlap=100 total_duration_ms=7763 corpus_sha256=sha256:7b5a134a3d08859e0bf5815c24b94f0f6c27a08f8aadc251ed44d5d856040edd"
+    ],
+    "not_claimed": [
+      "Form-native neural STT",
+      "Form-native neural TTS",
+      "Android native audio API corpus receipt",
+      "teacher authority retired by the current corpus alone"
+    ]
+  }
+}
