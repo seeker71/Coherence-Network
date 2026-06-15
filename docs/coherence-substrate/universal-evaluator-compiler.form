@@ -1,0 +1,61 @@
+; universal-evaluator-compiler.form — the deepest north star, in two claims.
+;
+; One engine. A string carries a GRAMMAR (data) and CONTENT in that grammar (data).
+; The engine parses the grammar into recipe-actions that emit Form, then either
+; EVALUATES the Form (meta-circular) or COMPILES it to a host-native binary. Every
+; specific thing we build — the form-cli, a route handler, a model — is an instance
+; of this. The companion concept is lc-grammar-is-the-universal-recipe;
+; grammar-as-recipe.form expresses the (parse, emit) pair this rests on.
+
+(universal-evaluator-compiler
+
+  ; ── Claim 1: evaluate any grammar-described code from a string, grammar included ──
+  (claim-evaluate
+    "A string can carry both a grammar and code in that grammar; one engine parses"
+    "the grammar (rules are data) and runs the code."
+    (grounded
+      (engine   "bmf-grammar.fk — a GRAMMAR is a named rule set + start; ref + recursion;"
+                "each rule emits a Form node. bml.fk is the high-level grammar over it;"
+                "source-compiler.fk lowers grammar-described source to Form.")
+      (proof    "every BML band in validate.sh IS this: BML-grammar (data) + source (data)"
+                "-> Form -> run, four-way. Minimal live instance: a one-string '+'-rule"
+                "evaluator returns ev(\"20+22\")=42 on the kernel.")
+      (status   "PROVEN.")))
+
+  ; ── Claim 2: any content with a describable grammar -> Form shape -> native binary ──
+  (claim-compile
+    "Any structured input with a describable grammar becomes a Form recipe tree, and a"
+    "Form tree compiles to a host-native binary — when the JIT covers the ops it uses."
+    (grounded
+      (content->form "grammar-as-recipe.form: every modality (code/data/prose/audio/"
+                     "image/video/sensor) is a Language cell (grammar + emission template)"
+                     "-> Form recipe tree. Shipped grammars: json/yaml/python/markdown/"
+                     "rust/go/ts. PROVEN for these modalities.")
+      (form->native  "form-lower.fk lowers an op-tagged Form tree to arm64 bytes,"
+                     "byte-verified against form-asm (zero clang); form-macho/form-elf"
+                     "wrap it into a runnable binary. PROVEN four-way across arithmetic,"
+                     "conditionals, map (higher-order), recursion (form-lower / -cond /"
+                     "-map / -rec -> 31; form-elf-exec -> 63 RUNS the binary).")
+      (status   "the path is real and proven for the lowered op set; full coverage is"
+                "the gap below.")))
+
+  ; ── the one gap: 'when JIT is fully present' named precisely ──
+  (jit-completeness-gap
+    "form-lower today covers arithmetic + control flow + higher-order + recursion."
+    "It does NOT yet lower: strings (str_concat/str_find/substring), host-io"
+    "(host-exec/read/write — the non-deterministic standing wall), and the full"
+    "builtin/substrate surface. 'When JIT is fully present' = when form-lower covers"
+    "those too. Until then, content -> Form -> native is proven for the lowered"
+    "subset; content -> Form -> EVALUATED (meta-circular, on the kernel) is fully"
+    "general today. The kernel interprets everything; the JIT compiles the covered"
+    "subset to native, and the covered subset grows.")
+
+  ; ── why this retires the C detour ──
+  (the-form-cli-is-an-instance
+    "The form-cli runner (form-native-run.fk) is claim 1: it parses the oracle's"
+    "Hermes tool-call grammar from a string and runs the loop — pure Form on the"
+    "kernel, host effects via the kernel's host-io drivers. Its native-binary form is"
+    "claim 2: when form-lower covers strings + host-io, the SAME runner recipe compiles"
+    "to a native binary — no hand-written C. C was only ever a stand-in for the missing"
+    "lowering; the honest path is to grow the JIT, not to emit a parallel C carrier."
+    "One engine: parse -> Form -> evaluate now, compile-to-native as the JIT completes."))
