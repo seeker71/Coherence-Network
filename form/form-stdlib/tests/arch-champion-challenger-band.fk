@@ -1,0 +1,34 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/champion-challenger.fk form-stdlib/arch-gen.fk
+;
+; arch-champion-challenger-band — the auto-ml SERVING loop, three-way: the architect generates a challenger
+; architecture, trains it, and champion-challenger.fk flips serving authority to it ONLY when it EARNS it —
+; fitting the task's targets better (closer in fixed steps) across enough samples — never on a tie, so the
+; served model is never degraded. This is M7's infer-best-while-searching-better: improve the model without
+; ever degrading what is served now. Fixture: input (1.0,0.5); three targets; 5 training steps; a target
+; counts as "fit" when the architecture's loss drops below efit = 0.005; min-samples = 3.
+;
+; Verdict 31 when every claim lands:
+;   1    a DEEPER challenger fits a target the champion cannot yet (depth-2 correct, depth-1 not — capacity)
+;   2    over the window the challenger STRICTLY exceeds the champion (chall score 3 > champ score 1)
+;   4    champion-challenger PROMOTES the earned challenger (ag-promote? depth1→depth2 = 1)
+;   8    champion-challenger PROTECTS the served champion against a same-architecture challenger (no strict gain → 0)
+;   16   authority flips right: "challenger" when earned, "champion" when not
+(do
+    (let x (list 1.0 0.5))
+    (let targets (list (list 1.5 0.8) (list 0.2 1.4) (list 2.0 -0.3)))
+    (let lr 0.1)
+    (let eps 0.00001)
+    (let steps 5)
+    (let efit 0.005)
+    (let ms 3)
+    (let h (ag-trials 1 2 x targets lr eps steps efit))
+
+    (let c0 (if (eq (ag-correct? 2 x (list 1.5 0.8) lr eps steps efit) 1)
+                (if (eq (ag-correct? 1 x (list 1.5 0.8) lr eps steps efit) 0) 1 0) 0))
+    (let c1 (if (gt (cc-chall-score h) (cc-champ-score h)) 2 0))
+    (let c2 (if (eq (ag-promote? 1 2 x targets lr eps steps efit ms) 1) 4 0))
+    (let c3 (if (eq (ag-promote? 1 1 x targets lr eps steps efit ms) 0) 8 0))
+    (let c4 (if (str_eq (ag-authority 1 2 x targets lr eps steps efit ms) "challenger")
+                (if (str_eq (ag-authority 1 1 x targets lr eps steps efit ms) "champion") 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
