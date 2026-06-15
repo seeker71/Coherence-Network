@@ -8,6 +8,7 @@
 //   tsx src/main.ts path/to/file.fk
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   deserializeRecipeArtifact,
@@ -181,6 +182,24 @@ async function main(): Promise<void> {
   const paths = args;
   if (paths.length === 0) {
     console.error("missing source file");
+    process.exit(2);
+  }
+  // Pre-flight: a missing input path is a caller error (usually a wrong-relative
+  // path), not a kernel fault. Fail with a fat, attributed error and a clean exit
+  // BEFORE the Promise.all below — otherwise readFile rejects with a bare ENOENT
+  // that reaches main()'s catch and writes a crash-trace, hiding which arg was
+  // wrong behind a Node stack. Kernel input paths resolve relative to form/.
+  const missingInputs = paths
+    .map((path, i) => ({ path, i }))
+    .filter(({ path }) => !existsSync(path));
+  if (missingInputs.length > 0) {
+    for (const { path, i } of missingInputs) {
+      console.error(
+        `form-kernel-ts: input file not found (arg ${i + 1}/${paths.length}): ${path}\n` +
+          `  cwd ${process.cwd()} — kernel input paths resolve relative to the form/ ` +
+          `directory (e.g. form-stdlib/core.fk, not form/form-stdlib/core.fk).`,
+      );
+    }
     process.exit(2);
   }
   const parts = await Promise.all(paths.map((path) => readFile(path, "utf8")));
