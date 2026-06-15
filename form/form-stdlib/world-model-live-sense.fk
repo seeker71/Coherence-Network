@@ -1,0 +1,133 @@
+; world-model-live-sense.fk - live mesh/model receipts enter world-model growth.
+;
+; Floor: Android/Mac active samples, capability receipts, and model eval
+; receipts convert into ordinary wmg-sense rows with inspectable payloads.
+; No host helper, shell probe, or Python carrier is source of truth here.
+;
+; North star: continuous live witness loops feed Form-native world growth from
+; sensor, capability, and model receipts. The same growth path can compare local
+; native recipes, sampled oracles, and mesh peers without hiding metadata.
+;
+; Proven by: form-stdlib/tests/world-model-live-sense-band.fk
+
+(do
+    (defn wmls-score (ok n) (if ok n 0))
+
+    (defn wmls-active-sample-payload (sample)
+        (list
+            "active-sample"
+            (aml-sample-lane sample)
+            (aml-sample-protocol sample)
+            (aml-sample-codec sample)
+            (aml-sample-count sample)
+            (aml-sample-metric sample)
+            (aml-sample-trust sample)
+            (aml-sample-privacy sample)
+            (aml-sample-active? sample)))
+
+    (defn wmls-active-sample-reading (sample tick)
+        (ov-reading
+            1
+            (if (eq (aml-active-sample-valid? sample) 1) 1 0)
+            tick))
+
+    (defn wmls-from-active-sample (sample deadline tick)
+        (wmg-sense
+            (str_concat (aml-sample-lane sample) ":active-sample")
+            (aml-sample-lane sample)
+            (wmls-active-sample-reading sample tick)
+            deadline
+            (wmls-active-sample-payload sample)))
+
+    (defn wmls-timeout-sense (name kind deadline payload)
+        (wmg-sense
+            name
+            kind
+            (ov-reading 0 0 (add deadline 1))
+            deadline
+            payload))
+
+    (defn wmls-capability-status (row)
+        (if (eq (aml-capability-learning-ready? row) 1)
+            "learning-ready"
+            (if (eq (aml-capability-floor? row) 1)
+                "capability-floor-held"
+                "capability-floor-missing")))
+
+    (defn wmls-capability-payload (row)
+        (list
+            "capability-receipt"
+            (wmls-capability-status row)
+            "android-present" (aml-cap-android-present? row)
+            "app-installed" (aml-cap-app-installed? row)
+            "app-running" (aml-cap-app-running? row)
+            "mac-present" (aml-cap-mac-present? row)
+            "witness-running" (aml-cap-witness-running? row)
+            "sensor-count" (aml-cap-sensor-count row)
+            "camera" (aml-cap-camera? row)
+            "microphone" (aml-cap-microphone? row)
+            "wifi" (aml-cap-wifi? row)
+            "bluetooth-le" (aml-cap-bluetooth-le? row)
+            "vulkan-compute" (aml-cap-vulkan-compute? row)))
+
+    (defn wmls-capability-reading (row tick)
+        (ov-reading
+            1
+            (if (eq (aml-capability-learning-ready? row) 1) 1 0)
+            tick))
+
+    (defn wmls-from-capability-receipt (row deadline tick)
+        (wmg-sense
+            "android-mac:capability"
+            "capability"
+            (wmls-capability-reading row tick)
+            deadline
+            (wmls-capability-payload row)))
+
+    (defn wmls-model-eval-observed? (receipt min-quality)
+        (if (mv-eval-receipt-valid? receipt)
+            (if (ge (mv-quality-score receipt) min-quality) 1 0)
+            0))
+
+    (defn wmls-model-eval-payload (receipt min-quality)
+        (list
+            "model-eval-receipt"
+            (mv-eval-model-id receipt)
+            (mv-eval-dataset receipt)
+            "quality" (mv-quality-score receipt)
+            "min-quality" min-quality
+            "focus" (mv-focus receipt)
+            "samples" (mv-eval-samples receipt)
+            "eval-merkle" (mv-eval-merkle receipt)
+            "valid" (if (mv-eval-receipt-valid? receipt) 1 0)))
+
+    (defn wmls-from-model-eval (receipt min-quality deadline tick)
+        (wmg-sense
+            (str_concat (mv-eval-model-id receipt) ":eval")
+            "model-eval"
+            (ov-reading 1 (wmls-model-eval-observed? receipt min-quality) tick)
+            deadline
+            (wmls-model-eval-payload receipt min-quality)))
+
+    (defn wmls-ingest-live (state senses)
+        (if (eq (len senses) 0)
+            state
+            (wmls-ingest-live
+                (wmg-ingest state (head senses))
+                (tail senses))))
+
+    (defn wmls-count-kind (senses kind)
+        (if (eq (len senses) 0)
+            0
+            (add
+                (if (str_eq (wmg-sense-kind (head senses)) kind) 1 0)
+                (wmls-count-kind (tail senses) kind))))
+
+    (defn wmls-grow-from-live (state senses offer)
+        (wmg-embody
+            (wmg-digest
+                (wmls-ingest-live state senses)
+                offer)
+            offer))
+
+    0)

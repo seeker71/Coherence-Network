@@ -165,6 +165,7 @@ form-cli-router fks 31
 obs-verify fks 31
 world-module-model fks 1023
 world-model-growth fks 4095
+world-model-live-sense fks 8191
 form-freq-check fks 31
 form-agent-protocol fks 31
 form-agent-tree fks 31
