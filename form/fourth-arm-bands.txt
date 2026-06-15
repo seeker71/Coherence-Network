@@ -163,6 +163,7 @@ form-train-step fks 31
 form-cli-loop fks 31
 form-cli-router fks 31
 obs-verify fks 31
+world-module-model fks 1023
 form-freq-check fks 31
 form-agent-protocol fks 31
 form-agent-tree fks 31
