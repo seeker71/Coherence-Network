@@ -75,12 +75,12 @@ fi
 
 # Git (message -> diff -> merged) pairs -> the form-cli training catalog's
 # commit-to-diff lane. Every merge teaches the english->code memory, labeled by
-# the merge itself (review + CI; four-way for .fk/.form). Pair-shape lives in
-# form-stdlib/training-catalog.fk; git_training_corpus.py is the host-IO bootstrap
-# carrier until the kernel reads git natively. Never fail the merge over it.
+# the merge itself (review + CI; four-way for .fk/.form). One engine, sources as
+# data (git here; chain/concept/... by --source); pair-shape lives in
+# form-stdlib/training-catalog.fk. Never fail the merge over it.
 if git diff --name-only "$RANGE" -- '*.fk' '*.form' 2>/dev/null | grep -q .; then
     echo "[catalog] feeding git (message->diff) pairs from $RANGE:"
-    python3 scripts/git_training_corpus.py --range "$RANGE" || true
+    python3 scripts/training_corpus.py --source git --range "$RANGE" || true
 fi
 
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
