@@ -1,0 +1,32 @@
+; preludes: form-stdlib/core.fk form-stdlib/tensor-autodiff-verifier.fk
+;
+; tensor-autodiff-verifier-band — receipt floor for native host verifier samples.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let good (tav-receipt 64 4 64 0 1234567 "pass"))
+    (let bigger (tav-receipt 256 8 256 0 9876543 "pass"))
+    (let failed (tav-receipt 64 4 63 1 1234567 "fail"))
+    (let zero-samples (tav-receipt 0 4 0 0 1234567 "pass"))
+    (let zero-width (tav-receipt 64 0 64 0 1234567 "pass"))
+    (let zero-checksum (tav-receipt 64 4 64 0 0 "pass"))
+    (let wrong-status (tav-receipt 64 4 64 0 1234567 "pending"))
+    (let wrong-kind (list "not-tensor-autodiff-native-verifier" 64 4 64 0 1234567 "pass"))
+
+    (let c0 (if (tav-receipt? good) 1 0))
+    (let c1 (if (eq (tav-samples good) 64) 2 0))
+    (let c2 (if (eq (tav-width good) 4) 4 0))
+    (let c3 (if (eq (tav-passed good) 64) 8 0))
+    (let c4 (if (eq (tav-failed good) 0) 16 0))
+    (let c5 (if (eq (tav-valid? good) 1) 32 0))
+    (let c6 (if (eq (tav-valid? bigger) 1) 64 0))
+    (let c7 (if (eq (tav-valid? failed) 0) 128 0))
+    (let c8 (if (eq (tav-valid? zero-samples) 0) 256 0))
+    (let c9 (if (eq (tav-valid? zero-width) 0) 512 0))
+    (let c10 (if (eq (tav-valid? zero-checksum) 0)
+                 (if (eq (tav-valid? wrong-status) 0)
+                     (if (eq (tav-receipt? wrong-kind) 0) 1024 0)
+                     0)
+                 0))
+    (let c11 (if (eq (len (tav-floor)) 4) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
