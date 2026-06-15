@@ -1,0 +1,33 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-gen.fk
+;
+; arch-gen-band — auto-ml as the ARCHITECT, three-way. The body GENERATES layer-stack architectures of
+; configurable depth, ASSEMBLES and TRAINS each through transformer-backprop.fk's stack engine, and crowns
+; the one that fits — rejecting the no-op architecture that structurally cannot. This closes the loop: the
+; same generate-then-search shape recipe-gen.fk uses to compose experts now designs and trains ARCHITECTURES.
+; Fixture: input (1.0, 0.5), target (1.5, 0.8) ≠ input, so a no-op (depth 0, y = x) cannot fit; lr 0.1.
+;
+; Verdict 31 when every claim lands:
+;   1    the body GENERATES + CONFIGURES an architecture: depth-2 is a 2-layer stack (len 2)
+;   2    architecture MATTERS: the no-op (depth 0, no layers) cannot fit — its loss stays at 0.34
+;   4    a generated depth-1 architecture TRAINS to fit (loss → 0)
+;   8    a generated depth-2 architecture TRAINS to fit (loss → 0)
+;   16   the ARCHITECT crowns a non-empty architecture (depth ≥ 1), rejecting the no-op that cannot fit
+(do
+    (let x (list 1.0 0.5))
+    (let t (list 1.5 0.8))
+    (let lr 0.1)
+    (let eps 0.00001)
+    (let steps 80)
+
+    (let l0 (ag-fit 0 x t lr eps steps))
+    (let l1 (ag-fit 1 x t lr eps steps))
+    (let l2 (ag-fit 2 x t lr eps steps))
+    (let crowned (ag-best 2 x t lr eps steps))
+
+    (let c0 (if (eq (ag-depth (ag-gen 2)) 2) 1 0))
+    (let c1 (if (gt l0 0.0) 2 0))
+    (let c2 (if (eq (round (mul l1 1000000.0)) 0) 4 0))
+    (let c3 (if (eq (round (mul l2 1000000.0)) 0) 8 0))
+    (let c4 (if (gt crowned 0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
