@@ -280,6 +280,15 @@ def _collect_learning_surfaces(limit: int = 14) -> list[LearningSurface]:
         commands = _validation_commands(record)
         refs = [str(item) for item in record.get("evidence_refs") or []][:6]
         state = _surface_state(record)
+        change_files = [str(item) for item in record.get("change_files") or [] if str(item).strip()]
+        floor_update = record.get("floor_update") if isinstance(record.get("floor_update"), dict) else {}
+        blocked_trials = floor_update.get("blocked_trials") if isinstance(floor_update, dict) else []
+        new_bands = floor_update.get("new_bands") if isinstance(floor_update, dict) else []
+        local_status = str((record.get("local_validation") or {}).get("status") or "")
+        ci_status = str((record.get("ci_validation") or {}).get("status") or "")
+        e2e_status = str((record.get("e2e_validation") or {}).get("status") or "")
+        pass_checks = sum(1 for value in (local_status, ci_status, e2e_status) if value == "pass")
+        known_checks = sum(1 for value in (local_status, ci_status, e2e_status) if value)
         surfaces.append(
             LearningSurface(
                 surface_id=surface_id,
@@ -291,6 +300,12 @@ def _collect_learning_surfaces(limit: int = 14) -> list[LearningSurface]:
                     "commands": commands,
                     "evidence_refs": refs,
                     "contributors": record.get("contributors") or [],
+                    "change_files": change_files[:8],
+                    "changed_cell_count": len(change_files),
+                    "new_cell_count": len(new_bands) if isinstance(new_bands, list) else 0,
+                    "blocked_trial_count": len(blocked_trials) if isinstance(blocked_trials, list) else 0,
+                    "branch_success_rate_ppm": int((pass_checks / known_checks) * 1000000) if known_checks else 0,
+                    "infer_error_rate_ppm": 0,
                     "trained_native_weights": False,
                     "note": (
                         "No weight artifact is claimed here; this is a proven learning/receipt floor."

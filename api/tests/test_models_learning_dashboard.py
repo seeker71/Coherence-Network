@@ -91,6 +91,8 @@ def test_learning_dashboard_exposes_models_receipts_and_guidance(tmp_path: Path,
     assert dashboard.native_training_artifacts == []
     assert dashboard.learning_surfaces[0].surface_id == "model-learning-floor"
     assert dashboard.learning_surfaces[0].training_metadata["trained_native_weights"] is False
+    assert dashboard.learning_surfaces[0].training_metadata["branch_success_rate_ppm"] == 1000000
+    assert dashboard.learning_surfaces[0].training_metadata["changed_cell_count"] == 0
     assert dashboard.learning_surfaces[0].next_step == "Attach weight receipts."
     assert dashboard.recent_proof_runs[0].model_used == "gpt-5-codex"
 

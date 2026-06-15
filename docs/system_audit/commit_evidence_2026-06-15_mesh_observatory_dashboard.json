@@ -1,0 +1,150 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/mesh-observatory-dashboard-20260615",
+  "commit_scope": "Expose multi-node mesh topology, typed runtime channels, and native training health on the dashboard, while preserving BML native route proof under full-suite CI.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "real-mesh-training",
+    "android-mesh-learning",
+    "channel-protocol-choice",
+    "mesh-observatory",
+    "native-training-receipts"
+  ],
+  "spec_ids": [
+    "commit-evidence-contract",
+    "hati-mesh-api",
+    "learning-dashboard"
+  ],
+  "task_ids": [
+    "mesh-observatory-dashboard-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "mesh-correction",
+        "north-star-correction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@mesh-observatory-dashboard-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "api-carrier-authoring",
+        "dashboard-authoring",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "api/app/routers/hati_mesh.py",
+    "api/app/routers/models.py",
+    "api/tests/test_hati_mesh.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/bml_idea_family_harness.py",
+    "docs/system_audit/commit_evidence_2026-06-15_mesh_observatory_dashboard.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs",
+    "web/app/dashboard/page.tsx"
+  ],
+  "change_files": [
+    "api/app/routers/hati_mesh.py",
+    "api/app/routers/models.py",
+    "api/tests/test_hati_mesh.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/bml_idea_family_harness.py",
+    "docs/system_audit/commit_evidence_2026-06-15_mesh_observatory_dashboard.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs",
+    "web/app/dashboard/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"mesh observatory dashboard\"",
+      "python3 -m pytest -q api/tests/test_hati_mesh.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m py_compile api/app/routers/hati_mesh.py api/app/routers/models.py",
+      "python3 -m ruff check api/app/routers/hati_mesh.py api/app/routers/models.py api/tests/test_hati_mesh.py api/tests/test_models_learning_dashboard.py",
+      "python3 scripts/generate_repo_indexes.py --check && git diff --check",
+      "cd web && npm ci --cache ../.cache/npm --prefer-offline",
+      "cd web && npm run build",
+      "cd form/form-kernel-rust && cargo build --release --quiet",
+      "cd api && COHERENCE_TEST_SUITE=full pytest -q tests/test_bml_idea_family_harness.py::test_bml_idea_family_harness_runs_or_skips_when_tools_missing --tb=short",
+      "cd api && COHERENCE_TEST_SUITE=full pytest -q tests/test_native_mutation_route_side_effect_binding.py::test_route_side_effect_binding_live_script_runs_or_skips_when_pg_missing --tb=short",
+      "cd api && COHERENCE_TEST_SUITE=full pytest -q",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "The Hati mesh API now stores and returns multi-device display, dwelling, location, and map-position metadata plus channel data type, direction, latency, error, branch-success, infer-error, and model id fields. The dashboard renders a multi-node field map, typed channel characteristics, and model training health derived from native receipts and learning surfaces. Full local PR guard passed after building the local form-kernel-rust release binary required by full API vitality tests; the first runtime web guard attempt hit a transient fonts.gstatic.com fetch failure, and the rerun plus full guard both passed. The CI full-suite mode exposed a BML native Postgres binder gap; the Rust binder now honors explicit SQL casts for text, float, bool, and integer parameters, and the BML idea-family harness has a realistic native route startup window."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; PR CI has not completed yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No production deploy requested for this dashboard/API compatibility slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The dashboard is no longer shaped around a single Mac node. It can show multiple mesh organs, map/dwelling labels, channel protocols and media characteristics, and model training metrics including branch success, infer error, new cells, and changed cells. Native BML Postgres routes also retain full-suite proof when route parameters are row-derived or JSON numeric values.",
+    "public_endpoints": [
+      "GET /api/hati/mesh/organs?limit=80",
+      "GET /api/hati/mesh/channels?limit=120",
+      "GET /api/models/learning-dashboard",
+      "GET /dashboard"
+    ],
+    "test_flows": [
+      "Local API and web dev servers seeded with three organs and three bidirectional runtime channels.",
+      "Browser verification found Mesh observatory, Field map, Channel characteristics, Model training health, Ultra 23, Mac Studio, Wall display, bluetooth-le-gatt, screen-camera-optical, and audio-near-ultrasonic on /dashboard with no browser errors.",
+      "CI-flavored BML idea-family and native mutation route side-effect focused tests pass after the Postgres binder cast fix."
+    ]
+  },
+  "evidence_refs": [
+    "api/app/routers/hati_mesh.py",
+    "api/app/routers/models.py",
+    "api/tests/test_hati_mesh.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/bml_idea_family_harness.py",
+    "form/form-kernel-rust/src/main.rs",
+    "web/app/dashboard/page.tsx",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "phase_gate": {
+    "phase": "mesh-observatory-dashboard",
+    "gate": "Mesh training needs a visible multi-device topology and training-health surface before large continuous training is useful.",
+    "state": "local-api-web-browser-proof-pass",
+    "can_move_next_phase": false,
+    "next": "After PR CI, attach real channel probes and persisted native training receipts so the observatory updates from live mesh evidence rather than seeded local sample rows."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The dashboard exposed native training receipts and learning direction but did not make the device mesh, transport characteristics, or topology visible.",
+    "current_observed_floor": "The dashboard can inspect multiple organs, dwelling/map labels, bidirectional channel characteristics, protocol/interface/data type metadata, branch success, infer error, new cells, changed cells, and native/oracle training deltas.",
+    "new_bands": [
+      "hati-mesh typed organ/channel API",
+      "dashboard mesh observatory",
+      "learning dashboard cell/change metrics",
+      "native Postgres binder explicit SQL-cast coercion"
+    ],
+    "retuned_north_star": [
+      "show the whole mesh instead of assuming a single Mac node",
+      "make Wi-Fi, Bluetooth, audio, video, screen, loopback, and other channels inspectable as first-class runtime paths",
+      "surface model health beside topology so route choice can learn from branch success, inference error, volume, latency, and trust",
+      "connect live probes and continuous training receipts so mesh visibility becomes operational, not decorative"
+    ],
+    "blocked_trials": []
+  }
+}

@@ -25,6 +25,7 @@ OrganKind = Literal[
 ]
 
 ChannelStatus = Literal["offered", "accepted", "open", "paused", "closed", "refused"]
+ChannelDirection = Literal["bidirectional", "send", "receive", "presence", "install-only"]
 
 
 class OrganAnnounceIn(BaseModel):
@@ -35,6 +36,13 @@ class OrganAnnounceIn(BaseModel):
     target: str = Field(default="unknown", min_length=1, max_length=80)
     steward_cell_id: str | None = Field(default=None, max_length=160)
     steward_label: str | None = Field(default=None, max_length=160)
+    display_name: str | None = Field(default=None, max_length=160)
+    dwelling_name: str | None = Field(default=None, max_length=160)
+    location_label: str | None = Field(default=None, max_length=160)
+    map_x: float | None = Field(default=None, ge=0.0, le=100.0)
+    map_y: float | None = Field(default=None, ge=0.0, le=100.0)
+    latitude: float | None = Field(default=None, ge=-90.0, le=90.0)
+    longitude: float | None = Field(default=None, ge=-180.0, le=180.0)
     capabilities: list[str] = Field(default_factory=list, max_length=32)
     lanes: list[str] = Field(default_factory=list, max_length=32)
     public_key: str | None = Field(default=None, max_length=256)
@@ -47,9 +55,17 @@ class ChannelOfferIn(BaseModel):
     interface: str = Field(..., min_length=1, max_length=120)
     capability: str = Field(..., min_length=1, max_length=120)
     codec: str = Field(default="json", min_length=1, max_length=80)
+    data_type: str = Field(default="event", min_length=1, max_length=80)
+    direction: ChannelDirection = "bidirectional"
     status: ChannelStatus = "offered"
     sample_rate_hz: float = Field(default=0.0, ge=0.0, le=192000.0)
     bytes_per_second: float = Field(default=0.0, ge=0.0)
+    latency_ms: float = Field(default=0.0, ge=0.0)
+    error_rate_ppm: int = Field(default=0, ge=0, le=1000000)
+    packet_loss_ppm: int = Field(default=0, ge=0, le=1000000)
+    branch_success_rate_ppm: int = Field(default=0, ge=0, le=1000000)
+    infer_error_rate_ppm: int = Field(default=0, ge=0, le=1000000)
+    model_id: str | None = Field(default=None, max_length=160)
 
 
 class OrganHeartbeatIn(BaseModel):
@@ -81,6 +97,14 @@ def _event_for(payload: OrganAnnounceIn) -> RuntimeEventCreate:
         metadata["steward_cell_id"] = payload.steward_cell_id
     if payload.steward_label:
         metadata["steward_label"] = payload.steward_label
+    for key in ("display_name", "dwelling_name", "location_label"):
+        value = getattr(payload, key)
+        if value:
+            metadata[key] = value
+    for key in ("map_x", "map_y", "latitude", "longitude"):
+        value = getattr(payload, key)
+        if value is not None:
+            metadata[key] = value
     return RuntimeEventCreate(
         source="api",
         endpoint="/api/hati/mesh/organs/announce",
@@ -110,9 +134,17 @@ def _event_for_offer(payload: ChannelOfferIn) -> RuntimeEventCreate:
             "interface": payload.interface,
             "capability": payload.capability,
             "codec": payload.codec,
+            "data_type": payload.data_type,
+            "direction": payload.direction,
             "status": payload.status,
             "sample_rate_hz": payload.sample_rate_hz,
             "bytes_per_second": payload.bytes_per_second,
+            "latency_ms": payload.latency_ms,
+            "error_rate_ppm": payload.error_rate_ppm,
+            "packet_loss_ppm": payload.packet_loss_ppm,
+            "branch_success_rate_ppm": payload.branch_success_rate_ppm,
+            "infer_error_rate_ppm": payload.infer_error_rate_ppm,
+            "model_id": payload.model_id or "",
         },
     )
 
@@ -211,6 +243,13 @@ async def list_organs(limit: int = Query(default=50, ge=1, le=200)) -> dict[str,
             by_id[organ_id] = {
                 "organ_id": organ_id,
                 "organ_kind": "unknown",
+                "display_name": "",
+                "dwelling_name": "",
+                "location_label": "",
+                "map_x": None,
+                "map_y": None,
+                "latitude": None,
+                "longitude": None,
                 "steward_cell_id": "unbound",
                 "capabilities": [],
                 "lanes": [],
@@ -226,6 +265,13 @@ async def list_organs(limit: int = Query(default=50, ge=1, le=200)) -> dict[str,
         item["receipt_id"] = row.id
         if row.endpoint == "/api/hati/mesh/organs/announce":
             item["organ_kind"] = row.metadata.get("organ_kind", item["organ_kind"])
+            item["display_name"] = row.metadata.get("display_name", item["display_name"])
+            item["dwelling_name"] = row.metadata.get("dwelling_name", item["dwelling_name"])
+            item["location_label"] = row.metadata.get("location_label", item["location_label"])
+            item["map_x"] = row.metadata.get("map_x", item["map_x"])
+            item["map_y"] = row.metadata.get("map_y", item["map_y"])
+            item["latitude"] = row.metadata.get("latitude", item["latitude"])
+            item["longitude"] = row.metadata.get("longitude", item["longitude"])
             item["steward_cell_id"] = row.metadata.get("steward_cell_id", item["steward_cell_id"])
             item["capabilities"] = str(row.metadata.get("capabilities", "")).split(",") if row.metadata.get("capabilities") else item["capabilities"]
             item["lanes"] = str(row.metadata.get("lanes", "")).split(",") if row.metadata.get("lanes") else item["lanes"]
@@ -272,19 +318,30 @@ async def list_channels(
             continue
         from_id = str(row.metadata.get("from_organ_id") or "")
         to_id = str(row.metadata.get("to_organ_id") or "")
+        protocol = str(row.metadata.get("protocol") or "")
+        if not from_id or not to_id or not protocol:
+            continue
         if organ_id and organ_id not in {from_id, to_id}:
             continue
         items.append(
             {
                 "from_organ_id": from_id,
                 "to_organ_id": to_id,
-                "protocol": row.metadata.get("protocol"),
-                "interface": row.metadata.get("interface"),
-                "capability": row.metadata.get("capability"),
-                "codec": row.metadata.get("codec"),
-                "status": row.metadata.get("status"),
+                "protocol": protocol,
+                "interface": str(row.metadata.get("interface") or ""),
+                "capability": str(row.metadata.get("capability") or ""),
+                "codec": str(row.metadata.get("codec") or ""),
+                "data_type": str(row.metadata.get("data_type") or "event"),
+                "direction": str(row.metadata.get("direction") or "bidirectional"),
+                "status": str(row.metadata.get("status") or "offered"),
                 "sample_rate_hz": row.metadata.get("sample_rate_hz", 0.0),
                 "bytes_per_second": row.metadata.get("bytes_per_second", 0.0),
+                "latency_ms": row.metadata.get("latency_ms", 0.0),
+                "error_rate_ppm": row.metadata.get("error_rate_ppm", 0),
+                "packet_loss_ppm": row.metadata.get("packet_loss_ppm", 0),
+                "branch_success_rate_ppm": row.metadata.get("branch_success_rate_ppm", 0),
+                "infer_error_rate_ppm": row.metadata.get("infer_error_rate_ppm", 0),
+                "model_id": row.metadata.get("model_id", ""),
                 "last_seen_at": row.recorded_at.isoformat(),
                 "receipt_id": row.id,
             }

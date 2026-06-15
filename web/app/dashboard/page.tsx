@@ -117,6 +117,11 @@ type LearningDashboardData = {
       commands?: string[];
       evidence_refs?: string[];
       trained_native_weights?: boolean;
+      changed_cell_count?: number;
+      new_cell_count?: number;
+      branch_success_rate_ppm?: number;
+      infer_error_rate_ppm?: number;
+      blocked_trial_count?: number;
       note?: string;
     };
     north_star_alignment: string;
@@ -132,6 +137,45 @@ type LearningDashboardData = {
     source_path?: string | null;
   }[];
   guidance: string[];
+};
+
+type MeshOrgan = {
+  organ_id: string;
+  organ_kind: string;
+  display_name?: string;
+  dwelling_name?: string;
+  location_label?: string;
+  map_x?: number | null;
+  map_y?: number | null;
+  steward_cell_id?: string;
+  capabilities: string[];
+  lanes: string[];
+  listening: boolean;
+  active_channels: string[];
+  sample_rate_hz: number;
+  bytes_per_second: number;
+  last_seen_at: string;
+};
+
+type MeshChannel = {
+  from_organ_id: string;
+  to_organ_id: string;
+  protocol: string;
+  interface: string;
+  capability: string;
+  codec: string;
+  data_type: string;
+  direction: string;
+  status: string;
+  sample_rate_hz: number;
+  bytes_per_second: number;
+  latency_ms: number;
+  error_rate_ppm: number;
+  packet_loss_ppm: number;
+  branch_success_rate_ppm: number;
+  infer_error_rate_ppm: number;
+  model_id?: string;
+  last_seen_at: string;
 };
 
 type SSEEvent = {
@@ -154,6 +198,44 @@ function relTime(iso: string): string {
 
 function ppmToPercent(value: number): string {
   return `${(value / 10000).toFixed(value % 10000 === 0 ? 0 : 1)}%`;
+}
+
+function bytesPerSecond(value: number): string {
+  if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB/s`;
+  if (value >= 1024) return `${(value / 1024).toFixed(1)} KB/s`;
+  return `${Math.round(value)} B/s`;
+}
+
+function meshNodeLabel(node: MeshOrgan): string {
+  return node.display_name || node.dwelling_name || node.location_label || node.organ_id.replace(/^hati-organ-/, "");
+}
+
+function meshPosition(node: MeshOrgan, index: number): { left: number; top: number } {
+  const fallback = [
+    [20, 32],
+    [48, 20],
+    [76, 38],
+    [32, 68],
+    [63, 72],
+    [84, 62],
+  ][index % 6];
+  return {
+    left: typeof node.map_x === "number" ? node.map_x : fallback[0],
+    top: typeof node.map_y === "number" ? node.map_y : fallback[1],
+  };
+}
+
+function channelTone(channel: MeshChannel): string {
+  const protocol = `${channel.protocol} ${channel.interface} ${channel.data_type}`.toLowerCase();
+  if (protocol.includes("audio")) return "bg-emerald-400";
+  if (protocol.includes("video") || protocol.includes("screen") || protocol.includes("optical")) return "bg-sky-400";
+  if (protocol.includes("bluetooth") || protocol.includes("ble")) return "bg-violet-400";
+  if (protocol.includes("wifi") || protocol.includes("websocket") || protocol.includes("http")) return "bg-amber-400";
+  return "bg-rose-400";
+}
+
+function ppmOrUnknown(value: number): string {
+  return value > 0 ? ppmToPercent(value) : "n/a";
 }
 
 function Gauge({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
@@ -196,6 +278,209 @@ function StatusPill({ value }: { value: string }) {
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${cls}`}>
       {value.replace(/_/g, " ")}
     </span>
+  );
+}
+
+function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; channels: MeshChannel[]; learning: LearningDashboardData | null }) {
+  const totalFlow = channels.reduce((sum, channel) => sum + (channel.bytes_per_second || 0), 0);
+  const activeChannels = channels.filter(channel => ["open", "accepted", "offered"].includes((channel.status || "").toLowerCase()));
+  const trained = learning?.native_training_artifacts || [];
+  const surfaces = learning?.learning_surfaces || [];
+  const avgBranchPpm = surfaces.length > 0
+    ? Math.round(surfaces.reduce((sum, surface) => sum + (surface.training_metadata.branch_success_rate_ppm || 0), 0) / surfaces.length)
+    : 0;
+  const newCells = surfaces.reduce((sum, surface) => sum + (surface.training_metadata.new_cell_count || 0), 0);
+  const changedCells = surfaces.reduce((sum, surface) => sum + (surface.training_metadata.changed_cell_count || 0), 0);
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Mesh observatory</h2>
+          <p className="text-xs text-muted-foreground">
+            Nodes, channels, and model learning health across the mesh.
+          </p>
+        </div>
+        <StatusPill value={`${organs.length} nodes`} />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-2xl font-bold">{organs.length}</p>
+          <p className="text-[10px] text-muted-foreground">mesh nodes</p>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-2xl font-bold">{activeChannels.length}</p>
+          <p className="text-[10px] text-muted-foreground">channels</p>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-2xl font-bold">{bytesPerSecond(totalFlow)}</p>
+          <p className="text-[10px] text-muted-foreground">flow</p>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-2xl font-bold">{trained.length}</p>
+          <p className="text-[10px] text-muted-foreground">trained</p>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-2xl font-bold">{ppmOrUnknown(avgBranchPpm)}</p>
+          <p className="text-[10px] text-muted-foreground">branch pass</p>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-2xl font-bold">{newCells}/{changedCells}</p>
+          <p className="text-[10px] text-muted-foreground">new/changed</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-3">
+        <div className="xl:col-span-3 rounded-xl border border-border/20 bg-card/40 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Field map</p>
+            <p className="text-[10px] text-muted-foreground">satellite-style mesh plane</p>
+          </div>
+          <div
+            className="relative h-[360px] overflow-hidden"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 20% 30%, rgba(39,92,76,.55), transparent 24%), radial-gradient(circle at 75% 42%, rgba(73,87,62,.5), transparent 28%), radial-gradient(circle at 42% 78%, rgba(45,76,95,.42), transparent 22%), linear-gradient(135deg, rgba(18,30,24,.96), rgba(20,35,42,.92))",
+            }}
+          >
+            <div className="absolute inset-0 opacity-30 bg-[linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.07)_1px,transparent_1px)] bg-[size:48px_48px]" />
+            {channels.map((channel, index) => {
+              const fromIndex = organs.findIndex(node => node.organ_id === channel.from_organ_id);
+              const toIndex = organs.findIndex(node => node.organ_id === channel.to_organ_id);
+              const from = meshPosition(organs[fromIndex] || { organ_id: channel.from_organ_id } as MeshOrgan, Math.max(fromIndex, index));
+              const to = meshPosition(organs[toIndex] || { organ_id: channel.to_organ_id } as MeshOrgan, Math.max(toIndex, index + 1));
+              const left = Math.min(from.left, to.left);
+              const top = Math.min(from.top, to.top);
+              const width = Math.abs(from.left - to.left);
+              const height = Math.abs(from.top - to.top);
+              const length = Math.max(18, Math.sqrt(width * width + height * height));
+              const angle = Math.atan2(to.top - from.top, to.left - from.left) * 180 / Math.PI;
+              return (
+                <div
+                  key={`${channel.from_organ_id}-${channel.to_organ_id}-${channel.protocol}-${index}`}
+                  className={`absolute h-1 rounded-full ${channelTone(channel)} opacity-70`}
+                  style={{
+                    left: `${left + (from.left < to.left ? 0 : width)}%`,
+                    top: `${top + (from.top < to.top ? 0 : height)}%`,
+                    width: `${length}%`,
+                    transform: `rotate(${angle}deg)`,
+                    transformOrigin: "0 50%",
+                  }}
+                />
+              );
+            })}
+            {organs.map((node, index) => {
+              const pos = meshPosition(node, index);
+              const active = Date.now() - new Date(node.last_seen_at).getTime() < 300000;
+              return (
+                <div
+                  key={node.organ_id}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
+                >
+                  <div className={`h-4 w-4 rounded-full border-2 ${active ? "border-green-300 bg-green-500" : "border-amber-200 bg-amber-500"} shadow-[0_0_22px_rgba(132,204,22,.45)]`} />
+                  <div className="mt-1 min-w-32 rounded-md bg-background/85 px-2 py-1 text-[10px] shadow-sm backdrop-blur">
+                    <p className="font-medium text-foreground truncate">{meshNodeLabel(node)}</p>
+                    <p className="text-muted-foreground truncate">{node.dwelling_name || node.location_label || node.organ_kind}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {organs.length === 0 && (
+              <div className="absolute inset-0 grid place-items-center text-xs text-muted-foreground">
+                No mesh nodes announced yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="xl:col-span-2 rounded-xl border border-border/20 bg-card/40 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/10">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Channel characteristics</p>
+          </div>
+          <div className="divide-y divide-border/10 max-h-[360px] overflow-y-auto">
+            {channels.slice(0, 8).map((channel, index) => {
+              const flowPct = Math.min(100, Math.max(4, (channel.bytes_per_second / Math.max(totalFlow, 1)) * 100));
+              return (
+                <div key={`${channel.from_organ_id}-${channel.to_organ_id}-${index}`} className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${channelTone(channel)}`} />
+                    <p className="text-sm font-medium">{channel.protocol}</p>
+                    <StatusPill value={channel.status || "unknown"} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {channel.interface} · {channel.data_type} · {channel.direction} · {channel.codec}
+                  </p>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className={`h-full rounded-full ${channelTone(channel)}`} style={{ width: `${flowPct}%` }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+                    <span>{bytesPerSecond(channel.bytes_per_second)}</span>
+                    <span>{Math.round(channel.latency_ms)}ms</span>
+                    <span>err {ppmOrUnknown(channel.error_rate_ppm)}</span>
+                    <span>infer {ppmOrUnknown(channel.infer_error_rate_ppm)}</span>
+                    <span>branch {ppmOrUnknown(channel.branch_success_rate_ppm)}</span>
+                    <span className="truncate">{channel.model_id || "no model"}</span>
+                  </div>
+                </div>
+              );
+            })}
+            {channels.length === 0 && (
+              <div className="p-4 text-xs text-muted-foreground">No channel receipts yet.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
+        <div className="px-4 py-3 border-b border-border/10">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Model training health</p>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-border/10">
+          {trained.slice(0, 4).map(artifact => {
+            const inferErrorPpm = artifact.heldout_count > 0
+              ? Math.round((artifact.wrong_count / artifact.heldout_count) * 1000000)
+              : 0;
+            const oracleDelta = artifact.native_accuracy_ppm - artifact.oracle_accuracy_ppm;
+            return (
+              <div key={artifact.artifact_id} className="bg-card p-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium font-mono break-all">{artifact.artifact_id}</p>
+                  <StatusPill value={artifact.proof_status} />
+                  {artifact.native_beats_oracle && <StatusPill value="native ahead" />}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <span>infer err {ppmToPercent(inferErrorPpm)}</span>
+                  <span>native {ppmToPercent(artifact.native_accuracy_ppm)}</span>
+                  <span>oracle delta {ppmToPercent(oracleDelta)}</span>
+                  <span>cycles {artifact.continuous_cycle_count}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground font-mono break-all">{artifact.receipt_path}</p>
+              </div>
+            );
+          })}
+          {surfaces.slice(0, trained.length > 0 ? 2 : 6).map(surface => (
+            <div key={surface.surface_id} className="bg-card p-4 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-medium">{surface.title}</p>
+                <StatusPill value={surface.proof_status} />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <span>branch {ppmOrUnknown(surface.training_metadata.branch_success_rate_ppm || 0)}</span>
+                <span>infer err {ppmOrUnknown(surface.training_metadata.infer_error_rate_ppm || 0)}</span>
+                <span>new {surface.training_metadata.new_cell_count || 0}</span>
+                <span>changed {surface.training_metadata.changed_cell_count || 0}</span>
+              </div>
+              {surface.next_step && <p className="text-xs text-muted-foreground">{surface.next_step}</p>}
+            </div>
+          ))}
+          {trained.length === 0 && surfaces.length === 0 && (
+            <div className="bg-card p-4 text-xs text-muted-foreground">No model training receipts yet.</div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -314,17 +599,21 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<RunningTask[]>([]);
   const [pulse, setPulse] = useState<PulseData | null>(null);
   const [learning, setLearning] = useState<LearningDashboardData | null>(null);
+  const [meshOrgans, setMeshOrgans] = useState<MeshOrgan[]>([]);
+  const [meshChannels, setMeshChannels] = useState<MeshChannel[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
   const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   const refresh = useCallback(async () => {
     try {
       const workspaceId = readActiveWorkspaceFromCookie();
-      const [nodesRes, tasksRes, pulseRes, learningRes] = await Promise.all([
+      const [nodesRes, tasksRes, pulseRes, learningRes, organsRes, channelsRes] = await Promise.all([
         fetch(`${API}/api/federation/nodes`, { cache: "no-store" }),
         fetch(withWorkspaceScope(`${API}/api/agent/tasks?status=running&limit=20`, workspaceId), { cache: "no-store" }),
         fetch(`${API}/api/pipeline/pulse`, { cache: "no-store" }),
         fetch(`${API}/api/models/learning-dashboard`, { cache: "no-store" }),
+        fetch(`${API}/api/hati/mesh/organs?limit=80`, { cache: "no-store" }),
+        fetch(`${API}/api/hati/mesh/channels?limit=120`, { cache: "no-store" }),
       ]);
       if (nodesRes.ok) setNodes(await nodesRes.json());
       if (tasksRes.ok) {
@@ -333,6 +622,14 @@ export default function DashboardPage() {
       }
       if (pulseRes.ok) setPulse(await pulseRes.json());
       if (learningRes.ok) setLearning(await learningRes.json());
+      if (organsRes.ok) {
+        const d = await organsRes.json();
+        setMeshOrgans(d.items || []);
+      }
+      if (channelsRes.ok) {
+        const d = await channelsRes.json();
+        setMeshChannels(d.items || []);
+      }
       setLastRefresh(Date.now());
     } catch {}
   }, []);
@@ -428,6 +725,8 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      <MeshObservatory organs={meshOrgans} channels={meshChannels} learning={learning} />
 
       {/* Learning Direction */}
       <section className="space-y-3">

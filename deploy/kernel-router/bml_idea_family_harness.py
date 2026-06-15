@@ -35,6 +35,8 @@ REPO_ROOT = HERE.parent.parent
 BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 BML_ROUTES = REPO_ROOT / "deploy" / "front-door" / "api.bml"
 STDLIB = REPO_ROOT / "form" / "form-stdlib"
+BML_ROUTER_STARTUP_TIMEOUT_SECONDS = 60.0
+BML_ROUTER_FAILURE_DRAIN_SECONDS = 10.0
 
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
@@ -615,9 +617,9 @@ def run_observation() -> dict[str, Any]:
             stderr=subprocess.PIPE,
         )
         try:
-            wait_for_port(router_port)
+            wait_for_port(router_port, timeout=BML_ROUTER_STARTUP_TIMEOUT_SECONDS)
         except RuntimeError:
-            out, err = router_proc.communicate(timeout=3)
+            out, err = router_proc.communicate(timeout=BML_ROUTER_FAILURE_DRAIN_SECONDS)
             raise RuntimeError(
                 "kernel-router failed to start with BML catalog\n"
                 f"stdout={out.decode(errors='replace')}\n"
