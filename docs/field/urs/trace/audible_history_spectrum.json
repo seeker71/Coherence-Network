@@ -71402,8 +71402,8 @@
     "audible-purchase-history": 198
   },
   "source_roots": {
-    "analysis_root": "/Users/ursmuff/CoherenceFieldAnalysis",
-    "playwright_capture": "/Users/ursmuff/CoherenceFieldAnalysis/input/audible/playwright"
+    "analysis_root": "~/CoherenceFieldAnalysis",
+    "playwright_capture": "~/CoherenceFieldAnalysis/input/audible/playwright"
   },
   "title_waves": [
     {

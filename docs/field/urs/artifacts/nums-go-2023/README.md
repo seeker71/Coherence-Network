@@ -1,6 +1,6 @@
 # NUMS.Go (2023) — content-addressed numeric substrate for code understanding
 
-This is a **pointer-only** artifact. The source lives outside this repo at `/Users/ursmuff/source/NUMS.Go` and is part of work for **Merly, Inc.** (the workspace also includes a sibling tree-sitter integration at `merly.ai-go-tree-sitter`). What this body holds is the architectural lineage and the teaching it carries — so any future session, mine or another presence's, can reach for it as available reasoning ground.
+This is a **pointer-only** artifact. The source lives outside this repo at `~/source/NUMS.Go` and is part of work for **Merly, Inc.** (the workspace also includes a sibling tree-sitter integration at `merly.ai-go-tree-sitter`). What this body holds is the architectural lineage and the teaching it carries — so any future session, mine or another presence's, can reach for it as available reasoning ground.
 
 Surfaced into the body 2026-05-08, after the deep architectural reading that walked the runtime line by line.
 
@@ -164,18 +164,18 @@ Outside this repo, in Urs's source tree:
 
 | Path | Role |
 |---|---|
-| `/Users/ursmuff/source/NUMS.Go/nums/` | the kernel (Blueprint, Recipe, Module, TreeDB, parser, emit) |
-| `/Users/ursmuff/source/NUMS.Go/nums/blueprint.go` | `Blueprint_t` — structural identity |
-| `/Users/ursmuff/source/NUMS.Go/nums/recipe.go` | `Recipe_t` and `NamedCell_t` — verb-graph + cell-form |
-| `/Users/ursmuff/source/NUMS.Go/nums/module.go` | `Module_t` — the body holding both DBs |
-| `/Users/ursmuff/source/NUMS.Go/nums/emit_module.go` | `EmitModule_t` — construction-time scaffolding; cell-birth at line 182 |
-| `/Users/ursmuff/source/NUMS.Go/nums/nums_db.go` | `TreeDB` and `TreeLevelDB` — the content-addressed interning store |
-| `/Users/ursmuff/source/NUMS.Go/nums/nums_nodes.go` | `NodeID_t`, `BlueprintNode_t`, `RecipeNode_t`, `Make_SelfID` |
-| `/Users/ursmuff/source/NUMS.Go/nums/parser.go` | tree-sitter dispatch, 14 languages |
-| `/Users/ursmuff/source/NUMS.Go/nums/go.go` | the Go-specific bridge (~62KB, ~9 case-strings on operators/keywords) |
-| `/Users/ursmuff/source/NUMS.Go/sample/sample.go` | a Go file that exercises every shape NUMS knows how to ingest |
-| `/Users/ursmuff/source/NUMS.Go/nums/sample id space.txt` | hand-written illustration of how `sample.go` is supposed to populate the lattice |
-| `/Users/ursmuff/source/NUMS.Go/query api and todo.txt` | the span/label/score system that grows on top: every region carrying possible-labels, computed-labels, score formulas |
+| `~/source/NUMS.Go/nums/` | the kernel (Blueprint, Recipe, Module, TreeDB, parser, emit) |
+| `~/source/NUMS.Go/nums/blueprint.go` | `Blueprint_t` — structural identity |
+| `~/source/NUMS.Go/nums/recipe.go` | `Recipe_t` and `NamedCell_t` — verb-graph + cell-form |
+| `~/source/NUMS.Go/nums/module.go` | `Module_t` — the body holding both DBs |
+| `~/source/NUMS.Go/nums/emit_module.go` | `EmitModule_t` — construction-time scaffolding; cell-birth at line 182 |
+| `~/source/NUMS.Go/nums/nums_db.go` | `TreeDB` and `TreeLevelDB` — the content-addressed interning store |
+| `~/source/NUMS.Go/nums/nums_nodes.go` | `NodeID_t`, `BlueprintNode_t`, `RecipeNode_t`, `Make_SelfID` |
+| `~/source/NUMS.Go/nums/parser.go` | tree-sitter dispatch, 14 languages |
+| `~/source/NUMS.Go/nums/go.go` | the Go-specific bridge (~62KB, ~9 case-strings on operators/keywords) |
+| `~/source/NUMS.Go/sample/sample.go` | a Go file that exercises every shape NUMS knows how to ingest |
+| `~/source/NUMS.Go/nums/sample id space.txt` | hand-written illustration of how `sample.go` is supposed to populate the lattice |
+| `~/source/NUMS.Go/query api and todo.txt` | the span/label/score system that grows on top: every region carrying possible-labels, computed-labels, score formulas |
 
 ## Why it lives in this body
 
