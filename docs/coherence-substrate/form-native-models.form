@@ -112,6 +112,22 @@
 ;     (ΔW within fp32 epsilon — GPU FMA vs CPU split-mul). The fp64 recipe is the proven algorithm; the
 ;     fp32 MSL is its GPU carrier, conformance-gated in the lane's own semantics. The learning kernel runs
 ;     on the silicon — host-kernel.form's "drive the organ" realized for backprop.
+;     AND NOW THE ARCHITECT'S WHOLE LAYER TRAINS ON METAL, not just one affine. jit-tensor-emit.fk emits
+;     jte-mlp-train-msl — the FFN training step y = W2·gelu(W1·x + b1) + b2 (tbp-mlp-step, the exact block
+;     ac-ffn-layer builds) as ONE Metal kernel run by a single threadgroup with barriered phases. The
+;     transcendental is the recipe's OWN: the kernel's gelu/gelu' compose from fexp (tn-exp's 14-term
+;     square-and-reduce Taylor) and ftanh ((e^2x-1)/(e^2x+1)), so the GPU walks transformer-numerics.fk's
+;     approximation, never Metal's tanh(). The two forward matvecs carry tb-dot's downward right-fold; the
+;     dh1 column reduction carries tbp-wt-gy-acc's forward left-fold; the residual-free block forces one
+;     ordering rule — dh1 (phase 3) reads the OLD W2 before phase 4 overwrites it, so a threadgroup_barrier
+;     between phases makes the single-group read-then-write deterministic. The emitter is a Form recipe,
+;     byte-stable three-way: tests/mlp-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_ffn_audit.sh on
+;     this M4 Max compiles the emitted kernel and trains a real FFN (in=256, hid=384, out=256, 197,248
+;     params): loss 46.26 → 5.9e-16 in 25 steps at 0.40 ms/step, the GPU weights matching an fp32 CPU mirror
+;     of the same phases to max|ΔW|=6.1e-6 — within fp32 epsilon (the recipe's exp squares a Taylor value up
+;     to k times, so a 1-ULP divide difference is amplified by the squaring, not a wrong fold). The fp64
+;     recipe is the proven algorithm; the fp32 MSL is its GPU carrier. The architect's layer learns on the
+;     silicon — the GPU is now the trainer underneath the search, the ring named at the bottom of this file.
 ;     autodiff-gradient-cell now returns 4095 four-way: a bounded scalar affine prediction/loss recipe
 ;     emits weight and bias gradient cells, and those gradients feed optimizer-step's SGD receipt.
 ;     adam-step-cell now returns 4095 four-way: bounded fixed-point first/second moment rows, integer
@@ -426,8 +442,12 @@
 ;   inductive bias matter: the SAME (width × type) grid, under a TIGHT budget on a retrieval task, crowns
 ;   attention (its bias fits fast); under a LOOSE budget on a capacity task, crowns the wide ffn (the narrow
 ;   underfits, the wrong-bias attention lags). One engine, task-adaptive — the (depth × width × type) grid is
-;   just the candidate list. Core-lift: three special-purpose searchers fold into one generic recipe. Next
-;   ring: the GPU as the trainer underneath the whole search.
+;   just the candidate list. Core-lift: three special-purpose searchers fold into one generic recipe. And the
+;   GPU is now the trainer underneath the search: jte-mlp-train-msl emits the architect's FFN training step
+;   (tbp-mlp-step, the ac-ffn-layer block) as one Metal kernel — scripts/metal_ffn_audit.sh trains a 197k-param
+;   FFN on the M4 Max, loss 46→6e-16 at 0.40 ms/step, the GPU weights within fp32 epsilon of the recipe's own
+;   exp/tanh on the CPU (tests/mlp-train-emit-band.fk → 7, three-way). Next ring: the search calling the GPU
+;   trainer directly — the architect timing real candidates on the silicon, not just the CPU recipe.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
