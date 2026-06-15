@@ -26,6 +26,7 @@ OrganKind = Literal[
 
 ChannelStatus = Literal["offered", "accepted", "open", "paused", "closed", "refused"]
 ChannelDirection = Literal["bidirectional", "send", "receive", "presence", "install-only"]
+DiscoveryState = Literal["declared", "seen", "paired", "trusted", "streaming", "training"]
 
 
 class OrganAnnounceIn(BaseModel):
@@ -43,6 +44,11 @@ class OrganAnnounceIn(BaseModel):
     map_y: float | None = Field(default=None, ge=0.0, le=100.0)
     latitude: float | None = Field(default=None, ge=-90.0, le=90.0)
     longitude: float | None = Field(default=None, ge=-180.0, le=180.0)
+    discovery_state: DiscoveryState = "declared"
+    trust_score_ppm: int = Field(default=0, ge=0, le=1000000)
+    signal_strength_ppm: int = Field(default=0, ge=0, le=1000000)
+    battery_level_ppm: int = Field(default=0, ge=0, le=1000000)
+    power_cost_ppm: int = Field(default=0, ge=0, le=1000000)
     capabilities: list[str] = Field(default_factory=list, max_length=32)
     lanes: list[str] = Field(default_factory=list, max_length=32)
     public_key: str | None = Field(default=None, max_length=256)
@@ -65,6 +71,10 @@ class ChannelOfferIn(BaseModel):
     packet_loss_ppm: int = Field(default=0, ge=0, le=1000000)
     branch_success_rate_ppm: int = Field(default=0, ge=0, le=1000000)
     infer_error_rate_ppm: int = Field(default=0, ge=0, le=1000000)
+    signal_strength_ppm: int = Field(default=0, ge=0, le=1000000)
+    power_cost_ppm: int = Field(default=0, ge=0, le=1000000)
+    trust_score_ppm: int = Field(default=0, ge=0, le=1000000)
+    route_quality_ppm: int = Field(default=0, ge=0, le=1000000)
     model_id: str | None = Field(default=None, max_length=160)
 
 
@@ -74,11 +84,53 @@ class OrganHeartbeatIn(BaseModel):
     active_channels: list[str] = Field(default_factory=list, max_length=32)
     sample_rate_hz: float = Field(default=0.0, ge=0.0, le=192000.0)
     bytes_per_second: float = Field(default=0.0, ge=0.0)
+    discovery_state: DiscoveryState = "seen"
+    trust_score_ppm: int = Field(default=0, ge=0, le=1000000)
+    signal_strength_ppm: int = Field(default=0, ge=0, le=1000000)
+    battery_level_ppm: int = Field(default=0, ge=0, le=1000000)
+    power_cost_ppm: int = Field(default=0, ge=0, le=1000000)
 
 
 def _join(values: list[str]) -> str:
     cleaned = [str(v).strip() for v in values if str(v).strip()]
     return ",".join(cleaned[:32])
+
+
+def _as_float(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int | float):
+        return float(value)
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_int(value: Any, default: int = 0) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    try:
+        return int(float(str(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _organ_state(payload: dict[str, Any]) -> str:
+    state = str(payload.get("discovery_state") or "declared")
+    if state in {"training", "streaming", "trusted", "paired"}:
+        return state
+    if _as_float(payload.get("bytes_per_second")) > 0 or payload.get("listening"):
+        return "streaming"
+    if _as_int(payload.get("trust_score_ppm")) >= 700000:
+        return "trusted"
+    if payload.get("active_channels"):
+        return "paired"
+    return state
 
 
 def _event_for(payload: OrganAnnounceIn) -> RuntimeEventCreate:
@@ -89,6 +141,11 @@ def _event_for(payload: OrganAnnounceIn) -> RuntimeEventCreate:
         "app": payload.app,
         "app_version": payload.app_version,
         "target": payload.target,
+        "discovery_state": payload.discovery_state,
+        "trust_score_ppm": payload.trust_score_ppm,
+        "signal_strength_ppm": payload.signal_strength_ppm,
+        "battery_level_ppm": payload.battery_level_ppm,
+        "power_cost_ppm": payload.power_cost_ppm,
         "capabilities": _join(payload.capabilities),
         "lanes": _join(payload.lanes),
         "has_public_key": bool(payload.public_key),
@@ -144,6 +201,10 @@ def _event_for_offer(payload: ChannelOfferIn) -> RuntimeEventCreate:
             "packet_loss_ppm": payload.packet_loss_ppm,
             "branch_success_rate_ppm": payload.branch_success_rate_ppm,
             "infer_error_rate_ppm": payload.infer_error_rate_ppm,
+            "signal_strength_ppm": payload.signal_strength_ppm,
+            "power_cost_ppm": payload.power_cost_ppm,
+            "trust_score_ppm": payload.trust_score_ppm,
+            "route_quality_ppm": payload.route_quality_ppm,
             "model_id": payload.model_id or "",
         },
     )
@@ -165,6 +226,11 @@ def _event_for_heartbeat(payload: OrganHeartbeatIn) -> RuntimeEventCreate:
             "active_channels": _join(payload.active_channels),
             "sample_rate_hz": payload.sample_rate_hz,
             "bytes_per_second": payload.bytes_per_second,
+            "discovery_state": payload.discovery_state,
+            "trust_score_ppm": payload.trust_score_ppm,
+            "signal_strength_ppm": payload.signal_strength_ppm,
+            "battery_level_ppm": payload.battery_level_ppm,
+            "power_cost_ppm": payload.power_cost_ppm,
         },
     )
 
@@ -250,6 +316,11 @@ async def list_organs(limit: int = Query(default=50, ge=1, le=200)) -> dict[str,
                 "map_y": None,
                 "latitude": None,
                 "longitude": None,
+                "discovery_state": "declared",
+                "trust_score_ppm": 0,
+                "signal_strength_ppm": 0,
+                "battery_level_ppm": 0,
+                "power_cost_ppm": 0,
                 "steward_cell_id": "unbound",
                 "capabilities": [],
                 "lanes": [],
@@ -272,14 +343,25 @@ async def list_organs(limit: int = Query(default=50, ge=1, le=200)) -> dict[str,
             item["map_y"] = row.metadata.get("map_y", item["map_y"])
             item["latitude"] = row.metadata.get("latitude", item["latitude"])
             item["longitude"] = row.metadata.get("longitude", item["longitude"])
+            item["discovery_state"] = row.metadata.get("discovery_state", item["discovery_state"])
+            item["trust_score_ppm"] = _as_int(row.metadata.get("trust_score_ppm", item["trust_score_ppm"]))
+            item["signal_strength_ppm"] = _as_int(row.metadata.get("signal_strength_ppm", item["signal_strength_ppm"]))
+            item["battery_level_ppm"] = _as_int(row.metadata.get("battery_level_ppm", item["battery_level_ppm"]))
+            item["power_cost_ppm"] = _as_int(row.metadata.get("power_cost_ppm", item["power_cost_ppm"]))
             item["steward_cell_id"] = row.metadata.get("steward_cell_id", item["steward_cell_id"])
             item["capabilities"] = str(row.metadata.get("capabilities", "")).split(",") if row.metadata.get("capabilities") else item["capabilities"]
             item["lanes"] = str(row.metadata.get("lanes", "")).split(",") if row.metadata.get("lanes") else item["lanes"]
         else:
             item["listening"] = bool(row.metadata.get("listening", False))
             item["active_channels"] = str(row.metadata.get("active_channels", "")).split(",") if row.metadata.get("active_channels") else []
-            item["sample_rate_hz"] = row.metadata.get("sample_rate_hz", 0.0)
-            item["bytes_per_second"] = row.metadata.get("bytes_per_second", 0.0)
+            item["sample_rate_hz"] = _as_float(row.metadata.get("sample_rate_hz", 0.0))
+            item["bytes_per_second"] = _as_float(row.metadata.get("bytes_per_second", 0.0))
+            item["discovery_state"] = row.metadata.get("discovery_state", item["discovery_state"])
+            item["trust_score_ppm"] = _as_int(row.metadata.get("trust_score_ppm", item["trust_score_ppm"]))
+            item["signal_strength_ppm"] = _as_int(row.metadata.get("signal_strength_ppm", item["signal_strength_ppm"]))
+            item["battery_level_ppm"] = _as_int(row.metadata.get("battery_level_ppm", item["battery_level_ppm"]))
+            item["power_cost_ppm"] = _as_int(row.metadata.get("power_cost_ppm", item["power_cost_ppm"]))
+        item["discovery_state"] = _organ_state(item)
     items = [by_id[organ_id] for organ_id in order[:limit]]
     return {"mesh": "hati.mesh", "count": len(items), "items": items}
 
@@ -341,6 +423,10 @@ async def list_channels(
                 "packet_loss_ppm": row.metadata.get("packet_loss_ppm", 0),
                 "branch_success_rate_ppm": row.metadata.get("branch_success_rate_ppm", 0),
                 "infer_error_rate_ppm": row.metadata.get("infer_error_rate_ppm", 0),
+                "signal_strength_ppm": _as_int(row.metadata.get("signal_strength_ppm", 0)),
+                "power_cost_ppm": _as_int(row.metadata.get("power_cost_ppm", 0)),
+                "trust_score_ppm": _as_int(row.metadata.get("trust_score_ppm", 0)),
+                "route_quality_ppm": _as_int(row.metadata.get("route_quality_ppm", 0)),
                 "model_id": row.metadata.get("model_id", ""),
                 "last_seen_at": row.recorded_at.isoformat(),
                 "receipt_id": row.id,
