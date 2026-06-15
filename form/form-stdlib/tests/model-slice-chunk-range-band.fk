@@ -1,0 +1,92 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk
+;
+; model-slice-chunk-range-band — chunk-range slice policy, four-way.
+;
+; A model slice names tensor:encoder.w1 chunks [0,2) under a chunk-set root.
+; The receipt accepts the contiguous chunks for that tensor and refuses a gap,
+; a wrong tensor, and a cache-authority source. It does not claim live mesh
+; transport, durable query, optimizer state, or privacy/conflict policy.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let chunk0 (mv-tensor-chunk
+        "tensor:encoder.w1"
+        0
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "safetensors:tiny-model"
+        "merkle:chunk-0"
+        2
+        12
+        0))
+    (let chunk1 (mv-tensor-chunk
+        "tensor:encoder.w1"
+        1
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "safetensors:tiny-model"
+        "merkle:chunk-1"
+        2
+        9
+        0))
+    (let chunk2 (mv-tensor-chunk
+        "tensor:encoder.w1"
+        2
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "safetensors:tiny-model"
+        "merkle:chunk-2"
+        2
+        9
+        0))
+    (let wrong-tensor (mv-tensor-chunk
+        "tensor:encoder.w2"
+        1
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "safetensors:tiny-model"
+        "merkle:chunk-wrong"
+        2
+        9
+        0))
+
+    (let good (mds-chunk-range-slice
+        "model-alpha"
+        "base-root"
+        "tensor:encoder.w1"
+        0
+        2
+        "merkle:chunk-set-root"
+        (list chunk0 chunk1)
+        "eval:tiny-slice"
+        "substrate-cell"))
+    (let gap (mds-chunk-range-slice
+        "model-alpha" "base-root" "tensor:encoder.w1" 0 2 "merkle:chunk-set-root"
+        (list chunk0 chunk2) "eval:tiny-slice" "substrate-cell"))
+    (let mismatch (mds-chunk-range-slice
+        "model-alpha" "base-root" "tensor:encoder.w1" 0 2 "merkle:chunk-set-root"
+        (list chunk0 wrong-tensor) "eval:tiny-slice" "substrate-cell"))
+    (let cache-source (mds-chunk-range-slice
+        "model-alpha" "base-root" "tensor:encoder.w1" 0 2 "merkle:chunk-set-root"
+        (list chunk0 chunk1) "eval:tiny-slice" "file-cache"))
+    (let receipt (mds-chunk-range-receipt good))
+
+    (let c0  (if (mv-tensor-chunk-valid? chunk0) 1 0))
+    (let c1  (if (mv-tensor-chunk-valid? chunk1) 2 0))
+    (let c2  (if (eq (mds-range-size 0 2) 2) 4 0))
+    (let c3  (if (eq (mds-chunk-in-range? chunk0 0 2) 1) 8 0))
+    (let c4  (if (eq (mds-chunk-in-range? chunk2 0 2) 0) 16 0))
+    (let c5  (if (eq (mds-chunks-cover-range? (list chunk0 chunk1) "tensor:encoder.w1" 0 2) 1) 32 0))
+    (let c6  (if (eq (mds-chunk-range-valid? good) 1) 64 0))
+    (let c7  (if (eq (mds-chunk-range-valid? gap) 0) 128 0))
+    (let c8  (if (eq (mds-chunk-range-valid? mismatch) 0) 256 0))
+    (let c9  (if (eq (mds-chunk-range-valid? cache-source) 0) 512 0))
+    (let c10 (if (str_eq (mds-chunk-range-receipt-root receipt) "merkle:chunk-set-root") 1024 0))
+    (let c11 (if (eq (mds-chunk-range-receipt-count receipt) 2)
+                 (if (eq (mds-chunk-range-receipt-valid-bit receipt) 1) 2048 0)
+                 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

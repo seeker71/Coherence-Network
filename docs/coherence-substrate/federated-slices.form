@@ -14,6 +14,8 @@
 ;     federation. model-data-sharing.fk now composes request-if-missing, re-address verification, apply,
 ;     substrate-source guard, and deterministic merge into one four-way slice-sharing receipt. These are
 ;     still small rows and proofs, not a real large-model chunk exchange or live mesh transport.
+;     model-slice-chunk-range adds the bounded chunk-range policy: a slice can name contiguous tensor
+;     chunk indexes under a chunk-set root and reject gaps, wrong tensors, and cache authority.
 ;   NORTH STAR: every federated update is a content-addressed slice over a known base merkle root:
 ;     (base-merkle, layer-ref, tensor-chunk-range, format-ref, quantization-context, delta-cell,
 ;     optimizer-state-delta, eval-receipt-ref, vitality-ref, n-samples, origin, ancestor-merge-refs).
@@ -21,7 +23,7 @@
 ;     compatibility, provenance compatibility, freshness, resonance, vitality, sovereignty, and trust.
 ;     Merge receipts record the elected sign, weight inputs, ancestor set, and output merkle root so the
 ;     mesh can avoid double counting and explain refusal without hidden policy.
-;   GAP: chunk-aware live transport, optimizer-state deltas, durable eval-receipt trust inputs,
+;   GAP: chunk-range merkle proof over live payloads, chunk-aware live transport, optimizer-state deltas, durable eval-receipt trust inputs,
 ;     merge-receipt ancestry, privacy/conflict policy, and body-readable vitality routing are not yet
 ;     real mesh payloads. The next proof should merge one tensor chunk-range slice, emit ancestry, and
 ;     update model vitality.
@@ -79,12 +81,15 @@
 ;   M1  wrap the merged delta in a slice-update cell and round-trip it through cell-sync (offer → diff →
 ;       verify-by-re-address) — SHIPPED: slice-update-roundtrip.fk -> 127, and model-data-sharing.fk
 ;       composes the request/apply/source/merge receipt -> 4095 four-way.
-;   M2  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
+;   M2  chunk-range slice policy — SHIPPED: model-slice-chunk-range -> 4095 four-way for contiguous
+;       tensor chunk ranges under a chunk-set root; live mesh transport and payload merkle proof remain
+;       next walls.
+;   M3  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
 ;       third merges both and applies it — assert mesh-merge NodeID == local-merge NodeID (gossip
 ;       convergence as a content-addressed proof).
-;   M3  trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
-;   M4  consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
-;   M5  apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
+;   M4  trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
+;   M5  consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
+;   M6  apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
 ;       merge demonstrably changes a model's behavior. Joins form-native-models.form M4 (the real block).
 ;
 ; KIN: form-native-models.form (the model-as-recipe + M1-M6; this is its distributed face) ·
