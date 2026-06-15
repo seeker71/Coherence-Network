@@ -407,8 +407,13 @@
 ;   (loss → 0), and ac-min-width crowns 2. This is the proof 2-D could not give (in 2-D layernorm collapses
 ;   any input to one of two directions, so width does not discriminate; at d=4 it does). So the body now
 ;   discovers BOTH the depth and the width a task needs, trains them, and promotes only the earned architecture.
-;   Next ring: richer architecture spaces (mixed layer types, attention vs ffn per task), and the GPU as the
-;   trainer underneath the search.
+;   And the JOINT (depth × width) search is now proven [arch-joint-band.fk → 31 three-way]: the architect
+;   searches a grid of (depth, width) candidates, trains each over the dataset, and crowns the MINIMAL-cost
+;   (depth·width) architecture that fits — Occam over architectures. On a d=4 dataset it crowns (depth 1,
+;   width 2): (1,1) and (2,1) both underfit (width-1 is the bottleneck — depth does NOT compensate for it),
+;   (1,2) fits at cost 2, and the over-large (2,2) at cost 4 is rejected. So the body reads that THIS task
+;   needs width, not depth, and picks the smallest model that solves it. Next ring: add the layer-TYPE axis
+;   to the joint grid (mixed attention/ffn per slot), and the GPU as the trainer underneath the search.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
