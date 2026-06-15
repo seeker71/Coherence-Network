@@ -74,6 +74,9 @@
 ;     checksums. This is the minimum explicit left-expanding binary floor: rerun with a larger sample
 ;     window to grow evidence; no background service, self-modification, or APK-bundled compiler is
 ;     claimed.
+;     core-axiom-package-receipt now returns 4095 four-way for package/install evidence around that
+;     pair: script/source/binary/channel-receipt SHA-256 lengths, channel duration, sample window, and
+;     remote Android binary cleanup. APK signing/distribution and non-adb transport remain separate.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -94,8 +97,9 @@
 ;     capture, all-kernel plaintext HTTP plus verified HTTPS body capture, and bounded model-slice
 ;     request/re-address/apply/merge receipt, chunk-range slice policy, optimizer-state delta-slice
 ;     receipt, fixed-point SGD/momentum optimizer step, scalar affine gradient cells, bounded Adam
-;     moment cells, bounded Adam bias correction, the native tensor-autodiff sample verifier, and the
-;     Mac+Android native channel receipt are now closed receipts, not future claims.
+;     moment cells, bounded Adam bias correction, the native tensor-autodiff sample verifier, the
+;     Mac+Android native channel receipt, and its package/install checksum cleanup receipt are now
+;     closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.

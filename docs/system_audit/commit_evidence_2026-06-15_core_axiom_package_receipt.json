@@ -1,0 +1,142 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/core-axiom-package-receipt-20260615",
+  "commit_scope": "Add package/install receipt evidence around the Mac + Android native core-axiom binary pair.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "core-axioms",
+    "kernel-on-android",
+    "hati-os-targets",
+    "form-native-models",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "hati-os-targets",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "core-axiom-package-receipt-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-device-authorization",
+        "package-receipt-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "form/form-stdlib/core-axiom-package-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-package-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_core_axiom_package_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-package-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "form/form-stdlib/core-axiom-package-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-package-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_core_axiom_package_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-package-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim core-axiom-package-receipt \"Next narrow lane after PR #3174: add package/install receipt around Mac+Android core-axiom native pair with binary/source checksums, adb-forward channel timing, and remote cleanup proof; avoid sensor/mesh/BML/compiler lanes.\"",
+      "bash -n scripts/android_mac_core_axiom_receipt.sh",
+      "scripts/android_mac_core_axiom_receipt.sh 2048 8",
+      "python3 -m json.tool .cache/android_mac_core_axiom_receipt/package-latest.json",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/core-axiom-package-receipt.fk form-stdlib/tests/core-axiom-package-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh core-axiom-package-receipt"
+    ],
+    "notes": "The live package receipt on authorized SM-S918U1 Android 16 arm64-v8a wrote kind=core-axiom-native-package-receipt, script_sha256=76e00a1138f4bb45192489e0364d4cd162d38e1af3b96b3ef8bd707083ebd74d, generated_source_sha256=8824952e790b987ec493223e160af7e96f4b590cda994441d166869c84042102, mac_binary_sha256=ce2fdfa61194819de0909383264a0ca67c0fc6d3b687fda8684352bad1839dd8, android_binary_sha256=d3829aa99d113037ad5c51f88f0d7224559c6d39e8dfb15349e8cb2e94b3b2a7, channel_receipt_sha256=0888365fb840a81ea677616760ad2a341529aad6d1301881c967636b089df79a, channel_duration_ms=156, samples=2048, width=8, remote_cleanup=pass, status=pass. Focused Form validation returned 4095 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. fourth-arm-gate returned PASS-4WAY core-axiom-package-receipt."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy requested; this is a local Mac + authorized Android package/install receipt proof."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Mac+Android native carrier now emits package/install evidence around the live channel receipt: script/source/binary/channel SHA-256s, channel duration, sample window, device metadata, and remote cleanup.",
+    "public_endpoints": [
+      "n/a: local authorized Android adb device and local Mac native binary"
+    ],
+    "test_flows": [
+      "Build macOS arm64 and Android arm64 binaries from one C source.",
+      "Push and run the Android executable one-shot.",
+      "Exchange the channel receipt over adb-forward TCP.",
+      "Emit package-latest.json with SHA-256 hashes and cleanup evidence.",
+      "Validate the package receipt shape four-way through fkwu."
+    ]
+  },
+  "evidence_refs": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "form/form-stdlib/core-axiom-package-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-package-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/core-axiom-package-receipt-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "core-axiom-package-receipt",
+    "gate": "Package/install metadata must be visible before widening the native phone binary claim to signed distribution or non-adb transport.",
+    "state": "local-native-package-and-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add APK/distribution signing or a non-adb mesh transport receipt with source-map provenance and timeout/RTT policy."
+  },
+  "floor_update": {
+    "previous_observed_floor": "PR #3174 established a live Mac+Android native channel receipt but package/install metadata was still a next-wall.",
+    "current_observed_floor": "core-axiom-package-receipt returns 4095 four-way, and package-latest.json records script/source/binary/channel hashes, channel duration, sample window, device metadata, and remote cleanup pass.",
+    "new_bands": [
+      "core-axiom-package-receipt -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "APK signing or Play-distributable packaging",
+      "non-adb mesh transport",
+      "runtime clang bundled in APK",
+      "background service",
+      "self-modifying binary",
+      "raw sensor learning"
+    ]
+  }
+}
