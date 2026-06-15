@@ -1,0 +1,150 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/control-backtracking-ml-floor-20260615",
+  "commit_scope": "Document grouped fourth-kernel walls and add the Form-native control/backtracking ML floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-kernel-wall-groups",
+    "form-native-control-backtracking-ml",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "form-native-models",
+    "form-native-llm",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-wall-groups-control-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "BMA-retirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-native-llm.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_fourth_wall_groups_control.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-wall-groups-control-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/form-control-backtracking-ml.fk",
+    "form/form-stdlib/tests/form-control-backtracking-ml-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-native-llm.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_fourth_wall_groups_control.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-wall-groups-control-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/form-control-backtracking-ml.fk",
+    "form/form-stdlib/tests/form-control-backtracking-ml-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord view",
+      "coord share fourth wall group lane cards",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/form-control-backtracking-ml.fk form-stdlib/tests/form-control-backtracking-ml-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh form-control-backtracking-ml",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+engine.fk+form-control-backtracking-ml.fk+form-control-backtracking-ml-band.fk -> 65535` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  form-control-backtracking-ml`. Wellness reported no attention items."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a Form runtime/documentation floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth kernel now carries the same Form-native primitive control/backtracking vocabulary needed for ML kernels/layers/models as the sibling kernels: conditionals, recursion/folds, any/all, reversible cells, task states, and BMF engine backtracking primitives.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/form-control-backtracking-ml.fk form-stdlib/tests/form-control-backtracking-ml-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh form-control-backtracking-ml"
+    ]
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/form-native-llm.form",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/form-control-backtracking-ml.fk",
+    "form/form-stdlib/tests/form-control-backtracking-ml-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/model_executor_run_ledger/fourth-wall-groups-control-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "fourth-kernel-control-backtracking-primitive-floor",
+    "gate": "ML kernel/layer/model research needs total primitive control flow and backtracking on the fourth kernel before source-level model claims depend on it.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Lower remaining source-level BML break/continue/try/throw/while/for/switch constructs into the proven Form-native control/backtracking primitives."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Go/Rust/TypeScript carried the control/backtracking proof at 65535 while the fourth kernel initially returned 65311, exposing missing fourth-shim any/all, cell-undo, and task helpers.",
+    "current_observed_floor": "form-control-backtracking-ml returns 65535 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "form-control-backtracking-ml -> 65535 four-way"
+    ],
+    "not_claimed": [
+      "source-level break/continue lowering",
+      "source-level try/throw/catch general lowering",
+      "arbitrary while/for/switch source lowering",
+      "dynamic grammar rule loading",
+      "large model tensor execution",
+      "token/audio streaming decode",
+      "mesh-scale model slice exchange"
+    ]
+  },
+  "parallel_coordination": {
+    "coord_claim": "fourth-walls-roadmap-groups",
+    "delegated_groups": [
+      "dynamic-grammar",
+      "bml-compiler-surface",
+      "ml-kernel-layer-model",
+      "model-router-nl-audio",
+      "model-data-sharing",
+      "mesh-networking"
+    ],
+    "active_group_completed_here": "control-and-backtracking"
+  }
+}
