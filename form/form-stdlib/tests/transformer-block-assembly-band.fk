@@ -1,0 +1,45 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-block-assembly-band — the FULL transformer block, ASSEMBLED the way auto-ml assembles layers,
+; trains end to end. Every gradient node is proven (affine 127, gelu 63, softmax+ln 31, attention core 31);
+; this band proves the ASSEMBLY: a LAYER is a typed cell with a uniform (fwd, step) interface, and a
+; heterogeneous STACK — an attention-residual layer THEN an FFN-residual layer, the actual tb-block — trains
+; through ONE generic engine (tbp-stk-fwd / tbp-stk-step with type dispatch). The architecture is a SEQUENCE
+; of typed layer-cells, the dynamic-recipe advantage applied to the transformer: the same shape recipe-gen.fk
+; uses to compose experts composes these layers. If the gradient did not chain correctly BETWEEN the two
+; different layer types, the lower (attention) layer would not learn and the stack would not converge.
+;
+; Verdict 63 when every claim lands:
+;   1    the assembled block's forward is deterministic: y[0] → 2030709 (×1e6)
+;   2    the unfit block carries positive loss
+;   4    ONE step of stack training lowers it — the generic backward fold learns
+;   8    it converges: after 50 steps the loss rounds to 0 — the full block (attn → ffn) trains end to end
+;   16   the LOWER (attention) layer learned: its Wq[0][0] moved off 1.0 — the gradient chained from ffn to attn
+;   32   the UPPER (ffn) layer learned: its W1[0][0] moved off 0.3 — both heterogeneous types backprop
+(do
+    (let attl (list "attn" (list (list 1.0 0.0) (list 0.0 1.0)) (list (list 0.5 0.0) (list 0.0 0.5))
+                    (list (list 1.0 0.0) (list 0.0 1.0)) (list (list 2.0 0.0) (list 0.0 2.0)) 1.0))
+    (let ffnl (list "ffn" (list (list 0.3 -0.2) (list 0.1 0.4)) (list 0.0 0.0)
+                    (list (list 0.5 0.2) (list -0.3 0.6)) (list 0.0 0.0)))
+    (let block (list attl ffnl))
+    (let x (list 1.0 0.5))
+    (let t (list 1.2 0.3))
+    (let eps 0.00001)
+    (let lr 0.08)
+
+    (let y    (tbp-stk-fwd block x eps))
+    (let l0   (tbp-stk-loss block x t eps))
+    (let l1   (tbp-stk-train-loss block x t lr eps 1))
+    (let l50  (tbp-stk-train-loss block x t lr eps 50))
+    (let trained (tbp-stk-train block x t lr eps 50))
+    (let attn-wq00 (round (mul (nth (nth (nth (nth trained 0) 1) 0) 0) 1000000.0)))
+    (let ffn-w100  (round (mul (nth (nth (nth (nth trained 1) 1) 0) 0) 1000000.0)))
+
+    (let c0 (if (eq (round (mul (nth y 0) 1000000.0)) 2030709) 1 0))
+    (let c1 (if (gt l0 0.0) 2 0))
+    (let c2 (if (lt l1 l0) 4 0))
+    (let c3 (if (eq (round (mul l50 1000000.0)) 0) 8 0))
+    (let c4 (if (eq attn-wq00 1000000) 0 16))
+    (let c5 (if (eq ffn-w100 300000) 0 32))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
