@@ -1,0 +1,25 @@
+{
+  "title": "Form-emitted Metal runs on Apple M4 Max GPU — inference bit-exact, learning to parity",
+  "date": "2026-06-16",
+  "closes_held_item": "host-kernel.form close-gpu-as-driven-organ: 'MSL kernel source emitted and held (Metal AIR awaits Apple hardware)'. The hardware it awaited is this M4 Max; the body's own audits run green on it.",
+  "device": "Apple M4 Max (40-core GPU, unified memory, supportsFamily(.apple9)), arm64 Darwin 26.3.1",
+  "emitter_recipe": "form/form-stdlib/jit-tensor-emit.fk — jte-matvec-msl-spine (inference) + jte-train-msl (learning); every byte of MSL authored by the Form recipe, no #include, runtime makeLibrary, mathMode=safe",
+  "carrier": "swiftc + Metal.framework host harness — the allowed driver-access carrier per host-kernel.form host-resource-access; the kernel LOGIC is Form, only GPU submission rides the host driver",
+  "inference_matvec": {
+    "audit": "scripts/metal_matvec_audit.sh",
+    "problem": "1280x1280 matvec, 30 timed dispatches after one warm",
+    "lanes": {
+      "f32":  {"parity_bitexact_rows": "1280/1280", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.583, "cpu_rightfold_ms": 1.445},
+      "f16":  {"parity_bitexact_rows": "1280/1280", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.561, "cpu_rightfold_ms": 1.298},
+      "bf16": {"parity_bitexact_rows": "1280/1280", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.556, "cpu_rightfold_ms": 1.095}
+    }
+  },
+  "learning_backprop": {
+    "audit": "scripts/metal_backprop_audit.sh",
+    "shape": "1280x1280 affine, Form-emitted SGD/backprop training-step kernel (742 bytes MSL), 200 steps on the GPU at 1.179 ms/step",
+    "loss": "5115.0 -> 2.18709317e-08",
+    "parity": "gpu_loss == cpu_fp32_loss (2.18709317e-08); max|W_gpu - W_cpu| = 1.565e-07, within fp32 epsilon (GPU FMA-contraction vs CPU split-mul allowed)"
+  },
+  "reading": "Both halves of the single model — inference AND learning — are Form recipes lowered to native Metal, running on the M4 GPU, bit-for-bit (inference) and to fp32 parity (learning) with the CPU walker. The next rungs of 'as native as we can muster': emit Metal AIR bytes directly (metal-as is on-box), then toward AGX ISA (reverse-engineered: Rigel 2026 / Asahi). lanes: f32/f16/bf16; reproducible on any Apple-GPU + swiftc host.",
+  "reproduce": "bash scripts/metal_matvec_audit.sh && bash scripts/metal_backprop_audit.sh"
+}
