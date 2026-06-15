@@ -1,9 +1,9 @@
-; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk
 ;
 ; code-tool-learning-band — Form-native sideband for code generation,
 ; tool selection, and tool execution learning.
 ;
-; Verdict 262143 when every claim lands:
+; Verdict 524287 when every claim lands:
 ;   1     code-generation intent is learned as a native exemplar
 ;   2     tool-selection intent is learned as a native exemplar
 ;   4     proof-execution intent is learned as a native exemplar
@@ -22,6 +22,7 @@
 ;   32768 Form-native floor oracle wins on lower token/energy/nutrition cost with high sovereignty/trust/confidence
 ;   65536 canonical natural-language to host-native ASM lowering path is explicit with alternatives
 ;   131072 coding-act receipt connects source listening, patch speaking, verifier feedback, and learned delta
+;   262144 live carrier JSONL-field receipt cell ingests into the same coding-act row
 (do
     (let samples
         (list
@@ -124,6 +125,65 @@
             receipt
             learned-delta))
     (let coding-act-sample (ctl-coding-act-sample coding-act))
+    (let live-receipt-cell
+        (list
+            (ctl-receipt-cell-pair "kind" "code-tool-learning/coding-act-receipt")
+            (ctl-receipt-cell-pair "status" "pass")
+            (ctl-receipt-cell-pair "intent" "form: add self-teaching coding receipt")
+            (ctl-receipt-cell-pair "source_surfaces"
+                (list
+                    (list
+                        (ctl-receipt-cell-pair "kind" "source-code")
+                        (ctl-receipt-cell-pair "language" "Form")
+                        (ctl-receipt-cell-pair "path" "form/form-stdlib/code-tool-learning.fk")
+                        (ctl-receipt-cell-pair "source_sig" "sha256:source-a")
+                        (ctl-receipt-cell-pair "node_sig" "bp:node-a")
+                        (ctl-receipt-cell-pair "grammar" "form/BML"))
+                    (list
+                        (ctl-receipt-cell-pair "kind" "source-code")
+                        (ctl-receipt-cell-pair "language" "Form")
+                        (ctl-receipt-cell-pair "path" "form/form-stdlib/tests/code-tool-learning-band.fk")
+                        (ctl-receipt-cell-pair "source_sig" "sha256:source-b")
+                        (ctl-receipt-cell-pair "node_sig" "bp:node-b")
+                        (ctl-receipt-cell-pair "grammar" "form/BML"))))
+            (ctl-receipt-cell-pair "patch_recipe"
+                (list
+                    (ctl-receipt-cell-pair "intent" "form: add self-teaching coding receipt")
+                    (ctl-receipt-cell-pair "dialect" "git-patch")
+                    (ctl-receipt-cell-pair "patch_sig" "sha256:patch-a")
+                    (ctl-receipt-cell-pair "files_touched" 2)
+                    (ctl-receipt-cell-pair "reversible" 1)
+                    (ctl-receipt-cell-pair "raw_patch_retained" 0)))
+            (ctl-receipt-cell-pair "verifiers"
+                (list
+                    (list
+                        (ctl-receipt-cell-pair "name" "code-tool-learning-band")
+                        (ctl-receipt-cell-pair "status" "pass")
+                        (ctl-receipt-cell-pair "duration_ms" 374)
+                        (ctl-receipt-cell-pair "evidence_sig" "sha256:verify-a")
+                        (ctl-receipt-cell-pair "raw_output_retained" 0))
+                    (list
+                        (ctl-receipt-cell-pair "name" "code-tool-learning-gate")
+                        (ctl-receipt-cell-pair "status" "pass")
+                        (ctl-receipt-cell-pair "duration_ms" 393)
+                        (ctl-receipt-cell-pair "evidence_sig" "sha256:verify-b")
+                        (ctl-receipt-cell-pair "raw_output_retained" 0))))
+            (ctl-receipt-cell-pair "choice_receipt"
+                (list
+                    (ctl-receipt-cell-pair "selected_path" "form-native:code-tool")
+                    (ctl-receipt-cell-pair "outcome" "success")
+                    (ctl-receipt-cell-pair "token_cost" 0)
+                    (ctl-receipt-cell-pair "certainty" 78)
+                    (ctl-receipt-cell-pair "sovereignty" 91)
+                    (ctl-receipt-cell-pair "trust" 74)))
+            (ctl-receipt-cell-pair "learned_delta"
+                (list
+                    (ctl-receipt-cell-pair "lane" "form-native:code-tool")
+                    (ctl-receipt-cell-pair "sample_count" 1)
+                    (ctl-receipt-cell-pair "trust_before" 62)
+                    (ctl-receipt-cell-pair "trust_after" 74)
+                    (ctl-receipt-cell-pair "accepted" 1)))))
+    (let live-cell-sample (ctl-receipt-cell-coding-act-sample live-receipt-cell))
 
     (let c0
         (if (str_eq
@@ -253,6 +313,18 @@
                             (eq (ctl-v-duration-ms syntax-proof) 140)))))
             131072
             0))
+    (let c18
+        (if (and
+                (eq (ctl-receipt-cell-coding-act-valid? live-receipt-cell) 1)
+                (and
+                    (eq (len (ctl-feature live-cell-sample)) 5)
+                    (and
+                        (eq (head (ctl-feature live-cell-sample)) 2)
+                        (and
+                            (eq (ctl-ld-trust-after (ctl-receipt-cell-learned-delta live-receipt-cell)) 74)
+                            (eq (len (ctl-receipt-cell-get live-receipt-cell "verifiers")) 2)))))
+            262144
+            0))
     (add c0
         (add c1
             (add c2
@@ -269,4 +341,5 @@
                                                         (add c13
                                                             (add c14
                                                                 (add c15
-                                                                    (add c16 c17))))))))))))))))))
+                                                                    (add c16
+                                                                        (add c17 c18)))))))))))))))))))
