@@ -1,0 +1,154 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/android-core-axiom-binary-receipt-20260615",
+  "commit_scope": "Add a Mac + Android native core-axiom receipt binary pair and Form receipt floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "core-axioms",
+    "kernel-on-android",
+    "form-native-models",
+    "fourth-kernel-physical-lanes",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "hati-os-targets",
+    "bml-native-north-star",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "android-core-axiom-binary-receipt-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-device-authorization",
+        "mac-android-native-channel-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "form/form-stdlib/core-axiom-native-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-native-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_android_core_axiom_binary_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/android-core-axiom-binary-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "form/form-stdlib/core-axiom-native-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-native-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_android_core_axiom_binary_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/android-core-axiom-binary-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord join && coord share \"android-core-axiom-binary-receipt: expanding scope slightly per user to Mac+Android native receipt pair over explicit adb-forward TCP channel; still avoiding sensor/privacy/mesh/BML compiler lanes.\"",
+      "bash -n scripts/android_mac_core_axiom_receipt.sh",
+      "scripts/android_mac_core_axiom_receipt.sh 1024 8",
+      "scripts/android_mac_core_axiom_receipt.sh 2048 8",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/core-axiom-native-receipt.fk form-stdlib/tests/core-axiom-native-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh core-axiom-native-receipt"
+    ],
+    "notes": "An authorized Samsung SM-S918U1 Android 16 arm64-v8a device was available through adb. The first adb-reverse attempt exposed a channel direction bug and was retuned to adb-forward TCP. The final expanded run generated a Mach-O 64-bit executable arm64 Mac binary and an ELF 64-bit ARM aarch64 Android PIE executable from a shared C source, pushed the Android binary to /data/local/tmp, ran it as a one-shot Android server, connected with the Mac client through adb-forward TCP, and wrote a combined receipt. The receipt status was pass with endpoint_count=2, samples_per_endpoint=2048, width=8, mac passed=2048 failed=0 checksum=8613732184965110171, android passed=2048 failed=0 checksum=8613732184965110171, peer_valid=true. Focused Form validation returned 4095 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. fourth-arm-gate returned PASS-4WAY core-axiom-native-receipt."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy requested; this is a local Mac + authorized Android native carrier proof."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The body now has a bounded Mac+Android native binary receipt floor: both endpoints verify the same sample window and exchange the receipt over an explicit native TCP channel carried by adb-forward.",
+    "public_endpoints": [
+      "n/a: local authorized Android adb device and local Mac native binary"
+    ],
+    "test_flows": [
+      "Build macOS arm64 and Android arm64 binaries from one C source.",
+      "Push the Android executable to /data/local/tmp and run it one-shot.",
+      "Connect Mac client to Android server over adb-forward TCP.",
+      "Require both endpoint receipts to pass the same bounded sample window with matching checksum.",
+      "Validate the combined Form receipt shape four-way through fkwu."
+    ]
+  },
+  "evidence_refs": [
+    "scripts/android_mac_core_axiom_receipt.sh",
+    "form/form-stdlib/core-axiom-native-receipt.fk",
+    "form/form-stdlib/tests/core-axiom-native-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/kernel-on-android.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/android-core-axiom-binary-receipt-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "android-core-axiom-binary-receipt",
+    "gate": "A native Mac+Android binary receipt pair must exist before claiming self-learning or left-expanding behavior across the phone and Mac.",
+    "state": "local-native-and-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Convert the one-shot adb-forward receipt into a signed install/package receipt with checksums, source-map provenance, channel RTT/timeout rows, larger sample windows, and then a non-adb mesh transport receipt."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Android could execute the Form-native ELF proof through adb, and the model lane had a native host tensor-autodiff verifier, but no two-endpoint Mac+Android native receipt pair existed.",
+    "current_observed_floor": "core-axiom-native-receipt returns 4095 four-way for receipt validation, and generated macOS arm64 + Android arm64 native binaries exchanged a pass receipt over adb-forward TCP for 2048 width-8 affine-loss samples.",
+    "new_bands": [
+      "core-axiom-native-receipt -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "APK install or Play-distributable packaging",
+      "runtime clang bundled in APK",
+      "background service",
+      "self-modifying binary",
+      "raw sensor learning",
+      "non-adb mesh transport",
+      "full tensor-scale autodiff cells",
+      "live model training authority"
+    ]
+  }
+}
