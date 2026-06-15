@@ -1,0 +1,17 @@
+{
+  "task_id": "model-slice-chunk-range-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim model-slice-chunk-range-floor \"Next model-data wall after PR #3156: add bounded chunk-range slice policy receipt; avoid live mesh transport, durable eval query, optimizer deltas, privacy/conflict, router/audio, and BML compiler lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk form-stdlib/tests/model-slice-chunk-range-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh model-slice-chunk-range",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a bounded model slice chunk-range policy receipt. The new floor accepts contiguous tensor chunk-index ranges under a chunk-set root and rejects gaps, wrong tensors, and file-cache authority while leaving live mesh transport, payload merkle proof, durable query, optimizer deltas, privacy, and conflict policy explicit as next walls."
+}
