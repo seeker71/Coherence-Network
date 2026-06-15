@@ -1,0 +1,14 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim public-api-rendezvous-receipt \"Next carrier proof after PR #3192: add bounded live public API rendezvous nonce receipt using existing public/API surfaces; avoid audio capture, Pastebin/archive posting, APK/JNI, BML compiler, and live-cycle runtime lanes.\"",
+    "bash -n scripts/public_api_rendezvous_receipt.sh",
+    "scripts/public_api_rendezvous_receipt.sh"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added and ran a live public API rendezvous nonce-hash receipt. The script wrote only a SHA-256 nonce hash to the public runtime event API and read it back publicly, producing event rt_13fdae655ee1 with write_ms=139, read_ms=3876, ttl_ms=600000, public_readable=1, raw_nonce_retained=0, status=pass."
+}
