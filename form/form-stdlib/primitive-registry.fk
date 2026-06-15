@@ -16,6 +16,7 @@
 ;            panic-contract   the native's contract IS a panic (form_error)
 ;            socket-carrier   loopback I/O proven in the socket bands
 ;            sweep-hazard     substrate_gc can sweep band tissue mid-walk
+;            host-io          result depends on host command/file authority
 ;            toolchain        result depends on host compiler availability
 ;            sibling-gap      absent in rust and/or ts today — the gap a
 ;                             Hati-OS audit lane and sibling work close
@@ -168,6 +169,12 @@
             (defn pv-char-at () (if (str_eq (char_at "form" 0) "f") 1 0)) 1 1)
         (prim "str_concat" "method" "two strings joined"
             (defn pv-str-concat () (str_len (str_concat "sat" "sang"))) 7 1)
+        (prim "host-exec" "method" "host-io: executes a host command and returns stdout; carrier receipt owns command authority"
+            (defn pv-host-exec () (str_len (host-exec "printf form"))) 4 0)
+        (prim "host-read" "method" "host-io: reads a host file as text; carrier receipt owns path authority"
+            (defn pv-host-read () (str_len (host-read "/tmp/prim-reg-host-read.txt"))) 0 0)
+        (prim "host-write" "method" "host-io: writes host file text and returns byte count; carrier receipt owns path authority"
+            (defn pv-host-write () (host-write "/tmp/prim-reg-host-write.txt" "form")) 4 0)
         (prim "form_error" "witness" "panic-contract: panics with the message, never returns; carrier observes exit"
             (defn pv-form-error () (do (form_error "prim-registry-probe") 0)) 0 0)
         (prim "form-error" "witness" "panic-contract: kebab door of form_error"
