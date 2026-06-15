@@ -90,6 +90,25 @@
     (defn moe-routed (experts task floor id) (moe-routed-acc experts task floor id 0))
 
     ; ─────────────────────────────────────────────────────────────────────────
+    ; A COMPUTE EXPERT KIND — a core that RUNS an executable recipe, not just pools.
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; The geometric experts MIX (diffusion) or POOL (attention/CNN); none can COMPUTE an order-and-sign
+    ; dependent function. The compute core runs a real recipe — the signed alternating fold a-b+c-d as
+    ; alternating prefix sums [a, a-b, a-b+c, a-b+c-d] — and the pool keeps the computed result (the final
+    ; alternating sum). On a task whose classes share a multiset but differ in alternating sum, NO pool or
+    ; mix can separate them (same values, same statistics, same local structure) — only the computation can.
+    ; This is "an expert can compute things / run executable recipes" as a drop-in (id, pool, core) ROW.
+    (defn moe-alt (xs sign acc)
+        (if (eq (len xs) 0) (empty)
+            (cons (add acc (mul sign (head xs)))
+                  (moe-alt (tail xs) (sub 0.0 sign) (add acc (mul sign (head xs)))))))
+    (defn moe-core-compute (x) (moe-alt x 1.0 0.0))     ; the executable recipe: alternating prefix sums
+    (defn moe-last (xs)
+        (if (eq (len xs) 0) 0.0 (if (eq (len xs) 1) (head xs) (moe-last (tail xs)))))
+    (defn moe-pool-last (x) (list (moe-last x)))         ; keep the computed result (the final alternating sum)
+    (defn moe-compute-style () (list "compute" moe-pool-last moe-core-compute))
+
+    ; ─────────────────────────────────────────────────────────────────────────
     ; THE LEARNED GATE — a gating network, because raw confidence mis-routes.
     ; ─────────────────────────────────────────────────────────────────────────
     ; The confidence gate above is honest but naive: on tiny data a memorizer or an off-specialist can

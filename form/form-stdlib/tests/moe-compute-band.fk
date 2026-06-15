@@ -1,0 +1,58 @@
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk form-stdlib/recognition-router.fk form-stdlib/moe-router.fk
+;
+; moe-compute-band — the MoE grows a COMPUTE expert: an expert that RUNS an executable recipe, and wins
+; a region no pattern-matcher can. The compute core runs the signed alternating fold a-b+c-d (alternating
+; prefix sums; the pool keeps the computed result). The alt-region's classes share near-constant values
+; (every input near [50,5,5,5]-ish, one position bumped), so the multiset, the mean, the max, and the local
+; structure are all the SAME across classes — diffusion, attention, CNN, and the memorizer every score 0.
+; Only the computation separates them (alt-sum +50 vs -50). Added by the open-set discipline: a new KIND
+; is one appended (id, pool, core) row, no engine change. The learned gate DISCOVERS it (ls-best) and the
+; three-kind MoE (diffusion + attention + compute) routes each held-out input to its specialist and wins all.
+;
+; Verdict 63 when every claim lands:
+;   1    the compute core RUNS the recipe: alternating fold of [55,5,5,5] = 55-5+5-5 = 50
+;   2    compute UNIQUELY wins the alt-task (ls-best = "compute")
+;   4    only computation separates it: compute scores 4 while mesh = attn = conv = raw = 0
+;   8    the learned gate routes a held-out alt input -> compute
+;   16   the three-kind MoE gets the full held-out test perfect (6/6)
+;   32   the MoE strictly beats every single expert (6 > mesh, attn, AND compute-alone)
+(do
+    (let chart-task (list (list (list 1.0 0.0 0.0 0.0 0.0 0.0) "A") (list (list 0.0 0.0 0.0 1.0 0.0 0.0) "B")
+                          (list (list 0.0 1.0 0.0 0.0 0.0 0.0) "A") (list (list 0.0 0.0 0.0 0.0 1.0 0.0) "B")
+                          (list (list 0.0 0.0 1.0 0.0 0.0 0.0) "A") (list (list 0.0 0.0 0.0 0.0 0.0 1.0) "B")))
+    (let perm-task (list (list (list 8.0 6.0 2.0 0.0) "A") (list (list 8.0 4.0 4.0 0.0) "B")
+                         (list (list 8.0 2.0 6.0 0.0) "A") (list (list 8.0 4.0 0.0 4.0) "B")
+                         (list (list 8.0 2.0 0.0 6.0) "A") (list (list 4.0 8.0 4.0 0.0) "B")))
+    (let alt-task (list (list (list 55.0 5.0 5.0 5.0) "A") (list (list 5.0 55.0 5.0 5.0) "B")
+                        (list (list 5.0 5.0 55.0 5.0) "A") (list (list 5.0 5.0 5.0 55.0) "B")
+                        (list (list 60.0 10.0 5.0 5.0) "A") (list (list 10.0 60.0 5.0 5.0) "B")))
+    (let styles+ (gl-cat (ls-styles) (list (moe-compute-style))))
+    (let regions (list (list chart-task (list (list 1.0 0.0 0.0 0.0 0.0 0.0) (list 0.0 0.0 0.0 1.0 0.0 0.0)))
+                       (list perm-task  (list (list 8.0 6.0 2.0 0.0) (list 8.0 4.0 4.0 0.0)))
+                       (list alt-task   (list (list 55.0 5.0 5.0 5.0) (list 5.0 55.0 5.0 5.0)))))
+    (let mtrain (list (list (list 1.0 0.0 0.0 0.0 0.0 0.0) "cA") (list (list 0.0 0.0 0.0 1.0 0.0 0.0) "cB")
+                      (list (list 8.0 6.0 2.0 0.0) "pA") (list (list 8.0 4.0 4.0 0.0) "pB")
+                      (list (list 55.0 5.0 5.0 5.0) "aH") (list (list 5.0 55.0 5.0 5.0) "aL")))
+    (let mtest (list (list (list 0.0 1.0 0.0 0.0 0.0 0.0) "cA") (list (list 0.0 0.0 0.0 0.0 1.0 0.0) "cB")
+                     (list (list 8.0 2.0 6.0 0.0) "pA") (list (list 8.0 4.0 0.0 4.0) "pB")
+                     (list (list 5.0 5.0 55.0 5.0) "aH") (list (list 5.0 5.0 5.0 55.0) "aL")))
+    (let experts (moe-train styles+ mtrain))
+    (let gate (moe-gate-build styles+ regions 2))
+
+    (let moe-acc     (moe-gate-eval experts gate mtest))
+    (let mesh-acc    (ls-eval (nth styles+ 2) mtest (ls-train (nth styles+ 2) mtrain)))
+    (let attn-acc    (ls-eval (nth styles+ 3) mtest (ls-train (nth styles+ 3) mtrain)))
+    (let compute-acc (ls-eval (nth styles+ 5) mtest (ls-train (nth styles+ 5) mtrain)))
+    (let rec (ls-research styles+ alt-task 2))
+
+    (let c0 (if (eq (round (nth (moe-pool-last (moe-core-compute (list 55.0 5.0 5.0 5.0))) 0)) 50) 1 0))
+    (let c1 (if (str_eq (ls-best rec) "compute") 2 0))
+    (let c2 (if (and (eq (ls-score-of rec "compute") 4)
+                     (and (eq (ls-score-of rec "mesh") 0)
+                          (and (eq (ls-score-of rec "attn") 0)
+                               (and (eq (ls-score-of rec "conv") 0) (eq (ls-score-of rec "raw") 0))))) 4 0))
+    (let c3 (if (str_eq (moe-gate-expert-id gate (list 5.0 5.0 55.0 5.0)) "compute") 8 0))
+    (let c4 (if (eq moe-acc 6) 16 0))
+    (let c5 (if (and (gt moe-acc mesh-acc) (and (gt moe-acc attn-acc) (gt moe-acc compute-acc))) 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

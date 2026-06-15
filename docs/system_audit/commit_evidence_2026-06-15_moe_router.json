@@ -5,14 +5,16 @@
   "files_owned": [
     "form/form-stdlib/moe-router.fk",
     "form/form-stdlib/tests/moe-router-band.fk",
+    "form/form-stdlib/tests/moe-compute-band.fk",
     "docs/coherence-substrate/form-native-models.form"
   ],
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk form-stdlib/recognition-router.fk form-stdlib/moe-router.fk form-stdlib/tests/moe-router-band.fk"
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk form-stdlib/recognition-router.fk form-stdlib/moe-router.fk form-stdlib/tests/moe-router-band.fk",
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk form-stdlib/recognition-router.fk form-stdlib/moe-router.fk form-stdlib/tests/moe-compute-band.fk"
     ],
-    "summary": "moe-router-band -> 127 three-way (Go=Rust=TS), 0 divergent. ls-best DISCOVERS chart specialist=mesh (diffusion) and perm specialist=attn (sparse attention) -- crowned by the warmed no-free-lunch research, not asserted. The learned gate routes a held-out chart input -> mesh and a held-out perm input -> attn. MoE(learned gate) = 8/8 on the held-out mixed test; single mesh = 6/8, single attn = 6/8, single conv = 4/8, single raw = 4/8 -- the MoE strictly beats every single expert (32) and no single expert solves the mixed task (64), so per-input routing is necessary, not decorative. 3-KERNEL ONLY (Go=Rust=TS): composes the geometric-learning/learning-style-space/recognition-router family, which is not in form/fourth-arm-bands.txt (the gl-* graph-learning + warmed-fold op family is not yet flattened for fkwu). This is an unsupported-op-family gap, not a divergence.",
+    "summary": "moe-router-band -> 127 three-way (Go=Rust=TS), 0 divergent. moe-compute-band -> 63 three-way, 0 divergent: a COMPUTE expert kind whose core RUNS an executable recipe (the signed alternating fold a-b+c-d = alternating prefix sums) wins a region where the multiset/mean/max/local-structure are identical across classes so diffusion, attention, CNN, and the memorizer every score 0 -- only the computation separates it (compute 4, others 0); ls-best DISCOVERS compute; the three-kind MoE (diffusion+attention+compute) routes each held-out input to its specialist and scores 6/6, beating every single expert. ls-best DISCOVERS chart specialist=mesh (diffusion) and perm specialist=attn (sparse attention) -- crowned by the warmed no-free-lunch research, not asserted. The learned gate routes a held-out chart input -> mesh and a held-out perm input -> attn. MoE(learned gate) = 8/8 on the held-out mixed test; single mesh = 6/8, single attn = 6/8, single conv = 4/8, single raw = 4/8 -- the MoE strictly beats every single expert (32) and no single expert solves the mixed task (64), so per-input routing is necessary, not decorative. 3-KERNEL ONLY (Go=Rust=TS): composes the geometric-learning/learning-style-space/recognition-router family, which is not in form/fourth-arm-bands.txt (the gl-* graph-learning + warmed-fold op family is not yet flattened for fkwu). This is an unsupported-op-family gap, not a divergence.",
     "observed_delta": {
       "moe_band_verdict": 127,
       "moe_band_divergent": 0,
@@ -22,7 +24,12 @@
       "single_mesh": 6,
       "single_attn": 6,
       "single_conv": 4,
-      "single_raw": 4
+      "single_raw": 4,
+      "compute_band_verdict": 63,
+      "compute_alt_fold_55_5_5_5": 50,
+      "alt_task_scores": "compute 4, mesh 0, attn 0, conv 0, raw 0",
+      "three_kind_moe_acc_of_6": 6,
+      "three_kind_singles": "mesh 3, attn 4, compute 2"
     },
     "known_limitations": [
       {
@@ -99,11 +106,13 @@
   "evidence_refs": [
     "form/form-stdlib/moe-router.fk",
     "form/form-stdlib/tests/moe-router-band.fk",
+    "form/form-stdlib/tests/moe-compute-band.fk",
     "docs/coherence-substrate/form-native-models.form"
   ],
   "change_files": [
     "form/form-stdlib/moe-router.fk",
     "form/form-stdlib/tests/moe-router-band.fk",
+    "form/form-stdlib/tests/moe-compute-band.fk",
     "docs/coherence-substrate/form-native-models.form",
     "docs/system_audit/commit_evidence_2026-06-15_moe_router.json"
   ],
