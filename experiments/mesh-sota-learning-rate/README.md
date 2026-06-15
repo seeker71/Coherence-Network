@@ -58,10 +58,22 @@ Honest long-running shape is **live accumulation**, not spinning a fixed task:
   --out learning_curve.jsonl --duration-hours 8
 ```
 
-## North star
+## North star — and what is already built
 
-This learner is the floor, not the destination. The destination is the gradient-trained
-form-native transformer that `form/form-stdlib/form-train-step.fk` is the SGD *seed* of
-(`docs/coherence-substrate/freq-check-model.form`, ~100M params, named not built). This
-experiment is the instrument that turns the gap to SOTA from an assertion into a measured
-distance — the precondition for closing it with proof rather than hope.
+`nearest-shape` here is the **router tier**, the floor — not the whole body. The
+**transformer tier is already built and proven**: `form/form-stdlib/transformer-block.fk`
+(M4 of `form-native-models.form`) is a whisper-shaped attention+FFN block with architecture
+and weights as recipe data, bit-exact against the PyTorch fp64 reference (band verdict
+**511**, re-run live on the Go kernel), emitted to six instruction sets and runnable on the
+GPU as a driven organ via `host-kernel.form`. What is seed-stage is the **backprop training
+loop** over that block (`form-train-step.fk` is the SGD atom). Both tiers learn through one
+**trust-observed** loop — `cross-train-oracle.form`: a local oracle (qwen2.5:72b) teaches,
+candidates are scored by *efficacy*, and a native-vs-oracle heldout score proves graduation
+(`native-training-receipt.fk`, `champion-challenger.fk`).
+
+So the instrument's job is not "wait until we can build a model." It is to turn the gap to
+SOTA into a measured distance, and the next step on the real path is concrete: run the
+cross-train-oracle loop on `transformer-block.fk` against a real corpus and read the
+native-vs-oracle score rise. The differentiator vs SOTA is not fidelity-someday — it is a
+transformer whose *body is legible, portable across six ISAs, and trust-observed*, which a
+frozen weight-blob cannot be.
