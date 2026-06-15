@@ -3,13 +3,14 @@
 ; public-audio-rendezvous-band — public rendezvous plus audio co-presence and
 ; measurement pressure floor.
 ;
-; Verdict 16383 when every claim lands.
+; Verdict 32767 when every claim lands.
 (do
     (let pub-api (par-public "coherence-public-api" "public-rendezvous-cell" 64 40 45 60000 1 "pass"))
     (let pub-paste (par-public "pastebin-public-page" "public-rendezvous-cell" 64 160 170 1800000 1 "pass"))
     (let pub-archive (par-public "archive-org-public-item" "public-rendezvous-cell" 64 220 230 3600000 1 "pass"))
     (let audio-out (par-audio "audio-audible-fsk" "mac-to-android" 64 18 91 180 0 "pass"))
     (let audio-back (par-audio "audio-near-ultrasonic" "android-to-mac" 64 16 88 210 0 "pass"))
+    (let live-mac-audio (par-audio "audio-audible-fsk" "mac-speaker-to-microphone" 64 44 99 3390 0 "pass"))
     (let measure (par-measure 14 9 420 180 90 "tool" 240 "pass"))
     (let good (par-session pub-api pub-archive audio-out audio-back measure 1 "pass"))
     (let good-paste (par-session pub-api pub-paste audio-out audio-back measure 1 "pass"))
@@ -46,4 +47,5 @@
                  0))
     (let c12 (if (eq (len (par-floor)) 5) 4096 0))
     (let c13 (if (par-session-valid? good-paste) 8192 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 c13))))))))))))))
+    (let c14 (if (par-audio-valid? live-mac-audio) 16384 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 c14)))))))))))))))

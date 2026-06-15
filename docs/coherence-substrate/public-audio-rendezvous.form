@@ -6,12 +6,12 @@
 ;   - oracle calls may teach candidates, but measurements decide what to keep.
 ;
 ; FLOOR [MEASURED IN FORM, 2026-06-15]
-;   public-audio-rendezvous.fk returns 16383 four-way. The receipt validates:
+;   public-audio-rendezvous.fk returns 32767 four-way. The receipt validates:
 ;     - public rendezvous receipts from coherence-public-api, pastebin-public-page,
 ;       or archive-org-public-item;
 ;     - nonce hash visibility, public readability, TTL, write/read timing;
 ;     - audio co-presence receipts over audio-audible-fsk or audio-near-ultrasonic;
-;     - Mac-to-Android, Android-to-Mac, or peer-to-peer direction receipts;
+;     - Mac-to-Android, Android-to-Mac, peer-to-peer, or Mac speaker-to-microphone direction receipts;
 ;     - SNR/confidence/latency thresholds and raw-audio-retained = 0;
 ;     - measured shape cells, recipe steps, tool/reasoning/oracle time, nonzero oracle time, bottleneck,
 ;       and pressure;
@@ -31,11 +31,28 @@
 ;     raw_nonce_retained=0
 ;     status=pass
 ;
+; LIVE CARRIER PROOF [MAC SPEAKER -> MICROPHONE AUDIO, 2026-06-15]
+;   scripts/live_audio_copresence_receipt.sh emits an audible FSK nonce-hash
+;   prefix through MacBook speakers, records through the built-in microphone,
+;   decodes the received bits, writes only a derived receipt, and deletes the
+;   raw generated/captured audio files.
+;   Receipt 20260615T154700Z:
+;     protocol=audio-audible-fsk
+;     direction=mac-speaker-to-microphone
+;     nonce_hash_len=64
+;     decoded_match_count=12/12
+;     snr_db=44.75
+;     confidence=99
+;     latency_ms=3390
+;     raw_audio_retained=0
+;     status=pass
+;
 ; WHAT THIS DOES NOT CLAIM
-;   No microphone capture has run in this slice. No Pastebin write or archive.org
-;   upload has run in this slice. No raw audio or raw nonce is retained. The
-;   public API carrier is live; paste/archive and audio carriers still must
-;   return this same receipt shape before they are claimed.
+;   No Android speaker/microphone exchange has run in this slice. No Pastebin
+;   write or archive.org upload has run in this slice. No raw audio or raw nonce
+;   is retained. The public API carrier and local Mac acoustic carrier are live;
+;   paste/archive and two-device audio carriers still must return this same
+;   receipt shape before they are claimed.
 ;
 ; NORTH STAR
 ;   Each carrier call emits a receipt: shape, recipe, cell count, start/end time,
@@ -45,8 +62,8 @@
 ;   recipe, and keep only what improves measured vitality.
 ;
 ; NEXT CARRIER PROOFS
-;   1. Audio detection: Mac emits a short FSK/chirp nonce; Android detects it by
-;      correlation/FFT and replies; both return SNR/confidence/latency receipts.
+;   1. Two-device audio detection: Mac emits a short FSK/chirp nonce; Android
+;      detects it by correlation/FFT and replies; both return SNR/confidence/latency receipts.
 ;   2. Public fallback services: add pastebin-public-page or archive-org-public-
 ;      item only as public-read fallback carriers with the same receipt shape.
 ;   3. Bottleneck learning: compare tool/reasoning/oracle durations and choose
