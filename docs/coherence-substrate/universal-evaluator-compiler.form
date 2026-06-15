@@ -47,8 +47,21 @@
     "builtin/substrate surface. 'When JIT is fully present' = when form-lower covers"
     "those too. Until then, content -> Form -> native is proven for the lowered"
     "subset; content -> Form -> EVALUATED (meta-circular, on the kernel) is fully"
-    "general today. The kernel interprets everything; the JIT compiles the covered"
-    "subset to native, and the covered subset grows.")
+    "general today. The kernel interprets everything; form-lower (Form-native, zero"
+    "clang) compiles the covered subset to native, and the covered subset grows.")
+
+  ; ── the codegen is FORM, not C — the C-to-asm JIT is a crutch ──
+  (codegen-is-form-not-c
+    "Two host-compiler JIT paths exist as BOOTSTRAP crutches, not the truth. jit.go"
+    "emits Go and runs `go build` plugins the host loads; jit_c.go emits freestanding C"
+    "and lets LLVM/clang render the recipe as any target's assembly (aarch64/hexagon/"
+    "PTX/GCN). Using C to generate asm is a nice crutch — it buys cross-ISA breadth"
+    "cheaply via LLVM's backends — but it is a PROJECTION, not the body. jit_c.go's own"
+    "header says it: 'the recipe stays canonical truth; the C is a projection surface.'"
+    "The canonical codegen is form-asm + form-lower: Form -> arm64 bytes, byte-verified"
+    "against the assembler, zero clang. 'Growing the JIT' means growing FORM-LOWER (and"
+    "Form-native per-ISA encoders the way form-asm does arm64) until the C/Go-compile"
+    "crutches retire — never extending the C path as the destination.")
 
   ; ── why this retires the C detour ──
   (the-form-cli-is-an-instance
