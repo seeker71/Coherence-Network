@@ -1,10 +1,10 @@
 ; optimizer-step.fk — bounded optimizer step math for Form-native model kernels.
 ;
-; Floor: exact integer vector SGD, momentum, and Adam-style moment receipts.
-; This proves the model kernel can compute a small optimizer step
-; deterministically on all four kernels. It does not claim tensor-scale
-; autodiff, bias-corrected production Adam, live training loops, durable eval
-; query, or mesh transport.
+; Floor: exact integer vector SGD, momentum, Adam-style moment receipts, and
+; bounded Adam bias correction. This proves the model kernel can compute a
+; small optimizer step deterministically on all four kernels. It does not claim
+; tensor-scale autodiff, live training loops, durable eval query, or mesh
+; transport.
 ;
 ; Convention: learning rates and momentum use integer fixed-point scale.
 ;   sgd:      w' = w - (lr * grad) / scale
@@ -12,6 +12,7 @@
 ;   adam:     m' = (b1*m + (scale-b1)*grad) / scale
 ;             v' = (b2*v + (scale-b2)*grad*grad) / scale
 ;             w' = w - (lr*m') / (isqrt(v') + epsilon)
+;   adam-bias: mhat = (m' * scale) / bias1; vhat = (v' * scale) / bias2
 
 (do
     (defn os-nonzero-vector? (xs)
@@ -44,6 +45,16 @@
                                 (if (os-same-len? weights grads) 1 0)
                                 0)
                             0)
+                        0)
+                    0)
+                0)
+            0))
+    (defn os-adam-bias-input-valid? (weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2)
+        (if (os-adam-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon)
+            (if (gt bias1 0)
+                (if (le bias1 scale)
+                    (if (gt bias2 0)
+                        (if (le bias2 scale) 1 0)
                         0)
                     0)
                 0)
@@ -106,6 +117,27 @@
             weights
             (os-adam-next-m1s m1s grads beta1 scale)
             (os-adam-next-m2s m2s grads beta2 scale)
+            lr
+            epsilon))
+    (defn os-adam-corrected-m1-value (m1 bias1 scale)
+        (div (mul m1 scale) bias1))
+    (defn os-adam-corrected-m2-value (m2 bias2 scale)
+        (div (mul m2 scale) bias2))
+    (defn os-adam-corrected-m1s (m1s bias1 scale)
+        (if (eq (len m1s) 0) (empty)
+            (cons
+                (os-adam-corrected-m1-value (head m1s) bias1 scale)
+                (os-adam-corrected-m1s (tail m1s) bias1 scale))))
+    (defn os-adam-corrected-m2s (m2s bias2 scale)
+        (if (eq (len m2s) 0) (empty)
+            (cons
+                (os-adam-corrected-m2-value (head m2s) bias2 scale)
+                (os-adam-corrected-m2s (tail m2s) bias2 scale))))
+    (defn os-adam-corrected-weights (weights next-m1s next-m2s lr epsilon bias1 bias2 scale)
+        (os-adam-weights-from-moments
+            weights
+            (os-adam-corrected-m1s next-m1s bias1 scale)
+            (os-adam-corrected-m2s next-m2s bias2 scale)
             lr
             epsilon))
 
@@ -207,6 +239,62 @@
         (if (os-adam-receipt? r)
             (if (mv-nonempty? (os-adam-model r))
                 (if (eq (os-adam-valid-bit r) 1) 1 0)
+                0)
+            0))
+
+    (defn os-adam-bias-receipt (model weights m1s m2s grads lr beta1 beta2 scale epsilon bias1 bias2)
+        (list
+            "optimizer-adam-bias-receipt"
+            model
+            weights
+            m1s
+            m2s
+            grads
+            lr
+            beta1
+            beta2
+            scale
+            epsilon
+            bias1
+            bias2
+            (if (eq (os-adam-bias-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2) 1)
+                (os-adam-next-m1s m1s grads beta1 scale)
+                (empty))
+            (if (eq (os-adam-bias-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2) 1)
+                (os-adam-next-m2s m2s grads beta2 scale)
+                (empty))
+            (if (eq (os-adam-bias-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2) 1)
+                (os-adam-corrected-m1s (os-adam-next-m1s m1s grads beta1 scale) bias1 scale)
+                (empty))
+            (if (eq (os-adam-bias-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2) 1)
+                (os-adam-corrected-m2s (os-adam-next-m2s m2s grads beta2 scale) bias2 scale)
+                (empty))
+            (if (eq (os-adam-bias-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2) 1)
+                (os-adam-corrected-weights
+                    weights
+                    (os-adam-next-m1s m1s grads beta1 scale)
+                    (os-adam-next-m2s m2s grads beta2 scale)
+                    lr
+                    epsilon
+                    bias1
+                    bias2
+                    scale)
+                (empty))
+            (if (eq (os-adam-bias-input-valid? weights m1s m2s grads beta1 beta2 scale epsilon bias1 bias2) 1)
+                (os-nonzero-vector? grads)
+                0)))
+    (defn os-adam-bias-receipt? (value) (mv-row? value "optimizer-adam-bias-receipt" 19))
+    (defn os-adam-bias-model (r) (nth r 1))
+    (defn os-adam-bias-next-m1 (r) (nth r 13))
+    (defn os-adam-bias-next-m2 (r) (nth r 14))
+    (defn os-adam-bias-corrected-m1 (r) (nth r 15))
+    (defn os-adam-bias-corrected-m2 (r) (nth r 16))
+    (defn os-adam-bias-after (r) (nth r 17))
+    (defn os-adam-bias-valid-bit (r) (nth r 18))
+    (defn os-adam-bias-valid? (r)
+        (if (os-adam-bias-receipt? r)
+            (if (mv-nonempty? (os-adam-bias-model r))
+                (if (eq (os-adam-bias-valid-bit r) 1) 1 0)
                 0)
             0))
 

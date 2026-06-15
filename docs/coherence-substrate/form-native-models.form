@@ -62,8 +62,9 @@
 ;     autodiff-gradient-cell now returns 4095 four-way: a bounded scalar affine prediction/loss recipe
 ;     emits weight and bias gradient cells, and those gradients feed optimizer-step's SGD receipt.
 ;     adam-step-cell now returns 4095 four-way: bounded fixed-point first/second moment rows, integer
-;     square-root denominator, and scalar autodiff gradient-vector handoff. Tensor-scale autodiff and
-;     production Adam bias-correction remain separate walls.
+;     square-root denominator, and scalar autodiff gradient-vector handoff.
+;     adam-bias-correction now returns 4095 four-way: bounded fixed-point Adam bias-corrected moments
+;     and weight updates. Tensor-scale autodiff remains a separate wall.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -76,15 +77,15 @@
 ;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     tensor-scale autodiff gradient cells, production Adam bias-correction, durable eval-receipt query path, measured fourth-arm duration, larger native
+;     tensor-scale autodiff gradient cells, durable eval-receipt query path, measured fourth-arm duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
 ;     live chunk-range merkle transport/proof is still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
 ;     live-row route read, production pulse/runtime row ingestion, Go/Rust/TypeScript production HTTPS
 ;     capture, all-kernel plaintext HTTP plus verified HTTPS body capture, and bounded model-slice
 ;     request/re-address/apply/merge receipt, chunk-range slice policy, optimizer-state delta-slice
-;     receipt, fixed-point SGD/momentum optimizer step, scalar affine gradient cells, and bounded Adam
-;     moment cells are now closed receipts, not future claims.
+;     receipt, fixed-point SGD/momentum optimizer step, scalar affine gradient cells, bounded Adam
+;     moment cells, and bounded Adam bias correction are now closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.

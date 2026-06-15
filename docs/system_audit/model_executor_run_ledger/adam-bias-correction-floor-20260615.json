@@ -1,0 +1,17 @@
+{
+  "task_id": "adam-bias-correction-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim adam-bias-correction-floor \"Next model-kernel wall after adam-step-cell: add bounded fixed-point Adam bias-correction receipts over existing moment cells; avoid tensor autodiff, live mesh transport, durable eval query, payload merkle proof, privacy/conflict, router/audio, and BML compiler lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk form-stdlib/tests/adam-step-cell-band.fk form-stdlib/tests/adam-bias-correction-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh adam-step-cell adam-bias-correction",
+    "make wellness",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a bounded Adam bias-correction receipt. The new floor proves corrected first and second moments, corrected weight updates, invalid bias/shape refusal before computation, and scalar autodiff gradient-vector handoff while leaving tensor-scale autodiff, live training loops, durable query, live mesh transport, payload merkle proof, privacy, and conflict policy explicit as next walls."
+}
