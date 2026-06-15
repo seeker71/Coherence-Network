@@ -147,6 +147,11 @@ type MeshOrgan = {
   location_label?: string;
   map_x?: number | null;
   map_y?: number | null;
+  discovery_state?: string;
+  trust_score_ppm?: number;
+  signal_strength_ppm?: number;
+  battery_level_ppm?: number;
+  power_cost_ppm?: number;
   steward_cell_id?: string;
   capabilities: string[];
   lanes: string[];
@@ -174,6 +179,10 @@ type MeshChannel = {
   packet_loss_ppm: number;
   branch_success_rate_ppm: number;
   infer_error_rate_ppm: number;
+  signal_strength_ppm: number;
+  power_cost_ppm: number;
+  trust_score_ppm: number;
+  route_quality_ppm: number;
   model_id?: string;
   last_seen_at: string;
 };
@@ -234,6 +243,58 @@ function channelTone(channel: MeshChannel): string {
   return "bg-rose-400";
 }
 
+function meshStateTone(state: string | undefined): string {
+  const normalized = (state || "declared").toLowerCase();
+  if (normalized === "training") return "bg-fuchsia-500";
+  if (normalized === "streaming") return "bg-green-500";
+  if (normalized === "trusted") return "bg-sky-500";
+  if (normalized === "paired") return "bg-amber-500";
+  if (normalized === "seen") return "bg-lime-500";
+  return "bg-muted-foreground";
+}
+
+function meshStateLabel(state: string | undefined): string {
+  return (state || "declared").replace(/_/g, " ");
+}
+
+function signalRingSize(node: MeshOrgan): number {
+  const signal = node.signal_strength_ppm || 0;
+  return 28 + Math.round((signal / 1000000) * 48);
+}
+
+function channelQuality(channel: MeshChannel): number {
+  if (channel.route_quality_ppm > 0) return channel.route_quality_ppm;
+  const signals = [channel.trust_score_ppm, channel.signal_strength_ppm, 1000000 - channel.error_rate_ppm, 1000000 - channel.packet_loss_ppm]
+    .filter(value => typeof value === "number" && value > 0);
+  return signals.length > 0 ? Math.round(signals.reduce((sum, value) => sum + value, 0) / signals.length) : 0;
+}
+
+function channelQualityLabel(channel: MeshChannel): string {
+  const quality = channelQuality(channel);
+  if (quality >= 850000) return "strong";
+  if (quality >= 650000) return "usable";
+  if (quality > 0) return "thin";
+  return "unmeasured";
+}
+
+function artifactInferErrorPpm(artifact: LearningDashboardData["native_training_artifacts"][number]): number {
+  return artifact.heldout_count > 0
+    ? Math.round((artifact.wrong_count / artifact.heldout_count) * 1000000)
+    : 0;
+}
+
+function artifactDecisionLabel(artifact: LearningDashboardData["native_training_artifacts"][number]): string {
+  if (artifact.native_beats_oracle) return "choose native";
+  if (artifact.native_accuracy_ppm === artifact.oracle_accuracy_ppm) return "sample both";
+  return "keep oracle sample";
+}
+
+function artifactDecisionTone(artifact: LearningDashboardData["native_training_artifacts"][number]): string {
+  if (artifact.native_beats_oracle) return "bg-green-500/15 text-green-600";
+  if (artifact.native_accuracy_ppm === artifact.oracle_accuracy_ppm) return "bg-amber-500/15 text-amber-600";
+  return "bg-red-500/15 text-red-600";
+}
+
 function ppmOrUnknown(value: number): string {
   return value > 0 ? ppmToPercent(value) : "n/a";
 }
@@ -289,8 +350,23 @@ function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; 
   const avgBranchPpm = surfaces.length > 0
     ? Math.round(surfaces.reduce((sum, surface) => sum + (surface.training_metadata.branch_success_rate_ppm || 0), 0) / surfaces.length)
     : 0;
+  const streamingNodes = organs.filter(node => ["streaming", "training"].includes((node.discovery_state || "").toLowerCase()));
+  const trustedNodes = organs.filter(node => (node.trust_score_ppm || 0) >= 700000 || ["trusted", "streaming", "training"].includes((node.discovery_state || "").toLowerCase()));
+  const avgSignalPpm = organs.length > 0
+    ? Math.round(organs.reduce((sum, node) => sum + (node.signal_strength_ppm || 0), 0) / organs.length)
+    : 0;
+  const readyRoutes = channels.filter(channel => (channel.route_quality_ppm || 0) >= 700000 || ((channel.trust_score_ppm || 0) >= 700000 && (channel.signal_strength_ppm || 0) >= 500000));
+  const avgRouteQualityPpm = channels.length > 0
+    ? Math.round(channels.reduce((sum, channel) => sum + channelQuality(channel), 0) / channels.length)
+    : 0;
   const newCells = surfaces.reduce((sum, surface) => sum + (surface.training_metadata.new_cell_count || 0), 0);
   const changedCells = surfaces.reduce((sum, surface) => sum + (surface.training_metadata.changed_cell_count || 0), 0);
+  const totalHeldout = trained.reduce((sum, artifact) => sum + artifact.heldout_count, 0);
+  const totalCycles = trained.reduce((sum, artifact) => sum + artifact.continuous_cycle_count, 0);
+  const nativeWins = trained.filter(artifact => artifact.native_beats_oracle).length;
+  const oracleReliance = Math.max(0, trained.length - nativeWins);
+  const bestArtifact = [...trained].sort((a, b) => b.native_accuracy_ppm - a.native_accuracy_ppm)[0];
+  const attentionSurfaces = surfaces.filter(surface => surface.proof_status !== "pass" || (surface.training_metadata.blocked_trial_count || 0) > 0);
 
   return (
     <section className="space-y-3">
@@ -318,16 +394,45 @@ function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; 
           <p className="text-[10px] text-muted-foreground">flow</p>
         </div>
         <div className="rounded-xl border border-border/20 bg-card/40 p-3">
-          <p className="text-2xl font-bold">{trained.length}</p>
-          <p className="text-[10px] text-muted-foreground">trained</p>
+          <p className="text-2xl font-bold">{streamingNodes.length}/{trustedNodes.length}</p>
+          <p className="text-[10px] text-muted-foreground">stream/trust</p>
         </div>
         <div className="rounded-xl border border-border/20 bg-card/40 p-3">
-          <p className="text-2xl font-bold">{ppmOrUnknown(avgBranchPpm)}</p>
-          <p className="text-[10px] text-muted-foreground">branch pass</p>
+          <p className="text-2xl font-bold">{ppmOrUnknown(avgSignalPpm)}</p>
+          <p className="text-[10px] text-muted-foreground">avg signal</p>
         </div>
         <div className="rounded-xl border border-border/20 bg-card/40 p-3">
-          <p className="text-2xl font-bold">{newCells}/{changedCells}</p>
-          <p className="text-[10px] text-muted-foreground">new/changed</p>
+          <p className="text-2xl font-bold">{readyRoutes.length}</p>
+          <p className="text-[10px] text-muted-foreground">ready routes</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Discovery readiness</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {["declared", "seen", "paired", "trusted", "streaming", "training"].map(state => {
+              const count = organs.filter(node => (node.discovery_state || "declared").toLowerCase() === state).length;
+              return (
+                <span key={state} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px]">
+                  <span className={`h-2 w-2 rounded-full ${meshStateTone(state)}`} />
+                  {state} {count}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Learning pressure</p>
+          <p className="mt-2 text-sm">
+            branch {ppmOrUnknown(avgBranchPpm)} · trained {trained.length} · new/changed {newCells}/{changedCells}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Channel readiness</p>
+          <p className="mt-2 text-sm">
+            {readyRoutes.length}/{channels.length} routes above floor · avg route {ppmOrUnknown(avgRouteQualityPpm)}
+          </p>
         </div>
       </div>
 
@@ -338,13 +443,24 @@ function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; 
             <p className="text-[10px] text-muted-foreground">satellite-style mesh plane</p>
           </div>
           <div
-            className="relative h-[360px] overflow-hidden"
+            className="relative h-[430px] overflow-hidden"
             style={{
               backgroundImage:
-                "radial-gradient(circle at 20% 30%, rgba(39,92,76,.55), transparent 24%), radial-gradient(circle at 75% 42%, rgba(73,87,62,.5), transparent 28%), radial-gradient(circle at 42% 78%, rgba(45,76,95,.42), transparent 22%), linear-gradient(135deg, rgba(18,30,24,.96), rgba(20,35,42,.92))",
+                "radial-gradient(circle at 18% 28%, rgba(45,109,87,.58), transparent 23%), radial-gradient(circle at 72% 44%, rgba(86,104,69,.5), transparent 27%), radial-gradient(circle at 44% 78%, rgba(45,78,106,.45), transparent 24%), linear-gradient(135deg, rgba(14,27,23,.98), rgba(19,33,42,.94))",
             }}
           >
             <div className="absolute inset-0 opacity-30 bg-[linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.07)_1px,transparent_1px)] bg-[size:48px_48px]" />
+            <div className="absolute left-4 top-4 rounded-md bg-background/80 px-2 py-1 text-[10px] text-muted-foreground backdrop-blur">
+              topology · route quality · signal radius
+            </div>
+            <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 rounded-md bg-background/80 px-2 py-1 text-[10px] backdrop-blur">
+              {["wifi", "bluetooth", "audio", "video"].map(kind => (
+                <span key={kind} className="inline-flex items-center gap-1 text-muted-foreground">
+                  <span className={`h-2 w-5 rounded-full ${kind === "wifi" ? "bg-amber-400" : kind === "bluetooth" ? "bg-violet-400" : kind === "audio" ? "bg-emerald-400" : "bg-sky-400"}`} />
+                  {kind}
+                </span>
+              ))}
+            </div>
             {channels.map((channel, index) => {
               const fromIndex = organs.findIndex(node => node.organ_id === channel.from_organ_id);
               const toIndex = organs.findIndex(node => node.organ_id === channel.to_organ_id);
@@ -356,33 +472,55 @@ function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; 
               const height = Math.abs(from.top - to.top);
               const length = Math.max(18, Math.sqrt(width * width + height * height));
               const angle = Math.atan2(to.top - from.top, to.left - from.left) * 180 / Math.PI;
+              const quality = channelQuality(channel);
+              const lineHeight = Math.max(2, Math.round((quality / 1000000) * 6));
               return (
                 <div
                   key={`${channel.from_organ_id}-${channel.to_organ_id}-${channel.protocol}-${index}`}
-                  className={`absolute h-1 rounded-full ${channelTone(channel)} opacity-70`}
+                  className={`absolute rounded-full ${channelTone(channel)}`}
                   style={{
                     left: `${left + (from.left < to.left ? 0 : width)}%`,
                     top: `${top + (from.top < to.top ? 0 : height)}%`,
                     width: `${length}%`,
+                    height: `${lineHeight}px`,
+                    opacity: Math.max(0.35, quality / 1000000),
                     transform: `rotate(${angle}deg)`,
                     transformOrigin: "0 50%",
+                    boxShadow: `0 0 ${8 + lineHeight * 2}px currentColor`,
                   }}
-                />
+                >
+                  <span className="absolute left-1/2 top-1/2 -translate-y-1/2 rounded bg-background/75 px-1 text-[9px] text-muted-foreground backdrop-blur">
+                    {channelQualityLabel(channel)}
+                  </span>
+                </div>
               );
             })}
             {organs.map((node, index) => {
               const pos = meshPosition(node, index);
               const active = Date.now() - new Date(node.last_seen_at).getTime() < 300000;
+              const ring = signalRingSize(node);
+              const labelVertical = pos.top > 62 ? "-translate-y-full -mt-2" : "mt-2";
+              const labelHorizontal = pos.left > 68 ? "-translate-x-full ml-4" : pos.left < 28 ? "ml-0" : "-translate-x-1/2";
               return (
                 <div
                   key={node.organ_id}
                   className="absolute -translate-x-1/2 -translate-y-1/2"
                   style={{ left: `${pos.left}%`, top: `${pos.top}%` }}
                 >
-                  <div className={`h-4 w-4 rounded-full border-2 ${active ? "border-green-300 bg-green-500" : "border-amber-200 bg-amber-500"} shadow-[0_0_22px_rgba(132,204,22,.45)]`} />
-                  <div className="mt-1 min-w-32 rounded-md bg-background/85 px-2 py-1 text-[10px] shadow-sm backdrop-blur">
+                  <div
+                    className="absolute left-1/2 top-1/2 rounded-full border border-white/20 bg-white/5 -translate-x-1/2 -translate-y-1/2"
+                    style={{ width: `${ring}px`, height: `${ring}px` }}
+                  />
+                  <div className={`relative h-4 w-4 rounded-full border-2 ${active ? "border-green-300" : "border-amber-200"} ${meshStateTone(node.discovery_state)} shadow-[0_0_22px_rgba(132,204,22,.45)]`} />
+                  <div className={`absolute left-1/2 ${labelVertical} ${labelHorizontal} min-w-36 max-w-44 rounded-md bg-background/90 px-2 py-1 text-[10px] shadow-sm backdrop-blur`}>
                     <p className="font-medium text-foreground truncate">{meshNodeLabel(node)}</p>
                     <p className="text-muted-foreground truncate">{node.dwelling_name || node.location_label || node.organ_kind}</p>
+                    <p className="text-muted-foreground truncate">
+                      {meshStateLabel(node.discovery_state)} · trust {ppmOrUnknown(node.trust_score_ppm || 0)} · sig {ppmOrUnknown(node.signal_strength_ppm || 0)}
+                    </p>
+                    <p className="text-muted-foreground truncate">
+                      power {ppmOrUnknown(node.power_cost_ppm || 0)} · battery {ppmOrUnknown(node.battery_level_ppm || 0)}
+                    </p>
                   </div>
                 </div>
               );
@@ -420,7 +558,10 @@ function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; 
                     <span>{Math.round(channel.latency_ms)}ms</span>
                     <span>err {ppmOrUnknown(channel.error_rate_ppm)}</span>
                     <span>infer {ppmOrUnknown(channel.infer_error_rate_ppm)}</span>
-                    <span>branch {ppmOrUnknown(channel.branch_success_rate_ppm)}</span>
+                    <span>route {ppmOrUnknown(channel.route_quality_ppm)}</span>
+                    <span>{channelQualityLabel(channel)}</span>
+                    <span>trust {ppmOrUnknown(channel.trust_score_ppm)}</span>
+                    <span>power {ppmOrUnknown(channel.power_cost_ppm)}</span>
                     <span className="truncate">{channel.model_id || "no model"}</span>
                   </div>
                 </div>
@@ -435,20 +576,60 @@ function MeshObservatory({ organs, channels, learning }: { organs: MeshOrgan[]; 
 
       <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
         <div className="px-4 py-3 border-b border-border/10">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Model training health</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Model training control</p>
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-px bg-border/10">
+          <div className="bg-card p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">native wins</p>
+            <p className="text-xl font-semibold">{nativeWins}/{trained.length}</p>
+          </div>
+          <div className="bg-card p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">oracle reliance</p>
+            <p className="text-xl font-semibold">{oracleReliance}</p>
+          </div>
+          <div className="bg-card p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">cycles</p>
+            <p className="text-xl font-semibold">{totalCycles}</p>
+          </div>
+          <div className="bg-card p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">heldout</p>
+            <p className="text-xl font-semibold">{totalHeldout}</p>
+          </div>
+          <div className="bg-card p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">attention</p>
+            <p className="text-xl font-semibold">{attentionSurfaces.length}</p>
+          </div>
+        </div>
+        {bestArtifact && (
+          <div className="border-b border-border/10 bg-card p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium">Current winner</p>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${artifactDecisionTone(bestArtifact)}`}>
+                {artifactDecisionLabel(bestArtifact)}
+              </span>
+              <StatusPill value={bestArtifact.model_family} />
+            </div>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-muted-foreground">
+              <span>native {ppmToPercent(bestArtifact.native_accuracy_ppm)}</span>
+              <span>oracle {ppmToPercent(bestArtifact.oracle_accuracy_ppm)}</span>
+              <span>infer err {ppmToPercent(artifactInferErrorPpm(bestArtifact))}</span>
+              <span>heldout {bestArtifact.heldout_count}</span>
+              <span>cycles {bestArtifact.continuous_cycle_count}</span>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-border/10">
           {trained.slice(0, 4).map(artifact => {
-            const inferErrorPpm = artifact.heldout_count > 0
-              ? Math.round((artifact.wrong_count / artifact.heldout_count) * 1000000)
-              : 0;
+            const inferErrorPpm = artifactInferErrorPpm(artifact);
             const oracleDelta = artifact.native_accuracy_ppm - artifact.oracle_accuracy_ppm;
             return (
               <div key={artifact.artifact_id} className="bg-card p-4 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium font-mono break-all">{artifact.artifact_id}</p>
                   <StatusPill value={artifact.proof_status} />
-                  {artifact.native_beats_oracle && <StatusPill value="native ahead" />}
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${artifactDecisionTone(artifact)}`}>
+                    {artifactDecisionLabel(artifact)}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   <span>infer err {ppmToPercent(inferErrorPpm)}</span>

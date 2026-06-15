@@ -309,4 +309,123 @@
     (defn ctl-output-receipt (output) (nth output 3))
     (defn ctl-output-meta (output) (nth output 4))
 
+    (defn ctl-code-surface (kind language path source-sig node-sig grammar)
+        (list kind language path source-sig node-sig grammar))
+    (defn ctl-cs-kind (surface) (nth surface 0))
+    (defn ctl-cs-language (surface) (nth surface 1))
+    (defn ctl-cs-path (surface) (nth surface 2))
+    (defn ctl-cs-source-sig (surface) (nth surface 3))
+    (defn ctl-cs-node-sig (surface) (nth surface 4))
+    (defn ctl-cs-grammar (surface) (nth surface 5))
+    (defn ctl-code-surface-valid? (surface)
+        (if (and
+                (eq (str_eq (ctl-cs-kind surface) "") 0)
+                (and
+                    (eq (str_eq (ctl-cs-language surface) "") 0)
+                    (and
+                        (eq (str_eq (ctl-cs-path surface) "") 0)
+                        (and
+                            (eq (str_eq (ctl-cs-source-sig surface) "") 0)
+                            (and
+                                (eq (str_eq (ctl-cs-node-sig surface) "") 0)
+                                (eq (str_eq (ctl-cs-grammar surface) "") 0))))))
+            1
+            0))
+
+    (defn ctl-patch-recipe (intent dialect patch-sig files-touched reversible)
+        (list intent dialect patch-sig files-touched reversible))
+    (defn ctl-pr-intent (recipe) (nth recipe 0))
+    (defn ctl-pr-dialect (recipe) (nth recipe 1))
+    (defn ctl-pr-patch-sig (recipe) (nth recipe 2))
+    (defn ctl-pr-files-touched (recipe) (nth recipe 3))
+    (defn ctl-pr-reversible (recipe) (nth recipe 4))
+    (defn ctl-patch-recipe-valid? (recipe)
+        (if (and
+                (eq (str_eq (ctl-pr-intent recipe) "") 0)
+                (and
+                    (eq (str_eq (ctl-pr-dialect recipe) "") 0)
+                    (and
+                        (eq (str_eq (ctl-pr-patch-sig recipe) "") 0)
+                        (and
+                            (gt (ctl-pr-files-touched recipe) 0)
+                            (eq (ctl-pr-reversible recipe) 1)))))
+            1
+            0))
+
+    (defn ctl-verifier (name status duration-ms evidence-sig)
+        (list name status duration-ms evidence-sig))
+    (defn ctl-v-name (verifier) (nth verifier 0))
+    (defn ctl-v-status (verifier) (nth verifier 1))
+    (defn ctl-v-duration-ms (verifier) (nth verifier 2))
+    (defn ctl-v-evidence-sig (verifier) (nth verifier 3))
+    (defn ctl-verifier-pass? (verifier)
+        (if (and
+                (str_eq (ctl-v-status verifier) "pass")
+                (and
+                    (gt (ctl-v-duration-ms verifier) 0)
+                    (and
+                        (eq (str_eq (ctl-v-name verifier) "") 0)
+                        (eq (str_eq (ctl-v-evidence-sig verifier) "") 0))))
+            1
+            0))
+    (defn ctl-verifiers-pass? (verifiers)
+        (if (eq (len verifiers) 0)
+            1
+            (if (eq (ctl-verifier-pass? (head verifiers)) 1)
+                (ctl-verifiers-pass? (tail verifiers))
+                0)))
+
+    (defn ctl-learned-delta (lane sample-count trust-before trust-after accepted)
+        (list lane sample-count trust-before trust-after accepted))
+    (defn ctl-ld-lane (delta) (nth delta 0))
+    (defn ctl-ld-sample-count (delta) (nth delta 1))
+    (defn ctl-ld-trust-before (delta) (nth delta 2))
+    (defn ctl-ld-trust-after (delta) (nth delta 3))
+    (defn ctl-ld-accepted (delta) (nth delta 4))
+    (defn ctl-learned-delta-valid? (delta)
+        (if (and
+                (eq (ctl-ld-accepted delta) 1)
+                (and
+                    (gt (ctl-ld-sample-count delta) 0)
+                    (and
+                        (gt (ctl-ld-trust-after delta) (ctl-ld-trust-before delta))
+                        (eq (str_eq (ctl-ld-lane delta) "") 0))))
+            1
+            0))
+
+    (defn ctl-coding-act (intent source patch verifiers receipt learned-delta)
+        (list intent source patch verifiers receipt learned-delta))
+    (defn ctl-ca-intent (act) (nth act 0))
+    (defn ctl-ca-source (act) (nth act 1))
+    (defn ctl-ca-patch (act) (nth act 2))
+    (defn ctl-ca-verifiers (act) (nth act 3))
+    (defn ctl-ca-receipt (act) (nth act 4))
+    (defn ctl-ca-learned-delta (act) (nth act 5))
+    (defn ctl-coding-act-valid? (act)
+        (if (and
+                (eq (str_eq (ctl-ca-intent act) "") 0)
+                (and
+                    (eq (ctl-code-surface-valid? (ctl-ca-source act)) 1)
+                    (and
+                        (eq (ctl-patch-recipe-valid? (ctl-ca-patch act)) 1)
+                        (and
+                            (gt (len (ctl-ca-verifiers act)) 0)
+                            (and
+                                (eq (ctl-verifiers-pass? (ctl-ca-verifiers act)) 1)
+                                (and
+                                    (cr-choice-receipt-valid? (ctl-ca-receipt act))
+                                    (eq (ctl-learned-delta-valid? (ctl-ca-learned-delta act)) 1)))))))
+            1
+            0))
+    (defn ctl-coding-act-sample (act)
+        (ctl-sample
+            (ctl-ca-intent act)
+            (list
+                (ctl-pr-files-touched (ctl-ca-patch act))
+                (len (ctl-ca-verifiers act))
+                (cr-receipt-cost (ctl-ca-receipt act))
+                (ctl-ld-trust-before (ctl-ca-learned-delta act))
+                (ctl-ld-trust-after (ctl-ca-learned-delta act)))
+            "code:coding-act"))
+
     0)

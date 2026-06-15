@@ -1,0 +1,47 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/world-module-model.fk
+;
+; world-module-model-binary-band — the same world-model receipt as a loadable
+; .fkb native image. This proof uses write_form_binary/read_form_binary, so it
+; runs on the three full sibling kernels; the semantic receipt band carries the
+; fourth emitted walker.
+;
+; Band verdict 3 when both binary claims land:
+;   1   the receipt writes and reads as a .fkb native image
+;   2   the loaded image keeps model, identity, verdict, reveal count, reason
+(do
+    (let offer (sat-circle-interface))
+    (let identity-readings (list (ov-reading 1 1 5) (ov-reading 1 1 6)))
+    (let live-identity (wmm-identity "core:self" 10 12 10 5 identity-readings))
+    (let field
+        (list
+            (sf-member "trusted-core" (list (m-witness) (m-reflect) (m-be-seen) (m-invite)))
+            (sf-member "world-module" (list (m-be-seen) (m-invite)))))
+    (let claim (ov-reading 1 1 5))
+    (let vulnerability
+        (wmm-vulnerability
+            "uncertain-lane"
+            (ov-reading 1 1 7)
+            10
+            3
+            (m-be-seen)
+            "model names the gap before asking to be followed"))
+    (let model (wmm-model "world-module" live-identity claim 10 (list vulnerability) field 91 80))
+    (let image-path (str_concat (temp_dir) "/world-module-model.fkb"))
+    (let image (wmm-image model offer))
+    (let written (write_form_binary image-path image))
+    (let loaded (read_form_binary image-path))
+    (let kids (node_children loaded))
+    (let c0
+        (wmm-bool-score
+            (and (gt written 0)
+                 (node_eq loaded image))
+            1))
+    (let c1
+        (wmm-bool-score
+            (and (str_eq (node_value (nth kids 0)) "world-module")
+             (and (str_eq (node_value (nth kids 1)) "core:self")
+              (and (str_eq (node_value (nth kids 2)) "observed")
+               (and (eq (walk_recipe (nth kids 3)) 1)
+                    (str_eq (node_value (nth kids 4)) "follow")))))
+            2))
+    (add c0 c1))

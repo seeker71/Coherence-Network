@@ -192,6 +192,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         organId = loadOrganId()
         renderIdentity("local identity ready")
         renderFirstFrame()
+        restorePersistedWitness()
         handler.post {
             renderQr()
             renderDashboard()
@@ -232,6 +233,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         updateBtn.setOnClickListener { onUpdateButton() }
         startWitnessDiscovery()
+        if (sharingWasEnabled()) {
+            pendingStartAfterDiscovery = true
+            connectBtn.text = "Waiting for Mac"
+            if (effectiveWitnessBase().isNotBlank()) {
+                handler.postDelayed({ startSharing() }, 600)
+            }
+        }
         handler.postDelayed({ checkForAppUpdate(false) }, 1600)
     }
 
@@ -261,6 +269,37 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         return created
     }
 
+    private fun restorePersistedWitness() {
+        val prefs = getSharedPreferences(CapabilityHeartbeatService.PREFS, MODE_PRIVATE)
+        val base = prefs.getString(CapabilityHeartbeatService.KEY_WITNESS_BASE, "")?.trim().orEmpty()
+        if (base.isBlank()) return
+        discoveredWitnessUrl = base.removeSuffix("/")
+        settingWitnessUrl = true
+        urlField.setText(discoveredWitnessUrl)
+        settingWitnessUrl = false
+        manualWitnessOverride = false
+        discoveryState = "restored Mac witness: $discoveredWitnessUrl"
+    }
+
+    private fun sharingWasEnabled(): Boolean =
+        getSharedPreferences(CapabilityHeartbeatService.PREFS, MODE_PRIVATE)
+            .getBoolean(CapabilityHeartbeatService.KEY_SHARING_ENABLED, false)
+
+    private fun persistWitnessBase(base: String) {
+        if (base.isBlank()) return
+        getSharedPreferences(CapabilityHeartbeatService.PREFS, MODE_PRIVATE)
+            .edit()
+            .putString(CapabilityHeartbeatService.KEY_WITNESS_BASE, base.trim().removeSuffix("/"))
+            .apply()
+    }
+
+    private fun persistSharingEnabled(enabled: Boolean) {
+        getSharedPreferences(CapabilityHeartbeatService.PREFS, MODE_PRIVATE)
+            .edit()
+            .putBoolean(CapabilityHeartbeatService.KEY_SHARING_ENABLED, enabled)
+            .apply()
+    }
+
     private fun toggle() {
         if (connected) {
             stopSharing()
@@ -288,6 +327,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             return
         }
         if (connected) return
+        persistWitnessBase(base)
+        persistSharingEnabled(true)
+        startCapabilityHeartbeat(base)
         connected = true
         flowWindowStarted = System.currentTimeMillis()
         registerSensor(Sensor.TYPE_ACCELEROMETER)
@@ -310,6 +352,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun stopSharing(message: String = "Paused. Senses held.") {
         connected = false
         pendingStartAfterDiscovery = false
+        persistSharingEnabled(false)
+        stopCapabilityHeartbeat()
         sm.unregisterListener(this)
         handler.removeCallbacks(loop)
         handler.removeCallbacks(meshLoop)
@@ -333,8 +377,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isNotEmpty()) ActivityCompat.requestPermissions(this, missing.toTypedArray(), 17)
+    }
+
+    private fun startCapabilityHeartbeat(base: String) {
+        val intent = Intent(this, CapabilityHeartbeatService::class.java)
+            .putExtra(CapabilityHeartbeatService.EXTRA_ORGAN_ID, organId)
+            .putExtra(CapabilityHeartbeatService.EXTRA_WITNESS_BASE, base.trim().removeSuffix("/"))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun stopCapabilityHeartbeat() {
+        stopService(Intent(this, CapabilityHeartbeatService::class.java))
     }
 
     private fun registerSensor(type: Int) {
@@ -450,6 +512,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setWitnessUrlFromDiscovery(url: String, serviceName: String) {
         discoveredWitnessUrl = url.removeSuffix("/")
+        persistWitnessBase(discoveredWitnessUrl)
         discoveryState = "nearby Mac witness: $serviceName at $discoveredWitnessUrl"
         if (!manualWitnessOverride) {
             settingWitnessUrl = true
@@ -1615,15 +1678,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onPause() {
         super.onPause()
-        if (connected || pendingStartAfterDiscovery) {
-            stopSharing()
-        } else {
-            sm.unregisterListener(this)
-            handler.removeCallbacks(loop)
+        sm.unregisterListener(this)
+        handler.removeCallbacks(loop)
+        handler.removeCallbacks(meshLoop)
+        stopMicSampling()
+        stopCameraSampling()
+        stopGpuSampling()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (connected) {
+            registerSensor(Sensor.TYPE_ACCELEROMETER)
+            registerSensor(Sensor.TYPE_GYROSCOPE)
+            registerSensor(Sensor.TYPE_LIGHT)
+            registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
+            startMicSamplingIfAllowed()
+            startCameraSamplingIfAllowed()
+            startGpuSampling()
             handler.removeCallbacks(meshLoop)
-            stopMicSampling()
-            stopCameraSampling()
-            stopGpuSampling()
+            handler.removeCallbacks(loop)
+            handler.post(meshLoop)
+            handler.post(loop)
         }
     }
 

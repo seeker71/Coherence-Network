@@ -12,7 +12,6 @@ This document outlines the high-level strategy for integrating **Justin Gottschl
 
 - Justin Gottschlich is the Founder, CEO & Chief Scientist of Merly.ai, a company focused on AI-powered machine programming and repository-scale code intelligence.
 - His involvement with the Coherence Network to date has been **indirect and personal** (through seeker71).
-- As of April 26, 2026, Merly.ai is out of money and in active conversations with Microsoft and Invisible.
 
 ## Strategic Alignment
 

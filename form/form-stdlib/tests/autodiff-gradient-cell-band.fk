@@ -1,0 +1,27 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk
+;
+; autodiff-gradient-cell-band — bounded scalar affine gradient cells, four-way.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let r (ag-receipt "model-alpha" 3 4 1 9))      ; pred=13, err=4, loss=16, dw=32, db=8
+    (let arrived (ag-receipt "model-alpha" 2 4 1 9)) ; pred=9, err=0
+    (let invalid (ag-receipt "" 3 4 1 9))
+    (let cells (ag-receipt-cells r))
+    (let step (os-sgd-receipt "model-alpha" (list 3 1) (ag-receipt-vector r) 1 8))
+
+    (let c0 (if (eq (ag-receipt-pred r) 13) 1 0))
+    (let c1 (if (eq (ag-receipt-loss r) 16) 2 0))
+    (let c2 (if (eq (nth (ag-receipt-vector r) 0) 32) 4 0))
+    (let c3 (if (eq (nth (ag-receipt-vector r) 1) 8) 8 0))
+    (let c4 (if (eq (ag-gradient-cell-valid? (nth cells 0)) 1) 16 0))
+    (let c5 (if (eq (ag-gradient-cell-valid? (nth cells 1)) 1) 32 0))
+    (let c6 (if (eq (ag-receipt-valid? r) 1) 64 0))
+    (let c7 (if (eq (ag-receipt-valid? invalid) 0) 128 0))
+    (let c8 (if (eq (ag-receipt-loss arrived) 0) 256 0))
+    (let c9 (if (eq (nth (ag-receipt-vector arrived) 0) 0) 512 0))
+    (let c10 (if (eq (os-sgd-valid? step) 1) 1024 0))
+    (let c11 (if (eq (nth (os-sgd-after step) 0) -1)
+                 (if (eq (nth (os-sgd-after step) 1) 0) 2048 0)
+                 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

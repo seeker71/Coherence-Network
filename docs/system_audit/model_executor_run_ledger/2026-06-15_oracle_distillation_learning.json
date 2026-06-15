@@ -1,0 +1,15 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim oracle-distillation-learning-floor",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/form-freq-check.fk form-stdlib/oracle-distillation-learning.fk form-stdlib/tests/oracle-distillation-learning-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_oracle_distillation_learning.json"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added the native oracle-distillation learning floor for summary, NL-to-Form, freq-check, STT, and TTS lanes. The floor turns oracle/native comparisons into Form training rows and reduces oracle reliance only when native candidates pass receipt floors with lower cost."
+}

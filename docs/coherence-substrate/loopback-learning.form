@@ -7,7 +7,8 @@
     (proof form/form-stdlib/tests/loopback-learning-band.fk -> 65535 four-way)
     (speech-model-proof form/form-stdlib/tests/speech-model-learning-band.fk -> 16383 four-way)
     (speech-kernel-channel-proof form/form-stdlib/tests/speech-kernel-channel-band.fk -> 511 four-way)
-    (real-speech-candidate-proof form/form-stdlib/tests/speech-real-candidate-race-band.fk -> 4095 three-kernel))
+    (real-speech-candidate-proof form/form-stdlib/tests/speech-real-candidate-race-band.fk -> 4095 three-kernel)
+    (speech-teacher-receipt-proof form/form-stdlib/tests/speech-teacher-receipt-band.fk -> 4095 four-way))
 
   (purpose
     "Let cells learn from each other's emitted channel data through the same Form surfaces used for routing and protocol choice."
@@ -21,6 +22,7 @@
 
   (real-local-sample-floor
     "Observed local macOS TTS audio, 16 kHz PCM conversion, and local whisper-cli transcript receipts are checked into form/form-stdlib/tests/speech-real-candidate-race-band.fk as Form data rows."
+    "A live no-Python witness now exists at scripts/speech_teacher_receipt.sh: macOS say -> 16 kHz mono PCM -> local whisper-cli -> hashed JSON receipt. The Form proof in speech-teacher-receipt-band.fk accepts that receipt shape as native training data and refuses low-overlap or missing-audio receipts."
     "The Form band trains and scores seven candidates over those observed rows: audio-exact STT, audio-L1-full STT, audio-L1-spectral STT, teacher-transcript STT, text-retrieval TTS, mesh TTS+audio-L1, and mesh TTS+teacher-STT."
     "Current observed counts: audio-exact 1/3, audio-L1-full 0/3, audio-L1-spectral 1/3, teacher-transcript 3/3, text-retrieval TTS 3/3, mesh TTS+audio-L1 0/3, mesh TTS+teacher-STT 3/3. The winner is mesh:tts-text+teacher-stt."
     "Full Whisper large-v3 GGML is local at /Users/ursmuff/whisper-models/ggml-large-v3.bin sha256=64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2; large-v3-turbo is local at /Users/ursmuff/whisper-models/ggml-large-v3-turbo.bin sha256=1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69."

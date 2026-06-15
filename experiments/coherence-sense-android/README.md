@@ -99,6 +99,10 @@ the highest-trust installer available on that host.
    automatically. Leave the mesh API as `https://api.coherencycoin.com/api` and tap **Start sharing**.
    If you tap before the Mac appears, the button waits and starts sharing when discovery resolves.
    Manual IP entry lives behind **Settings** only as a fallback when the local network blocks mDNS.
+   Once sharing starts, the app also runs a foreground capability heartbeat. That heartbeat keeps the
+   Mac witness liveness window fresh when the app leaves the foreground, while heavy mic/camera/GPU
+   samplers pause with the Activity. The heartbeat sends summary-only capability metadata; it does not
+   send raw audio, raw frames, or GPU buffers.
 3. **Open the live dashboard** in a Mac browser: `http://localhost:8800` — a dark console showing
    *presence* (is the body here, how many frames, how long alive), *recognition* (still / moving, the
    kernel's call, with the next-state prediction and the running prediction-accuracy — error is the
@@ -209,6 +213,19 @@ bidirectional runtime-channel sources, completed local process receipts, and all
 required lanes. Use `--require-active` when a release job should fail unless
 that floor is met.
 
+Every emitted `real-mesh-training-window.json` now also carries
+`world_model_live_cycle`, a runtime projection of
+`form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle`. That projection
+names the witness source, active mic/camera/GPU sense summaries, capability
+liveness, heldout count, local model-process eval sense, native teacher status,
+world-growth status, and exact block reasons. A stale phone, missing model
+processes, unproven native teacher retirement, or unembodied growth stays
+`blocked`; the cycle is still inspectable by dashboard and mesh readers.
+When Form-native learning does prove those last two conditions, attach the
+hashed receipts with `--native-teacher-receipt` and `--world-growth-receipt`;
+the emitter validates sample floor, oracle reach, followed growth parts, and
+content hashes before the cycle can claim `emitted`.
+
 The receipt shape is validated by:
 
 ```bash
@@ -242,7 +259,9 @@ The current APK actively streams and measures `sensor:signal` flow, announces / 
 `screen:write`, `network:http`, and `bluetooth:presence` channels. The mic lane has an active RMS
 summary floor, the camera lane has an active luma summary floor, and the GPU lane has an active
 OpenGL ES/EGL readback summary floor when sharing is active and permissions are granted. The app
-does not retain raw audio, camera frames, or GPU buffers.
+does not retain raw audio, camera frames, or GPU buffers. The foreground capability heartbeat keeps
+`/sense` present with `capability_heartbeat.active=true`; the Mac witness merges that heartbeat into
+the latest rich summary instead of treating it as a fresh mic/camera/GPU sample.
 
 The local Mac witness is also a discoverable channel. Both `mac-witness-server.py` and
 `coherence-sense-eval.py` advertise `_hati-witness._tcp` on the LAN and serve

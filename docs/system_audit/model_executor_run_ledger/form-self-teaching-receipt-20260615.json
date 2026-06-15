@@ -1,0 +1,15 @@
+{
+  "task_id": "2026-06-15-form-self-teaching-receipt",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord release audio-latency-metrics-retune",
+    "coord claim form-self-teaching-receipt \"Add a narrow Form-native coding-act/self-teaching receipt floor that connects source listening, patch/recipe speaking, verifier feedback, and learned deltas; avoid live-cycle, oracle-distillation, Android audio, and broad compiler lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a Form-native coding-act receipt floor to code-tool-learning: source surface listening, Form patch recipe speaking, verifier receipts, CHOICE-RECEIPT attachment, and learned trust delta are now one validated self-teaching row. The focused code-tool-learning band ratcheted from 131071 to 262143 four-way."
+}

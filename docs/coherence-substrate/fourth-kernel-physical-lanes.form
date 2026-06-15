@@ -24,7 +24,7 @@
     "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
 
   (floor
-    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, and records real host/resource stdout or artifacts for the currently available physical lanes.")
+    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, records real host/resource stdout or artifacts for the currently available physical lanes, and now carries a Mac+Android native receipt channel over adb-forward TCP.")
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
@@ -66,6 +66,7 @@
       (binary-format mach-o)
       (assembly-surface mach-o-relocatable+arm64-asm)
       (form-native-object form-macho)
+      (core-axiom-channel core-axiom-native-receipt)
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst)
@@ -77,11 +78,12 @@
       (assembly-surface elf-relocatable+aarch64-asm)
       (form-native-object form-elf)
       (form-native-executable form-elf-exec)
+      (core-axiom-channel core-axiom-native-receipt)
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
       (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated Vulkan+OpenGL-ES NNAPI+vendor-DSP-delegates unsupported-MLX)
-      (floor "Android executable shape is Form-native and inspectable; Docker Linux/arm64 executes the image for stdout/stderr/exit; an authorized Android arm64 device executes the same image through adb with stdout/stderr/exit receipt")))
+      (floor "Android executable shape is Form-native and inspectable; Docker Linux/arm64 executes the image for stdout/stderr/exit; an authorized Android arm64 device executes the same image through adb with stdout/stderr/exit receipt; the phone also runs a generated native receipt binary that exchanges a bounded verifier receipt with a generated Mac binary over adb-forward TCP")))
 
   (missing-physical-samples
     (tts-stt-loopback

@@ -1,0 +1,15 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim core-axiom-apk-receipt \"Next carrier lane after PR #3185: inspect/prove APK or Android app packaging surface for the core-axiom native receipt binary/lib; avoid Wi-Fi/non-adb transport, sensor/raw media, BML/compiler, and world-model lanes.\"",
+    "scripts/android_core_axiom_apk_receipt.sh 2048 8",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/core-axiom-apk-receipt.fk form-stdlib/tests/core-axiom-apk-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh core-axiom-apk-receipt"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a local APK native-library receipt. The proof script generated an Android arm64-v8a shared object, staged it into Coherence Sense jniLibs for a clean debug APK build, verified the APK contains lib/arm64-v8a/libcoherence_core_axiom_receipt.so, and checked the extracted entry SHA matches the generated library SHA. The Form receipt band returns 4095 four-way. JNI load/call and installed-app execution remain next walls."
+}

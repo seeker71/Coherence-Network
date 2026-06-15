@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/adam-bias-correction-floor-20260615",
+  "commit_scope": "Add a bounded Adam bias-correction floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-models",
+    "federated-slices",
+    "model-data-sharing",
+    "fourth-kernel-wall-groups",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "adam-bias-correction-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-wall-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_adam_bias_correction_floor.json",
+    "docs/system_audit/model_executor_run_ledger/adam-bias-correction-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/optimizer-step.fk",
+    "form/form-stdlib/tests/adam-bias-correction-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_adam_bias_correction_floor.json",
+    "docs/system_audit/model_executor_run_ledger/adam-bias-correction-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/optimizer-step.fk",
+    "form/form-stdlib/tests/adam-bias-correction-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim adam-bias-correction-floor \"Next model-kernel wall after adam-step-cell: add bounded fixed-point Adam bias-correction receipts over existing moment cells; avoid tensor autodiff, live mesh transport, durable eval query, payload merkle proof, privacy/conflict, router/audio, and BML compiler lanes.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk form-stdlib/tests/adam-step-cell-band.fk form-stdlib/tests/adam-bias-correction-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh adam-step-cell adam-bias-correction",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+model-vitality.fk+optimizer-step.fk+autodiff-gradient.fk+adam-step-cell-band.fk+adam-bias-correction-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY adam-step-cell` and `PASS-4WAY adam-bias-correction`."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-native model kernels now have bounded Adam bias-corrected moment and weight update receipts.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk form-stdlib/tests/adam-step-cell-band.fk form-stdlib/tests/adam-bias-correction-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh adam-step-cell adam-bias-correction"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/optimizer-step.fk",
+    "form/form-stdlib/tests/adam-bias-correction-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/system_audit/model_executor_run_ledger/adam-bias-correction-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "adam-bias-correction-floor",
+    "gate": "Bias-corrected optimizer receipts must exist before training-loop and model-layer claims can treat Adam optimizer state as first-class Form-native model-kernel status.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add tensor autodiff gradient cells, live chunk payload merkle proof, mesh transport, durable eval query, and privacy/conflict receipts as separate bounded lanes."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Bounded Adam first/second moment cells existed, while production Adam bias correction remained a named next wall.",
+    "current_observed_floor": "adam-bias-correction returns 4095 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "adam-bias-correction -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "tensor-scale autodiff",
+      "live training loop authority",
+      "live mesh slice transport",
+      "chunk-range payload merkle proof over a live carrier",
+      "durable eval-receipt query path",
+      "privacy boundary",
+      "conflict policy"
+    ]
+  }
+}

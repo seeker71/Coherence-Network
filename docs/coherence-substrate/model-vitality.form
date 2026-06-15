@@ -55,18 +55,20 @@
 ;   scripts/model_vitality_native_http_capture_probe.sh source-compiles core,
 ;   runs the Go, Rust, TypeScript, and emitted fkwu kernels. On
 ;   2026-06-14T15:38:53Z Go/Rust/TypeScript fetched the public API pulse and
-;   runtime-summary HTTPS endpoints with native http_get and returned verdict
+;   health HTTPS endpoints with native http_get and returned verdict
 ;   127; all four kernels fetched http://example.com/ through native http_get
 ;   and returned verdict 63. All four kernels also fetched
 ;   https://example.com/ through native http_get and returned verdict 63; fkwu
 ;   used runtime-loaded OpenSSL-compatible TLS, not a shell/Python carrier. All
-;   four kernels sent X-Form-Trace: codex-request-header-20260614 to
-;   https://httpbin.org/headers and saw the header echoed in the body, returning
+;   four kernels sent X-Form-Trace: codex-request-header-20260615 to
+;   https://postman-echo.com/headers and saw the header echoed in the body, returning
 ;   request-header verdict 127. The
 ;   same probe now proves fourth-runtime-authority -> 127: fkwu fetched the
-;   production runtime-summary endpoint, captured 14 response headers, read the
+;   production health endpoint, captured production response headers, read the
 ;   native-kernel router and x-form-python-authority=false header through
 ;   model-vitality rows, and carried the production authority receipt by itself.
+;   The fourth arm now measures elapsed request duration inside the native
+;   carrier and the live all-kernel HTTP/HTTPS witness requires duration_ms > 0.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -92,9 +94,9 @@
 ;   headers. Go, Rust, TypeScript, and the emitted fourth arm now prove direct
 ;   kernel-native HTTP and verified HTTPS body plus response-header capture into
 ;   the same dict field shape. Explicit request-header rows also forward through
-;   all kernels and echo back from a live HTTPS endpoint. The next carrier lift
-;   is measured fourth-arm duration, larger body policy, and streaming
-;   backpressure receipts.
+;   all kernels and echo back from a live HTTPS endpoint. The emitted fourth arm
+;   also measures native elapsed duration into the shared duration_ms field. The
+;   next carrier lift is larger body policy and streaming backpressure receipts.
 ;
 ; REVIEW TRACE:
 ;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
@@ -114,9 +116,8 @@
 ;   production pulse/runtime telemetry rows.
 ;   Remaining gaps: full safetensors header parsing for arbitrary model files,
 ;   real MLX tensor package ingest beyond the tiny carrier witness,
-;   measured fourth-arm duration, larger native HTTP body policy,
-;   streaming/backpressure receipts, and large multi-segment model sharing by
-;   merkle across mesh peers.
+;   larger native HTTP body policy, streaming/backpressure receipts, and large
+;   multi-segment model sharing by merkle across mesh peers.
 
 (model-vitality-surface
   (floor
@@ -138,8 +139,8 @@
     (native-carrier-witness "scripts/model_carrier_rehash_audit.sh")
     (production-live-witness "scripts/model_vitality_production_ingest_probe.sh")
     (native-http-live-witness "scripts/model_vitality_native_http_capture_probe.sh")
-    (all-kernel-plaintext-http-live-witness "scripts/model_vitality_native_http_capture_probe.sh -> go=63 rust=63 typescript=63 fourth=63")
-    (all-kernel-verified-https-live-witness "scripts/model_vitality_native_http_capture_probe.sh -> go=63 rust=63 typescript=63 fourth=63")
+    (all-kernel-plaintext-http-live-witness "scripts/model_vitality_native_http_capture_probe.sh -> go=63 rust=63 typescript=63 fourth=63 duration_ms>0")
+    (all-kernel-verified-https-live-witness "scripts/model_vitality_native_http_capture_probe.sh -> go=63 rust=63 typescript=63 fourth=63 duration_ms>0")
     (release-health smallest-focused-proof-first))
   (north-star
     (source-of-truth substrate-cells)

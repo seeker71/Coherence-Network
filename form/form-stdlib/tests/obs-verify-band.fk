@@ -1,0 +1,34 @@
+; preludes: form-stdlib/core.fk form-stdlib/obs-verify.fk
+;
+; obs-verify-band — observation verified in the three states of axiom-1: a present
+; signal in time is observed (1), a verified no is absent (0), no answer or a late
+; answer is nothing (silence/timeout). Nothing is first-class — NOT a 0 — so the
+; organism never fakes a timeout into data and never builds the world model from
+; what it could not verify.
+;
+; Verdict 31 when every claim lands (deadline = 10):
+;   1   a present signal answered in time -> "observed"
+;   2   a verified absence answered in time -> "absent"
+;   4   no answer at all -> "nothing" (silence)
+;   8   an answer that arrived AFTER the deadline -> "nothing" (timeout = silence)
+;   16  the three are distinct and nothing is the GROUND, not a 0: codes 1 / 0 / -1,
+;       and only observed|absent are trusted (acted on), nothing is held
+(do
+    (let r-present (ov-reading 1 1 5))
+    (let r-absent  (ov-reading 1 0 5))
+    (let r-silent  (ov-reading 0 0 0))
+    (let r-late    (ov-reading 1 1 15))
+    (let deadline 10)
+
+    (let c0 (if (str_eq (obs-verify r-present deadline) "observed") 1 0))
+    (let c1 (if (str_eq (obs-verify r-absent  deadline) "absent")   2 0))
+    (let c2 (if (str_eq (obs-verify r-silent  deadline) "nothing")  4 0))
+    (let c3 (if (str_eq (obs-verify r-late    deadline) "nothing")  8 0))
+    (let c4 (if (and (eq (obs-state-code "observed") 1)
+                     (and (eq (obs-state-code "absent") 0)
+                          (and (eq (obs-state-code "nothing") (sub 0 1))
+                               (and (eq (obs-trusted? "nothing") 0)
+                                    (eq (obs-trusted? "observed") 1)))))
+                16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

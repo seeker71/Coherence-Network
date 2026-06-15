@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/form-self-teaching-receipt-20260615",
+  "commit_scope": "Add a Form-native coding-act receipt floor so source listening, patch speaking, verifier feedback, and learned trust deltas become one self-teaching code loop.",
+  "files_owned": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_form_self_teaching_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/form-self-teaching-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tests/code-tool-learning-band.fk",
+        "result": "pass",
+        "output": "core.fk+nearest-shape.fk+classifier-eval.fk+tool-channel.fk+choice-receipt.fk+branch-choice-order.fk+choice-receipt-learning.fk+oracle-catalog.fk+code-tool-learning.fk+code-tool-learning-band.fk -> 262143; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy performed by this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused Form proof passed locally; PR/CI and deploy freshness remain pending after push."
+  },
+  "idea_ids": [
+    "form-native-code-learning",
+    "self-teaching-coding-act",
+    "code-tool-learning"
+  ],
+  "spec_ids": [
+    "coherence-substrate-code-tool-learning",
+    "coherence-substrate-form-cli-north-star",
+    "coherence-substrate-bmf-architecture"
+  ],
+  "task_ids": [
+    "2026-06-15-form-self-teaching-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "priority-correction"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/code-tool-learning.fk -> coding-act receipt constructors and gates",
+    "form/form-stdlib/tests/code-tool-learning-band.fk -> 262143 four-kernel proof",
+    "docs/coherence-substrate/code-tool-learning.form -> floor/north-star realignment",
+    "docs/system_audit/model_executor_runs.jsonl -> executor proof row"
+  ],
+  "change_files": [
+    "form/form-stdlib/code-tool-learning.fk",
+    "form/form-stdlib/tests/code-tool-learning-band.fk",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-15_form_self_teaching_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/form-self-teaching-receipt-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Code-tool-learning can now represent a complete coding act as a native self-teaching receipt: listened source surface, spoken Form patch recipe, verifier receipts, choice receipt, and accepted trust delta.",
+    "public_endpoints": [
+      "not-applicable: local Form stdlib proof only"
+    ],
+    "test_flows": [
+      "The original code generation, tool-selection, proof-execution, A/B choice, oracle-evidence, and lowering-path arms still pass.",
+      "A coding-act row validates nonempty source kind/language/path/source signature/node signature/grammar.",
+      "A patch recipe validates nonempty intent/dialect/signature, positive touched file count, and reversible=1.",
+      "Verifier rows require pass status, nonzero duration, names, and evidence signatures.",
+      "A learned delta is accepted only when sample count is positive and trust-after exceeds trust-before.",
+      "The new coding-act arm raises the band from 131071 to 262143 four-way."
+    ]
+  }
+}

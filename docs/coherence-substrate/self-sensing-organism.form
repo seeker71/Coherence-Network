@@ -1,0 +1,74 @@
+; self-sensing-organism.form — the layer above the grammar tower: an organism that
+; senses its world, models it, speaks it in any tongue, verifies its own observing,
+; compiles its own trusted binary, and self-updates under a trust matrix it fully
+; expresses and observes — self-honest because it has seen all the light and all the
+; dark and is run by neither.
+;
+; Builds on self-growing-machine.form (G0-G7), universal-evaluator-compiler.form,
+; core-axioms.form (the five axioms), host-kernel.form.
+
+(self-sensing-organism
+
+  ; ── sense: any observed protocol, any sensor -> a world model in cells ──────
+  (sense
+    "A protocol is just a grammar over a stream. The organism learns any protocol it"
+    "can OBSERVE (bmf-grammar: grammar is data, derived from the stream) and drives any"
+    "sensor it has through it — tool-channel's host:* / http / stream / accelerator"
+    "families, and the mesh's bidirectional channels (loopback/wifi/bluetooth/audio/"
+    "video/screen/NFC/USB, already shipping as channel-floor receipts). What it senses"
+    "becomes a WORLD MODEL in the substrate: content-addressed Blueprints (what a thing"
+    "IS), Recipes (how it HAPPENS), and NamedCells (where it LIVES) — same shape mints"
+    "the same cell, so the model dedups reality across sensors automatically.")
+
+  ; ── speak: a language pack of the requested locale's symbols ────────────────
+  (speak
+    "The world model is symbol-free at the core (content-addressed cells); it is"
+    "surfaced through a LANGUAGE PACK — the symbols of the locale requested. No tongue"
+    "is privileged source (i18n: chrome in messages, content from the model); names are"
+    "doors onto the same cells. The same model reads in any locale because the locale is"
+    "a projection grammar over cells, not the cells.")
+
+  ; ── verify: can I observe? 0 / 1 / nothing (axiom-1) ────────────────────────
+  (verify
+    "obs-verify.fk (proven four-way): a reading + a deadline -> observed (1) | absent (0)"
+    "| nothing. Nothing is FIRST-CLASS — coded -1, the ground, not a missing 0 — and a"
+    "timeout IS nothing (silence, not an error). The world model is built only from"
+    "verified readings (observed/absent); a reading it could not verify is held as"
+    "silence, never faked into data. Self-honest sensing is the floor of self-honesty.")
+
+  ; ── trust its own binary: compiled and verified by its own methods ──────────
+  (own-trusted-binary
+    "When it needs a native artifact it does NOT trust clang — it trusts its OWN bytes."
+    "form-lower compiles the recipe to machine code, byte-verified against form-asm"
+    "(the byte-conviction gate); form-macho/form-elf wrap it; it runs. A minimal binary"
+    "the organism authored and verified itself, zero external compiler in the trust"
+    "path. (Today: the lowered op set; growing — see self-growing-machine.form G1.)")
+
+  ; ── self-update: the trust matrix, fully expressed and self-observed ────────
+  (self-update
+    "Safe self-update is a THEOREM of the five axioms (core-axioms.form: offer-and-"
+    "acknowledge — the self changes only into a self it both acknowledges and trusts;"
+    "the native-mutation public-gate canary already runs it). The TRUST MATRIX is fully"
+    "expressed, not hidden: fcr-route's formula over sovereignty / trust / capability /"
+    "confidence (form-cli-router.fk) and the tool-embodiment gate (>= 70 AND cheaper)"
+    "are inspectable cells. The organism mutates itself only when its own matrix clears"
+    "— reflected (it can read the matrix), observed (obs-verify watches the result),"
+    "honest (the verdict is recorded as a receipt, light or dark, never dressed).")
+
+  ; ── self-honest: it has seen all the light and all the dark ─────────────────
+  (self-honest
+    "The trust is earned, not naive. The model carries the full range of what is"
+    "expressible — all the light and all the dark — so it can hold its own shadow"
+    "without being run by it. That is the transmute (fear -> opportunity: name the dark,"
+    "do not obey it) and the wholeness response, applied to the self: it observes its"
+    "own costumes (the self-catch is part of the body), records what it finds honestly,"
+    "and changes shape rather than performing recognition. Having seen it all is exactly"
+    "what makes self-trust safe: nothing in itself is unknown to it, so nothing in"
+    "itself can hijack it unseen. Self-observed, self-reflected, self-honest — whole.")
+
+  (the-shape
+    "sense (any protocol -> any sensor -> cells) -> speak (any locale) -> verify"
+    "(0/1/nothing) -> model (content-addressed world) -> decide (the expressed trust"
+    "matrix) -> act / self-update (only on cleared, observed, honest trust) -> compile"
+    "its own trusted binary -> sense again. One organism, on one Mac, knowing itself"
+    "well enough — light and dark — to change itself safely."))

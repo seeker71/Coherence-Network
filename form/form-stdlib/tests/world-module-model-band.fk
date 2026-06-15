@@ -1,0 +1,110 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/world-module-model.fk
+;
+; world-module-model-band — a trusted world module with observable vulnerability
+; reveal, identity animation, satsang participation, and binary-loadable shape.
+;
+; Band verdict 1023 when every claim lands:
+;   1     identity liveness is observed, not inferred from silence
+;   2     the claim enters the model only as observed/absent, never nothing
+;   4     vulnerability reveal is a witnessed offered-mode receipt
+;   8     the satsang field is aligned before the core follows
+;   16    trusted core follows only above trust floor
+;   32    honored core witnesses affirm and invasive project is dropped
+;   64    missing vulnerability reveal refuses with a visible reason
+;   128   stale identity refuses with a visible reason
+;   256   low trust refuses with a visible reason
+;   512   identity animation shows presence -> vulnerability -> trusted-core
+(do
+    (let offer (sat-circle-interface))
+    (let observers (list (m-witness) (m-reflect) (m-be-seen) (m-project)))
+    (let identity-readings (list (ov-reading 1 1 5) (ov-reading 1 1 6)))
+    (let live-identity (wmm-identity "core:self" 10 12 10 5 identity-readings))
+    (let stale-identity (wmm-identity "core:self" 1 20 10 5 identity-readings))
+    (let field
+        (list
+            (sf-member "trusted-core" (list (m-witness) (m-reflect) (m-be-seen) (m-invite)))
+            (sf-member "world-module" (list (m-be-seen) (m-invite)))))
+    (let claim (ov-reading 1 1 5))
+    (let vulnerability
+        (wmm-vulnerability
+            "uncertain-lane"
+            (ov-reading 1 1 7)
+            10
+            3
+            (m-be-seen)
+            "model names the gap before asking to be followed"))
+    (let hidden-vulnerability
+        (wmm-vulnerability
+            "hidden-gap"
+            (ov-reading 0 0 0)
+            10
+            3
+            (m-be-seen)
+            "silence is not a reveal"))
+    (let model (wmm-model "world-module" live-identity claim 10 (list vulnerability) field 91 80))
+    (let hidden-model (wmm-model "world-module" live-identity claim 10 (list hidden-vulnerability) field 91 80))
+    (let stale-model (wmm-model "world-module" stale-identity claim 10 (list vulnerability) field 91 80))
+    (let low-trust-model (wmm-model "world-module" live-identity claim 10 (list vulnerability) field 60 80))
+
+    (let c0
+        (wmm-bool-score
+            (and (wmm-identity-live? live-identity 10)
+                 (not (wmm-identity-live? (wmm-identity "silent" 10 12 10 5 (list (ov-reading 0 0 0))) 10)))
+            1))
+    (let c1
+        (wmm-bool-score
+            (and (str_eq (wmm-claim-verdict model) "observed")
+                 (not (wmm-claim-trusted?
+                    (wmm-model "late-world" live-identity (ov-reading 1 1 15) 10 (list vulnerability) field 91 80))))
+            2))
+    (let c2
+        (wmm-bool-score
+            (and (wmm-vulnerability-observed? vulnerability offer)
+                 (not (wmm-vulnerability-observed?
+                    (wmm-vulnerability "projected-gap" (ov-reading 1 1 7) 10 3 (m-project) "not offered") offer)))
+            4))
+    (let c3
+        (wmm-bool-score
+            (and (wmm-satsang-ready? model)
+                 (not (wmm-satsang-ready?
+                    (wmm-model "one-stance" live-identity claim 10 (list vulnerability)
+                        (list (sf-member "only-listener" (list (m-witness) (m-reflect))))
+                        91 80))))
+            8))
+    (let c4
+        (wmm-bool-score
+            (and (wmm-core-follow? model offer)
+                 (not (wmm-core-follow? low-trust-model offer)))
+            16))
+    (let w (wmm-core-witness model observers offer))
+    (let c5
+        (wmm-bool-score
+            (and (eq (sat-affirmed w) 3)
+                 (and (eq (add (sat-affirmed w) (add (sat-dissented w) (sat-silent w))) 3)
+                      (wmm-core-survives? model observers offer)))
+            32))
+    (let c6
+        (wmm-bool-score
+            (and (not (wmm-core-follow? hidden-model offer))
+                 (str_eq (wmm-core-reason hidden-model offer) "vulnerability-not-revealed"))
+            64))
+    (let c7
+        (wmm-bool-score
+            (and (not (wmm-core-follow? stale-model offer))
+                 (str_eq (wmm-core-reason stale-model offer) "identity-not-live"))
+            128))
+    (let c8
+        (wmm-bool-score
+            (and (not (wmm-core-follow? low-trust-model offer))
+                 (str_eq (wmm-core-reason low-trust-model offer) "trust-below-floor"))
+            256))
+    (let animation (wmm-identity-animation model offer))
+    (let c9
+        (wmm-bool-score
+            (and (eq (len animation) 3)
+             (and (str_eq (wmm-frame-stage (nth animation 0)) "presence")
+              (and (str_eq (wmm-frame-state (nth animation 0)) "fresh")
+               (and (str_eq (wmm-frame-state (nth animation 1)) "revealed")
+                    (str_eq (wmm-frame-state (nth animation 2)) "follow")))))
+            512))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
