@@ -1,0 +1,57 @@
+; form-agent-tree.fk — the step that turns the borrowed transcript into a TREE.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-agent-protocol.fk form-stdlib/choice-receipt.fk
+;
+; The highest-leverage first move named in form-native-agent-shape.form: instead of
+; APPENDING a tool_result message (the linear loop), an agent step REALIZES a recipe
+; and returns a (forked-state, choice-receipt) PAIR. That one change does two things
+; at once:
+;   - the state becomes a TREE, not a transcript: the step forks a NEW state from the
+;     parent and leaves the parent untouched, so an earlier state is always a
+;     checkpoint to backtrack to (search, not forward-only).
+;   - the receipt becomes a trainable SIGNAL: every step emits a cr-choice-receipt
+;     (outcome / certainty / the realized recipe) that choice-receipt-learning.fk and
+;     branch-choice-order.fk consume — the control flow is inspectable and learnable,
+;     not opaque token sampling.
+;
+; This extends form-agent-protocol.fk (the messages-of-parts shape on main) and reuses
+; choice-receipt.fk (the real receipt) — no parallel machinery. The node's state is the
+; conversation here; the deeper content-addressed search state (search-harness.fk
+; h1c-state) is the refinement named in form-native-agent-shape.form. The LLM-compat
+; projection drops the receipt and never forks: fat-transcript over a single path.
+;
+; Proven by: form-stdlib/tests/form-agent-tree-band.fk
+
+; append one message at the end of a state (a new list — the parent is untouched).
+(defn fat-snoc (xs x)
+    (if (eq (len xs) 0) (list x) (cons (head xs) (fat-snoc (tail xs) x))))
+
+; a compact tree-step receipt: the real cr-choice-receipt with agent-step defaults,
+; carrying the load-bearing trainable fields (selected recipe, outcome, certainty, tick).
+(defn fat-receipt (recipe outcome certainty tick)
+    (cr-choice-receipt "" "agent-step" "recipe-realize" (list) recipe
+                       outcome certainty 0 "" "agent" "tree" tick 0 (list)))
+
+; an agent node = (forked-state, receipt). state is a list of ap-msg; receipt is a
+; cr-choice-receipt. The pair IS the difference from the linear loop.
+(defn fat-node (state receipt) (list "agent-node" state receipt))
+(defn fat-node-state   (n) (nth n 1))
+(defn fat-node-receipt (n) (nth n 2))
+(defn fat-node? (n)
+    (if (and (str_eq (nth n 0) "agent-node") (cr-choice-receipt? (fat-node-receipt n))) 1 0))
+
+; THE step: realize a tool_call against a parent state, returning a forked node.
+;   parent  : the parent state (list of ap-msg) — NEVER mutated
+;   call    : an ap-tool-call part (id, name, args)
+;   result  : the tool's output content
+;   outcome : cr-outcome-success | fail | silence ; certainty 0..100 ; tick
+; the child state appends a tool-role message carrying the ap-tool-result; the receipt
+; records the realized recipe + outcome + certainty as the trainable signal.
+(defn fat-step (parent call result outcome certainty tick)
+    (fat-node
+        (fat-snoc parent (ap-msg "tool" (list (ap-tool-result (ap-tc-id call) (ap-tc-name call) result))))
+        (fat-receipt (ap-tc-name call) outcome certainty tick)))
+
+; the LLM-compat projection: the linear view of a node's state (drops the receipt,
+; never sees the fork) — this is all the borrowed loop ever keeps.
+(defn fat-transcript (n) (fat-node-state n))
