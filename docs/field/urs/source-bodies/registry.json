@@ -3,11 +3,11 @@
   "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
   "root_keys": {
     "analysis_root": {
-      "default_path": "/Users/ursmuff/CoherenceFieldAnalysis",
+      "default_path": "~/CoherenceFieldAnalysis",
       "description": "Local analysis workspace for extracted source bodies."
     },
     "downloads_dir": {
-      "default_path": "/Users/ursmuff/Downloads",
+      "default_path": "~/Downloads",
       "description": "Local Downloads folder holding bulky export archives and source PDFs."
     }
   },

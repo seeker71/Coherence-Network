@@ -10,5 +10,5 @@
     "chrome": 167
   },
   "errors": [],
-  "output": "/Users/ursmuff/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl"
+  "output": "~/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl"
 }

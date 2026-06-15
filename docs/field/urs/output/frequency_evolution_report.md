@@ -1,6 +1,6 @@
 # Frequency Evolution and Coherence
 
-Generated from `/Users/ursmuff/CoherenceFieldAnalysis/output/ten_year_events.jsonl`. This report does not use recency weighting; it compares each time period on its own evidence.
+Generated from `~/CoherenceFieldAnalysis/output/ten_year_events.jsonl`. This report does not use recency weighting; it compares each time period on its own evidence.
 
 Dated events used: 27443
 
