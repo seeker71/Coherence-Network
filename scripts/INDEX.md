@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 250
+**Total files**: 251
 
 | File | Purpose |
 |---|---|
@@ -139,6 +139,7 @@
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
 | [meeting_companion.sh](meeting_companion.sh) | meeting_companion.sh — a meeting companion that LISTENS (STT), DECIDES whether |
 | [metal_backprop_audit.sh](metal_backprop_audit.sh) | metal_backprop_audit.sh — the LEARNING KERNEL on Metal (M4 Max GPU witness). |
+| [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
