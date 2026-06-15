@@ -1,0 +1,45 @@
+; arch-joint.fk — the architect searches the JOINT (depth × width) space and crowns the MINIMAL-cost
+; architecture that fits the task. arch-gen discovers depth, arch-capacity discovers width; this composes
+; both into one search over a grid of (depth, width) candidates, trains each over the dataset, and keeps the
+; lowest-cost candidate whose loss clears the fit threshold — Occam's razor over architectures: the smallest
+; model that solves the task, not the biggest that can. Cost is depth·width (a compute proxy); ties keep the
+; first-found at that cost.
+;
+; A candidate (d, w) builds a depth-d stack of width-w FFN-residual layers (ac-ffn-layer), trained by the
+; multi-example engine (ac-train). Reuses arch-capacity.fk's layer + training; only the joint search is new.
+;
+; Preludes: transformer-numerics.fk transformer-block.fk transformer-backprop.fk arch-capacity.fk
+; Proven by: form-stdlib/tests/arch-joint-band.fk
+
+(do
+    ; a (depth, width) architecture: a stack of `d` width-`w` FFN-residual layers at input dim `dim`.
+    (defn aj-stack (d w dim seed)
+        (if (eq d 0) (empty) (cons (ac-ffn-layer dim w seed) (aj-stack (sub d 1) w dim (add seed 13.0)))))
+    (defn aj-arch (d w dim seed) (aj-stack d w dim seed))
+
+    ; fitness = total dataset loss after training; cost = depth·width.
+    (defn aj-fit (d w dim seed data lr eps epochs)
+        (ac-set-loss (ac-train (aj-arch d w dim seed) data lr eps epochs) data eps))
+    (defn aj-cost (d w) (mul d w))
+    (defn aj-fits? (d w dim seed data lr eps epochs efit)
+        (if (lt (aj-fit d w dim seed data lr eps epochs) efit) 1 0))
+
+    ; --- SEARCH the grid of (d, w) candidates; keep the lowest-cost candidate that fits. ---
+    (defn aj-cand-d (c) (nth c 0))
+    (defn aj-cand-w (c) (nth c 1))
+    (defn aj-search-acc (cands dim seed data lr eps epochs efit bd bw bcost)
+        (if (eq (len cands) 0) (list bd bw)
+            (if (and (eq (aj-fits? (aj-cand-d (head cands)) (aj-cand-w (head cands)) dim seed data lr eps epochs efit) 1)
+                     (lt (aj-cost (aj-cand-d (head cands)) (aj-cand-w (head cands))) bcost))
+                (aj-search-acc (tail cands) dim seed data lr eps epochs efit
+                               (aj-cand-d (head cands)) (aj-cand-w (head cands))
+                               (aj-cost (aj-cand-d (head cands)) (aj-cand-w (head cands))))
+                (aj-search-acc (tail cands) dim seed data lr eps epochs efit bd bw bcost))))
+    ; returns (best-d best-w) — the minimal-cost fitting architecture, or (0 0) if none fit.
+    (defn aj-search (cands dim seed data lr eps epochs efit)
+        (aj-search-acc cands dim seed data lr eps epochs efit 0 0 999999))
+    (defn aj-best-d (r) (nth r 0))
+    (defn aj-best-w (r) (nth r 1))
+    (defn aj-best-cost (r) (mul (nth r 0) (nth r 1)))
+
+    0)
