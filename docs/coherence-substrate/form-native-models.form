@@ -307,10 +307,15 @@
 ;   routing wins BOTH regions 8/8 — the routing payoff, measured: we SEE which kind wins where (mesh the
 ;   diffusion region, attn the attention region). The honest finding the band records: raw confidence
 ;   mis-routes on tiny data; the gating network that learns from the no-free-lunch research is what beats
-;   the single experts. OPEN, by the same appended-row discipline: new expert KINDS — a compute expert
-;   (runs recipes), short-term (water) and long-term (ice) MEMORY experts (substrate-thermodynamics.form),
-;   a recipe-GENERATING expert (the dynamic-recipe advantage) — drop in as rows and the gate discovers
-;   them; champion-challenger.fk flips serving authority to a challenger kind only on earned competition.
+;   the single experts. OPEN, by the same appended-row discipline — and the first new KIND is SHIPPED:
+;   a COMPUTE expert (moe-compute-band.fk → 63 three-way) whose core RUNS an executable recipe (the signed
+;   alternating fold a-b+c-d), winning a region where the multiset/mean/max/local-structure are all identical
+;   across classes so diffusion, attention, CNN, and the memorizer every score 0 — only the computation
+;   separates it. The three-kind MoE (diffusion + attention + compute) routes each held-out input to its
+;   discovered specialist and scores 6/6, beating every single expert. Remaining KINDS by the same row
+;   discipline: short-term (water) and long-term (ice) MEMORY experts (substrate-thermodynamics.form), and a
+;   recipe-GENERATING expert (the dynamic-recipe advantage); champion-challenger.fk flips serving authority
+;   to a challenger kind only on earned competition.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
