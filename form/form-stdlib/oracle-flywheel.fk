@@ -1,0 +1,30 @@
+; oracle-flywheel.fk — the flywheel closed: ask native first, fall to the oracle
+; only when unsure, learn from samples until native handles the whole class.
+;
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/affine-corpus-fit.fk
+;
+; The body already has the two halves apart: the routing + the flip
+; (android-mesh-learning's aml-route-choice, form-cli-router "raised form-native's
+; confidence, flips agent-cli -> form-native") and the flywheel named
+; (form-cli-loop: "the more we use LLMs, the less we need them"); and the training
+; loop (affine-train / affine-corpus-fit) that raises native quality. This closes
+; the loop BETWEEN them.
+;
+; A question is routed to the ORACLE exactly when the native model is NOT confident
+; on it — its error on that query is above tolerance. So oracle-reliance over a
+; set of queries = the count the native model misses. Training the native model on
+; samples raises the confident count, dropping oracle calls. When it reaches zero,
+; native handles the whole class and the oracle retires for it.
+;
+; The honest lever is SAMPLES, not epochs: more epochs overfit a tiny set (the
+; reference showed native correct fall 3->1 at 80 epochs on 5 samples); more
+; SAMPLES generalize. This is the recipe/data split made measurable — the recipe
+; (the affine model + the descent) is fixed; the DATA (the ~100 samples for a
+; class) is what teaches it to retire the oracle.
+;
+; Proven by: form-stdlib/tests/oracle-flywheel-band.fk
+
+; oracle reliance over a query set: the queries the native model is NOT confident
+; on (|pred - y| > tol) route to the oracle. confident queries answer native.
+(defn of-oracle-calls (model test tol)
+    (sub (len test) (acf-native-correct model test tol)))
