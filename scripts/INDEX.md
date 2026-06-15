@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 251
+**Total files**: 253
 
 | File | Purpose |
 |---|---|
@@ -134,6 +134,7 @@
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
 | [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
+| [live_speech_loop_receipt.sh](live_speech_loop_receipt.sh) | live_speech_loop_receipt.sh - known text played over speaker, heard by live mics. |
 | [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |

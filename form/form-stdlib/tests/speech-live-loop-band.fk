@@ -1,0 +1,135 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk
+;
+; speech-live-loop-band - live speaker plus dual-mic speech receipt floor.
+;
+; Floor: a known text is played through the Mac speaker, heard by the Mac mic,
+; transcribed locally, and co-witnessed by Android mic telemetry in the same
+; window.
+;
+; Verdict 255:
+;   1     floor and north-star are present
+;   2     live dual-mic receipt passes
+;   4     missing Android mic samples blocks the receipt
+;   8     invalid teacher receipt blocks the live loop
+;   16    sample lowers onto speech:live-dual-mic
+;   32    feature carries Mac and Android mic metrics
+;   64    exemplar model learns the live loop label
+;   128   heldout near live loop classifies to the learned label
+(do
+    (let teacher
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "form native speech loop listens with two microphones"
+            "form native speech loop listens with two microphones"
+            100
+            93000
+            46400
+            2900
+            62000
+            410
+            "sha256:live-mac-mic-audio"
+            "sha256:live-transcript"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let low-teacher
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "form native speech loop listens with two microphones"
+            "unrelated"
+            10
+            93000
+            46400
+            2900
+            62000
+            410
+            "sha256:live-mac-mic-audio"
+            "sha256:live-transcript"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let live
+        (sml-live-speech-loop-receipt
+            teacher
+            "mac-speaker"
+            "mac-microphone"
+            16
+            1100
+            4400
+            2100
+            1
+            (sml-live-speech-loop-floor)
+            (sml-live-speech-loop-north-star)))
+    (let no-android
+        (sml-live-speech-loop-receipt
+            teacher
+            "mac-speaker"
+            "mac-microphone"
+            0
+            0
+            0
+            0
+            0
+            (sml-live-speech-loop-floor)
+            (sml-live-speech-loop-north-star)))
+    (let bad-teacher
+        (sml-live-speech-loop-receipt
+            low-teacher
+            "mac-speaker"
+            "mac-microphone"
+            16
+            1100
+            4400
+            2100
+            1
+            (sml-live-speech-loop-floor)
+            (sml-live-speech-loop-north-star)))
+    (let sample (sml-live-speech-loop-sample "live-dual-mic-loop" live))
+    (let model (sml-device (list sample)))
+    (let heldout
+        (sml-test-row
+            (list 100 61000 2200 4500 15 3000)
+            "live-dual-mic-loop"))
+
+    (let c0
+        (if (and
+                (gt (len (sml-live-speech-loop-floor)) 0)
+                (gt (len (sml-live-speech-loop-north-star)) 0))
+            1
+            0))
+    (let c1 (if (eq (sml-live-speech-loop-valid? live) 1) 2 0))
+    (let c2 (if (eq (sml-live-speech-loop-valid? no-android) 0) 4 0))
+    (let c3 (if (eq (sml-live-speech-loop-valid? bad-teacher) 0) 8 0))
+    (let c4
+        (if (and
+                (str_eq (sml-label sample) "live-dual-mic-loop")
+                (str_eq (sml-lane sample) "speech:live-dual-mic"))
+            16
+            0))
+    (let c5
+        (if (and
+                (gt (nth (sml-feature sample) 1) 0)
+                (and
+                    (gt (nth (sml-feature sample) 2) 0)
+                    (gt (nth (sml-feature sample) 4) 0)))
+            32
+            0))
+    (let c6
+        (if (str_eq
+                (ns-label (sml-live-speech-loop-feature live) model)
+                "live-dual-mic-loop")
+            64
+            0))
+    (let c7
+        (if (str_eq
+                (sml-l1-label (sml-test-feature heldout) model)
+                "live-dual-mic-loop")
+            128
+            0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
