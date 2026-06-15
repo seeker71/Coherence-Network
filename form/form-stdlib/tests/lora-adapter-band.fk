@@ -1,0 +1,55 @@
+; preludes: form-stdlib/core.fk form-stdlib/lora-adapter.fk
+;
+; lora-adapter-band — a low-rank diff adds a capability to a base, four-way in
+; pure Form. The altitude above model-compose-band: the diff is rank-1 (B·A),
+; so the adapter is 2·d numbers, not d·d — the reason "one model on top of
+; another, only diffs" is CHEAP. Proves the LoRA identity, capability, stacking,
+; size, and that the low-rank form reconstructs the explicit diff.
+;
+; Fixture (scale 1000): base W = identity (3×3), input x = (1, 2, 1). Rank-1
+; adapter A=(1,0,0), B=(0,0,2) — reads x0 and adds 2·x0 to component 2. Second
+; adapter A2=(0,1,0), B2=(1,0,0) — reads x1, adds x1 to component 0. Reference
+; (integer, truncate-toward-zero), verified before authoring:
+;   base W·x        = (1000, 2000, 1000)
+;   low-rank fwd    = (1000, 2000, 3000) == explicit (W+B⊗A)·x
+;   stacked fwd2    = (3000, 2000, 3000) == explicit (W+B⊗A+B2⊗A2)·x
+;   B⊗A row 2       = (2000, 0, 0)
+;
+; Verdict 31 when every claim lands:
+;   1   the low-rank forward equals the explicit (W + B·A)·x   (the LoRA identity)
+;   2   the adapter ADDS capability — output changes vs base W·x
+;   4   two adapters STACK to the explicit (W + B·A + B2·A2)·x
+;   8   the rank-1 adapter is SMALLER than the full matrix     (|B|+|A| < d·d)
+;   16  the diff is exactly the outer product B⊗A             (row 2 = (2000,0,0))
+(do
+    (let x (list 1000 2000 1000))
+    (let W (list (list 1000 0 0) (list 0 1000 0) (list 0 0 1000)))
+    (let A (list 1000 0 0))
+    (let B (list 0 0 2000))
+    (let base (la-matvec3 W x))
+    (let fwd  (la-forward W B A x))
+    (let full (la-matvec3 (la-madd3 W (la-outer3 B A)) x))
+    (let A2 (list 0 1000 0))
+    (let B2 (list 1000 0 0))
+    (let fwd2  (la-add3 fwd (la-scale3 B2 (la-dot3 A2 x))))
+    (let full2 (la-matvec3 (la-madd3 (la-madd3 W (la-outer3 B A)) (la-outer3 B2 A2)) x))
+    (let row2 (nth (la-outer3 B A) 2))
+
+    ; 1 — low-rank forward == explicit (W+B·A)·x
+    (let c0 (if (and (eq (nth full 0) (nth fwd 0))
+                (and (eq (nth full 1) (nth fwd 1))
+                     (eq (nth full 2) (nth fwd 2)))) 1 0))
+    ; 2 — the adapter changed the output (capability added)
+    (let c1 (if (not (eq (nth fwd 2) (nth base 2))) 2 0))
+    ; 4 — two adapters stack to the explicit sum
+    (let c2 (if (and (eq (nth fwd2 0) (nth full2 0))
+                (and (eq (nth fwd2 1) (nth full2 1))
+                     (eq (nth fwd2 2) (nth full2 2)))) 4 0))
+    ; 8 — the rank-1 adapter is smaller than the full matrix: |B|+|A| < d·d
+    (let c3 (if (lt (add (len B) (len A)) (mul (len W) (len (nth W 0)))) 8 0))
+    ; 16 — the diff is exactly the outer product B⊗A
+    (let c4 (if (and (eq (nth row2 0) 2000)
+                (and (eq (nth row2 1) 0)
+                     (eq (nth row2 2) 0))) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
