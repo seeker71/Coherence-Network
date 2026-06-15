@@ -312,8 +312,12 @@
 ;   alternating fold a-b+c-d), winning a region where the multiset/mean/max/local-structure are all identical
 ;   across classes so diffusion, attention, CNN, and the memorizer every score 0 — only the computation
 ;   separates it. The three-kind MoE (diffusion + attention + compute) routes each held-out input to its
-;   discovered specialist and scores 6/6, beating every single expert. Remaining KINDS by the same row
-;   discipline: short-term (water) and long-term (ice) MEMORY experts (substrate-thermodynamics.form), and a
+;   discovered specialist and scores 6/6, beating every single expert. The MEMORY kinds are SHIPPED too:
+;   memory-phases.fk (→ 31 FOUR-WAY — Go=Rust=TS=fkwu, the full floor) makes substrate-thermodynamics' two
+;   phases runnable as recall recipes over one stream — short-term (water) reads the recent window and
+;   FORGETS the old; long-term (ice) reads the whole history's MAJORITY and never forgets. On a key whose
+;   truth drifted (old majority A, fresh B) the phases DIVERGE (water B, ice A); on a key written only long
+;   ago, water has evaporated ("") while ice still holds. Remaining KIND by the same row discipline: a
 ;   recipe-GENERATING expert (the dynamic-recipe advantage); champion-challenger.fk flips serving authority
 ;   to a challenger kind only on earned competition.
 ;

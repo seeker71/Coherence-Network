@@ -1,0 +1,51 @@
+; memory-phases.fk — short-term (water) and long-term (ice) recall over one stream of writes.
+;
+; The two memory phases of substrate-thermodynamics.form, made runnable. A memory is one stream of
+; (key, value) writes, most recent at the head. Two phases READ it differently:
+;   SHORT-TERM (water) — the most recent value for a key within the last K writes. Plastic: it tracks
+;     drift, and it FORGETS — a key written only long ago has evaporated past the window, recall "".
+;   LONG-TERM (ice)   — the MAJORITY value for a key across the WHOLE history. Load-bearing: it ignores
+;     recent noise, holds the persistent truth, and NEVER forgets — one old write still recalls.
+; On a key whose truth DRIFTED (old majority A, recent B), the phases DIVERGE: water recalls B (now),
+; ice recalls A (the long-held). On a key written only long ago, water has evaporated while ice holds.
+; Same axis, same data — the phase is the choice. This is "short-term and long-term memory" as two
+; recall recipes over one substrate, not two stores.
+;
+; A memory = list of (key value) entries; mp-add cons's to the head so head = most recent.
+; Proven by: form-stdlib/tests/memory-phases-band.fk (three-way at validate.sh)
+
+(do
+    (defn mp-add (mem key value) (cons (list key value) mem))   ; a write — newest at the head
+    (defn mp-key (e) (nth e 0))
+    (defn mp-val (e) (nth e 1))
+
+    ; --- SHORT-TERM (water): the most recent value for key within the last K writes; "" if evaporated. ---
+    ; walk from the head (recent) up to K entries; first key-match is the freshest value. Past K → "".
+    (defn mp-short-in (mem key k)
+        (if (eq k 0) ""
+            (if (eq (len mem) 0) ""
+                (if (str_eq (mp-key (head mem)) key) (mp-val (head mem))
+                    (mp-short-in (tail mem) key (sub k 1))))))
+    (defn mp-short (mem key k) (mp-short-in mem key k))
+
+    ; --- LONG-TERM (ice): the MAJORITY value for key across ALL writes (persistence, noise-robust). ---
+    ; count every (key,value) over the whole history; the value with the most writes is the held truth.
+    (defn mp-count (mem key value n)
+        (if (eq (len mem) 0) n
+            (mp-count (tail mem) key value
+                (add n (if (str_eq (mp-key (head mem)) key)
+                           (if (str_eq (mp-val (head mem)) value) 1 0) 0)))))
+    (defn mp-major-acc (mem all key bid bcount)
+        (if (eq (len mem) 0) bid
+            (if (str_eq (mp-key (head mem)) key)
+                (if (gt (mp-count all key (mp-val (head mem)) 0) bcount)
+                    (mp-major-acc (tail mem) all key (mp-val (head mem)) (mp-count all key (mp-val (head mem)) 0))
+                    (mp-major-acc (tail mem) all key bid bcount))
+                (mp-major-acc (tail mem) all key bid bcount))))
+    (defn mp-long (mem key) (mp-major-acc mem mem key "" 0))
+
+    ; --- the two phases as memory EXPERTS: a recency reader and a persistence reader over one stream. ---
+    (defn mp-recall (mem key k phase)
+        (if (str_eq phase "water") (mp-short mem key k) (mp-long mem key)))
+
+    0)
