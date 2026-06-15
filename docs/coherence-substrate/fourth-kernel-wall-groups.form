@@ -15,8 +15,10 @@
   (current-floor
     (control-backtracking "form-control-backtracking-ml now proves the Form-native primitive vocabulary needed by model layers: if, recursion/fold, any/all, reversible cells, task states, match/fail/fail-cut/cut/stop/choice, capture, opt rollback, and star repetition.")
     (source-control-transfer "bml-native-source-control now proves bounded BML source control-transfer rows for break, continue, throw, and try/catch as Form-native stop/choice/fail/return effects.")
+    (dynamic-grammar-carrier "dynamic-grammar-carrier now proves one rule extension as data: selector registration, parse trace, and lower trace without a host-side source of truth.")
     (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form-stdlib/dynamic-grammar-carrier.fk + tests/dynamic-grammar-carrier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
 
   (group
@@ -32,10 +34,11 @@
 
   (group
     (id dynamic-grammar)
-    (status available)
+    (status active)
     (why "BMF/BML, full dynamic grammar support, NL grammars, audio grammars, and model-router grammars all require grammar rules to be carried as substrate data instead of frozen host-side assumptions.")
-    (current-floor grammar-recipes field-domain-grammars bmf-engine-backtracking)
-    (next-walls grammar-rule-carrier grammar-extension-receipt source-to-parser-table lowering-back-to-form)
+    (current-floor grammar-recipes field-domain-grammars bmf-engine-backtracking dynamic-grammar-carrier)
+    (closed-now grammar-rule-carrier grammar-extension-receipt parse-trace lower-trace)
+    (next-walls host-file-config-plugin-loading source-to-parser-table richer-rule-patterns lowering-back-to-form runtime-grammar-selector-fourth-admission)
     (parallel-card
       (goal "Add a fourth-kernel grammar carrier receipt for one dynamic rule extension and its parse/lower trace.")
       (files_allowed form/form-stdlib/grammar*.fk form/form-stdlib/field-*.fk form/form-stdlib/tests/*grammar*-band.fk docs/coherence-substrate/fourth-kernel-wall-groups.form)
