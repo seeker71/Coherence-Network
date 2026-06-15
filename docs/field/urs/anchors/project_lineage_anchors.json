@@ -5,13 +5,13 @@
       "date": "2024-06-22T08:17:31-06:00",
       "project": "Crypo-Coin-Coherency-Network",
       "event": "Earliest local commit found: initial draft.",
-      "evidence": ["local-git:/Users/ursmuff/source/Crypo-Coin-Coherency-Network e578d23"]
+      "evidence": ["local-git:~/source/Crypo-Coin-Coherency-Network e578d23"]
     },
     {
       "date": "2024-06-28T17:07:03-06:00",
       "project": "Crypo-Coin-Coherency-Network",
       "event": "Repository initial commit in local history.",
-      "evidence": ["local-git:/Users/ursmuff/source/Crypo-Coin-Coherency-Network 81b6736"]
+      "evidence": ["local-git:~/source/Crypo-Coin-Coherency-Network 81b6736"]
     }
   ],
   "official_attempts": [
@@ -38,7 +38,7 @@
       "frequency": "U-CORE; Everything is a Node; resonance-based knowledge graph; C# implementation pressure",
       "collapse_pattern": "Collapsed under its own weight in the second implementation form before the surrounding AI/tooling could reliably carry it.",
       "evidence": [
-        "local-git:/Users/ursmuff/source/Living-Codex-CSharp 5fc24ba",
+        "local-git:~/source/Living-Codex-CSharp 5fc24ba",
         "github-repo-metadata",
         "Coherence-Network docs/lineage/three-attempts.md"
       ]
@@ -52,7 +52,7 @@
       "frequency": "spec-driven open-source contribution intelligence; ideas, people, agents, attribution, payout, governance, and deployment evidence",
       "survival_pattern": "The third attempt survived by grounding the mystical and systems signal into specs, tests, worktrees, evidence, PRs, deployment checks, and traceable contribution flow.",
       "evidence": [
-        "local-git:/Users/ursmuff/source/Coherence-Network a8984106",
+        "local-git:~/source/Coherence-Network a8984106",
         "github-repo-metadata",
         "Coherence-Network docs/lineage/three-attempts.md"
       ]

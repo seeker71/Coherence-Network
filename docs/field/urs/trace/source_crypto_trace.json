@@ -133,7 +133,7 @@
       "ingestion_policy": "compact_trace_allowed",
       "label": "youtube-takeout",
       "modified_at": "2026-05-06T17:48:31.874941+00:00",
-      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/takeout-20260506T165642Z-3-001.zip",
+      "path": "~/CoherenceFieldAnalysis/input/youtube/takeout-20260506T165642Z-3-001.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published.",
       "sample_entries": [
@@ -150,7 +150,7 @@
       "ingestion_policy": "compact_trace_allowed",
       "label": "youtube-takeout",
       "modified_at": "2026-05-06T02:28:11.828689+00:00",
-      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/myactivity-playwright-raw.json",
+      "path": "~/CoherenceFieldAnalysis/input/youtube/myactivity-playwright-raw.json",
       "path_class": "local_source_body",
       "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published.",
       "sha256": "386abad259da1698a41c58524fc07ee51b67d00e06d36345e2e6b3dd1366f1b4",
@@ -162,7 +162,7 @@
       "ingestion_policy": "compact_trace_allowed",
       "label": "youtube-takeout",
       "modified_at": "2026-05-08T03:12:21.785095+00:00",
-      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/youtube/youtube-all-myactivity-raw.json",
+      "path": "~/CoherenceFieldAnalysis/input/youtube/youtube-all-myactivity-raw.json",
       "path_class": "local_source_body",
       "publication_boundary": "Raw YouTube Takeout files remain local; derived watch/search events and aggregate traces may be published.",
       "sha256": "9fd50ede11b4faa450dc5814da89673cf6225db85a3f977c6327da4516058b57",
@@ -174,7 +174,7 @@
       "ingestion_policy": "compact_trace_allowed",
       "label": "browser-trace",
       "modified_at": "2026-05-06T02:21:23.685980+00:00",
-      "path": "/Users/ursmuff/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl",
+      "path": "~/CoherenceFieldAnalysis/input/browser/local_browser_events.jsonl",
       "path_class": "local_source_body",
       "publication_boundary": "Raw browser databases and sessions remain local; compact event traces and domain/title summaries may be published.",
       "sha256": "90ec076f4853fbbcc6aad5c6a139d2323ffcafaf1a3761e3a991177ee68d1ab6",
@@ -186,7 +186,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T18:19:20.579533+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-001.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-001.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -209,7 +209,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:20.458544+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-002.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-002.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -232,7 +232,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T18:13:09.609358+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-003.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-003.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -255,7 +255,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T18:13:12.766740+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-004.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-004.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -278,7 +278,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:31.989212+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-005.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-005.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -301,7 +301,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:09:24.258587+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-006.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-006.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -324,7 +324,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:46.884798+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-007.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-007.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -347,7 +347,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:53.665862+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-008.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-008.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -370,7 +370,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:55.786683+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-009.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-009.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -393,7 +393,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T01:24:57.159213+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-010.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-010.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -416,7 +416,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T06:51:25.599239+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-011.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-011.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -439,7 +439,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T06:42:04.771032+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-012.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-012.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -462,7 +462,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-07T06:41:45.268306+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T023119Z-3-013.zip",
+      "path": "~/Downloads/takeout-20260506T023119Z-3-013.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -485,7 +485,7 @@
       "ingestion_policy": "metadata_and_compact_trace_allowed",
       "label": "downloaded-takeout",
       "modified_at": "2026-05-06T17:48:31.874941+00:00",
-      "path": "/Users/ursmuff/Downloads/takeout-20260506T165642Z-3-001.zip",
+      "path": "~/Downloads/takeout-20260506T165642Z-3-001.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Bulky downloaded Takeout archives remain local; archive names, sizes, hashes, entry samples, and derived counts may be published.",
       "sample_entries": [
@@ -502,7 +502,7 @@
       "ingestion_policy": "metadata_hashes_and_summary_only",
       "label": "channeled-message-pdf",
       "modified_at": "2026-01-17T08:47:19.104015+00:00",
-      "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 1.16.26.pdf",
+      "path": "~/Downloads/Friday Live Channeled Message 1.16.26.pdf",
       "path_class": "local_source_body",
       "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen.",
       "sha256": "5c8a30ebb8d2eeda1abba2813970359c207583abf2391ab1378230d41692f186",
@@ -514,7 +514,7 @@
       "ingestion_policy": "metadata_hashes_and_summary_only",
       "label": "channeled-message-pdf",
       "modified_at": "2026-05-12T01:23:17.257392+00:00",
-      "path": "/Users/ursmuff/Downloads/Friday Live Channeled Message 5.8.26.pdf",
+      "path": "~/Downloads/Friday Live Channeled Message 5.8.26.pdf",
       "path_class": "local_source_body",
       "publication_boundary": "Raw PDFs and extracted transcript text remain local source bodies; the repo stores only metadata, hashes, and compact source-body attention until a summary/extracted-concept breath is chosen.",
       "sha256": "80a4736c3763be8bc76e15c3242b947b8a7f84bbb0247cbdee90d2ea0355999b",
@@ -526,7 +526,7 @@
       "ingestion_policy": "metadata_only",
       "label": "photo-archive",
       "modified_at": "2026-05-05T01:08:48.897974+00:00",
-      "path": "/Users/ursmuff/Downloads/Photos-3-001.zip",
+      "path": "~/Downloads/Photos-3-001.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Image pixels remain local; filenames, counts, archive hashes, and date hints may be published.",
       "sample_entries": [
@@ -549,7 +549,7 @@
       "ingestion_policy": "metadata_and_selected_lineage_allowed",
       "label": "project-archive",
       "modified_at": "2026-05-07T03:38:31.494867+00:00",
-      "path": "/Users/ursmuff/Downloads/Water Project.zip",
+      "path": "~/Downloads/Water Project.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Project archives remain local unless a specific lineage artifact is promoted; compact file counts, extensions, hashes, and sample paths may be published.",
       "sample_entries": [
@@ -572,7 +572,7 @@
       "ingestion_policy": "metadata_and_selected_lineage_allowed",
       "label": "project-archive",
       "modified_at": "2026-05-07T05:34:49.750274+00:00",
-      "path": "/Users/ursmuff/Downloads/Angelic-20260507T052334Z-3-001.zip",
+      "path": "~/Downloads/Angelic-20260507T052334Z-3-001.zip",
       "path_class": "local_source_body",
       "publication_boundary": "Project archives remain local unless a specific lineage artifact is promoted; compact file counts, extensions, hashes, and sample paths may be published.",
       "sample_entries": [
@@ -595,11 +595,11 @@
     "publication_boundary": "This registry names local source-body locations, matching patterns, custody classes, and ingestion policies. It does not publish raw source contents. Builder scripts read this registry to produce compact traces and reports.",
     "root_keys": {
       "analysis_root": {
-        "default_path": "/Users/ursmuff/CoherenceFieldAnalysis",
+        "default_path": "~/CoherenceFieldAnalysis",
         "description": "Local analysis workspace for extracted source bodies."
       },
       "downloads_dir": {
-        "default_path": "/Users/ursmuff/Downloads",
+        "default_path": "~/Downloads",
         "description": "Local Downloads folder holding bulky export archives and source PDFs."
       }
     },
