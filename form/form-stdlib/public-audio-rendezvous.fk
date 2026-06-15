@@ -1,0 +1,170 @@
+; public-audio-rendezvous.fk — public rendezvous + audio co-presence receipt.
+;
+; Public API / public paste/archive style surfaces carry rendezvous cells. Audio
+; carries local physical co-presence. Oracles may teach a candidate, but every
+; claim must return through measured shape/recipe/cell/time rows.
+
+(do
+    (defn par-public (carrier endpoint-kind nonce-hash-len write-ms read-ms ttl-ms public-readable status)
+        (list "public-rendezvous-receipt" carrier endpoint-kind nonce-hash-len write-ms read-ms ttl-ms public-readable status))
+
+    (defn par-audio (protocol direction nonce-hash-len snr confidence latency-ms raw-retained status)
+        (list "audio-copresence-receipt" protocol direction nonce-hash-len snr confidence latency-ms raw-retained status))
+
+    (defn par-measure (shape-cells recipe-steps tool-ms reasoning-ms oracle-ms bottleneck pressure status)
+        (list "carrier-pressure-measure" shape-cells recipe-steps tool-ms reasoning-ms oracle-ms bottleneck pressure status))
+
+    (defn par-session (pub-a pub-b audio-a audio-b measure oracle-used status)
+        (list "public-audio-rendezvous-session" pub-a pub-b audio-a audio-b measure oracle-used status))
+
+    (defn par-kind (r) (nth r 0))
+    (defn par-public-carrier (r) (nth r 1))
+    (defn par-public-endpoint-kind (r) (nth r 2))
+    (defn par-public-nonce-hash-len (r) (nth r 3))
+    (defn par-public-write-ms (r) (nth r 4))
+    (defn par-public-read-ms (r) (nth r 5))
+    (defn par-public-ttl-ms (r) (nth r 6))
+    (defn par-public-readable (r) (nth r 7))
+    (defn par-public-status (r) (nth r 8))
+
+    (defn par-audio-protocol (r) (nth r 1))
+    (defn par-audio-direction (r) (nth r 2))
+    (defn par-audio-nonce-hash-len (r) (nth r 3))
+    (defn par-audio-snr (r) (nth r 4))
+    (defn par-audio-confidence (r) (nth r 5))
+    (defn par-audio-latency-ms (r) (nth r 6))
+    (defn par-audio-raw-retained (r) (nth r 7))
+    (defn par-audio-status (r) (nth r 8))
+
+    (defn par-measure-shape-cells (r) (nth r 1))
+    (defn par-measure-recipe-steps (r) (nth r 2))
+    (defn par-measure-tool-ms (r) (nth r 3))
+    (defn par-measure-reasoning-ms (r) (nth r 4))
+    (defn par-measure-oracle-ms (r) (nth r 5))
+    (defn par-measure-bottleneck (r) (nth r 6))
+    (defn par-measure-pressure (r) (nth r 7))
+    (defn par-measure-status (r) (nth r 8))
+
+    (defn par-session-public-a (r) (nth r 1))
+    (defn par-session-public-b (r) (nth r 2))
+    (defn par-session-audio-a (r) (nth r 3))
+    (defn par-session-audio-b (r) (nth r 4))
+    (defn par-session-measure (r) (nth r 5))
+    (defn par-session-oracle-used (r) (nth r 6))
+    (defn par-session-status (r) (nth r 7))
+
+    (defn par-public-carrier-ok? (carrier)
+        (if (str_eq carrier "coherence-public-api")
+            1
+            (if (str_eq carrier "pastebin-public-page")
+                1
+                (if (str_eq carrier "archive-org-public-item") 1 0))))
+
+    (defn par-public-valid? (r)
+        (if (eq (len r) 9)
+            (if (str_eq (par-kind r) "public-rendezvous-receipt")
+                (if (par-public-carrier-ok? (par-public-carrier r))
+                    (if (str_eq (par-public-endpoint-kind r) "public-rendezvous-cell")
+                        (if (eq (par-public-nonce-hash-len r) 64)
+                            (if (gt (par-public-write-ms r) 0)
+                                (if (gt (par-public-read-ms r) 0)
+                                    (if (gt (par-public-ttl-ms r) 0)
+                                        (if (eq (par-public-readable r) 1)
+                                            (if (str_eq (par-public-status r) "pass") 1 0)
+                                            0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn par-audio-protocol-ok? (protocol)
+        (if (str_eq protocol "audio-audible-fsk")
+            1
+            (if (str_eq protocol "audio-near-ultrasonic") 1 0)))
+
+    (defn par-audio-direction-ok? (direction)
+        (if (str_eq direction "mac-to-android")
+            1
+            (if (str_eq direction "android-to-mac")
+                1
+                (if (str_eq direction "peer-to-peer") 1 0))))
+
+    (defn par-audio-valid? (r)
+        (if (eq (len r) 9)
+            (if (str_eq (par-kind r) "audio-copresence-receipt")
+                (if (par-audio-protocol-ok? (par-audio-protocol r))
+                    (if (par-audio-direction-ok? (par-audio-direction r))
+                        (if (eq (par-audio-nonce-hash-len r) 64)
+                            (if (gt (par-audio-snr r) 9)
+                                (if (gt (par-audio-confidence r) 79)
+                                    (if (gt (par-audio-latency-ms r) 0)
+                                        (if (eq (par-audio-raw-retained r) 0)
+                                            (if (str_eq (par-audio-status r) "pass") 1 0)
+                                            0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn par-pressure-bottleneck (m)
+        (if (gt (par-measure-tool-ms m) (par-measure-reasoning-ms m))
+            "tool"
+            (if (gt (par-measure-reasoning-ms m) (par-measure-tool-ms m)) "reasoning" "balanced")))
+
+    (defn par-measure-valid? (m)
+        (if (eq (len m) 9)
+            (if (str_eq (par-kind m) "carrier-pressure-measure")
+                (if (gt (par-measure-shape-cells m) 0)
+                    (if (gt (par-measure-recipe-steps m) 0)
+                        (if (gt (par-measure-tool-ms m) 0)
+                            (if (gt (par-measure-reasoning-ms m) 0)
+                                (if (gt (par-measure-oracle-ms m) 0)
+                                    (if (str_eq (par-measure-bottleneck m) (par-pressure-bottleneck m))
+                                        (if (gt (par-measure-pressure m) 0)
+                                            (if (str_eq (par-measure-status m) "pass") 1 0)
+                                            0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn par-session-valid? (s)
+        (if (eq (len s) 8)
+            (if (str_eq (par-kind s) "public-audio-rendezvous-session")
+                (if (par-public-valid? (par-session-public-a s))
+                    (if (par-public-valid? (par-session-public-b s))
+                        (if (par-audio-valid? (par-session-audio-a s))
+                            (if (par-audio-valid? (par-session-audio-b s))
+                                (if (par-measure-valid? (par-session-measure s))
+                                    (if (eq (par-session-oracle-used s) 1)
+                                        (if (str_eq (par-session-status s) "pass") 1 0)
+                                        0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn par-floor ()
+        (list
+            "public surfaces carry rendezvous cells"
+            "audio carries local co-presence"
+            "raw audio is not retained"
+            "oracle help is allowed as measured teacher"
+            "shape recipe cell and time pressure are inspectable"))
+
+    0)

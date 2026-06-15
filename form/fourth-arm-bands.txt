@@ -329,6 +329,7 @@ tensor-autodiff-verifier fks 4095
 core-axiom-native-receipt fks 4095
 core-axiom-package-receipt fks 4095
 core-axiom-apk-receipt fks 4095
+public-audio-rendezvous fks 16383
 sqlite-read fks 31
 speech-kernel-channel fks 511
 speech-model-learning fks 16383
