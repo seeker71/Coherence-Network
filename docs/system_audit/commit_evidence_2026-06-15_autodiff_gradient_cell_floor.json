@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/autodiff-gradient-cell-floor-20260615",
+  "commit_scope": "Add a bounded scalar autodiff gradient cell floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-models",
+    "federated-slices",
+    "model-data-sharing",
+    "fourth-kernel-wall-groups",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-kernel-wall-groups",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "autodiff-gradient-cell-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "parallel-wall-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_autodiff_gradient_cell_floor.json",
+    "docs/system_audit/model_executor_run_ledger/autodiff-gradient-cell-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/autodiff-gradient.fk",
+    "form/form-stdlib/tests/autodiff-gradient-cell-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/system_audit/commit_evidence_2026-06-15_autodiff_gradient_cell_floor.json",
+    "docs/system_audit/model_executor_run_ledger/autodiff-gradient-cell-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/autodiff-gradient.fk",
+    "form/form-stdlib/tests/autodiff-gradient-cell-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim autodiff-gradient-cell-floor \"Next model-kernel wall after PR #3160: add bounded autodiff gradient cell receipt for scalar affine loss; avoid Adam, live mesh transport, durable eval query, payload merkle proof, privacy/conflict, router/audio, and BML compiler lanes.\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk form-stdlib/tests/autodiff-gradient-cell-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh autodiff-gradient-cell",
+      "make wellness",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `core.fk+model-vitality.fk+optimizer-step.fk+autodiff-gradient.fk+autodiff-gradient-cell-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  autodiff-gradient-cell`. Wellness reported no attention items and production aligned with origin/main."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-native model kernels now have bounded scalar affine gradient cells for prediction, squared loss, dw/db, and optimizer-step handoff.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk form-stdlib/tests/autodiff-gradient-cell-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh autodiff-gradient-cell"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/autodiff-gradient.fk",
+    "form/form-stdlib/tests/autodiff-gradient-cell-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-kernel-wall-groups.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/federated-slices.form",
+    "docs/system_audit/model_executor_run_ledger/autodiff-gradient-cell-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "autodiff-gradient-cell-floor",
+    "gate": "A scalar gradient cell must exist before tensor-scale autodiff or Adam optimizer cells can be claimed as first-class Form-native model-kernel status.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add tensor autodiff gradient cells, Adam optimizer cells, live chunk payload merkle proof, mesh transport, durable eval query, and privacy/conflict receipts as separate bounded lanes."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Fixed-point SGD/momentum optimizer-step receipts existed, while autodiff gradient cells remained a named next wall.",
+    "current_observed_floor": "autodiff-gradient-cell returns 4095 four-way and is admitted to form/fourth-arm-bands.txt.",
+    "new_bands": [
+      "autodiff-gradient-cell -> 4095 four-way"
+    ],
+    "not_claimed": [
+      "tensor-scale autodiff",
+      "Adam optimizer cells",
+      "live training loop authority",
+      "live mesh slice transport",
+      "chunk-range payload merkle proof over a live carrier",
+      "durable eval-receipt query path",
+      "privacy boundary",
+      "conflict policy"
+    ]
+  }
+}

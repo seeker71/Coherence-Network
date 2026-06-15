@@ -1,0 +1,69 @@
+; autodiff-gradient.fk — the smallest Form-native gradient cell.
+;
+; Floor: scalar affine prediction y = w*x + b, squared loss, and exact integer
+; reverse gradients for w and b. The receipt can feed optimizer-step.fk's
+; fixed-point SGD/momentum vector. This is not a full autodiff tape, tensor
+; backprop, Adam, or live training loop.
+
+(do
+    (defn ag-predict (w x b) (add (mul w x) b))
+    (defn ag-error (pred target) (sub pred target))
+    (defn ag-loss-from-error (err) (mul err err))
+    (defn ag-loss (w x b target) (ag-loss-from-error (ag-error (ag-predict w x b) target)))
+    (defn ag-dw-from-error (err x) (mul 2 (mul err x)))
+    (defn ag-db-from-error (err) (mul 2 err))
+    (defn ag-dw (w x b target) (ag-dw-from-error (ag-error (ag-predict w x b) target) x))
+    (defn ag-db (w x b target) (ag-db-from-error (ag-error (ag-predict w x b) target)))
+
+    (defn ag-gradient-cell (param value)
+        (list "autodiff-gradient-cell" param value))
+    (defn ag-gradient-cell? (value) (mv-row? value "autodiff-gradient-cell" 3))
+    (defn ag-gradient-param (cell) (nth cell 1))
+    (defn ag-gradient-value (cell) (nth cell 2))
+    (defn ag-gradient-cell-valid? (cell)
+        (if (ag-gradient-cell? cell)
+            (if (mv-nonempty? (ag-gradient-param cell)) 1 0)
+            0))
+
+    (defn ag-gradient-vector (w x b target)
+        (list (ag-dw w x b target) (ag-db w x b target)))
+    (defn ag-gradient-cells (w x b target)
+        (list
+            (ag-gradient-cell "weight" (ag-dw w x b target))
+            (ag-gradient-cell "bias" (ag-db w x b target))))
+
+    (defn ag-receipt (model w x b target)
+        (do
+            (let pred (ag-predict w x b))
+            (let err (ag-error pred target))
+            (let dw (ag-dw-from-error err x))
+            (let db (ag-db-from-error err))
+            (list
+                "autodiff-gradient-receipt"
+                model
+                w
+                x
+                b
+                target
+                pred
+                (ag-loss-from-error err)
+                (list (ag-gradient-cell "weight" dw) (ag-gradient-cell "bias" db))
+                (list dw db)
+                (if (mv-nonempty? model) 1 0))))
+    (defn ag-receipt? (value) (mv-row? value "autodiff-gradient-receipt" 11))
+    (defn ag-receipt-model (r) (nth r 1))
+    (defn ag-receipt-pred (r) (nth r 6))
+    (defn ag-receipt-loss (r) (nth r 7))
+    (defn ag-receipt-cells (r) (nth r 8))
+    (defn ag-receipt-vector (r) (nth r 9))
+    (defn ag-receipt-valid-bit (r) (nth r 10))
+    (defn ag-receipt-valid? (r)
+        (if (ag-receipt? r)
+            (if (eq (ag-receipt-valid-bit r) 1)
+                (if (ag-gradient-cell-valid? (nth (ag-receipt-cells r) 0))
+                    (ag-gradient-cell-valid? (nth (ag-receipt-cells r) 1))
+                    0)
+                0)
+            0))
+
+    0)

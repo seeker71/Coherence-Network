@@ -20,6 +20,8 @@
 ;     before/after state ids, nonzero delta, chunk-range tie, and substrate-cell authority.
 ;     optimizer-step adds the exact integer SGD/momentum update math for the small vectors those slices
 ;     carry. Autodiff and Adam remain model-kernel walls.
+;     autodiff-gradient-cell adds the bounded scalar affine loss gradient rows that feed optimizer-step.
+;     Tensor-scale autodiff and Adam remain model-kernel walls.
 ;   NORTH STAR: every federated update is a content-addressed slice over a known base merkle root:
 ;     (base-merkle, layer-ref, tensor-chunk-range, format-ref, quantization-context, delta-cell,
 ;     optimizer-state-delta, eval-receipt-ref, vitality-ref, n-samples, origin, ancestor-merge-refs).
@@ -27,7 +29,7 @@
 ;     compatibility, provenance compatibility, freshness, resonance, vitality, sovereignty, and trust.
 ;     Merge receipts record the elected sign, weight inputs, ancestor set, and output merkle root so the
 ;     mesh can avoid double counting and explain refusal without hidden policy.
-;   GAP: chunk-range merkle proof over live payloads, chunk-aware live transport, autodiff/Adam optimizer math, durable eval-receipt trust inputs,
+;   GAP: chunk-range merkle proof over live payloads, chunk-aware live transport, tensor-autodiff/Adam optimizer math, durable eval-receipt trust inputs,
 ;     merge-receipt ancestry, privacy/conflict policy, and body-readable vitality routing are not yet
 ;     real mesh payloads. The next proof should merge one tensor chunk-range slice, emit ancestry, and
 ;     update model vitality.
@@ -93,12 +95,14 @@
 ;       remains a model-kernel wall.
 ;   M4  optimizer-step math — SHIPPED: optimizer-step -> 4095 four-way for fixed-point SGD and momentum
 ;       receipts over small vectors; autodiff gradients and Adam remain later model-kernel walls.
-;   M5  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
+;   M5  scalar affine gradient cells — SHIPPED: autodiff-gradient-cell -> 4095 four-way for prediction,
+;       squared loss, dw/db gradient cells, and SGD handoff. Tensor-scale autodiff and Adam remain later.
+;   M6  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
 ;       third merges both and applies it — assert mesh-merge NodeID == local-merge NodeID (gossip
 ;       convergence as a content-addressed proof).
-;   M6  trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
-;   M7  consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
-;   M8  apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
+;   M7  trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
+;   M8  consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
+;   M9  apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
 ;       merge demonstrably changes a model's behavior. Joins form-native-models.form M4 (the real block).
 ;
 ; KIN: form-native-models.form (the model-as-recipe + M1-M6; this is its distributed face) ·
