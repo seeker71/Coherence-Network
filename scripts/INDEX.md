@@ -108,7 +108,6 @@
 | [ghx.sh](ghx.sh) | _no top-of-file purpose_ |
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
-| [git_training_corpus.py](git_training_corpus.py) | Feed git (commit message -> diff) pairs into the form-cli training catalog. |
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [grounded_cost_endpoint_probe.py](grounded_cost_endpoint_probe.py) | Focused end-to-end probe for /api/utils/grounded_cost. |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
@@ -229,6 +228,7 @@
 | [test_verify_web_api_pulse_witness.sh](test_verify_web_api_pulse_witness.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_sha_patience.sh](test_verify_web_api_sha_patience.sh) | _no top-of-file purpose_ |
 | [thread_runtime_ports.sh](thread_runtime_ports.sh) | _no top-of-file purpose_ |
+| [training_corpus.py](training_corpus.py) | Feed the body's edges into the form-cli training catalog as (intent->realization) pairs. |
 | [transformer_kernel_audit.sh](transformer_kernel_audit.sh) | transformer_kernel_audit.sh — a full transformer block on every organ. |
 | [triangulate.sh](triangulate.sh) | triangulate.sh — stand up the three-vertex substrate triangle on this VPS. |
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
