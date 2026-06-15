@@ -1,0 +1,106 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/form-freq-check.fk form-stdlib/oracle-distillation-learning.fk
+;
+; oracle-distillation-learning-band - actual oracle-to-native learning floor.
+;
+; Floor: five concrete learning lanes train as native exemplars, heldout rows are
+; classified, oracle/native outputs are captured into receipts, and the oracle
+; budget drops only when the native candidate really passes the receipt floor
+; with lower token/energy/nutrition cost.
+;
+; North star: every LLM/speech/compiler/tool oracle call becomes teaching data
+; until Form-native candidates win lane-by-lane with accuracy, vitality, trust,
+; sovereignty, and lower cost.
+;
+; Verdict 4095:
+;   1    floor and north-star declarations are present
+;   2    all five learning lanes are cataloged
+;   4    nearest-shape model classifies all heldout lane rows
+;   8    summary receipt passes and emits native training row
+;   16   summary native receipt reduces oracle budget
+;   32   NL-to-Form native candidate wins with lower oracle reliance
+;   64   freq-check uses native head output and wins
+;   128  STT remains teacher-led when native quality is below floor
+;   256  TTS remains teacher-led when native quality is below floor
+;   512  choice receipt learning increments selected native success
+;   1024 failed receipt does not reduce oracle budget
+;   2048 unknown lane is refused
+(do
+    (let model (odl-model (odl-training-samples)))
+    (let summary (odl-summary-receipt))
+    (let nl-form (odl-nl-form-receipt))
+    (let freq (odl-freq-receipt))
+    (let stt (odl-stt-receipt))
+    (let tts (odl-tts-receipt))
+    (let summary-row (odl-training-row summary))
+    (let learned-native
+        (crl-learn-candidate
+            (bco-candidate "form-native:summary" 0 0 0 0 92 84)
+            (odl-r-choice summary)))
+    (let failed-summary
+        (odl-receipt
+            "summary:nl-to-nl"
+            "bad summary"
+            "oracle said cite source"
+            "native omitted source"
+            (odl-candidate "oracle:local-llm-summary" "teacher" 900 42 42 88 84 62 82 76 32)
+            (odl-candidate "form-native:summary" "native" 160 12 12 60 60 92 84 83 32)
+            "form-native:summary"
+            (cr-outcome-fail)
+            40))
+    (let unknown
+        (odl-receipt
+            "video-diffusion"
+            "generate a frame"
+            "oracle frame"
+            "native frame"
+            (odl-candidate "oracle:vision" "teacher" 2000 80 80 90 90 70 80 80 1)
+            (odl-candidate "form-native:vision" "native" 400 20 20 80 80 90 80 80 1)
+            "form-native:vision"
+            (cr-outcome-success)
+            80))
+
+    (let c0 (if (and (gt (len (odl-floor)) 0) (gt (len (odl-north-star)) 0)) 1 0))
+    (let c1
+        (if (and
+                (eq (len (odl-lanes)) 5)
+                (and
+                    (eq (odl-lane-known? "summary:nl-to-nl") 1)
+                    (and
+                        (eq (odl-lane-known? "nl-to-form") 1)
+                        (and
+                            (eq (odl-lane-known? "freq-check") 1)
+                            (and
+                                (eq (odl-lane-known? "stt") 1)
+                                (eq (odl-lane-known? "tts") 1)))))) 2 0))
+    (let c2 (if (eq (odl-correct model (odl-heldout-rows)) 5) 4 0))
+    (let c3
+        (if (and
+                (eq (odl-receipt-pass? summary) 1)
+                (and
+                    (str_eq (odl-sample-label summary-row) "form-native:summary")
+                    (str_eq (odl-sample-source summary-row) "choice-receipt"))) 8 0))
+    (let c4 (if (eq (odl-next-oracle-budget 80 summary) 70) 16 0))
+    (let c5
+        (if (and
+                (eq (odl-native-receipt-wins? nl-form) 1)
+                (eq (odl-next-oracle-budget 60 nl-form) 50)) 32 0))
+    (let c6
+        (if (and
+                (str_eq (odl-r-native-output freq) "pass")
+                (eq (odl-native-receipt-wins? freq) 1)) 64 0))
+    (let c7
+        (if (and
+                (str_eq (odl-r-selected stt) "oracle:whisper-local")
+                (eq (odl-native-receipt-wins? stt) 0)) 128 0))
+    (let c8
+        (if (and
+                (str_eq (odl-r-selected tts) "oracle:piper-local")
+                (eq (odl-native-receipt-wins? tts) 0)) 256 0))
+    (let c9
+        (if (and
+                (eq (bco-short-success learned-native) 1)
+                (eq (bco-short-fail learned-native) 0)) 512 0))
+    (let c10 (if (eq (odl-next-oracle-budget 80 failed-summary) 80) 1024 0))
+    (let c11 (if (eq (odl-receipt-pass? unknown) 0) 2048 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
