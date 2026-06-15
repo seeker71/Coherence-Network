@@ -35,8 +35,9 @@
 ; dict into model-vitality rows. The fourth arm now also captures response
 ; header rows and can read them through native _get, so production HTTPS
 ; authority receipts are carried by the native body. Explicit request-header
-; rows now forward through all kernels, including fkwu. Next floor: duration
-; timing, larger bodies, and streaming/backpressure rows.
+; rows now forward through all kernels, including fkwu. The emitted fourth arm
+; now measures elapsed request duration inside the native carrier. Next floor:
+; larger bodies and streaming/backpressure rows.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
