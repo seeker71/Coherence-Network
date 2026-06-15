@@ -1,0 +1,43 @@
+; obs-verify.fk — can I observe? the three states of axiom-1 (0 / 1 / nothing).
+;
+; preludes: form-stdlib/core.fk
+;
+; Axiom-1 (core-axioms.form): there are three states — 0, 1, nothing — and nothing
+; is FIRST-CLASS (the ground, not a missing 0); a timeout IS nothing (no answer in
+; time is silence, not an error). This recipe is that axiom made into a sensing
+; primitive: verify an observation of any sensor / observed protocol and return one
+; of the three. The world model (content-addressed cells) is built ONLY from verified
+; readings; nothing is held as silence, never forced into a 0. Self-honest sensing:
+; a timeout is named, not faked into an answer.
+;
+; A reading is (answered?, value, when-tick); the deadline is the timeout boundary.
+;   observed (1) — answered, value 1, at or before the deadline
+;   absent   (0) — answered, value 0, at or before the deadline (a verified NO is data)
+;   nothing      — no answer, OR an answer that arrived after the deadline (silence/timeout)
+;
+; Proven by: form-stdlib/tests/obs-verify-band.fk
+
+(defn ov-reading (answered value when) (list answered value when))
+(defn ov-answered? (r) (nth r 0))
+(defn ov-value     (r) (nth r 1))
+(defn ov-when      (r) (nth r 2))
+
+; the verify: a reading + a deadline -> one of the three states.
+(defn obs-verify (reading deadline)
+    (if (eq (ov-answered? reading) 1)
+        (if (ge deadline (ov-when reading))
+            (if (eq (ov-value reading) 1) "observed" "absent")
+            "nothing")
+        "nothing"))
+
+; the trust gate: ACT on a verified answer (observed | absent); HOLD "nothing" as
+; silence — never build the world model from a reading you could not verify.
+(defn obs-trusted? (verdict)
+    (if (str_eq verdict "nothing") 0 1))
+
+; the three states as their axiom-1 codes — and nothing is NOT a 0: it is the ground.
+;   observed -> 1, absent -> 0, nothing -> -1 (first-class, distinct from absent).
+(defn obs-state-code (verdict)
+    (if (str_eq verdict "observed")
+        1
+        (if (str_eq verdict "absent") 0 (sub 0 1))))
