@@ -259,3 +259,69 @@
   (if (eq n 0) q (tbp-attn-q-train (tbp-attn-q-step q ks vs scale t lr) ks vs scale t lr (sub n 1))))
 (defn tbp-attn-q-train-loss (q ks vs scale t lr n)
   (tbp-attn-loss (tbp-attn-q-train q ks vs scale t lr n) ks vs scale t))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; ASSEMBLY — layers as cells, composed into a stack by one engine (auto-ml's knowledge).
+; ─────────────────────────────────────────────────────────────────────────────
+; Every gradient node is proven; assembling them is configuration, not derivation. A LAYER is a cell with
+; a uniform interface — fwd: x -> y ; step: (layer, x_in, dy, lr) -> (new-layer, dx) — so a heterogeneous
+; STACK (attention then FFN, the transformer block) trains through one generic fold. This is the dynamic-
+; recipe advantage on the transformer: the architecture is a SEQUENCE of typed layer-cells, and the same
+; engine that recipe-gen.fk uses to compose experts composes these. Two layer kinds here: "attn" (a cross-
+; attention-residual block over a fixed context) and "ffn" (the FFN-residual block above).
+
+; --- the "attn" layer: h = x + Wo·attend(Wq·LN(x), ks, vs, scale). A layer = (list "attn" wq wo ks vs scale). ---
+(defn tbp-att-fwd (wq wo x ks vs scale eps)
+  (tb-vec-add x (tb-matvec wo (tb-attend-one (tb-matvec wq (tn-layernorm x eps)) ks vs scale))))
+; one step over (wq, wo) fitting dy at the output; returns (list new-wq new-wo dx) — dx chains to a lower layer.
+(defn tbp-att-grads (wq wo x ks vs scale eps dh)
+  (do
+    (let n    (tn-layernorm x eps))
+    (let q    (tb-matvec wq n))
+    (let att  (tb-attend-one q ks vs scale))
+    (let datt (tbp-dx wo dh))                         ; Woᵀ·dh — grad to the attention output
+    (let dq   (tbp-attn-dq q ks vs scale datt))       ; through the attention core (the hard gradient)
+    (let dn   (tbp-dx wq dq))                          ; Wqᵀ·dq — grad to LN(x)
+    (list (tbp-outer dq n) (tbp-outer dh att) (tb-vec-add dh (tbp-ln-back x dn eps)))))  ; dWq dWo dx(residual+LN')
+
+; --- the layer dispatch: a layer is (list type ...). fwd and step branch on the type. ---
+(defn tbp-lt (layer) (nth layer 0))
+(defn tbp-layer-fwd (layer x eps)
+  (if (str_eq (tbp-lt layer) "attn")
+      (tbp-att-fwd (nth layer 1) (nth layer 2) x (nth layer 3) (nth layer 4) (nth layer 5) eps)
+      (tbp-bk-fwd (tbp-bk (nth layer 1) (nth layer 2) (nth layer 3) (nth layer 4)) x eps)))
+; step a layer: returns (list new-layer dx).
+(defn tbp-layer-step (layer x dy lr eps)
+  (if (str_eq (tbp-lt layer) "attn")
+      (do (let g (tbp-att-grads (nth layer 1) (nth layer 2) x (nth layer 3) (nth layer 4) (nth layer 5) eps dy))
+          (list (list "attn" (tbp-sgd-mat (nth layer 1) (nth g 0) lr) (tbp-sgd-mat (nth layer 2) (nth g 1) lr)
+                      (nth layer 3) (nth layer 4) (nth layer 5))
+                (nth g 2)))
+      (do (let b (tbp-bk (nth layer 1) (nth layer 2) (nth layer 3) (nth layer 4)))
+          (let nb (tbp-bk-update b (tbp-bk-pgrads b x dy eps) lr))
+          (list (list "ffn" (tbp-bk-w1 nb) (tbp-bk-b1 nb) (tbp-bk-w2 nb) (tbp-bk-b2 nb))
+                (tbp-bk-dh b x dy eps)))))
+
+; --- the generic STACK engine: forward remembers each layer's input; backward folds in reverse. ---
+(defn tbp-stk-fwd-acc (layers x eps acc)   ; acc = reversed list of (input) seen; returns (list outputs-input-list y)
+  (if (eq (len layers) 0) (list acc x)
+      (tbp-stk-fwd-acc (tail layers) (tbp-layer-fwd (head layers) x eps) eps (cons x acc))))
+(defn tbp-stk-fwd (layers x eps) (nth (tbp-stk-fwd-acc layers x eps (empty)) 1))     ; the stack output
+(defn tbp-stk-loss (layers x t eps) (tbp-sse (tbp-stk-fwd layers x eps) t))
+; one training step over the whole stack: forward to y, dy=2(y-t), backprop in reverse updating each layer.
+(defn tbp-stk-back (layers ins dy lr eps)   ; layers & ins both in REVERSE order (deepest last fed first)
+  (if (eq (len layers) 0) (empty)
+      (do (let r (tbp-layer-step (head layers) (head ins) dy lr eps))
+          (cons (nth r 0) (tbp-stk-back (tail layers) (tail ins) (nth r 1) lr eps)))))
+(defn tbp-revacc (xs acc) (if (eq (len xs) 0) acc (tbp-revacc (tail xs) (cons (head xs) acc))))
+(defn tbp-rev (xs) (tbp-revacc xs (empty)))
+(defn tbp-stk-step (layers x t lr eps)
+  (do
+    (let fa (tbp-stk-fwd-acc layers x eps (empty)))   ; (rev-inputs, y)
+    (let y  (nth fa 1))
+    (let dy (tn-scale (tbp-vsub y t) 2.0))
+    ; layers reversed + inputs already reversed (acc is rev) → backprop deepest-first, then re-reverse layers
+    (tbp-rev (tbp-stk-back (tbp-rev layers) (nth fa 0) dy lr eps))))
+(defn tbp-stk-train (layers x t lr eps n)
+  (if (eq n 0) layers (tbp-stk-train (tbp-stk-step layers x t lr eps) x t lr eps (sub n 1))))
+(defn tbp-stk-train-loss (layers x t lr eps n) (tbp-stk-loss (tbp-stk-train layers x t lr eps n) x t eps))

@@ -86,9 +86,19 @@
 ;     (exact) AND by training a query to steer attention onto a target in the values' convex hull, loss → 0
 ;     (transformer-attention-backward-band.fk → 31 three-way). So EVERY gradient node the transformer needs
 ;     now exists: affine (127), gelu (63), softmax+layernorm (31), FFN-residual assembled (31), attention
-;     core (31). Remaining is ASSEMBLY only — compose the attention core with the q/k/v + output affine vjps
-;     and the residual into the attention-residual block (like the FFN-residual stack), then join the two
-;     halves into the full tb-block backward, then Adam. The hard gradients are done; what is left is wiring.
+;     core (31). And the ASSEMBLY is now done: the FULL transformer block trains end to end. A LAYER is a
+;     typed cell with a uniform (fwd, step) interface; a heterogeneous STACK — an attention-residual layer
+;     THEN an FFN-residual layer, the actual tb-block — trains through ONE generic engine (tbp-stk-fwd /
+;     tbp-stk-step with type dispatch). transformer-block-assembly-band.fk → 63 three-way: the block's
+;     forward is deterministic, the stack converges (loss 0.71 → 0 in ~50 steps), and BOTH heterogeneous
+;     layers learn (the attention layer's Wq and the FFN layer's W1 both move off their inits), so the
+;     gradient chains correctly BETWEEN different layer types. This is auto-ml's assembly knowledge realized:
+;     the architecture is a SEQUENCE of typed layer-cells, the dynamic-recipe advantage applied to the
+;     transformer — the same shape recipe-gen.fk uses to compose experts now composes LAYERS into a trained
+;     block, so the generator can assemble and configure architectures, not just hand-built ones. Remaining:
+;     Adam (beyond plain SGD), the full T-position sequence self-attention (k/v also projected, cross-query
+;     gradient accumulation), and the convergence — a trainable transformer-block layer as an MoE expert kind,
+;     trained by this backward on the GPU.
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,
