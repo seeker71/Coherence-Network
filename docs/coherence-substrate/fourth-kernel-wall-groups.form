@@ -21,6 +21,7 @@
     (optimizer-delta-slice "optimizer-delta-slice now proves a shareable optimizer-state delta beside the weight slice: valid optimizer cell ref, before/after state change, nonzero delta, chunk-range tie, and cache-authority refusal.")
     (optimizer-step "optimizer-step now proves exact integer fixed-point SGD and momentum update receipts for small model vectors, with invalid scale/length inputs refused before computation.")
     (autodiff-gradient-cell "autodiff-gradient-cell now proves bounded scalar affine loss gradients as Form cells, including dw/db gradient rows that feed optimizer-step receipts.")
+    (adam-step-cell "adam-step-cell now proves bounded fixed-point first/second moment update receipts with integer square-root denominator and scalar autodiff gradient-vector handoff.")
     (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/dynamic-grammar-carrier.fk + tests/dynamic-grammar-carrier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
@@ -29,6 +30,7 @@
     (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/optimizer-delta-slice-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/optimizer-step.fk + tests/optimizer-step-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/autodiff-gradient.fk + tests/autodiff-gradient-cell-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form-stdlib/optimizer-step.fk + tests/adam-step-cell-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
 
   (group
@@ -69,9 +71,9 @@
     (id ml-kernel-layer-model)
     (status available)
     (why "Model research needs tensors, optimizer state, decode loops, mutable/reversible training state, eval receipts, and carrier conformance as first-class Form cells.")
-    (current-floor format-arith tensor-quant transformer-numerics transformer-block jit-tensor-emitter-as-recipe model-vitality-storage physical-carrier-rehash optimizer-step autodiff-gradient-cell)
-    (closed-now optimizer-step-fixed-point-sgd optimizer-step-fixed-point-momentum scalar-affine-gradient-cells)
-    (next-walls tensor-autodiff-gradient-cells adam-step-cells large-tensor-policy full-safetensors-header full-mlx-package-ingest jit-buffer-bridge fourth-arm-duration conformance-ledger)
+    (current-floor format-arith tensor-quant transformer-numerics transformer-block jit-tensor-emitter-as-recipe model-vitality-storage physical-carrier-rehash optimizer-step autodiff-gradient-cell adam-step-cell)
+    (closed-now optimizer-step-fixed-point-sgd optimizer-step-fixed-point-momentum scalar-affine-gradient-cells bounded-adam-moment-cells)
+    (next-walls tensor-autodiff-gradient-cells production-adam-bias-correction large-tensor-policy full-safetensors-header full-mlx-package-ingest jit-buffer-bridge fourth-arm-duration conformance-ledger)
     (parallel-card
       (goal "Promote one ML model data or execution wall into a receipt-bearing Form-native floor.")
       (files_allowed form/form-stdlib/*model*.fk form/form-stdlib/*tensor*.fk form/form-stdlib/tests/*model*-band.fk form/form-stdlib/tests/*tensor*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
