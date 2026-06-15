@@ -1,0 +1,7 @@
+.venv/
+receipts/
+*.log
+# fingerprint caches + the long-run curve are reproducible artifacts, not source
+fingerprints-*.jsonl
+curve-*.jsonl
+learning_curve.jsonl
