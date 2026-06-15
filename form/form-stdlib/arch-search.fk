@@ -1,0 +1,38 @@
+; arch-search.fk — the ONE generic architecture searcher. arch-gen (depth), arch-capacity (width), and
+; arch-type (type) each crown the best along one axis; this is the single search they are all instances of.
+; Given a list of CANDIDATE architectures — each a (arch, cost) pair, of any depth, width, or layer type —
+; it trains each over the dataset and crowns the MINIMAL-cost one that fits. The (depth × width × type) grid
+; is just the candidate list spanning all three axes; one engine evaluates it. Core-lift: fewer special
+; cases, one generic recipe. The same candidate list adapts to the task — crowning attention where the task
+; is retrieval, an FFN of the right width where the task is capacity-bound.
+;
+; A candidate = (list arch cost): arch is a layer-stack (the tbp-stk-* engine trains it), cost a compute proxy.
+;
+; Preludes: transformer-numerics.fk transformer-block.fk transformer-backprop.fk arch-capacity.fk
+; Proven by: form-stdlib/tests/arch-search-band.fk
+
+(do
+    (defn as-arch (c) (nth c 0))
+    (defn as-cost (c) (nth c 1))
+    (defn as-fit (c data lr eps epochs) (ac-set-loss (ac-train (as-arch c) data lr eps epochs) data eps))
+
+    ; --- THE SEARCH: train each candidate once, keep the lowest-cost one whose loss clears the fit floor. ---
+    (defn as-search-acc (cands data lr eps epochs efit best bcost)
+        (if (eq (len cands) 0) best
+            (do
+                (let c (head cands))
+                (let loss (as-fit c data lr eps epochs))
+                (if (and (lt loss efit) (lt (as-cost c) bcost))
+                    (as-search-acc (tail cands) data lr eps epochs efit (as-arch c) (as-cost c))
+                    (as-search-acc (tail cands) data lr eps epochs efit best bcost)))))
+    (defn as-search (cands data lr eps epochs efit)
+        (as-search-acc cands data lr eps epochs efit (empty) 999999))
+
+    ; read what the search chose: the crowned stack's first layer type ("ffn" / "attn"), or "none" if nothing fit.
+    (defn as-best-type (cands data lr eps epochs efit)
+        (do (let b (as-search cands data lr eps epochs efit))
+            (if (eq (len b) 0) "none" (nth (head b) 0))))
+    (defn as-fits-any? (cands data lr eps epochs efit)
+        (if (eq (len (as-search cands data lr eps epochs efit)) 0) 0 1))
+
+    0)

@@ -1,0 +1,49 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/arch-search.fk
+;
+; arch-search-band — the ONE generic architecture searcher over a heterogeneous (width × type) candidate
+; grid, three-way. arch-gen (depth), arch-capacity (width), arch-type (type) are all instances of this single
+; search: train each candidate over the dataset and crown the minimal-cost one that fits within the compute
+; budget. The budget is the resource constraint that makes inductive bias matter: under a TIGHT budget the
+; searcher crowns the architecture whose bias fits FAST (attention, on a retrieval task); under a LOOSE budget
+; on a capacity-bound task it crowns the minimal-capacity architecture that fits (the wide ffn), rejecting the
+; underfit narrow ffn AND the wrong-bias attention. One engine, the same grid, task-adaptive.
+;
+; Grid: { ffn(width 1, cost 1), ffn(width 2, cost 2), attn(retrieval context, cost 2) }. Two tasks: retrieval
+; (output = a selected context value) and reversal (a capacity-bound per-example map at d=4).
+;
+; Verdict 31 when every claim lands:
+;   1    TIGHT budget + retrieval → crowns "attn" (when compute is scarce, the matching bias wins)
+;   2    LOOSE budget + capacity → crowns "ffn" (the wide one fits; narrow underfits, attn is wrong-bias)
+;   4    the SAME grid ADAPTS — the two crowns differ (one engine, task-dependent)
+;   8    the searcher REJECTS underfit: offered only the narrow ffn on the capacity task, nothing fits
+;   16   the searcher ACCEPTS capacity: offered the wide ffn on the capacity task, it fits
+(do
+    (let ks (list (list 1.0 0.0 0.0 0.0) (list 0.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 0.0)))
+    (let vs (list (list 3.0 0.0 0.0 0.0) (list 0.0 3.0 0.0 0.0) (list 0.0 0.0 3.0 0.0)))
+    (let wq (list (list 1.0 0.0 0.0 0.0) (list 0.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 0.0) (list 0.0 0.0 0.0 1.0)))
+    (let wo (list (list 0.5 0.0 0.0 0.0) (list 0.0 0.5 0.0 0.0) (list 0.0 0.0 0.5 0.0) (list 0.0 0.0 0.0 0.5)))
+    (let ffn-narrow (list (list (ac-ffn-layer 4 1 0.3)) 1))
+    (let ffn-wide   (list (list (ac-ffn-layer 4 2 0.3)) 2))
+    (let attn-cand  (list (list (list "attn" wq wo ks vs 1.0)) 2))
+    (let grid (list ffn-narrow ffn-wide attn-cand))
+    (let retr (list (list (list 2.0 0.0 0.0 0.0) (list 3.0 0.0 0.0 0.0))
+                    (list (list 0.0 2.0 0.0 0.0) (list 0.0 3.0 0.0 0.0))
+                    (list (list 0.0 0.0 2.0 0.0) (list 0.0 0.0 3.0 0.0))))
+    (let revr (list (list (list 2.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 2.0))
+                    (list (list 0.0 2.0 1.0 0.0) (list 0.0 1.0 2.0 0.0))
+                    (list (list 0.0 0.0 2.0 1.0) (list 1.0 2.0 0.0 0.0))
+                    (list (list 1.0 0.0 0.0 2.0) (list 2.0 0.0 0.0 1.0))))
+    (let lr 0.05)
+    (let eps 0.00001)
+    (let efit 0.001)
+
+    (let crown-retr (as-best-type grid retr lr eps 15 efit))
+    (let crown-revr (as-best-type grid revr lr eps 150 efit))
+
+    (let c0 (if (str_eq crown-retr "attn") 1 0))
+    (let c1 (if (str_eq crown-revr "ffn") 2 0))
+    (let c2 (if (str_eq crown-retr crown-revr) 0 4))
+    (let c3 (if (eq (as-fits-any? (list ffn-narrow) revr lr eps 150 efit) 0) 8 0))
+    (let c4 (if (eq (as-fits-any? (list ffn-wide) revr lr eps 150 efit) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
