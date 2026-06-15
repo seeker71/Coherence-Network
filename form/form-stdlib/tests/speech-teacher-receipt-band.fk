@@ -1,0 +1,155 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk
+;
+; speech-teacher-receipt-band - physical local TTS/STT teacher receipt floor.
+;
+; Floor: an observed local macOS say -> 16 kHz PCM -> whisper-cli receipt is
+; accepted as native training data only when audio/transcript hashes, nonzero
+; audio features, retained sample bytes, and transcript overlap are present.
+;
+; North star: local speech teachers become optional per lane after native STT/TTS
+; candidates win heldout receipts with lower cost, higher trust, sovereignty,
+; vitality, and retained inspectable data.
+;
+; Verdict 4095:
+;   1     floor and north-star are present
+;   2     observed local speech teacher receipt passes
+;   4     low-overlap transcript is refused
+;   8     missing retained audio is refused
+;   16    teacher receipt becomes a native training sample
+;   32    receipt features carry real nonzero audio metrics
+;   64    exact exemplar model learns the teacher label
+;   128   L1 exemplar model classifies a near heldout receipt
+;   256   valid teacher score beats invalid teacher score
+;   512   teacher-led path remains the current winner
+;   1024  observed transcript preserves expected phrase
+;   2048  local Whisper model identity is carried
+(do
+    (let observed
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "form native speech teacher receipt"
+            "Form native speech teacher receipt."
+            100
+            69530
+            32717
+            2045
+            164725
+            731
+            "sha256:7a9962b938745113b49ffafef1d083b1b01737aed727c1b90e4b79e59854d5bd"
+            "sha256:892c6be68c65c21180539f76683c99cd0d53c017e7c465b249ad0b092763b98a"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let low-overlap
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "form native speech teacher receipt"
+            "unrelated transcript"
+            25
+            69530
+            32717
+            2045
+            164725
+            731
+            "sha256:7a9962b938745113b49ffafef1d083b1b01737aed727c1b90e4b79e59854d5bd"
+            "sha256:892c6be68c65c21180539f76683c99cd0d53c017e7c465b249ad0b092763b98a"
+            1
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let missing-audio
+        (sml-speech-teacher-receipt
+            "pass"
+            "macos-say"
+            "whisper-cli"
+            "ggml-large-v3-turbo.bin"
+            "form native speech teacher receipt"
+            "Form native speech teacher receipt."
+            100
+            0
+            0
+            0
+            0
+            0
+            ""
+            "sha256:892c6be68c65c21180539f76683c99cd0d53c017e7c465b249ad0b092763b98a"
+            0
+            (sml-speech-teacher-floor)
+            (sml-speech-teacher-north-star)))
+    (let sample (sml-speech-teacher-sample "speech-teacher-loop" observed))
+    (let model (sml-device (list sample)))
+    (let heldout
+        (sml-test-row
+            (list 100 164000 2040 730 69000 32700)
+            "speech-teacher-loop"))
+    (let valid-score (sml-speech-teacher-score-card "teacher:macos-say+whisper" observed 95))
+    (let invalid-score (sml-speech-teacher-score-card "teacher:invalid" low-overlap 95))
+    (let race
+        (list
+            valid-score
+            invalid-score
+            (sml-score-card "form-native:stt-candidate" 0 1 95 95)))
+
+    (let c0
+        (if (and
+                (gt (len (sml-speech-teacher-floor)) 0)
+                (gt (len (sml-speech-teacher-north-star)) 0))
+            1
+            0))
+    (let c1 (if (eq (sml-speech-teacher-receipt-valid? observed) 1) 2 0))
+    (let c2 (if (eq (sml-speech-teacher-receipt-valid? low-overlap) 0) 4 0))
+    (let c3 (if (eq (sml-speech-teacher-receipt-valid? missing-audio) 0) 8 0))
+    (let c4
+        (if (and
+                (str_eq (sml-label sample) "speech-teacher-loop")
+                (str_eq (sml-lane sample) "speech:teacher-receipt"))
+            16
+            0))
+    (let c5
+        (if (and
+                (gt (nth (sml-feature sample) 1) 0)
+                (and
+                    (gt (nth (sml-feature sample) 2) 0)
+                    (gt (nth (sml-feature sample) 5) 0)))
+            32
+            0))
+    (let c6
+        (if (str_eq
+                (ns-label (sml-speech-teacher-feature observed) model)
+                "speech-teacher-loop")
+            64
+            0))
+    (let c7
+        (if (str_eq
+                (sml-l1-label (sml-test-feature heldout) model)
+                "speech-teacher-loop")
+            128
+            0))
+    (let c8
+        (if (gt (bco-score valid-score) (bco-score invalid-score))
+            256
+            0))
+    (let c9
+        (if (str_eq
+                (sml-best-candidate-path race)
+                "teacher:macos-say+whisper")
+            512
+            0))
+    (let c10
+        (if (str_eq
+                (sml-str-expected observed)
+                "form native speech teacher receipt")
+            1024
+            0))
+    (let c11
+        (if (str_eq
+                (sml-str-stt-model observed)
+                "ggml-large-v3-turbo.bin")
+            2048
+            0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
