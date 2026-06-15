@@ -1,0 +1,116 @@
+; dynamic-grammar-carrier.fk - pure dynamic grammar extension receipt.
+;
+; This is the smallest fourth-kernel floor for dynamic grammar support: a rule
+; extension is carried as data, registered by selector, parsed into an object,
+; and lowered back into a Form-readable trace. Host file/config loading remains a
+; carrier above this row.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (defn dgc-source (language path line)
+        (list "source" language path line))
+    (defn dgc-source-language (source) (nth source 1))
+    (defn dgc-source-path (source) (nth source 2))
+    (defn dgc-source-line (source) (nth source 3))
+
+    (defn dgc-selector (kind value)
+        (list "dynamic-grammar-selector" kind value))
+    (defn dgc-selector-kind (selector) (nth selector 1))
+    (defn dgc-selector-value (selector) (nth selector 2))
+
+    (defn dgc-rule (name literal capture-name lower-kind source)
+        (list "dynamic-grammar-rule" name literal capture-name lower-kind source))
+    (defn dgc-rule? (rule)
+        (if (eq (len rule) 6)
+            (str_eq (nth rule 0) "dynamic-grammar-rule")
+            0))
+    (defn dgc-rule-name (rule) (nth rule 1))
+    (defn dgc-rule-literal (rule) (nth rule 2))
+    (defn dgc-rule-capture-name (rule) (nth rule 3))
+    (defn dgc-rule-lower-kind (rule) (nth rule 4))
+    (defn dgc-rule-source (rule) (nth rule 5))
+
+    (defn dgc-extension (selector rule)
+        (list "dynamic-grammar-extension" selector rule))
+    (defn dgc-extension-selector (extension) (nth extension 1))
+    (defn dgc-extension-rule (extension) (nth extension 2))
+
+    (defn dgc-registry (extensions)
+        (list "dynamic-grammar-registry" extensions))
+    (defn dgc-registry-empty ()
+        (dgc-registry (empty)))
+    (defn dgc-registry-extensions (registry) (nth registry 1))
+    (defn dgc-register (registry extension)
+        (dgc-registry (cons extension (dgc-registry-extensions registry))))
+
+    (defn dgc-resolve-loop (extensions selector-kind selector-value missing)
+        (if (nil? extensions)
+            missing
+            (do
+                (let extension (head extensions))
+                (let selector (dgc-extension-selector extension))
+                (if (and (str_eq (dgc-selector-kind selector) selector-kind)
+                         (str_eq (dgc-selector-value selector) selector-value))
+                    extension
+                    (dgc-resolve-loop (tail extensions) selector-kind selector-value missing)))))
+
+    (defn dgc-resolve (registry selector-kind selector-value missing)
+        (dgc-resolve-loop (dgc-registry-extensions registry) selector-kind selector-value missing))
+
+    (defn dgc-parse-object (kind capture-name value source)
+        (list "dynamic-grammar-object" kind capture-name value source))
+    (defn dgc-parse-object-kind (object) (nth object 1))
+    (defn dgc-parse-object-capture-name (object) (nth object 2))
+    (defn dgc-parse-object-value (object) (nth object 3))
+    (defn dgc-parse-object-source (object) (nth object 4))
+
+    (defn dgc-parse-trace (selector rule source object rest)
+        (list "dynamic-grammar-parse-trace" selector rule source object rest))
+    (defn dgc-parse-trace-selector (trace) (nth trace 1))
+    (defn dgc-parse-trace-rule (trace) (nth trace 2))
+    (defn dgc-parse-trace-source (trace) (nth trace 3))
+    (defn dgc-parse-trace-object (trace) (nth trace 4))
+    (defn dgc-parse-trace-rest (trace) (nth trace 5))
+
+    (defn dgc-parse (registry selector-kind selector-value words source missing)
+        (do
+            (let extension (dgc-resolve registry selector-kind selector-value missing))
+            (if (nil? extension)
+                missing
+                (do
+                    (let selector (dgc-extension-selector extension))
+                    (let rule (dgc-extension-rule extension))
+                    (if (nil? words)
+                        missing
+                        (if (str_eq (head words) (dgc-rule-literal rule))
+                            (dgc-parse-trace
+                                selector
+                                rule
+                                source
+                                (dgc-parse-object
+                                    (dgc-rule-name rule)
+                                    (dgc-rule-capture-name rule)
+                                    (if (nil? (tail words)) "" (head (tail words)))
+                                    source)
+                                (if (nil? (tail words)) (empty) (tail (tail words))))
+                            missing))))))
+
+    (defn dgc-lower-trace (trace)
+        (do
+            (let object (dgc-parse-trace-object trace))
+            (let rule (dgc-parse-trace-rule trace))
+            (list "dynamic-grammar-lower-trace"
+                  (dgc-rule-lower-kind rule)
+                  (dgc-parse-object-capture-name object)
+                  (dgc-parse-object-value object)
+                  (dgc-parse-trace-source trace))))
+    (defn dgc-lower-kind (lowered) (nth lowered 1))
+    (defn dgc-lower-capture-name (lowered) (nth lowered 2))
+    (defn dgc-lower-value (lowered) (nth lowered 3))
+    (defn dgc-lower-source (lowered) (nth lowered 4))
+
+    (defn dgc-next-code-point ()
+        "form/form-stdlib/runtime-grammar.fk:host file/config grammar plugins -> dynamic-grammar-carrier rule-extension receipts")
+
+    0)
