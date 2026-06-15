@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/gpu-attn-trainer",
+  "commit_scope": "The architect's OTHER layer type now trains on Metal, closing the type axis on the GPU. jit-tensor-emit.fk gains jte-attn-train-msl, a Form recipe that emits the cross-attention-residual training step h = x + Wo*attend(Wq*LN(x), ks, vs, scale) -- tbp-layer-step on an 'attn' layer, updating Wq and Wo -- as one Metal kernel. It composes every attention-core gradient (softmax-back, the dv partition, the dq weighted-key sum) plus the pre-LN and the residual highway, with the recipe's exact folds. scripts/metal_attn_audit.sh trains a d=4 attention layer on the M4 Max and parity-gates the GPU weights against an fp32 CPU mirror. With the FFN-core (jte-mlp-train-msl) and residual-block (jte-resid-train-msl) kernels, both architect layer kinds now train on the silicon, so arch-search's full (depth x width x TYPE) grid can be timed on the GPU.",
+  "files_owned": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/attn-train-emit-band.fk",
+    "scripts/metal_attn_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/attn-train-emit-band.fk",
+      "scripts/metal_attn_audit.sh"
+    ],
+    "summary": "attn-train-emit-band -> 7 three-way (Go=Rust=TS), 0 divergent: the attention training-step emitter is byte-identical across kernels (4282-byte canonical MSL), name-parameterized, deterministic. The FFN-core, residual-block, and affine emitter bands all stay green (the shared fexp/ftanh helpers are unchanged). LIVE GPU WITNESS scripts/metal_attn_audit.sh on this M4 Max: emits the attention kernel, compiles it, and trains a d=4 / 3-key attention layer (updating Wq and Wo) -- loss 2.72 -> 1.8e-12 in 200 steps at 0.24 ms/step -- and parity-gates the GPU weights against an fp32 CPU mirror of the same step (LN, q=Wq.n downward, scores+softmax over the recipe's own fexp, att forward sum, residual, Wo^T.gy, softmax-back, dq weighted-key sum, the two SGD updates): max|dW| = 3.0e-7, within fp32 epsilon. 3-KERNEL ONLY (Go=Rust=TS): gated alongside the fp64 transformer op family; the Metal/Swift witness is Darwin+swiftc only (soft-skips elsewhere).",
+    "observed_delta": {
+      "band_verdict": 7,
+      "band_divergent": 0,
+      "emitted_msl_bytes": 4282,
+      "attn_dims": "d=4, dq=4, dv=4, 3 keys",
+      "gpu_loss_start": 2.715775,
+      "gpu_loss_end": 1.8e-12,
+      "gpu_ms_per_step": 0.24,
+      "parity_max_abs_dW": 3.0e-7,
+      "parity_verdict": "within fp32 epsilon"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The attention kernel runs the whole step in ONE thread (the architect's attn blocks are small -- few keys, small projection dims -- so the per-key and per-projection-row work is tiny). This is correct and matches the recipe's folds serially, but does not yet exploit the GPU's parallelism across keys and projection rows.",
+        "follow_up": "A multi-thread variant: thread-per-key for scores/softmax/value-mixing, thread-per-row for the Wq/Wo matvecs and updates, with barriered phases like the FFN kernel."
+      },
+      {
+        "limitation": "Parity is within fp32 epsilon (max|dW| 3.0e-7), not bit-exact, because the softmax uses the recipe's own fexp (a Taylor-and-square-up exp); a 1-ULP divide difference between Metal and Swift is amplified by the squaring. The matvec folds (fastMathEnabled=false) match exactly; the residual epsilon is the transcendental, same as the FFN kernels.",
+        "follow_up": "None needed; within-epsilon is the honest claim for a softmax kernel. The loss descending to 1.8e-12 is the learning witness; the 3e-7 weight agreement is the correctness witness."
+      },
+      {
+        "limitation": "3-kernel only: gated alongside the fp64 transformer op family; the Metal/Swift live witness is Darwin+swiftc only.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "attn-train-emit-band rides the default validate.sh suite via its '; preludes:' header (jit-tensor-emit.fk); CI three-way gate applies. The Metal witness is host-only and not part of CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib emitter recipe + band + a host GPU audit script; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The architect's attention-residual layer -- the 'attn' kind arch-search picks on retrieval tasks -- now trains on the M4 Max GPU via a Form-emitted Metal kernel, parity-gated against the recipe's fp32 CPU semantics. With the FFN-core and residual-block kernels, both layer kinds the architect ranges over train on the silicon.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh attn-train-emit-band (three kernels agree, verdict 7): the attention training-step MSL emitter is deterministic and byte-identical three-way",
+      "metal_attn_audit.sh: the emitted attention kernel compiles, trains Wq/Wo on the GPU (loss 2.7 -> 1.8e-12), and matches the fp32 CPU mirror within epsilon"
+    ],
+    "summary": "Proven three-way (emitter) and live on the M4 Max GPU (the attention layer trains on the silicon, parity within fp32 epsilon)."
+  },
+  "phase_gate": {
+    "phase": "m7-gpu-attn-trainer",
+    "gate": "the architect's attention-residual layer trains on Metal: jte-attn-train-msl emits the Wq/Wo training step through softmax-back, the dv partition, the pre-LN and residual (byte-stable three-way), and the live M4 Max witness trains a d=4 attention layer with the GPU weights within fp32 epsilon of the recipe's CPU semantics. Both architect layer kinds now train on the silicon",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "arch-search dispatching the GPU trainers per candidate over a mixed FFN/attention grid; a multi-thread attention kernel parallelizing across keys and projection rows"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "metal-attn-trainer-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/attn-train-emit-band.fk",
+    "scripts/metal_attn_audit.sh",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/attn-train-emit-band.fk",
+    "scripts/metal_attn_audit.sh",
+    "docs/coherence-substrate/form-native-models.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-16_metal_attn_trainer.json"
+  ],
+  "change_intent": "runtime_feature"
+}
