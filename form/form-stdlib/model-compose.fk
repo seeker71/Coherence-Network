@@ -1,0 +1,35 @@
+; model-compose.fk — one model on top of another: a model is base + diff.
+;
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk
+;
+; A new model is its base model PLUS a learned task-vector delta — the SGD
+; change training produces. The diff is a content-addressed cell that STACKS
+; additively: you increase capability by ADDING a small diff, not by retraining
+; the whole model. This is model-data-sharing.fk's `(model base delta ...)`
+; shape as runnable arithmetic over the proven affine model — and the bridge
+; the night's training loop earns: the delta aff-train produces IS the diff that
+; composes. slice-merge.fk's trust-weighted TIES/FedAvg is the many-diff merge;
+; this is the smallest honest base+diff stone underneath it.
+;
+; Why it grows capability AND how-we-learn: each diff is one learned capability
+; (a task vector). Stacking diffs composes capabilities; learning a new task
+; from a base produces a new diff. The base is shared (one NodeID); only the
+; diff is new — so a fleet of models over one base costs base + sum(small diffs).
+;
+; State is (list w b), the affine model from affine-train.fk. Integer fixed-point
+; scale 1000. Monomorphic; fourth-arm safe.
+;
+; Proven by: form-stdlib/tests/model-compose-band.fk
+
+; compose: base model + diff -> a new model
+(defn mc-compose (base diff)
+    (list (add (aff-w base) (aff-w diff)) (add (aff-b base) (aff-b diff))))
+
+; extract the diff a (trained) model carries over its base: model - base
+(defn mc-diff (model base)
+    (list (sub (aff-w model) (aff-w base)) (sub (aff-b model) (aff-b base))))
+
+; the magnitude of a diff (|w| + |b|) — a bound the body can read to decide
+; whether a diff is a small adapter or a whole new model
+(defn mc-mag (d)
+    (add (abs (aff-w d)) (abs (aff-b d))))
