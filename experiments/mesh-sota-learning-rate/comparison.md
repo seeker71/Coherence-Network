@@ -72,6 +72,24 @@ the `real_mesh_training_emitters.sh` data floor from **blocked → active** (300
 audio, 10k+ labels), so the carrier emits an *active* training receipt for the first
 time. See `run_8h_accumulation.py` and the run's `learning_curve.jsonl`.
 
+## The 8-hour run — measured
+
+Completed: **163 cycles, 8.04 h** (2026-06-15). The router-tier learner reached its
+ceiling (**~61%** on a *growing* 301-speaker mixed task — 40 dev-clean + 251
+train-clean-100 + 10 live `say` voices) within the **first ~45 minutes** (N≈6,000), then
+held **flat for 7+ hours** while 3,787 more corpus utterances and 1,630 live
+`say`→`whisper-large-v3` samples accumulated. Peak accuracy was at cycle 1 (0.65, 148
+speakers); as the space grew to 301 classes it settled to **0.6136 and never moved**. More
+data past the coarse-feature ceiling did not move the curve — the **"low ceiling" half of
+slope-vs-ceiling, measured over a real 8-hour window**. Brute-force eval cost grew to
+~178 s/cycle at N=7,320 (O(N·M), nearest-shape is unindexed). The mounted corpus met the
+data floor (6.67 GB, 36,903 labels ≫ the 300 MB / 10k floor); the emitted training receipts
+stayed **blocked** on the heldout-root and 3-process floors (not wired this run) — named,
+not hidden. The takeaway is the whole point: a longer router run does not close the gap to
+SOTA; the **transformer tier** does — and that tier is now built (forward `transformer-block.fk`
+→ 511, backward `transformer-backprop.fk` → 127) and trains on the M4 Max GPU at 1.05 ms/step
+(`metal_backprop_audit.sh`).
+
 ## What this measuring stick actually sits next to
 
 This experiment exercises the **router tier** (nearest-shape) on one task. The honest
