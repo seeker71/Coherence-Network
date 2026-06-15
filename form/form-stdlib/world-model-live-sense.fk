@@ -130,4 +130,87 @@
                 offer)
             offer))
 
+    ; ── witness training cycle receipts --------------------------------
+    (defn wmls-active-sample-senses (samples deadline tick)
+        (if (eq (len samples) 0)
+            (empty)
+            (cons
+                (wmls-from-active-sample (head samples) deadline tick)
+                (wmls-active-sample-senses (tail samples) deadline tick))))
+
+    (defn wmls-model-eval-senses (receipts min-quality deadline tick)
+        (if (eq (len receipts) 0)
+            (empty)
+            (cons
+                (wmls-from-model-eval (head receipts) min-quality deadline tick)
+                (wmls-model-eval-senses (tail receipts) min-quality deadline tick))))
+
+    (defn wmls-cycle-senses (state capability evals min-quality deadline tick)
+        (wmg-append
+            (wmls-active-sample-senses (wsr-active-samples state) deadline tick)
+            (cons
+                (wmls-from-capability-receipt capability deadline tick)
+                (wmls-model-eval-senses evals min-quality deadline tick))))
+
+    (defn wmls-training-cycle (cycle-id state emission capability evals min-quality deadline tick world-state offer)
+        (do
+            (let senses (wmls-cycle-senses state capability evals min-quality deadline tick))
+            (list
+                "wmls-training-cycle"
+                cycle-id
+                state
+                emission
+                capability
+                evals
+                senses
+                (wmls-grow-from-live world-state senses offer)
+                min-quality
+                deadline
+                tick)))
+    (defn wmls-training-cycle? (cycle)
+        (if (eq (len cycle) 11)
+            (str_eq (nth cycle 0) "wmls-training-cycle")
+            0))
+    (defn wmls-cycle-id (cycle) (nth cycle 1))
+    (defn wmls-cycle-state (cycle) (nth cycle 2))
+    (defn wmls-cycle-emission (cycle) (nth cycle 3))
+    (defn wmls-cycle-capability (cycle) (nth cycle 4))
+    (defn wmls-cycle-evals (cycle) (nth cycle 5))
+    (defn wmls-cycle-sense-list (cycle) (nth cycle 6))
+    (defn wmls-cycle-growth (cycle) (nth cycle 7))
+    (defn wmls-cycle-min-quality (cycle) (nth cycle 8))
+    (defn wmls-cycle-deadline (cycle) (nth cycle 9))
+    (defn wmls-cycle-tick (cycle) (nth cycle 10))
+
+    (defn wmls-cycle-source-backed? (cycle)
+        (if (and
+                (eq (wmls-training-cycle? cycle) 1)
+                (and
+                    (eq (wsr-emission-cycle-valid?
+                            (wmls-cycle-state cycle)
+                            (wmls-cycle-emission cycle)) 1)
+                    (eq (aml-capability-learning-ready? (wmls-cycle-capability cycle)) 1)))
+            1
+            0))
+    (defn wmls-cycle-heldout-count (cycle)
+        (len (wsr-emission-rows (wmls-cycle-emission cycle))))
+    (defn wmls-cycle-heldout-window-ready? (cycle min-samples)
+        (if (ge (wmls-cycle-heldout-count cycle) min-samples) 1 0))
+    (defn wmls-cycle-native-wins? (cycle min-samples margin)
+        (wsr-source-backed-native-wins?
+            (wmls-cycle-state cycle)
+            (wsr-emission-export (wmls-cycle-emission cycle))
+            (wsr-emission-labels (wmls-cycle-emission cycle))
+            (wsr-emission-rows (wmls-cycle-emission cycle))
+            min-samples
+            margin))
+    (defn wmls-cycle-growth-embodied? (cycle)
+        (if (str_eq (wmg-state-status (wmls-cycle-growth cycle)) "embodied") 1 0))
+    (defn wmls-cycle-status (cycle)
+        (if (and
+                (eq (wmls-cycle-source-backed? cycle) 1)
+                (eq (wmls-cycle-growth-embodied? cycle) 1))
+            "live-training-cycle-embodied"
+            "live-training-cycle-held"))
+
     0)
