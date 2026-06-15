@@ -1,0 +1,40 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/arch-type.fk
+;
+; arch-type-band — the architect discovers the layer TYPE a task wants, three-way. On a RETRIEVAL task
+; (output = a value selected from a fixed context of three magnitude-3 basis values, queried by inputs
+; aligned to each key), an ATTENTION layer — content-based retrieval — fits in a handful of steps, while an
+; FFN layer must MEMORIZE the input→value map and lags far behind. The architect trains one candidate of each
+; type and crowns the better fit: it reads that THIS task wants attention, not a feed-forward block. Size is
+; capacity; type is the shape of the computation — and the body now picks the shape too.
+;
+; Verdict 31 when every claim lands:
+;   1    ATTENTION fits the retrieval task fast: loss after 5 epochs < 0.001 (content-based retrieval matches)
+;   2    FFN does NOT fit fast: loss after 5 epochs > 0.5 (it must memorize, and lags)
+;   4    attention fully fits: loss after 30 epochs < 0.001
+;   8    the architect CROWNS "attn" on the retrieval task — the bias that matches the task
+;   16   attention is strictly the better fit at 30 epochs (attn loss < ffn loss)
+(do
+    (let ks (list (list 1.0 0.0 0.0 0.0) (list 0.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 0.0)))
+    (let vs (list (list 3.0 0.0 0.0 0.0) (list 0.0 3.0 0.0 0.0) (list 0.0 0.0 3.0 0.0)))
+    (let wq (list (list 1.0 0.0 0.0 0.0) (list 0.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 0.0) (list 0.0 0.0 0.0 1.0)))
+    (let wo (list (list 0.5 0.0 0.0 0.0) (list 0.0 0.5 0.0 0.0) (list 0.0 0.0 0.5 0.0) (list 0.0 0.0 0.0 0.5)))
+    (let data (list (list (list 2.0 0.0 0.0 0.0) (list 3.0 0.0 0.0 0.0))
+                    (list (list 0.0 2.0 0.0 0.0) (list 0.0 3.0 0.0 0.0))
+                    (list (list 0.0 0.0 2.0 0.0) (list 0.0 0.0 3.0 0.0))))
+    (let attn (at-attn-cand wq wo ks vs 1.0))
+    (let ffn  (at-ffn-cand 4 4 0.3))
+    (let lr 0.05)
+    (let eps 0.00001)
+
+    (let attn5  (at-fit attn data lr eps 5))
+    (let ffn5   (at-fit ffn  data lr eps 5))
+    (let attn30 (at-fit attn data lr eps 30))
+    (let ffn30  (at-fit ffn  data lr eps 30))
+
+    (let c0 (if (lt attn5 0.001) 1 0))
+    (let c1 (if (gt ffn5 0.5) 2 0))
+    (let c2 (if (lt attn30 0.001) 4 0))
+    (let c3 (if (str_eq (at-best-type ffn attn data lr eps 30) "attn") 8 0))
+    (let c4 (if (lt attn30 ffn30) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
