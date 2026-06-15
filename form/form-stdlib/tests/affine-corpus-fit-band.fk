@@ -1,0 +1,47 @@
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/affine-corpus-fit.fk
+;
+; affine-corpus-fit-band — the native training loop, fit on REAL i18n corpus
+; data, beats a predict-the-mean oracle on REAL held-out pairs, four-way.
+;
+; Fixture: EN->FR UI-string length pairs from web/messages/{en,fr}.json, feature
+; -scaled by 50 (raw en_len -> *50) so the proven scale-1000 aff-step conditions
+; cleanly. Five real training pairs and three real held-out pairs (genuinely
+; translated, expansion 1.10..1.30 — the real signal):
+;   train (en,fr): (8,9) (19,23) (27,35) (35,43) (44,54)
+;   held  (en,fr): (9,10) (28,31) (44,50)
+; lr=3, 40 epochs, tolerance 50 (= 1.0 character). Verified against an integer
+; reference (truncate-toward-zero) before authoring:
+;   start corpus loss = 16500000   after training = 165992   w = 1116 (1.116x), b = 640
+;   native correct = 3/3 (all held-out within 1 char)   oracle (mean=1640) correct = 0/3
+;
+; Verdict 31 when every claim lands:
+;   1   training reduced corpus loss on REAL data        (loss_after < loss_start)
+;   2   the native model hits all 3 real held-out pairs  (native-correct = 3)
+;   4   the predict-mean oracle hits none                (oracle-correct = 0)
+;   8   the native sense BEATS the oracle on held-out    (native-correct > oracle-correct)
+;   16  the model learned the real ~1.17x slope          (1000 < w < 1300)
+(do
+    (let train (list (list 400 450) (list 950 1150) (list 1350 1750) (list 1750 2150) (list 2200 2700)))
+    (let held  (list (list 450 500) (list 1400 1550) (list 2200 2500)))
+    (let lr 3)
+    (let tol 50)
+
+    (let s0 (list 0 0))
+    (let sT (aff-train s0 train lr 40))
+
+    (let mean (acf-mean-y train))
+    (let nc (acf-native-correct sT held tol))
+    (let oc (acf-oracle-correct mean held tol))
+
+    ; 1 — training reduced the corpus loss on real data
+    (let c0 (if (lt (aff-corpus-loss sT train) (aff-corpus-loss s0 train)) 1 0))
+    ; 2 — the native model hits all three real held-out pairs within 1 char
+    (let c1 (if (eq nc 3) 2 0))
+    ; 4 — the predict-mean oracle hits none of them
+    (let c2 (if (eq oc 0) 4 0))
+    ; 8 — the native sense beats the oracle on real held-out data
+    (let c3 (if (gt nc oc) 8 0))
+    ; 16 — the learned slope is the real expansion (~1.1..1.3), not noise
+    (let c4 (if (if (gt (aff-w sT) 1000) (lt (aff-w sT) 1300) 0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
