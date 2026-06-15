@@ -76,7 +76,13 @@
 ;     layernorm' has Σdx=0 (mean-orthogonal, exact) and <dx,y>≈0 (scale-orthogonal to ~4e-6, the eps/Newton
 ;     residual named honestly). So EVERY node of transformer-block.fk's pre-LN block now has its backward —
 ;     affine (127), gelu (63), softmax+layernorm (31). The whole proven forward block can train end to end.
-;     Remaining: assembling the per-node vjps into the full tb-block backward walk, and Adam.
+;     The FFN-residual half is now ASSEMBLED and trained: y = h + FFN(LN(h)), backward dh = dy + LN'(FFN_in(dy))
+;     — the gradient HIGHWAY composing affine vjp + gelu' + layernorm' + the residual. A two-block FFN-residual
+;     STACK trains end to end (transformer-block-backward-band.fk → 31 three-way): loss 0.814 → ~0, and the
+;     LOWER block's weights move off their init, so dh chained correctly through layernorm' (a wrong dh would
+;     have starved it). Remaining: the ATTENTION-residual half — backprop through scaled dot-product attention
+;     (softmax' is built; the weighted-sum + q/k/v-projection assembly is the hard remaining node) — then the
+;     two halves compose into the full tb-block backward, then Adam.
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,

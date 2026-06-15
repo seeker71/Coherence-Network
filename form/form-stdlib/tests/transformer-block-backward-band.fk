@@ -1,0 +1,41 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-block-backward-band — the four node-gradients ASSEMBLED into a residual block, proven by
+; training a stack end to end. transformer-block.fk's FFN residual block is y = h + FFN(LN(h)); its backward
+; is the gradient highway dh = dy + LN'(h, FFN_in(LN(h), dy)), which composes the affine vjp + gelu' +
+; layernorm' + the residual — every node-gradient already proven (127, 63, 31). A STACK of two such blocks
+; trains only if dh is right: a wrong dh starves the LOWER block, so the stack's convergence AND the lower
+; block's own movement are the proof the assembly composes. Fixture: two 2→2→2 residual blocks, lr=0.1,
+; fitting target (0.6, -0.4) from input (1.0, 0.5).
+;
+; Verdict 31 when every claim lands:
+;   1    the unfit stack carries positive loss
+;   2    ONE SGD step lowers it — the assembled backward learns
+;   4    thirty steps lower it further — it converges through residual + layernorm + FFN
+;   8    the stack FITS the target (loss after 150 steps rounds to 0) — the full residual block trains
+;   16   the LOWER block learned: block A's W1[0][0] moved off its 0.3 init, so dh reached it through
+;        layernorm' and the residual highway (a wrong dh would have left the lower block untouched)
+(do
+    (let ba (tbp-bk (list (list 0.3 -0.2) (list 0.1 0.4)) (list 0.0 0.0)
+                    (list (list 0.5 0.2) (list -0.3 0.6)) (list 0.0 0.0)))
+    (let bb (tbp-bk (list (list 0.2 0.1) (list -0.1 0.3)) (list 0.0 0.0)
+                    (list (list 0.4 -0.2) (list 0.3 0.5)) (list 0.0 0.0)))
+    (let x (list 1.0 0.5))
+    (let t (list 0.6 -0.4))
+    (let eps 0.00001)
+    (let lr 0.1)
+
+    (let l0   (tbp-stack-loss ba bb x t eps))
+    (let l1   (tbp-stack-train-loss ba bb x t lr eps 1))
+    (let l30  (tbp-stack-train-loss ba bb x t lr eps 30))
+    (let l150 (tbp-stack-train-loss ba bb x t lr eps 150))
+    (let trained-a (tbp-stack-A (tbp-stack-train ba bb x t lr eps 30)))
+    (let a-w1-00 (round (mul (nth (nth (nth trained-a 0) 0) 0) 1000000.0)))
+
+    (let c0 (if (gt l0 0.0) 1 0))
+    (let c1 (if (lt l1 l0) 2 0))
+    (let c2 (if (lt l30 l1) 4 0))
+    (let c3 (if (eq (round (mul l150 1000000.0)) 0) 8 0))
+    (let c4 (if (eq a-w1-00 300000) 0 16))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
