@@ -1,0 +1,109 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/arch-unified-grid",
+  "commit_scope": "Core-lift: the ONE generic architecture searcher. arch-search.fk is the single search that arch-gen (depth), arch-capacity (width), and arch-type (type) are all instances of -- given a list of (arch, cost) candidates of any depth/width/type, it trains each over the dataset and crowns the minimal-cost one that fits within the compute budget. The (depth x width x type) grid is just the candidate list; one engine evaluates it. The budget is the resource constraint that makes inductive bias matter, so the same grid is task-adaptive: tight budget + retrieval crowns attention, loose budget + capacity crowns the wide ffn. Three special-purpose searchers fold into one generic recipe.",
+  "files_owned": [
+    "form/form-stdlib/arch-search.fk",
+    "form/form-stdlib/tests/arch-search-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/arch-search.fk form-stdlib/tests/arch-search-band.fk"
+    ],
+    "summary": "arch-search-band -> 31 three-way (Go=Rust=TS), 0 divergent. ONE generic searcher over a heterogeneous (width x type) candidate grid { ffn(w1,cost1), ffn(w2,cost2), attn(cost2) }: under a TIGHT budget (15 epochs) on a retrieval task it crowns 'attn' (the matching bias fits fast, the ffns cannot fit in time); under a LOOSE budget (150 epochs) on a capacity-bound reversal task it crowns 'ffn' (the wide one fits, the narrow underfits, the wrong-bias attention lags). The two crowns differ -- the same grid adapts to the task. The searcher rejects underfit (offered only the narrow ffn on the capacity task, nothing fits) and accepts capacity (the wide ffn fits). 3-KERNEL ONLY (Go=Rust=TS): composes the fp64 transformer-backward op family, not in the fourth-arm manifest -- same floor as transformer-block.fk / arch-capacity.fk. Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "tight_budget_retrieval_crowns": "attn",
+      "loose_budget_capacity_crowns": "ffn",
+      "crowns_differ": true,
+      "narrow_ffn_underfits_capacity": "nothing fits",
+      "wide_ffn_fits_capacity": "fits"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The budget (epoch count) is the resource constraint that makes fit-speed / inductive bias matter; the two demo tasks use different budgets (tight for retrieval to surface attention's speed, loose for capacity so the wide ffn can fit). This is honest -- the budget is a search parameter, not a hidden tuning -- but a single fixed budget cannot separate both because a high-capacity ffn eventually memorizes any fixed dataset given enough epochs.",
+        "follow_up": "A cost function that prices compute-to-fit (epochs-to-threshold) would make one budget-free objective; for now the budget is the explicit resource axis."
+      },
+      {
+        "limitation": "Candidates are provided as (arch, cost) pairs; arch-gen/arch-capacity/arch-type are the GENERATORS that produce candidate lists. The full grid generator over (depth x width x type) with mixed per-slot types is a generator on top of this searcher, not a new searcher.",
+        "follow_up": "A grid generator that enumerates (depth, width, type) into the candidate list, feeding this one searcher."
+      },
+      {
+        "limitation": "3-kernel only: the fp64 transformer-backward op family is not in the fourth-arm manifest. Same floor as transformer-block.fk, arch-capacity.fk. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when the transformer bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs arch-search-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Core-lift: three special-purpose architecture searchers (depth, width, type) fold into one generic searcher over a heterogeneous candidate grid -- the same engine crowns attention on a retrieval task and an ffn on a capacity task, task-adaptive.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh arch-search-band (three kernels agree, verdict 31): one searcher, one grid, two tasks, two different crowns; underfit rejected, capacity accepted"
+    ],
+    "summary": "Proven three-way: one generic architecture searcher subsuming depth, width, and type."
+  },
+  "phase_gate": {
+    "phase": "m7-architect-one-searcher",
+    "gate": "the architecture search is ONE generic engine: arch-gen/arch-capacity/arch-type are instances of arch-search over a candidate list; the same grid is task-adaptive (attention under a tight budget on retrieval, the wide ffn under a loose budget on capacity), three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "a grid generator enumerating (depth x width x type) into the candidate list; the GPU as the trainer underneath the search"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arch-search-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/arch-search.fk",
+    "form/form-stdlib/tests/arch-search-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/arch-search.fk",
+    "form/form-stdlib/tests/arch-search-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-16_arch_search.json"
+  ],
+  "change_intent": "runtime_feature"
+}

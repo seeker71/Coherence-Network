@@ -419,8 +419,15 @@
 ;   ~1e-5) while an FFN that must MEMORIZE the input→value map is still at 1.79 at step 5 and 0.033 at step 30;
 ;   the architect trains one candidate of each type and crowns "attn" — reading that this task wants attention,
 ;   not a feed-forward block. So the body now searches depth, width, AND type — picking both the size and the
-;   shape a task wants. Next ring: a single joint grid over (depth × width × type) with mixed attention/ffn
-;   per slot, and the GPU as the trainer underneath the whole search.
+;   shape a task wants. And the SEARCH is now ONE engine [arch-search-band.fk → 31 three-way]: arch-search.fk
+;   is the single generic searcher that arch-gen (depth), arch-capacity (width), and arch-type (type) are all
+;   instances of — given a list of (arch, cost) candidates of ANY depth/width/type, it trains each and crowns
+;   the minimal-cost one that fits within the compute BUDGET. The budget is the resource constraint that makes
+;   inductive bias matter: the SAME (width × type) grid, under a TIGHT budget on a retrieval task, crowns
+;   attention (its bias fits fast); under a LOOSE budget on a capacity task, crowns the wide ffn (the narrow
+;   underfits, the wrong-bias attention lags). One engine, task-adaptive — the (depth × width × type) grid is
+;   just the candidate list. Core-lift: three special-purpose searchers fold into one generic recipe. Next
+;   ring: the GPU as the trainer underneath the whole search.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
