@@ -1,0 +1,28 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk
+;
+; optimizer-step-band — exact integer SGD and momentum receipts, four-way.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let weights (list 100 -50 25))
+    (let grads (list 10 -20 0))
+    (let sgd (os-sgd-receipt "model-alpha" weights grads 2 10))
+    (let momentum (os-momentum-receipt "model-alpha" weights (list 3 -4 5) grads 2 8 10))
+    (let zero-grad (os-sgd-receipt "model-alpha" weights (list 0 0 0) 2 10))
+    (let bad-scale (os-sgd-receipt "model-alpha" weights grads 2 0))
+    (let bad-len (os-sgd-receipt "model-alpha" weights (list 1 2) 2 10))
+    (let bad-momentum-len (os-momentum-receipt "model-alpha" weights (list 1 2) grads 2 8 10))
+
+    (let c0 (if (eq (os-step-delta 10 2 10) 2) 1 0))
+    (let c1 (if (eq (nth (os-sgd-after sgd) 0) 98) 2 0))
+    (let c2 (if (eq (nth (os-sgd-after sgd) 1) -46) 4 0))
+    (let c3 (if (eq (nth (os-sgd-after sgd) 2) 25) 8 0))
+    (let c4 (if (eq (os-sgd-valid? sgd) 1) 16 0))
+    (let c5 (if (eq (os-sgd-valid? zero-grad) 0) 32 0))
+    (let c6 (if (eq (os-sgd-valid? bad-scale) 0) 64 0))
+    (let c7 (if (eq (os-sgd-valid? bad-len) 0) 128 0))
+    (let c8 (if (eq (nth (os-momentum-next-velocity momentum) 0) 4) 256 0))
+    (let c9 (if (eq (nth (os-momentum-after momentum) 0) 96) 512 0))
+    (let c10 (if (eq (os-momentum-valid? bad-momentum-len) 0) 1024 0))
+    (let c11 (if (eq (os-momentum-valid? momentum) 1) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
