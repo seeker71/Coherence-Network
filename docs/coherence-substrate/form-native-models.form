@@ -64,7 +64,10 @@
 ;     adam-step-cell now returns 4095 four-way: bounded fixed-point first/second moment rows, integer
 ;     square-root denominator, and scalar autodiff gradient-vector handoff.
 ;     adam-bias-correction now returns 4095 four-way: bounded fixed-point Adam bias-corrected moments
-;     and weight updates. Tensor-scale autodiff remains a separate wall.
+;     and weight updates.
+;     tensor-autodiff-verifier now returns 4095 four-way for the Form receipt and generates a native
+;     host verifier binary that checked 4096 tiny affine-loss gradient samples at width 8. Tensor-scale
+;     autodiff cells remain a separate wall; the verifier carrier can now ask for larger windows.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -85,7 +88,8 @@
 ;     capture, all-kernel plaintext HTTP plus verified HTTPS body capture, and bounded model-slice
 ;     request/re-address/apply/merge receipt, chunk-range slice policy, optimizer-state delta-slice
 ;     receipt, fixed-point SGD/momentum optimizer step, scalar affine gradient cells, bounded Adam
-;     moment cells, and bounded Adam bias correction are now closed receipts, not future claims.
+;     moment cells, bounded Adam bias correction, and the native tensor-autodiff sample verifier are
+;     now closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.
