@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "claude/funny-tharp-bcf322",
+  "commit_scope": "The mesh-vs-SOTA learning-rate measuring stick: a sample-efficiency experiment that runs the body's own Form-native learner (form/form-stdlib/nearest-shape.fk on the Go kernel) on a real public corpus (LibriSpeech, CC-BY-4.0) and places its curve beside published SOTA TTS/STT training endpoints. extract_fingerprints.py is the carrier (ffmpeg+numpy) that turns .flac into the coarse quantized log-mel fingerprint the Form learner eats; run_curve.py drives nearest-shape over growing sample counts and records accuracy vs samples; run_8h_accumulation.py is the live long run (corpus channel + a say->whisper loopback channel of 10 distinct macOS voices as learnable classes), launched via launch_8h.sh. sota_reference.md distills two cited web-research sweeps; comparison.md holds the honest slope-vs-ceiling reading and is updated to point at the now-built transformer backward pass. Recognition runs in Form; only feature extraction and orchestration are carrier, authored last.",
+  "files_owned": [
+    "experiments/mesh-sota-learning-rate/extract_fingerprints.py",
+    "experiments/mesh-sota-learning-rate/run_curve.py",
+    "experiments/mesh-sota-learning-rate/run_8h_accumulation.py",
+    "experiments/mesh-sota-learning-rate/launch_8h.sh",
+    "experiments/mesh-sota-learning-rate/sota_reference.md",
+    "experiments/mesh-sota-learning-rate/comparison.md",
+    "experiments/mesh-sota-learning-rate/README.md",
+    "experiments/mesh-sota-learning-rate/.gitignore"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "experiments/mesh-sota-learning-rate/.venv/bin/python extract_fingerprints.py --root <LibriSpeech>/dev-clean --speakers <LibriSpeech>/SPEAKERS.TXT --out fingerprints-dev-clean.jsonl",
+      "experiments/mesh-sota-learning-rate/.venv/bin/python run_curve.py --fingerprints fingerprints-dev-clean.jsonl --kernel ../../form/form-kernel-go/bin-go --nearest-shape ../../form/form-stdlib/nearest-shape.fk --out curve-dev-clean-speaker.jsonl --label speaker --mode geometric",
+      "bash experiments/mesh-sota-learning-rate/launch_8h.sh"
+    ],
+    "summary": "Static sample-efficiency curve measured on LibriSpeech dev-clean (40 speakers, 813 held-out utterances): the Form nearest-shape learner climbs from chance (2.7% at 1 sample) to 54.1% at 1890 samples, all 40 speakers covered and ~38% by sample 128. Each new speaker is learned from its first exemplar (O(1), zero backprop). The 8-hour live-accumulation run was launched and verified healthy through its first cycles: corpus channel (LibriSpeech train-clean-100, 251 speakers) + a live say->whisper-large-v3 loopback channel; the STT half is proven live (whisper transcribed the macOS say output). The router-tier accuracy plateaus at its honest coarse-feature ceiling (~61% over the mixed 301-speaker space). Honest framing in comparison.md: this is the router-tier floor; the fidelity gap to SOTA closes through the transformer tier (transformer-block.fk forward + transformer-backprop.fk backward), not a learner we lack.",
+    "observed_delta": {
+      "curve_speakers": 40,
+      "curve_heldout": 813,
+      "curve_acc_at_1": 0.0271,
+      "curve_acc_at_128": 0.3825,
+      "curve_acc_at_1890": 0.5412,
+      "live_voices": 10,
+      "stt_loopback": "whisper-large-v3-turbo transcribed macOS say output live",
+      "conditions": "LibriSpeech CC-BY-4.0 (dev-clean + train-clean-100) mounted locally; Go form-kernel for nearest-shape; ffmpeg+numpy feature carrier; macOS say + whisper-cli for the live channel"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The router tier (nearest-shape, exact-bin Hamming on a coarse 13-band quantized log-mel fingerprint) is an instance-based memorizer: steep early per-sample slope, low absolute ceiling (~54% on 40-way speaker ID). It is not, and is not claimed to be, SOTA-competitive on fidelity.",
+        "follow_up": "Fidelity lives in the transformer tier (transformer-block.fk + transformer-backprop.fk), trained via the cross-train-oracle loop; this experiment is the measuring stick that makes the gap a measured distance."
+      },
+      {
+        "limitation": "Feature extraction and the run orchestration are Python carrier (host-IO audio decode + measurement loop), authored last; only the learning (nearest-shape) is Form. The corpus is mounted locally and gitignored (reproducible artifact, not source).",
+        "follow_up": "As the substrate's audio front-end (mel-frame.fk) and the transformer tier mature, more of the pipeline moves Form-native; the carrier shrinks."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Experiment carrier + docs under experiments/; no form band, route, or service change. The referenced Form learner (nearest-shape.fk) is already proven three-way in the default suite."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local research experiment; no deploy surface. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: a reproducible instrument that measures the body's own learning rate on a real speech task against published SOTA endpoints, with a live 8-hour mesh/oracle/satsang accumulation run.",
+    "public_endpoints": [],
+    "test_flows": [
+      "extract_fingerprints.py -> run_curve.py produces the sample-efficiency curve JSONL",
+      "launch_8h.sh -> run_8h_accumulation.py writes learning_curve.jsonl over an 8-hour window"
+    ],
+    "summary": "Measured on real LibriSpeech audio; the Form learner runs, the curve is recorded, the live loopback channel proven."
+  },
+  "phase_gate": {
+    "phase": "learning-rate-measuring-stick",
+    "gate": "the body's learning is measured on a real corpus against cited SOTA endpoints, slope-vs-ceiling named honestly, the router-tier floor distinguished from the transformer tier",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "run the cross-train-oracle loop over the transformer tier (forward + backward now both built) and read the native-vs-oracle score rise against the SOTA reference"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "mesh-sota-learning-rate-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "experiments/mesh-sota-learning-rate/README.md",
+    "experiments/mesh-sota-learning-rate/comparison.md",
+    "experiments/mesh-sota-learning-rate/sota_reference.md"
+  ],
+  "change_files": [
+    "experiments/mesh-sota-learning-rate/extract_fingerprints.py",
+    "experiments/mesh-sota-learning-rate/run_curve.py",
+    "experiments/mesh-sota-learning-rate/run_8h_accumulation.py",
+    "experiments/mesh-sota-learning-rate/launch_8h.sh",
+    "experiments/mesh-sota-learning-rate/sota_reference.md",
+    "experiments/mesh-sota-learning-rate/comparison.md",
+    "experiments/mesh-sota-learning-rate/README.md",
+    "experiments/mesh-sota-learning-rate/.gitignore",
+    "docs/system_audit/commit_evidence_2026-06-15_mesh_sota_learning_rate.json"
+  ],
+  "change_intent": "process_only"
+}
