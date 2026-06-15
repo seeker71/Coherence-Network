@@ -164,6 +164,7 @@ affine-train fks 31
 affine-corpus-fit fks 31
 model-compose fks 31
 lora-adapter fks 31
+oracle-flywheel fks 31
 form-cli-loop fks 31
 form-cli-router fks 31
 obs-verify fks 31

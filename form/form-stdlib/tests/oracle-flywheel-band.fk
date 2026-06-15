@@ -1,0 +1,46 @@
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/affine-corpus-fit.fk form-stdlib/oracle-flywheel.fk
+;
+; oracle-flywheel-band — the closed flywheel, four-way in pure Form: ask native
+; first, fall to the oracle only when unsure, and training on SAMPLES drops oracle
+; reliance to zero. This connects the night's training loop to the body's routing
+; (android-mesh-learning / form-cli-router) — the two halves the body had apart.
+;
+; Fixture: the real i18n EN->FR length task (FX=50, from affine-corpus-fit).
+; test = 3 held-out real pairs, tol = 50 (= 1 char). A question routes to the
+; ORACLE when the native model misses it by > tol. Train from base (0,0), lr=3,
+; 40 epochs, on FEW samples (2) vs FULL samples (5). Reference (integer,
+; truncate-toward-zero), verified before authoring:
+;   untrained base      : oracle_calls = 3 (no native capability — all to oracle)
+;   trained on 2 samples: native 0/3, oracle_calls = 3 (too few to generalize)
+;   trained on 5 samples: native 3/3, oracle_calls = 0 (native handles the class)
+;
+; Verdict 31 when every claim lands:
+;   1   untrained routes EVERY query to the oracle (no native capability yet)
+;   2   training drops oracle reliance — the flip oracle -> native
+;   4   the samples taught it — native-correct rises off zero
+;   8   MORE SAMPLES -> reliance does not rise (the honest lever; epochs overfit)
+;   16  native now handles the WHOLE class — zero oracle calls
+(do
+    (let test (list (list 450 500) (list 1400 1550) (list 2200 2500)))
+    (let tol 50)
+    (let few  (list (list 400 450) (list 950 1150)))
+    (let full (list (list 400 450) (list 950 1150) (list 1350 1750) (list 1750 2150) (list 2200 2700)))
+    (let base (list 0 0))
+    (let t-few  (aff-train base few  3 40))
+    (let t-full (aff-train base full 3 40))
+    (let oc-base (of-oracle-calls base   test tol))
+    (let oc-few  (of-oracle-calls t-few  test tol))
+    (let oc-full (of-oracle-calls t-full test tol))
+
+    ; 1 — untrained routes every query to the oracle
+    (let c0 (if (eq oc-base (len test)) 1 0))
+    ; 2 — training drops oracle reliance (the flip)
+    (let c1 (if (lt oc-full oc-base) 2 0))
+    ; 4 — the samples taught it (native answers rise off zero)
+    (let c2 (if (gt (acf-native-correct t-full test tol) (acf-native-correct base test tol)) 4 0))
+    ; 8 — more samples never raise reliance (oc-full <= oc-few): the honest lever
+    (let c3 (if (ge oc-few oc-full) 8 0))
+    ; 16 — native handles the whole class: zero oracle calls
+    (let c4 (if (eq oc-full 0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
