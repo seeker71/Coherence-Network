@@ -1,0 +1,82 @@
+; core-axiom-apk-receipt.fk — APK packaging receipt for the Android native
+; core-axiom library.
+;
+; scripts/android_core_axiom_apk_receipt.sh writes latest.json after it builds
+; an arm64-v8a shared object, stages it into the Coherence Sense APK, and
+; verifies the APK lib entry by SHA-256. Form validates the receipt shape; the
+; live APK, lib, and build paths remain explicit carriers.
+
+(do
+    (defn caa-receipt (apk-hash-len entry-hash-len source-hash-len library-hash-len abi samples width packaged executed status)
+        (list
+            "core-axiom-apk-native-lib-receipt"
+            apk-hash-len
+            entry-hash-len
+            source-hash-len
+            library-hash-len
+            abi
+            samples
+            width
+            packaged
+            executed
+            status))
+
+    (defn caa-receipt? (value)
+        (if (eq (len value) 11)
+            (str_eq (nth value 0) "core-axiom-apk-native-lib-receipt")
+            0))
+    (defn caa-apk-hash-len (r) (nth r 1))
+    (defn caa-entry-hash-len (r) (nth r 2))
+    (defn caa-source-hash-len (r) (nth r 3))
+    (defn caa-library-hash-len (r) (nth r 4))
+    (defn caa-abi (r) (nth r 5))
+    (defn caa-samples (r) (nth r 6))
+    (defn caa-width (r) (nth r 7))
+    (defn caa-packaged (r) (nth r 8))
+    (defn caa-executed (r) (nth r 9))
+    (defn caa-status (r) (nth r 10))
+
+    (defn caa-hash-lens-valid? (r)
+        (if (eq (caa-apk-hash-len r) 64)
+            (if (eq (caa-entry-hash-len r) 64)
+                (if (eq (caa-source-hash-len r) 64)
+                    (if (eq (caa-library-hash-len r) 64) 1 0)
+                    0)
+                0)
+            0))
+
+    (defn caa-valid? (r)
+        (if (caa-receipt? r)
+            (if (caa-hash-lens-valid? r)
+                (if (str_eq (caa-abi r) "arm64-v8a")
+                    (if (gt (caa-samples r) 0)
+                        (if (gt (caa-width r) 0)
+                            (if (eq (caa-packaged r) 1)
+                                (if (eq (caa-executed r) 0)
+                                    (if (str_eq (caa-status r) "pass") 1 0)
+                                    0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn caa-left-expands? (older newer)
+        (if (caa-valid? older)
+            (if (caa-valid? newer)
+                (if (gt (caa-samples newer) (caa-samples older))
+                    (if (eq (caa-width newer) (caa-width older)) 1 0)
+                    0)
+                0)
+            0))
+
+    (defn caa-floor ()
+        (list
+            "native arm64-v8a library is packaged inside the APK"
+            "APK and library-entry sha256 values are visible"
+            "generated source and library sha256 values are visible"
+            "device execution is explicitly not claimed"
+            "runtime JNI wiring remains a separate wall"))
+
+    0)

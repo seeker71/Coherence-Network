@@ -77,6 +77,10 @@
 ;     core-axiom-package-receipt now returns 4095 four-way for package/install evidence around that
 ;     pair: script/source/binary/channel-receipt SHA-256 lengths, channel duration, sample window, and
 ;     remote Android binary cleanup. APK signing/distribution and non-adb transport remain separate.
+;     core-axiom-apk-receipt now returns 4095 four-way for an APK native-library packaging receipt:
+;     a generated arm64-v8a .so is staged into Coherence Sense, the APK is built, and the extracted
+;     lib/arm64-v8a entry SHA matches the generated library SHA. JNI load/call and installed-app
+;     execution remain separate walls.
 ;     A Wi-Fi TCP receipt attempt is now instrumented with a Mac listener readiness gate, but it is
 ;     blocked by the current local network shape: one run saw Mac en0 and Android wlan0 both report
 ;     192.168.0.7; after Android moved to 192.168.0.4, the direct TCP client timed out against the

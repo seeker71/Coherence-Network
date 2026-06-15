@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/core-axiom-apk-receipt.fk
+;
+; core-axiom-apk-receipt-band — APK native-library packaging receipt floor for
+; the Android core-axiom library.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let good (caa-receipt 64 64 64 64 "arm64-v8a" 2048 8 1 0 "pass"))
+    (let bigger (caa-receipt 64 64 64 64 "arm64-v8a" 4096 8 1 0 "pass"))
+    (let bad-apk-hash (caa-receipt 63 64 64 64 "arm64-v8a" 2048 8 1 0 "pass"))
+    (let bad-entry-hash (caa-receipt 64 63 64 64 "arm64-v8a" 2048 8 1 0 "pass"))
+    (let bad-source-hash (caa-receipt 64 64 63 64 "arm64-v8a" 2048 8 1 0 "pass"))
+    (let bad-library-hash (caa-receipt 64 64 64 63 "arm64-v8a" 2048 8 1 0 "pass"))
+    (let bad-abi (caa-receipt 64 64 64 64 "x86_64" 2048 8 1 0 "pass"))
+    (let bad-samples (caa-receipt 64 64 64 64 "arm64-v8a" 0 8 1 0 "pass"))
+    (let bad-packaged (caa-receipt 64 64 64 64 "arm64-v8a" 2048 8 0 0 "pass"))
+    (let bad-executed (caa-receipt 64 64 64 64 "arm64-v8a" 2048 8 1 1 "pass"))
+    (let bad-status (caa-receipt 64 64 64 64 "arm64-v8a" 2048 8 1 0 "fail"))
+    (let bad-kind (list "not-core-axiom-apk-native-lib-receipt" 64 64 64 64 "arm64-v8a" 2048 8 1 0 "pass"))
+
+    (let c0 (if (caa-receipt? good) 1 0))
+    (let c1 (if (caa-hash-lens-valid? good) 2 0))
+    (let c2 (if (caa-valid? good) 4 0))
+    (let c3 (if (caa-left-expands? good bigger) 8 0))
+    (let c4 (if (eq (caa-valid? bad-apk-hash) 0) 16 0))
+    (let c5 (if (eq (caa-valid? bad-entry-hash) 0) 32 0))
+    (let c6 (if (eq (caa-valid? bad-source-hash) 0) 64 0))
+    (let c7 (if (eq (caa-valid? bad-library-hash) 0) 128 0))
+    (let c8 (if (eq (caa-valid? bad-abi) 0) 256 0))
+    (let c9 (if (eq (caa-valid? bad-samples) 0) 512 0))
+    (let c10 (if (eq (caa-valid? bad-packaged) 0)
+                 (if (eq (caa-valid? bad-executed) 0)
+                     (if (eq (caa-valid? bad-status) 0)
+                         (if (eq (caa-receipt? bad-kind) 0) 1024 0)
+                         0)
+                     0)
+                 0))
+    (let c11 (if (eq (len (caa-floor)) 5) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
