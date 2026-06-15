@@ -1,0 +1,297 @@
+; oracle-distillation-learning.fk - native oracle-to-candidate distillation loop.
+;
+; Floor: real learning work is represented as Form rows: lane, input sample,
+; oracle output, native candidate output, quality metrics, token/energy/nutrition
+; cost, choice receipt, feedback outcome, and the next oracle-reliance budget.
+; The floor trains summary, NL-to-Form, freq-check, STT, and TTS micro lanes as
+; nearest-shape exemplars and refuses to reduce oracle use unless a native
+; candidate actually clears receipt floors with lower cost.
+;
+; North star: every useful remote/local oracle call becomes teaching nutrition
+; for a native recipe. Oracles generate labels, corrections, outputs, and
+; judgments; Form carries the source, candidate, feedback, spectra, and choice
+; receipts; native lanes retire oracle authority per task only after heldout
+; receipts prove enough accuracy, trust, sovereignty, vitality, and lower cost.
+;
+; Proven by: form-stdlib/tests/oracle-distillation-learning-band.fk
+
+(do
+    (defn odl-floor ()
+        (list
+            "training samples are native rows, not hidden prompts"
+            "oracle output and native candidate output are both captured before scoring"
+            "choice receipts preserve success, failure, cost, and teacher identity"
+            "oracle reliance only drops when native receipts pass and cost less"
+            "STT and TTS remain teacher-led until real audio receipts clear the same floor"))
+    (defn odl-north-star ()
+        (list
+            "NL-to-NL, NL-to-Form, freq-check, STT, and TTS learn from every oracle call"
+            "local models, remote models, compilers, speech engines, and optional humans are teachers, not homes"
+            "native recipes win per lane by heldout accuracy, trust, sovereignty, vitality, and lower energy"
+            "source, spectrum, meaning-impact, expression, and feedback metadata travel with every output channel"))
+
+    (defn odl-lane (name modality codec priority floor north-star)
+        (list name modality codec priority floor north-star))
+    (defn odl-lane-name (lane) (nth lane 0))
+    (defn odl-lane-modality (lane) (nth lane 1))
+    (defn odl-lane-codec (lane) (nth lane 2))
+    (defn odl-lane-priority (lane) (nth lane 3))
+    (defn odl-lane-floor (lane) (nth lane 4))
+    (defn odl-lane-north-star (lane) (nth lane 5))
+    (defn odl-lanes ()
+        (list
+            (odl-lane "summary:nl-to-nl" "text" "text/utf8" 100 "claim/citation/quality receipt" "native summarizer retires oracle per source kind")
+            (odl-lane "nl-to-form" "text->form" "form/source" 96 "parseable Form output plus proof intent" "natural language lowers through domain grammar into Form/BML")
+            (odl-lane "freq-check" "text" "embedding/head" 92 "semantic signature plus pass/transmute receipt" "native meaning model supplies the signature and the head gates fear")
+            (odl-lane "stt" "audio->text" "pcm16/features->text" 88 "real audio feature rows plus transcript label" "native STT learns from Whisper/local speech teachers")
+            (odl-lane "tts" "text->audio" "text->pcm16/features" 84 "text feature rows plus audio/prosody target" "native TTS learns from piper/coqui/system voice teachers")))
+    (defn odl-lane-known-loop? (name lanes)
+        (if (eq (len lanes) 0) 0
+            (if (str_eq name (odl-lane-name (head lanes))) 1
+                (odl-lane-known-loop? name (tail lanes)))))
+    (defn odl-lane-known? (name) (odl-lane-known-loop? name (odl-lanes)))
+
+    (defn odl-sample (label feature lane source)
+        (list label feature lane source))
+    (defn odl-sample-label (sample) (nth sample 0))
+    (defn odl-sample-feature (sample) (nth sample 1))
+    (defn odl-sample-lane (sample) (nth sample 2))
+    (defn odl-sample-source (sample) (nth sample 3))
+    (defn odl-exemplar (sample) (list (odl-sample-label sample) (odl-sample-feature sample)))
+    (defn odl-learn-sample (sample model) (cons (odl-exemplar sample) model))
+    (defn odl-learn-stream (samples model)
+        (if (eq (len samples) 0) model
+            (odl-learn-stream (tail samples) (odl-learn-sample (head samples) model))))
+    (defn odl-model (samples) (odl-learn-stream samples (empty)))
+    (defn odl-row (feature label) (list feature label))
+    (defn odl-row-feature (row) (nth row 0))
+    (defn odl-row-label (row) (nth row 1))
+    (defn odl-pair (model row)
+        (list (ns-label (odl-row-feature row) model) (odl-row-label row)))
+    (defn odl-eval (model rows)
+        (if (eq (len rows) 0) (empty)
+            (cons (odl-pair model (head rows)) (odl-eval model (tail rows)))))
+    (defn odl-correct (model rows) (ce-correct (odl-eval model rows)))
+
+    (defn odl-summary-feature () (list 9 2 2 1 1))
+    (defn odl-nl-form-feature () (list 2 9 2 1 1))
+    (defn odl-freq-feature () (list 1 2 9 1 1))
+    (defn odl-stt-feature () (list 1 1 2 9 3))
+    (defn odl-tts-feature () (list 1 1 2 3 9))
+    (defn odl-training-samples ()
+        (list
+            (odl-sample "summary:nl-to-nl" (odl-summary-feature) "summary:nl-to-nl" "docs/coherence-substrate/text-summary-learning.form")
+            (odl-sample "nl-to-form" (odl-nl-form-feature) "nl-to-form" "docs/coherence-substrate/form-language.md")
+            (odl-sample "freq-check" (odl-freq-feature) "freq-check" "form/form-stdlib/form-freq-check.fk")
+            (odl-sample "stt" (odl-stt-feature) "stt" "form/form-stdlib/speech-model-learning.fk")
+            (odl-sample "tts" (odl-tts-feature) "tts" "form/form-stdlib/speech-model-learning.fk")))
+    (defn odl-heldout-rows ()
+        (list
+            (odl-row (list 8 2 2 1 1) "summary:nl-to-nl")
+            (odl-row (list 2 8 2 1 1) "nl-to-form")
+            (odl-row (list 1 2 8 1 1) "freq-check")
+            (odl-row (list 1 1 2 8 3) "stt")
+            (odl-row (list 1 1 2 3 8) "tts")))
+
+    (defn odl-candidate (path kind tokens energy nutrition quality confidence sovereignty trust vitality real-samples)
+        (list path kind tokens energy nutrition quality confidence sovereignty trust vitality real-samples))
+    (defn odl-c-path (candidate) (nth candidate 0))
+    (defn odl-c-kind (candidate) (nth candidate 1))
+    (defn odl-c-tokens (candidate) (nth candidate 2))
+    (defn odl-c-energy (candidate) (nth candidate 3))
+    (defn odl-c-nutrition (candidate) (nth candidate 4))
+    (defn odl-c-quality (candidate) (nth candidate 5))
+    (defn odl-c-confidence (candidate) (nth candidate 6))
+    (defn odl-c-sovereignty (candidate) (nth candidate 7))
+    (defn odl-c-trust (candidate) (nth candidate 8))
+    (defn odl-c-vitality (candidate) (nth candidate 9))
+    (defn odl-c-real-samples (candidate) (nth candidate 10))
+    (defn odl-c-ready? (candidate)
+        (if (and
+                (ge (odl-c-quality candidate) 70)
+                (and
+                    (ge (odl-c-confidence candidate) 70)
+                    (and
+                        (ge (odl-c-sovereignty candidate) 70)
+                        (and
+                            (ge (odl-c-trust candidate) 70)
+                            (and
+                                (ge (odl-c-vitality candidate) 70)
+                                (gt (odl-c-real-samples candidate) 0))))))
+            1
+            0))
+    (defn odl-c-lower-cost? (candidate teacher)
+        (if (lt (odl-c-tokens candidate) (odl-c-tokens teacher)) 1
+            (if (eq (odl-c-tokens candidate) (odl-c-tokens teacher))
+                (if (lt (odl-c-energy candidate) (odl-c-energy teacher)) 1
+                    (if (eq (odl-c-energy candidate) (odl-c-energy teacher))
+                        (if (lt (odl-c-nutrition candidate) (odl-c-nutrition teacher)) 1 0)
+                        0))
+                0)))
+    (defn odl-native-wins? (native teacher)
+        (if (and (eq (odl-c-ready? native) 1) (eq (odl-c-lower-cost? native teacher) 1)) 1 0))
+
+    (defn odl-choice-candidate (candidate category)
+        (cr-choice-candidate
+            (odl-c-path candidate)
+            category
+            true
+            (odl-c-energy candidate)
+            (odl-c-quality candidate)
+            "oracle-distillation-candidate"))
+    (defn odl-choice-value (candidate)
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            (odl-c-confidence candidate)
+            (odl-c-sovereignty candidate)
+            (odl-c-quality candidate)
+            (odl-c-trust candidate)))
+    (defn odl-choice-receipt (lane teacher native selected outcome)
+        (cr-choice-receipt
+            lane
+            "oracle-distillation-learning"
+            "ORACLE-DISTILLATION-CHOICE"
+            (list
+                (odl-choice-candidate teacher "ORACLE-DISTILLATION-CHOICE")
+                (odl-choice-candidate native "ORACLE-DISTILLATION-CHOICE"))
+            selected
+            outcome
+            (if (str_eq selected (odl-c-path native)) (odl-c-confidence native) (odl-c-confidence teacher))
+            (if (str_eq selected (odl-c-path native)) (odl-choice-value native) (odl-choice-value teacher))
+            "candidate chosen by receipt quality and oracle-reliance floor"
+            "oracle-distillation-learning"
+            "form/form-stdlib/oracle-distillation-learning.fk"
+            20260615
+            (if (str_eq selected (odl-c-path native)) (odl-c-tokens native) (odl-c-tokens teacher))
+            (if (str_eq outcome (cr-outcome-success))
+                (cr-choice-trace 2 1 1 0)
+                (cr-choice-trace 2 0 1 0))))
+
+    (defn odl-receipt (lane input oracle-output native-output teacher native selected outcome feedback)
+        (list lane input oracle-output native-output teacher native selected outcome feedback
+              (odl-choice-receipt lane teacher native selected outcome)
+              (odl-floor)
+              (odl-north-star)))
+    (defn odl-r-lane (receipt) (nth receipt 0))
+    (defn odl-r-input (receipt) (nth receipt 1))
+    (defn odl-r-oracle-output (receipt) (nth receipt 2))
+    (defn odl-r-native-output (receipt) (nth receipt 3))
+    (defn odl-r-teacher (receipt) (nth receipt 4))
+    (defn odl-r-native (receipt) (nth receipt 5))
+    (defn odl-r-selected (receipt) (nth receipt 6))
+    (defn odl-r-outcome (receipt) (nth receipt 7))
+    (defn odl-r-feedback (receipt) (nth receipt 8))
+    (defn odl-r-choice (receipt) (nth receipt 9))
+    (defn odl-r-floor (receipt) (nth receipt 10))
+    (defn odl-r-north-star (receipt) (nth receipt 11))
+    (defn odl-receipt-pass? (receipt)
+        (if (and
+                (eq (odl-lane-known? (odl-r-lane receipt)) 1)
+                (and
+                    (gt (str_len (odl-r-input receipt)) 0)
+                    (and
+                        (gt (str_len (odl-r-oracle-output receipt)) 0)
+                        (and
+                            (gt (str_len (odl-r-native-output receipt)) 0)
+                            (and
+                                (ge (odl-r-feedback receipt) 70)
+                                (cr-choice-receipt-valid? (odl-r-choice receipt)))))))
+            1
+            0))
+    (defn odl-native-receipt-wins? (receipt)
+        (if (and
+                (eq (odl-receipt-pass? receipt) 1)
+                (and
+                    (str_eq (odl-r-selected receipt) (odl-c-path (odl-r-native receipt)))
+                    (eq (odl-native-wins? (odl-r-native receipt) (odl-r-teacher receipt)) 1)))
+            1
+            0))
+    (defn odl-training-row (receipt)
+        (odl-sample
+            (odl-r-selected receipt)
+            (list
+                (odl-r-feedback receipt)
+                (cr-receipt-cost (odl-r-choice receipt))
+                (odl-c-quality (odl-r-native receipt))
+                (odl-c-quality (odl-r-teacher receipt))
+                (odl-c-sovereignty (odl-r-native receipt))
+                (odl-c-trust (odl-r-native receipt)))
+            (odl-r-lane receipt)
+            "choice-receipt"))
+    (defn odl-next-oracle-budget (prior receipt)
+        (if (eq (odl-native-receipt-wins? receipt) 1)
+            (if (lt prior 10) 0 (sub prior 10))
+            prior))
+
+    (defn odl-summary-receipt ()
+        (do
+            (let teacher (odl-candidate "oracle:local-llm-summary" "teacher" 900 42 42 88 84 62 82 76 32))
+            (let native (odl-candidate "form-native:summary" "native" 160 12 12 84 81 92 84 83 32))
+            (odl-receipt
+                "summary:nl-to-nl"
+                "Summarize the native learning lane with citations."
+                "A cited summary captures source, quality, and receipt rows."
+                "Summary rows carry source, quality, receipt, and lower-cost native choice."
+                teacher
+                native
+                "form-native:summary"
+                (cr-outcome-success)
+                84)))
+    (defn odl-nl-form-receipt ()
+        (do
+            (let teacher (odl-candidate "oracle:codex-form" "teacher" 1400 60 60 90 86 58 80 78 18))
+            (let native (odl-candidate "form-native:nl-to-form" "native" 220 18 18 76 74 88 78 75 18))
+            (odl-receipt
+                "nl-to-form"
+                "When quality passes, reduce oracle reliance."
+                "(odl-next-oracle-budget prior receipt)"
+                "(odl-next-oracle-budget prior receipt)"
+                teacher
+                native
+                "form-native:nl-to-form"
+                (cr-outcome-success)
+                76)))
+    (defn odl-freq-receipt ()
+        (do
+            (let teacher (odl-candidate "oracle:meaning-judge" "teacher" 700 32 32 86 82 60 78 74 24))
+            (let native (odl-candidate "form-native:freq-check-head" "native" 40 4 4 78 76 92 82 80 24))
+            (odl-receipt
+                "freq-check"
+                "Detect whether response needs fear-frequency transmutation."
+                "pass"
+                (fc-check (list 1 8 1) (list 9 1 1) (list 1 9 1) 50)
+                teacher
+                native
+                "form-native:freq-check-head"
+                (cr-outcome-success)
+                78)))
+    (defn odl-stt-receipt ()
+        (do
+            (let teacher (odl-candidate "oracle:whisper-local" "teacher" 0 70 40 91 88 72 84 80 8))
+            (let native (odl-candidate "form-native:stt" "native" 0 12 12 61 62 90 74 72 8))
+            (odl-receipt
+                "stt"
+                "pcm16 feature window: rms/formants/cadence"
+                "native learning needs more speech receipts"
+                "native learning needs more speech receipts"
+                teacher
+                native
+                "oracle:whisper-local"
+                (cr-outcome-success)
+                88)))
+    (defn odl-tts-receipt ()
+        (do
+            (let teacher (odl-candidate "oracle:piper-local" "teacher" 0 64 38 89 86 72 84 80 8))
+            (let native (odl-candidate "form-native:tts" "native" 0 12 12 58 60 90 74 72 8))
+            (odl-receipt
+                "tts"
+                "Render a short spoken label with prosody metadata."
+                "audio/prosody target"
+                "audio/prosody target"
+                teacher
+                native
+                "oracle:piper-local"
+                (cr-outcome-success)
+                86)))
+
+    0)
