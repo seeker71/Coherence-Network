@@ -25,12 +25,12 @@
 ;   - empty-list fold returns the identity accumulator (0)             → 16
 
 (do
-    (let bp (make_nodeid 1 5 4 1))
+    (let row-bp (make_nodeid 1 5 4 1))
 
     (let items (list
-        (record_new bp "n" 3 "tag" 1)
-        (record_new bp "n" 7 "tag" 1)
-        (record_new bp "n" 5 "tag" 0)))
+        (record_new row-bp "n" 3 "tag" 1)
+        (record_new row-bp "n" 7 "tag" 1)
+        (record_new row-bp "n" 5 "tag" 0)))
 
     ;; sum a named integer field across the list (head/tail accumulator fold)
     (defn sum_n (xs acc)
@@ -46,7 +46,7 @@
                 (count_tag (tail xs) (add acc 1))
                 (count_tag (tail xs) acc))))
 
-    (let one (record_new bp "n" 42 "tag" 9))
+    (let one (record_new row-bp "n" 42 "tag" 9))
     (let s1 (if (eq (record_get one "n") 42) 1 0))
     (let s2 (if (eq (record_get one "tag") 9) 1 0))
     (let s3 (if (eq (sum_n items 0) 15) 1 0))
