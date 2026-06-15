@@ -27,6 +27,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime/debug"
 	"sort"
@@ -1970,6 +1971,29 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
+	})
+	// host-io builtins: the kernel's host-driver layer (host-kernel.form). These give a
+	// Form recipe the host effects the agent runner needs — run a process, read/write a
+	// file — so the runner is a Form recipe the kernel runs, NOT hand-written emitted C.
+	// Output is non-deterministic (host-io standing wall), so these are receipt-validated,
+	// not part of the four-way output-identity floor. The kernel already shells out (JIT
+	// go-build, plugin load), so this exposes an existing capability, not a new class.
+	k.registerNative("host-exec", catMethod(), func(_ *Kernel, args []Value) Value {
+		out, _ := exec.Command("sh", "-c", args[0].Str).CombinedOutput()
+		return Value{Kind: VStr, Str: string(out)}
+	})
+	k.registerNative("host-read", catMethod(), func(_ *Kernel, args []Value) Value {
+		b, err := os.ReadFile(args[0].Str)
+		if err != nil {
+			return Value{Kind: VStr, Str: ""}
+		}
+		return Value{Kind: VStr, Str: string(b)}
+	})
+	k.registerNative("host-write", catMethod(), func(_ *Kernel, args []Value) Value {
+		if err := os.WriteFile(args[0].Str, []byte(args[1].Str), 0o644); err != nil {
+			return Value{Kind: VStr, Str: "error"}
+		}
+		return Value{Kind: VStr, Str: "ok"}
 	})
 	k.registerNative("form_error", catWitness(), func(_ *Kernel, args []Value) Value {
 		panic(args[0].Str)
