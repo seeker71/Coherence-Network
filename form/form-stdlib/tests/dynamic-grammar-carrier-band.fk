@@ -1,0 +1,39 @@
+; tests/dynamic-grammar-carrier-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/dynamic-grammar-carrier.fk
+;
+; Verdict 4095 when a dynamic grammar rule extension is carried as data,
+; registered by selector, parsed into an object, and lowered back into a
+; Form-readable trace without a host-side source of truth.
+;
+(do
+    (let source (dgc-source "dynamic-grammar" "runtime/plugin.dg" 7))
+    (let selector (dgc-selector "extension" ".dg"))
+    (let rule (dgc-rule "greeting" "hello" "target" "form-node" source))
+    (let extension (dgc-extension selector rule))
+    (let registry (dgc-register (dgc-registry-empty) extension))
+    (let missing (empty))
+    (let resolved (dgc-resolve registry "extension" ".dg" missing))
+    (let absent (dgc-resolve registry "extension" ".nope" missing))
+    (let trace (dgc-parse registry "extension" ".dg" (list "hello" "field" "rest") source missing))
+    (let object (dgc-parse-trace-object trace))
+    (let lowered (dgc-lower-trace trace))
+
+    (sum
+        (list
+            (if (eq (dgc-rule? rule) 1) 1 0)
+            (if (str_eq (dgc-selector-value (dgc-extension-selector resolved)) ".dg") 2 0)
+            (if (nil? absent) 4 0)
+            (if (str_eq (dgc-parse-object-kind object) "greeting") 8 0)
+            (if (str_eq (dgc-parse-object-capture-name object) "target") 16 0)
+            (if (str_eq (dgc-parse-object-value object) "field") 32 0)
+            (if (eq (len (dgc-parse-trace-rest trace)) 1) 64 0)
+            (if (str_eq (dgc-lower-kind lowered) "form-node") 128 0)
+            (if (str_eq (dgc-lower-value lowered) "field") 256 0)
+            (if (eq (dgc-source-line (dgc-lower-source lowered)) 7) 512 0)
+            (if (str_eq
+                    (dgc-next-code-point)
+                    "form/form-stdlib/runtime-grammar.fk:host file/config grammar plugins -> dynamic-grammar-carrier rule-extension receipts")
+                1024
+                0)
+            (if (str_eq (dgc-source-language (dgc-rule-source (dgc-parse-trace-rule trace))) "dynamic-grammar") 2048 0))))
