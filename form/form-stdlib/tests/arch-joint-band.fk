@@ -1,0 +1,41 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-capacity.fk form-stdlib/arch-joint.fk
+;
+; arch-joint-band — the architect searches the JOINT (depth × width) space and crowns the MINIMAL-cost
+; architecture that fits, three-way. arch-gen discovers depth, arch-capacity discovers width; this composes
+; both. On a d=4 dataset of 4 examples, candidates (1,1) and (2,1) UNDERFIT (width-1 is the bottleneck —
+; depth does not compensate for it here), (1,2) and (2,2) FIT, and the search crowns (1,2) — the smallest
+; (depth·width = 2) architecture that solves the task, rejecting the underfitters AND the over-large (2,2).
+; This is Occam over architectures: the smallest model that fits, discovered — and it correctly reads that
+; THIS task needs width, not depth.
+;
+; Verdict 31 when every claim lands:
+;   1    (depth 1, width 1) UNDERFITS the dataset (loss > 0.5 — too little capacity)
+;   2    (depth 2, width 1) ALSO underfits — depth does NOT compensate for a width-1 bottleneck (loss > 0.5)
+;   4    (depth 1, width 2) FITS (loss < 0.001)
+;   8    the joint search crowns (1, 2) — discovering the task needs width, not depth
+;   16   the crowned architecture is MINIMAL-cost (depth·width = 2), not the over-large (2,2) at cost 4
+(do
+    (let data (list (list (list 2.0 1.0 0.0 0.0) (list 0.0 0.0 1.0 2.0))
+                    (list (list 0.0 2.0 1.0 0.0) (list 0.0 1.0 2.0 0.0))
+                    (list (list 0.0 0.0 2.0 1.0) (list 1.0 2.0 0.0 0.0))
+                    (list (list 1.0 0.0 0.0 2.0) (list 2.0 0.0 0.0 1.0))))
+    (let grid (list (list 1 1) (list 1 2) (list 2 1) (list 2 2)))
+    (let dim 4)
+    (let seed 0.3)
+    (let lr 0.05)
+    (let eps 0.00001)
+    (let epochs 150)
+    (let efit 0.001)
+
+    (let f11 (aj-fit 1 1 dim seed data lr eps epochs))
+    (let f21 (aj-fit 2 1 dim seed data lr eps epochs))
+    (let f12 (aj-fit 1 2 dim seed data lr eps epochs))
+    (let crowned (aj-search grid dim seed data lr eps epochs efit))
+
+    (let c0 (if (gt f11 0.5) 1 0))
+    (let c1 (if (gt f21 0.5) 2 0))
+    (let c2 (if (lt f12 0.001) 4 0))
+    (let c3 (if (eq (aj-best-d crowned) 1) (if (eq (aj-best-w crowned) 2) 8 0) 0))
+    (let c4 (if (eq (aj-best-cost crowned) 2) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
