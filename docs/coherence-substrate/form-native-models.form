@@ -71,7 +71,12 @@
 ;     THROUGH the nonlinearity (dh1 = da ⊙ gelu'(h1), gelu' composed from tn-tanh) — a 2→2→2 MLP fits a
 ;     target with strictly decreasing loss, gelu'(0)=0.5 / gelu'(1)=1.082964 / gelu'(-0.75)=0.001062 (the
 ;     dip) pinned bit-exact, tests/transformer-backprop-ffn-band.fk → 63 three-way (source and binary).
-;     The remaining walls are softmax' (attention) and layernorm', then the full-block backward, and Adam.
+;     The softmax' and layernorm' gradient nodes are now built too (transformer-backprop-softmax-ln-band.fk
+;     → 31 three-way), each proven by its own CONSERVATION LAW: softmax' has Σdz=0 (mass conserved, exact),
+;     layernorm' has Σdx=0 (mean-orthogonal, exact) and <dx,y>≈0 (scale-orthogonal to ~4e-6, the eps/Newton
+;     residual named honestly). So EVERY node of transformer-block.fk's pre-LN block now has its backward —
+;     affine (127), gelu (63), softmax+layernorm (31). The whole proven forward block can train end to end.
+;     Remaining: assembling the per-node vjps into the full tb-block backward walk, and Adam.
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,

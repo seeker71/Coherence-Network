@@ -128,3 +128,26 @@
   (tbp-mlp-loss (tbp-mlp-W1 s) (tbp-mlp-b1 s) (tbp-mlp-W2 s) (tbp-mlp-b2 s) x t))
 (defn tbp-mlp-train-loss (w1 b1 w2 b2 x t lr n)
   (tbp-mlp-train-loss-s (tbp-mlp-train w1 b1 w2 b2 x t lr n) x t))
+
+; ─────────────────────────────────────────────────────────────────────────────
+; THE TWO REMAINING GRADIENT NODES — softmax' (attention) and layernorm' (pre-LN).
+; ─────────────────────────────────────────────────────────────────────────────
+; With these and the affine vjp + gelu' above, every node in transformer-block.fk's pre-LN block has
+; its backward, so the whole proven forward block can train end to end. Both are exact closed forms
+; composed from transformer-numerics.fk; each carries an algebraic INVARIANT the band checks bit-for-bit,
+; so correctness is proven by the gradient's own conservation law, not a tolerance.
+;
+; softmax':  s = softmax(z), upstream g  ->  dz_j = s_j (g_j - <g,s>).
+;   Invariant: Σ dz = 0 — softmax conserves total probability, so its gradient sums to zero exactly.
+(defn tbp-softmax-back (s g)
+  (tb-vec-mul s (tn-sub-scalar g (tb-dot g s))))
+
+; layernorm':  y = (x-μ)/σ (γ=1),  upstream g  ->  dx = (1/σ)[ g - mean(g) - y·mean(g⊙y) ].
+;   Invariants: Σ dx = 0 (orthogonal to the mean direction) and Σ(dx⊙y) = 0 (orthogonal to the scale),
+;   both because Σy = 0 and Σy² = N. y here is tn-layernorm's own output (the body's normalizer).
+(defn tbp-ln-back (x g eps)
+  (tn-scale
+    (tbp-vsub (tn-sub-scalar g (tn-mean g))
+              (tn-scale (tn-layernorm x eps)
+                        (tn-mean (tb-vec-mul g (tn-layernorm x eps)))))
+    (div 1.0 (tn-sqrt (add (tn-var x) eps)))))
