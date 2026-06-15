@@ -35,6 +35,11 @@ def test_hati_mesh_organs_lists_announced_organ() -> None:
         "organ_id": "hati-organ-test-camera-001",
         "organ_kind": "camera",
         "target": "macos-arm64",
+        "display_name": "Mac witness A",
+        "dwelling_name": "North house",
+        "location_label": "ridge room",
+        "map_x": 31.0,
+        "map_y": 47.0,
         "capabilities": ["cap.video.frame"],
         "lanes": ["video:rgba-time"],
     }
@@ -45,7 +50,10 @@ def test_hati_mesh_organs_lists_announced_organ() -> None:
     listed = client.get("/api/hati/mesh/organs")
     assert listed.status_code == 200
     items = listed.json()["items"]
-    assert any(item["organ_id"] == payload["organ_id"] for item in items)
+    organ = next(item for item in items if item["organ_id"] == payload["organ_id"])
+    assert organ["display_name"] == "Mac witness A"
+    assert organ["dwelling_name"] == "North house"
+    assert organ["map_x"] == 31.0
 
 
 def test_hati_mesh_channel_offer_records_flow_receipt() -> None:
@@ -57,9 +65,17 @@ def test_hati_mesh_channel_offer_records_flow_receipt() -> None:
         "interface": "offer:listen-speak",
         "capability": "cap.audio.sample",
         "codec": "pcm16",
+        "data_type": "audio-pcm16",
+        "direction": "bidirectional",
         "status": "offered",
         "sample_rate_hz": 16000.0,
         "bytes_per_second": 32000.0,
+        "latency_ms": 18.5,
+        "error_rate_ppm": 2500,
+        "packet_loss_ppm": 1000,
+        "branch_success_rate_ppm": 860000,
+        "infer_error_rate_ppm": 120000,
+        "model_id": "speech-native-v0",
     }
 
     response = client.post("/api/hati/mesh/channels/offer", json=payload)
@@ -67,11 +83,16 @@ def test_hati_mesh_channel_offer_records_flow_receipt() -> None:
     body = response.json()
     assert body["mesh"] == "hati.mesh"
     assert body["channel"]["protocol"] == "audio:pcm16"
+    assert body["channel"]["data_type"] == "audio-pcm16"
+    assert body["channel"]["direction"] == "bidirectional"
     assert body["receipt"]["runtime_event_id"].startswith("rt_")
 
     listed = client.get("/api/hati/mesh/channels", params={"organ_id": payload["from_organ_id"]})
     assert listed.status_code == 200
-    assert any(item["protocol"] == "audio:pcm16" for item in listed.json()["items"])
+    channel = next(item for item in listed.json()["items"] if item["protocol"] == "audio:pcm16")
+    assert channel["latency_ms"] == 18.5
+    assert channel["branch_success_rate_ppm"] == 860000
+    assert channel["infer_error_rate_ppm"] == 120000
 
 
 def test_hati_mesh_heartbeat_marks_organ_listening() -> None:
