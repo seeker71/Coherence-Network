@@ -710,6 +710,8 @@ WORLD_MODEL_LIVE_CYCLE="$(
         def growth_embodied: (($world_growth.embodied // false) == true);
         def blocks($senses):
             []
+            + (if $window_status != "active" then
+                [{code:"window_floor_missing", detail:"real mesh training window has not met the hard active floor"}] else [] end)
             + (if ($witness_source.status // "blocked") != "live" then
                 [{code:"witness_source_missing", detail:"mac-android-witness-state endpoint did not return a live source"}] else [] end)
             + (if ([ $senses[] | select(.verdict == "observed" and (.kind == "mic" or .kind == "camera" or .kind == "gpu")) ] | length) < 3 then

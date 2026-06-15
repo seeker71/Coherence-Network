@@ -46,6 +46,14 @@ def _event(kind, detail):
     del state["events"][60:]
 
 
+def _merge_snapshot(snap):
+    if isinstance(snap.get("capability_heartbeat"), dict):
+        merged = dict(state["latest"] or {})
+        merged.update(snap)
+        return merged
+    return snap
+
+
 class Witness(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         data = body.encode() if isinstance(body, str) else body
@@ -78,7 +86,9 @@ class Witness(BaseHTTPRequestHandler):
             return self._send(400, json.dumps({"error": str(e)}))
 
         now = time.time()
-        present = [k for k in ORGAN_KEYS if k in snap]
+        merged = _merge_snapshot(snap)
+        heartbeat = isinstance(snap.get("capability_heartbeat"), dict)
+        present = [k for k in ORGAN_KEYS if k in merged]
 
         if state["device"] is None:
             state["device"] = "phone"
@@ -88,14 +98,15 @@ class Witness(BaseHTTPRequestHandler):
         for o in present:
             if o not in state["organs"]:
                 _event("organ", f"{o} came online")
-        for o in state["organs"]:
-            if o not in present:
-                _event("organ", f"{o} went quiet")
+        if not heartbeat:
+            for o in state["organs"]:
+                if o not in present:
+                    _event("organ", f"{o} went quiet")
         if not state["present"] and state["frames"] > 0:
             _event("peer", f"{state['device']} present again")
 
         state["organs"] = present
-        state["latest"] = snap
+        state["latest"] = merged
         state["frames"] += 1
         state["last_ts"] = now
         state["present"] = True
