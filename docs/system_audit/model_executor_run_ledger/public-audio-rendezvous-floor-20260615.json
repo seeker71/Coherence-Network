@@ -1,0 +1,14 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim public-audio-rendezvous-floor \"Add Form-native floor for public rendezvous carriers plus audio co-presence detection receipts and measurement/pressure rows; avoid live-cycle-emission runtime files, APK/JNI, BML compiler, and raw sensor lanes.\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/public-audio-rendezvous.fk form-stdlib/tests/public-audio-rendezvous-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh public-audio-rendezvous"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a Form-native receipt floor for public rendezvous plus audio co-presence. Public API/paste/archive style carriers are rendezvous cells; audio audible/near-ultrasonic receipts prove co-presence with direction, SNR, confidence, latency, and no raw retention; measurement rows record shape, recipe, cell count, tool/reasoning/oracle time, bottleneck, and pressure. The band returns 16383 four-way."
+}
