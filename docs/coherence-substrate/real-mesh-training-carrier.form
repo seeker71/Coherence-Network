@@ -6,7 +6,7 @@
     (recipe form/form-stdlib/real-mesh-training-carrier.fk)
     (emitter-recipe form/form-stdlib/real-mesh-training-emitter.fk)
     (proof form/form-stdlib/tests/real-mesh-training-carrier-band.fk -> 65535)
-    (emitter-proof form/form-stdlib/tests/real-mesh-training-emitter-band.fk -> 16383)
+    (emitter-proof form/form-stdlib/tests/real-mesh-training-emitter-band.fk -> 65535)
     (four-way "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-carrier real-mesh-training-emitter"))
 
   (purpose
@@ -40,7 +40,7 @@
     (emitter-recipe "form/form-stdlib/real-mesh-training-emitter.fk")
     (band "form/form-stdlib/tests/real-mesh-training-carrier-band.fk")
     (emitter-band "form/form-stdlib/tests/real-mesh-training-emitter-band.fk")
-    (manifest "form/fourth-arm-bands.txt: real-mesh-training-carrier fks 65535; real-mesh-training-emitter fks 16383")
+    (manifest "form/fourth-arm-bands.txt: real-mesh-training-carrier fks 65535; real-mesh-training-emitter fks 65535")
     (verdict "PASS-4WAY real-mesh-training-carrier; PASS-4WAY real-mesh-training-emitter"))
 
   (host-emitter
@@ -52,6 +52,7 @@
     (install-provisioning "adb is optional and install-only; it is used only when --apk is supplied, never as the runtime training/testing channel")
     (active-requires "300 MiB training bytes, 100 MiB heldout bytes, 10k labels, at least one live bidirectional runtime channel source, completed local processes, and required lanes")
     (world-model-cycle "each receipt carries world_model_live_cycle, a projection of form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle with witness source, active senses, heldout count, local model eval sense, capability liveness, teacher status, world-growth status, and block reasons")
+    (active-cycle-receipts "--native-teacher-receipt and --world-growth-receipt attach hashed Form-aligned proof that native reached the sampled teacher and world growth embodied the cycle")
     (blocked-receipt "writes block_reasons instead of pretending when runtime channels, Whisper, data roots, labels, or process receipts are missing")
     (local-2026-06-15 "live witness endpoints and completed local TTS/Ollama receipts observed; blocked because no Whisper model was configured and no large train/heldout roots were supplied; adb absence is not a training communication blocker"))
 

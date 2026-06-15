@@ -2,7 +2,7 @@
 ;
 ; real-mesh-training-emitter-band - real host emitter pass/block receipt floor.
 ;
-; Verdict 16383:
+; Verdict 65535:
 ;   1   live sources with hashes are accepted
 ;   2   complete active emitter window passes the hard floor
 ;   4   blocked windows with explicit reasons are accepted as honest
@@ -17,6 +17,8 @@
 ;   2048 active live-cycle projection requires heldout, capability, native win, and embodied growth
 ;   4096 blocked live-cycle projections are accepted when reasons are explicit
 ;   8192 malformed blocked live-cycle projections are rejected
+;   16384 native teacher receipt wins only with sample floor and oracle reach
+;   32768 world-growth receipt embodies only with followed parts and hash
 
 (do
     (let lanes (rmt-required-lanes))
@@ -209,6 +211,57 @@
             "held"
             "form/form-stdlib/world-model-live-sense.fk#wmls-training-cycle"
             (list)))
+    (let native-teacher-win
+        (rmt-native-teacher-receipt
+            "native-teacher:stt"
+            "won"
+            12
+            12
+            0
+            12
+            12
+            "sha256:native-teacher-stt"))
+    (let native-teacher-behind
+        (rmt-native-teacher-receipt
+            "native-teacher:stt"
+            "won"
+            12
+            12
+            0
+            10
+            12
+            "sha256:native-teacher-stt-behind"))
+    (let native-teacher-too-small
+        (rmt-native-teacher-receipt
+            "native-teacher:stt"
+            "won"
+            4
+            12
+            0
+            4
+            4
+            "sha256:native-teacher-stt-small"))
+    (let world-growth-embodied
+        (rmt-world-growth-receipt
+            "world-growth:cycle"
+            "embodied"
+            "follow"
+            3
+            "sha256:world-growth-cycle"))
+    (let world-growth-held
+        (rmt-world-growth-receipt
+            "world-growth:cycle"
+            "held"
+            "vulnerability-not-revealed"
+            0
+            "sha256:world-growth-held"))
+    (let world-growth-thin
+        (rmt-world-growth-receipt
+            "world-growth:cycle"
+            "embodied"
+            "follow"
+            2
+            "sha256:world-growth-thin"))
 
     (let c0 (if (eq (rmt-emitter-sources-live? sources) 1) 1 0))
     (let c1 (if (eq (rmt-emitter-active? active-window) 1) 2 0))
@@ -258,5 +311,21 @@
         (if (str_eq (rmt-emitter-cycle-verdict malformed-cycle) "cycle-invalid")
             8192
             0))
+    (let c14
+        (if (and
+                (eq (rmt-native-teacher-wins? native-teacher-win) 1)
+                (and
+                    (eq (rmt-native-teacher-wins? native-teacher-behind) 0)
+                    (eq (rmt-native-teacher-wins? native-teacher-too-small) 0)))
+            16384
+            0))
+    (let c15
+        (if (and
+                (eq (rmt-world-growth-embodied? world-growth-embodied) 1)
+                (and
+                    (eq (rmt-world-growth-embodied? world-growth-held) 0)
+                    (eq (rmt-world-growth-embodied? world-growth-thin) 0)))
+            32768
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))

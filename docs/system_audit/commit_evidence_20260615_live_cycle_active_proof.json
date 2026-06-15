@@ -1,0 +1,118 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/live-cycle-active-proof-20260615",
+  "commit_scope": "Move the emitted world-model live cycle floor forward by making native-teacher retirement and world-growth embodiment receipt-backed, then prove local process receipts with actual macOS TTS and local Ollama runs.",
+  "files_owned": [
+    "scripts/real_mesh_training_emitters.sh",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "experiments/coherence-sense-android/README.md",
+    "docs/vision-kb/INDEX.md",
+    "docs/system_audit/commit_evidence_20260615_live_cycle_active_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/real_mesh_training_emitters.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter",
+      "scripts/real_mesh_training_emitters.sh --out .cache/real-mesh-training/windows/live-cycle-active-proof-20260615a --native-teacher-receipt .cache/real-mesh-training/proof-receipts/native-teacher-won.json --world-growth-receipt .cache/real-mesh-training/proof-receipts/world-growth-embodied.json",
+      "scripts/real_mesh_training_emitters.sh --out .cache/real-mesh-training/windows/live-cycle-active-proof-20260615b --run-models --native-teacher-receipt .cache/real-mesh-training/proof-receipts/native-teacher-won.json --world-growth-receipt .cache/real-mesh-training/proof-receipts/world-growth-embodied.json",
+      "jq '{status, counts, top_blocks:.block_reasons, cycle_status:.world_model_live_cycle.status, cycle_counts:.world_model_live_cycle.sense_counts, native_teacher:.world_model_live_cycle.native_teacher.earned, world_growth:.world_model_live_cycle.world_growth.embodied, projection:.world_model_live_cycle.projection_row, cycle_blocks:.world_model_live_cycle.block_reasons, process_tasks:[.process_receipts[] | {task,status,exit_code,stdout_bytes,provider,model}]}' .cache/real-mesh-training/windows/live-cycle-active-proof-20260615b/real-mesh-training-window.json",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check"
+    ],
+    "notes": "Focused Form validation returned 65535 across Go, Rust, TypeScript, and fkwu. The dedicated fourth-arm check returned PASS-4WAY real-mesh-training-emitter. Runtime proof with local macOS say and local Ollama llama3.2:3b produced three completed process receipts and cleared process_receipt_floor_missing from the cycle. Native teacher and world growth receipts are hashed and accepted as earned/embodied."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "No public HTTP endpoint behavior changes are expected; deploy validation remains pending until merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Form proof, runtime receipt proof, structural checks, and wellness pass; CI and post-merge deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-models",
+    "mesh-learning",
+    "world-model-growth"
+  ],
+  "spec_ids": [
+    "real-mesh-training-emitter",
+    "world-model-live-sense",
+    "real-mesh-training-carrier"
+  ],
+  "task_ids": [
+    "coord:live-cycle-active-proof",
+    "thread:live-cycle-active-proof-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "cd form && ./validate.sh ... real-mesh-training-emitter-band.fk -> 65535; kernels agree on every sample; fourth arm: 1 band(s) four-way",
+    "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter -> PASS-4WAY real-mesh-training-emitter",
+    ".cache/real-mesh-training/windows/live-cycle-active-proof-20260615b/real-mesh-training-window.json -> completed_processes=3, native_teacher.earned=true, world_growth.embodied=true, cycle block reasons only capability_liveness_missing",
+    "process receipts: macos-say text-to-speech stdout_bytes=177312; local-ollama nl-to-nl stdout_bytes=2040; local-ollama sentiment stdout_bytes=656",
+    "form emitted walker: fkwu"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/INDEX.md",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The live-cycle emitter can now consume hashed native-teacher and world-growth receipts. When those receipts are valid, native_wins becomes 1 and growth_status becomes embodied in the Form-aligned projection. With local model probes enabled, the process floor is proven by real macOS and Ollama processes; the current machine leaves only capability liveness as the world_model_live_cycle block.",
+    "public_endpoints": [
+      "local-only: scripts/real_mesh_training_emitters.sh writes real-mesh-training-window.json; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "A native-teacher receipt is accepted only when sample floor is met, native reaches the oracle within margin, and a content hash exists.",
+      "A world-growth receipt is accepted only when status is embodied, reason is follow, at least three parts exist, and a content hash exists.",
+      "Local run-models proof produced three completed process receipts from actual macOS TTS and Ollama tasks.",
+      "The receipt-backed runtime projection cleared native_teacher_retirement_unproven, world_growth_embodiment_unproven, and process_receipt_floor_missing; capability_liveness_missing remains because the witness endpoint reports present=false."
+    ]
+  }
+}

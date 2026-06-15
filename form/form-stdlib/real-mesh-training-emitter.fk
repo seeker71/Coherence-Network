@@ -188,6 +188,44 @@
     (defn rmt-emitter-cycle-blocks (row) (nth row 10))
     (defn rmt-emitter-cycle-recipe? (row)
         (not (str_eq (rmt-emitter-cycle-form-recipe row) "")))
+
+    (defn rmt-native-teacher-receipt (id status samples min-samples margin native-correct oracle-correct merkle)
+        (list id status samples min-samples margin native-correct oracle-correct merkle))
+    (defn rmt-native-teacher-id (row) (nth row 0))
+    (defn rmt-native-teacher-status (row) (nth row 1))
+    (defn rmt-native-teacher-samples (row) (nth row 2))
+    (defn rmt-native-teacher-min-samples (row) (nth row 3))
+    (defn rmt-native-teacher-margin (row) (nth row 4))
+    (defn rmt-native-teacher-native-correct (row) (nth row 5))
+    (defn rmt-native-teacher-oracle-correct (row) (nth row 6))
+    (defn rmt-native-teacher-merkle (row) (nth row 7))
+    (defn rmt-native-teacher-status-won? (row)
+        (if (str_eq (rmt-native-teacher-status row) "won") 1
+            (if (str_eq (rmt-native-teacher-status row) "retired") 1 0)))
+    (defn rmt-native-teacher-wins? (row)
+        (if (str_eq (rmt-native-teacher-id row) "") 0
+            (if (not (eq (rmt-native-teacher-status-won? row) 1)) 0
+                (if (lt (rmt-native-teacher-samples row) (rmt-native-teacher-min-samples row)) 0
+                    (if (lt
+                            (add (rmt-native-teacher-native-correct row) (rmt-native-teacher-margin row))
+                            (rmt-native-teacher-oracle-correct row))
+                        0
+                        (if (str_eq (rmt-native-teacher-merkle row) "") 0 1))))))
+
+    (defn rmt-world-growth-receipt (id status reason part-count merkle)
+        (list id status reason part-count merkle))
+    (defn rmt-world-growth-id (row) (nth row 0))
+    (defn rmt-world-growth-status (row) (nth row 1))
+    (defn rmt-world-growth-reason (row) (nth row 2))
+    (defn rmt-world-growth-part-count (row) (nth row 3))
+    (defn rmt-world-growth-merkle (row) (nth row 4))
+    (defn rmt-world-growth-embodied? (row)
+        (if (str_eq (rmt-world-growth-id row) "") 0
+            (if (not (str_eq (rmt-world-growth-status row) "embodied")) 0
+                (if (not (str_eq (rmt-world-growth-reason row) "follow")) 0
+                    (if (lt (rmt-world-growth-part-count row) 3) 0
+                        (if (str_eq (rmt-world-growth-merkle row) "") 0 1))))))
+
     (defn rmt-emitter-cycle-active? (row)
         (if (not (str_eq (rmt-emitter-cycle-status row) "emitted")) 0
             (if (lt (rmt-emitter-cycle-observed row) 5) 0
