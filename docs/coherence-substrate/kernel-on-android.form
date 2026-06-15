@@ -25,6 +25,12 @@
 ;   a combined receipt plus package/install evidence: script/source/binary/channel SHA-256s, channel
 ;   duration, and remote cleanup. This is not an APK install, sensor service, or self-modifying
 ;   runtime; it is the minimum explicit Mac+Android native channel/package floor.
+;   The APK packaging floor now also has a measured native-library receipt:
+;   scripts/android_core_axiom_apk_receipt.sh builds an arm64-v8a shared object from generated C,
+;   stages it into Coherence Sense under jniLibs for one Gradle build, verifies the APK contains
+;   lib/arm64-v8a/libcoherence_core_axiom_receipt.so, and checks the extracted APK entry SHA matches
+;   the generated library SHA. This proves APK carriage of native receipt code; it does NOT claim
+;   JNI wiring, System.loadLibrary, or on-device execution from the APK.
 ;   A direct Wi-Fi TCP variant exists in the receipt helper, but the 2026-06-15 live attempts did
 ;   NOT widen the floor: first the Mac and Android wlan0 both reported IPv4 192.168.0.7, so Android
 ;   connected to itself and refused the socket; after Android moved to 192.168.0.4, the bounded
@@ -67,6 +73,8 @@
 ;       (external fun formEval(src): String), the .so in jniLibs/arm64-v8a, the recipes bundled as assets,
 ;       and a device/emulator to actually run a recipe on ARM hardware (host-ctypes proves the symbol, not
 ;       the phone runtime). On-device three-way (all three kernels on one phone) still UNRUN.
+;     - A separate core-axiom receipt .so has now been packaged into the APK and verified by entry hash,
+;       but it is not wired into Kotlin/JNI yet and has not run from the installed app process.
 ;     - Actually RUNNING a recipe on an Android device/emulator is unverified — there is no device here yet.
 ;
 ;
