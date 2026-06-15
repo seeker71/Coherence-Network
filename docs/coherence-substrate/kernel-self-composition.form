@@ -75,6 +75,8 @@
     (via-native-binary  jit.go-compiles-a-recipe-to-native-and-runs-it)  # self-hosting; the new op is a callable leaf (host-kernel GAP-HK2)
     (via-substrate      store-new-cells-in-the-persistent-lattice)        # persistence.fk
     (versioned          content-addressing-keeps-every-version)           # axiom-3: a new shape mints a new node-id; the old persists
+    (a-version-is-a-layer  the-new-native-slice-stands-on-the-prior-binary)  # versioning IS layering — each version a slice over the one below
+    (layer-routing-is-a-recipe  the-new->old-crossing-is-itself-a-cell-packable-for-fewest-crossings)  # call-through (callable leaf) is the floor; a packed/routed boundary is the lift — the crossing is recipes over the five, so it is optimizable
     (reversible         roll-back-by-re-pointing-a-name-at-the-old-node-id)  # the version history IS the node-id lineage
     (bigger-is-rooted   the-larger-kernel-is-still-recipes-over-the-five))
 
