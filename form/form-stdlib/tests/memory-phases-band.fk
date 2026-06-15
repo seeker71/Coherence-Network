@@ -1,0 +1,34 @@
+; preludes: form-stdlib/memory-phases.fk
+;
+; memory-phases-band — short-term (water) and long-term (ice) recall over one stream, three-way in Form.
+; The stream: key Y is written ONCE long ago, then key X drifts A,A,A -> B,B (A is the majority, B is the
+; freshest). One substrate, read two ways:
+;   - water (short-term, window k=2) tracks the DRIFT and FORGETS the old: X -> B, Y -> "" (evaporated)
+;   - ice  (long-term, whole history) holds the PERSISTENT truth and never forgets: X -> A, Y -> yval
+; The two phases DIVERGE on the drifted key (B vs A) — that divergence is the point: short-term memory
+; and long-term memory are different recall recipes over the same writes, each correct for its purpose.
+;
+; Verdict 31 when every claim lands:
+;   1    water recalls the FRESH value on the drifted key (short X k=2 = "B") — recency
+;   2    ice recalls the PERSISTENT value on the drifted key (long X = "A") — majority
+;   4    the two phases DIVERGE on drift (short X != long X)
+;   8    water FORGETS the old key past its window (short Y k=2 = "") — water evaporates
+;   16   ice still HOLDS the old key (long Y = "yval") — ice is load-bearing, never forgets
+(do
+    (let mem (mp-add (mp-add (mp-add (mp-add (mp-add (mp-add (empty)
+                "Y" "yval")
+                "X" "A") "X" "A") "X" "A")
+                "X" "B") "X" "B"))
+
+    (let sx (mp-short mem "X" 2))
+    (let lx (mp-long mem "X"))
+    (let sy (mp-short mem "Y" 2))
+    (let ly (mp-long mem "Y"))
+
+    (let c0 (if (str_eq sx "B") 1 0))
+    (let c1 (if (str_eq lx "A") 2 0))
+    (let c2 (if (str_eq sx lx) 0 4))
+    (let c3 (if (str_eq sy "") 8 0))
+    (let c4 (if (str_eq ly "yval") 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
