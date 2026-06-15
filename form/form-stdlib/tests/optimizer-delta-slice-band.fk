@@ -1,0 +1,108 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk form-stdlib/slice-merge.fk form-stdlib/model-data-sharing.fk
+;
+; optimizer-delta-slice-band — bounded optimizer-state delta slice, four-way.
+;
+; A shareable model update can carry an optimizer-state delta beside the weight
+; delta. This band proves the floor only: the optimizer state is a valid
+; content-addressed optimizer cell, the state changes from before to after, the
+; integer delta is nonzero, the slice is tied to a valid chunk-range policy row,
+; and file cache authority is refused. It does not claim optimizer-step math,
+; durable eval queries, privacy policy, or live mesh transport.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let floor (mv-floor))
+    (let north (mv-north-star))
+    (let optimizer (mv-cell-ref
+        (mv-kind-optimizer-state)
+        "optimizer:adam-moments-a"
+        "merkle:optimizer-a"
+        "node:local-optimizer-a"
+        floor
+        north))
+    (let not-optimizer (mv-cell-ref
+        (mv-kind-model-architecture)
+        "model:arch-a"
+        "merkle:arch-a"
+        "node:local-arch-a"
+        floor
+        north))
+    (let chunk0 (mv-tensor-chunk
+        "tensor:optimizer.m1"
+        0
+        (list 1 3)
+        (list 3 1)
+        "int-delta"
+        "optimizer:adam-moments-a"
+        "merkle:opt-chunk-0"
+        3
+        12
+        0))
+    (let range (mds-chunk-range-slice
+        "model-alpha"
+        "base-root"
+        "tensor:optimizer.m1"
+        0
+        1
+        "merkle:optimizer-chunk-root"
+        (list chunk0)
+        "eval:optimizer-delta"
+        "substrate-cell"))
+    (let bad-range (mds-chunk-range-slice
+        "model-alpha"
+        "base-root"
+        "tensor:optimizer.m1"
+        0
+        1
+        "merkle:optimizer-chunk-root"
+        (empty)
+        "eval:optimizer-delta"
+        "substrate-cell"))
+
+    (let good (mds-optimizer-delta-slice
+        "model-alpha"
+        "base-root"
+        optimizer
+        "state:before"
+        "state:after"
+        7
+        (list 1 -1 0)
+        range
+        "eval:optimizer-delta"
+        "substrate-cell"))
+    (let zero-delta (mds-optimizer-delta-slice
+        "model-alpha" "base-root" optimizer "state:before" "state:after" 7
+        (list 0 0 0) range "eval:optimizer-delta" "substrate-cell"))
+    (let wrong-ref (mds-optimizer-delta-slice
+        "model-alpha" "base-root" not-optimizer "state:before" "state:after" 7
+        (list 1 -1 0) range "eval:optimizer-delta" "substrate-cell"))
+    (let unchanged (mds-optimizer-delta-slice
+        "model-alpha" "base-root" optimizer "state:same" "state:same" 7
+        (list 1 -1 0) range "eval:optimizer-delta" "substrate-cell"))
+    (let cache-source (mds-optimizer-delta-slice
+        "model-alpha" "base-root" optimizer "state:before" "state:after" 7
+        (list 1 -1 0) range "eval:optimizer-delta" "file-cache"))
+    (let bad-range-delta (mds-optimizer-delta-slice
+        "model-alpha" "base-root" optimizer "state:before" "state:after" 7
+        (list 1 -1 0) bad-range "eval:optimizer-delta" "substrate-cell"))
+    (let receipt (mds-optimizer-delta-receipt good))
+
+    (let c0  (if (eq (mds-optimizer-state-ref? optimizer) 1) 1 0))
+    (let c1  (if (eq (mds-optimizer-state-ref? not-optimizer) 0) 2 0))
+    (let c2  (if (eq (mds-nonzero-vector? (list 0 0 1)) 1) 4 0))
+    (let c3  (if (eq (mds-nonzero-vector? (list 0 0 0)) 0) 8 0))
+    (let c4  (if (eq (mds-chunk-range-valid? range) 1) 16 0))
+    (let c5  (if (eq (mds-optimizer-delta-valid? good) 1) 32 0))
+    (let c6  (if (eq (mds-optimizer-delta-valid? zero-delta) 0) 64 0))
+    (let c7  (if (eq (mds-optimizer-delta-valid? wrong-ref) 0) 128 0))
+    (let c8  (if (eq (mds-optimizer-delta-valid? unchanged) 0) 256 0))
+    (let c9  (if (eq (mds-optimizer-delta-valid? cache-source) 0) 512 0))
+    (let c10 (if (eq (mds-optimizer-delta-valid? bad-range-delta) 0) 1024 0))
+    (let c11 (if (eq (mds-optimizer-delta-receipt-step receipt) 7)
+                 (if (eq (mds-optimizer-delta-receipt-width receipt) 3)
+                     (if (str_eq (mds-optimizer-delta-receipt-root receipt) "merkle:optimizer-chunk-root")
+                         (if (eq (mds-optimizer-delta-receipt-valid-bit receipt) 1) 2048 0)
+                         0)
+                     0)
+                 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

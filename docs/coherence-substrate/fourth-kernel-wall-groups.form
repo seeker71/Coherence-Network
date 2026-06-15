@@ -18,11 +18,13 @@
     (dynamic-grammar-carrier "dynamic-grammar-carrier now proves one rule extension as data: selector registration, parse trace, and lower trace without a host-side source of truth.")
     (model-data-sharing "model-data-sharing now composes slice request-if-missing, re-address verification, apply receipt, substrate-source guard, and deterministic TIES/FedAvg merge into one four-way model-slice sharing floor.")
     (model-slice-chunk-range "model-slice-chunk-range now proves a delta slice can name a contiguous tensor chunk-index range under a chunk-set root and reject gaps, wrong tensors, and cache authority.")
+    (optimizer-delta-slice "optimizer-delta-slice now proves a shareable optimizer-state delta beside the weight slice: valid optimizer cell ref, before/after state change, nonzero delta, chunk-range tie, and cache-authority refusal.")
     (four-way-proof "form/form-stdlib/form-control-backtracking-ml.fk + tests/form-control-backtracking-ml-band.fk -> 65535 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/bml-native-source-control.fk + tests/bml-native-source-control-band.fk -> 2047 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/dynamic-grammar-carrier.fk + tests/dynamic-grammar-carrier-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/model-data-sharing-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/model-slice-chunk-range-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
+    (four-way-proof "form/form-stdlib/model-data-sharing.fk + tests/optimizer-delta-slice-band.fk -> 4095 on Go/Rust/TypeScript/fkwu.")
     (shim-repair "fourth-shim.fk now mirrors the core any?/all?, positive?/negative?, reversible cell, and task helpers the fourth prelude previously lacked."))
 
   (group
@@ -85,9 +87,9 @@
     (id model-data-sharing)
     (status active)
     (why "ML model data sharing needs chunk cells, merkle roots, delta slices, optimizer state, provenance, local NodeID handles, durable queries, and mesh-safe slice exchange.")
-    (current-floor tensor-chunk-store chunk-set-root carrier-projection-rehash model-vitality-production-row slice-update-roundtrip slice-merge model-data-sharing model-slice-chunk-range)
-    (closed-now bounded-slice-request-response readdress-verify-apply substrate-source-truth-guard deterministic-merge-receipt chunk-range-slice-policy)
-    (next-walls optimizer-delta-slices durable-eval-query live-mesh-slice-transport conflict-policy privacy-boundary chunk-range-merkle-proof)
+    (current-floor tensor-chunk-store chunk-set-root carrier-projection-rehash model-vitality-production-row slice-update-roundtrip slice-merge model-data-sharing model-slice-chunk-range optimizer-delta-slice)
+    (closed-now bounded-slice-request-response readdress-verify-apply substrate-source-truth-guard deterministic-merge-receipt chunk-range-slice-policy optimizer-state-delta-slice)
+    (next-walls durable-eval-query live-mesh-slice-transport conflict-policy privacy-boundary chunk-range-merkle-proof optimizer-step-math)
     (parallel-card
       (goal "Turn one model-data sharing wall into a substrate receipt with provenance and rehash proof.")
       (files_allowed form/form-stdlib/*model*.fk form/form-stdlib/*store*.fk form/form-stdlib/tests/*-band.fk docs/coherence-substrate/form-native-models.form docs/coherence-substrate/fourth-kernel-wall-groups.form)
