@@ -387,6 +387,15 @@
 ;   is realized: diffusion, sparse attention, CNN, memorizer, compute (runs recipes), short/long-term memory,
 ;   and recipe-generation. champion-challenger.fk flips serving authority between kinds on earned competition,
 ;   and the gate (recognition-router + the learned gating network) routes per input.
+;   M7's ARCHITECT [SHIPPED: arch-gen.fk + tests/arch-gen-band.fk → 31 three-way]: generation rises from
+;   composing experts to composing LAYERS into a trained ARCHITECTURE. The body generates layer-stacks of
+;   configurable DEPTH (each a list of typed layer-cells as data), ASSEMBLES and TRAINS each through
+;   transformer-backprop.fk's stack engine, and crowns the one that fits — the no-op (depth 0, y=x) cannot
+;   fit a target ≠ input (loss stays 0.34) and is rejected, while generated depth-1/2 architectures train to
+;   loss → 0. So the system designs the architecture AND learns it: the same generate-then-search shape that
+;   composes experts (recipe-gen) now does NAS over layer-stacks, trained by the proven backward. Next ring:
+;   richer architecture spaces (mixed layer types, widths, attention vs ffn per task) and champion-challenger
+;   flipping serving authority to a synthesized-and-trained architecture once it earns it.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·

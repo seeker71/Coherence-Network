@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-16",
+  "thread_branch": "claude/moe-layer-architect",
+  "commit_scope": "auto-ml as the ARCHITECT: generation rises from composing experts to composing LAYERS into a trained architecture. arch-gen.fk generates layer-stack architectures of configurable depth (each a list of typed layer-cells, as data), assembles and trains each through transformer-backprop.fk's stack engine (tbp-stk-train), and crowns the one that fits. This closes the loop between the two threads built on PR #3168: the same generate-then-search shape recipe-gen.fk uses to compose experts now does neural-architecture-search over layer-stacks, trained by the proven transformer backward. The body designs the architecture AND learns it, rejecting the no-op architecture that structurally cannot fit.",
+  "files_owned": [
+    "form/form-stdlib/arch-gen.fk",
+    "form/form-stdlib/tests/arch-gen-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/arch-gen.fk form-stdlib/tests/arch-gen-band.fk"
+    ],
+    "summary": "arch-gen-band -> 31 three-way (Go=Rust=TS), 0 divergent. The body GENERATES + CONFIGURES an architecture (depth-2 is a 2-layer stack); architecture MATTERS (the no-op depth-0 y=x cannot fit a target != input, loss stays 0.34); generated depth-1 and depth-2 architectures TRAIN to fit (loss -> 0); and the ARCHITECT crowns a non-empty architecture (depth >= 1), rejecting the no-op. Fixture: input (1.0,0.5), target (1.5,0.8), lr 0.1, 80 steps. 3-KERNEL ONLY (Go=Rust=TS): composes the fp64 transformer backward (transformer-block / transformer-numerics op family), not in the fourth-arm manifest -- the same floor transformer-block.fk and transformer-backprop are proven on. Unsupported-op-family gap, not a divergence.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "depth0_noop_loss": "0.34 (cannot fit)",
+      "depth1_loss": "~0 (fits)",
+      "depth2_loss": "~0 (fits)",
+      "architect_crowned_depth": 2
+    },
+    "known_limitations": [
+      {
+        "limitation": "The generated architecture space here is depth (a stack of n FFN-residual layers). Richer spaces -- mixed layer types (attention vs ffn per slot), widths, per-task type selection -- are the next ring, the same generate-then-search shape over a wider config vocabulary. The discrimination proven is structural (no-op cannot fit vs a layer can); capacity/type discrimination over a multi-example dataset is the deeper proof.",
+        "follow_up": "Extend the generator to mixed layer types and widths; train over a multi-example dataset so capacity-based architecture selection is provable; wire champion-challenger to flip serving authority to a synthesized-and-trained architecture."
+      },
+      {
+        "limitation": "Init is deterministic (the kernel has no RNG; each layer seeds by depth index), which makes the band reproducible and content-addressed but means architecture comparison is on one fixed init, not an init distribution.",
+        "follow_up": "When a host RNG carrier is wired, sample inits; until then deterministic seeds keep the proof bit-stable three-way."
+      },
+      {
+        "limitation": "3-kernel only: the fp64 transformer backward op family is not in the fourth-arm manifest. Same floor as transformer-block.fk and transformer-backprop. 0 divergent across Go/Rust/TS.",
+        "follow_up": "The fourth arm gains this family when the transformer numerics/block bands are flattened for fkwu."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs arch-gen-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + milestone-map doc; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body designs neural architectures -- it generates layer-stacks of configurable depth, trains each through the proven backward, and crowns the one that fits, rejecting architectures that structurally cannot.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh arch-gen-band (three kernels agree, verdict 31): generate depth-n architecture, train each, no-op rejected, working depth crowned"
+    ],
+    "summary": "Proven three-way: auto-ml designs and trains architectures, not just hand-built models."
+  },
+  "phase_gate": {
+    "phase": "m7-architect-nas",
+    "gate": "generation rises from experts to architectures: the body generates, configures, assembles, and trains layer-stacks, crowning the one that fits and rejecting the no-op -- NAS over layer-stacks trained by the proven backward, three-way",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "richer architecture spaces (mixed types, widths, per-task type selection); multi-example capacity-based selection; champion-challenger authority-flip to a synthesized-and-trained architecture"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arch-gen-20260616"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/arch-gen.fk",
+    "form/form-stdlib/tests/arch-gen-band.fk",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/arch-gen.fk",
+    "form/form-stdlib/tests/arch-gen-band.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-16_arch_gen.json"
+  ],
+  "change_intent": "runtime_feature"
+}
