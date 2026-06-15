@@ -1,0 +1,41 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/optimizer-step.fk form-stdlib/autodiff-gradient.fk
+;
+; adam-bias-correction-band — bounded fixed-point Adam bias correction, four-way.
+;
+; Verdict 4095 when every claim lands.
+(do
+    (let weights (list 100 50))
+    (let m1s (list 0 0))
+    (let m2s (list 0 0))
+    (let grads (list 10 5))
+    (let corrected (os-adam-bias-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 1 2 1))
+    (let uncorrected (os-adam-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 1))
+    (let zero-grad (os-adam-bias-receipt "model-alpha" weights m1s m2s (list 0 0) 2 8 9 10 1 2 1))
+    (let bad-bias1 (os-adam-bias-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 1 0 1))
+    (let bad-bias2 (os-adam-bias-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 1 2 0))
+    (let high-bias (os-adam-bias-receipt "model-alpha" weights m1s m2s grads 2 8 9 10 1 11 1))
+    (let bad-len (os-adam-bias-receipt "model-alpha" weights m1s (list 0) grads 2 8 9 10 1 2 1))
+    (let ag (ag-receipt "model-alpha" 3 4 1 9))
+    (let ag-corrected (os-adam-bias-receipt "model-alpha" (list 3 1) (list 0 0) (list 0 0) (ag-receipt-vector ag) 2 8 9 10 1 2 1))
+
+    (let c0 (if (eq (nth (os-adam-bias-next-m1 corrected) 0) 2) 1 0))
+    (let c1 (if (eq (nth (os-adam-bias-next-m2 corrected) 0) 10) 2 0))
+    (let c2 (if (eq (nth (os-adam-bias-corrected-m1 corrected) 0) 10) 4 0))
+    (let c3 (if (eq (nth (os-adam-bias-corrected-m2 corrected) 0) 100) 8 0))
+    (let c4 (if (eq (nth (os-adam-bias-after corrected) 0) 99) 16 0))
+    (let c5 (if (eq (nth (os-adam-bias-corrected-m1 corrected) 1) 5) 32 0))
+    (let c6 (if (eq (nth (os-adam-bias-corrected-m2 corrected) 1) 20) 64 0))
+    (let c7 (if (eq (nth (os-adam-bias-after corrected) 1) 48) 128 0))
+    (let c8 (if (eq (nth (os-adam-after uncorrected) 1) 49) 256 0))
+    (let c9 (if (eq (os-adam-bias-valid? corrected) 1) 512 0))
+    (let c10 (if (eq (os-adam-bias-valid? zero-grad) 0)
+                 (if (eq (os-adam-bias-valid? bad-bias1) 0)
+                     (if (eq (os-adam-bias-valid? bad-bias2) 0)
+                         (if (eq (os-adam-bias-valid? high-bias) 0)
+                             (if (eq (os-adam-bias-valid? bad-len) 0) 1024 0)
+                             0)
+                         0)
+                     0)
+                 0))
+    (let c11 (if (eq (os-adam-bias-valid? ag-corrected) 1) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
