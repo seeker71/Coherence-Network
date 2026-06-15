@@ -69,6 +69,16 @@
 ;     is not in the fourth-arm manifest). This is the autodiff-gradient-cell wall, opened at the affine
 ;     node; the remaining walls are the transcendental vjps (gelu'/softmax'/layernorm') that extend it to
 ;     the full-block backward, and Adam.
+;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
+;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
+;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,
+;     byte-stable three-way: tests/affine-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_backprop_audit.sh
+;     on this M4 Max compiles the emitted kernel and trains a real affine on the GPU: 32×32 loss 126→0,
+;     bit-exact vs the fp32 CPU reference (max|ΔW|=0); 1280×1280 (whisper-large d_model, 1.64M params) loss
+;     5115→2.2e-8 in 200 steps at 1.054 ms/step, GPU loss matching the fp32 CPU reference to 9 sig figs
+;     (ΔW within fp32 epsilon — GPU FMA vs CPU split-mul). The fp64 recipe is the proven algorithm; the
+;     fp32 MSL is its GPU carrier, conformance-gated in the lane's own semantics. The learning kernel runs
+;     on the silicon — host-kernel.form's "drive the organ" realized for backprop.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,

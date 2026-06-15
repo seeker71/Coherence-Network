@@ -1,0 +1,24 @@
+; preludes: form-stdlib/jit-tensor-emit.fk
+;
+; affine-train-emit-band — the GPU TRAINING-STEP emitter as recipe, proven three-way. jte-affine-train-msl
+; authors the MSL kernel for one SGD step over an affine layer y = W·x + b (transformer-backprop.fk's
+; tbp-step, one output row per GPU thread): the forward dot carries tb-dot's exact DOWNWARD right-fold,
+; the residual/loss/grad and the in-place SGD update (row -= lr·g·x, b -= lr·g) follow. The emitted source
+; is byte-identical across kernels (str_eq against the canonical text), the name parameterizes cleanly, and
+; the emission is deterministic — so two emissions of the same name intern to one cell (the crystallization
+; cache's ground). The kernel COMPILES and RUNS on the M4 Max GPU and is parity-gated against an fp32 CPU
+; reference of the recipe — see scripts/metal_backprop_audit.sh.
+;
+; Verdict 7 when the emission lands:
+;   1   the full emitted f32 MSL for form_affine_train_f32 equals the canonical text
+;   2   a different name lands in the same frame (emission is a function, not a constant)
+;   4   two emissions of the same name are str_eq (deterministic text — same emission, same cell)
+(do
+    (let tail "(device float* w [[buffer(0)]], device float* b [[buffer(1)]], device const float* x [[buffer(2)]], device const float* t [[buffer(3)]], device float* loss [[buffer(4)]], constant uint& rows [[buffer(5)]], constant uint& cols [[buffer(6)]], constant float& lr [[buffer(7)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } float y = acc + float(b[i]); float d = y - float(t[i]); loss[i] = d * d; float g = 2.0f * d; uint k = cols; while (k > 0) { k -= 1; row[k] = float(float(row[k]) - lr * g * float(x[k])); } b[i] = float(float(b[i]) - lr * g); }")
+    (let want (str_concat "kernel void form_affine_train_f32" tail))
+    (let got (jte-affine-train-msl "form_affine_train_f32"))
+    (let other (jte-affine-train-msl "at2"))
+    (let c0 (if (str_eq got want) 1 0))
+    (let c1 (if (str_eq other (str_concat "kernel void at2" tail)) 2 0))
+    (let c2 (if (str_eq (jte-affine-train-msl "form_affine_train_f32") got) 4 0))
+    (add c0 (add c1 c2)))
