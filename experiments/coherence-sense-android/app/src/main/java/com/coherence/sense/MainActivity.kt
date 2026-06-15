@@ -654,7 +654,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("organ_id", organId)
             .put("organ_kind", "android-phone")
             .put("app", "coherence-sense")
-            .put("app_version", "0.2")
+            .put("app_version", "0.4")
             .put("target", "android-arm64")
             .put("steward_cell_id", stewardCellId())
             .put("steward_label", stewardLabel())
@@ -709,6 +709,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         return Pair(sentSamples.toDouble() / elapsed, sentBytes.toDouble() / elapsed)
     }
 
+    private fun localWitnessConnected(): Boolean =
+        connected && effectiveWitnessBase().isNotBlank() && !lastMacState.startsWith("offline")
+
+    private fun visiblePeerCount(): Int = peerCount + if (localWitnessConnected()) 1 else 0
+
+    private fun visibleChannelCount(): Int = connectedChannelCount + if (localWitnessConnected()) 1 else 0
+
     private fun refreshMesh() {
         if (meshRefreshInFlight) return
         meshRefreshInFlight = true
@@ -743,8 +750,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         }
                     }
                     peerCount = present
-                    bestSharedChannel = if (present > 0) chosen else "none yet"
-                    meshState = if (present > 0) "mesh present: $present peer(s)" else "mesh quiet: no peers heard"
+                    bestSharedChannel = if (present > 0) chosen else if (localWitnessConnected()) "wifi:mac-witness" else "none yet"
+                    meshState = if (present > 0) {
+                        "public mesh present: $present peer(s)"
+                    } else if (localWitnessConnected()) {
+                        "local Mac witness connected; public mesh quiet"
+                    } else {
+                        "mesh quiet: no peers heard"
+                    }
                 } else {
                     meshState = "mesh list failed $organsCode"
                 }
@@ -1132,7 +1145,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("update", updateState)
 
     private fun bodyStateJson(): JSONObject {
-        val presentPeers = if (connected) peerCount + 1 else 0
+        val presentPeers = if (connected) visiblePeerCount() else 0
         return JSONObject()
             .put("organs_active", activeOrgans().size)
             .put("present_peers", presentPeers)
@@ -1459,11 +1472,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val bodyState = bodyStateJson()
         val presentPeers = bodyState.optInt("present_peers")
         val witness = effectiveWitnessBase().ifBlank { "auto-discovery pending" }
+        val localCarrier = if (localWitnessConnected()) "mac witness live" else "mac witness waiting"
         meshSummary.text = listOf(
             "state: $meshState",
             "witness: $witness",
+            "local carrier: $localCarrier",
             "discovery: $discoveryState",
-            "present peers: $peerCount  connected channels: $connectedChannelCount  offered: $offeredChannelCount",
+            "present peers: ${visiblePeerCount()}  connected channels: ${visibleChannelCount()}  offered: ${offeredChannelCount + offeredTransports().size}",
+            "public mesh peers: $peerCount  public channels: $connectedChannelCount",
             "best shared carrier: $bestSharedChannel",
         ).joinToString("\n")
         sensorLane.text = listOf(
@@ -1590,6 +1606,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val rows = JSONObject(body).optJSONArray("items") ?: JSONArray()
         var connectedRows = 0
         val lines = mutableListOf(
+            "local Mac witness: ${if (localWitnessConnected()) "connected" else "waiting"}",
+            "offered carriers: ${offeredTransports().joinToString(",")}",
             "local heartbeat: ${activeOrgans().size} organ(s), ${channelLanes().size} lane(s)",
             "best shared carrier: $bestSharedChannel",
             "local flow: %.2f samples/s %.0f B/s".format(samplesPerSecond, bytesPerSecond),
