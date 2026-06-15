@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/world-model-growth-cells-20260615",
+  "commit_scope": "Add Form-native world-model growth cells for ingest, digest, embody, and stored parts.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "world-model-growth",
+    "named-cells",
+    "form-native-world-model",
+    "observable-truth-receipts",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "commit-evidence-contract",
+    "form-native-world-model"
+  ],
+  "task_ids": [
+    "world-model-growth-cells-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment",
+        "growth-permission"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@world-model-growth-cells-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-15_world_model_growth_cells.json",
+    "docs/system_audit/model_executor_run_ledger/world-model-growth-cells-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/world-model-growth.fk",
+    "form/form-stdlib/tests/world-model-growth-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/user-blueprint-registry.md",
+    "scripts/INDEX.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-15_world_model_growth_cells.json",
+    "docs/system_audit/model_executor_run_ledger/world-model-growth-cells-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/world-model-growth.fk",
+    "form/form-stdlib/tests/world-model-growth-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/user-blueprint-registry.md",
+    "scripts/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim world-model-growth-cells",
+      "python3 scripts/scan_form_blueprints.py register WORLD-MODEL-GROWTH --meaning \"World-model growth receipt root: sensed readings digested into blueprint, recipe, and named-cell parts, embodied only after trusted-core follow.\" --defined-in form/form-stdlib/world-model-growth.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/tests/world-model-growth-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh world-model-growth",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned `world-model-growth-band.fk -> 4095` with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The explicit fourth-arm gate returned `PASS-4WAY  world-model-growth`. Blueprint scan reported no unregistered type-99 or bp string refs; it still reports the pre-existing bp name drift."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR yet for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested; this is a local Form runtime floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A world model can now grow through Form-native receipts: ingest sensed readings, digest observed/absent evidence while preserving nothing as silence, embody only after trusted-core follow, and store blueprint, recipe, and named-cell parts under a content-addressed WORLD-MODEL-GROWTH root.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/tests/world-model-growth-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh world-model-growth"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/world-model-growth.fk",
+    "form/form-stdlib/tests/world-model-growth-band.fk",
+    "form/form-stdlib/world-module-model.fk",
+    "form/form-stdlib/persistence.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/model_executor_run_ledger/world-model-growth-cells-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "world-model-growth-cells-floor",
+    "gate": "World-model growth needs Form-native parts for blueprint, recipe, and named-cell storage before live senses, auto-research, or dashboard embodiment can claim durable truth authority.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Attach live mesh/audio/video/model observations to wmg-sense rows, then project WORLD-MODEL-GROWTH parts onto the dashboard and durable substrate carrier."
+  },
+  "floor_update": {
+    "previous_observed_floor": "world-module-model proved trusted-core follow/refuse and vulnerability reveal, but it did not yet turn surviving truth into blueprint, recipe, and named-cell parts.",
+    "current_observed_floor": "world-model-growth returns 4095 pass-four-way and is admitted to form/fourth-arm-bands.txt. It stores embodied growth as WORLD-MODEL-GROWTH with three named parts.",
+    "new_bands": [
+      "world-model-growth -> 4095 pass-four-way"
+    ],
+    "not_claimed": [
+      "live sensor ingestion into wmg-sense rows",
+      "durable persisted .fkb store for the growth root",
+      "dashboard projection of growth parts",
+      "automatic cross-model growth policy selection"
+    ]
+  }
+}
