@@ -428,4 +428,199 @@
                 (ctl-ld-trust-after (ctl-ca-learned-delta act)))
             "code:coding-act"))
 
+    (defn ctl-json-get-string (obj key)
+        (json-string-value (json-object-get obj key)))
+    (defn ctl-json-get-int (obj key)
+        (json-int-value (json-object-get obj key)))
+    (defn ctl-json-source-surface (row)
+        (ctl-code-surface
+            (ctl-json-get-string row "kind")
+            (ctl-json-get-string row "language")
+            (ctl-json-get-string row "path")
+            (ctl-json-get-string row "source_sig")
+            (ctl-json-get-string row "node_sig")
+            (ctl-json-get-string row "grammar")))
+    (defn ctl-json-patch-recipe (receipt)
+        (do
+            (let patch (json-object-get receipt "patch_recipe"))
+            (ctl-patch-recipe
+                (ctl-json-get-string patch "intent")
+                (ctl-json-get-string patch "dialect")
+                (ctl-json-get-string patch "patch_sig")
+                (ctl-json-get-int patch "files_touched")
+                (ctl-json-get-int patch "reversible"))))
+    (defn ctl-json-verifier (row)
+        (ctl-verifier
+            (ctl-json-get-string row "name")
+            (ctl-json-get-string row "status")
+            (ctl-json-get-int row "duration_ms")
+            (ctl-json-get-string row "evidence_sig")))
+    (defn ctl-json-verifiers-loop (rows)
+        (if (eq (len rows) 0) (empty)
+            (cons
+                (ctl-json-verifier (head rows))
+                (ctl-json-verifiers-loop (tail rows)))))
+    (defn ctl-json-verifiers (receipt)
+        (ctl-json-verifiers-loop
+            (json-array-elements (json-object-get receipt "verifiers"))))
+    (defn ctl-json-learned-delta (receipt)
+        (do
+            (let delta (json-object-get receipt "learned_delta"))
+            (ctl-learned-delta
+                (ctl-json-get-string delta "lane")
+                (ctl-json-get-int delta "sample_count")
+                (ctl-json-get-int delta "trust_before")
+                (ctl-json-get-int delta "trust_after")
+                (ctl-json-get-int delta "accepted"))))
+    (defn ctl-json-choice-receipt (receipt)
+        (do
+            (let choice (json-object-get receipt "choice_receipt"))
+            (let delta (json-object-get receipt "learned_delta"))
+            (let meta
+                (ctl-meta
+                    (ctl-json-get-int choice "certainty")
+                    (ctl-json-get-int choice "certainty")
+                    (ctl-freq-spectrum
+                        (ctl-json-get-int (json-object-get receipt "patch_recipe") "files_touched")
+                        80
+                        90
+                        (json-array-length (json-object-get receipt "verifiers"))
+                        70)
+                    76
+                    (ctl-json-get-int choice "sovereignty")
+                    (ctl-json-get-int delta "trust_after")))
+            (ctl-success-receipt
+                (ctl-json-get-string choice "selected_path")
+                meta
+                (ctl-json-get-int choice "token_cost"))))
+    (defn ctl-json-first-source (receipt)
+        (head (json-array-elements (json-object-get receipt "source_surfaces"))))
+    (defn ctl-json-coding-act (receipt)
+        (ctl-coding-act
+            (ctl-json-get-string receipt "intent")
+            (ctl-json-source-surface (ctl-json-first-source receipt))
+            (ctl-json-patch-recipe receipt)
+            (ctl-json-verifiers receipt)
+            (ctl-json-choice-receipt receipt)
+            (ctl-json-learned-delta receipt)))
+    (defn ctl-json-coding-act-valid? (receipt)
+        (if (and
+                (str_eq (ctl-json-get-string receipt "kind") "code-tool-learning/coding-act-receipt")
+                (and
+                    (str_eq (ctl-json-get-string receipt "status") "pass")
+                    (and
+                        (gt (json-array-length (json-object-get receipt "source_surfaces")) 0)
+                        (and
+                            (eq
+                                (ctl-json-get-int (json-object-get receipt "patch_recipe") "files_touched")
+                                (json-array-length (json-object-get receipt "source_surfaces")))
+                            (and
+                                (eq (ctl-json-get-int (json-object-get receipt "patch_recipe") "raw_patch_retained") 0)
+                                (eq (ctl-coding-act-valid? (ctl-json-coding-act receipt)) 1))))))
+            1
+            0))
+    (defn ctl-json-coding-act-sample (receipt)
+        (ctl-coding-act-sample (ctl-json-coding-act receipt)))
+
+    (defn ctl-receipt-cell-pair (key value) (list key value))
+    (defn ctl-receipt-cell-key (pair) (head pair))
+    (defn ctl-receipt-cell-value (pair) (head (tail pair)))
+    (defn ctl-receipt-cell-get-loop (pairs key default-value)
+        (if (eq (len pairs) 0) default-value
+            (if (str_eq (ctl-receipt-cell-key (head pairs)) key)
+                (ctl-receipt-cell-value (head pairs))
+                (ctl-receipt-cell-get-loop (tail pairs) key default-value))))
+    (defn ctl-receipt-cell-get (cell key)
+        (ctl-receipt-cell-get-loop cell key ""))
+    (defn ctl-receipt-cell-source-surface (row)
+        (ctl-code-surface
+            (ctl-receipt-cell-get row "kind")
+            (ctl-receipt-cell-get row "language")
+            (ctl-receipt-cell-get row "path")
+            (ctl-receipt-cell-get row "source_sig")
+            (ctl-receipt-cell-get row "node_sig")
+            (ctl-receipt-cell-get row "grammar")))
+    (defn ctl-receipt-cell-patch-recipe (cell)
+        (do
+            (let patch (ctl-receipt-cell-get cell "patch_recipe"))
+            (ctl-patch-recipe
+                (ctl-receipt-cell-get patch "intent")
+                (ctl-receipt-cell-get patch "dialect")
+                (ctl-receipt-cell-get patch "patch_sig")
+                (ctl-receipt-cell-get patch "files_touched")
+                (ctl-receipt-cell-get patch "reversible"))))
+    (defn ctl-receipt-cell-verifier (row)
+        (ctl-verifier
+            (ctl-receipt-cell-get row "name")
+            (ctl-receipt-cell-get row "status")
+            (ctl-receipt-cell-get row "duration_ms")
+            (ctl-receipt-cell-get row "evidence_sig")))
+    (defn ctl-receipt-cell-verifiers-loop (rows)
+        (if (eq (len rows) 0) (empty)
+            (cons
+                (ctl-receipt-cell-verifier (head rows))
+                (ctl-receipt-cell-verifiers-loop (tail rows)))))
+    (defn ctl-receipt-cell-verifiers (cell)
+        (ctl-receipt-cell-verifiers-loop
+            (ctl-receipt-cell-get cell "verifiers")))
+    (defn ctl-receipt-cell-learned-delta (cell)
+        (do
+            (let delta (ctl-receipt-cell-get cell "learned_delta"))
+            (ctl-learned-delta
+                (ctl-receipt-cell-get delta "lane")
+                (ctl-receipt-cell-get delta "sample_count")
+                (ctl-receipt-cell-get delta "trust_before")
+                (ctl-receipt-cell-get delta "trust_after")
+                (ctl-receipt-cell-get delta "accepted"))))
+    (defn ctl-receipt-cell-choice-receipt (cell)
+        (do
+            (let choice (ctl-receipt-cell-get cell "choice_receipt"))
+            (let delta (ctl-receipt-cell-get cell "learned_delta"))
+            (let patch (ctl-receipt-cell-get cell "patch_recipe"))
+            (let meta
+                (ctl-meta
+                    (ctl-receipt-cell-get choice "certainty")
+                    (ctl-receipt-cell-get choice "certainty")
+                    (ctl-freq-spectrum
+                        (ctl-receipt-cell-get patch "files_touched")
+                        80
+                        90
+                        (len (ctl-receipt-cell-get cell "verifiers"))
+                        70)
+                    76
+                    (ctl-receipt-cell-get choice "sovereignty")
+                    (ctl-receipt-cell-get delta "trust_after")))
+            (ctl-success-receipt
+                (ctl-receipt-cell-get choice "selected_path")
+                meta
+                (ctl-receipt-cell-get choice "token_cost"))))
+    (defn ctl-receipt-cell-first-source (cell)
+        (head (ctl-receipt-cell-get cell "source_surfaces")))
+    (defn ctl-receipt-cell-coding-act (cell)
+        (ctl-coding-act
+            (ctl-receipt-cell-get cell "intent")
+            (ctl-receipt-cell-source-surface (ctl-receipt-cell-first-source cell))
+            (ctl-receipt-cell-patch-recipe cell)
+            (ctl-receipt-cell-verifiers cell)
+            (ctl-receipt-cell-choice-receipt cell)
+            (ctl-receipt-cell-learned-delta cell)))
+    (defn ctl-receipt-cell-coding-act-valid? (cell)
+        (if (and
+                (str_eq (ctl-receipt-cell-get cell "kind") "code-tool-learning/coding-act-receipt")
+                (and
+                    (str_eq (ctl-receipt-cell-get cell "status") "pass")
+                    (and
+                        (gt (len (ctl-receipt-cell-get cell "source_surfaces")) 0)
+                        (and
+                            (eq
+                                (ctl-receipt-cell-get (ctl-receipt-cell-get cell "patch_recipe") "files_touched")
+                                (len (ctl-receipt-cell-get cell "source_surfaces")))
+                            (and
+                                (eq (ctl-receipt-cell-get (ctl-receipt-cell-get cell "patch_recipe") "raw_patch_retained") 0)
+                                (eq (ctl-coding-act-valid? (ctl-receipt-cell-coding-act cell)) 1))))))
+            1
+            0))
+    (defn ctl-receipt-cell-coding-act-sample (cell)
+        (ctl-coding-act-sample (ctl-receipt-cell-coding-act cell)))
+
     0)
