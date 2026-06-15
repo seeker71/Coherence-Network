@@ -77,7 +77,6 @@
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
-| [form_cli_run.sh](form_cli_run.sh) | form_cli_run.sh — the form-cli RUNNER as a native binary, emitted by a Form recipe |
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
@@ -86,6 +85,7 @@
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
 | [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [form_native_run.sh](form_native_run.sh) | form_native_run.sh — run the PURE FORM agent runner (form-stdlib/form-native-run.fk) |
 | [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface. Emit a native binary from |
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
 | [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |
