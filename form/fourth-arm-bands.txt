@@ -335,6 +335,7 @@ public-audio-rendezvous fks 32767
 sqlite-read fks 31
 speech-kernel-channel fks 511
 speech-model-learning fks 16383
+speech-teacher-corpus fks 16383
 speech-teacher-receipt fks 4095
 static-to-dynamic-cells fks 262143
 string-membership fks 9

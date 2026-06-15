@@ -4,23 +4,29 @@
   (lineage
     (rests-on loopback-learning.form oracle-distillation-learning.form speech-model-learning.fk nearest-shape.fk classifier-eval.fk branch-choice-order.fk)
     (carrier-witness scripts/speech_teacher_receipt.sh)
+    (corpus-witness scripts/speech_teacher_corpus_receipt.sh)
     (recipe form/form-stdlib/speech-model-learning.fk)
     (proof form/form-stdlib/tests/speech-teacher-receipt-band.fk -> 4095 four-way)
-    (live-proof ".cache/speech-teacher-receipt/*/speech-teacher-receipt.json"))
+    (corpus-proof form/form-stdlib/tests/speech-teacher-corpus-band.fk -> 16383 four-way)
+    (live-proof ".cache/speech-teacher-receipt/*/speech-teacher-receipt.json")
+    (live-corpus-proof ".cache/speech-teacher-corpus/*/speech-teacher-corpus-receipt.json"))
 
   (purpose
     "Turn a real local speech teacher pass into native training data that cells can inspect."
     "The witness generates macOS TTS audio, lowers it to 16 kHz mono PCM, transcribes it with local whisper-cli, hashes every retained artifact, and writes a bounded JSON receipt."
+    "The corpus witness groups several real local receipts into one replayable training window with aggregate counts, totals, and corpus hash."
     "Form consumes the receipt shape as data only; execution stays outside the .fk proof until a native kernel speech lane exists.")
 
   (floor
     "A live Mac receipt uses /usr/bin/say as the local TTS teacher, afconvert for PCM lowering, sox for physical audio measurements, and whisper-cli with a local GGML model for STT."
     "The receipt must carry status=pass, macos-say, whisper-cli, model identity, expected text, transcript, at least 80 percent token overlap, nonzero WAV bytes, samples, duration, RMS, rough frequency, audio SHA-256, transcript SHA-256, retained audio flag, floor, and north star."
-    "The Form band refuses low-overlap and missing-audio receipts, turns a valid receipt into a native training sample, and proves the sample can classify a near heldout speech-teacher row.")
+    "The Form band refuses low-overlap and missing-audio receipts, turns a valid receipt into a native training sample, and proves the sample can classify a near heldout speech-teacher row."
+    "The corpus floor needs at least three pass receipts; the observed local floor has four receipts, min overlap 100 percent, 264784 total WAV bytes, 124200 samples, and 7763 ms total duration.")
 
   (north-star
     "Every speech teacher call becomes native channel data until Form-native STT/TTS candidates win heldout receipts with lower token, energy, nutrition, and higher sovereignty, trust, vitality, confidence, and accuracy."
     "Teacher authority retires by lane, never by assertion: raw or derived audio slices, transcript slices, model identities, score cards, choice receipts, and heldout failures all remain addressable substrate cells."
+    "Speech training windows become shareable native corpora where each sample, aggregate metric, and heldout native win can be replayed by any cell."
     "The same receipt shape should run on macOS, Android, and mesh organs through native OS audio APIs rather than shell-only carriers when the kernel lanes exist.")
 
   (observed-local-receipt
@@ -39,6 +45,21 @@
     (transcript-sha256 "sha256:892c6be68c65c21180539f76683c99cd0d53c017e7c465b249ad0b092763b98a")
     (raw-audio-retained 1))
 
+  (observed-local-corpus
+    (phrases 4)
+    (texts
+      "form native speech teacher receipt"
+      "cells learn from real audio"
+      "the local model returns a transcript"
+      "speech receipts guide native learning")
+    (min-overlap-percent 100)
+    (total-wav-bytes 264784)
+    (total-samples 124200)
+    (total-duration-ms 7763)
+    (corpus-sha256 "sha256:7b5a134a3d08859e0bf5815c24b94f0f6c27a08f8aadc251ed44d5d856040edd")
+    (model ggml-large-v3-turbo.bin)
+    (proof "scripts/speech_teacher_corpus_receipt.sh -> PASS samples=4 min_overlap=100 total_duration_ms=7763"))
+
   (available-local-teachers
     (tts macos-say "local OS TTS; physical audio source for current floor")
     (stt whisper-large-v3 "/Users/ursmuff/whisper-models/ggml-large-v3.bin")
@@ -47,10 +68,11 @@
   (not-claimed
     "No Form-native neural TTS or STT model is claimed by this receipt."
     "No microphone/speaker loopback is claimed here; that stricter co-presence lane lives in public-audio-rendezvous."
-    "No Android native audio API receipt is claimed yet.")
+    "No Android native audio API receipt is claimed yet."
+    "No teacher authority is retired by the corpus alone; retirement requires native heldout wins.")
 
   (next-gaps
     (macos-native-audio-api "replace shell carrier steps with kernel-native macOS audio capture/render calls while preserving this receipt shape")
     (android-native-audio-api "emit the same receipt from the Android app using AudioRecord/AudioTrack and local/on-device STT/TTS teachers")
-    (native-stt-candidate "train and score a native STT candidate against heldout receipts before reducing teacher authority")
-    (native-tts-candidate "train and score a native TTS candidate against transcript, waveform, and intelligibility receipts before reducing teacher authority")))
+    (native-stt-candidate "train and score a native STT candidate against heldout corpus receipts before reducing teacher authority")
+    (native-tts-candidate "train and score a native TTS candidate against transcript, waveform, and intelligibility corpus receipts before reducing teacher authority")))

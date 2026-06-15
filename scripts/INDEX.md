@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 248
+**Total files**: 250
 
 | File | Purpose |
 |---|---|
@@ -138,6 +138,7 @@
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
 | [meeting_companion.sh](meeting_companion.sh) | meeting_companion.sh — a meeting companion that LISTENS (STT), DECIDES whether |
+| [metal_backprop_audit.sh](metal_backprop_audit.sh) | metal_backprop_audit.sh — the LEARNING KERNEL on Metal (M4 Max GPU witness). |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
@@ -196,6 +197,7 @@
 | [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
 | [source_gh_token.sh](source_gh_token.sh) | _no top-of-file purpose_ |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
+| [speech_teacher_corpus_receipt.sh](speech_teacher_corpus_receipt.sh) | speech_teacher_corpus_receipt.sh - live local speech teacher corpus receipt. |
 | [speech_teacher_receipt.sh](speech_teacher_receipt.sh) | speech_teacher_receipt.sh - live local TTS -> STT teacher receipt. |
 | [sqlite_driver_demo.sh](sqlite_driver_demo.sh) | sqlite_driver_demo.sh — the 4th kernel's SQLite driver (carrier first). Emit a |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
