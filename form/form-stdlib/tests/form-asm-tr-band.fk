@@ -1,0 +1,47 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-tr-band — a zero-clang `tr A-Z a-z`, proven four-way against the
+; assembler. tr is cat plus a per-byte transform, and the transform is BRANCHLESS:
+; load the byte (ldrb), compute c-65 and c+32, compare, and SELECT (csel) on the
+; range flag — no inner branch. ldrb + csel are what tr adds to the cat loop.
+;
+; The reference image is what clang/as emitted for a `tr A-Z a-z` _main (the cat
+; loop with the lowercase transform spliced in before write). The transform:
+;   ldrb w8,[sp]; sub w9,w8,#65; add w10,w8,#32; cmp w9,#25; csel w8,w10,w8,ls; strb w8,[sp]
+; i.e.  (unsigned)(c-65) <= 25  ?  c+32  :  c   — the canonical branchless lowercase.
+; The binary built from this image (ld, no clang) lowercases stdin — form_tr_demo.sh.
+;
+; Verdict 31 when the encoder IS the assembler over tr's new instructions:
+;   1   the whole 100-byte `tr` image byte-equals clang's (the conviction gate)
+;   2   ldrb w8,[sp] is exact (load the byte to transform)
+;   4   csel w8,w10,w8,ls is exact (the branchless pick — rn is the if-true value)
+;   8   the loop's backward branch now folds -20 exactly (longer body, same fold)
+;  16   the forward EOF branch now folds +14 exactly
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16)
+        (fa-movz-x 0 0) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 3) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-cmp-x 0 0) (fa-bcond 13 14)
+        (fa-ldrb 8 31 0) (fa-sub 9 8 65) (fa-add 10 8 32) (fa-cmp 9 25) (fa-csel 8 10 8 9) (fa-strb 8 31 0)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-b-off -20)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209   0 0 128 210   225 3 0 145   34 0 128 210
+                   112 0 128 210  16 64 160 242 1 16 0 212    31 0 0 241
+                   205 1 0 84     232 3 64 57   9 5 1 81       10 129 0 17
+                   63 101 0 113   72 145 136 26 232 3 0 57     32 0 128 210
+                   225 3 0 145    34 0 128 210  144 0 128 210  16 64 160 242
+                   1 16 0 212     236 255 255 23 0 0 128 82    255 67 0 145
+                   192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-ldrb 8 31 0) (list 232 3 64 57)) 2 0))
+    (let c2 (if (fa-conviction (fa-csel 8 10 8 9) (list 72 145 136 26)) 4 0))
+    (let c3 (if (fa-conviction (fa-b-off -20) (list 236 255 255 23)) 8 0))
+    (let c4 (if (fa-conviction (fa-bcond 13 14) (list 205 1 0 84)) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

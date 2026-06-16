@@ -114,6 +114,17 @@
     ; b #off  (signed, imm26) : base 0x14000000 | off26
     (defn fa-b-off (off) (fa-le (add 335544320 (fa-smask off 67108864))))
 
+    ; ── byte load + branchless select: the transform a filter applies ────────
+    ; tr is cat plus a per-byte transform, and the transform is branchless: load
+    ; the byte, compute, select on a flag. ldrb reads it; csel picks. These are
+    ; the ARM ARM encodings; clang's bytes confirm.
+    ; ldrb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39400000 | imm<<10 | rn<<5 | rt
+    (defn fa-ldrb (rt rn imm) (fa-le (add 960495616 (add (mul imm 1024) (add (mul rn 32) rt)))))
+    ; csel w<rd>, w<rn>, w<rm>, <cond>  (rd = cond ? rn : rm, 32-bit)
+    ;   base 0x1A800000 | rm<<16 | cond<<12 | rn<<5 | rd   (cond LS=9, the unsigned <=)
+    (defn fa-csel (rd rn rm cond)
+        (fa-le (add 444596224 (add (mul rm 65536) (add (mul cond 4096) (add (mul rn 32) rd))))))
+
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
             (if (nil? cand) 1
