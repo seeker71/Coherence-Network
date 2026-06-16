@@ -5,15 +5,23 @@
 ; a host carrier (like the C ABI), `ld` is the linker carrier, and `ld`'s ad-hoc
 ; signature meets the macOS arm64 signing requirement — named, not a compiler.
 ;
-; A minimal valid .o for a leaf `_main` (no relocations): mach_header_64 +
+; A minimal valid .o for a leaf symbol (no relocations): mach_header_64 +
 ; LC_SEGMENT_64 (one __text section) + LC_SYMTAB + the code + the symbol table +
 ; the string table. Offsets are computed from the code length, so any compiled
-; program wraps. High-bit constants (magic 0xfeedfacf, section flags 0x80000400)
-; are emitted as BYTES, sidestepping the kernels' > 2^31 literal wrap (form-asm.fk).
+; program wraps. The exported symbol name is data (mo-object-sym), so the same
+; emitter serves `_main` for the executable floor and `_recipe` for a
+; recipe-as-dylib. High-bit constants (magic 0xfeedfacf, section flags
+; 0x80000400) are emitted as BYTES, sidestepping the kernels' > 2^31 literal
+; wrap (form-asm.fk).
 ;
-; Witnessed by scripts/form_macho_demo.sh: form-lower compiles ((40+1)-1) -> code,
-; form-macho wraps it -> .o, `ld` links it -> the binary runs and exits 40.
-; Structure proven three-way by tests/form-macho-band.fk.
+; Two carriers off the same .o, both zero-clang:
+;   • executable — `ld` links _main -> a binary that runs (form_macho_demo.sh).
+;   • recipe dylib — `ld -dylib` links + ad-hoc signs the _recipe .o into a tiny
+;     dlopen-able binary carrying ONLY the recipe; the kernel's dylib_call native
+;     loads and calls it. The durable counterpart to the in-RAM MAP_JIT path —
+;     the on-disk JIT cache, ~286x smaller than a Go plugin (form-to-asm.form).
+; Structure proven four-way by tests/form-macho-band.fk (_main) and
+; tests/recipe-dylib-band.fk (_recipe); the dylib load+call by jit_dylib_test.go.
 
 (do
     (defn mo-nil? (xs) (eq (len xs) 0))
@@ -55,21 +63,32 @@
             (list 0 4 0 128)                ; flags 0x80000400 (PURE|SOME_INSTRUCTIONS)
             (mo-u32 0) (mo-u32 0) (mo-u32 0))))   ; reserved1,2,3
 
-    (defn mo-symtab (clen)
+    ; strsize = leading \0 + name bytes + trailing \0; the symbol name is data,
+    ; so one .o emitter serves any exported symbol — _main for the executable
+    ; floor, _recipe for a recipe-as-dylib that `ld -dylib` turns into a tiny
+    ; dlopen-able binary carrying only the recipe.
+    (defn mo-symtab-sym (clen strsize)
         (mo-cat (list
-            (mo-u32 2) (mo-u32 24)                 ; LC_SYMTAB, cmdsize
-            (mo-u32 (add 208 clen)) (mo-u32 1)     ; symoff, nsyms
-            (mo-u32 (add 224 clen)) (mo-u32 7))))  ; stroff (208+clen+16), strsize
+            (mo-u32 2) (mo-u32 24)                       ; LC_SYMTAB, cmdsize
+            (mo-u32 (add 208 clen)) (mo-u32 1)           ; symoff, nsyms
+            (mo-u32 (add 224 clen)) (mo-u32 strsize))))  ; stroff (208+clen+16), strsize
 
-    ; one symbol: _main, N_SECT|N_EXT, section 1, value 0
+    ; one symbol: <name>, N_SECT|N_EXT (0x0f), section 1, value 0 — exported.
     (defn mo-nlist () (mo-cat (list (mo-u32 1) (list 15) (list 1) (mo-u16 0) (mo-u64 0))))
-    ; string table: \0 _main \0
-    (defn mo-strtab () (list 0 95 109 97 105 110 0))
+    ; string table: \0 <name> \0  (the symbol begins at strtab offset 1)
+    (defn mo-strtab-sym (name) (cons 0 (mo-app name (list 0))))
 
-    ; the whole object file for the given code byte-list
-    (defn mo-object (code)
+    ; the whole object file for the given code byte-list, exporting `name`
+    ; (a byte-list, e.g. "_recipe"). The leaf code lives at __text offset 0, so
+    ; the exported symbol (value 0) addresses the recipe entry directly.
+    (defn mo-object-sym (code name)
         (mo-cat (list
-            (mo-header) (mo-segment (len code)) (mo-section (len code)) (mo-symtab (len code))
-            code (mo-nlist) (mo-strtab))))
+            (mo-header) (mo-segment (len code)) (mo-section (len code))
+            (mo-symtab-sym (len code) (add (len name) 2))
+            code (mo-nlist) (mo-strtab-sym name))))
+
+    ; the executable floor's .o exports _main (95 109 97 105 110) — byte-identical
+    ; to the prior hardcoded form, so form-macho-band's checksum is unchanged.
+    (defn mo-object (code) (mo-object-sym code (list 95 109 97 105 110)))
 
     0)

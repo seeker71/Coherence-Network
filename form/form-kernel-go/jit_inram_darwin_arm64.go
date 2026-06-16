@@ -18,16 +18,24 @@
 // cgo + darwin/arm64 only; every other target uses the no-op stub
 // (jit_inram_other.go) and Form callers fall back to the Go-plugin path.
 //
-// Surface: the Form-callable native `jit_leaf_inram` takes (image, arg) where
-// image is a List of byte ints (lo-compile-fn's output) and arg is the single
-// i64 argument; it returns the i64 result, or null on bad input / mmap refusal.
+// Two host-native doors live here, both Form-callable:
+//   • `jit_leaf_inram` (image, arg) — run an arm64 leaf image IN-RAM via MAP_JIT
+//     (ephemeral, this process).
+//   • `dylib_call` (path, sym, arg) — dlopen a DURABLE recipe binary (a Mach-O
+//     dylib that form-macho emits + `ld -dylib` signs), dlsym the recipe symbol,
+//     and call it. The dylib carries ONLY the recipe (~16KB vs the 4.8MB Go
+//     plugin); it survives process restarts, so it is the on-disk counterpart
+//     to the in-RAM path — the durable, content-addressable JIT cache.
 
 package main
 
 /*
+#cgo LDFLAGS: -ldl
 #include <sys/mman.h>
 #include <pthread.h>
 #include <string.h>
+#include <stdlib.h>
+#include <dlfcn.h>
 
 // form_run_leaf — map a MAP_JIT page, write the image while jit-write-protect
 // is off, flip to executable, clear the instruction cache, call f(arg), unmap.
@@ -45,6 +53,21 @@ static long form_run_leaf(unsigned char *code, int n, long arg, int *ok) {
     long (*fn)(long) = (long (*)(long))mem;
     long r = fn(arg);
     munmap(mem, 4096);
+    *ok = 1;
+    return r;
+}
+
+// form_dylib_call — dlopen a recipe dylib, dlsym the symbol, call it as
+// long f(long), dlclose. *ok is 0 if the library or symbol could not be
+// resolved (the result is then meaningless), 1 on a real call.
+static long form_dylib_call(const char *path, const char *sym, long arg, int *ok) {
+    *ok = 0;
+    void *h = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+    if (!h) return 0;
+    long (*fn)(long) = (long (*)(long))dlsym(h, sym);
+    if (!fn) { dlclose(h); return 0; }
+    long r = fn(arg);
+    dlclose(h);
     *ok = 1;
     return r;
 }
@@ -69,9 +92,23 @@ func runLeafInRAM(code []byte, arg int64) (int64, bool) {
 	return int64(r), ok != 0
 }
 
-// registerInRAMJIT — bind `jit_leaf_inram` so Form code can emit an image with
-// lo-compile-fn and run it natively in the same breath. Present only where the
-// host can execute it; the stub registers nothing.
+// dylibCall — load a recipe dylib at path, resolve sym, call it as int64
+// f(int64). Returns (result, true) on a real call, (0, false) if the library
+// or symbol could not be resolved.
+func dylibCall(path, sym string, arg int64) (int64, bool) {
+	cpath := C.CString(path)
+	defer C.free(unsafe.Pointer(cpath))
+	csym := C.CString(sym)
+	defer C.free(unsafe.Pointer(csym))
+	var ok C.int
+	r := C.form_dylib_call(cpath, csym, C.long(arg), &ok)
+	return int64(r), ok != 0
+}
+
+// registerInRAMJIT — bind the host-native execution doors. `jit_leaf_inram`
+// runs an image in-RAM; `dylib_call` loads a durable recipe dylib and calls it.
+// Present only where the host can execute them; the stub registers nothing and
+// Form callers fall back to the Go-plugin path or the walker.
 func (k *Kernel) registerInRAMJIT() {
 	k.registerNative("jit_leaf_inram", catMethod(), func(_ *Kernel, args []Value) Value {
 		if len(args) != 2 || args[0].Kind != VList || args[1].Kind != VInt {
@@ -85,6 +122,17 @@ func (k *Kernel) registerInRAMJIT() {
 			code[i] = byte(b.Int)
 		}
 		r, ok := runLeafInRAM(code, args[1].Int)
+		if !ok {
+			return Value{Kind: VNull}
+		}
+		return Value{Kind: VInt, Int: r}
+	})
+	// dylib_call (path, sym, arg) — dlopen a recipe binary and call its symbol.
+	k.registerNative("dylib_call", catMethod(), func(_ *Kernel, args []Value) Value {
+		if len(args) != 3 || args[0].Kind != VStr || args[1].Kind != VStr || args[2].Kind != VInt {
+			return Value{Kind: VNull}
+		}
+		r, ok := dylibCall(args[0].Str, args[1].Str, args[2].Int)
 		if !ok {
 			return Value{Kind: VNull}
 		}

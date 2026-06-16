@@ -1,0 +1,19 @@
+; recipe-dylib-band.fk — form-macho wraps the lo-compile recipe as a Mach-O .o
+; exporting _recipe: the bytes `ld -dylib` turns into a tiny dlopen-able binary
+; carrying ONLY the recipe (no host runtime — ~286x smaller than a Go plugin).
+; The band folds the whole .o image to a position-weighted checksum so a
+; divergent kernel changes the number. The dlopen+dlsym+call half is proven on
+; this same .o (linked by ld, zero clang) by the Go kernel test jit_dylib_test.go
+; — emitter (Form, four-way) and loader (host, dlopen) meet on one object file.
+;
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-macho.fk
+
+(do
+  ; f(n) = n*3 + 7 as an op-tagged prog (1=LIT 2=ARG 3=ADD 5=MUL), lowered to a
+  ; leaf recipe, then wrapped as a .o exporting _recipe (95 114 101 99 105 112 101).
+  (let prog (list (list 1 7) (list 2) (list 1 3) (list 5 1 2) (list 3 3 0)))
+  (let code (lo-compile-fn prog 4))
+  (let obj (mo-object-sym code (list 95 114 101 99 105 112 101)))
+  ; position-weighted fold over the whole object image: Σ byte_i · i (i from 1).
+  (defn ck (xs i) (if (eq (len xs) 0) 0 (add (mul (head xs) i) (ck (tail xs) (add i 1)))))
+  (ck obj 1))
