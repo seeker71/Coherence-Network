@@ -1,0 +1,34 @@
+{
+  "title": "Offline self-evolution deepened — the local oracle gets memory of its own body (RAG four-way), the tool-predictor is validated on the full session history, and a local model is fine-tuned on it",
+  "date": "2026-06-17",
+  "context": "The air-gap form-cli kit was already READY (form_cli_preflight.sh: 7 passed, 0 gaps — kernel, membrane, local oracles, body-on-disk, offline agent loop). This run deepens the QUALITY of offline self-evolution rather than rebuilding the floor: it gives the offline local oracle semantic memory of the body, proves the new tool-predictor corpus does not regress the frozen model, and trains a fully-local model on the session logs.",
+  "device": "Apple M4 Max (40-core GPU), 128 GB, arm64 Darwin — fully offline once nomic-embed-text + a local chat model are pulled",
+  "advances": [
+    {
+      "what": "Offline semantic memory (RAG over the body)",
+      "detail": "rag-retrieve.fk: the offline local oracle can now RECALL the body it lives inside. A query embedding is ranked over an index of 994 docs (389 recipes + 169 specs + 191 concepts + 245 substrate forms) by L1 distance over quantized bins; the nearest docs ground the local oracle's answer. Ranking logic is pure list arithmetic (abs / L1 sum / min-walk / top-k), kept four-way; the content-addressed view stays in its companion embedding-as-recipe.fk. The local embedder (nomic-embed-text via ollama) is the only host-IO — a bootstrap carrier, air-gap-clean once pulled.",
+      "proof": "tests/rag-retrieve-band.fk -> 31, four-way (Go/Rust/TS/fkwu), 0 divergent. Registered in form/fourth-arm-bands.txt as 'rag-retrieve fks 31'. The same recipe ranked all 994 real docs on the Go kernel in 16.3s, returning the routing region (form-cli-loop, form-cli-router, tier-router, cross-train-oracle) for a routing query — at-scale Form ranking, demonstrated.",
+      "carrier": "scripts/form_cli_rag.py (build | search | ask) — embeds via nomic-embed-text, ranks with the identical rag-l1 formula for snappy serving, grounds a local oracle (no network). Demonstrated end-to-end: a routing question retrieved the right recipes and llama3.2:3b answered grounded, citing the doc id, fully offline."
+    },
+    {
+      "what": "Tool-predictor validated on the full local session history (not improved — validated)",
+      "detail": "Rebuilt the form-cli corpus from all 838 local Claude transcripts (553 -> 949 unique turns after task_sig dedup). On the SAME 186-task held-out split, the FROZEN form-cli-model.fk (Bash93/Read54/Write47/Edit56) scores 99% majority-match / 95% full-cover; the newly-learned base-rates (Write drops to 39, below the 40 threshold) regress full-cover to 50%. So the frozen model is kept — the larger, more representative corpus VALIDATES it generalizes, and updating would regress it. The base-rate predictor is near its architectural ceiling; full-cover gains need a task-conditional model (a named next lift, not shipped on a guess).",
+      "proof": "scripts/form_cli_train_predict.sh on baseline vs new corpus; a same-held-out head-to-head scored both models through form-cli-predict.fk on the Go kernel."
+    },
+    {
+      "what": "A fully-local model fine-tuned on the session logs (MLX LoRA)",
+      "detail": "843 train / 94 valid instruction pairs (task -> reasoning + tools + answer) distilled from the corpus. LoRA fine-tune of Llama-3.2-3B-Instruct-4bit via mlx-lm in an isolated venv, 400 iters, 8 layers, peak mem 7.6 GB. Val loss fell 3.869 -> 2.904; the adapter (3.47M params, 13.9 MB) generates fully offline at ~134 tok/s. This is a STYLE/shape adapter — its raw output still mis-names form-cli 'a Python library', so a 3B/400-iter touch shifts voice, not deep knowledge; the FACTS come from RAG grounding (which is why memory is the higher-value track). It is NOT yet embodied as a routed tier-1 oracle (that requires tool-embodiment.fk's trust/confidence gate to clear vs the existing local models). Honest state: a trained adapter on disk, an experiment, not a promoted lane."
+    },
+    {
+      "what": "The readiness check learned the new sense",
+      "detail": "form_cli_preflight.sh gained check [6] Offline semantic memory (RAG): index present + embedder present + a routing query recalls the routing region. The kit now reports 8 passed, 0 gaps, READY. form-cli-north-star.form names rag-retrieve.fk as a new four-way-proven organ (memory)."
+    }
+  ],
+  "honest_remainder": {
+    "kernel_ranking_latency": "ranking 994 docs on the kernel is 16.3s (the recipe re-walks per nearest pass over a multi-MB source table) — fine as proof, too slow for an interactive loop, so the carrier serves with the identical formula until the kernel reads the index natively. North star: the index as a durable substrate cell the kernel ranks in one pass.",
+    "codex_logs_untapped": "the corpus is from 838 Claude transcripts; the 22 GB / 17k Codex logs use a different {payload,type} format the Claude extractor cannot read. A Codex->turn adapter is the next source — named, not silently dropped.",
+    "lora_not_embodied": "the fine-tuned adapter is not yet a routed oracle; it must clear tool-embodiment.fk's sovereignty/trust/confidence gate against the existing local models before it embodies a lane."
+  },
+  "verdict": "The offline self-evolution kit stays READY and gains a memory: rag-retrieve.fk is four-way (31, 0 divergent), the offline oracle recalls and grounds in the body, the native tool-predictor is proven on the full session history, and a local model is trained on it. Nothing here needs the network.",
+  "reproduce": "scripts/form_cli_rag.py build && scripts/form_cli_rag.py ask 'how does the form-cli route to a local oracle?'  |  cd form && ./validate.sh form-stdlib/rag-retrieve.fk form-stdlib/tests/rag-retrieve-band.fk -> 31 four-way  |  bash scripts/form_cli_preflight.sh -> 8 passed, 0 gaps, READY"
+}

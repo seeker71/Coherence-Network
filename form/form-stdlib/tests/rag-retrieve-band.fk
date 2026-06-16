@@ -1,0 +1,38 @@
+; preludes: form-stdlib/rag-retrieve.fk
+;
+; rag-retrieve-band — offline semantic retrieval made falsifiable.
+;
+; An INDEX of three docs, each (id quantized-vector) — a coarse fingerprint a
+; local embedder produced for one body doc:
+;   "alpha" [10 20 30]
+;   "beta"  [50 50 50]
+;   "gamma" [10 20 31]
+; A query embedding arrives and the nearest doc by L1 distance names what to recall:
+;   q [10 20 30] -> alpha (distance 0, exact)  ; vs gamma=1, vs beta=90
+;   top-2 for q  -> (alpha gamma)               ; the two closest, nearest-first
+; A control proves the lane is honest:
+;   a TIE — first [5 9], second [9 5], query [7 7] is L1-distance 4 from each —
+;     must route to the FIRST entry (stable under replay, like nearest-shape).
+;
+; Verdict 31 when every claim lands:
+;   1   nearest routes to the closest doc        (q -> alpha)
+;   2   an exact match is distance 0             (rag-dist q alpha == 0)
+;   4   top-k returns the closest, nearest-first  (top-2 q -> alpha, gamma)
+;   8   a tie keeps the first entry               (tie query -> first)
+;   16  the L1 primitive is exact                 (rag-l1 [10 20 30] [50 50 50] == 90)
+(do
+    (let index (list
+        (rag-entry "alpha" (list 10 20 30))
+        (rag-entry "beta"  (list 50 50 50))
+        (rag-entry "gamma" (list 10 20 31))))
+    (let q (list 10 20 30))
+    (let alpha (rag-entry "alpha" (list 10 20 30)))
+    (let tieset (list (rag-entry "first" (list 5 9)) (rag-entry "second" (list 9 5))))
+    (let tieq (list 7 7))
+    (let tk (rag-topk q index 2))
+    (let c0 (if (str_eq (rag-nearest-id q index) "alpha") 1 0))
+    (let c1 (if (eq (rag-dist q alpha) 0) 2 0))
+    (let c2 (if (and (str_eq (nth tk 0) "alpha") (str_eq (nth tk 1) "gamma")) 4 0))
+    (let c3 (if (str_eq (rag-nearest-id tieq tieset) "first") 8 0))
+    (let c4 (if (eq (rag-l1 (list 10 20 30) (list 50 50 50)) 90) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

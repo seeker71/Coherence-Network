@@ -1,0 +1,74 @@
+; rag-retrieve.fk — offline semantic retrieval over the body, as a Form recipe.
+;
+; preludes: form-stdlib/core.fk
+;
+; The offline oracle (form-cli tier 1: a local LLM) can reason but is blind to the
+; body — it cannot recall the 994 recipes / specs / concepts / substrate cells it
+; lives inside. This recipe is the retrieval that gives it memory: an INDEX of
+; (id, embedding) entries — each embedding the quantized vector (ints 0..1000) a
+; local embedder produced for one doc — is ranked against a query embedding by L1
+; distance, and the nearest ids name the docs to ground the oracle's answer in.
+;
+; The vectors are DATA. The local embedder (nomic-embed-text via ollama) is the
+; only host-IO — a bootstrap carrier, air-gap-clean once the model is pulled. The
+; RANKING is this recipe: pure list arithmetic (abs, L1 sum, min-walk), so it runs
+; on all four kernels — the same nearest answer on Go, Rust, TS, and fkwu. The
+; content-addressed view (two identical embeddings intern to one NodeID) lives in
+; its companion embedding-as-recipe.fk; this lane is the ranking, kept four-way.
+;
+; Honest lane: distance is L1 over quantized bins — the right primitive for
+; already-discretized embedding components. Ties go to the FIRST entry (stable
+; under replay, like nearest-shape.fk). Vectors of unequal arity stop at the
+; shorter (production embeddings share arity by construction).
+;
+; Proven by: form-stdlib/tests/rag-retrieve-band.fk (four-way at validate.sh).
+
+(do
+    ; an index entry: (id vector-ints)
+    (defn rag-entry (id vec) (list id vec))
+    (defn rag-id  (e) (nth e 0))
+    (defn rag-vec (e) (nth e 1))
+
+    ; --- L1 distance between two quantized vectors (pure arithmetic) ---
+    (defn rag-abs (n) (if (lt n 0) (sub 0 n) n))
+    (defn rag-l1 (a b)
+        (if (eq (len a) 0) 0
+            (if (eq (len b) 0) 0
+                (add (rag-abs (sub (head a) (head b)))
+                     (rag-l1 (tail a) (tail b))))))
+
+    ; distance from a query vector to an entry
+    (defn rag-dist (qvec e) (rag-l1 qvec (rag-vec e)))
+
+    ; --- NEAREST: the entry whose vector is L1-closest to the query ---
+    ; mirror nearest-shape's min-walk; ties keep the FIRST entry (oldest wins).
+    (defn rag-nearest-loop (qvec entries best best-d)
+        (if (eq (len entries) 0) best
+            (if (eq (len best) 0)
+                (rag-nearest-loop qvec (tail entries)
+                                  (head entries) (rag-dist qvec (head entries)))
+                (if (lt (rag-dist qvec (head entries)) best-d)
+                    (rag-nearest-loop qvec (tail entries)
+                                      (head entries) (rag-dist qvec (head entries)))
+                    (rag-nearest-loop qvec (tail entries) best best-d)))))
+    (defn rag-nearest (qvec entries) (rag-nearest-loop qvec entries (empty) 0))
+    (defn rag-nearest-id (qvec entries) (rag-id (rag-nearest qvec entries)))
+
+    ; --- TOP-K: greedy nearest, remove, repeat. Returns ids, nearest-first. ---
+    (defn rag-remove (id entries)
+        (if (eq (len entries) 0) (empty)
+            (if (str_eq (rag-id (head entries)) id)
+                (tail entries)
+                (cons (head entries) (rag-remove id (tail entries))))))
+
+    (defn rag-rev-loop (in out)
+        (if (eq (len in) 0) out (rag-rev-loop (tail in) (cons (head in) out))))
+
+    (defn rag-topk-loop (qvec entries k acc)
+        (if (eq k 0) acc
+            (if (eq (len entries) 0) acc
+                (do (let nid (rag-nearest-id qvec entries))
+                    (rag-topk-loop qvec (rag-remove nid entries) (sub k 1) (cons nid acc))))))
+    ; nearest-first: the loop conses nearest-last, so reverse once at the end.
+    (defn rag-topk (qvec entries k) (rag-rev-loop (rag-topk-loop qvec entries k (empty)) (empty)))
+    0)
