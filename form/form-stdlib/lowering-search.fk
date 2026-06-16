@@ -1,0 +1,46 @@
+; lowering-search.fk — the generator's SELECT half: search a candidate set of
+; lowerings, admit each through the recipe-equivalence gate, keep the cheapest that
+; passes. The body DISCOVERS its best lowering by search + verification, never by
+; trusting one candidate — a wrong candidate that is cheapest is REFUSED, not chosen.
+;
+; preludes: form-stdlib/core.fk form-stdlib/recipe-equivalence-gate.fk
+;
+; This is the closing half of the flywheel: the recipe-equivalence gate judges a
+; single candidate; this judges MANY and selects the best admitted one to cache for
+; that NodeID. The PROPOSE half — synthesizing novel candidates (verified rewrite
+; rules, learned search) — is the deeper frontier; this scores and selects whatever
+; candidates are offered. Same min-select spine as nearest-shape / attention-argmin.
+
+; a candidate lowering: (name coverage breach? cost). coverage = the (input
+; recipe-ack candidate-ack) observations vs the recipe; cost = measured dispatches.
+(defn ls-cand (name coverage breach? cost) (list name coverage breach? cost))
+(defn ls-name (c) (nth c 0))
+(defn ls-coverage (c) (nth c 1))
+(defn ls-breach (c) (nth c 2))
+(defn ls-cost (c) (nth c 3))
+
+; admitted? eligible iff observed-equivalent over coverage AND breachless (the gate).
+(defn ls-admitted? (c)
+  (if (eq (req-equivalent? (ls-coverage c)) 1)
+      (if (eq (ls-breach c) 0) 1 0) 0))
+
+; the best lowering = the cheapest ADMITTED candidate. A non-admitted candidate is
+; never the answer, regardless of how cheap it is (correctness gates cost).
+(defn ls-best-loop (cands best)
+  (if (eq (len cands) 0) best
+      (ls-best-loop (tail cands)
+        (if (eq (ls-admitted? (head cands)) 1)
+            (if (if (eq (len best) 0) 1 (lt (ls-cost (head cands)) (ls-cost best)))
+                (head cands) best)
+            best))))
+(defn ls-best (cands) (ls-best-loop cands (empty)))
+
+; the winning lowering's cost (or 0 if NONE admitted — the body keeps the reference
+; rather than admit an unverified lowering).
+(defn ls-best-cost (cands)
+  (if (eq (len (ls-best cands)) 0) 0 (ls-cost (ls-best cands))))
+
+; how many candidates were admitted (the verified search space the winner came from).
+(defn ls-admitted-count (cands)
+  (if (eq (len cands) 0) 0
+      (add (ls-admitted? (head cands)) (ls-admitted-count (tail cands)))))
