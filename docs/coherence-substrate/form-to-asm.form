@@ -216,9 +216,20 @@
     (load   "form-kernel-go native dylib_call dlopens the dylib, dlsyms _recipe, calls it int64 f(int64); jit_dylib_test.go proves emit->link->load->call across {5,0,10,100}")
     (only-the-recipe "the dylib's __text IS the recipe (20 bytes); the ~16KB is Mach-O + signature overhead ld adds, vs a 4.8MB Go-runtime plugin"))
 
+  # The signature half of the direct (no-ld) dylib is now Form. Apple Silicon's
+  # dyld refuses an unsigned dylib; form-codesign.fk (co-sign) builds the ad-hoc
+  # EmbeddedSignature SuperBlob + CodeDirectory whose code slots are SHA256 of
+  # each 4096-byte page via sha256.fk — no host crypto. It reproduces ld's
+  # signature byte-for-byte on a real dylib, the gate that licenses dropping ld
+  # from the signing step (as form-asm dropped clang on byte-conviction).
+  (code-signature-realized
+    (recipe "form-codesign co-sign emits the ad-hoc CodeDirectory v=20400 + SuperBlob; code slots are sha256.fk over each page — the signature is a Form recipe, sovereign across cells")
+    (agree  "four-way Go/Rust/TS/fkwu at tests/codesign-band.fk -> 632490 (sha256 + big-endian layout agree across kernels)")
+    (convict "scripts/form_codesign_conviction_demo.sh: co-sign over a real dylib's [0:codeLimit] == ld's embedded signature, byte-for-byte (278 bytes); the gate opens"))
+
   # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
-    (recipe-dylib-direct "emit the signed MH_DYLIB directly from Form (MH_DYLIB filetype + LC_ID_DYLIB + export trie + an ad-hoc LC_CODE_SIGNATURE whose CodeDirectory SHA256-hashes each page via form-stdlib/sha256.fk), retiring ld from the dylib path as form-elf-exec already retired it for the ELF executable; and a Linux ELF ET_DYN .so (no signing) for the VPS, dlopen-proven once the Docker Linux/arm64 runner is live")
+    (recipe-dylib-direct "emit the MH_DYLIB STRUCTURE directly from Form (MH_DYLIB filetype + LC_ID_DYLIB + export trie + __LINKEDIT), then place the now-realized form-codesign signature — retiring ld from the dylib path entirely as form-elf-exec already retired it for the ELF executable; the signature half is done, the structural shell remains; and a Linux ELF ET_DYN .so (no signing) for the VPS, dlopen-proven once the Docker Linux/arm64 runner is live")
     (live-lowering   "auto-derive the op-tagged prog from a live closure's AST (the sibling of jit.go's Go-source walker) so jit_leaf_inram fires on real single-i64 closures automatically — the band and test author the prog explicitly today, proving the emit->exec path; the converter is what makes it the default backend")
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")

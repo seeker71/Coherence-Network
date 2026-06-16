@@ -1,0 +1,16 @@
+; codesign-band.fk — form-codesign emits the ad-hoc Mach-O code signature (the
+; SuperBlob + CodeDirectory dyld validates). The band folds a fixed small
+; signature to a position-weighted checksum, so a divergent kernel — in sha256
+; (the code-slot hash) or in the big-endian layout — changes the number. The
+; byte-conviction (Form signature == ld's signature, byte-for-byte on a real
+; dylib) lives in scripts/form_codesign_conviction_demo.sh.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/form-codesign.fk
+
+(do
+  ; sign image [1 2 3 4 5] (codeLimit 5, one partial page), identifier "x" (120),
+  ; execSegLimit 7, flags 2 (adhoc), execSegFlags 0 — the code slot is
+  ; sha256([1,2,3,4,5]), so the fold exercises the full SHA256 recipe.
+  (let sig (co-sign (list 1 2 3 4 5) 5 (list 120) 7 2 0))
+  (defn ck (xs i) (if (eq (len xs) 0) 0 (add (mul (head xs) i) (ck (tail xs) (add i 1)))))
+  (ck sig 1))

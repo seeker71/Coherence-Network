@@ -514,5 +514,6 @@ capability-form-div fkc 3027
 capability-form-tree fkc 13113
 inram-leaf-emit fkc 14073
 recipe-dylib fkc 787349
+codesign fks 632490
 native-code-fit fks 15
 reproduce-from-history fkc 8
