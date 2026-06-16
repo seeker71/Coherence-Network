@@ -1,0 +1,46 @@
+; form-export-trie.fk — the Mach-O LC_DYLD_EXPORTS_TRIE as a Form recipe.
+;
+; dlsym finds an exported symbol in a dylib through the export trie, not the
+; classic symbol table. This emits the minimal trie for a SINGLE exported symbol
+; at a virtual address: a root node whose one child edge is the whole symbol
+; name, leading to a terminal node carrying (flags=0, address). It is the last
+; novel encoder for the direct (no-ld) recipe dylib — composed with form-macho
+; (.o/segment bytes) and form-codesign (the ad-hoc signature), Form emits the
+; whole signed dlopen-able binary with zero ld.
+;
+; Proven against ld's own trie: ld exports `_recipe` at 0x2f0 as the same
+; root->child shape this builds. Four-way by tests/export-trie-band.fk.
+;
+; et-trie (name addr) -> the trie byte-list, where `name` is the exported symbol
+; byte-list INCLUDING its leading underscore (e.g. "_recipe").
+
+(do
+    (defn et-nil? (xs) (eq (len xs) 0))
+    (defn et-app (xs ys) (if (et-nil? xs) ys (cons (head xs) (et-app (tail xs) ys))))
+    (defn et-cat (xss) (if (eq (len xss) 1) (head xss) (et-app (head xss) (et-cat (tail xss)))))
+
+    ; unsigned LEB128: 7 bits per byte, low byte first, high bit = continue.
+    (defn et-uleb (n) (if (lt n 128) (list n)
+                          (cons (add (mod n 128) 128) (et-uleb (div n 128)))))
+
+    ; pad a byte-list up with zeros to a multiple of 8 (ld aligns the trie).
+    (defn et-zeros (n) (if (eq n 0) (list) (cons 0 (et-zeros (sub n 1)))))
+    (defn et-pad8 (xs) (et-app xs (et-zeros (sub (mul (div (add (len xs) 7) 8) 8) (len xs)))))
+
+    ; the terminal (child) node: terminalSize, then (flags=0, address ULEB),
+    ; then childCount=0.
+    (defn et-child (addr)
+        (do (let term (et-app (et-uleb 0) (et-uleb addr)))
+            (et-cat (list (list (len term)) term (list 0)))))
+
+    ; the whole trie: root node (terminalSize=0, childCount=1, edge=name+NUL,
+    ; childNodeOffset) then the terminal node. childOffset = length of the root
+    ; node = 2 + (len name + 1) + width(ULEB childOffset); for any name under
+    ; ~123 bytes the offset is a single ULEB byte, so childOffset = 4 + len name.
+    (defn et-trie (name addr)
+        (do (let sym (et-app name (list 0)))
+            (let childOff (add 4 (len name)))
+            (let root (et-cat (list (list 0 1) sym (et-uleb childOff))))
+            (et-pad8 (et-app root (et-child addr)))))
+
+    0)

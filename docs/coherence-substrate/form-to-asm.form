@@ -227,9 +227,29 @@
     (agree  "four-way Go/Rust/TS/fkwu at tests/codesign-band.fk -> 632490 (sha256 + big-endian layout agree across kernels)")
     (convict "scripts/form_codesign_conviction_demo.sh: co-sign over a real dylib's [0:codeLimit] == ld's embedded signature, byte-for-byte (278 bytes); the gate opens"))
 
+  # dlsym finds an exported symbol through the export trie, not the classic
+  # symbol table. form-export-trie.fk (et-trie) emits the LC_DYLD_EXPORTS_TRIE
+  # for one symbol at a vm address — the same root->child node shape ld emits,
+  # byte-for-byte. It is the last novel encoder for the direct (no-ld) dylib.
+  (export-trie-realized
+    (recipe "form-export-trie et-trie emits the minimal export trie (root edge = symbol name, terminal node = flags+address ULEB) — the bytes dlsym reads")
+    (agree  "four-way Go/Rust/TS/fkwu at tests/export-trie-band.fk -> 6391; reproduces ld's trie for _recipe at 0x2f0 byte-for-byte"))
+
+  # The whole signed dylib is proven buildable from scratch — zero ld, zero
+  # codesign, zero clang. A from-scratch MH_DYLIB (header + __TEXT/__LINKEDIT
+  # segments + LC_ID_DYLIB + the form-export-trie trie + LC_SYMTAB/DYSYMTAB +
+  # LC_BUILD_VERSION + LC_CODE_SIGNATURE), self-signed with the form-codesign
+  # algorithm, dlopens and runs (recipe(5)=22) on this Apple Silicon host. Every
+  # encoder it needs is now a four-way Form recipe; what remains is the assembler
+  # that composes them at the (fixed, for a _recipe leaf) Mach-O offsets.
+  (dylib-from-scratch-proven
+    (encoders "form-macho (header + segment/section + symtab LE bytes), form-export-trie (the trie), form-codesign (the ad-hoc signature) — all four-way")
+    (floor   "the minimal dlopen+dlsym-able MH_DYLIB needs 8 load commands: __TEXT, __LINKEDIT, LC_ID_DYLIB, LC_DYLD_EXPORTS_TRIE, LC_SYMTAB, LC_DYSYMTAB, LC_BUILD_VERSION, LC_CODE_SIGNATURE; code carries slack so an added signature command can't clobber it")
+    (proven  "the complete self-signed binary dlopens+calls on darwin/arm64 — the last toolchain (ld) is droppable; the open cell is form-dylib.fk assembling the proven encoders, validated by dylib_call dlopen"))
+
   # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
-    (recipe-dylib-direct "emit the MH_DYLIB STRUCTURE directly from Form (MH_DYLIB filetype + LC_ID_DYLIB + export trie + __LINKEDIT), then place the now-realized form-codesign signature — retiring ld from the dylib path entirely as form-elf-exec already retired it for the ELF executable; the signature half is done, the structural shell remains; and a Linux ELF ET_DYN .so (no signing) for the VPS, dlopen-proven once the Docker Linux/arm64 runner is live")
+    (form-dylib-assembler "form-dylib.fk: splice the lo-compile recipe code into the fixed MH_DYLIB template (form-macho header/segments/symtab + form-export-trie trie), append the form-codesign signature, and prove the Form-emitted dylib dlopens via dylib_call — composing proven four-way encoders at fixed offsets, no new format work; and a Linux ELF ET_DYN .so (no signing) for the VPS, dlopen-proven once the Docker Linux/arm64 runner is live")
     (live-lowering   "auto-derive the op-tagged prog from a live closure's AST (the sibling of jit.go's Go-source walker) so jit_leaf_inram fires on real single-i64 closures automatically — the band and test author the prog explicitly today, proving the emit->exec path; the converter is what makes it the default backend")
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")

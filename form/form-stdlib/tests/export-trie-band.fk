@@ -1,0 +1,13 @@
+; export-trie-band.fk — form-export-trie emits the LC_DYLD_EXPORTS_TRIE that
+; dlsym reads to find an exported symbol. The band folds the trie for `_recipe`
+; at address 0x200 to a position-weighted checksum, so a divergent kernel (ULEB
+; or node layout) changes the number. These are the exact bytes ld emits for the
+; same symbol and the bytes the proven self-signed recipe dylib carries.
+;
+; preludes: form-stdlib/form-export-trie.fk
+
+(do
+  ; _recipe = 95 114 101 99 105 112 101, exported at vm address 512 (0x200).
+  (let trie (et-trie (list 95 114 101 99 105 112 101) 512))
+  (defn ck (xs i) (if (eq (len xs) 0) 0 (add (mul (head xs) i) (ck (tail xs) (add i 1)))))
+  (ck trie 1))
