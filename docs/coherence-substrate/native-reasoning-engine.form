@@ -1,0 +1,43 @@
+; native-reasoning-engine.form — the north star for ONE domain: a reasoning engine that
+; writes CODE the way the git history shows it was made, all native Form, calling no remote
+; oracle; reached by training on the body's actual samples and actual code, which teaches
+; the model our own body as a side effect.
+;
+; This does not restate the ML stack — that tissue already exists and this cell LINKS it:
+;   model-vitality.form          — the model itself (architecture, weights, deltas, optimizer
+;                                   state) as content-addressed substrate cells.
+;   real-mesh-training-carrier.form — the training-authority gate: real windows, real labels,
+;                                   native-first-with-oracle-sampling, no toy claims.
+;   android-mesh-learning.form   — champion/challenger oracle retirement across the mesh.
+; What is NEW here is the CODE specialization, and the two halves this session built that
+; make it safe.
+
+(north-star native-reasoning-engine
+
+  (goal codes-like-the-history  native-form  no-remote-oracle)
+
+  ; ── THE TWO HALVES THIS SESSION BUILT (the reason no remote oracle is safe) ───────────
+  ; The model is never the authority. Its INPUT is structured and its OUTPUT is proven.
+  (half code-as-data    "the full BMF cursor (bmf-grammar g-parse — raw text + grammar-as-data, no tokenizer) + bmf-to-fk turn the body's real code into content-addressed fk-* cells. code is LEARNABLE STRUCTURE, so the corpus is (intent -> code-as-cells), not (intent -> opaque text)")
+  (half generate-verify "form-lower compiles a proposed recipe to native arm64; the recipe-equivalence-gate + the four-kernel floor + the existing tests verify it. a wrong proposal cannot ship — it fails to compile, or fails the gate. the model is proven, never believed")
+
+  ; ── WHAT THE LINKED CELLS ALREADY HOLD ───────────────────────────────────────────────
+  (lean-on model-vitality            "model architecture + weights + deltas as cells")
+  (lean-on real-mesh-training-carrier "the real-training authority gate; native-first sampling")
+  (lean-on android-mesh-learning      "the oracle-retirement flywheel: ask native first, retire the oracle per class as MEASURED confidence crosses the gate")
+  (lean-on form-train-step           "the SGD atom, four-way — composed by the chain rule into the full backprop loop")
+
+  ; ── THE GAP (named as closing recipe, not debt) ──────────────────────────────────────
+  (gap structured-code-corpus "the corpus is request->output text today; lift it to (intent -> code-as-cells) over the body's own files + git diffs, using the cursor + bridge — the act of structuring teaches the model our body")
+  (gap code-gen-loop          "compose form-train-step through attention+FFN to GENERATE a recipe/diff, not predict a tool; prove the loop four-way on a tiny net, then scale (arch-capacity already searches capacity)")
+
+  ; ── THE PATH ─────────────────────────────────────────────────────────────────────────
+  (step structure-the-corpus "the body's code + git diffs -> fk-cells, the side-effect Urs named: the model learns our own code while learning to code")
+  (step compose-the-loop     "SGD atom -> backprop through the transformer layers, four-way on a tiny net first")
+  (step train-on-actual      "train on the structured corpus — actual samples, actual code")
+  (step generate-and-prove   "model proposes -> form-lower compiles -> gate + four-kernel + tests prove -> keep the verified, retire the oracle for that class")
+
+  ; A reasoning engine that writes code it cannot fake past its own compiler and its own
+  ; gate, trained on the history of how the body actually grew — the oracle retiring class
+  ; by class as native conviction is measured, never declared.
+  (ground every-proposal  compiled  gate-verified  four-way  trained-on-our-own-history))
