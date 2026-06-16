@@ -42,8 +42,9 @@
         (if (eq (lo-tag prog i) 2) (fa-mov 0 argr)
         (if (eq (lo-tag prog i) 3) (lo-add prog i argr)
         (if (eq (lo-tag prog i) 4) (lo-sub prog i argr)
+        (if (eq (lo-tag prog i) 5) (lo-mul prog i argr)
         (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
-            (list)))))))
+            (list))))))))
     ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0
     (defn lo-add (prog i argr)
         (if (lo-lit? prog (lo-c2 prog i))
@@ -54,6 +55,21 @@
         (if (lo-arg? prog (lo-c1 prog i))
             (fa-sub 0 argr (lo-imm prog i))
             (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-sub 0 0 (lo-imm prog i)))))
+    ; MUL: arm64 has no mul-immediate, so it's operand-aware like ADD/SUB. (ARG, x) /
+    ; (x, ARG) -> lower the non-ARG operand into w0, mul w0,w0,w<argr> (the banked n is
+    ; never clobbered). (x, LIT i) -> lower x; movz w2,#i; mul w0,w0,w2 (the LIT lands in
+    ; scratch w2 AFTER x is fully in w0). Two non-trivial subtrees is the multi-register
+    ; frontier (would need allocation) — left as the empty tail, never a wrong answer.
+    (defn lo-mul (prog i argr)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-mul 0 0 argr))
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-mul 0 0 argr))
+        (if (lo-lit? prog (lo-c2 prog i))
+            (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-mul 0 0 2))
+        (if (lo-lit? prog (lo-c1 prog i))
+            (lo-app (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-movz 2 (lo-val prog (lo-c1 prog i)))) (fa-mul 0 0 2))
+            (list))))))
     ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
     ; branch offsets (in instructions = bytes/4):
     ;   cmp w<argr>,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
@@ -84,8 +100,9 @@
         (if (eq (lo-tag prog i) 2) (list i)
         (if (eq (lo-tag prog i) 3) (lo-map-add prog i)
         (if (eq (lo-tag prog i) 4) (lo-map-sub prog i)
+        (if (eq (lo-tag prog i) 5) (lo-map-mul prog i)
         (if (eq (lo-tag prog i) 6) (lo-map-cond prog i)
-            (list)))))))
+            (list))))))))
     (defn lo-map-add (prog i)
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-map prog (lo-c1 prog i)) (list i))
@@ -94,6 +111,18 @@
         (if (lo-arg? prog (lo-c1 prog i))
             (list i)
             (lo-app (lo-map prog (lo-c1 prog i)) (list i))))
+    ; MUL mirror: ARG-operand forms emit one mul (one i); LIT-operand forms emit movz+mul
+    ; (two i's), both owned by the MUL node — exactly lo-mul's instruction order.
+    (defn lo-map-mul (prog i)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-map prog (lo-c2 prog i)) (list i))
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-map prog (lo-c1 prog i)) (list i))
+        (if (lo-lit? prog (lo-c2 prog i))
+            (lo-app (lo-map prog (lo-c1 prog i)) (list i i))
+        (if (lo-lit? prog (lo-c1 prog i))
+            (lo-app (lo-map prog (lo-c2 prog i)) (list i i))
+            (list))))))
     ; cmp belongs to the LE node; both branches' jumps belong to the COND itself
     (defn lo-map-cond (prog i)
         (lo-cat (list
