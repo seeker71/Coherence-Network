@@ -1,0 +1,50 @@
+; recipe-equivalence-gate.fk — admit a BETTER native lowering by axiom-grounded
+; observation, where byte-identity to an external tool (the floor) could not.
+;
+; preludes: form-stdlib/core.fk
+;
+; Byte-conviction chains trust to clang, so it caps the body AT clang. This gate
+; chains trust to the SELF: the source recipe (ax-2 cell + ax-3 content-addressing)
+; is the ground truth, not clang. Running either is offer-and-observe-the-ack
+; (ax-5); truth is acks-agree-when-observed across coverage (ax-4 "observation
+; through the offered interface is what makes it real"); containment is observable
+; (ax-4 "breach is observable"). A candidate lowering whose BYTES DIFFER from the
+; assembler is admitted iff it is observed-equivalent to the recipe, breachless, and
+; measured better — so the body can exceed clang instead of only matching it.
+;
+; The strength over a single exit-code: COVERAGE over inputs. A lowering that
+; hardcodes the right answer for one input is refuted by a second input where the
+; recipe's ack differs. One disagreement refutes (the witness theorem: 0 if any
+; refute; the absent third state is silence).
+
+; one observation: (input recipe-ack native-ack). recipe-ack = the kernel walker's
+; result (ground truth); native-ack = the lowering's result, executed.
+(defn req-obs (input recipe-ack native-ack) (list input recipe-ack native-ack))
+(defn req-recipe-ack (o) (nth o 1))
+(defn req-native-ack (o) (nth o 2))
+
+; acks agree on one observation (ax-3 equivalence-by-structure, ax-4 observed-real).
+(defn req-agree? (o) (if (eq (req-recipe-ack o) (req-native-ack o)) 1 0))
+
+; equivalence across the coverage set: EVERY observed input's acks agree. One
+; disagreement refutes the whole candidate (witness theorem).
+(defn req-equivalent? (coverage)
+  (if (eq (len coverage) 0) 1
+      (if (eq (req-agree? (head coverage)) 1)
+          (req-equivalent? (tail coverage)) 0)))
+
+; admit: a candidate enters the body iff observed-equivalent across coverage (ax-4/5)
+; AND no breach observed (ax-4 containment) AND measured better (native-cost < ref).
+; breach? : 1 if any effect outside the offered interface was observed, else 0.
+(defn req-admit (coverage breach? native-cost ref-cost)
+  (if (eq (req-equivalent? coverage) 1)
+      (if (eq breach? 0)
+          (if (lt native-cost ref-cost) 1 0)
+          0)
+      0))
+
+; the three states (ax-1 states 0/1/nothing; the witness theorem):
+;   1 admitted · 0 refuted · 2 silent (no candidate produced — the absent third).
+(defn req-verdict (produced? coverage breach? native-cost ref-cost)
+  (if (eq produced? 0) 2
+      (req-admit coverage breach? native-cost ref-cost)))
