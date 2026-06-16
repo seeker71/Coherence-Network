@@ -93,7 +93,16 @@ while IFS= read -r line; do
 done < <("$GO" "$led" 2>/dev/null)
 echo "[3] ledger crossing: surface=local-oracle gap=$L_GAP receipt-valid=$L_VALID outcome=$OUTCOME"
 
-# 6. Verdict ------------------------------------------------------------------
+# 6. Capture the turn as a training sample (success AND fail both teach) ------
+if [[ -x "$ROOT/scripts/form_cli_capture.sh" ]]; then
+    bash "$ROOT/scripts/form_cli_capture.sh" --gap \
+        "close gap $GAP: $SPEC" \
+        "draft a Form recipe with a local coder oracle; the kernel validates it against $ASSERT" \
+        "$(cat "$draft" 2>/dev/null | head -c 800)" \
+        "$OUTCOME" "$(printf '%s' "$ORACLE" | sed 's/.* //')" 2>/dev/null | sed 's/^/   capture: /'
+fi
+
+# 7. Verdict ------------------------------------------------------------------
 if [[ "$OUTCOME" == "success" ]]; then
     echo "── gap '$GAP' CLOSED offline → draft kept at form/form-stdlib/drafts/${GAP}.fk"
     echo "   next: name an assertion band and add to the manifest to make it four-way."

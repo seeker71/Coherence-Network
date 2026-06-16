@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 259
+**Total files**: 260
 
 | File | Purpose |
 |---|---|
@@ -79,6 +79,7 @@
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
+| [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
 | [form_cli_close_gap.sh](form_cli_close_gap.sh) | form_cli_close_gap.sh — close a Form recipe gap OFFLINE with a local oracle. |
 | [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
 | [form_cli_gaps.sh](form_cli_gaps.sh) | form_cli_gaps.sh — the catalog of what is OPEN, walked from the live body. |
