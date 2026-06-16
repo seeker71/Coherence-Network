@@ -149,6 +149,37 @@ The slice spec is the lowered IR (op-tagged nodes; tags 1=LIT 2=ARG 3=ADD 4=SUB)
 A recipe→IR front-end is a separate cell; the lowered subset (LIT/ADD/SUB/COND/
 ARG/recursion) is what compiles to native today.
 
+## Shell commands are recipes — lowered to native asm
+
+The carriers used to shell out to `tr`, `cat`, `grep`. The north star is not
+"reimplement the pipeline in interpreted Form to avoid the shell" — it is **the
+shell commands have source, so they are Form recipes, lowered to native asm**.
+
+[`hati-os-byte-filter-emit.fk`](../../form/form-stdlib/hati-os-byte-filter-emit.fk)
+is the generic shape: a `stdin→stdout` byte filter where the **per-byte transform
+IS the command** — dropped in as data, never a parallel emitter.
+
+```bash
+scripts/form_byte_filter_demo.sh "Hello, World! 123 ABCxyz"
+```
+
+Form emits the whole C program (`tr A-Z a-z` → the transform `(c>=65&&c<=90)?c+32:c`);
+clang lowers it (an allowed host carrier under `host-kernel.form`); the system
+command is the oracle. Measured: `tr A-Z a-z`, `tr a-z A-Z`, `cat`, `rot13` each
+match their Form-lowered native binary **byte-for-byte**. The transform becomes
+real instructions — the lowercase filter's loop is `add w9, w0, #32` + `csel w0,
+w9, w0, lo` in arm64. Proven four-way at `hati-os-byte-filter-emit fks 31` (the
+emitted C is byte-identical across kernels; the name parameterizes the program).
+
+Two lowering lanes, named honestly: the **slice lane** above
+([`form-lower.fk`](../../form/form-stdlib/form-lower.fk)) reaches native arm64
+bytes with **zero clang**, but its ops are integer arithmetic today; the
+**filter lane** here reaches real coreutils **now** by emitting C through clang.
+Both author the whole program in Form — they differ only in how far the lowering
+walks before a host compiler. The filter lane retires the carriers' `tr`/`cat`
+shell-outs; widening the slice lane to I/O ops is the closing cell that drops
+clang from this lane too.
+
 ## The training corpus — samples to try the native models on
 
 Every slice and gap-close captures its request/response; the agent's own turns
