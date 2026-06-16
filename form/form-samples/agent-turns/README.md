@@ -36,6 +36,22 @@ scripts/form_cli_capture.sh --from-transcript <session>.jsonl 10
 scripts/form_cli_capture.sh --gap "<task>" "<reasoning>" "<answer>" <outcome> <oracle>
 ```
 
+### Historical archive
+
+`FORM_CLI_CORPUS` points the corpus at a stable path that survives worktree
+cleanup — used to sweep the whole session history into one durable store:
+
+```bash
+PD=~/.claude/projects/-Users-ursmuff-source-Coherence-Network
+for f in "$PD"/*.jsonl; do
+  FORM_CLI_CORPUS=~/.coherence-network/form-cli-corpus/corpus.jsonl \
+    scripts/form_cli_capture.sh --from-transcript "$f" 100
+done
+```
+
+The sovereignty filter runs on every turn, so a month of sessions sweeps down to
+only the technical reasoning + tool use. Dedup by `(task_sig, answer_sig)`.
+
 ## Cell sovereignty — structural, not manual
 
 The capture carrier **refuses** any turn touching tender/personal markers — a
