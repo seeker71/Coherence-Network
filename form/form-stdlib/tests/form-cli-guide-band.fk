@@ -1,0 +1,40 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-predict.fk form-stdlib/form-cli-model.fk form-stdlib/form-cli-guide.fk
+;
+; form-cli-guide-band - the self-guidance-in-Form proof (lifted from shell).
+;
+; Verdict 31 when, over the trained model: a runner tool is wanted iff a predictor
+; tool maps to it; the comma-join appends only wanted tools; the frequent four
+; resolve to "bash, read_file, write_file"; the full guidance line carries them;
+; and a model that wants nothing yields the empty hint.
+
+(do
+    (let base (fpm-base))
+    (let boosts (fpm-boosts))
+    (let thr (fpm-threshold))
+    (let amt (fpm-boost-amt))
+    (let kw (list "read" "spec"))
+
+    ; want? — Bash wanted, Grep/Glob not (base 0)
+    (let c0 (if (eq (fcg-want? base boosts kw thr amt "Bash" "") 1)
+                (if (eq (fcg-want? base boosts kw thr amt "Grep" "Glob") 0) 1 0)
+                0))
+
+    ; append — joins when wanted, leaves the accumulator when not
+    (let c1 (if (str_eq (fcg-append "" 1 "bash") "bash")
+                (if (str_eq (fcg-append "bash" 1 "read_file") "bash, read_file")
+                    (if (str_eq (fcg-append "bash" 0 "read_file") "bash") 2 0)
+                    0)
+                0))
+
+    ; the runner-tool string — the frequent four, no grep/glob
+    (let c2 (if (str_eq (fcg-tools base boosts kw thr amt) "bash, read_file, write_file") 4 0))
+
+    ; the full guidance line carries them
+    (let c3 (if (str_eq (fcg-guide base boosts kw thr amt)
+                    "GUIDANCE: similar past tasks needed these tools — reach for them when relevant: bash, read_file, write_file.")
+                8 0))
+
+    ; a threshold nothing clears yields the empty hint
+    (let c4 (if (str_eq (fcg-guide base boosts kw 200 amt) "") 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

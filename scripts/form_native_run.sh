@@ -19,30 +19,18 @@ esc(){ printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 
 # ── self-guidance: ask the trained predictor which tools this task needs ──
+# The predictor->runner mapping and the hint assembly are now Form
+# (form-cli-guide.fk) — fcg-guide builds the whole line. The only shell left here
+# is the keyword extraction (lowercase + tokenize): kernel string-tokenization is
+# the named gap that keeps it a carrier for now.
 GUIDE=""
-if [[ "${FNR_NO_GUIDE:-0}" != "1" && -f "$STD/form-cli-predict.fk" ]]; then
-    # task keywords (lowercase 4+ letter words, deduped)
+if [[ "${FNR_NO_GUIDE:-0}" != "1" && -f "$STD/form-cli-guide.fk" ]]; then
     kw="$(printf '%s' "$TASK" | tr 'A-Z' 'a-z' | grep -oE '[a-z]{4,}' | awk '!s[$0]++' | head -12 | sed 's/.*/"&"/' | tr '\n' ' ')"
-    { cat "$STD/form-cli-predict.fk" "$STD/form-cli-model.fk"
-      echo '(let base (fpm-base))'
-      echo '(let boosts (fpm-boosts))'
-      echo "(let kw (list ${kw:-\"\"}))"
-      for t in Bash Read Write Edit Grep Glob Agent; do echo "(print (fcp-predicted? base boosts kw \"$t\" (fpm-threshold) (fpm-boost-amt)))"; done
-    } > "$work/predict.fk"
-    # map predictor tools -> the runner's tool vocabulary (bash/read_file/write_file/search)
-    j=0; runner_tools=""
-    while IFS= read -r v; do
-        j=$((j+1)); pt=$(echo "Bash Read Write Edit Grep Glob Agent" | cut -d' ' -f$j)
-        [[ "$(printf '%s' "$v" | tr -d '[:space:]')" == "1" ]] || continue
-        case "$pt" in
-            Bash) runner_tools="$runner_tools bash";;
-            Read) runner_tools="$runner_tools read_file";;
-            Write|Edit) runner_tools="$runner_tools write_file";;
-            Grep|Glob) runner_tools="$runner_tools search";;
-        esac
-    done < <("$GO" "$work/predict.fk" 2>/dev/null | head -7)
-    runner_tools="$(printf '%s\n' $runner_tools | awk '!s[$0]++' | tr '\n' ' ' | sed 's/ *$//')"
-    [[ -n "$runner_tools" ]] && GUIDE="GUIDANCE: similar past tasks needed these tools — reach for them when relevant: ${runner_tools// /, }.\n\n"
+    { cat "$STD/form-cli-predict.fk" "$STD/form-cli-model.fk" "$STD/form-cli-guide.fk"
+      echo "(print (fcg-guide (fpm-base) (fpm-boosts) (list ${kw:-\"\"}) (fpm-threshold) (fpm-boost-amt)))"
+    } > "$work/guide.fk"
+    g="$("$GO" "$work/guide.fk" 2>/dev/null | sed '/^null$/d' | head -1)"
+    [[ -n "$g" && "$g" != "null" ]] && GUIDE="$g\n\n"
 fi
 
 { cat "$STD/form-native-run.fk"
