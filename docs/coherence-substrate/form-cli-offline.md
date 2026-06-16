@@ -250,6 +250,14 @@ coder unguided answered `[Grep, Edit]` (no Bash) becomes `[Bash, Read, Write,
 Edit]` once guided. The corpus-trained native model makes the live local model
 better: the flywheel turning, not just measured.
 
+**This is now permanent in the runner**, not a demo. `form_native_run.sh`
+self-guides every call: it consults the predictor (`form-cli-predict.fk`) for the
+task's likely tools, maps them to the runner's tool vocabulary, and feeds them to
+the loop via `fnr-run-guided` (`form-native-run.fk`). So the local model's tool
+selection is corrected on every real run — e.g. a read/validate/write task
+auto-guides to `bash, read_file, write_file`. `FNR_NO_GUIDE=1` gives the bare
+unguided runner. The runner uses its own trained model to guide itself.
+
 ## The reasoning lane — measured, and wide open
 
 Tool selection is a set problem; reasoning needs a *semantic* judge. So a local

@@ -55,19 +55,23 @@
 (defn fnr-toolcall? (reply)
     (if (and (ge (str_find reply "\"name\"" 0) 0) (ge (str_find reply "\"arguments\"" 0) 0)) 1 0))
 
-; ── the loop: recurse over (transcript, step) until a final answer or max ──
-(defn fnr-step (oracle transcript step max)
+; ── the loop: recurse over (transcript, step) until a final answer or max. The
+;    `guide` is the runner's self-guidance — the corpus-trained tool predictor's
+;    likely-tools hint for this task (form-cli-predict.fk, computed by the
+;    carrier), prepended to the system prompt so the local model stops omitting
+;    tools it learned to need (e.g. Bash). Empty guide = the unguided runner. ──
+(defn fnr-step (oracle guide transcript step max)
     (if (ge step max)
         (str_concat "(reached max-steps)\n" transcript)
         (do
-            (let prompt (str_concat (fnr-sys) (str_concat transcript "\nYour reply:")))
+            (let prompt (str_concat (fnr-sys) (str_concat guide (str_concat transcript "\nYour reply:"))))
             (let reply (fnr-oracle oracle prompt))
             (if (eq (fnr-toolcall? reply) 0)
                 reply
                 (do
                     (let nm (fnr-jf reply "name"))
                     (let obs (fnr-exec nm reply))
-                    (fnr-step oracle
+                    (fnr-step oracle guide
                         (str_concat transcript
                             (str_concat "\nACTION " (str_concat (int_to_str step)
                                 (str_concat ": " (str_concat reply (str_concat "\nOBSERVATION: " obs))))))
@@ -75,4 +79,7 @@
 
 ; ── the entry: run a task. returns the final answer (or the capped transcript). ──
 (defn fnr-run (task oracle max)
-    (fnr-step oracle (str_concat "TASK: " task) 1 max))
+    (fnr-step oracle "" (str_concat "TASK: " task) 1 max))
+; ── self-guided entry: the runner runs with the predictor's likely-tools hint. ──
+(defn fnr-run-guided (task oracle max guide)
+    (fnr-step oracle guide (str_concat "TASK: " task) 1 max))
