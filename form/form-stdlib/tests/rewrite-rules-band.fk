@@ -1,0 +1,21 @@
+; rewrite-rules-band.fk — a rule-SET collapses a multi-opportunity recipe, verified.
+;
+; preludes: form-stdlib/core.fk form-stdlib/recipe-equivalence-gate.fk form-stdlib/rewrite-propose.fk form-stdlib/rewrite-rules.fk
+;
+; recipe: ((x + 0) * 1) + (2 * 3)  =  x + 6, 9 nodes. rw-all fires three rules
+; bottom-up: identity (x+0 -> x), identity (x*1 -> x), fold (2*3 -> 6) => (x + 6),
+; 3 nodes. ast-eval over input coverage {0,5,10} confirms equivalence (a wrong rule
+; would diverge). aggregate = equivalent?(1) + orig-size(9) + opt-size(3) = 13.
+
+(do
+  (let recipe (list 2
+                (list 3 (list 2 (list 1) (list 0 0)) (list 0 1))
+                (list 3 (list 0 2) (list 0 3))))
+  (let opt (rw-all recipe))
+
+  (let cov (list
+    (req-obs 0  (ast-eval recipe 0)  (ast-eval opt 0))
+    (req-obs 5  (ast-eval recipe 5)  (ast-eval opt 5))
+    (req-obs 10 (ast-eval recipe 10) (ast-eval opt 10))))
+
+  (add (req-equivalent? cov) (add (ast-size recipe) (ast-size opt))))
