@@ -46,16 +46,24 @@
         (if (eq (lo-tag prog i) 8) (lo-div prog i argr)
         (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
             (list)))))))))
-    ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0
+    ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0 ·
+    ; else (two subtrees) -> lo-tree. The (ARG, x) fast path needs c1=ARG; without that
+    ; guard the general case would silently add w<argr> in place of the left subtree.
     (defn lo-add (prog i argr)
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-add 0 0 (lo-imm prog i)))
-            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-add-r 0 argr 0))))
-    ; SUB: (ARG, LIT i) -> sub w0,w<argr>,#i (direct) · (x, LIT i) -> lower(x); sub w0,w0,#i
-    (defn lo-sub (prog i argr)
         (if (lo-arg? prog (lo-c1 prog i))
-            (fa-sub 0 argr (lo-imm prog i))
-            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-sub 0 0 (lo-imm prog i)))))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-add-r 0 argr 0))
+            (lo-tree prog i argr 0))))
+    ; SUB: (ARG, LIT i) -> sub w0,w<argr>,#i (direct) · (x, LIT i) -> lower(x); sub w0,w0,#i ·
+    ; else (denominator not a LIT) -> lo-tree. Both fast paths require c2=LIT (they read its
+    ; immediate); a non-LIT second operand is the general case the register stack handles.
+    (defn lo-sub (prog i argr)
+        (if (lo-lit? prog (lo-c2 prog i))
+            (if (lo-arg? prog (lo-c1 prog i))
+                (fa-sub 0 argr (lo-imm prog i))
+                (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-sub 0 0 (lo-imm prog i))))
+            (lo-tree prog i argr 0)))
     ; MUL: arm64 has no mul-immediate, so it's operand-aware like ADD/SUB. (ARG, x) /
     ; (x, ARG) -> lower the non-ARG operand into w0, mul w0,w0,w<argr> (the banked n is
     ; never clobbered). (x, LIT i) -> lower x; movz w2,#i; mul w0,w0,w2 (the LIT lands in
@@ -144,11 +152,15 @@
     (defn lo-map-add (prog i)
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-map prog (lo-c1 prog i)) (list i))
-            (lo-app (lo-map prog (lo-c2 prog i)) (list i))))
-    (defn lo-map-sub (prog i)
         (if (lo-arg? prog (lo-c1 prog i))
-            (list i)
-            (lo-app (lo-map prog (lo-c1 prog i)) (list i))))
+            (lo-app (lo-map prog (lo-c2 prog i)) (list i))
+            (lo-map-tree prog i))))
+    (defn lo-map-sub (prog i)
+        (if (lo-lit? prog (lo-c2 prog i))
+            (if (lo-arg? prog (lo-c1 prog i))
+                (list i)
+                (lo-app (lo-map prog (lo-c1 prog i)) (list i)))
+            (lo-map-tree prog i)))
     ; MUL mirror: ARG-operand forms emit one mul (one i); LIT-operand forms emit movz+mul
     ; (two i's), both owned by the MUL node — exactly lo-mul's instruction order.
     (defn lo-map-mul (prog i)
