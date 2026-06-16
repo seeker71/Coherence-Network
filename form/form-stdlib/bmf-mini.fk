@@ -1,18 +1,21 @@
-; bmf-mini.fk — a grammar-AS-DATA compiler: source tokens folded through rule
-; cells into a Hati-OS kernel program-as-cells (M2 proof-of-shape; m4e3 seed).
+; bmf-mini.fk — the TOKENWISE grammar-fold, kept for ONE job: the FLATTENABLE four-arm
+; grammar-swap proof. This is NOT the front end. The front end is the full BMF cursor —
+; bmf-grammar.fk's g-parse reads RAW SOURCE TEXT char-by-char driven by a grammar-as-data,
+; no tokenizer, with recursion/precedence/nesting, and reaches a native binary through
+; bmf-to-fk.fk -> fk-opt -> fk-to-prog -> lo-compile. Use g-parse for real source.
 ;
-; A RULE is (token, op, operand): pattern = the token to match, semantic action
-; = wrap the accumulator program as (op acc (LIT operand)). A GRAMMAR is a list
-; of rules; SOURCE is a list of token ints. Compile folds the source through the
-; grammar, the accumulator starting at ARG — so a DIFFERENT grammar compiles the
-; SAME source into a DIFFERENT program. That is the compiler-compiler property:
-; the grammar is data, not baked. The product is a program-as-cells; the
-; existing emitter (hati-os-kernel-emit.fk) turns it into a native binary, so
-; grammar + source -> a new binary, end to end.
+; bmf-mini survives only because g-parse's text cursor uses char_at/ord (fkwu's
+; node/substrate + string wall, so it is 3-kernel), while THIS tokenwise fold touches none
+; of that — it folds a list of token INTS through rule cells, stays flattenable, and so its
+; output runs on the universal fkw binary. That is its remaining value, and the only one:
+; the four-arm bands (language-packs-fourth, fourth-union, jit-lower-bmf) prove "swap the
+; grammar-as-data, get a different binary" FOUR-way through here. When the cursor itself
+; reaches the fourth arm (g-parse's parse lowered onto flattenable ops), this file composts.
 ;
-; This is the tokenwise face of BMF (pattern-action rules folded over source).
-; The full nesting/choose/fail engine (engine.fk read through the observe door)
-; is m4e3; this proves the data-driven transform and the binary generation.
+; A RULE is (token, op, operand); a GRAMMAR is a list of rules; SOURCE is a list of token
+; ints; compile folds the source through the grammar, acc starting at ARG — a different
+; grammar compiles the SAME tokens into a DIFFERENT program (the compiler-compiler property,
+; here in its tokenwise, fourth-arm-reachable form).
 
 (defn bmf-rule (tok op operand)
     (ms-intern (ms-cell tok) (ms-intern (ms-cell op) (ms-cell operand))))
