@@ -1,0 +1,47 @@
+; text-tokenize.fk — split text into lowercased ascii-letter words, in pure Form.
+;
+; preludes: form-stdlib/core.fk
+;
+; The shell `tr A-Z a-z | grep -oE '[a-z]{4,}'` was a transformation, so it is
+; Form. A char is a letter when ord(c) is A-Z (65-90) or a-z (97-122); an
+; uppercase letter lowercases through an ord-indexed 26-char table (no chr op
+; needed). The scan accumulates the current word as a string and flushes it,
+; space-joined, when a non-letter (or the end) breaks it — words shorter than
+; minlen are dropped. Result is a single space-joined string (no cons needed);
+; a caller splits on spaces. char_at and ord both cross four-way.
+
+(let TK-LOWERS (list "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n"
+                     "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"))
+
+; lowercase one char: uppercase A-Z -> a-z (ord-indexed), others unchanged.
+(defn tk-low (c)
+    (do (let o (ord c))
+        (if (if (ge o 65) (le o 90) 0) (nth TK-LOWERS (sub o 65)) c)))
+
+; is a char an ascii letter? (A-Z or a-z)
+(defn tk-alpha? (c)
+    (do (let o (ord c))
+        (if (if (ge o 65) (le o 90) 0) 1
+            (if (if (ge o 97) (le o 122) 0) 1 0))))
+
+; flush the current word to the space-joined accumulator when it is long enough.
+(defn tk-flush (out cur minlen)
+    (if (ge (str_len cur) minlen)
+        (if (str_eq out "") cur (str_concat out (str_concat " " cur)))
+        out))
+
+; scan the text char by char, lowercasing letters into `cur`, flushing on breaks.
+(defn tk-scan (text i n cur out minlen)
+    (if (ge i n)
+        (tk-flush out cur minlen)
+        (do
+            (let c (char_at text i))
+            (if (eq (tk-alpha? c) 1)
+                (tk-scan text (add i 1) n (str_concat cur (tk-low c)) out minlen)
+                (tk-scan text (add i 1) n "" (tk-flush out cur minlen) minlen)))))
+
+; the entry: text -> space-joined lowercased letter-words of length >= minlen.
+(defn tk-words (text minlen)
+    (tk-scan text 0 (str_len text) "" "" minlen))
+
+0
