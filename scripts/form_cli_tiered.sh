@@ -57,7 +57,7 @@ fi
 
 # ── ledger the served tier as a membrane crossing (Form judges the surface) ──
 led="$(mktemp)"; trap 'rm -f "$led"' EXIT
-{ echo '(defn nil? (xs) (eq (len xs) 0))'
+{ cat "$STD/core-native.fk"
   cat "$STD/tool-channel.fk" "$STD/choice-receipt.fk" "$STD/form-cli-membrane.fk"
   echo "(let cx (fcm-crossing \"tiered:$served\" \"cap.host.exec\" (fcm-surface-$( [[ "$surface" == remote-oracle ]] && echo remote-oracle || echo local-oracle )) 0 \"tier $served served the task\" \"success\" 80 0))"
   echo '(let rep (fcm-report (list cx)))'
