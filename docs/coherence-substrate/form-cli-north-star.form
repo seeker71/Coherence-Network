@@ -44,6 +44,7 @@
     (catalog        training-catalog.fk        "the persistent training corpus: every oracle call stored as request + raw + transmuted (fear->opportunity, risk->data), content-addressed, yielding three separable composable models (raw / transmutation / vitality-reasoning) — proof tests/training-catalog-band.fk -> 31 four-way")
     (embodiment     tool-embodiment.fk         "a local lane embodies — replaces the external lane — only when ready (sovereignty/trust/confidence >= 70) AND cheaper")
     (oracles        oracle-catalog.fk          "remote LLMs are sampled teachers and baselines, not hidden authority")
+    (memory         rag-retrieve.fk            "the local lane recalls the body: a query embedding ranked over the doc index by L1 distance returns the nearest recipes/specs/concepts to ground the answer — offline semantic memory, proof tests/rag-retrieve-band.fk -> 31 four-way; carrier scripts/form_cli_rag.py over a local embedder (nomic-embed-text)")
     (binary         form-macho.fk              "the native arm64 ground-floor binary, zero clang (form-elf.fk for Linux/Android)"))
 
   (flywheel
