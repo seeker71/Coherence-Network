@@ -1,0 +1,43 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-syscall-band — the syscall / byte-I/O instruction set, proven four-way
+; against the assembler. These are what carry a unix FILTER (read/write/exit) past
+; pure arithmetic: a stack frame, a byte buffer, the syscall number in x16, svc.
+;
+; The reference image is what clang/as emitted for a write-"Hi\n"-to-stdout _main:
+;   sub sp,sp,#16; movz w8,#72; strb w8,[sp,#0]; movz w8,#105; strb w8,[sp,#1];
+;   movz w8,#10; strb w8,[sp,#2]; movz x0,#1; add x1,sp,#0; movz x2,#3;
+;   movz x16,#4; movk x16,#0x200,lsl#16; svc #0x80; movz w0,#0; add sp,sp,#16; ret
+; words: d10043ff 52800908 390003e8 52800d28 390007e8 52800148 39000be8 d2800020
+;        910003e1 d2800062 d2800090 f2a04010 d4001001 52800000 910043ff d65f03c0
+; The binary built from this image (ld, no clang) prints "Hi\n" — form_syscall_demo.sh.
+;
+; Verdict 31 when the encoder IS the assembler over the filter's new instructions:
+;   1   the whole 64-byte image byte-equals clang's (the conviction gate over syscall I/O)
+;   2   svc #0x80 is exact (the boundary cross to the OS kernel)
+;   4   strb at a nonzero offset is exact (buffer addressing — [sp,#1])
+;   8   64-bit movz into x16 is exact (the syscall-number register)
+;  16   movk #0x200,lsl#16 is exact (the write class bits, 0x2000004)
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16)
+        (fa-movz 8 72)  (fa-strb 8 31 0)
+        (fa-movz 8 105) (fa-strb 8 31 1)
+        (fa-movz 8 10)  (fa-strb 8 31 2)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 3)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209   8 9 128 82    232 3 0 57    40 13 128 82
+                   232 7 0 57     72 1 128 82   232 11 0 57   32 0 128 210
+                   225 3 0 145    98 0 128 210  144 0 128 210 16 64 160 242
+                   1 16 0 212     0 0 128 82    255 67 0 145  192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-svc 128) (list 1 16 0 212)) 2 0))
+    (let c2 (if (fa-conviction (fa-strb 8 31 1) (list 232 7 0 57)) 4 0))
+    (let c3 (if (fa-conviction (fa-movz-x 16 4) (list 144 0 128 210)) 8 0))
+    (let c4 (if (fa-conviction (fa-movk-x-16 16 512) (list 16 64 160 242)) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
