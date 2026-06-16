@@ -168,6 +168,7 @@ oracle-flywheel fks 31
 form-cli-loop fks 31
 form-cli-router fks 31
 form-cli-membrane fks 1023
+form-cli-gaps fks 1023
 obs-verify fks 31
 world-module-model fks 1023
 world-model-growth fks 4095

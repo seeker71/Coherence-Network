@@ -1,0 +1,111 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-gaps.fk
+;
+; form-cli-gaps-band - the open-gap catalog + closing-ladder proof.
+;
+; Verdict 1023 when: the capability ladder classifies all five rungs; each rung
+; names its next move; the offline-closable and stage-before-flight flags hold;
+; open-rung? excludes only closed; idea / spec / capability items construct and
+; validate with rung-consistent derived fields; and the catalog tallies open /
+; per-kind / offline / stage counts and reads flight-ready iff nothing needs the
+; network first.
+
+(do
+    ; ── the ladder classifies all five rungs (closest-to-closed wins) ──
+    (let c0 (if (str_eq (gaps-capability-rung 1 0 0 0) (gaps-rung-closed))
+                (if (str_eq (gaps-capability-rung 0 1 0 0) (gaps-rung-samples))
+                    (if (str_eq (gaps-capability-rung 0 0 1 0) (gaps-rung-local))
+                        (if (str_eq (gaps-capability-rung 0 0 0 1) (gaps-rung-remote))
+                            (if (str_eq (gaps-capability-rung 0 0 0 0) (gaps-rung-none)) 1 0)
+                            0)
+                        0)
+                    0)
+                0))
+
+    ; ── each rung names the cheapest next move ──
+    (let c1 (if (str_eq (gaps-next-move (gaps-rung-samples)) "train-native-recipe")
+                (if (str_eq (gaps-next-move (gaps-rung-local)) "distill-samples-from-local-oracle")
+                    (if (str_eq (gaps-next-move (gaps-rung-remote)) "stage-remote-to-local-oracle")
+                        (if (str_eq (gaps-next-move (gaps-rung-none)) "find-or-stage-an-oracle")
+                            (if (str_eq (gaps-next-move (gaps-rung-no-spec)) "author-form-spec")
+                                (if (str_eq (gaps-next-move (gaps-rung-no-proof)) "write-validation-band") 2 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0))
+
+    ; ── offline-closable: samples / local / no-spec / no-proof yes; remote / none no ──
+    (let c2 (if (eq (gaps-offline-closable? (gaps-rung-samples)) 1)
+                (if (eq (gaps-offline-closable? (gaps-rung-local)) 1)
+                    (if (eq (gaps-offline-closable? (gaps-rung-no-spec)) 1)
+                        (if (eq (gaps-offline-closable? (gaps-rung-no-proof)) 1)
+                            (if (eq (gaps-offline-closable? (gaps-rung-remote)) 0)
+                                (if (eq (gaps-offline-closable? (gaps-rung-none)) 0) 4 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0))
+
+    ; ── stage-before-flight: remote / none need the network; local / samples do not ──
+    (let c3 (if (eq (gaps-stage-before-flight? (gaps-rung-remote)) 1)
+                (if (eq (gaps-stage-before-flight? (gaps-rung-none)) 1)
+                    (if (eq (gaps-stage-before-flight? (gaps-rung-local)) 0)
+                        (if (eq (gaps-stage-before-flight? (gaps-rung-samples)) 0) 8 0)
+                        0)
+                    0)
+                0))
+
+    ; ── open-rung? excludes only closed ──
+    (let c4 (if (eq (gaps-open-rung? (gaps-rung-closed)) 0)
+                (if (eq (gaps-open-rung? (gaps-rung-remote)) 1)
+                    (if (eq (gaps-open-rung? (gaps-rung-no-spec)) 1) 16 0)
+                    0)
+                0))
+
+    ; ── the three kinds of open item construct and validate ──
+    (let cap-remote (gaps-item (gaps-kind-capability) "remote-thing" (gaps-capability-rung 0 0 0 1)))
+    (let cap-local (gaps-item (gaps-kind-capability) "stt" (gaps-capability-rung 0 0 1 1)))
+    (let cap-none (gaps-item (gaps-kind-capability) "void-thing" (gaps-capability-rung 0 0 0 0)))
+    (let idea-open (gaps-item (gaps-kind-idea) "agent-pipeline" (gaps-rung-no-spec)))
+    (let spec-open (gaps-item (gaps-kind-spec) "private-channels" (gaps-rung-no-proof)))
+
+    (let c5 (if (gaps-item-valid? cap-remote)
+                (if (eq (gaps-i-offline? cap-remote) 0)
+                    (if (eq (gaps-i-stage? cap-remote) 1)
+                        (if (str_eq (gaps-i-next cap-remote) "stage-remote-to-local-oracle") 32 0)
+                        0)
+                    0)
+                0))
+
+    (let c6 (if (gaps-item-valid? idea-open)
+                (if (eq (gaps-i-offline? idea-open) 1)
+                    (if (eq (gaps-i-stage? idea-open) 0) 64 0)
+                    0)
+                0))
+
+    (let c7 (if (gaps-item-valid? spec-open)
+                (if (eq (gaps-i-offline? spec-open) 1) 128 0)
+                0))
+
+    ; ── the catalog tallies (mixed: 1 idea, 1 spec, 3 capabilities) ──
+    (let catB (gaps-catalog (list idea-open spec-open cap-local cap-remote cap-none)))
+    (let c8 (if (eq (gaps-cat-open-count catB) 5)
+                (if (eq (gaps-cat-idea-count catB) 1)
+                    (if (eq (gaps-cat-spec-count catB) 1)
+                        (if (eq (gaps-cat-capability-count catB) 3)
+                            (if (eq (gaps-cat-offline-count catB) 3)
+                                (if (eq (gaps-cat-stage-count catB) 2) 256 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0))
+
+    ; ── flight-ready iff nothing needs the network first ──
+    (let catA (gaps-catalog (list idea-open spec-open cap-local)))
+    (let c9 (if (eq (gaps-cat-flight-ready? catA) 1)
+                (if (eq (gaps-cat-flight-ready? catB) 0) 512 0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
