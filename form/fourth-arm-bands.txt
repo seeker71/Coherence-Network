@@ -324,6 +324,7 @@ f16-decode fks 4095
 transformer-numerics fks 4095
 transformer-block fks 511
 transformer-backprop fks 127
+transformer-attention-backward fks 31
 transcendental-natives fks 16
 learning-arc fks 127
 living-equation fks 111111
