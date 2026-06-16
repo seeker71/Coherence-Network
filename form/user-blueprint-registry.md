@@ -268,3 +268,5 @@ The relationship protocol exposes skill verbs so agents and humans can present i
 - 1892 MEMBRANE-REPORT — the form-cli surface report: the crossing ledger with native/gap/retirable/local-oracle/network tallies and the air-gap-clean readout.
 - 1893 GAPS-OPEN-ITEM — one open thing in the body: kind (idea/spec/capability), id, ladder rung, cheapest next move, offline-closable flag, stage-before-flight flag.
 - 1894 GAPS-CATALOG — the standing inventory of open items with open/per-kind/offline/stage tallies and the flight-ready readout (nothing needs the network first).
+- 1895 SAMPLE-STEP — one tool step of an agent turn: tool name, surface crossed (native-recipe/os-kernel/local-oracle/remote-oracle), content-addressed args + result sigs.
+- 1896 AGENT-SAMPLE — one agent-turn training sample: task, oracle-id, reasoning, ordered tool-steps, answer, outcome — derives the reasoning (task→answer) and tool (task→tool) training pairs and offline-reproducible.
