@@ -1,0 +1,32 @@
+; capability-fk-pipeline-band.fk — the self-improving compiler on ONE representation.
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/form-parse.fk form-stdlib/recipe-equivalence-gate.fk form-stdlib/fk-opt.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/fk-to-prog.fk
+;
+; 3-kernel only (Go/Rust/TS) — fkwu lacks the node/substrate (ms-store) and string-parse op
+; families; an unsupported-op floor, not a divergence.
+;
+; Convergence: the flywheel that used a parallel rewrite-AST now runs entirely on the
+; content-addressed fk-* cells — the canonical lattice form-parse already produces.
+;   PROPOSE  fk-opt folds the cell tree in place        (no rewrite-AST)
+;   VERIFY   fk-run — hati-os's OWN walker — over the gate (a wrong fold refused)
+;   LOWER    fk-to-prog -> lo-compile                   (cells straight to executable arm64)
+; "(add (sub 50 8) (add 0 0))" is real Form source; fk-run gives 42; fk-opt folds the whole
+; constant to one LIT; fk-run still 42 (the gate confirms equivalent); the optimized image
+; is strictly smaller. aggregate = value(42) + orig-bytes + opt-bytes, gated on both.
+
+(do
+  (let src "(add (sub 50 8) (add 0 0))")
+  (let cells (fp-parse src))
+  (let v0 (fk-run cells 0))
+  (let opt (fk-opt cells))
+  (let v1 (fk-run opt 0))
+
+  (let cov (list (req-obs 0 v0 v1)))
+  (let img-orig (lo-compile (fk-to-prog cells) (fk-to-root cells)))
+  (let img-opt  (lo-compile (fk-to-prog opt)   (fk-to-root opt)))
+
+  (if (eq (req-equivalent? cov) 1)
+      (if (ge (len img-orig) (add (len img-opt) 1))
+          (add v0 (add (len img-orig) (len img-opt)))
+          0)
+      0))

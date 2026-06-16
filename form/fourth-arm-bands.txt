@@ -501,10 +501,6 @@ capability-form-asm fks 106
 tier-router fks 140
 model-roster-report fks 1388
 lowering-search fks 57
-rewrite-propose fks 7
-rewrite-rules fkc 13
 capability-form-mul fkc 2428
 capability-form-div fkc 3027
 capability-form-tree fkc 13113
-capability-form-pipeline fkc 9024
-capability-form-cond fkc 4156
