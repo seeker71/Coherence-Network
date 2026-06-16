@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 261
+**Total files**: 262
 
 | File | Purpose |
 |---|---|
@@ -86,6 +86,7 @@
 | [form_cli_preflight.sh](form_cli_preflight.sh) | form_cli_preflight.sh — air-gap readiness check for the form-cli. |
 | [form_cli_replay.sh](form_cli_replay.sh) | form_cli_replay.sh — measure how the native models do against the agent. |
 | [form_cli_slice.sh](form_cli_slice.sh) | form_cli_slice.sh — compile a Form recipe slice to a RUNNABLE native binary, |
+| [form_cli_train_predict.sh](form_cli_train_predict.sh) | form_cli_train_predict.sh — train a NATIVE tool predictor on the corpus, then |
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
