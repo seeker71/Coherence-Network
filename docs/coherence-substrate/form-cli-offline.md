@@ -258,6 +258,26 @@ selection is corrected on every real run — e.g. a read/validate/write task
 auto-guides to `bash, read_file, write_file`. `FNR_NO_GUIDE=1` gives the bare
 unguided runner. The runner uses its own trained model to guide itself.
 
+## Tiered local-first — the remote oracle as last resort
+
+The reasoning lane can't be won by a frequency table — it needs a capable model.
+But "native" means *local silicon*, not "a Form recipe": so the runner escalates
+**within local tiers** before ever crossing the network:
+
+```bash
+scripts/form_cli_tiered.sh "<task>"   # small-local → big-local → remote (last)
+```
+
+The self-guided runner tries a small local model first; on failure (reached
+max-steps or no real answer) it escalates to a bigger local model; only if every
+*local* tier fails does it cross to a remote oracle. Each served tier is ledgered
+as a membrane crossing (`form-cli-membrane.fk`) — local tiers stay
+**air-gap-clean**, a remote escalation is the one network crossing. **Remote
+reliance = network crossings**, the flywheel's lever: as the bigger local tier
+improves, tier-3 goes to zero and the remote oracle retires on reasoning too.
+Proven both ways: the easy task is served by tier-1 offline; a failing tier-1
+(unavailable model) correctly escalates to tier-2, still offline.
+
 ## The reasoning lane — measured, and wide open
 
 Tool selection is a set problem; reasoning needs a *semantic* judge. So a local
