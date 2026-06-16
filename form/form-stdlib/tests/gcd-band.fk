@@ -1,0 +1,25 @@
+; preludes: form-stdlib/gcd.fk
+;
+; gcd-band — subtractive Euclid made falsifiable, drafted offline by the local
+; coder oracle and now held to the four-kernel bar.
+;
+; The strange-minimal cases that pin the whole algorithm:
+;   (gcd 48 36) -> 12   the worked example the closer validated
+;   (gcd 17 5)  -> 1    coprime — the floor, no common factor but 1
+;   (gcd 7 7)   -> 7    the base case — a == b returns a, no recursion
+;   (gcd 1071 462) -> 21  the classic large Euclid case, many subtractions deep
+;   commutativity: (gcd 36 48) == (gcd 48 36)  — a<b and a>b reach the same answer
+;
+; Verdict 31 when every claim lands:
+;   1   the worked example          (gcd 48 36 == 12)
+;   2   coprime floors at 1         (gcd 17 5 == 1)
+;   4   the equal-args base case    (gcd 7 7 == 7)
+;   8   a deep large case           (gcd 1071 462 == 21)
+;   16  order does not matter       (gcd 36 48 == 12)
+(do
+    (let c0 (if (eq (gcd 48 36) 12) 1 0))
+    (let c1 (if (eq (gcd 17 5) 1) 2 0))
+    (let c2 (if (eq (gcd 7 7) 7) 4 0))
+    (let c3 (if (eq (gcd 1071 462) 21) 8 0))
+    (let c4 (if (eq (gcd 36 48) 12) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

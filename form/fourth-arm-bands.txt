@@ -525,3 +525,4 @@ export-trie fkc 6391
 native-code-fit fks 15
 reproduce-from-history fkc 8
 rag-retrieve fks 31
+gcd fkc 31

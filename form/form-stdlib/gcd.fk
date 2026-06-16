@@ -1,0 +1,19 @@
+; gcd.fk — greatest common divisor by subtractive Euclid.
+;
+; (gcd a b) for two positive integers: if a equals b the answer is a; otherwise
+; subtract the smaller from the larger and recurse. No modulo (the kernel has
+; none) — repeated subtraction is the whole algorithm. Integers only.
+;
+; Provenance: this recipe was DRAFTED OFFLINE by the local coder oracle
+; (ollama run coder) closing the 'gcd' gap via scripts/form_cli_close_gap.sh —
+; the local kernel validated it, no remote oracle touched. The body absorbing a
+; recipe its own offline mind wrote is the form-cli flywheel made concrete.
+;
+; Proven by: form-stdlib/tests/gcd-band.fk (four-way at validate.sh).
+
+(defn gcd (a b)
+    (if (eq a b)
+        a
+        (if (gt a b)
+            (gcd (sub a b) b)
+            (gcd a (sub b a)))))
