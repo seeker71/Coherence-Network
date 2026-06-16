@@ -1,0 +1,38 @@
+; ast-to-prog.fk — the BRIDGE: the optimizer's rewrite-AST becomes a form-lower prog.
+;
+; preludes: form-stdlib/core.fk
+;
+; This is the seam that lets the optimizer's output be lowered to a real native binary.
+; rewrite-propose/rewrite-rules produce a nested AST; form-lower consumes a flat-indexed
+; prog. a2p flattens one into the other, so the whole flywheel composes on machine code:
+;   rw-all (propose) -> ast-to-prog (bridge) -> lo-compile-fn (lower) -> real bytes.
+;
+; rewrite-AST tags:  (0 v)=LIT  (1)=VAR  (2 a b)=ADD  (3 a b)=MUL.
+; form-lower prog:   (1 v 0 0)=LIT  (2 0 0 0)=ARG  (3 ia ib 0)=ADD  (5 ia ib 0)=MUL.
+; (VAR is the function's single input n, which form-lower banks as ARG.)
+;
+; a2p threads the accumulating row list; each node's index is its position when appended,
+; so a child emitted earlier keeps a stable index a later parent can reference.
+
+(defn a2p-app (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (a2p-app (tail xs) ys))))
+
+; a2p: AST, acc-rows -> (list new-rows this-node-index)
+(defn a2p (ast acc)
+    (if (eq (head ast) 0)
+        (list (a2p-app acc (list (list 1 (nth ast 1) 0 0))) (len acc))
+    (if (eq (head ast) 1)
+        (list (a2p-app acc (list (list 2 0 0 0))) (len acc))
+        (a2p-bin ast acc))))
+(defn a2p-bin (ast acc)
+    (do (let la (a2p (nth ast 1) acc))
+        (let acc1 (nth la 0))
+        (let ia (nth la 1))
+        (let lb (a2p (nth ast 2) acc1))
+        (let acc2 (nth lb 0))
+        (let ib (nth lb 1))
+        (list (a2p-app acc2 (list (list (if (eq (head ast) 2) 3 5) ia ib 0))) (len acc2))))
+
+; the door: AST -> (list prog root-index), ready for lo-compile-fn.
+(defn ast-to-prog (ast) (a2p ast (list)))
+(defn a2p-prog (ast) (nth (ast-to-prog ast) 0))
+(defn a2p-root (ast) (nth (ast-to-prog ast) 1))
