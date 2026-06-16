@@ -1,0 +1,35 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-predict.fk form-stdlib/form-cli-model.fk
+;
+; form-cli-model-band - the trained-model invariant proof.
+;
+; Verdict 31 when: Bash sits in the model at its corpus rate; the frequent four
+; (Bash/Edit/Read/Write) clear the threshold on base alone so they are ALWAYS
+; predicted (closing the LLM's Bash-omission); and the rare Agent is predicted
+; only when a learned keyword triggers it.
+
+(do
+    (let base (fpm-base))
+    (let boosts (fpm-boosts))
+    (let thr (fpm-threshold))
+    (let amt (fpm-boost-amt))
+
+    ; Bash is in the model at its learned corpus rate
+    (let c0 (if (eq (fcp-base base "Bash") 93) 1 0))
+
+    ; Bash is ALWAYS predicted — base clears the threshold with no keywords
+    (let c1 (if (eq (fcp-predicted? base boosts (list "") "Bash" thr amt) 1) 2 0))
+
+    ; Agent is NOT predicted without a trigger keyword
+    (let c2 (if (eq (fcp-predicted? base boosts (list "read" "file") "Agent" thr amt) 0) 4 0))
+
+    ; Agent IS predicted when a learned keyword triggers it
+    (let c3 (if (eq (fcp-predicted? base boosts (list "parallel" "work") "Agent" thr amt) 1) 8 0))
+
+    ; the frequent four all clear the threshold on base alone
+    (let c4 (if (eq (fcp-predicted? base boosts (list "") "Edit" thr amt) 1)
+                (if (eq (fcp-predicted? base boosts (list "") "Read" thr amt) 1)
+                    (if (eq (fcp-predicted? base boosts (list "") "Write" thr amt) 1) 16 0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

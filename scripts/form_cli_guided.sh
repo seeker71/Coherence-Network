@@ -22,9 +22,9 @@ KNOWN="Bash Read Write Edit Grep Glob Agent"
 
 echo "── guided vs unguided: the predictor guides $MODEL, on $N tasks ──"
 
-# the learned model (base-rates + Agent boosts), as Form lets we reuse per task
-MODEL_FK='(let base (list (fcp-base-pair "Bash" 93) (fcp-base-pair "Edit" 56) (fcp-base-pair "Read" 54) (fcp-base-pair "Write" 47) (fcp-base-pair "Agent" 9)))
-(let boosts (list (fcp-boost-pair "parallel" "Agent") (fcp-boost-pair "explore" "Agent") (fcp-boost-pair "spawn" "Agent") (fcp-boost-pair "audit" "Agent") (fcp-boost-pair "sweep" "Agent") (fcp-boost-pair "review" "Agent")))'
+# the learned model lives in form-cli-model.fk (single source); reuse per task
+MODEL_FK='(let base (fpm-base))
+(let boosts (fpm-boosts))'
 
 PICKS="$(python3 - "$CORPUS" "$N" <<'PY'
 import json,sys,re
@@ -58,9 +58,9 @@ while IFS=$'\t' read -r agent_tools kw task; do
     i=$((i+1))
     # predictor's likely tools for this task (Form: form-cli-predict)
     pp="$(mktemp)"
-    { cat "$STD/form-cli-predict.fk"; echo "$MODEL_FK"
+    { cat "$STD/form-cli-predict.fk" "$STD/form-cli-model.fk"; echo "$MODEL_FK"
       echo "(let kw $(flist "$kw"))"
-      for t in $KNOWN; do echo "(print (fcp-predicted? base boosts kw \"$t\" 40 50))"; done
+      for t in $KNOWN; do echo "(print (fcp-predicted? base boosts kw \"$t\" (fpm-threshold) (fpm-boost-amt)))"; done
     } > "$pp"
     mapfile_pred=""; j=0; pred=""
     while IFS= read -r v; do j=$((j+1)); tool=$(echo $KNOWN | cut -d' ' -f$j); [[ "$(echo "$v"|tr -d '[:space:]')" == "1" ]] && pred="$pred $tool"; done < <("$GO" "$pp" 2>/dev/null | head -7)
