@@ -170,6 +170,7 @@ form-cli-router fks 31
 form-cli-membrane fks 1023
 form-cli-gaps fks 4095
 form-cli-sample fks 1023
+form-cli-score fks 255
 obs-verify fks 31
 world-module-model fks 1023
 world-model-growth fks 4095

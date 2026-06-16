@@ -175,9 +175,28 @@ tender/personal markers — dropped whole, never scrubbed-and-kept — so the co
 can never hold gated content by construction. (A turn that *read* a gated file is
 dropped because its step-results carry that content.)
 
-The replay — take a sample's task, run form-cli's native loop, compare to the
-captured answer + tool sequence — is how we see how the native models are doing
-on real work.
+## Scoring — how the native models are doing
+
+Replay measures the native models against the agent over the corpus. The first
+scoreable lane is **tool selection** — the agentic core: given a task, which
+tools to reach for.
+
+```bash
+scripts/form_cli_replay.sh 12 "ollama run coder"
+```
+
+For each task the local model predicts its tool sequence; the kernel scores the
+prediction against the tools the agent actually used (`form-cli-score.fk` →
+overlap → majority-match → tally; champion = the agent reference, challenger =
+native). It reports native match rate vs an **always-Bash baseline**, so the
+signal is honest: real skill, or just guessing the most common tool? Proven
+four-way (`form-cli-score-band` → 255).
+
+Snapshot (local coder, 8 tasks): native majority-match ~87%, full-cover ~37%,
+above a 25% baseline — real skill, but it **systematically omits `Bash`** (the
+model doesn't think to run shell commands) and over-predicts `Grep`/`Glob`. That
+named gap is what the corpus then trains toward — the flywheel closing on real
+work. Numbers drift run to run; the readout is the measurement, not a fixed score.
 
 ## What is proven, and the honest frontier
 

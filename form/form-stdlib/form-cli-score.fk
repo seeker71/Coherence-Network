@@ -1,0 +1,58 @@
+; form-cli-score.fk — score the native models against the agent over the corpus.
+;
+; preludes: form-stdlib/core.fk
+;
+; The samples (form-cli-sample.fk) capture what the AGENT did; this scores how
+; close a NATIVE prediction comes. The first scoreable lane is tool selection —
+; the agentic core: given a task, which tools to reach for. A trial pairs the
+; agent's actual tool list (the reference / champion) with the native model's
+; predicted tool list (the challenger). The native "matches" on a sample when its
+; prediction covers at least HALF of the agent's tools (overlap*2 >= count) — a
+; majority, not exact order, so partial native skill is credited honestly.
+;
+; This is the champion-challenger spine (champion = the agent reference, always
+; correct; challenger = native, correct on a match) made concrete on the corpus.
+; Integer-only — no float, no mul/div — so the verdict is identical on all arms.
+;
+; Proven by: form-stdlib/tests/form-cli-score-band.fk
+
+; a trial: (agent-tools native-tools), each a list of tool-name strings
+(defn fcsc-trial (agent-tools native-tools) (list agent-tools native-tools))
+(defn fcsc-agent (t) (nth t 0))
+(defn fcsc-native (t) (nth t 1))
+
+; is a tool present in a list of tools?
+(defn fcsc-in? (tool lst)
+    (if (eq (len lst) 0) 0
+        (if (str_eq (head lst) tool) 1 (fcsc-in? tool (tail lst)))))
+; overlap: how many of the agent's tools the native prediction covers
+(defn fcsc-overlap (agent native)
+    (if (eq (len agent) 0) 0
+        (add (fcsc-in? (head agent) native) (fcsc-overlap (tail agent) native))))
+
+; native matches when its prediction covers a majority of the agent's tools:
+;   overlap * 2 >= count   (no mul — overlap+overlap)
+(defn fcsc-match? (agent native)
+    (if (eq (len agent) 0) 0
+        (if (ge (add (fcsc-overlap agent native) (fcsc-overlap agent native)) (len agent)) 1 0)))
+; native covers ALL of the agent's tools (the strict bar)
+(defn fcsc-full? (agent native)
+    (if (eq (len agent) 0) 0
+        (if (ge (fcsc-overlap agent native) (len agent)) 1 0)))
+
+; tally over trials
+(defn fcsc-matched (trials)
+    (if (eq (len trials) 0) 0
+        (add (fcsc-match? (fcsc-agent (head trials)) (fcsc-native (head trials)))
+             (fcsc-matched (tail trials)))))
+(defn fcsc-full-matched (trials)
+    (if (eq (len trials) 0) 0
+        (add (fcsc-full? (fcsc-agent (head trials)) (fcsc-native (head trials)))
+             (fcsc-full-matched (tail trials)))))
+(defn fcsc-total (trials) (len trials))
+; the challenger reaches the champion when it matches on at least as many
+; samples as a margin allows — here: did native match a MAJORITY of samples?
+(defn fcsc-native-reaches? (trials)
+    (if (ge (add (fcsc-matched trials) (fcsc-matched trials)) (len trials)) 1 0))
+
+0
