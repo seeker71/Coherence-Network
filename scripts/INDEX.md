@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 273
+**Total files**: 274
 
 | File | Purpose |
 |---|---|
@@ -112,6 +112,7 @@
 | [form_tr_demo.sh](form_tr_demo.sh) | form_tr_demo.sh — `tr A-Z a-z`, a real unix command, built with ZERO clang and |
 | [form_union_demo.sh](form_union_demo.sh) | form_union_demo.sh — the m4e3/m4e4 union, witnessed: ONE self-contained binary |
 | [form_validate_shards.py](form_validate_shards.py) | Run Form validation workloads as parallel shards. |
+| [form_wc_demo.sh](form_wc_demo.sh) | form_wc_demo.sh — `wc -l`, built with ZERO clang and direct Form -> asm. It closes |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
 | [gen_bp_table.py](gen_bp_table.py) | Generate the kernel-resident bp lookup table for all three Form kernels. |
