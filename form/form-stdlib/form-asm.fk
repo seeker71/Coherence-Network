@@ -136,6 +136,10 @@
     ;   base 0x1A800000 | rm<<16 | cond<<12 | rn<<5 | rd   (cond LS=9, the unsigned <=)
     (defn fa-csel (rd rn rm cond)
         (fa-asm 444596224 (list 1 32 65536 4096) (list rd rn rm cond)))
+    ; ldr x<rt>, [x<rn>, #imm]  (64-bit load, unsigned offset SCALED by 8) :
+    ;   base 0xF9400000 | (imm/8)<<10 | rn<<5 | rt   — caller passes the scaled imm.
+    ;   This is how argv is read: at _main, x1 = argv; argv[1] is [x1, #8] (scaled 1).
+    (defn fa-ldr (rt rn imm) (fa-asm 4181721088 (list 1 32 1024) (list rt rn imm)))
 
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 271
+**Total files**: 272
 
 | File | Purpose |
 |---|---|
@@ -94,6 +94,7 @@
 | [form_coreutils_diff.sh](form_coreutils_diff.sh) | form_coreutils_diff.sh — differential test of the zero-clang Form coreutils against |
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
+| [form_echo_demo.sh](form_echo_demo.sh) | form_echo_demo.sh — `echo $1`, built with ZERO clang and direct Form -> asm, and |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
 | [form_head_demo.sh](form_head_demo.sh) | form_head_demo.sh — `head -3`, built with ZERO clang and direct Form -> asm. head |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |

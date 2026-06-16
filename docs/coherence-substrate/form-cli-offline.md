@@ -166,15 +166,17 @@ encoding table as a recipe). The **slice lane** (+ [`form-macho.fk`](../../form/
 carries real unix commands end to end, **zero clang**: the syscall / byte-I/O set
 (`svc`, 64-bit `movz`/`movk`, `ldrb`/`strb`, stack frame), the read-loop control flow
 (`cmp`, the EOF branch, the backward loop branch), and the branchless transform
-(`cmp`+`csel`), and a callee-saved line counter (`head`) — proven four-way at
-`form-asm-syscall`, `form-asm-branch`, `form-asm-tr` (31), and `form-asm-rot13`,
-`form-asm-head` (7).
+(`cmp`+`csel`), a callee-saved line counter (`head`), and **argv** (`echo` reads
+`argv[1]` via `ldr [x1,#8]`) — proven four-way at `form-asm-syscall`,
+`form-asm-branch`, `form-asm-tr` (31), and `form-asm-rot13`, `form-asm-head`,
+`form-asm-echo` (7).
 
 ```bash
 scripts/form_cat_demo.sh    # a zero-clang `cat`
 scripts/form_tr_demo.sh     # a zero-clang `tr A-Z a-z`
 scripts/form_rot13_demo.sh  # a zero-clang `rot13`
 scripts/form_head_demo.sh   # a zero-clang `head -3`
+scripts/form_echo_demo.sh   # a zero-clang `echo $1` — reads argv
 ```
 
 Form encodes the program (`cat` = loop `read(0)`→`write(1)`; `tr`/`rot13` = that

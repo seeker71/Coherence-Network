@@ -281,6 +281,7 @@ form-asm-branch fks 31
 form-asm-tr fks 31
 form-asm-rot13 fks 7
 form-asm-head fks 7
+form-asm-echo fks 7
 form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31
