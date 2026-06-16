@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 274
+**Total files**: 276
 
 | File | Purpose |
 |---|---|
@@ -50,6 +50,7 @@
 | [clear_queue_and_start_flow.sh](clear_queue_and_start_flow.sh) | Clear agent task queue and reset PM so the next pipeline run starts in the right order |
 | [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
 | [code_tool_learning_receipt.py](code_tool_learning_receipt.py) | Emit a bounded code-tool-learning coding-act receipt for a committed turn. |
+| [codex_corpus.py](codex_corpus.py) | codex_corpus.py — tap the local Codex session logs into (task -> response) pairs. |
 | [coh_substrate.py](coh_substrate.py) | coh substrate — unified CLI for the coherence-substrate. |
 | [coherence_reach.py](coherence_reach.py) | coherence_reach — measure where an identity is named across the body. |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |

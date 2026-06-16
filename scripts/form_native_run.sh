@@ -35,6 +35,20 @@ if [[ "${FNR_NO_GUIDE:-0}" != "1" && -f "$STD/form-cli-guide.fk" ]]; then
     [[ -n "$g" && "$g" != "null" ]] && GUIDE="$g\n\n"
 fi
 
+# ── body memory: ground the oracle in the nearest recipes/specs/concepts ──
+# rag-retrieve.fk (four-way) ranks the body index; the carrier serves the nearest
+# docs so the offline oracle reasons WITH the body instead of blind. Gated: needs
+# the local index (scripts/form_cli_rag.py build) + a local embedder; FNR_RAG=0
+# disables. Joined to one line (no newlines/quotes) so the Form string stays intact.
+RAG_INDEX="$HOME/.coherence-network/rag-index/index.jsonl"
+if [[ "${FNR_RAG:-1}" != "0" && -f "$RAG_INDEX" ]]; then
+    mem="$(python3 "$ROOT/scripts/form_cli_rag.py" context "$TASK" -k 3 2>/dev/null | tr '\n' '|' | tr '"' "'")"
+    if [[ -n "$mem" ]]; then
+        GUIDE="${GUIDE}From the body (cite if used): ${mem}\n\n"
+        printf '  [body-memory: %s]\n' "$(printf '%s' "$mem" | cut -c1-70)" >&2
+    fi
+fi
+
 { cat "$STD/form-native-run.fk"
   if [[ -n "$GUIDE" ]]; then
       echo "(print (fnr-run-guided \"$(esc "$TASK")\" \"$(esc "$ORACLE")\" $MAX \"$(esc "$GUIDE")\"))"
