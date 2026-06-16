@@ -1,0 +1,34 @@
+{
+  "title": "The transformer block — M3 numerics + M4 forward + the block's backward pass — crosses to the four-kernel floor",
+  "date": "2026-06-17",
+  "advances": "form-native-models.form rung (2) 'full transformer block on the GPU': the block's MATH was proven three-way (Go/Rust/TS) against the PyTorch fp64 reference but had never been run on the emitted universal walker fkwu. Lifting it to four-way makes the whole forward+backward block a gated four-kernel invariant on every suite run — the proven floor under emitting it to Metal next to the matvec/backprop kernels already on the M4 GPU.",
+  "device": "Apple M4 Max (40-core GPU), arm64 Darwin 26.3.1 — proof is host-independent (pure fp64 arithmetic bands)",
+  "bands_lifted": [
+    {
+      "stem": "transformer-numerics",
+      "verdict": 4095,
+      "what": "M3: softmax (max-subtract stable) / layernorm (eps inside sqrt, torch shape) / gelu (tanh approx), built from exp (Taylor square-and-reduce), sqrt (fixed-count Newton), tanh (from exp) — the transcendental floor every attention+FFN block needs. Pinned to torch fp64 (softmax / layer_norm eps=1e-5 / gelu approximate='tanh'), each value reduced to int at 1e-6."
+    },
+    {
+      "stem": "transformer-block",
+      "verdict": 511,
+      "what": "M4: one whisper-shaped pre-LN block h = x + Wo*attn(LN1(x)) + bo with attn = softmax(q*k^T/sqrt(d_k))-weighted sum of v; y = h + W2*gelu(W1*LN2(h)+b1) + b2. Weights are arguments (recipe DATA all the way down). Reference: torch layer_norm -> q/k/v/out projections -> softmax(q*k^T/sqrt2) -> residual -> layer_norm -> fc2(gelu_tanh(fc1)) -> residual, T=2, d=2, FFN hidden 4."
+    },
+    {
+      "stem": "transformer-backprop",
+      "verdict": 127,
+      "what": "the block's BACKWARD pass — gradients of affine/gelu/softmax+ln/attention-core — proven against the torch fp64 reference. Forward AND backward of the transformer block now agree on all four kernels."
+    }
+  ],
+  "proof": "cd form && ./validate.sh <core + the band's prelude chain> per band -> 4095 / 511 / 127, each 'fourth arm: 1 band four-way (fkwu + pre-flattened tables)', 1 ok, 0 divergent",
+  "verdict": "FOUR-WAY (4095 / 511 / 127), 0 divergent — Go, Rust, TypeScript, and the emitted fkwu walker all reproduce the PyTorch fp64 reference for the transformer block's forward numerics and its backward pass, bit-for-bit at 1e-6.",
+  "manifest": "registered in form/fourth-arm-bands.txt as 'transformer-numerics fks 4095', 'transformer-block fks 511', 'transformer-backprop fks 127'",
+  "honest_3kernel_remainder": {
+    "stem": "transformer-block-assembly",
+    "state": "3-kernel only (511 -> three-way 63); NOT registered four-way",
+    "blocker": "fkwu SEGFAULTS on this band — a fourth-arm robustness limit, NOT a value-divergence and NOT an unsupported op family. Every op family it uses crosses four-way (the block forward 511 and backprop 127 bands use the SAME recipes and cross clean). The assembly band adds the generic typed-layer stack engine: heterogeneous layer-cells tagged by string ('attn'/'ffn'), dispatched through one tbp-stk-fwd/tbp-stk-step engine, trained 50 steps over a deeply nested list-of-layer-cells. The combination (string-tag dispatch + deep heterogeneous nesting + 50-step train recursion) overflows the walker on the largest composed pre-flattened table. Owned and tracked as a walker-emitter robustness fix (raise fkwu recursion/table capacity), not buried: the band stays out of the manifest until fkwu runs it, which is the honest 3-kernel-only state.",
+    "for_urs": "the one fourth-arm item this run could not cross is an fkwu crash on the biggest composed band, not a wrong answer — a walker capacity fix, separable from the proven block."
+  },
+  "reading": "The forward numerics and the backward pass of a real pre-LN transformer block are now four-kernel proven against PyTorch fp64. With the dequant math (Q4_K) and f16 decode already four-way, the load path and the block math both live on the four-way floor; the remaining rungs toward full real-model inference on the M4 GPU are emitting this proven block to Metal (the matvec/backprop kernels already run there), then the generation loop (tokenizer + KV cache + greedy decode). The generic typed-layer STACK that assembles many such blocks is the one piece still three-way, blocked only by fkwu's capacity on the largest table.",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/tests/transformer-numerics-band.fk  (4095); add transformer-block.fk + its band (511); add transformer-backprop.fk + its band (127) — each four-way, 0 divergent. Run bands individually: rapid back-to-back validate.sh calls share a temp dir and can report a spurious divergence; the canonical suite isolates them."
+}
