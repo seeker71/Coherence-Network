@@ -1,0 +1,43 @@
+; rewrite-propose.fk — the generator's PROPOSE half: a rewrite RULE synthesizes a
+; candidate lowering, and the recipe-equivalence gate VERIFIES it by evaluation over
+; coverage. A wrong rewrite is refused, never trusted — so the body can search the
+; lowering space safely. This closes the flywheel: propose -> verify -> select.
+;
+; preludes: form-stdlib/core.fk
+;
+; A recipe is a tiny op-tagged AST (the same shape form-lower lowers):
+;   (0 v)     LIT v        a constant
+;   (1)       VAR          the single input x
+;   (2 a b)   ADD a b      subtrees a + b
+;   (3 a b)   MUL a b      subtrees a * b
+; ast-eval IS the ground-truth evaluator (offer the AST an input, observe the ack).
+; rw-fold is one rewrite rule (constant folding); more rules (identity, strength
+; reduction, CSE) drop in the same way, each verified by the gate, never assumed.
+
+; evaluate the AST for input x — the recipe's ack (ground truth).
+(defn ast-eval (n x)
+  (do (let t (head n))
+      (if (eq t 0) (nth n 1)
+          (if (eq t 1) x
+              (if (eq t 2) (add (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
+                  (mul (ast-eval (nth n 1) x) (ast-eval (nth n 2) x)))))))
+
+; node count — the cost proxy (fewer nodes = cheaper lowering).
+(defn ast-size (n)
+  (do (let t (head n))
+      (if (if (eq t 0) 1 (eq t 1)) 1
+          (add 1 (add (ast-size (nth n 1)) (ast-size (nth n 2)))))))
+
+; rw-fold — constant folding: fold children first, then if both are LIT, collapse
+; ADD/MUL of two constants into a single LIT. A pure semantics-preserving rewrite
+; (still VERIFIED by the gate, not trusted).
+(defn rw-fold (n)
+  (do (let t (head n))
+      (if (if (eq t 0) 1 (eq t 1)) n
+          (do (let a (rw-fold (nth n 1)))
+              (let b (rw-fold (nth n 2)))
+              (if (if (eq (head a) 0) (eq (head b) 0) 0)
+                  (if (eq t 2)
+                      (list 0 (add (nth a 1) (nth b 1)))
+                      (list 0 (mul (nth a 1) (nth b 1))))
+                  (list t a b))))))
