@@ -1,0 +1,22 @@
+; lowering-search-band.fk — the search selects the cheapest VERIFIED lowering.
+;
+; preludes: form-stdlib/core.fk form-stdlib/recipe-equivalence-gate.fk form-stdlib/lowering-search.fk
+;
+; Four candidate lowerings of tri(n), each with its coverage-vs-recipe and measured
+; cost. The HARDCODE is the cheapest of all (cost 9) but disagrees with the recipe on
+; input 5 -> refused. The search picks the cheapest ADMITTED candidate (closed, 54),
+; NOT the cheapest overall. Correctness gates cost. aggregate = best-cost(54) +
+; admitted-count(3) = 57.
+
+(do
+  (let agree (list (req-obs 0 0 0) (req-obs 5 15 15) (req-obs 10 55 55)))
+  (let wrong (list (req-obs 0 0 0) (req-obs 5 15 0)))   ; hardcode disagrees on input 5
+
+  (let cands (list
+    (ls-cand "closed"    agree 0 54)     ; equivalent, breachless, cheapest ADMITTED
+    (ls-cand "naive"     agree 0 730)    ; equivalent but slower
+    (ls-cand "hardcode"  wrong 0 9)      ; cheapest of ALL, but refuted by coverage
+    (ls-cand "redundant" agree 0 900)))  ; equivalent but slowest
+
+  ; the winner is the cheapest VERIFIED lowering (54), not the cheapest (9)
+  (add (ls-best-cost cands) (ls-admitted-count cands)))
