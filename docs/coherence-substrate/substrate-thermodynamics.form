@@ -132,3 +132,6 @@
 #   lc-identity-is-shared-blueprint-and-recipe — the SUBSTANCE trinity (the kinds)
 #   lc-void-as-potential — gas is potential; any substance can rest there
 #   right_sizing_service.py — one operational slice of state-reading (idea cells)
+#   cache-as-thermodynamic-substrate.form — this physics applied to the build/runtime
+#       cache: every cached artifact a cell, sublimate (not delete) when cold, trust by
+#       content-hash. Runnable four-way in form-stdlib/cache-phase.fk.

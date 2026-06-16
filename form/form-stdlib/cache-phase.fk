@@ -1,0 +1,81 @@
+; cache-phase.fk — the build/runtime cache as a phased substrate region.
+;
+; preludes: form-stdlib/substrate-phase.fk
+;
+; A cache entry is a CELL that carries its own trust and its own thermodynamics. It
+; runs on the SAME ice/water/gas physics as substrate-phase.fk (hits -> degree,
+; recomputes -> churn, the same hysteresis) and adds the one facet a cache needs that
+; pure phase does not: the split between a cell's IDENTITY (key + input-hash +
+; measurements — cheap, always kept) and its MATERIALIZED artifact (the expensive
+; bytes). The four transitions take cache meanings:
+;   freeze    (water -> ice) = PIN durable      (hot, settled, trusted: never evict)
+;   sublimate (ice -> gas)   = RELEASE the bytes,
+;                              KEEP the index    (cold: the "don't wipe" — conservation)
+;   condense  (gas -> water) = RE-MATERIALIZE    (a cold index re-requested)
+;   melt      (ice -> water) = RECOMPUTE         (still hot, but inputs changed -> stale)
+;
+; TRUST is input-hash equality, never freshness/mtime: a sublimated (gas) entry is
+; exactly as trustworthy as a frozen one — only a hash MISMATCH (the inputs changed)
+; breaks trust, and that mismatch is precisely what asks for melt/recompute. Identity
+; (the key) is conserved across every transition, so the cache is never "wiped" — only
+; de-materialized, and re-coherable. This is the substrate's conservation law applied
+; to the build cache. Composes with learned-primitive.fk: heat lifting a hot composite
+; into a callable primitive is the same physics on the recipe population.
+;
+; Proven by: form-stdlib/tests/cache-phase-band.fk (four-way at validate.sh).
+
+(do
+    ; A cache entry is a record cell. Its blueprint is supplied by the caller (the cache
+    ; region owns the shape), so this recipe hardcodes no NodeID — it reads and rebuilds
+    ; entries through the record carrier alone, which keeps identity content-addressed.
+    (defn ce-key        (e) (record_get e "key"))    ; content-addressed identity
+    (defn ce-input-hash (e) (record_get e "hash"))   ; the TRUST anchor (the inputs' hash)
+    (defn ce-hits       (e) (record_get e "hits"))   ; reads         -> degree  (circulation)
+    (defn ce-recomputes (e) (record_get e "rec"))    ; regenerations -> churn   (temperature)
+    (defn ce-mat        (e) (record_get e "mat"))    ; 1 = bytes present, 0 = sublimated to gas
+
+    ; --- TRUST: trustworthy iff the input-hash still matches the current inputs. ---
+    ; Content-addressing, not freshness; a gas entry and an ice entry are equally trusted.
+    (defn cache-trustworthy? (e current-hash)
+        (if (eq (ce-input-hash e) current-hash) 1 0))
+
+    ; --- SEE: the entry's state through the phase physics (hits = deg, recomputes = churn).
+    ; ice = circulating AND cool; gas = no circulation; water = the middle. No `and` — the
+    ; nest keeps the four-kernel floor portable (fkwu has no 2-arg boolean fold).
+    (defn cache-state (e ice-deg ice-churn gas-deg)
+        (if (ge (ce-hits e) ice-deg)
+            (if (le (ce-recomputes e) ice-churn)
+                (st-ice)
+                (if (le (ce-hits e) gas-deg) (st-gas) (st-water)))
+            (if (le (ce-hits e) gas-deg) (st-gas) (st-water))))
+
+    ; --- INVITE: the move this cache cell wants, given its state + trust. ---
+    ; Mirrors phase-invite, but "changing" = "inputs changed" = trust broken (stale),
+    ; tested explicitly (no boolean literal) so the move stays portable across all four arms.
+    (defn cache-invite (e current-hash state ice-deg ice-churn gas-deg condense-min)
+        (if (eq state (st-gas))
+            (if (ge (ce-hits e) condense-min) (mv-condense) (mv-stay))
+            (if (eq state (st-water))
+                (if (ge (ce-hits e) ice-deg)
+                    (if (le (ce-recomputes e) ice-churn) (mv-freeze) (mv-stay))
+                    (mv-stay))
+                (if (le (ce-hits e) gas-deg) (mv-sublimate)
+                    (if (eq (cache-trustworthy? e current-hash) 0) (mv-melt) (mv-stay))))))
+
+    ; --- the transitions as CELL transforms that CONSERVE identity ---
+    ; SUBLIMATE: drop the bytes (mat -> 0), keep key + hash + measurements. Key conserved.
+    (defn cache-sublimate (bp e)
+        (record_new bp "key" (ce-key e) "hash" (ce-input-hash e)
+                    "hits" (ce-hits e) "rec" (ce-recomputes e) "mat" 0))
+    ; CONDENSE: re-materialize under the SAME key + hash (re-coherable, trust preserved),
+    ; counting the one recompute paid to re-warm. Key and trust-anchor conserved.
+    (defn cache-condense (bp e)
+        (record_new bp "key" (ce-key e) "hash" (ce-input-hash e)
+                    "hits" (ce-hits e) "rec" (add (ce-recomputes e) 1) "mat" 1))
+    ; REMELT: inputs changed -> recompute under the NEW input-hash, materialized again.
+    ; Identity (the key) is conserved; only the trust-anchor advances to the new inputs.
+    (defn cache-remelt (bp e new-hash)
+        (record_new bp "key" (ce-key e) "hash" new-hash
+                    "hits" (ce-hits e) "rec" (add (ce-recomputes e) 1) "mat" 1))
+
+    0)

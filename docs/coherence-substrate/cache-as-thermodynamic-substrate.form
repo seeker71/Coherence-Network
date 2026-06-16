@@ -1,0 +1,142 @@
+# ─────────────────────────────────────────────────────────────────────
+# cache-as-thermodynamic-substrate.form — the build/runtime cache is a
+#                                          region of the substrate, not a
+#                                          pile of files beside it
+# ─────────────────────────────────────────────────────────────────────
+#
+# The cache is the same physics the lattice already runs. Every cached artifact —
+# a source-compiled prelude, a flattened fourth-arm table, a JIT plan, a name
+# resolution, a recipe-walk result — is a CELL with a thermodynamic STATE
+# (substrate-thermodynamics.form). What is new here is not a mechanism; it is the
+# recognition that the cache was never outside the body.
+#
+# RUNNABLE, four-way: form-stdlib/cache-phase.fk + tests/cache-phase-band.fk
+# (verdict 255 on Go, Rust, TypeScript, and fkwu — fourth-arm-bands.txt: cache-phase).
+#
+# ─────────────────────────────────────────────────────────────────────
+# The two facets — why a cache cell is more than a phase cell
+# ─────────────────────────────────────────────────────────────────────
+#
+# A cache cell carries two facets the lattice's pure-phase cell does not split:
+#
+#   IDENTITY     — key + input-hash + measurements. Cheap. ALWAYS kept.
+#   MATERIALIZED — the expensive artifact bytes. Droppable. Re-derivable.
+#
+# The whole "trust the cache, don't wipe it" ask lives in that split:
+#
+#   TRUST  is input-hash equality, not freshness. A content-addressed key means a
+#          re-derived value is PROVABLY the same value. mtime is irrelevant; a cache
+#          entry is trustworthy exactly when its input-hash still matches the inputs,
+#          whether it is frozen-materialized or sublimated to a bare index. So we do
+#          not wipe on suspicion — we only recompute on a hash MISMATCH.
+#
+#   DON'T-WIPE  is the substrate conservation law (substrate-thermodynamics.form:
+#          "SUBLIMATE removes NOTHING — NodeID and kind persist; re-coherable").
+#          Going cold does not delete the entry. It SUBLIMATES: release the bytes,
+#          keep the identity. The index — key, input-hash, measurements — survives in
+#          gas. Re-request re-materializes (CONDENSE) under the same key+hash. We
+#          never lose the trust-metadata, so we never have a reason to distrust the
+#          whole cache and clear it. Every `rm -rf .cache` this body has ever run was
+#          the crude, lossy version of sublimate.
+#
+# ─────────────────────────────────────────────────────────────────────
+# The measurement → state map (cache reads the same three counts)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   hits       — reads since birth          -> degree      (circulation)
+#   recomputes — times it had to regenerate  -> churn        (temperature)
+#   shared     — distinct callers of its shape -> population (pressure)
+#
+# state-of a cache cell is phase-state over (hits, recomputes) with the same
+# hysteresis gap (ice-degree > gas-degree) that keeps the lattice from thrashing.
+#
+# ─────────────────────────────────────────────────────────────────────
+# The four transitions, with cache meaning  (cache-phase.fk makes these run)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   FREEZE     water -> ice : PIN durable. Hot, settled, trusted — never evict; persist
+#                             past process exit, share across machines by content-hash.
+#   SUBLIMATE  ice -> gas   : RELEASE the bytes, KEEP the index. The "don't wipe."
+#   CONDENSE   gas -> water : RE-MATERIALIZE a cold index that got re-requested, under
+#                             the same key+hash (re-coherable; trust preserved).
+#   MELT       ice -> water : RECOMPUTE. Still hot, but the inputs changed (hash
+#                             mismatch) — the one honest reason to regenerate.
+#
+# phase-invite over a cache cell IS "what wants to move where." Run it report-only
+# first (show the 3×3 of cache cells by layer × state) before any eviction acts.
+#
+# ─────────────────────────────────────────────────────────────────────
+# The layers, today — what is already trustworthy, what is mtime-blind
+# ─────────────────────────────────────────────────────────────────────
+#
+# Each is a population of cache cells. The key scheme decides whether the layer can be
+# TRUSTED (content-addressed) or only GUESSED-AT (mtime). Content-addressed layers are
+# already safe to keep across machines; mtime layers are the ones we keep wiping.
+#
+#   source-compiled  (.cache/source-compiled/)  content-hash(source) + compiler-chain
+#                                                hash → already trustworthy.
+#   fourth-arm tables (.cache/fourth/t-*.txt)    content-hash(band-sources + chain) →
+#                                                trustworthy; today composted by mtime
+#                                                (-mtime +14 -delete) — that delete is a
+#                                                lossy sublimate that drops the index too.
+#   fourth-arm binary (.cache/fourth/fkwu-*)     content-hash(emitter chain + GO_BIN) →
+#                                                trustworthy.
+#   TS bundle (form-kernel-ts/dist/main.mjs)     mtime(src/*.ts) → mtime-blind; a touch
+#                                                with no content change forces a rebuild.
+#
+# The lift each layer asks for: emit its three counts as a cache cell, let phase-invite
+# choose freeze/sublimate/condense/melt, and replace `-mtime +N -delete` with SUBLIMATE
+# (drop bytes, keep the content-hash index). Then the cache is trusted by hash and
+# pruned by physics, and wiping becomes a thing we no longer reach for.
+#
+# ─────────────────────────────────────────────────────────────────────
+# Form-native access — why the cache must be a substrate citizen
+# ─────────────────────────────────────────────────────────────────────
+#
+# A caching strategy that cannot read its own cache is a strategy written blind. Once a
+# cache entry is a record cell (cache-phase.fk: key/hash/hits/recomputes/materialized),
+# the strategy is itself a Form recipe over cache metadata — and so is every OTHER
+# recipe the branching and learning primitives choose:
+#
+#   CHOOSE       recipe-branching-sense.form / recipe-choice-runtime.fk — at a cache
+#                fork (serve the materialized value vs recompute), `choose` branches on
+#                the cell's state and trust; the cache cell IS the evidence the choice
+#                point reads.
+#   LEARN        choice-outcome-learning.fk / choice-receipt.fk — a hit that saved real
+#                work rewards FREEZE; a recompute that was cheap teaches "this was not
+#                worth materializing." The cache's measurements ARE the reward signal.
+#   SAME PHYSICS learned-primitive.fk — heat lifting a hot composite into a callable
+#                primitive is freeze on the RECIPE population; a learned primitive that
+#                cools dissolves (sublimate). The cache is the same metabolism on the
+#                ARTIFACT population. One physics, two populations.
+#
+# So the cache metadata is not a side channel. It is the observability the choice and
+# learning primitives already want, expressed as cells they can already read.
+#
+# ─────────────────────────────────────────────────────────────────────
+# Grounded, and what is design
+# ─────────────────────────────────────────────────────────────────────
+#
+# GROUNDED (runs four-way today): the metabolism itself — cache-state, cache-invite,
+# cache-trustworthy?, and the identity-conserving transitions (sublimate / condense /
+# remelt) — proven in form-stdlib/cache-phase.fk against tests/cache-phase-band.fk,
+# verdict 255 on all four arms.
+#
+# DESIGN (the next honest steps, taken only as need calls):
+#   1. Each cache layer emits its (hits, recomputes, shared) as a cache cell — start
+#      with the fourth-arm tables, whose ~100s warm pre-scan and mtime-delete are the
+#      live friction.
+#   2. Replace `-mtime +N -delete` with phase-driven SUBLIMATE: drop bytes, keep the
+#      content-hash index. Re-request CONDENSEs. The cache stops being wiped.
+#   3. The TS bundle (and any other mtime-keyed layer) moves to a content-hash key, so
+#      "trustworthy" stops meaning "freshly built on this machine."
+#   4. Cache MORE layers — JIT plans, name resolutions, recipe-walk results — each a
+#      cell in whatever state its counts put it; gas, water, or ice, by the same map.
+#
+# Companions:
+#   substrate-thermodynamics.form       — the state axis + conservation law this rests on
+#   form-stdlib/substrate-phase.fk      — the runnable phase metabolism it composes with
+#   form-stdlib/learned-primitive.fk    — the same physics on the recipe population
+#   form-stdlib/cache-phase.fk          — the RUNNABLE cache metabolism (four-way)
+#   recipe-branching-sense.form         — the choice primitive that reads cache cells
+#   form-stdlib/cache.fk                — one carrier (parsed-recipe on-disk cache) to lift
