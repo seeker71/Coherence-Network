@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 268
+**Total files**: 269
 
 | File | Purpose |
 |---|---|
@@ -105,6 +105,7 @@
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
 | [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |
 | [form_syscall_demo.sh](form_syscall_demo.sh) | form_syscall_demo.sh — a program that does I/O, built with ZERO clang. The Form |
+| [form_tr_demo.sh](form_tr_demo.sh) | form_tr_demo.sh — `tr A-Z a-z`, a real unix command, built with ZERO clang and |
 | [form_union_demo.sh](form_union_demo.sh) | form_union_demo.sh — the m4e3/m4e4 union, witnessed: ONE self-contained binary |
 | [form_validate_shards.py](form_validate_shards.py) | Run Form validation workloads as parallel shards. |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
