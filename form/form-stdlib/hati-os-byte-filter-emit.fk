@@ -1,0 +1,35 @@
+; hati-os-byte-filter-emit.fk — Form emits the C source of a stdin->stdout byte
+; filter; each coreutil filter drops in as its per-byte transform expression
+; (DATA), not a parallel emitter. The shell commands have source, so they ARE
+; Form recipes, lowered to native asm through clang (an allowed host carrier under
+; host-kernel.form host-resource-access) — the intelligence is the recipe, the
+; toolchain and OS loader are dumb carriers. Sibling of hati-os-native-cli-emit.fk
+; (which emits whole compute programs); this widens the lane to the unix filter.
+;
+; preludes: (none — pure str_concat, four-way)
+;
+; The blueprint is one getchar->putchar loop; the transform over byte `c` is the
+; whole command. A new filter is a new transform string, never a new emitter:
+;   tr A-Z a-z  ->  (c >= 65 && c <= 90) ? c + 32 : c
+;   tr a-z A-Z  ->  (c >= 97 && c <= 122) ? c - 32 : c
+;   cat         ->  c
+;   rot13       ->  the two-range rotation
+; No quote char appears in the emitted source, so it travels as a plain
+; content-addressed Form string — identical emissions intern to one NodeID.
+
+; the filter blueprint: a name + a per-byte transform expression -> whole C program.
+(defn bf-filter-c (name transform)
+    (str_concat "extern int getchar(void); extern int putchar(int); static int "
+    (str_concat name
+    (str_concat "_run(void) { int c; while ((c = getchar()) != -1) { int o = "
+    (str_concat transform
+    (str_concat "; putchar(o); } return 0; } int main(void) { return "
+    (str_concat name "_run(); }")))))))
+
+; the commands, as transforms over byte c — the DATA that parameterizes the filter.
+(defn bf-lower () "(c >= 65 && c <= 90) ? c + 32 : c")    ; tr A-Z a-z
+(defn bf-upper () "(c >= 97 && c <= 122) ? c - 32 : c")   ; tr a-z A-Z
+(defn bf-cat   () "c")                                    ; cat (identity)
+(defn bf-rot13 () "(c >= 65 && c <= 90) ? (c - 65 + 13) % 26 + 65 : ((c >= 97 && c <= 122) ? (c - 97 + 13) % 26 + 97 : c)")
+
+0
