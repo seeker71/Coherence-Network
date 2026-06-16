@@ -43,8 +43,9 @@
         (if (eq (lo-tag prog i) 3) (lo-add prog i argr)
         (if (eq (lo-tag prog i) 4) (lo-sub prog i argr)
         (if (eq (lo-tag prog i) 5) (lo-mul prog i argr)
+        (if (eq (lo-tag prog i) 8) (lo-div prog i argr)
         (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
-            (list))))))))
+            (list)))))))))
     ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0
     (defn lo-add (prog i argr)
         (if (lo-lit? prog (lo-c2 prog i))
@@ -69,6 +70,19 @@
             (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-mul 0 0 2))
         (if (lo-lit? prog (lo-c1 prog i))
             (lo-app (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-movz 2 (lo-val prog (lo-c1 prog i)))) (fa-mul 0 0 2))
+            (list))))))
+    ; DIV: like MUL but NON-commutative — numerator is Rn, denominator Rm, order kept.
+    ; (ARG, x) -> n/x: lower x->w0; udiv w0,w<argr>,w0 · (x, ARG) -> x/n: lower x->w0; udiv w0,w0,w<argr>
+    ; (x, LIT i) -> x/i: lower x->w0; movz w2,#i; udiv w0,w0,w2 · (LIT a, x) -> a/x: lower x->w0; movz w2,#a; udiv w0,w2,w0
+    (defn lo-div (prog i argr)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-udiv 0 argr 0))
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-udiv 0 0 argr))
+        (if (lo-lit? prog (lo-c2 prog i))
+            (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-udiv 0 0 2))
+        (if (lo-lit? prog (lo-c1 prog i))
+            (lo-app (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-movz 2 (lo-val prog (lo-c1 prog i)))) (fa-udiv 0 2 0))
             (list))))))
     ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
     ; branch offsets (in instructions = bytes/4):
@@ -101,8 +115,9 @@
         (if (eq (lo-tag prog i) 3) (lo-map-add prog i)
         (if (eq (lo-tag prog i) 4) (lo-map-sub prog i)
         (if (eq (lo-tag prog i) 5) (lo-map-mul prog i)
+        (if (eq (lo-tag prog i) 8) (lo-map-div prog i)
         (if (eq (lo-tag prog i) 6) (lo-map-cond prog i)
-            (list))))))))
+            (list)))))))))
     (defn lo-map-add (prog i)
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-map prog (lo-c1 prog i)) (list i))
@@ -114,6 +129,17 @@
     ; MUL mirror: ARG-operand forms emit one mul (one i); LIT-operand forms emit movz+mul
     ; (two i's), both owned by the MUL node — exactly lo-mul's instruction order.
     (defn lo-map-mul (prog i)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-map prog (lo-c2 prog i)) (list i))
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-map prog (lo-c1 prog i)) (list i))
+        (if (lo-lit? prog (lo-c2 prog i))
+            (lo-app (lo-map prog (lo-c1 prog i)) (list i i))
+        (if (lo-lit? prog (lo-c1 prog i))
+            (lo-app (lo-map prog (lo-c2 prog i)) (list i i))
+            (list))))))
+    ; DIV mirror: same operand-shape as MUL (one udiv, or movz+udiv for a LIT operand).
+    (defn lo-map-div (prog i)
         (if (lo-arg? prog (lo-c1 prog i))
             (lo-app (lo-map prog (lo-c2 prog i)) (list i))
         (if (lo-arg? prog (lo-c2 prog i))
