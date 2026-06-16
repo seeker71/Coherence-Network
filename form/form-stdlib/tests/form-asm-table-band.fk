@@ -1,0 +1,24 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-table-band — the encoder is a TABLE, proven four-way. Every instruction
+; is base + sum(field * 2^bitpos); fa-asm is the one generic packer over a
+; per-instruction (base, multipliers) data row. A new instruction is a data row,
+; not new code — shown here by encoding `nop` (never defined as its own recipe)
+; from its base alone. The existing form-asm / -syscall / -branch / -tr bands prove
+; every shipped instruction still encodes byte-identically through fa-asm.
+;
+; Verdict 7 when:
+;   1   fa-asm packs a concrete row to the assembler's bytes (movz w0,#42)
+;   2   fa-pack sums field*multiplier exactly (the packing arithmetic)
+;   4   a NEW instruction drops in as a zero-field data row (nop = 0xD503201F)
+
+(do
+    ; movz w0,#42 : base 0x52800000, fields (rd*1, imm*32) -> 40 05 80 52
+    (let c0 (if (fa-conviction (fa-asm 1384120320 (list 1 32) (list 0 42))
+                               (list 64 5 128 82)) 1 0))
+    ; fa-pack (1 32 1024) (1 2 3) = 1 + 64 + 3072
+    (let c1 (if (eq (fa-pack (list 1 32 1024) (list 1 2 3)) (add 1 (add 64 3072))) 2 0))
+    ; nop = 0xD503201F, no fields -> the row is just the base : 1f 20 03 d5
+    (let c2 (if (fa-conviction (fa-asm 3573751839 (list) (list))
+                               (list 31 32 3 213)) 4 0))
+    (add c0 (add c1 c2)))
