@@ -1,0 +1,51 @@
+; f16-decode.fk — rung (1b) toward real-model inference: IEEE half/bfloat DECODE as a Form recipe.
+;
+; q4k-dequant.fk lifted the Q4_K weight unpack into Form, but its super-scale d and super-min dmin
+; entered as already-decoded f32. In a real GGUF block_q4_K those two scales are stored as ggml_half
+; (IEEE 754 half-precision, 2 bytes each). This recipe is the adjacent rung: decode a raw 16-bit integer
+; pattern back to its f32 value, so the dequant's scales can come straight from the file bytes.
+;
+; It is the INVERSE of format-arith.fk's quantize (encode: f32 -> stored mantissa bits), and like that
+; encode it is ONE recipe parameterized by the format's field widths — eb exponent bits, mb mantissa bits:
+;   f16  = (eb 5  mb 10)   bias 15      bf16 = (eb 8  mb 7)   bias 127
+; The field extraction is integer arithmetic — every bit-op is an arithmetic identity, so the recipe needs
+; no bitwise primitive and proves on the four-way arithmetic floor (the q4k-dequant / tensor-quant posture):
+;   bits & (2^mb - 1)        = (fd-mod bits 2^mb)        the mantissa field
+;   (bits >> mb) & (2^eb -1) = (fd-mod (div bits 2^mb) 2^eb)   the exponent field
+;   bits >> (eb+mb)          = (div bits 2^(eb+mb))      the sign bit (top bit of a clean N-bit pattern)
+; The value rebuilds by exact powers of two (format-arith.fk's fq-pow2, fp64-exact incl. negative exp):
+;   normal (exp != 0)    -> (-1)^s * 2^(exp - bias)  * (1 + mant/2^mb)
+;   subnormal (exp == 0) -> (-1)^s * 2^(1   - bias)  *      mant/2^mb      (mant 0 -> zero, the same path)
+; Scope named honestly like format-arith's normal-range scope: sign + normal + subnormal + zero are decoded;
+; inf/nan (exp all-ones) are out of scope — they are not finite and carry no eq verdict.
+
+; --- integer powers of two: field sizes and divisors are integers ---
+(defn fd-ipow2 (n) (if (eq n 0) 1 (mul 2 (fd-ipow2 (sub n 1)))))
+
+; --- integer mod via floor-div (bit patterns are non-negative, so div truncates == floors) ---
+(defn fd-mod (a n) (sub a (mul (div a n) n)))
+
+; --- field extraction: eb exponent bits, mb mantissa bits, sign is the top bit ---
+(defn fd-mant (bits mb) (fd-mod bits (fd-ipow2 mb)))
+(defn fd-exp (bits eb mb) (fd-mod (div bits (fd-ipow2 mb)) (fd-ipow2 eb)))
+(defn fd-sign (bits eb mb) (div bits (fd-ipow2 (add eb mb))))
+
+; --- bias for eb exponent bits: 2^(eb-1) - 1 ---
+(defn fd-bias (eb) (sub (fd-ipow2 (sub eb 1)) 1))
+
+; --- the mantissa as a float fraction in [0,1): mant / 2^mb (fq-pow2 gives the float denominator) ---
+(defn fd-frac (bits mb) (div (mul 1.0 (fd-mant bits mb)) (fq-pow2 mb)))
+
+; --- the magnitude (sign applied separately): subnormal when exp == 0, else normal ---
+(defn fd-mag (bits eb mb)
+  (if (eq (fd-exp bits eb mb) 0)
+      (mul (fq-pow2 (sub 1 (fd-bias eb))) (fd-frac bits mb))
+      (mul (fq-pow2 (sub (fd-exp bits eb mb) (fd-bias eb))) (add 1.0 (fd-frac bits mb)))))
+
+; --- the decoded value: a negative sign bit flips the magnitude ---
+(defn fd-value (bits eb mb)
+  (if (eq (fd-sign bits eb mb) 1) (sub 0.0 (fd-mag bits eb mb)) (fd-mag bits eb mb)))
+
+; --- named format instances: the format cell supplies the field widths ---
+(defn fd-f16 (bits) (fd-value bits 5 10))
+(defn fd-bf16 (bits) (fd-value bits 8 7))
