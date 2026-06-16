@@ -96,7 +96,7 @@
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_echo_demo.sh](form_echo_demo.sh) | form_echo_demo.sh — `echo $1`, built with ZERO clang and direct Form -> asm, and |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
-| [form_head_demo.sh](form_head_demo.sh) | form_head_demo.sh — `head -3`, built with ZERO clang and direct Form -> asm. head |
+| [form_headn_demo.sh](form_headn_demo.sh) | form_headn_demo.sh — `head N`, the REAL head, built with ZERO clang and direct |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
 | [form_macho_demo.sh](form_macho_demo.sh) | form_macho_demo.sh — a RUNNABLE native binary built with ZERO clang. The Form |
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
