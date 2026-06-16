@@ -1,0 +1,54 @@
+; rewrite-rules.fk — a rule-SET for the propose half, applied bottom-up across the
+; tree. rw-fold was one rule (constant folding); a real optimizer also eliminates
+; identities and reduces strength. Each rewrite is still VERIFIED by the
+; recipe-equivalence gate (a wrong rule is refused), never trusted.
+;
+; preludes: form-stdlib/core.fk form-stdlib/rewrite-propose.fk
+;
+; AST tags (from rewrite-propose): 0 LIT v / 1 VAR / 2 ADD a b / 3 MUL a b.
+; The shallow rules apply AT a node (children assumed already rewritten); rw-all
+; drives them bottom-up. Adding a rule is one shallow defn dropped into rw-step.
+
+(defn rr-lit0? (n) (if (eq (head n) 0) (eq (nth n 1) 0) 0))
+(defn rr-lit1? (n) (if (eq (head n) 0) (eq (nth n 1) 1) 0))
+(defn rr-lit2? (n) (if (eq (head n) 0) (eq (nth n 1) 2) 0))
+
+; constant folding at the node: ADD/MUL of two LITs -> one LIT.
+(defn rw-fold-shallow (n)
+  (do (let t (head n))
+      (if (if (eq t 0) 1 (eq t 1)) n
+          (do (let a (nth n 1)) (let b (nth n 2))
+              (if (if (eq (head a) 0) (eq (head b) 0) 0)
+                  (if (eq t 2) (list 0 (add (nth a 1) (nth b 1)))
+                      (list 0 (mul (nth a 1) (nth b 1))))
+                  n)))))
+
+; identity elimination: x+0 -> x, 0+x -> x, x*1 -> x, 1*x -> x, x*0 -> 0, 0*x -> 0.
+(defn rw-identity-shallow (n)
+  (do (let t (head n))
+      (if (eq t 2)
+          (do (let a (nth n 1)) (let b (nth n 2))
+              (if (rr-lit0? b) a (if (rr-lit0? a) b n)))
+          (if (eq t 3)
+              (do (let a (nth n 1)) (let b (nth n 2))
+                  (if (if (rr-lit0? a) 1 (rr-lit0? b)) (list 0 0)
+                      (if (rr-lit1? b) a (if (rr-lit1? a) b n))))
+              n))))
+
+; strength reduction: x*2 -> x+x (an add is cheaper than a multiply).
+(defn rw-strength-shallow (n)
+  (do (let t (head n))
+      (if (eq t 3)
+          (do (let a (nth n 1)) (let b (nth n 2))
+              (if (rr-lit2? b) (list 2 a a) (if (rr-lit2? a) (list 2 b b) n)))
+          n)))
+
+; one rewrite step at a node: all rules in sequence (fold -> identity -> strength).
+(defn rw-step (n) (rw-strength-shallow (rw-identity-shallow (rw-fold-shallow n))))
+
+; rw-all: rewrite children, then apply the rule-step at the node (bottom-up, one pass).
+(defn rw-all (n)
+  (do (let t (head n))
+      (if (if (eq t 0) 1 (eq t 1)) n
+          (do (let a (rw-all (nth n 1))) (let b (rw-all (nth n 2)))
+              (rw-step (list t a b))))))
