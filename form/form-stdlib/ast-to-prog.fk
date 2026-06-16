@@ -7,8 +7,8 @@
 ; prog. a2p flattens one into the other, so the whole flywheel composes on machine code:
 ;   rw-all (propose) -> ast-to-prog (bridge) -> lo-compile-fn (lower) -> real bytes.
 ;
-; rewrite-AST tags:  (0 v)=LIT  (1)=VAR  (2 a b)=ADD  (3 a b)=MUL.
-; form-lower prog:   (1 v 0 0)=LIT  (2 0 0 0)=ARG  (3 ia ib 0)=ADD  (5 ia ib 0)=MUL.
+; rewrite-AST tags:  (0 v)=LIT  (1)=VAR  (2 a b)=ADD  (3 a b)=MUL  (4 a b)=SUB  (5 a b)=DIV.
+; form-lower prog:   (1 v 0 0)=LIT  (2 0 0 0)=ARG  (3..)=ADD  (5..)=MUL  (4..)=SUB  (8..)=DIV.
 ; (VAR is the function's single input n, which form-lower banks as ARG.)
 ;
 ; a2p threads the accumulating row list; each node's index is its position when appended,
@@ -30,7 +30,8 @@
         (let lb (a2p (nth ast 2) acc1))
         (let acc2 (nth lb 0))
         (let ib (nth lb 1))
-        (list (a2p-app acc2 (list (list (if (eq (head ast) 2) 3 5) ia ib 0))) (len acc2))))
+        (let tag (if (eq (head ast) 2) 3 (if (eq (head ast) 3) 5 (if (eq (head ast) 4) 4 8))))
+        (list (a2p-app acc2 (list (list tag ia ib 0))) (len acc2))))
 
 ; the door: AST -> (list prog root-index), ready for lo-compile-fn.
 (defn ast-to-prog (ast) (a2p ast (list)))
