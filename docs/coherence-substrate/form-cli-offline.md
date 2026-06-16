@@ -227,6 +227,30 @@ learnable prior + a keyword discriminator. The harder lanes — tool *order*, an
 the reasoning lane (`task → answer`, which needs semantic judging) — are still
 open. One lane retired; the rest is the road.
 
+## The reasoning lane — measured, and wide open
+
+Tool selection is a set problem; reasoning needs a *semantic* judge. So a local
+model gives a one-shot answer and a local **oracle judges** how well it covers
+the agent's captured answer (0–100); the Form judge recipe tallies — pass-rate +
+grade distribution (`form-cli-judge.fk` → grade/pass/tally, four-way
+`form-cli-judge-band` → 127).
+
+```bash
+scripts/form_cli_judge.sh 5 "ollama run coder" "ollama run coder" 60
+```
+
+Snapshot (local coder, threshold 60): native **~25% pass, avg ~25/100**, mostly
+*poor* grades — the opposite of tool selection. So the two lanes read:
+
+| lane | native vs agent |
+|---|---|
+| **tool selection** (set) | **100% / 95%** — won, oracle retired |
+| **reasoning** (`task → answer`) | **~25%** — the open frontier |
+
+That contrast *is* the finding: the easy lane is done; reasoning is the real
+road. (The judge here is a local oracle — a membrane crossing — so this score
+itself isn't yet offline-pure; a Form-native semantic judge is the next cell.)
+
 ## What is proven, and the honest frontier
 
 - **Proven, four-way**: the surface membrane + crossing ledger; the agent loop
