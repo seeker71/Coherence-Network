@@ -1,0 +1,26 @@
+; inram-leaf-emit-band.fk — lo-compile-fn emits a leaf-callable arm64 image
+; for f(n) = n*3 + 7: the exact bytes the in-RAM JIT native (jit_leaf_inram,
+; MAP_JIT + pthread_jit_write_protect_np, darwin/arm64) executes in-process —
+; zero `go build`, zero .so, a ~20-byte image instead of a 4.8MB Go plugin.
+;
+; The emitter is the SAME lo-compile-fn proven by the arithmetic compiler bands;
+; here it produces a LEAF function (the single arg arrives in w0, banked to w1;
+; every result lands in w0; ends in ret) — which IS the AArch64 ABI shape
+; int64 f(int64). The band folds the image to a position-weighted checksum so a
+; divergent kernel changes the number. The executor half (mmap the image, call
+; it, compare to the walker) is proven on these same bytes by the Go kernel test
+; jit_inram_test.go — emit (Form, four-way) and exec (host, in-process) meet on
+; one byte image.
+;
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+
+(do
+  ; f(n) = n*3 + 7 as an op-tagged prog (tags: 1=LIT 2=ARG 3=ADD 5=MUL),
+  ; children are indices into the prog list:
+  ;   0 LIT 7 · 1 ARG · 2 LIT 3 · 3 MUL(ARG,LIT3) · 4 ADD(MUL,LIT7)  root=4
+  (let prog (list (list 1 7) (list 2) (list 1 3) (list 5 1 2) (list 3 3 0)))
+  (let img (lo-compile-fn prog 4))
+  ; position-weighted fold: Σ byte_i · i  (i from 1) — order-sensitive, so any
+  ; reordered or altered instruction byte moves the checksum.
+  (defn ck (xs i) (if (eq (len xs) 0) 0 (add (mul (head xs) i) (ck (tail xs) (add i 1)))))
+  (ck img 1))

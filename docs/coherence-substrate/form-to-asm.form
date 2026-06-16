@@ -185,8 +185,25 @@
     (fourth-arm "tests/form-elf-exec-band.fk is in the fourth-arm manifest and passes fkwu four-way at 63")
     (zero-clang "Form emits the executable bytes; no clang, assembler, or linker is used for this executable floor"))
 
+  # form-lower's lo-compile-fn emits a LEAF callable (the single arg arrives in
+  # w0, banked to w1; every result lands in w0; ends in ret) — the AArch64 ABI
+  # shape int64 f(int64). The Go kernel runs that image IN-PROCESS via MAP_JIT
+  # (pthread_jit_write_protect_np to write-then-execute on Apple Silicon), with
+  # no `go build` and no plugin .so: a ~20-byte image instead of the ~4.8MB
+  # Go-runtime plugin the buildmode=plugin path (form-kernel-go/jit.go) writes
+  # per recipe. This is the north-star JIT backend that path composts toward for
+  # the pure-i64 leaf subset — lo-compile-fn IS the executable backend, so the
+  # four-way-proven emitter is the one that runs natively; one engine, not a
+  # parallel path.
+  (in-ram-jit-realized
+    (emit    "lo-compile-fn lowers f(n)=n*3+7 to a 20-byte arm64 leaf image, four-way Go/Rust/TS/fkwu at tests/inram-leaf-emit-band.fk -> 14073")
+    (exec    "form-kernel-go native jit_leaf_inram mmaps the image MAP_JIT and calls it int64 f(int64); jit_inram_test.go proves emit->exec in one process across {5,0,10,100,7}")
+    (host    "darwin/arm64 + cgo only (MAP_JIT + pthread_jit_write_protect_np); every other target keeps the Go-plugin path or walker via the no-op stub jit_inram_other.go")
+    (no-disk "zero go build, zero plugin .so — the image is mmapped from the Form emitter's bytes, not a host plugin"))
+
   # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
+    (live-lowering   "auto-derive the op-tagged prog from a live closure's AST (the sibling of jit.go's Go-source walker) so jit_leaf_inram fires on real single-i64 closures automatically — the band and test author the prog explicitly today, proving the emit->exec path; the converter is what makes it the default backend")
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
     (richer-lowering "general register allocation and multi-argument calling conventions — beyond

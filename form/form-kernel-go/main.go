@@ -3056,6 +3056,12 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: 0}
 	})
+	// jit_leaf_inram (image, arg) — run a Form-emitted arm64 leaf image
+	// (lo-compile-fn's output) in-process via MAP_JIT: no `go build`, no
+	// plugin .so, a ~20-byte image. The north-star backend the Go-plugin path
+	// composts toward for the pure-i64 leaf subset. Present only on
+	// darwin/arm64+cgo; elsewhere the native is absent and callers fall back.
+	k.registerInRAMJIT()
 	// jit_compiled? form-name-str -> 1 if the named closure's body NodeID has
 	// a loaded Go plugin artifact, else 0. This reports compile-state only:
 	// dispatch still depends on the artifact ABI matching the call's runtime
