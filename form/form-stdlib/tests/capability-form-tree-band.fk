@@ -39,7 +39,15 @@
   (let img2 (lo-compile-fn
               (list (list 2 0 0 0) (list 1 4 0 0) (list 3 0 1 0) (list 1 1 0 0)
                     (list 3 0 3 0) (list 4 2 4 0) (list 5 5 4 0)) 6))
+  ; ADD and SUB of two subtrees route to lo-tree too (the fast paths assume an ARG/LIT
+  ; operand; the general case is the register stack). (n+1)+(n+2)=2n+3 and (n*n)-(n+1).
+  (let img3 (lo-compile-fn
+              (list (list 2 0 0 0) (list 1 1 0 0) (list 3 0 1 0)
+                    (list 1 2 0 0) (list 3 0 3 0) (list 3 2 4 0)) 5))
+  (let img4 (lo-compile-fn
+              (list (list 2 0 0 0) (list 5 0 0 0) (list 1 1 0 0)
+                    (list 3 0 2 0) (list 4 1 3 0)) 4))
 
   (if (eq (beq img1 exp1) 1)
-      (add (byte-sum img1) (byte-sum img2))
+      (add (add (byte-sum img1) (byte-sum img2)) (add (byte-sum img3) (byte-sum img4)))
       0))
