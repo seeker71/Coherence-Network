@@ -1,0 +1,42 @@
+; form-cli-guide.fk — the runner's self-guidance line, built in Form.
+;
+; preludes: form-stdlib/form-cli-predict.fk form-stdlib/form-cli-model.fk
+;
+; The runner (form_native_run.sh) used to map predictor tools to its own tool
+; vocabulary and assemble the GUIDANCE hint in SHELL (a `case` + string concat).
+; That is a transformation, so it is Form, not shell — carrier-last means the
+; shell shrinks to host-io as the logic lifts. Given the trained model and the
+; task keywords, this builds the hint the runner prepends, in the runner's tool
+; words (bash / read_file / write_file / search; Agent has no runner tool). Each
+; runner tool is checked once and appended in order — no dedup needed.
+
+; is a RUNNER tool wanted? — any of its (up to two) predictor tools predicted.
+; p2 = "" when the runner tool maps from a single predictor tool.
+(defn fcg-want? (base boosts kw thr amt p1 p2)
+    (if (or (eq (fcp-predicted? base boosts kw p1 thr amt) 1)
+            (if (str_eq p2 "") 0 (eq (fcp-predicted? base boosts kw p2 thr amt) 1)))
+        1 0))
+
+; append a runner tool to the comma-joined accumulator when it is wanted.
+(defn fcg-append (acc want name)
+    (if (eq want 1)
+        (if (str_eq acc "") name (str_concat acc (str_concat ", " name)))
+        acc))
+
+; the runner-tool list as a string, in fixed order: bash, read_file, write_file, search.
+(defn fcg-tools (base boosts kw thr amt)
+    (do
+        (let a (fcg-append "" (fcg-want? base boosts kw thr amt "Bash" "") "bash"))
+        (let b (fcg-append a (fcg-want? base boosts kw thr amt "Read" "") "read_file"))
+        (let c (fcg-append b (fcg-want? base boosts kw thr amt "Write" "Edit") "write_file"))
+        (fcg-append c (fcg-want? base boosts kw thr amt "Grep" "Glob") "search")))
+
+; the full guidance line — empty when the model wants nothing.
+(defn fcg-guide (base boosts kw thr amt)
+    (do
+        (let tools (fcg-tools base boosts kw thr amt))
+        (if (str_eq tools "") ""
+            (str_concat "GUIDANCE: similar past tasks needed these tools — reach for them when relevant: "
+                        (str_concat tools ".")))))
+
+0
