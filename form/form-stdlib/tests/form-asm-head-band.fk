@@ -1,0 +1,49 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-head-band — a zero-clang `head -N`, proven four-way against the assembler.
+; head is the cat loop plus a line COUNTER: a callee-saved register (w19, preserved
+; across the read/write syscalls) holds lines-remaining; each newline written
+; decrements it; at zero, exit. Adds NO new encoder — the counter uses cmp/sub and
+; two new branch CONDITIONS as data: b.ne (NE=1, byte wasn't newline -> keep going)
+; and b.gt (GT=12, lines remain -> loop). N is fixed at 3 here (argv-parsed N is the
+; next step; cat/tr/rot13/head all take no args yet).
+;
+; The reference image is what clang/as emitted for a `head -3` _main. The binary
+; built from it (ld, no clang) emits the first 3 lines of stdin — form_head_demo.sh.
+;
+; Verdict 7 when:
+;   1   the whole 100-byte head image byte-equals clang's (the conviction gate)
+;   2   b.ne folds a backward signed offset with cond NE=1 (the not-newline branch)
+;   4   b.gt folds a backward signed offset with cond GT=12 (the lines-remain branch)
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16) (fa-movz 19 3)
+        (fa-movz-x 0 0) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 3) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-cmp-x 0 0) (fa-bcond 13 13)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-ldrb 8 31 0) (fa-cmp 8 10) (fa-bcond 1 -16)
+        (fa-sub 19 19 1) (fa-cmp 19 0) (fa-bcond 12 -19)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209 115 0 128 82
+                   0 0 128 210 225 3 0 145
+                   34 0 128 210 112 0 128 210
+                   16 64 160 242 1 16 0 212
+                   31 0 0 241 173 1 0 84
+                   32 0 128 210 225 3 0 145
+                   34 0 128 210 144 0 128 210
+                   16 64 160 242 1 16 0 212
+                   232 3 64 57 31 41 0 113
+                   1 254 255 84 115 6 0 81
+                   127 2 0 113 172 253 255 84
+                   0 0 128 82 255 67 0 145
+                   192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-bcond 1 -16) (list 1 254 255 84)) 2 0))
+    (let c2 (if (fa-conviction (fa-bcond 12 -19) (list 172 253 255 84)) 4 0))
+
+    (add c0 (add c1 c2)))
