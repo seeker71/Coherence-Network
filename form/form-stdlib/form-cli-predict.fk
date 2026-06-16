@@ -1,0 +1,83 @@
+; form-cli-predict.fk — a NATIVE tool predictor learned from the agent corpus.
+;
+; preludes: form-stdlib/core.fk
+;
+; The replay (form-cli-score.fk) showed a local LLM omits Bash and over-predicts.
+; This is the native answer: a model whose WEIGHTS are learned from the corpus —
+; no LLM at the prediction step. The model is two tables:
+;
+;   base-pairs  : (tool, base-score)   — base-score = % of corpus turns using it
+;   boost-pairs : (keyword, tool)      — a task keyword that triggers a rarer tool
+;
+; A tool is predicted for a task when
+;   base-score(tool) + (boost if any task keyword triggers it)  >=  threshold.
+;
+; The frequent tools (Bash 93, Edit 56, Read 54, Write 47) clear the threshold on
+; their base rate alone — so Bash is ALWAYS predicted, closing the LLM's gap. The
+; rare tail (Agent 9) is predicted only when a task keyword triggers it. The model
+; is data; this recipe is the (proven, four-way) prediction logic over it.
+;
+; Proven by: form-stdlib/tests/form-cli-predict-band.fk
+
+(defn fcp-base-pair (tool score) (list tool score))
+(defn fcp-boost-pair (keyword tool) (list keyword tool))
+
+; base score for a tool (0 if the model never saw it)
+(defn fcp-base (pairs tool)
+    (if (eq (len pairs) 0) 0
+        (if (str_eq (nth (head pairs) 0) tool) (nth (head pairs) 1)
+            (fcp-base (tail pairs) tool))))
+
+; does the (keyword, tool) trigger appear in the model?
+(defn fcp-boost? (boosts keyword tool)
+    (if (eq (len boosts) 0) 0
+        (if (and (str_eq (nth (head boosts) 0) keyword) (str_eq (nth (head boosts) 1) tool)) 1
+            (fcp-boost? (tail boosts) keyword tool))))
+
+; does ANY of the task's keywords trigger this tool?
+(defn fcp-any-boost? (boosts task-keywords tool)
+    (if (eq (len task-keywords) 0) 0
+        (if (eq (fcp-boost? boosts (head task-keywords) tool) 1) 1
+            (fcp-any-boost? boosts (tail task-keywords) tool))))
+
+; the score for a tool on a task: base + boost-amt if any keyword triggers it
+(defn fcp-score (base-pairs boost-pairs task-keywords tool boost-amt)
+    (add (fcp-base base-pairs tool)
+         (if (eq (fcp-any-boost? boost-pairs task-keywords tool) 1) boost-amt 0)))
+
+; predict the tool for this task? (score clears the threshold)
+(defn fcp-predicted? (base-pairs boost-pairs task-keywords tool threshold boost-amt)
+    (if (ge (fcp-score base-pairs boost-pairs task-keywords tool boost-amt) threshold) 1 0))
+
+; ── scoring the model against the agent (no list assembly: ask, per agent tool,
+;    whether the model would predict it for the task) ──
+; how many of the agent's tools does the model predict for this task?
+(defn fcp-covers (base boosts task-keywords agent-tools threshold amt)
+    (if (eq (len agent-tools) 0) 0
+        (add (fcp-predicted? base boosts task-keywords (head agent-tools) threshold amt)
+             (fcp-covers base boosts task-keywords (tail agent-tools) threshold amt))))
+; does the model match the agent on this sample? (predicts a majority of the tools)
+(defn fcp-match? (base boosts task-keywords agent-tools threshold amt)
+    (if (eq (len agent-tools) 0) 0
+        (if (ge (add (fcp-covers base boosts task-keywords agent-tools threshold amt)
+                     (fcp-covers base boosts task-keywords agent-tools threshold amt))
+                (len agent-tools)) 1 0)))
+; does the model predict ALL of the agent's tools?
+(defn fcp-full? (base boosts task-keywords agent-tools threshold amt)
+    (if (eq (len agent-tools) 0) 0
+        (if (ge (fcp-covers base boosts task-keywords agent-tools threshold amt) (len agent-tools)) 1 0)))
+
+; tally over an eval set: pairs of (task-keywords, agent-tools)
+(defn fcp-eval-pair (task-keywords agent-tools) (list task-keywords agent-tools))
+(defn fcp-ep-kw (p) (nth p 0))
+(defn fcp-ep-tools (p) (nth p 1))
+(defn fcp-eval-matched (base boosts pairs threshold amt)
+    (if (eq (len pairs) 0) 0
+        (add (fcp-match? base boosts (fcp-ep-kw (head pairs)) (fcp-ep-tools (head pairs)) threshold amt)
+             (fcp-eval-matched base boosts (tail pairs) threshold amt))))
+(defn fcp-eval-full (base boosts pairs threshold amt)
+    (if (eq (len pairs) 0) 0
+        (add (fcp-full? base boosts (fcp-ep-kw (head pairs)) (fcp-ep-tools (head pairs)) threshold amt)
+             (fcp-eval-full base boosts (tail pairs) threshold amt))))
+
+0
