@@ -1,0 +1,46 @@
+; fk-to-prog.fk — lower content-addressed fk-* cells directly to a form-lower prog (flat
+; rows), replacing the rewrite-AST bridge (f2a + ast-to-prog). The spine is now one
+; representation end to end: fk-cells -> prog -> lo-compile -> executable arm64.
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk
+;
+; fk tag -> form-lower prog tag: 1 LIT->1 · 2 ARG->2 · 3 ADD->3 · 4 SUB->4 · 42 MUL->5 ·
+; 10 DIV->8 · 6 IF->6 COND (LE node + branch subtrees, lo-cond's shape). The prog is flat
+; and index-referenced; each node's index is its position when appended.
+
+(defn f2p-app (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (f2p-app (tail xs) ys))))
+(defn f2p-tag (t) (if (eq t 3) 3 (if (eq t 4) 4 (if (eq t 42) 5 (if (eq t 10) 8 t)))))
+(defn f2p-litv (n) (ms-value (fk-body n)))
+(defn f2p-l (n) (ms-child (fk-body n) 0))
+(defn f2p-r (n) (ms-child (fk-body n) 1))
+
+(defn f2p (n acc)
+    (do (let t (fk-tag n))
+        (if (eq t 1) (list (f2p-app acc (list (list 1 (f2p-litv n) 0 0))) (len acc))
+        (if (eq t 2) (list (f2p-app acc (list (list 2 0 0 0))) (len acc))
+        (if (eq t 6) (f2p-if n acc)
+            (f2p-bin t n acc))))))
+(defn f2p-bin (t n acc)
+    (do (let la (f2p (f2p-l n) acc))
+        (let acc1 (nth la 0)) (let ia (nth la 1))
+        (let lb (f2p (f2p-r n) acc1))
+        (let acc2 (nth lb 0)) (let ib (nth lb 1))
+        (list (f2p-app acc2 (list (list (f2p-tag t) ia ib 0))) (len acc2))))
+; IF(c,t,e), c = LE(arg, lit-k): emit ARG, LIT k, LE, then, else, COND row.
+(defn f2p-if (n acc)
+    (do (let kcell (f2p-r (f2p-l n))                       ; LE's right operand = fk-lit(k)
+)
+        (let acc1 (f2p-app acc (list (list 2 0 0 0))))     ; ARG   @ (len acc)
+        (let argi (len acc))
+        (let acc2 (f2p-app acc1 (list (list 1 (f2p-litv kcell) 0 0)))) ; LIT k @ (len acc1)
+        (let liti (len acc1))
+        (let acc3 (f2p-app acc2 (list (list 5 argi liti 0)))) ; LE  @ (len acc2)
+        (let lei (len acc2))
+        (let lt (f2p (f2p-l (f2p-r n)) acc3))              ; then-subtree
+        (let acc4 (nth lt 0)) (let ti (nth lt 1))
+        (let le2 (f2p (f2p-r (f2p-r n)) acc4))             ; else-subtree
+        (let acc5 (nth le2 0)) (let ei (nth le2 1))
+        (list (f2p-app acc5 (list (list 6 lei ti ei))) (len acc5))))
+
+(defn fk-to-prog (n) (nth (f2p n (list)) 0))
+(defn fk-to-root (n) (nth (f2p n (list)) 1))

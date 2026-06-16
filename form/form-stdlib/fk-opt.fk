@@ -1,0 +1,55 @@
+; fk-opt.fk — the optimizer ON the content-addressed cells. Convergence: it folds an fk-*
+; cell tree to an equivalent, cheaper fk-* cell tree, in place on the canonical lattice —
+; no parallel rewrite-AST. The flywheel now PROPOSES (fk-opt), VERIFIES (fk-run, hati-os's
+; own walker), and LOWERS (fk-to-prog) all on ONE representation.
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk
+;
+; tags (hati-os): 1 LIT · 2 ARG · 3 ADD · 4 SUB · 5 LE · 6 IF · 10 DIV · 42 MUL.
+
+(defn fk-lit? (n) (eq (fk-tag n) 1))
+(defn fk-litv (n) (ms-value (fk-body n)))
+(defn fk-lchild (n) (ms-child (fk-body n) 0))
+(defn fk-rchild (n) (ms-child (fk-body n) 1))
+(defn fk-zero? (n) (if (fk-lit? n) (eq (fk-litv n) 0) 0))
+(defn fk-one?  (n) (if (fk-lit? n) (eq (fk-litv n) 1) 0))
+
+; fold two constants under op t
+(defn fk-binop (t x y)
+    (if (eq t 3) (add x y)
+    (if (eq t 4) (sub x y)
+    (if (eq t 42) (mul x y)
+    (if (eq t 10) (div x y)
+        (if (le x y) 1 0))))))
+
+; rebuild a binary node with optimized children
+(defn fk-rebuild (t a b)
+    (if (eq t 3) (fk-add a b)
+    (if (eq t 4) (fk-sub a b)
+    (if (eq t 42) (fk-mul a b)
+    (if (eq t 10) (fk-div a b)
+        (fk-le a b))))))
+
+; identity elimination on a binary node (children already optimized, not both LIT)
+(defn fk-ident (t a b)
+    (if (eq t 3)  (if (fk-zero? b) a (if (fk-zero? a) b (fk-rebuild t a b)))
+    (if (eq t 4)  (if (fk-zero? b) a (fk-rebuild t a b))
+    (if (eq t 42) (if (if (fk-zero? a) 1 (fk-zero? b)) (fk-lit 0)
+                      (if (fk-one? b) a (if (fk-one? a) b (fk-rebuild t a b))))
+    (if (eq t 10) (if (fk-one? b) a (fk-rebuild t a b))
+        (fk-rebuild t a b))))))
+
+; fk-opt: leaves pass; IF rewrites each branch; a binary op folds children then collapses
+; two constants to one LIT, else applies identity. The result is a fresh fk-* cell tree.
+(defn fk-opt (n)
+    (do (let t (fk-tag n))
+        (if (eq t 1) n
+        (if (eq t 2) n
+        (if (eq t 6) (fk-if (fk-opt (fk-lchild n))
+                            (fk-opt (ms-child (fk-rchild n) 0))
+                            (fk-opt (ms-child (fk-rchild n) 1)))
+            (do (let a (fk-opt (fk-lchild n)))
+                (let b (fk-opt (fk-rchild n)))
+                (if (if (fk-lit? a) (fk-lit? b) 0)
+                    (fk-lit (fk-binop t (fk-litv a) (fk-litv b)))
+                    (fk-ident t a b))))))))
