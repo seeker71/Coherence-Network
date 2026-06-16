@@ -1,0 +1,45 @@
+; capability-form-tree-band.fk — the body lowers ARBITRARY expression trees.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; The single-accumulator scheme (one result in w0, ARG banked in w1, scratch w2)
+; could not lower an op whose BOTH operands are non-trivial subtrees — e.g.
+; (n+1)*(n+2). That was the empty tail in lo-mul/lo-div. lo-tree closes it with a
+; register stack: each level spills its LEFT result to w(9+depth) and lowers the
+; RIGHT subtree one depth deeper, so a right-child's registers are strictly above
+; the parent's save slot — nesting never clobbers. fa-sub-r (register sub) is byte-
+; convicted against the assembler (0x4b000000); fa-add-r/mul/udiv already were.
+;
+; This band byte-convicts the lowered (n+1)*(n+2) against the hand-assembled 12-
+; instruction register-stack sequence, then returns the byte-sum of that AND the
+; ((n+4)-(n+1))*(n+1) image (a content checksum the four kernels must agree on).
+; Execution-verified separately: (n+1)*(n+2) = 12,20,42,72 and the sub-in-tree case
+; = 9,12,18,24 exact over n=2..7.
+;
+;   (n+1)*(n+2) -> mov w1,w0 ; [ADD: w0=n,w9=n,w0=1,w0=w9+w0] ; w9=n+1 ;
+;                  [ADD@d1: w0=n,w10=n,w0=2,w0=w10+w0] ; mul w0,w9,w0 ; ret
+
+(do
+  (defn ap (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (ap (tail xs) ys))))
+  (defn beq (a b)
+    (if (eq (len a) (len b))
+        (if (eq (len a) 0) 1
+            (if (eq (head a) (head b)) (beq (tail a) (tail b)) 0))
+        0))
+  (defn byte-sum (bs) (if (eq (len bs) 0) 0 (add (head bs) (byte-sum (tail bs)))))
+
+  (let img1 (lo-compile-fn
+              (list (list 2 0 0 0) (list 1 1 0 0) (list 3 0 1 0)
+                    (list 1 2 0 0) (list 3 0 3 0) (list 5 2 4 0)) 5))
+  (let exp1 (ap (fa-mov 1 0)
+            (ap (fa-mov 0 1) (ap (fa-mov 9 0) (ap (fa-movz 0 1) (ap (fa-add-r 0 9 0)
+            (ap (fa-mov 9 0)
+            (ap (fa-mov 0 1) (ap (fa-mov 10 0) (ap (fa-movz 0 2) (ap (fa-add-r 0 10 0)
+            (ap (fa-mul 0 9 0) (fa-ret)))))))))))))
+  (let img2 (lo-compile-fn
+              (list (list 2 0 0 0) (list 1 4 0 0) (list 3 0 1 0) (list 1 1 0 0)
+                    (list 3 0 3 0) (list 4 2 4 0) (list 5 5 4 0)) 6))
+
+  (if (eq (beq img1 exp1) 1)
+      (add (byte-sum img1) (byte-sum img2))
+      0))

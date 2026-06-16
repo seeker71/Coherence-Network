@@ -70,7 +70,7 @@
             (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-mul 0 0 2))
         (if (lo-lit? prog (lo-c1 prog i))
             (lo-app (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-movz 2 (lo-val prog (lo-c1 prog i)))) (fa-mul 0 0 2))
-            (list))))))
+            (lo-tree prog i argr 0))))))
     ; DIV: like MUL but NON-commutative — numerator is Rn, denominator Rm, order kept.
     ; (ARG, x) -> n/x: lower x->w0; udiv w0,w<argr>,w0 · (x, ARG) -> x/n: lower x->w0; udiv w0,w0,w<argr>
     ; (x, LIT i) -> x/i: lower x->w0; movz w2,#i; udiv w0,w0,w2 · (LIT a, x) -> a/x: lower x->w0; movz w2,#a; udiv w0,w2,w0
@@ -83,7 +83,30 @@
             (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-udiv 0 0 2))
         (if (lo-lit? prog (lo-c1 prog i))
             (lo-app (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-movz 2 (lo-val prog (lo-c1 prog i)))) (fa-udiv 0 2 0))
+            (lo-tree prog i argr 0))))))
+    ; lo-tree — the GENERAL register-stack lowering for arbitrary expression trees, the
+    ; fallback when neither operand of an op is ARG/LIT (the case the single-accumulator
+    ; scheme can't reach). It spills each level's LEFT result to w(9+depth) and lowers the
+    ; RIGHT subtree one depth deeper, so a right-child's registers are always strictly
+    ; above the parent's save slot — nesting never clobbers. Order is preserved (left=Rn,
+    ; right=Rm), so non-commutative SUB/DIV stay correct. w9..w15 are caller-saved temps
+    ; (7 levels of right-depth); deeper would need a frame — the named next.
+    (defn lo-tree-op (tag sr)
+        (if (eq tag 3) (fa-add-r 0 sr 0)
+        (if (eq tag 4) (fa-sub-r 0 sr 0)
+        (if (eq tag 5) (fa-mul 0 sr 0)
+        (if (eq tag 8) (fa-udiv 0 sr 0)
             (list))))))
+    (defn lo-tree-bin (prog i argr depth sr)
+        (lo-app
+            (lo-app
+                (lo-app (lo-tree prog (lo-c1 prog i) argr depth) (fa-mov sr 0))
+                (lo-tree prog (lo-c2 prog i) argr (add depth 1)))
+            (lo-tree-op (lo-tag prog i) sr)))
+    (defn lo-tree (prog i argr depth)
+        (if (lo-lit? prog i) (fa-movz 0 (lo-val prog i))
+        (if (lo-arg? prog i) (fa-mov 0 argr)
+            (lo-tree-bin prog i argr depth (add 9 depth)))))
     ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
     ; branch offsets (in instructions = bytes/4):
     ;   cmp w<argr>,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
@@ -137,7 +160,7 @@
             (lo-app (lo-map prog (lo-c1 prog i)) (list i i))
         (if (lo-lit? prog (lo-c1 prog i))
             (lo-app (lo-map prog (lo-c2 prog i)) (list i i))
-            (list))))))
+            (lo-map-tree prog i))))))
     ; DIV mirror: same operand-shape as MUL (one udiv, or movz+udiv for a LIT operand).
     (defn lo-map-div (prog i)
         (if (lo-arg? prog (lo-c1 prog i))
@@ -148,7 +171,17 @@
             (lo-app (lo-map prog (lo-c1 prog i)) (list i i))
         (if (lo-lit? prog (lo-c1 prog i))
             (lo-app (lo-map prog (lo-c2 prog i)) (list i i))
-            (list))))))
+            (lo-map-tree prog i))))))
+    ; lo-tree mirror: each binary node owns its left-save (mov) and its combine op; the
+    ; subtrees own their own instructions. Depth doesn't change ownership, only registers.
+    (defn lo-map-tree (prog i)
+        (if (lo-lit? prog i) (list i)
+        (if (lo-arg? prog i) (list i)
+            (lo-app
+                (lo-app
+                    (lo-app (lo-map-tree prog (lo-c1 prog i)) (list i))
+                    (lo-map-tree prog (lo-c2 prog i)))
+                (list i)))))
     ; cmp belongs to the LE node; both branches' jumps belong to the COND itself
     (defn lo-map-cond (prog i)
         (lo-cat (list
