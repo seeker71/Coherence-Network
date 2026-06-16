@@ -1,0 +1,18 @@
+; fk-opt-band.fk — the converged optimizer (fk-opt) on the Hati-OS fourth arm.
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/fk-opt.fk
+;
+; The convergence moved the optimizer onto content-addressed fk-* cells; the three walkers
+; prove it, and the flattener (form-flatten.fk) carries the node/substrate ops
+; (intern_node/node_children/node_value) onto the universal fkw binary — so fk-opt reaches
+; the FOURTH arm too, restoring four-way coverage of the optimizer.
+;
+; (50-8)+(6*7) = 42+42 = 84. fk-opt folds both products and the sum to a single LIT 84.
+; The fold is checked STRUCTURALLY — tag == LIT(1), value == 84 — using only carried ops
+; (intern_node / node_children / node_value), so the band flattens (fk-run/fk-walk is a
+; defn, not a carried op, and isn't needed to witness the fold).
+
+(do
+  (let tree (fk-add (fk-sub (fk-lit 50) (fk-lit 8)) (fk-mul (fk-lit 6) (fk-lit 7))))
+  (let opt (fk-opt tree))
+  (if (eq (fk-tag opt) 1) (ms-value (fk-body opt)) 0))

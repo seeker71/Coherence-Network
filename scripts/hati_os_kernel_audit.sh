@@ -822,6 +822,36 @@ echo "                     (its band-scale allocation melts mid-call on the valu
 echo "  bands-on-Hati-OS-arm so far: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
 
 echo
+# ── 22b. the CONVERGED optimizer (fk-opt) on the Hati-OS arm ──────────────
+# The compiler converged onto content-addressed fk-* cells (fk-opt + fk-to-prog),
+# which moved the optimizer's proof off the numeric rewrite-AST fkwu could walk.
+# This restores its fourth arm: fk-opt depends on the cell substrate, so the
+# flattener carries that whole chain — the node/substrate ops intern_node(47)/
+# node_children(48)/node_value(49) are in flt-ops — onto the SAME universal binary.
+# fk-opt-band folds (50-8)+(6*7) to a single LIT 84 and checks it STRUCTURALLY
+# (tag/value, no walker), so it flattens cleanly across the dependency chain.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/fk-opt.fk" > "$work/fkopt-mod.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/fkopt-flt-driver.fk"
+cat >> "$work/fkopt-flt-driver.fk" <<EOF
+(print "==FKOPT==")
+(print (fkc-table-file (flt-band-fns (read_file "$work/fkopt-mod.fk") (read_file "form-stdlib/tests/fk-opt-band.fk"))))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/fkopt-flt-driver.fk" 2>/dev/null) > "$work/fkopt-flt.out"
+sed -n '/^==FKOPT==$/,/^==END==$/p' "$work/fkopt-flt.out" | sed -e '1d' -e '$d' > "$work/t-fkopt.txt"
+fkopt_three="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/fk-opt.fk form-stdlib/tests/fk-opt-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
+fkopt_fkw="$("$work/fkwu" "$work/t-fkopt.txt" 0 2>/dev/null | head -1)"
+echo "converged optimizer fk-opt on the Hati-OS arm (cell substrate flattened too):"
+echo "  three-walker (validate.sh) = $fkopt_three   fkw = $fkopt_fkw   (expect 84)"
+if [[ -z "$fkopt_three" || "$fkopt_three" != "$fkopt_fkw" || "$fkopt_fkw" != "84" ]]; then
+    echo "FAIL  fk-opt (converged optimizer) disagrees across arms"; exit 1
+fi
+echo "  fk-opt is FOUR-way: convergence onto content-addressed cells kept the fourth arm"
+
+echo
 # ── 23. live delivery priority — multiple offers pending in ONE window; WHICH ──
 # delivers first is a POLICY ROW (afferent-priority.fk): scheduler.fk's proven
 # row shape read by the afferent engine. Two offers pend together — a latched
