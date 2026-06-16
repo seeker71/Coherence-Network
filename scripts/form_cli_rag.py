@@ -109,6 +109,8 @@ def main() -> int:
     b = sub.add_parser("build"); b.add_argument("--index", default=INDEX)
     s = sub.add_parser("search"); s.add_argument("question")
     s.add_argument("-k", type=int, default=5); s.add_argument("--index", default=INDEX)
+    c = sub.add_parser("context"); c.add_argument("question")
+    c.add_argument("-k", type=int, default=3); c.add_argument("--index", default=INDEX)
     a = sub.add_parser("ask"); a.add_argument("question")
     a.add_argument("-k", type=int, default=5); a.add_argument("-m", "--model", default="qwen2.5:72b")
     a.add_argument("--index", default=INDEX)
@@ -118,6 +120,11 @@ def main() -> int:
     if args.cmd == "search":
         for h in retrieve(args.question, args.index, args.k):
             print(f"{h['id']}\t{h['kind']}")
+        return 0
+    if args.cmd == "context":
+        # grounding block for the form-cli loop's guide: nearest body docs, terse
+        for h in retrieve(args.question, args.index, args.k):
+            print(f"[{h['id']}] {' '.join(h['snippet'].split())[:280]}")
         return 0
     hits = retrieve(args.question, args.index, args.k)
     print("── retrieved (Form-ranked: rag-retrieve.fk) ──")
