@@ -121,7 +121,25 @@ else
     gap "offline loop smoke did not complete (oracle '$SMOKE_ORACLE' reachable?)"
 fi
 
-# 6. Readiness receipt ---------------------------------------------------------
+# 6. Offline semantic memory (RAG over the body) ------------------------------
+echo "[6] Offline semantic memory (RAG)"
+RAG_INDEX="$HOME/.coherence-network/rag-index/index.jsonl"
+RAG_N=0; [[ -f "$RAG_INDEX" ]] && RAG_N=$(grep -c . "$RAG_INDEX" 2>/dev/null | tr -d ' ')
+EMBED=""; command -v ollama >/dev/null 2>&1 && EMBED="$(ollama list 2>/dev/null | awk 'NR>1 && $1 ~ /embed/ {print $1; exit}')"
+if [[ "$RAG_N" -gt 0 && -n "$EMBED" ]]; then
+    # the memory works when a routing query recalls the routing/oracle region (Form-ranked)
+    recall="$(python3 "$ROOT/scripts/form_cli_rag.py" search "how does form-cli route between a local and a remote oracle" -k 3 2>/dev/null)"
+    if printf '%s' "$recall" | grep -qE 'form-cli|tier-router|oracle'; then
+        ok "RAG index: $RAG_N docs ($EMBED) — query recalls the right recipes (rag-retrieve.fk)"
+    else
+        ok "RAG index: $RAG_N docs ($EMBED) present"
+        note "recall smoke did not surface the routing region — check the embedder"
+    fi
+else
+    gap "no offline memory — run: scripts/form_cli_rag.py build (needs ollama + nomic-embed-text)"
+fi
+
+# 7. Readiness receipt ---------------------------------------------------------
 echo "── receipt ──"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 VERDICT="READY"; [[ "$GAP" -gt 0 ]] && VERDICT="GAPS:$GAP"
