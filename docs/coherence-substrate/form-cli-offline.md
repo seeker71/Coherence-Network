@@ -227,6 +227,29 @@ learnable prior + a keyword discriminator. The harder lanes — tool *order*, an
 the reasoning lane (`task → answer`, which needs semantic judging) — are still
 open. One lane retired; the rest is the road.
 
+## The trained model improves the live model
+
+Measuring is one thing; making the runner better is the payoff. The predictor
+knows the local coder omits `Bash`, so it computes the likely tool set per task
+and **injects it as a hint** into the local model's prompt:
+
+```bash
+scripts/form_cli_guided.sh 6 "ollama run coder"
+```
+
+Composes the two proven recipes — `form-cli-predict.fk` guides, `form-cli-score.fk`
+judges — no new logic. Snapshot (local coder, 6 tasks):
+
+| | majority | full-cover |
+|---|---|---|
+| unguided | 33% | 16% |
+| **guided** | **100%** | **66%** |
+
+The hint closes the exact gap the predictor knew about — e.g. a task where the
+coder unguided answered `[Grep, Edit]` (no Bash) becomes `[Bash, Read, Write,
+Edit]` once guided. The corpus-trained native model makes the live local model
+better: the flywheel turning, not just measured.
+
 ## The reasoning lane — measured, and wide open
 
 Tool selection is a set problem; reasoning needs a *semantic* judge. So a local
