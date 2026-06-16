@@ -201,8 +201,24 @@
     (host    "darwin/arm64 + cgo only (MAP_JIT + pthread_jit_write_protect_np); every other target keeps the Go-plugin path or walker via the no-op stub jit_inram_other.go")
     (no-disk "zero go build, zero plugin .so — the image is mmapped from the Form emitter's bytes, not a host plugin"))
 
+  # The DURABLE counterpart to the in-RAM path: the recipe becomes a dynamic
+  # library that is NOTHING but the recipe. form-macho's mo-object-sym wraps the
+  # lo-compile bytes as a Mach-O .o exporting _recipe; `ld -dylib` links and
+  # ad-hoc signs it (the macOS arm64 signing requirement, met by the same linker
+  # the executable floor already uses — no clang) into a ~16KB dlopen-able dylib
+  # whose __text is the 20-byte recipe. The kernel's dylib_call native dlopens
+  # it, dlsyms _recipe, and calls it. Unlike the in-RAM image this survives
+  # process restarts, so it is the on-disk, content-addressable JIT cache — and
+  # at ~16KB it is ~286x smaller than the 4.8MB Go plugin it replaces.
+  (recipe-dylib-realized
+    (emit   "form-macho mo-object-sym wraps the lo-compile recipe as a .o exporting _recipe, four-way Go/Rust/TS/fkwu at tests/recipe-dylib-band.fk -> 787349")
+    (link   "ld -dylib links + ad-hoc signs the Form .o into a dlopen-able dylib (zero clang; ld is the same linker the executable floor uses)")
+    (load   "form-kernel-go native dylib_call dlopens the dylib, dlsyms _recipe, calls it int64 f(int64); jit_dylib_test.go proves emit->link->load->call across {5,0,10,100}")
+    (only-the-recipe "the dylib's __text IS the recipe (20 bytes); the ~16KB is Mach-O + signature overhead ld adds, vs a 4.8MB Go-runtime plugin"))
+
   # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
+    (recipe-dylib-direct "emit the signed MH_DYLIB directly from Form (MH_DYLIB filetype + LC_ID_DYLIB + export trie + an ad-hoc LC_CODE_SIGNATURE whose CodeDirectory SHA256-hashes each page via form-stdlib/sha256.fk), retiring ld from the dylib path as form-elf-exec already retired it for the ELF executable; and a Linux ELF ET_DYN .so (no signing) for the VPS, dlopen-proven once the Docker Linux/arm64 runner is live")
     (live-lowering   "auto-derive the op-tagged prog from a live closure's AST (the sibling of jit.go's Go-source walker) so jit_leaf_inram fires on real single-i64 closures automatically — the band and test author the prog explicitly today, proving the emit->exec path; the converter is what makes it the default backend")
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
