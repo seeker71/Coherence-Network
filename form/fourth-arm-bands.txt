@@ -510,5 +510,6 @@ lowering-search fks 57
 capability-form-mul fkc 2428
 capability-form-div fkc 3027
 capability-form-tree fkc 13113
+inram-leaf-emit fkc 14073
 native-code-fit fks 15
 reproduce-from-history fkc 8
