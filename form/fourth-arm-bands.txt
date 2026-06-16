@@ -277,6 +277,7 @@ forget-stale fks 127
 asm-pl-human-emit fks 31
 form-asm fks 31
 form-asm-syscall fks 31
+form-asm-branch fks 31
 form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31

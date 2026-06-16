@@ -1,0 +1,47 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-branch-band — the read-loop control flow that makes a real unix filter
+; (a zero-clang `cat`), proven four-way against the assembler. cmp + a forward
+; conditional branch (b.le on EOF) + a BACKWARD branch (b to the loop top) are what
+; a `cat` adds to the syscall set; the backward branch is the case the old fa-b
+; could not encode (a negative offset needs the two's-complement fold).
+;
+; The reference image is what clang/as emitted for a `cat` _main:
+;   sub sp,#16; loop: read(0,sp,1); cmp x0,#0; b.le done; write(1,sp,1); b loop;
+;   done: ret. words (clang oracle):
+;   d10043ff d2800000 910003e1 d2800022 d2800070 f2a04010 d4001001 f100001f
+;   5400010d d2800020 910003e1 d2800022 d2800090 f2a04010 d4001001 17fffff2
+;   52800000 910043ff d65f03c0
+; The binary built from this image (ld, no clang) cats stdin->stdout — form_cat_demo.sh.
+;
+; Verdict 31 when the encoder IS the assembler over the loop's new instructions:
+;   1   the whole 76-byte `cat` image byte-equals clang's (the conviction gate)
+;   2   cmp x0,#0 is exact (64-bit subs xzr — the read-count test)
+;   4   b.le forward (+8) is exact (the EOF exit branch)
+;   8   the BACKWARD branch b -14 folds to two's complement exactly (0x17fffff2)
+;  16   a forward b (+8) stays positive — the fold only bends negatives
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16)
+        (fa-movz-x 0 0) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 3) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-cmp-x 0 0) (fa-bcond 13 8)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-b-off -14)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209   0 0 128 210   225 3 0 145   34 0 128 210
+                   112 0 128 210  16 64 160 242 1 16 0 212    31 0 0 241
+                   13 1 0 84      32 0 128 210  225 3 0 145   34 0 128 210
+                   144 0 128 210  16 64 160 242 1 16 0 212    242 255 255 23
+                   0 0 128 82     255 67 0 145  192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-cmp-x 0 0) (list 31 0 0 241)) 2 0))
+    (let c2 (if (fa-conviction (fa-bcond 13 8) (list 13 1 0 84)) 4 0))
+    (let c3 (if (fa-conviction (fa-b-off -14) (list 242 255 255 23)) 8 0))
+    (let c4 (if (fa-conviction (fa-b-off 8) (list 8 0 0 20)) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

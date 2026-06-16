@@ -100,6 +100,20 @@
     ; svc #imm16 : base 0xD4000001 | imm<<5
     (defn fa-svc (imm)          (fa-le (add 3556769793 (mul imm 32))))
 
+    ; ── control flow: the read-loop's compare + signed branches ──────────────
+    ; A filter loops, so it needs a backward branch. Branch offsets are signed,
+    ; measured in instructions; a negative offset folds to two's complement in its
+    ; field width (b: 26-bit, b.cond: 19-bit) — the ARM ARM encoding, the second
+    ; oracle alongside clang's bytes. fa-smask folds a negative offset into m=2^width.
+    (defn fa-smask (off m) (if (lt off 0) (add off m) off))
+    ; cmp x<rn>, #imm  (subs xzr, rn, #imm, 64-bit) : base 0xF100001F | imm<<10 | rn<<5
+    (defn fa-cmp-x (rn imm) (fa-le (add 4043309087 (add (mul imm 1024) (mul rn 32)))))
+    ; b.<cond> #off  (signed, imm19) : base 0x54000000 | off19<<5 | cond
+    ;   cond: EQ 0  NE 1  GE 10  LT 11  GT 12  LE 13
+    (defn fa-bcond (cond off) (fa-le (add 1409286144 (add (mul (fa-smask off 524288) 32) cond))))
+    ; b #off  (signed, imm26) : base 0x14000000 | off26
+    (defn fa-b-off (off) (fa-le (add 335544320 (fa-smask off 67108864))))
+
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
             (if (nil? cand) 1
