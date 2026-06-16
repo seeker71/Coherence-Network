@@ -313,6 +313,7 @@ trig fks 127
 trig-atan fks 1111111
 tensor-quant fks 4095
 q4k-dequant fks 4095
+f16-decode fks 4095
 transcendental-natives fks 16
 learning-arc fks 127
 living-equation fks 111111

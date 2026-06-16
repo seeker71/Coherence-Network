@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk
+;
+; f16-decode-band — the Form half/bfloat decode against numpy's IEEE reference, closing the rung q4k-dequant
+; named. The strange-minimal set exercises every path of the parameterized (eb,mb) decode in the simplest
+; expressions: both formats (f16 eb=5/mb=10, bf16 eb=8/mb=7), both signs, the normal path, the exp<bias path,
+; the subnormal path (exp==0), the smallest subnormal, the largest normal, and zero (the subnormal path with
+; mant==0). The two load-bearing claims are the REAL gguf scales: f16 bits 1780 -> the super-scale d and
+; bits 5061 -> the super-min dmin that q4k-dequant-band.fk feeds in pre-decoded — proving those f32 scales
+; come bit-exact from the file's 2-byte fields. Every reference value cross-checked against numpy
+; (np.uint16/uint32 .view) — bit-exact, all matched. Whole-number floats compared via round (never eq raw
+; floats — float-conversions-band's discipline).
+;
+; Verdict 4095 when all twelve claims land:
+;   1    f16 1.0    (15360)   round            ->  1          normal, exp==bias, sign 0
+;   2    f16 -2.0   (49152)   round            -> -2          normal, sign 1
+;   4    f16 0.5    (14336)   round(*1000)     ->  500        normal, exp<bias
+;   8    f16 min-subnormal (1) round(*1e9)     ->  60         subnormal path (2^-24), exp==0
+;   16   f16 max-normal (31743) round          ->  65504      full mantissa, exp near max
+;   32   f16 zero   (0)       round            ->  0          subnormal path, mant==0
+;   64   f16 -min-subnormal (32769) round(*1e9)-> -60         sign + subnormal
+;   128  bf16 1.0   (16256)   round            ->  1          bf16 normal, eb=8 bias 127
+;   256  bf16 -3.0  (49216)   round            -> -3          bf16 sign
+;   512  bf16 0.25  (16000)   round(*1000)     ->  250        bf16 exp<bias
+;   1024 gguf d     (1780)    round(*1e9)      ->  106096     REAL llama3.2:3b Q4_K super-scale
+;   2048 gguf dmin  (5061)    round(*1e9)      ->  948429     REAL llama3.2:3b Q4_K super-min
+(do
+    (let c0  (if (eq (round (fd-f16 15360)) 1) 1 0))
+    (let c1  (if (eq (round (fd-f16 49152)) -2) 2 0))
+    (let c2  (if (eq (round (mul (fd-f16 14336) 1000.0)) 500) 4 0))
+    (let c3  (if (eq (round (mul (fd-f16 1) 1000000000.0)) 60) 8 0))
+    (let c4  (if (eq (round (fd-f16 31743)) 65504) 16 0))
+    (let c5  (if (eq (round (fd-f16 0)) 0) 32 0))
+    (let c6  (if (eq (round (mul (fd-f16 32769) 1000000000.0)) -60) 64 0))
+    (let c7  (if (eq (round (fd-bf16 16256)) 1) 128 0))
+    (let c8  (if (eq (round (fd-bf16 49216)) -3) 256 0))
+    (let c9  (if (eq (round (mul (fd-bf16 16000) 1000.0)) 250) 512 0))
+    (let c10 (if (eq (round (mul (fd-f16 1780) 1000000000.0)) 106096) 1024 0))
+    (let c11 (if (eq (round (mul (fd-f16 5061) 1000000000.0)) 948429) 2048 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
