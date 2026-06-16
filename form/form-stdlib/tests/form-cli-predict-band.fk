@@ -1,0 +1,64 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-predict.fk
+;
+; form-cli-predict-band - the native (corpus-learned) tool-predictor proof.
+;
+; Verdict 31 when, over a model learned from the corpus (Bash 93 / Edit 56 /
+; Read 54 / Write 47 / Agent 9, with parallel|explore -> Agent boosts): base
+; lookup, trigger membership, any-keyword trigger, the base+boost score, and the
+; threshold prediction all hold — Bash clears on its base rate (always predicted),
+; Agent only when a task keyword triggers it.
+
+(do
+    (let base (list (fcp-base-pair "Bash" 93) (fcp-base-pair "Edit" 56)
+                    (fcp-base-pair "Read" 54) (fcp-base-pair "Write" 47)
+                    (fcp-base-pair "Agent" 9)))
+    (let boosts (list (fcp-boost-pair "parallel" "Agent") (fcp-boost-pair "explore" "Agent")))
+    (let amt 50)
+    (let thr 40)
+
+    ; ── base lookup ──
+    (let c0 (if (eq (fcp-base base "Bash") 93) (if (eq (fcp-base base "Grep") 0) 1 0) 0))
+
+    ; ── trigger membership ──
+    (let c1 (if (eq (fcp-boost? boosts "parallel" "Agent") 1)
+                (if (eq (fcp-boost? boosts "parallel" "Bash") 0) 2 0)
+                0))
+
+    ; ── any-keyword trigger ──
+    (let c2 (if (eq (fcp-any-boost? boosts (list "study" "parallel") "Agent") 1)
+                (if (eq (fcp-any-boost? boosts (list "study" "read") "Agent") 0) 4 0)
+                0))
+
+    ; ── score: base only vs base+boost ──
+    (let c3 (if (eq (fcp-score base boosts (list "study" "read") "Bash" amt) 93)
+                (if (eq (fcp-score base boosts (list "study" "parallel") "Agent" amt) 59) 8 0)
+                0))
+
+    ; ── prediction: Bash always; Agent only when triggered; Grep never ──
+    (let c4 (if (eq (fcp-predicted? base boosts (list "study" "read") "Bash" thr amt) 1)
+                (if (eq (fcp-predicted? base boosts (list "study" "read") "Agent" thr amt) 0)
+                    (if (eq (fcp-predicted? base boosts (list "study" "parallel") "Agent" thr amt) 1)
+                        (if (eq (fcp-predicted? base boosts (list "study" "read") "Grep" thr amt) 0) 16 0)
+                        0)
+                    0)
+                0))
+
+    ; ── model-vs-agent cover / match / full on a sample ──
+    (let c5 (if (eq (fcp-covers base boosts (list "study" "read") (list "Bash" "Read" "Edit") thr amt) 3)
+                (if (eq (fcp-match? base boosts (list "study" "read") (list "Bash" "Agent") thr amt) 1)
+                    (if (eq (fcp-full? base boosts (list "study" "read") (list "Bash" "Agent") thr amt) 0)
+                        (if (eq (fcp-full? base boosts (list "study" "parallel") (list "Bash" "Agent") thr amt) 1) 32 0)
+                        0)
+                    0)
+                0))
+
+    ; ── eval tally over a heldout-shaped set ──
+    (let ep1 (fcp-eval-pair (list "study" "read") (list "Bash" "Read" "Edit")))
+    (let ep2 (fcp-eval-pair (list "study" "read") (list "Bash" "Agent")))
+    (let ep3 (fcp-eval-pair (list "fix" "stuff") (list "Grep" "Glob")))
+    (let evals (list ep1 ep2 ep3))
+    (let c6 (if (eq (fcp-eval-matched base boosts evals thr amt) 2)
+                (if (eq (fcp-eval-full base boosts evals thr amt) 1) 64 0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
