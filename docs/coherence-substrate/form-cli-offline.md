@@ -87,6 +87,31 @@ the same shape for open-ended tasks — pure Form on the kernel, oracle call + t
 dispatch + recursion, host effects through the kernel's host-io builtins, every
 step a membrane crossing.
 
+## Native binary slices (zero clang)
+
+The deepest surface of the membrane: a native binary stays fully in the Form
+body — no oracle, no interpreter. Lower a recipe slice to machine code, run it,
+and content-address it:
+
+```bash
+scripts/form_cli_slice.sh answer "(list (list 1 40 0 0) (list 1 2 0 0) (list 3 0 1 0))" 2 42
+```
+
+The Form recipes ([`form-lower.fk`](../../form/form-stdlib/form-lower.fk) +
+[`form-macho.fk`](../../form/form-stdlib/form-macho.fk) on macOS,
+[`form-elf-exec.fk`](../../form/form-stdlib/form-elf-exec.fk) on Linux/Android)
+lower an op-tagged tree to arm64 bytes, wrap it in a Mach-O / ELF object; `ld`
+links it; the binary **runs and its exit code is the program's value** — zero
+clang. The binary's sha256 is its content address — the stable identity the
+substrate interns as an `ARTIFACT` cell (`BDomain.ARTIFACT=16`) with a NodeID, so
+it is addressable. Measured offline: `((40+2))=42` → 243-byte Mach-O, ran exit
+42; `((40+5)-3)=42` and `(7+8)=15` each a distinct binary + content address. The
+slice is ledgered as a `native-recipe` crossing (os-membrane-crossed=0).
+
+The slice spec is the lowered IR (op-tagged nodes; tags 1=LIT 2=ARG 3=ADD 4=SUB).
+A recipe→IR front-end is a separate cell; the lowered subset (LIT/ADD/SUB/COND/
+ARG/recursion) is what compiles to native today.
+
 ## What is proven, and the honest frontier
 
 - **Proven, four-way**: the surface membrane + crossing ledger; the agent loop
