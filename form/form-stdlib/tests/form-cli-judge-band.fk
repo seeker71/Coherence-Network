@@ -1,0 +1,50 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-judge.fk
+;
+; form-cli-judge-band - the reasoning-lane scoring proof.
+;
+; Verdict 127 when: grading and its boundaries hold; pass? clears the threshold;
+; and the passed / per-grade / sum tallies and the native-reaches-majority readout
+; are correct over a mixed score set.
+
+(do
+    (let scores (list 90 60 40 10 80))   ; grades 3 2 1 0 3
+    (let fail (list 40 10 20))           ; all below 60
+
+    ; ── grading ──
+    (let c0 (if (eq (fcj-grade 10) 0)
+                (if (eq (fcj-grade 40) 1)
+                    (if (eq (fcj-grade 60) 2)
+                        (if (eq (fcj-grade 90) 3) 1 0)
+                        0)
+                    0)
+                0))
+
+    ; ── grade boundaries ──
+    (let c1 (if (eq (fcj-grade 25) 0)
+                (if (eq (fcj-grade 26) 1)
+                    (if (eq (fcj-grade 75) 2)
+                        (if (eq (fcj-grade 76) 3) 2 0)
+                        0)
+                    0)
+                0))
+
+    ; ── pass at threshold ──
+    (let c2 (if (eq (fcj-pass? 80 60) 1) (if (eq (fcj-pass? 40 60) 0) 4 0) 0))
+
+    ; ── passed count ──
+    (let c3 (if (eq (fcj-passed scores 60) 3) 8 0))
+
+    ; ── per-grade counts ──
+    (let c4 (if (eq (fcj-count-grade scores (fcj-grade-strong)) 2)
+                (if (eq (fcj-count-grade scores (fcj-grade-poor)) 1) 16 0)
+                0))
+
+    ; ── sum (for the carrier's average) ──
+    (let c5 (if (eq (fcj-sum scores) 280) 32 0))
+
+    ; ── native reaches a majority on the good set, not on the failing one ──
+    (let c6 (if (eq (fcj-native-reaches? scores 60) 1)
+                (if (eq (fcj-native-reaches? fail 60) 0) 64 0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
