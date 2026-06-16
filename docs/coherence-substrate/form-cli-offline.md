@@ -192,6 +192,14 @@ now runs on Form's own bytes, clang only ever a check. (The whole-program C-emit
 [`hati-os-native-cli-emit.fk`](../../form/form-stdlib/hati-os-native-cli-emit.fk),
 remains for programs not yet asm-lowered.)
 
+These began as happy-path recipes from memory — toys. The real behavior surface is
+now read from the **actual GNU source** (cached offline), enumerated in
+[`coreutils-edge-surface.md`](coreutils-edge-surface.md), and the Form versions are
+held honest by `scripts/form_coreutils_diff.sh` — a differential test against the
+system tools over edge inputs (empty, NUL, UTF-8, >page-size, no-trailing-newline).
+Measured: the implemented operations match **14/14 byte-for-byte**; the option/mode
+surface (tr `-d`/`-s`/classes, cat `-n`/files, argv) is the named-from-source frontier.
+
 ## The training corpus — samples to try the native models on
 
 Every slice and gap-close captures its request/response; the agent's own turns
