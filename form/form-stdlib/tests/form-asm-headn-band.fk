@@ -1,0 +1,59 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-headn-band — a zero-clang `head N`, proven four-way against the assembler.
+; This is the REAL head: it reads its count from argv[1] (no longer hardcoded). The
+; new piece is atoi — parse a decimal string to an int — and it adds NO new encoder:
+;   p = argv[1]; n = 0; loop { c = *p; d = c-'0'; if (unsigned)d > 9 break;
+;                              n = n*10 + d; p++ }   then the head loop on n.
+; b.hi (cond HI=8, unsigned >) ends the digit scan; mul (register) and add (register)
+; do n*10+d — all already in the table. Supersedes the hardcoded head-3 toy.
+;
+; The reference image is what clang/as emitted for a `head N` _main. The binary
+; built from it (ld, no clang) emits the first N lines of stdin — form_headn_demo.sh.
+;
+; Verdict 7 when:
+;   1   the whole 140-byte head-N image byte-equals clang's (the conviction gate)
+;   2   the atoi core is exact: b.hi terminator (cond 8), mul w19,w19,w20 (register),
+;       add w19,w19,w10 (register) — n = n*10 + digit
+;   4   the argv load (ldr) and the loop's backward fold to the digit scan are exact
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16) (fa-ldr 9 1 1)
+        (fa-movz 19 0) (fa-movz 20 10)
+        (fa-ldrb 8 9 0) (fa-sub 10 8 48) (fa-cmp 10 9) (fa-bcond 8 5)
+        (fa-mul 19 19 20) (fa-add-r 19 19 10) (fa-add-x-imm 9 9 1) (fa-b-off -7)
+        (fa-movz-x 0 0) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1) (fa-movz-x 16 3) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-cmp-x 0 0) (fa-bcond 13 13)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1) (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-ldrb 8 31 0) (fa-cmp 8 10) (fa-bcond 1 -16)
+        (fa-sub 19 19 1) (fa-cmp 19 0) (fa-bcond 12 -19)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209 41 4 64 249
+                   19 0 128 82 84 1 128 82
+                   40 1 64 57 10 193 0 81
+                   95 37 0 113 168 0 0 84
+                   115 126 20 27 115 2 10 11
+                   41 5 0 145 249 255 255 23
+                   0 0 128 210 225 3 0 145
+                   34 0 128 210 112 0 128 210
+                   16 64 160 242 1 16 0 212
+                   31 0 0 241 173 1 0 84
+                   32 0 128 210 225 3 0 145
+                   34 0 128 210 144 0 128 210
+                   16 64 160 242 1 16 0 212
+                   232 3 64 57 31 41 0 113
+                   1 254 255 84 115 6 0 81
+                   127 2 0 113 172 253 255 84
+                   0 0 128 82 255 67 0 145
+                   192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-bcond 8 5) (list 168 0 0 84))
+            (if (fa-conviction (fa-mul 19 19 20) (list 115 126 20 27))
+            (if (fa-conviction (fa-add-r 19 19 10) (list 115 2 10 11)) 2 0) 0) 0))
+    (let c2 (if (fa-conviction (fa-ldr 9 1 1) (list 41 4 64 249))
+            (if (fa-conviction (fa-b-off -7) (list 249 255 255 23)) 4 0) 0))
+
+    (add c0 (add c1 c2)))

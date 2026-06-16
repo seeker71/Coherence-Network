@@ -166,27 +166,28 @@ encoding table as a recipe). The **slice lane** (+ [`form-macho.fk`](../../form/
 carries real unix commands end to end, **zero clang**: the syscall / byte-I/O set
 (`svc`, 64-bit `movz`/`movk`, `ldrb`/`strb`, stack frame), the read-loop control flow
 (`cmp`, the EOF branch, the backward loop branch), and the branchless transform
-(`cmp`+`csel`), a callee-saved line counter (`head`), and **argv** (`echo` reads
-`argv[1]` via `ldr [x1,#8]`) — proven four-way at `form-asm-syscall`,
-`form-asm-branch`, `form-asm-tr` (31), and `form-asm-rot13`, `form-asm-head`,
-`form-asm-echo` (7).
+(`cmp`+`csel`), a callee-saved line counter, **argv** (`ldr [x1,#8]`), and **atoi**
+(a `mul`-by-10 digit loop, so `head N` reads its real count) — proven four-way at
+`form-asm-syscall`, `form-asm-branch`, `form-asm-tr` (31), and `form-asm-rot13`,
+`form-asm-headn`, `form-asm-echo` (7).
 
 ```bash
 scripts/form_cat_demo.sh    # a zero-clang `cat`
 scripts/form_tr_demo.sh     # a zero-clang `tr A-Z a-z`
 scripts/form_rot13_demo.sh  # a zero-clang `rot13`
-scripts/form_head_demo.sh   # a zero-clang `head -3`
 scripts/form_echo_demo.sh   # a zero-clang `echo $1` — reads argv
+scripts/form_headn_demo.sh  # a zero-clang `head N` — N parsed from argv
 ```
 
 Form encodes the program (`cat` = loop `read(0)`→`write(1)`; `tr`/`rot13` = that
-plus a branchless per-byte transform; `head` = that plus a line counter in a
-callee-saved register), `ld` links it (**no clang**), and the binary runs through
+plus a branchless per-byte transform; `head N` = that plus a line counter, with N
+atoi'd from `argv[1]`), `ld` links it (**no clang**), and the binary runs through
 the OS read/write syscalls. Measured: `cat` round-trips stdin→stdout, Form `tr`
 matches the system `tr A-Z a-z`, Form `rot13` matches the system rot13 and is its
-own inverse, and Form `head` matches `head -n 3` — all **byte-for-byte**. clang only
-assembled the same instructions as the byte oracle; the ARM/LLVM spec derived the
-encodings. `tr`/`rot13`/`head` each added **no new encoder** — only data rows.
+own inverse, Form `echo` matches `echo`, and Form `head N` matches `head -n N` for
+N∈{1,2,3,5,8} — all **byte-for-byte**. clang only assembled the same instructions
+as the byte oracle; the ARM/LLVM spec derived the encodings. `tr`/`rot13`/`head`/
+`echo`/`atoi` each added **no new encoder** beyond `ldr` — only data rows.
 
 `rot13` added **no new encoder** — its two-range rotation is `sub`/`add`/`cmp`/`csel`
 data rows — so the earlier **C-emit byte-filter lane composted**: every common filter
