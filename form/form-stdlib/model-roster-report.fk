@@ -1,0 +1,60 @@
+; model-roster-report.fk — the form-cli model roster as a native channel report.
+;
+; preludes: form-stdlib/core.fk
+;
+; For each native model the body is training, one roster row carries its oracle
+; (local/remote, named in oracle-catalog.fk), captured sample count, current
+; fitness, sovereignty, trust, and oracle-reliance (calls). The report answers the
+; two questions that decide where attention goes — and both ride the body's own
+; max-select spine, the same shape as nearest-shape's ns-best, attention-argmin,
+; and histogram-peak ("which one won"):
+;
+;   which model NEEDS ATTENTION = lowest fitness (min-select over rows)
+;   which oracle is USED MOST   = highest oracle-reliance (max-select over rows)
+;
+; A native model becomes sovereign as its fitness rises and its oracle-reliance
+; falls toward zero (oracle-flywheel.fk): the report makes that drift legible.
+; The carrier reads oracle-catalog.fk + the training catalog + the executor ledger
+; and feeds these rows; the report logic — ranking and selection — is pure Form.
+
+; a roster row: (name oracle trust samples fitness sovereignty oracle-calls)
+(defn mrr-row (name oracle trust samples fitness sovereignty oracle-calls)
+  (list name oracle trust samples fitness sovereignty oracle-calls))
+(defn mrr-name (r) (nth r 0))
+(defn mrr-oracle (r) (nth r 1))
+(defn mrr-trust (r) (nth r 2))
+(defn mrr-samples (r) (nth r 3))
+(defn mrr-fitness (r) (nth r 4))
+(defn mrr-sovereignty (r) (nth r 5))
+(defn mrr-oracle-calls (r) (nth r 6))
+
+; needs-attention: the model with the LOWEST fitness (min-select).
+(defn mrr-needs-attention-loop (rows best)
+  (if (eq (len rows) 0) best
+      (mrr-needs-attention-loop (tail rows)
+        (if (lt (mrr-fitness (head rows)) (mrr-fitness best)) (head rows) best))))
+(defn mrr-needs-attention (rows)
+  (if (eq (len rows) 0) (empty) (mrr-needs-attention-loop (tail rows) (head rows))))
+
+; most-used oracle: the model whose oracle-reliance is HIGHEST (max-select).
+(defn mrr-most-used-loop (rows best)
+  (if (eq (len rows) 0) best
+      (mrr-most-used-loop (tail rows)
+        (if (gt (mrr-oracle-calls (head rows)) (mrr-oracle-calls best)) (head rows) best))))
+(defn mrr-most-used (rows)
+  (if (eq (len rows) 0) (empty) (mrr-most-used-loop (tail rows) (head rows))))
+
+; total captured samples across the roster (the corpus the body owns).
+(defn mrr-total-samples (rows)
+  (if (eq (len rows) 0) 0 (add (mrr-samples (head rows)) (mrr-total-samples (tail rows)))))
+
+; total oracle calls across the roster (the standing cost / dependence).
+(defn mrr-total-oracle-calls (rows)
+  (if (eq (len rows) 0) 0 (add (mrr-oracle-calls (head rows)) (mrr-total-oracle-calls (tail rows)))))
+
+; how many models have crossed to sovereign (fitness high, oracle retiring): count
+; rows whose sovereignty is at or above a gate (tool-embodiment's 70 floor).
+(defn mrr-sovereign-count (rows gate)
+  (if (eq (len rows) 0) 0
+      (add (if (ge (mrr-sovereignty (head rows)) gate) 1 0)
+           (mrr-sovereign-count (tail rows) gate))))

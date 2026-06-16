@@ -1,0 +1,73 @@
+; tier-router.fk — the form-cli three-tier success router; the inward-pull engine.
+;
+; preludes: form-stdlib/core.fk
+;
+; Three tiers, escalating cost / falling sovereignty:
+;   0 form-native      — the body's own recipes / trained models
+;   1 3rd-party local   — ANY locally-runnable oracle, NOT just ollama: ollama, CLIP,
+;                         whisper, local TTS, MLX / llama.cpp, local embedders —
+;                         every oracle-catalog row with trust=local. A class; different
+;                         capabilities use different local oracles (vision CLIP, STT whisper).
+;   2 3rd-party remote   — claude / codex / grok / gemini / cursor / opencode
+;
+; A capability carries a LIST of oracle records (name tier passes attempts). A rate
+; only counts as FITNESS when it is HELD-OUT and has enough samples — a lucky n=2 at
+; 100% is not generalization. tr-validated-rate gates on a minimum heldout count;
+; below it the tier reads 0 (unproven), so the router never routes to an unvalidated
+; tier. This is the honesty floor: routing trusts measured-on-heldout numbers only,
+; never training accuracy and never a fabricated or tiny-sample rate.
+
+(defn tr-rate (passes attempts) (if (eq attempts 0) 0 (div (mul passes 100) attempts)))
+
+; an oracle record: (name tier passes attempts). attempts = HELD-OUT trials.
+(defn tr-oracle (name tier passes attempts) (list name tier passes attempts))
+(defn tr-o-name (o) (nth o 0))
+(defn tr-o-tier (o) (nth o 1))
+(defn tr-o-attempts (o) (nth o 3))
+(defn tr-o-rate (o) (tr-rate (nth o 2) (nth o 3)))
+
+; VALIDATED rate: the held-out rate ONLY if attempts >= min-samples, else 0 (unproven).
+; A capability with too few heldout trials is unvalidated, not sovereign.
+(defn tr-validated-rate (o min-samples)
+  (if (ge (tr-o-attempts o) min-samples) (tr-o-rate o) 0))
+
+; a capability: (name (list of oracle records)).
+(defn tr-cap (name oracles) (list name oracles))
+(defn tr-cap-name (c) (nth c 0))
+(defn tr-cap-oracles (c) (nth c 1))
+
+; best VALIDATED rate among a capability's oracles at a tier (0 if none validated).
+(defn tr-tier-best-rate-loop (oracles tier minn best)
+  (if (eq (len oracles) 0) best
+      (tr-tier-best-rate-loop (tail oracles) tier minn
+        (if (if (eq (tr-o-tier (head oracles)) tier)
+                (gt (tr-validated-rate (head oracles) minn) best) 0)
+            (tr-validated-rate (head oracles) minn) best))))
+(defn tr-tier-best-rate (oracles tier minn) (tr-tier-best-rate-loop oracles tier minn 0))
+
+; route: cheapest tier whose best VALIDATED oracle clears threshold; else remote.
+(defn tr-route (c threshold minn)
+  (do (let os (tr-cap-oracles c))
+      (if (ge (tr-tier-best-rate os 0 minn) threshold) 0
+          (if (ge (tr-tier-best-rate os 1 minn) threshold) 1 2))))
+
+; total remote held-out attempts on a capability (the membrane spend on it).
+(defn tr-remote-attempts-loop (oracles acc)
+  (if (eq (len oracles) 0) acc
+      (tr-remote-attempts-loop (tail oracles)
+        (add acc (if (eq (tr-o-tier (head oracles)) 2) (tr-o-attempts (head oracles)) 0)))))
+(defn tr-cap-remote-attempts (c) (tr-remote-attempts-loop (tr-cap-oracles c) 0))
+
+; the capability most remote-dependent = next to internalize.
+(defn tr-most-remote-loop (caps best)
+  (if (eq (len caps) 0) best
+      (tr-most-remote-loop (tail caps)
+        (if (gt (tr-cap-remote-attempts (head caps)) (tr-cap-remote-attempts best)) (head caps) best))))
+(defn tr-most-remote (caps)
+  (if (eq (len caps) 0) (empty) (tr-most-remote-loop (tail caps) (head caps))))
+
+; flywheel progress: capabilities that route native on VALIDATED fitness.
+(defn tr-sovereign-count (caps threshold minn)
+  (if (eq (len caps) 0) 0
+      (add (if (eq (tr-route (head caps) threshold minn) 0) 1 0)
+           (tr-sovereign-count (tail caps) threshold minn))))

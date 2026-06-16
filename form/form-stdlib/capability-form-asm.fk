@@ -1,0 +1,42 @@
+; capability-form-asm.fk — form->asm as an EXECUTION-verified capability.
+;
+; preludes: form-stdlib/core.fk form-stdlib/tier-router.fk
+;
+; The uniform capability shape, instantiated for the cleanest execution-verifiable
+; case — so nothing about its fitness can be fabricated:
+;
+;   question : a Form arithmetic expression
+;   oracle   : native (form-lower -> form-macho, ZERO clang) | local (clang)
+;   response : the emitted binary's EXIT CODE (observable, runnable)
+;   verify   : exit-code == the expression's evaluated value  (RUN it; no assertion)
+;   sample   : (expr expected native-exit clang-exit)
+;   route    : tier-router by VALIDATED execution fitness
+;
+; Measured 2026-06-16 by executing both emitters over 20 add/sub arith exprs spanning
+; 0..255 (scripts/form_macho_demo.sh lineage + clang -x c): native form-macho 20/20,
+; clang 20/20 — native MATCHES the oracle by execution. n=20 clears the validation
+; floor, so the body routes NATIVE and retires clang for this op-shape. Other shapes
+; (mul, cond, loops) earn their own execution coverage before they validate.
+
+; a verified sample: (expr expected native-exit clang-exit).
+(defn caf-sample (expr expected nat clang) (list expr expected nat clang))
+(defn caf-expected (s) (nth s 1))
+(defn caf-native (s) (nth s 2))
+(defn caf-clang (s) (nth s 3))
+
+; verify by EXECUTION: the response is correct iff the exit code equals the value.
+(defn caf-native-pass (s) (if (eq (caf-native s) (caf-expected s)) 1 0))
+(defn caf-clang-pass (s) (if (eq (caf-clang s) (caf-expected s)) 1 0))
+
+; fold the executed samples into pass counts (the un-fakeable fitness numerator).
+(defn caf-native-passed (samples)
+  (if (eq (len samples) 0) 0 (add (caf-native-pass (head samples)) (caf-native-passed (tail samples)))))
+(defn caf-clang-passed (samples)
+  (if (eq (len samples) 0) 0 (add (caf-clang-pass (head samples)) (caf-clang-passed (tail samples)))))
+
+; the capability as a tier-router row, from the measured execution counts. Native is
+; tier 0 (form-macho), the local oracle is tier 1 (clang); attempts = exprs executed.
+(defn caf-capability (native-passed clang-passed n)
+  (tr-cap "form-to-asm" (list
+    (tr-oracle "form-macho" 0 native-passed n)
+    (tr-oracle "clang"      1 clang-passed  n))))

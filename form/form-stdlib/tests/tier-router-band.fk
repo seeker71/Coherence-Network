@@ -1,0 +1,31 @@
+; tier-router-band.fk — the three-tier router on the body's REAL, measured state.
+;
+; preludes: form-stdlib/core.fk form-stdlib/tier-router.fk
+;
+; HONEST data only. The body's actual measured capability fitness on 2026-06-16:
+;   i18n-expansion : native i18n-affine = 8/20 HELDOUT (40%), trained on 80 samples —
+;                    the one real measurement. 40% is below the 70 threshold, so it is
+;                    NOT sovereign; it needs more samples.
+;   vision-recognize: only n=2 demos through CLIP (1 held-out match + 1 zero-shot).
+;                    n=2 is not generalization — the validation gate (min 20) reads it
+;                    as 0, though its raw rate is 100. The gate refuses the tiny sample.
+;   git-commit-to-diff: 124 SAMPLES captured but ZERO heldout evaluations — no model
+;                    trained, so native fitness is unmeasured (0/0), not a number.
+; Everything else (summarize, spec-authoring, ...) has NO measurement and is omitted —
+; fabricating a rate for it is the failure this band exists to refuse.
+
+(do
+  (let i18n-native (tr-oracle "i18n-affine" 0 8 20))     ; MEASURED 8/20 heldout
+  (let vision-clip (tr-oracle "CLIP"        1 2 2))      ; n=2 demos — unvalidated
+  (let caps (list
+    (tr-cap "i18n-expansion"    (list i18n-native))
+    (tr-cap "vision-recognize"  (list (tr-oracle "native-encoder" 0 0 0) vision-clip))
+    (tr-cap "git-commit-to-diff"(list (tr-oracle "native" 0 0 0)))))
+  (let minn 20)
+
+  ; the gate, proven: i18n (n=20) validates at 40; CLIP (n=2) raw=100 but VALIDATED=0;
+  ; 0 capabilities are sovereign (i18n's 40 < 70). aggregate = 40 + 0 + 100 + 0 = 140.
+  (add (tr-validated-rate i18n-native minn)
+       (add (tr-validated-rate vision-clip minn)
+            (add (tr-o-rate vision-clip)
+                 (tr-sovereign-count caps 70 minn)))))

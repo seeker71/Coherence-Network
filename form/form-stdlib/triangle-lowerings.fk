@@ -1,0 +1,10 @@
+; triangle-lowerings.fk — two lowerings of the same function, for the equivalence gate.
+;
+; tri(n) = 1 + 2 + ... + n. The naive lowering recurses n times; the closed lowering
+; is n*(n+1)/2, O(1). Both compute the SAME function — so the recipe-equivalence gate
+; observes their acks agree across input coverage, measures the closed one as far
+; fewer kernel dispatches, and admits it: a BETTER lowering let in by observation, not
+; by byte-identity to any external tool.
+
+(defn tri-naive (n) (if (eq n 0) 0 (add n (tri-naive (sub n 1)))))
+(defn tri-closed (n) (div (mul n (add n 1)) 2))
