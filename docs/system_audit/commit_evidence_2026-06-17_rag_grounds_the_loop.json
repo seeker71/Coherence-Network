@@ -1,0 +1,25 @@
+{
+  "title": "RAG memory wired into the form-cli loop — the offline oracle reasons WITH the body, and all the Codex logs are tapped",
+  "date": "2026-06-17",
+  "follows": "commit_evidence_2026-06-17_offline_semantic_memory.json (rag-retrieve.fk four-way + the standalone form_cli_rag.py). This closes the loop: the memory now feeds the runner automatically, and the second half of the session history (Codex) is tapped for training.",
+  "device": "Apple M4 Max, 128 GB, arm64 Darwin — fully offline once the embed + chat models are pulled",
+  "advances": [
+    {
+      "what": "Body memory grounds the form-cli runner",
+      "detail": "form_native_run.sh builds a self-guidance string (Form-computed tool prediction) and prepends it to the oracle prompt via fnr-run-guided. It now also injects BODY MEMORY: rag-retrieve.fk (four-way) ranks the 994-doc index for the task, and the nearest recipes/specs/concepts are appended to the guide, so the offline local oracle reasons WITH the body instead of blind. Gated on the local index + embedder (FNR_RAG=0 disables); graceful when absent. The retrieval ranking is the proven Form recipe; form_cli_rag.py serves it (new 'context' mode emits a terse grounding block).",
+      "proof": "form_native_run.sh on a routing task emits '[body-memory: form/form-stdlib/form-cli-loop.fk ...]' on stderr — the loop received the right body docs as grounding, fully offline."
+    },
+    {
+      "what": "All the Codex logs tapped (the 'use all the session logs' half)",
+      "detail": "scripts/codex_corpus.py reads the Codex rollout format ({type:response_item, payload:{type:message|...}}) the Claude extractor cannot, pairing each genuine user task with the following assistant message into MLX chat instruction pairs. From 16,025 sessions it yielded 2,003 unique non-boilerplate pairs (global dedup on the task's first 120 chars; most sessions open with identical boilerplate, so unique-task yield is far below session count — correct, not a bug). Combined with the 937 Claude pairs: 2,538 train / 283 valid, deduped.",
+      "honest": "Codex tool names (exec_command, write_stdin) differ from Claude's (Bash/Read/Edit), so these pairs train REASONING/voice, not the tool-predictor (which stays the validated frozen model). A v2 LoRA on the combined corpus is a background experiment, reported separately."
+    }
+  ],
+  "honest_remainder": {
+    "small_model_ceiling": "the offline oracle in the demo is llama3.2:3b — its tool-loop choices are weak; the grounding injection is what this proves, not the 3B's agency. A larger local model (qwen2.5:72b, deepseek-r1:32b) uses the identical grounding.",
+    "embedder_latency": "each grounded run adds one local embed call (~100ms) + a python L1 rank; fine for the offline loop, FNR_RAG=0 opts out.",
+    "codex_yield": "global dedup suppressed the bulk; a per-session or semantic dedup would surface more, at the cost of cross-session boilerplate. Named, not silently capped."
+  },
+  "verdict": "The offline form-cli loop now grounds its local oracle in the body's own memory by default, and both halves of the session history (Claude + Codex) are tapped. The offline mind has memory, in the loop, with nothing reaching the network.",
+  "reproduce": "scripts/form_cli_rag.py build  |  FNR_RAG=1 bash scripts/form_native_run.sh 'how does the form-cli route to a local oracle, then echo DONE' 'ollama run llama3.2:3b' 2  -> '[body-memory: ...]' on stderr  |  scripts/codex_corpus.py -> N pairs"
+}
