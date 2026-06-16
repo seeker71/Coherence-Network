@@ -1,0 +1,42 @@
+; bmf-to-fk-band.fk — the FULL BMF cursor reaches fk-cells: grammar-as-data + raw source
+; text (no tokenizer) -> g-parse -> bml-to-fk -> fk-* cells. This is the real front end —
+; not the tokenwise bmf-mini shortcut — wired to the binary pipeline (fk-opt -> fk-to-prog
+; -> lo-compile); the binary that runs MUL is demonstrated live (the base walker fk-run has
+; no MUL arm, so the bridge is verified STRUCTURALLY here, which also pins the precedence).
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/bmf-to-fk.fk
+;
+; A recursive, precedence-aware arithmetic grammar — pure data over the cursor engine.
+; g-parse cursors "1 + 2 * 3" and the bridge yields ADD(LIT 1, MUL(LIT 2, LIT 3)) — the +
+; at the ROOT (binds looser), the * nested on the right. Structural readout:
+;   root tag = 3 (ADD), right tag = 42 (MUL), the three leaves = 1, 2, 3.
+; aggregate = root*1000 + right*10 + (1+2+3) = 3000 + 420 + 6 = 3426.
+
+(do
+  (let arith (grammar "expr" (list
+    (rule3 "expr"
+        (p-cap "v" (list "alt" (p-ref "addexpr") (p-ref "term")))
+        (t-splice "v"))
+    (rule3 "addexpr"
+        (list "seq" (p-cap "l" (p-ref "term")) (p-lit "+") (p-cap "r" (p-ref "expr")))
+        (t-emit "add" (list (t-splice "l") (t-splice "r"))))
+    (rule3 "term"
+        (p-cap "v" (list "alt" (p-ref "mulexpr") (p-ref "factor")))
+        (t-splice "v"))
+    (rule3 "mulexpr"
+        (list "seq" (p-cap "l" (p-ref "factor")) (p-lit "*") (p-cap "r" (p-ref "term")))
+        (t-emit "mul" (list (t-splice "l") (t-splice "r"))))
+    (rule3 "factor"
+        (list "alt"
+            (list "seq" (p-lit "(") (p-cap "v" (p-ref "expr")) (p-lit ")"))
+            (p-cap "v" (p-run "digit")))
+        (t-splice "v")))))
+
+  (let c (bml-to-fk (g-parse arith "1 + 2 * 3")))
+  (let lv  (ms-value (fk-body (ms-child (fk-body c) 0))))
+  (let r   (ms-child (fk-body c) 1))
+  (let mv2 (ms-value (fk-body (ms-child (fk-body r) 0))))
+  (let mv3 (ms-value (fk-body (ms-child (fk-body r) 1))))
+  (add (mul (fk-tag c) 1000)
+       (add (mul (fk-tag r) 10)
+            (add lv (add mv2 mv3)))))
