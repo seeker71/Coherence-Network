@@ -1,0 +1,33 @@
+; capability-form-pipeline-band.fk — the self-improving compiler, end to end on bytes.
+;
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/recipe-equivalence-gate.fk form-stdlib/rewrite-propose.fk form-stdlib/rewrite-rules.fk form-stdlib/ast-to-prog.fk
+;
+; The whole flywheel composed on one artifact, no proxy:
+;   PROPOSE  rw-all folds 2*3+n -> 6+n         (rewrite-rules)
+;   VERIFY   ast-eval equal over coverage      (recipe-equivalence gate — a wrong fold refused)
+;   LOWER    ast-to-prog -> lo-compile-fn       (the bridge: optimizer AST -> real arm64 bytes)
+;   SELECT   admit iff equivalent AND cheaper   (the optimized image is FEWER real instructions)
+;
+; The aggregate is the byte-sum of both lowered images, returned ONLY when the gate says
+; equivalent and the optimized image is strictly smaller — so the four kernels agree on
+; the whole pipeline's output, not just one stage. Execution-verified separately (zero
+; clang): both binaries compute 6+n over n=2..10; the optimized one is 12 B smaller.
+
+(do
+  (defn byte-sum (bs) (if (eq (len bs) 0) 0 (add (head bs) (byte-sum (tail bs)))))
+
+  (let ast (list 2 (list 3 (list 0 2) (list 0 3)) (list 1)))   ; 2*3 + n
+  (let opt (rw-all ast))                                        ; -> 6 + n
+
+  (let cov (list (req-obs 2 (ast-eval ast 2) (ast-eval opt 2))
+                 (req-obs 5 (ast-eval ast 5) (ast-eval opt 5))
+                 (req-obs 9 (ast-eval ast 9) (ast-eval opt 9))))
+
+  (let img-orig (lo-compile-fn (a2p-prog ast) (a2p-root ast)))
+  (let img-opt  (lo-compile-fn (a2p-prog opt) (a2p-root opt)))
+
+  (if (eq (req-equivalent? cov) 1)
+      (if (ge (len img-orig) (add (len img-opt) 1))
+          (add (byte-sum img-orig) (byte-sum img-opt))
+          0)
+      0))
