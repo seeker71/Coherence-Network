@@ -13,27 +13,35 @@
 (defn rr-lit1? (n) (if (eq (head n) 0) (eq (nth n 1) 1) 0))
 (defn rr-lit2? (n) (if (eq (head n) 0) (eq (nth n 1) 2) 0))
 
-; constant folding at the node: ADD/MUL of two LITs -> one LIT.
+; constant folding at the node: ADD/SUB/MUL/DIV of two LITs -> one LIT.
 (defn rw-fold-shallow (n)
   (do (let t (head n))
       (if (if (eq t 0) 1 (eq t 1)) n
           (do (let a (nth n 1)) (let b (nth n 2))
               (if (if (eq (head a) 0) (eq (head b) 0) 0)
                   (if (eq t 2) (list 0 (add (nth a 1) (nth b 1)))
-                      (list 0 (mul (nth a 1) (nth b 1))))
+                  (if (eq t 3) (list 0 (mul (nth a 1) (nth b 1)))
+                  (if (eq t 4) (list 0 (sub (nth a 1) (nth b 1)))
+                      (list 0 (div (nth a 1) (nth b 1))))))
                   n)))))
 
-; identity elimination: x+0 -> x, 0+x -> x, x*1 -> x, 1*x -> x, x*0 -> 0, 0*x -> 0.
+; identity elimination: x+0/0+x -> x, x*1/1*x -> x, x*0/0*x -> 0, x-0 -> x, x/1 -> x.
 (defn rw-identity-shallow (n)
   (do (let t (head n))
       (if (eq t 2)
           (do (let a (nth n 1)) (let b (nth n 2))
               (if (rr-lit0? b) a (if (rr-lit0? a) b n)))
-          (if (eq t 3)
-              (do (let a (nth n 1)) (let b (nth n 2))
-                  (if (if (rr-lit0? a) 1 (rr-lit0? b)) (list 0 0)
-                      (if (rr-lit1? b) a (if (rr-lit1? a) b n))))
-              n))))
+      (if (eq t 3)
+          (do (let a (nth n 1)) (let b (nth n 2))
+              (if (if (rr-lit0? a) 1 (rr-lit0? b)) (list 0 0)
+                  (if (rr-lit1? b) a (if (rr-lit1? a) b n))))
+      (if (eq t 4)
+          (do (let a (nth n 1)) (let b (nth n 2))
+              (if (rr-lit0? b) a n))
+      (if (eq t 5)
+          (do (let a (nth n 1)) (let b (nth n 2))
+              (if (rr-lit1? b) a n))
+          n))))))
 
 ; strength reduction: x*2 -> x+x (an add is cheaper than a multiply).
 (defn rw-strength-shallow (n)

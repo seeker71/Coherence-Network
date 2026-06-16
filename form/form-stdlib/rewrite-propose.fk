@@ -10,7 +10,11 @@
 ;   (1)       VAR          the single input x
 ;   (2 a b)   ADD a b      subtrees a + b
 ;   (3 a b)   MUL a b      subtrees a * b
-; ast-eval IS the ground-truth evaluator (offer the AST an input, observe the ack).
+;   (4 a b)   SUB a b      subtrees a - b   (-> form-lower tag 4)
+;   (5 a b)   DIV a b      subtrees a / b   (-> form-lower tag 8)
+; The op vocabulary matches form-lower's, so any expression the body can compile, it can
+; also reason about and optimize. ast-eval IS the ground-truth evaluator (offer the AST
+; an input, observe the ack).
 ; rw-fold is one rewrite rule (constant folding); more rules (identity, strength
 ; reduction, CSE) drop in the same way, each verified by the gate, never assumed.
 
@@ -20,7 +24,9 @@
       (if (eq t 0) (nth n 1)
           (if (eq t 1) x
               (if (eq t 2) (add (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
-                  (mul (ast-eval (nth n 1) x) (ast-eval (nth n 2) x)))))))
+              (if (eq t 3) (mul (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
+              (if (eq t 4) (sub (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
+                  (div (ast-eval (nth n 1) x) (ast-eval (nth n 2) x)))))))))
 
 ; node count — the cost proxy (fewer nodes = cheaper lowering).
 (defn ast-size (n)
@@ -37,7 +43,8 @@
           (do (let a (rw-fold (nth n 1)))
               (let b (rw-fold (nth n 2)))
               (if (if (eq (head a) 0) (eq (head b) 0) 0)
-                  (if (eq t 2)
-                      (list 0 (add (nth a 1) (nth b 1)))
-                      (list 0 (mul (nth a 1) (nth b 1))))
+                  (if (eq t 2) (list 0 (add (nth a 1) (nth b 1)))
+                  (if (eq t 3) (list 0 (mul (nth a 1) (nth b 1)))
+                  (if (eq t 4) (list 0 (sub (nth a 1) (nth b 1)))
+                      (list 0 (div (nth a 1) (nth b 1))))))
                   (list t a b))))))
