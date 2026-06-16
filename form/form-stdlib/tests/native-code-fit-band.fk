@@ -1,0 +1,34 @@
+; native-code-fit-band.fk — the native training loop fit on the BODY'S OWN CODE, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/affine-corpus-fit.fk
+;
+; The first real step toward the native code-reasoning engine (native-reasoning-engine.form):
+; train on ACTUAL code, so the model learns our own body as a side effect. The corpus is a
+; measured structural regularity of the body's 355 real recipes — defn-count predicts line-
+; count, corr 0.943 — denoised to (defn-count -> median lines over the actual files) and
+; feature-scaled (defns*150, lines*50) so the proven scale-1000 aff-step conditions. Six real
+; training pairs, six held-out. lr=3, 40 epochs, tolerance 250 (= 5 lines).
+;
+; The affine atom learns lines ~= 0.9*scaled-defns (the body's ~3.4 lines/defn) and predicts
+; HELD-OUT recipe sizes better than predict-the-mean: native 5/6, oracle (mean) 2/6 — the
+; native sense BEATS the baseline on real held-out code, four-way. Verdict 15:
+;   1  training reduced corpus loss on real code     (loss_after < loss_start)
+;   2  native hits 5+ of 6 real held-out recipes     (nc >= 5)
+;   4  native BEATS the predict-mean oracle           (nc > oc)
+;   8  the learned slope is real, not noise           (700 < w < 1200)
+
+(do
+    (let train (list (list 450 400) (list 750 800) (list 1050 900) (list 1350 1250) (list 1650 1650) (list 1950 2200)))
+    (let held  (list (list 600 750) (list 900 1000) (list 1200 1600) (list 1500 1200) (list 1800 1500) (list 2100 2000)))
+    (let lr 3) (let tol 250)
+    (let s0 (list 0 0))
+    (let sT (aff-train s0 train lr 40))
+    (let mean (acf-mean-y train))
+    (let nc (acf-native-correct sT held tol))
+    (let oc (acf-oracle-correct mean held tol))
+
+    (let c0 (if (lt (aff-corpus-loss sT train) (aff-corpus-loss s0 train)) 1 0))
+    (let c1 (if (ge nc 5) 2 0))
+    (let c2 (if (gt nc oc) 4 0))
+    (let c3 (if (if (gt (aff-w sT) 700) (lt (aff-w sT) 1200) 0) 8 0))
+    (add c0 (add c1 (add c2 c3))))
