@@ -19,13 +19,15 @@ esc(){ printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 
 # ── self-guidance: ask the trained predictor which tools this task needs ──
-# The predictor->runner mapping and the hint assembly are now Form
-# (form-cli-guide.fk) — fcg-guide builds the whole line. The only shell left here
-# is the keyword extraction (lowercase + tokenize): kernel string-tokenization is
-# the named gap that keeps it a carrier for now.
+# The whole self-guidance is Form now: text-tokenize.fk lowercases and splits the
+# task into keywords (char_at + ord, four-way), form-cli-predict/-model/-guide map
+# and assemble the hint. The carrier only splits the tokenizer's space-joined
+# result, dedups, and quotes it into the keyword list — data-munging, not logic.
 GUIDE=""
 if [[ "${FNR_NO_GUIDE:-0}" != "1" && -f "$STD/form-cli-guide.fk" ]]; then
-    kw="$(printf '%s' "$TASK" | tr 'A-Z' 'a-z' | grep -oE '[a-z]{4,}' | awk '!s[$0]++' | head -12 | sed 's/.*/"&"/' | tr '\n' ' ')"
+    { cat "$STD/text-tokenize.fk"; echo "(print (tk-words \"$(esc "$TASK")\" 4))"; } > "$work/tok.fk"
+    words="$("$GO" "$work/tok.fk" 2>/dev/null | sed '/^null$/d' | head -1)"
+    kw="$(printf '%s' "$words" | tr ' ' '\n' | awk 'NF && !s[$0]++' | head -12 | sed 's/.*/"&"/' | tr '\n' ' ')"
     { cat "$STD/form-cli-predict.fk" "$STD/form-cli-model.fk" "$STD/form-cli-guide.fk"
       echo "(print (fcg-guide (fpm-base) (fpm-boosts) (list ${kw:-\"\"}) (fpm-threshold) (fpm-boost-amt)))"
     } > "$work/guide.fk"
