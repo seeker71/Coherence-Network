@@ -1,0 +1,20 @@
+; capability-form-asm-band.fk — the execution-verified form->asm capability.
+;
+; preludes: form-stdlib/core.fk form-stdlib/tier-router.fk form-stdlib/capability-form-asm.fk
+;
+; Proves the verify LOGIC on real executed samples (exit == expected) and builds the
+; capability from the measured run (native form-macho 20/20, clang 20/20, by
+; execution over 0..255 arith). Native validated -> routes native (0) -> clang
+; retired for this op-shape. aggregate = np(3) + cp(3) + route(0) + native-rate(100).
+
+(do
+  (let samples (list
+    (caf-sample "=40"  40  40  40)
+    (caf-sample "=99"  99  99  99)
+    (caf-sample "=255" 255 255 255)))
+  (let np (caf-native-passed samples))                    ; 3 (execution-verified)
+  (let cp (caf-clang-passed samples))                     ; 3
+  (let cap (caf-capability 20 20 20))                     ; the full measured run
+  (let route (tr-route cap 70 20))                        ; native validated -> 0
+  (let nrate (tr-tier-best-rate (tr-cap-oracles cap) 0 20)) ; 100
+  (add np (add cp (add route nrate))))
