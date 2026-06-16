@@ -1,0 +1,150 @@
+; form-cli-membrane.fk — the form-cli surface membrane and its crossing ledger.
+;
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk
+;
+; The boundary axiom (core-axioms.form, axiom-4): a cell meets the world only
+; through an interface it offers; passage not through the offered interface is
+; breach, and breach is observable. This recipe makes that interface — the
+; form-cli's SURFACE MEMBRANE — legible, and ledgers every CROSSING of it.
+;
+; A crossing is the form-cli leaving its own Form body and reaching either
+;   - the OS kernel directly (host:exec / host:file — host-io), or
+;   - VIA the OS kernel to a local or remote oracle (host:exec `ollama run ...`).
+; Each crossing is compared against a NATIVE RECIPE: if a native Form recipe
+; carries that capability, the crossing was a CHOICE (and the flywheel can learn
+; to retire it); if not, the crossing is a GAP — an idea→form-spec opening to
+; close. The membrane reports its channels/protocols (the offered surface) and
+; the ledger of crossings with native-vs-gap tallied.
+;
+; A crossing IS a choice-receipt: the choice of WHICH SURFACE was crossed to,
+; over the candidate surfaces, witnessed by outcome. So the ledger row lowers to
+; cr-choice-receipt and inherits its proven validation — no parallel machinery.
+;
+; Registered Blueprint coordinates (form/user-blueprint-registry.md):
+(let FCM-TAG-CROSSING 1891)
+(let FCM-TAG-REPORT 1892)
+
+; ── the four surfaces a crossing can reach ──
+(defn fcm-surface-native () "native-recipe")   ; stayed in the Form body — no crossing of the OS membrane
+(defn fcm-surface-kernel () "os-kernel")        ; crossed to the OS kernel (host-io)
+(defn fcm-surface-local-oracle () "local-oracle")   ; via the OS kernel to a LOCAL oracle (sovereign, offline)
+(defn fcm-surface-remote-oracle () "remote-oracle") ; via the OS kernel to a REMOTE oracle (needs network)
+(defn fcm-surface-known? (s)
+    (or (str_eq s (fcm-surface-native))
+        (or (str_eq s (fcm-surface-kernel))
+            (or (str_eq s (fcm-surface-local-oracle))
+                (str_eq s (fcm-surface-remote-oracle))))))
+; did this crossing actually leave the Form body? (everything but native-recipe)
+(defn fcm-surface-crossed? (s) (if (str_eq s (fcm-surface-native)) 0 1))
+; did this crossing reach an oracle (local or remote)?
+(defn fcm-surface-oracle? (s)
+    (if (or (str_eq s (fcm-surface-local-oracle)) (str_eq s (fcm-surface-remote-oracle))) 1 0))
+; did this crossing need the network? (only a remote oracle does)
+(defn fcm-surface-needs-network? (s) (if (str_eq s (fcm-surface-remote-oracle)) 1 0))
+
+; ── deriving a default surface from the tool-channel catalog ──
+; tool-channel marks each protocol native (1) or host-crossing (0). A native
+; protocol means a native recipe carries the capability; a host-crossing means
+; the OS kernel is reached. The oracle refinement (local vs remote) is set by the
+; runner when the op is an oracle call; the catalog gives the host/native split.
+(defn fcm-surface-from-native (native-flag)
+    (if (eq native-flag 1) (fcm-surface-native) (fcm-surface-kernel)))
+(defn fcm-tool-surface (tool-name) (fcm-surface-from-native (tc-native-option? tool-name)))
+; is a native Form recipe available for this tool's capability? (1 = yes)
+(defn fcm-tool-native-available? (tool-name) (tc-native-option? tool-name))
+
+; ── the surface report: how many of the offered protocols are native vs host ──
+(defn fcm-surface-protocol-count () (len (tc-protocols)))
+(defn fcm-count-native-protocols (rows)
+    (if (eq (len rows) 0) 0
+        (add (tc-protocol-native (head rows)) (fcm-count-native-protocols (tail rows)))))
+(defn fcm-surface-native-count () (fcm-count-native-protocols (tc-protocols)))
+(defn fcm-surface-host-count () (sub (fcm-surface-protocol-count) (fcm-surface-native-count)))
+
+; ── a crossing ──
+; op           : the operation crossed (e.g. "exec", "read_file", "oracle")
+; capability   : the tool-channel capability (e.g. "cap.host.exec")
+; surface      : one of the four surfaces above — where it actually crossed to
+; native-avail : 1 if a native Form recipe carries this capability, else 0
+; note         : when native-avail=0, the idea→spec GAP descriptor;
+;                when native-avail=1, the FEEDBACK pointer (where training feedback lives)
+; outcome      : "success" | "fail" | "silence"
+; certainty    : 0..100
+; cost         : non-negative integer (e.g. tokens or ms)
+(defn fcm-crossing (op capability surface native-avail note outcome certainty cost)
+    (list FCM-TAG-CROSSING op capability surface native-avail note outcome certainty cost))
+(defn fcm-crossing? (x) (cr-tagged? x FCM-TAG-CROSSING 9))
+(defn fcm-x-op (x) (nth x 1))
+(defn fcm-x-capability (x) (nth x 2))
+(defn fcm-x-surface (x) (nth x 3))
+(defn fcm-x-native-avail (x) (nth x 4))
+(defn fcm-x-note (x) (nth x 5))
+(defn fcm-x-outcome (x) (nth x 6))
+(defn fcm-x-certainty (x) (nth x 7))
+(defn fcm-x-cost (x) (nth x 8))
+
+; a GAP: the crossing reached outside the body AND no native recipe was available.
+(defn fcm-x-gap? (x)
+    (if (and (eq (fcm-surface-crossed? (fcm-x-surface x)) 1) (eq (fcm-x-native-avail x) 0)) 1 0))
+; a RETIRABLE crossing: it crossed out even though a native recipe WAS available —
+; the flywheel should learn to keep it in the body next time.
+(defn fcm-x-retirable? (x)
+    (if (and (eq (fcm-surface-crossed? (fcm-x-surface x)) 1) (eq (fcm-x-native-avail x) 1)) 1 0))
+
+; ── a crossing lowers to a proven choice-receipt ──
+; the trace agrees with the outcome (so cr-outcome-trace-agrees? holds);
+; the selected path is the surface, or "none" on silence (cr-selection-shape-valid?).
+(defn fcm-outcome-trace (x)
+    (if (str_eq (fcm-x-outcome x) (cr-outcome-success)) (cr-choice-trace 1 1 0 0)
+        (if (str_eq (fcm-x-outcome x) (cr-outcome-fail)) (cr-choice-trace 1 0 1 0)
+            (cr-choice-trace 0 0 0 1))))
+(defn fcm-receipt-path (x)
+    (if (str_eq (fcm-x-outcome x) (cr-outcome-silence)) "none" (fcm-x-surface x)))
+(defn fcm-crossing-candidates (x)
+    (list (cr-choice-candidate (fcm-x-surface x) "MEMBRANE-CROSSING" true 0 (fcm-x-certainty x) (fcm-x-note x))))
+(defn fcm-crossing->receipt (x who where when-tick)
+    (cr-choice-receipt
+        (fcm-x-op x)
+        (fcm-x-surface x)
+        "MEMBRANE-CROSSING"
+        (fcm-crossing-candidates x)
+        (fcm-receipt-path x)
+        (fcm-x-outcome x)
+        (fcm-x-certainty x)
+        (cr-choice-value (cr-kind-branch-feedback) (fcm-x-certainty x) 80 80 80)
+        (fcm-x-note x)
+        who where when-tick (fcm-x-cost x)
+        (fcm-outcome-trace x)))
+(defn fcm-crossing-valid? (x who where when-tick)
+    (and (fcm-crossing? x)
+         (and (fcm-surface-known? (fcm-x-surface x))
+              (cr-choice-receipt-valid? (fcm-crossing->receipt x who where when-tick)))))
+
+; ── the membrane report: offered surface + the crossing ledger ──
+(defn fcm-report (ledger) (list FCM-TAG-REPORT ledger))
+(defn fcm-report? (r) (cr-tagged? r FCM-TAG-REPORT 2))
+(defn fcm-report-ledger (r) (nth r 1))
+
+(defn fcm-ledger-crossing-count (ledger) (len ledger))
+(defn fcm-ledger-gap-count (ledger)
+    (if (eq (len ledger) 0) 0
+        (add (fcm-x-gap? (head ledger)) (fcm-ledger-gap-count (tail ledger)))))
+(defn fcm-ledger-retirable-count (ledger)
+    (if (eq (len ledger) 0) 0
+        (add (fcm-x-retirable? (head ledger)) (fcm-ledger-retirable-count (tail ledger)))))
+(defn fcm-count-surface (ledger surface)
+    (if (eq (len ledger) 0) 0
+        (add (if (str_eq (fcm-x-surface (head ledger)) surface) 1 0)
+             (fcm-count-surface (tail ledger) surface))))
+(defn fcm-ledger-native-count (ledger) (fcm-count-surface ledger (fcm-surface-native)))
+(defn fcm-ledger-local-oracle-count (ledger) (fcm-count-surface ledger (fcm-surface-local-oracle)))
+(defn fcm-ledger-remote-oracle-count (ledger) (fcm-count-surface ledger (fcm-surface-remote-oracle)))
+; how many crossings needed the network? (the offline-readiness number — must be 0 air-gapped)
+(defn fcm-ledger-network-count (ledger)
+    (if (eq (len ledger) 0) 0
+        (add (fcm-surface-needs-network? (fcm-x-surface (head ledger)))
+             (fcm-ledger-network-count (tail ledger)))))
+; the report is air-gap-clean when no crossing needed the network.
+(defn fcm-report-airgap-clean? (r) (if (eq (fcm-ledger-network-count (fcm-report-ledger r)) 0) 1 0))
+
+0
