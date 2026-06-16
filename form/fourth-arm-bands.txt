@@ -485,3 +485,8 @@ graph-node-mutation-carrier fks 11111
 graph-node-mutation-file-verdict fks 1111111
 ideas-graph-projection fks 11111
 memory-phases fks 31
+recipe-equivalence-gate fkc 3
+triangle-lowerings fkc 1
+capability-form-asm fks 106
+tier-router fks 140
+model-roster-report fks 1388
