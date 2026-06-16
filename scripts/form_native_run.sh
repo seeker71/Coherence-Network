@@ -23,11 +23,11 @@ GUIDE=""
 if [[ "${FNR_NO_GUIDE:-0}" != "1" && -f "$STD/form-cli-predict.fk" ]]; then
     # task keywords (lowercase 4+ letter words, deduped)
     kw="$(printf '%s' "$TASK" | tr 'A-Z' 'a-z' | grep -oE '[a-z]{4,}' | awk '!s[$0]++' | head -12 | sed 's/.*/"&"/' | tr '\n' ' ')"
-    { cat "$STD/form-cli-predict.fk"
-      echo '(let base (list (fcp-base-pair "Bash" 93) (fcp-base-pair "Edit" 56) (fcp-base-pair "Read" 54) (fcp-base-pair "Write" 47) (fcp-base-pair "Agent" 9)))'
-      echo '(let boosts (list (fcp-boost-pair "parallel" "Agent") (fcp-boost-pair "explore" "Agent") (fcp-boost-pair "spawn" "Agent") (fcp-boost-pair "audit" "Agent") (fcp-boost-pair "sweep" "Agent")))'
+    { cat "$STD/form-cli-predict.fk" "$STD/form-cli-model.fk"
+      echo '(let base (fpm-base))'
+      echo '(let boosts (fpm-boosts))'
       echo "(let kw (list ${kw:-\"\"}))"
-      for t in Bash Read Write Edit Grep Glob Agent; do echo "(print (fcp-predicted? base boosts kw \"$t\" 40 50))"; done
+      for t in Bash Read Write Edit Grep Glob Agent; do echo "(print (fcp-predicted? base boosts kw \"$t\" (fpm-threshold) (fpm-boost-amt)))"; done
     } > "$work/predict.fk"
     # map predictor tools -> the runner's tool vocabulary (bash/read_file/write_file/search)
     j=0; runner_tools=""

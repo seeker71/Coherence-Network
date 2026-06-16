@@ -1,0 +1,32 @@
+; form-cli-model.fk — the corpus-trained tool-predictor model, as ONE data cell.
+;
+; preludes: form-stdlib/form-cli-predict.fk
+;
+; The base-rates (% of corpus turns using each tool) and Agent keyword-boosts
+; learned by scripts/form_cli_train_predict.sh, frozen here as the single source
+; the runner (form_native_run.sh) and the guided demo (form_cli_guided.sh) read —
+; instead of each carrier hardcoding its own copy, which drifts. Re-learn with the
+; trainer and update this one cell; every reader follows.
+
+; the learned base-rates (Bash 93% of turns, down to Agent 9%).
+(defn fpm-base ()
+    (list (fcp-base-pair "Bash" 93)
+          (fcp-base-pair "Edit" 56)
+          (fcp-base-pair "Read" 54)
+          (fcp-base-pair "Write" 47)
+          (fcp-base-pair "Agent" 9)))
+
+; the learned Agent keyword-boosts — task words that lift the rare Agent tool.
+(defn fpm-boosts ()
+    (list (fcp-boost-pair "parallel" "Agent")
+          (fcp-boost-pair "explore" "Agent")
+          (fcp-boost-pair "spawn" "Agent")
+          (fcp-boost-pair "audit" "Agent")
+          (fcp-boost-pair "sweep" "Agent")
+          (fcp-boost-pair "review" "Agent")))
+
+; the threshold a tool must clear to be predicted, and the boost a keyword adds.
+(defn fpm-threshold () 40)
+(defn fpm-boost-amt () 50)
+
+0
