@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-echo-band — a zero-clang `echo $1`, proven four-way against the assembler,
+; and the proof that the lane can READ ARGV. At _main, x0 = argc and x1 = argv (a
+; char** ); argv[1] is the pointer at [x1, #8]. echo loads it (ldr — the one new
+; instruction), then writes each byte of the string until NUL, then a newline.
+; This is the primitive every argument-taking tool needs (head N, tr SET1 SET2, ...).
+;
+; The reference image is what clang/as emitted for an `echo $1` _main. The binary
+; built from it (ld, no clang) prints argv[1] + newline — form_echo_demo.sh.
+;
+; Verdict 7 when:
+;   1   the whole 96-byte echo image byte-equals clang's (the conviction gate)
+;   2   ldr x9,[x1,#8] is exact — reading argv[1] (the scaled-offset 64-bit load)
+;   4   b.eq forward folds at cond EQ=0 (NUL-terminator exit), and the loop's
+;       backward b folds -10 (both signed folds in one image)
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16) (fa-ldr 9 1 1)
+        (fa-ldrb 8 9 0) (fa-cmp 8 0) (fa-bcond 0 9)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 9 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-add-x-imm 9 9 1) (fa-b-off -10)
+        (fa-movz 8 10) (fa-strb 8 31 0)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209 41 4 64 249
+                   40 1 64 57 31 1 0 113
+                   32 1 0 84 32 0 128 210
+                   33 1 0 145 34 0 128 210
+                   144 0 128 210 16 64 160 242
+                   1 16 0 212 41 5 0 145
+                   246 255 255 23 72 1 128 82
+                   232 3 0 57 32 0 128 210
+                   225 3 0 145 34 0 128 210
+                   144 0 128 210 16 64 160 242
+                   1 16 0 212 0 0 128 82
+                   255 67 0 145 192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-ldr 9 1 1) (list 41 4 64 249)) 2 0))
+    (let c2 (if (fa-conviction (fa-bcond 0 9) (list 32 1 0 84))
+            (if (fa-conviction (fa-b-off -10) (list 246 255 255 23)) 4 0) 0))
+
+    (add c0 (add c1 c2)))
