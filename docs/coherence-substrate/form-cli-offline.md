@@ -166,10 +166,11 @@ encoding table as a recipe). The **slice lane** (+ [`form-macho.fk`](../../form/
 carries real unix commands end to end, **zero clang**: the syscall / byte-I/O set
 (`svc`, 64-bit `movz`/`movk`, `ldrb`/`strb`, stack frame), the read-loop control flow
 (`cmp`, the EOF branch, the backward loop branch), and the branchless transform
-(`cmp`+`csel`), a callee-saved line counter, **argv** (`ldr [x1,#8]`), and **atoi**
-(a `mul`-by-10 digit loop, so `head N` reads its real count) — proven four-way at
+(`cmp`+`csel`), a callee-saved line counter, **argv** (`ldr [x1,#8]`), **atoi**
+(a `mul`-by-10 digit loop, so `head N` reads its real count), and **itoa** (`udiv`/
+`mul`/`sub` digits out, so `wc -l` prints a number) — proven four-way at
 `form-asm-syscall`, `form-asm-branch`, `form-asm-tr` (31), and `form-asm-rot13`,
-`form-asm-headn`, `form-asm-echo` (7).
+`form-asm-headn`, `form-asm-echo`, `form-asm-wc` (7).
 
 ```bash
 scripts/form_cat_demo.sh    # a zero-clang `cat`
@@ -177,17 +178,22 @@ scripts/form_tr_demo.sh     # a zero-clang `tr A-Z a-z`
 scripts/form_rot13_demo.sh  # a zero-clang `rot13`
 scripts/form_echo_demo.sh   # a zero-clang `echo $1` — reads argv
 scripts/form_headn_demo.sh  # a zero-clang `head N` — N parsed from argv
+scripts/form_wc_demo.sh     # a zero-clang `wc -l` — prints the count
 ```
 
 Form encodes the program (`cat` = loop `read(0)`→`write(1)`; `tr`/`rot13` = that
-plus a branchless per-byte transform; `head N` = that plus a line counter, with N
-atoi'd from `argv[1]`), `ld` links it (**no clang**), and the binary runs through
-the OS read/write syscalls. Measured: `cat` round-trips stdin→stdout, Form `tr`
-matches the system `tr A-Z a-z`, Form `rot13` matches the system rot13 and is its
-own inverse, Form `echo` matches `echo`, and Form `head N` matches `head -n N` for
-N∈{1,2,3,5,8} — all **byte-for-byte**. clang only assembled the same instructions
-as the byte oracle; the ARM/LLVM spec derived the encodings. `tr`/`rot13`/`head`/
-`echo`/`atoi` each added **no new encoder** beyond `ldr` — only data rows.
+plus a branchless per-byte transform; `head N` = that plus a line counter, N
+atoi'd from `argv[1]`; `wc -l` = count newlines, itoa the count out), `ld` links it
+(**no clang**), and the binary runs through the OS read/write syscalls. Measured
+byte-for-byte: `cat` round-trips stdin→stdout, Form `tr` matches `tr A-Z a-z`, Form
+`rot13` matches rot13 and is its own inverse, Form `echo` matches `echo`, Form
+`head N` matches `head -n N`, and Form `wc -l` matches `/usr/bin/wc -l` **including
+BSD's right-justified 8-char padding** — a format read from the real tool, not
+invented (the grounding earning its keep). clang only assembled the same
+instructions as the byte oracle; the ARM/LLVM spec derived the encodings.
+`tr`/`rot13`/`head`/`echo`/`atoi`/`wc`/`itoa` each added **no new encoder** beyond
+`ldr` — only data rows. (`wc`'s fixed-8 field matches BSD up to 8-digit counts; BSD
+widens beyond — a named bound, not pretended.)
 
 `rot13` added **no new encoder** — its two-range rotation is `sub`/`add`/`cmp`/`csel`
 data rows — so the earlier **C-emit byte-filter lane composted**: every common filter

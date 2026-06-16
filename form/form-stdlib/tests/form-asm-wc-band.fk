@@ -1,0 +1,71 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-wc-band — a zero-clang `wc -l`, proven four-way against the assembler.
+; This closes the read-number / print-number symmetry: head atoi'd a count IN;
+; wc counts newlines and itoa's the count OUT. The new piece is itoa, and it adds
+; NO new encoder — udiv/mul/sub/mov register forms already in the table:
+;   q = n/10 (udiv); r = n - q*10 (mul + sub); digit = r+'0'; emit right-to-left.
+;
+; The output format is read FROM the real BSD `wc -l`, not invented: the count is
+; right-justified in an 8-char space-padded field + newline (9 bytes) — e.g.
+; "       3\n", "   12345\n". The recipe fills 8 spaces, writes the digits backward
+; into the field's right edge, then a newline, and writes all 9 bytes at once.
+; Matched byte-for-byte vs /usr/bin/wc -l for counts 0,1,7,12,123,1234 —
+; form_wc_demo.sh. (Bound: the fixed-8 field matches BSD up to 8-digit counts; BSD
+; widens beyond, ours would need the dynamic field — named, not pretended.)
+;
+; Verdict 7 when:
+;   1   the whole 188-byte wc image byte-equals clang's (the conviction gate)
+;   2   the itoa core is exact: udiv, mul, sub (register), mov w19,w11 (register orr)
+;   4   the field-fill (strb at offsets) and the right-justified write are exact
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 32) (fa-movz 19 0)
+        (fa-movz-x 0 0) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1) (fa-movz-x 16 3) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-cmp-x 0 0) (fa-bcond 13 6)
+        (fa-ldrb 8 31 0) (fa-cmp 8 10) (fa-bcond 1 -10) (fa-add 19 19 1) (fa-b-off -12)
+        (fa-add-x-imm 10 31 8) (fa-movz 8 32)
+        (fa-strb 8 10 0) (fa-strb 8 10 1) (fa-strb 8 10 2) (fa-strb 8 10 3)
+        (fa-strb 8 10 4) (fa-strb 8 10 5) (fa-strb 8 10 6) (fa-strb 8 10 7)
+        (fa-movz 8 10) (fa-strb 8 10 8)
+        (fa-add-x-imm 9 10 8) (fa-movz 20 10)
+        (fa-udiv 11 19 20) (fa-mul 12 11 20) (fa-sub-r 13 19 12) (fa-add 13 13 48)
+        (fa-sub-x-imm 9 9 1) (fa-strb 13 9 0) (fa-mov 19 11) (fa-cmp 19 0) (fa-bcond 1 -8)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 10 0) (fa-movz-x 2 9) (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 32) (fa-ret))))
+
+    (let ref (list 255 131 0 209 19 0 128 82
+                   0 0 128 210 225 3 0 145
+                   34 0 128 210 112 0 128 210
+                   16 64 160 242 1 16 0 212
+                   31 0 0 241 205 0 0 84
+                   232 3 64 57 31 41 0 113
+                   193 254 255 84 115 6 0 17
+                   244 255 255 23 234 35 0 145
+                   8 4 128 82 72 1 0 57
+                   72 5 0 57 72 9 0 57
+                   72 13 0 57 72 17 0 57
+                   72 21 0 57 72 25 0 57
+                   72 29 0 57 72 1 128 82
+                   72 33 0 57 73 33 0 145
+                   84 1 128 82 107 10 212 26
+                   108 125 20 27 109 2 12 75
+                   173 193 0 17 41 5 0 209
+                   45 1 0 57 243 3 11 42
+                   127 2 0 113 1 255 255 84
+                   32 0 128 210 65 1 0 145
+                   34 1 128 210 144 0 128 210
+                   16 64 160 242 1 16 0 212
+                   0 0 128 82 255 131 0 145
+                   192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-udiv 11 19 20) (list 107 10 212 26))
+            (if (fa-conviction (fa-mul 12 11 20) (list 108 125 20 27))
+            (if (fa-conviction (fa-sub-r 13 19 12) (list 109 2 12 75))
+            (if (fa-conviction (fa-mov 19 11) (list 243 3 11 42)) 2 0) 0) 0) 0))
+    (let c2 (if (fa-conviction (fa-strb 8 10 7) (list 72 29 0 57))
+            (if (fa-conviction (fa-add-x-imm 1 10 0) (list 65 1 0 145)) 4 0) 0))
+
+    (add c0 (add c1 c2)))
