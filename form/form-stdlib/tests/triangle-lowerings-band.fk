@@ -1,0 +1,20 @@
+; triangle-lowerings-band.fk — the two lowerings are observed equivalent over coverage.
+;
+; preludes: form-stdlib/core.fk form-stdlib/recipe-equivalence-gate.fk form-stdlib/triangle-lowerings.fk
+;
+; Each kernel computes BOTH lowerings of tri(n) and the gate compares their acks
+; across input coverage. They agree on every input -> req-equivalent? = 1. This is
+; the correctness half of admission (the cost/measured-faster half is host-observed:
+; closed 54 dispatches vs naive 730 over the same coverage, 13x). A lowering whose
+; structure differs entirely from the naive recursion is proven equivalent by
+; observation of the recipe itself — not by byte-identity to any external tool.
+
+(do
+  (let cov (list
+    (req-obs 0  (tri-naive 0)  (tri-closed 0))
+    (req-obs 1  (tri-naive 1)  (tri-closed 1))
+    (req-obs 5  (tri-naive 5)  (tri-closed 5))
+    (req-obs 10 (tri-naive 10) (tri-closed 10))
+    (req-obs 20 (tri-naive 20) (tri-closed 20))
+    (req-obs 50 (tri-naive 50) (tri-closed 50))))
+  (req-equivalent? cov))

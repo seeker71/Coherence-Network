@@ -1,0 +1,31 @@
+; recipe-equivalence-gate-band.fk — the axiom-grounded "way in" for a better lowering.
+;
+; preludes: form-stdlib/core.fk form-stdlib/recipe-equivalence-gate.fk
+;
+; The recipe is sq(x) = x*x. The kernel walker's ack is the ground truth. Cases:
+;   cov-ok  : a candidate whose acks match the recipe on every covered input
+;   cov-bad : a candidate that HARDCODES 49 — agrees on x=7 but the coverage input
+;             x=5 (recipe 25, native 49) REFUTES it. This is the strength over a
+;             single exit code: coverage catches the hardcode.
+; Verdicts: admit only the equivalent + breachless + FASTER candidate (a lowering
+; whose bytes differ from clang gets in because it is observed true and better).
+; aggregate = better(1) + wrong(0) + breach(0) + slower(0) + silent(2) = 3.
+
+(do
+  (let cov-ok (list
+    (req-obs 7  49  49)
+    (req-obs 5  25  25)
+    (req-obs 9  81  81)
+    (req-obs 12 144 144)))
+  (let cov-bad (list
+    (req-obs 7  49  49)
+    (req-obs 5  25  49)        ; hardcoded 49 -> wrong where the recipe says 25
+    (req-obs 9  81  49)))
+
+  (let v-better (req-admit cov-ok  0 30  100))   ; equivalent + no breach + faster -> ADMIT 1
+  (let v-wrong  (req-admit cov-bad 0 30  100))   ; divergent (coverage caught it)  -> 0
+  (let v-breach (req-admit cov-ok  1 30  100))   ; breach observed                 -> 0
+  (let v-slower (req-admit cov-ok  0 120 100))   ; equivalent but slower           -> 0
+  (let v-silent (req-verdict 0 cov-ok 0 30 100)) ; no candidate produced           -> 2
+
+  (add v-better (add v-wrong (add v-breach (add v-slower v-silent)))))
