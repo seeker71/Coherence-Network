@@ -175,6 +175,7 @@ form-cli-predict fks 127
 form-cli-model fks 31
 form-cli-guide fks 31
 text-tokenize fks 31
+hati-os-byte-filter-emit fks 31
 form-cli-judge fks 127
 obs-verify fks 31
 world-module-model fks 1023
