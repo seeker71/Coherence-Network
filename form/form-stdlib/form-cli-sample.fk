@@ -1,0 +1,102 @@
+; form-cli-sample.fk — an agent-turn training sample: reasoning + tool use.
+;
+; preludes: form-stdlib/core.fk
+;
+; A sample captures one agent turn so the native form-cli models can be tried on
+; the same task and measured against the oracle that produced it (champion-
+; challenger). The oracle here is whoever answered — a remote model, a local
+; model, or form-native itself. When the oracle is the agent's own reasoning, the
+; sample teaches the native models to reach the agent.
+;
+; A turn is richer than one request->answer (training-catalog.fk): it is a
+; TASK, the REASONING, an ordered sequence of TOOL STEPS (each a tool call with
+; its content-addressed request/response), the ANSWER, and the OUTCOME. Each tool
+; step IS a membrane crossing — it carries the same surface vocabulary as
+; form-cli-membrane.fk (native-recipe / os-kernel / local-oracle / remote-oracle),
+; so a turn that never crossed to a remote oracle is OFFLINE-REPRODUCIBLE: the
+; native models can replay it air-gapped.
+;
+; The content-addressed sigs (sha256, computed by the carrier) are opaque strings
+; here; the recipe stores, validates, and derives the separable training pairs:
+;   reasoning lane — task -> answer (reason end to end like the oracle)
+;   tool lane      — task -> tool   (per step: which tool to reach for)
+;
+; Registered Blueprint coordinates (form/user-blueprint-registry.md):
+(let FCS-TAG-STEP 1895)
+(let FCS-TAG-SAMPLE 1896)
+
+(defn fcs-tagged? (v tag arity) (if (eq (len v) arity) (eq (nth v 0) tag) false))
+
+; ── the surfaces a tool step crosses to (shared with form-cli-membrane) ──
+(defn fcs-surface-native () "native-recipe")
+(defn fcs-surface-kernel () "os-kernel")
+(defn fcs-surface-local-oracle () "local-oracle")
+(defn fcs-surface-remote-oracle () "remote-oracle")
+(defn fcs-surface-remote? (s) (if (str_eq s (fcs-surface-remote-oracle)) 1 0))
+
+; ── one tool step: a tool call and its content-addressed request/response ──
+(defn fcs-step (tool surface args-sig result-sig)
+    (list FCS-TAG-STEP tool surface args-sig result-sig))
+(defn fcs-step? (x) (fcs-tagged? x FCS-TAG-STEP 5))
+(defn fcs-s-tool (x) (nth x 1))
+(defn fcs-s-surface (x) (nth x 2))
+(defn fcs-s-args (x) (nth x 3))
+(defn fcs-s-result (x) (nth x 4))
+(defn fcs-step-valid? (x)
+    (and (fcs-step? x)
+         (and (gt (str_len (fcs-s-tool x)) 0)
+              (and (gt (str_len (fcs-s-args x)) 0)
+                   (gt (str_len (fcs-s-result x)) 0)))))
+
+; ── outcomes ──
+(defn fcs-outcome-success () "success")
+(defn fcs-outcome-fail () "fail")
+(defn fcs-outcome-partial () "partial")
+(defn fcs-outcome-known? (o)
+    (or (str_eq o (fcs-outcome-success))
+        (or (str_eq o (fcs-outcome-fail)) (str_eq o (fcs-outcome-partial)))))
+
+; ── an agent-turn sample ──
+(defn fcs-sample (task-sig oracle reasoning-sig steps answer-sig outcome)
+    (list FCS-TAG-SAMPLE task-sig oracle reasoning-sig steps answer-sig outcome))
+(defn fcs-sample? (x) (fcs-tagged? x FCS-TAG-SAMPLE 7))
+(defn fcs-task (x) (nth x 1))
+(defn fcs-oracle (x) (nth x 2))      ; who answered: claude / qwen-coder / form-native
+(defn fcs-reasoning (x) (nth x 3))
+(defn fcs-steps (x) (nth x 4))
+(defn fcs-answer (x) (nth x 5))
+(defn fcs-outcome (x) (nth x 6))
+
+(defn fcs-steps-valid? (steps)
+    (if (eq (len steps) 0) true
+        (if (fcs-step-valid? (head steps)) (fcs-steps-valid? (tail steps)) false)))
+(defn fcs-sample-valid? (x)
+    (and (fcs-sample? x)
+         (and (gt (str_len (fcs-task x)) 0)
+              (and (gt (str_len (fcs-oracle x)) 0)
+                   (and (gt (str_len (fcs-reasoning x)) 0)
+                        (and (gt (str_len (fcs-answer x)) 0)
+                             (and (fcs-outcome-known? (fcs-outcome x))
+                                  (fcs-steps-valid? (fcs-steps x)))))))))
+
+; ── tallies ──
+(defn fcs-step-count (x) (len (fcs-steps x)))
+(defn fcs-count-surface (steps surface)
+    (if (eq (len steps) 0) 0
+        (add (if (str_eq (fcs-s-surface (head steps)) surface) 1 0)
+             (fcs-count-surface (tail steps) surface))))
+(defn fcs-count-remote (steps)
+    (if (eq (len steps) 0) 0
+        (add (fcs-surface-remote? (fcs-s-surface (head steps))) (fcs-count-remote (tail steps)))))
+(defn fcs-remote-step-count (x) (fcs-count-remote (fcs-steps x)))
+; offline-reproducible: no step crossed to a remote oracle — the native models
+; can replay this whole turn air-gapped.
+(defn fcs-offline-reproducible? (x) (if (eq (fcs-remote-step-count x) 0) 1 0))
+
+; ── the separable training pairs (the lanes a sample feeds) ──
+; reasoning lane: task -> answer (reason end to end like the oracle)
+(defn fcs-pair-reasoning (x) (list (fcs-task x) (fcs-answer x)))
+; tool lane: one step's (task -> tool) pair — the carrier maps this over steps
+(defn fcs-step-tool-pair (task step) (list task (fcs-s-tool step)))
+
+0
