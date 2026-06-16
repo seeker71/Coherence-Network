@@ -1,0 +1,27 @@
+; bmf-to-fk.fk — the bridge from the FULL BMF cursor's emitted AST to fk-* cells.
+;
+; This is the link that makes the real front end reach a binary. g-parse (bmf-grammar.fk)
+; is a cursor over raw source text driven by a grammar-as-DATA — no tokenizer, the BMF
+; discipline — and it emits content-addressed AST nodes. bml-to-fk turns those into fk-*
+; cells, so the whole one-shot composes on the canonical lattice:
+;   g-parse (grammar + raw text) -> bml-to-fk -> fk-opt -> fk-to-prog -> lo-compile -> binary.
+;
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk
+;
+; g-parse emits a binary op as intern_node(bp "add"/"mul"/"sub", (list a b)) and a number
+; leaf as intern_trivial_string("7") — 0 children, value = the digit text. The blueprint
+; NAME is read back by comparing node_category to a reference node (value_eq); a leaf is the
+; childless case. Unknown ops default to ADD — an honest floor, never a wrong op silently.
+
+(defn b2f-cat (name) (node_category (intern_node (bp name) (list (intern_trivial_string "")))))
+(defn b2f-op? (n name) (value_eq (node_category n) (b2f-cat name)))
+
+(defn bml-to-fk (n)
+    (if (eq (len (node_children n)) 0)
+        (fk-lit (str_to_int (node_value n)))
+        (do (let a (bml-to-fk (nth (node_children n) 0)))
+            (let b (bml-to-fk (nth (node_children n) 1)))
+            (if (b2f-op? n "add") (fk-add a b)
+            (if (b2f-op? n "mul") (fk-mul a b)
+            (if (b2f-op? n "sub") (fk-sub a b)
+                (fk-add a b)))))))
