@@ -7,8 +7,8 @@
 ; prog. a2p flattens one into the other, so the whole flywheel composes on machine code:
 ;   rw-all (propose) -> ast-to-prog (bridge) -> lo-compile-fn (lower) -> real bytes.
 ;
-; rewrite-AST tags:  (0 v)=LIT  (1)=VAR  (2 a b)=ADD  (3 a b)=MUL  (4 a b)=SUB  (5 a b)=DIV.
-; form-lower prog:   (1 v 0 0)=LIT  (2 0 0 0)=ARG  (3..)=ADD  (5..)=MUL  (4..)=SUB  (8..)=DIV.
+; rewrite-AST tags:  (0 v)=LIT  (1)=VAR  (2..)=ADD  (3..)=MUL  (4..)=SUB  (5..)=DIV  (6 k t e)=COND.
+; form-lower prog:   (1 v 0 0)=LIT  (2 0 0 0)=ARG  (3..)=ADD  (5..)=MUL  (4..)=SUB  (8..)=DIV  (6 le t e)=COND.
 ; (VAR is the function's single input n, which form-lower banks as ARG.)
 ;
 ; a2p threads the accumulating row list; each node's index is its position when appended,
@@ -22,7 +22,27 @@
         (list (a2p-app acc (list (list 1 (nth ast 1) 0 0))) (len acc))
     (if (eq (head ast) 1)
         (list (a2p-app acc (list (list 2 0 0 0))) (len acc))
-        (a2p-bin ast acc))))
+    (if (eq (head ast) 6)
+        (a2p-cond ast acc)
+        (a2p-bin ast acc)))))
+; COND (6 k then else) -> form-lower's COND prog: an ARG and LIT-k node feed an LE node
+; (lo-cond reads the threshold from it and compares the banked argr), then the two branch
+; subtrees, then the COND row (6 le then else). The ARG operand is structural — lo-cond
+; always compares w<argr> — but it is emitted to keep the LE node well-formed.
+(defn a2p-cond (ast acc)
+    (do (let acc1 (a2p-app acc (list (list 2 0 0 0))))         ; ARG    @ (len acc)
+        (let arg-idx (len acc))
+        (let acc2 (a2p-app acc1 (list (list 1 (nth ast 1) 0 0)))) ; LIT k @ (len acc1)
+        (let lit-idx (len acc1))
+        (let acc3 (a2p-app acc2 (list (list 5 arg-idx lit-idx 0)))) ; LE   @ (len acc2)
+        (let le-idx (len acc2))
+        (let lt (a2p (nth ast 2) acc3))                        ; then-subtree
+        (let acc4 (nth lt 0))
+        (let then-idx (nth lt 1))
+        (let le2 (a2p (nth ast 3) acc4))                       ; else-subtree
+        (let acc5 (nth le2 0))
+        (let else-idx (nth le2 1))
+        (list (a2p-app acc5 (list (list 6 le-idx then-idx else-idx))) (len acc5))))
 (defn a2p-bin (ast acc)
     (do (let la (a2p (nth ast 1) acc))
         (let acc1 (nth la 0))

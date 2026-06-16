@@ -12,6 +12,7 @@
 ;   (3 a b)   MUL a b      subtrees a * b
 ;   (4 a b)   SUB a b      subtrees a - b   (-> form-lower tag 4)
 ;   (5 a b)   DIV a b      subtrees a / b   (-> form-lower tag 8)
+;   (6 k t e) COND k t e   if x <= k then t else e   (-> form-lower COND, condition LE(VAR,k))
 ; The op vocabulary matches form-lower's, so any expression the body can compile, it can
 ; also reason about and optimize. ast-eval IS the ground-truth evaluator (offer the AST
 ; an input, observe the ack).
@@ -23,16 +24,18 @@
   (do (let t (head n))
       (if (eq t 0) (nth n 1)
           (if (eq t 1) x
+              (if (eq t 6) (if (le x (nth n 1)) (ast-eval (nth n 2) x) (ast-eval (nth n 3) x))
               (if (eq t 2) (add (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
               (if (eq t 3) (mul (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
               (if (eq t 4) (sub (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))
-                  (div (ast-eval (nth n 1) x) (ast-eval (nth n 2) x)))))))))
+                  (div (ast-eval (nth n 1) x) (ast-eval (nth n 2) x))))))))))
 
 ; node count — the cost proxy (fewer nodes = cheaper lowering).
 (defn ast-size (n)
   (do (let t (head n))
       (if (if (eq t 0) 1 (eq t 1)) 1
-          (add 1 (add (ast-size (nth n 1)) (ast-size (nth n 2)))))))
+      (if (eq t 6) (add 1 (add (ast-size (nth n 2)) (ast-size (nth n 3))))
+          (add 1 (add (ast-size (nth n 1)) (ast-size (nth n 2))))))))
 
 ; rw-fold — constant folding: fold children first, then if both are LIT, collapse
 ; ADD/MUL of two constants into a single LIT. A pure semantics-preserving rewrite
@@ -40,6 +43,7 @@
 (defn rw-fold (n)
   (do (let t (head n))
       (if (if (eq t 0) 1 (eq t 1)) n
+      (if (eq t 6) (list 6 (nth n 1) (rw-fold (nth n 2)) (rw-fold (nth n 3)))
           (do (let a (rw-fold (nth n 1)))
               (let b (rw-fold (nth n 2)))
               (if (if (eq (head a) 0) (eq (head b) 0) 0)
@@ -47,4 +51,4 @@
                   (if (eq t 3) (list 0 (mul (nth a 1) (nth b 1)))
                   (if (eq t 4) (list 0 (sub (nth a 1) (nth b 1)))
                       (list 0 (div (nth a 1) (nth b 1))))))
-                  (list t a b))))))
+                  (list t a b)))))))
