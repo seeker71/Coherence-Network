@@ -505,7 +505,7 @@ recipe-equivalence-gate fkc 3
 triangle-lowerings fkc 1
 capability-form-asm fks 106
 tier-router fks 140
-model-roster-report fks 1388
+model-roster-report fks 1942
 lowering-search fks 57
 capability-form-mul fkc 2428
 capability-form-div fkc 3027

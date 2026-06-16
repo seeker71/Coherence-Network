@@ -16,9 +16,13 @@
     (mrr-row "git-commit-to-diff" "local-llm"            "local"           124  0  0 124)
     (mrr-row "idea-to-spec"       "spec-author-llm"      "remote-membrane" 165  0  0 165)
     (mrr-row "spec-to-code"       "spec-author-llm"      "remote-membrane" 163  0  0 163)
-    (mrr-row "i18n-affine"        "i18n-baseline"        "local"            80 40 80   2)))
+    (mrr-row "i18n-affine"        "i18n-baseline"        "local"            80 40 80   2)
+    (mrr-row "form-cli-predict"   "tool-corpus"          "local"           553 91 100  0)))
   ; i18n-affine fitness 40 is MEASURED (native 8/20 heldout vs oracle 0/20),
   ; trained on 80 real en->fr samples in-kernel — not a placeholder.
+  ; form-cli-predict fitness 91 is MEASURED: native reproduces the tool decision
+  ; on 91% of 553 real session traces (local LLM 52%, baseline ~30%), zero oracle
+  ; calls at inference — fully sovereign (form-cli-corpus/corpus.jsonl).
 
   ; which oracle is USED MOST  -> gpt-5-codex (256 calls)
   (let most-used (mrr-most-used roster))
@@ -26,7 +30,7 @@
   (let needs (mrr-needs-attention roster))
 
   ; aggregate = most-used calls (256) + needs-attention samples (124)
-  ;           + total captured samples (939) + sovereign count (1)  = 1320
+  ;           + total captured samples (1560) + sovereign count (2)  = 1942
   (add (mrr-oracle-calls most-used)
        (add (mrr-samples needs)
             (add (mrr-total-samples roster)
