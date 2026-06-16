@@ -1,0 +1,42 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-score.fk
+;
+; form-cli-score-band - the native-vs-agent tool-selection scoring proof.
+;
+; Verdict 255 when: tool membership and overlap count hold; the majority-match and
+; full-cover verdicts are right; and the matched / full-matched / total tallies
+; and the native-reaches-majority readout are correct over a mixed trial set.
+
+(do
+    ; ── membership ──
+    (let c0 (if (eq (fcsc-in? "Bash" (list "Bash" "Read")) 1)
+                (if (eq (fcsc-in? "Grep" (list "Bash" "Read")) 0) 1 0)
+                0))
+
+    ; ── overlap count ──
+    (let c1 (if (eq (fcsc-overlap (list "Bash" "Read") (list "Bash" "Edit" "Read")) 2)
+                (if (eq (fcsc-overlap (list "Bash" "Grep") (list "Read" "Edit")) 0) 2 0)
+                0))
+
+    ; ── majority match: covers >= half; a single tool out of four does not ──
+    (let c2 (if (eq (fcsc-match? (list "Bash" "Read" "Edit") (list "Bash" "Read")) 1)
+                (if (eq (fcsc-match? (list "Bash" "Read" "Edit") (list "Grep")) 0)
+                    (if (eq (fcsc-match? (list "Bash" "Read" "Edit" "Write") (list "Bash")) 0) 4 0)
+                    0)
+                0))
+
+    ; ── full cover ──
+    (let c3 (if (eq (fcsc-full? (list "Bash" "Read") (list "Bash" "Read" "Edit")) 1)
+                (if (eq (fcsc-full? (list "Bash" "Read") (list "Bash")) 0) 8 0)
+                0))
+
+    ; ── tallies over a mixed trial set ──
+    (let t1 (fcsc-trial (list "Bash" "Read" "Edit") (list "Bash" "Read")))     ; match, not full
+    (let t2 (fcsc-trial (list "Bash" "Read" "Edit") (list "Grep")))            ; no match
+    (let t3 (fcsc-trial (list "Bash" "Read") (list "Bash" "Read" "Edit")))     ; match and full
+    (let trials (list t1 t2 t3))
+    (let c4 (if (eq (fcsc-matched trials) 2) 16 0))
+    (let c5 (if (eq (fcsc-full-matched trials) 1) 32 0))
+    (let c6 (if (eq (fcsc-total trials) 3) 64 0))
+    (let c7 (if (eq (fcsc-native-reaches? trials) 1) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
