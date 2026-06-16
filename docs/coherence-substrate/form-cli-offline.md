@@ -63,11 +63,29 @@ oracles are staged.
 
 ## Closing a gap offline
 
-The agent runner ([`form-native-run.fk`](../../form/form-stdlib/form-native-run.fk),
+Name a gap, let a local coder oracle draft the recipe, and validate it on the
+kernel — all offline:
+
+```bash
+scripts/form_cli_close_gap.sh triangular \
+  "(tri n) returns the nth triangular number n*(n+1)/2" \
+  "(tri 5)" 15 "ollama run coder"
+```
+
+The loop ([`scripts/form_cli_close_gap.sh`](../../scripts/form_cli_close_gap.sh)):
+the coder drafts the recipe in the Form `.fk` dialect → the kernel **validates**
+it against the assertion → the crossing is **ledgered** through the membrane
+recipe (`surface=local-oracle`, `gap=1`, `receipt-valid=1`). A validated draft
+lands in `form/form-stdlib/drafts/` (gitignored); promote it by writing an
+assertion band and adding it to the manifest to make it four-way. Measured
+offline: `(defn tri (n) (div (mul n (add n 1)) 2))` and a recursive list-sum,
+each drafted in seconds and kernel-validated.
+
+The general agent runner ([`form-native-run.fk`](../../form/form-stdlib/form-native-run.fk),
 driven by [`scripts/form_native_run.sh`](../../scripts/form_native_run.sh)) is
-pure Form on the kernel — oracle call + tool dispatch + recursion, host effects
-through the kernel's host-io builtins. Point it at a local coder oracle and it
-drafts, runs, and reports — every step a membrane crossing in the ledger.
+the same shape for open-ended tasks — pure Form on the kernel, oracle call + tool
+dispatch + recursion, host effects through the kernel's host-io builtins, every
+step a membrane crossing.
 
 ## What is proven, and the honest frontier
 
