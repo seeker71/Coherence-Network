@@ -1,0 +1,46 @@
+; cache-phase-band.fk — four-way proof of the cache phase metabolism (cache-phase.fk).
+;
+; preludes: form-stdlib/substrate-phase.fk form-stdlib/cache-phase.fk
+;
+; Thresholds for the whole band: gas-deg=1, ice-deg=5, ice-churn=2, condense-min=2 —
+; the substrate-phase band's numbers, because it is the same physics. One
+; content-addressed key (1) at input-hash 100 is walked through its whole cache life; a
+; second entry carries a CHANGED input-hash (999) to drive the stale -> recompute trigger.
+;
+; The strange-minimal edge that covers the most: one key, every transition, and the
+; conservation law (identity survives sublimate -> condense) in the simplest expression.
+; Each check is one bit of the verdict so a failure names itself.
+;
+; Band verdict: 255 when every assertion holds across all four kernels.
+;   - hot, settled, trusted entry in water        -> freeze (pin durable)        ->   1
+;   - cold entry in ice                           -> sublimate (release bytes)   ->   2
+;   - sublimate drops the bytes (mat 1 -> 0)                                     ->   4
+;   - sublimate CONSERVES the key (the "don't wipe")                            ->   8
+;   - a cold index re-requested (gas, hits>=cmin) -> condense (re-materialize)   ->  16
+;   - condense restores bytes AND preserves the input-hash (re-coherable trust)  ->  32
+;   - a hot but STALE entry in ice                -> melt (recompute)            ->  64
+;   - trust is hash-equality: match -> 1, mismatch -> 0                          -> 128
+
+(do
+    (let cache-bp (make_nodeid 1 2 99 9100))
+    (let g-deg 1) (let i-deg 5) (let i-churn 2) (let c-min 2)
+
+    ; entries: (key hash hits rec mat)
+    (let e-hot    (record_new cache-bp "key" 1 "hash" 100 "hits" 6 "rec" 1 "mat" 1))
+    (let e-cold   (record_new cache-bp "key" 1 "hash" 100 "hits" 0 "rec" 1 "mat" 1))
+    (let e-rewarm (record_new cache-bp "key" 1 "hash" 100 "hits" 3 "rec" 1 "mat" 0))
+    (let e-stale  (record_new cache-bp "key" 1 "hash" 999 "hits" 6 "rec" 1 "mat" 1))
+
+    (let subl (cache-sublimate cache-bp e-cold))
+    (let cond (cache-condense  cache-bp subl))
+
+    (let a1 (if (eq (cache-invite e-hot    100 (st-water) i-deg i-churn g-deg c-min) (mv-freeze))    1 0))
+    (let a2 (if (eq (cache-invite e-cold   100 (st-ice)   i-deg i-churn g-deg c-min) (mv-sublimate)) 1 0))
+    (let a3 (if (eq (ce-mat subl) 0) 1 0))
+    (let a4 (if (eq (ce-key subl) (ce-key e-cold)) 1 0))
+    (let a5 (if (eq (cache-invite e-rewarm 100 (st-gas)   i-deg i-churn g-deg c-min) (mv-condense))  1 0))
+    (let a6 (if (eq (ce-mat cond) 1) (if (eq (ce-input-hash cond) (ce-input-hash subl)) 1 0) 0))
+    (let a7 (if (eq (cache-invite e-stale  100 (st-ice)   i-deg i-churn g-deg c-min) (mv-melt))      1 0))
+    (let a8 (if (eq (cache-trustworthy? e-hot 100) 1) (if (eq (cache-trustworthy? e-stale 100) 0) 1 0) 0))
+
+    (add a1 (add (mul a2 2) (add (mul a3 4) (add (mul a4 8) (add (mul a5 16) (add (mul a6 32) (add (mul a7 64) (mul a8 128)))))))))

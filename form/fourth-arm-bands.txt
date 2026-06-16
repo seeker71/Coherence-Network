@@ -393,6 +393,7 @@ record-blueprint fks 7
 record-fold fks 31
 record-field-access fks 16
 list-of-record-reduction fks 22
+cache-phase fks 255
 
 # ── blueprint literal lane — current registry aliases fold to NodeID packets ──
 # Literal bp calls for the current user-range registry names now lower onto
