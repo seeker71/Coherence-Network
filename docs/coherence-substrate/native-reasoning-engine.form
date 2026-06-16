@@ -37,6 +37,20 @@
   (step train-on-actual      "train on the structured corpus — actual samples, actual code")
   (step generate-and-prove   "model proposes -> form-lower compiles -> gate + four-kernel + tests prove -> keep the verified, retire the oracle for that class")
 
+  ; ── MEASURED so far (2026-06-16, no fabrication) ─────────────────────────────────────
+  ; How much "just form-cli" reproduces our real session history, scored against what the
+  ; agent actually did over 553 traces in ~/.coherence-network/form-cli-corpus:
+  (measured tool-decision-reproduction
+    "PURE-NATIVE form-cli-predict (5-row base table + keyword boosts, NO LLM, no remote) =
+     91% majority-match over 553 real session traces; local LLM (llama3.2:3b) = 52%; always-
+     Bash baseline ~30%. The native floor BEATS the local model — the LLM omits Bash and
+     over-predicts. Proven four-way by tests/reproduce-from-history-band.fk (the per-trace
+     scoring is Form; the full tally is the carrier).")
+  (measured ceiling
+    "This is the DECISION layer (which tools/lane). GENERATING the actual spec/code/diff the
+     session produced is the code-gen gap above — the predictor decides like the sessions did,
+     it does not yet write what they wrote.")
+
   ; A reasoning engine that writes code it cannot fake past its own compiler and its own
   ; gate, trained on the history of how the body actually grew — the oracle retiring class
   ; by class as native conviction is measured, never declared.
