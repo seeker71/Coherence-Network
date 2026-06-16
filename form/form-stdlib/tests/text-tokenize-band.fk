@@ -1,0 +1,26 @@
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk
+;
+; text-tokenize-band — the keyword tokenizer in Form (lifted from shell tr|grep|awk).
+;
+; Verdict 31 when: a mixed-case sentence lowercases and splits on non-letters with
+; short words dropped; punctuation and digits break words without leaking; the
+; empty string yields the empty result; one uppercase char lowercases via the
+; ord-indexed table; and a digit is not a letter.
+
+(do
+    ; lowercase + split + length filter: "Run"/"the" (len 3) drop, rest lowercase
+    (let c0 (if (str_eq (tk-words "Run the Validate Script" 4) "validate script") 1 0))
+
+    ; punctuation and a digit-bearing token break cleanly, no leak
+    (let c1 (if (str_eq (tk-words "Read spec, then WRITE2 it." 4) "read spec then write") 2 0))
+
+    ; empty text -> empty result
+    (let c2 (if (str_eq (tk-words "" 4) "") 4 0))
+
+    ; one uppercase char lowercases through the ord table
+    (let c3 (if (str_eq (tk-low (char_at "A" 0)) "a") 8 0))
+
+    ; a digit is not an ascii letter
+    (let c4 (if (eq (tk-alpha? (char_at "5" 0)) 0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
