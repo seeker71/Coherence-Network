@@ -60,10 +60,12 @@ import (
 	"path/filepath"
 	"plugin"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"form-kernel-go/jitabi"
 )
@@ -429,7 +431,67 @@ func jitPersistPlugin(builtSo, cacheSo string) error {
 		os.Remove(tmpPath)
 		return err
 	}
-	return os.Rename(tmpPath, cacheSo)
+	if err := os.Rename(tmpPath, cacheSo); err != nil {
+		return err
+	}
+	jitMaybeEvictCache(cacheSo)
+	return nil
+}
+
+// jitCacheCapDirs — the max number of cached plugin dirs to retain. The cache key
+// includes kernelHash, so EVERY kernel change re-keys the whole set and the prior
+// plugins are orphaned; with no eviction they accumulate forever (each plugin.so is a
+// full Go-runtime plugin, ~4–5 MB, so the orphan tail dominated the cache at 7.6 GB /
+// 2280 plugins). Eviction is always safe: the cache rebuilds a plugin on demand, and
+// unlinking a .so that is currently mapped leaves the mapping valid. Tunable via
+// FORM_JIT_CACHE_MAX (default 512 ≈ a generous live working set, ~2.5 GB ceiling).
+func jitCacheCapDirs() int {
+	if v := os.Getenv("FORM_JIT_CACHE_MAX"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 512
+}
+
+// jitPersistCount throttles the eviction sweep so the cache-dir scan does not run on
+// every persist — once per 32 persists amortizes the cost while keeping the cap close.
+var jitPersistCount int64
+
+// jitMaybeEvictCache sweeps the plugin cache down to the cap (LRU by mtime). cacheSo is
+// root/<key>/plugin.so; its grandparent is the cache root holding one dir per plugin.
+func jitMaybeEvictCache(cacheSo string) {
+	if cacheSo == "" || atomic.AddInt64(&jitPersistCount, 1)%32 != 0 {
+		return
+	}
+	root := filepath.Dir(filepath.Dir(cacheSo))
+	cap := jitCacheCapDirs()
+	ents, err := os.ReadDir(root)
+	if err != nil {
+		return
+	}
+	type cdir struct {
+		path string
+		mod  time.Time
+	}
+	dirs := make([]cdir, 0, len(ents))
+	for _, e := range ents {
+		if !e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		dirs = append(dirs, cdir{filepath.Join(root, e.Name()), info.ModTime()})
+	}
+	if len(dirs) <= cap {
+		return
+	}
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i].mod.Before(dirs[j].mod) })
+	for _, d := range dirs[:len(dirs)-cap] {
+		os.RemoveAll(d.path) // best-effort LRU eviction; an in-use mapping stays valid
+	}
 }
 
 // jitBuildAndLoadGo — the kernel-free half: cache probe, `go build`, atomic
