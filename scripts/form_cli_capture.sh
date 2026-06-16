@@ -17,8 +17,11 @@
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
-CORPUS_DIR="$ROOT/form/form-samples/agent-turns"; mkdir -p "$CORPUS_DIR"
-CORPUS="$CORPUS_DIR/corpus.jsonl"
+# Corpus path: defaults to the gitignored in-repo store; FORM_CLI_CORPUS points it
+# at a stable location (e.g. ~/.coherence-network/form-cli-corpus) that survives
+# worktree cleanup — used for the historical archive.
+CORPUS="${FORM_CLI_CORPUS:-$ROOT/form/form-samples/agent-turns/corpus.jsonl}"
+mkdir -p "$(dirname "$CORPUS")"
 [[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 
 MODE="${1:-}"; shift || true
@@ -35,12 +38,20 @@ path, n = sys.argv[1], int(sys.argv[2])
 def sig(s): return hashlib.sha256((s or "").encode("utf-8","replace")).hexdigest()[:16]
 def clip(s, k=2000): return (s or "")[:k]
 # Cell sovereignty: a turn touching tender/personal context never enters the
-# corpus. Structural redaction, not manual — specific personal markers only, so
-# the technical "flight-ready" metaphor stays. A matched turn is dropped whole.
-GATED=re.compile(r"irina|\bpartner\b|psoriatic|dispenza|\bcancer\b|longmont|"
-                 r"switzerland|intimacy|\babuse\b|insomnia|maija|louisa|\bmerly\b|"
-                 r"chrysanthemum|\bbali\b|\bcolorado\b|household|infusion|"
-                 r"loneliness|\blonely\b|\bval\b(?!id)", re.I)
+# corpus. Structural redaction, not manual — a matched turn is dropped WHOLE,
+# never scrubbed-and-kept. Markers span named people, medical, personal places,
+# the relational arc, AND gated file paths (a turn that READ a tender memory file
+# carries its content in the step result, so the path match catches it). The
+# technical "flight-ready" metaphor survives — those words are not markers.
+GATED=re.compile(
+    r"irina|louisa|maija|\balex\b|dispenza|gottschlich|\bjustin\b|\brocco\b|\baly\b|"
+    r"zach\s*bush|\bzach\b|bagus|kesnawa|anne\s*tucker|amanda\s*walsh|pam\s*gregory|"
+    r"psoriatic|\bcancer\b|\bcpap\b|remicade|biologic|infusion|insomnia|chrysanthemum|"
+    r"longmont|switzerland|\bbali\b|\bcolorado\b|\bubud\b|hati[\s._-]*suci|\bboulder\b|"
+    r"\bpartner\b|intimacy|sexual|divorce|snor(?:e|ing)|household|loneliness|\blonely\b|"
+    r"pleiadian|sacred\s*union|soul\s*compass|\bval\b(?!id)|\bson\b|\babuse\b|\bmerly\b|"
+    r"partner_presence|project_may_june|urs_waking|documents/2026|sacred_union|soul_compass",
+    re.I)
 def gated(t):
     blob=" ".join([t["task"], t["reasoning"] if isinstance(t["reasoning"],str) else " ".join(t["reasoning"]),
                    t["answer"]] + [s.get("args","")+" "+s.get("result","") for s in t["steps"]])
