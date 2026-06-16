@@ -399,7 +399,7 @@ For the body of teachings:
 
 ## Cross-References
 
-→ lc-anything-imagined-realizes, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-recipe-branching-sense, lc-the-recipe-remembers-its-source, lc-parser-as-form-recipe, lc-perception-as-interface, lc-assemblage-point, lc-frequency-routes-reception, lc-sensing, lc-whole-vitality, lc-edges-as-vitality
+→ lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-traces-teach-the-recipe, lc-observer-pays-the-trace, lc-recipe-branching-sense, lc-the-recipe-remembers-its-source, lc-parser-as-form-recipe, lc-perception-as-interface, lc-assemblage-point, lc-frequency-routes-reception, lc-sensing, lc-whole-vitality, lc-edges-as-vitality
 
 ## Sources to Walk Further
 
