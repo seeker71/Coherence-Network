@@ -55,8 +55,11 @@
 (defn rw-step (n) (rw-strength-shallow (rw-identity-shallow (rw-fold-shallow n))))
 
 ; rw-all: rewrite children, then apply the rule-step at the node (bottom-up, one pass).
+; COND (6 k then else) carries control flow — rewrite each BRANCH; the conditional itself
+; isn't a fold/identity/strength target, so no rw-step at the node.
 (defn rw-all (n)
   (do (let t (head n))
       (if (if (eq t 0) 1 (eq t 1)) n
+      (if (eq t 6) (list 6 (nth n 1) (rw-all (nth n 2)) (rw-all (nth n 3)))
           (do (let a (rw-all (nth n 1))) (let b (rw-all (nth n 2)))
-              (rw-step (list t a b))))))
+              (rw-step (list t a b)))))))
