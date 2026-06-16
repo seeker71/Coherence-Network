@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 269
+**Total files**: 270
 
 | File | Purpose |
 |---|---|
@@ -94,6 +94,7 @@
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
+| [form_head_demo.sh](form_head_demo.sh) | form_head_demo.sh — `head -3`, built with ZERO clang and direct Form -> asm. head |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
 | [form_macho_demo.sh](form_macho_demo.sh) | form_macho_demo.sh — a RUNNABLE native binary built with ZERO clang. The Form |
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
