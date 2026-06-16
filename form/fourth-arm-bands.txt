@@ -172,6 +172,7 @@ form-cli-gaps fks 4095
 form-cli-sample fks 1023
 form-cli-score fks 255
 form-cli-predict fks 127
+form-cli-model fks 31
 form-cli-judge fks 127
 obs-verify fks 31
 world-module-model fks 1023
