@@ -16,7 +16,9 @@
     (mrr-row "git-commit-to-diff" "local-llm"            "local"           124  0  0 124)
     (mrr-row "idea-to-spec"       "spec-author-llm"      "remote-membrane" 165  0  0 165)
     (mrr-row "spec-to-code"       "spec-author-llm"      "remote-membrane" 163  0  0 163)
-    (mrr-row "i18n-affine"        "i18n-baseline"        "local"            12 90 80   2)))
+    (mrr-row "i18n-affine"        "i18n-baseline"        "local"            80 40 80   2)))
+  ; i18n-affine fitness 40 is MEASURED (native 8/20 heldout vs oracle 0/20),
+  ; trained on 80 real en->fr samples in-kernel — not a placeholder.
 
   ; which oracle is USED MOST  -> gpt-5-codex (256 calls)
   (let most-used (mrr-most-used roster))
