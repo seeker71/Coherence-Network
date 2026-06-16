@@ -28,34 +28,46 @@
     (defn fa-le (w) (list (mod w 256) (mod (div w 256) 256)
                           (mod (div w 65536) 256) (mod (div w 16777216) 256)))
 
+    ; ── the encoder as a TABLE: base opcode + bitfield multipliers ───────────
+    ; Every arm64 instruction below is  base | (field0<<p0) | (field1<<p1) | ...,
+    ; so encoding is ONE generic packer over a per-instruction (base, multipliers)
+    ; row — a new instruction is a DATA row, not new code (the ARM ARM / LLVM
+    ; encoding table as a recipe). A multiplier is 2^bitpos; args pair with mults
+    ; in order. Signed branch offsets fold via fa-smask at the call site; fixed
+    ; words (ret, the frame pairs) stay literal byte rows.
+    (defn fa-pack (mults args)
+        (if (nil? mults) 0
+            (add (mul (head args) (head mults)) (fa-pack (tail mults) (tail args)))))
+    (defn fa-asm (base mults args) (fa-le (add base (fa-pack mults args))))
+
     ; ── arm64 instruction encoding -> the 4-byte little-endian image ────
     ; movz w<rd>, #imm16 : base 0x52800000 | imm<<5 | rd          (word < 2^31)
-    (defn fa-movz (rd imm)   (fa-le (add 1384120320 (add (mul imm 32) rd))))
+    (defn fa-movz (rd imm)   (fa-asm 1384120320 (list 1 32) (list rd imm)))
     ; add  w<rd>, w<rn>, #imm12 : base 0x11000000 | imm<<10 | rn<<5 | rd
-    (defn fa-add  (rd rn imm) (fa-le (add 285212672 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    (defn fa-add  (rd rn imm) (fa-asm 285212672 (list 1 32 1024) (list rd rn imm)))
     ; sub  w<rd>, w<rn>, #imm12 : base 0x51000000 | imm<<10 | rn<<5 | rd
-    (defn fa-sub  (rd rn imm) (fa-le (add 1358954496 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    (defn fa-sub  (rd rn imm) (fa-asm 1358954496 (list 1 32 1024) (list rd rn imm)))
     ; ret : fixed 0xd65f03c0 — its base has the high bit set, so it is given as the
     ; 4 little-endian bytes directly (c0 03 5f d6), not a > 2^31 word literal
     (defn fa-ret  ()          (list 192 3 95 214))
 
     ; ── control flow + register operands (the full-program instructions) ─
     ; mov w<rd>, w<rm>  (orr rd, wzr, rm) : base 0x2A0003E0 | rm<<16 | rd
-    (defn fa-mov  (rd rm)     (fa-le (add 704644064 (add (mul rm 65536) rd))))
+    (defn fa-mov  (rd rm)     (fa-asm 704644064 (list 1 65536) (list rd rm)))
     ; cmp w<rn>, #imm  (subs wzr, rn, #imm) : base 0x7100001F | imm<<10 | rn<<5
-    (defn fa-cmp  (rn imm)    (fa-le (add 1895825439 (add (mul imm 1024) (mul rn 32)))))
+    (defn fa-cmp  (rn imm)    (fa-asm 1895825439 (list 32 1024) (list rn imm)))
     ; b.gt #off  (off in instructions) : base 0x5400000C | off<<5   (cond GT = 0xC)
-    (defn fa-bgt  (off)       (fa-le (add 1409286156 (mul off 32))))
+    (defn fa-bgt  (off)       (fa-asm 1409286156 (list 32) (list off)))
     ; b #off  (off in instructions) : base 0x14000000 | off
-    (defn fa-b    (off)       (fa-le (add 335544320 off)))
+    (defn fa-b    (off)       (fa-asm 335544320 (list 1) (list off)))
     ; add w<rd>, w<rn>, w<rm>  (register form) : base 0x0B000000 | rm<<16 | rn<<5 | rd
-    (defn fa-add-r (rd rn rm) (fa-le (add 184549376 (add (mul rm 65536) (add (mul rn 32) rd)))))
+    (defn fa-add-r (rd rn rm) (fa-asm 184549376 (list 1 32 65536) (list rd rn rm)))
     ; mul w<rd>, w<rn>, w<rm>  (= MADD wd,wn,wm,wzr ; Ra=31) : base 0x1B007C00 | rm<<16 | rn<<5 | rd
-    (defn fa-mul  (rd rn rm) (fa-le (add 453016576 (add (mul rm 65536) (add (mul rn 32) rd)))))
+    (defn fa-mul  (rd rn rm) (fa-asm 453016576 (list 1 32 65536) (list rd rn rm)))
     ; udiv w<rd>, w<rn>, w<rm>  (unsigned divide, rd = rn / rm) : base 0x1AC00800 | rm<<16 | rn<<5 | rd
-    (defn fa-udiv (rd rn rm) (fa-le (add 448792576 (add (mul rm 65536) (add (mul rn 32) rd)))))
+    (defn fa-udiv (rd rn rm) (fa-asm 448792576 (list 1 32 65536) (list rd rn rm)))
     ; sub w<rd>, w<rn>, w<rm>  (register form, rd = rn - rm) : base 0x4B000000 | rm<<16 | rn<<5 | rd
-    (defn fa-sub-r (rd rn rm) (fa-le (add 1258291200 (add (mul rm 65536) (add (mul rn 32) rd)))))
+    (defn fa-sub-r (rd rn rm) (fa-asm 1258291200 (list 1 32 65536) (list rd rn rm)))
 
     ; ── the call + frame instructions (recursion) ────────────────────────
     ; bl #off — branch-with-link, SIGNED 26-bit offset in instructions. The base
@@ -88,17 +100,17 @@
     ; every encoding here is byte-verified against clang/as (form_syscall_demo.sh),
     ; so the conviction gate licenses these too. SP is register 31.
     ; movz x<rd>, #imm16  (64-bit) : base 0xD2800000 | imm<<5 | rd
-    (defn fa-movz-x (rd imm)    (fa-le (add 3531603968 (add (mul imm 32) rd))))
+    (defn fa-movz-x (rd imm)    (fa-asm 3531603968 (list 1 32) (list rd imm)))
     ; movk x<rd>, #imm16, lsl #16  (64-bit, hw=1) : base 0xF2A00000 | imm<<5 | rd
-    (defn fa-movk-x-16 (rd imm) (fa-le (add 4070572032 (add (mul imm 32) rd))))
+    (defn fa-movk-x-16 (rd imm) (fa-asm 4070572032 (list 1 32) (list rd imm)))
     ; strb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39000000 | imm<<10 | rn<<5 | rt
-    (defn fa-strb (rt rn imm)   (fa-le (add 956301312 (add (mul imm 1024) (add (mul rn 32) rt)))))
+    (defn fa-strb (rt rn imm)   (fa-asm 956301312 (list 1 32 1024) (list rt rn imm)))
     ; add x<rd>, x<rn>, #imm12  (64-bit) : base 0x91000000 | imm<<10 | rn<<5 | rd
-    (defn fa-add-x-imm (rd rn imm) (fa-le (add 2432696320 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    (defn fa-add-x-imm (rd rn imm) (fa-asm 2432696320 (list 1 32 1024) (list rd rn imm)))
     ; sub x<rd>, x<rn>, #imm12  (64-bit) : base 0xD1000000 | imm<<10 | rn<<5 | rd
-    (defn fa-sub-x-imm (rd rn imm) (fa-le (add 3506438144 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    (defn fa-sub-x-imm (rd rn imm) (fa-asm 3506438144 (list 1 32 1024) (list rd rn imm)))
     ; svc #imm16 : base 0xD4000001 | imm<<5
-    (defn fa-svc (imm)          (fa-le (add 3556769793 (mul imm 32))))
+    (defn fa-svc (imm)          (fa-asm 3556769793 (list 32) (list imm)))
 
     ; ── control flow: the read-loop's compare + signed branches ──────────────
     ; A filter loops, so it needs a backward branch. Branch offsets are signed,
@@ -107,23 +119,23 @@
     ; oracle alongside clang's bytes. fa-smask folds a negative offset into m=2^width.
     (defn fa-smask (off m) (if (lt off 0) (add off m) off))
     ; cmp x<rn>, #imm  (subs xzr, rn, #imm, 64-bit) : base 0xF100001F | imm<<10 | rn<<5
-    (defn fa-cmp-x (rn imm) (fa-le (add 4043309087 (add (mul imm 1024) (mul rn 32)))))
+    (defn fa-cmp-x (rn imm) (fa-asm 4043309087 (list 32 1024) (list rn imm)))
     ; b.<cond> #off  (signed, imm19) : base 0x54000000 | off19<<5 | cond
     ;   cond: EQ 0  NE 1  GE 10  LT 11  GT 12  LE 13
-    (defn fa-bcond (cond off) (fa-le (add 1409286144 (add (mul (fa-smask off 524288) 32) cond))))
+    (defn fa-bcond (cond off) (fa-asm 1409286144 (list 1 32) (list cond (fa-smask off 524288))))
     ; b #off  (signed, imm26) : base 0x14000000 | off26
-    (defn fa-b-off (off) (fa-le (add 335544320 (fa-smask off 67108864))))
+    (defn fa-b-off (off) (fa-asm 335544320 (list 1) (list (fa-smask off 67108864))))
 
     ; ── byte load + branchless select: the transform a filter applies ────────
     ; tr is cat plus a per-byte transform, and the transform is branchless: load
     ; the byte, compute, select on a flag. ldrb reads it; csel picks. These are
     ; the ARM ARM encodings; clang's bytes confirm.
     ; ldrb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39400000 | imm<<10 | rn<<5 | rt
-    (defn fa-ldrb (rt rn imm) (fa-le (add 960495616 (add (mul imm 1024) (add (mul rn 32) rt)))))
+    (defn fa-ldrb (rt rn imm) (fa-asm 960495616 (list 1 32 1024) (list rt rn imm)))
     ; csel w<rd>, w<rn>, w<rm>, <cond>  (rd = cond ? rn : rm, 32-bit)
     ;   base 0x1A800000 | rm<<16 | cond<<12 | rn<<5 | rd   (cond LS=9, the unsigned <=)
     (defn fa-csel (rd rn rm cond)
-        (fa-le (add 444596224 (add (mul rm 65536) (add (mul cond 4096) (add (mul rn 32) rd))))))
+        (fa-asm 444596224 (list 1 32 65536 4096) (list rd rn rm cond)))
 
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
