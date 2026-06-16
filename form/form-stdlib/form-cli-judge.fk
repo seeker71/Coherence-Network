@@ -1,0 +1,50 @@
+; form-cli-judge.fk — score the REASONING lane: how well a native answer covers
+; the agent's, graded 0..100 by a judge.
+;
+; preludes: form-stdlib/core.fk
+;
+; Tool selection (form-cli-score / form-cli-predict) is a SET problem — exact,
+; cheap, and the native model already wins it. Reasoning is the hard lane: the
+; native answer must cover the SUBSTANCE of the agent's, which set-overlap can't
+; measure. So a judge (a local oracle, the membrane crossing) rates each native
+; answer 0..100 for how well it covers the agent's reference; this recipe is the
+; rubric and the tally over those scores — the proven (four-way) logic, the judge
+; is the carrier.
+;
+; A judged sample is one native score in 0..100. The recipe grades it, counts
+; passes at a threshold, sums for the average, and reports whether the native
+; reaches a majority — the same champion-challenger shape, on a graded lane.
+;
+; Proven by: form-stdlib/tests/form-cli-judge-band.fk
+
+; grade a score: 0 poor (<=25) / 1 weak (<=50) / 2 partial (<=75) / 3 strong
+(defn fcj-grade (score)
+    (if (le score 25) 0
+        (if (le score 50) 1
+            (if (le score 75) 2 3))))
+(defn fcj-grade-poor () 0)
+(defn fcj-grade-weak () 1)
+(defn fcj-grade-partial () 2)
+(defn fcj-grade-strong () 3)
+
+; does a score clear the bar?
+(defn fcj-pass? (score threshold) (if (ge score threshold) 1 0))
+
+; tallies over a list of scores
+(defn fcj-passed (scores threshold)
+    (if (eq (len scores) 0) 0
+        (add (fcj-pass? (head scores) threshold) (fcj-passed (tail scores) threshold))))
+(defn fcj-count-grade (scores g)
+    (if (eq (len scores) 0) 0
+        (add (if (eq (fcj-grade (head scores)) g) 1 0) (fcj-count-grade (tail scores) g))))
+(defn fcj-total (scores) (len scores))
+(defn fcj-sum (scores)
+    (if (eq (len scores) 0) 0 (add (head scores) (fcj-sum (tail scores)))))
+; (the average is sum/total — computed by the carrier; div is kept off the
+;  four-way path so the tally stays integer-identical on every arm.)
+
+; native reaches the lane when a majority of samples pass the threshold
+(defn fcj-native-reaches? (scores threshold)
+    (if (ge (add (fcj-passed scores threshold) (fcj-passed scores threshold)) (len scores)) 1 0))
+
+0
