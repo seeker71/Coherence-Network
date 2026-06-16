@@ -54,6 +54,8 @@
     (defn fa-mul  (rd rn rm) (fa-le (add 453016576 (add (mul rm 65536) (add (mul rn 32) rd)))))
     ; udiv w<rd>, w<rn>, w<rm>  (unsigned divide, rd = rn / rm) : base 0x1AC00800 | rm<<16 | rn<<5 | rd
     (defn fa-udiv (rd rn rm) (fa-le (add 448792576 (add (mul rm 65536) (add (mul rn 32) rd)))))
+    ; sub w<rd>, w<rn>, w<rm>  (register form, rd = rn - rm) : base 0x4B000000 | rm<<16 | rn<<5 | rd
+    (defn fa-sub-r (rd rn rm) (fa-le (add 1258291200 (add (mul rm 65536) (add (mul rn 32) rd)))))
 
     ; ── the call + frame instructions (recursion) ────────────────────────
     ; bl #off — branch-with-link, SIGNED 26-bit offset in instructions. The base
