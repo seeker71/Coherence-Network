@@ -1,0 +1,37 @@
+; capability-form-div-band.fk — the body's native codegen can lower a DIVIDE.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; With MUL landed, the symmetric gap was DIV — and it pays off the optimizer thread:
+; the triangle closed form T(n)=n*(n+1)/2 (the lowering the recipe-equivalence gate
+; admitted over the naive recursion) needs exactly MUL + ADD + DIV, so once lo-div
+; (tag 8) exists, T(n) compiles to a REAL native binary. DIV is non-commutative, so
+; lo-div keeps operand order (numerator Rn, denominator Rm) — unlike lo-mul it cannot
+; swap. fa-udiv is byte-convicted against the assembler (udiv w0,w0,w1 = 0x1ac10800).
+;
+; This band byte-convicts n/2's lowered image against the hand-assembled sequence,
+; then returns the byte-sum of n/2 AND the full T(n) image (a content checksum the
+; four kernels must agree on — a wrong DIV/MUL on any arm diverges). Execution-
+; verified separately: T(n) exact over n=2..15 (3,6,15,55,120), n/2 floor exact.
+;
+;   n/2          -> mov w1,w0 ; movz w0,#2 ; udiv w0,w1,w0 ; ret
+;   T(n)=n(n+1)/2 lowers ADD(n,1) -> MUL(n,·) -> DIV(·,2), single-accumulator throughout
+
+(do
+  (defn ap (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (ap (tail xs) ys))))
+  (defn beq (a b)
+    (if (eq (len a) (len b))
+        (if (eq (len a) 0) 1
+            (if (eq (head a) (head b)) (beq (tail a) (tail b)) 0))
+        0))
+  (defn byte-sum (bs) (if (eq (len bs) 0) 0 (add (head bs) (byte-sum (tail bs)))))
+
+  (let imgd (lo-compile-fn (list (list 2 0 0 0) (list 1 2 0 0) (list 8 0 1 0)) 2))
+  (let expd (ap (fa-mov 1 0) (ap (fa-movz 0 2) (ap (fa-udiv 0 1 0) (fa-ret)))))
+  (let imgt (lo-compile-fn
+              (list (list 2 0 0 0) (list 1 1 0 0) (list 3 0 1 0)
+                    (list 5 0 2 0) (list 1 2 0 0) (list 8 3 4 0)) 5))
+
+  (if (eq (beq imgd expd) 1)
+      (add (byte-sum imgd) (byte-sum imgt))
+      0))
