@@ -43,6 +43,43 @@ ledger inherits proven four-way validation. Each is tagged:
 - **air-gap-clean?** — zero `remote-oracle` crossings. The offline-readiness
   number; on a plane it must be 0.
 
+## The open-gap catalog
+
+The membrane shows gaps *per crossing* — what one run hit. The catalog is the
+*standing inventory* of everything open in the body, so you can see every gap at
+rest and pick which to close:
+
+```bash
+scripts/form_cli_gaps.sh            # the full catalog
+scripts/form_cli_gaps.sh --stage    # only what must be staged before the flight
+```
+
+Three lanes of openness:
+
+- **open idea** — an idea no spec references → `author-form-spec`
+- **open spec** — a non-draft spec with no `test:`/`proof:` → `write-validation-band`
+- **open capability** — an oracle-catalog teacher lane, placed on the **closing
+  ladder** by its `(trust, state)`
+
+The capability ladder names, for each open capability, the cheapest next move and
+whether it's **offline-closable** or needs the network **first**:
+
+| rung | meaning | next move | offline |
+|---|---|---|---|
+| `samples` | samples on disk, no recipe | train a native recipe | yes |
+| `local-oracle` | a local oracle is installed | distill samples | yes |
+| `source-local` | local oracle source on disk, needs building | build the source | yes |
+| `remote-only` | only a remote oracle | **stage remote→local** | **no — ⚑ before flight** |
+| `none` | no oracle at all | find/stage an oracle | **no** |
+
+The catalog tallies `open / offline-closable / stage-before-flight` and reads
+**flight-ready** iff nothing needs the network first — the membrane's
+air-gap-clean notion at body scale. A membrane crossing tagged `gap=1`
+corresponds to a catalog item. Recipe:
+[`form-cli-gaps.fk`](../../form/form-stdlib/form-cli-gaps.fk) — proven four-way
+(`form-cli-gaps-band` → 4095). Measured on the body today: 27 open, 26
+offline-closable, 1 stage-before-flight (`remote-llm`).
+
 Recipe: [`form-cli-membrane.fk`](../../form/form-stdlib/form-cli-membrane.fk) —
 proven four-way (`form-cli-membrane-band`, verdict 1023, go/rust/ts/fkwu).
 
