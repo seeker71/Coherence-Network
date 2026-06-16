@@ -133,6 +133,9 @@ output.
 
 - `unbound function` → a misspelled name, or a primitive that isn't in `core.fk`.
 - `N divergent` (kernels print different numbers) → almost always a 3-arg `and`/`or`; nest it.
+  A second cause: a **scientific-notation float literal** (`1.16e-05`). The three walkers parse it,
+  but the fourth arm's pre-flattened table does not — write floats as plain decimals
+  (`0.000011682...`). This bit the q6k-dequant band (fourth = -5 vs three-way 11215).
 - wrong verdict, 0 divergent → a band claim is false; fix the recipe or the claim. **Never weaken a
   claim to make it pass** — the band is the truth, not the obstacle.
 
