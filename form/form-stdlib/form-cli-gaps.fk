@@ -1,0 +1,150 @@
+; form-cli-gaps.fk — the catalog of what is OPEN, with the closing ladder.
+;
+; preludes: form-stdlib/core.fk
+;
+; The membrane (form-cli-membrane.fk) shows gaps PER CROSSING — what one run hit.
+; This is the standing inventory: every open thing in the body at rest, so we see
+; the gaps and choose which to close, by which move, and — the flight lever —
+; which are closable OFFLINE versus which need the network first.
+;
+; Three lanes of openness:
+;   - open IDEA       — an idea with no form spec            → author a spec
+;   - open SPEC       — a spec with no validation/proof       → write a band
+;   - open CAPABILITY — a model/capability with no native     → climb the ladder
+;     recipe, no samples, no local oracle, no remote oracle
+;
+; The capability LADDER (Urs's framing made executable) — rungs from most-open to
+; closed, each naming the cheapest next move and whether it needs the network:
+;
+;   none         no recipe, no samples, no oracle at all   find/stage an oracle   NEEDS NETWORK
+;   remote-only  only a remote oracle reachable            stage remote->local    NEEDS NETWORK  ← flight flag
+;   local-oracle a local oracle is on the device           distill samples         offline
+;   samples      samples on disk, no recipe yet            train a native recipe   offline
+;   recipe       a native Form recipe carries it           (closed — not open)
+;
+; "stage-before-flight" = the rung needs the network to even begin (remote-only /
+; none). flight-ready = the catalog has zero such items: every open gap can be
+; worked air-gapped. This composes the membrane's air-gap-clean notion at body
+; scale; a membrane crossing tagged gap=1 corresponds to a catalog item here.
+;
+; Registered Blueprint coordinates (form/user-blueprint-registry.md):
+(let GAPS-TAG-ITEM 1893)
+(let GAPS-TAG-CATALOG 1894)
+
+(defn gaps-tagged? (v tag arity) (if (eq (len v) arity) (eq (nth v 0) tag) false))
+
+; ── the rungs of the closing ladder ──
+(defn gaps-rung-closed () "closed")
+(defn gaps-rung-samples () "samples")
+(defn gaps-rung-local () "local-oracle")
+(defn gaps-rung-remote () "remote-only")
+(defn gaps-rung-source () "source-local")  ; local oracle source on disk, needs building (offline)
+(defn gaps-rung-none () "none")
+(defn gaps-rung-no-spec () "no-spec")     ; an open idea
+(defn gaps-rung-no-proof () "no-proof")   ; an open spec
+
+; the kinds of open thing
+(defn gaps-kind-idea () "idea")
+(defn gaps-kind-spec () "spec")
+(defn gaps-kind-capability () "capability")
+
+; ── the capability rung from four facts (each 1/0) ──
+; climb down: a native recipe closes it; else samples; else a local oracle; else
+; a remote oracle; else nothing. The FIRST available rung is where it sits.
+(defn gaps-capability-rung (recipe? samples? local? remote?)
+    (if (eq recipe? 1) (gaps-rung-closed)
+        (if (eq samples? 1) (gaps-rung-samples)
+            (if (eq local? 1) (gaps-rung-local)
+                (if (eq remote? 1) (gaps-rung-remote)
+                    (gaps-rung-none))))))
+
+; ── map an oracle-catalog teacher (trust, state) onto the ladder ──
+; oracle-catalog.fk names each teacher lane the body leans on. A lane the body
+; senses only through a teacher is an open capability: an installed LOCAL teacher
+; sits at local-oracle (distill offline); an installed REMOTE teacher sits at
+; remote-only (stage before flight); source-pending / absent sit at none.
+(defn gaps-rung-from-oracle (trust state)
+    (if (str_eq state "installed")
+        (if (str_eq trust "local") (gaps-rung-local) (gaps-rung-remote))
+        (if (str_eq state "source-pending") (gaps-rung-source)
+            (gaps-rung-none))))
+
+; ── the cheapest next move to climb one rung toward closed ──
+(defn gaps-next-move (rung)
+    (if (str_eq rung (gaps-rung-samples)) "train-native-recipe"
+        (if (str_eq rung (gaps-rung-local)) "distill-samples-from-local-oracle"
+            (if (str_eq rung (gaps-rung-source)) "build-local-oracle-source"
+                (if (str_eq rung (gaps-rung-remote)) "stage-remote-to-local-oracle"
+                    (if (str_eq rung (gaps-rung-none)) "find-or-stage-an-oracle"
+                        (if (str_eq rung (gaps-rung-no-spec)) "author-form-spec"
+                            (if (str_eq rung (gaps-rung-no-proof)) "write-validation-band"
+                                "none"))))))))
+
+; ── can the next move happen with NO network? (the offline lever) ──
+(defn gaps-offline-closable? (rung)
+    (if (or (str_eq rung (gaps-rung-samples))
+            (or (str_eq rung (gaps-rung-local))
+                (or (str_eq rung (gaps-rung-source))
+                    (or (str_eq rung (gaps-rung-no-spec))
+                        (str_eq rung (gaps-rung-no-proof)))))) 1 0))
+
+; ── does this rung NEED the network before it can even begin? (flight flag) ──
+(defn gaps-stage-before-flight? (rung)
+    (if (or (str_eq rung (gaps-rung-remote)) (str_eq rung (gaps-rung-none))) 1 0))
+
+; ── is this rung open at all? (closed is the only non-open rung) ──
+(defn gaps-open-rung? (rung) (if (str_eq rung (gaps-rung-closed)) 0 1))
+
+; ── an open item: a thing in the body and the rung it sits on ──
+(defn gaps-item (kind id rung)
+    (list GAPS-TAG-ITEM kind id rung
+        (gaps-next-move rung)
+        (gaps-offline-closable? rung)
+        (gaps-stage-before-flight? rung)))
+(defn gaps-item? (x) (gaps-tagged? x GAPS-TAG-ITEM 7))
+(defn gaps-i-kind (x) (nth x 1))
+(defn gaps-i-id (x) (nth x 2))
+(defn gaps-i-rung (x) (nth x 3))
+(defn gaps-i-next (x) (nth x 4))
+(defn gaps-i-offline? (x) (nth x 5))
+(defn gaps-i-stage? (x) (nth x 6))
+; an item is well-formed when its derived fields agree with its rung
+(defn gaps-item-valid? (x)
+    (and (gaps-item? x)
+         (and (gt (str_len (gaps-i-id x)) 0)
+              (and (str_eq (gaps-i-next x) (gaps-next-move (gaps-i-rung x)))
+                   (and (eq (gaps-i-offline? x) (gaps-offline-closable? (gaps-i-rung x)))
+                        (eq (gaps-i-stage? x) (gaps-stage-before-flight? (gaps-i-rung x))))))))
+
+; ── the catalog: the open items and what they tally to ──
+(defn gaps-catalog (items) (list GAPS-TAG-CATALOG items))
+(defn gaps-catalog? (c) (gaps-tagged? c GAPS-TAG-CATALOG 2))
+(defn gaps-cat-items (c) (nth c 1))
+
+(defn gaps-count (items) (len items))
+(defn gaps-count-kind (items kind)
+    (if (eq (len items) 0) 0
+        (add (if (str_eq (gaps-i-kind (head items)) kind) 1 0)
+             (gaps-count-kind (tail items) kind))))
+(defn gaps-count-offline (items)
+    (if (eq (len items) 0) 0
+        (add (gaps-i-offline? (head items)) (gaps-count-offline (tail items)))))
+(defn gaps-count-stage (items)
+    (if (eq (len items) 0) 0
+        (add (gaps-i-stage? (head items)) (gaps-count-stage (tail items)))))
+(defn gaps-count-rung (items rung)
+    (if (eq (len items) 0) 0
+        (add (if (str_eq (gaps-i-rung (head items)) rung) 1 0)
+             (gaps-count-rung (tail items) rung))))
+
+(defn gaps-cat-open-count (c) (gaps-count (gaps-cat-items c)))
+(defn gaps-cat-idea-count (c) (gaps-count-kind (gaps-cat-items c) (gaps-kind-idea)))
+(defn gaps-cat-spec-count (c) (gaps-count-kind (gaps-cat-items c) (gaps-kind-spec)))
+(defn gaps-cat-capability-count (c) (gaps-count-kind (gaps-cat-items c) (gaps-kind-capability)))
+(defn gaps-cat-offline-count (c) (gaps-count-offline (gaps-cat-items c)))
+(defn gaps-cat-stage-count (c) (gaps-count-stage (gaps-cat-items c)))
+; flight-ready: nothing in the catalog needs the network to begin closing —
+; every open gap can be worked air-gapped.
+(defn gaps-cat-flight-ready? (c) (if (eq (gaps-cat-stage-count c) 0) 1 0))
+
+0
