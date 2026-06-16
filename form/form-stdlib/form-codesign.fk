@@ -1,0 +1,84 @@
+; form-codesign.fk — the ad-hoc Mach-O code signature as a Form recipe.
+;
+; Apple Silicon's dyld REFUSES an unsigned dylib (proven: dlopen of an unsigned
+; library fails). Today `ld` supplies that signature; this recipe is the Form
+; carrier that retires it — the kernel signs its own binaries. The signature is
+; a SuperBlob wrapping one CodeDirectory whose code slots are SHA256 of each
+; 4096-byte page of the image up to codeLimit (the byte-conviction floor:
+; sha256(page) == the system signer's stored slot, proven exactly). SHA256 is
+; the Form recipe in sha256.fk — no host crypto required; the signature stays
+; sovereign across cells.
+;
+; Layout reproduced byte-for-byte from `ld`'s ad-hoc signature (CodeDirectory
+; v=20400): the conviction demo scripts/form_codesign_conviction_demo.sh signs a
+; real dylib's [0:codeLimit] and the Form blob == ld's blob, byte-identical.
+; Structure proven four-way by tests/codesign-band.fk.
+;
+; co-sign (image codeLimit ident execSegLimit flags execSegFlags) -> the
+; SuperBlob byte-list, where `image` is the byte-list being signed (its length
+; IS codeLimit), `ident` is the identifier byte-list (e.g. "lib.dylib"), and
+; execSegLimit/flags/execSegFlags match the binary (the dylib emitter computes
+; them; the demo passes ld's values — flags 0x20002, execSegFlags 0).
+
+(do
+    (defn co-nil? (xs) (eq (len xs) 0))
+    (defn co-app (xs ys) (if (co-nil? xs) ys (cons (head xs) (co-app (tail xs) ys))))
+    (defn co-cat (xss) (if (eq (len xss) 1) (head xss) (co-app (head xss) (co-cat (tail xss)))))
+
+    ; big-endian integer fields (values < 2^31 -> safe; the high-bit blob magics
+    ; are emitted as raw bytes below, sidestepping the kernels' > 2^31 wrap).
+    (defn co-be-u32 (n) (list (mod (div n 16777216) 256) (mod (div n 65536) 256)
+                              (mod (div n 256) 256) (mod n 256)))
+    (defn co-be-u64 (n) (co-app (list 0 0 0 0) (co-be-u32 n)))
+
+    ; blob magics as bytes: CodeDirectory 0xfade0c02, EmbeddedSignature 0xfade0cc0
+    (defn co-magic-cd () (list 250 222 12 2))
+    (defn co-magic-sb () (list 250 222 12 192))
+
+    ; first n / drop n elements of a byte-list (page slicing).
+    (defn co-take (xs n) (if (eq n 0) (list) (cons (head xs) (co-take (tail xs) (sub n 1)))))
+    (defn co-drop (xs n) (if (eq n 0) xs (co-drop (tail xs) (sub n 1))))
+
+    ; page count = ceil(codeLimit / 4096); a full multiple stays exact.
+    (defn co-npages (n) (if (le n 4096) 1 (add 1 (co-npages (sub n 4096)))))
+
+    ; code slots = SHA256 of each 4096-byte page, concatenated (32 bytes each).
+    (defn co-hashes (xs)
+        (if (le (len xs) 4096)
+            (sha256 xs)
+            (co-app (sha256 (co-take xs 4096)) (co-hashes (co-drop xs 4096)))))
+
+    ; the CodeDirectory header is 88 bytes (magic..execSegFlags), then the
+    ; identifier (null-terminated) at offset 88, then the code-slot hashes.
+    ; hashOffset = 88 + identLen + 1 ; length = hashOffset + nCode*32.
+    (defn co-cd (image codeLimit ident execSegLimit flags execSegFlags)
+        (do
+            (let nCode (co-npages codeLimit))
+            (let identOff 88)
+            (let hashOff (add 89 (len ident)))            ; 88 + identLen + 1
+            (let cdLen (add hashOff (mul nCode 32)))
+            (co-cat (list
+                (co-magic-cd) (co-be-u32 cdLen)           ; magic, length
+                (co-be-u32 132096) (co-be-u32 flags)      ; version 0x20400, flags
+                (co-be-u32 hashOff) (co-be-u32 identOff)  ; hashOffset, identOffset
+                (co-be-u32 0) (co-be-u32 nCode)           ; nSpecialSlots, nCodeSlots
+                (co-be-u32 codeLimit)                     ; codeLimit
+                (list 32 2 0 12)                          ; hashSize, hashType(SHA256), platform, pageLog(4096)
+                (co-be-u32 0) (co-be-u32 0)               ; spare2, scatterOffset
+                (co-be-u32 0) (co-be-u32 0)               ; teamOffset, spare3
+                (co-be-u64 0) (co-be-u64 0)               ; codeLimit64, execSegBase
+                (co-be-u64 execSegLimit) (co-be-u64 execSegFlags) ; execSegLimit, execSegFlags
+                ident (list 0)                            ; identifier + NUL
+                (co-hashes image)))))                     ; the code slots
+
+    ; the EmbeddedSignature SuperBlob: magic, totalLength, count=1; one index
+    ; (CSSLOT_CODEDIRECTORY type 0 at offset 20); then the CodeDirectory.
+    (defn co-sign (image codeLimit ident execSegLimit flags execSegFlags)
+        (do
+            (let cd (co-cd image codeLimit ident execSegLimit flags execSegFlags))
+            (co-cat (list
+                (co-magic-sb) (co-be-u32 (add 20 (len cd))) (co-be-u32 1)  ; magic, length, count
+                (co-be-u32 0) (co-be-u32 20)                               ; index: type CODEDIRECTORY, offset 20
+                cd))))
+
+    0)

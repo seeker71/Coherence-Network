@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 272
+**Total files**: 273
 
 | File | Purpose |
 |---|---|
@@ -91,6 +91,7 @@
 | [form_cli_slice.sh](form_cli_slice.sh) | form_cli_slice.sh — compile a Form recipe slice to a RUNNABLE native binary, |
 | [form_cli_tiered.sh](form_cli_tiered.sh) | form_cli_tiered.sh — retire the REMOTE oracle on reasoning: local-first, tiered. |
 | [form_cli_train_predict.sh](form_cli_train_predict.sh) | form_cli_train_predict.sh — train a NATIVE tool predictor on the corpus, then |
+| [form_codesign_conviction_demo.sh](form_codesign_conviction_demo.sh) | form_codesign_conviction_demo.sh — byte-conviction for the Form code-signer. |
 | [form_coreutils_diff.sh](form_coreutils_diff.sh) | form_coreutils_diff.sh — differential test of the zero-clang Form coreutils against |
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
