@@ -77,7 +77,7 @@ echo "    or: python3 scripts/coh_substrate.py ingest <path-to-slice>"
 
 # 3. Ledger the slice as a native-recipe crossing (it stayed in the body) -----
 led="$work/led.fk"
-{ echo '(defn nil? (xs) (eq (len xs) 0))'
+{ cat "$STD/core-native.fk"
   cat "$STD/tool-channel.fk" "$STD/choice-receipt.fk" "$STD/form-cli-membrane.fk"
   echo "(let cx (fcm-crossing \"slice:$NAME\" \"cap.compute.native\" (fcm-surface-native) 1 \"native binary slice sha256 $SHA\" \"success\" 100 0))"
   echo '(print (fcm-surface-crossed? (fcm-x-surface cx)))'

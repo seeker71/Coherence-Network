@@ -1,0 +1,18 @@
+; core-native.fk — core.fk's helpers in the native (Lisp) dialect, for recipes
+; evaluated DIRECTLY on the kernel rather than through validate.sh's BML-compiled
+; core.fk.
+;
+; core.fk is the `section [form.bml]` maintenance dialect; it cannot be raw-cat'd
+; into a Lisp program, so a carrier that evals a stdlib recipe using a core helper
+; (e.g. choice-receipt's nil?) hits "unbound function nil?". Carriers were each
+; hand-shimming the same `(defn nil? ...)` before catting the membrane stack —
+; repeated carrier friction. This is the single native-dialect source for those
+; helpers: a carrier preludes ONE file instead of re-shimming.
+;
+; Mirrors core.fk's contract for the raw-eval context; grows only as a raw-eval
+; recipe needs another helper.
+
+; nil? — the empty-list predicate (core.fk defines it as eq(len(xs), 0)).
+(defn nil? (xs) (eq (len xs) 0))
+
+0

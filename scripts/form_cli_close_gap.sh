@@ -77,9 +77,9 @@ esac
 # 5. Ledger the crossing through the Form membrane recipe ----------------------
 # native-avail=0 (this was a gap); surface=local-oracle; the note is the gap.
 led="$(mktemp)"; trap 'rm -f "$pf" "$raw" "$val" "$led"' EXIT
-# nil? lives in core.fk (BML dialect, needs the source-compiler); for a raw Lisp
-# kernel eval we supply the one-line native-dialect shim choice-receipt needs.
-{ echo '(defn nil? (xs) (eq (len xs) 0))'
+# core.fk is BML (needs the source-compiler) and cannot be raw-cat;
+# core-native.fk is the native-dialect prelude that gives nil? for raw kernel eval.
+{ cat "$STD/core-native.fk"
   cat "$STD/tool-channel.fk" "$STD/choice-receipt.fk" "$STD/form-cli-membrane.fk"
   echo "(let cx (fcm-crossing \"close-gap:$GAP\" \"cap.recipe.synthesis\" (fcm-surface-local-oracle) 0 \"gap: $GAP — drafted by local coder oracle\" \"$OUTCOME\" 85 $COST))"
   echo '(print (fcm-x-gap? cx))'
