@@ -1,0 +1,101 @@
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/form-cli-membrane.fk
+;
+; form-cli-membrane-band - the surface membrane + crossing ledger proof.
+;
+; Verdict 1023 when: the offered surface tallies native vs host; a native tool
+; classifies as native-recipe and a host tool as os-kernel; the surface
+; predicates (crossed? / oracle? / needs-network?) hold; native, gap, retirable,
+; and silence crossings each lower to a VALID choice-receipt; the ledger tallies
+; crossing/gap/retirable/native/local-oracle counts; and the air-gap-clean check
+; reads zero network crossings on a local-only ledger and one on a remote one.
+
+(do
+    ; ── the offered surface: 13 protocols, native + host split sums to 13 ──
+    (let c0 (if (eq (fcm-surface-protocol-count) 13)
+                (if (eq (add (fcm-surface-native-count) (fcm-surface-host-count)) 13) 1 0)
+                0))
+
+    ; ── a native tool (grep, stream:read native=1) crosses no OS membrane ──
+    (let nat-surface (fcm-tool-surface "grep"))
+    (let c1 (if (str_eq nat-surface (fcm-surface-native))
+                (if (eq (fcm-tool-native-available? "grep") 1) 2 0)
+                0))
+
+    ; ── a host tool (find, host:file native=0) reaches the OS kernel, no native recipe ──
+    (let host-surface (fcm-tool-surface "find"))
+    (let c2 (if (str_eq host-surface (fcm-surface-kernel))
+                (if (eq (fcm-tool-native-available? "find") 0) 4 0)
+                0))
+
+    ; ── surface predicates ──
+    (let c3 (if (eq (fcm-surface-crossed? (fcm-surface-native)) 0)
+                (if (eq (fcm-surface-crossed? (fcm-surface-kernel)) 1)
+                    (if (eq (fcm-surface-oracle? (fcm-surface-local-oracle)) 1)
+                        (if (eq (fcm-surface-oracle? (fcm-surface-kernel)) 0)
+                            (if (eq (fcm-surface-needs-network? (fcm-surface-remote-oracle)) 1)
+                                (if (eq (fcm-surface-needs-network? (fcm-surface-local-oracle)) 0) 8 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0))
+
+    ; ── four crossings, one per shape ──
+    (let cx-native (fcm-crossing "compute" "cap.kernel.call" (fcm-surface-native) 1
+                        "carried by native recipe nodeid-compat" (cr-outcome-success) 95 12))
+    (let cx-gap (fcm-crossing "exec" "cap.host.exec" (fcm-surface-kernel) 0
+                        "gap: no native recipe for shell exec — idea->spec opening" (cr-outcome-success) 60 5))
+    (let cx-retire (fcm-crossing "oracle" "cap.host.exec" (fcm-surface-local-oracle) 1
+                        "feedback: native-training-receipt summary recipe ledger" (cr-outcome-success) 70 240))
+    (let cx-silent (fcm-crossing "oracle" "cap.host.exec" (fcm-surface-local-oracle) 1
+                        "no answer from oracle this step" (cr-outcome-silence) 0 0))
+    (let cx-remote (fcm-crossing "oracle" "cap.host.exec" (fcm-surface-remote-oracle) 0
+                        "gap: fell to remote oracle — needs network" (cr-outcome-success) 80 300))
+
+    ; ── a native crossing is valid, not a gap, not retirable ──
+    (let c4 (if (fcm-crossing-valid? cx-native "form-cli" "form-cli-membrane-band" 20260616)
+                (if (eq (fcm-x-gap? cx-native) 0)
+                    (if (eq (fcm-x-retirable? cx-native) 0) 16 0)
+                    0)
+                0))
+
+    ; ── a host crossing with no native recipe is valid AND a gap ──
+    (let c5 (if (fcm-crossing-valid? cx-gap "form-cli" "form-cli-membrane-band" 20260616)
+                (if (eq (fcm-x-gap? cx-gap) 1) 32 0)
+                0))
+
+    ; ── a local-oracle crossing where native WAS available is valid, retirable, and an oracle ──
+    (let c6 (if (fcm-crossing-valid? cx-retire "form-cli" "form-cli-membrane-band" 20260616)
+                (if (eq (fcm-x-retirable? cx-retire) 1)
+                    (if (eq (fcm-surface-oracle? (fcm-x-surface cx-retire)) 1) 64 0)
+                    0)
+                0))
+
+    ; ── a silence crossing lowers to a valid receipt (selected-path collapses to none) ──
+    (let c7 (if (fcm-crossing-valid? cx-silent "form-cli" "form-cli-membrane-band" 20260616) 128 0))
+
+    ; ── the ledger tallies ──
+    (let ledger (list cx-native cx-gap cx-retire cx-remote))
+    (let rep (fcm-report ledger))
+    (let c8 (if (eq (fcm-ledger-crossing-count ledger) 4)
+                (if (eq (fcm-ledger-gap-count ledger) 2)
+                    (if (eq (fcm-ledger-retirable-count ledger) 1)
+                        (if (eq (fcm-ledger-native-count ledger) 1)
+                            (if (eq (fcm-ledger-local-oracle-count ledger) 1) 256 0)
+                            0)
+                        0)
+                    0)
+                0))
+
+    ; ── air-gap clean: a local-only ledger has zero network crossings; the remote one has one ──
+    (let clean-ledger (list cx-native cx-gap cx-retire))
+    (let clean-rep (fcm-report clean-ledger))
+    (let c9 (if (eq (fcm-ledger-network-count clean-ledger) 0)
+                (if (eq (fcm-report-airgap-clean? clean-rep) 1)
+                    (if (eq (fcm-ledger-network-count ledger) 1)
+                        (if (eq (fcm-report-airgap-clean? rep) 0) 512 0)
+                        0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

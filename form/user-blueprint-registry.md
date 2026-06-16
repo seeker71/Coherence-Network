@@ -263,3 +263,6 @@ The relationship protocol exposes skill verbs so agents and humans can present i
 - 1890 SKILL-SET-BOUNDARY — lightweight signal for evolving inside/outside/guest status in a relationship
 
 **Operating shape**: These verbs make the protocol callable from agent tools, MCP surfaces, and direct Form evaluation while keeping identity, relationship memory, welcome orientation, exchange records, and boundaries in one composable shape.
+
+- 1891 MEMBRANE-CROSSING — one crossing of the form-cli surface membrane: op, capability, surface (native-recipe/os-kernel/local-oracle/remote-oracle), native-recipe availability, gap-or-feedback note, outcome, certainty, and cost. Lowers to CHOICE-RECEIPT for proven validation.
+- 1892 MEMBRANE-REPORT — the form-cli surface report: the crossing ledger with native/gap/retirable/local-oracle/network tallies and the air-gap-clean readout.
