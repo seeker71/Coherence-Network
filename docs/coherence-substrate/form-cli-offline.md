@@ -149,6 +149,36 @@ The slice spec is the lowered IR (op-tagged nodes; tags 1=LIT 2=ARG 3=ADD 4=SUB)
 A recipe→IR front-end is a separate cell; the lowered subset (LIT/ADD/SUB/COND/
 ARG/recursion) is what compiles to native today.
 
+## The training corpus — samples to try the native models on
+
+Every slice and gap-close captures its request/response; the agent's own turns
+(reasoning + tool use) are captured too. These become samples the native models
+are tried on and measured against — champion (the oracle) vs challenger
+(form-native).
+
+```bash
+# the agent's own turns from a session transcript
+scripts/form_cli_capture.sh --from-transcript <session>.jsonl 10
+# form_cli_close_gap.sh auto-captures every close (success AND fail teach)
+```
+
+Each line is a `form-cli-sample.fk` cell (four-way, `form-cli-sample-band` →
+1023): task, oracle-id, reasoning, ordered tool-steps (each a membrane crossing),
+answer, outcome. A turn with no remote-oracle step is **offline-reproducible** —
+the native models replay it air-gapped. Corpus lives in
+[`form/form-samples/agent-turns/`](../../form/form-samples/agent-turns/) — a
+committed `seed.jsonl` of real exemplars, a gitignored `corpus.jsonl` that
+accumulates.
+
+**Cell sovereignty is structural:** the capture carrier refuses any turn touching
+tender/personal markers — dropped whole, never scrubbed-and-kept — so the corpus
+can never hold gated content by construction. (A turn that *read* a gated file is
+dropped because its step-results carry that content.)
+
+The replay — take a sample's task, run form-cli's native loop, compare to the
+captured answer + tool sequence — is how we see how the native models are doing
+on real work.
+
 ## What is proven, and the honest frontier
 
 - **Proven, four-way**: the surface membrane + crossing ledger; the agent loop

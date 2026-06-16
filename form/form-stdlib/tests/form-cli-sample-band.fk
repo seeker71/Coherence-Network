@@ -1,0 +1,73 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-sample.fk
+;
+; form-cli-sample-band - the agent-turn training sample proof.
+;
+; Verdict 1023 when: tool steps validate (and an empty-tool step is rejected); the
+; remote-surface predicate holds; a sample validates; outcomes are known;
+; step-count and per-surface counts tally; offline-reproducible? reads 1 with no
+; remote step and 0 with one; and the reasoning (task->answer) and tool
+; (task->tool) training pairs derive correctly. A sample carrying an invalid step
+; is itself invalid.
+
+(do
+    (let s-read (fcs-step "Read" (fcs-surface-kernel) "args:specs/foo.md" "result:frontmatter"))
+    (let s-oracle (fcs-step "oracle" (fcs-surface-local-oracle) "args:draft tri" "result:(defn tri ...)"))
+    (let s-bash (fcs-step "Bash" (fcs-surface-kernel) "args:validate.sh" "result:1023 four-way"))
+    (let s-remote (fcs-step "oracle" (fcs-surface-remote-oracle) "args:ask" "result:answer"))
+    (let s-bad (fcs-step "" (fcs-surface-kernel) "args" "result"))
+
+    ; ── a real step is valid; an empty-tool step is not ──
+    (let c0 (if (fcs-step-valid? s-read) (if (fcs-step-valid? s-bad) 0 1) 0))
+
+    ; ── the remote-surface predicate ──
+    (let c1 (if (eq (fcs-surface-remote? (fcs-surface-remote-oracle)) 1)
+                (if (eq (fcs-surface-remote? (fcs-surface-local-oracle)) 0) 2 0)
+                0))
+
+    ; ── an offline turn (no remote step): the triangular gap close ──
+    (let smp (fcs-sample "task:close triangular gap" "claude"
+                "reasoning:local coder drafts, kernel validates"
+                (list s-read s-oracle s-bash)
+                "answer:gap closed (tri 5)=15" (fcs-outcome-success)))
+    (let c2 (if (fcs-sample-valid? smp) 4 0))
+
+    ; ── outcomes ──
+    (let c3 (if (fcs-outcome-known? (fcs-outcome-success))
+                (if (fcs-outcome-known? (fcs-outcome-partial))
+                    (if (fcs-outcome-known? "garbage") 0 8)
+                    0)
+                0))
+
+    ; ── step-count ──
+    (let c4 (if (eq (fcs-step-count smp) 3) 16 0))
+
+    ; ── per-surface counts ──
+    (let c5 (if (eq (fcs-count-surface (fcs-steps smp) (fcs-surface-kernel)) 2)
+                (if (eq (fcs-count-surface (fcs-steps smp) (fcs-surface-local-oracle)) 1) 32 0)
+                0))
+
+    ; ── offline-reproducible: the offline turn yes, a turn with a remote step no ──
+    (let smp-remote (fcs-sample "task:x" "claude" "r" (list s-read s-remote) "answer:y" (fcs-outcome-success)))
+    (let c6 (if (eq (fcs-offline-reproducible? smp) 1)
+                (if (eq (fcs-offline-reproducible? smp-remote) 0)
+                    (if (eq (fcs-remote-step-count smp-remote) 1) 64 0)
+                    0)
+                0))
+
+    ; ── the reasoning pair (task -> answer) ──
+    (let pr (fcs-pair-reasoning smp))
+    (let c7 (if (str_eq (nth pr 0) "task:close triangular gap")
+                (if (str_eq (nth pr 1) "answer:gap closed (tri 5)=15") 128 0)
+                0))
+
+    ; ── a tool pair (task -> tool) ──
+    (let tp (fcs-step-tool-pair (fcs-task smp) s-oracle))
+    (let c8 (if (str_eq (nth tp 0) "task:close triangular gap")
+                (if (str_eq (nth tp 1) "oracle") 256 0)
+                0))
+
+    ; ── a sample carrying an invalid step is itself invalid ──
+    (let smp-bad (fcs-sample "task:x" "claude" "r" (list s-read s-bad) "answer:y" (fcs-outcome-success)))
+    (let c9 (if (fcs-sample-valid? smp-bad) 0 512))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
