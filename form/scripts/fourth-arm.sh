@@ -157,16 +157,43 @@ fourth_table_for_band() {
     fourth_table "$stem"
 }
 
-# fourth_prepare_all — batch-emit every missing manifest table in ONE Go
-# walker run (the flattener chain parses once, not once per band). Called
-# before the full suite; single-band runs fall back to fourth_table's
-# per-band miss path.
+# fourth_run_chunk — flatten ONE chunk's driver through the Go walker in a
+# single pass, then split the marker-delimited output into per-band tables.
+#   driver: FOURTH_CHAIN  +  (==T-stem== marker, flatten expr)*  +  ==T-END==
+#   plan:   one "stem<TAB>outpath" line per band, in driver order
+# Self-contained (reads only its two files), so it runs safely as a background
+# job: every table publishes atomically (mv -f "$cur.tmp" "$cur"), so parallel
+# chunks never collide. A band whose flatten emits nothing leaves no table and
+# runs three-kernel only — honest degradation, never a red suite.
+fourth_run_chunk() {
+    local driver="$1" plan="$2" out_all="$1.out"
+    "$GO_BIN" "$driver" 2>/dev/null > "$out_all" || true
+    local stems=() outs=() s o
+    while IFS=$'\t' read -r s o; do stems+=("$s"); outs+=("$o"); done < "$plan"
+    local n="${#stems[@]}" p cur nextmark
+    for ((p = 0; p < n; p++)); do
+        cur="${outs[$p]}"
+        if ((p + 1 < n)); then nextmark="==T-${stems[$((p + 1))]}=="; else nextmark="==T-END=="; fi
+        sed -n "/^==T-${stems[$p]}==\$/,/^${nextmark}\$/p" "$out_all" | sed -e '1d' -e '$d' > "$cur.tmp"
+        if [[ -s "$cur.tmp" ]]; then mv -f "$cur.tmp" "$cur"; else rm -f "$cur.tmp"; fi
+    done
+    rm -f "$out_all"
+}
+
+# fourth_prepare_all — emit every MISSING manifest table before the suite fans
+# out. Each Go walker run re-parses the whole FOURTH_CHAIN, so the cost that
+# matters is the NUMBER of walker runs, not the band count. We group the missing
+# bands into CHUNKS of $batch_max and flatten each chunk in ONE walker run
+# (chain parsed once per chunk) — turning N separate runs (one per band on a
+# cold cache) into ceil(N/batch_max). Chunks fan out across cores in waves of
+# $jobs with a plain `wait` barrier: no busy-poll, no `wait -n`, holds in bash
+# 3.2 (macOS default). Warm runs (missing=0) return before any walker starts.
 fourth_prepare_all() {
     fourth_available || return 0
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
-    local d stems=() outs=() stem kind key out missing=0 f srcs
-    d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-all.XXXXXX")"
-    cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
+    local workdir stem kind key out missing=0 f srcs driver plan cidx=0 ccount=0
+    local batch_max="${FOURTH_PREPARE_ALL_BATCH_MAX:-48}"
+    workdir="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-all.XXXXXX")"
     while read -r stem kind _; do
         [[ -z "$stem" || "$stem" == \#* ]] && continue
         srcs=()
@@ -176,55 +203,38 @@ fourth_prepare_all() {
         out="$FOURTH_DIR/t-$stem-$key.txt"
         [[ -s "$out" ]] && continue
         missing=$((missing + 1))
-        stems+=("$stem")
-        outs+=("$out")
-        printf '(print "==T-%s==")\n' "$stem" >> "$d/driver.fk"
-        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
-    done < "$FOURTH_MANIFEST"
-    if [[ "$missing" -eq 0 ]]; then
-        rm -rf "$d"
-        return 0
-    fi
-    local batch_max="${FOURTH_PREPARE_ALL_BATCH_MAX:-48}"
-    if [[ "$missing" -gt "$batch_max" ]]; then
-        # Cold cache: each band's flatten is independent and content-keyed, so
-        # they fan out across cores. A rolling worker pool keeps at most $jobs
-        # flatten processes alive — background each fourth_table, then while at
-        # capacity poll the live-job count (jobs -r) and yield until one
-        # finishes. Holds in bash 3.2 (macOS default, no wait -n). Each job is a
-        # subshell, so prepare_sources's prepared_args global stays isolated;
-        # cache writes already publish atomically (mv -f "$out.tmp" "$out",
-        # PR #3008), so concurrent flatten is safe. set -e is never tripped by a
-        # backgrounded miss — a band that can't flatten just leaves no table and
-        # runs three-kernel only, the suite stays green.
-        local jobs="${FOURTH_PREPARE_ALL_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
-        [[ "$jobs" =~ ^[0-9]+$ && "$jobs" -ge 1 ]] || jobs=4
-        echo "  flattening $missing band tables for the fourth arm across $jobs cores (cold cache; batch cap $batch_max)..." >&2
-        rm -rf "$d"
-        local one
-        for one in "${stems[@]}"; do
-            while (( $(jobs -r 2>/dev/null | wc -l) >= jobs )); do
-                wait "$(jobs -rp 2>/dev/null | head -1)" 2>/dev/null || true
-            done
-            fourth_table "$one" >/dev/null &
-        done
-        wait || true
-        return 0
-    fi
-    echo "  flattening $missing band tables for the fourth arm..." >&2
-    printf '(print "==T-END==")\n' >> "$d/driver.fk"
-    "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$d/all.out" || true
-    local i cur=""
-    for ((i = 0; i < ${#stems[@]}; i++)); do
-        cur="${outs[$i]}"
-        if ((i + 1 < ${#stems[@]})); then
-            sed -n "/^==T-${stems[$i]}==\$/,/^==T-${stems[$((i + 1))]}==\$/p" "$d/all.out" | sed -e '1d' -e '$d' > "$cur.tmp"
-        else
-            sed -n "/^==T-${stems[$i]}==\$/,/^==T-END==\$/p" "$d/all.out" | sed -e '1d' -e '$d' > "$cur.tmp"
+        if [[ "$ccount" -eq 0 ]]; then        # open a fresh chunk driver + plan
+            driver="$workdir/driver-$cidx.fk"; plan="$workdir/plan-$cidx.tsv"
+            cat "${FOURTH_CHAIN[@]}" > "$driver"; : > "$plan"
         fi
-        if [[ -s "$cur.tmp" ]]; then mv -f "$cur.tmp" "$cur"; else rm -f "$cur.tmp"; fi
+        printf '(print "==T-%s==")\n' "$stem" >> "$driver"
+        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$driver"
+        printf '%s\t%s\n' "$stem" "$out" >> "$plan"
+        ccount=$((ccount + 1))
+        if [[ "$ccount" -ge "$batch_max" ]]; then   # seal a full chunk
+            printf '(print "==T-END==")\n' >> "$driver"
+            cidx=$((cidx + 1)); ccount=0
+        fi
+    done < "$FOURTH_MANIFEST"
+    if [[ "$ccount" -gt 0 ]]; then               # seal the trailing partial chunk
+        printf '(print "==T-END==")\n' >> "$driver"
+        cidx=$((cidx + 1))
+    fi
+    if [[ "$missing" -eq 0 ]]; then
+        rm -rf "$workdir"
+        return 0
+    fi
+    local jobs="${FOURTH_PREPARE_ALL_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
+    [[ "$jobs" =~ ^[0-9]+$ && "$jobs" -ge 1 ]] || jobs=4
+    echo "  flattening $missing band tables for the fourth arm in $cidx walker run(s) across $jobs cores (cold cache; chunk $batch_max)..." >&2
+    local k inflight=0
+    for ((k = 0; k < cidx; k++)); do
+        fourth_run_chunk "$workdir/driver-$k.fk" "$workdir/plan-$k.tsv" &
+        inflight=$((inflight + 1))
+        if [[ "$inflight" -ge "$jobs" ]]; then wait || true; inflight=0; fi
     done
-    rm -rf "$d"
+    wait || true
+    rm -rf "$workdir"
     # Compost stale tables from earlier source generations.
     find "$FOURTH_DIR" -maxdepth 1 -name 't-*' -mtime +14 -delete 2>/dev/null || true
 }
