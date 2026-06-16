@@ -1,0 +1,29 @@
+; rewrite-propose-band.fk — propose -> verify -> select, end to end.
+;
+; preludes: form-stdlib/core.fk form-stdlib/recipe-equivalence-gate.fk form-stdlib/lowering-search.fk form-stdlib/rewrite-propose.fk
+;
+; recipe: 2*3 + x  =  (ADD (MUL (LIT 2) (LIT 3)) VAR), 5 nodes.
+; PROPOSE: rw-fold collapses 2*3 -> 6  =>  (ADD (LIT 6) VAR), 3 nodes.
+; VERIFY: ast-eval both over input coverage {0,5,10} -> acks agree (a WRONG fold would
+;   diverge here and the gate would refuse it — the rewrite is verified, not trusted).
+; SELECT: lowering-search picks the cheaper VERIFIED candidate (variant, 3) over the
+;   original (5). aggregate = equivalent?(1) + best-cost(3) + variant-size(3) = 7.
+
+(do
+  (let recipe  (list 2 (list 3 (list 0 2) (list 0 3)) (list 1)))
+  (let variant (rw-fold recipe))
+
+  (let vcov (list
+    (req-obs 0  (ast-eval recipe 0)  (ast-eval variant 0))
+    (req-obs 5  (ast-eval recipe 5)  (ast-eval variant 5))
+    (req-obs 10 (ast-eval recipe 10) (ast-eval variant 10))))
+  (let rcov (list
+    (req-obs 0  (ast-eval recipe 0)  (ast-eval recipe 0))
+    (req-obs 5  (ast-eval recipe 5)  (ast-eval recipe 5))
+    (req-obs 10 (ast-eval recipe 10) (ast-eval recipe 10))))
+
+  (let cands (list
+    (ls-cand "recipe"  rcov 0 (ast-size recipe))
+    (ls-cand "variant" vcov 0 (ast-size variant))))
+
+  (add (req-equivalent? vcov) (add (ls-best-cost cands) (ast-size variant))))
