@@ -78,7 +78,6 @@
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
-| [form_byte_filter_demo.sh](form_byte_filter_demo.sh) | form_byte_filter_demo.sh — a shell command, lowered to native asm from a Form recipe. |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
@@ -103,6 +102,7 @@
 | [form_native_run.sh](form_native_run.sh) | form_native_run.sh — run the PURE FORM agent runner (form-stdlib/form-native-run.fk) |
 | [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface. Emit a native binary from |
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
+| [form_rot13_demo.sh](form_rot13_demo.sh) | form_rot13_demo.sh — `rot13`, built with ZERO clang and direct Form -> asm, and |
 | [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |
 | [form_syscall_demo.sh](form_syscall_demo.sh) | form_syscall_demo.sh — a program that does I/O, built with ZERO clang. The Form |
 | [form_tr_demo.sh](form_tr_demo.sh) | form_tr_demo.sh — `tr A-Z a-z`, a real unix command, built with ZERO clang and |
