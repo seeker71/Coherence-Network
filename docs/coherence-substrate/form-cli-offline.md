@@ -171,28 +171,33 @@ real instructions — the lowercase filter's loop is `add w9, w0, #32` + `csel w
 w9, w0, lo` in arm64. Proven four-way at `hati-os-byte-filter-emit fks 31` (the
 emitted C is byte-identical across kernels; the name parameterizes the program).
 
-Two lowering lanes, named honestly: the **slice lane**
-([`form-lower.fk`](../../form/form-stdlib/form-lower.fk) + `form-asm.fk`) reaches
-native arm64 bytes with **zero clang**; the **filter lane** above reaches real
-coreutils **now** by emitting C through clang. Both author the whole program in
-Form — they differ only in how far the lowering walks before a host compiler.
-Here clang is the **crutch**; the north star is clang as **oracle only**.
+**The north star is direct Form → asm** — the Form recipe emitting machine code on
+its own. clang is not that destination; it is **one oracle**, a way to check our
+bytes against the assembler. Understanding the **LLVM / ARM encoding spec** is a
+**second oracle** — independent of clang, it grounds an encoding in the documented
+bitfields (e.g. the two's-complement branch fold). Neither oracle is the lane; the
+four-way band is the truth, and it stands without either.
 
-The slice lane is now walking there. `form-asm.fk` carries the syscall / byte-I/O
-instruction set (`svc`, 64-bit `movz`/`movk`, `strb`, stack-frame `add`/`sub`) —
-proven four-way at `form-asm-syscall fks 31`, byte-for-byte against the assembler.
+Two lowering lanes, named honestly: the **slice lane**
+([`form-lower.fk`](../../form/form-stdlib/form-lower.fk) + `form-asm.fk`) emits
+native arm64 bytes with **zero clang**; the **filter lane** above reaches coreutils
+by emitting C through clang (clang there is a crutch, on its way out). The slice
+lane now carries a real unix filter end to end: the syscall / byte-I/O set (`svc`,
+64-bit `movz`/`movk`, `strb`, stack frame) **and** the read-loop control flow
+(`cmp`, the EOF branch, the backward loop branch) — proven four-way at
+`form-asm-syscall fks 31` and `form-asm-branch fks 31`.
 
 ```bash
-scripts/form_syscall_demo.sh   # arm64 macOS
+scripts/form_cat_demo.sh   # arm64 macOS — a zero-clang `cat`
 ```
 
-Form encodes a `write`-to-stdout program, wraps it in a Mach-O (`form-macho.fk`),
-`ld` links it (**no clang**), and the binary writes `Hi\n` through the OS kernel —
-clang only assembled the same instructions as the byte **oracle**. The encodings
-are lifted from the ARM ARM / LLVM's ARM target, verified against `as`, never
-copied. This is the syscall primitive a unix filter composes from; the read-loop
-(making the zero-clang `cat`/`tr` that retires the clang filter lane) is the next
-move.
+Form encodes `cat` (loop `read(0)` → `write(1)` until EOF), `form-macho.fk` wraps
+it, `ld` links it (**no clang**), and the binary **cats stdin to stdout
+byte-for-byte** through the OS kernel. Both oracles agree: clang assembles the
+same bytes, and the ARM/LLVM spec derives the backward branch's two's-complement
+fold. `tr` is `cat` plus the branchless transform (`cmp` + `csel`); once it lands,
+the clang filter lane retires — the shell commands run on their own bytes, clang
+only ever a check.
 
 ## The training corpus — samples to try the native models on
 
