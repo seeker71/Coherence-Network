@@ -82,6 +82,24 @@
     ; conviction(candidate, reference): 1 if byte-for-byte identical (FULL — the
     ; witnesses agree), 0 if any byte differs (REFUTED). Silence (no candidate
     ; produced) is the absent third state, handled by the caller.
+    ; ── the syscall / byte-I/O instruction set ──────────────────────────────
+    ; What a unix filter needs beyond arithmetic: a stack frame, a byte buffer,
+    ; the syscall number in x16, and svc. Each base is the ARM ARM opcode template;
+    ; every encoding here is byte-verified against clang/as (form_syscall_demo.sh),
+    ; so the conviction gate licenses these too. SP is register 31.
+    ; movz x<rd>, #imm16  (64-bit) : base 0xD2800000 | imm<<5 | rd
+    (defn fa-movz-x (rd imm)    (fa-le (add 3531603968 (add (mul imm 32) rd))))
+    ; movk x<rd>, #imm16, lsl #16  (64-bit, hw=1) : base 0xF2A00000 | imm<<5 | rd
+    (defn fa-movk-x-16 (rd imm) (fa-le (add 4070572032 (add (mul imm 32) rd))))
+    ; strb w<rt>, [x<rn>, #imm12]  (unsigned offset) : base 0x39000000 | imm<<10 | rn<<5 | rt
+    (defn fa-strb (rt rn imm)   (fa-le (add 956301312 (add (mul imm 1024) (add (mul rn 32) rt)))))
+    ; add x<rd>, x<rn>, #imm12  (64-bit) : base 0x91000000 | imm<<10 | rn<<5 | rd
+    (defn fa-add-x-imm (rd rn imm) (fa-le (add 2432696320 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    ; sub x<rd>, x<rn>, #imm12  (64-bit) : base 0xD1000000 | imm<<10 | rn<<5 | rd
+    (defn fa-sub-x-imm (rd rn imm) (fa-le (add 3506438144 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    ; svc #imm16 : base 0xD4000001 | imm<<5
+    (defn fa-svc (imm)          (fa-le (add 3556769793 (mul imm 32))))
+
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
             (if (nil? cand) 1
