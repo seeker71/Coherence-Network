@@ -1,0 +1,61 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk
+;
+; form-asm-rot13-band — a zero-clang `rot13`, proven four-way against the assembler,
+; and the proof that the TABLE pays off: rot13 adds NO new encoder. Its branchless
+; transform is sub/add/cmp/csel — every instruction already a data row in form-asm.
+; rot13 rotates a letter by 13 within its case, branchless: x=c-base; x=x+13;
+; if x>=26 x-=26 (cmp + csel hs); +base; then csel on each case flag (ls). This
+; retires the C-emit byte-filter lane — its last unique reach was an arbitrary
+; transform, and rot13 now runs on Form's own bytes.
+;
+; The reference image is what clang/as emitted for a `rot13` _main (the cat loop with
+; the two-range rotation spliced in). The binary built from it (ld, no clang) rot13s
+; stdin and ROUND-TRIPS (rot13∘rot13 = identity) — form_rot13_demo.sh.
+;
+; Verdict 7 when:
+;   1   the whole 148-byte rot13 image byte-equals clang's (the conviction gate)
+;   2   csel with cond hs (unsigned >=, the wrap pick) is exact — a cond never used before
+;   4   the longer backward branch folds -32 exactly (the loop body grew, the fold holds)
+
+(do
+    (let img (fa-image (list
+        (fa-sub-x-imm 31 31 16)
+        (fa-movz-x 0 0) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 3) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-cmp-x 0 0) (fa-bcond 13 26)
+        (fa-ldrb 8 31 0)
+        (fa-sub 9 8 65) (fa-add 10 9 13) (fa-sub 11 10 26) (fa-cmp 10 26) (fa-csel 10 11 10 2) (fa-add 10 10 65)
+        (fa-sub 12 8 97) (fa-add 13 12 13) (fa-sub 14 13 26) (fa-cmp 13 26) (fa-csel 13 14 13 2) (fa-add 13 13 97)
+        (fa-cmp 9 25) (fa-csel 8 10 8 9)
+        (fa-cmp 12 25) (fa-csel 8 13 8 9)
+        (fa-strb 8 31 0)
+        (fa-movz-x 0 1) (fa-add-x-imm 1 31 0) (fa-movz-x 2 1)
+        (fa-movz-x 16 4) (fa-movk-x-16 16 512) (fa-svc 128)
+        (fa-b-off -32)
+        (fa-movz 0 0) (fa-add-x-imm 31 31 16) (fa-ret))))
+
+    (let ref (list 255 67 0 209 0 0 128 210
+                   225 3 0 145 34 0 128 210
+                   112 0 128 210 16 64 160 242
+                   1 16 0 212 31 0 0 241
+                   77 3 0 84 232 3 64 57
+                   9 5 1 81 42 53 0 17
+                   75 105 0 81 95 105 0 113
+                   106 33 138 26 74 5 1 17
+                   12 133 1 81 141 53 0 17
+                   174 105 0 81 191 105 0 113
+                   205 33 141 26 173 133 1 17
+                   63 101 0 113 72 145 136 26
+                   159 101 0 113 168 145 136 26
+                   232 3 0 57 32 0 128 210
+                   225 3 0 145 34 0 128 210
+                   144 0 128 210 16 64 160 242
+                   1 16 0 212 224 255 255 23
+                   0 0 128 82 255 67 0 145
+                   192 3 95 214))
+
+    (let c0 (if (fa-conviction img ref) 1 0))
+    (let c1 (if (fa-conviction (fa-csel 10 11 10 2) (list 106 33 138 26)) 2 0))
+    (let c2 (if (fa-conviction (fa-b-off -32) (list 224 255 255 23)) 4 0))
+
+    (add c0 (add c1 c2)))

@@ -159,30 +159,34 @@ spec** is a **second oracle** (independent of clang, it grounds an encoding in t
 documented bitfields — e.g. the two's-complement branch fold). Neither oracle is
 the lane; the four-way band is the truth and stands without either.
 
-The **slice lane** ([`form-asm.fk`](../../form/form-stdlib/form-asm.fk) +
-[`form-macho.fk`](../../form/form-stdlib/form-macho.fk)) now carries real unix
-commands end to end, **zero clang**: the syscall / byte-I/O set (`svc`, 64-bit
-`movz`/`movk`, `ldrb`/`strb`, stack frame), the read-loop control flow (`cmp`, the
-EOF branch, the backward loop branch), and the branchless transform (`csel`) —
-proven four-way at `form-asm-syscall`, `form-asm-branch`, and `form-asm-tr` (all 31).
+The encoder itself is a **table** ([`form-asm.fk`](../../form/form-stdlib/form-asm.fk)):
+one generic packer `fa-asm` over per-instruction `(base, multipliers)` data rows, so
+a new instruction is a row, not new code (`form-asm-table fks 7`, the ARM/LLVM
+encoding table as a recipe). The **slice lane** (+ [`form-macho.fk`](../../form/form-stdlib/form-macho.fk))
+carries real unix commands end to end, **zero clang**: the syscall / byte-I/O set
+(`svc`, 64-bit `movz`/`movk`, `ldrb`/`strb`, stack frame), the read-loop control flow
+(`cmp`, the EOF branch, the backward loop branch), and the branchless transform
+(`cmp`+`csel`) — proven four-way at `form-asm-syscall`, `form-asm-branch`,
+`form-asm-tr` (31), and `form-asm-rot13` (7).
 
 ```bash
-scripts/form_cat_demo.sh   # a zero-clang `cat`
-scripts/form_tr_demo.sh    # a zero-clang `tr A-Z a-z`
+scripts/form_cat_demo.sh    # a zero-clang `cat`
+scripts/form_tr_demo.sh     # a zero-clang `tr A-Z a-z`
+scripts/form_rot13_demo.sh  # a zero-clang `rot13`
 ```
 
-Form encodes the program (`cat` = loop `read(0)`→`write(1)`; `tr` = that plus
-`ldrb` → `(unsigned)(c-65)≤25 ? c+32 : c` via `cmp`+`csel` → `strb`), `ld` links it
-(**no clang**), and the binary runs through the OS read/write syscalls. Measured:
-`cat` round-trips stdin→stdout and the Form `tr` matches the system `tr A-Z a-z`,
-both **byte-for-byte**. clang only assembled the same instructions as the byte
-oracle; the ARM/LLVM spec derived the encodings.
+Form encodes the program (`cat` = loop `read(0)`→`write(1)`; `tr`/`rot13` = that
+plus a branchless per-byte transform), `ld` links it (**no clang**), and the binary
+runs through the OS read/write syscalls. Measured: `cat` round-trips stdin→stdout,
+Form `tr` matches the system `tr A-Z a-z`, and Form `rot13` matches the system
+rot13 and is its own inverse — all **byte-for-byte**. clang only assembled the same
+instructions as the byte oracle; the ARM/LLVM spec derived the encodings.
 
-This **retires the earlier filter lane** — `hati-os-byte-filter-emit.fk` emitted C
-for the same commands and leaned on clang to lower it. That lane stays only as the
-bridge for an arbitrary transform whose asm encodings aren't lifted yet (e.g.
-`rot13`'s two-range rotation); once those ops are encoded it composts fully. The
-common filters now run on Form's own bytes, clang only ever a check.
+`rot13` added **no new encoder** — its two-range rotation is `sub`/`add`/`cmp`/`csel`
+data rows — so the earlier **C-emit byte-filter lane composted**: every common filter
+now runs on Form's own bytes, clang only ever a check. (The whole-program C-emit lane,
+[`hati-os-native-cli-emit.fk`](../../form/form-stdlib/hati-os-native-cli-emit.fk),
+remains for programs not yet asm-lowered.)
 
 ## The training corpus — samples to try the native models on
 
