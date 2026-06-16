@@ -108,4 +108,20 @@
                 (if (eq (gaps-cat-flight-ready? catB) 0) 512 0)
                 0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
+    ; ── oracle-catalog (trust, state) maps onto the ladder ──
+    (let c10 (if (str_eq (gaps-rung-from-oracle "local" "installed") (gaps-rung-local))
+                 (if (str_eq (gaps-rung-from-oracle "remote-membrane" "installed") (gaps-rung-remote))
+                     (if (str_eq (gaps-rung-from-oracle "local" "source-pending") (gaps-rung-source))
+                         (if (str_eq (gaps-rung-from-oracle "local" "absent") (gaps-rung-none)) 1024 0)
+                         0)
+                     0)
+                 0))
+
+    ; ── source-local: a local oracle source on disk is offline-buildable, not a network stage ──
+    (let c11 (if (str_eq (gaps-next-move (gaps-rung-source)) "build-local-oracle-source")
+                 (if (eq (gaps-offline-closable? (gaps-rung-source)) 1)
+                     (if (eq (gaps-stage-before-flight? (gaps-rung-source)) 0) 2048 0)
+                     0)
+                 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

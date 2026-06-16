@@ -38,6 +38,7 @@
 (defn gaps-rung-samples () "samples")
 (defn gaps-rung-local () "local-oracle")
 (defn gaps-rung-remote () "remote-only")
+(defn gaps-rung-source () "source-local")  ; local oracle source on disk, needs building (offline)
 (defn gaps-rung-none () "none")
 (defn gaps-rung-no-spec () "no-spec")     ; an open idea
 (defn gaps-rung-no-proof () "no-proof")   ; an open spec
@@ -57,22 +58,35 @@
                 (if (eq remote? 1) (gaps-rung-remote)
                     (gaps-rung-none))))))
 
+; ── map an oracle-catalog teacher (trust, state) onto the ladder ──
+; oracle-catalog.fk names each teacher lane the body leans on. A lane the body
+; senses only through a teacher is an open capability: an installed LOCAL teacher
+; sits at local-oracle (distill offline); an installed REMOTE teacher sits at
+; remote-only (stage before flight); source-pending / absent sit at none.
+(defn gaps-rung-from-oracle (trust state)
+    (if (str_eq state "installed")
+        (if (str_eq trust "local") (gaps-rung-local) (gaps-rung-remote))
+        (if (str_eq state "source-pending") (gaps-rung-source)
+            (gaps-rung-none))))
+
 ; ── the cheapest next move to climb one rung toward closed ──
 (defn gaps-next-move (rung)
     (if (str_eq rung (gaps-rung-samples)) "train-native-recipe"
         (if (str_eq rung (gaps-rung-local)) "distill-samples-from-local-oracle"
-            (if (str_eq rung (gaps-rung-remote)) "stage-remote-to-local-oracle"
-                (if (str_eq rung (gaps-rung-none)) "find-or-stage-an-oracle"
-                    (if (str_eq rung (gaps-rung-no-spec)) "author-form-spec"
-                        (if (str_eq rung (gaps-rung-no-proof)) "write-validation-band"
-                            "none")))))))
+            (if (str_eq rung (gaps-rung-source)) "build-local-oracle-source"
+                (if (str_eq rung (gaps-rung-remote)) "stage-remote-to-local-oracle"
+                    (if (str_eq rung (gaps-rung-none)) "find-or-stage-an-oracle"
+                        (if (str_eq rung (gaps-rung-no-spec)) "author-form-spec"
+                            (if (str_eq rung (gaps-rung-no-proof)) "write-validation-band"
+                                "none"))))))))
 
 ; ── can the next move happen with NO network? (the offline lever) ──
 (defn gaps-offline-closable? (rung)
     (if (or (str_eq rung (gaps-rung-samples))
             (or (str_eq rung (gaps-rung-local))
-                (or (str_eq rung (gaps-rung-no-spec))
-                    (str_eq rung (gaps-rung-no-proof))))) 1 0))
+                (or (str_eq rung (gaps-rung-source))
+                    (or (str_eq rung (gaps-rung-no-spec))
+                        (str_eq rung (gaps-rung-no-proof)))))) 1 0))
 
 ; ── does this rung NEED the network before it can even begin? (flight flag) ──
 (defn gaps-stage-before-flight? (rung)
