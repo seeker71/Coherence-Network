@@ -1,0 +1,59 @@
+; tier-router.fk — the form-cli three-tier router + success-rate report: the core
+; engine that drives capability inward.
+;
+; preludes: form-stdlib/core.fk
+;
+; form-cli-loop's fcl-route is two-tier (form-native | oracle). This is the three
+; tiers the body actually has, in escalating cost / falling sovereignty:
+;   0 form-native       — the body's own recipes / trained models (cheapest, sovereign)
+;   1 3rd-party local    — ollama on-device (cheap, private, no membrane crossed)
+;   2 3rd-party remote    — claude / codex / grok / gemini / cursor / opencode (last resort)
+;
+; For each capability the body tracks (passes, attempts) at each tier. Routing tries
+; the cheapest tier whose success rate clears threshold and escalates on failure; the
+; report names which capability is most remote-dependent (the next to bring inward)
+; and counts how many already route native (the flywheel's progress toward
+; "most capabilities internal, local, minimally remote"). Same max-select spine as
+; nearest-shape / attention-argmin / histogram-peak / model-roster-report.
+
+; success rate 0..100 of a tier (passes/attempts); empty tier reads 0.
+(defn tr-rate (passes attempts) (if (eq attempts 0) 0 (div (mul passes 100) attempts)))
+
+; a capability row: (name native-p native-a local-p local-a remote-p remote-a)
+(defn tr-cap (name np na lp la rp ra) (list name np na lp la rp ra))
+(defn tr-name (c) (nth c 0))
+(defn tr-native-rate (c) (tr-rate (nth c 1) (nth c 2)))
+(defn tr-local-rate  (c) (tr-rate (nth c 3) (nth c 4)))
+(defn tr-remote-rate (c) (tr-rate (nth c 5) (nth c 6)))
+(defn tr-remote-attempts (c) (nth c 6))
+
+; route: the cheapest sovereign tier whose success rate clears threshold.
+; 0 native, 1 local, 2 remote. A tier whose rate is below threshold falls through
+; to the next — escalation is implicit in the fall-through.
+(defn tr-route (c threshold)
+  (if (ge (tr-native-rate c) threshold) 0
+      (if (ge (tr-local-rate c) threshold) 1 2)))
+
+; sovereignty of a routed capability: 2 native, 1 local, 0 remote (higher = freer).
+(defn tr-sovereignty (c threshold) (sub 2 (tr-route c threshold)))
+
+; the capability MOST remote-dependent = highest remote attempts. This is the next
+; one to internalize — where the body spends the most on the membrane.
+(defn tr-most-remote-loop (caps best)
+  (if (eq (len caps) 0) best
+      (tr-most-remote-loop (tail caps)
+        (if (gt (tr-remote-attempts (head caps)) (tr-remote-attempts best)) (head caps) best))))
+(defn tr-most-remote (caps)
+  (if (eq (len caps) 0) (empty) (tr-most-remote-loop (tail caps) (head caps))))
+
+; flywheel progress: how many capabilities already route native at the threshold.
+(defn tr-sovereign-count (caps threshold)
+  (if (eq (len caps) 0) 0
+      (add (if (eq (tr-route (head caps) threshold) 0) 1 0)
+           (tr-sovereign-count (tail caps) threshold))))
+
+; total remote attempts across the roster = the standing membrane spend the
+; flywheel is driving toward zero.
+(defn tr-total-remote (caps)
+  (if (eq (len caps) 0) 0
+      (add (tr-remote-attempts (head caps)) (tr-total-remote (tail caps)))))

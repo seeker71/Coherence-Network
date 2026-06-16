@@ -1,0 +1,34 @@
+; tier-router-band.fk — the three-tier success router on real capability shapes.
+;
+; preludes: form-stdlib/core.fk form-stdlib/tier-router.fk
+;
+; Each capability carries (passes, attempts) at native / local / remote. Threshold
+; 70. The body's real shape (2026-06-16): summarize is native-sovereign; vision is
+; handled by local CLIP (no remote); spec-authoring and english-to-code still lean
+; remote (claude/codex) — the next to bring inward. The aggregate encodes the route
+; of each + the inward-pull metrics, so a divergent kernel changes the number.
+
+(do
+  (let caps (list
+    ;          name              nat-p nat-a  loc-p loc-a  rem-p rem-a
+    (tr-cap "spec-authoring"       0   163    10    50     92   100)
+    (tr-cap "english-to-code"      0   124    15    40     85    95)
+    (tr-cap "vision-recognize"     0   376    88   100      0     1)
+    (tr-cap "summarize"           75   100    80    50     60   100)))
+
+  ; routes: spec->remote(2), e2c->remote(2), vision->local(1), summarize->native(0)
+  (let r-spec  (tr-route (nth caps 0) 70))
+  (let r-e2c   (tr-route (nth caps 1) 70))
+  (let r-vis   (tr-route (nth caps 2) 70))
+  (let r-sum   (tr-route (nth caps 3) 70))
+
+  ; the next to internalize = most remote-dependent; flywheel progress = native count
+  (let most-remote-calls (tr-remote-attempts (tr-most-remote caps)))
+  (let sovereign (tr-sovereign-count caps 70))
+  (let total-remote (tr-total-remote caps))
+
+  ; aggregate = most-remote(100) + total-remote(296) + sovereign(1) + routes(2+2+1+0)
+  (add most-remote-calls
+       (add total-remote
+            (add sovereign
+                 (add r-spec (add r-e2c (add r-vis r-sum)))))))
