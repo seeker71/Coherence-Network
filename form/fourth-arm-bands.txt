@@ -179,6 +179,7 @@ lora-adapter fks 31
 oracle-flywheel fks 31
 oracle-distillation-learning fks 4095
 oracle-distill-corpus fks 255
+metabolic-learning fks 4095
 form-cli-loop fks 31
 form-cli-router fks 31
 form-cli-membrane fks 1023
