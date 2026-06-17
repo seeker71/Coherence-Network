@@ -1,0 +1,34 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/form-freq-check.fk form-stdlib/oracle-distillation-learning.fk form-stdlib/native-training-receipt.fk form-stdlib/oracle-distill-corpus.fk
+;
+; oracle-distill-corpus-band — the real corpus result, proven.
+;
+; The form-cli tool-selection lane, trained on the 949-turn Claude corpus, beats
+; the no-learning baseline on the held-out split AND costs zero remote tokens, so
+; the oracle retires on this lane. Every number is the MEASURED held-out count
+; from the real run; this band proves the receipt LOGIC over those counts crosses
+; four-way (the carrier writes the durable receipt with real content digests).
+;
+; Verdict 255:
+;   1    full-cover receipt is a well-formed native-training receipt
+;   2    full-cover receipt is a trained native artifact (weights+data+eval, counts close)
+;   4    full-cover: native (91/186) beats the no-learning baseline (35/186)
+;   8    majority:   native (184/186) beats the no-learning baseline (78/186)
+;   16   native candidate clears every receipt floor (ready)
+;   32   native candidate costs less than the Claude teacher (0 vs 800 tokens)
+;   64   native wins the lane (ready AND lower-cost) — the oracle can retire
+;   128  the ppm accuracy math is exact (91/186 -> 489247 ppm)
+
+(do
+    (let full (odc-full-receipt))
+    (let maj (odc-majority-receipt))
+
+    (let c0 (if (ntr-row? full) 1 0))
+    (let c1 (if (eq (ntr-trained? full) 1) 2 0))
+    (let c2 (if (eq (ntr-beats-oracle? full) 1) 4 0))
+    (let c3 (if (eq (ntr-beats-oracle? maj) 1) 8 0))
+    (let c4 (if (eq (odl-c-ready? (odc-native-candidate)) 1) 16 0))
+    (let c5 (if (eq (odl-c-lower-cost? (odc-native-candidate) (odc-teacher-candidate)) 1) 32 0))
+    (let c6 (if (eq (odc-native-wins?) 1) 64 0))
+    (let c7 (if (eq (odc-ppm (odc-native-full-correct)) 489247) 128 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
