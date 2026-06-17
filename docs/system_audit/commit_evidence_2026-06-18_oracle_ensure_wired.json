@@ -1,0 +1,26 @@
+{
+  "title": "oracle-ensure wired end-to-end — the installer and form-cli now bootstrap their own oracles by Form decision",
+  "date": "2026-06-18",
+  "follows": "commit_evidence_2026-06-17_oracle_ensure.json (the four-way oracle-ensure.fk decision recipe).",
+  "intent": "Close the 'a form-cli built from recipes that installs its own oracles' loop end-to-end: probe live presence (host-io), let oracle-ensure.fk on the kernel DECIDE what's missing / next / ready, and host-exec the install. The decision is Form; the hands are host-io.",
+  "advances": [
+    {
+      "what": "scripts/form_cli_ensure.sh — the carrier",
+      "detail": "probes the form-cli's three runtime oracles (ollama, nomic-embed-text, llama3.2:3b) for live presence, builds oracle-catalog rows with those live states, runs oracle-ensure.fk on the kernel for need-count / next / ready, reports, and with --install host-execs the per-lane install. The decision is the recipe, verified by feeding a fake-absent state -> recipe returns need=1, next='embed', ready=0."
+    },
+    {
+      "what": "form-cli ensure [--install]",
+      "detail": "new subcommand on bin/form-cli routing to the carrier. Report mode on this host: ollama/nomic/llama all installed -> need 0, ready yes."
+    },
+    {
+      "what": "installer drives oracle bootstrap through the recipe",
+      "detail": "install/form-cli-install.sh step [3] now calls form_cli_ensure.sh (--install on yes, report otherwise) instead of hand-rolled `ollama pull` lines — so which oracles to fetch is decided by oracle-ensure.fk, even during install."
+    }
+  ],
+  "honest_remainder": {
+    "lane_command_map_in_carrier": "the lane->install-command map (ollama pull X / brew install Y) lives in the bash carrier, not the catalog. The recipe decides WHICH lanes and the order; the carrier still knows the command. Folding the command into the catalog (or a Form install-plan) is a further lift.",
+    "host_io_native": "probe + install are host-io (host-exec), the named G1 lever in self-growing-machine.form; the DECISION already crosses fkwu (pure logic), the effect does not yet."
+  },
+  "verdict": "End-to-end: the form-cli (and its installer) now compute their own oracle-install plan via a four-way Form recipe and execute it via host-exec. 'A form-cli built from recipes that ensures its oracles are installed' — the decision half is Form-native and proven; the effect is a thin host-io carrier.",
+  "reproduce": "form-cli ensure   (report)  |  form-cli ensure --install   (fetch missing)  |  installer step [3] now routes through it"
+}
