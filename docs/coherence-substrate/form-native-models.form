@@ -70,26 +70,33 @@
 ;     node. The gelu' vjp is now built too: the FFN sub-block y = W2·gelu(W1·x+b1)+b2 trains by backprop
 ;     THROUGH the nonlinearity (dh1 = da ⊙ gelu'(h1), gelu' composed from tn-tanh) — a 2→2→2 MLP fits a
 ;     target with strictly decreasing loss, gelu'(0)=0.5 / gelu'(1)=1.082964 / gelu'(-0.75)=0.001062 (the
-;     dip) pinned bit-exact, tests/transformer-backprop-ffn-band.fk → 63 three-way (source and binary).
+;     dip) pinned bit-exact, tests/transformer-backprop-ffn-band.fk → 63 FOUR-WAY (Go=Rust=TS=fkwu).
 ;     The softmax' and layernorm' gradient nodes are now built too (transformer-backprop-softmax-ln-band.fk
-;     → 31 three-way), each proven by its own CONSERVATION LAW: softmax' has Σdz=0 (mass conserved, exact),
+;     → 31 FOUR-WAY), each proven by its own CONSERVATION LAW: softmax' has Σdz=0 (mass conserved, exact),
 ;     layernorm' has Σdx=0 (mean-orthogonal, exact) and <dx,y>≈0 (scale-orthogonal to ~4e-6, the eps/Newton
 ;     residual named honestly). So EVERY node of transformer-block.fk's pre-LN block now has its backward —
 ;     affine (127), gelu (63), softmax+layernorm (31). The whole proven forward block can train end to end.
 ;     The FFN-residual half is now ASSEMBLED and trained: y = h + FFN(LN(h)), backward dh = dy + LN'(FFN_in(dy))
 ;     — the gradient HIGHWAY composing affine vjp + gelu' + layernorm' + the residual. A two-block FFN-residual
-;     STACK trains end to end (transformer-block-backward-band.fk → 31 three-way): loss 0.814 → ~0, and the
-;     LOWER block's weights move off their init, so dh chained correctly through layernorm' (a wrong dh would
-;     have starved it). The ATTENTION CORE backward is now built too — the steepest gradient, through the
+;     STACK trains end to end (transformer-block-backward-band.fk → 31, Go=Rust=TS; 3-kernel-only by the
+;     fkwu TABLE-CAPACITY wall — the 150-step two-block SGD loop overflows the walker's pre-flattened table,
+;     a segfault, NOT a value divergence and NOT a missing op family; its constituent node gradients all
+;     cross four-way in isolation, so the wall is table size, not the math — same wall as the assembly band):
+;     loss 0.814 → ~0, and the LOWER block's weights move off their init, so dh chained correctly through
+;     layernorm' (a wrong dh would have starved it). The ATTENTION CORE backward is now built too — the steepest gradient, through the
 ;     softmax-weighted value mixing: dv_j = α_j·dout (the value-grads PARTITION dout — Σdv = dout exactly,
 ;     since Σα = 1), dα = <dout,v>, ds = softmax'(α,dα), dq = scale·Σ ds_j·k_j. Proven by the partition law
 ;     (exact) AND by training a query to steer attention onto a target in the values' convex hull, loss → 0
-;     (transformer-attention-backward-band.fk → 31 three-way). So EVERY gradient node the transformer needs
-;     now exists: affine (127), gelu (63), softmax+layernorm (31), FFN-residual assembled (31), attention
-;     core (31). And the ASSEMBLY is now done: the FULL transformer block trains end to end. A LAYER is a
+;     (transformer-attention-backward-band.fk → 31 FOUR-WAY). So EVERY gradient NODE the transformer needs
+;     now crosses FOUR-WAY: affine (127), gelu (63), softmax+layernorm (31), attention core (31) — the whole
+;     backward floor at the node level on Go/Rust/TS/fkwu, matching the four-way forward floor (numerics 4095,
+;     block 511). The assembled end-to-end TRAINING stacks (FFN-residual block-backward 31, the heterogeneous
+;     assembly 63) stay 3-kernel-only on the fkwu table-capacity wall above — table size, not the math. And
+;     the ASSEMBLY is now done: the FULL transformer block trains end to end. A LAYER is a
 ;     typed cell with a uniform (fwd, step) interface; a heterogeneous STACK — an attention-residual layer
 ;     THEN an FFN-residual layer, the actual tb-block — trains through ONE generic engine (tbp-stk-fwd /
-;     tbp-stk-step with type dispatch). transformer-block-assembly-band.fk → 63 three-way: the block's
+;     tbp-stk-step with type dispatch). transformer-block-assembly-band.fk → 63, Go=Rust=TS (3-kernel-only,
+;     the same fkwu table-capacity wall as block-backward): the block's
 ;     forward is deterministic, the stack converges (loss 0.71 → 0 in ~50 steps), and BOTH heterogeneous
 ;     layers learn (the attention layer's Wq and the FFN layer's W1 both move off their inits), so the
 ;     gradient chains correctly BETWEEN different layer types. This is auto-ml's assembly knowledge realized:
@@ -191,9 +198,11 @@
 ;     into parallel lanes so model work, compiler work, dynamic grammar work, sharing, router/audio,
 ;     and mesh networking move against one shared floor rather than one-by-one drift.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     the FOUR-WAY tensor-scale autodiff (the fp64 transformer backward — every node and the full-block
-;     assembly — is closed three-way; the scalar autodiff + Adam are four-way; the four-way TENSOR lane stays
-;     open), the full T-position sequence self-attention, durable eval-receipt query path, measured fourth-arm
+;     the fp64 transformer backward at the NODE level is now four-way (affine 127, gelu 63, softmax+layernorm 31,
+;     attention-core 31, all Go=Rust=TS=fkwu), and the scalar autodiff + Adam are four-way; the OPEN four-way
+;     tensor lane is the end-to-end assembled-stack TRAINING (block-backward, the heterogeneous assembly) —
+;     blocked only by the fkwu table-capacity wall (a walker-emitter robustness fix, not the math),
+;     the full T-position sequence self-attention, durable eval-receipt query path, measured fourth-arm
 ;     duration, larger native
 ;     HTTP body policy, streaming/backpressure receipts, privacy/conflict policy, live mesh transport,
 ;     live chunk-range merkle transport/proof is still not closed.
