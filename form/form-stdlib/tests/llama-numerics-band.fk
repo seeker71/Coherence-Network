@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk
+;
+; llama-numerics-band — the llama-shaped numerics (SiLU / SwiGLU / RMSNorm) against the
+; libm fp64 reference, lifted to the four-kernel floor. Every claim is a reference value
+; computed by libm (exp/sqrt), reduced to an integer at 1e-6. These are the three numerics
+; that separate a real llama3.2:3b block from the whisper block already four-way (3m).
+; Inputs: x = [-1.5, 0.0, 2.0, 0.5], per-channel gain g = [1.0, 0.5, 2.0, 1.0], eps = 1e-5.
+;
+; Verdict 4095 when every value lands:
+;   1     silu(0.0)          → 0         (the zero crossing: 0·sigmoid(0) = 0·0.5 = 0)
+;   2     silu(1.0)          → 731059
+;   4     silu(-3.0)         → -142278   (the negative lobe stays small, never zeroed)
+;   8     silu(2.0)          → 1761594   (approaches x without saturating)
+;   16    swiglu(1.0, 2.0)   → 1462117   (silu(gate)·up = silu(1)·2)
+;   32    sigmoid(-0.75)     → 320821    (the gate atom on its own)
+;   64    meansq(x)          → 1625000   (the RMS interior: mean of squares, exact)
+;   128   rms(x, eps)        → 1274759   (sqrt(meansq + eps), Newton matching libm)
+;   256   rmsnorm(x,g,eps)[0]→ -1176693  (a negative channel, gain 1.0)
+;   512   rmsnorm(x,g,eps)[2]→ 3137849   (the largest channel, gain 2.0 amplifies)
+;   1024  rmsnorm(x,g,eps)[3]→ 392231    (a small channel, gain 1.0)
+;   2048  swiglu(-3.0, 0.5)  → -71139    (a negative gate through the FFN core: silu(-3)·0.5)
+(do
+    (let x (list -1.5 0.0 2.0 0.5))
+    (let g (list 1.0 0.5 2.0 1.0))
+    (let rn (ln-rmsnorm x g 0.00001))
+    (let c0  (if (eq (round (mul (ln-silu 0.0) 1000000.0)) 0) 1 0))
+    (let c1  (if (eq (round (mul (ln-silu 1.0) 1000000.0)) 731059) 2 0))
+    (let c2  (if (eq (round (mul (ln-silu -3.0) 1000000.0)) -142278) 4 0))
+    (let c3  (if (eq (round (mul (ln-silu 2.0) 1000000.0)) 1761594) 8 0))
+    (let c4  (if (eq (round (mul (ln-swiglu 1.0 2.0) 1000000.0)) 1462117) 16 0))
+    (let c5  (if (eq (round (mul (ln-sigmoid -0.75) 1000000.0)) 320821) 32 0))
+    (let c6  (if (eq (round (mul (ln-meansq x) 1000000.0)) 1625000) 64 0))
+    (let c7  (if (eq (round (mul (ln-rms x 0.00001) 1000000.0)) 1274759) 128 0))
+    (let c8  (if (eq (round (mul (nth rn 0) 1000000.0)) -1176693) 256 0))
+    (let c9  (if (eq (round (mul (nth rn 2) 1000000.0)) 3137849) 512 0))
+    (let c10 (if (eq (round (mul (nth rn 3) 1000000.0)) 392231) 1024 0))
+    (let c11 (if (eq (round (mul (ln-swiglu -3.0 0.5) 1000000.0)) -71139) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
