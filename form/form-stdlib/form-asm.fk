@@ -141,6 +141,15 @@
     ;   This is how argv is read: at _main, x1 = argv; argv[1] is [x1, #8] (scaled 1).
     (defn fa-ldr (rt rn imm) (fa-asm 4181721088 (list 1 32 1024) (list rt rn imm)))
 
+    ; 32-bit WORD store/load to/from a stack slot — the buffer model's load-bearing
+    ; pair (clang lowers `int b[..]` as `str/ldr w, [sp, #off]`). base STR Wt
+    ; 0xB9000000 / LDR Wt 0xB9400000; off is the BYTE offset, scaled /4 via mult 256
+    ; (imm12 = off/4 at bit 10). Verified against the assembler offline:
+    ;   (fa-str-w 8 31 8)  == str w8,[sp,#8]  == [232 11 0 185]
+    ;   (fa-ldr-w 9 31 12) == ldr w9,[sp,#12] == [233 15 64 185]
+    (defn fa-str-w (rt rn off) (fa-asm 3103784960 (list 1 32 256) (list rt rn off)))
+    (defn fa-ldr-w (rt rn off) (fa-asm 3107979264 (list 1 32 256) (list rt rn off)))
+
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
             (if (nil? cand) 1

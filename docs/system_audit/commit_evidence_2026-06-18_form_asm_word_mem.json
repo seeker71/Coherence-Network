@@ -1,0 +1,15 @@
+{
+  "title": "Walking ll-buffer via form-cli found the gap (form-asm lacked word memory ops) and fixed it — 0 remote calls",
+  "date": "2026-06-18",
+  "walk": "100% via form-cli: form-cli roadmap (next = ll-buffer) -> form-cli asm (clang's stack-buffer lowering: sub sp / str w / ldr w / add sp) -> checked form-asm primitives.",
+  "finding": "form-asm had byte ops (fa-strb/fa-ldrb), a 64-bit fa-ldr, and sp alloc/free (fa-sub-x-imm/fa-add-x-imm) — but NOT the 32-bit WORD str/ldr the buffer model needs. That missing pair blocked every ll-buffer sub-recipe. Found entirely via form-cli; 0 remote oracle calls.",
+  "ground_truth_offline": "form-cli asm + llvm-mc gave the exact encodings (no internet): str w8,[sp,#8] = [232 11 0 185] (0xB9000BE8), ldr w9,[sp,#12] = [233 15 64 185] (0xB9400FE9), sub sp,sp,#16 = [255 67 0 209].",
+  "fix": {
+    "primitives": "form-asm.fk gains fa-str-w (STR Wt, base 0xB9000000) and fa-ldr-w (LDR Wt, base 0xB9400000), byte offset scaled /4 via mult 256. These are ENCODER cells (one instruction = one correct encoding), so byte-identity to the assembler is the right gate here — verified offline.",
+    "proof": "tests/form-asm-stack-band.fk -> 7 four-way (Go/Rust/TS/fkwu), 0 divergent ('form-asm-stack fkc 7'): str-w, ldr-w, and alloc each fa-conviction-match the assembler bytes.",
+    "walk_continued": "form-cli close 'll-store-slot' --prelude form-asm.fk -> local coder drafted (store-slot) = (fa-str-w 8 31 8) -> kernel validated byte-correct -> CLOSED offline. With the primitive added, form-cli now closes buffer-model sub-recipes."
+  },
+  "honest_scope": "Shipped the word-memory ENCODER primitives + a closed store-slot sub-recipe, proving the gap is resolved and form-cli can now compose the buffer model's loads/stores. The full ll-buffer form-lower dispatch (frame setup + slot allocation policy for arbitrary locals) is the remaining lowering work — and per lowering-conviction it is judged by semantics + healthy difference, not byte-identity to clang.",
+  "verdict": "Walking the next step via form-cli surfaced a precise missing primitive (32-bit word str/ldr); we learned its encoding from clang offline and fixed form-asm (byte-exact encoder, four-way). The buffer model's memory ops now exist and a sub-recipe closes via form-cli alone, 0 remote.",
+  "reproduce": "form-cli roadmap | form-cli asm 'int f(int n){volatile int b[4];b[0]=n;b[1]=n+1;return b[0]+b[1];}' | cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/tests/form-asm-stack-band.fk -> 7 four-way"
+}
