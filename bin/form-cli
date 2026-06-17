@@ -8,7 +8,14 @@
 # directly on the kernel. Local-first by design — a remote oracle (incl. Claude via
 # `claude -p`) is consulted only to review, never required to answer.
 set -u
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# resolve through symlinks — the installer links this onto PATH (~/.local/bin),
+# so BASH_SOURCE is the symlink; follow it to the real file in the cloned repo.
+src="${BASH_SOURCE[0]}"
+while [ -h "$src" ]; do
+  d="$(cd -P "$(dirname "$src")" && pwd)"; src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$d/$src";; esac
+done
+ROOT="$(cd -P "$(dirname "$src")/.." && pwd)"
 GO="$ROOT/form/form-kernel-go/bin-go"
 RAG="$ROOT/scripts/form_cli_rag.py"
 

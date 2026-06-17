@@ -36,6 +36,16 @@ ln -s ~/coherence-network/bin/form-cli ~/.local/bin/form-cli
 form-cli index
 ```
 
+### Unattended (CI / scripted)
+
+The installer prompts on a terminal by default; preset the answers to run it with no tty:
+
+```bash
+FORM_CLI_PROVIDER=6 FORM_CLI_PULL=y \
+  curl -fsSL https://raw.githubusercontent.com/seeker71/Coherence-Network/main/install/form-cli-install.sh | bash
+# provider: 1 claude · 2 codex · 3 gemini · 4 grok · 5 cursor · 6 none
+```
+
 ## Using it
 
 ```bash
