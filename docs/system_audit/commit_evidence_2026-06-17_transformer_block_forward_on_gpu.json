@@ -1,0 +1,29 @@
+{
+  "title": "The whole transformer block runs FORWARD on the Apple M4 Max GPU — inference, bit-exact with the recipe",
+  "date": "2026-06-17",
+  "stone": "form-native-models.form rung (2) 'full transformer block on the GPU' — lowered for INFERENCE. The GPU already TRAINED the FFN/attention/residual sub-blocks (metal_ffn/attn/arch_search audits) and ran the matvec; this composes them into the one pre-LN block forward that real model serving runs.",
+  "device": "Apple M4 Max (40-core GPU, unified memory), arm64 Darwin 26.3.1; on-box Metal toolchain (metal/metallib/metal-as)",
+  "algorithm": "transformer-block.fk tb-block (fp64) — proven FOUR-WAY 511 by tests/transformer-block-band.fk: h = xs + Wo*attn(Wq*LN1(xs), Wk*LN1(xs), Wv*LN1(xs), scale) + bo ; y = h + W2*gelu(W1*LN2(h)+b1) + b2 over a SEQUENCE of token vectors (real self-attention: every token a query over all tokens, softmax(q*kᵀ/√d)).",
+  "emitter_recipe": "form/form-stdlib/jit-tensor-emit.fk — jte-block-fwd-msl. Every byte of MSL authored by the Form recipe. One static string parameterized only by the kernel name (dims S/d/dq/dv/hid arrive as runtime buffers). Composes the recipe's own folds: tb-dot downward right-fold split through a named temporary (no fma contraction), tb-weighted-acc forward value-mix, tn-softmax max-subtract over the recipe's OWN fexp (transformer-numerics Taylor, never Metal exp()), tn-layernorm biased-variance + 50-step Newton tn-sqrt, fgelu tanh-approx.",
+  "emitter_proof_four_way": {
+    "band": "form/form-stdlib/tests/block-fwd-emit-band.fk",
+    "manifest_row": "block-fwd-emit fks 7",
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/block-fwd-emit-band.fk",
+    "verdict": 7,
+    "fourth_arm": "1 band four-way (fkwu + pre-flattened tables), 0 divergent — Go/Rust/TS/fkwu emit byte-identical text",
+    "msl_bytes": 5385
+  },
+  "on_gpu_execution": {
+    "audit": "scripts/metal_block_audit.sh",
+    "carrier": "swiftc + Metal.framework host harness — the allowed driver-access carrier per host-kernel.form host-resource-access; runtime makeLibrary, mathMode=safe (IEEE, no fast-math contraction). The kernel LOGIC is Form; only GPU submission rides the host driver.",
+    "fixture": "the transformer-block-band.fk fixture: S=2 positions, d=2, dq=dv=2, FFN hidden 4, every weight non-trivial, scale=1/√2, eps=1e-5",
+    "gpu_ms": 3.27,
+    "y_gpu_fp32": [1.175483, -0.300290, 0.545407, 2.171165],
+    "y_cpu_fp32_mirror": [1.175483, -0.300290, 0.545407, 2.171165],
+    "parity_gpu_vs_cpu": "max|y_gpu - y_cpu| = 0.0 — BIT-EXACT (same folds, both fp32, no contraction)",
+    "recipe_ground_truth_x1e6": [1175482, -300290, 545407, 2171165],
+    "parity_gpu_vs_fp64_recipe": "max|Δ*1e6| = 0.5 — GPU fp32 tracks the proven four-way fp64 recipe within fp32 epsilon"
+  },
+  "reading": "The model's COMPUTE for a full transformer block forward — the inference primitive a layer stack repeats — is now Form-native on the M4 GPU, bit-for-bit with the recipe walker. Weights are recipe DATA (arguments), so a layer stack is a sequence of these calls. With the load path already Form-native (q4k/q6k/f16 dequant four-way) and the block forward+backward four-way on the CPU floor, both the weight load AND the block compute live on the silicon. Next rungs: parallelize across tokens/rows (one threadgroup per query), run the block over REAL llama GGUF weights on the GPU, then the generation loop (tokenizer + KV cache + greedy decode).",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/block-fwd-emit-band.fk && cd .. && bash scripts/metal_block_audit.sh"
+}

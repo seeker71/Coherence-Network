@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 277
+**Total files**: 278
 
 | File | Purpose |
 |---|---|
@@ -164,6 +164,7 @@
 | [metal_arch_search_audit.sh](metal_arch_search_audit.sh) | metal_arch_search_audit.sh — the ARCHITECT'S CAPACITY SEARCH on Metal (M4 Max GPU witness). |
 | [metal_attn_audit.sh](metal_attn_audit.sh) | metal_attn_audit.sh — the ARCHITECT'S ATTENTION layer learning on Metal (M4 Max GPU witness). |
 | [metal_backprop_audit.sh](metal_backprop_audit.sh) | metal_backprop_audit.sh — the LEARNING KERNEL on Metal (M4 Max GPU witness). |
+| [metal_block_audit.sh](metal_block_audit.sh) | metal_block_audit.sh — the WHOLE TRANSFORMER BLOCK running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |

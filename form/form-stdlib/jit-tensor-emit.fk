@@ -235,3 +235,66 @@
 (defn jte-attn-train-msl-fmt (fname fmt) (jte-attn-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
 
 (defn jte-attn-train-msl (fname) (jte-attn-train-msl-fmt fname "f32"))
+
+; --- TRANSFORMER BLOCK FORWARD (inference) kernel, emitted as a Form recipe — the whole pre-LN block
+; running on Metal, the INFERENCE half of the model on the silicon (M4 of form-native-models.form lowered
+; to the GPU). transformer-block.fk's tb-block is the ALGORITHM (fp64, proven FOUR-WAY 511): one whisper-
+; shaped block over a SEQUENCE of token vectors —
+;   h = xs + Wo·attn(Wq·LN1(xs), Wk·LN1(xs), Wv·LN1(xs), scale) + bo     (self-attention + residual)
+;   y = h  + W2·gelu(W1·LN2(h) + b1) + b2                                 (FFN + residual)
+; This emits that forward as ONE Metal kernel run by a single thread (gid==0), walking the recipe's exact
+; folds serially: every dot is tb-dot's DOWNWARD right-fold split through a named temporary p so no
+; conformant Metal compiler contracts it into an fma; the value-mix is tb-weighted-acc's FORWARD fold; the
+; softmax is tn-softmax's max-subtract over the recipe's OWN fexp (transformer-numerics' Taylor), never
+; Metal's exp(); each LayerNorm is tn-layernorm's biased variance + 50-step Newton tn-sqrt (the exact
+; jte-resid-ln walk); gelu is the recipe's fgelu. So the transcendental floor is the body's, not the
+; hardware's — the parity gate against an fp32 CPU mirror of the SAME folds is honest end to end
+; (scripts/metal_block_audit.sh), and the GPU output tracks the proven fp64 recipe within fp32 epsilon.
+;
+; Dims arrive as RUNTIME buffers (S tokens, d model, dq query/key, dv value, hid FFN), so the emitted MSL
+; is one static string parameterized only by the kernel name — a layer stack is a sequence of these calls,
+; weights as recipe DATA all the way down (the dynamic-recipe advantage). Scratch is one device buffer the
+; carrier sizes from the dims; regions ln/q/k/v/att/h/ln2/scores/es/a are laid out by computed offsets.
+; The single-thread walk matches the recipe serially and bit-exactly; parallelizing across tokens and rows
+; (one threadgroup per query, the matvec spine's per-row threads) is the named follow-up, as with the attn
+; and ffn training kernels. fp32 lane first; format lanes (f16/bf16) parameterize the same spine when the
+; carrier learns the block ABI, exactly as the matvec spine already does. Proven byte-stable four-way by
+; tests/block-fwd-emit-band.fk.
+
+(defn jte-blk-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* bq [[buffer(1)]], device const float* wk [[buffer(2)]], device const float* bk [[buffer(3)]], device const float* wv [[buffer(4)]], device const float* bv [[buffer(5)]], device const float* wo [[buffer(6)]], device const float* bo [[buffer(7)]], device const float* g1 [[buffer(8)]], device const float* be1 [[buffer(9)]], device const float* w1 [[buffer(10)]], device const float* b1 [[buffer(11)]], device const float* w2 [[buffer(12)]], device const float* b2 [[buffer(13)]], device const float* g2 [[buffer(14)]], device const float* be2 [[buffer(15)]], device const float* x [[buffer(16)]], device float* y [[buffer(17)]], device float* sc [[buffer(18)]], constant uint& S [[buffer(19)]], constant uint& d [[buffer(20)]], constant uint& dq [[buffer(21)]], constant uint& dv [[buffer(22)]], constant uint& hid [[buffer(23)]], constant float& scale [[buffer(24)]], constant float& eps [[buffer(25)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+(defn jte-blk-off ()
+  "uint oLN = 0; uint oQ = oLN + S * d; uint oK = oQ + S * dq; uint oV = oK + S * dq; uint oA = oV + S * dv; uint oH = oA + S * dv; uint oN2 = oH + S * d; uint oSR = oN2 + S * d; uint oE = oSR + S; uint oFA = oE + S; ")
+
+(defn jte-blk-ln1 ()
+  "{ uint s = 0; while (s < S) { float sm = 0.0f; uint j = 0; while (j < d) { sm = sm + x[s * d + j]; j += 1; } float mean = sm / float(d); float va = 0.0f; j = 0; while (j < d) { float dm = x[s * d + j] - mean; float dd = dm * dm; va = va + dd; j += 1; } float varv = va / float(d); float sdv = varv + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = (x[s * d + j] - mean) * inv; float sg = nm * g1[j]; sc[oLN + s * d + j] = sg + be1[j]; j += 1; } s += 1; } } ")
+
+(defn jte-blk-proj ()
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wq[r * d + c] * sc[oLN + s * d + c]; acc = p + acc; } sc[oQ + s * dq + r] = acc + bq[r]; r += 1; } s += 1; } } "
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wk[r * d + c] * sc[oLN + s * d + c]; acc = p + acc; } sc[oK + s * dq + r] = acc + bk[r]; r += 1; } s += 1; } } "
+  "{ uint s = 0; while (s < S) { uint r = 0; while (r < dv) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wv[r * d + c] * sc[oLN + s * d + c]; acc = p + acc; } sc[oV + s * dv + r] = acc + bv[r]; r += 1; } s += 1; } } ")))
+
+(defn jte-blk-attn ()
+  "{ uint s = 0; while (s < S) { uint t = 0; while (t < S) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float p = sc[oQ + s * dq + c] * sc[oK + t * dq + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < S) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < S) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < S) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + s * dv + i] = 0.0f; i += 1; } t = 0; while (t < S) { i = 0; while (i < dv) { float pv = sc[oV + t * dv + i] * sc[oSR + t]; sc[oA + s * dv + i] = sc[oA + s * dv + i] + pv; i += 1; } t += 1; } s += 1; } } ")
+
+(defn jte-blk-out ()
+  "{ uint s = 0; while (s < S) { uint i = 0; while (i < d) { float acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; float p = wo[i * dv + c] * sc[oA + s * dv + c]; acc = p + acc; } float o = acc + bo[i]; sc[oH + s * d + i] = x[s * d + i] + o; i += 1; } s += 1; } } ")
+
+(defn jte-blk-ln2 ()
+  "{ uint s = 0; while (s < S) { float sm = 0.0f; uint j = 0; while (j < d) { sm = sm + sc[oH + s * d + j]; j += 1; } float mean = sm / float(d); float va = 0.0f; j = 0; while (j < d) { float dm = sc[oH + s * d + j] - mean; float dd = dm * dm; va = va + dd; j += 1; } float varv = va / float(d); float sdv = varv + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = (sc[oH + s * d + j] - mean) * inv; float sg = nm * g2[j]; sc[oN2 + s * d + j] = sg + be2[j]; j += 1; } s += 1; } } ")
+
+(defn jte-blk-ffn ()
+  "{ uint s = 0; while (s < S) { uint k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = w1[k * d + c] * sc[oN2 + s * d + c]; acc = p + acc; } sc[oFA + k] = fgelu(acc + b1[k]); k += 1; } uint i = 0; while (i < d) { float acc2 = 0.0f; uint kk = hid; while (kk > 0) { kk -= 1; float p2 = w2[i * hid + kk] * sc[oFA + kk]; acc2 = p2 + acc2; } float f = acc2 + b2[i]; y[s * d + i] = sc[oH + s * d + i] + f; i += 1; } s += 1; } } ")
+
+(defn jte-block-fwd-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-blk-sig fname)
+  (str_concat (jte-blk-off)
+  (str_concat (jte-blk-ln1)
+  (str_concat (jte-blk-proj)
+  (str_concat (jte-blk-attn)
+  (str_concat (jte-blk-out)
+  (str_concat (jte-blk-ln2)
+  (str_concat (jte-blk-ffn) "}"))))))))))

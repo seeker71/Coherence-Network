@@ -314,6 +314,7 @@ jit-metal-lanes fks 4095
 jit-native-span fks 255
 jit-oracle-learning fks 1023
 jit-tensor-emit fks 7
+block-fwd-emit fks 7
 float-conversions fks 31
 trig fks 127
 trig-atan fks 1111111
