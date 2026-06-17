@@ -1,0 +1,35 @@
+{
+  "title": "form-cli onboarding — a new Mac clones the body, runs the kernel, picks a provider, and questions local docs through one door",
+  "date": "2026-06-17",
+  "intent": "Make the Form-native organism installable by a new Mac user as a self-contained, local-first tool: the GitHub-hosted binary + source, a single `form-cli` command, the agent CLI of their choice, and a Claude skill that routes questions to form-cli including over their own local documents.",
+  "device": "Apple M4 Max, arm64 Darwin — the kernel binary is arm64; other platforms build from source (Go)",
+  "advances": [
+    {
+      "what": "One door: bin/form-cli",
+      "detail": "A single entry point routing ask / search / index / gaps / close / review / run / eval / preflight through the kernel and the existing form-cli carriers. `form-cli eval '(add 20 22)'` -> 42 verified. Local-first: a remote oracle is consulted only to review, never to answer."
+    },
+    {
+      "what": "Local documents become questionable",
+      "detail": "scripts/form_cli_rag.py build gains --docs DIR (repeatable): it walks a user's folder (common text/code extensions), embeds each file with the local nomic-embed-text, and adds it to the index alongside the body. Verified end-to-end: indexed /tmp/mydocs, asked a question only that doc answered, and llama3.2:3b returned 'port 7741 ... Coldharbor' citing the doc — fully offline."
+    },
+    {
+      "what": "The installer",
+      "detail": "install/form-cli-install.sh: clone source -> build/download kernel -> ollama + llama3.2:3b + nomic-embed-text -> ASK which agent CLI (claude/codex/gemini/grok/cursor/none) and install it (codex+gemini via Homebrew, claude via official installer, grok/cursor print the official command to verify first — no fabricated install commands) -> build the index -> install the Claude skill -> link form-cli onto PATH. Transparent (prints each step), consent-based (asks before heavy/external steps), re-runnable, stock bash 3.2."
+    },
+    {
+      "what": "The Claude skill",
+      "detail": "skills/form-cli/SKILL.md routes any question to form-cli, including local-doc Q&A (index a folder, then ask), gap-closing, and self-review. Follows the repo skill format with an openclaw install pointer to the one-line installer."
+    },
+    {
+      "what": "GitHub-hosted binary + docs",
+      "detail": "Release form-cli-v0.1.0 carries the prebuilt arm64 kernel (form-cli-kernel-macos-arm64) + the install script, so a user without Go can still run. docs/FORM-CLI-INSTALL.md is the new-Mac-user guide and release notes."
+    }
+  ],
+  "honest_remainder": {
+    "provider_installs": "claude (official installer), codex, and gemini-cli (both Homebrew) are verified on this host. grok and cursor installers change and were NOT fabricated — the installer prints the official command/URL for the user to verify before running.",
+    "binary_version_drift": "the release binary matches this commit's source; the installer prefers building from source (go) so the kernel always matches the cloned recipes, and only downloads the prebuilt binary as a fallback.",
+    "arm64_only": "the prebuilt binary is Apple-silicon; Intel/Linux build from source."
+  },
+  "verdict": "A new Mac user runs one command and ends with the full body local, a working Form kernel, a local reasoning+memory oracle, the agent CLI they chose, and `form-cli` answering questions grounded in the body and their own documents — offline. The remote provider is a reviewer, not a requirement.",
+  "reproduce": "curl -fsSL https://raw.githubusercontent.com/seeker71/Coherence-Network/main/install/form-cli-install.sh | bash  |  form-cli ask '...'  |  form-cli index --docs ~/notes && form-cli ask 'what did my notes say?'"
+}

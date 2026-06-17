@@ -64,24 +64,45 @@ def _snippet(path: str) -> str:
     return "\n".join(lines[:18])[:1200]
 
 
-def build(index_path: str) -> None:
+LOCAL_DOC_EXTS = (".md", ".txt", ".org", ".rst", ".py", ".ts", ".tsx", ".js",
+                  ".go", ".rs", ".fk", ".form", ".json", ".yaml", ".yml", ".sh", ".html")
+
+
+def _local_doc_paths(root: str):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "node_modules"]
+        for fn in sorted(filenames):
+            if fn.lower().endswith(LOCAL_DOC_EXTS):
+                yield os.path.join(dirpath, fn)
+
+
+def build(index_path: str, doc_roots=None) -> None:
     os.makedirs(os.path.dirname(index_path), exist_ok=True)
     n = 0
     with open(index_path, "w") as out:
+        def emit(rel_id, kind, sn):
+            nonlocal n
+            try:
+                vec = quantize(embed(sn))
+            except Exception:
+                return
+            out.write(json.dumps({"id": rel_id, "kind": kind, "snippet": sn[:400], "vec": vec}) + "\n")
+            n += 1
+            if n % 100 == 0:
+                print(f"  ...{n} docs embedded", flush=True)
+        # the body itself (recipes, specs, concepts, substrate)
         for kind, pat in SOURCES:
             for path in sorted(glob.glob(os.path.join(ROOT, pat))):
                 sn = _snippet(path)
-                if len(sn) < 20:
-                    continue
-                try:
-                    vec = quantize(embed(sn))
-                except Exception:
-                    continue
-                out.write(json.dumps({"id": os.path.relpath(path, ROOT),
-                                      "kind": kind, "snippet": sn[:400], "vec": vec}) + "\n")
-                n += 1
-                if n % 100 == 0:
-                    print(f"  ...{n} docs embedded", flush=True)
+                if len(sn) >= 20:
+                    emit(os.path.relpath(path, ROOT), kind, sn)
+        # any local document folders the user points at
+        for root in (doc_roots or []):
+            root = os.path.abspath(os.path.expanduser(root))
+            for path in _local_doc_paths(root):
+                sn = _snippet(path)
+                if len(sn) >= 20:
+                    emit(path, "local", sn)
     print(f"[rag index built: {n} docs -> {index_path}]")
 
 
@@ -107,6 +128,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build"); b.add_argument("--index", default=INDEX)
+    b.add_argument("--docs", action="append", default=[], help="extra local folder(s) to index, repeatable")
     s = sub.add_parser("search"); s.add_argument("question")
     s.add_argument("-k", type=int, default=5); s.add_argument("--index", default=INDEX)
     c = sub.add_parser("context"); c.add_argument("question")
@@ -116,7 +138,7 @@ def main() -> int:
     a.add_argument("--index", default=INDEX)
     args = ap.parse_args()
     if args.cmd == "build":
-        build(args.index); return 0
+        build(args.index, args.docs); return 0
     if args.cmd == "search":
         for h in retrieve(args.question, args.index, args.k):
             print(f"{h['id']}\t{h['kind']}")
