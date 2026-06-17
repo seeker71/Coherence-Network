@@ -11,6 +11,13 @@
 #   7. put `form-cli` on your PATH and print next steps
 #
 # Written for stock macOS bash 3.2. Re-runnable: it detects what is already present.
+#
+# Interactive by default (prompts on the terminal). Unattended/CI: preset answers
+# with env vars and it never blocks on a tty:
+#   FORM_CLI_PROVIDER=6   # 1 claude 2 codex 3 gemini 4 grok 5 cursor 6 none
+#   FORM_CLI_PULL=y       # pull the local models (else skip)
+#   FORM_CLI_INSTALL_OLLAMA=y   # install ollama via brew if missing
+#   FORM_CLI_HOME=/path   # where to clone (default ~/coherence-network)
 set -u
 REPO_URL="https://github.com/seeker71/Coherence-Network.git"
 REL_TAG="form-cli-v0.1.0"
@@ -18,7 +25,16 @@ DEST="${FORM_CLI_HOME:-$HOME/coherence-network}"
 BINDIR="$HOME/.local/bin"
 say(){ printf "\n\033[1m── %s\033[0m\n" "$1"; }
 ok(){ printf "  ✓ %s\n" "$1"; }
-ask(){ printf "  %s " "$1"; read -r REPLY < /dev/tty; }
+# ask "<prompt>" "<override>" — an env override wins (unattended/CI), else a real
+# tty, else a safe empty default. Never crashes under set -u when there is no
+# controlling terminal (e.g. piped, CI, sandbox): an empty answer takes the safe path.
+REPLY=""
+ask(){
+  if [ -n "${2:-}" ]; then REPLY="$2"; printf "  %s %s\n" "$1" "$REPLY"; return; fi
+  printf "  %s " "$1"
+  if [ -r /dev/tty ]; then read -r REPLY < /dev/tty 2>/dev/null || REPLY=""; printf "\n"
+  else REPLY=""; printf "(no tty — default: skip)\n"; fi
+}
 
 say "form-cli installer (local-first, Form-native)"
 echo "  destination: $DEST"
@@ -55,18 +71,18 @@ say "[3/7] local oracle (offline reasoning + memory)"
 if command -v ollama >/dev/null 2>&1; then
   ok "ollama present"
 else
-  ask "ollama not found — install via Homebrew now? [y/N]"
+  ask "ollama not found — install via Homebrew now? [y/N]" "${FORM_CLI_INSTALL_OLLAMA:-}"
   case "$REPLY" in y|Y) brew install ollama 2>/dev/null && ok "ollama installed" || echo "  see https://ollama.com/download";; *) echo "  skipped — install from https://ollama.com/download";; esac
 fi
 if command -v ollama >/dev/null 2>&1; then
-  ask "pull local models llama3.2:3b (~2GB) + nomic-embed-text (~270MB)? [y/N]"
+  ask "pull local models llama3.2:3b (~2GB) + nomic-embed-text (~270MB)? [y/N]" "${FORM_CLI_PULL:-}"
   case "$REPLY" in y|Y) ollama pull llama3.2:3b; ollama pull nomic-embed-text; ok "models pulled";; *) echo "  skipped — pull later for offline answers";; esac
 fi
 
 # 4. agent CLI provider (asked) ---------------------------------------------------
 say "[4/7] agent CLI — which provider? form-cli calls it only to review/escalate"
 echo "  1) claude   2) codex   3) gemini   4) grok   5) cursor   6) none"
-ask "choose [1-6]:"
+ask "choose [1-6]:" "${FORM_CLI_PROVIDER:-}"
 case "$REPLY" in
   1) command -v claude >/dev/null 2>&1 && ok "claude already installed" || { echo "  installing claude (official):"; echo "    curl -fsSL https://claude.ai/install.sh | bash"; curl -fsSL https://claude.ai/install.sh | bash; } ;;
   2) command -v codex  >/dev/null 2>&1 && ok "codex already installed"  || brew install codex ;;
