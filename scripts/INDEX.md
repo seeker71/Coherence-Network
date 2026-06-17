@@ -91,6 +91,7 @@
 | [form_cli_preflight.sh](form_cli_preflight.sh) | form_cli_preflight.sh — air-gap readiness check for the form-cli. |
 | [form_cli_rag.py](form_cli_rag.py) | form_cli_rag.py — offline semantic memory for the form-cli's local oracle. |
 | [form_cli_replay.sh](form_cli_replay.sh) | form_cli_replay.sh — measure how the native models do against the agent. |
+| [form_cli_roadmap.sh](form_cli_roadmap.sh) | form_cli_roadmap.sh — list the floor->north-star steps and the next one to build. |
 | [form_cli_self_review.sh](form_cli_self_review.sh) | form_cli_self_review.sh — the self-review flywheel, driven through form-cli. |
 | [form_cli_slice.sh](form_cli_slice.sh) | form_cli_slice.sh — compile a Form recipe slice to a RUNNABLE native binary, |
 | [form_cli_tiered.sh](form_cli_tiered.sh) | form_cli_tiered.sh — retire the REMOTE oracle on reasoning: local-first, tiered. |
