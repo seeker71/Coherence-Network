@@ -63,6 +63,7 @@ case "$cmd" in
   asm)       exec bash "$ROOT/scripts/form_cli_asm.sh" "$@" ;;
   gaps)      exec bash "$ROOT/scripts/form_cli_gaps.sh" "$@" ;;
   close)     exec bash "$ROOT/scripts/form_cli_close_gap.sh" "$@" ;;
+  close-next) exec bash "$ROOT/scripts/form_cli_close_next.sh" "$@" ;;
   review)    exec bash "$ROOT/scripts/form_cli_self_review.sh" "$@" ;;
   run)       exec bash "$ROOT/scripts/form_native_run.sh" "$@" ;;
   ensure)    exec bash "$ROOT/scripts/form_cli_ensure.sh" "$@" ;;
