@@ -51,3 +51,28 @@ model drafts, the local kernel validates. Sequence: `ll-buffer` → `ll-streq` �
 fall out by composition.
 
 See the live plan any time, offline: `form-cli roadmap`.
+
+## Learning LLVM's lowering offline — clang IS the oracle
+
+No internet, no LLVM source — the binary answers every question by *showing* you.
+`clang`/`opt`/`llc`/`llvm-objdump` are all local; you observe behavior, not source.
+The door is `form-cli asm "<C>"`:
+
+| Question | Command | What you read |
+|---|---|---|
+| How does LLVM lower X to arm64? | `form-cli asm "<C>"` | the arm64 asm at -O2 — the actual instructions |
+| What did the optimizer DO? | `form-cli asm "<C>" --opt` | -O0 vs -O2 asm; the *delta* is the optimization |
+| What's the optimization path? | `form-cli asm "<C>" --passes` | per-pass IR (`opt -print-after-all`) — each pass's effect |
+| How does it differ by target? | `form-cli asm "<C>" --x86` | x86_64 asm from the same source |
+| What's the SSA substrate? | `form-cli asm "<C>" --ir` | the LLVM IR (mul nsw / range analysis / attrs) |
+| How does it handle an edge case? | feed the edge case as C | overflow, unaligned, odd widths — read the asm |
+
+Worked example — `form-cli asm "int streq(const char*a,const char*b){...}"` returns
+`ldrb / cmp / b.ne / cbnz / cset`, which maps one-to-one onto the form-asm
+primitives (`fa-ldrb`, `fa-cmp-x`, `fa-bcond`, `fa-csel`). **That asm IS the
+blueprint for the `ll-streq` lowering arm.** The loop closes through the
+`clang-compiler` teacher lane (oracle-catalog.fk): form-lower drafts a lowering,
+`form-cli asm` shows clang's reference bytes, and the byte-conviction gate
+(`fa-conviction`) measures the match — clang drops out only when our bytes ARE its
+bytes. Second offline oracle for the *why*: the local coding models carry LLVM
+internals. Between them, the laptop answers any lowering question with no network.

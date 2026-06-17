@@ -1,0 +1,14 @@
+{
+  "title": "form-cli asm — interrogate LLVM offline: clang IS the lowering oracle, no source, no network",
+  "date": "2026-06-18",
+  "answers": "How to learn LLVM's optimization path / target lowering / edge-case handling offline without the source: you observe the binary, not the source. clang/opt/llc/llvm-objdump are all local and emit IR, per-pass IR, per-target asm, and the -O0->-O2 delta for any C input.",
+  "advance": {
+    "tool": "scripts/form_cli_asm.sh + bin/form-cli asm: '<C>' -> arm64 asm (-O2, LLVM's lowering); --ir (LLVM IR); --opt (-O0 vs -O2 delta = what the optimizer did); --x86 (target-specific lowering); --passes (opt -print-after-all, the per-pass pipeline).",
+    "worked_example": "form-cli asm 'int streq(const char*a,const char*b){while(*a&&*a==*b){a++;b++;}return *a==*b;}' -> ldrb/cmp/b.ne/cbnz/cset, which maps 1:1 onto form-asm primitives fa-ldrb/fa-cmp-x/fa-bcond/fa-csel. That asm IS the ll-streq lowering blueprint, learned from clang offline. --x86 on a sum loop shows clang auto-vectorizing (optimizer behavior, visible).",
+    "loop": "the clang-compiler teacher lane (oracle-catalog.fk): form-lower drafts a lowering, form-cli asm shows clang's reference bytes, the byte-conviction gate (fa-conviction) measures the match; clang drops out only when our bytes ARE its bytes. Second offline oracle for the why: local coding models carry LLVM internals.",
+    "doc": "docs/coherence-substrate/form-lower-extension-reference.md gains the 'Learning LLVM's lowering offline' section (the command table + the worked example + the teacher loop)."
+  },
+  "no_llvm_source_needed": "We do not check out or read LLVM source. clang (/usr/bin/clang) + brew llvm (opt/llc/llvm-mc/llvm-objdump) are the queryable oracle; observing their output for chosen inputs IS the lowering/optimization/target/edge-case knowledge. Bug found and fixed in the carrier: a `}` inside a ${1:?...} message prematurely closed the expansion (appended `\"}` to the snippet); replaced with a plain arg check.",
+  "verdict": "form-cli can now ask LLVM how it lowers, optimizes, targets, and handles edge cases — entirely offline. The asm it returns is the direct blueprint for each form-lower lever arm; the conviction gate measures the match. No source, no internet.",
+  "reproduce": "form-cli asm 'int f(int x){return x*x+3;}'  |  form-cli asm '<C>' --opt  |  form-cli asm '<C>' --x86  |  form-cli asm '<C>' --passes"
+}
