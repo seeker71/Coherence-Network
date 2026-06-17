@@ -1,0 +1,27 @@
+; preludes: form-stdlib/core.fk form-stdlib/lowering-conviction.fk
+;
+; lowering-conviction-band — the oracle is a teacher, not a byte-master, made falsifiable.
+;
+; Our lowering vs the oracle's, by RESULT (semantics) and SIZE (bytes), limit 10x:
+;   same result, 3 bytes vs oracle 5   -> BETTER  (3)  smaller, a win
+;   same result, 40 bytes vs oracle 5  -> HEALTHY (2)  8x, within an order of magnitude
+;   same result, 60 bytes vs oracle 5  -> BLOATED (1)  12x, understood-or-not, hold back
+;   result 7 vs oracle 9               -> WRONG   (0)  semantics broken, the hard fail
+;
+; Verdict 127 when every claim lands:
+;   1   semantic equivalence is the floor   (lc-equiv? 7 7 == 1)
+;   2   smaller than the oracle is better    (lc-better? 3 5 == 1)
+;   4   within limit is healthy              (lc-ratio-ok? 40 5 10 == 1)
+;   8   equiv + smaller -> BETTER (3)         (lc-verdict 7 7 3 5 10 == 3)
+;   16  equiv + bloated -> BLOATED (1)        (lc-verdict 7 7 60 5 10 == 1)
+;   32  different result -> WRONG (0)         (lc-verdict 7 9 3 5 10 == 0)
+;   64  ship on healthy, not on wrong         (may-ship 2 == 1 AND may-ship 0 == 0)
+(do
+    (let c0 (if (eq (lc-equiv? 7 7) 1) 1 0))
+    (let c1 (if (eq (lc-better? 3 5) 1) 2 0))
+    (let c2 (if (eq (lc-ratio-ok? 40 5 10) 1) 4 0))
+    (let c3 (if (eq (lc-verdict 7 7 3 5 10) 3) 8 0))
+    (let c4 (if (eq (lc-verdict 7 7 60 5 10) 1) 16 0))
+    (let c5 (if (eq (lc-verdict 7 9 3 5 10) 0) 32 0))
+    (let c6 (if (and (eq (lc-may-ship? 2) 1) (eq (lc-may-ship? 0) 0)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

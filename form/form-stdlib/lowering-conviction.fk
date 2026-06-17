@@ -1,0 +1,50 @@
+; lowering-conviction.fk — judge a lowering against an ORACLE, not against byte-identity.
+;
+; preludes: form-stdlib/core.fk
+;
+; Two different gates live in this body, and they are NOT the same:
+;
+;   ENCODER gate (fa-conviction, form-to-asm.form): "does this INSTRUCTION encode
+;     to the right bytes?" has ONE right answer — byte-identity to the assembler is
+;     correct, because that is how form-asm faithfully REPLACES clang as the
+;     assembler. Keep it byte-exact.
+;
+;   LOWERING gate (THIS recipe): "which instructions do we emit for a construct, and
+;     how do we optimize?" has MANY valid answers. clang/LLVM is an ORACLE — a
+;     teacher to compare against — NOT a master to match byte-for-byte. Demanding
+;     byte-identity here is a CEILING: it forbids us being different and as-good or
+;     better. The honest gate is: same SEMANTICS (our lowering, run, returns the same
+;     result as the oracle's), and the DIFFERENCE (size/speed) understood and within a
+;     HEALTHY order of magnitude. Smaller/faster than the oracle is a WIN, not a fail.
+;
+; Inputs are measured by the carrier (run ours, run the oracle): the two results and
+; the two sizes (bytes or cycles). This recipe is the verdict over them, four-way.
+;
+; Proven by: form-stdlib/tests/lowering-conviction-band.fk (four-way at validate.sh).
+
+(do
+    ; SEMANTICS first — the only hard requirement: ours computes what the oracle does.
+    (defn lc-equiv? (ours-result oracle-result)
+        (if (eq ours-result oracle-result) 1 0))
+
+    ; better = strictly smaller/faster than the oracle (our whole point).
+    (defn lc-better? (ours oracle) (if (lt ours oracle) 1 0))
+
+    ; healthy = within a `limit`x factor of the oracle (limit=10 -> same order of
+    ; magnitude). Difference is allowed; only an unexplained blow-up is not.
+    (defn lc-ratio-ok? (ours oracle limit) (if (le ours (mul oracle limit)) 1 0))
+
+    ; the verdict (a code, not a pass/fail):
+    ;   0 WRONG    — different result; semantics broken; the one hard fail, must fix
+    ;   3 BETTER   — same result, strictly smaller/faster than the oracle
+    ;   2 HEALTHY  — same result, within an order of magnitude (different, fine)
+    ;   1 BLOATED  — same result but beyond the limit; understood-or-not, investigate
+    (defn lc-verdict (ours-result oracle-result ours-size oracle-size limit)
+        (if (eq (lc-equiv? ours-result oracle-result) 0) 0
+            (if (eq (lc-better? ours-size oracle-size) 1) 3
+                (if (eq (lc-ratio-ok? ours-size oracle-size limit) 1) 2 1))))
+
+    ; ship when semantics hold AND the difference is healthy or better — NOT only
+    ; when bytes match. (Bloated is held back for understanding, not for conformance.)
+    (defn lc-may-ship? (verdict) (if (ge verdict 2) 1 0))
+    0)

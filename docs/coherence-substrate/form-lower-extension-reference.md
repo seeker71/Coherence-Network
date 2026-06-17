@@ -21,8 +21,12 @@ composing them in `form-lower`'s dispatch, not inventing encodings:
 | `ll-callconv` (multi-arg calls) | `fa-stp-fp` / `fa-ldp-fp` (frame), `fa-bl` (branch-link) |
 
 So each lever step is a `form-lower` dispatch arm that *emits a sequence of existing
-`fa-*` calls*, byte-verified through the conviction gate (`fa-conviction` /
-`fa-may-drop`, `form-to-asm.form`).
+`fa-*` calls*. Two gates, kept distinct: the **encoder** is byte-exact (`fa-conviction`,
+`form-to-asm.form`) — one instruction has one correct encoding, and matching the
+assembler is how we drop clang *as the assembler*. The **lowering choice** (which
+instructions, how optimized) is judged by `lowering-conviction.fk`, NOT byte-identity:
+clang is an oracle, and a different sequence that returns the same result within a
+healthy order of magnitude is fine — smaller/faster is a win.
 
 ## The only external rote facts — the macOS arm64 syscall ABI
 
@@ -70,9 +74,12 @@ The door is `form-cli asm "<C>"`:
 Worked example — `form-cli asm "int streq(const char*a,const char*b){...}"` returns
 `ldrb / cmp / b.ne / cbnz / cset`, which maps one-to-one onto the form-asm
 primitives (`fa-ldrb`, `fa-cmp-x`, `fa-bcond`, `fa-csel`). **That asm IS the
-blueprint for the `ll-streq` lowering arm.** The loop closes through the
-`clang-compiler` teacher lane (oracle-catalog.fk): form-lower drafts a lowering,
-`form-cli asm` shows clang's reference bytes, and the byte-conviction gate
-(`fa-conviction`) measures the match — clang drops out only when our bytes ARE its
-bytes. Second offline oracle for the *why*: the local coding models carry LLVM
+starting shape for the `ll-streq` lowering arm — to learn from, not to copy
+byte-for-byte.** The loop closes through the `clang-compiler` teacher lane
+(oracle-catalog.fk): form-lower drafts a lowering, `form-cli asm` shows clang's
+sequence, and `lowering-conviction.fk` judges ours — **same result is required, and
+the size/speed difference must be understood and within a healthy order of
+magnitude** (smaller/faster than clang is a win). Byte-identity is the *encoder's*
+gate, never the lowering's; demanding it here would be a ceiling that forbids us from
+being different and better. Second offline oracle for the *why*: the local coding models carry LLVM
 internals. Between them, the laptop answers any lowering question with no network.

@@ -1,0 +1,16 @@
+{
+  "title": "Two gates, not one — the lowering oracle is a teacher, not a byte-master; byte-accuracy was a ceiling",
+  "date": "2026-06-18",
+  "correction": "Earlier docs (form-lower-extension-reference.md) applied byte-identity (fa-conviction, 'our bytes ARE clang's bytes') to the LOWERING. That is wrong: demanding byte-accuracy to LLVM forbids us being different and as-good-or-better. clang/LLVM is an ORACLE to compare against and learn from, not a conformance target.",
+  "distinction": {
+    "encoder_gate": "fa-conviction / form-to-asm.form: 'does THIS instruction encode to the right bytes?' has ONE right answer; byte-identity to the assembler is correct, because it proves form-asm faithfully REPLACES clang as the assembler. Unchanged — legitimately byte-exact.",
+    "lowering_gate": "lowering-conviction.fk (new): 'which instructions do we emit / how optimized?' has MANY valid answers. Gate = same SEMANTICS (run ours, same result as the oracle) + the size/speed DIFFERENCE understood and within a HEALTHY order of magnitude. Smaller/faster than the oracle is BETTER, not a fail."
+  },
+  "advance": {
+    "recipe": "form/form-stdlib/lowering-conviction.fk: lc-equiv? (semantics, the only hard floor), lc-better? (smaller/faster), lc-ratio-ok? (within limit x, limit=10 -> same order of magnitude), lc-verdict (0 WRONG / 1 BLOATED / 2 HEALTHY / 3 BETTER), lc-may-ship? (verdict >= 2 — ship on better-or-healthy, NOT only on byte-match).",
+    "proof": "tests/lowering-conviction-band.fk -> 127 four-way (Go/Rust/TS/fkwu), 0 divergent; registered 'lowering-conviction fkc 127'.",
+    "doc": "form-lower-extension-reference.md corrected: encoder byte-exact; lowering judged by lowering-conviction (oracle = teacher); byte-identity named explicitly as a ceiling for the lowering."
+  },
+  "verdict": "The bar for a lowering is correctness + an understood, healthy difference from the oracle — not byte-accuracy. clang is reviewed and compared, not copied. This keeps the door open to being different and better, while the encoder stays byte-exact where one right answer exists.",
+  "reproduce": "cd form && ./validate.sh form-stdlib/lowering-conviction.fk form-stdlib/tests/lowering-conviction-band.fk -> 127 four-way, 0 divergent"
+}
