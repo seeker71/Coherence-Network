@@ -1,0 +1,64 @@
+; roadmap.fk — the floor->north-star steps, as recipe DATA the form-cli can walk.
+;
+; preludes: form-stdlib/core.fk
+;
+; Every step on the grammar tower (self-growing-machine.form G0-G7) is a row here:
+; (id phase title spec status). form-cli lists them (form_cli_roadmap.sh), and for
+; an OPEN step whose spec is a closable recipe gap, hands the spec + assertion to
+; form_cli_close_gap.sh — a LOCAL oracle drafts the recipe, the LOCAL kernel
+; validates it. No remote LLM: the plan is data, the generation is local, the proof
+; is the kernel. The query logic (total / open / next / done) is this recipe,
+; four-way; the carrier only formats and runs the local oracle.
+;
+; status: "done" (proven on main) | "open" (the path ahead). The seed below reflects
+; the real state — G0/G1-base/G2/G4 proven, the G1 lever sub-steps + G3/G7 open.
+;
+; Proven by: form-stdlib/tests/roadmap-band.fk (four-way at validate.sh).
+
+(do
+    (defn rm-step (id phase title spec status) (list id phase title spec status))
+    (defn rm-id    (s) (nth s 0))
+    (defn rm-phase (s) (nth s 1))
+    (defn rm-title (s) (nth s 2))
+    (defn rm-spec  (s) (nth s 3))
+    (defn rm-status (s) (nth s 4))
+
+    (defn rm-done? (status) (if (str_eq status "done") 1 0))
+    (defn rm-open? (status) (if (eq (rm-done? status) 1) 0 1))
+
+    (defn rm-total (rows) (len rows))
+    (defn rm-open-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (rm-open? (rm-status (head rows))) (rm-open-count (tail rows)))))
+    (defn rm-done-count (rows) (sub (rm-total rows) (rm-open-count rows)))
+
+    ; the next step to build: first row still open, or an explicit "none" step
+    (defn rm-next-open (rows)
+        (if (eq (len rows) 0) (rm-step "none" "-" "all steps done" "-" "done")
+            (if (eq (rm-open? (rm-status (head rows))) 1) (head rows)
+                (rm-next-open (tail rows)))))
+
+    ; the real floor->north-star seed (self-growing-machine.form, made walkable)
+    (defn rm-seed ()
+        (list
+            (rm-step "g0"          "G0" "five axioms + host-kernel carriers"
+                     "host-exec/read/write as gated carriers" "done")
+            (rm-step "g1-base"     "G1" "form-lower: int arith + cond + map + recursion -> arm64"
+                     "lower(LIT/ADD/SUB/MUL/DIV/COND/MAP/REC) to bytes, zero clang" "done")
+            (rm-step "g2"          "G2" "BMF grammar + BML + source-compiler"
+                     "any grammar admitted; a grammar may ref another" "done")
+            (rm-step "g4"          "G4" "form-cli runner: parse, route, host-io, loop"
+                     "pure Form on the kernel, no REST" "done")
+            (rm-step "ll-buffer"   "G1" "form-lower: stack/heap buffer model"
+                     "a memory model (sp alloc + pointers), not just w0/w1 registers" "open")
+            (rm-step "ll-streq"    "G1" "form-lower: lower string ops to byte loops"
+                     "(str_eq a b) -> byte-compare loop; form-asm-tr proves the primitive" "open")
+            (rm-step "ll-readfile" "G1" "form-lower: lower host-io to syscalls"
+                     "(read_file p) -> open/read/close svc; form-asm-syscall proves the primitive" "open")
+            (rm-step "ll-callconv" "G1" "form-lower: general multi-arg calling convention"
+                     "args in w0..w7, frame setup; today single-arg only" "open")
+            (rm-step "g3"          "G3" "grammar-as-recipe compiles ANY recipe to native"
+                     "rides G1 completing over strings + host-io" "open")
+            (rm-step "g7"          "G7" "form-cli compiles ITSELF (self-host)"
+                     "the runner recipe lowers to a native binary that emits the next" "open")))
+    0)

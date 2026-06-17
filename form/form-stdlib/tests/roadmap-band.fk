@@ -1,0 +1,29 @@
+; preludes: form-stdlib/core.fk form-stdlib/roadmap.fk
+;
+; roadmap-band — the floor->north-star step query, made falsifiable.
+;
+; A four-row fixture: two done (the floor), two open (the path ahead) — the next
+; open step is the first not-done in order:
+;   g0        done
+;   g1-base   done
+;   ll-buffer open   <- next to build
+;   ll-streq  open
+;
+; Verdict 31 when every claim lands:
+;   1   total counts every step          (rm-total == 4)
+;   2   open-count counts the unbuilt     (== 2)
+;   4   done-count = total - open         (== 2)
+;   8   next-open is the first not-done    (rm-id (rm-next-open) == "ll-buffer")
+;   16  the done? primitive is exact       (rm-done? "done" == 1, rm-done? "open" == 0)
+(do
+    (let rows (list
+        (rm-step "g0"        "G0" "axioms"       "carriers"     "done")
+        (rm-step "g1-base"   "G1" "lower base"   "arith"        "done")
+        (rm-step "ll-buffer" "G1" "buffer model" "sp alloc"     "open")
+        (rm-step "ll-streq"  "G1" "string lower" "byte loop"    "open")))
+    (let c0 (if (eq (rm-total rows) 4) 1 0))
+    (let c1 (if (eq (rm-open-count rows) 2) 2 0))
+    (let c2 (if (eq (rm-done-count rows) 2) 4 0))
+    (let c3 (if (str_eq (rm-id (rm-next-open rows)) "ll-buffer") 8 0))
+    (let c4 (if (eq (add (rm-done? "done") (rm-open? "done")) 1) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

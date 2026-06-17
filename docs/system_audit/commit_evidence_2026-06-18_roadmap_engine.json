@@ -1,0 +1,23 @@
+{
+  "title": "form-cli roadmap — the floor->north-star steps as walkable Form data, plus the offline G1-lever reference",
+  "date": "2026-06-18",
+  "intent": "Make the path from current floor to north-star legible and actionable OFFLINE: form-cli lists every step as structured Form data (each carrying a spec), and for a closable step hands the spec to form_cli_close_gap.sh — a LOCAL oracle drafts the recipe, the LOCAL kernel validates. The plan is data, the generation is local, the proof is the kernel; no remote LLM. Built for a plane (offline) work session on the G1 lever.",
+  "advances": [
+    {
+      "what": "roadmap.fk — the tower as data",
+      "detail": "the G0-G7 steps from self-growing-machine.form as rows (id phase title spec status), with rm-total / rm-open-count / rm-done-count / rm-next-open queries. Seed reflects real state: G0/G1-base/G2/G4 done; the four G1 lever sub-steps (ll-buffer, ll-streq, ll-readfile, ll-callconv) + G3/G7 open.",
+      "proof": "tests/roadmap-band.fk -> 31 four-way (Go/Rust/TS/fkwu), 0 divergent; registered 'roadmap fks 31'."
+    },
+    {
+      "what": "form-cli roadmap",
+      "detail": "scripts/form_cli_roadmap.sh + bin/form-cli subcommand: lists the steps (done ✓ / open ○) from the kernel and names the next to build with its spec and the offline close command. Verified: lists all 10 steps, 6 open, next = ll-buffer."
+    },
+    {
+      "what": "form-lower-extension-reference.md — the offline plane reference",
+      "detail": "the key finding: the arm64 encodings the G1 lever needs ALREADY exist in form-asm.fk (fa-svc, fa-ldrb/strb, fa-ldr, fa-stp-pre/ldp, fa-cmp-x/bcond, fa-movz-x) — the lever is form-lower DISPATCH composing them, not new encodings. Plus the macOS arm64 syscall ABI numbers (the only external rote facts) and the per-step proof shape. Offline oracle = local model; offline byte cross-check = /usr/bin/clang."
+    }
+  ],
+  "llvm_question": "We do NOT need LLVM's lowering spec — LLVM is SSA-IR + register allocation, a different/larger architecture; porting it would be a detour off the north star (one engine, not parallel paths). Our reference is our own form-asm/form-lower (the register-machine lowerer we extend), the local coding models (arm64/syscall knowledge baked in, the offline oracle), and local clang as a byte cross-check. All three are on the laptop now.",
+  "verdict": "form-cli now lists the whole floor->north-star path as Form data and points at the next buildable step; close_gap turns a step's spec into a kernel-validated recipe offline. The plane reference shows the lever's instructions are already forged — only the form-lower dispatch is missing. Everything needed is local.",
+  "reproduce": "form-cli roadmap   |   cd form && ./validate.sh form-stdlib/roadmap.fk form-stdlib/tests/roadmap-band.fk -> 31 four-way   |   docs/coherence-substrate/form-lower-extension-reference.md"
+}

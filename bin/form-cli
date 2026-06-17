@@ -29,6 +29,8 @@ form-cli — the one door (local-first, Form-native)
         (re)build the searchable index over the body and any local doc folders
   form-cli search "<query>" [-k N]
         list the nearest body/doc cells for a query (retrieval only)
+  form-cli roadmap
+        list the floor->north-star steps (roadmap.fk) and the next one to build
   form-cli gaps
         walk the body's open gaps (ideas/specs/capabilities), offline-closable tally
   form-cli close "<name>" "<spec>" "<assert>" "<expected>" [oracle]
@@ -54,6 +56,7 @@ case "$cmd" in
   ask)       exec python3 "$RAG" ask "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;
   index)     exec python3 "$RAG" build "$@" ;;
+  roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;
   gaps)      exec bash "$ROOT/scripts/form_cli_gaps.sh" "$@" ;;
   close)     exec bash "$ROOT/scripts/form_cli_close_gap.sh" "$@" ;;
   review)    exec bash "$ROOT/scripts/form_cli_self_review.sh" "$@" ;;
