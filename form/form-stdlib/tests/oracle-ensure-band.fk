@@ -1,0 +1,29 @@
+; preludes: form-stdlib/core.fk form-stdlib/oracle-catalog.fk form-stdlib/oracle-ensure.fk
+;
+; oracle-ensure-band — the form-cli's own oracle-install decision, made falsifiable.
+;
+; Three teachers in three states — the whole point is that the recipe tells the
+; carrier what to fetch without any host call:
+;   ear / stt          whisper-cli   installed       -> present, skip
+;   inner-voice / llm  ollama        absent          -> bring in (next)
+;   eye / camera       vision.swift  source-pending  -> bring in
+; So 2 of 3 still need install, the body is NOT ready, and the NEXT lane to fetch
+; is the absent local-llm (catalog order: it precedes the source-pending eye).
+;
+; Verdict 31 when every claim lands:
+;   1   counts what still needs install     (oe-need-count == 2)
+;   2   not ready while anything is missing (oe-ready? == 0)
+;   4   next-to-fetch is the first needed   (oe-next -> lane "local-llm")
+;   8   the plan is exactly the needed rows (len (oe-plan) == 2)
+;   16  the present primitive is exact      (oe-present? "installed" == 1)
+(do
+    (let rows (list
+        (oc-teacher "ear"         "stt"       "whisper-cli"  "generate" "local" "installed")
+        (oc-teacher "inner-voice" "local-llm" "ollama"       "generate" "local" "absent")
+        (oc-teacher "eye"         "camera"    "vision.swift" "label"    "local" "source-pending")))
+    (let c0 (if (eq (oe-need-count rows) 2) 1 0))
+    (let c1 (if (eq (oe-ready? rows) 0) 2 0))
+    (let c2 (if (str_eq (oc-lane (oe-next rows)) "local-llm") 4 0))
+    (let c3 (if (eq (len (oe-plan rows)) 2) 8 0))
+    (let c4 (if (eq (oe-present? "installed") 1) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

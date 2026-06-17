@@ -1,0 +1,16 @@
+{
+  "title": "oracle-ensure.fk — the form-cli's own oracle-install decision, as a four-way recipe",
+  "date": "2026-06-17",
+  "intent": "Move the 'ensure the oracles I need are present' brain from the bash installer into Form: a recipe that reads the oracle-catalog and computes which lanes still need install, which to fetch next, and whether the body is ready. The decision is Form (four-way); the effect (ollama pull / brew install) stays a host-exec carrier. A step on the self-growing-machine.form path where the form-cli is built from recipes and tends its own oracles.",
+  "advance": {
+    "recipe": "form/form-stdlib/oracle-ensure.fk (preludes oracle-catalog.fk): oe-present? / oe-needs? / oe-need-count / oe-plan / oe-next / oe-ready? — pure list logic over the catalog rows, no host call in the decision.",
+    "proof": "form/form-stdlib/tests/oracle-ensure-band.fk -> 31 four-way (Go/Rust/TS/fkwu), 0 divergent; registered 'oracle-ensure fks 31'. Fixture: three teachers (installed / absent / source-pending) -> 2 need install, not ready, next = the absent local-llm, plan = the 2 needed rows.",
+    "north_star": "self-growing-machine.form: the brain is Form (this recipe), the hands are host-io (G0 host-exec carrier). As G1 (form-lower over host-io) lands, the host-exec install step folds into the same native binary as the decision."
+  },
+  "honest_remainder": {
+    "carrier_wiring": "the install-command per lane (ollama pull <model>, brew install <formula>) is not in the catalog yet; the recipe names WHICH lanes need install and which is next, the carrier still maps lane->command. Wiring oracle-ensure into form-cli-install.sh (read catalog -> ask oe-plan -> host-exec) is the next step.",
+    "fkwu_host_io": "the DECISION crosses fkwu (pure logic); the install EFFECT uses host-io, which is the named G1 lever, not yet in fkwu/native."
+  },
+  "verdict": "The decision half of 'a form-cli built from recipes that installs its own oracles' is now a four-way-proven Form recipe. The body can compute its own oracle-install plan with no host call; the host-exec carrier executes it.",
+  "reproduce": "cd form && ./validate.sh form-stdlib/oracle-catalog.fk form-stdlib/oracle-ensure.fk form-stdlib/tests/oracle-ensure-band.fk -> 31, fourth arm four-way, 0 divergent"
+}

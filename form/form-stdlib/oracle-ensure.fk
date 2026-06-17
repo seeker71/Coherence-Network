@@ -1,0 +1,42 @@
+; oracle-ensure.fk — decide which oracles the body still needs, as a recipe.
+;
+; preludes: form-stdlib/core.fk form-stdlib/oracle-catalog.fk
+;
+; A form-cli built from recipes ensures its own oracles. It reads the
+; oracle-catalog (the teachers the body knows about, each with a state —
+; installed / source-pending / absent) and computes the INSTALL PLAN: which lanes
+; are not yet present, which to bring in next, and whether the body is ready. The
+; DECISION is this recipe (pure list logic, four-way); the EFFECT — running
+; `ollama pull` / `brew install` — is a host-exec carrier that walks the plan.
+; The brain is Form, the hands are host-io. As G1 (form-lower over host-io) lands,
+; the hands fold into the same native binary as the brain (self-growing-machine.form).
+;
+; Proven by: form-stdlib/tests/oracle-ensure-band.fk (four-way at validate.sh).
+
+(do
+    ; a lane is present only when its state is exactly "installed"
+    (defn oe-present? (state) (if (str_eq state "installed") 1 0))
+    ; so it still needs bringing in when it is anything else (absent / source-pending)
+    (defn oe-needs? (state) (if (eq (oe-present? state) 1) 0 1))
+
+    ; how many catalog rows still need install
+    (defn oe-need-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (oe-needs? (oc-state (head rows))) (oe-need-count (tail rows)))))
+
+    ; the PLAN: the sublist of rows that still need install (catalog order preserved)
+    (defn oe-plan (rows)
+        (if (eq (len rows) 0) (empty)
+            (if (eq (oe-needs? (oc-state (head rows))) 1)
+                (cons (head rows) (oe-plan (tail rows)))
+                (oe-plan (tail rows)))))
+
+    ; the NEXT lane to bring in (first that needs it), or an explicit absent "none" row
+    (defn oe-next (rows)
+        (if (eq (len rows) 0) (oc-teacher "none" "none" "none" "none" "none" "absent")
+            (if (eq (oe-needs? (oc-state (head rows))) 1) (head rows)
+                (oe-next (tail rows)))))
+
+    ; READY when nothing in the catalog still needs install
+    (defn oe-ready? (rows) (if (eq (oe-need-count rows) 0) 1 0))
+    0)
