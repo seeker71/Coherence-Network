@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 283
+**Total files**: 284
 
 | File | Purpose |
 |---|---|
@@ -84,7 +84,7 @@
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
 | [form_cli_close_gap.sh](form_cli_close_gap.sh) | form_cli_close_gap.sh — close a Form recipe gap OFFLINE with a local oracle. |
-| [form_cli_close_next.sh](form_cli_close_next.sh) | form_cli_close_next.sh — the autonomous self-closer, one iteration of the flywheel. |
+| [form_cli_close_next.sh](form_cli_close_next.sh) | form_cli_close_next.sh — the autonomous self-closer, FOUR-WAY gated. |
 | [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
 | [form_cli_distill_receipt.sh](form_cli_distill_receipt.sh) | form_cli_distill_receipt.sh — run the oracle->native distillation on the real |
 | [form_cli_ensure.sh](form_cli_ensure.sh) | form_cli_ensure.sh — ensure the form-cli's oracles are present, DECIDED by Form. |
@@ -92,6 +92,7 @@
 | [form_cli_guided.sh](form_cli_guided.sh) | form_cli_guided.sh — the trained native model makes the live model better. |
 | [form_cli_judge.sh](form_cli_judge.sh) | form_cli_judge.sh — measure the REASONING lane: how well a native model's answer |
 | [form_cli_preflight.sh](form_cli_preflight.sh) | form_cli_preflight.sh — air-gap readiness check for the form-cli. |
+| [form_cli_prove4.sh](form_cli_prove4.sh) | form_cli_prove4.sh — promote a closed recipe to a FOUR-WAY-proven stdlib cell. |
 | [form_cli_rag.py](form_cli_rag.py) | form_cli_rag.py — offline semantic memory for the form-cli's local oracle. |
 | [form_cli_replay.sh](form_cli_replay.sh) | form_cli_replay.sh — measure how the native models do against the agent. |
 | [form_cli_roadmap.sh](form_cli_roadmap.sh) | form_cli_roadmap.sh — list the floor->north-star steps and the next one to build. |

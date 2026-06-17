@@ -550,3 +550,7 @@ oracle-ensure fks 31
 roadmap fks 31
 lowering-conviction fkc 127
 form-asm-stack fkc 7
+ll-alloc16 fkc 1
+ll-store-w8 fkc 1
+ll-load-w9 fkc 1
+ll-free16 fkc 1

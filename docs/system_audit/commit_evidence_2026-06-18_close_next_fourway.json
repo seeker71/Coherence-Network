@@ -1,0 +1,14 @@
+{
+  "title": "The self-closer is now 4th-kernel-native — close-next gates every recipe on fkwu four-way before loading; end-to-end proof",
+  "date": "2026-06-18",
+  "the_gap_fixed": "close-next previously validated drafts on the Go kernel ONLY (form_cli_close_gap.sh '$GO' '$val'), so self-closed recipes were Go-native, not 4th-kernel-native. That is the integrity hole at the center of the 'native' claim. Fixed.",
+  "fix": {
+    "prover": "scripts/form_cli_prove4.sh — promotes a Go-validated draft to a FOUR-WAY-proven stdlib cell: moves the draft into the stdlib, auto-generates a verdict-1 band (the assertion), registers it NEWLINE-SAFE in form/fourth-arm-bands.txt (a row that lands mid-line is invisible to fkwu — a real gotcha caught via a sub-agent root-cause), runs validate.sh, and only succeeds if the band crosses the 4th kernel (fkwu) four-way with 0 divergent.",
+    "loop": "scripts/form_cli_close_next.sh now gates on prove4: draft -> Go-validate -> FOUR-WAY (incl fkwu) -> only then LOAD native. A recipe that Go-validates but does not cross fkwu is NOT loaded. The proven recipes accumulate as the native prelude the next iteration builds on."
+  },
+  "end_to_end_proof": "Ran the gated self-closer for the ll-buffer memory model, clean slate, 4 iterations, 0 remote oracle calls. Each: local coder drafted the recipe, Go validated, then prove4 reported 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '0 divergent', then loaded native. The prelude grew form-asm -> +ll-alloc16 -> +ll-store-w8 -> +ll-load-w9 -> +ll-free16. Four recipes self-closed AND proven on the 4th kernel by the loop itself.",
+  "shipped_artifacts": "form-stdlib/ll-alloc16.fk (sub sp,#16), ll-store-w8.fk (str w8,[sp,#8]), ll-load-w9.fk (ldr w9,[sp,#12]), ll-free16.fk (add sp,#16) + their -band.fk + manifest rows (each fkc 1, four-way). These are the buffer model's memory cells, self-closed offline and fkwu-proven — the durable record that the loop crossed the 4th kernel.",
+  "honest_remainder": "Remaining rungs toward the full self-hosting vision: (a) the recipes are register/offset-specific demonstrations; a general ll-alloc(n)/ll-store(rt,off) is the next lift; (b) a composed gap (buffer round-trip) that USES the four loaded recipes; (c) autonomous gap-finding instead of the queue; (d) an explicit per-recipe arm64 dylib via form_cli_slice.sh. The INTEGRITY proof the user demanded — the self-closer is 4th-kernel-native, not Go-only — is done.",
+  "verdict": "form-cli close-next now finds the next gap, drafts the recipe locally, tests it, PROVES it four-way on the 4th kernel (fkwu), and loads it native for the next iteration — proven end-to-end across 4 recipes, 0 remote. Go-only can no longer masquerade as native.",
+  "reproduce": "form-cli close-next 'ollama run coder'  (run repeatedly; each iteration gates on 'fourth arm: 1 band four-way, 0 divergent' before loading)"
+}

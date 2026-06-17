@@ -1,0 +1,4 @@
+; ll-store-w8.fk — self-closed by form-cli close-next (local oracle), proven four-way.
+; preludes: form-asm.fk ll-alloc16.fk 
+(do (defn store-w8 () (fa-str-w 8 31 8))
+ 0)
