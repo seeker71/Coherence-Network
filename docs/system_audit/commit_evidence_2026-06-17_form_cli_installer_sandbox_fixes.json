@@ -1,0 +1,20 @@
+{
+  "title": "form-cli installer + entry point: two install-breaking bugs caught by a real sandbox run and fixed",
+  "date": "2026-06-17",
+  "context": "Ran the documented one-liner installer against an isolated sandbox HOME (a fresh-Mac simulation). It surfaced two bugs that only appear on the real install path — neither visible when running from inside the repo, which is how the prior session tested.",
+  "bugs_found_and_fixed": [
+    {
+      "bug": "installer crashed without a tty",
+      "detail": "install/form-cli-install.sh read prompts from /dev/tty; under set -u with no controlling terminal (curl|bash in CI/sandbox/pipe) the read failed and REPLY was unbound -> 'REPLY: unbound variable', killing the run at the first prompt (step 3).",
+      "fix": "ask() now takes an env-override arg, falls back to /dev/tty when readable, else a safe empty default — never crashes. Added FORM_CLI_PROVIDER / FORM_CLI_PULL / FORM_CLI_INSTALL_OLLAMA / FORM_CLI_HOME for fully unattended runs, documented in the header and FORM-CLI-INSTALL.md."
+    },
+    {
+      "bug": "installed form-cli could not find the kernel",
+      "detail": "bin/form-cli resolved ROOT from ${BASH_SOURCE[0]} via dirname/... — correct when run inside the repo, but the installer links it onto PATH as a SYMLINK (~/.local/bin/form-cli). Through the symlink, ROOT resolved to ~/.local (the symlink's parent's parent), so GO and RAG pointed at non-existent paths and every command failed with 'No such file or directory'. This broke the primary install path entirely.",
+      "fix": "bin/form-cli now follows the symlink chain (portable readlink loop) to the real file before computing ROOT."
+    }
+  ],
+  "verified_in_sandbox": "After both fixes, the installer ran all 7 steps unattended (FORM_CLI_PROVIDER=6 FORM_CLI_PULL=n): clone/pull, build kernel (20+22=42), detect ollama, provider none, index 999 docs, install the Claude skill, link form-cli onto PATH. Then the INSTALLED symlink worked end-to-end: `form-cli eval '(add 20 22)' -> 42`, `form-cli gaps` -> the 27-gap tally, `form-cli ask '...local vs remote oracle...'` -> retrieved form-cli-loop/north-star/sample and a grounded offline answer (llama3.2:3b) citing form-cli-north-star.form. No network in the answer path.",
+  "verdict": "The one-command onboarding now works on the real install path (symlink on PATH) and in unattended/CI contexts, not only from inside the repo. The release install-script asset is updated to match.",
+  "honest_remainder": "A full clean-HOME run that re-clones from main confirms end-to-end only after this PR merges (the installer clones main); each fix was verified in the sandbox against the real artifacts. arm64 prebuilt binary unchanged."
+}
