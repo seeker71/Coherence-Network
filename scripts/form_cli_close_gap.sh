@@ -24,6 +24,11 @@ GO_DIR="$ROOT/form/form-kernel-go"; GO="$GO_DIR/bin-go"
 STD="$ROOT/form/form-stdlib"
 GAP="${1:?gap-name}"; SPEC="${2:?recipe-spec}"; ASSERT="${3:?assert-expr}"; EXPECT="${4:?expected}"
 ORACLE="${5:-ollama run coder}"
+# optional 6th arg: space-separated stdlib basenames preluded BEFORE the draft, so a
+# recipe that composes existing cells (e.g. form-asm primitives for a lowering step)
+# validates against them instead of failing on unbound symbols. The lever steps all
+# need this — they build on form-asm/form-lower.
+PRELUDE="${6:-}"
 [[ -x "$GO" ]] || ( cd "$GO_DIR" && go build -o bin-go . ) 2>/dev/null
 
 echo "── close gap: $GAP (oracle: $ORACLE, offline) ──"
@@ -40,6 +45,8 @@ EXAMPLE — a recipe (sq n) = n*n:
 ;;;BEGIN
 (defn sq (n) (mul n n))
 ;;;END
+
+You MAY call functions already defined in these preludes (do not redefine them): ${PRELUDE:-none}
 
 TASK: write a recipe for: $SPEC
 Output ONLY the recipe between ;;;BEGIN and ;;;END markers. No prose.
@@ -67,7 +74,7 @@ sed 's/^/     /' "$draft"
 
 # 4. VALIDATE on the kernel: does the draft + assertion evaluate to expected? --
 val="$(mktemp)"; trap 'rm -f "$pf" "$raw" "$val"' EXIT
-{ cat "$draft"; echo "(print $ASSERT)"; } > "$val"
+{ for p in $PRELUDE; do cat "$STD/$p" 2>/dev/null; done; cat "$draft"; echo "(print $ASSERT)"; } > "$val"
 GOT="$("$GO" "$val" 2>/dev/null | tr -d '[:space:]')"
 case "$GOT" in
     ${EXPECT}*) OUTCOME="success"; echo "[2] kernel validated: $ASSERT = $GOT (expected $EXPECT) ✓" ;;

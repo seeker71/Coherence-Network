@@ -1,0 +1,19 @@
+{
+  "title": "Walking G1 via form-cli only — the walk surfaced a real form-cli gap (close validates in isolation) and the fix shipped a lever sub-step with 0 remote calls",
+  "date": "2026-06-18",
+  "experiment": "skills/walk-g1-g7 drives the roadmap using ONLY form-cli: roadmap (plan) -> asm (learn LLVM's lowering from local clang) -> close (local oracle drafts, kernel validates). Measure remote-oracle calls, shipped count, and for each not-shipped the form-cli gap + fix.",
+  "findings": {
+    "remote_oracle_calls": "0 across the whole walk — clang (asm) is local, coder (close) is local; claude -p was never touched.",
+    "first_pass_shipped": "0 — and the reason was form-cli's, not the model's. On ll-streq's first sub-step the LOCAL coder drafted the CORRECT recipe `(defn ldrb-w8 () (fa-ldrb 8 0 0))`, but the kernel rejected it: `(len (ldrb-w8)) = ''` — `fa-ldrb` UNBOUND, because form_cli_close_gap.sh validated the draft in ISOLATION (no stdlib prelude). Every lever step builds on form-asm/form-lower primitives, so none could validate.",
+    "fix_shipped": "form_cli_close_gap.sh gains a 6th arg: space-separated stdlib basenames preluded BEFORE the draft (and named in the oracle prompt). Re-running the SAME step with `form-asm.fk` -> `(len (ldrb-w8)) = 4` -> CLOSED offline. The lever sub-step shipped via form-cli alone, 0 remote calls.",
+    "honest_scope": "What shipped is one instruction-emit SUB-recipe (ldrb), proving the mechanism + the fix — not the entire ll-streq byte-loop. The coarse roadmap steps (ll-buffer/ll-streq/...) still do not close in one shot; they must be decomposed into instruction-emit sub-recipes, each validated against form-asm and (next) byte-checked against `form-cli asm`'s clang reference."
+  },
+  "how_to_ship_the_full_lever_via_form_cli": [
+    "1. close --prelude (DONE) — lever recipes validate against form-asm.",
+    "2. finer roadmap steps — decompose each lever step into instruction-emit sub-recipes (ldrb, cmp, branch-loop), each close-able with a byte/length assertion.",
+    "3. byte-conviction assertion — the assert compares emitted bytes to `form-cli asm`'s clang reference (fa-conviction), so 'correct' means 'matches LLVM', checkable offline.",
+    "4. an iterative close loop — on a failed validate, feed the kernel error + clang's reference bytes back to the local oracle and re-draft, so it converges instead of one-shotting."
+  ],
+  "verdict": "form-cli can walk the lever entirely locally (0 remote). The blocker to shipping was a real form-cli limitation — close validated drafts in isolation — now fixed with --prelude. A lever sub-step now closes via form-cli alone. The full lever is reachable by decomposing the coarse steps into instruction-emit sub-recipes with clang-referenced byte assertions; the skill records this as the next move.",
+  "reproduce": "form-cli roadmap | form-cli asm '<C>' | form-cli close 'll-streq-ldrb' '(ldrb-w8) returns the bytes for ldrb w8,[x0] via (fa-ldrb 8 0 0)' '(len (ldrb-w8))' 4 'ollama run coder' 'form-asm.fk' -> CLOSED"
+}
