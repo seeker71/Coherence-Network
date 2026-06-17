@@ -1,0 +1,39 @@
+; llama-numerics.fk — the llama-shaped numerics: SiLU, SwiGLU, RMSNorm.
+;
+; The whisper-shaped block math (softmax / layernorm / gelu) is proven four-way in
+; transformer-numerics.fk and runs on the M4 GPU (form-native-models.form rung 2,
+; brick 3m). A REAL llama3.2:3b block differs in exactly three numerics: the norm is
+; RMSNorm (not LayerNorm), the FFN activation is SwiGLU (silu(gate)·up, not gelu), and
+; the activation atom is SiLU (not tanh-gelu). Until now these lived only inside
+; transformer-kernel.fk's tk-emit-llama as emitted C (three-way, projecting to a C
+; unit). This file lifts them to standalone proven Form recipes — the numeric floor
+; under running a real llama block on the GPU next to the whisper block.
+;
+; Core-abstraction-first: compose transformer-numerics.fk's proven tn-exp (Taylor,
+; square-and-reduce) and tn-sqrt (fixed-count Newton) rather than re-deriving them.
+; All fp64; the recipe DEFINES the reduction order so every kernel computes the same
+; bits. Conformance pinned to libm (exp/sqrt) at 1e-6 in the band.
+
+; --- SiLU: x·sigmoid(x) = x / (1 + e^-x) ---
+(defn ln-sigmoid (x) (div 1.0 (add 1.0 (tn-exp (sub 0.0 x)))))
+(defn ln-silu (x) (mul x (ln-sigmoid x)))
+
+; --- SwiGLU (elementwise activation core): silu(gate)·up ---
+; The llama FFN is down(swiglu(gate(x), up(x))); this is the per-element gate.
+(defn ln-swiglu (g u) (mul (ln-silu g) u))
+
+; --- RMSNorm: o_i = g_i · x_i / sqrt(mean(x²) + eps) ---
+; The norm llama uses in place of layernorm: no mean-subtraction, no bias — just a
+; root-mean-square rescale times a per-channel gain. eps inside the sqrt (the llama
+; shape). Reuses tn-flen (float-counted length) and tn-scale from transformer-numerics.
+(defn ln-sumsq-acc (acc xs)
+  (if (eq (len xs) 0) acc
+      (ln-sumsq-acc (add acc (mul (head xs) (head xs))) (tail xs))))
+(defn ln-meansq (xs) (div (ln-sumsq-acc 0.0 xs) (tn-flen xs)))
+(defn ln-rms (xs eps) (tn-sqrt (add (ln-meansq xs) eps)))
+; elementwise product of two equal-length vectors (the per-channel gain application)
+(defn ln-mul2 (xs ys)
+  (if (eq (len xs) 0) (empty)
+      (cons (mul (head xs) (head ys)) (ln-mul2 (tail xs) (tail ys)))))
+(defn ln-rmsnorm (xs gs eps)
+  (ln-mul2 (tn-scale xs (div 1.0 (ln-rms xs eps))) gs))
