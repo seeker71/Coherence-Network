@@ -75,8 +75,13 @@ else
   case "$REPLY" in y|Y) brew install ollama 2>/dev/null && ok "ollama installed" || echo "  see https://ollama.com/download";; *) echo "  skipped — install from https://ollama.com/download";; esac
 fi
 if command -v ollama >/dev/null 2>&1; then
-  ask "pull local models llama3.2:3b (~2GB) + nomic-embed-text (~270MB)? [y/N]" "${FORM_CLI_PULL:-}"
-  case "$REPLY" in y|Y) ollama pull llama3.2:3b; ollama pull nomic-embed-text; ok "models pulled";; *) echo "  skipped — pull later for offline answers";; esac
+  # which oracles are still needed is DECIDED by oracle-ensure.fk on the kernel;
+  # this carrier only probes presence and (on yes) host-execs the install.
+  ask "fetch the local oracles form-cli needs (llama3.2:3b ~2GB + nomic-embed-text ~270MB)? [y/N]" "${FORM_CLI_PULL:-}"
+  case "$REPLY" in
+    y|Y) bash "$DEST/scripts/form_cli_ensure.sh" --install ;;
+    *)   bash "$DEST/scripts/form_cli_ensure.sh" || true ;;
+  esac
 fi
 
 # 4. agent CLI provider (asked) ---------------------------------------------------

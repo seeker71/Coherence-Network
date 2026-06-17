@@ -39,6 +39,9 @@ form-cli — the one door (local-first, Form-native)
         the self-guided agent loop (tool prediction + body memory in the prompt)
   form-cli eval "<form-expression>"
         evaluate a Form expression on the kernel, e.g. form-cli eval '(add 20 22)'
+  form-cli ensure [--install]
+        check (and with --install, fetch) the oracles form-cli needs — decided by
+        oracle-ensure.fk on the kernel, installed via host-exec
   form-cli preflight
         air-gap readiness check (kernel, oracles, body on disk, offline loop, memory)
 
@@ -55,6 +58,7 @@ case "$cmd" in
   close)     exec bash "$ROOT/scripts/form_cli_close_gap.sh" "$@" ;;
   review)    exec bash "$ROOT/scripts/form_cli_self_review.sh" "$@" ;;
   run)       exec bash "$ROOT/scripts/form_native_run.sh" "$@" ;;
+  ensure)    exec bash "$ROOT/scripts/form_cli_ensure.sh" "$@" ;;
   preflight) exec bash "$ROOT/scripts/form_cli_preflight.sh" "$@" ;;
   eval)
     [ -n "${1:-}" ] || { echo "usage: form-cli eval '<form-expression>'" >&2; exit 2; }
