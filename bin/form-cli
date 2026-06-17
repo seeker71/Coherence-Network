@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# form-cli — the one door into the Form-native organism.
+#
+# Everything routes through here: ask a question (answered local-first, grounded
+# in the body's recipes/specs/concepts and any local docs you index), see your own
+# open gaps, close one offline with a local oracle, review your own thinking
+# against an oracle, run the self-guided agent loop, or evaluate a Form expression
+# directly on the kernel. Local-first by design — a remote oracle (incl. Claude via
+# `claude -p`) is consulted only to review, never required to answer.
+set -u
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+GO="$ROOT/form/form-kernel-go/bin-go"
+RAG="$ROOT/scripts/form_cli_rag.py"
+
+usage() {
+  cat <<EOF
+form-cli — the one door (local-first, Form-native)
+
+  form-cli ask "<question>" [-k N] [-m MODEL]
+        answer from the body + local docs, grounded (local oracle, no network)
+  form-cli index [--docs DIR ...]
+        (re)build the searchable index over the body and any local doc folders
+  form-cli search "<query>" [-k N]
+        list the nearest body/doc cells for a query (retrieval only)
+  form-cli gaps
+        walk the body's open gaps (ideas/specs/capabilities), offline-closable tally
+  form-cli close "<name>" "<spec>" "<assert>" "<expected>" [oracle]
+        let a LOCAL oracle draft the missing recipe; the kernel validates it
+  form-cli review [N] [native] [inner-judge] [oracle] [tol]
+        the body answers; an inner judge + an oracle review it; the gap is measured
+  form-cli run "<task>" [oracle] [max-steps]
+        the self-guided agent loop (tool prediction + body memory in the prompt)
+  form-cli eval "<form-expression>"
+        evaluate a Form expression on the kernel, e.g. form-cli eval '(add 20 22)'
+  form-cli preflight
+        air-gap readiness check (kernel, oracles, body on disk, offline loop, memory)
+
+Models are local (ollama): coder, qwen2.5:72b, deepseek-r1:32b, llama3.2:3b.
+EOF
+}
+
+cmd="${1:-help}"; shift 2>/dev/null || true
+case "$cmd" in
+  ask)       exec python3 "$RAG" ask "$@" ;;
+  search)    exec python3 "$RAG" search "$@" ;;
+  index)     exec python3 "$RAG" build "$@" ;;
+  gaps)      exec bash "$ROOT/scripts/form_cli_gaps.sh" "$@" ;;
+  close)     exec bash "$ROOT/scripts/form_cli_close_gap.sh" "$@" ;;
+  review)    exec bash "$ROOT/scripts/form_cli_self_review.sh" "$@" ;;
+  run)       exec bash "$ROOT/scripts/form_native_run.sh" "$@" ;;
+  preflight) exec bash "$ROOT/scripts/form_cli_preflight.sh" "$@" ;;
+  eval)
+    [ -n "${1:-}" ] || { echo "usage: form-cli eval '<form-expression>'" >&2; exit 2; }
+    [ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+    tf="$(mktemp)"; printf '(print %s)\n' "$1" > "$tf"
+    "$GO" "$tf" 2>&1 | sed '/^null$/d'; rc=${PIPESTATUS[0]}; rm -f "$tf"; exit "$rc" ;;
+  help|-h|--help|*) usage ;;
+esac
