@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 281
+**Total files**: 282
 
 | File | Purpose |
 |---|---|
@@ -84,6 +84,7 @@
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
 | [form_cli_close_gap.sh](form_cli_close_gap.sh) | form_cli_close_gap.sh — close a Form recipe gap OFFLINE with a local oracle. |
+| [form_cli_close_next.sh](form_cli_close_next.sh) | form_cli_close_next.sh — the autonomous self-closer, one iteration of the flywheel. |
 | [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
 | [form_cli_ensure.sh](form_cli_ensure.sh) | form_cli_ensure.sh — ensure the form-cli's oracles are present, DECIDED by Form. |
 | [form_cli_gaps.sh](form_cli_gaps.sh) | form_cli_gaps.sh — the catalog of what is OPEN, walked from the live body. |

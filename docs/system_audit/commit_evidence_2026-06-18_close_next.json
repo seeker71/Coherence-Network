@@ -1,0 +1,13 @@
+{
+  "title": "form-cli close-next — the autonomous self-closer loop runs: find gap -> draft -> validate -> load native -> next iteration, 0 remote",
+  "date": "2026-06-18",
+  "advance": "scripts/form_cli_close_next.sh + bin/form-cli close-next: one command per iteration finds the next open gap, a LOCAL oracle drafts the recipe, the kernel validates it, and on success the validated recipe is appended to the loaded ledger ($STD/.cache/close-next-loaded.fk) that the NEXT iteration preludes — the new feature available native for the next pass. Run again to advance; when a gap does not close, the loop stops and names the blocker to fix.",
+  "run": "Drained a 4-gap buffer-model queue in 5 runs: ll-alloc16 (fa-sub-x-imm) -> ll-store-w8 (fa-str-w) -> ll-load-w9 (fa-ldr-w) -> ll-free16 (fa-add-x-imm). Each: local coder drafted the recipe, kernel validated byte-correct, loaded native; the 'native features available' prelude grew 0->1->2->3->4. Run 5: queue drained, 4 features loaded. 0 remote oracle calls across all 5.",
+  "honest_remainder": {
+    "gap_source": "the queue is currently a hardcoded fine-gap list (the ll-buffer decomposition). Next: autonomous gap-finding (derive the next gap from roadmap decomposition / what form-lower's dispatch lacks) instead of a fixed queue.",
+    "accumulation_payoff": "the ledger accumulates and the next close preludes it (mechanism proven), but no closed gap YET USES a prior closed recipe. Next: a composed gap (buffer round-trip = alloc+store+load+free) that calls the four loaded recipes — proving the accumulation pays off.",
+    "explicit_dylib": "'load native' currently means the recipe joins the preluded ledger (the kernel runs it; hot closures JIT to a .so). Wiring form_cli_slice.sh to emit an explicit per-recipe native artifact is the next rung toward the literal dylib-per-feature."
+  },
+  "verdict": "The self-closing flywheel runs end-to-end on real lever sub-steps: one form-cli command per iteration self-finds the next gap, drafts + validates locally (0 remote), and loads the feature native for the next pass. The remaining rungs (autonomous gap-finding, composed-gap payoff, explicit dylib) are the night's next fixes.",
+  "reproduce": "form-cli close-next 'ollama run coder'  (run repeatedly; drains the queue, accumulating native features)"
+}
