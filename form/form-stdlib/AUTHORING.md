@@ -128,8 +128,11 @@ and prints `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
 The authoring floor is four-kernel when the band can live in the fourth-friendly subset: add the band
 to `form/fourth-arm-bands.txt` and iterate until `validate.sh` proves the fourth arm. When the band
 uses an unsupported fourth-arm family, keep the 3-kernel result explicit in evidence as `3-kernel only`
-and name the blocker, such as host I/O, node/substrate operations, higher-order calls, or multiline
-output.
+and name the blocker, such as host I/O, node/substrate operations, or multiline output. (Passing a
+named top-level recipe as a value and calling it — the semiring-generic dispatch in
+`geometric-learning.fk`, `gl-gstep edges x zero cfn wfn ctx` — DOES cross four-way; the fourth arm
+carries that higher-order shape. A very large composed table can still overflow the walker, which is a
+capacity wall, not an op-family wall — see `transformer-block-assembly`.)
 
 - `unbound function` → a misspelled name, or a primitive that isn't in `core.fk`.
 - `N divergent` (kernels print different numbers) → almost always a 3-arg `and`/`or`; nest it.
