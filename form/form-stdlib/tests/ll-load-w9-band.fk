@@ -1,0 +1,3 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/ll-alloc16.fk form-stdlib/ll-store-w8.fk form-stdlib/ll-load-w9.fk
+; ll-load-w9-band — self-closed recipe ll-load-w9, proven four-way incl. fkwu.
+(do (if (eq (fa-conviction (load-w9) (list 233 15 64 185)) 1) 1 0))
