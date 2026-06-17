@@ -36,6 +36,18 @@
 #     docs/coherence-substrate/fourth-arm-substrate-carriers.form
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
+#   table-capacity wall   — a very large composed pre-flattened table overflows
+#     the walker (fkwu Segmentation fault), NOT an op-family wall and NOT a
+#     value divergence (Go/Rust/TS agree; fkwu crashes before answering). The
+#     end-to-end assembled-stack TRAINING bands hit it: transformer-block-assembly
+#     (heterogeneous typed-layer stack + string-tag dispatch + 50-step recursion)
+#     and transformer-block-backward (two FFN-residual blocks + 150-step SGD loop)
+#     are 3-kernel-only here. Their constituent gradient NODES all cross four-way
+#     in isolation — affine (transformer-backprop 127), attention-core
+#     (transformer-attention-backward 31), gelu (transformer-backprop-ffn 63),
+#     softmax+layernorm (transformer-backprop-softmax-ln 31) — so the wall is
+#     table size, not the math. Lifts when the walker's recursion/table capacity
+#     is raised (an fkwu emitter change, orthogonal to the proven recipes).
 #
 # Crossed walls (kept here as named precedent, not standing blockers):
 #   higher-order calls    — foldl/map/filter with function arguments now CROSS
@@ -326,6 +338,8 @@ transformer-numerics fks 4095
 transformer-block fks 511
 transformer-backprop fks 127
 transformer-attention-backward fks 31
+transformer-backprop-ffn fks 63
+transformer-backprop-softmax-ln fks 31
 geometric-learning fks 8388607
 transcendental-natives fks 16
 learning-arc fks 127
