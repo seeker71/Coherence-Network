@@ -1,0 +1,29 @@
+; preludes: form-stdlib/form-cli-review-gap.fk
+;
+; form-cli-review-gap-band — the self-review convergence metric, made falsifiable.
+;
+; Three answers, each scored by the INTERNAL judge and by the ORACLE:
+;   internal [80 40 90]
+;   oracle   [75 70 88]
+;   gaps      5  30   2   — the internal eye agrees on 1 and 3, is far off on 2
+; At tolerance 10 two of three reviews agree -> a majority -> CONVERGED (the internal
+; review has reached the oracle's). At the strict tolerance 1 none agree -> NOT
+; converged: convergence is a real bar, not always true.
+;
+; Verdict 63 when every claim lands:
+;   1   one-pair gap is |a-b|         (frg-gap 80 75 == 5)
+;   2   total gap sums the pairs      (== 37)
+;   4   worst gap is the widest       (== 30)
+;   8   agreement counts within tol   (tol 10 -> 2)
+;   16  majority within tol converges (tol 10 -> 1)
+;   32  a strict tol does NOT converge (tol 1 -> 0)
+(do
+    (let ins (list 80 40 90))
+    (let ors (list 75 70 88))
+    (let c0 (if (eq (frg-gap 80 75) 5) 1 0))
+    (let c1 (if (eq (frg-total-gap ins ors) 37) 2 0))
+    (let c2 (if (eq (frg-worst-gap ins ors) 30) 4 0))
+    (let c3 (if (eq (frg-agree-count ins ors 10) 2) 8 0))
+    (let c4 (if (eq (frg-converged? ins ors 10) 1) 16 0))
+    (let c5 (if (eq (frg-converged? ins ors 1) 0) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

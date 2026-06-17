@@ -1,0 +1,55 @@
+; form-cli-review-gap.fk — the convergence metric for the self-review lane.
+;
+; preludes: form-stdlib/core.fk
+;
+; The flywheel's hardest rung: the body answers from its OWN knowledge, an INTERNAL
+; judge scores that answer, and an ORACLE (a stronger model — including Claude via
+; the CLI) scores the SAME answer. This recipe measures the GAP between the two
+; reviews. While the gap is wide the oracle is the authority; as the internal judge
+; learns the oracle's eye the gap closes, and when a majority of reviews agree
+; within tolerance the internal review has REACHED the oracle — the remote reviewer
+; can be retired. "Learn from the oracle until your own review is as good as the
+; oracle's", made a measured, four-way-proven number.
+;
+; Input: two equal-length score lists (0..100) — internal[i] and oracle[i] for the
+; same answer i. Output: per-pair gaps, total/worst gap, agreement count within a
+; tolerance, and the convergence verdict (majority within tolerance).
+;
+; Proven by: form-stdlib/tests/form-cli-review-gap-band.fk (four-way at validate.sh).
+
+(do
+    (defn frg-abs (n) (if (lt n 0) (sub 0 n) n))
+
+    ; the gap on one pair: |internal - oracle|
+    (defn frg-gap (internal oracle) (frg-abs (sub internal oracle)))
+
+    ; walk two score lists in lockstep, summing the per-pair gaps
+    (defn frg-total-gap (ins ors)
+        (if (eq (len ins) 0) 0
+            (if (eq (len ors) 0) 0
+                (add (frg-gap (head ins) (head ors))
+                     (frg-total-gap (tail ins) (tail ors))))))
+
+    ; the widest single disagreement — the worst the internal eye is still off by
+    (defn frg-worst-gap (ins ors)
+        (if (eq (len ins) 0) 0
+            (if (eq (len ors) 0) 0
+                (do (let g (frg-gap (head ins) (head ors)))
+                    (let rest (frg-worst-gap (tail ins) (tail ors)))
+                    (if (gt g rest) g rest)))))
+
+    ; a pair agrees when its gap is within tolerance
+    (defn frg-within? (internal oracle tol) (if (le (frg-gap internal oracle) tol) 1 0))
+
+    ; how many pairs agree within tolerance
+    (defn frg-agree-count (ins ors tol)
+        (if (eq (len ins) 0) 0
+            (if (eq (len ors) 0) 0
+                (add (frg-within? (head ins) (head ors) tol)
+                     (frg-agree-count (tail ins) (tail ors) tol)))))
+
+    ; CONVERGED: a majority of reviews agree within tolerance — the internal review
+    ; has reached the oracle's, so the remote reviewer is no longer needed.
+    (defn frg-converged? (ins ors tol)
+        (if (ge (add (frg-agree-count ins ors tol) (frg-agree-count ins ors tol)) (len ins)) 1 0))
+    0)
