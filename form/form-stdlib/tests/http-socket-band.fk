@@ -1,5 +1,5 @@
 ; tests/http-socket-band.fk — real-socket witness for http-socket.fk.
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk
 ;
 ; Iteration 4 of lifting the HTTP server into the BML hierarchy: the Form-native
 ; accept-loop. Proves the WHOLE stack serves over a real TCP socket end-to-end —

@@ -32,7 +32,7 @@ The rework plan below keeps the remaining (mostly spine) items open and honest.
 6. substrate — 74 (5/8 four-way; stale claims, cache trust split, no BML lift)
 7. choice + backtrack — 72 (8/9 four-way; flat tuples, two tag conventions, one proof-theater row)
 8. channel — 68 (12/23 four-way; carrier-as-body in form-os-channel, inert catalogs, flat rows)
-9. http + net — 62 (1/8 four-way; node-substrate detour, duplicate engine, absent http-render)
+9. http + net — 84 (5/8 four-way: kernel-http + http-render + http-parse + http-request + http-server cross; one duplicate engine (http-serve) to compost, http-adapter compat tissue, http-socket host-io)
 10. host-os + IO + tool-channel — 62 (5/11 four-way; cornerstone host-kernel-cell silently absent, carrier drift)
 11. BMF grammar engine — 58 (2/19 four-way; 3+ parallel engines, real cursor 3-kernel, stale claims)
 12. BML + source-compiler — 58 (5/13 four-way; two BML front-ends, Go-only compiler tissue, output-not-compiler proof)
@@ -156,11 +156,11 @@ Overall alignment: **73/100**. Strong ideas; proof and grammar-altitude lag on t
 | file | grammar | aligned? | rework |
 |---|---|---|---|
 | kernel-http | BML-high | yes | tag ints → named Blueprint NodeIDs (the spine) |
-| http-render | BML-high | **NO** | **register four-way band (pure/unwalled, silently absent)** |
-| http-server | BML-high | **NO** | 3-kernel only via http-parse's node ops (name it) |
-| http-request | BML-high | yes | retune journey-trace comments |
+| http-render | BML-high | yes | four-way (http-render-band 63), data-driven status/MIME table |
+| http-server | BML-high | yes | four-way (http-server-band 1023), one value vocabulary end to end |
+| http-request | BML-high | yes | four-way (http-request-band 63), lifts lexer parts to kh-request |
 | http-adapter | BML-high | **NO** | track alist-bridge as closing recipe (compat tissue) |
-| **http-parse** | Form-recipe | **NO** | **emit kh-request directly (root four-way blocker)** |
+| http-parse | BML-high | yes | four-way (http-parse-band 11): emits kh-header parts as values, no node detour |
 | http-socket | BML-high | yes | name socket host-io 3-kernel in evidence |
 | **http-serve** | mixed | **NO** | **compost (superseded engine); move fanout to kh-serve** |
 
@@ -219,7 +219,7 @@ WHERE IT DRIFTS. (a) HIGHEST-GRAMMAR GAP is pervasive — almost the entire surf
 
 The manifest (form/fourth-arm-bands.txt, ~335 four-way rows) is the floor source and is largely accurate — but several concrete updates are owed so the body's self-attestation matches reality:
 
-ADD ROWS (or name the precise unsupported op as 3-kernel-only in commit evidence — silent absence is forbidden): host-kernel-cell, kernel-satsang, kernel-core-self, kernel-core-image, kernel-image-proposal, tool-channel-grammar (same int/string/list op family as four-way tool-channel — its absence reads as an uncrossed band or buried divergence, NOT a standing wall, so it must be diagnosed), bml-capability-ledger, substrate-phase (its primitives already cross as cache-phase's prelude), http-render (pure/unwalled yet absent — register and run four-way now).
+ADD ROWS (or name the precise unsupported op as 3-kernel-only in commit evidence — silent absence is forbidden): host-kernel-cell, kernel-satsang, kernel-core-self, kernel-core-image, kernel-image-proposal, tool-channel-grammar (same int/string/list op family as four-way tool-channel — its absence reads as an uncrossed band or buried divergence, NOT a standing wall, so it must be diagnosed), bml-capability-ledger, substrate-phase (its primitives already cross as cache-phase's prelude). The http server value stack is now registered and four-way: http-render (63), http-parse (11), http-request (63), http-server (1023).
 
 FIX STALE UNDERSTATEMENTS (headers say 'three-way' while the manifest proves four-way — retune to match the floor): substrate-core.fk, memory-phases.fk, and 15 learning files (active-inference, classifier-eval, co-learning-stream, learned-primitive, nearest-shape, predictor-train, self-grounding-classifier, sequence-predictor, colearning-retire, learning-arc, predictor-sampling, trust-weighted-colearning, champion-challenger, learning-trend, metabolic-learning — verified on disk). Add the missing '; Proven by: ... (four-way)' line to autodiff-gradient.fk.
 
@@ -230,7 +230,7 @@ DOWNGRADE THE SEMANTICALLY-VACUOUS ROW: form-control-backtracking-ml's 65535 fou
 STOP DUPLICATING THE FLOOR: channel-protocol-choice-floor.fk hand-mirrors ~18 sibling 'proven-four-way' verdicts as string literals that can silently drift — derive status from fourth-arm-bands.txt instead. The north-star docs should state plainly: the real BMF cursor front-end and the cornerstone host-OS inversion are NOT yet on the fourth kernel; today's four-way grammar/host-OS coverage is the tokenwise shadow + minimal carriers, not the principled engines.
 ## Biggest cross-cutting gaps
 
-- FOUR-WAY COVERAGE HOLES on the most load-bearing cells. The cornerstone host-OS inversion (host-kernel-cell on kernel-satsang) is NOT on the fkwu manifest and is SILENTLY absent (only 'three-way + --binary' in its own header) — neither four-way-proven nor blocker-named, the exact anti-pattern CLAUDE.md forbids. The real BMF front end (bmf-core/bmf-grammar g-parse cursor) is 3-kernel-only on the char_at/ord node/substrate wall, so only the tokenwise shadow (bmf-mini->jit-lower-bmf) and the minimal dynamic-grammar-carrier cross. The whole http server stack is gated 3-kernel by ONE detour: http-parse interns a substrate node tree only to have http-request immediately tear it back into a value.
+- FOUR-WAY COVERAGE HOLES on the most load-bearing cells. The cornerstone host-OS inversion (host-kernel-cell on kernel-satsang) is NOT on the fkwu manifest and is SILENTLY absent (only 'three-way + --binary' in its own header) — neither four-way-proven nor blocker-named, the exact anti-pattern CLAUDE.md forbids. The real BMF front end (bmf-core/bmf-grammar g-parse cursor) is 3-kernel-only on the char_at/ord node/substrate wall, so only the tokenwise shadow (bmf-mini->jit-lower-bmf) and the minimal dynamic-grammar-carrier cross. The http server value stack (http-parse, http-request, http-render, http-server) now crosses four-way: http-parse emits the request's parts as kh-header values directly, so http-request lifts them into kh-request with no substrate-node detour, and the whole flow walks one vocabulary.
 - PARALLEL PATHS / TWO ENGINES. BML has two front-ends (the principled bml.fk grammar vs a ~500-line hand-rolled string scanner in source-compiler.fk that the build actually runs — Go-only). The grammar family has at least three cursor/matcher engines (bmf-core/bmf-grammar, form-parse, grammar-chars) plus engine.fk under bmf-choice-receipts/runtime-grammar, and per-language lifters re-implement precedence climbing bmf-grammar already carries as data. http + net carries a superseded second server engine (http-serve.fk) on life-support with three live bands. storage has two cache files (cache.fk vs cache-phase.fk) that DISAGREE on the trust axiom.
 - GRAMMAR ALTITUDE GAP — almost nothing is at the highest available grammar. The learning family (42 files), choice+backtrack (9), substrate (8), storage+ports (14), native-asm (11), and form-cli-core (19) are ALL uniformly raw Form-recipe (defn/if/list) when BML/domain-grammar is available; the structural-composition discipline (typed records, NamedField, TypedTokenRef, SEQUENCE) is met almost nowhere — flat positional nth-tuples and stringly-typed tags are the family-wide norm.
 - PROOF-THEATER AND STALE PROOF CLAIMS. form-control-backtracking-ml returns string-LISTS naming choose/fail/cut and carries a four-way row (65535) that proves only 'return strings crosses four kernels'. SYSTEMATIC stale headers: 15 learning files + substrate-core + memory-phases say 'three-way at validate.sh' while the manifest proves them four-way (understatement drift). channel-protocol-choice-floor hand-mirrors ~18 sibling 'proven-four-way' verdicts as drift-prone string literals and freezes a per-agent validation-round journey-log. channel-query's cq-query-fingerprint docstring promises a sha256-fold the body (return node_inst) never runs.
@@ -280,10 +280,10 @@ STOP DUPLICATING THE FLOOR: channel-protocol-choice-floor.fk hand-mirrors ~18 si
 - **Why:** Parallel paths violate the one-engine north star in three families at once. BML: bml.fk grammar vs the ~500-line hand-rolled scanner in source-compiler.fk that the build actually runs (Go-only, so neither front-end is four-way-proven as executing tissue — the proof-theater is the COMPILED OUTPUT crossing four-way being presented as the compiler crossing). Grammar: 3+ cursor/matcher engines + engine.fk. http: a superseded http-serve.fk on life-support with three live bands.
 - **Action:** Delete the source-compiler.fk fsc-compile-form-bml-* scanner and drive form-source-compile through bml.fk+engine.fk to one Recipe tree; converge form-parse + grammar-chars onto bmf-grammar g-match (add not/peek/cut/multi-match/eol as data tags); compost http-serve.fk after moving its unique http-fanout relay into kh-serve.
 
-### [MED] Lift http-parse to emit kh-request values directly (no substrate node detour)
+### [DONE] http-parse emits request parts as kh-header values directly (no substrate node detour) — server value stack four-way
 
-- **Why:** http-parse is the single four-way ROOT BLOCKER for the whole server stack: it interns a substrate node tree (the node/substrate standing wall) only to have http-request immediately tear it back into a kh-request value — a detour through a walled surface that single-handedly blocks http-parse/http-request/http-server from four-way. It is also the only family file still in raw Form-recipe.
-- **Action:** Re-author the parser in BML to emit a kh-request tagged-list value directly (the vocabulary kernel-http.fk uses); register http-render-band four-way now (it is pure/unwalled yet silently absent).
+- **What landed:** http-parse is re-authored in BML as the lexer: it walks the wire bytes into the request's PARTS (method, full path, kh-header list, body) as plain values, interning nothing. http-request lifts those parts into kh-request (path/query split, query → kh-field). The intern_node/node_category wall is gone from the value path, so the whole server stack walks one vocabulary. http-render-band, http-parse-band, http-request-band, and http-server-band are registered four-way (63 / 11 / 63 / 1023). http-serve (the superseded engine) reads the same lexer parts + kernel-http's kh-header-value-or, shedding its own duplicate ascii-lower/header-value-ci helpers, and stays three-kernel only for its socket host-io. The fourth-arm stem resolver now anchors to form-stdlib/tests/ so a same-named sample (cross-modal 34-http-parse) cannot collide with a manifest band.
+- **Remaining in family:** compost http-serve (superseded engine), move its fan-out relay into kh-serve; track http-adapter's alist bridge as a closing compat recipe.
 
 ### [MED] Generate flt-bp-node and the form-ontology-loader name-list from the shared BP table; lift jit-tensor-emit string assembly to a template grammar
 

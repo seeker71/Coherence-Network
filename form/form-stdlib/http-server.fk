@@ -1,6 +1,6 @@
 ; http-server.fk — the Server: dispatch a raw HTTP request to its handler.
 ;
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk
 ;
 ; THE PRINCIPLE (Urs): the dispatch is DATA-DRIVEN. Routes are kh-route data;
 ; handlers are closures in a registry keyed by name; the Server is ONE generic
@@ -20,7 +20,7 @@
 ; the Request class (kh-request-path, kh-field-value, …) and returns a Response.
 ; The registry is a list of (name, handler) pairs; the route's handler-name
 ; selects the closure. First-class: the closure is looked up, bound, and called
-; — proven identical across Go/Rust/TS.
+; — proven identical across Go/Rust/TS + the emitted fkwu arm (four-way).
 
 section [form.bml] {
 

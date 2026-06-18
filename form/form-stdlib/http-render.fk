@@ -78,7 +78,7 @@ section [form.bml] {
     // headers list IS the wire header block — Content-Type/Content-Length/
     // X-Form-Router are expected to be present on it as kh-header data (see
     // kh-response-finalize, which attaches the framing headers a handler did
-    // not). Pure: a value in, a string out; no I/O, three-way-identical.
+    // not). Pure: a value in, a string out; no I/O, four-way-identical.
     def kh-response-render(response) = str_concat(kh-status-line(kh-response-status(response)), str_concat(kh-render-headers(kh-response-headers(response)), str_concat("\r\n", kh-response-body(response))));
 
     // (kh-response-finalize response) -> a kh-response with the transport
