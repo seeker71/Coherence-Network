@@ -54,9 +54,11 @@
                        "SELECT k — both host-io.")
   (serve-all-native    "OPEN — lift every promoted native route onto storage-port-db (the ones"
                        "still calling pg_* directly), so the file carrier serves them offline.")
-  (merge-back          "OPEN — replica-merge: candidate set -> cell-sync diff vs prod ->"
-                       "cache-phase conflict -> storage-put db. The reconcile direction, on the"
-                       "proven cell-sync + cache-phase organs.")
+  (merge-back          "CROSSED — replica-merge: the candidate set reconciles back to prod, the"
+                       "seed baseline telling clean-apply from conflict (content-addressed, cache-"
+                       "phase input-hash trust). A clean edit applies; a key prod ALSO changed is"
+                       "NAMED a conflict, never clobbered; a clean run reports zero false conflicts."
+                       "Band replica-merge -> 15 four-way (0 divergent). The db storage-put leg is host-io.")
   (db-carrier-seed     "OPEN/host-io — the db leg of seed/apply rides the Rust-only pg_*"
                        "carrier; named 3-kernel host-io, the prod boundary."))
 
