@@ -39,7 +39,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "$CORPUS" && -f "$CORPUS" ]] || { echo "usage: corpus_partition_by_license.sh <corpus.jsonl> [--default-license tag] [--out-dir dir]"; exit 1; }
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null  # offline: build from module cache, never the network
 [[ -n "$OUT_DIR" ]] || OUT_DIR="$(dirname "$CORPUS")"
 stem="$(basename "${CORPUS%.jsonl}")"
 TRAIN_OUT="$OUT_DIR/$stem.train-eligible.jsonl"
