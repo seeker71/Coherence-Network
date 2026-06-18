@@ -64,7 +64,17 @@
                           (str_concat (db-quote key) ""))) "1")
             1 0))
 
+    ;; ---- keys: SELECT k → the rows, one key per line, walked into a list --
+    ;; pg_query returns rows newline-separated; str_line_at pulls line i, "" past
+    ;; the end (keys are the PRIMARY KEY, never empty, so "" is the honest stop).
+    (defn db-keys-lines (s i acc)
+        (do (let line (str_line_at s i))
+            (if (str_eq line "") acc
+                (db-keys-lines s (add i 1) (cons line acc)))))
+    (defn db-keys (conn)
+        (db-keys-lines (pg_query conn "SELECT k FROM port_kv") 0 (empty)))
+
     (defn carrier-db ()
-        (mk-carrier "postgres" db-init db-put db-get db-has))
+        (mk-carrier "postgres" db-init db-put db-get db-has db-keys))
 
     0)
