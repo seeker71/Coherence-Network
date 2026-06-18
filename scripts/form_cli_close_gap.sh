@@ -53,33 +53,45 @@ Output ONLY the recipe between ;;;BEGIN and ;;;END markers. No prose.
 EOF
 )"
 
-# 2. Cross the membrane to the LOCAL oracle (host-exec, no network) ------------
+# 2-4. Draft + validate, ITERATIVELY. Local models over-reason (wrap a simple body
+# in let/do/nth); on a failed Go-validate we feed the kernel error + the failed
+# draft back and tighten the ask, retrying up to FORM_CLI_CLOSE_TRIES times. No
+# remote oracle — the same LOCAL model converges with feedback. host-exec only.
 DRAFTS="$STD/drafts"; mkdir -p "$DRAFTS"
-pf="$(mktemp)"; raw="$(mktemp)"; draft="$DRAFTS/${GAP}.fk"
-trap 'rm -f "$pf" "$raw"' EXIT
-printf '%s' "$prompt" > "$pf"
-t0=$(date +%s)
-$ORACLE < "$pf" > "$raw" 2>/dev/null
-t1=$(date +%s); COST=$((t1 - t0))
-
-# 3. Extract the drafted recipe between the markers ---------------------------
-awk '/;;;BEGIN/{f=1;next} /;;;END/{f=0} f' "$raw" > "$draft"
-if [[ ! -s "$draft" ]]; then
-    # tolerant fallback: a fenced code block, else the first (defn ...) line
-    awk '/```/{f=!f;next} f' "$raw" > "$draft"
+pf="$(mktemp)"; raw="$(mktemp)"; val="$(mktemp)"; draft="$DRAFTS/${GAP}.fk"
+trap 'rm -f "$pf" "$raw" "$val"' EXIT
+OUTCOME="fail"; GOT=""; COST=0; feedback=""; tries="${FORM_CLI_CLOSE_TRIES:-3}"
+for attempt in $(seq 1 "$tries"); do
+    { printf '%s' "$prompt"; [ -n "$feedback" ] && printf '\n\n%s' "$feedback"; } > "$pf"
+    a0=$(date +%s)
+    # `ollama run` streams through a TUI that rewraps long lines with cursor-control
+    # escapes (ESC[2D ESC[K), corrupting a draft mid-token — and stripping the escapes
+    # leaves the overwritten fragment. The HTTP API (/api/generate) returns CLEAN text.
+    # Use it for ollama; run any other oracle (claude -p, …) as a command.
+    case "$ORACLE" in
+      "ollama run "*)
+        jq -Rs --arg m "${ORACLE#ollama run }" '{model:$m,prompt:.,stream:false}' < "$pf" \
+          | curl -sS --max-time 600 http://localhost:11434/api/generate -d @- 2>/dev/null \
+          | jq -r '.response // ""' > "$raw" ;;
+      *)
+        COLUMNS=100000 $ORACLE < "$pf" 2>/dev/null | LC_ALL=C sed $'s/\x1b\\[[0-9;]*[A-Za-z]//g' > "$raw" ;;
+    esac
+    a1=$(date +%s); COST=$((COST + a1 - a0))
+    awk '/;;;BEGIN/{f=1;next} /;;;END/{f=0} f' "$raw" > "$draft"
+    [[ -s "$draft" ]] || awk '/```/{f=!f;next} f' "$raw" > "$draft"
     [[ -s "$draft" ]] || grep -E '^\(defn ' "$raw" > "$draft"
-fi
-echo "[1] coder drafted $(grep -c . "$draft" 2>/dev/null | tr -d ' ') line(s) in ${COST}s"
-sed 's/^/     /' "$draft"
-
-# 4. VALIDATE on the kernel: does the draft + assertion evaluate to expected? --
-val="$(mktemp)"; trap 'rm -f "$pf" "$raw" "$val"' EXIT
-{ for p in $PRELUDE; do cat "$STD/$p" 2>/dev/null; done; cat "$draft"; echo "(print $ASSERT)"; } > "$val"
-GOT="$("$GO" "$val" 2>/dev/null | tr -d '[:space:]')"
-case "$GOT" in
-    ${EXPECT}*) OUTCOME="success"; echo "[2] kernel validated: $ASSERT = $GOT (expected $EXPECT) ✓" ;;
-    *)          OUTCOME="fail";    echo "[2] kernel rejected: $ASSERT = '$GOT' (expected $EXPECT) ✗" ;;
-esac
+    echo "[1] attempt $attempt: drafted $(grep -c . "$draft" 2>/dev/null | tr -d ' ') line(s)"
+    sed 's/^/     /' "$draft"
+    { for p in $PRELUDE; do cat "$STD/$p" 2>/dev/null; done; cat "$draft"; echo "(print $ASSERT)"; } > "$val"
+    GOT="$("$GO" "$val" 2>/dev/null | tr -d '[:space:]')"
+    case "$GOT" in
+        ${EXPECT}*) OUTCOME="success"; echo "[2] kernel validated: $ASSERT = $GOT (expected $EXPECT) ✓"; break ;;
+        *) echo "[2] attempt $attempt rejected: $ASSERT = '$GOT' (expected $EXPECT) ✗"
+           feedback="Your previous attempt was:
+$(cat "$draft")
+It FAILED on the kernel: $ASSERT gave '$GOT' but must equal $EXPECT. Output ONLY the single (defn ...) the task names, its body exactly the expression given — NO let, NO do, NO nth, NO extra arguments to the recipes you call." ;;
+    esac
+done
 
 # 5. Ledger the crossing through the Form membrane recipe ----------------------
 # native-avail=0 (this was a gap); surface=local-oracle; the note is the gap.
