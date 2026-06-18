@@ -573,3 +573,5 @@ ll-buffer fkc 1
 # BMF/dialect surface is provable on the fourth kernel.
 bmf-core fks 600
 bmf-grammar fks 300
+kernel-image-proposal fks 111111
+form-os-channel fks 111111
