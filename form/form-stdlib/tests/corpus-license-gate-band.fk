@@ -1,0 +1,31 @@
+; preludes: form-stdlib/core.fk form-stdlib/corpus-license-gate.fk
+;
+; corpus-license-gate-band — the lawful-to-train gate, proven on every kernel.
+;
+; The gate decides what a corpus cell's provenance permits: enter the training
+; fold ("train") or stay test-only ("eval"). The safety-critical property is
+; FAIL-CLOSED: only an allowlisted provenance trains; copyright and UNKNOWN route
+; to eval. All four kernels must agree on this decision bit-for-bit, because it is
+; the boundary of "we cannot train on them" — string-tag matching, the op family
+; cjk-channel already crosses four-way (fks).
+;
+; Verdict 31:
+;   1   owned is train-eligible (the body's own work folds)
+;   2   copyright is NOT train-eligible (the legal gate)
+;   4   UNKNOWN/absent provenance is NOT train-eligible (fail-closed — the safety bit)
+;   8   the other lawful kinds all train (public-domain AND permissive AND consented)
+;   16  partitioning a mixed corpus counts exactly the lawful rows (3 of 5)
+(do
+    ; a mixed corpus of provenance tags: 3 lawful (owned, permissive, consented),
+    ; 2 not (copyright, unknown).
+    (let tags (list "owned" "copyright" "permissive" "unknown" "consented"))
+
+    (let c0 (if (eq (clg-train-eligible? "owned") 1) 1 0))
+    (let c1 (if (eq (clg-train-eligible? "copyright") 0) 2 0))
+    (let c2 (if (eq (clg-train-eligible? "unknown") 0) 4 0))
+    (let c3 (if (eq (add (clg-train-eligible? "public-domain")
+                        (add (clg-train-eligible? "permissive")
+                             (clg-train-eligible? "consented"))) 3) 8 0))
+    (let c4 (if (eq (clg-count-train tags) 3) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

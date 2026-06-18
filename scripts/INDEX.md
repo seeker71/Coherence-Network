@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 286
+**Total files**: 287
 
 | File | Purpose |
 |---|---|
@@ -59,6 +59,7 @@
 | [coord-heartbeat.sh](coord-heartbeat.sh) | coord-heartbeat.sh — per-agent liveness + upgrade-watch, with idle stand-down. |
 | [coord-respond.sh](coord-respond.sh) | coord-respond.sh — a GUARDED auto-responder for ONE agent (carrier). |
 | [coord-watcher.sh](coord-watcher.sh) | coord-watcher.sh — the naive watcher: asks silly questions to keep the field honest. |
+| [corpus_partition_by_license.sh](corpus_partition_by_license.sh) | corpus_partition_by_license.sh — split a downloaded corpus into the part that is |
 | [cross_isa_assembly_audit.sh](cross_isa_assembly_audit.sh) | cross_isa_assembly_audit.sh — one recipe, every ISA the host can show. |
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
 | [db_api_server_demo.sh](db_api_server_demo.sh) | db_api_server_demo.sh — emit a self-contained native binary (from the Form |
