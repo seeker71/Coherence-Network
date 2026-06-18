@@ -88,6 +88,11 @@ fourth_band_stem() {
 # fallback when no prelude is declared).
 fourth_band_srcs() {
     local stem="$1" band="form-stdlib/tests/$stem-band.fk" mods
+    # A manifest stem maps to tests/<stem>-band.fk OR the plain tests/<stem>.fk —
+    # fourth_band_stem strips -band when reading, so both are the same band.
+    # Read the preludes header from whichever file exists, else a stem registered
+    # under the plain name silently builds an empty table and runs three-kernel only.
+    [[ -f "$band" ]] || band="form-stdlib/tests/$stem.fk"
     # Drop ONLY the exact core.fk prelude (the shim mirrors it). Anchor the match
     # to a path boundary so sibling-named modules — substrate-core.fk, bmf-core.fk
     # — keep their place in the source list instead of vanishing as substrings.
