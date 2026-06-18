@@ -63,8 +63,17 @@
                        "phase input-hash trust). A clean edit applies; a key prod ALSO changed is"
                        "NAMED a conflict, never clobbered; a clean run reports zero false conflicts."
                        "Band replica-merge -> 15 four-way (0 divergent). The db storage-put leg is host-io.")
-  (db-carrier-seed     "OPEN/host-io — the db leg of seed/apply rides the Rust-only pg_*"
-                       "carrier; named 3-kernel host-io, the prod boundary."))
+  (local-host-io       "NATIVE-LOWERABLE — the offline substrate's own host-io (the cell-log"
+                       "read AND append) lowers to native arm64 syscalls via the lever:"
+                       "form-lower-readfile -> 15 (open/read/close) and form-lower-writefile -> 15"
+                       "(open-append/write/close), both four-way. So the local store compiles to"
+                       "native machine code, not interpreted-kernel host_io natives. fkwu the"
+                       "WALKER does not carry I/O (a correct standing wall — its job is agreement,"
+                       "not side-effects); 'native' here means the form-lower lever, the G7 path.")
+  (db-prod-boundary    "EXTERNAL/host-io — the pg_* leg of seed-from-prod / apply-to-prod is the"
+                       "Postgres wire protocol to an external server, only needed ONLINE (offline"
+                       "the file carrier serves everything). Rust-only; the genuine external edge,"
+                       "not an fkwu gap — naming it honest, not a wall to climb in the walker."))
 
 ; The north star rides the completed G1 lever (form-lower covers memory/strings/host-io/
 ; calls four-way) and the proven storage organs above. No step invents a new primitive —

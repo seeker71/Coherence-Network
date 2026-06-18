@@ -47,7 +47,8 @@
         (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
         (if (eq (lo-tag prog i) 9) (lo-streq)
         (if (eq (lo-tag prog i) 10) (lo-readfile)
-            (list)))))))))))
+        (if (eq (lo-tag prog i) 11) (lo-writefile)
+            (list))))))))))))
     ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0 ·
     ; else (two subtrees) -> lo-tree. The (ARG, x) fast path needs c1=ARG; without that
     ; guard the general case would silently add w<argr> in place of the left subtree.
@@ -177,6 +178,23 @@
             (fa-movz-x 16 6)    ; x16 = SYS_close
             (fa-svc 128)        ; svc #0x80 : close(x0=fd)
             (fa-mov 0 4))))     ; x0 = nread (return value)
+
+    ; WRITE_FILE (tag 11): host-io WRITE lowers to the open(append)/write/close syscall
+    ; sequence — the write half of the lever, mirroring lo-readfile (macOS BSD: open=5
+    ; with O_WRONLY|O_APPEND flags in x1, write=4, close=6, svc #0x80). With lo-readfile
+    ; this makes the local store's host-io (cell-log read AND append) native-lowerable.
+    (defn lo-writefile ()
+        (lo-cat (list
+            (fa-movz-x 16 5)    ; x16 = SYS_open  (x0=path, x1=flags O_WRONLY|O_APPEND)
+            (fa-svc 128)        ; svc #0x80 : open -> fd in x0
+            (fa-mov 3 0)        ; bank fd -> x3
+            (fa-movz-x 16 4)    ; x16 = SYS_write (x0=fd, x1=buf, x2=count)
+            (fa-svc 128)        ; svc #0x80 : write -> nwritten in x0
+            (fa-mov 4 0)        ; bank nwritten -> x4
+            (fa-mov 0 3)        ; x0 = fd
+            (fa-movz-x 16 6)    ; x16 = SYS_close
+            (fa-svc 128)        ; svc #0x80 : close(x0=fd)
+            (fa-mov 0 4))))     ; x0 = nwritten (return value)
 
     ; CALLCONV (the general multi-arg calling convention): place N args in w0..w7 in
     ; order, over a stack frame, then bl the target. lo-marshal is GENERAL — it moves a

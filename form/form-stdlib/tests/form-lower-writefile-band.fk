@@ -1,0 +1,42 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-writefile-band — the WRITE half of host-io lowering, the lever's last
+; host-io piece. (write_file p) lowers to the open(append)/write/close syscall
+; sequence in arm64 (macOS BSD: open=5, write=4, close=6, svc #0x80), byte-for-byte
+; the assembler's. With form-lower-readfile (the read half), the local store's host-io
+; — the cell-log's read AND append — is now native-lowerable; the offline substrate's
+; durable store compiles to native machine code, no interpreted-kernel host_io natives.
+;
+; The tree is a single WRITE_FILE node (tag 11). lo-compile prog 0 lowers to:
+;   movz x16,#5 ; svc #0x80     ; open(x0=path, x1=O_WRONLY|O_APPEND) -> fd in x0
+;   mov w3,w0                   ; bank fd
+;   movz x16,#4 ; svc #0x80     ; write(x0=fd, x1=buf, x2=count) -> nwritten in x0
+;   mov w4,w0                   ; bank nwritten
+;   mov w0,w3 ; movz x16,#6 ; svc #0x80   ; close(x0=fd)
+;   mov w0,w4 ; ret             ; return nwritten
+;
+; Verdict 15 when the write lowering is byte-accurate:
+;   1   the syscall instruction + open-number load are exact (svc #0x80, movz x16,#5)
+;   2   the WRITE + close syscall-number loads are exact (movz x16,#4 / movz x16,#6)
+;   4   the whole 44-byte image (10 instructions + ret) ends in ret
+;   8   COMPOSITIONAL — lo-node of the WRITE_FILE tree equals the hand-built
+;       open/write/close block byte-for-byte: the lowering IS the syscall sequence
+(do
+    (let prog (list (list 11 0 0 0)))   ; 0 WRITE_FILE(path in x0) = root
+    (let img (lo-compile prog 0))
+    (let hand (lo-app (fa-image (list
+        (fa-movz-x 16 5) (fa-svc 128) (fa-mov 3 0)
+        (fa-movz-x 16 4) (fa-svc 128) (fa-mov 4 0)
+        (fa-mov 0 3) (fa-movz-x 16 6) (fa-svc 128) (fa-mov 0 4)))
+        (fa-ret)))
+
+    (let c0 (if (fa-conviction (fa-svc 128) (list 1 16 0 212))
+            (if (fa-conviction (fa-movz-x 16 5) (list 176 0 128 210)) 1 0) 0))
+    (let c1 (if (fa-conviction (fa-movz-x 16 4) (list 144 0 128 210))
+            (if (fa-conviction (fa-movz-x 16 6) (list 208 0 128 210)) 2 0) 0))
+    (let c2 (if (eq (len img) 44)
+            (if (eq (nth img 40) 192)
+            (if (eq (nth img 43) 214) 4 0) 0) 0))
+    (let c3 (if (eq (fa-conviction img hand) 1) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
