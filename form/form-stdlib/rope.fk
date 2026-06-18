@@ -1,0 +1,40 @@
+; rope.fk — Rotary Position Embedding (RoPE) as a FORM RECIPE, not emitted C.
+;
+; A real llama3.2:3b block rotates the query/key vectors by position before attention:
+; each adjacent pair (x[i], x[i+1]) is rotated by angle θ = pos · base^(−hd/HD), where
+; hd = i mod HD is the position within the head and base = 10000. This is the LAST
+; position-dependent numeric in the llama block — the whisper block (transformer-numerics,
+; 4095) has no RoPE; llama-numerics.fk added RMSNorm/SwiGLU/SiLU; this closes RoPE.
+;
+; Until now RoPE lived ONLY inside transformer-kernel.fk's tk-emit-llama as emitted C
+; (cosf/sinf/powf, three-way, projecting to a C unit). This lifts it to a standalone
+; proven Form recipe — the rotation floor under running a real llama block on the GPU.
+;
+; Core-abstraction-first: compose trig.fk's already-four-way fcos/fsin/fpow (sin/cos as
+; Taylor recipes, fpow = exp(e·ln b)) rather than re-deriving any transcendental. All fp64;
+; the recipe DEFINES the reduction order so every kernel computes the same bits. Conformance
+; pinned to libm cos/sin/pow at 1e-6 in the band.
+
+; --- base θ frequency: base^(−hd/HD), base = 10000 (the llama rope_theta) ---
+(defn rope-base () 10000.0)
+(defn rope-freq (hd HD) (fpow (rope-base) (div (mul -1.0 hd) (mul HD 1.0))))
+; per-pair rotation angle at position pos for head-dim offset hd
+(defn rope-angle (pos hd HD) (mul (mul pos 1.0) (rope-freq hd HD)))
+
+; --- rotate one (q0,q1) pair by angle a → the rotated pair as a 2-list ---
+;   q0' = q0·cos a − q1·sin a ;  q1' = q0·sin a + q1·cos a   (a planar rotation)
+(defn rope-rot-pair (q0 q1 a)
+  (cons (sub (mul q0 (fcos a)) (mul q1 (fsin a)))
+        (cons (add (mul q0 (fsin a)) (mul q1 (fcos a))) (empty))))
+
+; --- walk a vector pairwise, rotating each pair by its position+head-dim angle ---
+; i = absolute dim index (so hd = i mod HD); steps by 2. xs must have even length.
+(defn rope-walk (xs i pos HD)
+  (if (eq (len xs) 0) (empty)
+      (do (let q0 (head xs))
+          (let q1 (head (tail xs)))
+          (let r (rope-rot-pair q0 q1 (rope-angle pos (mod i HD) HD)))
+          (cons (head r)
+                (cons (head (tail r))
+                      (rope-walk (tail (tail xs)) (add i 2) pos HD))))))
+(defn rope (xs pos HD) (rope-walk xs 0 pos HD))

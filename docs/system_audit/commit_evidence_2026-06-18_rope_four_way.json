@@ -1,0 +1,31 @@
+{
+  "title": "RoPE — rotary position embedding crosses to the four-kernel floor as a standalone Form recipe",
+  "date": "2026-06-18",
+  "advances": "Closes the LAST llama-specific numeric on the real-llama-block-on-GPU path. llama-numerics.fk (PR #3308, brick 3p) lifted RMSNorm/SwiGLU/SiLU four-way and named RoPE as the next stone, believing it needed a sin/cos primitive floor that 'transformer-numerics carries exp/tanh/sqrt but not sin/cos.' Read-the-body corrected that: the sin/cos floor already lives in trig.fk (fsin/fcos as Taylor recipes, fpow = exp(e*ln b)), already four-way (manifest 'trig fks 127' + 'trig-atan fks 1111111'). RoPE itself lived ONLY inside transformer-kernel.fk's tk-emit-llama as emitted C (cosf/sinf/powf, three-way, projecting to a freestanding C unit) — there was no standalone proven Form recipe for the rotation. This run authors rope.fk and lifts it to the four-kernel floor, composing trig.fk's already-four-way fcos/fsin/fpow rather than re-deriving any transcendental (core-abstraction-first).",
+  "device": "Apple M4 Max (40-core GPU), arm64 Darwin 26.3.1 — proof is host-independent (pure fp64 arithmetic band)",
+  "recipe_new": {
+    "file": "form/form-stdlib/rope.fk",
+    "defns": [
+      "rope-base () = 10000.0  -- the llama rope_theta",
+      "rope-freq (hd HD) = fpow(base, -hd/HD)  -- per-pair frequency, base^(-hd/HD)",
+      "rope-angle (pos hd HD) = pos * rope-freq(hd, HD)  -- rotation angle at position pos",
+      "rope-rot-pair (q0 q1 a) = [q0*cos(a) - q1*sin(a), q0*sin(a) + q1*cos(a)]  -- a planar rotation of one pair",
+      "rope-walk (xs i pos HD) = pairwise walk; hd = i mod HD, steps by 2",
+      "rope (xs pos HD) = rope-walk(xs, 0, pos, HD)  -- rotate a whole even-length vector"
+    ]
+  },
+  "band_new": {
+    "stem": "rope",
+    "verdict": 4095,
+    "what": "RoPE against the libm fp64 reference (cos/sin/pow), every value reduced to an integer at 1e-6. Fixture: x = [1.0, 0.0, 1.0, 1.0], HD = 4 (one head). Pair 0 sits at hd=0 (freq base^0 = 1, so theta = pos exactly: q0=1,q1=0 rotates to (cos pos, sin pos)); pair 1 sits at hd=2 (freq base^-0.5 = 0.01, a slow rotation). Three positions: 0 (identity), 1, 2.",
+    "claims": "1-8: pos=0 identity [1000000, 0, 1000000, 1000000] (pos 0 => theta=0 => cos=1,sin=0 => x unchanged). 16-128: pos=1 [540302, 841471, 989950, 1009950] (the fast pair = (cos 1, sin 1); the slow pair rotates by theta=0.01). 256-2048: pos=2 [-416147, 909297, 979801, 1019799] (the fast pair = (cos 2, sin 2), rotated past pi/2; the slow pair by theta=0.02). => 4095.",
+    "preludes": "form-stdlib/core.fk form-stdlib/trig.fk (already four-way: trig 127, trig-atan 1111111) form-stdlib/rope.fk (new)"
+  },
+  "reference": "libm fp64 via python math (cos/sin/pow). For each adjacent pair (x[i],x[i+1]) at head-dim offset hd=i mod HD: f=10000^(-hd/HD); val=pos*f; q[i]=x[i]*cos(val)-x[i+1]*sin(val); q[i+1]=x[i]*sin(val)+x[i+1]*cos(val). This is exactly the rotation tk-emit-llama emits as C. Every reference value matched the recipe's Form output bit-for-bit at 1e-6 rounding — trig.fk's Taylor sin/cos and exp/ln-based pow land within 0.5e-6 of libm on every claim.",
+  "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/rope.fk form-stdlib/tests/rope-band.fk  ->  '-> 4095', 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', '1 ok, 0 divergent'.",
+  "verdict": "FOUR-WAY (rope 4095), 0 divergent — Go, Rust, TypeScript, and the emitted fkwu walker all reproduce the RoPE rotation bit-for-bit at 1e-6 against the libm reference. Pure fp64 arithmetic + list recursion (head/tail/cons/empty) + integer mod for the head-dim offset — the same op family trig 127 / llama-numerics 4095 cross on; no unsupported op, no divergence.",
+  "manifest": "registered in form/fourth-arm-bands.txt as 'rope fks 4095', placed in the transformer family directly after 'llama-numerics fks 4095'.",
+  "reading": "With RoPE four-way, EVERY llama-specific numeric is now a proven Form recipe rather than emitted-C-only: RMSNorm + SwiGLU + SiLU (llama-numerics 4095) and now the rotary embedding. Combined with the whisper-shaped block math four-way + on the M4 GPU (transformer-numerics 4095, transformer-block 511, brick 3m), the full backward pass four-way (transformer-backprop / attention-backward / ffn / softmax-ln, all four-way), and the load-path dequant math four-way (Q4_K 4095, Q6_K 4095, f16-decode 4095), the numeric floor under a REAL llama3.2:3b block on the M4 GPU is now complete in Form. Named next stones: emit the llama block (RMSNorm + RoPE + SwiGLU MSL kernel) to Metal next to the whisper block (brick 3m), and run it over real GGUF weights (the load path is already Form-native).",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/rope.fk form-stdlib/tests/rope-band.fk  (four-way 4095, 0 divergent). Run the band individually: rapid back-to-back validate.sh calls share a temp dir and can report a spurious divergence; a single invocation isolates it.",
+  "read_the_body_note": "Confirmed the gap by grep before authoring (default-to-body): RoPE appeared only inside transformer-kernel.fk's tk-emit-llama as emitted C (cosf/sinf), never a standalone four-way recipe. The llama-numerics receipt believed the sin/cos floor was missing; reading the body found trig.fk already carries fsin/fcos/fpow four-way (trig 127, trig-atan 1111111) — so RoPE composed onto an existing proven floor with NO new transcendental and NO kernel native. Design (the rotation shape + the libm reference + strange-minimal fixtures spanning identity / fast pair / slow pair across three positions) was the cost; the four-way proof was seconds — the autonomous-walk lesson held a SIXTH time."
+}
