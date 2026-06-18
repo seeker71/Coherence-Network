@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-callconv-band — the GENERAL multi-arg calling convention in the
+; Form -> assembly compiler, the ll-callconv rung (roadmap.fk): a call places its
+; args in w0..w7 in order over a stack frame, then bl the target. This is the LAST
+; G1 lever piece — with ll-buffer (memory), ll-streq (strings) and ll-readfile
+; (host-io), form-lower now covers the full surface, so G3 (any recipe -> native)
+; and G7 (self-host) open. lo-marshal is general (recursion over the arg list, any
+; arity up to the 8 argument registers); the frame is ll-buffer's own alloc/free
+; (sub/add sp), so the convention composes the memory model the lever already proved.
+;
+; lo-callconv (19 20 21) 0 16 lowers to:
+;   sub sp,sp,#16 ; mov w0,w19 ; mov w1,w20 ; mov w2,w21 ; bl #0 ; add sp,sp,#16
+;
+; Verdict 15 when the convention is byte-accurate:
+;   1   GENERAL arity — lo-marshal of 2 srcs is 2 movs (8 bytes), of 3 srcs is 3
+;       movs (12 bytes): the marshalling scales with the arg list, never hardcoded
+;   2   the frame is ll-buffer's alloc/free — opens with sub sp,sp,#16 and closes
+;       with add sp,sp,#16 (the memory model carries the call frame)
+;   4   the call + arg placement are exact — bl #0 and mov w0,w19 byte-for-byte
+;   8   COMPOSITIONAL — lo-callconv equals the hand-built frame/marshal/bl block
+(do
+    (let m2 (lo-marshal (list 19 20) 0))
+    (let m3 (lo-marshal (list 19 20 21) 0))
+    (let img (lo-callconv (list 19 20 21) 0 16))
+    (let hand (lo-app (fa-sub-x-imm 31 31 16)
+              (lo-app (fa-image (list (fa-mov 0 19) (fa-mov 1 20) (fa-mov 2 21)))
+              (lo-app (fa-bl 0) (fa-add-x-imm 31 31 16)))))
+
+    (let c0 (if (eq (len m2) 8) (if (eq (len m3) 12) 1 0) 0))
+    (let c1 (if (eq (nth img 0) 255) (if (eq (nth img 3) 209)
+            (if (eq (nth img 20) 255) (if (eq (nth img 23) 145) 2 0) 0) 0) 0))
+    (let c2 (if (fa-conviction (fa-bl 0) (list 0 0 0 148))
+            (if (fa-conviction (fa-mov 0 19) (list 224 3 19 42)) 4 0) 0))
+    (let c3 (if (eq (fa-conviction img hand) 1) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
