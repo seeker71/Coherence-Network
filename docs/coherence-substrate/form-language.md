@@ -85,7 +85,7 @@ Coordinate / content-addressed languages are **geometric** — meaning lives in 
 
 ## What coordinates make free
 
-Every node — Blueprint, Recipe, Cell — is a `NodeID(package, level, type, instance)`: a direct coordinate into the lattice, not a reference resolved by walking. And no cell ever mutates — content-addressing means a changed shape is a *different* coordinate, never an in-place edit. Those two facts together hand Form properties that imperative languages build by hand.
+Every node — Blueprint, Recipe, Cell — is a `NodeID(package, level, type, instance)`: a direct coordinate into the lattice, not a reference resolved by walking. And no cell ever mutates — content-addressing means a changed shape is a *different* coordinate, never an in-place edit. Identity is conserved, not hoarded — a changed shape mints a new coordinate, the *referenced* old one persists as lineage, and what nothing references composts back to gas (truth-3 of [`living-axioms.form`](living-axioms.form); see the gas → ice section below). Those two facts together hand Form properties that imperative languages build by hand.
 
 **A switch is free.** A `match` — any choice — is a lookup, not a scan. The scrutinee resolves to a coordinate; the arm it selects is found *by* coordinate, O(1). There is no chain of comparisons to walk — the recipe lookup **is** the dispatch. A hundred arms cost the same as one.
 
