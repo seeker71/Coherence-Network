@@ -1,0 +1,55 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-streq-band — STRING LOWERING in the Form -> assembly compiler, the
+; ll-streq rung (roadmap.fk): (str_eq a b) lowers to a null-terminated byte-compare
+; LOOP in arm64, byte-for-byte the assembler's. This is the lever's string half —
+; once form-lower covers strings the whole tower turns native. The primitive
+; form-asm-tr/branch/headn already convict (ldrb, bcond, b-off four-way); the one
+; new encoder the rung names is fa-cmp-r — a register compare of two LOADED bytes
+; (cmp w8,w9), not a byte vs an immediate — also convicted here against the assembler.
+;
+; The tree is a single STR_EQ node (tag 9). Strings are POINTERS — a in x0, b in x1
+; (the C convention); the result is 1/0 in w0. lo-compile prog 0 lowers to:
+;   loop: ldrb w8,[x0] ; ldrb w9,[x1] ; cmp w8,w9 ; b.ne ne ;
+;         cmp w8,#0 ; b.eq eq ; add x0,x0,#1 ; add x1,x1,#1 ; b loop ;
+;   ne:   movz w0,#0 ; b end ; eq: movz w0,#1 ; end: ret
+; assembler ref (clang/as): 39400008 39400029 6b09011f 540000c1 7100011f 540000c0
+;                           91000400 91000421 17fffff8 52800000 14000002 52800020
+;                           d65f03c0
+;
+; Verdict 31 when string lowering is byte-accurate:
+;   1   the new register compare is exact — cmp w8,w9 = 1f 01 09 6b (the rung's
+;       one new primitive; str_eq compares two loaded bytes, not a byte vs immediate)
+;   2   the byte load + the loop's BACKWARD branch are exact — ldrb w8,[x0] and the
+;       -8 back-edge fold (the loop the byte-compare needs, folded to two's complement)
+;   4   the whole 52-byte str_eq image (13 instructions) ends in ret
+;   8   CONVICTION FULL — the compiled byte-compare loop byte-equals the assembler;
+;       the gate opens (clang may be dropped for str_eq) — fa-may-drop = 1
+;  16   COMPOSITIONAL — lo-node of the STR_EQ tree equals the hand-built loop block,
+;       byte-for-byte: the lowering IS the encoder sequence
+(do
+    (let prog (list
+        (list 9 0 0 0)))   ; 0 STR_EQ(a in x0, b in x1) = root
+
+    (let img (lo-compile prog 0))
+    (let ref (list 8 0 64 57    41 0 64 57    31 1 9 107    193 0 0 84
+                   31 1 0 113   192 0 0 84    0 4 0 145     33 4 0 145
+                   248 255 255 23  0 0 128 82  2 0 0 20     32 0 128 82
+                   192 3 95 214))
+    (let hand (lo-app (fa-image (list
+        (fa-ldrb 8 0 0) (fa-ldrb 9 1 0) (fa-cmp-r 8 9) (fa-bcond 1 6)
+        (fa-cmp 8 0) (fa-bcond 0 6) (fa-add-x-imm 0 0 1) (fa-add-x-imm 1 1 1)
+        (fa-b-off -8) (fa-movz 0 0) (fa-b-off 2) (fa-movz 0 1)))
+        (fa-ret)))
+
+    (let c0 (if (fa-conviction (fa-cmp-r 8 9) (list 31 1 9 107)) 1 0))
+    (let c1 (if (fa-conviction (fa-ldrb 8 0 0) (list 8 0 64 57))
+            (if (fa-conviction (fa-b-off -8) (list 248 255 255 23)) 2 0) 0))
+    (let c2 (if (eq (len img) 52)
+            (if (eq (nth img 48) 192)
+            (if (eq (nth img 51) 214) 4 0) 0) 0))
+    (let c3 (if (eq (fa-conviction img ref) 1)
+            (if (eq (fa-may-drop (fa-conviction img ref) 1) 1) 8 0) 0))
+    (let c4 (if (eq (fa-conviction img hand) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
