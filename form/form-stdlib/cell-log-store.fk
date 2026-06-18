@@ -134,6 +134,16 @@
     (defn cls-found? (result) (if (eq (len result) 1) 1 0))
     (defn cls-value (result) (head result))
 
+    ;; ---- keys: the LIVE keys (every keydir key whose entry is not a tombstone) --
+    ;; record_keys lists the keydir; a deleted key still has a "T" entry, so skip it.
+    (defn cls-keys-loop (kd ks acc)
+        (if (nil? ks) acc
+            (if (cls-tomb? (record_get kd (head ks)))
+                (cls-keys-loop kd (tail ks) acc)
+                (cls-keys-loop kd (tail ks) (cons (head ks) acc)))))
+    (defn cls-keys (st)
+        (do (let kd (cls-keydir st)) (cls-keys-loop kd (record_keys kd) (empty))))
+
     ;; ---- delete: tombstone record in the active segment -------------------
     (defn cls-delete (st key)
         (do

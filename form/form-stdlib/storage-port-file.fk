@@ -30,7 +30,10 @@
     (defn file-has (store key)
         (if (eq (cls-found? (cls-get store key)) 1) 1 0))
 
+    ;; keys: the live keys from the log's keydir (tombstones excluded).
+    (defn file-keys (store) (cls-keys store))
+
     (defn carrier-file ()
-        (mk-carrier "file" file-init file-put file-get file-has))
+        (mk-carrier "file" file-init file-put file-get file-has file-keys))
 
     0)
