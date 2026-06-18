@@ -1,0 +1,44 @@
+; replica.fk — the offline-first prod replica: seed a local store from a source,
+; serve from it offline, reconcile the offline changes back when online.
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk
+;
+; The whole capability composes storage-port's backend-as-data — prod is the `db`
+; carrier (Postgres), local is the `file` carrier (the cell-log segmented store).
+; SEED and SERVE and the candidate-set for MERGE are all the SAME port ops over a
+; different carrier, never a parallel path: storage-get/put name no backend, so
+; "read from prod" and "read from local" differ only in which carrier value is
+; passed. The full reconcile rides cell-sync (content-addressed offer→diff→
+; transfer→verify) and cache-phase (input-hash conflict trust). See offline-replica.form.
+
+(do
+    ;; ---- SEED: copy a key-set from a source store into a destination store, --
+    ;; through the port. prod(db) -> local(file) is THIS recipe with those two
+    ;; carriers; a unit proof runs it memory -> memory. Threads the destination
+    ;; store handle through the fold (file/db handles advance on each put).
+    (defn replica-seed-key (src-c src-s dst-c dst-s key)
+        (storage-put dst-c dst-s key (storage-value (storage-get src-c src-s key))))
+    (defn replica-seed (src-c src-s dst-c dst-s keys)
+        (if (nil? keys) dst-s
+            (replica-seed src-c src-s dst-c
+                (replica-seed-key src-c src-s dst-c dst-s (head keys))
+                (tail keys))))
+
+    ;; ---- DIRTY: a key is a merge-back candidate iff its LOCAL value differs ---
+    ;; from the seed baseline — content-addressed change detection (a cell's value
+    ;; IS its identity, so equal content = unchanged = nothing to reconcile). The
+    ;; candidate set is what crosses back to prod; cell-sync then diffs it against
+    ;; prod by address and cache-phase decides clean-apply vs conflict.
+    (defn replica-dirty? (baseline-val local-val)
+        (if (str_eq baseline-val local-val) 0 1))
+
+    ;; ---- the merge-back candidate set: the dirty keys, by replaying each key's --
+    ;; baseline-vs-local through replica-dirty? (the offer set cell-sync carries).
+    (defn replica-candidates (base-c base-s local-c local-s keys)
+        (if (nil? keys) (empty)
+            (if (eq (replica-dirty?
+                        (storage-value (storage-get base-c base-s (head keys)))
+                        (storage-value (storage-get local-c local-s (head keys)))) 1)
+                (cons (head keys) (replica-candidates base-c base-s local-c local-s (tail keys)))
+                (replica-candidates base-c base-s local-c local-s (tail keys)))))
+    0)
