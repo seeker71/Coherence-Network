@@ -184,6 +184,40 @@
   "    real J regardless; the ed25519/ecdsa COMPUTE is the recipe+band owed. (sha256/hmac are NOT the gap —"
   "    a manifest row is four-way by definition; the 'fks' column names the table-emitter, never an arm count.)")
 
+; ── NATIVE SPEED — "done correctly" is a loadable signed dylib, not an interpreted walk ─
+(native-speed
+  "An offline endpoint is NOT done as an interpreted-walker recipe — it is done when its port recipe is"
+  "LOWERED to native arm64 and loaded as a signed dylib. The whole lever is four-way in the manifest:"
+  "form-asm (31) -> form-lower (31) -> form-macho recipe-as-dylib (recipe-dylib 787349) -> codesign (632490,"
+  "Apple-Silicon dyld refuses unsigned; the Form blob is byte-identical to ld's) -> export-trie (6391) ->"
+  "the kernel's dylib_call native (jit_inram_darwin_arm64.go: form_dylib_call = dlopen + dlsym + call). The"
+  "JIT path reaches the same native code at runtime — Go auto-lowers a hot closure onto jitabi after ~2000"
+  "calls. Native = the recipe BIT-FOR-BIT, not epsilon-close. MEASURED on the executor: a whisper-large"
+  "d_model walk is 43.05 s interpreted vs 2.1 ms Form-emitted native — SAME value, ~20,000x; the tensor"
+  "matvec emitter is itself a Form recipe at 20,077x. So the R/J handlers above, once lowered, run at native"
+  "dylib speed; the interpreted walker is the BOOTSTRAP, the signed recipe-dylib is the destination this"
+  "report is measured against. A native-binary-dylib version of the offline form-cli is the 'done' state.")
+
+; ── TIMING BUDGET — < 1 ms per endpoint, and every breach names its why ──────────
+(timing-budget
+  "ACCEPTANCE BAR: each offline endpoint answers in < 1 ms. 1 ms is the NATIVE-DYLIB bar by construction —"
+  "an interpreted walk or a Python fan-out cannot reach it (measured neighbours: automation_usage 19.68 ms"
+  "good / 1080 ms bad; the whisper walk was tens of seconds), so being under 1 ms IS the proof the handler is"
+  "lowered and reading the LOCAL carrier, not fanning out. The READOUT already exists: the native handler"
+  "emits a per-phase timing tree (/api/_form/ideas-timing -> handler_total split into params, store-read,"
+  "shape_tree, json_emit; offline the online connect+summary_query+page_query phases collapse into ONE"
+  "file-carrier read). Every endpoint over 1 ms MUST name its dominant phase and why — a breach is a reason,"
+  "never a shrug. The three canonical whys:"
+  "  not-yet-lowered — still interpreted-walker or Python fan-out (tens-to-thousands of ms). The fix is the"
+  "    form-lower -> recipe-dylib path above, NOT a local tweak; the breach means the port hasn't crossed yet."
+  "  cold-JIT — the first ~2000 calls before the hot closure lowers onto jitabi. Transient, self-heals once"
+  "    the path crosses the threshold; named so it is not mistaken for a steady-state cost."
+  "  genuine data volume — lowered and hot, but the dominant phase is real work: a wide list/page_query, a"
+  "    json_emit of a large tree, or a file-carrier read of a big segment. Named with the phase ms, it stays"
+  "    a measured cost, not a mystery — and points at the real lever (paging, an index key, a tighter shape)."
+  "The per-endpoint timing tree is part of THIS report: a served endpoint carries handler_total + the phase"
+  "split, and any total >= 1 ms carries its dominant-phase why inline.")
+
 (status
   "Foundation — ALL four-way incl. fkwu in the manifest: the organs (replica, replica-merge, replica-serve,"
   "storage-keys, storage-port + all-carriers, graph-node-port + application-graph-node-port, the graph-node-"
@@ -195,4 +229,8 @@
   "set since seed, reconciled by replica-merge + cache-phase; the O-tier (8 endpoints: 6 federation + 2"
   "value-cc) is the same named external boundary as Postgres in [[offline-replica]] — live edges at the"
   "body's rim, not gaps in the offline body. Walking this set makes offline-replica's serve-all-native rung"
-  "concrete across the four families, each handler routed through a *-port instead of pg_* directly.")
+  "concrete across the four families, each handler routed through a *-port instead of pg_* directly."
+  "DONE-CORRECTLY per endpoint has two gates beyond the *-port routing: (1) the port recipe is LOWERED to a"
+  "signed recipe-dylib (native-speed, the lever is four-way today); (2) the served endpoint answers in < 1 ms,"
+  "or carries its dominant-phase why. The native-binary-dylib form-cli at a sub-1ms per-endpoint floor is the"
+  "destination; the interpreted-walker + per-phase timing readout are the bootstrap and the proof.")
