@@ -41,4 +41,40 @@
                         (storage-value (storage-get local-c local-s (head keys)))) 1)
                 (cons (head keys) (replica-candidates base-c base-s local-c local-s (tail keys)))
                 (replica-candidates base-c base-s local-c local-s (tail keys)))))
+
+    ;; ---- MERGE-BACK: reconcile the offline edits into prod, on reconnect. -----
+    ;; Three values per candidate key — the seed BASELINE, the LOCAL edit, the
+    ;; current PROD — classify by content-addressed comparison (cache-phase's input-
+    ;; hash trust): clean-apply if prod still equals the baseline (untouched since
+    ;; seed), no-op if local never diverged (or converged with prod), CONFLICT if
+    ;; prod AND local both changed the baseline differently. No row is silently
+    ;; overwritten — a conflict is NAMED, not clobbered.
+    (defn replica-merge-class (baseline-val local-val prod-val)
+        (if (str_eq local-val baseline-val) 2          ; not edited offline -> no-op
+            (if (str_eq prod-val baseline-val) 0       ; prod untouched -> clean apply
+                (if (str_eq prod-val local-val) 2      ; converged independently -> no-op
+                    1))))                              ; both diverged -> conflict
+    ;; fold one candidate into the (prod-store, conflict-keys) accumulator.
+    (defn replica-merge-step (base-c base-s loc-c loc-s prod-c acc key)
+        (do
+            (let prod-s (head acc))
+            (let conflicts (head (tail acc)))
+            (let lv (storage-value (storage-get loc-c loc-s key)))
+            (let cls (replica-merge-class
+                        (storage-value (storage-get base-c base-s key)) lv
+                        (storage-value (storage-get prod-c prod-s key))))
+            (if (eq cls 0) (list (storage-put prod-c prod-s key lv) conflicts)
+                (if (eq cls 1) (list prod-s (cons key conflicts))
+                    (list prod-s conflicts)))))
+    (defn replica-merge-fold (base-c base-s loc-c loc-s prod-c acc keys)
+        (if (nil? keys) acc
+            (replica-merge-fold base-c base-s loc-c loc-s prod-c
+                (replica-merge-step base-c base-s loc-c loc-s prod-c acc (head keys))
+                (tail keys))))
+    ;; reconcile the local store's offline edits back into prod; the seed baseline
+    ;; tells clean-apply from conflict. Returns (prod-store' conflict-keys).
+    (defn replica-merge (base-c base-s loc-c loc-s prod-c prod-s keys)
+        (replica-merge-fold base-c base-s loc-c loc-s prod-c (list prod-s (empty)) keys))
+    (defn replica-merge-store (result) (head result))
+    (defn replica-merge-conflicts (result) (head (tail result)))
     0)
