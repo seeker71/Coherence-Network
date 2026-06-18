@@ -56,6 +56,7 @@
           (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)
           (list "substring" 3 29) (list "str_find" 3 30)
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
+          (list "input_byte" 1 17)
           (list "intern_trivial_int" 1 43)
           (list "intern_trivial_bool" 1 112) (list "intern_trivial_float" 1 113)
           (list "make_nodeid" 4 91)

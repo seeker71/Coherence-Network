@@ -1,0 +1,43 @@
+; form-cli.fk — the native form-cli FRONT DOOR, running on the emitted walker (fkwu).
+;
+; The form-cli LOGIC already lives as Form recipes (form-cli-predict/gaps/score/
+; review-gap/router/loop, several four-way). What was missing is the front door: a
+; native dispatcher that reads the command from the staged input (fk_src, via the
+; input_byte op = walker tag 17), routes on the verb, and returns the response
+; STRING — which fkwu prints natively through fk_pv_root/fk_psv. One native engine
+; on the emitted kernel, not 23 bespoke Python/shell carriers.
+;
+; Surfaces: HEADLESS works today (the command arrives staged in fk_src — `fkwu
+; <table> 0 <cmdfile>`). INTERACTIVE TTY (a read-line loop + isatty prompt) is the
+; one remaining kernel-emitter add-on (host-io family); the dispatch below is the
+; shared core both surfaces call.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; read the command from fk_src: input_byte i -> the i-th byte, stop at NUL/newline.
+    (defn fc-read (i acc)
+        (do (let b (input_byte i))
+            (if (eq b 0) acc
+                (if (eq b 10) acc
+                    (fc-read (add i 1) (str_concat acc (byte_to_str b)))))))
+    (defn fc-command () (fc-read 0 ""))
+
+    ; the verb is the command up to the first space (or the whole line).
+    (defn fc-verb (cmd)
+        (do (let sp (str_find cmd " " 0))
+            (if (lt sp 0) cmd (substring cmd 0 sp))))
+
+    ; dispatch: the self-contained verbs prove the native door end-to-end; the
+    ; data verbs (predict/gaps/score) route to their existing recipes next, and
+    ; the host-io verbs (ask/rag/ingest) follow as POST + dir-scan land.
+    (defn fc-respond (cmd)
+        (do (let v (fc-verb cmd))
+            (if (str_eq v "ping") "pong"
+                (if (str_eq v "help")
+                    "form-cli (native/fkwu): ping | help | version | <verb> ..."
+                    (if (str_eq v "version")
+                        "form-cli native 0.1 — running on the emitted walker (fkwu)"
+                        (str_concat "form-cli: unknown verb " v))))))
+
+    (fc-respond (fc-command)))
