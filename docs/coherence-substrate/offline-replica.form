@@ -8,7 +8,10 @@
   "every native API route from a local disk store seeded from the real prod DB,"
   "records what it changes as an append-only journal, and on reconnect merges those"
   "changes back to prod — content-addressed, conflict-aware, no row lost. Online and"
-  "offline are the SAME recipes over a different storage carrier, never two code paths.")
+  "offline are the SAME recipes over a different storage carrier, never two code paths."
+  "Offline there is NO Postgres in the loop: the local file carrier is the only store"
+  "touched, its host-io native-lowered. Postgres is crossed only at the two online"
+  "edges (seed-in, merge-out) — outside the offline body, not a piece of it.")
 
 ; ── THE ORGANS (each four-way today; the replica composes them) ───────────────
 (organs
@@ -70,10 +73,14 @@
                        "native machine code, not interpreted-kernel host_io natives. fkwu the"
                        "WALKER does not carry I/O (a correct standing wall — its job is agreement,"
                        "not side-effects); 'native' here means the form-lower lever, the G7 path.")
-  (db-prod-boundary    "EXTERNAL/host-io — the pg_* leg of seed-from-prod / apply-to-prod is the"
-                       "Postgres wire protocol to an external server, only needed ONLINE (offline"
-                       "the file carrier serves everything). Rust-only; the genuine external edge,"
-                       "not an fkwu gap — naming it honest, not a wall to climb in the walker."))
+  (db-prod-boundary    "ONLINE-ONLY CROSSING — Postgres is touched at exactly two moments, both"
+                       "while connected: seed-in (prod -> local file store, before going offline) and"
+                       "merge-out (the journal -> prod, on reconnect). The OFFLINE form-cli never"
+                       "writes pg and carries no pg dependency at all — the local file carrier IS the"
+                       "store, its read+write native-lowered (form-lower-readfile + form-lower-writefile,"
+                       "four-way). So pg is NOT a remaining fkwu gap and NOT an offline rung; it is"
+                       "simply outside the offline body — the external wire, crossed only when the"
+                       "network returns. Offline, every rung above is four-way or native-lowerable."))
 
 ; The north star rides the completed G1 lever (form-lower covers memory/strings/host-io/
 ; calls four-way) and the proven storage organs above. No step invents a new primitive —
