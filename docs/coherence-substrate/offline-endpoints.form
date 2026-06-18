@@ -114,9 +114,9 @@
     "POST /api/hati/mesh/organs/announce|heartbeat|channels/offer -> federation/hati/{organ|channel}/... (runtime-event append)")
   (crypto-note
     "Federation capability-sign / settlement-share use HMAC-SHA256 over a LOCAL secret (no transport) —"
-    "offline-capable, but HMAC is recipe-present-yet-fks-only, not four-way. The attestation store-write is J;"
-    "the HMAC compute is owed to (crypto-port). The verified envelope arrives as the POST body; the handler"
-    "does NOT call back out — value-flow sign/verify is local hmac+hashlib, no socket.")
+    "and hmac-sha256 IS four-way incl. fkwu (manifest rows hmac-sha256, sha256), so the crypto COMPUTE is"
+    "offline-PROVEN today; only its storage port (the attestation append, a J) is proposed. The verified"
+    "envelope arrives as the POST body; the handler does NOT call back out — local hmac+hashlib, no socket.")
   (online-edge   ; 6 — each holds a LIVE remote feed or polls a live peer
     "POST /api/federation/sync (receive live payload FROM a remote instance)"
     "POST /api/federation/peers/poll (live httpx GETs to each peer's pulse/manifest/canonicals)"
@@ -174,18 +174,23 @@
 
 ; ── CRYPTO-PORT — a real op-family gap, NOT folded into the storage ports ────
 (crypto-port
-  "PROPOSED, SEPARATE. A storage-port carries get/put/has/keys ONLY — it has no sign op, so sign/verify"
-  "cannot 'stay in the port'. The sign/verify endpoints across the set (graph profile-sign = ed25519,"
-  "wallet verify = secp256k1-ECDSA-recover, federation capability/settlement = HMAC-SHA256) are offline-"
-  "CAPABLE — no network — but need host-crypto recipes the four kernels do not all carry: sha256 has a"
-  "four-way recipe; hmac-sha256 exists but fks-only (NOT four-way); ed25519 and secp256k1-recover have NO"
-  "Form recipe and NO band at all. The store-WRITE half (the attestation append) is a real J; the crypto"
-  "COMPUTE half is this port's own four-way bands, owed before sign/verify can be claimed offline-SERVED.")
+  "PROPOSED, SEPARATE — and HALF ALREADY PROVEN. A storage-port carries get/put/has/keys ONLY (no sign op),"
+  "so sign/verify cannot 'stay in a storage port'. The sign/verify endpoints split two ways on the fourth arm:"
+  "  PROVEN four-way incl. fkwu TODAY — sha256 and hmac-sha256 are manifest rows, so federation capability/"
+  "    settlement HMAC sign+verify is offline-PROVEN compute now; only its attestation storage port is proposed."
+  "  GENUINE fkwu GAP — ed25519 (graph profile-sign) and secp256k1-ECDSA-recover (wallet verify) have NO Form"
+  "    recipe and NO band at all. These two endpoints are offline-CAPABLE (no network) but cannot be offline-"
+  "    SERVED until the recipe exists AND crosses four-way. The store-WRITE half (the attestation append) is a"
+  "    real J regardless; the ed25519/ecdsa COMPUTE is the recipe+band owed. (sha256/hmac are NOT the gap —"
+  "    a manifest row is four-way by definition; the 'fks' column names the table-emitter, never an arm count.)")
 
 (status
-  "graph-node-port node/count/index — four-way CROSSED (the only proven keys today)."
-  "Every new key family, the three new storage ports, and the crypto-port — RECIPE-PROPOSED, each awaiting"
-  "its own four-way band (Go/Rust/TS + fkwu). This cell is the design floor those bands will cross, not a"
+  "Foundation — ALL four-way incl. fkwu in the manifest: the organs (replica, replica-merge, replica-serve,"
+  "storage-keys, storage-port + all-carriers, graph-node-port + application-graph-node-port, the graph-node-"
+  "mutation write carriers, cache-phase, cell-sync) AND the crypto sha256 + hmac-sha256. graph-node-port"
+  "node/count/index are the route keys proven today. What is RECIPE-PROPOSED (awaiting its own four-way band,"
+  "Go/Rust/TS + fkwu): the new per-endpoint key families, the three new storage ports, and ed25519 +"
+  "secp256k1-recover (no recipe yet). This cell is the design floor those bands will cross, not a"
   "claim they have. The R-tier is replica-serve over the seeded snapshot; the J-tier is the cell-log append"
   "set since seed, reconciled by replica-merge + cache-phase; the O-tier (8 endpoints: 6 federation + 2"
   "value-cc) is the same named external boundary as Postgres in [[offline-replica]] — live edges at the"
