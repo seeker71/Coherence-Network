@@ -1,0 +1,50 @@
+; corpus-license-gate.fk — the lawful-to-train decision, as a Form recipe.
+;
+; Offline training reads a CORPUS of (source, target) faces. Some faces are the
+; body's OWN work, or public-domain / permissively-licensed / consented content —
+; lawful to TRAIN on. Some faces are copyright-restricted — they may be USED FOR
+; TESTING (held-out evaluation, inference-time loss/quality measurement) but NEVER
+; folded into the weight update. This recipe is the gate that routes a corpus cell
+; to one of those two phases by its PROVENANCE tag.
+;
+; THE GATE IS FAIL-CLOSED. A tag is train-eligible ONLY if it is on the explicit
+; lawful allowlist; everything else — "copyright", "all-rights-reserved", and any
+; UNKNOWN/absent provenance — routes to eval-only. Uncertainty never trains. The
+; allowlist is DATA (clg-allow), so the body's lawful sources are an appended row,
+; never a code change.
+;
+; This is the SUBSTANCE of "we cannot train on them": the carrier
+; (scripts/corpus_partition_by_license.sh) does the file IO, but the DECISION of
+; what is lawful lives here, so every kernel agrees bit-for-bit on what enters the
+; training fold. Companion: docs/coherence-substrate/offline-nl-translation-training.form.
+;
+; Proven by: form-stdlib/tests/corpus-license-gate-band.fk
+
+(do
+    ; the lawful-to-train provenance kinds — DATA, append a new row to extend.
+    ;   owned         — the body's own work product (e.g. our captured oracle turns,
+    ;                   our own writing, our code)
+    ;   public-domain — out of copyright
+    ;   permissive    — licensed such that training is permitted (CC0, CC-BY, ...)
+    ;   consented     — creator explicitly consented to training (the consent membrane)
+    (defn clg-allow () (list "owned" "public-domain" "permissive" "consented"))
+
+    ; membership over the allowlist (string match, fold over list length)
+    (defn clg-in (tag allow)
+        (if (eq (len allow) 0) 0
+            (if (str_eq tag (head allow)) 1 (clg-in tag (tail allow)))))
+
+    ; clg-train-eligible? : provenance tag -> 1 if lawful to TRAIN on, else 0.
+    ; FAIL-CLOSED — train only for an allowlisted tag; copyright/unknown -> 0.
+    (defn clg-train-eligible? (tag) (clg-in tag (clg-allow)))
+
+    ; the phase a tag routes to: "train" (enters the fold) | "eval" (test-only).
+    (defn clg-phase (tag) (if (eq (clg-train-eligible? tag) 1) "train" "eval"))
+
+    ; how many of a list of tags are lawful to train on (partition size).
+    (defn clg-count-train (tags)
+        (if (eq (len tags) 0) 0
+            (add (clg-train-eligible? (head tags)) (clg-count-train (tail tags)))))
+
+    (defn corpus-license-gate-teaching () "lc-cognitive-sovereignty")
+    0)
