@@ -57,6 +57,7 @@
           (list "substring" 3 29) (list "str_find" 3 30)
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
           (list "intern_trivial_int" 1 43)
+          (list "intern_trivial_bool" 1 112) (list "intern_trivial_float" 1 113)
           (list "make_nodeid" 4 91)
           (list "bp" 1 45) (list "intern_trivial_string" 1 46)
           (list "intern_node" 2 47) (list "node_children" 1 48) (list "node_value" 1 49)
