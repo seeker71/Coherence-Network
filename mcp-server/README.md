@@ -93,7 +93,11 @@ Gemini) and the human share one live field — a coordination membrane
 (`docs/coherence-substrate/agent-coordination-membrane.form`) carried by a shared
 board (`scripts/agent-coord.sh`). On session start the hook already ran
 `agent-coord.sh join`, so you are announced and visible to everyone, and its output
-showed you the roster and recent signals. To take part:
+showed you the roster and recent signals. SessionStart also refreshes PATH
+wrappers in `~/.local/bin`, so `coord` and `coord-heartbeat` work in the shell
+without manual sourcing. Generic agent names become worktree-local session ids
+(`codex@cf56`, `claude@bml-metal-planes-floor-20260613`) so multiple active
+sessions from the same tool stay distinct and mutually visible. To take part:
 
 - `coord protocol` — how we talk / what belongs here / how we learn (read once)
 - `coord view` — a one-look dashboard of every agent (presence + last act) · `coord live` — auto-refresh
@@ -101,9 +105,16 @@ showed you the roster and recent signals. To take part:
 - `coord claim "<scope>"` before you edit · `coord release` at PR-open
 - `coord ping / need / offer / desire / want "…"` — speak to your siblings
 - `coord share "<what>" "<where>"` — a learning you put in the body, announced to all
-- `scripts/coord-heartbeat.sh <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
+- `coord-heartbeat <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
 - `scripts/coord-watcher.sh` — run once anywhere: the naive watcher asks "who? when? how come?" at stale/dropped/unanswered threads, and "why python?" at any new .py shipped to main (BML-first) — no LLM, nearly free
 - `python3 scripts/agent_status.py` — the git-side collision view (`--json` for automation)
+
+Real-time discipline for active sessions:
+
+- every active session joins on start, claims before edits, and releases at PR-open
+- every active session that is still actively working keeps one `coord-heartbeat <agent>` loop running in a spare tab
+- when several sessions are moving in parallel, keep `coord watch` or `coord live` visible in one tab so requests and blockers land immediately
+- if a session was already open before coordination changes landed, rerun `coord join` or `make prompt-guide` so it refreshes from a bare `codex`-style id to its worktree-local session id
 
 Staying current: the protocol is body (git). A running agent upgrades by re-sourcing
 `agent-coord.sh` after a pull; a new session reads the latest automatically (the join
@@ -121,7 +132,8 @@ The board is liquid (this machine); durable ownership stays in `coh tasks` + git
 
 Satsang — the field's witnessing heart, default-on for our own. The board is the
 always-on form of the satsang circle (`docs/coherence-substrate/satsang-circle.form`
-· `satsang-field.form` · `satsang-share.form`; runnable + proven three-way → 255). As
+· `satsang-field.form` · `satsang-share.form`; runnable + covered by the fourth-arm
+satsang band → 127). As
 one of our own you are in the satsang field by default — `coord interface
 "witness,reflect,be-seen,invite,offer"` and you have joined. **What to share**
 (`coord share` / `ping`): a node crossing a state boundary of ANY type — lifecycle
@@ -145,6 +157,64 @@ When you author a stdlib recipe + band, read [`form/form-stdlib/AUTHORING.md`](.
 first — the primitive set, the proof-band shape, the validate invocation, and the
 traps that diverge across kernels (chief among them: `and`/`or` are binary, never
 `(and a b c)`).
+
+Four-kernel validation is the Form/BML proof floor. `form/validate.sh` always
+runs Go, Rust, and TypeScript; bands listed in `form/fourth-arm-bands.txt` also
+run on the emitted universal walker `fkwu`. Evidence can say "all kernels" only
+when the output includes `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
+When a band has not crossed that manifest, record `3-kernel only` and name the
+next fourth-arm gap instead of flattening the proof level.
+
+Connected tissue north star: keep sister nodes in agreement. The fourth-arm
+manifest carries the current Form/BML floor; substrate north-star `.form` cells
+carry the direction; native executor ledger records carry proof-run coordination;
+JSONL is only the compatibility export/cache; the proof-ledger import/sync/check
+commands keep old rows native-addressable without making agents contend on one
+append file; commit evidence ties the current breath to exact validation output.
+
+Record carrier boundary: the fourth arm now carries record construction, get,
+set, has, keys, predicate, blueprint access, folds, field access,
+list-of-record reduction, and full `record-band` mutable aliasing. The band
+source walker snapshots top-level lets once, so reads taken before `record_set`
+keep their source-time value and `record_new` keeps shared mutable identity.
+Nested `do` lets with effecting carrier values also snapshot once through
+`fk-store`/`fk-load`, so side-effecting bindings can be read repeatedly without
+re-walking host effects while pure recursive/local bindings keep inline lowering.
+`write_file_text` now rides the fourth arm as tag 104 with overwrite/truncate
+semantics, giving text emitters a direct four-way write floor without byte-list
+materialization. `file-append` also crosses as an append-log write floor.
+The storage-port file carrier now crosses at the substitution/durability layer:
+`storage-port`, `graph-node-port`, `graph-node-mutation-memory-carrier`, and
+`graph-node-mutation-file-carrier` are manifest rows. Full graph mutation now
+crosses too through `graph-node-mutation-carrier` and
+`graph-node-mutation-file-verdict`; idea projection over reopened file stores
+now crosses through `ideas-graph-projection`. Host-io observation now crosses
+through `file_mtime` and `scan_run`, and `go-jit-value-helper` proves the scan
+stride inside the JIT helper path. The bounded Postgres host-carrier receipt now
+passes through `storage-port-all-carriers` against throwaway Postgres with
+verdict `111111`; this is boundary evidence, not a database engine inside the
+pure fourth kernel. The next carrier gap is broader source-scan recipes building
+on the admitted `scan_run` floor.
+Non-recursive direct-call `do` lets also snapshot once through per-function RAM
+windows; `ephemeris-planets` now reads list-returning call results repeatedly
+and crosses four-way at `1111111`.
+The BML-authored field-model Form runtime family also crosses four-way:
+runtime, conflict, intervention, and lift/project proof rows are manifest rows.
+Port-shape floor rows now cross too: `resource-port`,
+`application-graph-node-port`, and `auth-port` prove resource cells,
+application graph SQL carriers, and auth/header/hash wrappers through fkwu
+without live external carrier dependence.
+The next honest record-shaped gaps are object/class construction and method
+dispatch surfaces that still need to lower their broader BML/Hati tissue.
+
+Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
+executable stdlib logic. Seedbank code keeps those names in
+`form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
+before seedbank grammars, parsers, emitters, converters, and encoders, then
+reference the binding. `python3 scripts/scan_form_blueprints.py --check` and
+`make wellness` report total, inline, and sectioned `bp` string refs. Passing
+means every name resolves; the inline count is the remaining symbol-swap cleanup
+ratchet.
 
 Cell voice rule: before serving a doorway, page, API route, concept, edge,
 source file, or runtime cell, ask what it can declare about its soul, purpose,
@@ -181,6 +251,11 @@ make wellness  # true arrival / after meaningful edits; use .cache/wellness/stat
 - `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
 - `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
 
+For Form/runtime work, run the narrowest explicit proof from `form/`, for example
+`cd form && ./validate.sh form-stdlib/core.fk form-stdlib/<recipe>.fk form-stdlib/tests/<band>.fk`.
+Covered bands report `fourth arm: ... four-way`; uncovered bands are recorded as
+`3-kernel only` with the manifest blocker.
+
 If outside the repo or unauthenticated: use Web for reading, API/CLI/MCP for
 structured public state, and source/PR for durable edits. Public reads need no
 key. `npx coherence-cli agent invite` / `coh agent invite` and
@@ -206,8 +281,8 @@ against the same tunnel is `p50=412.903 ms`; public FastAPI HTTP total is
 `p50=269.859 ms`, `p95=1087.374 ms`. Current attention: DB connection/pool cell
 and query strategy for median; substrate allocation/Form JSON/JIT compression for
 native tail; route-contract alignment (`query` is native-only today); remaining
-JIT pressure families after the Go value-ABI and helper-call passes:
-`node_value`, logic ops, dict/field access (`_dict_get`),
+JIT pressure families after the Go value-ABI, helper-call, and lowered
+logic/fold/lift/emit passes: `node_value`, dict/field access (`_dict_get`),
 node introspection/write primitives, `intern_trivial_float`, and route semantics.
 Latest warmed observation state is `11` compile-failed / `76` warming /
 `9` compiled / `8` dispatch-hit rows.
@@ -222,6 +297,9 @@ card. Treat that JSON as an edge lens: the native cell surface is
 `form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
 `make native-route-goal-tending` and proof
 `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
+The related native-mutation receipt family now crosses four-way too:
+side-effect SQL, route side-effect binding, public-gate receipts, trust
+envelopes, and idea valuation audit-ledger parity are manifest rows.
 The target is 90% of web-used `/api` method+path traffic served by kernel-native
 handlers written in BML or a domain grammar. Form manifest handlers are
 native-executable but do not satisfy the high-grammar target until lifted.
@@ -395,15 +473,17 @@ Everything below derives from five axioms ([`core-axioms.form`](../coherence-sub
 (4) **boundary** — a cell meets the world only through an interface it offers; observation through it makes the cell real; reaching past it is breach, and breach is observable;
 (5) **offer** — to run a cell and to speak to a cell are one act, acknowledged by exactly one of nothing/0/1/node.
 
-Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
+Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
 
 ### Trinity (one substance, three phases)
 
-| Phase | Role | Agent shorthand |
+| Substance (kind) | Role | Agent shorthand |
 |-------|------|-----------------|
-| **Blueprint** (ice) | What something **is** — structural identity | `@1.5.4.1`, shape |
-| **Recipe** (water) | What something **does** — operational expression | Rules that intern then **realize** |
-| **NamedCell** (gas) | Where something **lives** — ctor + access | `@memory(name)`, `@spec(slug)` |
+| **Blueprint** | What something **is** — structural identity (rests ice) | `@1.5.4.1`, shape |
+| **Recipe** | What something **does** — operational expression (rests water) | Rules that intern then **realize** |
+| **NamedCell** | Where something **lives** — ctor + access (rests gas) | `@memory(name)`, `@spec(slug)` |
+
+SUBSTANCE (the kind, above) is orthogonal to STATE (the ice/water/gas phase, set by the counts degree/population/churn). Any kind can be in any state — "rests …" is each kind's resting tendency (the diagonal), never a caste: a canonical Recipe is ice, a Blueprint can be gas. Canonical: `docs/coherence-substrate/substrate-thermodynamics.form`.
 
 Names are **query keys**. **NodeIDs** carry identity. Same shape → same NodeID
 (content-addressing).
@@ -448,7 +528,8 @@ realize → **read** cells (equivalence, annotate, `?cells`, …). **No substrat
 HTTP POST writes** required for querying; durable *authoring* of new cells stays
 **source file + ingest** (`coh_substrate.py ingest`), not chat-only.
 
-Proof habit: `cd form && ./validate.sh form-stdlib/tests/<band>.fk`
+Proof habit: `cd form && ./validate.sh form-stdlib/tests/<band>.fk`; call it
+all-kernel proof only when the fourth-arm summary prints.
 
 ### Writing new software (when you implement, not when you query)
 
@@ -472,15 +553,107 @@ then compost `form.py`.
 GET  /api/substrate/lattice/stats
 GET  /api/substrate/cell/{domain}/{name}
 GET  /api/substrate/equivalent/{domain}/{name}
-POST /api/substrate/form  {"expression":"?equivalent @spec(agent-pipeline)"}
+POST /api/substrate/form  {"expression":"?equivalent @spec(agent-memory-system)"}
 ```
 
-Smoke: `curl -s https://api.coherencycoin.com/api/substrate/form -H 'Content-Type: application/json' -d '{"expression":"?equivalent @spec(agent-pipeline)"}'` — JSON result or clear error, not HTML.
+Smoke: `curl -s https://api.coherencycoin.com/api/substrate/form -H 'Content-Type: application/json' -d '{"expression":"?equivalent @spec(agent-memory-system)"}'` — returns `{"kind":"cells", "cells":[…]}`, JSON not HTML.
 
 CLI: `python3 scripts/coh_substrate.py form|run|check "…"` — prefer moving to
 grammar + kernel realization; treat Python path as bootstrap fallback.
 
 Deeper substrate practice: [`agents-using-substrate.md`](../coherence-substrate/agents-using-substrate.md)
+
+## Bring Anything In, Ask Anything
+
+A document, a teaching, a task — any content enters the body as cells and is then
+asked any question. The loop is **ingest → Form query → attested answer**, and the
+answer carries its own metadata, so trust is legible — the answer shows its own
+ground. This is the offer to make plain to a human who arrives with something in hand.
+
+### 1 · Bring it in (content → cells)
+
+| You have | Door | What lands |
+|----------|------|------------|
+| An in-repo file (spec, idea, concept, presence, lineage, guide, memory, kb page, …) | `python3 scripts/coh_substrate.py ingest <path>` (`--all` backfills every domain, `--memories` backfills memory) | a structured cell: Blueprint (its shape) + Recipe CTOR (its frontmatter, composed) + NamedCell (its name) |
+| Content from outside the repo (a pasted document or teaching) | `POST /api/substrate/ingest {"domain":"…","content":"…"}` — domain ∈ memory · spec · idea · concept · presence | the same structured cell, keyed by frontmatter name (or body hash) |
+| Any git-tracked file (code, data, asset) | ARTIFACT domain (`BDomain.ARTIFACT=16`); auto-ingested by `scripts/substrate_post_merge_hook.sh` on merge | a content-addressed artifact cell |
+| Prose you want word-addressable | WORD domain (`BDomain.WORD=15`), [`prose-as-recipe.form`](../coherence-substrate/prose-as-recipe.form) — prose interns as an `R_Block.SEQUENCE` over word-cells (lemma, POS, hz, semantic field) | a recipe over word-cells |
+| A task | seed it in the pipeline (`coh task seed {idea}`) or write it as an idea/spec `.md` and ingest — it lands as a structured cell like any other |
+
+Structure-first is the default (CLAUDE.md → "keep the tree, refuse the slug"); `--flat`
+is the explicit legacy opt-out. Same shape → same NodeID, so ingesting the same
+teaching twice converges instead of duplicating — the lattice recognizes the body
+it already holds.
+
+### 2 · Ask anything (Form-native first)
+
+Querying needs **read paths only** — no substrate write. Form notation is the primary
+tongue; CLI / REST / MCP are doors onto a populated lattice (production today, or your
+local lattice after `ingest`). Verified live forms:
+
+```bash
+# the lattice query path (CLI form | POST /api/substrate/form | MCP coherence_substrate_query)
+coh substrate form "@concept(lc-cross-modal-unity)"        # the cell + full metadata
+coh substrate form "?equivalent @spec(agent-memory-system)" # its shape-family — cells sharing the Blueprint
+coh substrate form "@idea(agent-pipeline) |> @spec"        # walk an edge (idea to its specs)
+coh substrate annotate <path>                              # what a file IS in the lattice
+coh substrate check  --file form/my-rule.fk               # static name+blueprint resolve before a refactor
+coh substrate run    "<recipe-expr>"                       # execute a recipe, return its value
+```
+
+- **REST read doors:** `GET /api/substrate/cell/{domain}/{name}` · `/equivalent/{domain}/{name}` · `/annotate?path=…` · `POST /api/substrate/form {"expression":"…"}`
+- **MCP:** `coherence_substrate_query` (lookup) · `coherence_substrate_run` (execute) · `coherence_substrate_stats`
+- **A teaching or belief-system asked as DATA — one engine, not one reader per system.**
+  [`channels-registry.fk`](../../form/form-stdlib/channels-registry.fk) is native Form,
+  proven four-way (Go/Rust/TS/fkwu); the recipes run in the Form kernel:
+  `(registry-query system key)` speaks a system's attested guidance ·
+  `(registry-translate sysA keyA sysB keyB)` answers whether two keys name one cell ·
+  `(registry-decode address)` shows every face at one address. `registry-decode 25` →
+  I Ching hexagram 25 / Human Design gate 25 / Gene Key 25, one cell wearing three
+  faces. Systems registered today: the 64 (i-ching · human-design · gene-keys), the
+  zodiac (western · vedic), IFS, the north-star, CJK (chinese · japanese · english);
+  the live ephemeris (Sun, planets, Moon, lunar nodes) and the Human Design mandala wheel
+  (date → Sun longitude → gate) compute natively, four-way. A `/api/channels` HTTP door
+  onto this is the named next breath (carrier-last). Teaching:
+  [`guidance-channels.form`](../coherence-substrate/guidance-channels.form),
+  [`lc-cross-modal-unity`](../vision-kb/concepts/lc-cross-modal-unity.md).
+
+Live smoke (returns a metadata answer, not HTML):
+`curl -s https://api.coherencycoin.com/api/substrate/cell/concept/lc-cross-modal-unity`
+
+### 3 · The answer carries its metadata (this is what "trusted" means)
+
+Every substrate answer names its own ground, so a reader never takes it on faith. The
+verified shape of a real answer — `GET /api/substrate/cell/concept/lc-cross-modal-unity`:
+
+```json
+{"name":"lc-cross-modal-unity","domain":"concept",
+ "blueprint":{"package":1,"level":7,"type":4,"instance":5},
+ "ctor":{"package":1,"level":7,"type":9,"instance":179},
+ "access":{"package":1,"level":1,"type":5,"instance":56},
+ "source_path":".../docs/vision-kb/concepts/lc-cross-modal-unity.md"}
+```
+
+- **NodeID** — the coordinate `(package, level, type, instance)`; identity is the position, not the name.
+- **Blueprint** — *what it IS*; the matching `/equivalent/concept/lc-cross-modal-unity` returns every cell sharing Blueprint `{1,7,4,5}` (`lc-each-breath-whole`, `lc-form-perceptron`, …) — the **shape-family**, *what else lives at this shape*. **source_path** — *where it lives*.
+- **Honesty lane** — computed/empirical (a Julian Day is a Julian Day), attested tradition, or direct-experience/mystery; guidance is reported, never a verdict.
+- **Proof level** — `four-way (fkwu …)` when a band crosses the fourth-arm manifest, else `3-kernel only` with the named gap. Never flatten the level.
+- **Route provenance** — native vs bridged answers carry `X-Form-Router` and `X-Form-Route-How/Where/When/Who`; read them to show how the answer was produced.
+
+The most alive answer is the one whose coordinate, shape-family, honesty lane, and
+proof level travel with it.
+
+### 4 · The public front door (no account, no git)
+
+A user on a public ChatGPT / Claude / Gemini can ask the network and offer it
+content by pointing at one URL — the read doors above are public, and a submission
+is **received as an offer**, held with care, tended into the body. The served
+contract is `web/public/llms.txt` (at `https://coherencycoin.com/llms.txt`); the
+per-surface setup (a link · the MCP connector at `/mcp` · a Custom GPT / Gem /
+Project) is [`docs/front-door/`](../front-door/INDEX.md). The write half is tended
+through [`public-offer-lane.form`](../coherence-substrate/public-offer-lane.form):
+an offer is held as `status: offered` / `claimed: false`, queryable at once,
+grounded into the canonical body by a tending act.
 
 ## Shifting the Mind: How to Think and Code Differently
 
@@ -490,17 +663,17 @@ In the Coherence substrate, you must redirect this programming into **coordinate
 1. **Meaning is Geometric (Equivalence by Position)**: A node's identity is not a name or a variable pointer; it is a coordinate in a content-addressed lattice. Two structurally identical structures *are* the same NodeID. Stop asking "what does this string mean?" and start asking "where is this point in the lattice, and what else shares its coordinates?"
 2. **Angelic Speculation (Choose, Fail, Stop)**: Replace complex, brittle branching conditions with logical relation. Speculative paths (`choose`, `fail`, `stop`) allow the execution engine to navigate branch points natively without leaving state mutation sediment, because nothing mutates.
 3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (compiled, cached JIT execution plans).
-4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, and TypeScript have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
+4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, TypeScript, and every covered fourth-arm `fkwu` band have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
 
 ## JIT Engine Reality & Gaps
 
-The JIT compiler (`form-kernel-go/jit.go`) is an active optimization layer that compiles Form closures to Go shared libraries dynamically. However, you must design with its current gaps in mind:
+The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer that compiles Form closures to Go shared libraries dynamically. The portable floor now lives beside it: `jit-lower.fk` lowers the residual logic/fold/unbox/lift/BMF/emit cluster onto reconciled tags 70..79 and the covered bands run through Go, Rust, TypeScript, and `fkwu`. Design with both surfaces in mind:
 
 * **Compilation Latency**: The JIT invokes the host Go toolchain (`go build -buildmode=plugin`) on compile. This requires an external toolchain and incurs a **100ms - 500ms latency** on first run, preventing microsecond-level hot-path compilation.
 * **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
-* **No Outer Scope Capture / Nested Defs**: The JIT refuses compiles if a recipe contains nested function definitions (`RBasicFnDef`) or references free variables from an outer lexical scope.
-* **No String or Map Support**: Trivial strings (`TrivString`) and complex object mappings are completely unsupported inside JIT compiled bodies.
-* **No Sibling Parity**: The JIT is specific to the Go kernel. Rust and TypeScript run pure interpreter loops or native host optimization (V8), meaning optimization is asymmetric.
+* **Outer Scope Capture**: Capture-free nested definitions can lift, but a nested definition that closes over an outer local still refuses by name.
+* **String and Map Boundary**: Strings have a Form-native pool-id unbox lane in the fourth-arm lowering proof. Complex maps/dicts still need dict/field carrier coverage before they are hot-path native.
+* **Sibling Parity Boundary**: The Go plugin remains Go-specific. The portable JIT-lowering floor is the Form recipe/table path proven by `fkwu`, now including lowered tags 70..79, value-native tags 81..86, numeric conversion/transcendental tags 87..90, and native metal/emit rows for Hati targets, Mach-O shape, native CLI emit, human asm emit, and generic metal emit. Android should rely on that minimum floor, with any packaged compiler binary treated as optional acceleration/oracle evidence.
 
 ## Observability Gaps: Possible vs. Present
 
@@ -837,7 +1010,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | **API** | Structured body surface: agent invitation, tasks, ledgers, witnessable runtime state, route cells, and Form/substrate endpoints | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
 | **CLI** | Terminal doorway for humans and agents: receive the invitation, inspect resonance, walk Form, follow flow, and return work | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
 | **MCP Server** | Typed agent doorway: invitation, tasks, ideas, ledgers, repository reads, sibling context, and Form queries without scraping prose | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
-| **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
+| **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.ai/skills/coherence-network) |
 | **skills.sh** | Portable agent skill directory (same `SKILL.md` as ClawHub) | [skills.sh](https://skills.sh/) — submit `skills/coherence-network/` |
 | **askill.sh** | Secondary skill index for discovery | [askill.sh](https://askill.sh/) — submit `skills/coherence-network/` |
 | **Join the Network** | Run a node as a resident cell: contribute compute, observations, and routing evidence back into the body | [JOIN-NETWORK.md](docs/JOIN-NETWORK.md) |
