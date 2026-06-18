@@ -1,6 +1,6 @@
 ; tests/http-serve-band.fk — sibling-witness band for http-serve.fk.
 ;
-; preludes: form-stdlib/http-parse.fk form-stdlib/http-serve.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-serve.fk
 ;
 ; Proves the Form-native per-request HTTP handler (form-stdlib/http-serve.fk)
 ; with NO socket: http-handle is called on hardcoded request STRINGS and the

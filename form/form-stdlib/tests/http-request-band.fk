@@ -1,14 +1,15 @@
 ; tests/http-request-band.fk — sibling-witness band for http-request.fk.
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk
 ;
-; Iteration 2 of lifting the HTTP server into the BML class hierarchy: the
-; Request class. Proves kh-request-from-raw lifts a raw HTTP/1.1 request string
-; into a kh-request value — method, path-only (query stripped), the query parsed
-; to kh-field, the headers to kh-header, the body — and that the assembled value
-; is kh-request-valid?. The engine now speaks the class the Router consumes.
+; The Request class. Proves kh-request-from-raw lifts a raw HTTP/1.1 request
+; string into a kh-request value — method, path-only (query stripped), the query
+; parsed to kh-field, the headers to kh-header, the body — and that the assembled
+; value is kh-request-valid?. The engine speaks the class the Router consumes,
+; with no substrate-node detour between the wire bytes and the domain value.
 ;
 ; Each check contributes a distinct bit; the band emits their sum (63 when all
-; pass). Identical across Go/Rust/TS proves the lift is correct and portable.
+; pass). Identical across Go/Rust/TS + the emitted fkwu arm proves the lift is
+; correct and four-way-portable.
 
 (let raw "GET /api/utils/coherence_weight?threshold=90 HTTP/1.1\r\nHost: x\r\n\r\n")
 (let req (kh-request-from-raw raw))

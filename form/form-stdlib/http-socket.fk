@@ -1,6 +1,6 @@
 ; http-socket.fk — bind the Server to a real socket: the Form-native accept-loop.
 ;
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk
 ;
 ; THE BOUNDARY (Urs): kh-serve (http-server.fk) is PURE — a request string in, a
 ; wire string out, no I/O, three-way-identical. This file is the ONLY place the
