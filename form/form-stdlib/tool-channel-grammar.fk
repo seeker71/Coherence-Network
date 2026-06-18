@@ -3,6 +3,12 @@
 ; High-level declarations lower into tool-channel.fk rows. This lets grammar
 ; surfaces, recipe metadata, applet projections, and low-level plans share one
 ; native shape.
+;
+; Proven by: form-stdlib/tests/tool-channel-grammar-band.fk — four-way at
+;           validate.sh (Go/Rust/TS + fkwu), verdict 255. The cell carries
+;           only int/string/list ops, the same family the four-way
+;           tool-channel rows ride, so the fourth arm crosses with the three
+;           walkers byte for byte.
 
 (do
     (defn tcg-form (kind surface phrase lowers-to proof)

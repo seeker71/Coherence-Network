@@ -575,3 +575,12 @@ bmf-core fks 600
 bmf-grammar fks 300
 kernel-image-proposal fks 111111
 form-os-channel fks 111111
+# ── host-os surface lane — the membrane/grammar/ledger cells that compose to
+# the host-kernel inversion. These carry only int/string/list ops (the same
+# family as four-way tool-channel), so they cross the fourth arm. The node/
+# substrate + host-io carriers of the inversion (host-kernel-cell on
+# kernel-satsang, kernel-core-self/image) stay 3-kernel-only with the exact
+# unsupported op named in each file header — they are standing walls, not
+# uncrossed bands.
+tool-channel-grammar fks 255
+bml-capability-ledger fks 255

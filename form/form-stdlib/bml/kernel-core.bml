@@ -8,6 +8,17 @@
 // core as a Form image, walks real recipes, and round-trips the image as
 // .fkb across Go, Rust, and TypeScript sibling kernels.
 //
+// Proven by: form-stdlib/tests/kernel-core-image-compiler-proof.fk — three-way
+// at validate.sh (Go/Rust/TS), verdict 34.
+// Fourth arm: 3-kernel only — the proof rests on three op families fkwu does
+// not carry: the broad source-scan host-io that reads and parses this BML
+// source, walk_recipe and native_blueprint (executing and observing interned
+// recipe nodes), and the .fkb image pair write_form_binary / read_form_binary
+// (host-io binary image). Each lowers to fkwu's literal-0 fallback — an
+// unsupported op family, named here, not a divergence. It crosses when
+// source-scan, walk_recipe/native_blueprint, and the form-binary carrier join
+// the fourth arm.
+//
 //////////////////////////////////////////////////////////////////////
 
 package Form.kernel;
