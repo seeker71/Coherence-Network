@@ -21,6 +21,9 @@ The first cornerstone investment closed the most-pointed-at overnight gaps:
 - **Conviction codes named** — `lc-wrong/lc-bloated/lc-healthy/lc-better` replace bare 0/1/2/3.
 - **Floor honesty** — 17 recipe headers retuned from understated "three-way" to their true four-way floor (each verified against a manifest row); a stray duplicate manifest composted.
 - **Carrier fixes un-stranded** — close-gap drafts via the ollama HTTP API (clean text) with iterative kernel-feedback retry; close-next no longer resurrects composted leaves.
+- **Confidence is one primitive** — `fcr-confidence-axis` (a lane's measured pass-rate) is the single definition; `form-cli-loop.fk`'s `fcl-confidence` delegates to it and `fcr-backend-learned` computes the router fitness axis from it, so the route gate and the fitness scalar can never drift into two notions of confidence. Both bands four-way (form-cli-loop → 31, form-cli-router → 31). Open wire: the python `ask` route still bypasses `fcr-route` with a coarse door.
+
+**Known four-way divergence (hard gate, tracked):** the **TypeScript kernel computes 32-bit unsigned bitwise-multiply wrong** — FNV-1a-32 (`fnv.fk`) gives Go=Rust=fkwu=correct but TS=wrong, because JS numbers are float64 (exact only to 2⁵³, so `(h⊕b)*16777619` loses precision) and JS bitwise ops coerce to *signed* 32-bit (so `& 0xFFFFFFFF` returns negative for the high bit). The `fnv.fk` recipe is correct (three kernels prove it); the TS kernel's integer arithmetic is the bug. Per the divergence discipline this is **not shipped** — it blocks `fnv` → cache content-hash until the TS kernel does uint32 math faithfully (BigInt or `Math.imul`+`>>>0`). Fixing it hardens the four-way floor for *every* large-int Form recipe, not just FNV. The correct `fnv.fk` + band are preserved for the moment the TS fix lands.
 
 The rework plan below keeps the remaining (mostly spine) items open and honest.
 
