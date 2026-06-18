@@ -1,0 +1,57 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-predict.fk form-stdlib/form-cli-score.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-review-gap.fk form-stdlib/form-cli.fk
+;
+; form-cli-band — the native form-cli FRONT-DOOR dispatch, made falsifiable.
+;
+; A command STRING is tokenized with string ops (str_find / substring / str_len)
+; into a subcommand, and fcli-dispatch routes it to the matching logic recipe,
+; returning that recipe's verdict. The command strings are hardcoded here so the
+; route is deterministic and four-way comparable; the routed lanes COMPOSE the
+; already-proven recipes (fcp-* / fcsc-* / fcj-* / frg-*), so this band proves the
+; DISPATCH itself — the right string reaches the right lane and the lane computes
+; the expected answer.
+;
+; Verdict 2047 (= 1+2+4+...+1024, all eleven claims) when:
+;    1    tokenize: head token of "predict Bash" is "predict"
+;    2    tokenize: arg-tail of "predict Bash now" is "Bash now"
+;    4    tokenize: a single-word command "eval" has an empty arg-tail
+;    8    eval lane: dispatch "eval" returns the value it was handed (42)
+;   16    predict lane: "predict" routes to fcp-* — Bash clears on base rate (1)
+;   32    predict lane: Agent NOT predicted without a trigger keyword (0)
+;   64    predict lane: Agent IS predicted when a task keyword triggers it (1)
+;  128    score lane: "score" routes to fcsc-* — native covers a majority (match 1)
+;  256    score lane: native covering a minority does NOT match (0)
+;  512    judge lane: "judge" routes to fcj-* — 2 of 4 scores pass threshold 60
+; 1024    review-gap lane: "review-gap" routes to frg-* — converges within tol 10 (1),
+;         AND an unknown subcommand ("ask") returns -1 (the host-io-wall signal)
+
+(do
+    ; shared model data for the predict lane (corpus-learned base + boost)
+    (let base (list (fcp-base-pair "Bash" 93) (fcp-base-pair "Agent" 9)))
+    (let boosts (list (fcp-boost-pair "parallel" "Agent")))
+
+    ; ── tokenizing (string ops only) ──
+    (let c0 (if (str_eq (fcli-head-token "predict Bash") "predict") 1 0))
+    (let c1 (if (str_eq (fcli-arg-tail "predict Bash now") "Bash now") 2 0))
+    (let c2 (if (str_eq (fcli-arg-tail "eval") "") 4 0))
+
+    ; ── eval lane (the identity door) ──
+    (let c3 (if (eq (fcli-dispatch "eval" (list 42)) 42) 8 0))
+
+    ; ── predict lane routes to fcp-* ──
+    (let c4 (if (eq (fcli-dispatch "predict" (list base boosts (list "study" "read") "Bash" 40 50)) 1) 16 0))
+    (let c5 (if (eq (fcli-dispatch "predict" (list base boosts (list "study" "read") "Agent" 40 50)) 0) 32 0))
+    (let c6 (if (eq (fcli-dispatch "predict" (list base boosts (list "study" "parallel") "Agent" 40 50)) 1) 64 0))
+
+    ; ── score lane routes to fcsc-* ──
+    (let c7 (if (eq (fcli-dispatch "score" (list (list "Bash" "Read") (list "Bash" "Read" "Edit"))) 1) 128 0))
+    (let c8 (if (eq (fcli-dispatch "score" (list (list "Bash" "Read" "Edit" "Write") (list "Grep"))) 0) 256 0))
+
+    ; ── judge lane routes to fcj-* ──
+    (let c9 (if (eq (fcli-dispatch "judge" (list (list 80 40 90 55) 60)) 2) 512 0))
+
+    ; ── review-gap lane routes to frg-*, AND unknown -> -1 ──
+    (let c10 (if (eq (fcli-dispatch "review-gap" (list (list 80 40 90) (list 75 70 88) 10)) 1)
+                 (if (eq (fcli-dispatch "ask" (list)) (sub 0 1)) 1024 0)
+                 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))
