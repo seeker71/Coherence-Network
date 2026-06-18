@@ -22,7 +22,7 @@
 ; mtb-reverse is the adjoint carrier — (i j w) → (j i w) — the chain-rule seam for stacking
 ; layers: backprop through gl-step IS gl-step over reversed edges. Sibling lanes: active-
 ; inference.fk counts the same surprise symbolically; choice-receipt-learning.fk is the
-; discrete branch-order reading. Proven by tests/metabolic-learning-band.fk (three-way).
+; discrete branch-order reading. Proven by tests/metabolic-learning-band.fk (four-way at validate.sh, incl. fkwu).
 (do
     ; --- vector ground this module adds (gl- carries zeros/sum/mean/cat/bump/flen) ---
     (defn mtb-vsub (a b)

@@ -36,7 +36,7 @@
 ; and order-stable: a's local exemplars stay at the head, so nearest-shape's "oldest exemplar wins" ties
 ; keep the local peer's knowledge primary and the admitted peer's exemplars purely additive.
 ;
-; Proven by: form-stdlib/tests/trust-weighted-colearning-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/trust-weighted-colearning-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ;; --- TRUST BAND: lift trust-decay's three-band string to a numeric band. -----
