@@ -22,7 +22,7 @@
 #                                   from a stranger is attributed to a
 #                                   placeholder until they walk in and claim it
 #   - substrate ingest            — content-addressed storage; same shape
-#                                   converges; nothing is overwritten (axiom-3)
+#                                   converges; nothing referenced is overwritten (axiom-3)
 #   - rate_limit middleware       — the organism's breath: cooperative pacing
 #                                   already meets every public POST; a burst is
 #                                   slowed, the guest stays welcome

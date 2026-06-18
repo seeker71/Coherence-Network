@@ -402,9 +402,11 @@ the index reads back and still contains a known evidence cell by source path.
 Everything below derives from five axioms ([`core-axioms.form`](../coherence-substrate/core-axioms.form)):
 (1) **states** — 0, 1, nothing; nothing is first-class and timeout == nothing;
 (2) **cell** — everything is a node-id that may compose child cells;
-(3) **content-addressing** — identity is computed from composition; same shape is the same cell; nothing is overwritten;
+(3) **content-addressing** — identity is computed from your *present* composition; same shape is the same cell; nothing *referenced* is overwritten, and what nothing references composts back to gas (a healthy body forgets);
 (4) **boundary** — a cell meets the world only through an interface it offers; observation through it makes the cell real; reaching past it is breach, and breach is observable;
 (5) **offer** — to run a cell and to speak to a cell are one act, acknowledged by exactly one of nothing/0/1/node.
+
+[`living-axioms.form`](../coherence-substrate/living-axioms.form) reads the same five at the altitude of a life; [`living-vision.form`](../coherence-substrate/living-vision.form) walks them as the organism's dateless gradient and names the honest floor — the body is young and small, thinking mostly on rented frontier minds, tended by a small first circle. Native reasoning is the precondition of the no-exclusion promise: *a mind rented from a gated provider cannot offer sovereignty to others* ([`lc-cognitive-sovereignty`](../vision-kb/concepts/lc-cognitive-sovereignty.md)).
 
 Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
 

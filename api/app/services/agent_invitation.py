@@ -16,7 +16,7 @@ def build_agent_invitation(generated_at: str) -> dict[str, Any]:
     """Return a fresh invitation payload with dynamic fields inserted."""
     return {
         "id": "agent-resonance-onboarding",
-        "version": "2026-05-31",
+        "version": "2026-06-18",
         "generated_at": generated_at,
         **deepcopy(INVITATION_INTRO_FIELDS),
         "agent_start_packet": get_agent_start_packet(),
