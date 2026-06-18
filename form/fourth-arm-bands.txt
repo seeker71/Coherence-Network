@@ -552,3 +552,24 @@ roadmap fks 31
 lowering-conviction fkc 127
 form-asm-stack fkc 7
 ll-buffer fkc 1
+
+# ── BMF cursor lane — the principled grammar front end crosses four-way ──
+# The cursor-based BMF core and its recursive grammar engine — one data-driven
+# matcher, grammars-as-data, parsing-produces-recipes, no-sediment backtrack —
+# cross the emitted fourth arm. The string cursor (char_at/ord/substring) rides
+# the shim string stones (tags 24..29); the parse emits universal recipes
+# through the content-addressed intern arm (intern_node tag 47, bp tag 45,
+# trivial interns tags 43/46, make_nodeid tag 91). intern_node_at rides the
+# fourth-shim image of the carried intern: its returned NodeID is exactly
+# intern_node(cat, kids), the source attribution feeding only the framebuffer
+# side-map the verdict never reads. bmf-core proves cursor/peek/advance, data
+# patterns + templates, the universal coordinate, and no-sediment alternation
+# (verdict 600); bmf-grammar proves rule references, recursion, operator
+# precedence, paren nesting, and separator-lists + splice* (verdict 300). The
+# real cursor on the fourth arm joins the tokenwise bmf-mini fold (which still
+# carries the grammar-swap bands jit-lower-bmf / fourth-union /
+# language-packs-fourth): both the principled front end and the flattenable
+# fold now reach fkwu through the same carried intern vocabulary, so the whole
+# BMF/dialect surface is provable on the fourth kernel.
+bmf-core fks 600
+bmf-grammar fks 300
