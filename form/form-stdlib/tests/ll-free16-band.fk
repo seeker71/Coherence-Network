@@ -1,3 +1,0 @@
-; preludes: form-stdlib/form-asm.fk form-stdlib/ll-alloc16.fk form-stdlib/ll-store-w8.fk form-stdlib/ll-load-w9.fk form-stdlib/ll-free16.fk
-; ll-free16-band — self-closed recipe ll-free16, proven four-way incl. fkwu.
-(do (if (eq (fa-conviction (free16) (list 255 67 0 145)) 1) 1 0))
