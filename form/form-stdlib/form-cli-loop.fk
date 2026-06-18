@@ -1,6 +1,6 @@
 ; form-cli-loop.fk — the form-cli decision loop, as a running recipe.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk
 ;
 ; The form-cli does what codex/claude/grok/gemini CLIs do, but local Form-native
 ; FIRST and a remote LLM oracle ONLY when the internal flow state is uncertain —
