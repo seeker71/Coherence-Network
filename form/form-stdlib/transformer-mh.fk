@@ -1,0 +1,61 @@
+; transformer-mh.fk — multi-head self-attention, the real whisper-tiny block.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk
+;
+; transformer-block.fk's tb-block is the whisper-shaped pre-LN block with SINGLE-head
+; attention. Real whisper-tiny splits d_model into n_head heads (tiny: d_model=384,
+; n_head=6, head_dim=64): q/k/v are projected to full d_model, reshaped into n_head
+; slices of head_dim, attention runs INDEPENDENTLY per head (scale = 1/√head_dim), and
+; the per-head context vectors are concatenated back to d_model before the output
+; projection. This cell is that reshape+per-head+concat, composed from tb-block's own
+; proven primitives (tb-proj-seq, tb-attn-seq, tb-add-seq, tb-ffn-block) — no new
+; arithmetic, so it stays bit-deterministic across kernels exactly as the single-head
+; block does. Single-head is the n_head=1 case of this recipe.
+;
+; A LAYER's weights are arguments (lists of rows), so an encoder is a SEQUENCE of these
+; calls folded over the layer list (tb-enc-stack) — the dynamic-recipe advantage.
+
+; --- vector slicing (monomorphic, fourth-arm-safe) ---
+(defn tb-drop (n xs) (if (eq n 0) xs (tb-drop (sub n 1) (tail xs))))
+(defn tb-take (n xs) (if (eq n 0) (empty) (cons (head xs) (tb-take (sub n 1) (tail xs)))))
+(defn tb-vslice (xs start len) (tb-take len (tb-drop start xs)))
+(defn tb-cat (a b) (if (eq (len a) 0) b (cons (head a) (tb-cat (tail a) b))))
+
+; extract head h (width hd) from every position-vector of a sequence.
+(defn tb-seq-headslice (sq h hd)
+  (if (eq (len sq) 0) (empty)
+      (cons (tb-vslice (head sq) (mul h hd) hd) (tb-seq-headslice (tail sq) h hd))))
+
+; --- multi-head attention over projected q/k/v sequences ---
+; head h's context sequence: attention within that head's hd-wide slice, own √hd scale.
+(defn tb-mh-head (qs ks vs h hd scale)
+  (tb-attn-seq (tb-seq-headslice qs h hd) (tb-seq-headslice ks h hd) (tb-seq-headslice vs h hd) scale))
+; concatenate two sequences position-wise (head outputs joined back toward d_model).
+(defn tb-seq-cat (a b)
+  (if (eq (len a) 0) (empty) (cons (tb-cat (head a) (head b)) (tb-seq-cat (tail a) (tail b)))))
+; heads h..n-1 concatenated: head h ++ (head h+1 ++ ...).
+(defn tb-mh-loop (qs ks vs h n hd scale)
+  (if (eq h (sub n 1))
+      (tb-mh-head qs ks vs h hd scale)
+      (tb-seq-cat (tb-mh-head qs ks vs h hd scale) (tb-mh-loop qs ks vs (add h 1) n hd scale))))
+(defn tb-mh-attn (qs ks vs n hd scale) (tb-mh-loop qs ks vs 0 n hd scale))
+
+; --- the multi-head attention sub-block (pre-LN + residual) and the full block ---
+(defn tb-mh-attn-sub (lns wq bq wk bk wv bv wo bo n hd scale)
+  (tb-proj-seq wo bo
+    (tb-mh-attn (tb-proj-seq wq bq lns) (tb-proj-seq wk bk lns) (tb-proj-seq wv bv lns) n hd scale)))
+(defn tb-mh-attn-block (xs eps g1 be1 wq bq wk bk wv bv wo bo n hd scale)
+  (tb-add-seq xs (tb-mh-attn-sub (tb-ln-seq xs eps g1 be1) wq bq wk bk wv bv wo bo n hd scale)))
+(defn tb-mh-block (xs eps g1 be1 wq bq wk bk wv bv wo bo n hd scale g2 be2 w1 c1 w2 c2)
+  (tb-ffn-block (tb-mh-attn-block xs eps g1 be1 wq bq wk bk wv bv wo bo n hd scale) eps g2 be2 w1 c1 w2 c2))
+
+; --- the encoder as a SEQUENCE of blocks (the dynamic-recipe advantage) ---
+; a layer's weights are one list: (g1 be1 wq bq wk bk wv bv wo bo g2 be2 w1 b1 w2 b2).
+; n/hd/scale are shared across the stack (whisper-tiny: 4 layers, n=6, hd=64).
+(defn tb-enc-layer (xs eps n hd scale L)
+  (tb-mh-block xs eps (nth L 0) (nth L 1) (nth L 2) (nth L 3) (nth L 4) (nth L 5)
+               (nth L 6) (nth L 7) (nth L 8) (nth L 9) n hd scale
+               (nth L 10) (nth L 11) (nth L 12) (nth L 13) (nth L 14) (nth L 15)))
+(defn tb-enc-stack (xs eps n hd scale layers)
+  (if (eq (len layers) 0) xs
+      (tb-enc-stack (tb-enc-layer xs eps n hd scale (head layers)) eps n hd scale (tail layers))))
