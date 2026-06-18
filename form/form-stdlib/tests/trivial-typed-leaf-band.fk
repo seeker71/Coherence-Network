@@ -1,0 +1,27 @@
+; trivial-typed-leaf-band.fk — the typed trivial leaves the four kernels carry
+; natively, proven in isolation so a primitive regression points here first.
+;
+; intern_trivial_bool interns a TrivBool leaf (type 3) whose inst is the bit;
+; intern_trivial_float parses its source text into a boxed f64 leaf (type 7).
+; node_value reads each leaf's stored value back, and int_to_str renders it —
+; true/false for the bool sentinels, %.15g for the float — which is the codec
+; door json (json-node-bool / json-node-float-text) and the transformer numerics
+; lean on. The verdict lights one bit per claim:
+;   node_type bool is 3                    → 1
+;   node_inst true is 1                    → 10
+;   node_inst false is 0                   → 100
+;   node_value true renders "true"         → 1000
+;   node_value false renders "false"       → 10000
+;   node_type float is 7                   → 100000
+;   node_value 0.5 renders "0.5"           → 1000000
+(do
+    (let bt (intern_trivial_bool true))
+    (let bf (intern_trivial_bool false))
+    (let ff (intern_trivial_float "0.5"))
+    (add (mul (if (eq (node_type bt) 3) 1 0) 1)
+    (add (mul (if (eq (node_inst bt) 1) 1 0) 10)
+    (add (mul (if (eq (node_inst bf) 0) 1 0) 100)
+    (add (mul (if (str_eq (int_to_str (node_value bt)) "true") 1 0) 1000)
+    (add (mul (if (str_eq (int_to_str (node_value bf)) "false") 1 0) 10000)
+    (add (mul (if (eq (node_type ff) 7) 1 0) 100000)
+         (mul (if (str_eq (int_to_str (node_value ff)) "0.5") 1 0) 1000000))))))))
