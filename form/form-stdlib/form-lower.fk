@@ -178,6 +178,21 @@
             (fa-svc 128)        ; svc #0x80 : close(x0=fd)
             (fa-mov 0 4))))     ; x0 = nread (return value)
 
+    ; CALLCONV (the general multi-arg calling convention): place N args in w0..w7 in
+    ; order, over a stack frame, then bl the target. lo-marshal is GENERAL — it moves a
+    ; list of source registers into w0, w1, w2, ... by recursion, so any arity (up to the
+    ; 8 argument registers) lowers without per-arity code. The frame is ll-buffer's own
+    ; alloc/free (sub/add sp), so the calling convention composes the memory model the
+    ; lever already proved — one engine, not a parallel path.
+    (defn lo-marshal (srcs i)
+        (if (eq (len srcs) 0) (list)
+            (lo-app (fa-mov i (head srcs)) (lo-marshal (tail srcs) (add i 1)))))
+    (defn lo-callconv (srcs off n)
+        (lo-app (fa-sub-x-imm 31 31 n)        ; ll-alloc(n): open the call frame
+        (lo-app (lo-marshal srcs 0)           ; args -> w0..w<len-1> (the convention)
+        (lo-app (fa-bl off)                   ; bl target
+                (fa-add-x-imm 31 31 n)))))     ; ll-free(n): close the frame
+
     ; compile a whole function: lower the root, then return
     (defn lo-compile (prog root) (lo-app (lo-node prog root 1) (fa-ret)))
     ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
