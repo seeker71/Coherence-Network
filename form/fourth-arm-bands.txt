@@ -28,9 +28,11 @@
 # The standing walls (what keeps a band out today, by blocked-band count):
 #   remaining node/substrate family — generated bp table parity beyond the
 #     current literal registry floor, the symbol wire sibling constructor,
-#     field constructors, float NodeIDs, and deeper content-addressed lattice
-#     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
-#     projection, and generic/doc/concept/dns/session floor
+#     field constructors, the float-NodeID read-back (float_value / make_float64),
+#     and deeper content-addressed lattice surfaces beyond the explicit
+#     make_nodeid, the trivial typed leaves (int/bool/float),
+#     category/pkg/level/type/inst projection, and generic/doc/concept/dns/session
+#     floor
 #   host io family        — broader source-scan recipes.
 #     Full floor/north-star for this arc:
 #     docs/coherence-substrate/fourth-arm-substrate-carriers.form
@@ -58,6 +60,18 @@
 #     was the standing shim: map/filter/foldl/foldr (and even?/odd?/zero?)
 #     are now carried as the EXACT generic recipes core.fk runs, so a band
 #     reaching them resolves ordinary function rows that walk through tag 44.
+#   trivial typed leaves   — intern_trivial_bool (TrivBool, type 3; inst the bit)
+#     and intern_trivial_float (TrivFloat64, type 7; an f64 parsed from its source
+#     text) now CROSS four-way. The walk arms intern the typed leaf, node_value
+#     reads its stored value back, and int_to_str renders it (true/false for the
+#     bool sentinels, %.15g for the float) — the codec door json-node-bool /
+#     json-node-float-text ride. The missing piece was the fkc-flat serializer:
+#     it carried intern_trivial_int (tag 43) but not 112/113, so they fell to the
+#     binary fallback and read a second child that wasn't there (as_nid: null),
+#     crashing the flatten of every json.fk-preluded band before fkwu ever ran.
+#     Adding the two unary serializer rows beside tag 43 unblocked them:
+#     trivial-typed-leaf 1111111, json-codec-bml 8191, json-meaning-ingestion 1000,
+#     whisper-block0 1023.
 #
 # Current floor (2026-06-14 content-address + sibling-node floor): the admitted
 # manifest carries content-address, durable substrate-core, and the doc-xpath,
@@ -65,8 +79,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 238
-# four-way bands and 620 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 364
+# four-way bands and 740 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -607,3 +621,7 @@ storage-keys fks 7
 replica-merge fks 15
 replica-serve fks 7
 form-lower-writefile fkc 15
+trivial-typed-leaf fks 1111111
+json-codec-bml fks 8191
+whisper-block0 fks 1023
+json-meaning-ingestion fks 1000
