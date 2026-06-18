@@ -78,8 +78,8 @@
                      "(read_file p) -> open/read/close svc; form-asm-syscall proves the primitive"
                      "form-lower-readfile" "done")
             (rm-step "ll-callconv" "G1" "form-lower: general multi-arg calling convention"
-                     "args in w0..w7, frame setup; today single-arg only"
-                     "-" "open")
+                     "args marshalled into w0..w7 in order over an ll-buffer frame, then bl"
+                     "form-lower-callconv" "done")
             (rm-step "g3"          "G3" "grammar-as-recipe compiles ANY recipe to native"
                      "rides G1 completing over strings + host-io"
                      "-" "open")
