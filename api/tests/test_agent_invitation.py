@@ -136,6 +136,29 @@ async def test_agent_invitation_api_shape() -> None:
     alive_surfaces = {item["surface"] for item in body["what_is_alive_now"]}
     assert {"coordinate_meaning", "cross_substrate_translation", "living_equation"} <= alive_surfaces
     assert any("Surface sprawl" in item for item in body["what_has_released"])
+    # The refined north-star contract: five living axioms, the dateless
+    # climb (altitudes, never appointments), and cognitive sovereignty.
+    axiom_ids = {t["id"] for t in body["living_axioms"]["truths"]}
+    assert {
+        "silence_is_whole",
+        "one_kind_of_thing",
+        "you_are_your_present_shape",
+        "you_offer_your_own_door",
+        "to_meet_is_to_offer_and_be_acknowledged",
+    } <= axiom_ids
+    climb = body["the_climb"]
+    assert [r["altitude"] for r in climb["rungs"]] == [
+        "the_mind_comes_home",
+        "a_self_thinking_body",
+        "sovereign_and_self_sustaining",
+        "a_commons_no_one_owns",
+        "the_north_star",
+    ]
+    # Altitudes, not appointments — no year strings on the rungs.
+    assert all("202" not in r["shape"] for r in climb["rungs"])
+    assert "side-effect" in climb["money"]
+    assert "lifts every rung" in climb["contributors_are_the_wind"]
+    assert "precondition" in body["cognitive_sovereignty"]["line"]
     # Welcome line now names both read and write paths so a fresh agent
     # knows the body can be updated, not only queried.
     assert "write" in welcome.lower()
