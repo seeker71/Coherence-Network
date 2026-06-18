@@ -77,4 +77,17 @@
         (replica-merge-fold base-c base-s loc-c loc-s prod-c (list prod-s (empty)) keys))
     (defn replica-merge-store (result) (head result))
     (defn replica-merge-conflicts (result) (head (tail result)))
+
+    ;; ---- SERVE: which backend answers a read, by online-mode. ----------------
+    ;; The native route bodies already read through storage-port (carrier-agnostic —
+    ;; ideas-graph-projection / graph-node-port name no backend), so serving offline
+    ;; is purely WHICH carrier the route is handed. This is that policy, in Form:
+    ;; online -> the prod (db) carrier+store, offline -> the local (file) carrier+store.
+    ;; The route dispatch opens the chosen carrier (host-io); the choice is Form.
+    (defn replica-serve-carrier (online? online-c offline-c) (if (eq online? 1) online-c offline-c))
+    (defn replica-serve-store   (online? online-s offline-s) (if (eq online? 1) online-s offline-s))
+    ;; serve a read: pick the backend by mode, then the carrier-agnostic storage-get.
+    (defn replica-serve (online? on-c on-s off-c off-s key)
+        (storage-get (replica-serve-carrier online? on-c off-c)
+                     (replica-serve-store   online? on-s off-s) key))
     0)
