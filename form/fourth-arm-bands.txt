@@ -348,6 +348,7 @@ transformer-backprop-ffn fks 63
 transformer-backprop-softmax-ln fks 31
 transformer-block-backward fks 31
 transformer-block-assembly fks 63
+transformer-corpus-train fks 31
 llama-numerics fks 4095
 rope fks 4095
 geometric-learning fks 8388607
