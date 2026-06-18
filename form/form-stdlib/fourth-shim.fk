@@ -145,4 +145,12 @@
         (and (gt (len rec) 0) (eq (head (head rec)) (sub 0 1))))
     (defn record_blueprint (rec)
         (if (record? rec) (head (tail (head rec))) 0))
+    ; intern_node_at — the content-addressed intern plus source attribution.
+    ; The returned NodeID is exactly intern_node(cat, kids): file/line/col feed
+    ; the framebuffer side-map only (an observer-side trace), never the verdict a
+    ; band computes. fkwu carries no framebuffer and answers one value, so the
+    ; faithful image on the fourth arm is the carried intern_node (tag 47) over
+    ; (cat, kids), with the attribution parameters held in the frame, read by
+    ; nothing. A grammar's parse produces the same recipe tree on all four arms.
+    (defn intern_node_at (cat kids file line col) (intern_node cat kids))
     0)
