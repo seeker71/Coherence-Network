@@ -628,3 +628,4 @@ trivial-typed-leaf fks 1111111
 json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
+form-cli fks 31

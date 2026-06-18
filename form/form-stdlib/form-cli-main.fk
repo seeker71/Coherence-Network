@@ -1,0 +1,27 @@
+; form-cli-main.fk — the native form-cli runtime entry on the emitted walker (fkwu).
+;
+; The HEADLESS front door: the command arrives staged in fk_src (fkwu's argv[3], or
+; the persistent fkwu-server's per-request buffer — see form-kernel-go/fkwu_bridge.go).
+; fc-read walks it byte-by-byte via input_byte (walker tag 17), and the dispatch
+; (fc-respond, four-way proven by tests/form-cli-band.fk) returns the response
+; string, which fkwu prints natively through fk_pv_root/fk_psv.
+;
+; This entry is fkwu-native: input_byte is the staged-input op the emitted walker
+; carries (tag 17); it is not registered in the three host walkers, so this runs on
+; the emitted kernel — the native form-cli exe — not on Go/Rust/TS. The dispatch it
+; calls (form-cli.fk) is the four-way-proven shared brain. Interactive TTY (a
+; read-line loop + isatty prompt) wraps this same dispatch once those host-io ops
+; land in the emitter (host-io family).
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
+
+(do
+    ; read the command from fk_src: input_byte i -> the i-th byte, stop at NUL/newline.
+    (defn fc-read (i acc)
+        (do (let b (input_byte i))
+            (if (eq b 0) acc
+                (if (eq b 10) acc
+                    (fc-read (add i 1) (str_concat acc (byte_to_str b)))))))
+    (defn fc-command () (fc-read 0 ""))
+
+    (fc-respond (fc-command)))
