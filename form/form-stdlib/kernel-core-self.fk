@@ -3,6 +3,22 @@
 ; The BML source remains the authority. This file is a small Form compiler
 ; surface that parses the source, reads executable count methods from the
 ; source model, and emits the KERNEL-CORE-IMAGE as a compiler-object value.
+;
+; Proven by: form-stdlib/tests/kernel-core-self-proof.fk (verdict 43) and
+;           form-stdlib/tests/kernel-core-image-compiler-proof.fk (verdict 34)
+;           — three-way at validate.sh (Go/Rust/TS).
+; Fourth arm: 3-kernel only — this surface rests on three op families the
+;           fourth arm (fkwu) does not carry: the broad source-scan host-io
+;           that reads and parses the BML source (bml-source-file-parse-
+;           declarations and the bml-model/bml-class readers), walk_recipe and
+;           native_blueprint (executing and observing interned recipe nodes),
+;           and the .fkb image pair write_form_binary / read_form_binary
+;           (host-io binary image). fkwu lowers each to its literal-0 fallback,
+;           so it cannot answer the proof — an unsupported op family, named
+;           here, not a divergence. The proofs use the *-proof.fk convention,
+;           so they sit outside the fourth-arm *-band.fk test harness as well;
+;           the surface crosses when source-scan, walk_recipe/native_blueprint,
+;           and the form-binary carrier join the fourth arm.
 
 (do
     (defn kernel-core-source-path (_x)
