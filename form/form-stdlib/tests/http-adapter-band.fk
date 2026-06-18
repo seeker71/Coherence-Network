@@ -1,5 +1,5 @@
 ; tests/http-adapter-band.fk — sibling-witness band for http-adapter.fk.
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-adapter.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-adapter.fk
 ;
 ; Proves the adapter that brings parity-proven alist handlers into kh-serve: a
 ; kh-request's query becomes the (name value) alist param_or/assoc read, and a

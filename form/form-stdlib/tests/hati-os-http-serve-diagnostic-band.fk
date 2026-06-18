@@ -1,4 +1,4 @@
-; preludes: form-stdlib/http-parse.fk form-stdlib/http-serve.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-serve.fk
 ;
 ; hati-os-http-serve-diagnostic-band — a narrow witness for the Hati-OS universal
 ; HTTP gap. The wide http-serve-band proves the full surface (1023) across the
