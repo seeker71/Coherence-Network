@@ -1,0 +1,107 @@
+; form-cli.fk — the ONE native Form front-door for the form-cli.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-predict.fk form-stdlib/form-cli-score.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-review-gap.fk
+;
+; The form-cli LOGIC is eleven proven Form recipes (predict, score, judge,
+; review-gap, router, loop, model, sample, membrane, guide, gaps). This recipe is
+; the FRONT DOOR over them, native: it reads the command STRING, splits off the
+; subcommand with string ops (str_find / substring / str_len — already native),
+; and dispatches to the matching logic recipe. The logic is COMPOSED — fcli-* calls
+; fcp-* / fcsc-* / fcj-* / frg-* directly. The host-io-gated subcommands keep their
+; own carriers (the standing wall below); the pure-compute lanes route through here.
+;
+; ── what migrates here now (the spine — pure compute over passed-in data, needs
+;    NO new host-IO op) ──
+;   eval        — return a passed Form expression result (the identity door: the
+;                 dispatcher proves the command string reached the right lane)
+;   predict     — fcp-* over passed base-rates + boost triggers + a task's keywords
+;   score       — fcsc-* over passed (agent-tools, native-tools) trials
+;   judge       — fcj-* over passed judge scores (0..100) at a threshold
+;   review-gap  — frg-* over passed internal/oracle score pairs at a tolerance
+;
+; ── the host-io family standing wall — subcommands that CANNOT migrate yet (and
+;    why), so this is named honestly, never faked ──
+;   ask / rag   — need native HTTP POST to reach ollama; the kernel's http_get is
+;                 GET-only. They migrate when an http_post host-io op lands.
+;   gaps        — the FULL source-walk variant needs native directory-scan to
+;                 enumerate the source tree; gaps' pure tally logic (form-cli-gaps.fk)
+;                 is already four-way, but feeding it the live tree needs the scan op.
+;   ingest      — needs native directory-scan for the same reason.
+;   Both are the "host-io family" standing wall named in form/fourth-arm-bands.txt.
+;
+; ── the one remaining carrier ──
+;   A high-level Form recipe reads its command via a passed STRING argument; the
+;   kernel's fk-buf (argv[3] -> fk_src, tag 17) is the low-level BMF cursor, not yet
+;   reachable from the defn grammar. So ONE thin generic stager
+;   (scripts/form_cli_native.sh) stages argv -> a string literal -> this recipe. That
+;   stager is the only carrier left for the migrated subcommands, until the kernel
+;   reads argv-as-strings natively at the high-grammar level.
+;
+; Proven by: form-stdlib/tests/form-cli-band.fk (four-way at validate.sh).
+
+; ── command-string tokenizing (string ops only — already four-way native) ──
+
+; index of the first space in s at or after `from`, or str_len when none (so the
+; whole tail is one token). One door, used by both subcommand and arg splits.
+(defn fcli-space-at (s from)
+    (if (eq (str_find s " " from) (sub 0 1)) (str_len s) (str_find s " " from)))
+
+; the first whitespace-delimited token of a command string (the subcommand).
+(defn fcli-head-token (s) (substring s 0 (fcli-space-at s 0)))
+
+; everything AFTER the first token + its trailing space (the argument tail). When
+; there is no space the tail is empty.
+(defn fcli-arg-tail (s)
+    (if (eq (fcli-space-at s 0) (str_len s)) ""
+        (substring s (add (fcli-space-at s 0) 1) (str_len s))))
+
+; does the command string name this subcommand? (head token equals the name)
+(defn fcli-is? (cmdline name) (str_eq (fcli-head-token cmdline) name))
+
+; ── the per-subcommand lanes (each COMPOSES the existing logic recipe) ──
+
+; eval — the identity lane: the dispatcher proves a command reached the right lane
+; by returning the value the lane was handed. (Pure compute, no parse step needed:
+; the staged program binds the value; this lane returns it.)
+(defn fcli-eval (value) value)
+
+; predict — does the corpus-learned model predict `tool` for a task with these
+; keywords? (composes form-cli-predict.fk's fcp-predicted?)
+(defn fcli-predict (base boosts task-keywords tool threshold amt)
+    (fcp-predicted? base boosts task-keywords tool threshold amt))
+
+; score — does the native prediction match the agent on this (agent, native) trial?
+; (composes form-cli-score.fk's fcsc-match?)
+(defn fcli-score (agent-tools native-tools)
+    (fcsc-match? agent-tools native-tools))
+
+; judge — how many native answers pass the reasoning bar? (composes fcj-passed)
+(defn fcli-judge (scores threshold) (fcj-passed scores threshold))
+
+; review-gap — has the internal review converged to the oracle's within tolerance?
+; (composes form-cli-review-gap.fk's frg-converged?)
+(defn fcli-review-gap (internal oracle tol) (frg-converged? internal oracle tol))
+
+; ── THE dispatcher: route a command string to its lane ──
+;
+; The command string's FIRST token is the subcommand; the lane args are passed
+; alongside (the stager turns argv into both). This returns the verdict the routed
+; lane computes — so a hardcoded command string makes the route deterministic and
+; band-able. A command naming no known migrated lane returns -1 (the honest "not a
+; native lane here" — e.g. ask/rag/gaps/ingest live behind the host-io wall).
+;
+; The args bundle is a list whose shape is per-lane (the stager builds it):
+;   predict     (base boosts task-keywords tool threshold amt)
+;   score       (agent-tools native-tools)
+;   judge       (scores threshold)
+;   review-gap  (internal oracle tol)
+;   eval        (value)
+(defn fcli-dispatch (cmdline args)
+    (if (fcli-is? cmdline "eval")       (fcli-eval (nth args 0))
+    (if (fcli-is? cmdline "predict")    (fcli-predict (nth args 0) (nth args 1) (nth args 2) (nth args 3) (nth args 4) (nth args 5))
+    (if (fcli-is? cmdline "score")      (fcli-score (nth args 0) (nth args 1))
+    (if (fcli-is? cmdline "judge")      (fcli-judge (nth args 0) (nth args 1))
+    (if (fcli-is? cmdline "review-gap") (fcli-review-gap (nth args 0) (nth args 1) (nth args 2))
+        (sub 0 1)))))))
+
+0
