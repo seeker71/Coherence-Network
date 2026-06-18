@@ -364,6 +364,17 @@
 ;        is this recipe walked — speed is M5's JIT stone, not a new shape. Remaining for M6: safetensors
 ;        carrier + block-0 activation match — and the reference teacher is now a LOCAL oracle on this host
 ;        (whisper.cpp / whisper-cli, on-device, Metal+BLAS), not a cloud HF pull. See oracle-catalog.fk.]
+;        [FORWARD-PASS EXTENSION SHIPPED: the whole whisper-tiny ARCHITECTURE now runs in Form, each piece
+;        proven against the numpy/fp64 reference at tiny dims — multi-head self-attention + encoder stack
+;        (transformer-mh.fk, max|Δ| 4e-16 over a 4-layer stack); the decoder block — causal masked
+;        self-attention + cross-attention + FFN + stack (transformer-decoder.fk, max|Δ| 2e-16, and the
+;        causal mask proven genuinely causal: a future token moves position-0 output by exactly 0.0); and
+;        the greedy autoregressive loop — embed+positional → decoder → layernorm_post → tied-embedding
+;        logits → argmax → feed back (transformer-generate.fk, EXACT token-id-sequence parity). Bands:
+;        tests/transformer-{mh,decoder,generate}-band.fk, three-way (the fkwu float-band gap is the same
+;        named host-io/node-family limitation as mel-frame). Remaining to a real transcript: real
+;        d_model=384 weights via M5's JIT, conv stem + full 80×3000 mel, sinusoidal/learned positionals,
+;        BPE tokenizer.]
 ;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
 ;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
 ;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what
