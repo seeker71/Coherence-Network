@@ -592,3 +592,10 @@ form-os-channel fks 111111
 tool-channel-grammar fks 255
 bml-capability-ledger fks 255
 form-lower-readfile fkc 15
+learning-style-space fks 4095
+arch-capacity fks 31
+arch-gen fks 31
+arch-type fks 31
+arch-search fks 31
+arch-joint fks 31
+moe-router fks 127
