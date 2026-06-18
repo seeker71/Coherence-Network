@@ -1,0 +1,44 @@
+{
+  "date": "2026-06-18",
+  "brick": "llama-block.fk — one real llama-shaped decoder block as proven Form, four-way",
+  "north_star_track": "device-native / model-as-recipe: the fp64 ALGORITHM floor under running a real llama block on the M4 GPU, next to the whisper block already on the GPU (brick 3m)",
+  "what": "Composed the already-four-way llama numerics (RMSNorm, RoPE, SwiGLU/SiLU) with the transformer-block dot/matvec/attention/residual walks into ONE real llama-shaped decoder block, and proved it four-way against an independent libm fp64 reference. This is the recipe tk-emit-llama only ever emitted as C (three-way); it had never been a standalone proven Form recipe. It is the missing fp64 floor the llama GPU kernel will mirror, exactly as transformer-block.fk's tb-block (511) backs the whisper GPU kernel (jte-block-fwd-msl, 3m).",
+  "block": "n1 = RMSNorm1(x); h = x + Wo·attn(RoPE(Wq·n1), RoPE(Wk·n1), Wv·n1, scale); n2 = RMSNorm2(h); y = h + Wdown·SwiGLU(Wgate·n2, Wup·n2). Bias-free projections (llama), position = absolute token index, scale = 1/sqrt(dq).",
+  "composed_from_four_way_recipes": [
+    "ln-rmsnorm, ln-swiglu, ln-silu (llama-numerics.fk, band 4095)",
+    "rope (rope.fk, band 4095) over trig.fk fsin/fcos/fpow",
+    "tb-dot / tb-matvec / tb-attn-seq / tb-add-seq / tb-scores (transformer-block.fk, band 511)"
+  ],
+  "recipe": "form/form-stdlib/llama-block.fk",
+  "band": "form/form-stdlib/tests/llama-block-band.fk",
+  "manifest_row": "llama-block fks 4095 (form/fourth-arm-bands.txt)",
+  "reference": "independent pure-libm fp64 (math.exp/sin/cos/sqrt) — RMSNorm1 -> q/k/v proj (bias-free) -> RoPE(q),RoPE(k) by token position -> softmax(q·kT·scale)-weighted v -> residual -> RMSNorm2 -> Wdown·(silu(Wgate·n2)·(Wup·n2)) -> residual. S=2 tokens, d=4, dq=dv=4, HD=4 (single head), FFN hidden 4. Every weight non-trivial. Each claim a libm value rounded at 1e-6.",
+  "claims_4095": {
+    "1_alpha00": 394953,
+    "2_alpha0_sum": 1000000,
+    "4_h00": 962606,
+    "8_h12": 1806845,
+    "16_y00": 1115890,
+    "32_y01": -492135,
+    "64_y03": 1846721,
+    "128_y10": -1069281,
+    "256_y12": 1648117,
+    "512_y13": -1118617,
+    "1024_scale": 500000,
+    "2048_qr10": 185718
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/tests/llama-block-band.fk",
+    "verdict": 4095,
+    "kernels": "Go + Rust + TypeScript + fkwu",
+    "fourth_arm": "1 band(s) four-way (fkwu + pre-flattened tables)",
+    "divergent": 0
+  },
+  "non_causal_note": "Attention is non-causal here, matching tb-block's whisper attention and the jte-blk-attn GPU walk this block's GPU emit will reuse. The causal decoder mask is a named orthogonal follow-up (a per-query key-prefix, no numeric change).",
+  "named_next_stones": [
+    "emit lblk-block to Metal (jte-llama-block-fwd-msl) next to the whisper block and run on the M4 GPU with an fp32 CPU-mirror parity gate, as brick 3m did for the whisper block",
+    "run the llama block forward over REAL llama3.2:3b GGUF weights (the load path q4k/q6k/f16 dequant is already Form-native, four-way)",
+    "add the causal mask (decoder attention)"
+  ],
+  "lesson": "Read-the-body found the exact gap: the llama numerics (RMSNorm/RoPE/SwiGLU) were already four-way standalone (3p/3q) but NEVER composed into a block; tk-emit-llama only emitted the whole llama as C. Core-abstraction-first composition of proven recipes; design (the block shape + the libm reference + fixtures) was the cost, the four-way proof was seconds."
+}
