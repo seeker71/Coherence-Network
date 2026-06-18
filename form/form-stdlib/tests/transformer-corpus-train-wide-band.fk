@@ -1,0 +1,74 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/transformer-corpus-train.fk
+;
+; transformer-corpus-train-wide-band — the SAME corpus-train recipe, WIDER.
+;
+; transformer-corpus-train-band proves the 2→2→2 floor; this proves the recipe
+; is DIMENSION-GENERIC at width 4. tbp-bk / tbp-stack-step / tct-train-blocks /
+; tct-corpus-loss are unchanged — every op (tb-matvec, tb-affine, tn-layernorm,
+; tbp-dx, tbp-outer) folds over list length, so at width 4 the matrices are 4×4
+; and the vectors are 4-wide; ZERO new logic, only a 4-dim fixture.
+;
+; The fixture is the carrier's real signal SHAPE: x = [task-length-norm, code-word,
+; has-path-token, question-mark], t = [Read-used, Edit-used, Bash-used, Write-used]
+; — the oracle's full tool-usage vector. Six examples train, two are held out. The
+; two-block residual stack folds tbp-stack-step over the corpus for 20 then 60
+; epochs. Loss ×1e6 rounded to integers, so all four kernels compare byte-for-byte.
+; Measured (Go, deterministic): train 13.964 → 2.122 → 1.034, held-out 4.808 → 0.431
+; — it learns the wider signal and carries it to UNSEEN turns.
+;
+; A wider stack boxes far more floats per epoch (4×4 matrices, six examples), so this
+; is also the real exercise of fkwu's grown-on-demand float pool at width.
+;
+; Verdict 31:
+;   1    the untrained wide stack carries real corpus loss (l0 > 0)
+;   2    training over the corpus lowers it (l20 < l0)
+;   4    and keeps lowering it past the first phase (l60 < l20)
+;   8    it GENERALIZES — held-out loss falls too (h60 < h0), not memorization
+;   16   substantial — training cut corpus loss to under a quarter (4·l60 < l0)
+(do
+    ; two 4×4 residual blocks — small structured init, the proven-shape pattern at width 4.
+    (let ba (tbp-bk
+        (list (list 0.30 -0.20 0.10 0.05) (list 0.10 0.40 -0.15 0.20)
+              (list -0.05 0.25 0.35 -0.10) (list 0.15 -0.30 0.20 0.30))
+        (list 0.0 0.0 0.0 0.0)
+        (list (list 0.50 0.20 -0.10 0.15) (list -0.30 0.60 0.25 -0.05)
+              (list 0.10 -0.20 0.45 0.30) (list 0.20 0.35 -0.25 0.40))
+        (list 0.0 0.0 0.0 0.0)))
+    (let bb (tbp-bk
+        (list (list 0.20 0.10 -0.05 0.15) (list -0.10 0.30 0.20 -0.15)
+              (list 0.25 -0.20 0.35 0.10) (list -0.05 0.15 -0.10 0.40))
+        (list 0.0 0.0 0.0 0.0)
+        (list (list 0.40 -0.20 0.15 -0.10) (list 0.30 0.50 -0.25 0.20)
+              (list -0.15 0.25 0.45 0.10) (list 0.20 -0.10 0.30 0.35))
+        (list 0.0 0.0 0.0 0.0)))
+    ; corpus: x = [task-len-norm, code-word, has-path, question-mark]  →  t = [Read Edit Bash Write]
+    (let train (list
+        (list (list 0.80 1.0 1.0 0.0) (list 1.0 1.0 0.0 0.0))
+        (list (list 0.30 0.0 0.0 1.0) (list 1.0 0.0 0.0 0.0))
+        (list (list 0.95 1.0 1.0 0.0) (list 1.0 1.0 1.0 1.0))
+        (list (list 0.50 1.0 0.0 0.0) (list 1.0 0.0 1.0 0.0))
+        (list (list 0.20 0.0 0.0 1.0) (list 0.0 0.0 0.0 0.0))
+        (list (list 0.70 1.0 1.0 1.0) (list 1.0 1.0 0.0 1.0))))
+    (let held (list
+        (list (list 0.60 1.0 1.0 0.0) (list 1.0 1.0 0.0 0.0))
+        (list (list 0.25 0.0 0.0 1.0) (list 1.0 0.0 0.0 0.0))))
+    (let eps 0.00001)
+    (let lr 0.03)
+
+    (let s0  (list ba bb))
+    (let s20 (tct-train-blocks ba bb train lr eps 20))
+    (let s60 (tct-train-blocks ba bb train lr eps 60))
+
+    (let l0  (round (mul (tct-corpus-loss s0  train eps) 1000000.0)))
+    (let l20 (round (mul (tct-corpus-loss s20 train eps) 1000000.0)))
+    (let l60 (round (mul (tct-corpus-loss s60 train eps) 1000000.0)))
+    (let h0  (round (mul (tct-corpus-loss s0  held eps) 1000000.0)))
+    (let h60 (round (mul (tct-corpus-loss s60 held eps) 1000000.0)))
+
+    (let c0 (if (gt l0 0) 1 0))
+    (let c1 (if (lt l20 l0) 2 0))
+    (let c2 (if (lt l60 l20) 4 0))
+    (let c3 (if (lt h60 h0) 8 0))
+    (let c4 (if (lt (add l60 (add l60 (add l60 l60))) l0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
