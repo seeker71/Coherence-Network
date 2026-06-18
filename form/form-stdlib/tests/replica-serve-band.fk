@@ -1,0 +1,26 @@
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/replica.fk
+;
+; replica-serve-band — the offline replica's SERVE policy: a read is answered from
+; prod when online, from the local store when offline, through the carrier-agnostic
+; port. The native route bodies (ideas-graph-projection fks 11111, graph-node-port
+; fks 11111) are ALREADY carrier-agnostic and four-way, so serving offline is purely
+; which carrier the route is handed — this proves that choice. The route dispatch
+; opens the chosen carrier (host-io); the policy is Form.
+;
+; Verdict 7 when the serve-swap is correct:
+;   1   ONLINE serves prod — the read returns the prod store's value
+;   2   OFFLINE serves local — the read returns the local store's value
+;   4   the SAME key reads differently by mode (the swap actually selects the backend)
+(do
+    (let mem (carrier-memory))
+    (let prod  (storage-put mem (storage-open mem 0) "idea:alpha" "PROD"))
+    (let local (storage-put mem (storage-open mem 0) "idea:alpha" "LOCAL"))
+
+    (let online  (replica-serve 1 mem prod mem local "idea:alpha"))
+    (let offline (replica-serve 0 mem prod mem local "idea:alpha"))
+
+    (let c0 (if (str_eq (storage-value online)  "PROD")  1 0))
+    (let c1 (if (str_eq (storage-value offline) "LOCAL") 2 0))
+    (let c2 (if (eq (str_eq (storage-value online) (storage-value offline)) 0) 4 0))
+
+    (add c0 (add c1 c2)))
