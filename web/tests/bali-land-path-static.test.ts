@@ -33,19 +33,16 @@ describe("Bali land design path", () => {
     }
   });
 
-  it("renders the registered entry path from home and come-in", () => {
+  it("is de-surfaced from home and come-in (composted with /silence and /one-sheet)", () => {
     const homeSource = readFileSync(join(root, "app/page.tsx"), "utf8");
     const comeInSource = readFileSync(join(root, "app/come-in/page.tsx"), "utf8");
 
-    expect(homeSource).toContain(
-      'getEntryPathForSurface("bali-living-compound", "home-ground")',
-    );
-    expect(comeInSource).toContain(
-      'getEntryPathForSurface("bali-living-compound", "come-in-explore")',
-    );
-    expect(comeInSource).toContain(
-      'getEntryPathForSurface("bali-living-compound", "come-in-doors")',
-    );
+    // The /silence/built land-design draft is part of /silence, so it was
+    // de-surfaced from the public doors along with the rest of /silence and
+    // /one-sheet. It lives at its own /silence/built page now — never as a
+    // card on home or come-in. This guards against it being re-surfaced.
+    expect(homeSource).not.toContain('getEntryPathForSurface("bali-living-compound"');
+    expect(comeInSource).not.toContain('getEntryPathForSurface("bali-living-compound"');
     expect(homeSource).not.toContain('href="/silence/built"');
     expect(comeInSource).not.toContain('href="/silence/built"');
   });
