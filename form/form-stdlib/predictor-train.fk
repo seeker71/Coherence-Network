@@ -29,7 +29,7 @@
 ; and let nearest-shape's max-select choose among them). pt-learn itself never refuses — it always grows; the
 ; novelty judgment lives in pt-learn-new?, which the caller consults, so the policy stays separable from the act.
 ;
-; Proven by: form-stdlib/tests/predictor-train-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/predictor-train-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ; a prototype: (list label feature-vector) — label at index 0, vector at index 1.

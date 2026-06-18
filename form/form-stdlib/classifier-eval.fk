@@ -10,7 +10,7 @@
 ; A pair = (list predicted actual): what the classifier said, what the label says, for one input.
 ; A set is a list of pairs — the held-out evaluation record. min-correct / max-wrong are the bar.
 ;
-; Proven by: tests/classifier-eval-band.fk (three-way at validate.sh)
+; Proven by: tests/classifier-eval-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     (defn ce-pred   (p) (nth p 0))   ; what the classifier predicted

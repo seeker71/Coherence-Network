@@ -12,7 +12,7 @@
 ; recall recipes over one substrate, not two stores.
 ;
 ; A memory = list of (key value) entries; mp-add cons's to the head so head = most recent.
-; Proven by: form-stdlib/tests/memory-phases-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/memory-phases-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     (defn mp-add (mem key value) (cons (list key value) mem))   ; a write — newest at the head

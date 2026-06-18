@@ -21,7 +21,7 @@
 ; max-select, stable replay). All votes, agreements, and quorums are integers 0..N (model count); no floats,
 ; no ratios — the quorum is a raw count, the same proven-count gate self-grounding-classifier.fk uses.
 ;
-; Proven by: form-stdlib/tests/predictor-sampling-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/predictor-sampling-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ; --- VOTES: how many of the sampled 3rd-party models named cand for this input (a tally over the sample). ---

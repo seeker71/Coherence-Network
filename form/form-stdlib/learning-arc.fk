@@ -25,7 +25,7 @@
 ; order-respecting: replay the same stream and the curve is identical — on Go, Rust, and TS (the
 ; nearest-shape parity IS the learning parity). No weights, no epochs: an exemplar set that grows once.
 ;
-; Composes: nearest-shape.fk (ns-label). Proven by: form-stdlib/tests/learning-arc-band.fk (three-way).
+; Composes: nearest-shape.fk (ns-label). Proven by: form-stdlib/tests/learning-arc-band.fk (four-way at validate.sh, incl. fkwu).
 
 (do
     (defn la-feature (sample) (nth sample 0))   ; the frame's feature-vector

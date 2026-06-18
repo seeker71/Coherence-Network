@@ -23,7 +23,7 @@
 ; five misses and the other by one — magnitude is the caller's lane, the direction is exact. A graded
 ; "how much faster is it learning" deviation score is a later brick; what is proven here is the sign.
 ;
-; Proven by: form-stdlib/tests/learning-trend-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/learning-trend-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ; --- RECENT: this window's miss count — the head of the most-recent-first list. ---

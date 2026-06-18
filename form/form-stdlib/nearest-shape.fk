@@ -24,7 +24,7 @@
 ; is the wrong primitive for raw continuous signal (quantize first, then recognize). Ties go to the
 ; FIRST-interned prototype (oldest exemplar wins) — recognition is stable under replay, not order-random.
 ;
-; Proven by: form-stdlib/tests/nearest-shape-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/nearest-shape-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ; a prototype: (list label feature-vector)

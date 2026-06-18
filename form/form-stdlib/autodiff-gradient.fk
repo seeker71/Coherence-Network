@@ -4,6 +4,8 @@
 ; reverse gradients for w and b. The receipt can feed optimizer-step.fk's
 ; fixed-point SGD/momentum vector. This is not a full autodiff tape, tensor
 ; backprop, Adam, or live training loop.
+;
+; Proven by: form-stdlib/tests/autodiff-gradient-cell-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     (defn ag-predict (w x b) (add (mul w x) b))

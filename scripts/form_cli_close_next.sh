@@ -15,12 +15,14 @@ CLOSED="$CN/closed.txt"; touch "$CLOSED"
 LOADED="$CN/loaded.txt"; touch "$LOADED"   # proven recipe basenames, accumulating native
 ORACLE="${1:-ollama run coder}"
 
-# the gap queue — fine closable units (the ll-buffer memory model, decomposed).
+# the gap queue — hand-seeded closable units (id|spec|assert|expected). The
+# ll-buffer memory model closed through this loop and now lives composed + four-way
+# in form-stdlib/ll-buffer.fk (ll-alloc(n)/ll-store(rt,off)/ll-load/ll-free + ll-buf);
+# its four atomic leaves are superseded by that model, not requeued. The hand-seed
+# is the bootstrap proof that the loop works end-to-end; the next rung is autonomous
+# gap-finding — the loop sourcing open gaps from form-cli-gaps.fk rather than this
+# literal list.
 queue() { cat <<'Q'
-ll-alloc16|(alloc16) returns the byte image for 'sub sp, sp, #16' by calling (fa-sub-x-imm 31 31 16). Output ONLY the recipe.|(fa-conviction (alloc16) (list 255 67 0 209))|1
-ll-store-w8|(store-w8) returns the byte image for 'str w8, [sp, #8]' by calling (fa-str-w 8 31 8). Output ONLY the recipe.|(fa-conviction (store-w8) (list 232 11 0 185))|1
-ll-load-w9|(load-w9) returns the byte image for 'ldr w9, [sp, #12]' by calling (fa-ldr-w 9 31 12). Output ONLY the recipe.|(fa-conviction (load-w9) (list 233 15 64 185))|1
-ll-free16|(free16) returns the byte image for 'add sp, sp, #16' by calling (fa-add-x-imm 31 31 16). Output ONLY the recipe.|(fa-conviction (free16) (list 255 67 0 145))|1
 Q
 }
 
@@ -30,7 +32,7 @@ while IFS='|' read -r id spec assert expected; do
     grep -qx "$id" "$CLOSED" && continue
     next="$id|$spec|$assert|$expected"; break
 done <<< "$(queue)"
-[ -n "$next" ] || { echo "── close-next: queue drained. $(grep -c . "$CLOSED") features loaded native (four-way). ──"; exit 0; }
+[ -n "$next" ] || { echo "── close-next: hand-seed drained. $(grep -c . "$CLOSED") features loaded native (four-way, 0 remote). Next rung: autonomous gap-finding from form-cli-gaps.fk. ──"; exit 0; }
 IFS='|' read -r id spec assert expected <<< "$next"
 
 prelude="form-asm.fk $(tr '\n' ' ' < "$LOADED")"

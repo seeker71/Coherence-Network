@@ -19,7 +19,7 @@
 ; field when the surprises it actually carries fall within tolerance. tolerance 0 demands a perfect run;
 ; nothing is rounded toward "settled." Counts are integers 0..N.
 ;
-; Proven by: form-stdlib/tests/active-inference-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/active-inference-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ; --- HIT: the prediction landed. predicted == actual -> 1, else 0. ---
