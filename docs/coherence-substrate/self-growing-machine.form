@@ -30,8 +30,11 @@
                     "FLOOR — proven, on main.")
 
     (G1-codegen     "form-asm + form-lower: a Form tree -> native machine code, byte-verified,"
-                    "ZERO clang. Stands on G0's bytes. FLOOR for arith / cond / map / recursion"
-                    "(four-way; form_macho_demo runs a Form-built binary, exit 40, no clang).")
+                    "ZERO clang. Stands on G0's bytes. FLOOR for arith/cond/map/recursion AND the"
+                    "lever families — memory (ll-buffer), strings (str_eq -> byte-compare loop),"
+                    "host-io (read_file -> open/read/close svc), and the general multi-arg calling"
+                    "convention (args -> w0..w7 over an ll-buffer frame) — each four-way; form_macho"
+                    "_demo runs a Form-built binary, exit 40, no clang.")
 
     (G2-grammar     "bmf-grammar (the recursive engine — a grammar IS data: rules + start +"
                     "ref) + bml (the high grammar) + source-compiler. ANY grammar admitted; a"
@@ -73,11 +76,14 @@
 
   ; ── the one lever that unlocks the rest ──────────────────────────────────────
   (the-lever
-    "Grow form-lower (G1) to cover strings + host-io + the full builtin surface. The"
-    "moment it does: G3 compiles ANY Form recipe to native, G4's runner self-hosts (G7),"
-    "and G6's grown capabilities ship as native binaries. ONE frontier — the Form-native"
-    "codegen completing — turns the whole tower from 'evaluated' to 'native'. Everything"
-    "above the floor is composition over proven cells once that lever lands.")
+    "form-lower (G1) now lowers a representative op of each lever family to native, four-"
+    "way: memory, strings (str_eq), host-io (read_file), and the general multi-arg calling"
+    "convention. The pattern is proven; the frontier is composing it — G3: lower an ANY"
+    "Form recipe end-to-end (dispatch over a whole program, registers across nodes), then"
+    "extend the proven pattern across every string/host-io builtin. The moment G3 lands,"
+    "G4's runner self-hosts (G7) and G6's grown capabilities ship as native binaries. ONE"
+    "frontier — whole-recipe codegen — turns the tower from 'evaluated' to 'native';"
+    "everything above the floor is composition over proven cells once it lands.")
 
   (the-dare
     "Stated plainly and boldly: a single Mac can become a complete, sovereign, self-"
