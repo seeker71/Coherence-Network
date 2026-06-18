@@ -1,10 +1,24 @@
 ; tests/kernel-image-proposal-band.fk -- public proposal trust membrane.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-render.fk form-stdlib/kernel-image-proposal.fk
 ;
-; Band verdict: 11111 when the public kernel-image proposal shape names a
-; candidate image, accepts proof only as preview, refuses mutation, carries the
-; residual, and exposes source/image hashes.
+; Band verdict: 111111 when the public kernel-image proposal VALUE names a
+; candidate image (asserted on its tagged children), accepts proof only as
+; preview, refuses mutation, carries the residual, exposes source/image hashes,
+; and the kernel-http response carrier serializes it once into a real wire
+; string. Every bit reads STRUCTURE — kh-tagged?, kh-field-value-or, accessor
+; children, kh-response-status — never substrings of a hand-built string.
 
-(do
-    (kip-test))
+section [form.bml] {
+    def kip-band-score() {
+        let proposal = kip-proposal("kernel-proposal-demo", "sha256:source", "sha256:image", 8, 15, 6, "apply");
+        let image = kip-proposal-candidate-image(proposal);
+        let env = kip-proposal-trust-envelope(proposal);
+        let gate = kip-proposal-mutation-gate(proposal);
+        let response = kip-proposal-response(proposal);
+        let wire = kip-proposal-wire(proposal);
+        sum(list(kh-bool-score(and(kip-candidate-image?(image), and(kip-candidate-image-valid?(image), and(str_eq(kip-candidate-image-field(image, "image_kind"), "kernel-core-self"), eq(len(kip-candidate-image-witness-recipes(image)), 3)))), 1), kh-bool-score(and(kip-proposal?(proposal), and(kip-proposal-proof-passed?(proposal), and(eq(kip-trust-envelope-choice-success(env), 1), str_eq(kip-proposal-status(proposal), "accepted-preview")))), 10), kh-bool-score(and(kip-mutation-gate?(gate), and(kip-mutation-gate-refuses?(gate), and(if kip-trust-envelope-mutation-allowed?(env) then false else true, if kip-trust-envelope-mutation-performed?(env) then false else true))), 100), kh-bool-score(and(kip-trust-envelope?(env), and(str_eq(kip-trust-envelope-bma(env), "kernel-image-proposal"), and(str_eq(kip-trust-envelope-prediction-error(env), "carried_as_residual"), str_eq(kip-trust-envelope-rollback(env), "no production state changed by this route")))), 1000), kh-bool-score(and(str_eq(kip-candidate-image-field(image, "source_hash"), "sha256:source"), and(str_eq(kip-candidate-image-field(image, "image_hash"), "sha256:image"), str_eq(kip-trust-envelope-candidate-image-hash(env), "sha256:image"))), 10000), kh-bool-score(and(kip-proposal-valid?(proposal), and(kh-response-valid?(response), and(eq(kh-response-status(response), 200), gt(str_len(wire), 0)))), 100000)));
+    }
+
+    kip-band-score();
+}
