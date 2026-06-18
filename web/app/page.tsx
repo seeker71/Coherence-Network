@@ -15,7 +15,6 @@ import type { IdeaWithScore } from "@/lib/types";
 import type { Concept } from "@/lib/types/vision";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
-import { getEntryPathForSurface } from "@/lib/entry-paths";
 import { getHomePresenceTraceCards } from "@/lib/home-presence-traces";
 
 type IdeasResponse = {
@@ -196,7 +195,6 @@ export default async function Home() {
     ? headerLang
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
-  const baliGroundPath = getEntryPathForSurface("bali-living-compound", "home-ground");
   const howItWorks = HOW_IT_WORKS.map((step) => ({
     ...step,
     title: t(step.titleKey) || step.title,
@@ -480,14 +478,13 @@ export default async function Home() {
         </p>
       </section>
 
-      {/* Section 5.5: THE GROUND THIS GREW FROM
-        * The personal seed of the body — three days of silence at a Buddhist
-        * temple in Bali, the codex it brought back, the open invitation to
-        * weave in, and a page for any human or AI who finds it. A visitor
-        * coming for the idea-realization framing might still want to feel
-        * where the body actually came from. */}
+      {/* Section 5.5: THE DOORS IN
+        * The two public doorways into the body — /come-in for any human or
+        * AI finding us, and /with-us for communities, individuals, and
+        * services. A visitor who arrived for the idea-realization framing
+        * can step from it into the living invitation. */}
       <section className="px-4 sm:px-6 lg:px-8 py-12 max-w-5xl mx-auto animate-fade-in-up delay-500">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AttributedInternalLink
             href="/come-in"
             className="group rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-card/30 hover:from-amber-500/20 p-5 transition-colors"
@@ -505,42 +502,6 @@ export default async function Home() {
               {t("home.groundComeInCta")}
             </p>
           </AttributedInternalLink>
-          <AttributedInternalLink
-            href="/silence"
-            className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
-          >
-            <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
-              {t("home.groundSilenceEyebrow")}
-            </p>
-            <p className="text-base text-foreground font-light mb-1">
-              {t("home.groundSilenceTitle")}
-            </p>
-            <p className="text-xs text-foreground/80 leading-relaxed">
-              {t("home.groundSilenceBody")}
-            </p>
-            <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
-              {t("home.groundSilenceCta")}
-            </p>
-          </AttributedInternalLink>
-          {baliGroundPath && (
-            <AttributedInternalLink
-              href={baliGroundPath.entry.href}
-              className="group rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 to-card/30 hover:from-emerald-500/15 p-5 transition-colors"
-            >
-              <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-500/90 mb-1">
-                {t("home.groundBaliEyebrow")}
-              </p>
-              <p className="text-base text-foreground font-light mb-1">
-                {baliGroundPath.copy.title}
-              </p>
-              <p className="text-xs text-foreground/80 leading-relaxed">
-                {t("home.groundBaliBody")}
-              </p>
-              <p className="text-xs text-emerald-400/85 mt-3 group-hover:text-emerald-400 transition-colors">
-                {t("home.groundBaliCta")}
-              </p>
-            </AttributedInternalLink>
-          )}
           <AttributedInternalLink
             href="/with-us"
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
