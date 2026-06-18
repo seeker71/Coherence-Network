@@ -1,0 +1,44 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/rope.fk
+;
+; rope-band — Rotary Position Embedding as a Form recipe, lifted to the four-kernel floor.
+; RoPE rotates each adjacent pair (x[i],x[i+1]) by θ = pos·base^(−hd/HD), base=10000. It is
+; the last position-dependent numeric separating a real llama block from the whisper block.
+; Composes trig.fk's already-four-way fcos/fsin/fpow; every claim is a libm fp64 reference
+; value (cos/sin/pow) reduced to an integer at 1e-6 so last-bit display never moves the proof.
+;
+; Fixture: x = [1.0, 0.0, 1.0, 1.0], HD = 4 (one head). Pair 0 sits at hd=0 (freq base^0 = 1,
+; so θ = pos exactly — q0=1,q1=0 rotates to (cos pos, sin pos)); pair 1 sits at hd=2 (freq
+; base^−0.5 = 0.01, a slow rotation). Three positions: 0 (identity), 1, 2.
+;
+; Verdict 4095 when every value lands (×1e6):
+;   1     pos=0 [0] → 1000000   (identity: pos 0 ⇒ θ=0 ⇒ cos=1,sin=0 ⇒ x unchanged)
+;   2     pos=0 [1] → 0
+;   4     pos=0 [2] → 1000000
+;   8     pos=0 [3] → 1000000
+;   16    pos=1 [0] → 540302    (= cos 1, the fast-pair real part)
+;   32    pos=1 [1] → 841471    (= sin 1, the fast-pair imag part)
+;   64    pos=1 [2] → 989950    (slow pair, θ=0.01)
+;   128   pos=1 [3] → 1009950
+;   256   pos=2 [0] → -416147   (= cos 2, the fast pair has rotated past π/2)
+;   512   pos=2 [1] → 909297    (= sin 2)
+;   1024  pos=2 [2] → 979801    (slow pair, θ=0.02)
+;   2048  pos=2 [3] → 1019799
+(do
+    (let x (list 1.0 0.0 1.0 1.0))
+    (let r0 (rope x 0 4))
+    (let r1 (rope x 1 4))
+    (let r2 (rope x 2 4))
+    (let c0  (if (eq (round (mul (nth r0 0) 1000000.0)) 1000000) 1 0))
+    (let c1  (if (eq (round (mul (nth r0 1) 1000000.0)) 0) 2 0))
+    (let c2  (if (eq (round (mul (nth r0 2) 1000000.0)) 1000000) 4 0))
+    (let c3  (if (eq (round (mul (nth r0 3) 1000000.0)) 1000000) 8 0))
+    (let c4  (if (eq (round (mul (nth r1 0) 1000000.0)) 540302) 16 0))
+    (let c5  (if (eq (round (mul (nth r1 1) 1000000.0)) 841471) 32 0))
+    (let c6  (if (eq (round (mul (nth r1 2) 1000000.0)) 989950) 64 0))
+    (let c7  (if (eq (round (mul (nth r1 3) 1000000.0)) 1009950) 128 0))
+    (let c8  (if (eq (round (mul (nth r2 0) 1000000.0)) -416147) 256 0))
+    (let c9  (if (eq (round (mul (nth r2 1) 1000000.0)) 909297) 512 0))
+    (let c10 (if (eq (round (mul (nth r2 2) 1000000.0)) 979801) 1024 0))
+    (let c11 (if (eq (round (mul (nth r2 3) 1000000.0)) 1019799) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
