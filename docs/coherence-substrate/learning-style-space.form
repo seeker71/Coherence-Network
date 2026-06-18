@@ -107,7 +107,14 @@
 #   tensor-scale autodiff          mtb-reverse's adjoint carried onto
 #                                  the JIT emitter lane (jit-tensor-emit)
 #   contrastive / self-supervised  pair-loss over ls-features — needs
-#                                  only a loss row, no new engine
+#                                  only a loss row, no new engine. The
+#                                  DPO family (DPO, IPO, KTO, ORPO,
+#                                  SimPO, CPO) fills this stone as a loss
+#                                  dimension orthogonal to (pool, core):
+#                                  preference-learning.form names each as
+#                                  a row over the SAME engines (the two-
+#                                  angle mtb-step, the champion as π_ref,
+#                                  the choice-receipt as KTO's signal)
 #   Hebbian / local plasticity     co-occurrence bumps on gl edge
 #                                  weights — edges as memory
 #   Bayesian / probabilistic       proven-count gates → priors
@@ -162,3 +169,6 @@
 #   autoresearch-runtime.form   genome / evaluator / experiment /
 #                               governance — the loop these rows feed
 #   federated-slices.form       the trainer axis at mesh scale
+#   preference-learning.form    the loss dimension — the DPO family as
+#                               rows: learn from "this over that" through
+#                               the same operator, champion, and receipts

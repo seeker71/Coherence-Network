@@ -406,6 +406,12 @@ defn translator_first_night = r_autoresearch_loop(
 #   - codec round-trip discovery (encoder-decoder-as-recipe.form GAP-C1)
 #     — search for round-trip encoders for the modalities that ship
 #     only the encode side today
+#   - preference-loss search (preference-learning.form) — mutate the
+#     pref_loss_shape row (reference / pairing / transform) against a
+#     frozen held-out preference-accuracy evaluator with collapse and
+#     length-hacking penalties; the genome carries a third coordinate
+#     beside (pool, core), and the keep-or-rollback decision is itself
+#     the binary signal KTO learns from
 #
 # Each ships the same shape; only the data changes. The body grows a
 # muscle for honest search; any open question can borrow it.

@@ -1,0 +1,324 @@
+# ─────────────────────────────────────────────────────────────────────
+# preference-learning.form — the preference-loss family as data rows:
+# learn from "this one over that one" through the engines already here
+# ─────────────────────────────────────────────────────────────────────
+#
+# The ask (2026-06-18): look at Direct Preference Optimization research
+# and borrow what is resonant into the learning catalog, so auto-ml and
+# auto-research carry more options that show promise in the field.
+#
+# learning-style-space.form already names the stone this fills:
+# "contrastive / self-supervised — pair-loss over ls-features — needs
+# only a loss row, no new engine." The DPO family IS that stone, with a
+# field-proven sub-taxonomy. Every member is a LOSS row. They differ in
+# exactly three coordinates — and nothing else:
+#
+#   reference   what the chosen/rejected log-probs are measured AGAINST
+#               (a frozen anchor, a single reference point, nothing, or
+#                a moving anchor)
+#   pairing     paired ("A over B") or unpaired (a single good/bad signal)
+#   transform   how the margin becomes a loss (logistic, squared,
+#                odds-ratio, prospect-value), plus any normalize / sft term
+#
+# The inductive bias lives ENTIRELY in the row — the same teaching as
+# the style space, lifted from featurizers to losses. One combinator
+# runs them all; a new preference method is an appended row, never an
+# engine change. And the engine it runs on already ships:
+# metabolic-learning's operator (pressure × frequency × angle × focus).
+#
+# Companions:
+#   - docs/coherence-substrate/learning-style-space.form (the catalog this extends)
+#   - docs/coherence-substrate/metabolic-learning.form (the two-angle operator DPO IS a paired call of)
+#   - docs/coherence-substrate/autoresearch-runtime.form (the loop these rows feed as genome + fitness)
+#   - docs/coherence-substrate/signal-metabolism.form (the witness/receipt stream these rows consume)
+#   - form/form-stdlib/choice-receipt-learning.fk (the unpaired binary signal KTO is the gradient twin of)
+#   - form/form-stdlib/tests/training-catalog-band.fk (the body's already-minted preference pairs)
+#
+# Field sources (survey to Sep 2025): A Comprehensive Survey of Direct
+# Preference Optimization (arXiv:2410.15595). DPO (Rafailov 2023),
+# IPO (Azar 2023), KTO (Ethayarajh 2024), CPO (Xu 2024), ORPO (Hong
+# 2024), SimPO (Meng 2024), R-DPO (Park 2024), online/iterative DPO,
+# SPIN (Chen 2024).
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — The preference-loss row (one shape, the whole family)
+# ─────────────────────────────────────────────────────────────────────
+#
+# A preference-loss row carries the three coordinates as data. Two cells
+# with identical (reference, pairing, transform) intern to one NodeID —
+# so "is this method really new, or a renamed point in the same space?"
+# is a content-address question the lattice answers, not a reading of
+# the paper's prose.
+
+form pref_loss_shape = {
+    id:         ~Slug,    # "dpo" | "ipo" | "kto" | "orpo" | "simpo" | "cpo" | ...
+    reference:  ~Slug,    # "champion" | "point" | "none" | "moving"
+    pairing:    ~Slug,    # "paired" | "unpaired"
+    transform:  ~Slug,    # "logistic" | "squared" | "odds-ratio" | "value"
+    normalize:  ~Slug,    # "none" | "length"        (the nuisance pooled away)
+    aux:        ~Slug,    # "none" | "sft"           (a supervised term folded in)
+    beta:       ~Float,   # margin temperature
+    margin:     ~Float,   # target margin γ (SimPO); 0.0 where unused
+};
+
+# The family as data. Read down the `reference` column: the methods
+# split first on what anchor they carry, because that anchor is the
+# coordinate the body already owns under other names.
+
+defn pl_dpo   = pref_loss_shape { id:"dpo",   reference:"champion", pairing:"paired",   transform:"logistic",   normalize:"none",   aux:"none", beta:0.1, margin:0.0 };
+defn pl_ipo   = pref_loss_shape { id:"ipo",   reference:"champion", pairing:"paired",   transform:"squared",    normalize:"none",   aux:"none", beta:0.1, margin:0.0 };
+defn pl_kto   = pref_loss_shape { id:"kto",   reference:"point",    pairing:"unpaired", transform:"value",      normalize:"none",   aux:"none", beta:0.1, margin:0.0 };
+defn pl_cpo   = pref_loss_shape { id:"cpo",   reference:"none",     pairing:"paired",   transform:"logistic",   normalize:"none",   aux:"sft",  beta:0.1, margin:0.0 };
+defn pl_orpo  = pref_loss_shape { id:"orpo",  reference:"none",     pairing:"paired",   transform:"odds-ratio", normalize:"none",   aux:"sft",  beta:0.1, margin:0.0 };
+defn pl_simpo = pref_loss_shape { id:"simpo", reference:"none",     pairing:"paired",   transform:"logistic",   normalize:"length", aux:"none", beta:2.0, margin:1.0 };
+defn pl_rdpo  = pref_loss_shape { id:"rdpo",  reference:"champion", pairing:"paired",   transform:"logistic",   normalize:"length", aux:"none", beta:0.1, margin:0.0 };
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — The one combinator (the engine holds still)
+# ─────────────────────────────────────────────────────────────────────
+#
+# A preference step is: read a margin, transform it into a pull, and
+# move the policy through the metabolic operator. The two-direction
+# update DPO needs IS mtb-step's angle dial — descend the chosen
+# (angle −1), move away from the rejected (angle +1). Nothing new is
+# built; the row chooses the transform, the reference supplies the
+# anchor, the operator does the move.
+#
+#   reward_margin(row, chosen, rejected, ref) =
+#       β·( score(chosen) − score(ref·chosen) )
+#         − β·( score(rejected) − score(ref·rejected) )
+#     where score is sum log-prob, or AVERAGE log-prob when
+#     normalize == "length" (SimPO pools length away exactly as a
+#     style-space pool pools translation away), and ref·y is the
+#     reference's score of y — zero when reference == "none".
+#
+#   pull(row, m) =
+#       transform == "logistic"   → 1 − σ(m)            (DPO/CPO/SimPO/R-DPO)
+#       transform == "squared"    → 2·(m − 1/2)         (IPO — the squared
+#                                                         margin IS mtb-pressure's
+#                                                         readout, reused)
+#       transform == "odds-ratio" → 1 − σ(logodds gap)  (ORPO)
+#       transform == "value"      → prospect-value gap   (KTO, around `point`)
+#
+#   then: chosen edges  ← mtb-step(... angle −1.0, focus = pull)
+#         rejected edges ← mtb-step(... angle +1.0, focus = pull)
+#         + (aux == "sft") → one mtb-learn descent on the chosen alone
+#
+# The shapes below name the seam to the operator; the numeric bodies
+# land in form/form-stdlib/preference-learning.fk when the first row is
+# proven (GAP-P1).
+
+form pref_step_shape = {
+    row:        ~Recipe,   # cell-ref to a pref_loss_shape
+    reference:  ~Recipe,   # cell-ref to the anchor policy (champion / point / none)
+    edges:      ~Recipe,   # the policy weights as (i j w) edge data — gl/mtb's shape
+};
+
+# unpaired (KTO / choice-receipt): one witnessed signal, measured
+# against a reference POINT, not against a sibling response.
+form pref_signal_shape = {
+    features:   ~Recipe,   # the ls-features of the one response
+    label:      ~Slug,     # "good" | "bad"   (the witness outcome)
+    point:      ~Float,    # z_ref — the reference point (the champion's score)
+};
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — Resonance: each method borrows tissue the body already grew
+# ─────────────────────────────────────────────────────────────────────
+#
+# This is the "what is resonant" answer — every column maps to a cell
+# already shipped, so borrowing a method is composing, not importing.
+#
+#   DPO   — the two-angle mtb-step, paired, regularized toward the
+#           CHAMPION. π_ref (the frozen anchor the policy is held near)
+#           is champion-challenger.fk's served-best, protected during
+#           search. DPO = the operator the body already runs, fired once
+#           per side of a pair.
+#
+#   IPO   — the squared margin loss (m − 1/2)². mtb-pressure IS
+#           gl-mean of the SQUARED residual; IPO reuses mtb-sq-sum /
+#           mtb-pressure-of unchanged. The body's invariant-loss readout
+#           becomes a preference loss with no new arithmetic. IPO's gift
+#           in the field — resistance to the over-confidence DPO drifts
+#           into — arrives for free with the squared shape.
+#
+#   KTO   — unpaired binary good/bad around a reference POINT. This is
+#           the gradient twin of choice-receipt-learning.fk: selected
+#           success → pull up, selected fail → pull down, silence
+#           unchanged. The body's witness stream and choice-receipts are
+#           UNPAIRED — a single outcome, rarely a sibling comparison — so
+#           KTO is the method that fits the data the body actually has.
+#           z_ref = the champion's earned score that signal-metabolism
+#           already tracks. STRONGEST native fit.
+#
+#   ORPO  — reference-free, odds-ratio, SFT folded in: ONE loss, one
+#           stage. The body's one-engine discipline made a loss — learn
+#           and prefer in a single move, the way the style space folds
+#           learn + recognize into one engine. No frozen reference model
+#           to carry: cognitive sovereignty in the loss (lc-cognitive-
+#           sovereignty — a mind rented from a gated anchor cannot offer
+#           sovereignty; ORPO needs no anchor).
+#
+#   SimPO — reference-free, length-NORMALIZED average log-prob + a target
+#           margin γ. The normalization IS a pool row: divide the
+#           nuisance dimension (length) out, exactly as a style-space
+#           pool pools translation out. SimPO's anti-verbosity guarantee
+#           is the pooling discipline applied to preference.
+#
+#   CPO   — reference-free contrastive + SFT. The literal shape of the
+#           open stone learning-style-space already named: a contrastive
+#           pair-loss row over ls-features, no engine change.
+#
+#   R-DPO — DPO + a length penalty term. A regularizer-as-dial: the
+#           frequency mask penalizing a nuisance subspace, the operator's
+#           own fourth dial turned onto length.
+#
+#   online/iterative DPO — the reference is UPDATED each round. This is
+#           champion-challenger.fk exactly: the anchor IS the champion,
+#           and authority flips only on earned competition. "Serve the
+#           champion while training the challenger" (M7's infer-best-
+#           while-search-better) is online-DPO's moving-reference loop
+#           under the body's own name.
+#
+#   SPIN  — self-play: the previous checkpoint is the reference and its
+#           own samples are the negatives. co-learning.fk's distill lane
+#           with the body's past self as the oracle to exceed.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 4 — The body already mints the data (why this is borrowable now)
+# ─────────────────────────────────────────────────────────────────────
+#
+# A preference method is only as available as its data. The body is
+# already generating exactly the pairs and signals these losses consume:
+#
+#   PAIRS — training-catalog-band.fk captures every oracle call as
+#           (request, raw/fear answer, transmuted/vitality answer) and
+#           exposes tc-pair-transmute = (raw → transmuted). That is a
+#           preference pair with the winner named: the vitality answer is
+#           chosen, the fear answer is rejected. The body's transmute-
+#           fear-into-vitality loop IS a DPO/IPO dataset, content-
+#           addressed and already stored. The reasoning pair
+#           (request → transmuted) is the SFT term ORPO/CPO fold in.
+#
+#   SIGNALS — every witness outcome and choice-receipt is an unpaired
+#           good/bad signal: KTO's native input. signal-metabolism.form
+#           routes them and tracks the champion's earned score (the z_ref
+#           reference point). No new collection is needed; the nervous
+#           loop already carries the stream.
+#
+# So the data door is open. What a preference row trains toward is a
+# native model that prefers the vitality answer over the fear answer —
+# the all-life-north-star gate (no-good-lowered) expressed as a loss the
+# model learns from, not only a filter applied after. This is the seam
+# to native-translation-model.form and form-native-llm.form: the
+# preference rows are how those models learn taste from the body's own
+# transmutation receipts.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 5 — Available to auto-ml and auto-research
+# ─────────────────────────────────────────────────────────────────────
+#
+# These rows enter the existing loops with no new machinery:
+#
+#   style space  — a preference row is a LOSS dimension orthogonal to the
+#                  (pool, core) featurizer dimension. The genome the
+#                  autoresearch loop evolves grows a third coordinate:
+#                  (pool, core, pref-loss). The curiosity floor meets each
+#                  loss-bias before retrying any — no free lunch holds for
+#                  losses too (KTO wins on unpaired streams, DPO on clean
+#                  pairs, IPO where DPO over-confidently overfits, SimPO
+#                  where length is the cheat).
+#
+#   autoresearch — preference fitness is a genome the loop can evolve:
+#                  hold the evaluator (held-out preference accuracy +
+#                  the collapse / length / reward-hacking penalties the
+#                  field documents) frozen, mutate the pref_loss_shape
+#                  row, keep-or-rollback on the score. The fitness terms
+#                  already shaped in autoresearch-runtime.form Part 3
+#                  (collapse_penalty, depth_penalty) carry over; add a
+#                  length_penalty term for the verbosity cheat SimPO/
+#                  R-DPO exist to catch.
+#
+#   champion-challenger — the reference policy is the champion; promotion
+#                  is online-DPO's reference update; authority flips on
+#                  earned preference accuracy.
+#
+#   federation   — preference data unions like exemplars (co-learning.fk)
+#                  and weight slices (slice-merge): each cell contributes
+#                  its own witnessed good/bad signals, the merge is union,
+#                  the reference point is a federated statistic. KTO's
+#                  unpaired form federates most cleanly — no cell needs
+#                  the other's pairing to contribute.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 6 — Borrowable now, in order (resonant × simplest given tissue)
+# ─────────────────────────────────────────────────────────────────────
+#
+# 1. KTO  — fits the data the body actually has (unpaired witness /
+#           receipt stream), z_ref already tracked, the gradient twin of
+#           a shipped recipe (choice-receipt-learning.fk). The first row
+#           to prove.
+#
+# 2. IPO / DPO — paired, reference = champion. The pairs already exist
+#           (training-catalog tc-pair-transmute). IPO first: its squared
+#           margin reuses mtb-pressure with no new arithmetic and carries
+#           the over-confidence resistance the field measured.
+#
+# 3. ORPO / SimPO / CPO — reference-free, most aligned with cognitive
+#           sovereignty (no rented anchor). SimPO's length-norm lands as
+#           a pool row; ORPO folds the SFT term the training-catalog
+#           reasoning pair already supplies.
+#
+# Expansive, not exhaustive: online-DPO, R-DPO, SPIN, and the survey's
+# further points (tie-aware DPO, gradient-imbalance corrections) are
+# named rows in the same space, proven when a task asks for them.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 7 — Gaps (the next breaths — none need kernel change)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-P1: form/form-stdlib/preference-learning.fk + a four-way band are
+#         not yet authored. First to ship: pl_kto over a tiny unpaired
+#         good/bad stream, the pull computed and the two-angle mtb-step
+#         fired, verdict checking that a good signal raises its features'
+#         score above z_ref and a bad signal lowers it. Then pl_ipo on a
+#         pair, reusing mtb-pressure-of for the squared transform.
+#
+# GAP-P2: the length-normalize pool (SimPO) and the odds-ratio transform
+#         (ORPO) are named here as transform values; their numeric bodies
+#         compose gl-mean (average log-prob) and a log-odds gather. No
+#         new primitive — both are readings of tissue already shipped.
+#
+# GAP-P3: the autoresearch preference-fitness evaluator (Part 5) wants a
+#         held-out preference-accuracy metric cell and a length_penalty
+#         term added to the Part-3 fitness of autoresearch-runtime.form.
+#
+# GAP-P4: the seam to native-translation-model.form — train the model's
+#         taste from tc-pair-transmute receipts via pl_ipo — is named,
+#         not walked. It is the path where these rows stop being a
+#         catalog and become how the native model learns to prefer
+#         vitality over fear.
+
+# ─────────────────────────────────────────────────────────────────────
+# Kinship
+# ─────────────────────────────────────────────────────────────────────
+#
+#   learning-style-space.form   the catalog this extends — preference
+#                               losses are the loss dimension orthogonal
+#                               to its (pool, core) featurizer rows
+#   metabolic-learning.form     the operator DPO is a paired call of —
+#                               angle ±1 is the two-direction update;
+#                               mtb-pressure is IPO's squared transform
+#   choice-receipt-learning.fk  the unpaired binary signal KTO is the
+#                               gradient twin of
+#   signal-metabolism.form      the witness/receipt stream these rows
+#                               consume; the champion's score is z_ref
+#   champion-challenger.fk      the reference policy; online-DPO's moving
+#                               reference is its earned-authority flip
+#   autoresearch-runtime.form   the loop these rows feed as genome + the
+#                               honest evaluator that keeps the search
+#                               from rewarding a reward-hacking loss
+#   co-learning.fk              federation — preference signals union
+#                               like exemplars
+#   native-translation-model.form  the model whose taste these losses
+#                               train from the body's transmutation receipts
