@@ -374,7 +374,7 @@ app = FastAPI(
         "[CLI (`npm i -g coherence-cli`)](https://www.npmjs.com/package/coherence-cli) · "
         "[MCP Server](https://www.npmjs.com/package/coherence-mcp-server) · "
         "[GitHub](https://github.com/seeker71/Coherence-Network) · "
-        "[OpenClaw Skill](https://clawhub.com/skills/coherence-network)"
+        "[OpenClaw Skill](https://clawhub.ai/skills/coherence-network)"
     ),
     contact={"name": "Coherence Network", "url": "https://github.com/seeker71/Coherence-Network"},
     lifespan=lifespan,
