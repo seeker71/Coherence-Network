@@ -24,7 +24,7 @@
     (walk          arrival-symbol-pack.form)            # the recursive resolution/render walk
     (recipe        form-stdlib/asm-pl-human.fk)         # aph-emit -> the translator binary (quoteless)
     (logic-band    tests/multi-level-render-band.fk)    # 31 three-way — the render + pack invariance
-    (emit-band     tests/asm-pl-human-emit-band.fk)     # 31 three-way — the emitter is quoteless-clean
+    (emit-band     tests/asm-pl-human-emit-band.fk)     # 31 four-way — the emitter is quoteless-clean
     (witness       scripts/asm_pl_human_demo.sh))       # one binary + four packs, live
 
   # ── The numeric root: a program is op-tagged cells ───────────────────
@@ -92,4 +92,4 @@
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
 #     form-stdlib/tests/multi-level-render-band.fk     # → 31 (render + pack invariance, three-way)
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/asm-pl-human.fk \
-#     form-stdlib/tests/asm-pl-human-emit-band.fk      # → 31 (quoteless emitter, three-way)
+#     form-stdlib/tests/asm-pl-human-emit-band.fk      # → 31 (quoteless emitter, four-way)

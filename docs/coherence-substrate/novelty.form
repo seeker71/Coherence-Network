@@ -7,7 +7,7 @@
 ;   fresh cell. Without this face, every field gets snapped to the closest existing label — that is the
 ;   hallucination the recognition floor exists to refuse.
 ;
-; THE SHAPE  (runnable: form-stdlib/novelty.fk · proven: tests/novelty-band.fk -> 63, three-way)
+; THE SHAPE  (runnable: form-stdlib/novelty.fk · proven: tests/novelty-band.fk -> 63, four-way)
 ;
 ;   Reads ONE number — the best similarity (0..100) nearest-shape returned — against the recognition
 ;   floor, and makes the BOUNDARY load-bearing:

@@ -7,7 +7,7 @@
 ; way feature-vector.fk is upstream of a classifier, but shaped for the speak/stay decision.
 ;
 ; THE SHAPE (runnable: form-stdlib/conversation-context.fk · proven: tests/conversation-context-band.fk
-; -> 127, three-way, composing only core):
+; -> 127, four-way, composing only core):
 ;   A CONVERSATION is a list of utterances, most-recent-FIRST — the way a live transcript grows: the newest
 ;   utterance is cons-prepended to the head. An UTTERANCE is (list ts speaker named):
 ;     ts      — an integer tick when it was said (monotonic; larger = more recent)

@@ -26,7 +26,7 @@
 # appended row, never an engine change.
 #
 # SHIPPED: `form/form-stdlib/learning-style-space.fk` +
-# `tests/learning-style-space-band.fk` → 4095 (12 claims), three-way
+# `tests/learning-style-space-band.fk` → 4095 (12 claims), four-way
 # (Go/Rust/TS), composing transformer-numerics + geometric-learning +
 # nearest-shape + learning-arc.
 

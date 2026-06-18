@@ -26,7 +26,7 @@
 ;   all cells, and cells are content-addressed. (structural-composition.md is the discipline that
 ;   keeps it so: keep the tree, refuse the slug, or the cross-device identity is lost.)
 ;
-; ── 3. THE CIRCLE SENSES AND TEACHES ──  [SHIPPED + proven: shared-sensing.fk -> 127, three-way]
+; ── 3. THE CIRCLE SENSES AND TEACHES ──  [SHIPPED + proven: shared-sensing.fk -> 127, four-way]
 ;   satsang.fk applied to perception. Two+ bodies witness one field from different sensors/models;
 ;   each is a witness (device, label, confidence). The strongest proposes; the circle CONFIRMS only
 ;   on >= quorum agreement (ss-confirmed? — one body is not a circle, shared sensing needs plural
@@ -52,7 +52,7 @@
 ;   parity + cross-grounding, which the body already has.
 ;
 ; ── THE PATH ──
-;   1. the shared-sensing circle + cross-grounding   [SHIPPED: shared-sensing.fk -> 127, three-way]
+;   1. the shared-sensing circle + cross-grounding   [SHIPPED: shared-sensing.fk -> 127, four-way]
 ;   2. the kernel built for Android (Rust/NDK or Go/gomobile), running the proven recipes   [build]
 ;   3. cell-sync transport — share content-addressed cells device<->device (a recipe/classifier/
 ;      routing-table is a cell; the sync is cell-level, identity-verified by NodeID)        [build]

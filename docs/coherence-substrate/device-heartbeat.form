@@ -48,7 +48,7 @@
 ; ── HONEST LANES ──
 ;   SHIPPED — the heartbeat/discovery body (device-heartbeat.fk -> 127): organ-state, shared-channel
 ;     selection, liveness. The surprise + inference-error signals it would surface (novelty, anomaly-
-;     band, drift-detect, self-grounding) are already proven three-way.
+;     band, drift-detect, self-grounding) are already proven four-way.
 ;   BUILDABLE — the per-channel carriers (wifi heartbeat first — the app already POSTs over wifi; then
 ;     BLE advertise/scan, audio FSK, video QR), and the live observability dashboard (Mac + app).
 ;   PROVEN RECEIPT SHAPE — public-audio-rendezvous.fk -> 32767 four-way names public rendezvous +
