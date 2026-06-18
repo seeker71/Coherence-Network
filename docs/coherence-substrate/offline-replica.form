@@ -59,8 +59,11 @@
                        "carrier-agnostic and four-way (ideas-graph-projection -> 11111, graph-node-"
                        "port -> 11111 name no backend; no stdlib recipe calls pg_* directly). The"
                        "serve POLICY is now Form too: replica-serve -> 7 reads from prod online,"
-                       "local offline, by mode. The only remaining serve work is host-io: the kernel"
-                       "route dispatch opening the file carrier when offline (the toggle, not logic).")
+                       "local offline, by mode. The concrete set this serves across the four key"
+                       "families (graph, substrate, federation, value-cc) is cataloged in"
+                       "[[offline-endpoints]]: 85 reads + 43 journal-writes offline, 8 live O-edges."
+                       "The only remaining serve work is host-io: the kernel route dispatch opening"
+                       "the file carrier when offline (the toggle, not logic).")
   (merge-back          "CROSSED — replica-merge: the candidate set reconciles back to prod, the"
                        "seed baseline telling clean-apply from conflict (content-addressed, cache-"
                        "phase input-hash trust). A clean edit applies; a key prod ALSO changed is"
