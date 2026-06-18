@@ -46,7 +46,8 @@
         (if (eq (lo-tag prog i) 8) (lo-div prog i argr)
         (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
         (if (eq (lo-tag prog i) 9) (lo-streq)
-            (list))))))))))
+        (if (eq (lo-tag prog i) 10) (lo-readfile)
+            (list)))))))))))
     ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0 ·
     ; else (two subtrees) -> lo-tree. The (ARG, x) fast path needs c1=ARG; without that
     ; guard the general case would silently add w<argr> in place of the left subtree.
@@ -158,6 +159,24 @@
             (fa-movz 0 0)     ; not_equal: result 0
             (fa-b-off 2)     ; b end (skip the true arm)
             (fa-movz 0 1)))) ; equal: result 1
+
+    ; READ_FILE (tag 10): host-io lowers to the open/read/close syscall sequence
+    ; (macOS arm64 BSD: number in x16, args in x0..x2, svc #0x80). The path arrives
+    ; in x0 (the C convention), a buffer in x1 and count in x2; the fd is banked in
+    ; x3 across read, the byte count in x4 across close, so x0 returns nread. The
+    ; movz-x/svc primitives are byte-verified against the assembler (form-asm.fk).
+    (defn lo-readfile ()
+        (lo-cat (list
+            (fa-movz-x 16 5)    ; x16 = SYS_open
+            (fa-svc 128)        ; svc #0x80 : open(x0=path, x1=flags) -> fd in x0
+            (fa-mov 3 0)        ; bank fd -> x3
+            (fa-movz-x 16 3)    ; x16 = SYS_read
+            (fa-svc 128)        ; svc #0x80 : read(x0=fd, x1=buf, x2=count) -> nread in x0
+            (fa-mov 4 0)        ; bank nread -> x4
+            (fa-mov 0 3)        ; x0 = fd
+            (fa-movz-x 16 6)    ; x16 = SYS_close
+            (fa-svc 128)        ; svc #0x80 : close(x0=fd)
+            (fa-mov 0 4))))     ; x0 = nread (return value)
 
     ; compile a whole function: lower the root, then return
     (defn lo-compile (prog root) (lo-app (lo-node prog root 1) (fa-ret)))

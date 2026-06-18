@@ -1,0 +1,44 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-readfile-band — HOST-IO LOWERING in the Form -> assembly compiler, the
+; ll-readfile rung (roadmap.fk): (read_file p) lowers to the open/read/close syscall
+; sequence in arm64 (macOS BSD: number in x16, args in x0..x2, svc #0x80), byte-for-byte
+; the assembler's. This is the lever's host-io half — with ll-streq (strings) it leaves
+; the multi-arg calling convention as the last G1 piece before G3/G7. The movz-x/svc
+; primitives are byte-verified against the assembler (form-asm.fk, form_syscall_demo.sh);
+; this proves the LOWERING composes them into the canonical open/read/close block.
+;
+; The tree is a single READ_FILE node (tag 10). The path arrives in x0; lo-compile
+; prog 0 lowers to:
+;   movz x16,#5 ; svc #0x80     ; open(x0=path, x1=flags) -> fd in x0
+;   mov w3,w0                   ; bank fd
+;   movz x16,#3 ; svc #0x80     ; read(x0=fd, x1=buf, x2=count) -> nread in x0
+;   mov w4,w0                   ; bank nread
+;   mov w0,w3 ; movz x16,#6 ; svc #0x80   ; close(x0=fd)
+;   mov w0,w4 ; ret             ; return nread
+;
+; Verdict 15 when host-io lowering is byte-accurate:
+;   1   the syscall instruction + open-number load are exact (svc #0x80, movz x16,#5)
+;   2   the read + close syscall-number loads are exact (movz x16,#3 / movz x16,#6)
+;   4   the whole 44-byte image (10 instructions + ret) ends in ret
+;   8   COMPOSITIONAL — lo-node of the READ_FILE tree equals the hand-built
+;       open/read/close block byte-for-byte: the lowering IS the syscall sequence
+(do
+    (let prog (list (list 10 0 0 0)))   ; 0 READ_FILE(path in x0) = root
+    (let img (lo-compile prog 0))
+    (let hand (lo-app (fa-image (list
+        (fa-movz-x 16 5) (fa-svc 128) (fa-mov 3 0)
+        (fa-movz-x 16 3) (fa-svc 128) (fa-mov 4 0)
+        (fa-mov 0 3) (fa-movz-x 16 6) (fa-svc 128) (fa-mov 0 4)))
+        (fa-ret)))
+
+    (let c0 (if (fa-conviction (fa-svc 128) (list 1 16 0 212))
+            (if (fa-conviction (fa-movz-x 16 5) (list 176 0 128 210)) 1 0) 0))
+    (let c1 (if (fa-conviction (fa-movz-x 16 3) (list 112 0 128 210))
+            (if (fa-conviction (fa-movz-x 16 6) (list 208 0 128 210)) 2 0) 0))
+    (let c2 (if (eq (len img) 44)
+            (if (eq (nth img 40) 192)
+            (if (eq (nth img 43) 214) 4 0) 0) 0))
+    (let c3 (if (eq (fa-conviction img hand) 1) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
