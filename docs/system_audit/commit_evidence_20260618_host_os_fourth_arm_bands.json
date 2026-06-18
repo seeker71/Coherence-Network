@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-18",
+  "thread_branch": "claude/fourth-kernel-host-os-bands-20260618",
+  "commit_scope": "End the silent absence of the host-OS bands from the fkwu manifest: each of host-kernel-cell, kernel-satsang, kernel-core-self, kernel-core-image, kernel-image-proposal, tool-channel-grammar, bml-capability-ledger is now either four-way-registered or 3-kernel-only with its exact unsupported op family named in its header.",
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/host-kernel-cell.fk",
+    "form/form-stdlib/kernel-satsang.fk",
+    "form/form-stdlib/kernel-core-self.fk",
+    "form/form-stdlib/bml/kernel-core.bml",
+    "form/form-stdlib/kernel-image-proposal.fk",
+    "form/form-stdlib/tool-channel-grammar.fk",
+    "form/form-stdlib/bml-capability-ledger.fk",
+    "docs/coherence-substrate/form-cli-fourth-kernel-baseline.md",
+    "docs/system_audit/commit_evidence_20260618_host_os_fourth_arm_bands.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/tests/tool-channel-grammar-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bml-capability-ledger.fk form-stdlib/tests/bml-capability-ledger-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk form-stdlib/kernel-satsang.fk form-stdlib/recognition-router.fk form-stdlib/champion-challenger.fk form-stdlib/host-kernel-cell.fk form-stdlib/tests/host-kernel-cell-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk form-stdlib/kernel-satsang.fk form-stdlib/tests/kernel-satsang-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/kernel-core-self-proof.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260618_host_os_fourth_arm_bands.json"
+    ],
+    "notes": "Each of the seven host-OS surface bands was probed on the fourth arm (fkwu) by adding a temporary manifest row and reading validate.sh's fourth-arm line and divergent count. THREE cross four-way and are now registered in form/fourth-arm-bands.txt: kernel-image-proposal (fks 11111), tool-channel-grammar (fks 255), and bml-capability-ledger (fks 255) — each carries only int/string/list ops, the same family the already-four-way tool-channel rows ride, so the fourth leg equals the three walkers byte for byte (0 divergent). FOUR are 3-kernel only on a real unsupported op FAMILY, named in each file header — NOT a divergence: the flattener (form-stdlib/form-flatten.fk flt-ops table) carries no row for walk_recipe, write_form_binary, read_form_binary, native_blueprint, or the broad BML source-scan host-io, so fkwu lowers each to its literal-0 fallback (flt-call3 returns (fk-lit 0) for an op that is neither a flt-ops entry nor a defined function) and answers a degraded value rather than a wrong computed one. host-kernel-cell answered 25 (vs 255) and kernel-satsang answered 193 (vs 255) under the probe row, with the carried node/substrate floor (intern_node, node_eq, node_category, intern_trivial_int/string, bp) crossing and only walk_recipe + the form-binary host-io pair failing. The temporary probe rows were removed; the four walled cells are NOT in the manifest, with their exact missing op family named in-file per the silent-absence rule.",
+    "fourth_arm_outputs": [
+      "kernel-image-proposal fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 11111",
+      "tool-channel-grammar fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 255",
+      "bml-capability-ledger fks lane (with core.fk prelude, as the suite prepends): fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 255"
+    ],
+    "known_full_suite_gaps": [
+      "host-kernel-cell: 3-kernel only — fourth-arm unsupported op family: walk_recipe (execute an interned recipe node, the verification lane) plus write_form_binary / read_form_binary (host-io .fkb binary image). Three walkers 255, fkwu 25 under probe (degraded literal-0 fallback, not a divergence). Stays out of the manifest; header names the ops.",
+      "kernel-satsang: 3-kernel only — fourth-arm unsupported op family: walk_recipe, node_children / node_value projections over a freshly interned image node, plus write_form_binary / read_form_binary (host-io .fkb binary image). Three walkers 255, fkwu 193 under probe. Stays out of the manifest; header names the ops.",
+      "kernel-core-self: 3-kernel only — fourth-arm unsupported op family: broad BML source-scan host-io (bml-source-file-parse-declarations and the bml-model/bml-class readers), walk_recipe, native_blueprint, plus write_form_binary / read_form_binary. Three-way verdict 43. Proof file uses the *-proof.fk convention, outside the *-band.fk fourth-arm harness. Stays out of the manifest; header names the ops.",
+      "kernel-core-image: 3-kernel only — same op families as kernel-core-self (broad BML source-scan host-io, walk_recipe, native_blueprint, write_form_binary / read_form_binary). Lives as form-stdlib/bml/kernel-core.bml with proof form-stdlib/tests/kernel-core-image-compiler-proof.fk (verdict 34). Stays out of the manifest; the BML header names the ops."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "Form stdlib headers, fourth-arm manifest rows, and the baseline doc only; no public route behavior changes beyond the normal post-merge deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused four-way and three-way validation passed and the four walls are named in-file; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "developer-quick-start"
+  ],
+  "task_ids": [
+    "host-os-fourth-arm-bands"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "anthropic-claude",
+      "contributor_type": "machine",
+      "roles": [
+        "validation",
+        "documentation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "claude-opus-4-8[1m]"
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/form-flatten.fk",
+    "form emitted walker: fkwu",
+    "scripts/validate_commit_evidence.py"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/form-cli-fourth-kernel-baseline.md",
+    "docs/system_audit/commit_evidence_20260618_host_os_fourth_arm_bands.json",
+    "form/form-stdlib/bml-capability-ledger.fk",
+    "form/form-stdlib/bml/kernel-core.bml",
+    "form/form-stdlib/host-kernel-cell.fk",
+    "form/form-stdlib/kernel-core-self.fk",
+    "form/form-stdlib/kernel-image-proposal.fk",
+    "form/form-stdlib/kernel-satsang.fk",
+    "form/form-stdlib/tool-channel-grammar.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth-arm manifest now carries kernel-image-proposal, tool-channel-grammar, and bml-capability-ledger as four-way rows, so validate.sh gates their fkwu leg on every suite run. The four host-OS carriers that rest on unsupported op families (host-kernel-cell, kernel-satsang, kernel-core-self, kernel-core-image) now name their exact 3-kernel-only blocker in-file, ending the silent absence where their headers claimed only three-way without naming why the fourth arm is out.",
+    "public_endpoints": [
+      "local-only: Form stdlib headers, fourth-arm manifest, and baseline doc; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Covered fourth-arm fks lane proof: kernel-image-proposal band on Go/Rust/TypeScript/fkwu, verdict 11111, 0 divergent.",
+      "Covered fourth-arm fks lane proof: tool-channel-grammar band on Go/Rust/TypeScript/fkwu, verdict 255, 0 divergent.",
+      "Covered fourth-arm fks lane proof: bml-capability-ledger band on Go/Rust/TypeScript/fkwu, verdict 255, 0 divergent.",
+      "Unsupported-op gap proof: host-kernel-cell and kernel-satsang answer degraded fkwu values (25, 193) on walk_recipe + form-binary host-io under a probe row; left out of the manifest with the op family named in-file.",
+      "Unsupported-op gap proof: kernel-core-self and kernel-core-image rest on broad BML source-scan host-io + walk_recipe/native_blueprint + form-binary; three-way verdicts 43 and 34; left out of the manifest with the op family named in-file."
+    ]
+  }
+}

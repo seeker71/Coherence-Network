@@ -5,6 +5,13 @@
 ; The ledger names desired BML expression first, then the current carrier,
 ; lowering target, proof band, kernel support, runtime evidence, and status.
 ; A gap names the next language, lowering, runtime, or kernel feature to tend.
+;
+; Proven by: form-stdlib/tests/bml-capability-ledger-band.fk — four-way at
+;           validate.sh (Go/Rust/TS + fkwu), verdict 255. The ledger is a BML
+;           section over int/string/list ops, the same family the four-way
+;           tool-channel rows ride, so the fourth arm reads the ledger, finds
+;           the first tending target, and proves the coverage shape byte for
+;           byte with the three walkers.
 
 section [form.bml] {
     let bcl_tag_feature = 65601;
