@@ -603,3 +603,4 @@ form-lower-callconv fkc 15
 transformer-kernel fks 511
 replica fks 15
 storage-keys fks 7
+replica-merge fks 15

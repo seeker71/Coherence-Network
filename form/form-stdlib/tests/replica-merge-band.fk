@@ -1,0 +1,35 @@
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/replica.fk
+;
+; replica-merge-band — the offline replica's MERGE-BACK: reconcile offline edits into
+; prod on reconnect, the seed baseline distinguishing clean-apply from conflict (cache
+; -phase's input-hash trust, content-addressed). cell-sync is the kin transport (the
+; candidate set is its want-set); this proves the apply + conflict decision. Memory
+; carrier (prod = the db carrier, local = the file carrier in production).
+;
+; Verdict 15 when merge-back is correct:
+;   1   CLEAN-APPLY — prod still equals the baseline, so the offline edit lands in prod
+;   2   CONFLICT not clobbered — prod changed too, so the offline edit does NOT overwrite it
+;   4   CONFLICT named — the diverged key is reported in the conflict set, not silently dropped
+;   8   CLEAN run reports zero conflicts — a clean reconcile names no false conflict
+(do
+    (let mem (carrier-memory))
+    ;; seed baseline (the snapshot taken going offline)
+    (let base (storage-put mem (storage-put mem (storage-open mem 0) "alpha" "one") "beta" "two"))
+    ;; offline: alpha edited, beta untouched
+    (let local (storage-put mem base "alpha" "one-LOCAL"))
+    ;; auto-discover the dirty candidate set (storage-keys + replica-candidates)
+    (let cands (replica-candidates mem base mem local (storage-keys mem local)))   ; -> (alpha)
+
+    ;; scenario CLEAN — prod still == baseline
+    (let resA (replica-merge mem base mem local mem base cands))
+    ;; scenario CONFLICT — prod's alpha changed under us
+    (let prodB (storage-put mem base "alpha" "one-PROD"))
+    (let resB (replica-merge mem base mem local mem prodB cands))
+
+    (let c0 (if (str_eq (storage-value (storage-get mem (replica-merge-store resA) "alpha")) "one-LOCAL") 1 0))
+    (let c1 (if (str_eq (storage-value (storage-get mem (replica-merge-store resB) "alpha")) "one-PROD") 2 0))
+    (let c2 (if (eq (len (replica-merge-conflicts resB)) 1)
+            (if (str_eq (head (replica-merge-conflicts resB)) "alpha") 4 0) 0))
+    (let c3 (if (eq (len (replica-merge-conflicts resA)) 0) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
