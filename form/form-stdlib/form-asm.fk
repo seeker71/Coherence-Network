@@ -120,6 +120,10 @@
     (defn fa-smask (off m) (if (lt off 0) (add off m) off))
     ; cmp x<rn>, #imm  (subs xzr, rn, #imm, 64-bit) : base 0xF100001F | imm<<10 | rn<<5
     (defn fa-cmp-x (rn imm) (fa-asm 4043309087 (list 32 1024) (list rn imm)))
+    ; cmp w<rn>, w<rm>  (subs wzr, rn, rm — register form) : base 0x6B00001F | rm<<16 | rn<<5
+    ;   the byte-loop's per-position compare (str_eq is cmp two LOADED bytes, not a
+    ;   byte vs an immediate); verified against the assembler — cmp w8,w9 == 6b09011f.
+    (defn fa-cmp-r (rn rm) (fa-asm 1795162143 (list 32 65536) (list rn rm)))
     ; b.<cond> #off  (signed, imm19) : base 0x54000000 | off19<<5 | cond
     ;   cond: EQ 0  NE 1  GE 10  LT 11  GT 12  LE 13
     (defn fa-bcond (cond off) (fa-asm 1409286144 (list 1 32) (list cond (fa-smask off 524288))))

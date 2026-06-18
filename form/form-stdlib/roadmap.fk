@@ -52,7 +52,7 @@
             (rm-step "ll-buffer"   "G1" "form-lower: stack/heap buffer model"
                      "a memory model (sp alloc + pointers), not just w0/w1 registers" "open")
             (rm-step "ll-streq"    "G1" "form-lower: lower string ops to byte loops"
-                     "(str_eq a b) -> byte-compare loop; form-asm-tr proves the primitive" "open")
+                     "(str_eq a b) -> byte-compare loop; form-asm-tr proves the primitive" "done")
             (rm-step "ll-readfile" "G1" "form-lower: lower host-io to syscalls"
                      "(read_file p) -> open/read/close svc; form-asm-syscall proves the primitive" "open")
             (rm-step "ll-callconv" "G1" "form-lower: general multi-arg calling convention"

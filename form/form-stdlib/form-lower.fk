@@ -45,7 +45,8 @@
         (if (eq (lo-tag prog i) 5) (lo-mul prog i argr)
         (if (eq (lo-tag prog i) 8) (lo-div prog i argr)
         (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
-            (list)))))))))
+        (if (eq (lo-tag prog i) 9) (lo-streq)
+            (list))))))))))
     ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0 ·
     ; else (two subtrees) -> lo-tree. The (ARG, x) fast path needs c1=ARG; without that
     ; guard the general case would silently add w<argr> in place of the left subtree.
@@ -129,6 +130,35 @@
             ecode)))
     (defn lo-cat (xss) (if (eq (len xss) 1) (head xss) (lo-app (head xss) (lo-cat (tail xss)))))
 
+    ; STR_EQ(a, b) — the byte-compare LOOP, the ll-streq rung (roadmap.fk). Strings
+    ; are POINTERS (a in x0, b in x1, the C convention); the result lands in w0 (1 if
+    ; the null-terminated bytes match, else 0). Unlike arith this is a loop with a
+    ; back-edge, so it composes the SAME proven encoders form-asm-tr/branch/headn
+    ; convict — ldrb (byte load), fa-cmp-r (register compare of two loaded bytes, the
+    ; one new primitive the rung needs), fa-bcond (NE/EQ exits), fa-b-off (the loop
+    ; back-edge and the false-skip). Branch offsets are computed from the block layout
+    ; in instructions (bytes/4), never labels — the lo-cond2 discipline at loop scale:
+    ;   loop: ldrb w8,[x0] ; ldrb w9,[x1] ; cmp w8,w9 ; b.ne +6(->ne) ;
+    ;         cmp w8,#0 ; b.eq +6(->eq) ; add x0,x0,#1 ; add x1,x1,#1 ; b -8(loop) ;
+    ;   ne:   movz w0,#0 ; b +2(->end) ; eq: movz w0,#1 ; end:  (caller appends ret)
+    ; The mismatch/terminator exits are symmetric +6 (4 body instrs + the 2 between),
+    ; the back-edge folds -8 (whole block to the top), the false arm skips the true arm
+    ; (+2). A 13th ret is added by lo-compile; lo-streq is the pure value-in-w0 block.
+    (defn lo-streq ()
+        (lo-cat (list
+            (fa-ldrb 8 0 0)              ; loop: load a's byte
+            (fa-ldrb 9 1 0)             ;       load b's byte
+            (fa-cmp-r 8 9)             ;       compare the two loaded bytes
+            (fa-bcond 1 6)            ; b.ne -> not_equal (skip 5, land on movz #0)
+            (fa-cmp 8 0)            ;        both bytes equal — is it the terminator?
+            (fa-bcond 0 6)        ; b.eq -> equal (skip 5, land on movz #1)
+            (fa-add-x-imm 0 0 1) ;          advance a
+            (fa-add-x-imm 1 1 1);           advance b
+            (fa-b-off -8)      ; b loop (back over the 8-instruction body)
+            (fa-movz 0 0)     ; not_equal: result 0
+            (fa-b-off 2)     ; b end (skip the true arm)
+            (fa-movz 0 1)))) ; equal: result 1
+
     ; compile a whole function: lower the root, then return
     (defn lo-compile (prog root) (lo-app (lo-node prog root 1) (fa-ret)))
     ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
@@ -148,7 +178,10 @@
         (if (eq (lo-tag prog i) 5) (lo-map-mul prog i)
         (if (eq (lo-tag prog i) 8) (lo-map-div prog i)
         (if (eq (lo-tag prog i) 6) (lo-map-cond prog i)
-            (list)))))))))
+        (if (eq (lo-tag prog i) 9) (lo-map-streq i)
+            (list))))))))))
+    ; STR_EQ owns all 12 loop instructions — the whole byte-compare block is one node
+    (defn lo-map-streq (i) (list i i i i i i i i i i i i))
     (defn lo-map-add (prog i)
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-map prog (lo-c1 prog i)) (list i))
