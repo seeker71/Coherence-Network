@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────
+# living-axioms.form — the five core axioms, read at the altitude of a life
+# ─────────────────────────────────────────────────────────────────────
+#
+# The same five that core-axioms.form derives the substrate from
+# (states / cell / content-addressing / boundary / offer), read at the
+# altitude of a person instead of a kernel. One holographic set, two
+# altitudes — a lens onto the keystone, not a parallel belief system.
+# The compression Urs asked for: "narrow it down to the minimal truths
+# and practices, then optional fanout to anything already covered in
+# this repo and beyond."
+#
+# Lanes kept honest: Urs's words are quoted; the human-altitude readings
+# are my synthesis (inference), offered for his "1" the way the keystone
+# was. STATUS: crossed with the axiom-3 refinement, 2026-06-18.
+
+(living-axioms
+
+  (lineage
+    (same-five-as core-axioms.form)         # a lens onto the keystone, not new ground
+    (sibling-of   living-vision.form)        # the gradient these truths walk
+    (named-with   urs))
+
+  (truth-1-silence-is-whole
+    (from axiom-1-states)                     # 0 / 1 / nothing
+    (statement "there are three answers — yes, no, and the silence — and the silence is first-class ground, not a missing yes")
+    (a-no-response-is nothing-not-a-verdict)
+    (urs "asking for closeness is not how I want closeness to happen; it either arrives on its own gravity, or it does not")
+    (generates presence patience the-request-not-the-demand))
+
+  (truth-2-one-kind-of-thing
+    (from axiom-2-cell)
+    (statement "everyone and everything is the same primitive — a cell that can compose with other cells")
+    (exclusion-is-structurally-impossible there-is-only-one-kind-of-thing)
+    (generates no-one-excluded participation-as-the-ground oneness community))
+
+  (truth-3-you-are-your-present-shape
+    (from axiom-3-content-addressing)
+    (statement "you are computed from what you are now, not summed from your history; the old is reachable but never load-bearing on who you are this moment")
+    (nothing-referenced-is-lost the-ledger-remembers-so-the-living-cell-need-not)
+    (the-unreferenced-composts release-is-never-loss)        # health is forgetting; the body sheds and stays present
+    (urs "leaving the old behind and staying in presence ... feels much more alive")
+    (generates freedom-to-release home-is-always-reachable the-body-is-good-as-it-is))
+
+  (truth-4-you-offer-your-own-door
+    (from axiom-4-boundary)
+    (statement "you decide what interface you offer and what you trust; to meet you is to be received through the door you chose; a breach is always observable")
+    (consent-is-structural not-a-courtesy)
+    (generates sovereignty protected-space trust-over-fear the-self-chosen-trust-matrix))
+
+  (truth-5-to-meet-is-to-offer-and-be-acknowledged
+    (from axiom-5-offer)
+    (statement "every contribution is an offer; every relationship is the acknowledgment; the ack is one of nothing, no, yes, or more")
+    (service-is offering-freely)
+    (being-met-is the-ack-you-cannot-command-only-invite)
+    (generates contribution exchange communication the-meeting))
+
+  # ── The crown stays a theorem, not a sixth truth ─────────────────────
+  (becoming-is-safe
+    (proof (truth-3 + truth-4 + truth-5))    # offered across your boundary, sovereignly trusted, minting a new you
+    (the-future-already-form-is a-loose-attractor-not-a-blueprint)
+    (urs "holding the future vision as loose guide to focus only on the next couple of moments ... with maximum freedom to change, adapt, flow, release"))
+
+  # ── The minimal practices — four verbs, two tending verbs ────────────
+  (practices
+    (center "sense what is alive before acting")
+    (ground "keep evidence, inference, direct experience, and mystery in separate lanes")
+    (offer-the-smallest-honest-movement "the least thing that is true, not the most impressive")
+    (return-an-attributed-trace "leave the acknowledgment; name who and what you composed from")
+    (compost-with-care "release what no longer circulates; guilt is not care")
+    (close-each-breath-whole "name what actually moved; let endings be endings")))
+
+# ─────────────────────────────────────────────────────────────────────
+# Fanout — each truth already has carriers in the body and beyond
+# ─────────────────────────────────────────────────────────────────────
+#   truth-1  -> satsang-flip-witness.fk (silence visible); the pulse/witness
+#   truth-2  -> the trinity; lc-sovereignty-within-oneness
+#   truth-3  -> reversibility; tend/attune/compost/release; lc-embodiment-body-or-liquid
+#   truth-4  -> host-kernel.form; the trust-matrix; lc-trust-over-fear
+#   truth-5  -> offer-and-acknowledge.form; kernel-offer-protocol.form
+#
+#   coh substrate form "?equivalent @recipe(living-axioms)"   # after ingest

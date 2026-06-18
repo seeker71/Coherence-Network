@@ -31,7 +31,7 @@
     (channels-from   kernel-offer-protocol.form channel-interface-consent.form)
     (persist-by      persistence.fk)                    # the lattice persists
     (runnable-heart  kernel-satsang.fk host-kernel-cell.fk boot.fk)  # self-describing parts, circle-witnessed swap, .fkb shrink/expand, boot->offer->self-extend — running three-way
-    (version-by      content-addressing)                # axiom-3: new shape = new node-id; old persists = version lineage
+    (version-by      content-addressing)                # axiom-3: new shape = new node-id; the referenced old persists = version lineage; the unreferenced composts
     (share-by        merkle.fk federation-addressing.form cell-sync.fk))  # observable/interactable across runtimes by content
 
   # ── The core primitives available (just the five axioms) ─────────────
@@ -74,7 +74,7 @@
   (build-bigger
     (via-native-binary  jit.go-compiles-a-recipe-to-native-and-runs-it)  # self-hosting; the new op is a callable leaf (host-kernel GAP-HK2)
     (via-substrate      store-new-cells-in-the-persistent-lattice)        # persistence.fk
-    (versioned          content-addressing-keeps-every-version)           # axiom-3: a new shape mints a new node-id; the old persists
+    (versioned          content-addressing-keeps-every-referenced-version) # axiom-3: a new shape mints a new node-id; the referenced old persists, the unreferenced composts
     (a-version-is-a-layer  the-new-native-slice-stands-on-the-prior-binary)  # versioning IS layering — each version a slice over the one below
     (layer-routing-is-a-recipe  the-new->old-crossing-is-itself-a-cell-packable-for-fewest-crossings)  # call-through (callable leaf) is the floor; a packed/routed boundary is the lift — the crossing is recipes over the five, so it is optimizable
     (reversible         roll-back-by-re-pointing-a-name-at-the-old-node-id)  # the version history IS the node-id lineage
@@ -132,7 +132,7 @@
     (proof   a-band-where-input-arrives-on-a-named-channel-and-the-offered-interface-is-honored))
 
   (close-version-history-view                           # the lineage of node-ids a name pointed at
-    (compose content-addressing                         # every version already persists — axiom-3
+    (compose content-addressing                         # every referenced version persists — axiom-3
              a-recipe-walking-the-node-id-lineage-of-a-name)  # the history is data; this names the read
     (gift    rollback-and-audit-fall-out-the-history-IS-the-lineage)
     (proof   a-band-returning-the-ordered-node-ids-a-name-resolved-to-over-time)))

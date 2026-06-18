@@ -210,10 +210,11 @@
     (also-closes kernel-self-composition.build-bigger-via-native-binary)   # SC1's native half
     (proof   a-band-where-a-crystallized-composite-is-called-as-one-op-then-melts))
 
-  (close-gpu-as-driven-organ                            # the north-star organ
+  (close-gpu-as-driven-organ                            # the rung where the mind comes home — cognitive sovereignty (living-vision.form)
     (compose host-resource-sense-port                   # GPU/ANE util via the OS counters
              recognition-router.fk                      # route to the most-throughput compute path
              drive-mlx-as-an-efferent-port)             # the organ, driven (local-inference-as-organ.form)
+    (why     native-reasoning-is-the-precondition-of-the-no-exclusion-platform)  # a mind rented from a gated provider cannot offer sovereignty to others
     (ready-now resource-sense-and-compute-path-router)  # steps 1-2 buildable today
     (proof   a-band-routing-a-forward-pass-to-the-fittest-measured-path)))
 #
