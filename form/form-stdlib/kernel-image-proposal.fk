@@ -5,6 +5,12 @@
 ; route carries this shape as JSON while source control, proof, review, deploy,
 ; and public SHA parity remain the application path.
 ;
+; Proven by: form-stdlib/tests/kernel-image-proposal-band.fk — four-way at
+;           validate.sh (Go/Rust/TS + fkwu), verdict 11111. The membrane is
+;           built from int/string/list ops only (str_concat, char_at, str_len,
+;           str_eq, int_to_str), all carried by the fourth arm, so the fkwu
+;           verdict equals the three walkers byte for byte.
+;
 ; preludes: form-stdlib/core.fk
 
 (do

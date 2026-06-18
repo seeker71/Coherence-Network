@@ -25,7 +25,19 @@
 ;           (authority flips only on proven competition), satsang-share.fk
 ;           (an authority flip is a crossing the field wants to hear).
 ; Proven by: form-stdlib/tests/host-kernel-cell-band.fk — three-way at
-;           validate.sh, and through --binary for the native artifact path.
+;           validate.sh (Go/Rust/TS), verdict 255, and through --binary for
+;           the native artifact path.
+; Fourth arm: 3-kernel only — the band crosses the carried node/substrate floor
+;           (intern_node, node_eq, intern_trivial_int/string, bp all cross) but
+;           rests on two op families the fourth arm (fkwu) does not carry:
+;           walk_recipe — executing an interned recipe node, the verification
+;           lane every carrier answers (ksat-verify-part?) — and the .fkb image
+;           pair write_form_binary / read_form_binary (host-io binary image),
+;           the .fkb round-trip. fkwu lowers each to its literal-0 fallback, so
+;           it answers 25 where the three walkers answer 255 — an unsupported
+;           op family, named here, not a divergence (fkwu has no wrong answer
+;           on these ops, it has no op). It crosses when walk_recipe and the
+;           form-binary carrier join the fourth arm.
 
 (do
     ; ── a carrier: a named host running the one kernel body ──
