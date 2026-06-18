@@ -273,10 +273,10 @@ export default async function ArrivalPage({ params }: RouteParams) {
           <p className="text-base text-muted-foreground italic pt-2">
             And — when you write to{" "}
             <a
-              href="mailto:umuff71@gmail.com"
+              href="mailto:hello@hati.earth"
               className="text-amber-400 hover:text-amber-300"
             >
-              urs at umuff71@gmail.com
+              urs at hello@hati.earth
             </a>{" "}
             — he reads what you sent and writes back, personally, while
             the body is still small enough that he can.
