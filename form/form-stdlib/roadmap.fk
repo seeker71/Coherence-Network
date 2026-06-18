@@ -76,7 +76,7 @@
                      "form-lower-streq" "done")
             (rm-step "ll-readfile" "G1" "form-lower: lower host-io to syscalls"
                      "(read_file p) -> open/read/close svc; form-asm-syscall proves the primitive"
-                     "-" "open")
+                     "form-lower-readfile" "done")
             (rm-step "ll-callconv" "G1" "form-lower: general multi-arg calling convention"
                      "args in w0..w7, frame setup; today single-arg only"
                      "-" "open")
