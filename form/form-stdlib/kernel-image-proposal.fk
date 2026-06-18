@@ -1,145 +1,118 @@
 ; kernel-image-proposal.fk -- public kernel image proposal trust membrane.
 ;
-; Public Form/BML can now propose a candidate kernel image, but this surface
-; names the membrane that keeps proposal separate from live mutation. The API
-; route carries this shape as JSON while source control, proof, review, deploy,
-; and public SHA parity remain the application path.
+; Public Form/BML can propose a candidate kernel image; this surface is the
+; membrane that keeps proposal separate from live mutation. The proposal is a
+; VALUE — a tagged tree of kh-field rows over kernel-http's vocabulary, with the
+; candidate image, the mutation gate, and the trust envelope as nested tagged
+; cells. The kernel-http Response carrier serializes the value ONCE on its way
+; to the socket (kh-serve-response over http-render.fk); nothing here hand-concats
+; a wire string. Structure is the proof: a reader asserts on the tagged value's
+; children (kh-tagged?, kh-field-value-or, kh-response-status), never on
+; substrings of a hand-built string.
 ;
-; preludes: form-stdlib/core.fk
+; Four-way: pure value construction + structural accessors + the kernel-http
+; render carrier — string ops (str_concat/int_to_str) and tagged-list shape are
+; all carried by fkwu. No node/substrate, no host-io.
+;
+; (Single-line list(...) rows: the local source-compiler compiles a list( call
+; that spans lines wrong — list( + newline collapses the rows. The constructor
+; rows live on one line, the body's proven idiom shared with http-render.fk.)
+;
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-render.fk
 
-(do
-    (defn kip-cat (xs)
-        (if (nil? xs) ""
-            (str_concat (head xs) (kip-cat (tail xs)))))
+section [form.bml] {
 
-    (defn kip-json-string-escape-loop (s i)
-        (if (ge i (str_len s))
-            ""
-            (str_concat (char_at s i) (kip-json-string-escape-loop s (add i 1)))))
+    // ---- the candidate image : a tagged value over kh-field rows ----------
+    // The image a public proposal names. Its facts are kh-field rows (name,
+    // value), composed — readable by kh-field-value-or, never sniffed from a
+    // string. witness_recipes is a list child, not a baked "[...]" literal.
+    let kip_tag_candidate_image = 44001;
+    let kip_tag_mutation_gate = 44002;
+    let kip_tag_trust_envelope = 44003;
+    let kip_tag_proposal = 44004;
 
-    (defn kip-json-string (s)
-        (str_concat "\"" (str_concat (kip-json-string-escape-loop s 0) "\"")))
+    def kip-int-field(name, value) = kh-field(name, int_to_str(value));
 
-    (defn kip-candidate-image-json
-        (source-hash image-hash primitive-count dispatch-count proof-count)
-        (kip-cat (list
-            "{\"kind\":\"KERNEL-CORE-IMAGE\""
-            ",\"image_kind\":\"kernel-core-self\""
-            ",\"source_authority\":\"submitted BML source plus public proposal proof\""
-            ",\"source_hash\":" (kip-json-string source-hash)
-            ",\"image_hash\":" (kip-json-string image-hash)
-            ",\"primitive_count\":" (int_to_str primitive-count)
-            ",\"dispatch_count\":" (int_to_str dispatch-count)
-            ",\"proof_count\":" (int_to_str proof-count)
-            ",\"witness_recipes\":[\"add\",\"if\",\"do\"]"
-            "}")))
+    def kip-candidate-image-fields-of(source_hash, image_hash, primitive_count, dispatch_count, proof_count) = list(kh-field("kind", "KERNEL-CORE-IMAGE"), kh-field("image_kind", "kernel-core-self"), kh-field("source_authority", "submitted BML source plus public proposal proof"), kh-field("source_hash", source_hash), kh-field("image_hash", image_hash), kip-int-field("primitive_count", primitive_count), kip-int-field("dispatch_count", dispatch_count), kip-int-field("proof_count", proof_count));
+    def kip-candidate-image(source_hash, image_hash, primitive_count, dispatch_count, proof_count, witness_recipes) = list(kip_tag_candidate_image, kip-candidate-image-fields-of(source_hash, image_hash, primitive_count, dispatch_count, proof_count), witness_recipes);
+    def kip-candidate-image?(image) = kh-tagged?(image, kip_tag_candidate_image, 3);
+    def kip-candidate-image-fields(image) = nth(image, 1);
+    def kip-candidate-image-witness-recipes(image) = nth(image, 2);
+    def kip-candidate-image-field(image, name) = kh-field-value-or(kip-candidate-image-fields(image), name, "");
+    def kip-candidate-image-valid?(image) = if kip-candidate-image?(image) then and(kh-fields-valid?(kip-candidate-image-fields(image)), str_eq(kip-candidate-image-field(image, "kind"), "KERNEL-CORE-IMAGE")) else false;
 
-    (defn kip-mutation-gate-json (requested-action)
-        (kip-cat (list
-            "{\"requested_action\":" (kip-json-string requested-action)
-            ",\"allowed\":false"
-            ",\"performed\":false"
-            ",\"reason\":\"public proposal preview does not mutate production\""
-            ",\"next_gate\":\"commit evidence -> PR -> CI -> deploy -> public SHA verification\""
-            "}")))
+    // ---- the mutation gate : refusal carried as structure ----------------
+    // The gate says: this route refuses to mutate production, and names the next
+    // gate. allowed/performed are real bool children, not "false" substrings.
+    def kip-mutation-gate(requested_action) = list(kip_tag_mutation_gate, requested_action, false, false, "public proposal preview does not mutate production", "commit evidence -> PR -> CI -> deploy -> public SHA verification");
+    def kip-mutation-gate?(gate) = kh-tagged?(gate, kip_tag_mutation_gate, 6);
+    def kip-mutation-gate-requested-action(gate) = nth(gate, 1);
+    def kip-mutation-gate-allowed?(gate) = nth(gate, 2);
+    def kip-mutation-gate-performed?(gate) = nth(gate, 3);
+    def kip-mutation-gate-reason(gate) = nth(gate, 4);
+    def kip-mutation-gate-next-gate(gate) = nth(gate, 5);
+    def kip-mutation-gate-refuses?(gate) = if kip-mutation-gate?(gate) then and(if kip-mutation-gate-allowed?(gate) then false else true, if kip-mutation-gate-performed?(gate) then false else true) else false;
 
-    (defn kip-trust-envelope-json (source-hash image-hash proof-passed requested-action)
-        (kip-cat (list
-            "{\"state\":\"kernel-image-proposal-preview\""
-            ",\"choice_success\":" (if proof-passed "1" "0")
-            ",\"protocol\":\"POST /api/substrate/kernel-image/proposals\""
-            ",\"default_route\":\"proposal-preview\""
-            ",\"native_route\":\"Form kernel-image-proposal envelope\""
-            ",\"bma\":\"kernel-image-proposal\""
-            ",\"prediction_error\":\"carried_as_residual\""
-            ",\"residual\":\"Public source can propose a kernel image; live mutation remains behind commit, proof, review, deploy, and public SHA verification.\""
-            ",\"requested_action\":" (kip-json-string requested-action)
-            ",\"mutation_allowed\":false"
-            ",\"mutation_performed\":false"
-            ",\"candidate_image_hash\":" (kip-json-string image-hash)
-            ",\"rollback\":\"no production state changed by this route\""
-            ",\"source_hash\":" (kip-json-string source-hash)
-            "}")))
+    // ---- the trust envelope : the residual that travels with the preview --
+    def kip-trust-envelope(source_hash, image_hash, proof_passed, requested_action) = list(kip_tag_trust_envelope, "kernel-image-proposal-preview", kh-bool-score(proof_passed, 1), "POST /api/substrate/kernel-image/proposals", "kernel-image-proposal", "carried_as_residual", "Public source can propose a kernel image; live mutation remains behind commit, proof, review, deploy, and public SHA verification.", requested_action, false, false, image_hash, "no production state changed by this route", source_hash);
+    def kip-trust-envelope?(env) = kh-tagged?(env, kip_tag_trust_envelope, 13);
+    def kip-trust-envelope-state(env) = nth(env, 1);
+    def kip-trust-envelope-choice-success(env) = nth(env, 2);
+    def kip-trust-envelope-protocol(env) = nth(env, 3);
+    def kip-trust-envelope-bma(env) = nth(env, 4);
+    def kip-trust-envelope-prediction-error(env) = nth(env, 5);
+    def kip-trust-envelope-residual(env) = nth(env, 6);
+    def kip-trust-envelope-requested-action(env) = nth(env, 7);
+    def kip-trust-envelope-mutation-allowed?(env) = nth(env, 8);
+    def kip-trust-envelope-mutation-performed?(env) = nth(env, 9);
+    def kip-trust-envelope-candidate-image-hash(env) = nth(env, 10);
+    def kip-trust-envelope-rollback(env) = nth(env, 11);
+    def kip-trust-envelope-source-hash(env) = nth(env, 12);
 
-    (defn kip-proposal-json
-        (proposal-id source-hash image-hash primitive-count dispatch-count proof-count requested-action)
-        (kip-cat (list
-            "{\"state\":\"kernel-image-proposal-preview\""
-            ",\"proposal_id\":" (kip-json-string proposal-id)
-            ",\"proposal_status\":\"accepted-preview\""
-            ",\"proof_passed\":true"
-            ",\"candidate_image\":"
-            (kip-candidate-image-json
-                source-hash
-                image-hash
-                primitive-count
-                dispatch-count
-                proof-count)
-            ",\"trust_envelope\":"
-            (kip-trust-envelope-json source-hash image-hash true requested-action)
-            ",\"mutation\":"
-            (kip-mutation-gate-json requested-action)
-            "}")))
+    // ---- the proposal : the whole preview as one tagged value ------------
+    def kip-proposal(proposal_id, source_hash, image_hash, primitive_count, dispatch_count, proof_count, requested_action) = list(kip_tag_proposal, proposal_id, "accepted-preview", true, kip-candidate-image(source_hash, image_hash, primitive_count, dispatch_count, proof_count, list("add", "if", "do")), kip-trust-envelope(source_hash, image_hash, true, requested_action), kip-mutation-gate(requested_action));
+    def kip-proposal?(proposal) = kh-tagged?(proposal, kip_tag_proposal, 7);
+    def kip-proposal-id(proposal) = nth(proposal, 1);
+    def kip-proposal-status(proposal) = nth(proposal, 2);
+    def kip-proposal-proof-passed?(proposal) = nth(proposal, 3);
+    def kip-proposal-candidate-image(proposal) = nth(proposal, 4);
+    def kip-proposal-trust-envelope(proposal) = nth(proposal, 5);
+    def kip-proposal-mutation-gate(proposal) = nth(proposal, 6);
 
-    (defn kip-match-at? (s needle i j)
-        (if (eq j (str_len needle))
-            1
-            (if (ge (add i j) (str_len s))
-                0
-                (if (str_eq (char_at s (add i j)) (char_at needle j))
-                    (kip-match-at? s needle i (add j 1))
-                    0))))
+    // The proposal is valid iff it names an image, accepts proof only as preview,
+    // refuses mutation, and carries the residual — all read as structure.
+    def kip-proposal-valid?(proposal) = if kip-proposal?(proposal) then and(kip-candidate-image-valid?(kip-proposal-candidate-image(proposal)), and(kip-proposal-proof-passed?(proposal), and(str_eq(kip-proposal-status(proposal), "accepted-preview"), and(kip-mutation-gate-refuses?(kip-proposal-mutation-gate(proposal)), str_eq(kip-trust-envelope-prediction-error(kip-proposal-trust-envelope(proposal)), "carried_as_residual"))))) else false;
 
-    (defn kip-contains-loop? (s needle i)
-        (if (gt i (sub (str_len s) (str_len needle)))
-            0
-            (if (eq (kip-match-at? s needle i 0) 1)
-                1
-                (kip-contains-loop? s needle (add i 1)))))
+    // ---- the kernel-http Response carrier serializes it once -------------
+    // The proposal value reaches the socket as a kh-response. The handler builds
+    // a kh-response with its OWN semantic header (the bma) and the rendered
+    // proposal body; kh-serve-response (http-render.fk) attaches the transport
+    // framing and renders ONCE. The body wire-text is produced by the carrier,
+    // not hand-concatenated here.
+    def kip-render-fields(fields) = if nil?(fields) then "" else str_concat(str_concat(kh-field-name(head(fields)), str_concat("=", str_concat(kh-field-value(head(fields)), "\n"))), kip-render-fields(tail(fields)));
+    def kip-proposal-body(proposal) {
+        let env = kip-proposal-trust-envelope(proposal);
+        let image = kip-proposal-candidate-image(proposal);
+        let gate = kip-proposal-mutation-gate(proposal);
+        str_concat(str_concat("state=", str_concat(kip-trust-envelope-state(env), "\n")), str_concat(str_concat("proposal_id=", str_concat(kip-proposal-id(proposal), "\n")), str_concat(str_concat("proposal_status=", str_concat(kip-proposal-status(proposal), "\n")), str_concat(kip-render-fields(kip-candidate-image-fields(image)), str_concat(str_concat("residual=", str_concat(kip-trust-envelope-residual(env), "\n")), str_concat("next_gate=", str_concat(kip-mutation-gate-next-gate(gate), "\n")))))));
+    }
+    def kip-proposal-response(proposal) = kh-response(200, list(kh-header("Content-Type", "text/plain"), kh-header("X-Form-Bma", kip-trust-envelope-bma(kip-proposal-trust-envelope(proposal)))), kip-proposal-body(proposal));
+    // (kip-proposal-wire proposal) -> the full HTTP/1.1 wire string, serialized
+    // once by the kernel-http response carrier.
+    def kip-proposal-wire(proposal) = kh-serve-response(kip-proposal-response(proposal));
 
-    (defn kip-contains? (s needle)
-        (if (eq (str_len needle) 0)
-            1
-            (if (lt (str_len s) (str_len needle))
-                0
-                (kip-contains-loop? s needle 0))))
+    // ---- the structural proof ----
+    // 100000+... = image named (structure), proof accepted, mutation refused,
+    // trust residual carried, source/image hashes visible — each asserted on the
+    // tagged value's children, and the carrier render carries the structure.
+    def kip-test() {
+        let proposal = kip-proposal("kernel-proposal-demo", "sha256:source", "sha256:image", 8, 15, 6, "apply");
+        let image = kip-proposal-candidate-image(proposal);
+        let env = kip-proposal-trust-envelope(proposal);
+        let gate = kip-proposal-mutation-gate(proposal);
+        let response = kip-proposal-response(proposal);
+        sum(list(kh-bool-score(and(kip-candidate-image-valid?(image), and(str_eq(kip-candidate-image-field(image, "image_kind"), "kernel-core-self"), eq(len(kip-candidate-image-witness-recipes(image)), 3))), 1), kh-bool-score(and(kip-proposal-proof-passed?(proposal), and(eq(kip-trust-envelope-choice-success(env), 1), str_eq(kip-proposal-status(proposal), "accepted-preview"))), 10), kh-bool-score(and(kip-mutation-gate-refuses?(gate), and(if kip-trust-envelope-mutation-allowed?(env) then false else true, if kip-trust-envelope-mutation-performed?(env) then false else true)), 100), kh-bool-score(and(str_eq(kip-trust-envelope-bma(env), "kernel-image-proposal"), and(str_eq(kip-trust-envelope-prediction-error(env), "carried_as_residual"), str_eq(kip-trust-envelope-rollback(env), "no production state changed by this route"))), 1000), kh-bool-score(and(str_eq(kip-candidate-image-field(image, "source_hash"), "sha256:source"), and(str_eq(kip-candidate-image-field(image, "image_hash"), "sha256:image"), str_eq(kip-trust-envelope-candidate-image-hash(env), "sha256:image"))), 10000), kh-bool-score(and(kip-proposal-valid?(proposal), and(kh-response-valid?(response), gt(str_len(kip-proposal-wire(proposal)), 0))), 100000)));
+    }
 
-    (defn kip-and2 (a b) (if (eq a 1) (if (eq b 1) 1 0) 0))
-    (defn kip-and3 (a b c) (kip-and2 (kip-and2 a b) c))
-
-    ;; 11111 = image named, proof accepted, mutation refused, trust residual
-    ;; carried, and source/image hashes visible.
-    (defn kip-test ()
-        (do
-            (let proposal
-                (kip-proposal-json
-                    "kernel-proposal-demo"
-                    "sha256:source"
-                    "sha256:image"
-                    8
-                    15
-                    6
-                    "apply"))
-            (sum (list
-                (if (eq (kip-and3
-                    (kip-contains? proposal "\"kind\":\"KERNEL-CORE-IMAGE\"")
-                    (kip-contains? proposal "\"image_kind\":\"kernel-core-self\"")
-                    (kip-contains? proposal "\"witness_recipes\"")) 1) 1 0)
-                (if (eq (kip-and3
-                    (kip-contains? proposal "\"proof_passed\":true")
-                    (kip-contains? proposal "\"choice_success\":1")
-                    (kip-contains? proposal "\"proposal_status\":\"accepted-preview\"")) 1) 10 0)
-                (if (eq (kip-and3
-                    (kip-contains? proposal "\"mutation_allowed\":false")
-                    (kip-contains? proposal "\"mutation_performed\":false")
-                    (kip-contains? proposal "\"performed\":false")) 1) 100 0)
-                (if (eq (kip-and3
-                    (kip-contains? proposal "\"bma\":\"kernel-image-proposal\"")
-                    (kip-contains? proposal "\"prediction_error\":\"carried_as_residual\"")
-                    (kip-contains? proposal "\"rollback\":\"no production state changed by this route\"")) 1) 1000 0)
-                (if (eq (kip-and3
-                    (kip-contains? proposal "\"source_hash\":\"sha256:source\"")
-                    (kip-contains? proposal "\"image_hash\":\"sha256:image\"")
-                    (kip-contains? proposal "\"candidate_image_hash\":\"sha256:image\"")) 1) 10000 0)))))
-
-    0)
+    kip-test();
+}

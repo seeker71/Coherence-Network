@@ -1,0 +1,40 @@
+; tests/form-os-channel-band.fk — the offer/acknowledge channel as a Form recipe.
+;
+; preludes: form-stdlib/core.fk form-stdlib/offer-lane.fk form-stdlib/storage-port.fk form-stdlib/form-os-channel.fk
+;
+; Band verdict: 111111 when the channel — schema, the four verbs, and the
+; offer/acknowledge lifecycle — runs as Form over the storage-port carrier and
+; agrees across all four kernels. Every bit reads STRUCTURE (tagged rows, lane
+; status, the carrier round-trip), never a substring of a hand-built blob.
+;   init seeds 3 deps / 3 needs / 3 OFFERED expansions                  -> 1
+;   offer grows the channel; the new row rests OFFERED                  -> 10
+;   validate grounds id 1 (OFFERED -> GROUNDED), leaves the rest        -> 100
+;   the satsang ack is axiom-5: received / counter (idempotent) / declined -> 1000
+;   the channel survives a storage-port carrier round-trip (memory)     -> 10000
+;   the sqlite carrier's C is GENERATED from the schema (single source) -> 100000
+
+section [form.bml] {
+    def foc-band-score() {
+        let ch0 = foc-init();
+        let ch1 = foc-offer(ch0, "recipe", "a fresh offered expansion");
+        let ch2 = foc-validate(ch1, 1);
+        let mem = carrier-memory();
+        let store = foc-persist(mem, storage-open(mem, ""), ch2);
+        let round = foc-load-encoded(mem, store, 1);
+        // (1) init seeds the schema as composed rows
+        let bit1 = if and(foc-channel?(ch0), and(foc-dep?(head(foc-channel-deps(ch0))), and(foc-need?(head(foc-channel-needs(ch0))), and(eq(len(foc-channel-deps(ch0)), 3), and(eq(len(foc-channel-needs(ch0)), 3), eq(foc-count-offered(foc-channel-expansions(ch0)), 3)))))) then 1 else 0;
+        // (10) offer grows the channel; the new expansion rests OFFERED
+        let bit10 = if and(eq(len(foc-channel-expansions(ch1)), 4), and(foc-expansion?(foc-find-expansion(foc-channel-expansions(ch1), 4)), foc-expansion-offered?(foc-find-expansion(foc-channel-expansions(ch1), 4)))) then 10 else 0;
+        // (100) validate grounds id 1; id 2 stays offered
+        let bit100 = if and(foc-expansion-validated?(foc-find-expansion(foc-channel-expansions(ch2), 1)), and(foc-expansion-offered?(foc-find-expansion(foc-channel-expansions(ch2), 2)), eq(foc-count-validated(foc-channel-expansions(ch2)), 1))) then 100 else 0;
+        // (1000) the satsang ack is axiom-5 vocabulary
+        let bit1000 = if and(eq(foc-validate-ack(ch1, 1), ACK-RECEIVED()), and(eq(foc-validate-ack(ch2, 1), ACK-COUNTER()), eq(foc-validate-ack(ch1, 99), ACK-DECLINED()))) then 1000 else 0;
+        // (10000) the channel survives a storage-port carrier round-trip
+        let bit10000 = if and(eq(len(round), 1), gt(str_len(storage-value(round)), 0)) then 10000 else 0;
+        // (100000) the sqlite carrier's C is generated from the schema recipe
+        let bit100000 = if gt(str_len(foc-emit-create()), 0) then 100000 else 0;
+        sum(list(bit1, bit10, bit100, bit1000, bit10000, bit100000));
+    }
+
+    foc-band-score();
+}

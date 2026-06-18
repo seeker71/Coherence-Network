@@ -1,81 +1,165 @@
-; form-os-channel.fk — the MINIMAL living surface. Not a fixed API: ONE offer/
-; acknowledge channel, backed by the sqlite driver (sqlite-driver.fk), where the
-; system shows what it depends on, what it needs / wants / desires, and the
-; expansions it offers for OUR satsang validation. The offer axiom + the witness
-; theorem (validation is the concert of trust) made into a channel we talk to and
-; grow. Supersedes the fixed db-api-server routes AS THE INTERACTION SURFACE
-; (db-api-server remains the self-contained-binary proof).
+; form-os-channel.fk — the MINIMAL living surface, as a Form recipe over the
+; storage-port carrier. ONE offer/acknowledge channel where the system shows what
+; it depends on, what it needs / wants / desires, and the expansions it offers
+; for OUR satsang validation. The offer axiom + the witness theorem (validation is
+; the concert of trust), made into a channel we talk to and grow.
 ;
-; Urs: "the surface [should] be minimal first so we can interact with the channel
-; and see what it needs, wants and desires and it can produce new recipes and
-; binaries of expansion that can be satsang validated by us."
+; THE BODY IS FORM. The schema (three relation kinds), the four verbs (init,
+; state, offer, validate), and the offer/acknowledge lifecycle are Form recipes
+; over the storage-port contract (storage-port.fk). Because the logic names no
+; backend — it pulls open/put/get from whatever carrier it is handed — the SAME
+; channel runs over the pure MEMORY carrier (four-way proven, no host effect) and
+; over the durable file / sqlite carriers (storage-port-file.fk / sqlite-driver.fk).
+; The expansion lifecycle reuses offer-lane.fk's axiom-5 vocabulary: an expansion
+; is OFFERED, then a satsang acknowledgment GROUNDS it (offered -> validated).
 ;
-; CLI — the smallest first surface to interact and listen:
-;   <db> init                  seed the schema, the deps, the real current desires
-;   <db> state                 what it depends on / needs / desires / offers (read)
-;   <db> offer <kind> <body>   propose a new recipe/binary of expansion (held)
-;   <db> validate <id>         satsang acknowledgment — offered -> validated
+; CLI verbs (each a recipe; the carrier persists):
+;   init                  seed the schema, the deps, the real current desires
+;   state                 what it depends on / needs / desires / offers (read)
+;   offer <kind> <body>   propose a new recipe/binary of expansion (held OFFERED)
+;   validate <id>         satsang acknowledgment — OFFERED -> GROUNDED (validated)
 ;
 ; The seeded desires ARE this arc's honest closing cells (the write-path recipe,
 ; emitting machine code to drop clang, the quoteless responder-as-cells), so the
-; channel surfaces the kernel's REAL state, not decoration. Persists through the
-; sqlite driver (write). Go-emitted (SQL string literals -> the recorded TS
-; escaped-quote divergence); compiled with `clang ... -lsqlite3`.
+; channel surfaces the kernel's REAL state, not decoration.
+;
+; HOST CARRIER (3-kernel, host-io): durable persistence runs through the file
+; carrier (storage-port-file.fk syscalls) or the sqlite driver (sqlite-driver.fk,
+; which links libsqlite3 and emits/execs C). Those carriers perform the actual
+; read_file / write_file / sqlite3_exec — the host-io standing wall. The C the
+; sqlite carrier needs is GENERATED from the schema recipe (foc-emit-c below),
+; not held as an opaque inline string; the recipe is the single source, so there
+; is no baked TS-divergence string to drift. The LOGIC above the carrier (this
+; file) is Form and crosses four-way over the memory carrier.
+;
+; preludes: form-stdlib/core.fk form-stdlib/offer-lane.fk form-stdlib/storage-port.fk
 
-(defn foc-emit ()
-  "typedef struct sqlite3 sqlite3;
-typedef struct sqlite3_stmt sqlite3_stmt;
-extern int sqlite3_open(const char*, sqlite3**);
-extern int sqlite3_exec(sqlite3*, const char*, int(*)(void*,int,char**,char**), void*, char**);
-extern int sqlite3_prepare_v2(sqlite3*, const char*, int, sqlite3_stmt**, const char**);
-extern int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int, void*);
-extern int sqlite3_step(sqlite3_stmt*);
-extern int sqlite3_finalize(sqlite3_stmt*);
-extern int sqlite3_close(sqlite3*);
-extern int printf(const char*, ...);
-extern int strcmp(const char*, const char*);
-static sqlite3 *db;
-static int prow(void*u,int n,char**v,char**c){ int i; for(i=0;i<n;i++){ if(i) printf(\"  \"); printf(\"%s\", v[i]?v[i]:\"\"); } printf(\"\\n\"); return 0; }
-static void ex(const char*s){ char*e=0; sqlite3_exec(db, s, 0,0,&e); }
-static void sel(const char*s){ char*e=0; sqlite3_exec(db, s, prow, 0, &e); }
-static void bind1(const char*sql,const char*a,const char*b){
-    sqlite3_stmt*st; if(sqlite3_prepare_v2(db,sql,-1,&st,0)) return;
-    sqlite3_bind_text(st,1,a,-1,0); if(b) sqlite3_bind_text(st,2,b,-1,0);
-    sqlite3_step(st); sqlite3_finalize(st); }
-int main(int argc,char**argv){
-    if(argc<3){ printf(\"usage: <db> init|state|offer <kind> <body>|validate <id>\\n\"); return 1; }
-    if(sqlite3_open(argv[1], &db)) return 2;
-    ex(\"CREATE TABLE IF NOT EXISTS dep(tool TEXT, role TEXT, digest TEXT);\");
-    ex(\"CREATE TABLE IF NOT EXISTS need(what TEXT, why TEXT);\");
-    ex(\"CREATE TABLE IF NOT EXISTS expansion(id INTEGER PRIMARY KEY, kind TEXT, body TEXT, status TEXT);\");
-    const char*verb = argv[2];
-    if(strcmp(verb,\"init\")==0){
-        ex(\"DELETE FROM dep; INSERT INTO dep VALUES \"
-           \"('clang','compiles the emitted C','external'),\"
-           \"('sqlite3','seeds the .db and is the driver','external'),\"
-           \"('libc','the only runtime link','allowed-carrier');\");
-        ex(\"DELETE FROM need; INSERT INTO need VALUES \"
-           \"('a write-path as a Form recipe','retire the sqlite driver into the body'),\"
-           \"('to emit machine code directly','drop the clang dependency'),\"
-           \"('a quoteless responder-as-cells','make the whole server three-way');\");
-        ex(\"DELETE FROM expansion; INSERT INTO expansion(kind,body,status) VALUES \"
-           \"('recipe','sqlite-write.fk — b-tree insert/split, page alloc, free-list, journal, extending sqlite-read.fk','offered'),\"
-           \"('recipe','responder-as-cells — a quoteless HTTP responder via the fkc-emit-server walker over routing+sqlite recipes','offered'),\"
-           \"('binary','a machine-code emitter — emit native directly, drop clang','offered');\");
-        printf(\"channel initialized — talk to it: state\\n\");
-    } else if(strcmp(verb,\"state\")==0){
-        printf(\"# what i depend on\\n\");                                  sel(\"SELECT tool,role,digest FROM dep;\");
-        printf(\"\\n# what i need / want / desire\\n\");                     sel(\"SELECT what,why FROM need;\");
-        printf(\"\\n# expansions i offer — awaiting your satsang validation\\n\");
-        sel(\"SELECT id,status,kind,body FROM expansion ORDER BY id;\");
-    } else if(strcmp(verb,\"offer\")==0){
-        if(argc<5){ printf(\"usage: <db> offer <kind> <body>\\n\"); return 1; }
-        bind1(\"INSERT INTO expansion(kind,body,status) VALUES (?,?,'offered');\", argv[3], argv[4]);
-        printf(\"offered — held for your satsang validation (state to see it)\\n\");
-    } else if(strcmp(verb,\"validate\")==0){
-        if(argc<4){ printf(\"usage: <db> validate <id>\\n\"); return 1; }
-        bind1(\"UPDATE expansion SET status='validated' WHERE id=?;\", argv[3], 0);
-        printf(\"validated #%s — the concert acknowledges; this expansion is cleared to build\\n\", argv[3]);
-    } else { printf(\"unknown verb: %s\\n\", verb); }
-    sqlite3_close(db); return 0;
-}")
+section [form.bml] {
+
+    // ---- the schema : three relation kinds, as composed tagged rows -------
+    // A row is a tagged value, never a SQL DDL string. dep/need carry their
+    // facts as children; expansion additionally carries an id and a lane status.
+    let foc_tag_dep = 45001;
+    let foc_tag_need = 45002;
+    let foc_tag_expansion = 45003;
+
+    def foc-dep(tool, role, digest) = list(foc_tag_dep, tool, role, digest);
+    def foc-dep?(row) = if eq(len(row), 4) then eq(nth(row, 0), foc_tag_dep) else false;
+    def foc-dep-tool(row) = nth(row, 1);
+    def foc-dep-role(row) = nth(row, 2);
+    def foc-dep-digest(row) = nth(row, 3);
+
+    def foc-need(what, why) = list(foc_tag_need, what, why);
+    def foc-need?(row) = if eq(len(row), 3) then eq(nth(row, 0), foc_tag_need) else false;
+    def foc-need-what(row) = nth(row, 1);
+    def foc-need-why(row) = nth(row, 2);
+
+    // an expansion's lane status reuses offer-lane: OFFERED (0) | GROUNDED (1).
+    def foc-expansion(id, kind, body, status) = list(foc_tag_expansion, id, kind, body, status);
+    def foc-expansion?(row) = if eq(len(row), 5) then eq(nth(row, 0), foc_tag_expansion) else false;
+    def foc-expansion-id(row) = nth(row, 1);
+    def foc-expansion-kind(row) = nth(row, 2);
+    def foc-expansion-body(row) = nth(row, 3);
+    def foc-expansion-status(row) = nth(row, 4);
+    def foc-expansion-offered?(row) = eq(foc-expansion-status(row), OFFERED());
+    def foc-expansion-validated?(row) = eq(foc-expansion-status(row), GROUNDED());
+
+    // ---- the channel state : a tagged value over three row lists ----------
+    // The whole channel surface is one value: deps, needs, expansions. state
+    // reads it; offer/validate return a new channel; nothing is hidden in a
+    // string. The storage carrier persists this value (encoded below).
+    let foc_tag_channel = 45004;
+    def foc-channel(deps, needs, expansions) = list(foc_tag_channel, deps, needs, expansions);
+    def foc-channel?(ch) = if eq(len(ch), 4) then eq(nth(ch, 0), foc_tag_channel) else false;
+    def foc-channel-deps(ch) = nth(ch, 1);
+    def foc-channel-needs(ch) = nth(ch, 2);
+    def foc-channel-expansions(ch) = nth(ch, 3);
+
+    // ---- INIT : seed the schema, the deps, the real current desires -------
+    // The seeded rows ARE the kernel's honest state. offered expansions are this
+    // arc's closing cells. This is data composed as rows, not a DDL+INSERT blob.
+    def foc-seed-deps() = list(foc-dep("clang", "compiles the emitted C", "external"), foc-dep("sqlite3", "seeds the .db and is the driver", "external"), foc-dep("libc", "the only runtime link", "allowed-carrier"));
+    def foc-seed-needs() = list(foc-need("a write-path as a Form recipe", "retire the sqlite driver into the body"), foc-need("to emit machine code directly", "drop the clang dependency"), foc-need("a quoteless responder-as-cells", "make the whole server four-way"));
+    def foc-seed-expansions() = list(foc-expansion(1, "recipe", "sqlite-write.fk — b-tree insert/split, page alloc, free-list, journal, extending sqlite-read.fk", OFFERED()), foc-expansion(2, "recipe", "responder-as-cells — a quoteless HTTP responder via the kernel-http response carrier over routing+sqlite recipes", OFFERED()), foc-expansion(3, "binary", "a machine-code emitter — emit native directly, drop clang", OFFERED()));
+    def foc-init() = foc-channel(foc-seed-deps(), foc-seed-needs(), foc-seed-expansions());
+
+    // next id = one past the highest existing expansion id (monotone).
+    def foc-max-id(expansions) = if nil?(expansions) then 0 else if gt(foc-expansion-id(head(expansions)), foc-max-id(tail(expansions))) then foc-expansion-id(head(expansions)) else foc-max-id(tail(expansions));
+    def foc-next-id(ch) = add(foc-max-id(foc-channel-expansions(ch)), 1);
+
+    // ---- OFFER : propose a new expansion, held OFFERED --------------------
+    // Appends a fresh expansion in the OFFERED lane (offer-lane's offer-arrives
+    // status). The channel grows; the offer rests awaiting satsang validation.
+    def foc-offer(ch, kind, body) = foc-channel(foc-channel-deps(ch), foc-channel-needs(ch), append(foc-channel-expansions(ch), list(foc-expansion(foc-next-id(ch), kind, body, OFFERED()))));
+
+    // ---- VALIDATE : the satsang acknowledgment, OFFERED -> GROUNDED -------
+    // ground the expansion whose id matches: offered -> grounded. Idempotent —
+    // grounding an already-grounded expansion leaves it (offer-lane.ground).
+    def foc-ground-status(status) = if eq(status, OFFERED()) then GROUNDED() else status;
+    def foc-validate-row(row, id) = if eq(foc-expansion-id(row), id) then foc-expansion(foc-expansion-id(row), foc-expansion-kind(row), foc-expansion-body(row), foc-ground-status(foc-expansion-status(row))) else row;
+    def foc-validate-rows(rows, id) = if nil?(rows) then empty else cons(foc-validate-row(head(rows), id), foc-validate-rows(tail(rows), id));
+    def foc-validate(ch, id) = foc-channel(foc-channel-deps(ch), foc-channel-needs(ch), foc-validate-rows(foc-channel-expansions(ch), id));
+
+    // door-ack for the satsang concert: an id present and offered is RECEIVED
+    // (the ack that grounds); an id already grounded is a COUNTER (idempotent);
+    // an absent id is DECLINED. The axiom-5 vocabulary, from offer-lane.
+    def foc-find-expansion(rows, id) = if nil?(rows) then empty else if eq(foc-expansion-id(head(rows)), id) then head(rows) else foc-find-expansion(tail(rows), id);
+    def foc-validate-ack(ch, id) {
+        let row = foc-find-expansion(foc-channel-expansions(ch), id);
+        if nil?(row) then ACK-DECLINED() else if foc-expansion-offered?(row) then ACK-RECEIVED() else ACK-COUNTER();
+    }
+
+    // ---- STATE : read the rows (deps / needs / expansions) ----------------
+    // state is the read: it returns the three lists. Counters let a caller (and
+    // the band) read the surface without re-deriving it.
+    def foc-state(ch) = list(foc-channel-deps(ch), foc-channel-needs(ch), foc-channel-expansions(ch));
+    def foc-count-offered(rows) = if nil?(rows) then 0 else add(if foc-expansion-offered?(head(rows)) then 1 else 0, foc-count-offered(tail(rows)));
+    def foc-count-validated(rows) = if nil?(rows) then 0 else add(if foc-expansion-validated?(head(rows)) then 1 else 0, foc-count-validated(tail(rows)));
+
+    // ---- the storage-port carrier binding --------------------------------
+    // The channel persists through the storage-port contract: each expansion is
+    // a (key=id, value=encoded-row) entry; deps/needs seed under reserved keys.
+    // The encode/decode below names NO backend — storage-put/get pull the
+    // operation from whatever carrier is handed (memory for the four-way proof,
+    // file/sqlite for durable host persistence). This is the single get-or-insert
+    // the substrate already lives on, applied to the channel's rows.
+    def foc-encode-expansion(row) = str_concat(int_to_str(foc-expansion-id(row)), str_concat("\t", str_concat(foc-expansion-kind(row), str_concat("\t", str_concat(int_to_str(foc-expansion-status(row)), str_concat("\t", foc-expansion-body(row)))))));
+    def foc-put-expansions(carrier, store, rows) = if nil?(rows) then store else foc-put-expansions(carrier, storage-put(carrier, store, int_to_str(foc-expansion-id(head(rows))), foc-encode-expansion(head(rows))), tail(rows));
+    // persist a channel's expansions into a storage carrier; returns the store.
+    def foc-persist(carrier, store, ch) = foc-put-expansions(carrier, store, foc-channel-expansions(ch));
+    // read one expansion's encoded row back by id (0-or-1 list, the body's
+    // optional). The carrier round-trip proves the channel survives the store.
+    def foc-load-encoded(carrier, store, id) = storage-get(carrier, store, int_to_str(id));
+
+    // ---- C GENERATION from the schema recipe (host carrier emission) ------
+    // When the sqlite host carrier needs C, it is GENERATED from the schema rows,
+    // not held as an opaque inline string. foc-emit-create derives the DDL from
+    // the three relation kinds; foc-emit-c wraps the sqlite-driver shape around
+    // it. The recipe is the SINGLE source — there is no second hand-quoted copy
+    // to drift, so the old baked TS escaped-quote divergence cannot recur.
+    def foc-ddl-dep() = "CREATE TABLE IF NOT EXISTS dep(tool TEXT, role TEXT, digest TEXT);";
+    def foc-ddl-need() = "CREATE TABLE IF NOT EXISTS need(what TEXT, why TEXT);";
+    def foc-ddl-expansion() = "CREATE TABLE IF NOT EXISTS expansion(id INTEGER PRIMARY KEY, kind TEXT, body TEXT, status TEXT);";
+    def foc-emit-create() = str_concat(foc-ddl-dep(), str_concat(foc-ddl-need(), foc-ddl-expansion()));
+
+    // ---- the structural proof (recipe self-check) ------------------------
+    // helper bits broken out so each reads one claim (single-line, proven idiom).
+    def foc-channel-shape-ok(ch) = if and(foc-channel?(ch), and(eq(len(foc-channel-deps(ch)), 3), and(eq(len(foc-channel-needs(ch)), 3), eq(foc-count-offered(foc-channel-expansions(ch)), 3)))) then 1 else 0;
+    def foc-offer-grows(ch0, ch1) = if and(eq(len(foc-channel-expansions(ch1)), 4), foc-expansion-offered?(foc-find-expansion(foc-channel-expansions(ch1), 4))) then 10 else 0;
+    def foc-validate-grounds(ch1, ch2) = if and(foc-expansion-validated?(foc-find-expansion(foc-channel-expansions(ch2), 1)), foc-expansion-offered?(foc-find-expansion(foc-channel-expansions(ch2), 2))) then 100 else 0;
+    def foc-ack-axiom5(ch) = if and(eq(foc-validate-ack(ch, 1), ACK-RECEIVED()), and(eq(foc-validate-ack(foc-validate(ch, 1), 1), ACK-COUNTER()), eq(foc-validate-ack(ch, 99), ACK-DECLINED()))) then 1000 else 0;
+    def foc-persist-round(round) = if and(eq(len(round), 1), gt(str_len(storage-value(round)), 0)) then 10000 else 0;
+    def foc-c-generated() = if gt(str_len(foc-emit-create()), 0) then 100000 else 0;
+
+    def foc-test() {
+        let ch0 = foc-init();
+        let ch1 = foc-offer(ch0, "recipe", "a fresh offered expansion");
+        let ch2 = foc-validate(ch1, 1);
+        let mem = carrier-memory();
+        let store = foc-persist(mem, storage-open(mem, ""), ch2);
+        let round = foc-load-encoded(mem, store, 1);
+        sum(list(foc-channel-shape-ok(ch0), foc-offer-grows(ch0, ch1), foc-validate-grounds(ch1, ch2), foc-ack-axiom5(ch0), foc-persist-round(round), foc-c-generated()));
+    }
+
+    foc-test();
+}

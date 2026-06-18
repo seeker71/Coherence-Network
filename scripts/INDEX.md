@@ -113,7 +113,7 @@
 | [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
 | [form_native_run.sh](form_native_run.sh) | form_native_run.sh — run the PURE FORM agent runner (form-stdlib/form-native-run.fk) |
-| [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface. Emit a native binary from |
+| [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface, as a Form recipe over a |
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
 | [form_rot13_demo.sh](form_rot13_demo.sh) | form_rot13_demo.sh — `rot13`, built with ZERO clang and direct Form -> asm, and |
 | [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |

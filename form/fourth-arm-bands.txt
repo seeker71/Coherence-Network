@@ -552,3 +552,5 @@ roadmap fks 31
 lowering-conviction fkc 127
 form-asm-stack fkc 7
 ll-buffer fkc 1
+kernel-image-proposal fks 111111
+form-os-channel fks 111111
