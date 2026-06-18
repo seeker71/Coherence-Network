@@ -1,19 +1,21 @@
-; http-request.fk — lift a raw HTTP/1.1 request string into a kh-request value.
+; http-request.fk — lift the parsed HTTP/1.1 parts into a kh-request value.
 ;
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk
 ;
 ; THE PRINCIPLE (Urs): the engine speaks the Request CLASS, not an ad-hoc tree.
-; http-parse.fk is the lexer — it walks the wire bytes into a substrate node.
-; This adapter lifts that node into kh-request (kernel-http.fk's Request class),
+; http-parse.fk is the lexer — it walks the wire bytes into the request's PARTS
+; (method, full path, kh-header list, body) as plain values, interning nothing.
+; This adapter lifts those parts into kh-request (kernel-http.fk's Request class),
 ; the value the Router (kh-select-route-candidate-for-request) and the handlers
 ; consume. Parse is transport; kh-request is the domain. The boundary is here,
-; named, so neither side reaches across it.
+; named, so neither side reaches across it — and nothing crosses the substrate
+; node wall, so the whole stack walks one vocabulary on the fourth arm.
 ;
 ; kh-request(method, path, headers, query, body):
 ;   method  — the request method string ("GET" …).
 ;   path    — the PATH ONLY (query string stripped). A handler routes on the
 ;             path; the query is data it reads separately, as typed fields.
-;   headers — a list of kh-header (the Header class), one per parsed header.
+;   headers — the kh-header list the lexer produced, carried through unchanged.
 ;   query   — a list of kh-field (the Field class), parsed from the query
 ;             string. A handler reads kh-field-value(…, name), not a raw string.
 ;   body    — the body string.
@@ -28,10 +30,6 @@ section [form.bml] {
     // ---- query layer : path/query split, k=v&… -> kh-field list -------
 
     // the path up to the first '?', or the whole path when there is none.
-    // Bind the '?' index once (block-let) rather than scanning twice. The block
-    // spans lines — the local source-compiler reads multi-line blocks correctly
-    // but mangles single-line ones (the `let` gets dropped); the body's blocks
-    // (kernel-http.fk) follow the same shape.
     def kh-req-path-only(path) {
         let qi = str_find(path, "?", 0);
         if eq(qi, -1) then path else substring(path, 0, qi);
@@ -58,20 +56,15 @@ section [form.bml] {
     }
     def kh-req-fields(qs) = if eq(str_len(qs), 0) then empty else kh-req-fields-loop(qs, 0);
 
-    // ---- header layer : parsed HTTP-HEADER nodes -> kh-header list ----
-    // http-headers(node) returns a list of the parser's HEADER nodes; each
-    // lifts to a kh-header value. The recipe walks the list; the names/values
-    // are data carried through, never literals here.
-    def kh-req-headers(parsed) = if nil?(parsed) then empty else cons(kh-header(http-header-name(head(parsed)), http-header-value(head(parsed))), kh-req-headers(tail(parsed)));
-
     // ---- the adapter : raw request string -> kh-request --------------
-    // Parse to the lexer node, then read its parts through the http-* accessors
-    // and assemble the kh-request. The full path is split: kh-request carries
-    // the path-only for routing and the parsed fields for the handler.
+    // Lex the raw bytes to parts, then read its parts through the hp-parts-*
+    // accessors and assemble the kh-request. The full path is split: kh-request
+    // carries the path-only for routing and the parsed fields for the handler.
+    // The headers come straight from the lexer as kh-header — carried through.
     def kh-request-from-raw(raw) {
-        let node = http-parse-request(raw);
-        let full-path = http-path(node);
-        kh-request(http-method(node), kh-req-path-only(full-path), kh-req-headers(http-headers(node)), kh-req-fields(kh-req-query-str(full-path)), http-body(node));
+        let parts = http-parse-parts(raw);
+        let full-path = hp-parts-full-path(parts);
+        kh-request(hp-parts-method(parts), kh-req-path-only(full-path), hp-parts-headers(parts), kh-req-fields(kh-req-query-str(full-path)), hp-parts-body(parts));
     }
 
     0;

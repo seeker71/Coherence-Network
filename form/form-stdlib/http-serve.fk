@@ -1,6 +1,6 @@
 ; http-serve.fk — per-request HTTP/1.1 handling as a Form recipe.
 ;
-; preludes: form-stdlib/http-parse.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk
 ;
 ; This is the FIRST stone of moving the kernel-router's HTTP off the Rust
 ; kernel and into Form. The Rust kernel grew an HTTP server — handle_request,
@@ -270,8 +270,8 @@
 ;; with no I/O.
 (defn http-handle (raw routes)
     (do
-        (let req (http-parse-request raw))
-        (let raw-path (http-path req))
+        (let parts (http-parse-parts raw))
+        (let raw-path (hp-parts-full-path parts))
         (let path (hs-path-only raw-path))
         (let row (hs-find-route routes path))
         (if (eq (len row) 0)
@@ -292,37 +292,18 @@
 ;; close: recv until the socket returns "" (peer closed). No caps, no
 ;; timeouts — connect, send, recv, relay.
 
-;; (hs-header-value-ci headers name-lower) → the value string of the first
-;; header whose name, lowercased, equals name-lower; "" when absent. HTTP
-;; header names are case-insensitive, so we compare on a lowercased name.
-(defn hs-ascii-lower-go (s i n acc)
-    (if (eq i n) acc
-        (do
-            (let b (ord (char_at s i)))
-            (if (if (ge b 65) (le b 90) false)
-                (hs-ascii-lower-go s (add i 1) n (str_concat acc (byte_to_str (add b 32))))
-                (hs-ascii-lower-go s (add i 1) n (str_concat acc (char_at s i)))))))
-(defn hs-ascii-lower (s) (hs-ascii-lower-go s 0 (str_len s) ""))
-
-(defn hs-header-value-ci (headers name-lower)
-    (if (eq (len headers) 0)
-        ""
-        (do
-            (let h (head headers))
-            (if (str_eq (hs-ascii-lower (http-header-name h)) name-lower)
-                (http-header-value h)
-                (hs-header-value-ci (tail headers) name-lower)))))
-
 ;; (hs-content-length-of head-str) → the declared Content-Length as an int,
 ;; or -1 when the header is absent/empty (signals read-to-close). head-str is
-;; the bytes received so far (head + maybe some body); we parse it as an HTTP
-;; response by reusing http-parse-request's header machinery — the response
-;; status-line has the SAME three-token shape the request-line parser splits,
-;; so http-headers reads the response headers, and we pull Content-Length.
+;; the bytes received so far (head + maybe some body); we lex it as an HTTP
+;; response through http-parse-parts — the response status-line has the SAME
+;; three-token shape the request-line splits, so hp-parts-headers reads the
+;; response headers as kh-header values, and kernel-http.fk's own
+;; case-insensitive kh-header-value-or pulls Content-Length. The protocol's
+;; header-name case rule lives once in kernel-http, not re-rolled here.
 (defn hs-content-length-of (head-str)
     (do
-        (let parsed (http-parse-request head-str))
-        (let cl (hs-header-value-ci (http-headers parsed) "content-length"))
+        (let parts (http-parse-parts head-str))
+        (let cl (kh-header-value-or (hp-parts-headers parts) "content-length" ""))
         (if (eq (str_len cl) 0) -1 (str_to_int cl))))
 
 ;; (hs-header-end s) → index just past the "\r\n\r\n" that ends the headers,

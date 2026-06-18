@@ -10,9 +10,9 @@
 ; wire.
 ;
 ; Each check contributes a distinct bit; the band emits their sum (63 when all
-; pass). Identical across Go, Rust, and TypeScript is the proof the Response
-; render is correct and three-way-portable — built IN the hierarchy
-; (kernel-http.fk's kh-response), not beside it.
+; pass). Identical across Go, Rust, TypeScript, and the emitted fkwu arm is the
+; proof the Response render is correct and four-way-portable — built IN the
+; hierarchy (kernel-http.fk's kh-response), not beside it.
 
 ;; CHECK 1 (bit 1) — the status table is DATA. Listed codes resolve to their
 ;; phrase; an UNLISTED code falls to the neutral "Status" (the lookup's

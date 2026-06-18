@@ -215,6 +215,10 @@ bml-protocol-runtime-choice fks 65535
 recipe-choice-runtime fks 233
 channel-protocol-choice-floor fks 262143
 kernel-http fks 536965066
+http-render fks 63
+http-parse fks 11
+http-request fks 63
+http-server fks 1023
 tool-channel fks 255
 cell-sync fks 127
 chakra-column fks 127
