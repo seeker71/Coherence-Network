@@ -1,0 +1,65 @@
+; neural-lm.fk — a Form-native neural language model that GENERATES the next token,
+; offline, by predicting in meaning-space and snapping to the nearest interned cell.
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/transformer-corpus-train.fk
+;
+; This is the FIRST rung from retrieval-NL→NL to GENERATIVE-NL→NL (the named-open S3
+; in native-translation-model.form). It replaces sequence-predictor.fk's Markov-1
+; FOLLOWER COUNTS with a LEARNED contextual model — the proven transformer block —
+; and renders by the content-address SNAP the diffusion-decoder design names:
+;
+;   train   the proven two-block residual stack to map a context token's embedding
+;           to the NEXT token's embedding (tct-train-blocks — SSE, four-way:
+;           transformer-corpus-train 31, block-backward 31, every node four-way).
+;   predict run the trained stack forward (tct-predict) → a point in meaning-space.
+;   render  SNAP that point to the NEAREST token embedding (nl-render) — the emitted
+;           token is the interned cell the prediction fell toward, never a fabricated
+;           coordinate. Same max-select spine as sequence-predictor / translation-
+;           engine's te-nearest, here over the vocabulary's embedding table.
+;   generate feed the emitted token's embedding back as the next context (nl-gen) —
+;           autoregressive emission, one token at a time.
+;
+; The embedding table is DATA (the vocabulary's content-addressed coordinates),
+; passed in — the recipe is only the engine. Context here is the LAST token (a
+; learned bigram LM, the proven T=1/T=2 floor); the climb to multi-token context is
+; the full-T sequence self-attention rung (named-open in form-native-models.form),
+; and learned DENSE embeddings replace the seed one-hots — same engine over both.
+;
+; Proven by: form-stdlib/tests/neural-lm-band.fk
+; teaching: lc-cognitive-sovereignty
+
+(do
+    ; --- RENDER: snap a predicted meaning-vector to the nearest vocabulary token. ---
+    (defn nl-abs (n) (if (lt n 0.0) (mul -1.0 n) n))
+    (defn nl-dist-loop (a b acc)
+        (if (eq (len a) 0) acc
+            (nl-dist-loop (tail a) (tail b)
+                (add acc (nl-abs (sub (head a) (head b)))))))
+    (defn nl-dist (a b) (nl-dist-loop a b 0.0))   ; L1 in meaning-space
+
+    ; walk the embedding table; return the INDEX of the nearest token (honest argmin).
+    (defn nl-near-loop (table q i best-i best-d)
+        (if (eq (len table) 0) best-i
+            (do (let d (nl-dist (head table) q))
+                (if (lt d best-d)
+                    (nl-near-loop (tail table) q (add i 1) i d)
+                    (nl-near-loop (tail table) q (add i 1) best-i best-d)))))
+    (defn nl-render (table q) (nl-near-loop table q 0 -1 1000000.0))
+
+    (defn nl-emb (table i) (nth table i))         ; token index -> its embedding
+
+    ; --- PREDICT one token: forward through the trained stack, then snap. ---
+    (defn nl-predict-token (s table x eps) (nl-render table (tct-predict s x eps)))
+
+    ; --- GENERATE: autoregressive emission, feeding each token's embedding back. ---
+    (defn nl-rev-loop (xs acc) (if (eq (len xs) 0) acc (nl-rev-loop (tail xs) (cons (head xs) acc))))
+    (defn nl-rev (xs) (nl-rev-loop xs (list)))
+    (defn nl-gen-loop (s table cur k eps acc)
+        (if (eq k 0) (nl-rev acc)
+            (do (let i (nl-predict-token s table cur eps))
+                (nl-gen-loop s table (nl-emb table i) (sub k 1) eps (cons i acc)))))
+    ; from a start embedding, emit k tokens (a list of vocabulary indices).
+    (defn nl-gen (s table start-emb k eps) (nl-gen-loop s table start-emb k eps (list)))
+
+    (defn neural-lm-teaching () "lc-cognitive-sovereignty")
+    0)
