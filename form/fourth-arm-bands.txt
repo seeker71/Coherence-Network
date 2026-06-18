@@ -307,6 +307,7 @@ form-lower fks 31
 form-lower-cond fks 31
 form-lower-map fks 31
 form-lower-rec fks 31
+form-lower-streq fks 31
 form-macho fks 31
 form-elf fks 31
 form-elf-exec fks 63
