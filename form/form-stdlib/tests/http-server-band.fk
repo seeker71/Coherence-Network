@@ -1,18 +1,19 @@
 ; tests/http-server-band.fk — sibling-witness band for http-server.fk.
-; preludes: form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk
 ;
-; Iteration 3 of lifting the HTTP server into the BML class hierarchy: the
-; Server. Proves the full dispatch — a raw HTTP/1.1 request string flows
+; The Server. Proves the full dispatch — a raw HTTP/1.1 request string flows
 ; parse -> Router -> handler -> render -> wire — across every shape: two matched
 ; routes (one whose handler reads the request and declares its own content-type),
 ; an unmatched path (404 naming what missed), a matched route whose handler is
 ; unregistered (500, the wiring gap made visible), HEAD through GET with no body,
-; case-insensitive required headers, and a generic OPTIONS invitation.
+; case-insensitive required headers, and a generic OPTIONS invitation. The whole
+; flow walks one value vocabulary — no substrate-node detour anywhere on the path.
 ;
 ; The handlers, routes, and registry are DEMO data this band supplies; the
 ; Server names none of them — it is one generic flow over data. Emits a bit-sum
-; (1023 when all pass). Identical across Go/Rust/TS proves the dispatch —
-; including the first-class handler call — is correct and portable.
+; (1023 when all pass). Identical across Go/Rust/TS + the emitted fkwu arm proves
+; the dispatch — including the first-class handler call — is correct and
+; four-way-portable.
 
 ;; demo handlers : handler(kh-request) -> kh-response. A handler reads the
 ;; request through the Request class and returns a Response; it never sees

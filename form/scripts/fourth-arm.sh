@@ -66,9 +66,16 @@ build_fourth() {
     find "$FOURTH_DIR" -maxdepth 1 -name 'fkwu-*' ! -name "$(basename "$out")" -delete 2>/dev/null || true
 }
 
-# fourth_band_stem — manifest stem for a band file path, or empty.
+# fourth_band_stem — manifest stem for a band file path, or empty. The fourth
+# arm only applies to a CANONICAL band — the workload's last file living under
+# form-stdlib/tests/. A same-named sample elsewhere (e.g. a cross-modal demo
+# whose basename collides with a manifest stem) never resolves, because its
+# table would still be built from form-stdlib/tests/<stem>-band.fk and compared
+# against the sample's own three-kernel output — a false divergence. Anchoring
+# to the tests/ path keeps the stem the contract for the real band only.
 fourth_band_stem() {
     local band="$1" stem
+    [[ "$band" == form-stdlib/tests/* || "$band" == */form-stdlib/tests/* ]] || return 0
     stem="$(basename "$band")"
     stem="${stem%.fk}"
     stem="${stem%-band}"

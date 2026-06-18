@@ -1,12 +1,14 @@
 ; http-parse.fk — HTTP/1.1 request parsing, sibling-verified.
 ;
-; preludes: form-stdlib/http-parse.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk
 ;
 ; Walks three representative HTTP request shapes through the Form
 ; recipe in form-stdlib/http-parse.fk and prints the parsed components.
 ; Three sibling kernels (Go, Rust, TypeScript) must agree on every
-; byte of output — same method, same path, same version, same header
-; count, same body length.
+; byte of output — same method, same path, same header count, same
+; body length. The lexer emits the request's PARTS as values (method,
+; full path, kh-header list, body); the carrier speaks one HTTP version,
+; so the parts do not carry it.
 ;
 ; The three shapes:
 ;   1. minimal      — "GET / HTTP/1.1\n\n"
@@ -27,47 +29,44 @@
     (let req2 "POST /api/echo HTTP/1.1\nContent-Type: text/plain\nContent-Length: 5\n\nhello")
     (let req3 "GET /api/health HTTP/1.1\nHost: example.com\nAccept: application/json\n\n")
 
-    ;; --- Parse each ------------------------------------------------
-    (let r1 (http-parse-request req1))
-    (let r2 (http-parse-request req2))
-    (let r3 (http-parse-request req3))
+    ;; --- Lex each into parts ---------------------------------------
+    (let r1 (http-parse-parts req1))
+    (let r2 (http-parse-parts req2))
+    (let r3 (http-parse-parts req3))
 
     ;; --- Request 1: minimal ----------------------------------------
-    (print "req1-method:"        (http-method r1))
-    (print "req1-path:"          (http-path r1))
-    (print "req1-version:"       (http-version r1))
-    (print "req1-header-count:"  (len (http-headers r1)))
-    (print "req1-body-length:"   (str_len (http-body r1)))
+    (print "req1-method:"        (hp-parts-method r1))
+    (print "req1-path:"          (hp-parts-full-path r1))
+    (print "req1-header-count:"  (len (hp-parts-headers r1)))
+    (print "req1-body-length:"   (str_len (hp-parts-body r1)))
 
     ;; --- Request 2: with body --------------------------------------
-    (print "req2-method:"        (http-method r2))
-    (print "req2-path:"          (http-path r2))
-    (print "req2-version:"       (http-version r2))
-    (print "req2-header-count:"  (len (http-headers r2)))
-    (print "req2-body-length:"   (str_len (http-body r2)))
-    (print "req2-body:"          (http-body r2))
+    (print "req2-method:"        (hp-parts-method r2))
+    (print "req2-path:"          (hp-parts-full-path r2))
+    (print "req2-header-count:"  (len (hp-parts-headers r2)))
+    (print "req2-body-length:"   (str_len (hp-parts-body r2)))
+    (print "req2-body:"          (hp-parts-body r2))
 
     ;; --- Request 3: multi-header -----------------------------------
-    (print "req3-method:"        (http-method r3))
-    (print "req3-path:"          (http-path r3))
-    (print "req3-version:"       (http-version r3))
-    (print "req3-header-count:"  (len (http-headers r3)))
-    (print "req3-body-length:"   (str_len (http-body r3)))
+    (print "req3-method:"        (hp-parts-method r3))
+    (print "req3-path:"          (hp-parts-full-path r3))
+    (print "req3-header-count:"  (len (hp-parts-headers r3)))
+    (print "req3-body-length:"   (str_len (hp-parts-body r3)))
 
-    ;; --- First header of req3 (deterministic order: insertion) -----
-    (let h0 (head (http-headers r3)))
-    (print "req3-h0-name:"  (http-header-name h0))
-    (print "req3-h0-value:" (http-header-value h0))
+    ;; --- First header of req3 (deterministic order: wire order) ----
+    (let h0 (head (hp-parts-headers r3)))
+    (print "req3-h0-name:"  (kh-header-name h0))
+    (print "req3-h0-value:" (kh-header-value h0))
 
-    ;; --- Verdict — six string-eq checks (1 per request) ------------
-    ;; Sums to 9 across three requests when every kernel parses the
+    ;; --- Verdict — nine checks (3 per request) ---------------------
+    ;; Sums to 9 across three requests when every kernel lexes the
     ;; method correctly and counts headers / body length to spec.
-    (add (if (str_eq (http-method r1) "GET")             1 0)
-        (add (if (eq (len (http-headers r1)) 0)          1 0)
-            (add (if (eq (str_len (http-body r1)) 0)     1 0)
-                (add (if (str_eq (http-method r2) "POST") 1 0)
-                    (add (if (eq (len (http-headers r2)) 2) 1 0)
-                        (add (if (eq (str_len (http-body r2)) 5) 1 0)
-                            (add (if (str_eq (http-method r3) "GET") 1 0)
-                                (add (if (eq (len (http-headers r3)) 2) 1 0)
-                                    (if (eq (str_len (http-body r3)) 0) 1 0))))))))))
+    (add (if (str_eq (hp-parts-method r1) "GET")             1 0)
+        (add (if (eq (len (hp-parts-headers r1)) 0)          1 0)
+            (add (if (eq (str_len (hp-parts-body r1)) 0)     1 0)
+                (add (if (str_eq (hp-parts-method r2) "POST") 1 0)
+                    (add (if (eq (len (hp-parts-headers r2)) 2) 1 0)
+                        (add (if (eq (str_len (hp-parts-body r2)) 5) 1 0)
+                            (add (if (str_eq (hp-parts-method r3) "GET") 1 0)
+                                (add (if (eq (len (hp-parts-headers r3)) 2) 1 0)
+                                    (if (eq (str_len (hp-parts-body r3)) 0) 1 0))))))))))

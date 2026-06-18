@@ -1,7 +1,7 @@
 ; tests/http-serve-socket-band.fk — REAL single-process TCP end-to-end for
 ; the Form-native HTTP handler (form-stdlib/http-serve.fk).
 ;
-; preludes: form-stdlib/http-parse.fk form-stdlib/http-serve.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-serve.fk
 ;
 ; The http-serve-band proves http-handle with NO socket (request-string in,
 ; response-string out). THIS band closes the loop over a REAL TCP socket on
