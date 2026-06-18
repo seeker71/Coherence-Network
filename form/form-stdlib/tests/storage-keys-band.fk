@@ -1,0 +1,24 @@
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk
+;
+; storage-keys-band — enumerate a store's live keys through the port, proven over
+; the memory carrier (the file carrier rides record_keys, the db carrier a SELECT —
+; both host-io). storage-keys is the op the offline replica's seed + merge ride to
+; auto-discover the cell-set; a new carrier op is a new carrier field, never a new
+; call site (the substitutability discipline).
+;
+; Verdict 7 when enumerate is correct:
+;   1   DEDUP — alpha put twice + beta once enumerates to exactly 2 keys (last-write-wins)
+;   2   alpha is present in the enumerated key-set
+;   4   beta is present in the enumerated key-set
+(do
+    (let mem (carrier-memory))
+    (let s (storage-put mem
+              (storage-put mem
+                (storage-put mem (storage-open mem 0) "alpha" "one")
+                "beta" "two")
+              "alpha" "one-REVISED"))
+    (let ks (storage-keys mem s))
+    (let c0 (if (eq (len ks) 2) 1 0))
+    (let c1 (if (eq (sp-contains? ks "alpha") 1) 2 0))
+    (let c2 (if (eq (sp-contains? ks "beta") 1) 4 0))
+    (add c0 (add c1 c2)))

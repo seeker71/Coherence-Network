@@ -47,9 +47,11 @@
   (replica-seed-detect "CROSSED — replica.fk: seed a key-set through the port + content-"
                        "addressed change detection (dirty? + candidate set). Band replica -> 15"
                        "four-way (0 divergent).")
-  (enumerate           "OPEN — storage-keys: enumerate a store's keys (the file carrier has"
-                       "the keydir; the db carrier a SELECT). Both seed and merge auto-discover"
-                       "the key-set from it instead of being handed one. A 5th carrier op.")
+  (enumerate           "CROSSED — storage-keys: a 5th carrier op (a new field, never a new call"
+                       "site) enumerates a store's live keys; seed and merge auto-discover the"
+                       "key-set instead of being handed one. memory four-way (band storage-keys ->"
+                       "7); file via record_keys over the keydir (tombstones excluded); db via"
+                       "SELECT k — both host-io.")
   (serve-all-native    "OPEN — lift every promoted native route onto storage-port-db (the ones"
                        "still calling pg_* directly), so the file carrier serves them offline.")
   (merge-back          "OPEN — replica-merge: candidate set -> cell-sync diff vs prod ->"
