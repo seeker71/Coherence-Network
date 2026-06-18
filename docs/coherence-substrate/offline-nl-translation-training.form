@@ -46,13 +46,23 @@
 ;       graded distance). embedding = a content-addressed COORDINATE — the feature
 ;       no other runtime has; identical meaning across surfaces interns to ONE NodeID.
 ;
-;   WHAT IS NAMED-OPEN (the generative half, S3 in native-translation-model.form):
-;     - the learned surface→embedding ENCODER for arbitrary unseen NL, and the
-;       generative DECODER that synthesises a NOVEL target surface (the
-;       content-address-snapping diffusion, ml-diffusion-model-flow.form). Today the
-;       decoder is nearest-meaning RETRIEVAL over the corpus faces, not free
-;       generation. This is named, not faked: retrieval-NL→NL trains and runs now;
-;       novel-surface synthesis is the next stage.
+;   GENERATION — the first rung RUNS (the S3 decoder in native-translation-model.form):
+;     - neural-lm.fk + tests/neural-lm-band.fk → 31 FOUR-WAY. A LEARNED contextual
+;       next-token model: the proven two-block residual stack trains (context-emb →
+;       next-token-emb, the tct-train fold) and GENERATES by the content-address
+;       SNAP the diffusion-decoder design names — predict a point in meaning-space,
+;       snap to the NEAREST interned token cell (nl-render, the sequence-predictor
+;       max-select spine), feed it back (nl-gen, autoregressive). On the 4-token
+;       cyclic grammar a→b→c→d→a it trains to ~0 loss and emits the cycle
+;       indefinitely. This replaces sequence-predictor.fk's Markov-1 COUNTS with a
+;       learned model — generation, not retrieval.
+;     - THE CLIMB (each a nameable band over proven cells): multi-token context via
+;       full-T sequence self-attention (named-open in form-native-models.form — the
+;       block is proven at T=1/T=2); learned DENSE embeddings replacing the seed
+;       one-hots (the same engine over both); larger vocabulary + offline distillation
+;       of the next-token targets from a LOCAL oracle (oracle-catalog.fk's ollama row)
+;       via predictor-sampling.fk. The diffusion-snap decoder (ml-diffusion-model-flow.form)
+;       is its own design-stage alternative to the autoregressive loop.
 ;
 ; ── THE COPYRIGHT GATE — "we cannot train on them", made enforceable ──
 ;   The legal boundary: copyright-restricted content may be USED FOR TESTING
@@ -117,7 +127,9 @@
 ; KIN: native-translation-model.form (the design — S1-S4, diffusion, auto-ml) ·
 ;   translation-engine.fk + tests/translation-engine-band.fk (S2 retrieval) ·
 ;   transformer-corpus-train.fk + tests/transformer-corpus-train(-wide)-band.fk (the
-;   fold) · corpus-license-gate.fk + tests/corpus-license-gate-band.fk (the gate) ·
+;   fold) · neural-lm.fk + tests/neural-lm-band.fk (the first generative rung —
+;   predict-in-meaning-space + content-address snap + autoregressive emit, four-way) ·
+;   corpus-license-gate.fk + tests/corpus-license-gate-band.fk (the gate) ·
 ;   scripts/corpus_partition_by_license.sh + scripts/form_cli_transformer_train_wide.sh
 ;   (the carriers) · scripts/offline_nl_training_runbook.sh (the terminal teacher +
 ;   runner — no agent, no internet) · embedding-as-recipe.fk (content-addressed faces) ·

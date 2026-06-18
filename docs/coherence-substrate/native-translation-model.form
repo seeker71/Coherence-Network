@@ -82,8 +82,15 @@
 ;                + tests/translation-engine-band.fk (1111111 four-way) — ANY modality -> ANY
 ;                modality (NL<->NL/Code/ASM, text<->image, audio as a face) through the shared
 ;                meaning space, corpus passed in as data, seed scale. OPEN: the learned
-;                surface->embedding encoder and the generative decoder (S3 diffusion).
-;   S3 denoise   the content-address-snapping parallel denoiser (ml-diffusion-model-flow).
+;                surface->embedding encoder (dense, for arbitrary unseen surfaces).
+;   S3 generate  FIRST RUNG SHIPPED: neural-lm.fk + tests/neural-lm-band.fk (31 four-way) —
+;                the proven block trains context-emb -> next-token-emb and GENERATES by
+;                snapping each prediction to the nearest interned token cell (nl-render),
+;                autoregressive (nl-gen); on the cyclic grammar a->b->c->d->a it emits the
+;                cycle. This is the content-address SNAP at single-token context. The climb:
+;                multi-token context (full-T sequence self-attention), dense learned
+;                embeddings, and the parallel content-address-snapping DENOISER
+;                (ml-diffusion-model-flow, design-stage) as the diffusion alternative.
 ;   S4 auto-ml   architecture variants searched, scored, and promoted natively.
 ;
 ; OPEN QUESTIONS (for auto-research + sister consensus — named, not yet answered):
