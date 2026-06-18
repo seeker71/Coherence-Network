@@ -23,7 +23,7 @@
 ; oracle, score a sample, or merge exemplars — those are upstream (co-learning.fk, the carriers). Given an
 ; honest history it answers deterministically: retire only on earned, long-window competition.
 ;
-; Proven by: tests/colearning-retire-band.fk (three-way at validate.sh) -> 127
+; Proven by: tests/colearning-retire-band.fk (four-way at validate.sh, incl. fkwu) -> 127
 
 (do
     ; --- RETIRE? — may the 3rd-party oracle stop running for this category now? 1 iff the merged native

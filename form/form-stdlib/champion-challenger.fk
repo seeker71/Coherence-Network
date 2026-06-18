@@ -14,7 +14,7 @@
 ; A trial = (list champion-correct challenger-correct) for ONE sample — each 1 if that model got
 ; that sample right, else 0. A history is a list of trials — the competition record over the window.
 ;
-; Proven by: tests/champion-challenger-band.fk (three-way at validate.sh)
+; Proven by: tests/champion-challenger-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     (defn cc-champ  (t) (nth t 0))   ; 1 if the 3rd-party champion was correct on this sample

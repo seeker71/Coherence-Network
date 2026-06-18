@@ -1,4 +1,0 @@
-; ll-alloc16.fk — self-closed by form-cli close-next (local oracle), proven four-way.
-; preludes: form-asm.fk 
-(do (defn alloc16 () (fa-sub-x-imm 31 31 16))
- 0)

@@ -10,7 +10,7 @@
 ; the max count is 0 — the body predicts "" (silence) at confidence 0, never a fabricated next symbol.
 ; This mirrors rr-route's honest silence: below the evidence floor, no claim. Counts are integers 0..N.
 ;
-; Proven by: form-stdlib/tests/sequence-predictor-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/sequence-predictor-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     ; --- FOLLOWER COUNT: how many times cand immediately followed prev in history. ---

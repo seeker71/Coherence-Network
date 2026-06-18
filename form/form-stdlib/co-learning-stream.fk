@@ -22,7 +22,7 @@
 ; A device's learned set = a list of (label vector) — exactly nearest-shape's prototype-set.
 ;
 ; Composes: nearest-shape.fk (ns-label, via cl-knows?) + co-learning.fk (cl-merge, cl-breadth, cl-knows?).
-; Proven by: form-stdlib/tests/co-learning-stream-band.fk (three-way at validate.sh).
+; Proven by: form-stdlib/tests/co-learning-stream-band.fk (four-way at validate.sh, incl. fkwu).
 
 (do
     ; --- a sample's parts: the oracle's label, and the feature the mic sensed. ---

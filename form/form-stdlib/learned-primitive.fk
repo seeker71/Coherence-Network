@@ -21,7 +21,7 @@
 ; substrate-phase (freeze > melt, a stable gap between, no thrash). A learned primitive is a content-
 ; addressed cell, so what one device learns is the SAME primitive on another by NodeID (shared-sensing).
 ;
-; Proven by: form-stdlib/tests/learned-primitive-band.fk (three-way at validate.sh)
+; Proven by: form-stdlib/tests/learned-primitive-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     (defn lp-name    (c) (nth c 0))

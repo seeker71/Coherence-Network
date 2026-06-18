@@ -1,3 +1,0 @@
-; preludes: form-stdlib/form-asm.fk form-stdlib/ll-alloc16.fk form-stdlib/ll-store-w8.fk
-; ll-store-w8-band — self-closed recipe ll-store-w8, proven four-way incl. fkwu.
-(do (if (eq (fa-conviction (store-w8) (list 232 11 0 185)) 1) 1 0))

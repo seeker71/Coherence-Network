@@ -1,4 +1,0 @@
-; ll-free16.fk — self-closed by form-cli close-next (local oracle), proven four-way.
-; preludes: form-asm.fk ll-alloc16.fk ll-store-w8.fk ll-load-w9.fk 
-(do (defn free16 () (fa-add-x-imm 31 31 16))
- 0)

@@ -12,7 +12,7 @@
 ; A sample = (list our-label truth-label): what our classifier said, what the ground-truth route
 ; said, for one input. A history is a list of samples — the shadow-learning record for one modality.
 ;
-; Proven by: tests/self-grounding-classifier-band.fk (three-way at validate.sh)
+; Proven by: tests/self-grounding-classifier-band.fk (four-way at validate.sh, incl. fkwu)
 
 (do
     (defn sg-our   (s) (nth s 0))   ; what our own classifier recognized

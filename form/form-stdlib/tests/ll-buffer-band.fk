@@ -1,0 +1,14 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/ll-buffer.fk
+; ll-buffer-band — the parameterized buffer model, proven four-way incl. fkwu.
+; The five flags multiply to 1 iff: each generalized move reproduces its frozen
+; leaf's bytes (alloc16/store-w8/load-w9/free16), AND the composed ll-buf round-trip
+; emits the four images in order as one 16-byte image. Byte-conviction is the right
+; gate — the encoder has one right answer per move.
+(do (if (eq (mul (fa-conviction (ll-alloc 16) (list 255 67 0 209))
+                 (mul (fa-conviction (ll-store 8 8) (list 232 11 0 185))
+                      (mul (fa-conviction (ll-load 9 12) (list 233 15 64 185))
+                           (mul (fa-conviction (ll-free 16) (list 255 67 0 145))
+                                (fa-conviction (ll-buf 16 8 8 9)
+                                  (list 255 67 0 209 232 11 0 185 233 11 64 185 255 67 0 145))))))
+            1)
+        1 0))

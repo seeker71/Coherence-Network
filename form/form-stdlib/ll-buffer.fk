@@ -1,0 +1,32 @@
+; ll-buffer.fk — the parameterized stack-buffer memory model, four-way native.
+;
+; A buffer is a frame on the machine stack: alloc lowers the stack pointer by n
+; bytes, store/load move a word to/from a byte offset within the frame, free
+; raises the pointer back. The four moves are ONE family parameterized by data
+; (n, register, offset) — not four frozen instructions. ll-buf composes them into
+; a single matched round-trip image: alloc n / store rt@off / load rt2@off / free n.
+;
+; Axioms it rests on: content-addressing (the byte image IS the cell — identical
+; (n,rt,off) always yields identical bytes); cell + boundary (the frame is a
+; bounded region the pointer opens and closes); composition (ll-buf is a recipe
+; over recipes, the parse-tree-is-the-recipe shape — fa-image folds the four leaf
+; images into one). The encoder has ONE right answer per move, so byte-conviction
+; (fa-conviction) is the correct gate here — distinct from lowering-conviction's
+; semantic gate for many-valid-answer lowerings (see lowering-conviction.fk).
+;
+; Provenance: the frozen single-instruction leaves alloc16/store-w8/load-w9/free16
+; were self-authored four-way by form-cli close-next from a LOCAL oracle, zero
+; remote tokens (PR #3306). This generalizes those instances into one model —
+; ll-alloc(16) == alloc16, ll-store(8,8) == store-w8, ll-load(9,12) == load-w9,
+; ll-free(16) == free16 — and adds the composed round-trip the roadmap named open.
+;
+; off is a byte offset (multiple of 4, the word scale); n the raw frame size.
+; preludes: form-asm.fk
+(do
+  (defn ll-alloc (n) (fa-sub-x-imm 31 31 n))
+  (defn ll-free (n) (fa-add-x-imm 31 31 n))
+  (defn ll-store (rt off) (fa-str-w rt 31 off))
+  (defn ll-load (rt off) (fa-ldr-w rt 31 off))
+  (defn ll-buf (n rt off rt2)
+    (fa-image (list (ll-alloc n) (ll-store rt off) (ll-load rt2 off) (ll-free n))))
+  0)
