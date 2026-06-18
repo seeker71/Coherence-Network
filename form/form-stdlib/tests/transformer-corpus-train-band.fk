@@ -1,0 +1,46 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/transformer-corpus-train.fk
+;
+; transformer-corpus-train-band — a real model trains over a CORPUS and GENERALIZES.
+;
+; Three 2D examples train, one is held out. The two-block residual stack folds the
+; proven SGD atom (tbp-stack-step) over the corpus for 20 then 60 epochs. Loss ×1e6
+; rounded to integers, so all four kernels compare byte-for-byte (the float math is
+; identical; the verdict is deterministic). Measured: train 2.28 → 0.154 → 0.151,
+; held-out 1.08 → 0.014 — it learns the signal and carries it to UNSEEN input.
+;
+; Verdict 31:
+;   1    the untrained stack carries real corpus loss (l0 > 0)
+;   2    training over the corpus lowers it (l20 < l0)
+;   4    and keeps lowering it past the first phase (l60 < l20)
+;   8    it GENERALIZES — held-out loss falls too (h60 < h0), not memorization
+;   16   substantial — training cut corpus loss to under a quarter (4·l60 < l0)
+(do
+    (let ba (tbp-bk (list (list 0.3 -0.2) (list 0.1 0.4)) (list 0.0 0.0)
+                    (list (list 0.5 0.2) (list -0.3 0.6)) (list 0.0 0.0)))
+    (let bb (tbp-bk (list (list 0.2 0.1) (list -0.1 0.3)) (list 0.0 0.0)
+                    (list (list 0.4 -0.2) (list 0.3 0.5)) (list 0.0 0.0)))
+    (let train (list
+        (list (list 1.0 0.5) (list 0.6 -0.4))
+        (list (list 0.5 1.0) (list -0.4 0.6))
+        (list (list 0.8 0.2) (list 0.4 -0.2))))
+    (let held (list (list (list 0.6 0.9) (list -0.3 0.5))))
+    (let eps 0.00001)
+    (let lr 0.1)
+
+    (let s0  (list ba bb))
+    (let s20 (tct-train-blocks ba bb train lr eps 20))
+    (let s60 (tct-train-blocks ba bb train lr eps 60))
+
+    (let l0  (round (mul (tct-corpus-loss s0  train eps) 1000000.0)))
+    (let l20 (round (mul (tct-corpus-loss s20 train eps) 1000000.0)))
+    (let l60 (round (mul (tct-corpus-loss s60 train eps) 1000000.0)))
+    (let h0  (round (mul (tct-corpus-loss s0  held eps) 1000000.0)))
+    (let h60 (round (mul (tct-corpus-loss s60 held eps) 1000000.0)))
+
+    (let c0 (if (gt l0 0) 1 0))
+    (let c1 (if (lt l20 l0) 2 0))
+    (let c2 (if (lt l60 l20) 4 0))
+    (let c3 (if (lt h60 h0) 8 0))
+    (let c4 (if (lt (add l60 (add l60 (add l60 l60))) l0) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

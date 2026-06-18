@@ -1,0 +1,54 @@
+; transformer-corpus-train.fk — train the two-block residual stack over a CORPUS.
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk
+;
+; transformer-backprop.fk's tbp-stack-step fits ONE (x,t) pair in one SGD step. A
+; REAL model trains over a CORPUS: fold that proven atom over a list of examples
+; (one epoch), repeated for many epochs. Each example is (list x t). The fold is
+; monomorphic recursion (fourth-arm safe); every numeric op is the already-proven
+; block backward (transformer-backprop 127, attention-backward 31, ffn 63,
+; softmax-ln 31, the assembled stack 31). This is the smallest honest step from
+; "fits one fixture" to "trains a model on data" — and because an epoch over a
+; corpus boxes far more floats than a single example, it is also the real exercise
+; of fkwu's grown float pool.
+;
+; Proven by: form-stdlib/tests/transformer-corpus-train-band.fk
+
+(do
+    (defn tct-ex-x (ex) (nth ex 0))
+    (defn tct-ex-t (ex) (nth ex 1))
+
+    ; one epoch — thread the stack through every example once, in order.
+    (defn tct-epoch (s examples lr eps)
+        (if (eq (len examples) 0) s
+            (tct-epoch
+                (tbp-stack-step (tbp-stack-A s) (tbp-stack-B s)
+                    (tct-ex-x (head examples)) (tct-ex-t (head examples)) lr eps)
+                (tail examples) lr eps)))
+
+    ; train: `epochs` passes over the whole corpus.
+    (defn tct-train (s examples lr eps epochs)
+        (if (eq epochs 0) s
+            (tct-train (tct-epoch s examples lr eps) examples lr eps (sub epochs 1))))
+    (defn tct-train-blocks (ba bb examples lr eps epochs)
+        (tct-train (list ba bb) examples lr eps epochs))
+
+    ; the trained stack's prediction on an input.
+    (defn tct-predict (s x eps)
+        (tbp-bk-fwd (tbp-stack-B s) (tbp-bk-fwd (tbp-stack-A s) x eps) eps))
+
+    ; total SSE over a corpus — the training objective, summed across examples.
+    (defn tct-corpus-loss (s examples eps)
+        (if (eq (len examples) 0) 0.0
+            (add (tbp-stack-loss (tbp-stack-A s) (tbp-stack-B s)
+                    (tct-ex-x (head examples)) (tct-ex-t (head examples)) eps)
+                 (tct-corpus-loss s (tail examples) eps))))
+
+    ; a held-out example is a HIT when its SSE is within tolerance.
+    (defn tct-hit (s x t eps tol)
+        (if (le (tbp-stack-loss (tbp-stack-A s) (tbp-stack-B s) x t eps) tol) 1 0))
+    (defn tct-heldout-correct (s held eps tol)
+        (if (eq (len held) 0) 0
+            (add (tct-hit s (tct-ex-x (head held)) (tct-ex-t (head held)) eps tol)
+                 (tct-heldout-correct s (tail held) eps tol))))
+    0)
