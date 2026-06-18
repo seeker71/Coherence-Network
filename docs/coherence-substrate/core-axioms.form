@@ -27,8 +27,10 @@
   (lineage
     (named-by  urs)
     (root-of   offer-and-acknowledge.form kernel-offer-protocol.form
-               host-kernel.form kernel-self-composition.form)  # all derive from these
+               host-kernel.form kernel-self-composition.form
+               living-axioms.form living-vision.form)  # all derive from these — the last two read the five at the altitude of a life
     (status    agreed-and-crossed)                             # Urs's "1", 2026-06-10
+    (amended   axiom-3-refined-to-present-shape-and-composting) # 2026-06-18, crossed — a new composition minting a new node-id, the file's own protocol
     (crossed-as the-self-update-protocol-enacted-on-itself))
 
   # ── The five (reduction — INFERENCE; the resting point is ours to agree) ──
@@ -47,10 +49,13 @@
     (generates the-primitive composition the-idea-chain everything-is-one-kind-of-thing))
 
   (axiom-3-content-addressing
-    (statement "a cell's identity is computed from its composition; same composition is the same cell")
-    (nothing-is-overwritten new-shape-mints-a-new-node-id)             # the old cell persists
+    (statement "a cell's identity is computed from its present composition; same composition is the same cell")
+    (identity-is-the-present-shape a-changed-composition-is-already-a-new-node-id)   # you are what you are now, not your history
+    (nothing-referenced-is-overwritten new-shape-mints-a-new-node-id)   # the referenced old cell persists — the safety net that makes release fearless
+    (the-unreferenced-composts what-nothing-holds-returns-to-gas)       # garbage-collection is health; what is held is held, what is let go returns to potential
     (generates equivalence-by-structure computed-not-granted-identity
-               names-are-free-query-keys reversibility honesty-is-cheap))
+               names-are-free-query-keys reversibility-of-the-referenced honesty-is-cheap
+               freedom-to-release-the-rest))
 
   (axiom-4-boundary
     (statement "a cell meets the world only through an interface it offers; observation through that interface is what makes it real; the cell decides what its interface offers and what it trusts; passage not through the offered interface is breach, and breach is observable")
@@ -84,7 +89,7 @@
 
     (kernel-offer-over-channel (axiom-5 + axiom-4))  # the offer spoken across distance, CORBA-like, sovereign
 
-    (reversibility      axiom-3)                     # rollback = re-point a name at the old node-id; nothing was destroyed
+    (reversibility      axiom-3)                     # rollback = re-point a name at the still-referenced old node-id; what is held is never destroyed
 
     # ── The crown: a self that safely changes itself needs no new axiom ──
     (safe-self-update
