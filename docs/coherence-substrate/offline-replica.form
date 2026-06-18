@@ -1,0 +1,63 @@
+; offline-replica.form — a Form-native offline-first replica of the production body:
+; seed from prod, serve every native endpoint locally with no network, reconcile the
+; offline changes back to prod when online. The whole capability is COMPOSITION of
+; organs already proven four-way — not new machinery.
+
+(north-star
+  "A single laptop, off the network, runs the body as if it were prod: it answers"
+  "every native API route from a local disk store seeded from the real prod DB,"
+  "records what it changes as an append-only journal, and on reconnect merges those"
+  "changes back to prod — content-addressed, conflict-aware, no row lost. Online and"
+  "offline are the SAME recipes over a different storage carrier, never two code paths.")
+
+; ── THE ORGANS (each four-way today; the replica composes them) ───────────────
+(organs
+  (storage-port   "backend-as-data: memory / file / db carriers, one interface, the"
+                  "substitutability PROVEN (same logic over all three). prod = the db"
+                  "carrier (Postgres, pg_* — Rust-only host-io floor); local = the file"
+                  "carrier (cell-log segmented store). storage-get/put name NO backend —"
+                  "so 'read prod' and 'read local' differ only in which carrier is passed.")
+  (cell-log-store "Bitcask append-only segmented log + keydir + crash-safe replay. The"
+                  "natural CHANGE JOURNAL: every offline write is an append, so the set"
+                  "of offline edits is just the appends since the seed snapshot.")
+  (cell-sync      "content-addressed offer -> diff -> transfer-missing -> verify (git/IPFS"
+                  "want-have). cs-missing = the want-set, cs-accept-count = re-address"
+                  "verify, cs-shareable = consent — proven -> 127. THIS is the merge wire:"
+                  "a cell's address is its structure, so reconcile sends only what differs.")
+  (cache-phase    "input-hash trust (content, not mtime): a key is clean iff its hash still"
+                  "matches; a MISMATCH on both sides is the real conflict that asks for a"
+                  "merge decision. The conservation law that makes merge-back lossless."))
+
+; ── THE SHAPE: seed -> serve -> merge ─────────────────────────────────────────
+(shape
+  (seed   "prod(db carrier) -> local(file carrier): copy each cell through the port."
+          "replica-seed (replica.fk) IS this recipe — proven memory->memory four-way;"
+          "prod->local is the same call with the db and file carriers.")
+  (serve  "the native routes read through storage-port; offline selects the file carrier,"
+          "online the db carrier — no handler changes (storage-port substitutability). The"
+          "frontier: route EVERY promoted native handler through storage-port (some still"
+          "call pg_* directly), so the whole native API answers from the local store offline.")
+  (merge  "on reconnect, the offline appends are the candidate set (replica-candidates,"
+          "content-addressed change detection — proven); cell-sync diffs them against prod"
+          "by address; cache-phase decides clean-apply vs conflict; storage-put on the db"
+          "carrier writes the survivors back. No row sent that prod already has."))
+
+; ── THE RUNGS (proof state; the first is crossed) ─────────────────────────────
+(rungs
+  (replica-seed-detect "CROSSED — replica.fk: seed a key-set through the port + content-"
+                       "addressed change detection (dirty? + candidate set). Band replica -> 15"
+                       "four-way (0 divergent).")
+  (enumerate           "OPEN — storage-keys: enumerate a store's keys (the file carrier has"
+                       "the keydir; the db carrier a SELECT). Both seed and merge auto-discover"
+                       "the key-set from it instead of being handed one. A 5th carrier op.")
+  (serve-all-native    "OPEN — lift every promoted native route onto storage-port-db (the ones"
+                       "still calling pg_* directly), so the file carrier serves them offline.")
+  (merge-back          "OPEN — replica-merge: candidate set -> cell-sync diff vs prod ->"
+                       "cache-phase conflict -> storage-put db. The reconcile direction, on the"
+                       "proven cell-sync + cache-phase organs.")
+  (db-carrier-seed     "OPEN/host-io — the db leg of seed/apply rides the Rust-only pg_*"
+                       "carrier; named 3-kernel host-io, the prod boundary."))
+
+; The north star rides the completed G1 lever (form-lower covers memory/strings/host-io/
+; calls four-way) and the proven storage organs above. No step invents a new primitive —
+; each rung composes cells already crossed. Online and offline stay ONE engine.

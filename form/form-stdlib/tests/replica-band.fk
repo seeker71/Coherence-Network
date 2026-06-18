@@ -1,0 +1,28 @@
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/replica.fk
+;
+; replica-band — the offline-first prod replica's SEED + content-addressed CHANGE
+; DETECTION, proven over storage-port (memory carrier here; prod=db, local=file are
+; the SAME recipe with those carriers). The whole capability is COMPOSITION of proven
+; organs — storage-port (backend swap), cell-log-store (journal), cell-sync (merge),
+; cache-phase (conflict trust); this band proves the seed + merge-candidate rung.
+;
+; Verdict 15 when seed + change-detection are correct:
+;   1   SEED copies a key-set source -> local through the port (alpha+beta both land)
+;   2   DIRTY? is content-addressed — equal value clean (0), changed value dirty (1)
+;   4   CANDIDATES = exactly the changed keys (alpha edited locally, beta untouched -> (alpha))
+;   8   the local edit is real — local alpha reads back the offline value, last-write-wins
+(do
+    (let mem (carrier-memory))
+    (let src (storage-put mem (storage-put mem (storage-open mem 0) "alpha" "one") "beta" "two"))
+    (let local0 (replica-seed mem src mem (storage-open mem 0) (list "alpha" "beta")))
+    (let local (storage-put mem local0 "alpha" "one-LOCAL"))
+
+    (let c0 (if (str_eq (storage-value (storage-get mem local0 "alpha")) "one")
+            (if (str_eq (storage-value (storage-get mem local0 "beta")) "two") 1 0) 0))
+    (let c1 (if (eq (replica-dirty? "x" "x") 0)
+            (if (eq (replica-dirty? "x" "y") 1) 2 0) 0))
+    (let cands (replica-candidates mem src mem local (list "alpha" "beta")))
+    (let c2 (if (eq (len cands) 1) (if (str_eq (head cands) "alpha") 4 0) 0))
+    (let c3 (if (str_eq (storage-value (storage-get mem local "alpha")) "one-LOCAL") 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
