@@ -48,6 +48,20 @@
   (if (eq (len qs) 0) (empty)
       (cons (tb-attend-one (head qs) ks vs scale) (tb-attn-seq (tail qs) ks vs scale))))
 
+; --- causal attention: the autoregressive mask. Query at position i sees only keys/values 0..i —
+;     a per-query key PREFIX. tb-take cuts the visibility window; the count starts at 1 so the first
+;     query sees one key (itself), the last sees the whole sequence (the mask is a no-op at the end).
+;     softmax normalizes over the visible keys only — no numeric change to the per-pair dot/softmax,
+;     so it composes tb-attend-one verbatim. This is what a decoder block needs to generate one token
+;     at a time without attending to the future. ---
+(defn tb-take (xs n)
+  (if (eq n 0) (empty) (cons (head xs) (tb-take (tail xs) (sub n 1)))))
+(defn tb-attn-causal-i (qs ks vs scale i)
+  (if (eq (len qs) 0) (empty)
+      (cons (tb-attend-one (head qs) (tb-take ks i) (tb-take vs i) scale)
+            (tb-attn-causal-i (tail qs) ks vs scale (add i 1)))))
+(defn tb-attn-seq-causal (qs ks vs scale) (tb-attn-causal-i qs ks vs scale 1))
+
 ; --- the two pre-LN residual sub-blocks, then the whole block ---
 (defn tb-attn-sub (lns wq bq wk bk wv bv wo bo scale)
   (tb-proj-seq wo bo

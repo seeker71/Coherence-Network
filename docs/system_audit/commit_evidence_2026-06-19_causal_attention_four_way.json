@@ -1,0 +1,48 @@
+{
+  "date": "2026-06-19",
+  "brick": "causal-attention — the autoregressive mask (tb-attn-seq-causal) and the causal llama decoder block (lblk-block-causal), four-way",
+  "north_star_track": "device-native / model-as-recipe: the generation-ready decoder. The named next stone after the whole llama block ran FORWARD on the M4 GPU (brick 3s, #3355) was the causal mask — a decoder must not attend to future tokens. This adds it at the reusable engine altitude (transformer-block.fk) and on the real llama block, four-way; the generation loop steps the causal block.",
+  "what": "The whisper/llama blocks proven so far use NON-CAUSAL attention (every query sees every key) — correct for an encoder, wrong for autoregressive generation. Added tb-attn-seq-causal to transformer-block.fk: query at position i attends only to keys/values 0..i (a per-query key PREFIX via tb-take), composing tb-attend-one verbatim — no numeric change to the per-pair dot/softmax. Added lblk-block-causal to llama-block.fk (the real RMSNorm+RoPE+SwiGLU decoder block with the mask). Proved both four-way against an independent libm fp64 reference whose non-causal path bit-exactly reproduces llama-block-band's known pins (1115890, -1069281, 1648117).",
+  "mask_definition": "tb-attn-causal-i walks the queries with a 1-based count i; query k sees the first i=k+1 keys/values. The first query sees one key (itself); the last sees the whole sequence (the mask is a no-op there). softmax normalizes over the visible keys only.",
+  "the_proof_is_the_relationships": [
+    "first token sees ONLY itself: causal attn[0] == v0 EXACTLY (softmax of one score = 1) — bits 1,2 = (2000000, 3000000) = v0 — AND non-causal attn[0][0] (bit 16, 2806824) differs, so the mask actually restricts",
+    "mask is a NO-OP at the last position: causal attn[last] (bits 4,8) == non-causal attn[last] (bit 32) = 4193176 — no over-masking",
+    "same two laws on the REAL llama block: causal yc[last] (bits 64,128) == non-causal y[last] (-1069281/1648117) AND causal yc[0][0] (bit 256, 1893731) differs from non-causal 1115890 — the mask changed an earlier token"
+  ],
+  "composed_from_four_way_recipes": [
+    "tb-attend-one / tb-scores / tb-weighted-acc (transformer-block.fk, band 511) — reused verbatim",
+    "the full llama block lblk-attn-block / lblk-ffn-block (llama-block.fk, band 4095) — only the attention seq-walk swapped for the causal one"
+  ],
+  "recipes": [
+    "form/form-stdlib/transformer-block.fk (tb-take, tb-attn-causal-i, tb-attn-seq-causal)",
+    "form/form-stdlib/llama-block.fk (lblk-attn-sub-causal, lblk-attn-block-causal, lblk-block-causal)"
+  ],
+  "band": "form/form-stdlib/tests/causal-attention-band.fk",
+  "manifest_row": "causal-attention fks 511 (form/fourth-arm-bands.txt)",
+  "reference": "independent pure-libm fp64 (math.exp/sin/cos/sqrt). Generic attention fixture: scale 1, d=2, qs=ks=[[1,0],[0,1]], vs=[[2,3],[5,7]]. Llama block: the llama-block-band fixture (S=2, d=4, HD=4). The reference's NON-CAUSAL llama path reproduces llama-block-band's pins bit-exactly (1115890, -1069281, 1648117), validating it before reading the causal values.",
+  "claims_511": {
+    "1_causal_attn00": 2000000,
+    "2_causal_attn01": 3000000,
+    "4_causal_attn10": 4193176,
+    "8_causal_attn11": 5924234,
+    "16_noncausal_attn00": 2806824,
+    "32_noncausal_attn10": 4193176,
+    "64_causal_llama_y10": -1069281,
+    "128_causal_llama_y12": 1648117,
+    "256_causal_llama_y00": 1893731
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/tests/causal-attention-band.fk",
+    "verdict": 511,
+    "kernels": "Go + Rust + TypeScript + fkwu",
+    "fourth_arm": "1 band(s) four-way (fkwu + pre-flattened tables)",
+    "divergent": 0
+  },
+  "regression": "llama-block-band still 4095 four-way, transformer-block-band still 511 four-way after the additive edits to the shared files.",
+  "named_next_stones": [
+    "emit lblk-block-causal to Metal (the causal jte-llama-block-fwd-msl) and run on the M4 GPU — the mask is a per-query key-prefix in the threadgroup walk, no new numerics",
+    "the generation loop: tokenizer + KV cache + greedy decode stepping the causal block over real llama3.2:3b GGUF weights (the load path q4k/q6k/f16 is already Form-native four-way)"
+  ],
+  "lesson": "A NEW-recipe brick (like 3p/3q/3r) but cheap: the mask composes tb-attend-one verbatim, so the only design cost was the strange-minimal characterization (prove causality by the RELATIONSHIPS between libm-pinned values — first token == v0 exactly, last token == non-causal) and validating the python reference against the known band pins. The four-way proof was seconds.",
+  "co_authored_by": "Claude Opus 4.8 (1M context)"
+}
