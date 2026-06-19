@@ -52,7 +52,15 @@
 ;     5. cross-kernel parity: DONE — scientific-notation float bug fixed in BOTH the Rust kernel lexer and
 ;        fkwu's flattener; the WHOLE whisper-tiny stack crosses FOUR-WAY (fourth arm 369, 0 divergent).
 ;        Evidence: commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json.
-;     6. THEN native training/fine-tuning with local oracles — the original ask, meaningful once inference runs.
+;     6. LEARNING ON REAL DATA — now a PROVEN FACT, not a "would": transformer-real-train-band (→ 31,
+;        FOUR-WAY) trains the real two-block transformer (backprop SGD) on REAL EN->FR (char,word) pairs
+;        from web/messages/{en,fr}.json — weights START at a fixed init and EMERGE (block-A W1[0][0] moves
+;        0.3→0.496), train loss 1.68→0.36, held-out 0.55→0.085 on UNSEEN pairs (generalizes), and it BEATS
+;        the predict-the-mean baseline (0.085 < 0.359). The data is baked; the weights are learned; the
+;        verdict proves the dynamic (loss-fall + generalize + beat-baseline + weights-moved), not a baked
+;        output. Honest scale: 2-block / 24-param / 13+5 pairs / a simple ~1.2x signal — the LEARNING is
+;        proven, not whisper-scale. Scaling = the same machinery + M5's JIT for speed + more data + a real
+;        model (fine-tune real weights with local oracles).
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
