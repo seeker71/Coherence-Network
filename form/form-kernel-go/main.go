@@ -5414,6 +5414,11 @@ func writeKernelCrashTraceWithContext(args []string, src string, recovered any, 
 
 func main() {
 	args := os.Args[1:]
+	// Invoked as `form-cli` (by name): run the embedded Form recipes, not a .fk path.
+	if strings.HasSuffix(filepath.Base(os.Args[0]), "form-cli") {
+		runFcli(args)
+		return
+	}
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --binary file.fkb | --emit-binary out.fkb file.fk... | --expr \"...\" | --bench | --numeric-bench | trace ... | serve --port 18080 <route-prelude.fk...>")
 		os.Exit(2)
