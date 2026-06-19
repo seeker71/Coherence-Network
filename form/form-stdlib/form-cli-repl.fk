@@ -1,0 +1,44 @@
+; form-cli-repl.fk — the form-cli's interactive / non-interactive CONTROL logic, as recipes.
+;
+; preludes: form-stdlib/core.fk
+;
+; Every agent CLI (claude, codex, cursor, gemini, grok) has the same two modes: a one-shot
+; print mode for scripts/pipes, and an interactive REPL when launched bare at a terminal. The
+; SHELL of a REPL (reading lines, history, rendering) is carrier; the two decisions that govern
+; it are logic, so they live here and are four-way proven — the carrier only gathers the reads
+; and obeys the verdict.
+;
+; LAUNCH MODE — from three reads the carrier makes:
+;   print-flag  1 if -p / --print was passed
+;   tty         1 if stdin is a terminal
+;   has-input   1 if a question arg or piped text is present
+; ->  0 interactive (a REPL)   1 one-shot (answer once, exit)   2 help (no input, no terminal)
+;
+; PER-LINE KIND — inside the REPL, from three reads of the typed line:
+;   is-empty    1 if blank
+;   starts-paren 1 if it begins with '(' (a Form expression -> eval on the kernel, 0 tokens)
+;   starts-slash 1 if it begins with '/' (a meta-command -> /help /model /local /exit ...)
+; ->  0 form-expr   1 meta-command   2 question (the local-first ask+ loop)   3 empty (ignore)
+;
+; Proven by: form-stdlib/tests/form-cli-repl-band.fk
+
+; the launch decision: an explicit -p or any given input is one-shot; a bare terminal is
+; interactive; bare with no terminal (e.g. an empty pipe) falls to help.
+(defn frepl-mode (print-flag tty has-input)
+    (if (eq print-flag 1) 1
+        (if (eq has-input 1) 1
+            (if (eq tty 1) 0 2))))
+
+; the per-line decision inside the REPL.
+(defn frepl-classify (is-empty starts-paren starts-slash)
+    (if (eq is-empty 1) 3
+        (if (eq starts-slash 1) 1
+            (if (eq starts-paren 1) 0 2))))
+
+(defn frepl-interactive? (m) (if (eq m 0) 1 0))
+(defn frepl-oneshot?     (m) (if (eq m 1) 1 0))
+(defn frepl-help?        (m) (if (eq m 2) 1 0))
+(defn frepl-is-question? (k) (if (eq k 2) 1 0))
+(defn frepl-is-formexpr? (k) (if (eq k 0) 1 0))
+(defn frepl-is-meta?     (k) (if (eq k 1) 1 0))
+0

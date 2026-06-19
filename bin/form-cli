@@ -23,6 +23,10 @@ usage() {
   cat <<EOF
 form-cli — the one door (local-first, Form-native)
 
+  form-cli                          interactive REPL (bare at a terminal) — like claude/codex
+  form-cli -p "<question>"          one-shot print mode (scripts/pipes); also: echo q | form-cli
+  form-cli repl                     force the interactive REPL
+
   form-cli ask "<question>" [-k N] [-m MODEL]
         answer from the body + local docs, grounded (local oracle, no network)
   form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"]
@@ -58,8 +62,12 @@ Models are local (ollama): coder, qwen2.5:72b, deepseek-r1:32b, llama3.2:3b.
 EOF
 }
 
-cmd="${1:-help}"; shift 2>/dev/null || true
+cmd="${1:-}"; shift 2>/dev/null || true
 case "$cmd" in
+  "")          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" ;;        # bare: recipe picks the mode (TTY -> REPL)
+  repl)        exec python3 "$ROOT/scripts/form_cli_ask_smart.py" --repl ;; # force interactive
+  -p|--print)  exec python3 "$ROOT/scripts/form_cli_ask_smart.py" -p "$@" ;; # one-shot print mode (scripts/pipes)
+  -*)          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$cmd" "$@" ;; # flags (-m/-j/--local-only/...) -> ask engine
   ask)       exec python3 "$RAG" ask "$@" ;;
   ask+)      exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;
