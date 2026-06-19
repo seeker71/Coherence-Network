@@ -1,0 +1,20 @@
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/positional.fk
+;
+; positional-band — whisper's encoder sinusoidal positional embedding (sinusoids(length,channels)),
+; proven against the numpy reference. length=4, channels=8. Verdict 1 when the whole
+; [length × channels] matrix matches within 1e-6.
+
+(do
+  (defn pos-vmaxdiff (a b)
+    (if (eq (len a) 0) 0.0
+        (do (let d (tn-abs (sub (head a) (head b))))
+            (let r (pos-vmaxdiff (tail a) (tail b)))
+            (if (gt d r) d r))))
+  (defn pos-maxdiff (as bs)
+    (if (eq (len as) 0) 0.0
+        (do (let d (pos-vmaxdiff (head as) (head bs)))
+            (let r (pos-maxdiff (tail as) (tail bs)))
+            (if (gt d r) d r))))
+  (let expected (list (list 0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0) (list 0.8414709848078965 0.04639922346473126 0.0021544330233656027 9.999999983333325e-05 0.5403023058681398 0.9989229760406304 0.9999976792064809 0.999999995) (list 0.9092974268256817 0.0926985007787272 0.004308856046742809 0.0001999999986666665 -0.4161468365471424 0.9956942241237399 0.9999907168366957 0.9999999800000001) (list 0.1411200080598672 0.13879810108005047 0.0064632590701896395 0.0002999999954999997 -0.9899924966004454 0.990320699135675 0.9999791129229608 0.9999999550000004)))
+  (let got (pe-matrix 4 8))
+  (if (lt (pos-maxdiff got expected) 0.000001) 1 0))
