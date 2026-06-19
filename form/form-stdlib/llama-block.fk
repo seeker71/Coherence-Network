@@ -1,0 +1,85 @@
+; llama-block.fk — one real llama-shaped decoder block as proven Form, the fp64 ALGORITHM
+; floor under running a llama block on the M4 GPU (next to the whisper block, brick 3m).
+;
+; The whisper-shaped block transformer-block.fk's tb-block (LayerNorm + gelu, proven FOUR-WAY 511)
+; runs on the GPU as one Metal kernel (jte-block-fwd-msl). A REAL llama3.2:3b block differs in
+; exactly the numerics already lifted to four-way standalone recipes — RMSNorm (llama-numerics.fk,
+; not LayerNorm), SwiGLU (llama-numerics.fk, not gelu), and RoPE on q/k (rope.fk, position-dependent
+; rotation the whisper block has none of). Until now those four-way numerics were never COMPOSED into
+; a block; tk-emit-llama (transformer-kernel.fk) only emitted the whole llama as C (three-way). This
+; file composes them into the block — the missing proven recipe the GPU emit will mirror, exactly as
+; tb-block backs the whisper GPU kernel.
+;
+;   n1 = RMSNorm1(x)                                          (gain g1, no bias — the llama norm)
+;   h  = x + Wo·attn( RoPE(Wq·n1), RoPE(Wk·n1), Wv·n1, scale ) (bias-free proj, RoPE q/k, residual)
+;   n2 = RMSNorm2(h)
+;   y  = h + Wdown·SwiGLU( Wgate·n2, Wup·n2 )                  (silu(gate)·up FFN, residual)
+;
+; Core-abstraction-first: every numeric is an ALREADY-FOUR-WAY recipe — ln-rmsnorm/ln-swiglu
+; (llama-numerics, 4095), rope (rope.fk, 4095, over trig's fsin/fcos/fpow), and the dot/matvec/attn/
+; residual walks of transformer-block.fk (tb-dot/tb-matvec/tb-attn-seq/tb-add-seq, 511). Nothing
+; re-derived. Weights are arguments — recipe DATA all the way down; a layer stack is a SEQUENCE of
+; lblk-block calls, mutable at runtime (the dynamic-recipe advantage). fp64 lane; the GPU emit
+; (fp32 mirror) and format lanes are the named follow-ups. lblk-block is non-causal (matching the
+; jte-llama-block-fwd-msl GPU walk it backs); lblk-block-causal applies the autoregressive mask
+; (tb-attn-seq-causal — a per-query key-prefix, no numeric change) for the real decoder that the
+; generation loop steps. Position = absolute token index. Proven four-way against the libm fp64
+; reference by tests/llama-block-band.fk; the causal mask by tests/causal-attention-band.fk.
+
+; --- RMSNorm each token-vector of a sequence (gain g, no bias) ---
+(defn lblk-rms-seq (xs g eps)
+  (if (eq (len xs) 0) (empty)
+      (cons (ln-rmsnorm (head xs) g eps) (lblk-rms-seq (tail xs) g eps))))
+
+; --- project each token by W, NO bias (llama projections are bias-free) ---
+(defn lblk-proj-seq (w xs)
+  (if (eq (len xs) 0) (empty)
+      (cons (tb-matvec w (head xs)) (lblk-proj-seq w (tail xs)))))
+
+; --- RoPE each token's vector by its absolute position (token index), head-dim HD ---
+(defn lblk-rope-seq-i (xs i HD)
+  (if (eq (len xs) 0) (empty)
+      (cons (rope (head xs) i HD) (lblk-rope-seq-i (tail xs) (add i 1) HD))))
+(defn lblk-rope-seq (xs HD) (lblk-rope-seq-i xs 0 HD))
+
+; --- SwiGLU FFN per token: down · [silu(gate_i)·up_i] ---
+(defn lblk-swiglu-map (gs us)
+  (if (eq (len gs) 0) (empty)
+      (cons (ln-swiglu (head gs) (head us)) (lblk-swiglu-map (tail gs) (tail us)))))
+(defn lblk-ffn (wg wu wd n)
+  (tb-matvec wd (lblk-swiglu-map (tb-matvec wg n) (tb-matvec wu n))))
+(defn lblk-ffn-seq (wg wu wd xs)
+  (if (eq (len xs) 0) (empty)
+      (cons (lblk-ffn wg wu wd (head xs)) (lblk-ffn-seq wg wu wd (tail xs)))))
+
+; --- attention sub-block: RMSNorm → q/k/v proj → RoPE(q),RoPE(k) → attn → Wo proj → +residual ---
+(defn lblk-attn-sub (n1 wq wk wv wo scale HD)
+  (lblk-proj-seq wo
+    (tb-attn-seq (lblk-rope-seq (lblk-proj-seq wq n1) HD)
+                 (lblk-rope-seq (lblk-proj-seq wk n1) HD)
+                 (lblk-proj-seq wv n1) scale)))
+(defn lblk-attn-block (xs g1 eps wq wk wv wo scale HD)
+  (tb-add-seq xs (lblk-attn-sub (lblk-rms-seq xs g1 eps) wq wk wv wo scale HD)))
+
+; --- FFN sub-block ---
+(defn lblk-ffn-block (xs g2 eps wg wu wd)
+  (tb-add-seq xs (lblk-ffn-seq wg wu wd (lblk-rms-seq xs g2 eps))))
+
+; --- the whole llama block ---
+(defn lblk-block (xs g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (lblk-ffn-block (lblk-attn-block xs g1 eps wq wk wv wo scale HD) g2 eps wg wu wd))
+
+; --- the causal llama block: the real autoregressive decoder. Identical to lblk-block but each
+;     token attends only to itself and the tokens before it (tb-attn-seq-causal). At the last token
+;     the prefix is the whole sequence, so the last position is bit-identical to lblk-block; earlier
+;     tokens differ because the non-causal block let them see the future. This is the block the
+;     generation loop steps: it produces one token's next-state without leaking later positions. ---
+(defn lblk-attn-sub-causal (n1 wq wk wv wo scale HD)
+  (lblk-proj-seq wo
+    (tb-attn-seq-causal (lblk-rope-seq (lblk-proj-seq wq n1) HD)
+                        (lblk-rope-seq (lblk-proj-seq wk n1) HD)
+                        (lblk-proj-seq wv n1) scale)))
+(defn lblk-attn-block-causal (xs g1 eps wq wk wv wo scale HD)
+  (tb-add-seq xs (lblk-attn-sub-causal (lblk-rms-seq xs g1 eps) wq wk wv wo scale HD)))
+(defn lblk-block-causal (xs g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (lblk-ffn-block (lblk-attn-block-causal xs g1 eps wq wk wv wo scale HD) g2 eps wg wu wd))

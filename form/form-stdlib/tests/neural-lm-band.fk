@@ -1,0 +1,74 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/transformer-corpus-train.fk form-stdlib/neural-lm.fk
+;
+; neural-lm-band — a Form-native neural LM learns a tiny language and GENERATES it.
+;
+; The language is the 4-token cycle  a → b → c → d → a  (vocab one-hot embeddings,
+; d=4). The proven two-block residual stack trains to map each token's embedding to
+; the NEXT token's embedding (tct-train-blocks, SSE — the same fold proven four-way
+; by transformer-corpus-train). Then we GENERATE: predict → snap to nearest token
+; (nl-render) → feed back (nl-gen). The strange-minimal edge case is the CYCLE: an
+; autoregressive walk from `a` must reproduce b,c,d,a — proving both correct
+; next-token rendering AND that emission feeds back without drift.
+;
+; Every numeric op is the already-four-way block forward/backward; the only new
+; tissue is the nearest-embedding render (max-select, the sequence-predictor spine).
+;
+; Verdict 31:
+;   1   the untrained model carries real loss (l0 > 0)
+;   2   training the block lowers it (lN < l0)
+;   4   training cut it sharply — to under a quarter (4·lN < l0)
+;   8   RENDER is correct: each context token predicts its true successor (all 4)
+;   16  GENERATION is correct: an autoregressive walk from `a` emits b,c,d,a (1,2,3,0)
+(do
+    ; vocabulary embeddings — one-hot coordinates, d=4 (a=0 b=1 c=2 d=3).
+    (let E (list (list 1.0 0.0 0.0 0.0) (list 0.0 1.0 0.0 0.0)
+                 (list 0.0 0.0 1.0 0.0) (list 0.0 0.0 0.0 1.0)))
+    ; the language: the 4 cyclic transitions, as (context-emb  next-emb) pairs.
+    (let corpus (list
+        (list (nl-emb E 0) (nl-emb E 1))
+        (list (nl-emb E 1) (nl-emb E 2))
+        (list (nl-emb E 2) (nl-emb E 3))
+        (list (nl-emb E 3) (nl-emb E 0))))
+
+    ; two 4×4 FFN-residual blocks — the proven-shape init from the wide band.
+    (let ba (tbp-bk
+        (list (list 0.30 -0.20 0.10 0.05) (list 0.10 0.40 -0.15 0.20)
+              (list -0.05 0.25 0.35 -0.10) (list 0.15 -0.30 0.20 0.30))
+        (list 0.0 0.0 0.0 0.0)
+        (list (list 0.50 0.20 -0.10 0.15) (list -0.30 0.60 0.25 -0.05)
+              (list 0.10 -0.20 0.45 0.30) (list 0.20 0.35 -0.25 0.40))
+        (list 0.0 0.0 0.0 0.0)))
+    (let bb (tbp-bk
+        (list (list 0.20 0.10 -0.05 0.15) (list -0.10 0.30 0.20 -0.15)
+              (list 0.25 -0.20 0.35 0.10) (list -0.05 0.15 -0.10 0.40))
+        (list 0.0 0.0 0.0 0.0)
+        (list (list 0.40 -0.20 0.15 -0.10) (list 0.30 0.50 -0.25 0.20)
+              (list -0.15 0.25 0.45 0.10) (list 0.20 -0.10 0.30 0.35))
+        (list 0.0 0.0 0.0 0.0)))
+    (let eps 0.00001)
+    (let lr 0.05)
+
+    (let s0 (list ba bb))
+    (let sN (tct-train-blocks ba bb corpus lr eps 400))
+
+    (let l0 (round (mul (tct-corpus-loss s0 corpus eps) 1000000.0)))
+    (let lN (round (mul (tct-corpus-loss sN corpus eps) 1000000.0)))
+
+    ; render correctness: each token predicts its cyclic successor.
+    (let r0 (nl-predict-token sN E (nl-emb E 0) eps))
+    (let r1 (nl-predict-token sN E (nl-emb E 1) eps))
+    (let r2 (nl-predict-token sN E (nl-emb E 2) eps))
+    (let r3 (nl-predict-token sN E (nl-emb E 3) eps))
+    (let render-ok (if (eq r0 1) (if (eq r1 2) (if (eq r2 3) (if (eq r3 0) 1 0) 0) 0) 0))
+
+    ; generation: an autoregressive walk of 4 from `a` -> b,c,d,a == (1 2 3 0).
+    (let g (nl-gen sN E (nl-emb E 0) 4 eps))
+    (let gen-ok (if (eq (nth g 0) 1) (if (eq (nth g 1) 2) (if (eq (nth g 2) 3) (if (eq (nth g 3) 0) 1 0) 0) 0) 0))
+
+    (let c0 (if (gt l0 0) 1 0))
+    (let c1 (if (lt lN l0) 2 0))
+    (let c2 (if (lt (add lN (add lN (add lN lN))) l0) 4 0))
+    (let c3 (if (eq render-ok 1) 8 0))
+    (let c4 (if (eq gen-ok 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

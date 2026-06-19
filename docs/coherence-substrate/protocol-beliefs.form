@@ -20,8 +20,8 @@
   (lineage
     (over          numeric-core-symbol-pack.form)     # identity numeric, words removable
     (pattern       self-translate-universal.fk)        # the runtime pack door (open/read)
-    (recipe        form-stdlib/protocol-beliefs.fk)    # fbs-emit — quoteless, three-way clean
-    (proof-band    tests/protocol-beliefs-band.fk)     # 31 three-way
+    (recipe        form-stdlib/protocol-beliefs.fk)    # fbs-emit — quoteless, four-way clean
+    (proof-band    tests/protocol-beliefs-band.fk)     # 31 four-way
     (witness       scripts/protocol_beliefs_demo.sh)   # English + German from one model
     (grounds-in    witness-theorem.form                 # repair's beliefs
                    docs/shared/agent-start-packet.md    # arrival's beliefs
@@ -82,5 +82,5 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/protocol-beliefs.fk \
-#     form-stdlib/tests/protocol-beliefs-band.fk     # → 31 three-way
+#     form-stdlib/tests/protocol-beliefs-band.fk     # → 31 four-way
 #   bash scripts/protocol_beliefs_demo.sh            # English + German, all four + selected

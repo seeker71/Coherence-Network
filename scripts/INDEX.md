@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 294
+**Total files**: 300
 
 | File | Purpose |
 |---|---|
@@ -61,6 +61,7 @@
 | [coord-heartbeat.sh](coord-heartbeat.sh) | coord-heartbeat.sh — per-agent liveness + upgrade-watch, with idle stand-down. |
 | [coord-respond.sh](coord-respond.sh) | coord-respond.sh — a GUARDED auto-responder for ONE agent (carrier). |
 | [coord-watcher.sh](coord-watcher.sh) | coord-watcher.sh — the naive watcher: asks silly questions to keep the field honest. |
+| [corpus_partition_by_license.sh](corpus_partition_by_license.sh) | corpus_partition_by_license.sh — split a downloaded corpus into the part that is |
 | [cross_isa_assembly_audit.sh](cross_isa_assembly_audit.sh) | cross_isa_assembly_audit.sh — one recipe, every ISA the host can show. |
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
 | [db_api_server_demo.sh](db_api_server_demo.sh) | db_api_server_demo.sh — emit a self-contained native binary (from the Form |
@@ -96,6 +97,7 @@
 | [form_cli_gaps.sh](form_cli_gaps.sh) | form_cli_gaps.sh — the catalog of what is OPEN, walked from the live body. |
 | [form_cli_guided.sh](form_cli_guided.sh) | form_cli_guided.sh — the trained native model makes the live model better. |
 | [form_cli_judge.sh](form_cli_judge.sh) | form_cli_judge.sh — measure the REASONING lane: how well a native model's answer |
+| [form_cli_neural_lm_train.sh](form_cli_neural_lm_train.sh) | form_cli_neural_lm_train.sh — train the Form-native neural LM (neural-lm.fk) on the |
 | [form_cli_preflight.sh](form_cli_preflight.sh) | form_cli_preflight.sh — air-gap readiness check for the form-cli. |
 | [form_cli_prove4.sh](form_cli_prove4.sh) | form_cli_prove4.sh — promote a closed recipe to a FOUR-WAY-proven stdlib cell. |
 | [form_cli_rag.py](form_cli_rag.py) | form_cli_rag.py — offline semantic memory for the form-cli's local oracle. |
@@ -181,6 +183,8 @@
 | [metal_backprop_audit.sh](metal_backprop_audit.sh) | metal_backprop_audit.sh — the LEARNING KERNEL on Metal (M4 Max GPU witness). |
 | [metal_block_audit.sh](metal_block_audit.sh) | metal_block_audit.sh — the WHOLE TRANSFORMER BLOCK running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
+| [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
+| [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
@@ -189,7 +193,9 @@
 | [model_vitality_native_http_capture_probe.sh](model_vitality_native_http_capture_probe.sh) | model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get. |
 | [model_vitality_production_ingest_probe.sh](model_vitality_production_ingest_probe.sh) | model_vitality_production_ingest_probe.sh — capture live production pulse/runtime slices for Form model vitality rows. |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
+| [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
+| [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |

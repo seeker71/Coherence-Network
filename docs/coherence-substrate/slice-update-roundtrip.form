@@ -1,6 +1,6 @@
 ; slice-update-roundtrip.form — a model-delta UPDATE survives the mesh by re-addressing.
 ;
-; RUNNABLE HEART: form-stdlib/slice-update-roundtrip.fk proves the update roundtrip three-way over
+; RUNNABLE HEART: form-stdlib/slice-update-roundtrip.fk proves the update roundtrip four-way over
 ; cell-sync's own logic (sur-missing = the deltas to request · sur-verify = re-address check ·
 ; sur-applied? = the delta is now held). Band -> 127, 0 divergent (Go · Rust · TS).
 ;

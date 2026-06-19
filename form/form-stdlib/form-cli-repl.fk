@@ -1,44 +1,41 @@
-; form-cli-repl.fk — the form-cli's interactive / non-interactive CONTROL logic, as recipes.
+; form-cli-repl.fk — the interactive TTY front door on the emitted walker (fkwu).
 ;
-; preludes: form-stdlib/core.fk
+; The INTERACTIVE surface (the headless one is form-cli-main.fk reading fk_src):
+; a read-eval-print loop over real fd 0. read_line (walker tag 114) reads one
+; line of stdin, fc-respond (form-cli.fk, four-way proven) dispatches the verb,
+; print_str (tag 115) writes the response, and the loop recurses. isatty (tag
+; 116) gates an interactive prompt so a piped session stays clean. The loop ends
+; on EOF (read_line returns a negative sentinel) or the quit/exit verb.
 ;
-; Every agent CLI (claude, codex, cursor, gemini, grok) has the same two modes: a one-shot
-; print mode for scripts/pipes, and an interactive REPL when launched bare at a terminal. The
-; SHELL of a REPL (reading lines, history, rendering) is carrier; the two decisions that govern
-; it are logic, so they live here and are four-way proven — the carrier only gathers the reads
-; and obeys the verdict.
+; Deterministic and testable: output is a pure function of the stdin bytes —
+; pipe a fixed transcript, get a fixed response stream (form_cli_test.go).
+; read_line/print_str/isatty are host-io ops the emitted walker carries (tags
+; 114/115/116); they are not in the three host walkers, so this is fkwu-native,
+; the same way input_byte (tag 17) is. One native engine, both surfaces.
 ;
-; LAUNCH MODE — from three reads the carrier makes:
-;   print-flag  1 if -p / --print was passed
-;   tty         1 if stdin is a terminal
-;   has-input   1 if a question arg or piped text is present
-; ->  0 interactive (a REPL)   1 one-shot (answer once, exit)   2 help (no input, no terminal)
-;
-; PER-LINE KIND — inside the REPL, from three reads of the typed line:
-;   is-empty    1 if blank
-;   starts-paren 1 if it begins with '(' (a Form expression -> eval on the kernel, 0 tokens)
-;   starts-slash 1 if it begins with '/' (a meta-command -> /help /model /local /exit ...)
-; ->  0 form-expr   1 meta-command   2 question (the local-first ask+ loop)   3 empty (ignore)
-;
-; Proven by: form-stdlib/tests/form-cli-repl-band.fk
-
-; the launch decision: an explicit -p or any given input is one-shot; a bare terminal is
-; interactive; bare with no terminal (e.g. an empty pipe) falls to help.
-(defn frepl-mode (print-flag tty has-input)
-    (if (eq print-flag 1) 1
-        (if (eq has-input 1) 1
-            (if (eq tty 1) 0 2))))
-
-; the per-line decision inside the REPL.
-(defn frepl-classify (is-empty starts-paren starts-slash)
-    (if (eq is-empty 1) 3
-        (if (eq starts-slash 1) 1
-            (if (eq starts-paren 1) 0 2))))
-
-(defn frepl-interactive? (m) (if (eq m 0) 1 0))
-(defn frepl-oneshot?     (m) (if (eq m 1) 1 0))
-(defn frepl-help?        (m) (if (eq m 2) 1 0))
-(defn frepl-is-question? (k) (if (eq k 2) 1 0))
-(defn frepl-is-formexpr? (k) (if (eq k 0) 1 0))
-(defn frepl-is-meta?     (k) (if (eq k 1) 1 0))
-0
+; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
+(do
+    ; the native-only verbs read this binary's own baked source via self_source
+    ; (a fkwu-only op), so they live here in the runtime wrapper rather than in
+    ; the four-way dispatch: 'source' prints the Form source the binary was built
+    ; from; 'verify' reports that the binary carries its own source (self-coherence).
+    ; Everything else routes to fc-respond, the four-way-proven brain.
+    (defn fc-native (line)
+        (if (str_eq (fc-verb line) "source") (self_source)
+            (if (str_eq (fc-verb line) "verify")
+                (str_concat "coherent: this binary carries "
+                    (str_concat (int_to_str (str_len (self_source)))
+                                " bytes of its own Form source (run 'source' to print it); program running native on fkwu."))
+                (fc-respond line))))
+    ; one self-recursive loop: prompt (only on a real tty), read a line, and
+    ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
+    ; let (an effect op) so it fires exactly once per turn, not once per use.
+    (defn repl ()
+        (do (if (eq (isatty) 2) (print_str "form-cli> ") 0)
+            (let line (read_line))
+            (if (lt line 0) ""
+                (if (str_eq (fc-verb line) "quit") ""
+                    (if (str_eq (fc-verb line) "exit") ""
+                        (do (print_str (fc-native line))
+                            (repl)))))))
+    (repl))

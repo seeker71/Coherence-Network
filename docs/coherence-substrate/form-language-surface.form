@@ -46,7 +46,7 @@
 ;     SoundAnalysis oracle (each wants subprocess, which is the one missing native). EVERYTHING ELSE I put
 ;     in Python — the energy DSP, the f0 autocorrelation, the per-chunk loop, the view rendering — was
 ;     carrier-first DRIFT, not necessity. PROOF: the kernel reads a 103 KB wav and walks it in ~8 ms
-;     (read_file_bytes), and wav-sense.fk (→63, three-way) now computes the 8-window energy envelope IN
+;     (read_file_bytes), and wav-sense.fk (→63, four-way) now computes the 8-window energy envelope IN
 ;     THE BODY, reading the wav itself — the first DSP lifted back out of Python. f0 follows the same way.
 ;   NORTH STAR: the carrier shrinks to exactly the host shell-outs. The capture→sense→classify→emit LOOP,
 ;     the DSP, the property readings, the channel persistence are Form, running in the kernel.

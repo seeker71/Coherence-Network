@@ -1,0 +1,236 @@
+; offline-endpoints.form — the curated set of native API endpoints the offline
+; form-cli serves from the local file carrier, across the four families that
+; matter most for a sovereign offline body: graph, substrate, federation-mesh,
+; value-cc-economy. A DESIGN/CATALOG cell — it names which endpoints ride the
+; offline-replica shape and the content-addressed storage-port keys they serve
+; from. It composes the proven organs and invents nothing. Honest proof state:
+; only graph-node-port's node/count/index keys are four-way TODAY; every new key
+; family, the three new storage ports, and the crypto-port are RECIPE-PROPOSED,
+; awaiting their own four-way bands. This cell is the design floor those bands
+; will cross — not a claim that they already have.
+; Sibling of [[offline-replica]] (the shape + organs); exemplar is graph-node-port.fk.
+
+(north-star
+  "The four families answer every R (read) and J (journal-write) endpoint from the"
+  "local file carrier with no network: the SAME recipe, file carrier offline and db"
+  "carrier online, selected by mode (replica-serve), never two code paths. The O-tier"
+  "is the named live boundary — federation peer-poll/sync/streams and the CC exchange"
+  "mint/burn rail — the cross-node / external analog of Postgres' seed-in/merge-out:"
+  "outside the offline body, crossed only when the network returns.")
+
+(rule
+  "An endpoint serves offline IFF its handler reads/writes through storage-port,"
+  "never pg_* directly. THREE TIERS:"
+  "  R read — serves from the seeded/synced file snapshot (replica-serve read)."
+  "  J journal-write — a cell-log append since seed, reconciled on reconnect by"
+  "    replica-merge + cache-phase content-hash conflict trust (clean / no-op / NAMED"
+  "    conflict; double-spend = the two-sided mismatch)."
+  "  O online-only — needs a LIVE remote node or external system; not an offline rung,"
+  "    the same boundary as pg in offline-replica.form.")
+
+(organs   ; composed by reference from offline-replica.form — nothing new is invented
+  (storage-port   "carrier-as-data; storage-get/put/has/keys name NO backend — the file")
+  (storage-port   "carrier (cell-log-store) is what serves offline.")
+  (cell-log-store "Bitcask append-only segmented log + keydir = the J-tier journal.")
+  (cache-phase    "input-hash conflict trust = the merge + double-spend/concurrent-edit detector.")
+  (replica        "seed -> serve(by mode) -> merge, four-way proven on the graph-node-port exemplar."))
+
+; ── THE SET: counts are honest after adversarial verification ────────────────
+;   graph R=20 J=13 O=0 · substrate R=15 J=2 O=0 · federation R=24 J=14 O=6 · value-cc R=26 J=14 O=2
+;   offline-served total: 85 reads + 43 journal-writes = 128 endpoints; 8 genuine online edges.
+
+(graph        ; R=20 J=13 O=0 — the whole adjacency body serves offline
+  (reads
+    "GET /api/graph/nodes -> graph/index/type/{type}"
+    "GET /api/graph/nodes/{id} -> graph/node/{id}"
+    "GET /api/graph/nodes/count -> graph/count/type/{type}"
+    "GET /api/graph/stats , /api/graph/proof -> graph/count/total"
+    "GET /api/graph/nodes/{id}/revisions -> graph/node-revisions/{id}"
+    "GET /api/graph/nodes/{id}/edges|neighbors|subgraph , /path , /zoom/{id}"
+    "    -> graph/edges/from/{id} AND graph/edges/to/{id} (both directions; see edge-index note)"
+    "GET /api/graph/node-types|edge-types -> graph/registry/{node-types|edge-types}"
+    "GET /api/graph/pillars -> graph/node/{id} (five root ids)"
+    "GET /api/graph/health , /health/roi -> graph/health/{snapshot/latest|roi} (computed over snapshot)"
+    "GET /api/profile/{id} , /verify , POST /api/resonance , /profile/{id}/resonant"
+    "    -> graph/profile/{id} (computed read-model over seeded rows)"
+    "GET /api/contributors/{id}/public-key -> graph/node/{id} (pubkey on the contributor's own node)")
+  (journal-writes
+    "POST|PATCH|DELETE /api/graph/nodes(/{id}) -> graph/node/{id} (delete = __deleted__ tombstone append)"
+    "POST|DELETE /api/graph/edges(/{id}) -> graph/edge/{id} + the two adjacency indexes (3-key txn)"
+    "POST /api/graph/nodes/{id}/questions , PATCH .../questions/{qid} -> graph/node/{id} (folded into properties)"
+    "POST /api/graph/health/compute -> graph/health/snapshot/latest"
+    "POST|DELETE /api/graph/concepts/{cid}/convergence-guard -> graph/health/guard/{cid}"
+    "POST /api/contributors/{id}/register-key -> graph/node/{id} (pubkey onto the contributor's local node)")
+  (edge-index-note
+    "Adjacency needs BOTH graph/edges/from/{id} AND graph/edges/to/{id}: get_edges/neighbors/path/"
+    "subgraph default to or_(from_id==n, to_id==n), so a forward-only index cannot answer the incoming"
+    "or 'both' half or a BFS arriving via to_id. An edge write is a 3-key transaction — edge cell + add"
+    "to from-index + add to to-index (remove on tombstone) — maintained exactly as graph-node-port"
+    "maintains graph/index/type/{type}. Composable from existing primitives; no new machinery.")
+  (crypto-note
+    "POST /api/profile/{id}/sign and POST /contributors/{id}/verify-signature are offline-CAPABLE (no"
+    "network) but the SIGN/VERIFY compute is NOT a storage-port op — see (crypto-port). The store-write"
+    "half (graph/profile-attestation/{id}) is a real J; the ed25519/secp256k1 compute is owed there.")
+  (online-edge "NONE today — no graph handler opens a remote socket. Federating edges/profiles across"
+               "LIVE peer instances would be the only future O (the cross-node analog of pg)."))
+
+(substrate    ; R=15 J=2 O=0 — the cleanest fit: content-addressed by its own nature
+  (reads
+    "GET /api/substrate/lattice/stats -> substrate/count/total"
+    "GET /api/substrate/cell/{domain}/{name} , /view/{cd}/{cn} -> substrate/cell/{domain}/{name}"
+    "GET /api/substrate/node/{pkg}/{lvl}/{type}/{inst} -> substrate/node/{pkg}.{lvl}.{type}.{inst}"
+    "GET /api/substrate/equivalent/{domain}/{name} , cross_modal_twins , modality_for"
+    "    -> substrate/index/blueprint/{blueprint_node_id} (structural-equivalence index)"
+    "GET /api/substrate/cells , compatible_with , histogram/{domain} , shape_health -> substrate/index/domain/{domain}"
+    "GET /api/substrate/canonical_families -> substrate/index/domain/recipe-shape"
+    "GET /api/substrate/annotate , /api/substrate/page -> substrate/index/source-path/{path}")
+  (journal-writes
+    "POST /api/substrate/ingest -> substrate/cell/{domain}/{name} (NamedCell content-addressed append/update)"
+    "POST /api/substrate/form -> substrate/node/{nodeid} (interns the recipe shapes it builds; idempotent by content-address)")
+  (online-edge "NONE — a NodeID either already exists in the snapshot or is a fresh idempotent append. The"
+               "only future O is a not-yet-built lattice federation door pulling cells from a remote sibling."))
+
+(federation-mesh  ; R=24 J=14 O=6 — half: the local VIEW is offline, the live half is intrinsically O
+  (reads
+    "GET /api/federation/instances(/{id}) -> federation/instance/{id} , /index/instance/all"
+    "GET /api/federation/nodes(/count|/capabilities|/stats|/{id}/measurements) -> federation/node|index|count/*"
+    "GET /api/federation/sync/history -> federation/index/sync-history/recent"
+    "GET /api/federation/strategies , /aggregates -> federation/index/{strategy/active|aggregate/all}"
+    "GET /api/federation/substrate/canonicals(/{name}/discover|/attestations/{peer}) -> federation/canonical|index/*"
+    "GET /api/federation/peers/last-polled -> federation/index/peer/last-polled (CACHED prior poll, not a live fetch)"
+    "GET /api/federation/value/mirrors|read-attestations|settlement-share/{outbox|inbox} -> federation/index/*"
+    "GET /api/federation/messages/{id} -> federation/message/{id}"
+    "GET /api/federation/identity/recognition-summary|aliases/{cid} -> federation/index/identity*"
+    "GET /api/hati/mesh/organs|channels -> federation/index/hati/{organ|channel}/recent (folded from local events)")
+  (journal-writes
+    "POST /api/federation/instances , /nodes(/{id}/heartbeat) , DELETE /nodes/{id} -> federation/instance|node/{id}"
+    "POST /api/federation/nodes/{id}/measurements -> federation/measurement/{id}/{slot}"
+    "POST /api/federation/strategies/compute(/effectiveness) -> federation/strategy/{id} (from LOCAL stats)"
+    "POST /api/federation/instances/{id}/aggregate -> federation/aggregate/{id}/{envelope}"
+    "POST /api/federation/substrate/exchange -> federation/attestation/{peer}/{canonical} (peer inventory recorded, never imported)"
+    "POST /api/federation/value/mirror-asset|read-attribution|settlement-share(/compute) -> federation/{mirror|read-attestation|settlement-*}"
+    "POST /api/federation/nodes/{id}/messages , /broadcast -> federation/message/{id} (local store; live SSE/WS push is the O side-channel)"
+    "POST /api/federation/identity/recognize -> federation/identity-alias/{local}/{peer}"
+    "POST /api/hati/mesh/organs/announce|heartbeat|channels/offer -> federation/hati/{organ|channel}/... (runtime-event append)")
+  (crypto-note
+    "Federation capability-sign / settlement-share use HMAC-SHA256 over a LOCAL secret (no transport) —"
+    "and hmac-sha256 IS four-way incl. fkwu (manifest rows hmac-sha256, sha256), so the crypto COMPUTE is"
+    "offline-PROVEN today; only its storage port (the attestation append, a J) is proposed. The verified"
+    "envelope arrives as the POST body; the handler does NOT call back out — local hmac+hashlib, no socket.")
+  (online-edge   ; 6 — each holds a LIVE remote feed or polls a live peer
+    "POST /api/federation/sync (receive live payload FROM a remote instance)"
+    "POST /api/federation/peers/poll (live httpx GETs to each peer's pulse/manifest/canonicals)"
+    "GET /api/federation/nodes/{id}/stream , .../diag/stream (held-open SSE of live messages/diagnostics)"
+    "POST /api/federation/nodes/{id}/diag (publish ephemeral event to live subscribers, never persisted)"
+    "WS /api/federation/openclaw/nodes/{id}/bridge (held-open WebSocket pushing live federation_message events)"))
+
+(value-cc-economy ; R=26 J=14 O=2 — an append-only CC ledger; cache-phase IS the double-spend detector
+  (reads
+    "GET /api/value-lineage/links(/{id}) -> value-cc/lineage-link/{id} , /index/lineage-link/recent"
+    "GET /api/value-lineage/links/{id}/valuation , POST .../payout-preview -> value-cc/lineage-link/{id}/{valuation|payout-preview} (compute, no write)"
+    "GET /api/cc/supply , /exchange-rate -> value-cc/treasury/supply , value-cc/oracle/rate/last-known (CACHED epoch rate, no live oracle)"
+    "GET /api/cc/staking/{user} -> value-cc/index/stake-position/user/{user}"
+    "GET /api/cc/exchange/adapters , POST /exchange/quote -> value-cc/exchange/{adapter|quote} (hard-coded local adapter rates, no socket)"
+    "GET /api/cc/exchange/swap/{tx_id} , /exchange/history/{user} -> value-cc/exchange/swap/{tx_id} , /index/exchange-swap/user/{user} (local in-memory store read)"
+    "GET /api/treasury , /deposits/{cid} -> value-cc/treasury/info , /index/deposit/contributor/{cid}"
+    "GET /api/wallets/lookup/{addr} , /{cid} -> value-cc/index/wallet/{address|contributor}/*"
+    "GET /api/settlement(/{batch_date}) -> value-cc/settlement-batch/{batch_date} , /index/settlement-batch/recent"
+    "POST /api/distributions -> value-cc/distribution/asset/{aid} (read+compute over local edges, no mint)"
+    "GET /api/ideas/{iid}/invest-preview , /investments , /investment-history -> value-cc/{invest-preview|index/investment*}"
+    "GET /api/contributors/{cid}/pledges -> value-cc/index/time-pledge/contributor/{cid}"
+    "GET /api/marketplace/browse , /authors/{aid}/reputation , /manifest -> value-cc/{index/listing/active|listing-reputation|marketplace/manifest}"
+    "GET /api/reward-policies(/{key}|-snapshot) -> value-cc/reward-policy/{ws}/{key} , /index/reward-policy/workspace/{ws}"
+    "GET /api/execution/value-proof -> value-cc/execution-value-proof/window/{days} (composed read+compute)")
+  (journal-writes
+    "POST /api/value-lineage/links , /minimum-e2e-flow -> value-cc/lineage-link/{id}"
+    "POST /api/value-lineage/links/{id}/usage-events -> value-cc/usage-event/{id}"
+    "POST /api/cc/stake , /unstake -> value-cc/stake-position/{id} (position + treasury ledger append)"
+    "POST /api/treasury/deposit(/{id}/stake) -> value-cc/{deposit|stake-position}/{id}"
+    "POST /api/wallets/connect|verify , DELETE /wallets/{id} -> value-cc/wallet/{id} (verify = EIP-191 LOCAL recovery; see crypto-port)"
+    "POST /api/settlement/run -> value-cc/settlement-batch/{batch_date} (local-only, no consensus rail)"
+    "POST /api/contributors/{cid}/pledges(/{pid}/fulfill) -> value-cc/time-pledge/{id}"
+    "POST /api/marketplace/publish , /fork/{lid} -> value-cc/{listing|fork}/{id} (local write; the peer broadcast is the O side-channel)"
+    "PUT|DELETE /api/reward-policies/{key} , POST /reward-policies/seed -> value-cc/reward-policy/{ws}/{key} (versioned)")
+  (crypto-note "Wallet verify is secp256k1-ECDSA-recover — offline-capable but NOT a storage-port op; owed to (crypto-port).")
+  (online-edge   ; 2 — the mint/burn rail; settlement-semantic, not a live wire yet
+    "POST /api/cc/exchange/swap (initiate swap against New Earth / CES external rail — burns CC)"
+    "POST /api/cc/exchange/swap/{tx_id}/confirm (confirm external settlement — mints CC; an O-gated-J:"
+    "    the external tx-ref is the live input, the ledger mint is the local append it triggers)."))
+
+; ── PORTS — the storage layers the set rides; status is honest ───────────────
+(ports
+  (graph-node-port    "EXISTS — node/count/index four-way CROSSED (the exemplar). The edge / edges-from /"
+                      "edges-to / revisions / registry / health / profile keys are PROPOSED: same put/get/"
+                      "index shape, one call-site each, no new machinery.")
+  (substrate-cell-port "PROPOSED — substrate/cell/{domain}/{name} , node/{nodeid} , index/{blueprint|domain|"
+                       "source-path}. 1:1 with graph-node-port's shape; the reverse indexes are newline-joined"
+                       "name lists maintained on each put.")
+  (federation-view-port "PROPOSED — the local roster / attestations / value-mirrors / settlement envelopes /"
+                        "identity aliases / folded hati events. The held-open streams and live peer-poll do NOT"
+                        "belong to this port — they are the O boundary.")
+  (value-ledger-port  "PROPOSED — the CC ledger as an append-only cell-log, the most natural fit of the four."
+                      "cache-phase IS the double-spend / concurrent-stake detector on merge-back. The external"
+                      "swap rail is the O boundary, NOT part of this port."))
+
+; ── CRYPTO-PORT — a real op-family gap, NOT folded into the storage ports ────
+(crypto-port
+  "PROPOSED, SEPARATE — and HALF ALREADY PROVEN. A storage-port carries get/put/has/keys ONLY (no sign op),"
+  "so sign/verify cannot 'stay in a storage port'. The sign/verify endpoints split two ways on the fourth arm:"
+  "  PROVEN four-way incl. fkwu TODAY — sha256 and hmac-sha256 are manifest rows, so federation capability/"
+  "    settlement HMAC sign+verify is offline-PROVEN compute now; only its attestation storage port is proposed."
+  "  GENUINE fkwu GAP — ed25519 (graph profile-sign) and secp256k1-ECDSA-recover (wallet verify) have NO Form"
+  "    recipe and NO band at all. These two endpoints are offline-CAPABLE (no network) but cannot be offline-"
+  "    SERVED until the recipe exists AND crosses four-way. The store-WRITE half (the attestation append) is a"
+  "    real J regardless; the ed25519/ecdsa COMPUTE is the recipe+band owed. (sha256/hmac are NOT the gap —"
+  "    a manifest row is four-way by definition; the 'fks' column names the table-emitter, never an arm count.)")
+
+; ── NATIVE SPEED — "done correctly" is a loadable signed dylib, not an interpreted walk ─
+(native-speed
+  "An offline endpoint is NOT done as an interpreted-walker recipe — it is done when its port recipe is"
+  "LOWERED to native arm64 and loaded as a signed dylib. The whole lever is four-way in the manifest:"
+  "form-asm (31) -> form-lower (31) -> form-macho recipe-as-dylib (recipe-dylib 787349) -> codesign (632490,"
+  "Apple-Silicon dyld refuses unsigned; the Form blob is byte-identical to ld's) -> export-trie (6391) ->"
+  "the kernel's dylib_call native (jit_inram_darwin_arm64.go: form_dylib_call = dlopen + dlsym + call). The"
+  "JIT path reaches the same native code at runtime — Go auto-lowers a hot closure onto jitabi after ~2000"
+  "calls. Native = the recipe BIT-FOR-BIT, not epsilon-close. MEASURED on the executor: a whisper-large"
+  "d_model walk is 43.05 s interpreted vs 2.1 ms Form-emitted native — SAME value, ~20,000x; the tensor"
+  "matvec emitter is itself a Form recipe at 20,077x. So the R/J handlers above, once lowered, run at native"
+  "dylib speed; the interpreted walker is the BOOTSTRAP, the signed recipe-dylib is the destination this"
+  "report is measured against. A native-binary-dylib version of the offline form-cli is the 'done' state.")
+
+; ── TIMING BUDGET — < 1 ms per endpoint, and every breach names its why ──────────
+(timing-budget
+  "ACCEPTANCE BAR: each offline endpoint answers in < 1 ms. 1 ms is the NATIVE-DYLIB bar by construction —"
+  "an interpreted walk or a Python fan-out cannot reach it (measured neighbours: automation_usage 19.68 ms"
+  "good / 1080 ms bad; the whisper walk was tens of seconds), so being under 1 ms IS the proof the handler is"
+  "lowered and reading the LOCAL carrier, not fanning out. The READOUT already exists: the native handler"
+  "emits a per-phase timing tree (/api/_form/ideas-timing -> handler_total split into params, store-read,"
+  "shape_tree, json_emit; offline the online connect+summary_query+page_query phases collapse into ONE"
+  "file-carrier read). Every endpoint over 1 ms MUST name its dominant phase and why — a breach is a reason,"
+  "never a shrug. The three canonical whys:"
+  "  not-yet-lowered — still interpreted-walker or Python fan-out (tens-to-thousands of ms). The fix is the"
+  "    form-lower -> recipe-dylib path above, NOT a local tweak; the breach means the port hasn't crossed yet."
+  "  cold-JIT — the first ~2000 calls before the hot closure lowers onto jitabi. Transient, self-heals once"
+  "    the path crosses the threshold; named so it is not mistaken for a steady-state cost."
+  "  genuine data volume — lowered and hot, but the dominant phase is real work: a wide list/page_query, a"
+  "    json_emit of a large tree, or a file-carrier read of a big segment. Named with the phase ms, it stays"
+  "    a measured cost, not a mystery — and points at the real lever (paging, an index key, a tighter shape)."
+  "The per-endpoint timing tree is part of THIS report: a served endpoint carries handler_total + the phase"
+  "split, and any total >= 1 ms carries its dominant-phase why inline.")
+
+(status
+  "Foundation — ALL four-way incl. fkwu in the manifest: the organs (replica, replica-merge, replica-serve,"
+  "storage-keys, storage-port + all-carriers, graph-node-port + application-graph-node-port, the graph-node-"
+  "mutation write carriers, cache-phase, cell-sync) AND the crypto sha256 + hmac-sha256. graph-node-port"
+  "node/count/index are the route keys proven today. What is RECIPE-PROPOSED (awaiting its own four-way band,"
+  "Go/Rust/TS + fkwu): the new per-endpoint key families, the three new storage ports, and ed25519 +"
+  "secp256k1-recover (no recipe yet). This cell is the design floor those bands will cross, not a"
+  "claim they have. The R-tier is replica-serve over the seeded snapshot; the J-tier is the cell-log append"
+  "set since seed, reconciled by replica-merge + cache-phase; the O-tier (8 endpoints: 6 federation + 2"
+  "value-cc) is the same named external boundary as Postgres in [[offline-replica]] — live edges at the"
+  "body's rim, not gaps in the offline body. Walking this set makes offline-replica's serve-all-native rung"
+  "concrete across the four families, each handler routed through a *-port instead of pg_* directly."
+  "DONE-CORRECTLY per endpoint has two gates beyond the *-port routing: (1) the port recipe is LOWERED to a"
+  "signed recipe-dylib (native-speed, the lever is four-way today); (2) the served endpoint answers in < 1 ms,"
+  "or carries its dominant-phase why. The native-binary-dylib form-cli at a sub-1ms per-endpoint floor is the"
+  "destination; the interpreted-walker + per-phase timing readout are the bootstrap and the proof.")

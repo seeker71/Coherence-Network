@@ -28,7 +28,7 @@
 ;      recognize `query` as `label`? (cl-knows? → nearest-shape over the learned set). The handle that
 ;      shows a single mic is PARTIAL — it recognizes only the shapes its own stream met.
 ;
-; WHY TWO STREAMS ARE FASTER (proven — tests/co-learning-stream-band.fk -> 127, three-way Go/Rust/TS):
+; WHY TWO STREAMS ARE FASTER (proven — tests/co-learning-stream-band.fk -> 127, four-way Go/Rust/TS/fkwu):
 ;   Device A's stream heard SPEECH; device B's heard MUSIC. After each folds its own stream, A's set
 ;   recognizes only speech (a music query routes to its lone speech prototype: WRONG); B's only music.
 ;   The union of the two FOLDED streams recognizes BOTH — and its breadth is 2 while each device alone

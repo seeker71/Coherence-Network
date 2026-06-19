@@ -16,13 +16,18 @@
 #
 # Width 2 is the proven floor; this proves the recipe is dimension-generic — at
 # width 4 the matrices are 4×4 and only the fixture changes, no new logic.
-# Usage: form_cli_transformer_train_wide.sh [corpus] [epochs] [cap]
+#
+# Optional 4th arg [eval-corpus]: a SEPARATE corpus to measure the trained model's
+# loss on, NEVER folded into training. This is how copyright-restricted material is
+# used for TESTING — partition first (scripts/corpus_partition_by_license.sh), train
+# on the .train-eligible file, pass the .eval-only file here as the copyright test set.
+# Usage: form_cli_transformer_train_wide.sh [corpus] [epochs] [cap] [eval-corpus]
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
 CORPUS="${1:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
-EPOCHS="${2:-60}"; CAP="${3:-200}"
-[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
+EPOCHS="${2:-60}"; CAP="${3:-200}"; EVAL_CORPUS="${4:-}"
+[[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null  # offline: build from module cache, never the network
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
 echo "── train the WIDE (4→4→4) Form-native transformer on the real oracle corpus (logic is four-way Form) ──"
@@ -61,6 +66,36 @@ PY
 )"
 [[ -n "$body" ]] || { echo "featurization produced no rows"; exit 1; }
 
+# optional copyright test set: featurize ALL its rows into a (let test ...) list,
+# same 4-dim featurizer. These rows are MEASURED, never folded into training.
+eval_body=""
+if [[ -n "$EVAL_CORPUS" && -f "$EVAL_CORPUS" ]]; then
+  eval_body="$(python3 - "$EVAL_CORPUS" "$CAP" <<'PY'
+import json,sys,re
+path,cap=sys.argv[1],int(sys.argv[2])
+KW  =re.compile(r"\b(file|code|fix|bug|function|test|error|class|import|build|deploy|kernel)\b", re.I)
+PATH=re.compile(r"(/|\.\w{1,4}\b|\b\w+\.(py|ts|tsx|go|rs|fk|md|sh|json)\b)")
+def feat(t):
+    task=str(t.get("task",""))
+    return (round(min(len(task)/300.0,1.0),4),
+            1.0 if KW.search(task) else 0.0, 1.0 if PATH.search(task) else 0.0,
+            1.0 if "?" in task else 0.0,
+            *(1.0 if tool in {st.get("tool") for st in t.get("steps",[]) if isinstance(st,dict)} else 0.0
+              for tool in ("Read","Edit","Bash","Write")))
+rows=[]
+for l in open(path):
+    try: r=json.loads(l)
+    except: continue
+    if not r.get("steps"): continue
+    rows.append(feat(r))
+rows=rows[:cap]
+print("(let test (list "+" ".join(
+    "(list (list %s %s %s %s) (list %s %s %s %s))"%r for r in rows)+"))")
+sys.stderr.write("eval set: %d copyright test rows (measured, never trained)\n"%len(rows))
+PY
+)"
+fi
+
 prog="$(mktemp)"
 { cat "$STD/transformer-numerics.fk" "$STD/transformer-block.fk" "$STD/transformer-backprop.fk" "$STD/transformer-corpus-train.fk"
   echo "(do"
@@ -68,6 +103,7 @@ prog="$(mktemp)"
   echo "  (let ba (tbp-bk (list (list 0.30 -0.20 0.10 0.05) (list 0.10 0.40 -0.15 0.20) (list -0.05 0.25 0.35 -0.10) (list 0.15 -0.30 0.20 0.30)) (list 0.0 0.0 0.0 0.0) (list (list 0.50 0.20 -0.10 0.15) (list -0.30 0.60 0.25 -0.05) (list 0.10 -0.20 0.45 0.30) (list 0.20 0.35 -0.25 0.40)) (list 0.0 0.0 0.0 0.0)))"
   echo "  (let bb (tbp-bk (list (list 0.20 0.10 -0.05 0.15) (list -0.10 0.30 0.20 -0.15) (list 0.25 -0.20 0.35 0.10) (list -0.05 0.15 -0.10 0.40)) (list 0.0 0.0 0.0 0.0) (list (list 0.40 -0.20 0.15 -0.10) (list 0.30 0.50 -0.25 0.20) (list -0.15 0.25 0.45 0.10) (list 0.20 -0.10 0.30 0.35)) (list 0.0 0.0 0.0 0.0)))"
   echo "  $body"
+  [[ -n "$eval_body" ]] && echo "  $eval_body"
   echo "  (let eps 0.00001) (let lr 0.03)"
   echo "  (let s0 (list ba bb))"
   echo "  (let sN (tct-train-blocks ba bb train lr eps $EPOCHS))"
@@ -75,12 +111,19 @@ prog="$(mktemp)"
   echo "  (print (round (mul (tct-corpus-loss sN train eps) 1000000.0)))"
   echo "  (print (round (mul (tct-corpus-loss s0 held eps) 1000000.0)))"
   echo "  (print (round (mul (tct-corpus-loss sN held eps) 1000000.0)))"
-  echo "  (print (len train)) (print (len held)) 0)"
+  echo "  (print (len train)) (print (len held))"
+  if [[ -n "$eval_body" ]]; then
+    echo "  (print (round (mul (tct-corpus-loss s0 test eps) 1000000.0)))"
+    echo "  (print (round (mul (tct-corpus-loss sN test eps) 1000000.0)))"
+    echo "  (print (len test))"
+  fi
+  echo "  0)"
 } > "$prog"
 out="$("$GO" "$prog" 2>/dev/null | grep -E '^-?[0-9]+$')"; rm -f "$prog"
 tr0=$(sed -n '1p' <<<"$out"); trN=$(sed -n '2p' <<<"$out")
 hd0=$(sed -n '3p' <<<"$out"); hdN=$(sed -n '4p' <<<"$out")
 ntr=$(sed -n '5p' <<<"$out"); nhd=$(sed -n '6p' <<<"$out")
+te0=$(sed -n '7p' <<<"$out"); teN=$(sed -n '8p' <<<"$out"); nte=$(sed -n '9p' <<<"$out")
 f6(){ printf "%d.%06d" "$(( ${1:-0}/1000000 ))" "$(( ${1:-0}<0 ? -${1:-0}%1000000 : ${1:-0}%1000000 ))"; }
 
 echo
@@ -89,6 +132,9 @@ printf "  shape             4→4→4 two-block residual stack (x=[len,code,path
 printf "  epochs            %s   (SGD lr=0.03)\n" "$EPOCHS"
 printf "  train loss        %s  →  %s\n" "$(f6 "$tr0")" "$(f6 "$trN")"
 printf "  held-out loss     %s  →  %s\n" "$(f6 "$hd0")" "$(f6 "$hdN")"
+if [[ -n "$eval_body" ]]; then
+  printf "  copyright TEST    %s  →  %s   (%s rows, measured only, NEVER trained)\n" "$(f6 "$te0")" "$(f6 "$teN")" "$nte"
+fi
 if [[ "${trN:-1}" -lt "${tr0:-0}" && "${hdN:-1}" -lt "${hd0:-0}" ]]; then
   echo "  → the WIDE Form-native transformer learned the oracle's full tool-usage vector and generalized to held-out turns."
 fi

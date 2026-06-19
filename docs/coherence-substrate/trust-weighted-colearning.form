@@ -18,7 +18,7 @@
 ; nearest-shape's "oldest exemplar wins" ties keep local knowledge primary and the admitted peer purely
 ; additive.
 ;
-; THE FEDERATION GUARD, PROVEN (tests/trust-weighted-colearning-band.fk → 127, three-way):
+; THE FEDERATION GUARD, PROVEN (tests/trust-weighted-colearning-band.fk → 127, four-way):
 ;   A local peer A learned SPEECH. A FRESH peer F (now=12 on a max=10 budget) learned MUSIC; a GONE peer
 ;   G (now=25, grace spent) learned ANIMAL. The bands are read from td-grace-band itself, not hand-fed.
 ;     1   twc-band reads FRESH as 2                                    (band exact, positive)

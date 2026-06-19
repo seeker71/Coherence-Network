@@ -193,11 +193,11 @@ host-carrier harness:
 
 | Carrier | Backend | File | Proof |
 |---|---|---|---|
-| **memory** | in-process assoc-list (pure) | `storage-port.fk` | three-way band, verdict 1111 |
-| **file** | the **segmented log store** (`cell-log-store.fk`) — real, scalable | `storage-port-file.fk` | three-way band, verdict 1111 |
+| **memory** | in-process assoc-list (pure) | `storage-port.fk` | four-way band, verdict 1111 |
+| **file** | the **segmented log store** (`cell-log-store.fk`) — real, scalable | `storage-port-file.fk` | four-way band, verdict 1111 |
 | **db** | **Postgres** via the `pg_*` natives | `storage-port-db.fk` | live-PG harness, verdict 1111 |
 
-`tests/storage-port-band.fk` (three-way, 11111) proves memory and the segmented
+`tests/storage-port-band.fk` (four-way, 11111) proves memory and the segmented
 file log return the identical verdict and the file store survives reopen
 (durability via replay). The Postgres proof is intentionally separate:
 `integration/storage-port-all-carriers.fk` +

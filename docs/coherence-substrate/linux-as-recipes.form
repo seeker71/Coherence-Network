@@ -73,7 +73,7 @@
     (entropy          RUNS  op 16 RND — /dev/urandom's shape (two draws differ, witnessed))
     (clock            RUNS  op 15 TIME — the host clock organ, real epoch (afferent scalar))
     (gpu              RUNS  the native emitter lane, precision as DATA: one MSL spine (jte-matvec-msl-spine,
-                            jit-tensor-emit.fk) with f32/f16/bf16 as format rows, byte-stable three-way
+                            jit-tensor-emit.fk) with f32/f16/bf16 as format rows, byte-stable four-way
                             (tests/metal-emit-band.fk -> 31); LIVE on M4 Max: every lane bit-exact by its
                             format's OWN semantics (format-arith's RNE chain, accumulate-in-fp32 as data),
                             15.5x kernel-window at 4096^2 on the 16-bit lanes

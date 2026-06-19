@@ -19,8 +19,8 @@
 ;        a CHANNEL = the utterance stream; a VIEW = one property projected across it (view-as).
 ;
 ; ── EXISTS (proven Form bodies + working carrier — verified live on real audio) ──
-;   - voiced.fk (→511, three-way) — the silence/speech gate. No transcript is trusted over silence.
-;   - voice-traits.fk (→1023, three-way) — the property readings: speaker-band(f0) {lower/mid/higher
+;   - voiced.fk (→511, four-way) — the silence/speech gate. No transcript is trusted over silence.
+;   - voice-traits.fk (→1023, four-way) — the property readings: speaker-band(f0) {lower/mid/higher
 ;     voiced — pitch, named as pitch, never an identity verdict}; arousal(energy-spread) {calm↔active};
 ;     and the TRUST MATRIX trust-vec(gate, speechiness, agree) = [transcript-trust, sound-trust,
 ;     agreement-trust], each 0..9 — the channel's confidence per lane.
@@ -28,7 +28,7 @@
 ;     channel is one of these. channel-query.fk (→ band) — QUERY(verb, address, body) / RESPONSE: the
 ;     "ask any addressable cell any question" protocol; a view-switch is a query verb.
 ;   - conversation-cell.fk (→127) — the utterance-as-sequence shape the stream reuses (content-addressed).
-;   - wav-sense.fk (→63, three-way) — the energy feature, lifted from the carrier into the body: Form reads
+;   - wav-sense.fk (→63, four-way) — the energy feature, lifted from the carrier into the body: Form reads
 ;     the wav itself (read_file_bytes) and computes the 8-window envelope in-kernel (~8 ms). The DSP is body.
 ;   - nearest-shape.fk + co-learning.fk — the recognizer the FORMING properties will learn through.
 ;   - CARRIER: experiments/satsang-voice/channel_live.py — mic cells resolved BY NAME (avfoundation

@@ -1,0 +1,56 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/transformer-corpus-train.fk form-stdlib/neural-lm.fk
+;
+; neural-lm-real-band — held-out next-token ACCURACY is a four-way quantity.
+;
+; neural-lm-band proves the generative loop on a cyclic (permutation) grammar. This
+; band proves the MEASURE that makes a real-data claim possible — nl-eval-correct,
+; held-out next-word accuracy — and does it over a NON-permutation map: contexts MERGE
+; (0→1 and 2→1 both land on 1; 1→2 and 3→2 both land on 2), the many-to-one shape real
+; language has and a permutation cannot be. The block learns the function, and
+; nl-eval-correct counts the hits identically on every kernel.
+;
+; The full real-corpus measurement (vocabulary, distributional/one-hot embeddings,
+; train/held split, model-vs-unigram-baseline) is the carrier's job
+; (scripts/form_cli_neural_lm_train.sh) — a measurement on real data, not a committed
+; fixture. This band commits the COMPUTE under it.
+;
+; Verdict 7:
+;   1   the untrained model scores below perfect on the held set (room to learn)
+;   2   training reaches every held transition (nl-eval-correct == 6 — the merges learned)
+;   4   training strictly improves held accuracy (trained > untrained)
+(do
+    ; 6 one-hot tokens (d=6); the language is a many-to-one MAP (merges at 1 and 2).
+    (let E (list (list 1.0 0.0 0.0 0.0 0.0 0.0) (list 0.0 1.0 0.0 0.0 0.0 0.0)
+                 (list 0.0 0.0 1.0 0.0 0.0 0.0) (list 0.0 0.0 0.0 1.0 0.0 0.0)
+                 (list 0.0 0.0 0.0 0.0 1.0 0.0) (list 0.0 0.0 0.0 0.0 0.0 1.0)))
+    ; transitions: 0→1 1→2 2→1 3→2 4→5 5→4  (1 and 2 are merge targets)
+    (let corpus (list
+        (list (nl-emb E 0) (nl-emb E 1)) (list (nl-emb E 1) (nl-emb E 2))
+        (list (nl-emb E 2) (nl-emb E 1)) (list (nl-emb E 3) (nl-emb E 2))
+        (list (nl-emb E 4) (nl-emb E 5)) (list (nl-emb E 5) (nl-emb E 4))))
+    ; held = each context with its TRUE next index (the accuracy target).
+    (let held (list
+        (list (nl-emb E 0) 1) (list (nl-emb E 1) 2) (list (nl-emb E 2) 1)
+        (list (nl-emb E 3) 2) (list (nl-emb E 4) 5) (list (nl-emb E 5) 4)))
+
+    (let zb (list 0.0 0.0 0.0 0.0 0.0 0.0))
+    (let w1 (list (list 0.30 -0.20 0.10 0.05 0.12 -0.08) (list 0.10 0.40 -0.15 0.20 -0.05 0.18)
+                  (list -0.05 0.25 0.35 -0.10 0.22 0.07) (list 0.15 -0.30 0.20 0.30 -0.12 0.09)
+                  (list 0.08 0.18 -0.22 0.14 0.28 -0.16) (list -0.18 0.06 0.24 -0.20 0.10 0.32)))
+    (let w2 (list (list 0.50 0.20 -0.10 0.15 -0.06 0.11) (list -0.30 0.60 0.25 -0.05 0.13 -0.09)
+                  (list 0.10 -0.20 0.45 0.30 -0.14 0.08) (list 0.20 0.35 -0.25 0.40 0.07 -0.12)
+                  (list -0.09 0.16 0.21 -0.18 0.33 0.05) (list 0.12 -0.07 0.19 0.24 -0.21 0.29)))
+    (let ba (tbp-bk w1 zb w2 zb))
+    (let bb (tbp-bk w2 zb w1 zb))
+    (let eps 0.00001) (let lr 0.05)
+
+    (let s0 (list ba bb))
+    (let sN (tct-train-blocks ba bb corpus lr eps 400))
+
+    (let u (nl-eval-correct s0 E held eps))   ; untrained hits
+    (let t (nl-eval-correct sN E held eps))   ; trained hits
+
+    (let c0 (if (lt u 6) 1 0))
+    (let c1 (if (eq t 6) 2 0))
+    (let c2 (if (gt t u) 4 0))
+    (add c0 (add c1 c2)))

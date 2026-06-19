@@ -1,0 +1,61 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk
+;
+; causal-attention-band — the autoregressive mask (tb-attn-seq-causal) and the causal llama decoder
+; block (lblk-block-causal), lifted to the four-kernel floor. The causal mask lets a query at
+; position i attend only to keys/values 0..i — what a decoder needs to generate one token at a time
+; without seeing the future. It composes tb-attend-one verbatim (a per-query key PREFIX, no numeric
+; change), so the proof is the RELATIONSHIPS between values, each a libm fp64 reference at 1e-6:
+;
+;   the mask's defining property — the FIRST token sees only itself:
+;     causal attn[0] == v0 EXACTLY (softmax of one score = 1) — and differs from non-causal attn[0]
+;     (which mixed in the future). So bits 1,2 (= v0) together with bit 16 (non-causal ≠ v0) say the
+;     mask actually restricts.
+;   the mask is a NO-OP at the last position — it sees the whole sequence:
+;     causal attn[last] == non-causal attn[last] (bits 4,8 == bit 32). No over-masking.
+;
+; The same two laws on the REAL llama block (RMSNorm + RoPE + SwiGLU, the llama-block-band fixture):
+;   causal yc[last] == non-causal y[last] (bits 64,128 == llama-block-band's -1069281/1648117) — the
+;     last token's whole downstream is bit-identical; and causal yc[0][0] (bit 256) DIFFERS from the
+;     non-causal 1115890 — the mask changed an earlier token. The first generation-ready decoder block.
+;
+; Verdict 511 when the mask lands four-way:
+;   1     cattn[0][0] → 2000000   (first token = v0 exactly: sees only itself)
+;   2     cattn[0][1] → 3000000
+;   4     cattn[1][0] → 4193176   (last token's prefix-softmax = whole-sequence softmax)
+;   8     cattn[1][1] → 5924234
+;   16    nattn[0][0] → 2806824   (non-causal token 0 mixed the future — ≠ causal 2000000)
+;   32    nattn[1][0] → 4193176   (non-causal last token == causal last: mask is a no-op at the end)
+;   64    yc[1][0]    → -1069281  (causal llama, last token == non-causal: mask no-op at the end)
+;   128   yc[1][2]    → 1648117
+;   256   yc[0][0]    → 1893731   (causal llama token 0 ≠ non-causal 1115890: the mask restricted it)
+(do
+    ; --- generic causal attention on a strange-minimal fixture (scale 1, d=2) ---
+    (let qs (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let ks (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let vs (list (list 2.0 3.0) (list 5.0 7.0)))
+    (let cattn (tb-attn-seq-causal qs ks vs 1.0))
+    (let nattn (tb-attn-seq qs ks vs 1.0))
+    ; --- the real llama decoder block, causal vs non-causal (llama-block-band fixture) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    (let eps 0.00001)
+    (let HD 4)
+    (let scale (div 1.0 (tn-sqrt 4.0)))
+    (let yc (lblk-block-causal x g1 eps wq wk wv wo scale HD g2 wg wu wd))
+    (let c0 (if (eq (round (mul (nth (nth cattn 0) 0) 1000000.0)) 2000000) 1 0))
+    (let c1 (if (eq (round (mul (nth (nth cattn 0) 1) 1000000.0)) 3000000) 2 0))
+    (let c2 (if (eq (round (mul (nth (nth cattn 1) 0) 1000000.0)) 4193176) 4 0))
+    (let c3 (if (eq (round (mul (nth (nth cattn 1) 1) 1000000.0)) 5924234) 8 0))
+    (let c4 (if (eq (round (mul (nth (nth nattn 0) 0) 1000000.0)) 2806824) 16 0))
+    (let c5 (if (eq (round (mul (nth (nth nattn 1) 0) 1000000.0)) 4193176) 32 0))
+    (let c6 (if (eq (round (mul (nth (nth yc 1) 0) 1000000.0)) -1069281) 64 0))
+    (let c7 (if (eq (round (mul (nth (nth yc 1) 2) 1000000.0)) 1648117) 128 0))
+    (let c8 (if (eq (round (mul (nth (nth yc 0) 0) 1000000.0)) 1893731) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

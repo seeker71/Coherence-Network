@@ -16,7 +16,7 @@
 # DATA — a list of (i j w) edge triples — and ONE engine walks every
 # domain. No grid path, no graph path, no mesh path. SHIPPED:
 # `form/form-stdlib/geometric-learning.fk` +
-# `tests/geometric-learning-band.fk` → 8388607 (23 claims), three-way
+# `tests/geometric-learning-band.fk` → 8388607 (23 claims), four-way
 # (Go/Rust/TS).
 #
 # The engine is SEMIRING-GENERIC — (combine, weigh) arrive as data,

@@ -1,0 +1,34 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-float-band — a whole FLOAT function lowers to arm64 native BYTES, no clang.
+; The integer lowerer (lo-node/lo-tree) lowers to w-registers; lo-fnode lowers the SAME
+; op-tagged tree to the scalar-double FP tier (gap #12's byte-proven fa-f* encodings). The
+; argument is a float in d0, banked to d1; the result lands in d0. This is the clang-free
+; FLOAT native path the self-JIT targets (JIT_GAP_LEDGER #11) — the same f64 ops the walk
+; runs, emitted as bytes, bit-identical by construction.
+;
+; Two functions, each lowered and byte-verified against the clang/LLVM oracle (otool -tvVj):
+;   f(x) = x*x + x  ->  fmov d1,d0 ; fmul d0,d1,d1 ; fadd d0,d0,d1 ; ret  (commutative)
+;   g(x) = x*x - x  ->  fmov d1,d0 ; fmul d0,d1,d1 ; fsub d0,d0,d1 ; ret  (NON-commutative order kept)
+; oracle words: fmov d1,d0=1e604001  fmul d0,d1,d1=1e610820  fadd d0,d0,d1=1e612800
+;               fsub d0,d0,d1=1e613800  ret=d65f03c0
+;
+; Verdict 15 when every claim lands:
+;   1  f(x)=x*x+x lowers to the exact 16-byte native image (byte-identical to the oracle)
+;   2  g(x)=x*x-x lowers correctly — SUB keeps operand order (fsub d0,d0,d1, not d1,d0)
+;   4  the MUL(ARG,ARG) subtree folds to ONE register-form instruction (fmul d0,d1,d1)
+;   8  the compiled function is exactly 4 instructions (16 bytes) — no spill, no junk
+(do
+    (let prog-add (list (list 2) (list 5 0 0) (list 3 1 0)))   ; f(x) = ADD(MUL(ARG,ARG), ARG)
+    (let prog-sub (list (list 2) (list 5 0 0) (list 4 1 0)))   ; g(x) = SUB(MUL(ARG,ARG), ARG)
+    (let want-add (list 1 64 96 30  32 8 97 30  0 40 97 30  192 3 95 214))
+    (let want-sub (list 1 64 96 30  32 8 97 30  0 56 97 30  192 3 95 214))
+    (let img-add (lo-fcompile-fn prog-add 2))
+    (let img-sub (lo-fcompile-fn prog-sub 2))
+
+    (let c0 (if (eq (fa-conviction img-add want-add) 1) 1 0))
+    (let c1 (if (eq (fa-conviction img-sub want-sub) 1) 2 0))
+    (let c2 (if (eq (fa-conviction (lo-fnode prog-add 1 1) (list 32 8 97 30)) 1) 4 0))
+    (let c3 (if (eq (len img-add) 16) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
