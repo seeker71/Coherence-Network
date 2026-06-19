@@ -105,10 +105,18 @@ then re-run `validate.sh` (or `fourth_table <stem>`).
 
 ## Worked example
 
-`value-ledger-port` (the CC ledger as a storage-port layer) is the canonical
-small example: band [`tests/value-ledger-port-band.fk`](tests/value-ledger-port-band.fk)
-over recipe [`value-ledger-port.fk`](value-ledger-port.fk), manifest row
-`value-ledger-port fks 111111`. Its table is `fks` (it interns the
-`value-cc/entry/…` keys into the pool), 166 functions deep once the
-storage-port + cell-log-store + file-carrier preludes flatten in, and `fkwu`
-walking it returns `111111` — the same value Go, Rust, and TypeScript compute.
+A genuinely four-way band makes the cleanest example: `graph-node-port`
+(manifest row `graph-node-port fks 11111`) — its cached table runs on `fkwu` and
+returns `11111`, byte-equal to Go/Rust/TypeScript.
+
+`value-ledger-port` (the CC ledger as a storage-port layer, band
+[`tests/value-ledger-port-band.fk`](tests/value-ledger-port-band.fk)) is the
+honest in-progress example: **3-way proven** (go=rust=ts=`111111`) but **held out
+of the manifest** because the local fresh-flatten path is currently broken — on a
+clean single-generation rebuild even the `graph-node-port` *control* returns
+`fkwu=0`, so the break is the toolchain (the cached tables ride an older working
+generation), not the recipe. This is the standing "trust a working fourth arm
+over a red local one" situation: the row is registered only once the fourth arm
+can actually verify it. The failure shape itself — `fkwu=0` while the three
+walkers agree — is the textbook *diagnose-don't-assume* trap: confirm against a
+known-four-way control before calling it a recipe divergence.

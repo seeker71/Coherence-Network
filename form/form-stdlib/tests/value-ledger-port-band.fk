@@ -7,6 +7,13 @@
 ; the offline replica rides (online=db, offline=file, the SAME recipe). The first
 ; real value-ledger-port rung of offline-endpoints.form.
 ;
+; Proof state: 3-way PROVEN (go=rust=ts=111111). NOT yet in the fourth-arm
+; manifest: the local fresh-flatten path is currently broken in this checkout — a
+; known-four-way control band (graph-node-port) ALSO returns fkwu=0 on a clean
+; single-generation rebuild, so the break is the toolchain, not this recipe. The
+; row is HELD until the fourth arm can verify it on a working flatten (runner /
+; clean env), per "a band that never touched the fourth arm is not proven."
+;
 ; Band verdict: 111111 when both carriers fully pass and file persistence holds.
 ;   memory ledger contract pass (post/fold/dup-refuse/conserve)  -> 1
 ;   file ledger contract pass                                    -> 10
