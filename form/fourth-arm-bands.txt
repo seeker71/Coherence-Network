@@ -391,6 +391,7 @@ neural-lm-real fks 7
 llama-numerics fks 4095
 rope fks 4095
 llama-block fks 4095
+causal-attention fks 511
 geometric-learning fks 8388607
 transcendental-natives fks 16
 learning-arc fks 127
