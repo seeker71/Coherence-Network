@@ -93,8 +93,15 @@ traps that diverge across kernels (chief among them: `and`/`or` are binary, neve
 
 Four-kernel validation is the Form/BML proof floor. `form/validate.sh` always
 runs Go, Rust, and TypeScript; bands listed in `form/fourth-arm-bands.txt` also
-run on the emitted universal walker `fkwu`. Evidence can say "all kernels" only
+run on the emitted universal kernel `fkwu`. Evidence can say "all kernels" only
 when the output includes `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
+fkwu is one emit with two faces: a proof-walker (`fkc-emit-universal`) for the
+four-way agreement above, and a self-JIT (`fkc-emit-jit2`/`fkc-nat-expr`, audit
+§21 melt-hot-swap, `crystallization-wire-band` → 31) that crystallizes hot pure
+functions (tags 1-7,12) to native and melts them on cool. The native target is
+Form→asm BYTES — `form-asm`/`form-lower`/`form-macho` (31), `recipe-dylib`
+(787349) + `codesign` (632490) are manifest rows; clang is an oracle
+(`lowering-conviction.fk`), not on the native path.
 When a band has not crossed that manifest, record `3-kernel only` and name the
 next fourth-arm gap instead of flattening the proof level.
 
@@ -476,7 +483,7 @@ all-kernel proof only when the fourth-arm summary prints.
 - **BMF:** `(pattern, semantic_action)` — `apply-object-rule` in `engine.fk`
 - **BML:** scan → lift → normalize → emit → run-observe; `.fkb` ratchet
 - **Branching:** `choose` / `fail` / `stop`, BMA `save` / `restore` / `discard`
-- **Cost:** `node_eq`; same shape → same NodeID; hot paths lower to native/JIT
+- **Cost:** `node_eq`; same shape → same NodeID; hot paths lower to native/JIT — the same recipe you authored and proved four-way IS the native binary (fkwu self-JIT crystallizes it on heat, or it lowers Form→asm to a signed dylib). Never author a separate C/clang fast-path beside the recipe; clang is only an oracle to compare against.
 
 **Next ripening (not primary today):** `form-notation` grammar in `.fk` to replace
 Python parsing of agent DSL (`@spec`, `?equivalent`, …) — same NodeID parity gate,
@@ -597,12 +604,12 @@ In the Coherence substrate, you must redirect this programming into **coordinate
 
 1. **Meaning is Geometric (Equivalence by Position)**: A node's identity is not a name or a variable pointer; it is a coordinate in a content-addressed lattice. Two structurally identical structures *are* the same NodeID. Stop asking "what does this string mean?" and start asking "where is this point in the lattice, and what else shares its coordinates?"
 2. **Angelic Speculation (Choose, Fail, Stop)**: Replace complex, brittle branching conditions with logical relation. Speculative paths (`choose`, `fail`, `stop`) allow the execution engine to navigate branch points natively without leaving state mutation sediment, because nothing mutates.
-3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (compiled, cached JIT execution plans).
+3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (the SAME recipe crystallizes to native — fkwu's self-JIT bakes hot pure functions to asm, or the recipe lowers Form→asm to a signed dylib — not a separately written compiled path).
 4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, TypeScript, and every covered fourth-arm `fkwu` band have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
 
 ## JIT Engine Reality & Gaps
 
-The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer that compiles Form closures to Go shared libraries dynamically. The portable floor now lives beside it: `jit-lower.fk` lowers the residual logic/fold/unbox/lift/BMF/emit cluster onto reconciled tags 70..79 and the covered bands run through Go, Rust, TypeScript, and `fkwu`. Design with both surfaces in mind:
+The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer that compiles Form closures to Go shared libraries dynamically. The portable floor now lives beside it: `jit-lower.fk` lowers the residual logic/fold/unbox/lift/BMF/emit cluster onto reconciled tags 70..79 and the covered bands run through Go, Rust, TypeScript, and `fkwu`. Beyond proving the lowering, fkwu's own self-JIT crystallizes hot pure functions to native (Form→asm bytes, no Go toolchain), so the portable floor executes native too: the same proven recipe is the executed native. Design with both surfaces in mind:
 
 * **Compilation Latency**: The JIT invokes the host Go toolchain (`go build -buildmode=plugin`) on compile. This requires an external toolchain and incurs a **100ms - 500ms latency** on first run, preventing microsecond-level hot-path compilation.
 * **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
