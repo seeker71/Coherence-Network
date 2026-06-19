@@ -1,0 +1,20 @@
+{
+  "title": "Heal: restore the 2 dropped closing parens in fkc-flat — #3354 left hati-os-kernel-emit.fk unparseable, silently killing the fourth arm on main",
+  "date": "2026-06-19",
+  "thread_branch": "claude/ecstatic-hofstadter-cd3234",
+  "severity": "high — the fourth kernel (fkwu) could not be emitted at all on main, so EVERY 'four-way' band silently ran 3-kernel-only. fourth-arm.sh degrades honestly on an emit failure (no red suite), which is correct for a missing clang but masked a real parse-error regression. Every four-way claim merged after #3354 was actually 3-kernel until this heal.",
+  "root_cause": "PR #3354 (Form-native HTTP/TLS over fkwu wire primitives) added two new arms to the fkc-flat node-flattener cascade in form-stdlib/hati-os-kernel-emit.fk — `(if (eq (fk-tag n) 118) (fkc-tri2 118 ...)` and the same for tag 119 — but did NOT add the two matching closing parens to the cascade's trailing close run. Net +2 unclosed '(' → the Go/Rust/TS parser reached EOF with fkc-flat's `(if` still open, so the whole emit module failed to parse, so fkc-emit-universal never produced C, so the fkwu binary never built.",
+  "bisect": "form-kernel-go/bin-go parses form-stdlib/hati-os-kernel-emit.fk cleanly at fcc59852d (#3369) and its parent, and FAILS at a7cae78f7 (#3354) with `unclosed ( opened at line 37 col 5 in (if ...)`. The band that preludes it (hati-os-kernel-emit-band) crashes at HEAD. Confirmed origin/main == the broken blob (git diff empty).",
+  "fix": "Added the 2 missing ')' to fkc-flat's trailing close run (the line ending `(fkc-bin2 ... n))))...`). Paren delta returns to 0; no semantic change — the two added tag arms (118/119) now close correctly, exactly as their sibling arms (105/108) do.",
+  "files_owned": ["form/form-stdlib/hati-os-kernel-emit.fk"],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form/form-kernel-go/bin-go form-stdlib/hati-os-kernel-emit.fk   # parses, no error",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-float-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-float-band.fk"
+    ],
+    "summary": "hati-os-kernel-emit.fk parses again. The fkwu binary BUILDS again ('building fourth kernel (fkwu)...' with no 'did not land'). form-asm-float -> 2047 with 'fourth arm: 1 band four-way', form-lower-float -> 15 with 'fourth arm: 1 band four-way' — the emitted fourth kernel runs the manifest tables and agrees byte-for-byte. The fourth arm is alive again."
+  },
+  "follow_up": "fourth-arm.sh degrades silently on ANY emit failure. It should distinguish an honest degrade (no clang / no manifest) from a CHAIN PARSE ERROR (a real regression that must go RED), so a future unclosed-paren in the emit chain fails the suite instead of silently dropping every four-way claim to 3-kernel. Flagged as a separate guard task."
+}
