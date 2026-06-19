@@ -31,11 +31,15 @@
 ;       compiler can contract them into an fma." MEASURED: native = recipe to the last
 ;       bit, 20,077× on a 1280² matvec; the MSL lanes bit-exact vs the CPU reference in
 ;       the lane's own conversion chain (scripts/metal_matvec_audit.sh).
-;     - fkwu — the universal walker, emitted in C by Form recipes (hati-os-kernel-emit.fk)
-;       and ALREADY bridged INTO the Go kernel in-process: TestFkwuOffloadBridge proves
-;       the carrier→fkwu→value loop matches the in-process walker BIT-FOR-BIT. fkwu walks
-;       ANY flattened closure, floats included, deterministically — it is the general
-;       bit-identical executor, not a per-shape emitter.
+;     - fkwu — the AOT flat-table WALKER (not a JIT), emitted in C by Form recipes
+;       (hati-os-kernel-emit.fk) and ALREADY bridged INTO the Go kernel in-process:
+;       TestFkwuOffloadBridge proves the carrier→fkwu→value loop matches the in-process
+;       walker BIT-FOR-BIT. fkwu walks the pure-compute op families — arithmetic, FLOATS
+;       (the float-pool wall is lifted; the transformer TRAINING bands cross four-way on
+;       fkwu), lists, control flow — which is EXACTLY what a JIT accelerates. fkwu has no
+;       JIT and no missing JIT features; its float compute is the bit-identical reference.
+;       (Its standing walls are op FAMILIES for I/O and the intern-door — host-io,
+;       multi-line, the BMF-compiler intern family — which a compute JIT never touches.)
 ;
 ; ── THE ONE PIPELINE: one front-end, two bit-identical back-ends ──
 ;   FRONT-END (shared): flatten the hot closure ONCE into the content-addressed
@@ -53,12 +57,17 @@
 ;   cost decision (walk vs native), never a correctness fork.
 ;
 ; ── THE MIGRATION (each step provable; the pieces exist, the wiring is the work) ──
+;   NOTE what is and is NOT open: fkwu needs NOTHING — it already walks the compute
+;   floor bit-identically. The portable JIT *lowering* (jit-lower.fk) is ALSO done,
+;   four-way including fkwu. The only open work is HOST-SIDE INTEGRATION — wiring each
+;   kernel's hot-path to call the shared bit-identical lane fast. No fkwu feature is missing.
 ;   M1  Go hot-path dispatch routes through the in-process fkwu offload bridge instead
 ;       of emitGoExpr→go-build. Float support arrives for free (fkwu walks floats
 ;       bit-identically); the neural-lm-corpus divergence resolves to four-way WITH
 ;       float JIT intact, not shrunk. (TestFkwuOffloadBridge is the proven seed; the
-;       open work is fast in-process invocation — flatten-and-walk the closure's table
-;       in-process rather than fork/exec per call.)
+;       open work is a Go-kernel INTEGRATION task — fast in-process invocation,
+;       flatten-and-walk the closure's table in-process rather than fork/exec per call.
+;       It is NOT an fkwu gap.)
 ;   M2  Rust and TS hot-paths dispatch to the same bridge. Three emitters → one.
 ;   M3  The native fast lane (jit-tensor-emit C/MSL) generalizes from the matvec/train
 ;       shapes to the closure families the walk identifies as hot, shared by all kernels.
