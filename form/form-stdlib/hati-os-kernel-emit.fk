@@ -133,7 +133,7 @@
     (if (eq (fk-tag n) 115) (fkc-un2 115 (fkc-flat (fk-body n) acc))
     (if (or (eq (fk-tag n) 81) (or (eq (fk-tag n) 82) (or (eq (fk-tag n) 83) (or (eq (fk-tag n) 85) (or (eq (fk-tag n) 87) (or (eq (fk-tag n) 88) (or (eq (fk-tag n) 89) (eq (fk-tag n) 90))))))))
         (fkc-un2 (fk-tag n) (fkc-flat (fk-body n) acc))
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 (defn fkc-call2 (fidx acc1) (cons (list 12 fidx (sub (len acc1) 1) 0) acc1))
 
