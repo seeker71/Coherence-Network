@@ -1,0 +1,26 @@
+{
+  "title": "The architect drops below the layer to the OPERATOR itself — the body invents a function nobody wrote, measures it, crowns the minimal one, and crystallizes it native",
+  "date": "2026-06-19",
+  "thread_branch": "claude/ecstatic-hofstadter-cd3234",
+  "stone": "form-native-models.form M7 architect rung, one granularity below arch-gen. arch-gen/arch-capacity/arch-type/arch-joint/arch-search compose and SIZE a fixed catalog of given layer kinds (ffn, attention); none invents the operator. op-gen.fk generates the FUNCTION itself — candidate operators composed from base ops {var, const, add, mul} — and crowns the minimal-cost one that fits the data EXACTLY, the same crown-minimal-cost-that-fits discipline as arch-search, scored by EVALUATION instead of gradient training. The crowned operator is a content-addressed composite recipe, so it enters learned-primitive.fk verbatim: once hot, lp-abstract? crystallizes it to a callable JIT-native primitive — the kernel's op set GROWS by a function it invented. This is the user's vision made executable: a model dreams a kernel, measures it, and uses it. invention -> measurement -> crown -> native, one engine; the same recipe is the four-way proof AND (on heat) the native binary.",
+  "algorithm": "Operator = a recipe tree over the single input x in the universal (head=ctor) shape: (list \"var\") -> x ; (list \"const\" k) -> k ; (list \"add\" a b) / (list \"mul\" a b) -> binary ops over operator subtrees. og-gen(d) DREAMS candidates by composition (og-grow adds every add/mul over the operators found so far, iterated d times from the leaves; deterministic, no RNG, so each invented operator is reproducible and content-addressed). og-fits? scores exact integer fit on samples (no float, no epsilon — verdict identical on Go=Rust=TS=fkwu, the same integer-count discipline as champion-challenger.fk). og-crown keeps the minimal-cost (Occam) candidate clearing the fit floor. og-as-primitive wraps the winner as a learned-primitive composite cell so lp-abstract? lifts it to native on heat.",
+  "task": "f(x) = x*x + x, given ONLY {var, const, add, mul}. x*x+x is in no leaf and no single composition — the search must DISCOVER it (cost 5, Occam-minimal; x*x+x and x*(x+1) tie). Samples {(0,0),(1,2),(2,6),(3,12)}.",
+  "files_owned": [
+    "form/form-stdlib/op-gen.fk",
+    "form/form-stdlib/tests/op-gen-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/learned-primitive.fk form-stdlib/op-gen.fk form-stdlib/tests/op-gen-band.fk"
+    ],
+    "summary": "op-gen-band -> 31 FOUR-WAY (Go=Rust=TS=fkwu), 0 divergent. Verdict bits: 1 INVENTION (the architect composes an operator that fits the data exactly); 2 OCCAM (the crowned operator is minimal cost 5; no cheaper composition fits — costs over cost-1 leaves are odd, so 3 is the only smaller binary tier and none of its eight trees fit); 4 the OPERATOR MATTERS (the no-op identity y=x cannot fit, rejected, cf. arch-gen's depth-0 no-op); 8 a plausible wrong invention y=2x=add(x,x) is rejected (exact fit, not 'close'); 16 CRYSTALLIZE (the crowned operator, once hot, lifts via lp-abstract? to a callable JIT-native primitive). Manifest row: op-gen fks 31."
+  },
+  "lanes": {
+    "RUNS": "op-gen.fk operator invention + crown + the learned-primitive crystallization bridge, four-way incl. fkwu (integer ops).",
+    "named_gap": "The float-valued operator lane is the same recipe shape over format-arith.fk numerics and is 3-kernel-only until the fkwu float wall (fourth-arm-bands.txt float-pool / boxed-float region) is crossed. Honest 3-kernel, not a divergence: fkwu lacks the float op family at training scale, it does not compute a different answer."
+  },
+  "north_star": "Operator search over a parameterized op-grammar is the first stone of open-ended kernel invention: the model proposing recipe SHAPES it was not composed from, surviving champion-challenger on held-out, and crystallizing native by the same act that proves it. arch-search's as-search (train-scored) and op-gen's og-crown (eval-scored) share the crown spine; the lift is one generic crown over pre-scored candidates that both feed — named here, not yet refactored."
+}
