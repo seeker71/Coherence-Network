@@ -95,10 +95,30 @@
 ;   default they are "unknown" → eval-only (fail-closed). A row's own copyright tag
 ;   always wins over the default.
 ;
+; ── THE SELF-LEARNING LOOP (proven end-to-end 2026-06-19) ──
+;   ONE terminal command improves the model and keeps the best — the harness that walks
+;   toward "usable for most tasks":
+;     `bash scripts/offline_nl_training_runbook.sh learn <corpus.jsonl> --rounds 3`
+;   Each round: gate copyright OUT of the fold → train harder (more epochs) → measure
+;   held-out accuracy → KEEP the model only if it beats the current champion. The accept
+;   is champion-challenger (champion-challenger.fk): the WALK is the always-correct
+;   champion; a trained model is a challenger that must EARN the slot by exceeding held-out.
+;   The champion — the rising floor — PERSISTS (nl-champion.txt) across invocations, so
+;   running `learn` again pushes the floor higher. PROVEN: round 1 promoted 16/24 held-out
+;   (beat the unigram baseline 12/24), persisted; the floor is durable.
+;   THE GRADIENT TO "MOST TASKS": the floor rises toward the bigram ceiling; the
+;   ceiling-LIFTERS each plug into THIS SAME loop as they land — LM head + cross-entropy
+;   (the biggest quality jump, fixes mean-regression), multi-token context (full-T
+;   attention), dense learned embeddings, and offline distillation of next-token targets
+;   from the LOCAL ollama oracle (oracle-catalog.fk — the mind coming home). Native speed
+;   for deeper rounds arrives with fkwu's float self-JIT (one-acceleration-engine.form M0).
+;
 ; ── THE RUNNABLE OFFLINE LOOP (proven end-to-end 2026-06-18) ──
 ;   TERMINAL ENTRYPOINT (no agent, no internet): scripts/offline_nl_training_runbook.sh
 ;     `bash scripts/offline_nl_training_runbook.sh`        prints the full instructions
 ;     `bash scripts/offline_nl_training_runbook.sh check`  verifies offline prerequisites
+;     `bash scripts/offline_nl_training_runbook.sh learn <corpus.jsonl> --rounds 3`
+;        the self-learning loop above (train → measure → keep-best → persist).
 ;     `bash scripts/offline_nl_training_runbook.sh run <corpus.jsonl> --default-license owned`
 ;        does steps 1-2 below in one offline command. The steps are also runnable directly:
 ;   1. PARTITION by provenance (the gate splits lawful from test-only):
