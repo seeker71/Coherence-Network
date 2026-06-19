@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 293
+**Total files**: 294
 
 | File | Purpose |
 |---|---|
@@ -83,6 +83,7 @@
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
+| [form_cli_agent.sh](form_cli_agent.sh) | form_cli_agent.sh — thin WITNESS: the kernel runs the TIERED agent loop (form-native-run.fk). |
 | [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS: the kernel runs form-cli-ask.fk (the body is Form, not this shell). |
 | [form_cli_ask_smart.py](form_cli_ask_smart.py) | form_cli_ask_smart.py — thin REPL CARRIER. The form-cli interactive shell. |
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |

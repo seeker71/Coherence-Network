@@ -62,9 +62,9 @@ def repl(a):
                       "  /exit  leave · '(expr)' eval Form · anything else = a question")
             elif name == "model" and len(cmd) > 1: a.model = cmd[1]; print(f"  local model → {a.model}")
             elif name == "judge" and len(cmd) > 1: a.judge = cmd[1]; print(f"  judge → {a.judge}")
-            elif name == "do" and len(cmd) > 1:     # agentic task: the Form agent loop (read/edit/bash/search)
-                subprocess.run(["bash", os.path.join(ROOT, "scripts", "form_native_run.sh"),
-                                line.split(None, 1)[1], f"ollama run {a.model}", "6"])
+            elif name == "do" and len(cmd) > 1:     # agentic task: the TIERED Form agent loop (local-first, escalate)
+                subprocess.run(["bash", os.path.join(ROOT, "scripts", "form_cli_agent.sh"), line.split(None, 1)[1]],
+                               env={**os.environ, "LOCAL": a.model, "REMOTE": a.remote})
             else: print("  unknown command — /help")
         else:                                           # a question -> the Form ask flow
             answer_once(line, a)
