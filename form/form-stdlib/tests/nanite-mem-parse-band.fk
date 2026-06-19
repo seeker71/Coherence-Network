@@ -1,0 +1,23 @@
+; nanite-mem-parse-band.fk -- the nanite's memory parse + used-ppm compute, four-way.
+;
+; The sensing cell (scripts/nanite_cell.py / sensing-cell-among-cells.form) reads
+; /proc/meminfo at the carrier edge -- environmental, not gated by value parity.
+; But the PARSE+COMPUTE is pure recipe: scan the digit runs, str_to_int them,
+; compute used-ppm = (total - avail) * 1e6 / total. This band proves that LOGIC
+; crosses four-way (incl fkwu) over a FIXED fixture, so the "host-io, not
+; four-way" label was an excuse: only the raw read stays at the carrier edge,
+; never the sensing logic. scan_run class: 0=whitespace, 1=digit, 2=alpha.
+
+(do
+    (let s "16000000 12000000")
+    (let e0 (scan_run s 0 1))                                   ; end of first digit run
+    (let total (str_to_int (substring s 0 e0)))                 ; 16000000
+    (let j (scan_run s e0 0))                                    ; skip whitespace
+    (let e1 (scan_run s j 1))                                    ; end of second digit run
+    (let avail (str_to_int (substring s j e1)))                 ; 12000000
+    (let used_ppm (div (mul (sub total avail) 1000000) total))  ; 250000 (25.0%)
+    (let c0 (if (eq e0 8) 1 0))
+    (let c1 (if (eq total 16000000) 2 0))
+    (let c2 (if (eq avail 12000000) 4 0))
+    (let c3 (if (eq used_ppm 250000) 8 0))
+    (add c0 (add c1 (add c2 c3))))
