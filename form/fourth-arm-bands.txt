@@ -634,3 +634,4 @@ transformer-generate fks 1
 transformer-gelu-erf fks 255
 whisper-mh-block-real fks 1
 transformer-real-train fks 31
+form-cli-sufficiency fks 255

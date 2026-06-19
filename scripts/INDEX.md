@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 290
+**Total files**: 291
 
 | File | Purpose |
 |---|---|
@@ -83,6 +83,7 @@
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
+| [form_cli_ask_smart.py](form_cli_ask_smart.py) | form_cli_ask_smart.py — CARRIER. Local-first ask with a PROVEN multi-signal escalation. |
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
 | [form_cli_close_gap.sh](form_cli_close_gap.sh) | form_cli_close_gap.sh — close a Form recipe gap OFFLINE with a local oracle. |

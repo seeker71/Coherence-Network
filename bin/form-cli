@@ -25,6 +25,10 @@ form-cli — the one door (local-first, Form-native)
 
   form-cli ask "<question>" [-k N] [-m MODEL]
         answer from the body + local docs, grounded (local oracle, no network)
+  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"]
+        daily-driver ask: local-first, then a multi-signal sufficiency check
+        (form-cli-sufficiency.fk, four-way proven) escalates to the subscription
+        oracle for the real answer when local is not enough — claude-code quality
   form-cli index [--docs DIR ...]
         (re)build the searchable index over the body and any local doc folders
   form-cli search "<query>" [-k N]
@@ -57,6 +61,7 @@ EOF
 cmd="${1:-help}"; shift 2>/dev/null || true
 case "$cmd" in
   ask)       exec python3 "$RAG" ask "$@" ;;
+  ask+)      exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;
   index)     exec python3 "$RAG" build "$@" ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;

@@ -1,0 +1,83 @@
+; form-cli-sufficiency.fk — was the LOCAL answer ENOUGH, or escalate to the remote oracle?
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk
+;
+; form-cli-router.fk picks where to START (a soft weighted fitness over sovereignty /
+; trust / capability / confidence — an a-priori choice). This is its POSTERIOR partner:
+; after the local lane actually answers, read THIS RUN's signals and decide accept / retry
+; / escalate. A hard "remote = last resort, only on total failure" rule does not serve a
+; daily driver — to reach claude-code quality you must escalate for the REAL answer whenever
+; local was not enough (empty, malformed, weak content, low confidence, low trust), not only
+; when it crashed. So this is a SOFT multi-signal blend with tunable policy DATA, and it
+; records WHY it escalated so the crossing (form-cli-membrane.fk) teaches the local lane.
+;
+; Signals — each a run-time read of the local oracle's actual answer this turn:
+;   has-output   1 if non-empty                            (the lane produced something)
+;   shape-ok     1 if it parses / fits the expected output shape
+;   content      0..100 judge coverage of the answer's substance (the fcj rubric's score)
+;   confidence   0..100 accumulated pass-rate of this lane (fcr-confidence-axis)
+;   trust        0..100 accumulated success rate of this lane
+;   retries-left how many local re-tries remain
+;
+; Verdict: 0 accept (local stands) / 1 retry (transient — re-run local) / 2 escalate (remote).
+; Reason : 0 ok / 1 empty / 2 bad-shape / 3 weak-content / 4 low-confidence / 5 low-trust.
+;
+; Proven by: form-stdlib/tests/form-cli-sufficiency-band.fk
+
+(defn fsuf-signals (has-output shape-ok content confidence trust retries-left)
+    (list has-output shape-ok content confidence trust retries-left))
+(defn fsuf-has-output (s) (nth s 0))
+(defn fsuf-shape-ok   (s) (nth s 1))
+(defn fsuf-content    (s) (nth s 2))
+(defn fsuf-confidence (s) (nth s 3))
+(defn fsuf-trust      (s) (nth s 4))
+(defn fsuf-retries    (s) (nth s 5))
+
+; tunable policy DATA (like fcr-weights): (w-content w-confidence w-trust accept-threshold floor).
+; quality is a weighted blend of the three soft axes; floor is a per-axis hard minimum below
+; which a present, parseable answer still can't stand (a strong-on-paper lane that has never
+; been proven — confidence/trust under the floor — does not get to answer alone). Change the
+; body's behavior by changing this cell, not the math.
+(defn fsuf-policy () (list 2 1 1 60 25))
+(defn fsuf-w-content  () (nth (fsuf-policy) 0))
+(defn fsuf-w-conf     () (nth (fsuf-policy) 1))
+(defn fsuf-w-trust    () (nth (fsuf-policy) 2))
+(defn fsuf-accept-thr () (nth (fsuf-policy) 3))
+(defn fsuf-floor      () (nth (fsuf-policy) 4))
+
+; the soft quality blend (0..100) — no single axis is a hard gate; they lift together.
+(defn fsuf-quality (s)
+    (div (add (add (mul (fsuf-w-content) (fsuf-content s))
+                   (mul (fsuf-w-conf) (fsuf-confidence s)))
+              (mul (fsuf-w-trust) (fsuf-trust s)))
+         (add (add (fsuf-w-content) (fsuf-w-conf)) (fsuf-w-trust))))
+
+; every soft axis at or above the floor — a present answer that no axis disqualifies.
+(defn fsuf-above-floor? (s)
+    (if (and (ge (fsuf-content s) (fsuf-floor))
+             (and (ge (fsuf-confidence s) (fsuf-floor)) (ge (fsuf-trust s) (fsuf-floor)))) 1 0))
+
+; which soft axis dragged below the floor (the escalation reason / the learning signal)
+(defn fsuf-weak-reason (s)
+    (if (lt (fsuf-content s) (fsuf-floor)) 3
+        (if (lt (fsuf-confidence s) (fsuf-floor)) 4
+            (if (lt (fsuf-trust s) (fsuf-floor)) 5 3))))
+
+; THE verdict — soft, multi-signal:
+;   garbled (no output OR bad shape) -> retry if a re-try remains, else escalate (transient recovery)
+;   quality clears accept-threshold AND no axis under the floor -> accept (local stands)
+;   otherwise -> escalate for the real answer (a quality gap; re-running a weak lane won't lift it)
+(defn fsuf-verdict (s)
+    (if (eq (mul (fsuf-has-output s) (fsuf-shape-ok s)) 0)
+        (if (gt (fsuf-retries s) 0) 1 2)
+        (if (and (ge (fsuf-quality s) (fsuf-accept-thr)) (eq (fsuf-above-floor? s) 1)) 0 2)))
+
+; the reason behind the verdict — what the crossing should teach
+(defn fsuf-reason (s)
+    (if (eq (fsuf-has-output s) 0) 1
+        (if (eq (fsuf-shape-ok s) 0) 2
+            (if (eq (fsuf-verdict s) 0) 0 (fsuf-weak-reason s)))))
+
+; the carrier's gate: 1 = escalate to the remote oracle, 0 = local stands or re-tries
+(defn fsuf-escalate? (s) (if (eq (fsuf-verdict s) 2) 1 0))
+0

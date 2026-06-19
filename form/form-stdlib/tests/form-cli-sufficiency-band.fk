@@ -1,0 +1,45 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk
+;
+; form-cli-sufficiency-band — the posterior accept/retry/escalate decision, proven four-way.
+; Eight strange-minimal cases cover the boundary: a strong local answer stands; an empty
+; answer retries while a re-try remains then escalates when exhausted; a malformed shape
+; escalates; and three quality gaps (weak content, low confidence, low trust) each escalate
+; with the RIGHT reason. Confidence is fed by the ONE primitive fcr-confidence-axis(passes,
+; attempts) so the wire is real, not a hand-typed scalar.
+;
+; Verdict 255 when every claim lands:
+;   1    strong answer ACCEPTS                    (v=0)
+;   2    empty + a re-try remains -> RETRY         (v=1)
+;   4    empty + exhausted -> ESCALATE             (v=2)
+;   8    malformed shape + exhausted -> ESCALATE   (v=2)
+;   16   weak content -> ESCALATE, reason=content  (v=2, r=3)
+;   32   low confidence -> ESCALATE, reason=conf    (v=2, r=4)
+;   64   low trust -> ESCALATE, reason=trust       (v=2, r=5)
+;   128  borderline blend clears -> ACCEPTS        (v=0)
+(do
+    ; strong: parseable, content 90, confidence 8/10=80, trust 85, a re-try spare
+    (let strong   (fsuf-signals 1 1 90 (fcr-confidence-axis 8 10) 85 1))
+    ; empty with a re-try left, and the same empty with none left
+    (let empty-r  (fsuf-signals 0 1 0  (fcr-confidence-axis 8 10) 85 1))
+    (let empty-x  (fsuf-signals 0 1 0  (fcr-confidence-axis 8 10) 85 0))
+    ; produced text but it doesn't parse to the expected shape, no re-try left
+    (let badshape (fsuf-signals 1 0 70 (fcr-confidence-axis 8 10) 85 0))
+    ; answered, but the judge says the substance is weak (content 20)
+    (let weak     (fsuf-signals 1 1 20 (fcr-confidence-axis 8 10) 85 1))
+    ; a brand-new lane: good-looking content but unproven (confidence 1/10=10)
+    (let lowconf  (fsuf-signals 1 1 70 (fcr-confidence-axis 1 10) 70 1))
+    ; a lane that keeps missing on this shape (trust 10)
+    (let lowtrust (fsuf-signals 1 1 70 (fcr-confidence-axis 7 10) 10 1))
+    ; borderline: content 70, confidence 6/10=60, trust 70 -> blend 67 clears 60
+    (let border   (fsuf-signals 1 1 70 (fcr-confidence-axis 6 10) 70 1))
+
+    (let c0 (if (eq (fsuf-verdict strong) 0) 1 0))
+    (let c1 (if (eq (fsuf-verdict empty-r) 1) 2 0))
+    (let c2 (if (eq (fsuf-verdict empty-x) 2) 4 0))
+    (let c3 (if (eq (fsuf-verdict badshape) 2) 8 0))
+    (let c4 (if (and (eq (fsuf-verdict weak) 2) (eq (fsuf-reason weak) 3)) 16 0))
+    (let c5 (if (and (eq (fsuf-verdict lowconf) 2) (eq (fsuf-reason lowconf) 4)) 32 0))
+    (let c6 (if (and (eq (fsuf-verdict lowtrust) 2) (eq (fsuf-reason lowtrust) 5)) 64 0))
+    (let c7 (if (eq (fsuf-verdict border) 0) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
