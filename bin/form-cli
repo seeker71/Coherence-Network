@@ -39,6 +39,10 @@ form-cli — the one door (local-first, Form-native)
   form-cli train [hid epochs lr]
         train the native tool-use predictor on the real agent corpus (M4 Max GPU),
         caching its held-out scores for `form-cli stats` tool->native
+  form-cli shadow [N] [model]
+        SHADOW MODE: replay N real captured agent turns through the native lane and
+        score its tool-prediction against what the agent actually did (vs baseline)
+        — watch how form-cli would have handled real work, without it being live
   form-cli index [--docs DIR ...]
         (re)build the searchable index over the body and any local doc folders
   form-cli search "<query>" [-k N]
@@ -78,6 +82,8 @@ case "$cmd" in
   ask+)      exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$@" ;;
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
   train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
+  shadow)    exec env FORM_CLI_CORPUS="${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}" \
+                  bash "$ROOT/scripts/form_cli_replay.sh" "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;
   index)     exec python3 "$RAG" build "$@" ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;
