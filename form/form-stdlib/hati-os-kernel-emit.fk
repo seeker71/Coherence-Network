@@ -775,16 +775,33 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 ; crosses the threshold (argv), dispatch flips to the native alternative —
 ; gas cooled to ice on measured heat, the flip visible in the probe (fk_njit).
 
+; fkc-jhelpers-text — the self-JIT's arithmetic helpers, each the EXACT inline of the
+; universal walker's arm for that tag (int branch + float branch). Emitting CALLS to
+; these (not raw `a+b`) makes the native bit-identical to the walk for BOTH int and
+; float — fk_isf picks the branch the walk picks, fk_fbox/fk_num box exactly where the
+; walk boxes — and the call boundary blocks any FMA contraction (a*b then +c cannot
+; fuse across fk_jadd). float math (matvec/dot/layernorm/softmax, whose transcendentals
+; are Taylor/Newton recipes over these ops) thus crystallizes bit-identically. Needs
+; fkc-pr-text's fk_isf/fk_num/fk_fbox (emitted first in both JIT assemblies).
+(defn fkc-jhelpers-text ()
+    (str_concat "static long long fk_jadd(long long l, long long r){ if(fk_isf(l)||fk_isf(r)) return fk_fbox(fk_num(l)+fk_num(r)); return l+r; } "
+    (str_concat "static long long fk_jsub(long long l, long long r){ if(fk_isf(l)||fk_isf(r)) return fk_fbox(fk_num(l)-fk_num(r)); return l-r; } "
+    (str_concat "static long long fk_jmul(long long l, long long r){ if(fk_isf(l)||fk_isf(r)) return fk_fbox(fk_num(l)*fk_num(r)); return ((l>>1)*(r>>1))<<1; } "
+    (str_concat "static long long fk_jdiv(long long l, long long r){ if(fk_isf(l)||fk_isf(r)) return fk_fbox(fk_num(l)/fk_num(r)); return ((l>>1)/(r>>1))<<1; } "
+                "static long long fk_jle(long long l, long long r){ return fk_num(l)<=fk_num(r) ? 2 : 0; } ")))))
+
 (defn fkc-nat-expr (n)
     (if (eq (fk-tag n) 1) (int_to_str (add (ms-value (fk-body n)) (ms-value (fk-body n))))
     (if (eq (fk-tag n) 2) "a"
-    (if (eq (fk-tag n) 3) (str_concat "(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat " + " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
-    (if (eq (fk-tag n) 4) (str_concat "(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat " - " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
-    (if (eq (fk-tag n) 5) (str_concat "(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat " <= " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) " ? 2 : 0)"))))
+    (if (eq (fk-tag n) 3) (str_concat "fk_jadd(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat ", " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
+    (if (eq (fk-tag n) 4) (str_concat "fk_jsub(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat ", " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
+    (if (eq (fk-tag n) 5) (str_concat "fk_jle(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat ", " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
+    (if (eq (fk-tag n) 42) (str_concat "fk_jmul(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat ", " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
+    (if (eq (fk-tag n) 10) (str_concat "fk_jdiv(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat ", " (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
     (if (eq (fk-tag n) 6) (str_concat "(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 0)) (str_concat " == 0 ? " (str_concat (fkc-nat-expr (ms-child (ms-child (fk-body n) 1) 1)) (str_concat " : " (str_concat (fkc-nat-expr (ms-child (ms-child (fk-body n) 1) 0)) ")"))))))
     (if (eq (fk-tag n) 7) (str_concat "fk_nat0(" (str_concat (fkc-nat-expr (fk-body n)) ")"))
     (if (eq (fk-tag n) 12) (str_concat "fk_nat" (str_concat (int_to_str (ms-value (ms-child (fk-body n) 0))) (str_concat "(" (str_concat (fkc-nat-expr (ms-child (fk-body n) 1)) ")"))))
-        "0")))))))))
+        "0")))))))))))
 
 (defn fkc-jit-protos (k nf)
     (if (eq k nf) " "
@@ -807,12 +824,13 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 
 (defn fkc-emit-jit2 (fns flat)
     (str_concat (fkc-pr-text)
+    (str_concat (fkc-jhelpers-text)
     (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
     (str_concat "static long long fk_heat[64]; static long long fk_hot; static long long fk_njit; static long long (*fk_nat_tab[64])(long long); "
     (str_concat (fkc-jit-protos 0 (len fns))
     (str_concat (fkc-jit-bodies fns 0)
     (str_concat (fkc-walk-jit-text)
-                (fkc-main-jit-text (len fns)))))))))
+                (fkc-main-jit-text (len fns))))))))))
 
 (defn fkc-emit-jit (fns) (fkc-emit-jit2 fns (fkc-flatten-many fns)))
 
@@ -864,7 +882,9 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
     (if (eq (fk-tag n) 3) (fkc-low-bin n can)
     (if (eq (fk-tag n) 4) (fkc-low-bin n can)
     (if (eq (fk-tag n) 5) (fkc-low-bin n can)
-        0)))))))))
+    (if (eq (fk-tag n) 42) (fkc-low-bin n can)
+    (if (eq (fk-tag n) 10) (fkc-low-bin n can)
+        0)))))))))))
 (defn fkc-low-bin (n can)
     (if (eq (fkc-lower-ok (ms-child (fk-body n) 0) can) 1)
         (fkc-lower-ok (ms-child (fk-body n) 1) can) 0))
@@ -949,6 +969,7 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 
 (defn fkc-emit-jitmelt2 (fns flat)
     (str_concat (fkc-pr-text)
+    (str_concat (fkc-jhelpers-text)
     (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
     (str_concat (fkc-jitmelt-decl-text)
     (str_concat (fkc-jit-protos 0 (len fns))
@@ -956,7 +977,7 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
     (str_concat (fkc-epoch-text (len fns))
     (str_concat (fkc-jd-text)
     (str_concat (fkc-walk-jitmelt-text)
-                (fkc-main-jitmelt-text fns))))))))))
+                (fkc-main-jitmelt-text fns)))))))))))
 
 (defn fkc-emit-jitmelt (fns) (fkc-emit-jitmelt2 fns (fkc-flatten-many fns)))
 
@@ -1045,7 +1066,7 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 ; walk, reading the table: tags 1-7 and 12 lower; everything else refuses;
 ; impurity poisons transitively through call edges (nf+1 simultaneous passes)
 (defn fkc-rt-can-text ()
-    "static long long fk_ok(long long i) { long long t = fk_node[i][0]; if (t == 1) { return 1; } if (t == 2) { return 1; } if (t == 3) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 4) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 5) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 6) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } if (fk_ok(fk_node[i][2]) == 0) { return 0; } return fk_ok(fk_node[i][3]); } if (t == 7) { if (fk_can[0] == 0) { return 0; } return fk_ok(fk_node[i][1]); } if (t == 12) { if (fk_can[fk_node[i][1]] == 0) { return 0; } return fk_ok(fk_node[i][2]); } return 0; } static void fk_canc(void) { long long k = 0; while (k < fk_nf) { fk_can[k] = 1; k = k + 1; } long long m = 0; while (m <= fk_nf) { long long nx[64]; k = 0; while (k < fk_nf) { nx[k] = fk_ok(fk_fn[k]); k = k + 1; } k = 0; while (k < fk_nf) { fk_can[k] = nx[k]; k = k + 1; } m = m + 1; } } ")
+    "static long long fk_ok(long long i) { long long t = fk_node[i][0]; if (t == 1) { return 1; } if (t == 2) { return 1; } if (t == 3) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 4) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 5) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 42) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 10) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 6) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } if (fk_ok(fk_node[i][2]) == 0) { return 0; } return fk_ok(fk_node[i][3]); } if (t == 7) { if (fk_can[0] == 0) { return 0; } return fk_ok(fk_node[i][1]); } if (t == 12) { if (fk_can[fk_node[i][1]] == 0) { return 0; } return fk_ok(fk_node[i][2]); } return 0; } static void fk_canc(void) { long long k = 0; while (k < fk_nf) { fk_can[k] = 1; k = k + 1; } long long m = 0; while (m <= fk_nf) { long long nx[64]; k = 0; while (k < fk_nf) { nx[k] = fk_ok(fk_fn[k]); k = k + 1; } k = 0; while (k < fk_nf) { fk_can[k] = nx[k]; k = k + 1; } m = m + 1; } } ")
 
 ; the lowerer the binary carries: fkc-nat-expr's per-tag shapes, reading the
 ; loaded rows — LIT doubles into tagged space, LE answers 2/0, IF emits the
