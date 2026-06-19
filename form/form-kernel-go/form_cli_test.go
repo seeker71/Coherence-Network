@@ -60,7 +60,7 @@ func TestFkwuFormCli(t *testing.T) {
 		{"ping", "pong"},
 		{"version", "form-cli 0.2"},
 		{"ping extra", "pong"},
-		{"foobar", "form-cli: unknown verb foobar, try help"},
+		{"foobar", "form-cli: unknown verb 'foobar' — type 'help'"},
 	}
 	for _, c := range cases {
 		got, err := FkwuEvalWithInput(fkwuBin, tablePath, 0, []byte(c.cmd))
@@ -160,7 +160,7 @@ func TestFkwuFormCliRepl(t *testing.T) {
 	}
 
 	// An unknown verb echoes it back; the verb is the line up to the first space.
-	if u := run("wobble the cat\nquit\n"); u != "form-cli: unknown verb wobble, try help\n" {
+	if u := run("wobble the cat\nquit\n"); u != "form-cli: unknown verb 'wobble' — type 'help'\n" {
 		t.Fatalf("repl unknown-verb: got=%q", u)
 	}
 
@@ -265,5 +265,50 @@ func TestFkwuFormCliCombined(t *testing.T) {
 	// and verifies it carries that source (length reported from the baked bytes).
 	if v := run("verify\nquit\n"); !strings.Contains(v, "coherent:") || !strings.Contains(v, fmt.Sprintf("%d bytes", len(genesis))) {
 		t.Fatalf("combined verify: got=%q", v)
+	}
+}
+
+// TestFkwuLocaleUtf8 locks the locale capability: fkwu must print ANY UTF-8
+// byte-exact, not just ASCII. The string pool serializes raw bytes (str_byte_at
+// in fks-lit-sp), so a baked multi-script string round-trips through the table
+// and prints identically. This is the regression guard for the multibyte print
+// path — the bug that the earlier ASCII-only responses worked around.
+func TestFkwuLocaleUtf8(t *testing.T) {
+	clang := requireClang(t)
+	stdlib := filepath.Join("..", "form-stdlib")
+	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	formParse := filepath.Join(stdlib, "form-parse.fk")
+	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
+	shim := filepath.Join(stdlib, "fourth-shim.fk")
+	core := filepath.Join(stdlib, "core.fk")
+
+	dir := t.TempDir()
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+
+	// a band whose root is a multi-script string: CJK, Arabic, Devanagari, emoji,
+	// em-dash. If any continuation byte is dropped/corrupted, this mismatches.
+	// build the string with str_concat — the shape real responses use (a bare
+	// SLIT root isn't flagged string-valued by fk_str_root_depth, a separate gap);
+	// this exercises the byte-serialization fix across two multibyte literals.
+	want := "中文 العربية हिन्दी 😀—ok"
+	bandPath := filepath.Join(dir, "locale-band.fk")
+	if err := os.WriteFile(bandPath, []byte("; locale\n(str_concat \"中文 العربية हिन्दी 😀\" \"—ok\")\n"), 0o644); err != nil {
+		t.Fatalf("write band: %v", err)
+	}
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `"))`
+	band := `(read_file "` + bandPath + `")`
+	flattenExpr := "(fks-table-file (flt-band-sources-fns " + mods + " " + band + ") (flt-band-sources-pool " + mods + " " + band + "))"
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	tablePath := filepath.Join(dir, "locale-table.txt")
+	if err := os.WriteFile(tablePath, []byte(table), 0o644); err != nil {
+		t.Fatalf("write table: %v", err)
+	}
+
+	got, err := FkwuEval(fkwuBin, tablePath, 0)
+	if err != nil {
+		t.Fatalf("FkwuEval: %v", err)
+	}
+	if got != want {
+		t.Fatalf("fkwu locale print:\n got=%q (% x)\nwant=%q (% x)", got, []byte(got), want, []byte(want))
 	}
 }

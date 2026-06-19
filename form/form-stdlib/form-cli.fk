@@ -38,5 +38,5 @@
                 "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own."
             (if (str_eq v "version")
                 "form-cli 0.2"
-                (str_concat "form-cli: unknown verb " (str_concat v ", try help"))))))))))
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))
     0)
