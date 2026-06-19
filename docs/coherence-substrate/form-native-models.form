@@ -24,11 +24,13 @@
 ;     a 384×384 matvec in ~0.1ms and the full 384 block in ~3ms — ~10^4× the tree-walker, bit-exact
 ;     (jit_matvec_speedup_audit.py). With EXACT-erf gelu (transformer-gelu-erf.fk) the real block-0 matches
 ;     whisper's TRUE output at 3.1e-7 — the last numerics gap, closed. fkwu DOES support float four-way
-;     (transformer-block 511, transformer-corpus-train 31, mel-frame 1023, transformer-gelu-erf 255 — all
-;     genuine, verdicts that require correct float math); the OTHER whisper bands stay three-way because of
-;     an isolated fkwu LIST-SLICING DIVERGENCE (a recursive take returning a float sublist → 0 on fkwu;
-;     2-line repro + the conv-stem false-pass in commit_evidence_2026-06-19_fkwu_float_slicing_divergence.json),
-;     a flattener/walker correctness bug, owned and tracked — NOT a missing float op family.
+;     (transformer-block 511, transformer-corpus-train 31, mel-frame 1023, transformer-gelu-erf 255,
+;     conv-stem — all genuine, verdicts that require correct float math). TWO real divergences remain in
+;     this arc's bands (commit_evidence_2026-06-19_fkwu_float_slicing_divergence.json): (A) the RUST kernel
+;     computes the MULTI-HEAD path ~6e-4 off (transformer-mh/decoder/generate: go=ts=numpy correct, rust=0,
+;     fkwu errors — they fail THREE-WAY; committed earlier this session tested Go-only, never cross-kernel
+;     valid); (B) positional/mel-full are three-way-solid but fkwu-only diverge (0). Single-head
+;     transformer-block stays four-way, so (A) is specific to the multi-head split/concat in the Rust kernel.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT) and text →
 ;     audio (TTS) — where the model's architecture AND weights are content-addressed recipe DATA, one engine
 ;     (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and TRAINABLE/fine-tunable
@@ -44,10 +46,10 @@
 ;     3. learned DECODER positionals; byte-map + GPT-2 regex word-split carriers feeding the tokenizer; the full
 ;        80×3000 mel at JIT speed.
 ;     4. in-process jit_compile realization-gap fix (the dispatch bug) for the zero-carrier native path.
-;     5. four-way: fkwu does float (mel-frame, transformer-gelu-erf now registered four-way). The remaining
-;        whisper bands are blocked by an ISOLATED fkwu list-slicing DIVERGENCE (not floats) — root-cause it
-;        in the flattener/walker (commit_evidence_2026-06-19_fkwu_float_slicing_divergence.json) and the
-;        multi-head / decoder / generate / positional / conv-stem / mel-full bands cross four-way.
+;     5. cross-kernel parity (two real, tracked bugs): (A) root-cause the RUST kernel's multi-head divergence
+;        (~6e-4 off Go/TS/numpy) so transformer-mh/decoder/generate cross three- then four-way; (B) the
+;        fkwu-only divergence on positional/mel-full. mel-frame, conv-stem, transformer-gelu-erf already
+;        cross four-way. Evidence: commit_evidence_2026-06-19_fkwu_float_slicing_divergence.json.
 ;     6. THEN native training/fine-tuning with local oracles — the original ask, meaningful once inference runs.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──

@@ -1,28 +1,31 @@
 {
-  "kind": "fourth-arm-divergence",
+  "kind": "fourth-arm-and-kernel-divergence",
   "date": "2026-06-19",
-  "headline": "fkwu DOES support float four-way; a recursive list-slicing/building helper returning a float sublist DIVERGES on fkwu (returns 0). Corrects the prior false claim 'fkwu lacks the float op family'.",
-  "float_is_supported": {
-    "claim": "fkwu computes fp64 four-way — proven by NON-TRIVIAL verdicts that require correct float math (a wrong float drops verdict bits).",
-    "genuine_four_way_bands": [
-      {"band": "transformer-block", "verdict": 511},
-      {"band": "transformer-corpus-train", "verdict": 31},
-      {"band": "mel-frame", "verdict": 1023, "note": "fsin/fcos/fln + Goertzel + mf-frame builds a float list; exact integer-eq checks"},
-      {"band": "transformer-gelu-erf", "verdict": 255, "note": "tn-erf + tn-gelu-erf scalar float, 8 exact checks"}
-    ]
+  "supersedes": "an earlier draft of this file that claimed a 'list-slicing divergence' — that was a PRINT ARTIFACT (the fourth arm compares the band's RETURN value; a band ending in (print x) returns unit→0 while Go reports stdout). Corrected below with bare-return testing.",
+  "headline": "fkwu DOES support float four-way. Careful four-way re-testing (bare-return verdicts) found TWO real divergences in this session's new bands, and corrected a false 'fkwu lacks float' claim.",
+  "float_supported_genuine_four_way": [
+    {"band": "transformer-block", "verdict": 511},
+    {"band": "transformer-corpus-train", "verdict": 31},
+    {"band": "mel-frame", "verdict": 1023},
+    {"band": "conv-stem", "verdict": 1, "note": "value also confirmed four-way via a bare-return value probe, not just the boolean"},
+    {"band": "transformer-gelu-erf", "verdict": 255}
+  ],
+  "divergence_A_rust_multihead": {
+    "bands": ["transformer-mh", "transformer-decoder", "transformer-generate"],
+    "observed": "transformer-mh-band: go=1, rust=0, ts=1 — FAILS THREE-WAY. Value probe of tb-mh-block[0][0]*1e6: go=525305, ts=525305, rust=524669, fkwu=-5.",
+    "diagnosis": "Go and TS match numpy (the multi-head parity harness showed bin-go vs numpy = 1.9e-16), so Go/TS are correct and the RUST kernel computes the multi-head path ~6e-4 off. Single-head transformer-block is fully four-way (511), so the bug is specific to the multi-head split/concat path in the Rust kernel. fkwu additionally errors (-5).",
+    "honest_admission": "transformer-mh/decoder/generate were committed earlier THIS session tested via bin-go (Go only); they were never actually cross-kernel valid. The recipe is correct (Go/TS/numpy agree); the Rust kernel has the bug.",
+    "status": "hard gate — root-cause in the Rust kernel's handling of the multi-head path; not registered in the manifest until it crosses."
   },
-  "divergence": {
-    "what": "A recursive take/slice that returns a float SUBLIST evaluates to 0 on fkwu while Go/Rust/TS agree on the correct value.",
-    "minimal_repro": {
-      "recipe": "(defn f (n xs) (if (eq n 0) (empty) (cons (head xs) (f (sub n 1) (tail xs)))))",
-      "expr": "(round (mul (head (f 2 (list 5.0 6.0 7.0))) 1000000.0))",
-      "preludes": "form-stdlib/core.fk only",
-      "go": 5000000, "rust": 5000000, "typescript": 5000000, "fkwu": 0
-    },
-    "contrast": "Byte-identical helpers under conv-stem's cv-take ALSO diverge when the actual value is printed (cv-conv value: go=-10000, fkwu=0). conv-stem's band verdict 1 was a FALSE PASS: broken slicing -> empty/zero output -> maxdiff 0 < tol -> verdict 1, coincidentally matching Go.",
-    "affected_bands": ["transformer-mh", "transformer-decoder", "transformer-generate", "positional", "conv-stem", "mel-full", "whisper-mh-block-real"],
-    "not_a_wall": "This is a DIVERGENCE (one kernel computes a different answer), not a missing op FAMILY. Per fourth-arm-bands.txt rules it is a correctness bug to root-cause in the flattener/walker (form-flatten.fk / fkc-emit-universal), tracked here, never buried by omission.",
-    "methodological_note": "Boolean-verdict bands can FALSE-PASS on fkwu when a divergence trivializes the comparison. A four-way verdict is only trustworthy when the verdict derives from the COMPUTED VALUE (exact-eq / bit-sum), as mel-frame and transformer-gelu-erf do."
+  "divergence_B_fkwu_only": {
+    "bands": ["positional", "mel-full"],
+    "observed": "go=1, rust=1, ts=1 (three-way agree), fkwu=0.",
+    "diagnosis": "Three-way solid; an isolated fourth-arm (fkwu) divergence. mel-frame (same trig family) crosses four-way, so it is not trig per se — to root-cause in the flattener/walker for these specific recipes.",
+    "status": "owned, tracked; three-way is the floor for these until fkwu crosses."
   },
-  "status": "owned, tracked to a flattener/walker fix; the slicing-dependent whisper-tiny bands stay three-way until it lands"
+  "methodology_lessons": [
+    "The fourth arm compares the band's RETURN value — bands must end in a bare verdict expression, never (print x).",
+    "Boolean verdicts can FALSE-PASS or be mis-read; verify with a bare-return VALUE probe, and always read go/rust/ts/fkwu separately, not just 'kernels agree'.",
+    "Validate every band three-way via validate.sh, never bin-go (Go) alone, before claiming it is proven."
+  ]
 }

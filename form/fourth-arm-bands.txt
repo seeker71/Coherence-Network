@@ -609,3 +609,6 @@ replica-serve fks 7
 form-lower-writefile fkc 15
 mel-frame fks 1023
 transformer-gelu-erf fks 255
+mel-frame fks 1023
+conv-stem fks 1
+transformer-gelu-erf fks 255
