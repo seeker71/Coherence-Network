@@ -454,6 +454,19 @@ func jitCacheCapDirs() int {
 	return 512
 }
 
+// jitHotThreshold is the call count at which a closure is promoted to a native
+// build. Tunable via FORM_JIT_HOT (default 2000); set very high to keep a workload
+// on the pure interpreter (e.g. a long training fold whose async build is not worth
+// the cost). The walk is the same answer either way, so this never changes results.
+func jitHotThreshold() uint32 {
+	if v := os.Getenv("FORM_JIT_HOT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return uint32(n)
+		}
+	}
+	return 2000
+}
+
 // jitPersistCount throttles the eviction sweep so the cache-dir scan does not run on
 // every persist — once per 32 persists amortizes the cost while keeping the cap close.
 var jitPersistCount int64

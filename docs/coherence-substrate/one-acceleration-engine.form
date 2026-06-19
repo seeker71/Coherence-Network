@@ -1,0 +1,84 @@
+; one-acceleration-engine.form — ONE shared JIT lowering pipeline for every kernel,
+; replacing the three bespoke per-kernel JITs. The north star Urs named:
+;
+;   "How is shrinking helping with float JIT support? Unify all the JIT lowerings
+;    with a single working pipeline." (2026-06-19)
+;
+; ── THE PROBLEM: three JITs are three divergence surfaces ──
+;   Each kernel today lowers a hot closure to native in ITS OWN host language:
+;     - Go   : recipe → Go source → `go build -buildmode=plugin` → plugin.Open   (jit.go)
+;     - Rust : recipe → Rust source → `rustc --crate-type=cdylib` → libloading    (main.rs)
+;     - TS   : recipe → MSL/WGSL/CUDA via the GPU emitters                         (backends/)
+;   Three emitters, three compilers, three ABIs. Float bit-identity must then be won
+;   THREE times against THREE optimizers — and it is not. The Go float JIT lets the
+;   host compiler fuse a*b+c into a single-rounding FMA (or reorder a reduction), so
+;   the native body is NOT bit-identical to the walk. The async JIT adopts that body
+;   MID-FOLD, so a float-accumulating training loop uses walk-floats before adoption
+;   and native-floats after — the final weights depend on WHEN the background build
+;   landed. MEASURED (2026-06-19): the neural-lm-corpus band (a real-corpus bigram LM)
+;   read go=5 while rust=ts=fkwu=7, nondeterministically — a band that would pass
+;   four-way most runs and randomly diverge. The four-way floor caught it.
+;   Shrinking the Go JIT to i64-only "fixes" this by DELETING float JIT (slow-walk) —
+;   a stopgap pointed away from the goal. The goal is float JIT that WORKS.
+;
+; ── THE INSIGHT: only a SHARED, bit-identical-BY-CONSTRUCTION lowering is correct ──
+;   Bit-identity chased per-compiler is a losing game. Bit-identity by CONSTRUCTION is
+;   already solved, in one place, as a Form recipe:
+;     - jit-tensor-emit.fk — the emitter is a FORM RECIPE (host keeps only the dumb
+;       carriers: clang/rustc, dlopen, call-by-pointer). It is bit-identical by
+;       construction: the inner loop accumulates j DOWN exactly like tb-dot's
+;       right-fold, and mul/add split through a NAMED TEMPORARY so "no conformant
+;       compiler can contract them into an fma." MEASURED: native = recipe to the last
+;       bit, 20,077× on a 1280² matvec; the MSL lanes bit-exact vs the CPU reference in
+;       the lane's own conversion chain (scripts/metal_matvec_audit.sh).
+;     - fkwu — the universal walker, emitted in C by Form recipes (hati-os-kernel-emit.fk)
+;       and ALREADY bridged INTO the Go kernel in-process: TestFkwuOffloadBridge proves
+;       the carrier→fkwu→value loop matches the in-process walker BIT-FOR-BIT. fkwu walks
+;       ANY flattened closure, floats included, deterministically — it is the general
+;       bit-identical executor, not a per-shape emitter.
+;
+; ── THE ONE PIPELINE: one front-end, two bit-identical back-ends ──
+;   FRONT-END (shared): flatten the hot closure ONCE into the content-addressed
+;     node-table (the fkc/fks flattener, a Form recipe). Identical emitted artifact
+;     regardless of which host kernel asked — content-addressed, so two identical
+;     emissions intern to one NodeID (the crystallization cache comes free).
+;   BACK-END A — WALK (the general floor): run the flat table through in-process fkwu.
+;     Bit-identical (it IS the fourth-arm walk), general (any op family fkwu carries),
+;     fast (pre-flattened table, milliseconds — no per-call boot-compile). This is the
+;     correct default for float/value/list closures the bespoke JITs got wrong.
+;   BACK-END B — EMIT-NATIVE (the fast lane): for a hot tensor shape, the SAME flat
+;     source feeds jit-tensor-emit's Form-recipe C/MSL emitter → clang → dlopen →
+;     dispatch. Bit-identical by the j-down/no-contraction discipline; native-fast.
+;   Both back-ends are bit-identical to the walk and to each other; the choice is a
+;   cost decision (walk vs native), never a correctness fork.
+;
+; ── THE MIGRATION (each step provable; the pieces exist, the wiring is the work) ──
+;   M1  Go hot-path dispatch routes through the in-process fkwu offload bridge instead
+;       of emitGoExpr→go-build. Float support arrives for free (fkwu walks floats
+;       bit-identically); the neural-lm-corpus divergence resolves to four-way WITH
+;       float JIT intact, not shrunk. (TestFkwuOffloadBridge is the proven seed; the
+;       open work is fast in-process invocation — flatten-and-walk the closure's table
+;       in-process rather than fork/exec per call.)
+;   M2  Rust and TS hot-paths dispatch to the same bridge. Three emitters → one.
+;   M3  The native fast lane (jit-tensor-emit C/MSL) generalizes from the matvec/train
+;       shapes to the closure families the walk identifies as hot, shared by all kernels.
+;   M4  Compost emitGoExpr (jit.go), the Rust cdylib emitter, and the bespoke TS path —
+;       once dispatch is unified, three host-language emitters are duplicated tissue.
+;
+; ── OWNED + TRACKED (not buried) ──
+;   The neural-lm-corpus band (real-corpus bigram LM, beats the unigram baseline) is
+;   CORRECT on fkwu/rust/ts (7); the lone diverger is the Go BESPOKE float JIT (an
+;   optimization path, not the walk). Per the four-way rule the divergence is
+;   root-caused (host-compiler FMA on the non-bit-identical float plugin, adopted
+;   mid-fold) and tracked HERE to its specific fix: M1 above. The band stays out of
+;   form/fourth-arm-bands.txt until M1 lands — owned, named, not silently omitted. The
+;   FORM_JIT_HOT knob (jit.go) lets a workload run the deterministic walk meanwhile.
+;
+; KIN: jit-tensor-emit.fk (the emitter-as-recipe, bit-identical by construction) ·
+;   form/form-kernel-go/fkwu_bridge_test.go (the in-process offload bridge, proven) ·
+;   hati-os-kernel-emit.fk (fkwu's C emitted by Form) · hati-os-native-cli-emit.fk
+;   (emit→clang→exec) · form-native-models.form (the JIT-realization-gap note: the
+;   in-process Go plugin dispatch never realized a speedup either — the emit-compile-exec
+;   lane is the honest fast path) · neural-lm.fk + scripts/form_cli_neural_lm_train.sh
+;   (the real-corpus LM whose four-way run exposed the divergence).
+; teaching: lc-cognitive-sovereignty
