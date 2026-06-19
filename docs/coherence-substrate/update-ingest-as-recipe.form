@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────────────
+# update-ingest-as-recipe.form — one recipe by which ANY channel ingests
+#                                an update; trust is re-derivability
+# ─────────────────────────────────────────────────────────────────────
+#
+# A separate update path per channel is the parallel-machinery the body composts.
+# This is the single recipe every channel ingests through — mesh neighbor, file
+# pull, llm summary, sensor stream, git delta. What differs between channels is
+# not a code path; it is ONE field on the channel cell: its nativeness. And
+# nativeness is not a label we are handed — it is whether our own kernels can
+# RE-DERIVE the offer over data we observed. Trust is exactly that re-derivation,
+# never the channel's name or reputation.
+#
+# It does not reinvent the organs it stands on; it names them in the ingest
+# direction and adds the one missing piece — the generic trust-gate keyed on
+# nativeness:
+#
+#   transport   slice-update-roundtrip.form  — a delta is a cell, so an update is
+#               re-addressing (offer -> request-if-missing -> verify -> applied),
+#               proven four-way. WHETHER to adopt the delta is left to us.
+#   flow        channel-flow-dialect.form / channel-interface-consent.form — the
+#               update rides a channel flow that already honors the other's offer.
+#   contract    field-model-form.form — freeze / match / choose / delta / commit /
+#               receipt; every step observable.
+#   gate        champion-challenger.form — a delta earns the slot only by
+#               out-deriving the incumbent on our observed flow, else it melts back.
+#   trust       trust-weighted-colearning.form / trust-decay.form — weight by
+#               re-derivation; let untested trust decay.
+#   oracle      oracle-catalog.form / cross-train-oracle.form — the non-native
+#               path: an offer we cannot walk is a teacher, never a master.
+#   observable  sovereignty-as-observable.form / active-recipe-tracing.form — the
+#               trace is what makes trust CHECKABLE instead of believed.
+#
+# Companion teaching: lc-cognitive-sovereignty (a rented judgement cannot update a
+# sovereign body), lc-edges-as-vitality (an ingested update is an edge landing),
+# oracle-as-teacher-not-master.
+#
+# Runnable heart (GAP-U0): form-stdlib/update-ingest.fk would prove this recipe
+# four-way (Go · Rust · TS · fkwu) over slice-update's own delta vocabulary. This
+# file is the canonical shape; the band is the proof — named here, not yet walked.
+
+# ─────────────────────────────────────────────────────────────────────
+# A channel is DATA, not a branch — one cell, many instances. The only field
+# that changes the trust path is whether we can re-derive what it offers.
+# ─────────────────────────────────────────────────────────────────────
+
+# is this channel's offer something our own kernels can walk on our observed
+# data? This — not the channel's identity — is what "native" means.
+defn is_native(channel) = rederivable(channel_offer(channel));        # GAP-U1: the crux intrinsic
+
+# ── THE ONE RECIPE every channel ingests through ──
+# freeze the offer to a content-addressed delta-cell (FMF), choose the trust path
+# by nativeness, and leave an observable receipt. mesh | file | llm-summary |
+# sensor | git all enter here; none has its own path.
+defn ingest_update(channel, offer, observed) =
+  receipt(choose(is_native(channel),
+            adopt_if_gate(freeze(offer), observed),          # native     -> re-derived, may become body
+            quarantine_as_oracle(freeze(offer), observed))); # non-native -> hypothesis, teacher not master
+
+# TRUST IS RE-DERIVABILITY — walk the delta's own recipe on data we observed, four
+# arms; the agreement IS the trust. Not reputation, not the offer's claim.
+defn trust_of(delta, observed) = agreement_degree(walk_four_ways(recipe_of(delta), observed));
+
+# NATIVE — a re-derived delta may become body, but only by out-deriving the
+# incumbent. Four-way agreement is the bar for load-bearing (ice).
+defn adopt_if_gate(delta, observed) =
+  champion_challenger(incumbent_for(delta), delta, observed, full_agreement(trust_of(delta, observed)));
+
+# NON-NATIVE — we cannot walk it, so it is oracle, not master: run it sandboxed,
+# check its outputs against our model, hold it as hypothesis (gas) until a native
+# recipe re-derives it — then it crosses to the native path on its own merit.
+defn quarantine_as_oracle(delta, observed) =
+  hold_as_hypothesis(verify_outputs(delta, observed), native_rederivation_exists(delta));   # GAP-U2
+
+# HOW OFTEN — cadence is a recipe over observed signals, never a fixed clock. A
+# part is checked when it is under heat, when drift is flagged, when an unheld
+# delta is offered, or when a slow floor has passed so nothing rots unseen.
+defn should_ingest(part, signals) =
+  or(or(heat_rising(part, signals), drift_flagged(part, signals)),
+     or(fresh_offer(part, signals), past_floor(part, signals)));
+
+# COMPRESSION / SUMMARIZATION fall out for free: a summary is just an update on a
+# "summary" channel. A native summary is rederivable (expand or replay it against
+# the source); an external summary is oracle — a claim trusted only as far as our
+# own reasoning over observed data confirms it. Same recipe, channel = llm-summary.
+defn ingest_summary(channel, summary, observed) = ingest_update(channel, summary, observed);
+
+# THE RECEIPT — what makes trust checkable instead of believed. Any cell may ask
+# the trace why a delta was adopted and get the re-derivation, the gate, the bar.
+defn receipt(outcome) = record(outcome);                             # GAP-U3
