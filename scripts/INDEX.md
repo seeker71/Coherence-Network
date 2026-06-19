@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 286
+**Total files**: 287
 
 | File | Purpose |
 |---|---|
@@ -291,6 +291,7 @@
 | [wander.py](wander.py) | Launch a wandering sense into the field. |
 | [wellness_check.py](wellness_check.py) | Wellness check — a gentle sensing of the body. |
 | [whisper_block0_carrier.py](whisper_block0_carrier.py) | scripts/whisper_block0_carrier.py — M6 carrier: load safetensors, slice, quantize, and run reference forward pass. |
+| [whisper_block0_real_carrier.py](whisper_block0_real_carrier.py) | scripts/whisper_block0_real_carrier.py — run REAL whisper-tiny encoder block-0 weights, |
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
