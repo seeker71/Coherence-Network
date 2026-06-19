@@ -54,7 +54,10 @@
     (claim "a mind rented from a gated provider cannot offer sovereignty to others")
     (so native-reasoning-is-the-precondition-of-the-no-exclusion-platform)
     (carrier form-recipes-on-the-kernel + local-models-on-owned-hardware)
-    (seed host-kernel.form close-gpu-as-driven-organ local-inference-as-organ.form))
+    (own-toolchain-too the-same-recipe-walked-four-way IS-the-native-binary
+                       form->asm-bytes-lane-drops-clang clang-only-an-oracle)
+    (seed host-kernel.form close-gpu-as-driven-organ local-inference-as-organ.form
+          form-asm.fk lowering-conviction.fk))
 
   (money
     (is a-side-effect never-the-attractor never-the-direction)

@@ -1,5 +1,13 @@
 # fourth-arm-bands.txt — the bands proven to cross four-way on the emitted
-# fourth kernel (fkwu, the universal walker). One row per band:
+# fourth kernel (fkwu). fkwu has two faces over the SAME emit: the universal
+# PROOF-WALKER (fkc-emit-universal) this manifest gates four-way, and a
+# SELF-JIT (fkc-nat-expr / fkc-emit-jit2) that crystallizes hot pure functions
+# (tags 1-7,12) to NATIVE and melts them on cool, champion-challenger re-earned
+# (jit-lower 15, full-jit-lower 63, champion-challenger 127). The native target
+# is Form -> asm BYTES, not clang: form-asm 31 / form-lower 31 / form-macho 31 /
+# form-elf 31 -> recipe-dylib 787349 -> codesign 632490, every stage a four-way
+# Form recipe; clang is dropped by form-asm's byte-identity conviction gate,
+# kept only as oracle. One row per band:
 #
 #   <band-stem> <table-emitter> <expected-verdict>
 #
