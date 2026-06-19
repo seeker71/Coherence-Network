@@ -576,14 +576,38 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 ; still one honest use; a request-aware responder is now equally native.
 ; The kernel-resource lifecycle is the constant main (the organ); the body
 ; the program serves is Form. Port is argv[1] (default 8080).
+; Platform-correct socket constants + sockaddr_in first bytes. The hand-rolled
+; fk_sa mirrors a sockaddr_in; Darwin has a sin_len byte (b0=16, b1=family) and
+; SOL_SOCKET=0xffff/SO_REUSEADDR=4, while Linux has a 2-byte sin_family (b0=2,
+; b1=0 little-endian, no sin_len) and SOL_SOCKET=1/SO_REUSEADDR=2. The #else
+; branch keeps the exact prior Darwin bytes, so macOS output is byte-identical.
+(defn fkc-net-platform-defs-text ()
+    "
+#ifndef FK_NET_PLAT
+#define FK_NET_PLAT 1
+#if defined(__linux__)
+#define FK_SOL_SOCKET 1
+#define FK_SO_REUSEADDR 2
+#define FK_SA_B0 2
+#define FK_SA_B1 0
+#else
+#define FK_SOL_SOCKET 65535
+#define FK_SO_REUSEADDR 4
+#define FK_SA_B0 16
+#define FK_SA_B1 2
+#endif
+#endif
+")
+
 (defn fkc-server-main-text ()
-    "extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern long long read(int,void*,unsigned long); extern int shutdown(int,int); extern int atoi(const char *); struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { long long port = 8080; if (argc > 1) { port = atoi(argv[1]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, 65535, 4, &yes, 4); struct fk_sa a; a.len = 16; a.fam = 2; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 1; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { long long got = read((int)cfd, fk_src, 262143); if (got < 0) { got = 0; } fk_src[got] = 0; dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
+    "extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern long long read(int,void*,unsigned long); extern int shutdown(int,int); extern int atoi(const char *); struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { long long port = 8080; if (argc > 1) { port = atoi(argv[1]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, FK_SOL_SOCKET, FK_SO_REUSEADDR, &yes, 4); struct fk_sa a; a.len = FK_SA_B0; a.fam = FK_SA_B1; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 1; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { long long got = read((int)cfd, fk_src, 262143); if (got < 0) { got = 0; } fk_src[got] = 0; dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
 
 (defn fkc-emit-server2 (flat)
+    (str_concat (fkc-net-platform-defs-text)
     (str_concat (fkc-pr-text)
     (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
     (str_concat (fkc-walk-many-text)
-                (fkc-server-main-text)))))
+                (fkc-server-main-text))))))
 
 (defn fkc-emit-server (fns) (fkc-emit-server2 (fkc-flatten-many fns)))
 
@@ -707,14 +731,15 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 ; net organ forever. Each accepted request is staged into fk_src before the
 ; walk, so the loaded program can branch on live request bytes through fk-buf.
 (defn fkc-main-server-universal-text ()
-    "extern int atoi(const char *); struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } long long port = 8080; if (argc > 2) { port = atoi(argv[2]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, 65535, 4, &yes, 4); struct fk_sa a; a.len = 16; a.fam = 2; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 4; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { long rg = read((int)cfd, fk_src, 262143); if (rg < 0) { rg = 0; } fk_src[rg] = 0; dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
+    "extern int atoi(const char *); struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } long long port = 8080; if (argc > 2) { port = atoi(argv[2]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, FK_SOL_SOCKET, FK_SO_REUSEADDR, &yes, 4); struct fk_sa a; a.len = FK_SA_B0; a.fam = FK_SA_B1; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 4; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { long rg = read((int)cfd, fk_src, 262143); if (rg < 0) { rg = 0; } fk_src[rg] = 0; dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
 
 (defn fkc-emit-server-universal ()
+    (str_concat (fkc-net-platform-defs-text)
     (str_concat (fkc-pr-text)
     (str_concat (fkc-decl-server-universal-text)
     (str_concat (fkc-typed-stdout-text)
     (str_concat (fkc-walk-many-text)
-                (fkc-main-server-universal-text))))))
+                (fkc-main-server-universal-text)))))))
 
 ; ── self-JIT on heat — learned-primitive's crystallize, in the emitted sibling ──
 ; The emitter lowers each pure function FROM ITS CELLS to a native C
