@@ -34,3 +34,19 @@
             "\r\n\r\n")
           body)
         (str_concat head "\r\n"))))
+
+; http-fetch — a COMPLETE HTTP client in pure Form: parse the url, render the
+; request (any method, kh-render-request), send it over the ONE wire primitive
+; (sock_request), return the raw response. http_get is just http-fetch "GET".
+; The wire is the only atom; everything else is flow + choice.
+(defn http-fetch (method url body)
+  (do
+    (let after (substring url 7 (str_len url)))
+    (let slash (str_find after "/" 0))
+    (let hostport (if (eq slash -1) after (substring after 0 slash)))
+    (let path (if (eq slash -1) "/" (substring after slash (str_len after))))
+    (let colon (str_find hostport ":" 0))
+    (let host (if (eq colon -1) hostport (substring hostport 0 colon)))
+    (let port (if (eq colon -1) "80" (substring hostport (add colon 1) (str_len hostport))))
+    (let req (kh-render-request method path host body))
+    (sock_request host port req)))

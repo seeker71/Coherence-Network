@@ -79,6 +79,7 @@
           (list "read_file" 1 63) (list "temp_dir" 0 101)
           (list "write_file_text" 2 104)
           (list "http_get" 3 105)
+          (list "sock_request" 3 114)
           (list "_get" 2 106)
           (list "file_mtime" 1 107) (list "scan_run" 3 108)
           (list "record_get" 2 65) (list "record_set" 3 66)
