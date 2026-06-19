@@ -652,11 +652,14 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
     (if (eq (len rows) 1) (fkc-row-sp (head rows))
         (str_concat (fkc-rows-sp (tail rows)) (str_concat " " (fkc-row-sp (head rows))))))
 
-; the string section: pool count, then per string its length and bytes —
-; fks-table-file is fkc-table-file with the program's pool riding behind it
+; the string section: pool count, then per string its length and bytes. The
+; bytes are serialized RAW via str_byte_at (str_len is the byte count): a string
+; is a UTF-8 byte sequence, so this carries any locale's script into the emitted
+; walker's pool exactly. (ord(char_at) was rune-aware and dropped continuation
+; bytes, corrupting every multibyte char — that was the ASCII-only limitation.)
 (defn fks-lit-sp (s i)
     (if (eq i (str_len s)) ""
-        (str_concat " " (str_concat (int_to_str (ord (char_at s i))) (fks-lit-sp s (add i 1))))))
+        (str_concat " " (str_concat (int_to_str (str_byte_at s i)) (fks-lit-sp s (add i 1))))))
 (defn fks-pool-entry (s) (str_concat (int_to_str (str_len s)) (fks-lit-sp s 0)))
 (defn fks-pool-items (pool)
     (if (eq (len pool) 0) ""
