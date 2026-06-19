@@ -637,3 +637,4 @@ transformer-real-train fks 31
 form-cli-sufficiency fks 255
 form-cli-repl fks 255
 form-cli-stats fks 255
+form-native-run fks 63

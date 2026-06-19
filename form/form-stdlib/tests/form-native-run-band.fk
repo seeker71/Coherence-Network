@@ -1,0 +1,20 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-native-run.fk
+;
+; form-native-run-band — the agent loop's PURE logic, proven four-way (the host-io tools — bash/read/
+; write/edit/glob — are the named 3-kernel family; the find/replace + step-usability logic is pure).
+;
+; Verdict 63:
+;   1   edit's find/replace hits the first occurrence      (fnr-replace ... = "the kernel is sovereign")
+;   2   and only the first                                 (fnr-replace "aXbXc" "X" "-" = "a-bXc")
+;   4   no match leaves the string whole                   (fnr-replace no-match = unchanged)
+;   8   a tool-call reply is usable                         (fnr-usable? toolcall = 1)
+;   16  a garbled/empty reply is NOT (escalate the step)    (fnr-usable? "x" = 0)
+;   32  tool-call detection (name + arguments present)      (fnr-toolcall? = 1)
+(do
+    (let c0 (if (str_eq (fnr-replace "the kernel is fast" "fast" "sovereign") "the kernel is sovereign") 1 0))
+    (let c1 (if (str_eq (fnr-replace "aXbXc" "X" "-") "a-bXc") 2 0))
+    (let c2 (if (str_eq (fnr-replace "no match" "zzz" "q") "no match") 4 0))
+    (let c3 (if (eq (fnr-usable? "{\"name\":\"bash\",\"arguments\":{\"cmd\":\"ls\"}}") 1) 8 0))
+    (let c4 (if (eq (fnr-usable? "x") 0) 16 0))
+    (let c5 (if (eq (fnr-toolcall? "{\"name\":\"glob\",\"arguments\":{\"pattern\":\"*.fk\"}}") 1) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
