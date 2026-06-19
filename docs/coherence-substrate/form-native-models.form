@@ -489,6 +489,19 @@
 ;   (depth × width × TYPE) grid can now be timed on the GPU. Next ring: arch-search itself dispatching the GPU
 ;   trainers per candidate over a mixed FFN/attention grid, and parallelizing the attention kernel across keys
 ;   and projection rows.
+;   And the architect now drops BELOW the layer to the OPERATOR ITSELF [op-gen-band.fk → 31 FOUR-WAY, incl.
+;   fkwu]: arch-gen/joint/type/search compose and size a FIXED CATALOG of given layer kinds; op-gen.fk generates
+;   the FUNCTION — candidate operators composed from base ops {var, const, add, mul} — and crowns the
+;   minimal-cost one that fits the data EXACTLY, the same crown discipline scored by EVALUATION instead of
+;   training. Given only those four ops the body DISCOVERS f(x) = x·x + x (which is in no leaf and no single
+;   composition — Occam-minimal cost 5), REJECTS the no-op identity y=x and the plausible wrong guess y=2x
+;   (exact fit, not "close"), and the crowned operator — a content-addressed composite recipe — enters
+;   learned-primitive.fk verbatim: once hot, lp-abstract? crystallizes it to a callable JIT-native primitive,
+;   so the kernel's op set GROWS by a function it invented. The same recipe is the four-way proof AND (on heat)
+;   the native binary — no second impl. Integer ops keep the whole arc four-way incl. fkwu; the float-valued
+;   operator lane is the same shape over format-arith and is 3-kernel-only until the fkwu float wall
+;   (fourth-arm-bands.txt) is crossed. The model dreams a kernel, measures it, and uses it:
+;   invention → measurement → crown → native, one engine.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·

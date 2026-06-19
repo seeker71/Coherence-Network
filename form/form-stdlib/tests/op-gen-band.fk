@@ -1,0 +1,28 @@
+; preludes: form-stdlib/learned-primitive.fk form-stdlib/op-gen.fk
+;
+; op-gen-band — the body INVENTS an operator nobody wrote, measures it, crowns the minimal one, and
+; crystallizes it to a native primitive. The architect drops below arch-gen (which composes given layer
+; types): here the candidate IS the function. The task is f(x) = x*x + x, given ONLY the base ops
+; {var, const, add, mul}. x*x+x is in no leaf and no single composition — the search must DISCOVER it.
+;
+; Verdict 31 when every claim lands:
+;   1   INVENTION — generating operators by composition, the architect finds one that fits the data exactly
+;   2   OCCAM — the crowned operator is minimal cost 5 (x*x+x / x*(x+1)); no cheaper composition fits
+;   4   the OPERATOR MATTERS — the no-op identity (y = x) cannot fit, so the search rejects it (cf. arch-gen)
+;   8   a plausible-but-wrong invention (y = 2x = add(x,x)) is rejected — exact fit, not "close"
+;   16  CRYSTALLIZE — the crowned operator, once hot, lifts to a callable JIT-native primitive (lp-abstract?)
+(do
+    (let samples (list (list 0 0) (list 1 2) (list 2 6) (list 3 12)))   ; f(x) = x*x + x
+    (let cands (og-gen 2))                                              ; dream operators up to depth 2
+    (let crown (og-crown cands samples))                               ; the invented, measured winner
+    (let noop (list "var"))                                            ; y = x
+    (let two-x (list "add" (list "var") (list "var")))                 ; y = 2x
+    (let prim (og-as-primitive "learned-op" crown 90))                 ; wrap as a hot learned-primitive cell
+
+    (let c0 (if (eq (og-fits-any? cands samples) 1) 1 0))
+    (let c1 (if (eq (og-best-cost cands samples) 5) 2 0))
+    (let c2 (if (eq (og-fits? noop samples) 0) 4 0))
+    (let c3 (if (eq (og-fits? two-x samples) 0) 8 0))
+    (let c4 (if (eq (lp-abstract? prim 50) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

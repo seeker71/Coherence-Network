@@ -639,6 +639,7 @@ arch-gen fks 31
 arch-type fks 31
 arch-search fks 31
 arch-joint fks 31
+op-gen fks 31
 moe-router fks 127
 form-lower-callconv fkc 15
 transformer-kernel fks 511
