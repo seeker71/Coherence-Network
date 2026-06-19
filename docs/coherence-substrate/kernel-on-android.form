@@ -14,7 +14,7 @@
 ; ── WHAT IS ALREADY TRUE (the ground this stands on) ── [MEASURED — in the body]
 ;   form/validate.sh proves three kernels identical: form/form-kernel-rust, form-kernel-go,
 ;   form-kernel-ts. The recipes that would run on the phone — recognition-router.fk,
-;   shared-sensing.fk, self-grounding-classifier.fk, satsang.fk — are SHIPPED and three-way green
+;   shared-sensing.fk, self-grounding-classifier.fk, satsang.fk — are SHIPPED and four-way green
 ;   (recognition-router-band -> 127, shared-sensing.fk -> 127). So "the kernel on Android" is not
 ;   "port the logic"; the logic is done and proven. It is "carry one of three existing kernels onto
 ;   ARM and feed it the device's senses." That is a build, not a research question.

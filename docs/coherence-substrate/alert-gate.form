@@ -2,7 +2,7 @@
 ; salient enough to matter AND quiet enough not to nag. The fusion of two gates the body keeps
 ; apart — a salience floor and a cooldown — into one yes/no a caller can act on.
 ;
-; Proven three-way (Go · Rust · TS) by form-stdlib/tests/alert-gate-band.fk at form/validate.sh → 127.
+; Proven four-way (Go · Rust · TS · fkwu) by form-stdlib/tests/alert-gate-band.fk at form/validate.sh → 127.
 
 ; ---------------------------------------------------------------------------
 ; purpose

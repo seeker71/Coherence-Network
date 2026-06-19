@@ -273,5 +273,5 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk \
-#     form-stdlib/tests/form-asm-band.fk        # → 31 three-way (encoder + conviction gate)
+#     form-stdlib/tests/form-asm-band.fk        # → 31 four-way (encoder + conviction gate)
 #   bash scripts/form_asm_conviction_demo.sh    # Form bytes == clang bytes, byte-for-byte -> gate opens

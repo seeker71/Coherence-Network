@@ -153,4 +153,19 @@
     ; (cat, kids), with the attribution parameters held in the frame, read by
     ; nothing. A grammar's parse produces the same recipe tree on all four arms.
     (defn intern_node_at (cat kids file line col) (intern_node cat kids))
+    ; ── null + dict mirrors — the host value-null model on the fourth arm ──
+    ; The three reference kernels carry a VNull value and native _dict_*/value_kind.
+    ; fkwu has no host-null in its value ABI, so null is carried STRUCTURALLY: a
+    ; reserved blueprint node (VALUE-NONE) is the absent/None value, and node_eq
+    ; (a four-way structural primitive) tests for it — never nil?/len, which
+    ; collapse int/string/empty in fkwu's scalar region. _dict_get on a miss
+    ; answers VALUE-NONE; value_kind answers "null" for it and "value" otherwise,
+    ; which is exactly what json-node-null-value? (str_eq ... "null") reads. The
+    ; dict is the "__dict__"-marked cons-list the kernels and fkwu's _get share.
+    (defn value-none () (bp "VALUE-NONE"))
+    (defn value_kind (v) (if (node_eq v (value-none)) "null" "value"))
+    (defn _dict_new () (cons "__dict__" (empty)))
+    (defn _dict-scan (xs k) (if (nil? xs) (value-none) (if (str_eq (head xs) k) (head (tail xs)) (_dict-scan (tail (tail xs)) k))))
+    (defn _dict_get (d k) (_dict-scan (tail d) k))
+    (defn _dict_has (d k) (if (node_eq (_dict_get d k) (value-none)) 0 1))
     0)

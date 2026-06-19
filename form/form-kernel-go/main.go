@@ -2337,6 +2337,20 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: int64(args[0].Str[0])}
 	})
+	// str_byte_at: the i-th raw BYTE of the string (0-255), byte-exact. A string
+	// is a UTF-8 byte sequence; char_at is rune-aware (returns "" inside a
+	// multibyte char), so ord(char_at) drops continuation bytes. The string-pool
+	// serializer (fks-lit-sp) must emit exact bytes so the emitted walker prints
+	// any locale's script, not just ASCII — this is that byte door, matching the
+	// walker's own byte-indexed char_at arm (tag 28).
+	k.registerNative("str_byte_at", catAccess(), func(_ *Kernel, args []Value) Value {
+		s := args[0].Str
+		i := args[1].AsInt()
+		if i < 0 || i >= int64(len(s)) {
+			panic(fmt.Sprintf("str_byte_at: bounds out of range index=%d len=%d", i, len(s)))
+		}
+		return Value{Kind: VInt, Int: int64(s[i])}
+	})
 	k.registerNative("byte_to_str", catAccess(), func(_ *Kernel, args []Value) Value {
 		if args[0].AsInt() < 0 || args[0].AsInt() > 255 {
 			return Value{Kind: VStr, Str: ""}
@@ -4601,7 +4615,7 @@ func (k *Kernel) walkInner(n NodeID, env *Frame) Value {
 				// and the ones after it keep walking until the artifact
 				// lands, then adoption swaps it in and later calls dispatch
 				// native. The walk is the same answer either way.
-				const goJITHotThreshold uint32 = 2000
+				goJITHotThreshold := jitHotThreshold()
 				if res, building := k.jitAsyncTake(bodyKey); res != nil {
 					if res.jc != nil {
 						k.jitCompiledGo[bodyKey] = res.jc

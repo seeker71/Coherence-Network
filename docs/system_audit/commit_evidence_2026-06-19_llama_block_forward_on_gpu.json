@@ -1,0 +1,29 @@
+{
+  "title": "The whole LLAMA decoder block runs FORWARD on the Apple M4 Max GPU — RMSNorm + RoPE + SwiGLU, bit-exact with the recipe",
+  "date": "2026-06-19",
+  "stone": "form-native-models.form rung (2) 'full transformer block on the GPU' — extended from the whisper-shaped block (brick 3m) to a REAL llama-shaped decoder block. The named next stone from llama-block.fk / brick 3r ('emit lblk-block to Metal next to the whisper block and run on the M4 GPU with an fp32 CPU-mirror parity gate'). The whisper block runs on the GPU (jte-block-fwd-msl); a real llama3.2:3b block differs in exactly the numerics already four-way standalone — RMSNorm (not LayerNorm), RoPE on q/k (position-dependent), SwiGLU (not gelu), bias-free projections. This composes them into one GPU kernel.",
+  "device": "Apple M4 Max (40-core GPU, unified memory), arm64 Darwin 26.3.1; on-box Metal toolchain (metal/metallib/metal-as), swiftc",
+  "algorithm": "llama-block.fk lblk-block (fp64) — proven FOUR-WAY 4095 by tests/llama-block-band.fk: n1 = RMSNorm1(x) ; h = x + Wo*attn(RoPE(Wq*n1), RoPE(Wk*n1), Wv*n1, scale) ; n2 = RMSNorm2(h) ; y = h + Wdown*SwiGLU(Wgate*n2, Wup*n2) over a SEQUENCE of token vectors. Bias-free llama projections, non-causal self-attention, position = absolute token index. Composes ONLY already-four-way recipes: ln-rmsnorm/ln-swiglu (llama-numerics 4095), rope (rope.fk 4095 over trig fsin/fcos/fpow), tb-dot/tb-matvec/tb-attn-seq/tb-add-seq (transformer-block 511).",
+  "emitter_recipe": "form/form-stdlib/jit-tensor-emit.fk — jte-llama-block-fwd-msl (new, next to jte-block-fwd-msl). Every byte of MSL authored by the Form recipe. One static string parameterized only by the kernel name (dims S/d/dq/dv/hid/HD arrive as runtime buffers). Composes the recipe's own folds: tb-dot downward right-fold split through a named temporary (no fma contraction), forward value-mix, tn-softmax max-subtract over the recipe's OWN fexp, RMSNorm = biased mean-square (forward sum-of-squares fold) + 50-step Newton sqrt, SiLU sigmoid = the recipe's fexp, RoPE = trig.fk's OWN fsin/fcos Taylor + fpow=fexp(e*fln b) — never Metal's transcendentals. New llama helpers: fsin/fcos (range-reduce + 10-term Taylor), fln (exponent+mantissa+atanh 14-term), fpow.",
+  "emitter_proof_four_way": {
+    "band": "form/form-stdlib/tests/llama-block-fwd-emit-band.fk",
+    "manifest_row": "llama-block-fwd-emit fks 7",
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/llama-block-fwd-emit-band.fk",
+    "verdict": 7,
+    "fourth_arm": "1 band four-way (fkwu + pre-flattened tables), 0 divergent — Go/Rust/TS/fkwu emit byte-identical text",
+    "msl_bytes": 6990
+  },
+  "on_gpu_execution": {
+    "audit": "scripts/metal_llama_block_audit.sh",
+    "carrier": "swiftc + Metal.framework host harness — the allowed driver-access carrier per host-kernel.form host-resource-access; runtime makeLibrary, mathMode=safe (IEEE, no fast-math contraction). The kernel LOGIC is Form; only GPU submission rides the host driver.",
+    "fixture": "the llama-block-band.fk fixture: S=2 tokens, d=4, dq=dv=4, HD=4 (single head), FFN hidden 4, scale=1/√4, eps=1e-5, every weight non-trivial",
+    "gpu_ms": 3.16,
+    "y_gpu_fp32": [1.115890, -0.492135, 0.620317, 1.846721, -1.069281, 0.365812, 1.648117, -1.118617],
+    "y_cpu_fp32_mirror": [1.115890, -0.492135, 0.620317, 1.846721, -1.069281, 0.365812, 1.648117, -1.118617],
+    "parity_gpu_vs_cpu": "max|y_gpu - y_cpu| = 0.0 — BIT-EXACT (same folds, both fp32, no contraction)",
+    "recipe_ground_truth_x1e6": [1115890, -492135, 620317, 1846721, -1069281, 365812, 1648117, -1118617],
+    "parity_gpu_vs_fp64_recipe": "max|Δ*1e6| = 0.3 — GPU fp32 tracks the proven four-way fp64 recipe within fp32 epsilon"
+  },
+  "reading": "A REAL llama-shaped decoder block's COMPUTE — RMSNorm, RoPE-rotated attention, SwiGLU FFN, two residuals — is now Form-native on the M4 GPU, bit-for-bit with the recipe walker. Weights are recipe DATA (arguments), so a llama layer stack is a sequence of these calls. With the load path already Form-native (q4k/q6k/f16 dequant four-way) and every llama-specific numeric four-way on the CPU floor (llama-numerics, rope, llama-block), both the weight load AND a real llama block's compute now run on the silicon. The transcendentals are the body's OWN (Newton sqrt, Taylor fexp/fsin/fcos/fln), never Metal's. Next rungs: parallelize across tokens/rows (one threadgroup per query), run the block over REAL llama3.2:3b GGUF weights on the GPU, add the causal mask, then the generation loop (tokenizer + KV cache + greedy decode).",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/llama-block-fwd-emit-band.fk && cd .. && bash scripts/metal_llama_block_audit.sh"
+}

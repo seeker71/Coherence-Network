@@ -67,4 +67,4 @@
 # ─────────────────────────────────────────────────────────────────────
 #   bash scripts/sqlite_driver_demo.sh        # emit -> clang -lsqlite3 -> digest, write, read, persist
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
-#     form-stdlib/tests/sqlite-read-band.fk   # the READ path, three-way (the destination's first half)
+#     form-stdlib/tests/sqlite-read-band.fk   # the READ path, four-way (the destination's first half)

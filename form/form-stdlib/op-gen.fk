@@ -1,0 +1,86 @@
+; op-gen.fk — the architect one granularity below arch-gen: the body INVENTS the OPERATOR itself.
+;
+; arch-gen/arch-capacity/arch-type/arch-joint all search how to COMPOSE and SIZE a fixed catalog of
+; hand-written layer types (ffn, attention). arch-search.fk is the one engine they share: crown the
+; minimal-cost candidate that fits. This cell drops one level: the candidate is no longer a stack of
+; GIVEN layers — it is a FUNCTION the body composed from base ops that NOBODY WROTE. The model dreams an
+; operator (a recipe over its input), measures it on data, and the same crown-minimal-cost-that-fits
+; discipline keeps the smallest one that fits exactly. The crowned operator is a content-addressed
+; composite recipe, so it enters learned-primitive.fk's path verbatim: when it runs hot, lp-abstract?
+; crystallizes it into a callable JIT-native primitive — the kernel's op set GROWS by an op it invented.
+;
+; An operator is a recipe tree over the single input x, in the universal shape (head = ctor):
+;   (list "var")        -> x                  a leaf: the input
+;   (list "const" k)    -> k                  a leaf: an integer constant
+;   (list "add" a b)    -> eval a + eval b    a binary op over two operator subtrees
+;   (list "mul" a b)    -> eval a * eval b
+; Integer ops only — every node is in the four-way JIT-able pure set, so the whole arc proves four-way
+; INCLUDING fkwu. The float-valued operator lane is the same shape over format-arith.fk numerics and is
+; 3-kernel-only until the fkwu float wall (fourth-arm-bands.txt) is crossed; that lane is named, not built here.
+;
+; Proven by: form-stdlib/tests/op-gen-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; --- RESOLVE: walk the operator recipe on input x — a function turning a number into a new number. ---
+    (defn og-eval (e x)
+        (if (str_eq (head e) "var") x
+            (if (str_eq (head e) "const") (nth e 1)
+                (if (str_eq (head e) "add")
+                    (add (og-eval (nth e 1) x) (og-eval (nth e 2) x))
+                    (mul (og-eval (nth e 1) x) (og-eval (nth e 2) x))))))
+
+    ; --- COST: the operator's size (node count). Occam over operators — the smallest function that fits. ---
+    (defn og-cost (e)
+        (if (str_eq (head e) "var") 1
+            (if (str_eq (head e) "const") 1
+                (add 1 (add (og-cost (nth e 1)) (og-cost (nth e 2)))))))
+
+    ; --- FIT: does the operator reproduce the data EXACTLY? A sample = (list x y). Integer-exact, like
+    ;     champion-challenger.fk — the verdict is identical on Go=Rust=TS=fkwu, no float, no epsilon. ---
+    (defn og-fits-sample? (e s) (if (eq (og-eval e (nth s 0)) (nth s 1)) 1 0))
+    (defn og-fits? (e samples)
+        (if (eq (len samples) 0) 1
+            (if (eq (og-fits-sample? e (head samples)) 1) (og-fits? e (tail samples)) 0)))
+
+    ; --- DREAM: generate candidate operators by composition. og-grow adds every (add a b)/(mul a b) over
+    ;     the operators discovered so far; og-gen iterates it `depth` times from the leaves. Deterministic
+    ;     (no RNG) — the same candidate set every run, so each invented operator is reproducible and
+    ;     content-addressed (structurally equal trees intern to one NodeID — the crystallization cache free).
+    ;     (and is binary — nest explicitly; never a 3-arg and across kernels.) ---
+    (defn og-append (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (og-append (tail xs) ys))))
+    (defn og-leaves () (list (list "var") (list "const" 1)))
+    (defn og-binops (a b) (list (list "add" a b) (list "mul" a b)))
+    (defn og-cross-b (a subs)
+        (if (eq (len subs) 0) (empty)
+            (og-append (og-binops a (head subs)) (og-cross-b a (tail subs)))))
+    (defn og-cross-a (rest subs)
+        (if (eq (len rest) 0) (empty)
+            (og-append (og-cross-b (head rest) subs) (og-cross-a (tail rest) subs))))
+    (defn og-grow (subs) (og-append subs (og-cross-a subs subs)))
+    (defn og-gen-acc (d subs) (if (eq d 0) subs (og-gen-acc (sub d 1) (og-grow subs))))
+    (defn og-gen (d) (og-gen-acc d (og-leaves)))
+
+    ; --- CROWN: the minimal-cost candidate that fits all samples — the same discipline as arch-search's
+    ;     as-search, scored by exact evaluation instead of gradient training. (The shared spine is
+    ;     "keep the cheapest candidate clearing the fit floor"; arch-search trains, op-gen evaluates.) ---
+    (defn og-crown-acc (cands samples best bcost)
+        (if (eq (len cands) 0) best
+            (do
+                (let c (head cands))
+                (if (if (eq (og-fits? c samples) 1) (lt (og-cost c) bcost) 0)
+                    (og-crown-acc (tail cands) samples c (og-cost c))
+                    (og-crown-acc (tail cands) samples best bcost)))))
+    (defn og-crown (cands samples) (og-crown-acc cands samples (empty) 999999))
+
+    ; read what the search invented: whether anything fit, and the crowned operator's cost.
+    (defn og-fits-any? (cands samples) (if (eq (len (og-crown cands samples)) 0) 0 1))
+    (defn og-best-cost (cands samples)
+        (do (let b (og-crown cands samples)) (if (eq (len b) 0) 999999 (og-cost b))))
+
+    ; --- CRYSTALLIZE: wrap a crowned operator as a learned-primitive composite cell (name kind heat frozen).
+    ;     It IS a composite recipe over base ops, so lp-abstract? lifts it to a callable JIT-native primitive
+    ;     once hot — the invented operator becomes part of the kernel's living primitive set by the same act
+    ;     that any hot composite does. The operator's recipe is the proof AND (crystallized) the native binary. ---
+    (defn og-as-primitive (name op heat) (list name "composite" heat 0))
+
+    0)

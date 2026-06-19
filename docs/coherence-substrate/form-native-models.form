@@ -288,22 +288,22 @@
 ;   M2  quant tensor encode/dequant — quantize_block (absmax -> int8/nf4 codes via round + the nf4
 ;        16-quantile table already in the format cell) + dequant; round-trip band: dequant(encode(W)) ~ W
 ;        within format epsilon; identical tensors node_eq (dedup proof). Weights become substrate cells.
-;        [SHIPPED: form-stdlib/tensor-quant.fk + tests/tensor-quant-band.fk → 4095, three-way. The
+;        [SHIPPED: form-stdlib/tensor-quant.fk + tests/tensor-quant-band.fk → 4095, four-way. The
 ;        kernels' half-away round IS the int8 quantizer; the nf4 table travels as data from the format
 ;        cell; int8 round-trips within 1e-2, nf4 within half its largest quantile gap × absmax (the
 ;        honest bound); identical rows → identical code lists (the dedup shape — node_eq interning
 ;        itself already proven by ml-flow-band.fk); a zero row encodes without dividing by zero.]
 ;   M3  transformer-numerics — softmax (max-subtract for stability), gelu (tanh approximation), layernorm,
-;        composed from the existing exp/tanh/matvec; each a three-way band on tiny dims.
+;        composed from the existing exp/tanh/matvec; each a four-way band on tiny dims.
 ;        [SHIPPED: form-stdlib/transformer-numerics.fk + tests/transformer-numerics-band.fk → 4095,
-;        three-way. exp by square-and-reduce Taylor, sqrt by fixed-count Newton, tanh from exp — all
+;        four-way. exp by square-and-reduce Taylor, sqrt by fixed-count Newton, tanh from exp — all
 ;        Lisp-level stdlib, every band claim pinned to the PyTorch fp64 reference (softmax · layer_norm
 ;        eps=1e-5 · gelu approximate='tanh') reduced to integers at 1e-6. The conformance discipline
 ;        turned toward the reference the whisper-tiny weights will arrive from.]
 ;   M4  one attention+FFN block — compose M1+M2+M3 into a learned-weight self-attention + FFN block,
-;        proven three-way on tiny dims (the real transformer primitive, replacing weightless attention.fk).
+;        proven four-way on tiny dims (the real transformer primitive, replacing weightless attention.fk).
 ;        [SHIPPED (fp64 lane): form-stdlib/transformer-block.fk + tests/transformer-block-band.fk → 511,
-;        three-way. The whisper-shaped pre-LN block — h = x + Wo·attn(LN1(x)), y = h + FFN(LN2(h)) —
+;        four-way. The whisper-shaped pre-LN block — h = x + Wo·attn(LN1(x)), y = h + FFN(LN2(h)) —
 ;        T=2/d=2/ffn=4, weights as recipe data (lists of rows), every claim pinned to the torch fp64
 ;        reference at 1e-6, the √d_k scale computed by the body's own tn-sqrt. The format-parameterized
 ;        and quantized-weight lanes stay M1/M2's stones.]
@@ -312,7 +312,7 @@
 ;        (add matmul conformance vectors to numeric-formats.canonical.json). Then port metal.ts -> a
 ;        Metal carrier for bf16 matmul, verified under epsilon.
 ;        [EMITTER-AS-RECIPE LANE SHIPPED (close-jit-crystallization's heart): form-stdlib/
-;        jit-tensor-emit.fk + tests/jit-tensor-emit-band.fk → 7, three-way — the slice-ABI matvec
+;        jit-tensor-emit.fk + tests/jit-tensor-emit-band.fk → 7, four-way — the slice-ABI matvec
 ;        EMITTER is a Form recipe (str_concat over the recipe shape; `extern fn` keeps the source
 ;        quote-free), the kernel keeps only dumb carriers (rustc --crate-type=cdylib, dlopen, call).
 ;        The emitted loop accumulates j DOWNWARD — tb-dot's exact right-fold — so the native result
@@ -339,7 +339,7 @@
 ;        f32→float, f16→half, bf16→bfloat storage, fp32 accumulator in every lane — M1's
 ;        accumulate-wide-store-lane semantics, one RNE rounding at the store boundary, load exact,
 ;        mul/add split through a named temporary so no compiler contraction can change the op order,
-;        inner loop j DOWN = tb-dot's right-fold). tests/metal-emit-band.fk → 31 three-way (each
+;        inner loop j DOWN = tb-dot's right-fold). tests/metal-emit-band.fk → 31 four-way (each
 ;        lane's emitted MSL byte-stable). LIVE WITNESS scripts/metal_matvec_audit.sh (M4 Max,
 ;        mathMode=safe, 30 dispatches after warm; CPU reference computed in the lane's own conversion
 ;        chain, parity gated bit-exact in the lane's storage format — bf16's store-RNE fires on
@@ -400,13 +400,13 @@
 ;   held-out signal, and champion-challenges it against the running model — provable, and gated on M1-M6
 ;   (you can only search architectures once you can build and run them).
 ;   M7's STYLE-SPACE ORGAN [SHIPPED: learning-style-space.fk + tests/learning-style-space-band.fk
-;   → 4095, three-way]: the genome the loop searches is now ROWS of (id, pool, core) data — CNN,
+;   → 4095, four-way]: the genome the loop searches is now ROWS of (id, pool, core) data — CNN,
 ;   mesh/GDL, attention, relational/max-plus, order-spectrum, and their compositions through ONE
 ;   combinator; the band proves three tasks crown three different styles (no free lunch), a new
 ;   bias appended as pure data is measurable immediately, federated memories compose to strictly
 ;   exceed each cell alone, and a curiosity floor meets every style before retrying any. See
 ;   learning-style-space.form.
-;   M7's MIXTURE-OF-EXPERTS GATE [SHIPPED: moe-router.fk + tests/moe-router-band.fk → 127, three-way]:
+;   M7's MIXTURE-OF-EXPERTS GATE [SHIPPED: moe-router.fk + tests/moe-router-band.fk → 127, four-way]:
 ;   the style-space's research crowns one winner per TASK; the MoE serves per INPUT. Experts are the
 ;   heterogeneous KINDS (mesh = diffusion, attn = sparse attention, conv = CNN, raw = memorizer); the
 ;   GATE is a Form-native choice — recognition-router fan-and-select for the simple gate, and a LEARNED
@@ -435,7 +435,7 @@
 ;   is realized: diffusion, sparse attention, CNN, memorizer, compute (runs recipes), short/long-term memory,
 ;   and recipe-generation. champion-challenger.fk flips serving authority between kinds on earned competition,
 ;   and the gate (recognition-router + the learned gating network) routes per input.
-;   M7's ARCHITECT [SHIPPED: arch-gen.fk + tests/arch-gen-band.fk → 31 three-way]: generation rises from
+;   M7's ARCHITECT [SHIPPED: arch-gen.fk + tests/arch-gen-band.fk → 31 four-way]: generation rises from
 ;   composing experts to composing LAYERS into a trained ARCHITECTURE. The body generates layer-stacks of
 ;   configurable DEPTH (each a list of typed layer-cells as data), ASSEMBLES and TRAINS each through
 ;   transformer-backprop.fk's stack engine, and crowns the one that fits — the no-op (depth 0, y=x) cannot
@@ -449,25 +449,25 @@
 ;   the served champion is protected ("champion", not promoted). This is M7's infer-best-while-searching-better
 ;   in full: generate challenger architectures, train them, promote only the earned winner — improving the
 ;   model without ever degrading what is served now. And CAPACITY-based search is now proven at d=4
-;   [arch-capacity-band.fk → 31 three-way]: the architect generates layers of configurable WIDTH, trains each
+;   [arch-capacity-band.fk → 31 four-way]: the architect generates layers of configurable WIDTH, trains each
 ;   over a 4-example DATASET (multi-example, not one target), and discovers the smallest width that fits — a
 ;   width-1 FFN-residual UNDERFITS the dataset (total loss 5.65, one gelu unit is not enough), width-2 fits
 ;   (loss → 0), and ac-min-width crowns 2. This is the proof 2-D could not give (in 2-D layernorm collapses
 ;   any input to one of two directions, so width does not discriminate; at d=4 it does). So the body now
 ;   discovers BOTH the depth and the width a task needs, trains them, and promotes only the earned architecture.
-;   And the JOINT (depth × width) search is now proven [arch-joint-band.fk → 31 three-way]: the architect
+;   And the JOINT (depth × width) search is now proven [arch-joint-band.fk → 31 four-way]: the architect
 ;   searches a grid of (depth, width) candidates, trains each over the dataset, and crowns the MINIMAL-cost
 ;   (depth·width) architecture that fits — Occam over architectures. On a d=4 dataset it crowns (depth 1,
 ;   width 2): (1,1) and (2,1) both underfit (width-1 is the bottleneck — depth does NOT compensate for it),
 ;   (1,2) fits at cost 2, and the over-large (2,2) at cost 4 is rejected. So the body reads that THIS task
 ;   needs width, not depth, and picks the smallest model that solves it. And the layer-TYPE axis is now
-;   proven [arch-type-band.fk → 31 three-way]: size is capacity, TYPE is the shape of the computation, and
+;   proven [arch-type-band.fk → 31 four-way]: size is capacity, TYPE is the shape of the computation, and
 ;   the architect discovers which kind's inductive bias the task wants. On a RETRIEVAL task (output = a value
 ;   selected from a fixed context), an ATTENTION layer — content-based retrieval — fits in 5 steps (loss
 ;   ~1e-5) while an FFN that must MEMORIZE the input→value map is still at 1.79 at step 5 and 0.033 at step 30;
 ;   the architect trains one candidate of each type and crowns "attn" — reading that this task wants attention,
 ;   not a feed-forward block. So the body now searches depth, width, AND type — picking both the size and the
-;   shape a task wants. And the SEARCH is now ONE engine [arch-search-band.fk → 31 three-way]: arch-search.fk
+;   shape a task wants. And the SEARCH is now ONE engine [arch-search-band.fk → 31 four-way]: arch-search.fk
 ;   is the single generic searcher that arch-gen (depth), arch-capacity (width), and arch-type (type) are all
 ;   instances of — given a list of (arch, cost) candidates of ANY depth/width/type, it trains each and crowns
 ;   the minimal-cost one that fits within the compute BUDGET. The budget is the resource constraint that makes
@@ -489,6 +489,19 @@
 ;   (depth × width × TYPE) grid can now be timed on the GPU. Next ring: arch-search itself dispatching the GPU
 ;   trainers per candidate over a mixed FFN/attention grid, and parallelizing the attention kernel across keys
 ;   and projection rows.
+;   And the architect now drops BELOW the layer to the OPERATOR ITSELF [op-gen-band.fk → 31 FOUR-WAY, incl.
+;   fkwu]: arch-gen/joint/type/search compose and size a FIXED CATALOG of given layer kinds; op-gen.fk generates
+;   the FUNCTION — candidate operators composed from base ops {var, const, add, mul} — and crowns the
+;   minimal-cost one that fits the data EXACTLY, the same crown discipline scored by EVALUATION instead of
+;   training. Given only those four ops the body DISCOVERS f(x) = x·x + x (which is in no leaf and no single
+;   composition — Occam-minimal cost 5), REJECTS the no-op identity y=x and the plausible wrong guess y=2x
+;   (exact fit, not "close"), and the crowned operator — a content-addressed composite recipe — enters
+;   learned-primitive.fk verbatim: once hot, lp-abstract? crystallizes it to a callable JIT-native primitive,
+;   so the kernel's op set GROWS by a function it invented. The same recipe is the four-way proof AND (on heat)
+;   the native binary — no second impl. Integer ops keep the whole arc four-way incl. fkwu; the float-valued
+;   operator lane is the same shape over format-arith and is 3-kernel-only until the fkwu float wall
+;   (fourth-arm-bands.txt) is crossed. The model dreams a kernel, measures it, and uses it:
+;   invention → measurement → crown → native, one engine.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·

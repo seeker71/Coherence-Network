@@ -9,9 +9,10 @@
 ; This entry is fkwu-native: input_byte is the staged-input op the emitted walker
 ; carries (tag 17); it is not registered in the three host walkers, so this runs on
 ; the emitted kernel — the native form-cli exe — not on Go/Rust/TS. The dispatch it
-; calls (form-cli.fk) is the four-way-proven shared brain. Interactive TTY (a
-; read-line loop + isatty prompt) wraps this same dispatch once those host-io ops
-; land in the emitter (host-io family).
+; calls (form-cli.fk) is the four-way-proven shared brain. The interactive TTY
+; surface (form-cli-repl.fk) wraps this same dispatch in a read_line loop over
+; real fd 0 — its host-io ops (read_line/print_str/isatty, tags 114/115/116) ride
+; the emitter alongside input_byte.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
 

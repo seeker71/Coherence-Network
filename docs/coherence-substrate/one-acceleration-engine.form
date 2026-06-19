@@ -1,0 +1,97 @@
+; one-acceleration-engine.form — ONE shared JIT lowering pipeline for every kernel,
+; replacing the three bespoke per-kernel JITs. The north star Urs named:
+;
+;   "How is shrinking helping with float JIT support? Unify all the JIT lowerings
+;    with a single working pipeline." (2026-06-19)
+;
+; ── THE PROBLEM: three JITs are three divergence surfaces ──
+;   Each kernel today lowers a hot closure to native in ITS OWN host language:
+;     - Go   : recipe → Go source → `go build -buildmode=plugin` → plugin.Open   (jit.go)
+;     - Rust : recipe → Rust source → `rustc --crate-type=cdylib` → libloading    (main.rs)
+;     - TS   : recipe → MSL/WGSL/CUDA via the GPU emitters                         (backends/)
+;   Three emitters, three compilers, three ABIs. Float bit-identity must then be won
+;   THREE times against THREE optimizers — and it is not. The Go float JIT lets the
+;   host compiler fuse a*b+c into a single-rounding FMA (or reorder a reduction), so
+;   the native body is NOT bit-identical to the walk. The async JIT adopts that body
+;   MID-FOLD, so a float-accumulating training loop uses walk-floats before adoption
+;   and native-floats after — the final weights depend on WHEN the background build
+;   landed. MEASURED (2026-06-19): the neural-lm-corpus band (a real-corpus bigram LM)
+;   read go=5 while rust=ts=fkwu=7, nondeterministically — a band that would pass
+;   four-way most runs and randomly diverge. The four-way floor caught it.
+;   Shrinking the Go JIT to i64-only "fixes" this by DELETING float JIT (slow-walk) —
+;   a stopgap pointed away from the goal. The goal is float JIT that WORKS.
+;
+; ── THE INSIGHT: only a SHARED, bit-identical-BY-CONSTRUCTION lowering is correct ──
+;   Bit-identity chased per-compiler is a losing game. Bit-identity by CONSTRUCTION is
+;   already solved, in one place, as a Form recipe:
+;     - jit-tensor-emit.fk — the emitter is a FORM RECIPE (host keeps only the dumb
+;       carriers: clang/rustc, dlopen, call-by-pointer). It is bit-identical by
+;       construction: the inner loop accumulates j DOWN exactly like tb-dot's
+;       right-fold, and mul/add split through a NAMED TEMPORARY so "no conformant
+;       compiler can contract them into an fma." MEASURED: native = recipe to the last
+;       bit, 20,077× on a 1280² matvec; the MSL lanes bit-exact vs the CPU reference in
+;       the lane's own conversion chain (scripts/metal_matvec_audit.sh).
+;     - fkwu's SELF-JIT — the one already in the body. hati-os-kernel-emit.fk's
+;       "self-JIT on heat" lowers each pure function FROM ITS CELLS to a native fk_nat
+;       (fkc-nat-expr / fkc-emit-jit); the emitted walker counts heat per function and
+;       FLIPS dispatch to the native past a threshold (fk_njit probe); melt-hot-swap
+;       melts a cold native back to the walk, champion-challenger gated with THE WALK AS
+;       THE ALWAYS-CORRECT CHAMPION. The native is emitted from the same cells and the
+;       walk stays the reference, so it is bit-identical by construction — the same
+;       discipline jit-tensor-emit proves at tensor scale (named-temp, no fma contraction).
+;       This IS a full JIT, 100% in Form, inside the universal walker.
+;
+; ── THE ONE ENGINE: fkwu's self-JIT, extended to floats ──
+;   The unified pipeline is not a new thing to build beside fkwu — it is fkwu's OWN
+;   self-JIT. Front-end: flatten a function's cells (already done). Engine: emit fk_nat
+;   from the cells, heat-flip to native, melt cold natives back, walk-as-champion
+;   (already done for the pure-compute INTEGER family — tags 1-7, 12; fk_nat is long long).
+;   Because every kernel runs fkwu, ONE self-JIT serves all four — no Go-plugin,
+;   Rust-cdylib, or TS bespoke emitter needed.
+;   THE ONE GAP (Urs, 2026-06-19 — "fkwu has a full JIT, 100% in fkwu, and if not, that
+;   is what we need"): the self-JIT does not yet lower FLOATS. The WALK handles floats
+;   fully (the float arms box fk_fbox(fk_num(a) op fk_num(b)) — the bit-identical
+;   reference); fk_nat does not. Closing it: fkc-nat-expr gains float arms emitting
+;   fk_fbox(<f64 expr over fk_num(a)>) THROUGH NAMED TEMPORARIES (never a*b+c in one C
+;   expression, so clang cannot contract to an fma), a boxed fk_natf table, the
+;   heat-walker dispatching it, and the honesty gate (fkc-can-list) widened to the
+;   float-pure family. The native then runs the EXACT fk_num/fk_fbox/f64 sequence the
+;   walk runs → bit-identical by construction, unlike the Go f64 plugin.
+;   For tensor-shaped hot paths the jit-tensor-emit C/MSL lane is the same discipline at
+;   width (native = recipe bit-for-bit, 20,077×) — the self-JIT's vectorized face, not a
+;   separate engine.
+;
+; ── THE MIGRATION (each step provable; the integer self-JIT is the proven template) ──
+;   M0  FLOAT SELF-JIT IN fkwu — the one real gap. Extend fkc-nat-expr + fkc-emit-jit to
+;       the float-pure family with named-temp emission; prove a float-pure function
+;       heat-flips to a native that equals the walk bit-for-bit (hati_os_kernel_audit.sh).
+;       This is what makes float JIT correct AND fast AND shared — the answer to the
+;       neural-lm-corpus divergence, in fkwu, not in a bespoke host plugin. (JIT_GAP_LEDGER #11.)
+;   M1  Host hot-paths dispatch to the in-process fkwu self-JIT instead of emitGoExpr→
+;       go-build / the Rust cdylib emitter. TestFkwuOffloadBridge is the proven seed; the
+;       open work is a Go/Rust kernel INTEGRATION task (fast in-process invocation), not
+;       an fkwu gap.
+;   M2  Rust and TS hot-paths dispatch to the same self-JIT. Three bespoke emitters → one.
+;   M3  The jit-tensor-emit C/MSL vectorized face generalizes from matvec/train shapes to
+;       the closure families the walk identifies as hot, shared by all kernels.
+;   M4  Compost emitGoExpr (jit.go), the Rust cdylib emitter, and the bespoke TS path —
+;       once dispatch is unified, three host-language emitters are duplicated tissue.
+;
+; ── OWNED + TRACKED (not buried) ──
+;   The neural-lm-corpus band (real-corpus bigram LM, beats the unigram baseline) is
+;   CORRECT on fkwu/rust/ts (7); the lone diverger is the Go BESPOKE float JIT (an
+;   optimization path, not the walk). Per the four-way rule the divergence is
+;   root-caused (host-compiler FMA on the non-bit-identical float plugin, adopted
+;   mid-fold) and tracked HERE to its specific fix: M0 above (fkwu's float self-JIT —
+;   the bit-identical native that makes the bespoke plugin unnecessary). The band stays
+;   out of form/fourth-arm-bands.txt until that lands — owned, named, not silently
+;   omitted. The FORM_JIT_HOT knob (jit.go) lets a workload run the deterministic walk meanwhile.
+;
+; KIN: jit-tensor-emit.fk (the emitter-as-recipe, bit-identical by construction) ·
+;   form/form-kernel-go/fkwu_bridge_test.go (the in-process offload bridge, proven) ·
+;   hati-os-kernel-emit.fk (fkwu's C emitted by Form) · hati-os-native-cli-emit.fk
+;   (emit→clang→exec) · form-native-models.form (the JIT-realization-gap note: the
+;   in-process Go plugin dispatch never realized a speedup either — the emit-compile-exec
+;   lane is the honest fast path) · neural-lm.fk + scripts/form_cli_neural_lm_train.sh
+;   (the real-corpus LM whose four-way run exposed the divergence).
+; teaching: lc-cognitive-sovereignty

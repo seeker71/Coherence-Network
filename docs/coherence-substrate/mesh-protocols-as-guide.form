@@ -136,7 +136,7 @@
 ;     before-rebroadcast + SNR contention window (meshtastic.org). These are reference DESIGNS; we cite
 ;     them as proof the mechanisms work, and we are free to diverge — which we do, on purpose, above.
 ;   MEASURED / ours, already built — the pieces the adoption lands on are real: device-heartbeat.fk
-;     (hb-present?/hb-organs, -> 127 three-way) is the heartbeat; cell-sync.fk (offer/diff/verify ->
+;     (hb-present?/hb-organs, -> 127 four-way) is the heartbeat; cell-sync.fk (offer/diff/verify ->
 ;     127) + merkle.fk (the content-address, three-way) are the friend's store-and-forward and the
 ;     dedup KEY; channel-interface.fk is the per-interface consent that replaces network membership.
 ;   BUILDABLE — clear path, not yet a band: the RELAY recipe itself — a body that receives a beat/offer
