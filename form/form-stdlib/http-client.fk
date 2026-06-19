@@ -50,3 +50,32 @@
     (let port (if (eq colon -1) "80" (substring hostport (add colon 1) (str_len hostport))))
     (let req (kh-render-request method path host body))
     (sock_request host port req)))
+
+; ── generic HTTP message parsing (works for a REQUEST or a RESPONSE) ──
+; The body is everything after the first blank line; the start-line is up to the
+; first CRLF. These are message-generic — the only request/response difference is
+; how the start-line is read (method vs status). High grammar: one parser, two views.
+(defn kh-msg-body (msg)
+  (do
+    (let crlf (str_find msg "\r\n\r\n" 0))
+    (if (gt crlf -1)
+        (substring msg (add crlf 4) (str_len msg))
+        (do
+          (let lf (str_find msg "\n\n" 0))
+          (if (gt lf -1) (substring msg (add lf 2) (str_len msg)) "")))))
+
+(defn kh-msg-start-line (msg)
+  (do
+    (let nl (str_find msg "\r\n" 0))
+    (if (gt nl -1) (substring msg 0 nl) msg)))
+
+; response status = the integer second token of the start line ("HTTP/1.0 200 OK" -> 200)
+(defn kh-status-of (response)
+  (do
+    (let line (kh-msg-start-line response))
+    (let sp (str_find line " " 0))
+    (if (eq sp -1) 0
+        (do
+          (let rest (substring line (add sp 1) (str_len line)))
+          (let sp2 (str_find rest " " 0))
+          (str_to_int (if (eq sp2 -1) rest (substring rest 0 sp2)))))))
