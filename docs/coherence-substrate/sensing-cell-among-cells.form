@@ -151,11 +151,16 @@
     (bounded      health-impact-receipt.form)                 # benefit / risk / mixed / unknown / refused — a gate, never a verdict
     (runnable     scripts/nanite_cell.py)                     # bootstrap witness: senses its host, traces content-addressed receipts,
                                                               # opens the two-sided Hati mesh channel (announce/heartbeat/offer/peers)
-    (honest       "'nanite' is a ROLE composed from organs that run. The bootstrap"
-                  "witness above is stdlib-only host-IO tissue; its Form-native"
-                  "carrier is resource-port.fk driven through the host-kernel host"
-                  "channel + tool-channel host:usage — that is the north star the"
-                  "bootstrap points at, never away from."))
+    (logic-four-way nanite-mem-parse)                         # the sensing LOGIC crosses Go/Rust/TS/fkwu: digit-scan + str_to_int +
+                                                              # used-ppm compute (tests/nanite-mem-parse-band.fk -> 15). NOT host-io-walled.
+    (carrier-edge "only the irreducible edges stay off the four-way floor, by"
+                  "category not excuse: the raw read VALUE is environmental"
+                  "(carrier-witnessed by receipt, not gated by value-parity); the"
+                  "mesh POST is a socket — the tracked frontier, not yet a carrier band.")
+    (honest       "'nanite' is a ROLE composed from organs that run; the bootstrap is"
+                  "Python, its Form-native carrier is resource-port.fk through the host"
+                  "channel — and the logic above already proves four-way, so the wall"
+                  "is the socket and the environmental value, named, never the logic."))
 
   # ── 8 · RESONANCE — the free vital information ───────────────────────
   # When a cell's internal state changes REPEATEDLY in coupling with being

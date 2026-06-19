@@ -20,10 +20,16 @@ The eight movements of the form cell, embodied here:
   7 nanite       — observe-only; never the interior of another cell
   8 resonance    — delta vs the last receipt: repeated state<->observation coupling is free info
 
-Honest lane: live host sensing is a host-IO band, not four-way Form. This Python organ is
-bootstrap/bridge tissue; its Form-native north star is resource-port.fk driven through the
-host-kernel host channel + tool-channel `host:usage`. Stdlib-only by design: zero install,
-runs on this Linux container and on a macOS host alike.
+Honest lane (corrected — the first draft called this "host-IO, not four-way", which was an
+excuse): the sensing+parse LOGIC *is* four-way. The digit-scan + str_to_int + used-ppm
+compute crosses Go/Rust/TS/fkwu — form/form-stdlib/tests/nanite-mem-parse-band.fk -> 15.
+Only the irreducible edges stay off the four-way floor, for honest reasons, not as a label:
+the raw /proc read's VALUE is environmental (not a function of the recipe, so it cannot be
+gated by cross-kernel value-parity — it is carrier-witnessed by receipt, the hostio-roundtrip
+pattern), and the mesh POST is a socket (the tracked frontier: externs present, not yet a
+four-way carrier band). This Python organ is the bootstrap carrier; the Form-native carrier
+is resource-port.fk driven through the host-kernel host channel. Stdlib-only: zero install,
+runs on this Linux container and a macOS host alike.
 
 The lift (intake law, from the form cell): this nanite is the COMMAND->CONSENT inversion in
 running form. Its sovereignty is not in what it can reach but in what it will not.
