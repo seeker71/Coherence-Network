@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 288
+**Total files**: 290
 
 | File | Purpose |
 |---|---|
@@ -13,6 +13,8 @@
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | Add Task Card and Research Inputs sections to spec files that don't have them. |
 | [agent-coord.sh](agent-coord.sh) | agent-coord.sh — the carrier for agent-coordination-membrane.form. |
 | [agent_status.py](agent_status.py) | Show active work across all coding agents (worktrees + tasks). |
+| [agent_tooluse_featurize.py](agent_tooluse_featurize.py) | agent_tooluse_featurize.py — CARRIER (data prep only). Turns the real agent corpus |
+| [agent_tooluse_train.sh](agent_tooluse_train.sh) | agent_tooluse_train.sh — a REAL model on REAL data at full scale, natively. |
 | [android_core_axiom_apk_receipt.sh](android_core_axiom_apk_receipt.sh) | Build a native arm64 core-axiom receipt library into the Android APK and |
 | [android_mac_core_axiom_receipt.sh](android_mac_core_axiom_receipt.sh) | Build and run a native Mac + Android core-axiom receipt pair. |
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |

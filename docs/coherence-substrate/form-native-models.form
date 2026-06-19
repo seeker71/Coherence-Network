@@ -61,6 +61,17 @@
 ;        output. Honest scale: 2-block / 24-param / 13+5 pairs / a simple ~1.2x signal — the LEARNING is
 ;        proven, not whisper-scale. Scaling = the same machinery + M5's JIT for speed + more data + a real
 ;        model (fine-tune real weights with local oracles).
+;     7. A REAL MODEL ON REAL DATA AT FULL SCALE, NATIVELY — the scaling step taken. scripts/agent_tooluse_*
+;        train a Form-emitted FFN (jte-mlp-train-msl, the recipe metal_ffn_audit bit-parity-proves) on the
+;        REAL agent corpus: 939 captured agent turns → 53 task-text features → 8 tool labels, 751 train /
+;        188 held. Weights start at a fixed small init and EMERGE over 60,080 native GPU SGD steps in ~7.8s.
+;        Held-out (unseen turns): micro-acc 84.8% vs 79.9% majority baseline, exact-set match 26.6% vs 11.2%
+;        (doubled), covers-used 53.7% vs 23.4% (doubled). Per-tool the learning is legible: Edit 67/53,
+;        Write 68/57, StructuredOutput 99/82, WebSearch 99.5/98 — the model reads the task and predicts the
+;        tools; Bash ties (near-universal), Read ties (keyword-blind), ToolSearch/Agent so rare "never" wins.
+;        First real insight surfaced by real data: held loss bottoms ~epoch 20 then rises while train keeps
+;        falling — overfitting, the handle for the architecture experiments (early-stop / regularize / the
+;        adaptive-swappable-kernel + branch + fast-fail + backtrack playground this foundation now enables).
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
