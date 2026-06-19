@@ -388,6 +388,15 @@
 ;        BPE merge core proven against the REAL whisper tokenizer (bpe-tokenizer.fk: " the"→264,
 ;        " tokenizer"→[14862,6545], exact). Remaining to an end-to-end transcript: assemble the pieces at
 ;        real width via JIT, learned decoder positionals, byte-map + regex word-split carriers, exact-erf gelu.]
+;        [NATIVE SPEEDUP MEASURED (the 33s interpreter block is a walker cost, not a real one): the
+;        Form matvec EMITTER (jit-tensor-emit.fk jte-matvec-rust) → rustc cdylib runs a 384×384 matvec
+;        in ~0.1ms and 1280×1280 (whisper-large width) in ~1.6ms, bit-exact vs numpy (the j-DOWN fold).
+;        The full d_model=384 block with its matvecs routed through that native lane runs in ~3-4ms —
+;        ~7000-12000× the 31s tree-walk — projecting a full 8-layer pass at ~20-35ms. Witness:
+;        scripts/jit_matvec_speedup_audit.py. The block is matvec-dominated, so SPEED is already solved
+;        by the proven emit→compile→exec lane; the remaining wiring is the buffer bridge (Form list ↔
+;        flat slice) + a CPU block emitter so the WHOLE block runs pure-Form-native end to end, plus the
+;        in-process jit_compile realization-gap fix (the dispatch bug) for the zero-carrier path.]
 ;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
 ;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
 ;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what

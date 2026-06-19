@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 287
+**Total files**: 288
 
 | File | Purpose |
 |---|---|
@@ -159,6 +159,7 @@
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
 | [jit_assembly_audit.sh](jit_assembly_audit.sh) | jit_assembly_audit.sh — read the JIT's machine code and measure the gap. |
+| [jit_matvec_speedup_audit.py](jit_matvec_speedup_audit.py) | scripts/jit_matvec_speedup_audit.py — witness: the Form-emitted native matvec speedup. |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
