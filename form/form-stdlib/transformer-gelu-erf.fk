@@ -1,0 +1,39 @@
+; transformer-gelu-erf.fk — whisper's EXACT (erf) gelu, closing the last numerics gap to the reference.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk
+;
+; transformer-numerics.fk's tn-gelu is the TANH approximation (what some models train on). whisper's
+; encoder/decoder FFN uses nn.GELU() = approximate='none' = the EXACT erf gelu, so our tanh-gelu block
+; differs from whisper's true output by ~4e-3 — the named M3 follow-up. This cell is the erf lane:
+;   erf(x)  — Abramowitz & Stegun 7.1.26 rational form (max |err| ~1.5e-7), odd-extended for x<0,
+;             composed from tn-exp/tn-abs (the body's own approximations) — bit-deterministic.
+;   gelu(x) = 0.5·x·(1 + erf(x/√2))
+; and the FFN/block variants that swap tb-gelu-map → the erf map, so tb-mh-block-erf is whisper's
+; TRUE block. Drops the residual vs whisper from ~4e-3 to ~1e-6 (the erf-approx + softmax/ln residual).
+
+; erf via A&S 7.1.26: t = 1/(1+p·|x|); erf = sign·(1 − poly(t)·e^(−x²)); poly in Horner form.
+(defn tn-erf (x)
+  (do
+    (let s (if (lt x 0.0) -1.0 1.0))
+    (let ax (tn-abs x))
+    (let t (div 1.0 (add 1.0 (mul 0.3275911 ax))))
+    (let poly (mul t (add 0.254829592
+              (mul t (add -0.284496736
+              (mul t (add 1.421413741
+              (mul t (add -1.453152027
+              (mul t 1.061405429))))))))))
+    (mul s (sub 1.0 (mul poly (tn-exp (sub 0.0 (mul ax ax))))))))
+
+; exact gelu: 0.5·x·(1 + erf(x/√2)),  1/√2 = 0.7071067811865476
+(defn tn-gelu-erf (x) (mul (mul 0.5 x) (add 1.0 (tn-erf (mul x 0.7071067811865476)))))
+
+; the erf-gelu FFN + residual block + whisper-true multi-head block (swap the activation map)
+(defn tb-gelu-erf-map (xs)
+  (if (eq (len xs) 0) (empty) (cons (tn-gelu-erf (head xs)) (tb-gelu-erf-map (tail xs)))))
+(defn tb-ffn-erf (w1 c1 w2 c2 x) (tb-affine w2 c2 (tb-gelu-erf-map (tb-affine w1 c1 x))))
+(defn tb-ffn-seq-erf (w1 c1 w2 c2 xs)
+  (if (eq (len xs) 0) (empty) (cons (tb-ffn-erf w1 c1 w2 c2 (head xs)) (tb-ffn-seq-erf w1 c1 w2 c2 (tail xs)))))
+(defn tb-ffn-block-erf (xs eps g2 be2 w1 c1 w2 c2)
+  (tb-add-seq xs (tb-ffn-seq-erf w1 c1 w2 c2 (tb-ln-seq xs eps g2 be2))))
+(defn tb-mh-block-erf (xs eps g1 be1 wq bq wk bk wv bv wo bo n hd scale g2 be2 w1 c1 w2 c2)
+  (tb-ffn-block-erf (tb-mh-attn-block xs eps g1 be1 wq bq wk bk wv bv wo bo n hd scale) eps g2 be2 w1 c1 w2 c2))

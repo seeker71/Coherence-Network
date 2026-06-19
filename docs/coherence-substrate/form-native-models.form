@@ -22,7 +22,9 @@
 ;     actual trained weights, real 6-head, run through the Form block at FULL d_model=384 = 6.66e-15
 ;     (whisper_block0_real_carrier.py). SPEED: the Form matvec emitter (jit-tensor-emit.fk) → rustc cdylib runs
 ;     a 384×384 matvec in ~0.1ms and the full 384 block in ~3ms — ~10^4× the tree-walker, bit-exact
-;     (jit_matvec_speedup_audit.py). All float bands are three-way (Go/Rust/TS); fkwu lacks the float op family.
+;     (jit_matvec_speedup_audit.py). With EXACT-erf gelu (transformer-gelu-erf.fk) the real block-0 matches
+;     whisper's TRUE output at 3.1e-7 — the last numerics gap, closed. All float bands are three-way
+;     (Go/Rust/TS); fkwu lacks the float op family.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT) and text →
 ;     audio (TTS) — where the model's architecture AND weights are content-addressed recipe DATA, one engine
 ;     (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and TRAINABLE/fine-tunable
@@ -32,7 +34,9 @@
 ;     1. ASSEMBLE end-to-end at real width: wire mel → conv stem → encoder → decoder → tokenizer through the
 ;        native matvec lane (M5's buffer bridge: Form list ↔ flat f64 slice) + a CPU/GPU block emitter, so a
 ;        real .wav produces a transcript — then score WER vs whisper-cli on held-out audio (the real metric).
-;     2. exact-erf gelu — closes the ~4e-3 residual to whisper's true output (the body uses tanh-gelu today).
+;     2. exact-erf gelu — SHIPPED (transformer-gelu-erf.fk: tn-erf A&S 7.1.26 + tn-gelu-erf + tb-mh-block-erf).
+;        tn-gelu-erf matches libm erf-gelu at 5e-7; the real whisper block-0 (d_model=96) via tb-mh-block-erf
+;        now matches whisper's TRUE output at 3.1e-7 (was 4.3e-4 with tanh-gelu). The last numerics gap closed.
 ;     3. learned DECODER positionals; byte-map + GPT-2 regex word-split carriers feeding the tokenizer; the full
 ;        80×3000 mel at JIT speed.
 ;     4. in-process jit_compile realization-gap fix (the dispatch bug) for the zero-carrier native path.
