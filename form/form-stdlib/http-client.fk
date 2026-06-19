@@ -41,15 +41,16 @@
 ; The wire is the only atom; everything else is flow + choice.
 (defn http-fetch (method url body)
   (do
-    (let after (substring url 7 (str_len url)))
+    (let https (eq (str_find url "https://" 0) 0))
+    (let after (substring url (if https 8 7) (str_len url)))
     (let slash (str_find after "/" 0))
     (let hostport (if (eq slash -1) after (substring after 0 slash)))
     (let path (if (eq slash -1) "/" (substring after slash (str_len after))))
     (let colon (str_find hostport ":" 0))
     (let host (if (eq colon -1) hostport (substring hostport 0 colon)))
-    (let port (if (eq colon -1) "80" (substring hostport (add colon 1) (str_len hostport))))
+    (let port (if (eq colon -1) (if https "443" "80") (substring hostport (add colon 1) (str_len hostport))))
     (let req (kh-render-request method path host body))
-    (sock_request host port req)))
+    (if https (tls_request host port req) (sock_request host port req))))
 
 ; ── generic HTTP message parsing (works for a REQUEST or a RESPONSE) ──
 ; The body is everything after the first blank line; the start-line is up to the

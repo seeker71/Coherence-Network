@@ -80,6 +80,7 @@
           (list "write_file_text" 2 104)
           (list "http_get" 3 105)
           (list "sock_request" 3 114)
+          (list "tls_request" 3 115)
           (list "_get" 2 106)
           (list "file_mtime" 1 107) (list "scan_run" 3 108)
           (list "record_get" 2 65) (list "record_set" 3 66)
