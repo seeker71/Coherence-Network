@@ -9,6 +9,49 @@ use them. The byte-exact authority stays the emitter source
 this is the orientation that lets you read those without reverse-engineering the
 shell.
 
+## fkwu is not only a walker — it is a native JIT, via Form → asm (no clang)
+
+The tables feed two faces of the fourth kernel, and it is easy to remember only
+the first:
+
+1. **Proof-walker.** `build_fourth` emits `fkc-emit-universal` — a generic tree-
+   walker that *interprets* the table. `validate.sh` uses this for four-way
+   **agreement** (you want pure walking to verify Go/Rust/TS == fkwu).
+2. **Self-JIT.** The same emitter family (`fkc-emit-jit2`, `fkc-walk-jit-text`)
+   lowers each pure function to a native alternative, counts **heat per
+   function**, and **flips dispatch to native** when heat crosses the line
+   (`fk_njit` probe); on cool it **melts back** to walking, champion-challenger
+   gated. Proven three-way in `crystallization-wire-band` / `melt-hot-swap-band`
+   (→ 31) and on the live binary in `scripts/hati_os_kernel_audit.sh` §21/§27.
+
+**The native target is Form → asm bytes, NOT C/clang.** This is the part most
+worth not forgetting. The proven, four-way lane emits machine code directly,
+every stage a Form recipe:
+
+```
+jit-lower (15, full-jit-lower 63)   recipe → lowered cell (one generic engine, per-tag shape is DATA)
+  → form-lower (31)                 instruction selection
+  → form-asm (31)                   arm64 instruction BYTES (little-endian on-disk image)
+  → form-macho (31) / form-elf (31) the .o / executable bytes — "RUNNABLE native binary with ZERO clang"
+  → recipe-dylib (787349)           direct, no-ld, dlopen-able dylib
+  → codesign (632490)               Form-emitted Mach-O signature (no codesign tool)
+  → dylib_call                      dlopen + call
+```
+
+clang is **dropped from the native path**, with proof: `form-asm`'s `fa-conviction`
+gate is **byte-identity** — the encoder may drop clang only once it byte-verifies
+its own output equals the assembler's. `form-macho` then drops clang (`ld` links
+the `.o`); `recipe-dylib` drops `ld` too. clang survives ONLY as an **oracle**
+(`lowering-conviction.fk`: a teacher for the open optimization question, never the
+master) and as the bootstrap C-emit path. So the §27 "drives clang" crystallize
+face is the *oracle/bootstrap* lane; the **proven native lane is Form emitting its
+own arm64, object format, and signature** — a runtime that compiles its recipes to
+native machine code with no external toolchain (the cognitive-sovereignty claim:
+a runtime that rents its compiler is not sovereign). Coverage frontier: `fkc-nat-expr`
+/ the jit-shape-table cover the pure-compute family (tags 1‑7, 12) today; impure
+functions (ports/organs/strings) stay walked, honestly named — the mechanism is
+generic, the op coverage is what grows.
+
 ## What a table is
 
 A table is one Form band — its prelude modules **plus** the band expression —
