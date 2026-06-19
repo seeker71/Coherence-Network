@@ -49,7 +49,7 @@
 ;   provisioning names whether a NEW device crosses the threshold at all.
 ;
 ; HONEST LANE:
-;   SHIPPED — the per-request admission DECISION, proven three-way (-> 127): the shared-wire test, the
+;   SHIPPED — the per-request admission DECISION, proven four-way (-> 127): the shared-wire test, the
 ;     allowlist test, and the AND of the two, with both negatives pinned (un-allowlisted device refused,
 ;     no-shared-channel device refused, a wire the joiner does not offer reads honestly as not-offered).
 ;   This is the BODY of one admitting node's yes/no for one join-request. What it does NOT carry, and is

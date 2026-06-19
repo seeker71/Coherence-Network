@@ -73,7 +73,7 @@
 ;   vitality, sovereignty, and trust evidence for the receiving body to plan: merge now, ask for more
 ;   samples, repair compatibility, or hold the slice without degrading the local champion.
 ;
-; ── THE MERGE (proven strategy, as a Form recipe — slice-merge.fk, PROVEN three-way → 127) ──
+; ── THE MERGE (proven strategy, as a Form recipe — slice-merge.fk, PROVEN four-way → 127) ──
 ;   trust-weighted FedAvg with TIES sign-election, division-free:
 ;     1. ELECT a sign per coordinate — the side with the larger summed weight wins (sm-elect). This is
 ;        confidence-weighted-vote.fk's integer weight-sum spine (cw-weight-for) specialized to a sign
@@ -91,7 +91,7 @@
 ;
 ; ── THE MILESTONES ──
 ;   M0  merge two task-vector slices (TIES sign-election + trust-weighted FedAvg, order-stable, gone-peer
-;       excluded) — SHIPPED: slice-merge.fk + tests/slice-merge-band.fk → 127, three-way.
+;       excluded) — SHIPPED: slice-merge.fk + tests/slice-merge-band.fk → 127, four-way.
 ;   M1  wrap the merged delta in a slice-update cell and round-trip it through cell-sync (offer → diff →
 ;       verify-by-re-address) — SHIPPED: slice-update-roundtrip.fk -> 127, and model-data-sharing.fk
 ;       composes the request/apply/source/merge receipt -> 4095 four-way.

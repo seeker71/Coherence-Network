@@ -26,8 +26,8 @@
 ;                 whole)                      └─ audio out: AVSpeechSynthesizer (Mac) / TextToSpeech (Android)
 ;
 ; ── EXISTS (proven Form bodies + working carriers — the hard part is done) ──
-;   - turn-taking.fk (→127, three-way) — the speak/stay gate, LEARNED from invitations. THE novel core.
-;   - voiced.fk (→511, three-way) — the silence/speech gate that stops the STT hallucinating over silence.
+;   - turn-taking.fk (→127, four-way) — the speak/stay gate, LEARNED from invitations. THE novel core.
+;   - voiced.fk (→511, four-way) — the silence/speech gate that stops the STT hallucinating over silence.
 ;     A transcript is trusted only when the chunk is loud AND the STT is speech-confident (loudness from
 ;     mean dBFS; speechiness from 1−no_speech_prob). 0 silence (say/learn nothing) · 1 audible non-speech
 ;     (the oracle classifies + co-learning learns, but NO transcript) · 2 voiced speech (trust the words).

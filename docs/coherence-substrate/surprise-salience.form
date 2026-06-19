@@ -1,6 +1,6 @@
 ; surprise-salience.form — rank surprises by HOW surprising, so the dashboard highlights what matters most.
 ;
-; THE SHAPE  (runnable: form-stdlib/surprise-salience.fk · proven: tests/surprise-salience-band.fk -> 127, three-way)
+; THE SHAPE  (runnable: form-stdlib/surprise-salience.fk · proven: tests/surprise-salience-band.fk -> 127, four-way)
 ;
 ;   active-inference.fk answers WHETHER a step surprised — predicted != actual is a bit, a 1. That bit
 ;   is enough to count total error over a run; it is not enough to rank. Once the body carries more

@@ -9,7 +9,7 @@
 ;     OS): confidence 100, near-zero cost, and TRUE by definition (it IS what is playing).
 ;   INFERRED — a classifier guessed from raw signal (audio fingerprint, whisper, vision): real cost,
 ;     and only a guess.
-;   Three consequences, all composing the spine (SHIPPED + proven: declared-source.fk -> 127, three-way):
+;   Three consequences, all composing the spine (SHIPPED + proven: declared-source.fk -> 127, four-way):
 ;     PREFER  a declared reading wins the route over any inferred one (ds-route) — the source's own
 ;             word is ground truth, not a vote to out-weigh.
 ;     SKIP    when something is declared, the expensive classifier does not run at all (ds-should-

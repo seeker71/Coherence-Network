@@ -25,7 +25,7 @@
 ;
 ; LANE 2 — THE BODY'S OWN PERCEPTION (the toolkit)
 ;   north star  a complete, content-addressed perception the body runs and grows for itself, no foreign model.
-;   ground      ~20 recipes proven three-way: feature-vector · nearest-shape · novelty · sequence-predictor ·
+;   ground      ~20 recipes proven four-way: feature-vector · nearest-shape · novelty · sequence-predictor ·
 ;               classifier-eval · temporal-smoothing · perception-pipeline(127) · drift-detect · ensemble-vote ·
 ;               anomaly-band · markov-2 · histogram-peak · transition-detect · cooldown.
 ;   direction   real features from real carriers; nearest-shape interns real prototypes; the pipeline runs on a stream.

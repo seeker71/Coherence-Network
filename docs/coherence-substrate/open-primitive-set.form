@@ -27,7 +27,7 @@
 ;     silicon's tensor units as one primitive (local-inference-as-organ — drive the organ, don't
 ;     reimplement it). With these as leaves, every higher recipe is grounded in actual sensing.
 ;
-; THE SELF-ABSTRACTION LOOP (runnable: form-stdlib/learned-primitive.fk -> 255, three-way):
+; THE SELF-ABSTRACTION LOOP (runnable: form-stdlib/learned-primitive.fk -> 255, four-way):
 ;   A cell = (name, kind, heat, frozen). kind "base" = a sensor/MLX/core op (permanent, never melts);
 ;   "composite" = a recipe over children (expandable). The JIT's live heat drives it:
 ;     lp-abstract? (composite, heat >= freeze)  -> the JIT lifts a hot composite into a learned primitive.
@@ -46,7 +46,7 @@
 ;
 ; HONEST LANES (lc-honest-lane):
 ;   ALREADY BUILT / MEASURED — substrate-phase.fk, the three-kernel JIT, the thermodynamics teaching.
-;   SHIPPED NOW — the open-primitive-set POLICY: learned-primitive.fk, proven three-way (255). (The
+;   SHIPPED NOW — the open-primitive-set POLICY: learned-primitive.fk, proven four-way (255). (The
 ;     proof earned its keep: a 3-arg (and a b c) passed on TS but Go/Rust dropped the third arg — the
 ;     three-way caught the non-portability; nested to binary (and (and a b) c), all three agree.)
 ;   CARRIER WORK, NAMED NOT BUILT — (1) the sensor BINDINGS per platform: Android LocationManager /
