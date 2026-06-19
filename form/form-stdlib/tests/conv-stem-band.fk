@@ -1,0 +1,23 @@
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv-stem.fk
+;
+; conv-stem-band — whisper's two-conv encoder front-end: gelu(conv1 k3 s1 p1) → gelu(conv2 k3
+; s2 p1), proven against numpy (conv1d math exact; gelu = tn-gelu tanh approx — whisper's exact
+; erf gelu is the named M3 follow-up). in=3, hidden=4, T=6 → time halved by conv2.
+; Verdict 1 when the stem output matches within 1e-6.
+
+(do
+  (defn cvs-vmaxdiff (a b)
+    (if (eq (len a) 0) 0.0
+        (do (let d (tn-abs (sub (head a) (head b))))
+            (let r (cvs-vmaxdiff (tail a) (tail b)))
+            (if (gt d r) d r))))
+  (defn cvs-maxdiff (as bs)
+    (if (eq (len as) 0) 0.0
+        (do (let d (cvs-vmaxdiff (head as) (head bs)))
+            (let r (cvs-maxdiff (tail as) (tail bs)))
+            (if (gt d r) d r))))
+  (let input (list (list 0.3734 -0.0695 0.2609) (list 0.4685 -0.0976 0.2124) (list 0.3692 0.0227 0.1197) (list 0.0309 -0.0216 -0.0739) (list -0.2673 0.0554 -0.2109) (list -0.4886 0.0434 0.4739)))
+  (let w1 (list (list (list -0.1662 0.4829 -0.4291) (list -0.2812 -0.3721 -0.2752) (list -0.4342 -0.1779 -0.1064)) (list (list 0.3961 -0.4713 0.2642) (list -0.1545 -0.1483 0.4388) (list 0.4847 -0.119 -0.1803)) (list (list -0.0675 0.1382 0.2956) (list -0.2299 -0.4313 -0.468) (list 0.3011 0.1036 -0.0446)) (list (list 0.2902 -0.4611 0.1271) (list 0.4886 -0.0536 -0.2847) (list 0.084 -0.3118 -0.349)))) (let b1 (list 0.0361 -0.3996 0.2312 0.4397)) (let w2 (list (list (list 0.4433 0.162 -0.4911 -0.0685) (list -0.1253 0.0106 -0.4321 -0.3141) (list 0.0958 -0.0291 -0.0652 0.0297)) (list (list 0.0991 -0.0956 0.2065 0.2207) (list 0.2209 0.3228 0.0106 0.3663) (list -0.1936 0.0871 0.3301 -0.2966)) (list (list -0.2015 0.1077 0.4392 0.1197) (list -0.0242 0.3189 0.2234 0.0623) (list -0.0064 0.0277 -0.3212 0.2634)) (list (list 0.3066 0.1354 0.0021 -0.2729) (list -0.2014 -0.4917 0.4971 0.35) (list -0.3616 0.2886 0.484 0.3128)))) (let b2 (list -0.2639 0.1569 0.4772 0.2316))
+  (let expected (list (list -0.14164131918694792 0.08395935114239872 0.4598735836246679 0.6108182733427975) (list -0.1669644915276941 0.25126765095633263 0.587694640542585 0.3276992829955252) (list -0.14624124394599416 0.19466386674549038 0.35451744990371625 0.0909519995441632)))
+  (let got (cv-stem input w1 b1 w2 b2))
+  (if (lt (cvs-maxdiff got expected) 0.000001) 1 0))
