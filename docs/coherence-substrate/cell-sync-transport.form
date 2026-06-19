@@ -1,6 +1,6 @@
 ; cell-sync-transport.form — a cell learned on one device reaches another, content-addressed.
 ;
-; RUNNABLE HEART: form-stdlib/cell-sync.fk proves the diff/verify/consent LOGIC three-way (cs-missing =
+; RUNNABLE HEART: form-stdlib/cell-sync.fk proves the diff/verify/consent LOGIC four-way (cs-missing =
 ; the want-set · cs-accept-count = re-address verify · cs-shareable = the consent filter; band -> 127).
 ; The wire FRAMES over a carrier and peer discovery remain BUILDABLE/carrier-work, named below.
 ;

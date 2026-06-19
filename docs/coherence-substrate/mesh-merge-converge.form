@@ -12,7 +12,7 @@
 ; THE SHAPE  (runnable: form-stdlib/mesh-merge-converge.fk · proven: tests/mesh-merge-converge-band.fk -> 127)
 ;
 ;   This recipe carries NO arithmetic of its own — it composes slice-merge.fk's sm-num / sm-den (the
-;   trust-weighted FedAvg + TIES sign-election merge, proven three-way -> 127) and proves ONE thing about
+;   trust-weighted FedAvg + TIES sign-election merge, proven four-way -> 127) and proves ONE thing about
 ;   them: their value at a coordinate is invariant under reordering of the slice list.
 ;   1. PERMUTE  mm-perm: a re-cons of the same three cells — no element added or lost, only order changed.
 ;      The six orderings of {A,B,C} are the six gossip paths the three deltas can arrive by.
@@ -28,11 +28,11 @@
 ;
 ; WHY IT MATTERS:
 ;   the convergence is integer-exact (slice-merge defers the divide), so every cell agrees on the same
-;   NUMBERS, bit-identical three-way (Go=Rust=TS) — a float-averaging PyTorch federation, where order of
+;   NUMBERS, bit-identical four-way (Go=Rust=TS=fkwu) — a float-averaging PyTorch federation, where order of
 ;   summation perturbs the low bits, cannot promise this. Eventual consistency without a coordinator,
 ;   without a clock, without a trusted prover: the merge is the proof.
 ;
-; THE PROVEN VERDICT — tests/mesh-merge-converge-band.fk -> 127, three-way, 0 divergent:
+; THE PROVEN VERDICT — tests/mesh-merge-converge-band.fk -> 127, four-way, 0 divergent:
 ;   A=(w2,[3,-2,5]) B=(w1,[1,4,-5]) C=(w3,[2,-1,-4]); merged coord0 = (13 6), coord1 = (-7 5), coord2 = (-17 4).
 ;     1   the merge computes the right numerator         (mm-num coord0 == 13)
 ;     2   the merge computes the right denominator       (mm-den coord0 == 6)

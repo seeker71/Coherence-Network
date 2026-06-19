@@ -23,7 +23,7 @@
 ;                   exemplars from both mics dedup to one NodeID for free).
 ;   7. CONVERGE   — the merged classifier recognizes the UNION of what both mics heard.
 ;
-; WHY TWO MICS ARE FASTER (proven — tests/co-learning-band.fk → 127, three-way):
+; WHY TWO MICS ARE FASTER (proven — tests/co-learning-band.fk → 127, four-way):
 ;   Each mic catches different signals, so each cell's classifier is PARTIAL — it recognizes only the
 ;   shapes it has met. Device A (heard speech) gets a MUSIC feature wrong; device B (heard music) gets
 ;   SPEECH wrong; the MERGE of their exemplar sets gets BOTH right. The federated speedup is real and

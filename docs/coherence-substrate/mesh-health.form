@@ -48,7 +48,7 @@
 ;   partition; watching channels too keeps it honest. All three kernels land 127.
 ;
 ; HONEST LANE:
-;   SHIPPED — the standing READOUT over a known snapshot, proven three-way (-> 127): connected,
+;   SHIPPED — the standing READOUT over a known snapshot, proven four-way (-> 127): connected,
 ;     whole, partitioned, each a pure function of the three counts already in hand.
 ;   This is the READING of the mesh's state, not the GATHERING of it. What it does NOT carry, and is
 ;   honestly out of this brick's scope: WHERE the three counts come from — the carrier that polls each

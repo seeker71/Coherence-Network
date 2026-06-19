@@ -28,7 +28,7 @@
     (ground        coherence-substrate)                  # the recipe/tree — what the program IS
     (witness-law   witness-theorem.form)                 # fired / refuted / SILENT — now inside one program
     (senses-for    core-lift + JIT)                      # hot ops are lift candidates; the readout feeds the loop
-    (proof-band    tests/form-diagnose-band.fk)          # 31 three-way, every diagnosis two-sided
+    (proof-band    tests/form-diagnose-band.fk)          # 31 four-way, every diagnosis two-sided
     (live-witness  scripts/form_diagnose_demo.sh))       # real binaries, real channels, conviction live
 
   # ── The channels — every emitter is observable live ──────────────────
@@ -86,7 +86,7 @@
     (verbs     "fd-vhot (hottest node) · fd-vdead (never-executed nodes) · fd-vat (point lookup)")
     (witnessed "fib(10)=55 live: hot node named; 89 leaves + 88 internal = 177 calls
                 read off the counts; scripts/form_symbol_demo.sh prints the full table")
-    (band      "tests/form-spy-band.fk -> 31 three-way — emission carries the counter,
+    (band      "tests/form-spy-band.fk -> 31 four-way — emission carries the counter,
                 one engine with the standard walk, hot/dead two-sided, deterministic"))
 
   # ── Cell provenance — REALIZED: row -> original source file:line:col ──
@@ -130,7 +130,7 @@
     (verbs     "fd-twatch (all values of a node, in order) · fd-tlast · fd-tdepth")
     (joined    "trace -> provenance -> source line: the step log reads as the source itself")
     (witnessed "scripts/form_debug_demo.sh — the step log + the watchpoint, live")
-    (band      "tests/form-debug-band.fk -> 31 three-way — tracer present, one engine,
+    (band      "tests/form-debug-band.fk -> 31 four-way — tracer present, one engine,
                 watch/last/depth two-sided, deterministic emission"))
 
   # ── The mutation channel — REALIZED: creation + repoints, never reads ──
@@ -155,7 +155,7 @@
     (witnessed "3 births + 1 repoint = the whole state genesis (scripts/form_mut_demo.sh);
                 the same run's full value-trace: 12 events — the channel is 3x leaner here
                 and the ratio grows with read-heavy programs")
-    (band      "tests/form-mut-band.fk -> 31 three-way — C/S guards present, reads proven
+    (band      "tests/form-mut-band.fk -> 31 four-way — C/S guards present, reads proven
                 silent BY ABSENCE, one engine, the three planes attested, deterministic"))
 
   # ── Closing cells ─────────────────────────────────────────────────────
@@ -180,6 +180,6 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-diagnose.fk \
-#     form-stdlib/tests/form-diagnose-band.fk      # → 31 three-way, all diagnoses two-sided
+#     form-stdlib/tests/form-diagnose-band.fk      # → 31 four-way, all diagnoses two-sided
 #   bash scripts/form_diagnose_demo.sh             # real channels: native exit codes + live
 #                                                  #   fk_arms framebuffer → conviction

@@ -9,7 +9,7 @@
 ;   missed more, the body drifted; if the same, it is steady. The body needs a direction across time, read
 ;   from its own error history.
 ;
-; THE SHAPE  (runnable: form-stdlib/learning-trend.fk · proven: tests/learning-trend-band.fk -> 127, three-way)
+; THE SHAPE  (runnable: form-stdlib/learning-trend.fk · proven: tests/learning-trend-band.fk -> 127, four-way)
 ;
 ;   The input is a list of per-window error COUNTS, MOST RECENT FIRST. (2 5 8) reads "this window 2 misses,
 ;   the one before 5, the one before that 8" — error has been falling. Counts are integers 0..N.

@@ -50,7 +50,7 @@
 ;      throughput x quality, the same vector->scalar the recognition carriers do; route to the
 ;      most-throughput path that clears a floor, fail-fast on the slow ones, trust the strong one,
 ;      consensus = a viable fallback organ exists.   [SHIPPED: tests/recognition-router-compute-band.fk
-;      -> 63, three-way. The choose-model decision tree the ask described, proven, already Form.]
+;      -> 63, four-way. The choose-model decision tree the ask described, proven, already Form.]
 ;   3. INFERENCE GRAPH AS FORM — express the forward pass (A) as a Form recipe whose leaf ops
 ;      drive MLX/Metal kernels (B). The body owns the graph; the organ does the FLOPs.   [build]
 ;   4. THE FEEDBACK LOOP — the resource sense (1) feeds the router (2), which re-routes the graph

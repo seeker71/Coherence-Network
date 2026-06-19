@@ -31,7 +31,7 @@
 ;                      category alone); "third-party" until the competition proves over a long-enough
 ;                      window. cc-authority's shape with the per-category-oracle vocabulary.
 ;
-; THE PROVEN VERDICT (tests/colearning-retire-band.fk -> 127, three-way Go=Rust=TS):
+; THE PROVEN VERDICT (tests/colearning-retire-band.fk -> 127, four-way Go=Rust=TS=fkwu):
 ;   reached (12 trials, oracle 10 / native 10) — the native arm REACHES at margin 0 (a tie reaches:
 ;     equal-or-exceed; the native need not BEAT the oracle to free it, only catch it) over a window past
 ;     the 12-sample floor -> RETIRE, authority "native".  behind (oracle 9 / native 6) -> NOT retired,

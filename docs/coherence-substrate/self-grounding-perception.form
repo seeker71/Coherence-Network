@@ -43,7 +43,7 @@
 ;     a sense. [next brick — the recognizer itself]
 ;
 ;   The promotion loop — the governing recipe, SHIPPED and proven (self-grounding-classifier.fk,
-;   tests/self-grounding-classifier-band.fk -> 63, three-way): our classifier's reading runs beside
+;   tests/self-grounding-classifier-band.fk -> 63, four-way): our classifier's reading runs beside
 ;   the ground-truth route; sg-correct / sg-wrong count agreement over the shadow-learning history;
 ;   sg-promoted? trusts our perception only when agreement clears a proven-count gate (value-
 ;   execution's credit discipline, division-free); sg-authority routes "self" once promoted (the
@@ -61,7 +61,7 @@
 ;   (the organ, driven — see local-inference-as-organ.form); the graph and the GROUNDING are Form.
 ;
 ; ── THE PATH ──
-;   1. ground-truth promotion loop      [SHIPPED: self-grounding-classifier.fk -> 63, three-way]
+;   1. ground-truth promotion loop      [SHIPPED: self-grounding-classifier.fk -> 63, four-way]
 ;   2. the substrate-nearest-shape recognizer (turboquant -> position -> content-addressed match;
 ;      learns by interning ground-truth labels)                                          [build]
 ;   3. the Android sense-port array (Kotlin carrier; every permitted sensor a port)       [build]

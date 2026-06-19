@@ -39,7 +39,7 @@
 
   (host-targets
     (catalog      hati-os-targets.fk)
-    (proof        tests/hati-os-targets-band.fk -> 255 three-way)
+    (proof        tests/hati-os-targets-band.fk -> 255 four-way)
     (targets      macos-arm64 android-arm64)
     (distribution https://hati.earth/downloads/hati-os)
     (contract     one-native-binary-per-target with-sha256 with-source-map with-physical-lane-receipts)
@@ -75,7 +75,7 @@
   # and writes the first measured comparison rows.
   (m1-cli-seed
     (emitter      hati-os-native-cli-emit.fk)                    # hati-os-program: the whole binary as a string
-    (proof        tests/hati-os-native-cli-emit-band.fk -> 7 three-way)
+    (proof        tests/hati-os-native-cli-emit-band.fk -> 7 four-way)
     (carrier      scripts/hati_os_kernel_audit.sh)           # clang -O2, parity, time/rss/size/startup
     (workloads    fib sum ackermann)                        # the kernels/README.md performance frame
     (lowering     recursion-to-loops-for-fib-and-sum ack-stays-recursive)  # value parity over integers
@@ -91,8 +91,8 @@
     (grammar      tool-channel-grammar.fk)                 # declarations lower into the same rows
     (surface      docs/coherence-substrate/tool-channel.form)
     (compat       docs/coherence-substrate/fourth-kernel.form)
-    (proof        tests/tool-channel-band.fk -> 255 three-way)
-    (grammar-proof tests/tool-channel-grammar-band.fk -> 255 three-way)
+    (proof        tests/tool-channel-band.fk -> 255 four-way)
+    (grammar-proof tests/tool-channel-grammar-band.fk -> 255 four-way)
     (protocols    host:exec host:process host:usage host:file http:request kernel:call kernel:route stream:read store:query)
     (applets      grep find awk fields group xpath xmlpath)
     (catalog-ops  words providers queries which plan)

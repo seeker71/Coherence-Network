@@ -8,7 +8,7 @@
 ;   it and ANOMALOUS when it falls outside. Where the recognition floor is one-sided (at or above is known),
 ;   a band is two-sided — below the floor is as anomalous as above the ceiling.
 ;
-; THE SHAPE  (runnable: form-stdlib/anomaly-band.fk · proven: tests/anomaly-band-band.fk -> 127, three-way)
+; THE SHAPE  (runnable: form-stdlib/anomaly-band.fk · proven: tests/anomaly-band-band.fk -> 127, four-way)
 ;
 ;   A reading x, lo, hi are integers 0..100; the band is the closed interval [lo, hi].
 ;     ab-in-band?   x >= lo AND hi >= x : the reading sits inside the lived range (boundary counts as in).

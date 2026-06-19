@@ -23,7 +23,7 @@
     (recipe       form-stdlib/db-api-server.fk)       # das-emit → the C → the binary
     (witness      scripts/db_api_server_demo.sh)      # emit → clang → run → curl every route
     (container    deploy/db-api/Dockerfile)           # minimal Linux image: binary + .db only
-    (data-proof   tests/sqlite-read-band.fk))         # the load-bearing parse, 31 three-way
+    (data-proof   tests/sqlite-read-band.fk))         # the load-bearing parse, 31 four-way
 
   # ── What the one binary does ─────────────────────────────────────────
   (routes
@@ -78,5 +78,5 @@
 #   bash scripts/db_api_server_demo.sh          # emit → clang → run → curl /, /api/idea,
 #                                               #   /api/_surface, /api/_binary (IDENTICAL self-return)
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
-#     form-stdlib/tests/sqlite-read-band.fk     # → 31 three-way (the data body)
+#     form-stdlib/tests/sqlite-read-band.fk     # → 31 four-way (the data body)
 #   docker build -f deploy/db-api/Dockerfile -t form-db-api .   # the Linux container (needs a daemon)

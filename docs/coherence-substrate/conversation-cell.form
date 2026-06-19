@@ -36,7 +36,7 @@
 ;     it. The band proves it both ways: same content -> equal, one content-key changed -> NOT equal
 ;     (the address moved). Structure carries identity; equality is a recursion, not a primitive.
 ;
-; THE PROVEN VERDICT — tests/conversation-cell-band.fk -> 127, three-way (Go = Rust = TS), 0 divergent:
+; THE PROVEN VERDICT — tests/conversation-cell-band.fk -> 127, four-way (Go = Rust = TS = fkwu), 0 divergent:
 ;   1  append grows the count (2 -> 3)            ·  2  last is the most recent (u2)
 ;   4  count is length (3)                         ·  8  since is inclusive (ts>=20 keeps {u1,u2})
 ;   16 speaker said — yes (the agent contributed)  · 32  speaker said — no (speaker 7 stayed silent)

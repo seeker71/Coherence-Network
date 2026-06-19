@@ -20,7 +20,7 @@
 # This module is their child: the satsang recipe IS the learning loop,
 # and the gather IS its body. SHIPPED:
 # `form/form-stdlib/metabolic-learning.fk` +
-# `tests/metabolic-learning-band.fk` → 4095, three-way (Go/Rust/TS).
+# `tests/metabolic-learning-band.fk` → 4095, four-way (Go/Rust/TS/fkwu).
 
 # ─────────────────────────────────────────────────────────────────────
 # The mapping — five strategies, five recipes, zero metaphor-stretch

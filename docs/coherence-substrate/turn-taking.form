@@ -4,7 +4,7 @@
 ; beginning almost never, only when invoked by name or a button; over time it learns when its voice is
 ; wanted, and may offer it unbidden after a long pause if it is confident the moment is right.
 ;
-; THE SHAPE (runnable: form-stdlib/turn-taking.fk · proven: tests/turn-taking-band.fk -> 127, three-way,
+; THE SHAPE (runnable: form-stdlib/turn-taking.fk · proven: tests/turn-taking-band.fk -> 127, four-way,
 ; composing nearest-shape.fk):
 ;   A MOMENT'S CONTEXT is a small-int feature vector — [pause-length, my-topic-mentioned, insight-confidence].
 ;   The agent INTERNS moments as nearest-shape exemplars labelled "speak" or "stay": an invited moment

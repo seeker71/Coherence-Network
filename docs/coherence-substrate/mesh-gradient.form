@@ -46,7 +46,7 @@
 ;   the three kernels read it identically (the raw-gate divergence mesh-relay caught live, avoided here).
 ;
 ; HONEST LANE:
-;   SHIPPED — one node's next-hop choice from a known distance field, proven three-way (-> 127):
+;   SHIPPED — one node's next-hop choice from a known distance field, proven four-way (-> 127):
 ;     strict downhill selection, the steepest-step min-select, arrival at distance 0, and honest "" when
 ;     no neighbor descends (a local minimum, or the node is itself the destination).
 ;   This is the BODY of one node's forwarding decision for one message. What it does NOT carry yet, and

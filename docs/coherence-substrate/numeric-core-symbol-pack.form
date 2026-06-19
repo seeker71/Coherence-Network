@@ -59,7 +59,7 @@
                        pack file at runtime — so the SAME binary translates its
                        model into ANY language by swapping the pack, no rebuild;
                        witnessed live in en/fr/de/es/sa (five tongues, one
-                       binary). Quoteless, so the emitter is three-way clean
+                       binary). Quoteless, so the emitter is four-way clean
                        (self-translate-universal-band -> 15). Any language is a
                        data file; the binary is language-free")
     (running-binary   "self-translate.fk emits a 33KB self-contained binary

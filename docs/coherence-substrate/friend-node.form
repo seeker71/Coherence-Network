@@ -45,7 +45,7 @@
 ;   to grow a set, and fn-pending's (len ...) is the same count-by-walking as mr-ttl.
 ;
 ; HONEST LANE:
-;   SHIPPED — the Friend's four moves over its cache, proven three-way (-> 127): the routing predicate,
+;   SHIPPED — the Friend's four moves over its cache, proven four-way (-> 127): the routing predicate,
 ;     the accept (store), the wake-time hand-off (deliver), the backlog depth (pending).
 ;   This is the BODY of one Friend's caching choice. What it does NOT carry yet, honestly out of this
 ;   brick's scope: the cache's LIFETIME and eviction (a real Friend bounds its queue and drops oldest

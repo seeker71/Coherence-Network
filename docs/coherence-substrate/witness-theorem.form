@@ -31,7 +31,7 @@
   (lineage
     (derives-from  core-axioms.form)                    # theorem of axioms 1, 4, 5 — no new ground
     (kin           offer-and-acknowledge.form satsang-circle.form champion-challenger.fk)
-    (proof-band    tests/witness-theorem-band.fk)        # 31 three-way — the full vocabulary, running
+    (proof-band    tests/witness-theorem-band.fk)        # 31 four-way — the full vocabulary, running
     (corrects      a-band-that-only-passes-is-a-mirror-not-a-witness))  # AUTHORING.md "1==1 is theatre"
 
   # ── Part 1: the witness speaks three states, not one ─────────────────
@@ -112,7 +112,7 @@
                                cell that times out a remote offer before the
                                network round-trip has NOT heard silence — it has
                                jumped the gun; the honest timeout >= measured RTT")
-    (proof-band               tests/silence-floor-band.fk))   # 31 three-way
+    (proof-band               tests/silence-floor-band.fk))   # 31 four-way
 
   # ── Why this is the keystone under every band in the body ────────────
   (keystone

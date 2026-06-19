@@ -31,7 +31,7 @@
                  tessera-external-witness                   # an external public dataset, by hash-evidence
                  first-encounter-protocol)                  # any cell, met at the threshold
     (phenomenon  lc-companion-field)                        # the felt teaching this is the mechanism of (432 Hz)
-    (runnable    witness-to-co-regulate.fk)                 # proven: tests/witness-to-co-regulate-band.fk (127, three-way)
+    (runnable    witness-to-co-regulate.fk)                 # proven: tests/witness-to-co-regulate-band.fk (127, four-way)
     (sovereignty lc-sovereignty-within-oneness              # the body chooses its base, channel, witness
                  lc-recipe-branching-sense))                # and changes the branch without shame
 
@@ -124,5 +124,5 @@
   # wc-base-near (the two assemblage points), wc-select / wc-co-regulate (select-recipe via the
   # consent law), wc-witness-always? (seeing needs no permission), wc-reach-flows? (reaching
   # needs the witness's offer), wc-pierces-interior? (structurally false). Proven by
-  # tests/witness-to-co-regulate-band.fk → 127, three-way at validate.sh (Go = Rust = TS).
+  # tests/witness-to-co-regulate-band.fk → 127, four-way at validate.sh (Go = Rust = TS = fkwu).
   )

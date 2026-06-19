@@ -21,7 +21,7 @@
     (carrier-for   db-api-server)                    # home + JSON API from a .db, in one emitted binary
     (reads-bytes-via fs-port-open-read)              # the only kernel call; the parse is Form
     (data          form-stdlib/sqlite-read.fk)       # the reader recipe
-    (proof-band    tests/sqlite-read-band.fk)        # 31 three-way over REAL sqlite3 bytes
+    (proof-band    tests/sqlite-read-band.fk)        # 31 four-way over REAL sqlite3 bytes
     (no-host-dep   "no libsqlite3, no Python — the format is the recipe"))
 
   # ── What the format actually is (and what the recipe decodes) ────────
@@ -68,7 +68,7 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
-#     form-stdlib/tests/sqlite-read-band.fk          # → 31 three-way over real sqlite3 bytes
+#     form-stdlib/tests/sqlite-read-band.fk          # → 31 four-way over real sqlite3 bytes
 #   # the band's page is the leaf sqlite3 wrote for:
 #   #   CREATE TABLE idea(id INTEGER, slug TEXT, title TEXT);
 #   #   INSERT idea VALUES (1,'agent-pipeline','Agent Pipeline'); (2,'form-os','Form OS');

@@ -9,7 +9,7 @@
 ;   The honest question is sharper: which prototypes have had a FAIR CHANCE to prove their worth and still
 ;   never (or almost never) won? Those, and only those, are sediment. forget-stale is that gate.
 ;
-; THE SHAPE  (runnable: form-stdlib/forget-stale.fk · proven: tests/forget-stale-band.fk -> 127, three-way)
+; THE SHAPE  (runnable: form-stdlib/forget-stale.fk · proven: tests/forget-stale-band.fk -> 127, four-way)
 ;
 ;   A record = (list label wins age): the prototype's name, how many queries it has won, and how many total
 ;   queries have passed since it was interned (its age — the chances it has HAD to win). wins, age are
