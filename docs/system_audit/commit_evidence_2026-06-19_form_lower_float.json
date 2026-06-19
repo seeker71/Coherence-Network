@@ -1,0 +1,24 @@
+{
+  "title": "A whole FLOAT function lowers to native arm64 BYTES, no clang — form-lower float twin, four-way incl. fkwu",
+  "date": "2026-06-19",
+  "thread_branch": "claude/ecstatic-hofstadter-cd3234",
+  "stone": "Sovereign-native-fkwu campaign, step 2 (gap #12 sub-step (a)). Step 1 landed the arm64 FP instruction ENCODINGS in form-asm.fk (form-asm-float -> 2047). This builds the LOWERER on top: form-lower.fk gains lo-fnode — the float twin of the integer lo-node/lo-tree — so an op-tagged float expression tree lowers to a sequence of those FP instructions as native bytes, with NO clang in the path. This is the clang-free float native path gap #11's self-JIT targets.",
+  "what_landed": "lo-fnode (ARG/FADD/FSUB/FMUL/FDIV dispatch), lo-fadd/lo-fmul (commutative, ARG-on-either-side folds to one register-form instruction), lo-fsub/lo-fdiv (non-commutative, operand order preserved), and lo-fcompile-fn (the float calling convention: the single float arg arrives in d0, is banked to d1, every result lands in d0, ret). Operand-aware like the integer lane — an ARG operand selects the register-form FP instruction directly, never clobbering the banked arg.",
+  "oracle_use": "clang/LLVM as ORACLE only. `clang -c -arch arm64` + `otool -tvVj` produced the ground-truth byte image for each full function sequence (fmov d1,d0=1e604001, fmul d0,d1,d1=1e610820, fadd d0,d0,d1=1e612800, fsub d0,d0,d1=1e613800, ret=d65f03c0); the lowerer's output is byte-identical to it via fa-conviction. clang is not in the native path — the recipe lowers to bytes; clang only confirmed them.",
+  "files_owned": [
+    "form/form-stdlib/form-lower.fk",
+    "form/form-stdlib/tests/form-lower-float-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-float-band.fk"
+    ],
+    "summary": "form-lower-float-band -> 15 FOUR-WAY (Go=Rust=TS=fkwu), 'fourth arm: 1 band four-way'. Verdict bits: 1 f(x)=x*x+x lowers to the exact 16-byte native image byte-identical to the oracle; 2 g(x)=x*x-x lowers correctly with SUB operand order preserved (fsub d0,d0,d1, not d1,d0); 4 the MUL(ARG,ARG) subtree folds to ONE register-form instruction (fmul d0,d1,d1); 8 the compiled function is exactly 4 instructions (16 bytes) — no spill, no junk. Manifest row: form-lower-float fkc 15. NOTE: this proof depends on the fourth-arm heal in PR #3372 (fkc-flat paren fix) — without it the fkwu binary does not build and the band silently runs 3-kernel only.",
+    "depends_on": "PR #3372 (fix(fkwu): restore fkc-flat's 2 dropped closing parens) — the fourth arm was dead on main before that heal."
+  },
+  "remaining": "(b) wire the self-JIT heat-flip (hati-os-kernel-emit.fk) to lower float-pure functions through form-lower->form-asm BYTES, retiring the C-emit interim — this is the bit-identical-by-construction native that makes the Go float plugin (gap #10) unnecessary; plus the FP-register STACK for two-non-ARG-subtree float trees (the named frontier, via fa-ldr-d/fa-str-d spill). NB: (b) and the self-JIT C-emit path are sibling-area (fkwu-gaps-close, the gap #11 increments); sequence per the JIT_GAP_LEDGER #11 note, do not race.",
+  "north_star": "ONE acceleration engine: fkwu's self-JIT, extended to floats, lowering through the clang-free Form->asm byte path. The encodings (step 1) and the lowerer (this step) are the foundation; wiring the heat-flip to them (step b) makes the SAME recipe that proves four-way the recipe that crystallizes to native float bytes — no second impl, no host compiler in the path."
+}

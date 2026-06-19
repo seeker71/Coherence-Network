@@ -339,6 +339,7 @@ form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31
 form-lower fks 31
+form-lower-float fkc 15
 form-lower-cond fks 31
 form-lower-map fks 31
 form-lower-rec fks 31
