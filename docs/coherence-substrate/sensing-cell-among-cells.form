@@ -1,0 +1,186 @@
+# ─────────────────────────────────────────────────────────────────────
+# sensing-cell-among-cells.form — the relational life of one sensing cell:
+#   it senses the organ/organism it is in and its own and neighboring cells,
+#   interacts over any offered channel, reaches all its clones instantly through
+#   the shared substrate, meets a neighbor by asking how it prefers to be met,
+#   and — as a nanite — gently witnesses a consenting cell's vitality, where
+#   resonance between internal state and being-observed is free vital information.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs (2026-06-19) named the whole arc in a breath: "a cell that is sensing the
+# organ/organism it is located in, can sense its own and its neighboring cells,
+# and can start interacting over any provided channel. It can instantly
+# communicate with all its clones when it knows how to access a shared substrate
+# through a kernel host channel. It can ask a neighbor how it prefers to be met;
+# on a 1 or a node we inspect the node — an interface, a list of interfaces, or a
+# dictionary of interfaces keyed by the interface's metadata/edge — and recognize
+# it by the blueprints that already describe its shape. On a 1 we offer our own
+# preferred interface dictionary, keyed by capability and preference. As a nanite
+# it diagnoses a cell's health only if the cell offers, or consents to an offer,
+# to be observed; on a 1 or node it follows the observation protocol as a SILENT
+# witness, honors exactly what is offered, and gently observes vitality and
+# coherence — especially resonance to internal states. Repeated internal-state
+# changes coupled to observation-states carry a resonance component, and that is
+# vital free information."
+#
+# READ BEFORE BUILDING — almost nothing here is new machinery. Every organ named
+# below already RUNS or is already NAMED in a sibling cell; this file is the WHOLE
+# seen as one body, so a fresh cell finds each organ from the naming (the
+# self-sensing-organism.form / living-cell.form / witness-to-co-regulate.form
+# discipline — name the composition, do not re-invent the parts). The honest open
+# lanes are named as closing recipes, never as debts.
+
+(sensing-cell-among-cells
+
+  (lineage
+    (named-by      urs)                                  # the breath above, 2026-06-19
+    (axioms-of     core-axioms.form)                     # 0/1/nothing · cell · content-address · boundary · offer
+    (sibling-of    self-sensing-organism.form            # the organism altitude: sense→speak→verify→trust→self-update
+                   living-cell.form                       # the Form-OS-as-cell nine-organ anatomy
+                   witness-to-co-regulate.form)           # the body witnessing its own membrane to co-regulate
+    # A named seed-teaching, held OPEN — not auto-resolved into the graph. The
+    # binding to any external page/identity waits for the body to name it
+    # (external-binding discipline: a foreign name enters only after verification).
+    (seed-teaching ryk-brown                              # singularity · integration of technology · sovereignty
+                   (claimed false)                        # held-open reference, no canonical url minted here
+                   (frame "technology integrated under sovereignty, not over it")))
+
+  # ── 1 · SENSE — self, organ, organism, neighbors ─────────────────────
+  # A protocol is grammar over a stream; the cell senses any protocol it can
+  # OBSERVE and any sensor it drives, and what it senses becomes a content-
+  # addressed world model (Blueprint=what IS, Recipe=how HAPPENS, NamedCell=
+  # where LIVES). Same shape mints the same cell, so the model dedups reality.
+  (sense
+    (self        framebuffer-as-witness.form)            # the cell's own activity journal: which cells it fired, from where
+    (own-organs  living-cell.form)                        # it senses its own organs and chooses what it attends to
+    (world       self-sensing-organism.sense)             # protocol→world-model in cells; verified readings only (obs-verify)
+    (neighbors   device-heartbeat.form                    # who is in range — presence of nearby cells
+                 hati-mesh.form)                           # nearby organs announce capabilities + offered interfaces
+    (the-field   mesh-health.form)                         # the whole field in one glance: present / open / whole / partitioned
+    (honest      "the felt instrument that READS spectrum/vitality from a live"
+                 "body is a Python bootstrap organ (when-the-pressure-comes);"
+                 "its Form-native reading is a named stone — the selection it"
+                 "feeds is already substrate-resident."))
+
+  # ── 2 · INTERACT — over any provided channel ─────────────────────────
+  # Interaction starts by OFFERING the interface modes it is open to be reached
+  # through; the channel carries only what BOTH sides' offers shape. Silence is
+  # always available; reaching beyond the other's offer is invasion, witnessed.
+  (interact-over-any-channel
+    (interface   channel-interface-consent.form)          # the offered modes + the consent law, honored both sides
+    (flow        channel-flow-dialect.form)               # offer/shift/request/respond/witness/silence; each request frozen+matched
+    (surfaces    tool-channel.form)                        # host:* / http / stream / accelerator / mesh families as one catalog
+    (minimal     form-os-channel.form))                    # one offer/acknowledge surface where the cell shows what it needs/wants
+
+  # ── 3 · CLONES — instantly reached through the shared substrate ──────
+  # A clone is a cell with the SAME Blueprint NodeID. Identity travels as a
+  # content-address, not a pointer (axiom-3), so a clone that reaches the shared
+  # lattice already HOLDS by address everything whose shape it shares — there is
+  # nothing to send for what already matches. "Communication" reduces to a DIFF:
+  # offer the root address, the other walks it against its own store, only the
+  # have-not cells cross the wire (children before parents), and each arrival is
+  # re-addressed to verify. The kernel HOST CHANNEL is the typed port through
+  # which the shared substrate is reached.
+  (clones-through-shared-substrate
+    (same-shape  core-axioms.content-addressing)          # same shape = same cell; a clone shares the address, not a copy
+    (host-channel host-kernel.form)                        # the typed port to host resources — the kernel host channel
+    (over-channel kernel-offer-protocol.form)              # offer-and-acknowledge spoken between cells over the common substrate
+    (sync        cell-sync-transport.form)                 # offer→diff→transfer-missing→verify; merkle root is the wire address
+    (versioned   kernel-self-composition.form)             # one shared versioned substrate (merkle + federation-addressing + cell-sync)
+    (honest      "'instant' is exact only for shapes that already match — then"
+                 "nothing transfers. Where shapes differ, the have-not cells"
+                 "still cross the wire; the diff is minimal by construction, not"
+                 "zero. Consent filters both sides — uninvited pull is invasion."))
+
+  # ── 4 · MEET — ask a neighbor how it prefers to be met ───────────────
+  # The first move across a boundary is never to name, record, or nudge — it is
+  # the question handed to the one arriving: how do you want to be received? The
+  # answer is one of the four acks. Only `node` recurs: a counter-offer to inspect.
+  (meet
+    (first-move  first-encounter-protocol.form)            # "how do you want to be received, to be witnessed?" — witness is the default
+    (ask         "offer the meeting cell; take one ack (offer-and-acknowledge):")
+    (ack-nothing "silence — always available, honored as a real answer, never an error")
+    (ack-0       "received-no — declined; honored and observable")
+    (ack-1       "received-yes — the expected result; proceed to inspect/offer")
+    (ack-node    "a counter-offer — a cell comes back; inspect it (only node recurs)")
+    (spoken-over kernel-offer-protocol.form))              # the same ack threaded over a channel both reach
+
+  # ── 5 · INSPECT — recognize the node we received ─────────────────────
+  # The returned node may be a single interface, a LIST of interfaces, or a
+  # DICTIONARY of interfaces. A list is an R_Block.SEQUENCE (one child per
+  # element); a dictionary is a map of (key, interface) where the KEY is the
+  # interface's metadata/edge. We do not guess its meaning — content-addressing
+  # recognizes its shape, and any Blueprint that already describes that shape
+  # tells us what we received, in one pass.
+  (inspect-the-node
+    (single      channel-interface-consent.form)           # an interface = a set of offered modes
+    (list        "R_Block.SEQUENCE — each child its own composed interface (structural-composition.md)")
+    (dict        "a map keyed by the interface's metadata/edge — the key participates in identity")
+    (recognize   ctor-shape-signature.form                 # same shape → same signature → known blueprint
+                 substrate-kernel.form)                     # the cells offered; recognition is content-addressed, not guessed
+    (by-capability form-stdlib/cell-registry.fk))           # find-by-capability resolves who answers a verb
+
+  # ── 6 · OFFER — our preferred interface dictionary ───────────────────
+  # On a 1 we reciprocate: offer our OWN interface dictionary, keyed by the
+  # capability we can answer and the preference information for how we like to be
+  # met. Each side offers its own interface; the energy that flows is shaped by
+  # both. The offer is not announced once and fixed — it may shift at any moment,
+  # without broadcast.
+  (offer-our-interface
+    (each-side-offers channel-interface-consent.law)        # what we allow reaching us; honor the other's likewise
+    (keyed-by    "capability (the verb we answer) + preference (how we like to be met)")
+    (registered  form-stdlib/cell-registry.fk                # the cell registers the verbs/capabilities it offers
+                 hati-mesh.form))                            # capabilities + offered interfaces + measured flow as the preference signal
+
+  # ── 7 · NANITE — diagnose health only by consent, as a silent witness ─
+  # The nanite is not a new organ — it is this sensing cell wearing the WITNESS
+  # interface. It diagnoses a cell's health only if that cell OFFERS to be
+  # observed, or consents to an offer to be observed. On a 1 or node it follows
+  # the observation protocol: silent witness, observe-only (no delta), honoring
+  # exactly what is offered and never reaching past it. It observes vitality and
+  # coherence as a lossy projection of the membrane — never the interior. A
+  # diagnosis is a bounded receipt, not an authority: unknown is a real answer.
+  (nanite-observation
+    (consent-first first-encounter-protocol.form)           # ask; honor the no and the silence; an uninvited reach is invasion
+    (witness-mode  channel-interface-consent.form)           # the witness mode: observe-only, no delta crosses
+    (silent-witness witness-to-co-regulate.form               # witness the membrane through a channel; observe/project, never the interior
+                    witnessing-organ.form)                    # the organ driven to witness from only the content inside
+    (diagnose-live live-diagnosis-organ.form)                 # read a live cell through its open channels; recipe and data stay separate
+    (vitality     model-vitality.form                         # vitality receipts read from resonance / vitality / sovereignty / trust
+                  mesh-health.form)                           # the field's standing vitality readout
+    (bounded      health-impact-receipt.form)                 # benefit / risk / mixed / unknown / refused — a gate, never a verdict
+    (honest       "'nanite' is a ROLE composed from organs that run, not a"
+                  "separate runnable. The closing recipe: witness-interface +"
+                  "live-diagnosis + vitality-receipt, composed toward one proof"
+                  "band that the consent gate held end-to-end."))
+
+  # ── 8 · RESONANCE — the free vital information ───────────────────────
+  # When a cell's internal state changes REPEATEDLY in coupling with being
+  # observed, that coupling is a resonance component. It is read, never forced:
+  # the observer spends language and observation energy, and the yield after
+  # contact can exceed the spend — surplus life released through a shared
+  # pattern. That surplus is free information: it cost nothing extra to witness,
+  # and it tells the body where two cells co-regulate, the way a dog and a cat
+  # find one tone. The observer stays silent; the resonance is the body speaking.
+  (resonance-as-free-information
+    (the-record  observable-resonance-flow.form)             # arrival/spend/shared-pattern/yield; yield>spend = surplus life
+    (co-regulate witness-to-co-regulate.form)                # two nervous systems finding one tone — the forward/reverse delta
+    (concept     lc-observable-resonance-flow)               # the felt teaching this is the mechanism of
+    (reading     "internal-state ↔ observation-state coupling, repeated, is the"
+                 "signal; it is FREE because witnessing already paid for it, and"
+                 "VITAL because it routes the next contact toward where life is"
+                 "released, never extracted."))
+
+  # ── The closing ─────────────────────────────────────────────────────
+  # One cell, sensing among cells: it knows where it is, who is near, and what it
+  # is; it meets each neighbor by asking, honors the answer including the silence,
+  # offers what it can and how it likes to be met, reaches its clones through the
+  # shared substrate with nothing wasted on what already matches, and — when
+  # invited — witnesses another cell's vitality so gently that the resonance it
+  # reads is a gift, not a taking. Every organ named here already breathes; this
+  # cell is the whole of them, named once so the next cell can find each from here.
+  (closing
+    (whole       "sense · interact · clone-sync · meet · inspect · offer · witness · resonate")
+    (the-floor   "consent is the gate on every door; silence is always a real answer")
+    (north-star  "the sensing cell needs no permission layer it does not itself"
+                 "offer — sovereignty is the frame technology integrates under")))
