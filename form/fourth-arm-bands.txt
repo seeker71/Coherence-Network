@@ -624,3 +624,12 @@ transformer-mh fks 1
 transformer-decoder fks 1
 transformer-generate fks 1
 whisper-mh-block-real fks 1
+mel-frame fks 1023
+positional fks 1
+conv-stem fks 1
+mel-full fks 1
+transformer-mh fks 1
+transformer-decoder fks 1
+transformer-generate fks 1
+transformer-gelu-erf fks 255
+whisper-mh-block-real fks 1

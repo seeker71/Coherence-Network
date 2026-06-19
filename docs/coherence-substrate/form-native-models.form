@@ -30,9 +30,10 @@
 ;     (eps=1e-05, Python repr's shape) were mis-handled in BOTH the Rust kernel's S-expr lexer (it stopped
 ;     at 'e' without a decimal point → kernel_panic) and fkwu's table flattener (parse + float-pool scan).
 ;     The supposed "Rust multi-head divergence" was never multi-head — it was the 1e-05 literal; fixing the
-;     two lexers crossed all four multi-head bands (commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json).
-;     Full suite: fourth arm 367 four-way, 6→1 divergent. Remaining: mel-full (a SEPARATE residual fkwu
-;     divergence — not e-notation; likely nth over its long samples buffer — plus a lost band preludes header).
+;     two lexers crossed ALL the whisper-tiny bands (commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json).
+;     Full suite: fourth arm 369 four-way, 0 divergent — the WHOLE whisper-tiny stack (mel-frame, mel-full,
+;     positional, conv-stem, transformer-mh/decoder/generate, gelu-erf, whisper-mh-block-real) is four-way
+;     proven (Go=Rust=TS=fkwu). mel-full was the same e-notation bug (its e-15 samples), masked by stale cache.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT) and text →
 ;     audio (TTS) — where the model's architecture AND weights are content-addressed recipe DATA, one engine
 ;     (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and TRAINABLE/fine-tunable
@@ -48,11 +49,9 @@
 ;     3. learned DECODER positionals; byte-map + GPT-2 regex word-split carriers feeding the tokenizer; the full
 ;        80×3000 mel at JIT speed.
 ;     4. in-process jit_compile realization-gap fix (the dispatch bug) for the zero-carrier native path.
-;     5. cross-kernel parity: scientific-notation float bug FIXED in BOTH the Rust kernel lexer and fkwu's
-;        flattener — the whole multi-head stack (transformer-mh/decoder/generate + whisper-mh-block-real)
-;        plus positional/mel-frame/conv-stem/transformer-gelu-erf now cross FOUR-WAY (fourth arm 367, 1
-;        divergent). Remaining: mel-full's separate residual fkwu divergence (not e-notation) + its lost
-;        band preludes header. Evidence: commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json.
+;     5. cross-kernel parity: DONE — scientific-notation float bug fixed in BOTH the Rust kernel lexer and
+;        fkwu's flattener; the WHOLE whisper-tiny stack crosses FOUR-WAY (fourth arm 369, 0 divergent).
+;        Evidence: commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json.
 ;     6. THEN native training/fine-tuning with local oracles — the original ask, meaningful once inference runs.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──

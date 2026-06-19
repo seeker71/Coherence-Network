@@ -14,10 +14,8 @@
   "verified_four_way": {
     "minimal_repro": "(round (mul 1e-05 1000000000.0)) → 10000 on go/rust/ts/fkwu (was: rust panic, fkwu 0)",
     "bands": ["transformer-mh", "transformer-decoder", "transformer-generate", "whisper-mh-block-real", "positional", "mel-frame", "conv-stem", "transformer-gelu-erf"],
-    "full_suite": "fourth arm 367 bands four-way; divergences 6 → 1 (only mel-full remains)."
-  },
-  "remaining": {
-    "mel-full": "NOT e-notation (its e-15 literals now parse). Two separate issues: (1) its band lost the `; preludes:` header in an edit so the suite can't load mfu-spectrogram; (2) even with explicit preludes it is fourth=0 — a residual fkwu divergence (likely nth over the long samples buffer / the spectrogram walk). De-registered, tracked."
+    "full_suite": "fourth arm 369 bands four-way; 0 divergent. The WHOLE whisper-tiny stack crosses (incl. mel-full).",
+    "mel-full_resolved": "mel-full was the SAME e-notation bug (its samples buffer carries e-15 values); its earlier fourth=0 was stale-cache noise + a lost `; preludes:` header (both fixed). Component probes (nth over the 560-element buffer, mfu-windowed, mfu-spectrogram, mfb-maxdiff) all cross four-way; with a fresh cache mel-full-band is four-way (maxdiff 1.8e-11). Registered."
   },
   "methodology_lessons": [
     "The fourth arm compares the band's RETURN value — bands must end in a bare verdict, never (print x).",
