@@ -81,9 +81,20 @@
 #     cons-list (the shape fkwu's _get already shares); value_kind answers "null"
 #     for VALUE-NONE and "value" otherwise — exactly what json-node-null-value?
 #     (str_eq ... "null") reads. json-emitter (31) and json-promoted-types (115)
-#     cross. RESIDUAL: value_kind cannot yet split int from string (both x<<1) —
-#     the named next rung is a boxed-string region (like the float region) that
-#     lifts int_to_str(node_value(string)) passthrough and general value_kind.
+#     cross. The int/string value-ABI ambiguity that once bounded value_kind is now
+#     lifted — see "string value tag" below.
+#   string value tag        — int and string were both x<<1 in fkwu, byte-identical,
+#     so int_to_str(node_value(aString)) rendered the pool-id's DIGITS and value_kind
+#     could not split them. Strings now box into their own deep-negative region
+#     (fk_sbase = -8e18, mirroring the float region): fk_sbox / fk_sidx / fk_iss, so a
+#     string is structurally distinct everywhere. int_to_str passes a string through
+#     (fk_iss check), len is polymorphic (string -> byte length, matching Go/Rust/TS),
+#     and the str arms, the carriers (fk_sbuf / fk_cstr / fk_keyeq / fk_psv), the dict
+#     and record string keys, the http-header builder, and fk_veq all read fk_iss /
+#     fk_sidx. ~30 sites; region math disjoint from float/node/record (proven), pool-id
+#     0 representable, content-addressing preserved (fk_sbox injective, equal strings
+#     share a pool-id). string-roundtrip 111. A faithful value_kind ("string"/"int"/
+#     "float"/...) is now a small follow-on — the value ABI no longer blocks it.
 #
 # Current floor (2026-06-14 content-address + sibling-node floor): the admitted
 # manifest carries content-address, durable substrate-core, and the doc-xpath,
@@ -91,8 +102,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 372
-# four-way bands and 745 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 374
+# four-way bands and 747 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -645,3 +656,4 @@ json-meaning-ingestion fks 1000
 form-cli fks 31
 json-emitter fks 31
 json-promoted-types fks 115
+string-roundtrip fks 111
