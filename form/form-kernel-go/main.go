@@ -4601,7 +4601,7 @@ func (k *Kernel) walkInner(n NodeID, env *Frame) Value {
 				// and the ones after it keep walking until the artifact
 				// lands, then adoption swaps it in and later calls dispatch
 				// native. The walk is the same answer either way.
-				const goJITHotThreshold uint32 = 2000
+				goJITHotThreshold := jitHotThreshold()
 				if res, building := k.jitAsyncTake(bodyKey); res != nil {
 					if res.jc != nil {
 						k.jitCompiledGo[bodyKey] = res.jc
