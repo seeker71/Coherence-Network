@@ -1,0 +1,36 @@
+; http-client.fk — render an HTTP/1.1 request for ANY method, in pure Form.
+;
+; THE PRINCIPLE (Urs): the method is DATA, not control flow. ONE generic recipe
+; renders GET / POST / PUT / DELETE / OPTIONS — or any custom method (*) — because
+; the method is just the first token on the request line. Body presence is the
+; only branch: it adds Content-Type + Content-Length and the body. There is NO
+; per-method native and NO C: the whole method family is flow + choice over data,
+; so it walks one vocabulary on all four arms (Go / Rust / TS / fkwu).
+;
+; This is the corrected layer for HTTP client methods. The earlier move — a
+; monolithic per-method C native in the emitter — was the wrong layer. Rendering
+; and parsing are Form (http-parse.fk lexes the response). The ONE atom beneath
+; this recipe is the wire (connect / send / recv); see fkwu-host-io-port-plan.md.
+; Everything ABOVE the wire is this recipe.
+
+(defn kh-render-request (method path host body)
+  (do
+    (let blen (str_len body))
+    (let head (str_concat
+                (str_concat
+                  (str_concat
+                    (str_concat
+                      (str_concat method " ")
+                      path)
+                    " HTTP/1.0\r\nHost: ")
+                  host)
+                "\r\nConnection: close\r\n"))
+    (if (gt blen 0)
+        (str_concat
+          (str_concat
+            (str_concat
+              (str_concat head "Content-Type: application/json\r\nContent-Length: ")
+              (int_to_str blen))
+            "\r\n\r\n")
+          body)
+        (str_concat head "\r\n"))))

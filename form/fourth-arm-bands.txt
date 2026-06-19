@@ -629,4 +629,5 @@ json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
 form-cli fks 31
+http-client-render fks 63
 nanite-mem-parse fks 15
