@@ -1,0 +1,235 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk
+;
+; speaker-identity-oracle-band - local speaker fingerprint oracle floor.
+;
+; Floor: the current local oracle is not production diarization. It is the
+; existing log-mel fingerprint path promoted into a native receipt: enrolled
+; speaker rows, query match, confidence, agreement bins, hashes, and privacy
+; policy. Pitch bands remain metadata only.
+;
+; Verdict 262143:
+;   1     speaker-id floor and north-star are present
+;   2     observed local fingerprint match passes
+;   4     mismatched identity is refused
+;   8     raw room audio retention is refused for this identity floor
+;   16    valid receipt lowers into the speaker identity lane
+;   32    feature carries confidence, bands, agreement, and timing
+;   64    exact exemplar model learns two enrolled identities
+;   128   L1 heldout query routes to the nearest enrolled speaker
+;   256   fingerprint oracle score beats pitch-only metadata
+;   512   local fingerprint oracle wins the current race
+;   1024  weak native speaker model cannot retire the oracle
+;   2048  perfect heldout native model can retire the oracle
+;   4096  north-star names one/multiple Form speaker models
+;   8192  floor names pitch as metadata only
+;   16384 strong local diarization+voiceprint oracle availability passes
+;   32768 missing strong oracle blocks availability
+;   65536 strong oracle alone cannot promote production without native heldout win
+;   131072 production readiness passes only after strong oracle plus native win
+(do
+    (let speaker-a
+        (sml-speaker-id-receipt
+            "pass"
+            "local-logmel-fingerprint"
+            "nearest-shape-fingerprint-v0"
+            3
+            "speaker-A"
+            "speaker-A"
+            88
+            13
+            11
+            420
+            "sha256:audio-speaker-a-query-local-only"
+            "sha256:fingerprint-speaker-a-query"
+            0
+            (sml-speaker-id-floor)
+            (sml-speaker-id-north-star)))
+    (let speaker-b
+        (sml-speaker-id-receipt
+            "pass"
+            "local-logmel-fingerprint"
+            "nearest-shape-fingerprint-v0"
+            3
+            "speaker-B"
+            "speaker-B"
+            84
+            13
+            10
+            510
+            "sha256:audio-speaker-b-query-local-only"
+            "sha256:fingerprint-speaker-b-query"
+            0
+            (sml-speaker-id-floor)
+            (sml-speaker-id-north-star)))
+    (let mismatch
+        (sml-speaker-id-receipt
+            "pass"
+            "local-logmel-fingerprint"
+            "nearest-shape-fingerprint-v0"
+            3
+            "speaker-A"
+            "speaker-B"
+            88
+            13
+            11
+            420
+            "sha256:audio-speaker-a-query-local-only"
+            "sha256:fingerprint-speaker-a-query"
+            0
+            (sml-speaker-id-floor)
+            (sml-speaker-id-north-star)))
+    (let retained-raw
+        (sml-speaker-id-receipt
+            "pass"
+            "local-logmel-fingerprint"
+            "nearest-shape-fingerprint-v0"
+            3
+            "speaker-A"
+            "speaker-A"
+            88
+            13
+            11
+            420
+            "sha256:audio-speaker-a-query-local-only"
+            "sha256:fingerprint-speaker-a-query"
+            1
+            (sml-speaker-id-floor)
+            (sml-speaker-id-north-star)))
+    (let sample-a (sml-speaker-id-sample speaker-a))
+    (let sample-b (sml-speaker-id-sample speaker-b))
+    (let model (sml-device (list sample-a sample-b)))
+    (let tests
+        (list
+            (sml-test-row (sml-speaker-id-feature speaker-a) "speaker-A")
+            (sml-test-row (sml-speaker-id-feature speaker-b) "speaker-B")))
+    (let heldout-a
+        (sml-test-row
+            (list 87 13 10 3 430 0)
+            "speaker-A"))
+    (let oracle-score
+        (sml-speaker-id-score-card "oracle:local-logmel-fingerprint" speaker-a 90))
+    (let pitch-only-score
+        (sml-score-card "metadata:pitch-band-only" 0 1 40 40))
+    (let weak-native-score
+        (sml-score-card "form-native:speaker-model-v0" 1 3 80 80))
+    (let strong-oracle
+        (sml-speaker-strong-oracle
+            "pyannote-local"
+            "speechbrain-ecapa-local"
+            1
+            1
+            1
+            88
+            91
+            3
+            3
+            "sha256:strong-speaker-oracle-model"
+            1
+            1))
+    (let missing-oracle
+        (sml-speaker-strong-oracle
+            ""
+            ""
+            0
+            0
+            0
+            0
+            0
+            0
+            0
+            ""
+            0
+            0))
+    (let race
+        (list
+            oracle-score
+            pitch-only-score
+            weak-native-score))
+
+    (let c0
+        (if (and
+                (gt (len (sml-speaker-id-floor)) 0)
+                (gt (len (sml-speaker-id-north-star)) 0))
+            1
+            0))
+    (let c1 (if (eq (sml-speaker-id-valid? speaker-a) 1) 2 0))
+    (let c2 (if (eq (sml-speaker-id-valid? mismatch) 0) 4 0))
+    (let c3 (if (eq (sml-speaker-id-valid? retained-raw) 0) 8 0))
+    (let c4
+        (if (and
+                (str_eq (sml-label sample-a) "speaker-A")
+                (str_eq (sml-lane sample-a) "speech:speaker-identity-oracle"))
+            16
+            0))
+    (let c5
+        (if (and
+                (eq (nth (sml-feature sample-a) 0) 88)
+                (and
+                    (eq (nth (sml-feature sample-a) 1) 13)
+                    (and
+                        (eq (nth (sml-feature sample-a) 2) 11)
+                        (eq (nth (sml-feature sample-a) 4) 420))))
+            32
+            0))
+    (let c6 (if (eq (sml-exact-correct model tests) 2) 64 0))
+    (let c7
+        (if (str_eq
+                (sml-l1-label (sml-test-feature heldout-a) model)
+                "speaker-A")
+            128
+            0))
+    (let c8
+        (if (gt (bco-score oracle-score) (bco-score pitch-only-score))
+            256
+            0))
+    (let c9
+        (if (str_eq
+                (sml-best-candidate-path race)
+                "oracle:local-logmel-fingerprint")
+            512
+            0))
+    (let c10
+        (if (eq (sml-speaker-id-retire-oracle? speaker-a 1 3 90 95) 0)
+            1024
+            0))
+    (let c11
+        (if (eq (sml-speaker-id-retire-oracle? speaker-a 3 3 90 95) 1)
+            2048
+            0))
+    (let c12
+        (if (ge (str_find
+                    (nth (sml-speaker-id-north-star) 1)
+                    "one or multiple Form speaker models"
+                    0)
+                0)
+            4096
+            0))
+    (let c13
+        (if (ge (str_find
+                    (nth (sml-speaker-id-floor) 2)
+                    "pitch bands are metadata only"
+                    0)
+                0)
+            8192
+            0))
+    (let c14
+        (if (and
+                (eq (sml-speaker-strong-oracle-available? strong-oracle) 1)
+                (and
+                    (str_eq (sml-sso-diarization-provider strong-oracle) "pyannote-local")
+                    (str_eq (sml-sso-voiceprint-provider strong-oracle) "speechbrain-ecapa-local")))
+            16384
+            0))
+    (let c15
+        (if (eq (sml-speaker-strong-oracle-available? missing-oracle) 0)
+            32768
+            0))
+    (let c16
+        (if (eq (sml-speaker-production-ready? speaker-a strong-oracle 1 3 90 95) 0)
+            65536
+            0))
+    (let c17
+        (if (eq (sml-speaker-production-ready? speaker-a strong-oracle 3 3 90 95) 1)
+            131072
+            0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17)))

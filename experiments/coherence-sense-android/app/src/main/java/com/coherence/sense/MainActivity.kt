@@ -87,6 +87,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val debugApkName = "coherence-sense-hati-mesh-debug.apk"
     private val releaseApkUrl = "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk"
     private val debugApkUrl = "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk"
+    private val speakerNamesKey = CapabilityHeartbeatService.KEY_SPEAKER_NAMES
+    private val defaultSpeakerId = CapabilityHeartbeatService.DEFAULT_SPEAKER_ID
+    private val speakerRmsFloor = 0.018
+    private val speakerSilenceFloor = 0.010
     private var connected = false
     private var tick = 0
     private var sentBytes = 0L
@@ -141,6 +145,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var cachedBluetoothState = "unknown"
     private var cachedSpeakerState = "unknown"
     private var cachedCameraState = "unknown"
+    private val speakerNames = linkedMapOf<String, String>()
+    private var settingSpeakerFields = false
+    @Volatile private var activeSpeakerId = defaultSpeakerId
+    @Volatile private var speakerActive = false
+    @Volatile private var speakerConfidence = 0
+    @Volatile private var speakerTurnCount = 0L
+    @Volatile private var speakerLastRms = 0.0
+    @Volatile private var speakerLastChangeMs = 0L
 
     private lateinit var feed: TextView
     private lateinit var status: TextView
@@ -151,11 +163,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var urlField: EditText
     private lateinit var meshField: EditText
     private lateinit var stewardField: EditText
+    private lateinit var speakerIdField: EditText
+    private lateinit var speakerNameField: EditText
     private lateinit var connectBtn: Button
     private lateinit var settingsBtn: Button
     private lateinit var updateBtn: Button
+    private lateinit var saveSpeakerBtn: Button
     private lateinit var settingsPanel: LinearLayout
     private lateinit var meshSummary: TextView
+    private lateinit var speakerTracking: TextView
     private lateinit var sensorLane: TextView
     private lateinit var audioLane: TextView
     private lateinit var videoLane: TextView
@@ -176,11 +192,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         urlField = findViewById(R.id.urlField)
         meshField = findViewById(R.id.meshField)
         stewardField = findViewById(R.id.stewardField)
+        speakerIdField = findViewById(R.id.speakerIdField)
+        speakerNameField = findViewById(R.id.speakerNameField)
         connectBtn = findViewById(R.id.connectBtn)
         settingsBtn = findViewById(R.id.settingsBtn)
         updateBtn = findViewById(R.id.updateBtn)
+        saveSpeakerBtn = findViewById(R.id.saveSpeakerBtn)
         settingsPanel = findViewById(R.id.settingsPanel)
         meshSummary = findViewById(R.id.meshSummaryView)
+        speakerTracking = findViewById(R.id.speakerTrackingView)
         sensorLane = findViewById(R.id.sensorLaneView)
         audioLane = findViewById(R.id.audioLaneView)
         videoLane = findViewById(R.id.videoLaneView)
@@ -190,6 +210,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sm = getSystemService(SENSOR_SERVICE) as SensorManager
         nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         organId = loadOrganId()
+        loadSpeakerNames()
+        restoreSpeakerFields()
         renderIdentity("local identity ready")
         renderFirstFrame()
         restorePersistedWitness()
@@ -227,11 +249,33 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = renderIdentity(meshState)
             override fun afterTextChanged(s: Editable?) = Unit
         })
+        speakerIdField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (settingSpeakerFields) return
+                val id = normalizeSpeakerId(s?.toString().orEmpty())
+                activeSpeakerId = id
+                speakerActive = false
+                settingSpeakerFields = true
+                speakerNameField.setText(synchronized(speakerNames) { speakerNames[id].orEmpty() })
+                settingSpeakerFields = false
+                requestDashboardRender()
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        speakerNameField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (!settingSpeakerFields) requestDashboardRender()
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
         connectBtn.setOnClickListener { toggle() }
         settingsBtn.setOnClickListener {
             settingsPanel.visibility = if (settingsPanel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
         updateBtn.setOnClickListener { onUpdateButton() }
+        saveSpeakerBtn.setOnClickListener { saveCurrentSpeakerName() }
         startWitnessDiscovery()
         if (sharingWasEnabled()) {
             pendingStartAfterDiscovery = true
@@ -245,6 +289,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun renderFirstFrame() {
         meshSummary.text = "state: local identity ready\nwitness: $discoveryState\npresent peers: 0  connected channels: 0  offered: 0\nbest shared carrier: network:http"
+        speakerTracking.text = "active: quiet\nspeaker: ${speakerDisplayName(defaultSpeakerId)} ($defaultSpeakerId)\nturns 0  confidence 0\nsource: mic-rms + manual slot"
         sensorLane.text = "SENSORS\nfloor visible\nmotion waiting\ngps not-granted"
         audioLane.text = "AUDIO\nmic offered\nspeaker visible"
         videoLane.text = "VIDEO\ncamera offered\nscreen QR/write"
@@ -298,6 +343,116 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .edit()
             .putBoolean(CapabilityHeartbeatService.KEY_SHARING_ENABLED, enabled)
             .apply()
+    }
+
+    private fun loadSpeakerNames() {
+        val raw = getSharedPreferences(CapabilityHeartbeatService.PREFS, MODE_PRIVATE)
+            .getString(speakerNamesKey, "{}")
+            .orEmpty()
+        synchronized(speakerNames) {
+            speakerNames.clear()
+            try {
+                val obj = JSONObject(raw)
+                val keys = obj.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val id = normalizeSpeakerId(key)
+                    val name = obj.optString(key).trim().take(48)
+                    if (id.isNotBlank() && name.isNotBlank()) speakerNames[id] = name
+                }
+            } catch (_: Exception) {
+                speakerNames.clear()
+            }
+            if (!speakerNames.containsKey(defaultSpeakerId)) speakerNames[defaultSpeakerId] = "Speaker 1"
+        }
+        activeSpeakerId = defaultSpeakerId
+    }
+
+    private fun persistSpeakerNames() {
+        val obj = JSONObject()
+        val names = synchronized(speakerNames) { speakerNames.toMap() }
+        names.forEach { (id, name) ->
+            if (id.isNotBlank() && name.isNotBlank()) obj.put(id, name)
+        }
+        getSharedPreferences(CapabilityHeartbeatService.PREFS, MODE_PRIVATE)
+            .edit()
+            .putString(speakerNamesKey, obj.toString())
+            .apply()
+    }
+
+    private fun restoreSpeakerFields() {
+        settingSpeakerFields = true
+        speakerIdField.setText(defaultSpeakerId)
+        speakerNameField.setText(synchronized(speakerNames) { speakerNames[defaultSpeakerId].orEmpty() })
+        settingSpeakerFields = false
+    }
+
+    private fun normalizeSpeakerId(value: String): String {
+        val cleaned = value.trim().lowercase(Locale.US)
+            .replace(Regex("[^a-z0-9_.-]+"), "-")
+            .trim('-')
+        return cleaned.ifBlank { defaultSpeakerId }.take(32)
+    }
+
+    private fun currentSpeakerId(): String =
+        if (::speakerIdField.isInitialized && Looper.myLooper() == Looper.getMainLooper()) {
+            normalizeSpeakerId(speakerIdField.text.toString())
+        } else {
+            activeSpeakerId.ifBlank { defaultSpeakerId }
+        }
+
+    private fun speakerDisplayName(id: String): String {
+        val typed = if (
+            ::speakerNameField.isInitialized &&
+            Looper.myLooper() == Looper.getMainLooper() &&
+            currentSpeakerId() == id
+        ) {
+            speakerNameField.text.toString().trim().take(48)
+        } else {
+            ""
+        }
+        return typed.ifBlank { synchronized(speakerNames) { speakerNames[id].orEmpty() } }.ifBlank { id }
+    }
+
+    private fun saveCurrentSpeakerName() {
+        val id = currentSpeakerId()
+        val name = speakerNameField.text.toString().trim().take(48)
+        if (name.isBlank()) return
+        synchronized(speakerNames) { speakerNames[id] = name }
+        activeSpeakerId = id
+        persistSpeakerNames()
+        status.text = "Speaker saved: $name ($id)"
+        requestDashboardRender()
+    }
+
+    private fun mergeSpeakerTrackingFromWitness(tracking: JSONObject?) {
+        if (tracking == null) return
+        val rows = tracking.optJSONArray("speakers") ?: JSONArray()
+        var changed = false
+        synchronized(speakerNames) {
+            for (i in 0 until rows.length()) {
+                val row = rows.optJSONObject(i) ?: continue
+                val id = normalizeSpeakerId(row.optString("speaker_id"))
+                val name = row.optString("name").trim().take(48)
+                if (name.isNotBlank() && name != id && speakerNames[id] != name) {
+                    speakerNames[id] = name
+                    changed = true
+                }
+            }
+            val activeId = normalizeSpeakerId(tracking.optString("active_speaker_id", activeSpeakerId))
+            val activeName = tracking.optString("active_speaker_name").trim().take(48)
+            if (activeName.isNotBlank() && activeName != activeId && speakerNames[activeId] != activeName) {
+                speakerNames[activeId] = activeName
+                changed = true
+            }
+        }
+        if (!changed) return
+        persistSpeakerNames()
+        val currentId = currentSpeakerId()
+        if (currentId == activeSpeakerId && speakerNameField.text.toString().isBlank()) {
+            speakerNameField.setText(speakerDisplayName(currentId))
+        }
+        requestDashboardRender()
     }
 
     private fun toggle() {
@@ -606,6 +761,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         snap.put("organs_active", JSONArray(activeOrgans()))
         snap.put("channels_offered", JSONArray(offeredTransports()))
+        snap.put("speaker_tracking", speakerTrackingJson())
         snap.put("body_state", bodyStateJson())
         snap.put("tick", tick++)
         innerCellsCreated += 1
@@ -654,7 +810,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("organ_id", organId)
             .put("organ_kind", "android-phone")
             .put("app", "coherence-sense")
-            .put("app_version", "0.4")
+            .put("app_version", "0.5")
             .put("target", "android-arm64")
             .put("steward_cell_id", stewardCellId())
             .put("steward_label", stewardLabel())
@@ -664,6 +820,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     .put("cap.sensor.read")
                     .put("cap.video.frame")
                     .put("cap.audio.sample")
+                    .put("cap.speaker.track")
+                    .put("cap.speaker.name")
                     .put("cap.screen.write")
                     .put("cap.http.request")
                     .put("cap.bluetooth.presence")
@@ -677,6 +835,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             )
             .put("organs_active", JSONArray(activeOrgans()))
             .put("channels_offered", JSONArray(offeredTransports()))
+            .put("speaker_tracking", speakerTrackingJson())
             .put("heartbeat", heartbeatJson())
 
         Thread {
@@ -1109,6 +1268,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         if (cachedGpsState.contains(",")) organs.add("gps")
         if (micSamples > 0) organs.add("mic")
+        if (micSamples > 0 || synchronized(speakerNames) { speakerNames.isNotEmpty() }) organs.add("speaker-tracking")
         if (cameraSamples > 0) organs.add("camera")
         if (gpuSamples > 0) organs.add("gpu")
         return organs.distinct().sorted()
@@ -1118,6 +1278,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val transports = mutableListOf("wifi", "screen")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) transports.add("ble")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)) transports.add("audio")
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)) transports.add("speaker:identity-summary")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) transports.add("video")
         return transports.distinct()
     }
@@ -1127,6 +1288,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "hati.mesh:presence",
             "sensor:signal",
             "audio:pcm16",
+            "speaker:identity-summary",
             "video:rgba-time",
             "gpu:compute",
             "screen:write",
@@ -1142,6 +1304,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("channels", JSONArray(offeredTransports()))
             .put("beat", tick)
             .put("best_shared", bestSharedChannel)
+            .put("speaker_tracking", speakerTrackingJson())
             .put("update", updateState)
 
     private fun bodyStateJson(): JSONObject {
@@ -1152,6 +1315,83 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("surprise_count", surpriseCount)
             .put("error_count", inferenceErrorCount)
             .put("sample_count", sentSamples + micSamples + cameraSamples + gpuSamples)
+            .put("speaker_count", synchronized(speakerNames) { speakerNames.size })
+            .put("speaker_turn_count", speakerTurnCount)
+    }
+
+    private fun speakerConfidenceFromRms(rms: Double): Int =
+        (rms * 2400.0).toInt().coerceIn(0, 99)
+
+    private fun updateSpeakerTrackingFromMic(rms: Double) {
+        val id = activeSpeakerId.ifBlank { defaultSpeakerId }
+        speakerLastRms = rms
+        if (rms >= speakerRmsFloor) {
+            if (!speakerActive) {
+                speakerTurnCount += 1
+                speakerLastChangeMs = System.currentTimeMillis()
+            }
+            speakerActive = true
+            speakerConfidence = speakerConfidenceFromRms(rms).coerceAtLeast(40)
+        } else if (rms <= speakerSilenceFloor) {
+            speakerActive = false
+            speakerConfidence = 0
+        }
+        activeSpeakerId = id
+    }
+
+    private fun speakerRowsJson(): JSONArray {
+        val rows = JSONArray()
+        val ids = (synchronized(speakerNames) { speakerNames.keys.toList() } + currentSpeakerId()).distinct().sorted()
+        ids.forEach { id ->
+            rows.put(
+                JSONObject()
+                    .put("speaker_id", id)
+                    .put("name", speakerDisplayName(id))
+                    .put("named", speakerDisplayName(id) != id)
+                    .put("active", speakerActive && id == activeSpeakerId),
+            )
+        }
+        return rows
+    }
+
+    private fun speakerTrackingJson(): JSONObject {
+        val id = currentSpeakerId()
+        activeSpeakerId = id
+        val rows = speakerRowsJson()
+        return JSONObject()
+            .put("status", if (speakerActive) "active" else if (micSamples > 0) "listening" else "offered")
+            .put("source", "android-mic-rms-manual-slot")
+            .put("claim", "manual-name-rms-activity-not-voiceprint")
+            .put("active_speaker_id", id)
+            .put("active_speaker_name", speakerDisplayName(id))
+            .put("confidence", speakerConfidence)
+            .put("turn_count", speakerTurnCount)
+            .put("speaker_count", rows.length())
+            .put("last_rms", speakerLastRms)
+            .put("rms_floor", speakerRmsFloor)
+            .put("last_change_ms", speakerLastChangeMs)
+            .put("speakers", rows)
+    }
+
+    private fun speakerShortState(): String {
+        val id = activeSpeakerId.ifBlank { currentSpeakerId() }
+        val mode = if (speakerActive) "active" else if (micSamples > 0) "listening" else "offered"
+        return "$mode ${speakerDisplayName(id)} conf=$speakerConfidence turns=$speakerTurnCount"
+    }
+
+    private fun renderSpeakerTracking() {
+        val id = activeSpeakerId.ifBlank { currentSpeakerId() }
+        val saved = synchronized(speakerNames) { speakerNames.entries.map { it.key to it.value } }
+            .sortedBy { it.first }
+            .joinToString(", ") { "${it.first}:${it.second}" }
+            .ifBlank { "none" }
+        speakerTracking.text = listOf(
+            "active: ${if (speakerActive) speakerDisplayName(id) else "quiet"} ($id)",
+            "status: ${if (micSamples > 0) "mic listening" else "mic offered"}  confidence $speakerConfidence",
+            "turns: $speakerTurnCount  rms=${"%.3f".format(Locale.US, speakerLastRms)}",
+            "saved: $saved",
+            "source: mic-rms + manual name; not voiceprint",
+        ).joinToString("\n")
     }
 
     private fun jsonArrayHas(array: JSONArray?, value: String): Boolean {
@@ -1261,6 +1501,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                             }
                             micRms = sqrt(sum / read.toDouble())
                             micSamples += 1
+                            updateSpeakerTrackingFromMic(micRms)
                             requestDashboardRender()
                         }
                     }
@@ -1492,7 +1733,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "AUDIO",
             "mic ${micState()}",
             "speaker $cachedSpeakerState",
+            "tracked ${speakerShortState()}",
         ).joinToString("\n")
+        renderSpeakerTracking()
         videoLane.text = listOf(
             "VIDEO",
             "camera $cachedCameraState",
@@ -1531,6 +1774,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "discovery: $discoveryState",
             "update: $updateState",
             "body-state: organs=${bodyState.optInt("organs_active")} peers=${bodyState.optInt("present_peers")} surprises=${bodyState.optLong("surprise_count")} errors=${bodyState.optLong("error_count")} samples=${bodyState.optLong("sample_count")}",
+            "speaker: ${speakerShortState()}",
             "identity: organ id automatic; phone/email label remains opt-in until Android consent flow is wired",
             "screen: active dashboard + QR offer; camera frames emit luma receipts only",
             "disk: $cachedDiskState",
@@ -1550,6 +1794,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("channels_offered", JSONArray(offeredTransports()))
             .put("heartbeat", heartbeatJson())
             .put("body_state", bodyStateJson())
+            .put("speaker_tracking", speakerTrackingJson())
             .put("sample_rate_hz", samplesPerSecond)
             .put("bytes_per_second", bytesPerSecond)
         val conn = (URL("$base/hati/mesh/organs/heartbeat").openConnection() as HttpURLConnection).apply {
@@ -1577,6 +1822,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("status", "offered")
             .put("lanes", JSONArray(channelLanes()))
             .put("organs_active", JSONArray(activeOrgans()))
+            .put("speaker_tracking", speakerTrackingJson())
             .put("sample_rate_hz", samplesPerSecond)
             .put("bytes_per_second", bytesPerSecond)
         try {
@@ -1610,6 +1856,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "offered carriers: ${offeredTransports().joinToString(",")}",
             "local heartbeat: ${activeOrgans().size} organ(s), ${channelLanes().size} lane(s)",
             "best shared carrier: $bestSharedChannel",
+            "speaker tracking: ${speakerShortState()}",
             "local flow: %.2f samples/s %.0f B/s".format(samplesPerSecond, bytesPerSecond),
         )
         for (i in 0 until rows.length().coerceAtMost(4)) {
@@ -1619,7 +1866,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             lines.add("${status} ${row.optString("protocol", "unknown")} -> ${row.optString("to_organ_id").takeLast(8)} ${row.optDouble("bytes_per_second", 0.0).toInt()} B/s")
         }
         connectedChannelCount = connectedRows
-        lines.add("offerable: sensor:signal audio:pcm16 video:rgba-time screen:write bluetooth:presence")
+        lines.add("offerable: sensor:signal audio:pcm16 speaker:identity-summary video:rgba-time screen:write bluetooth:presence")
         channels.text = lines.joinToString("\n")
         requestDashboardRender()
     }
@@ -1658,6 +1905,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val recog = r.optString("recognized", "—")
             val pred = r.optString("predicted", "—")
             val witnessed = r.optInt("witnessed", -1)
+            mergeSpeakerTrackingFromWitness(r.optJSONObject("speaker_tracking"))
             lastMacState = "synced; witnessed $witnessed frame(s)"
             status.text = "Sharing senses. $lastMacState"
             val senses = mutableListOf<String>()
@@ -1665,6 +1913,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if (snap.has("gyro")) senses.add("gyro")
             if (snap.has("light")) senses.add("light")
             if (snap.has("mag")) senses.add("mag")
+            if (snap.has("speaker_tracking")) senses.add("speaker")
             if (recog == "novel" || recog == "—") surpriseCount += 1
             val line = "tick ${snap.optInt("tick")}  senses[${senses.joinToString(",")}]  field:$recog  next:$pred\n"
             val current = if (feed.text.toString() == "recent witness: none") "" else feed.text.toString()

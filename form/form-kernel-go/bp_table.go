@@ -754,6 +754,7 @@ var bpTable = map[string][4]uint32{
 	"URL-DECODE-ERROR": {1, 2, 99, 1771},
 	"UUID": {1, 2, 99, 1870},
 	"UUID-PARSE-ERROR": {1, 2, 99, 1871},
+	"VALUE-NONE": {1, 2, 99, 32},
 	"VID-ARR": {1, 2, 99, 11},
 	"VID-NULL": {1, 2, 99, 13},
 	"VID-OBJ": {1, 2, 99, 10},

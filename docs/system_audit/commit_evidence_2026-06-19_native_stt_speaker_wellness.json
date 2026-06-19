@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-19",
+  "thread_branch": "codex/native-stt-state-20260619",
+  "commit_scope": "Expose the ambient STT and speaker-identity north star without overstating current capability, add summary-only speaker naming/tracking to the Android and Mac witness surfaces, close the speaker-identification oracle gap as Form proof tissue, and repair the current wellness drift in Blueprint/primitive registries plus the BML front-door views health/archive branch shape.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "ambient-room-sense",
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "native-front-door-deploy",
+    "kernel-native-api-readiness",
+    "ambient-room-sense"
+  ],
+  "task_ids": [
+    "native-stt-speaker-tracking-20260619",
+    "wellness-drift-repair-20260619"
+  ],
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "docs/coherence-substrate/form-cli-north-star.form",
+    "experiments/coherence-sense-android/",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/speech-room-sense-gaps.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/blueprint-registry.json"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "docs/coherence-substrate/form-cli-north-star.form",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/CapabilityHeartbeatService.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/speech-model-learning.fk",
+    "form/form-stdlib/speech-room-sense-gaps.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/tests/speaker-identity-oracle-band.fk",
+    "form/form-stdlib/tests/speech-room-sense-gaps-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make wellness",
+    "deploy/front-door/api.bml",
+    "docs/coherence-substrate/form-cli-north-star.form",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/tests/speaker-identity-oracle-band.fk",
+    "form/form-stdlib/tests/speech-room-sense-gaps-band.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide -> passed in dirty continuation mode",
+      "make wellness -> passed locally; Form blueprints and Form primitives clear; public URL reads from wellness urllib still reported DNS reachability noise",
+      "python3 scripts/scan_form_blueprints.py --check -> registered: 428; unregistered: 0",
+      "python3 form/scripts/validate_primitive_registry.py -> natives: 205; registry: 205; lanes: 164 in-band verified and 41 carrier-declared; str_byte_at named as sibling gap",
+      "cd form && ./validate.sh form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk -> ok, fourth arm present through fkwu registry proof lane",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk -> ok, fourth arm present through fkwu band 32767",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk form-stdlib/tests/speaker-identity-oracle-band.fk -> ok, fourth arm: speaker-identity-oracle fkwu 262143",
+      "bash form/scripts/fourth-arm-gate.sh speaker-identity-oracle -> PASS-4WAY speaker-identity-oracle",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-gaps.fk form-stdlib/speech-room-sense-gaps.fk form-stdlib/tests/speech-room-sense-gaps-band.fk -> ok, fourth arm: speech-room-sense-gaps fkwu 2047",
+      "bash form/scripts/fourth-arm-gate.sh speech-room-sense-gaps -> PASS-4WAY speech-room-sense-gaps",
+      "/usr/bin/env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./gradlew --gradle-user-home /tmp/coherence-gradle :app:compileDebugKotlin -> passed with existing deprecation warnings",
+      "python3 -m py_compile experiments/coherence-sense-android/mac-witness-server.py -> passed",
+      "python3 -m pytest -q api/tests/test_bml_idea_family_harness.py api/tests/test_runtime_surface_native_routes.py -> 6 passed after sandbox escalation; sandbox-only first run failed with Operation not permitted",
+      "./target/release/form-kernel-rust serve --port 19122 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib -> source manifest compiled and served 71 native routes after sandbox escalation",
+      "curl http://127.0.0.1:19122/api/views/archive -> 200 native api_views_archive",
+      "curl http://127.0.0.1:19122/api/views/health -> 200 native api_views_health",
+      "curl http://127.0.0.1:19122/api/automation/usage/readiness -> 503 persistence/database unavailable locally, not name_resolution_error",
+      "git diff --check -> clean"
+    ],
+    "notes": "Local wellness drift is repaired. The BML front-door fix lifts route else branches into helper functions so the loader does not treat block text beginning with pg_connect as an unbound function. Android/Mac speaker tracking is summary-only manual naming/activity, not production diarization or strong voiceprint matching."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks have not run in this local worktree."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy was performed in this task. Direct public curl still shows /api/views/health on the deployed kernel returning name_resolution_error from the old route source; /api/health and /api/substrate/shape_health are reachable."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Ready for PR/deploy validation, but the public wellness witness remains red until this branch is deployed and /api/views/health is rechecked in production."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native BML front-door views archive and health routes no longer crash on a branch body beginning with pg_connect; local Android and Mac witness surfaces show a named speaker ledger with summary-only mic activity; Form CLI and Form proof bands name production diarization and strong voiceprint matching as explicit gaps with oracle-to-native promotion gates.",
+    "public_endpoints": [
+      "/api/views/health",
+      "/api/views/archive",
+      "/api/automation/usage/readiness"
+    ],
+    "test_flows": [
+      "Local Rust kernel serves patched deploy/front-door/api.bml and returns 200 native JSON for /api/views/health.",
+      "Local Rust kernel serves patched deploy/front-door/api.bml and returns 200 native JSON for /api/views/archive.",
+      "Local Rust kernel returns the intended local 503 persistence response for /api/automation/usage/readiness instead of name_resolution_error."
+    ]
+  }
+}

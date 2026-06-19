@@ -20,12 +20,43 @@ import json
 import time
 from argparse import ArgumentParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from hati_witness_discovery import start_mdns_advertisement, witness_descriptor
 
 DEFAULT_PORT = 8800
 ORGAN_KEYS = ("accel", "gyro", "light", "mag")
 STALE_SECONDS = 4.0          # no frame in this long -> the body went quiet (a liveness event)
+SPEAKER_NAMES_FILE = Path.home() / ".coherence-sense-speakers.json"
+
+
+def _normalize_speaker_id(value):
+    cleaned = "".join(c.lower() if c.isalnum() or c in "_.-" else "-" for c in str(value or "").strip())
+    cleaned = cleaned.strip("-")[:32]
+    return cleaned or "speaker-1"
+
+
+def _load_speaker_names():
+    try:
+        raw = json.loads(SPEAKER_NAMES_FILE.read_text())
+    except Exception:
+        raw = {}
+    names = {}
+    if isinstance(raw, dict):
+        for key, value in raw.items():
+            speaker_id = _normalize_speaker_id(key)
+            name = str(value or "").strip()[:48]
+            if speaker_id and name:
+                names[speaker_id] = name
+    names.setdefault("speaker-1", "Speaker 1")
+    return names
+
+
+def _save_speaker_names():
+    try:
+        SPEAKER_NAMES_FILE.write_text(json.dumps(state["speaker_names"], indent=2, sort_keys=True) + "\n")
+    except Exception as e:
+        _event("speaker", f"speaker names not persisted: {e}")
 
 # the shared field state the dashboard renders — pure witness, not a decision.
 state = {
@@ -40,6 +71,9 @@ state = {
     "events": [],            # field-change events (most recent first)
     "present": False,
     "witness": {},
+    "speaker_names": _load_speaker_names(),
+    "speaker_tracking": {},
+    "active_speaker_id": "speaker-1",
 }
 
 
@@ -69,6 +103,72 @@ def _merge_snapshot(snap):
     return snap
 
 
+def _speaker_display_name(speaker_id):
+    return state["speaker_names"].get(speaker_id) or speaker_id
+
+
+def _merge_speaker_tracking(raw):
+    incoming = raw if isinstance(raw, dict) else {}
+    previous = state.get("speaker_tracking") if isinstance(state.get("speaker_tracking"), dict) else {}
+    changed_names = False
+    incoming_rows = []
+    speakers = incoming.get("speakers", [])
+    if isinstance(speakers, list):
+        incoming_rows = [row for row in speakers if isinstance(row, dict)]
+
+    for row in incoming_rows:
+        speaker_id = _normalize_speaker_id(row.get("speaker_id"))
+        name = str(row.get("name") or "").strip()[:48]
+        if name and name != speaker_id and state["speaker_names"].get(speaker_id) != name:
+            state["speaker_names"][speaker_id] = name
+            changed_names = True
+
+    active_id = _normalize_speaker_id(
+        incoming.get("active_speaker_id")
+        or previous.get("active_speaker_id")
+        or state.get("active_speaker_id")
+        or "speaker-1"
+    )
+    active_name = str(incoming.get("active_speaker_name") or "").strip()[:48]
+    if active_name and active_name != active_id and state["speaker_names"].get(active_id) != active_name:
+        state["speaker_names"][active_id] = active_name
+        changed_names = True
+    if changed_names:
+        _save_speaker_names()
+
+    row_ids = {_normalize_speaker_id(row.get("speaker_id")) for row in incoming_rows}
+    row_ids.add(active_id)
+    row_ids.update(state["speaker_names"].keys())
+    rows = [
+        {
+            "speaker_id": speaker_id,
+            "name": _speaker_display_name(speaker_id),
+            "named": _speaker_display_name(speaker_id) != speaker_id,
+            "active": speaker_id == active_id and bool(incoming.get("status") == "active"),
+        }
+        for speaker_id in sorted(row_ids)
+        if speaker_id
+    ]
+
+    merged = dict(previous)
+    merged.update(incoming)
+    merged.update({
+        "status": incoming.get("status") or previous.get("status") or "offered",
+        "source": incoming.get("source") or previous.get("source") or "mac-witness-manual-name",
+        "claim": incoming.get("claim") or previous.get("claim") or "manual-name-summary-not-voiceprint",
+        "active_speaker_id": active_id,
+        "active_speaker_name": _speaker_display_name(active_id),
+        "speaker_count": len(rows),
+        "speakers": rows,
+    })
+    state["active_speaker_id"] = active_id
+    state["speaker_tracking"] = merged
+    return merged
+
+
+_merge_speaker_tracking({})
+
+
 class Witness(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         data = body.encode() if isinstance(body, str) else body
@@ -76,8 +176,12 @@ class Witness(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
         self.wfile.write(data)
+
+    def do_OPTIONS(self):
+        self._send(204, b"")
 
     def do_GET(self):
         if self.path.startswith("/state"):
@@ -92,6 +196,8 @@ class Witness(BaseHTTPRequestHandler):
         return self._send(200, DASHBOARD, "text/html; charset=utf-8")
 
     def do_POST(self):
+        if self.path.startswith("/speakers/name"):
+            return self._save_speaker_name()
         if self.path != "/sense":
             return self._send(404, json.dumps({"error": "only /sense"}))
         try:
@@ -103,6 +209,7 @@ class Witness(BaseHTTPRequestHandler):
         now = time.time()
         heartbeat = isinstance(snap.get("capability_heartbeat"), dict)
         merged = _merge_snapshot(snap)
+        speaker_tracking = _merge_speaker_tracking(merged.get("speaker_tracking"))
         present = [k for k in ORGAN_KEYS if k in merged]
 
         if state["device"] is None:
@@ -121,6 +228,7 @@ class Witness(BaseHTTPRequestHandler):
             _event("peer", f"{state['device']} present again")
 
         state["organs"] = present
+        merged["speaker_tracking"] = speaker_tracking
         state["latest"] = merged
         state["frames"] += 1
         if heartbeat:
@@ -135,7 +243,29 @@ class Witness(BaseHTTPRequestHandler):
             "witnessed": state["frames"],
             "recognized": "+".join(present) if present else "quiet",
             "predicted": "—",
+            "speaker_tracking": speaker_tracking,
         }))
+
+    def _save_speaker_name(self):
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+            payload = json.loads(self.rfile.read(n) or b"{}")
+        except Exception as e:
+            return self._send(400, json.dumps({"error": str(e)}))
+        speaker_id = _normalize_speaker_id(payload.get("speaker_id") or state.get("active_speaker_id") or "speaker-1")
+        name = str(payload.get("name") or "").strip()[:48]
+        if not name:
+            return self._send(400, json.dumps({"error": "name required"}))
+        state["speaker_names"][speaker_id] = name
+        _save_speaker_names()
+        tracking = _merge_speaker_tracking({
+            "active_speaker_id": speaker_id,
+            "active_speaker_name": name,
+            "source": "mac-witness-manual-name",
+            "claim": "manual-name-summary-not-voiceprint",
+        })
+        _event("speaker", f"{speaker_id} named {name}")
+        return self._send(200, json.dumps({"saved": True, "speaker_tracking": tracking}))
 
     def log_message(self, *a):
         pass
@@ -146,7 +276,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8>
 <style>
  body{background:#0b0d10;color:#cdd6e0;font:13px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:18px}
  h1{font-size:18px;margin:0 0 2px;color:#eaf0f6} .sub{color:#7a8696;margin:0 0 16px}
- .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:900px}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1040px}
  .card{background:#12161b;border:1px solid #1e252d;border-radius:10px;padding:14px}
  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7a8696;margin:0 0 10px}
  .big{font-size:26px;color:#eaf0f6} .dim{color:#7a8696}
@@ -158,6 +288,10 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8>
  table{width:100%;border-collapse:collapse} td{padding:2px 0} td.k{color:#7a8696;width:84px;padding-right:10px}
  .ev{border-left:2px solid #2a3340;padding:1px 0 1px 10px;margin:2px 0;color:#aeb9c6}
  .ev .t{color:#566} .ev.organ{border-color:#2c4a35} .ev.peer{border-color:#3a4a66}
+ input{background:#0b0d10;border:1px solid #2a3340;border-radius:6px;color:#eaf0f6;font:13px ui-monospace,Menlo,monospace;padding:7px;width:100%;box-sizing:border-box}
+ button{background:#1e3a34;border:1px solid #2c6b58;border-radius:6px;color:#c4f1df;font:13px ui-monospace,Menlo,monospace;padding:7px 10px;cursor:pointer}
+ .speaker-form{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-top:12px}
+ .speaker-row{border-top:1px solid #1e252d;padding:5px 0}.speaker-row:first-child{border-top:0}
  .note{grid-column:1/3;background:#12161b;border:1px dashed #2a3340;border-radius:10px;padding:12px;color:#8a97a6}
 </style></head><body>
 <h1>Coherence Sense — live</h1>
@@ -167,12 +301,41 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8>
  <div class=card><h2>organs active</h2><div id=organs></div></div>
  <div class=card><h2>nearby discovery</h2><div id=discovery></div><div class=dim>Android listens for _hati-witness._tcp; fallback URLs stay visible here.</div></div>
  <div class=card><h2>field (latest)</h2><table id=field></table></div>
+ <div class=card><h2>speaker tracking</h2><div id=speaker></div><div class=speaker-form><input id=speakerId placeholder="speaker-1"><input id=speakerName placeholder="Name"><button onclick="saveSpeakerName()">Save</button></div></div>
  <div class=card><h2>events / surprises</h2><div id=events></div></div>
  <div class=note id=note>recognition &middot; prediction &middot; inference-error &mdash; the Form recipes are proven three-way; wiring them into this live loop (a persistent kernel eval server) is the next carrier step. For now this window shows the senses and the sync, honestly.</div>
 </div>
 <script>
 const ALL=["accel","gyro","light","mag"];
 function vec(v){return Array.isArray(v)?v.map(x=>(+x).toFixed(2)).join("  "):(+v).toFixed(2)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function speakerSummary(t){
+ if(!t)return "offered";
+ return (t.status||"offered")+" "+(t.active_speaker_name||t.active_speaker_id||"speaker-1")+" conf="+(t.confidence||0)+" turns="+(t.turn_count||0);
+}
+function renderSpeaker(t){
+ t=t||{};
+ const rows=Array.isArray(t.speakers)?t.speakers:[];
+ const activeId=t.active_speaker_id||"speaker-1";
+ const activeName=t.active_speaker_name||activeId;
+ const body=[
+  '<div class=big>'+esc(activeName)+'</div>',
+  '<div class=dim>'+esc(t.status||"offered")+' · confidence '+esc(t.confidence||0)+' · turns '+esc(t.turn_count||0)+'</div>',
+  '<div class=dim>'+esc(t.claim||"manual-name-summary-not-voiceprint")+'</div>',
+  rows.map(r=>'<div class=speaker-row>'+esc(r.active?"● ":"")+esc(r.speaker_id||"speaker")+' · '+esc(r.name||r.speaker_id||"unnamed")+'</div>').join("")||'<div class=dim>no saved speaker names</div>'
+ ].join("");
+ document.getElementById("speaker").innerHTML=body;
+ const idInput=document.getElementById("speakerId");
+ const nameInput=document.getElementById("speakerName");
+ if(document.activeElement!==idInput) idInput.value=activeId;
+ if(document.activeElement!==nameInput) nameInput.value=activeName;
+}
+async function saveSpeakerName(){
+ const speaker_id=document.getElementById("speakerId").value;
+ const name=document.getElementById("speakerName").value;
+ const res=await fetch("/speakers/name",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({speaker_id,name})});
+ if(res.ok){const body=await res.json();renderSpeaker(body.speaker_tracking||{})}
+}
 async function tick(){
  let s; try{ s=await (await fetch("/state")).json() }catch(e){ document.getElementById("presence").textContent="server offline"; return }
  const pres=document.getElementById("presence");
@@ -183,10 +346,12 @@ async function tick(){
  const w=s.witness||{};
  document.getElementById("discovery").innerHTML='<div class=dim>'+((w.service_type||"_hati-witness._tcp")+" · "+(w.mode||"witness"))+'</div>'+((w.urls||[]).map(u=>'<span class=pill>'+u+'</span>').join("")||'<span class=dim>waiting for LAN address</span>');
  const f=s.latest||{};
+ renderSpeaker(s.speaker_tracking||f.speaker_tracking||{});
  const channelRows=[
   ["frame", f.last_frame_kind||"—"],
   ["samples", (s.sample_frames||0)+" full / "+(s.heartbeat_frames||0)+" heartbeat"],
   ["audio", ("mic_rms" in f)?(+f.mic_rms).toFixed(4):"offered"],
+  ["speaker", speakerSummary(s.speaker_tracking||f.speaker_tracking)],
   ["video", ("camera_luma" in f)?(("luma "+(+f.camera_luma).toFixed(3))+" · "+(f.camera_samples||0)+" frames"):"offered"],
   ["gpu", ("gpu_samples" in f)?((f.gpu_samples||0)+" samples · "+(+f.gpu_latency_ms||0).toFixed(2)+"ms"):"waiting"],
   ["screen", "dashboard+qr/write offered"],

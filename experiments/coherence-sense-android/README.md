@@ -259,9 +259,12 @@ The current APK actively streams and measures `sensor:signal` flow, announces / 
 `screen:write`, `network:http`, and `bluetooth:presence` channels. The mic lane has an active RMS
 summary floor, the camera lane has an active luma summary floor, and the GPU lane has an active
 OpenGL ES/EGL readback summary floor when sharing is active and permissions are granted. The app
-does not retain raw audio, camera frames, or GPU buffers. The foreground capability heartbeat keeps
-`/sense` present with `capability_heartbeat.active=true`; the Mac witness merges that heartbeat into
-the latest rich summary instead of treating it as a fresh mic/camera/GPU sample.
+does not retain raw audio, camera frames, or GPU buffers. Speaker tracking is visible as a
+summary-only lane: Android exposes a mic-RMS/manual-speaker-slot receipt, speaker names can be saved
+on Android or on the Mac witness dashboard, and the claim remains manual naming plus activity
+confidence, not production diarization or voiceprint identity. The foreground capability heartbeat
+keeps `/sense` present with `capability_heartbeat.active=true`; the Mac witness merges that
+heartbeat into the latest rich summary instead of treating it as a fresh mic/camera/GPU sample.
 
 The local Mac witness is also a discoverable channel. Both `mac-witness-server.py` and
 `coherence-sense-eval.py` advertise `_hati-witness._tcp` on the LAN and serve

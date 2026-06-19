@@ -20,10 +20,15 @@
 ; until heldout receipts prove otherwise.
 ; Corpus receipts group several real teacher rows into one training window so
 ; the next native candidate races against a heldout corpus, not a single phrase.
+; Speaker identity receipts use the same ladder: a local log-mel fingerprint
+; oracle can perform enrollment/query matching now. Production diarization and
+; strong voiceprint matching must additionally pass a local strong-oracle gate
+; before any native heldout win can promote them from gap to default runtime.
 ;
 ; Proven by: form-stdlib/tests/speech-model-learning-band.fk
 ;            form-stdlib/tests/speech-teacher-receipt-band.fk
 ;            form-stdlib/tests/speech-teacher-corpus-band.fk
+;            form-stdlib/tests/speaker-identity-oracle-band.fk
 
 (do
     (defn sml-sample (label feature lane)
@@ -609,6 +614,158 @@
             label
             (sml-live-speech-loop-feature receipt)
             "speech:live-dual-mic"))
+
+    (defn sml-speaker-id-floor ()
+        (list
+            "enrollment audio lowers to hashed log-mel fingerprint rows before identity claims"
+            "query audio must match an enrolled speaker with confidence and agreement bins"
+            "pitch bands are metadata only; identity requires a speaker fingerprint receipt"))
+    (defn sml-speaker-id-north-star ()
+        (list
+            "local log-mel fingerprints, pyannote, SpeechBrain, and WeSpeaker can all write the same receipt"
+            "one or multiple Form speaker models train and race against heldout fingerprint receipts"
+            "native voice identity becomes default only after heldout wins and raw room audio stays local"))
+    (defn sml-speaker-id-receipt
+        (status provider model enrolled expected matched confidence bands agreement query-ms audio-sha fingerprint-sha raw-audio-retained floor north-star)
+        (list status provider model enrolled expected matched confidence bands agreement query-ms audio-sha fingerprint-sha raw-audio-retained floor north-star))
+    (defn sml-sid-status (receipt) (nth receipt 0))
+    (defn sml-sid-provider (receipt) (nth receipt 1))
+    (defn sml-sid-model (receipt) (nth receipt 2))
+    (defn sml-sid-enrolled (receipt) (nth receipt 3))
+    (defn sml-sid-expected (receipt) (nth receipt 4))
+    (defn sml-sid-matched (receipt) (nth receipt 5))
+    (defn sml-sid-confidence (receipt) (nth receipt 6))
+    (defn sml-sid-bands (receipt) (nth receipt 7))
+    (defn sml-sid-agreement (receipt) (nth receipt 8))
+    (defn sml-sid-query-ms (receipt) (nth receipt 9))
+    (defn sml-sid-audio-sha (receipt) (nth receipt 10))
+    (defn sml-sid-fingerprint-sha (receipt) (nth receipt 11))
+    (defn sml-sid-raw-audio-retained (receipt) (nth receipt 12))
+    (defn sml-sid-floor (receipt) (nth receipt 13))
+    (defn sml-sid-north-star (receipt) (nth receipt 14))
+    (defn sml-speaker-id-valid? (receipt)
+        (if (and
+                (str_eq (sml-sid-status receipt) "pass")
+                (and
+                    (str_eq (sml-sid-provider receipt) "local-logmel-fingerprint")
+                    (and
+                        (sml-str-nonempty? (sml-sid-model receipt))
+                        (and
+                            (ge (sml-sid-enrolled receipt) 2)
+                            (and
+                                (sml-str-nonempty? (sml-sid-expected receipt))
+                                (and
+                                    (str_eq (sml-sid-matched receipt) (sml-sid-expected receipt))
+                                    (and
+                                        (ge (sml-sid-confidence receipt) 60)
+                                        (and
+                                            (ge (sml-sid-bands receipt) 13)
+                                            (and
+                                                (ge (sml-sid-agreement receipt) 7)
+                                                (and
+                                                    (gt (sml-sid-query-ms receipt) 0)
+                                                    (and
+                                                        (sml-str-sha? (sml-sid-audio-sha receipt))
+                                                        (and
+                                                            (sml-str-sha? (sml-sid-fingerprint-sha receipt))
+                                                            (and
+                                                                (eq (sml-sid-raw-audio-retained receipt) 0)
+                                                                (and
+                                                                    (gt (len (sml-sid-floor receipt)) 0)
+                                                                    (gt (len (sml-sid-north-star receipt)) 0)))))))))))))))
+            1
+            0))
+    (defn sml-speaker-id-feature (receipt)
+        (list
+            (sml-sid-confidence receipt)
+            (sml-sid-bands receipt)
+            (sml-sid-agreement receipt)
+            (sml-sid-enrolled receipt)
+            (sml-sid-query-ms receipt)
+            (sml-sid-raw-audio-retained receipt)))
+    (defn sml-speaker-id-sample (receipt)
+        (sml-sample
+            (sml-sid-matched receipt)
+            (sml-speaker-id-feature receipt)
+            "speech:speaker-identity-oracle"))
+    (defn sml-speaker-id-score-card (path receipt trust)
+        (sml-score-card
+            path
+            (if (eq (sml-speaker-id-valid? receipt) 1) 1 0)
+            1
+            90
+            trust))
+    (defn sml-speaker-id-retire-oracle? (receipt native-correct native-total native-trust native-locality)
+        (if (and
+                (eq (sml-speaker-id-valid? receipt) 1)
+                (and
+                    (ge native-total 3)
+                    (and
+                        (eq native-correct native-total)
+                        (and
+                            (ge native-trust 85)
+                            (ge native-locality 90)))))
+            1
+            0))
+    (defn sml-speaker-strong-oracle-floor ()
+        (list
+            "production diarization requires a local provider availability receipt"
+            "strong voiceprint matching requires a local embedding or verification provider"
+            "native promotion requires provider availability plus heldout native wins"))
+    (defn sml-speaker-strong-oracle-north-star ()
+        (list
+            "pyannote, SpeechBrain ECAPA, WeSpeaker, or another local oracle can teach the same lane"
+            "diarization, enrollment, query, and heldout identity rows share one receipt grammar"
+            "when native Form models beat the strong oracle on heldout room receipts, the oracle retires"))
+    (defn sml-speaker-strong-oracle
+        (diarization-provider voiceprint-provider local-ready diarization-ready voiceprint-ready diarization-confidence voiceprint-confidence enrollment-count heldout-count model-sha license-ok consent-ok)
+        (list diarization-provider voiceprint-provider local-ready diarization-ready voiceprint-ready diarization-confidence voiceprint-confidence enrollment-count heldout-count model-sha license-ok consent-ok))
+    (defn sml-sso-diarization-provider (oracle) (nth oracle 0))
+    (defn sml-sso-voiceprint-provider (oracle) (nth oracle 1))
+    (defn sml-sso-local-ready (oracle) (nth oracle 2))
+    (defn sml-sso-diarization-ready (oracle) (nth oracle 3))
+    (defn sml-sso-voiceprint-ready (oracle) (nth oracle 4))
+    (defn sml-sso-diarization-confidence (oracle) (nth oracle 5))
+    (defn sml-sso-voiceprint-confidence (oracle) (nth oracle 6))
+    (defn sml-sso-enrollment-count (oracle) (nth oracle 7))
+    (defn sml-sso-heldout-count (oracle) (nth oracle 8))
+    (defn sml-sso-model-sha (oracle) (nth oracle 9))
+    (defn sml-sso-license-ok (oracle) (nth oracle 10))
+    (defn sml-sso-consent-ok (oracle) (nth oracle 11))
+    (defn sml-speaker-strong-oracle-available? (oracle)
+        (if (and
+                (sml-str-nonempty? (sml-sso-diarization-provider oracle))
+                (and
+                    (sml-str-nonempty? (sml-sso-voiceprint-provider oracle))
+                    (and
+                        (eq (sml-sso-local-ready oracle) 1)
+                        (and
+                            (eq (sml-sso-diarization-ready oracle) 1)
+                            (and
+                                (eq (sml-sso-voiceprint-ready oracle) 1)
+                                (and
+                                    (ge (sml-sso-diarization-confidence oracle) 80)
+                                    (and
+                                        (ge (sml-sso-voiceprint-confidence oracle) 80)
+                                        (and
+                                            (ge (sml-sso-enrollment-count oracle) 2)
+                                            (and
+                                                (ge (sml-sso-heldout-count oracle) 3)
+                                                (and
+                                                    (sml-str-sha? (sml-sso-model-sha oracle))
+                                                    (and
+                                                        (eq (sml-sso-license-ok oracle) 1)
+                                                        (eq (sml-sso-consent-ok oracle) 1))))))))))))
+            1
+            0))
+    (defn sml-speaker-production-ready? (receipt oracle native-correct native-total native-trust native-locality)
+        (if (and
+                (eq (sml-speaker-id-valid? receipt) 1)
+                (and
+                    (eq (sml-speaker-strong-oracle-available? oracle) 1)
+                    (eq (sml-speaker-id-retire-oracle? receipt native-correct native-total native-trust native-locality) 1)))
+            1
+            0))
 
     (defn sml-mesh-row (tts-label stt-label expected)
         (list tts-label stt-label expected))
