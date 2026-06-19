@@ -216,6 +216,60 @@
     ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
     (defn lo-compile-fn (prog root) (lo-app (fa-mov 1 0) (lo-compile prog root)))
 
+    ; ── the FLOAT lowering twin — lower a float-op tree to arm64 scalar-double bytes ──
+    ; The integer lane above lowers to w-registers; this lowers the SAME op-tagged tree to
+    ; the FP tier (form-asm.fk's fa-f* — the byte-proven encodings of gap #12). Convention
+    ; mirrors the integer lane: the single float argument arrives in d0, the preamble banks
+    ; it to d<argr> (d1), every result lands in d0. Operand-aware like lo-mul/lo-add: an ARG
+    ; operand selects the register-form FP instruction directly, never clobbering the banked
+    ; arg. This is the clang-free FLOAT native path the self-JIT targets (JIT_GAP_LEDGER #11):
+    ; the SAME f64 ops the walk runs, emitted as BYTES — bit-identical by construction.
+    ; Two non-ARG float subtrees is the FP-register-stack frontier (named next, via the
+    ; fa-ldr-d/fa-str-d spill that gap #12 landed) — left as the empty tail, never a wrong answer.
+    (defn lo-fnode (prog i argr)
+        (if (eq (lo-tag prog i) 2) (fa-fmov 0 argr)              ; ARG: d0 = d<argr>
+        (if (eq (lo-tag prog i) 3) (lo-fadd prog i argr)
+        (if (eq (lo-tag prog i) 4) (lo-fsub prog i argr)
+        (if (eq (lo-tag prog i) 5) (lo-fmul prog i argr)
+        (if (eq (lo-tag prog i) 8) (lo-fdiv prog i argr)
+            (list)))))))
+    ; FADD/FMUL commute: ARG on both sides folds to one register-form instruction; ARG on
+    ; one side lowers the other subtree into d0, then the op against the banked arg.
+    (defn lo-fadd (prog i argr)
+        (if (if (lo-arg? prog (lo-c1 prog i)) (lo-arg? prog (lo-c2 prog i)) 0)
+            (fa-fadd 0 argr argr)
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-fnode prog (lo-c1 prog i) argr) (fa-fadd 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-fnode prog (lo-c2 prog i) argr) (fa-fadd 0 0 argr))
+            (list)))))
+    (defn lo-fmul (prog i argr)
+        (if (if (lo-arg? prog (lo-c1 prog i)) (lo-arg? prog (lo-c2 prog i)) 0)
+            (fa-fmul 0 argr argr)
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-fnode prog (lo-c1 prog i) argr) (fa-fmul 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-fnode prog (lo-c2 prog i) argr) (fa-fmul 0 0 argr))
+            (list)))))
+    ; FSUB/FDIV do NOT commute — order kept (d0 = left OP right):
+    ;   (x, ARG) -> lower x->d0 ; op d0,d0,d<argr>   (the banked arg is the right operand)
+    ;   (ARG, x) -> lower x->d0 ; op d0,d<argr>,d0   (the banked arg is the left operand)
+    (defn lo-fsub (prog i argr)
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-fnode prog (lo-c1 prog i) argr) (fa-fsub 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-fnode prog (lo-c2 prog i) argr) (fa-fsub 0 argr 0))
+            (list))))
+    (defn lo-fdiv (prog i argr)
+        (if (lo-arg? prog (lo-c2 prog i))
+            (lo-app (lo-fnode prog (lo-c1 prog i) argr) (fa-fdiv 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i))
+            (lo-app (lo-fnode prog (lo-c2 prog i) argr) (fa-fdiv 0 argr 0))
+            (list))))
+    ; compile a float function OF one float arg: bank d0 -> d1, lower the body, ret.
+    (defn lo-fcompile (prog root) (lo-app (lo-fnode prog root 1) (fa-ret)))
+    (defn lo-fcompile-fn (prog root) (lo-app (fa-fmov 1 0) (lo-fcompile prog root)))
+
     ; ── the SOURCE MAP: one owning node per instruction ──────────────────
     ; lo-map mirrors lo-node's emission order exactly, emitting the source-node
     ; index that owns each instruction — so a native binary gets a full
