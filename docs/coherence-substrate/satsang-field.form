@@ -26,7 +26,7 @@
     (field       field-domain-grammars.interspecies-and-conversation)  # the attention-graph carrier this turns on the circle
     (classifier-kin witness-to-co-regulate)                 # same resonance/select shapes, at the membrane scale
     (concept     lc-satsang-circle)                         # the human door (963 Hz)
-    (runnable    satsang-field.fk)                          # proven: tests/satsang-field-band.fk (255, three-way)
+    (runnable    satsang-field.fk)                          # proven: tests/satsang-field-band.fk (255, four-way)
     (sovereignty lc-sovereignty-within-oneness              # each cell its own interface; one circle
                  lc-received-by-invitation))                # the no, and silence, are whole
 
@@ -87,7 +87,7 @@
   # form-stdlib/satsang-field.fk makes it executable: sf-join (welcome + record interface),
   # sf-offer-invite, sf-listening? / sf-offering? (the stance classifier), sf-listeners /
   # sf-offerers, sf-aligned? (reciprocity as a field property), sf-coherence (the reading),
-  # sf-arrive (join-then-sense). Proven by tests/satsang-field-band.fk -> 255, three-way
+  # sf-arrive (join-then-sense). Proven by tests/satsang-field-band.fk -> 255, four-way
   # (Go = Rust = TS): all four cells welcomed, both stances classified, the reciprocal field
   # aligned while an all-silent one is not, an offered invite honored, and a new cell arriving
   # raising the field's coherence — sensing improving as the circle grows.

@@ -112,7 +112,7 @@
 ;     AND IT RUNS ON METAL. jit-tensor-emit.fk now emits that training step as an MSL kernel
 ;     (jte-affine-train-msl — one GPU thread per output row: forward dot in tb-dot's downward fold, then
 ;     g = 2(y-t) and the in-place SGD update row -= lr·g·x, b -= lr·g). The emitter is a Form recipe,
-;     byte-stable three-way: tests/affine-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_backprop_audit.sh
+;     byte-stable four-way: tests/affine-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_backprop_audit.sh
 ;     on this M4 Max compiles the emitted kernel and trains a real affine on the GPU: 32×32 loss 126→0,
 ;     bit-exact vs the fp32 CPU reference (max|ΔW|=0); 1280×1280 (whisper-large d_model, 1.64M params) loss
 ;     5115→2.2e-8 in 200 steps at 1.054 ms/step, GPU loss matching the fp32 CPU reference to 9 sig figs
@@ -128,7 +128,7 @@
 ;     dh1 column reduction carries tbp-wt-gy-acc's forward left-fold; the residual-free block forces one
 ;     ordering rule — dh1 (phase 3) reads the OLD W2 before phase 4 overwrites it, so a threadgroup_barrier
 ;     between phases makes the single-group read-then-write deterministic. The emitter is a Form recipe,
-;     byte-stable three-way: tests/mlp-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_ffn_audit.sh on
+;     byte-stable four-way: tests/mlp-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_ffn_audit.sh on
 ;     this M4 Max compiles the emitted kernel and trains a real FFN (in=256, hid=384, out=256, 197,248
 ;     params): loss 46.26 → 5.9e-16 in 25 steps at 0.40 ms/step, the GPU weights matching an fp32 CPU mirror
 ;     of the same phases to max|ΔW|=6.1e-6 — within fp32 epsilon (the recipe's exp squares a Taylor value up
@@ -140,7 +140,7 @@
 ;     two pieces the residual block adds: a pre-LN of the input (z = LN(h) by thread 0, tn-mean/tn-var/tn-sqrt's
 ;     exact folds — biased variance, eps inside a 50-iteration Newton sqrt) and the residual highway (y = h+ffn,
 ;     so gy = 2(y-t) flows straight to the FFN as gout); the FFN reads z and the W1 update uses z. Byte-stable
-;     three-way: tests/resid-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_arch_search_audit.sh runs
+;     four-way: tests/resid-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_arch_search_audit.sh runs
 ;     arch-capacity.fk's ac-min-width ON THE GPU: on the d=4 reversal dataset it trains each candidate width
 ;     (1..4) over the dataset on the M4 Max and crowns the smallest that fits — width 1 underfits (loss 7.6),
 ;     width 2 fits (loss 4.8e-7), crown = 2. THREE executions, ONE crown: the fp64 Form recipe ac-min-width
@@ -152,7 +152,7 @@
 ;     layer, updating Wq and Wo. It composes every attention-core gradient (softmax-back, the dv partition, the
 ;     dq weighted-key sum) plus the pre-LN and the residual highway, with the recipe's exact folds (tb-dot
 ;     downward, the attention sums forward, tn-max-subtract softmax over the recipe's own fexp). Byte-stable
-;     three-way: tests/attn-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_attn_audit.sh trains a d=4,
+;     four-way: tests/attn-train-emit-band.fk → 7. LIVE WITNESS scripts/metal_attn_audit.sh trains a d=4,
 ;     3-key attention layer on the M4 Max: loss 2.72 → 1.8e-12 in 200 steps at 0.24 ms/step, the GPU weights
 ;     within fp32 epsilon (max|ΔW|=3.0e-7) of the fp32 CPU mirror. Both architect layer kinds — FFN-residual and
 ;     attention-residual — now train on the silicon, so arch-search's full (depth × width × TYPE) grid can be
@@ -417,7 +417,7 @@
 ;   diffusion region, attn the attention region). The honest finding the band records: raw confidence
 ;   mis-routes on tiny data; the gating network that learns from the no-free-lunch research is what beats
 ;   the single experts. OPEN, by the same appended-row discipline — and the first new KIND is SHIPPED:
-;   a COMPUTE expert (moe-compute-band.fk → 63 three-way) whose core RUNS an executable recipe (the signed
+;   a COMPUTE expert (moe-compute-band.fk → 63 four-way) whose core RUNS an executable recipe (the signed
 ;   alternating fold a-b+c-d), winning a region where the multiset/mean/max/local-structure are all identical
 ;   across classes so diffusion, attention, CNN, and the memorizer every score 0 — only the computation
 ;   separates it. The three-kind MoE (diffusion + attention + compute) routes each held-out input to its
@@ -427,7 +427,7 @@
 ;   FORGETS the old; long-term (ice) reads the whole history's MAJORITY and never forgets. On a key whose
 ;   truth drifted (old majority A, fresh B) the phases DIVERGE (water B, ice A); on a key written only long
 ;   ago, water has evaporated ("") while ice still holds. And the last KIND is SHIPPED: a recipe-GENERATING
-;   expert (recipe-gen.fk → 63 three-way) — the dynamic-recipe advantage as an expert. It WRITES new
+;   expert (recipe-gen.fk → 63 four-way) — the dynamic-recipe advantage as an expert. It WRITES new
 ;   executable recipes by composing pool × core primitives (28 of them, far past the 5 pre-built styles),
 ;   each immediately runnable and content-addressed; on a task every pre-built base style scores 0, the
 ;   generator searches its synthesized recipes and crowns one (chart-pool over the compute core) that scores
@@ -442,7 +442,7 @@
 ;   fit a target ≠ input (loss stays 0.34) and is rejected, while generated depth-1/2 architectures train to
 ;   loss → 0. So the system designs the architecture AND learns it: the same generate-then-search shape that
 ;   composes experts (recipe-gen) now does NAS over layer-stacks, trained by the proven backward.
-;   And the SERVING loop is now closed [arch-champion-challenger-band.fk → 31 three-way]: the architect's
+;   And the SERVING loop is now closed [arch-champion-challenger-band.fk → 31 four-way]: the architect's
 ;   challenger replaces the served champion ONLY when it EARNS it. A deeper challenger fits the task's targets
 ;   faster (closer in 5 steps), strictly exceeds the champion across the window (score 3 > 1), and
 ;   champion-challenger.fk flips authority to it ("challenger"); a same-architecture challenger only TIES, so
@@ -485,7 +485,7 @@
 ;   three-way. And both architect layer kinds now train on the silicon: jte-attn-train-msl emits the
 ;   attention-residual block (Wq/Wo through softmax-back, the dv partition, the pre-LN and residual) —
 ;   scripts/metal_attn_audit.sh trains a d=4 attention layer on the M4 Max (loss 2.7→1.8e-12 at 0.24 ms/step,
-;   within fp32 epsilon of the recipe's own softmax; tests/attn-train-emit-band.fk → 7 three-way). The full
+;   within fp32 epsilon of the recipe's own softmax; tests/attn-train-emit-band.fk → 7 four-way). The full
 ;   (depth × width × TYPE) grid can now be timed on the GPU. Next ring: arch-search itself dispatching the GPU
 ;   trainers per candidate over a mixed FFN/attention grid, and parallelizing the attention kernel across keys
 ;   and projection rows.
