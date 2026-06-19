@@ -149,10 +149,13 @@
     (vitality     model-vitality.form                         # vitality receipts read from resonance / vitality / sovereignty / trust
                   mesh-health.form)                           # the field's standing vitality readout
     (bounded      health-impact-receipt.form)                 # benefit / risk / mixed / unknown / refused — a gate, never a verdict
-    (honest       "'nanite' is a ROLE composed from organs that run, not a"
-                  "separate runnable. The closing recipe: witness-interface +"
-                  "live-diagnosis + vitality-receipt, composed toward one proof"
-                  "band that the consent gate held end-to-end."))
+    (runnable     scripts/nanite_cell.py)                     # bootstrap witness: senses its host, traces content-addressed receipts,
+                                                              # opens the two-sided Hati mesh channel (announce/heartbeat/offer/peers)
+    (honest       "'nanite' is a ROLE composed from organs that run. The bootstrap"
+                  "witness above is stdlib-only host-IO tissue; its Form-native"
+                  "carrier is resource-port.fk driven through the host-kernel host"
+                  "channel + tool-channel host:usage — that is the north star the"
+                  "bootstrap points at, never away from."))
 
   # ── 8 · RESONANCE — the free vital information ───────────────────────
   # When a cell's internal state changes REPEATEDLY in coupling with being

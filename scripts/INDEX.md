@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 288
+**Total files**: 289
 
 | File | Purpose |
 |---|---|
@@ -183,6 +183,7 @@
 | [model_vitality_native_http_capture_probe.sh](model_vitality_native_http_capture_probe.sh) | model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get. |
 | [model_vitality_production_ingest_probe.sh](model_vitality_production_ingest_probe.sh) | model_vitality_production_ingest_probe.sh — capture live production pulse/runtime slices for Form model vitality rows. |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
+| [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
