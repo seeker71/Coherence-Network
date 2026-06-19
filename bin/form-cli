@@ -79,7 +79,7 @@ case "$cmd" in
   -p|--print)  exec python3 "$ROOT/scripts/form_cli_ask_smart.py" -p "$@" ;; # one-shot print mode (scripts/pipes)
   -*)          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$cmd" "$@" ;; # flags (-m/-j/--local-only/...) -> ask engine
   ask)       exec python3 "$RAG" ask "$@" ;;
-  ask+)      exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$@" ;;
+  ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
   train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
   shadow)    exec env FORM_CLI_CORPUS="${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}" \

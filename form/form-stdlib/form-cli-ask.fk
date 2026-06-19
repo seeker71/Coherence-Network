@@ -1,0 +1,66 @@
+; form-cli-ask.fk — the form-cli ASK flow as a PURE FORM recipe the kernel runs (no Python body).
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk
+;
+; Local-first ask, IN THE KERNEL: call the local oracle (host-exec), judge its answer (host-exec),
+; let the four-way-proven form-cli-sufficiency.fk decide accept / escalate, and on escalate call the
+; subscription oracle (host-exec `claude -p`) for the real answer — recording the crossing (host-exec
+; append) so the gap teaches the local lane. The body is Form; the kernel is the runtime; host-io is
+; the only carrier. Modeled on form-native-run.fk. Witness: scripts/form_cli_ask.sh (bin/form-cli ask+).
+
+; call an oracle: write the prompt to a file, exec `oracle < file`, return its stdout
+(defn fca-oracle (oracle prompt)
+    (do (host-write "/tmp/fca_prompt.txt" prompt)
+        (host-exec (str_concat oracle " < /tmp/fca_prompt.txt 2>/dev/null"))))
+
+; the first integer embedded in a string (so a chatty judge "the score is 84" still reads 84)
+(defn fca-isdigit (c) (if (ge c 48) (if (le c 57) 1 0) 0))
+; end of the digit run starting at i (str_to_int rejects trailing non-digits, so we slice exactly)
+(defn fca-numend (s i)
+    (if (ge i (str_len s)) i
+        (if (eq (fca-isdigit (ord (char_at s i))) 1) (fca-numend s (add i 1)) i)))
+; the LAST integer in a string — robust for a rating, since chatty judges ("0 issues, so 95")
+; put the verdict last; taking the first would grab a leaked leading 0.
+(defn fca-scan-nums (s i last)
+    (if (ge i (str_len s)) last
+        (if (eq (fca-isdigit (ord (char_at s i))) 1)
+            (fca-scan-nums s (fca-numend s i) (str_to_int (substring s i (fca-numend s i))))
+            (fca-scan-nums s (add i 1) last))))
+(defn fca-clamp100 (n) (if (gt n 100) 100 n))
+(defn fca-lastnum (s) (fca-clamp100 (fca-scan-nums s 0 0)))
+
+; judge the answer's coverage of the question, 0..100 (the fcj content axis), via the local judge.
+(defn fca-judge (judge question answer)
+    (fca-lastnum (fca-oracle judge
+        (str_concat "How fully does the ANSWER address the QUESTION? Reply with ONLY a single integer percent (higher means more complete), nothing else.\nQUESTION: "
+            (str_concat question (str_concat "\nANSWER: " answer))))))
+
+; did the local lane punt? -> shape-ok 0
+(defn fca-refused? (ans)
+    (if (ge (str_find ans "do not answer" 0) 0) 1
+        (if (ge (str_find ans "cannot answer" 0) 0) 1
+            (if (ge (str_find ans "not enough" 0) 0) 1
+                (if (ge (str_find ans "don't have" 0) 0) 1 0)))))
+
+; record the crossing (reason code) for learning — host-io append, the gap teaches the local lane
+(defn fca-record (reason)
+    (host-exec (str_concat "printf '%d\\n' " (str_concat (int_to_str reason)
+        " >> $HOME/.coherence-network/form-cli-escalations.log"))))
+
+; THE ask: local -> judge -> sufficiency verdict -> accept locally, or escalate for the real answer.
+; trust is the lane's accumulated confidence (0..100), passed in; retries the re-try budget.
+(defn fca-ask (question model judge remote trust retries)
+    (do
+        (let local (fca-oracle (str_concat "ollama run " model) question))
+        (let hasout (if (gt (str_len local) 0) 1 0))
+        (let shape (if (eq (fca-refused? local) 1) 0 1))
+        (let content (if (eq hasout 1) (fca-judge judge question local) 0))
+        (let sig (fsuf-signals hasout shape content trust trust retries))
+        (let v (fsuf-verdict sig))
+        (let r (fsuf-reason sig))
+        (if (eq v 0)
+            (str_concat "[local · sufficient · 0 subscription tokens]\n" local)
+            (do
+                (fca-record r)
+                (str_concat "[escalated -> remote · reason " (str_concat (int_to_str r)
+                    (str_concat "]\n" (fca-oracle remote question))))))))
