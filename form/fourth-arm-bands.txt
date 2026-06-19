@@ -636,3 +636,4 @@ whisper-mh-block-real fks 1
 transformer-real-train fks 31
 form-cli-sufficiency fks 255
 form-cli-repl fks 255
+form-cli-stats fks 255

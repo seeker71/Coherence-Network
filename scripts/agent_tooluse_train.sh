@@ -167,4 +167,21 @@ swiftc -O -framework Metal "$work/runner.swift" -o "$work/runner" 2>&1 | grep -v
 [[ -x "$work/runner" ]] || { echo "FAIL swiftc did not build the runner"; exit 1; }
 
 echo "── training the tool-use model on the M4 Max GPU (real agent corpus) ──"
-"$work/runner" "$DATA" "$work/train.metal" "$HID" "$EPOCHS" "$LR"
+"$work/runner" "$DATA" "$work/train.metal" "$HID" "$EPOCHS" "$LR" | tee "$work/out.txt"
+# cache the held-out metric so `form-cli stats` can read the native tool-predictor's real numbers
+python3 - "$work/out.txt" <<'PY'
+import sys, re, json, os
+txt = open(sys.argv[1]).read()
+def row(label):
+    m = re.search(rf'{label}\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%', txt)
+    return [float(x) for x in m.groups()] if m else None
+model, base = row("model"), row("majority base")
+per = {n: float(a) for n, a in re.findall(r'^\s{4}(\S+)\s+([\d.]+)%', txt, re.M)}
+if model and base:
+    p = os.path.expanduser("~/.coherence-network/form-cli-model-metric.json")
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    json.dump({"micro": model[0], "exact": model[1], "cover": model[2],
+               "baseline_micro": base[0], "baseline_exact": base[1], "baseline_cover": base[2],
+               "perTool": per}, open(p, "w"))
+    print(f"  (held-out metric cached → {p})")
+PY

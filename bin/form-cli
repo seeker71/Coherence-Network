@@ -33,6 +33,12 @@ form-cli — the one door (local-first, Form-native)
         daily-driver ask: local-first, then a multi-signal sufficiency check
         (form-cli-sufficiency.fk, four-way proven) escalates to the subscription
         oracle for the real answer when local is not enough — claude-code quality
+  form-cli stats
+        dashboard: learning · models · tools · tool->native · local/remote oracle
+        (counts read from the body's records; stats by form-cli-stats.fk, four-way)
+  form-cli train [hid epochs lr]
+        train the native tool-use predictor on the real agent corpus (M4 Max GPU),
+        caching its held-out scores for `form-cli stats` tool->native
   form-cli index [--docs DIR ...]
         (re)build the searchable index over the body and any local doc folders
   form-cli search "<query>" [-k N]
@@ -70,6 +76,8 @@ case "$cmd" in
   -*)          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$cmd" "$@" ;; # flags (-m/-j/--local-only/...) -> ask engine
   ask)       exec python3 "$RAG" ask "$@" ;;
   ask+)      exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$@" ;;
+  stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
+  train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;
   index)     exec python3 "$RAG" build "$@" ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 291
+**Total files**: 292
 
 | File | Purpose |
 |---|---|
@@ -101,6 +101,7 @@
 | [form_cli_roadmap.sh](form_cli_roadmap.sh) | form_cli_roadmap.sh — list the floor->north-star steps and the next one to build. |
 | [form_cli_self_review.sh](form_cli_self_review.sh) | form_cli_self_review.sh — the self-review flywheel, driven through form-cli. |
 | [form_cli_slice.sh](form_cli_slice.sh) | form_cli_slice.sh — compile a Form recipe slice to a RUNNABLE native binary, |
+| [form_cli_stats.py](form_cli_stats.py) | form_cli_stats.py — CARRIER. The `form-cli stats` dashboard: six lenses on the body's real records. |
 | [form_cli_tiered.sh](form_cli_tiered.sh) | form_cli_tiered.sh — retire the REMOTE oracle on reasoning: local-first, tiered. |
 | [form_cli_train_predict.sh](form_cli_train_predict.sh) | form_cli_train_predict.sh — train a NATIVE tool predictor on the corpus, then |
 | [form_cli_transformer_train.sh](form_cli_transformer_train.sh) | form_cli_transformer_train.sh — train the Form-native transformer on the REAL |

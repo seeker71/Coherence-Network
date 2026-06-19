@@ -1,0 +1,38 @@
+; form-cli-stats.fk — the form-cli dashboard MATH, as recipes (the carrier reads records; this counts).
+;
+; preludes: form-stdlib/core.fk
+;
+; Six lenses the `form-cli stats` carrier renders — learning, model, tool, tool->native, local-oracle,
+; remote-oracle — all reduce to a few generic tallies over integer-coded record lists. The carrier maps
+; tools / models / reasons / surfaces to small ints (its job); these recipes do the counting, the rates,
+; and the learning trend (the proven logic). Built on core builtins only (no cons) so the SAME recipe
+; runs four-way under validate.sh AND carrier-side on the Go kernel. Composes with form-cli-membrane.fk's
+; surface tallies when full crossing receipts exist; here counts/shares suffice.
+;
+; Proven by: form-stdlib/tests/form-cli-stats-band.fk
+
+; frequency of a category token in a coded list — the histogram cell (carrier calls it per category)
+(defn fcst-count (xs tok)
+    (if (eq (len xs) 0) 0
+        (add (if (eq (head xs) tok) 1 0) (fcst-count (tail xs) tok))))
+
+; integer percent, divide-by-zero safe
+(defn fcst-pct (n total) (if (eq total 0) 0 (div (mul n 100) total)))
+
+; the tool->native flywheel %: native crossings (or natively-served calls) as a share of all
+(defn fcst-native-share (native total) (fcst-pct native total))
+
+; --- the learning trend: is the local lane improving over time? ---
+; outcomes is a time-ordered 0/1 list (1 = local sufficed / passed). Compare the late half's pass-rate
+; to the early half's — a rising rate means the flywheel is turning and escalation is receding.
+(defn fcst-sum (xs) (if (eq (len xs) 0) 0 (add (head xs) (fcst-sum (tail xs)))))
+(defn fcst-sum-first (xs n)
+    (if (eq n 0) 0 (if (eq (len xs) 0) 0 (add (head xs) (fcst-sum-first (tail xs) (sub n 1))))))
+(defn fcst-half (n) (div n 2))
+(defn fcst-early-rate (xs) (fcst-pct (fcst-sum-first xs (fcst-half (len xs))) (fcst-half (len xs))))
+(defn fcst-late-rate (xs)
+    (fcst-pct (sub (fcst-sum xs) (fcst-sum-first xs (fcst-half (len xs))))
+              (sub (len xs) (fcst-half (len xs)))))
+(defn fcst-improving? (xs) (if (ge (fcst-late-rate xs) (fcst-early-rate xs)) 1 0))
+(defn fcst-lift (xs) (sub (fcst-late-rate xs) (fcst-early-rate xs)))   ; signed pp change: late - early
+0
