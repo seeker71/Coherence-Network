@@ -1,26 +1,28 @@
 {
-  "kind": "fourth-arm-fix",
+  "kind": "kernel-fix",
   "date": "2026-06-19",
-  "headline": "FIXED a real fkwu bug: the table flattener's float-literal lexer dropped scientific-notation exponents (1.5e-05 read as the mantissa ~1.5×10^? wrong). Now positional + mel-frame + conv-stem + transformer-gelu-erf cross four-way.",
+  "headline": "Scientific-notation float literals (1e-05) were mis-handled in BOTH the Rust kernel's S-expr lexer AND fkwu's table flattener. Fixed both. The supposed 'Rust multi-head divergence' was never multi-head — it was the eps=1e-05 literal. transformer-mh / decoder / generate / whisper-mh-block-real + positional now cross FOUR-WAY.",
   "root_cause": {
-    "where": "form-stdlib/form-flatten.fk, flt-float-end — it consumed only the integer+fraction digits and STOPPED at 'e', so '9.999999983333325e-05' was lexed as the mantissa (~10) and 'e-05' became stray tokens. Only the fourth arm (fkwu) flattens through this path; Go/Rust/TS parse floats via the source-compiler, which handles exponents — hence three-way agreed and only fkwu diverged.",
-    "minimal_repro": {
-      "expr": "(round (mul 9.999e-05 1000000000000.0))",
-      "before": {"go": 99990000, "rust": 99990000, "typescript": 99990000, "fkwu": 0},
-      "after": {"go": 99990000, "rust": 99990000, "typescript": 99990000, "fkwu": 99990000}
-    }
+    "symptom": "transformer-mh-band: go=1, rust=0, ts=1 (fails three-way); fkwu errors -5. Traced (bare-return value probes) through tb-mh-block → tb-ln-seq → tn-sqrt → its input. The input carried eps, baked by Python repr as `1e-05`.",
+    "rust": "main.rs SexpTok reader (and source_native_lex): the [eE][+-]?digits exponent was only consumed INSIDE the `.`-fraction branch, so `1e-05` (no decimal point) lexed `1` as an INT and `e-05` as a separate symbol → fatal[kernel_panic]: unbound: e-05. Go/TS readers already parse the bare-mantissa exponent.",
+    "fkwu": "form-flatten.fk flt-num2/flt-neg-num and the flt-scan-num2 pre-pass both only treated digits.digits as a float, stopping at a bare `e`. The parse path emitted a wrong literal AND the scan path never interned `1e-05` into the float pool → fkwu strtod read the wrong pool string → 0. (An earlier partial fix had only covered the after-the-dot exponent case.)"
   },
-  "fix": "flt-float-end now consumes a valid scientific-notation exponent (e/E, optional +/-, digits) into the literal substring; fk-f64 carries the full literal string and the walker's strtod parses it. A bare 'e' not followed by a valid exponent is left as a separate token (unchanged).",
-  "now_four_way": ["mel-frame (1023)", "positional (1)", "conv-stem (1)", "transformer-gelu-erf (255)"],
-  "remaining_divergences": {
-    "mel-full": "fourth=0, three-way solid — a SEPARATE residual fkwu issue (NOT e-notation; the exact e-15 literals now cross). Likely nth over the long samples buffer or the spectrogram walk. Owned, tracked.",
-    "transformer-mh / transformer-decoder / transformer-generate / whisper-mh-block-real": "RUST kernel computes the multi-head split/concat path ~6e-4 off (go=ts=numpy correct, rust wrong → fail THREE-WAY; fkwu errors -5). Separate Rust-kernel bug, owned, tracked.",
-    "note": "the prior draft of the 2026-06-19 evidence wrongly called the fkwu issue a 'list-slicing divergence' — that was a PRINT ARTIFACT (the fourth arm compares the band's RETURN value). Bare-return testing found the real cause (this exponent bug) and the separate Rust bug."
+  "fix": {
+    "rust": "main.rs: both number arms (positive and `-`-prefixed) now set is_float and consume [eE][+-]?digits after the integer mantissa with or without a fractional part; a bare `e` not followed by a valid exponent stays a separate symbol.",
+    "fkwu": "form-flatten.fk: flt-float-end consumes a trailing exponent; new flt-has-exp/flt-exp-lit handle the no-decimal-point case in BOTH flt-num2/flt-neg-num (parse) and flt-scan-num2 (the float-pool pre-pass)."
+  },
+  "verified_four_way": {
+    "minimal_repro": "(round (mul 1e-05 1000000000.0)) → 10000 on go/rust/ts/fkwu (was: rust panic, fkwu 0)",
+    "bands": ["transformer-mh", "transformer-decoder", "transformer-generate", "whisper-mh-block-real", "positional", "mel-frame", "conv-stem", "transformer-gelu-erf"],
+    "full_suite": "fourth arm 367 bands four-way; divergences 6 → 1 (only mel-full remains)."
+  },
+  "remaining": {
+    "mel-full": "NOT e-notation (its e-15 literals now parse). Two separate issues: (1) its band lost the `; preludes:` header in an edit so the suite can't load mfu-spectrogram; (2) even with explicit preludes it is fourth=0 — a residual fkwu divergence (likely nth over the long samples buffer / the spectrogram walk). De-registered, tracked."
   },
   "methodology_lessons": [
-    "The fourth arm compares the band's RETURN value — bands must end in a bare verdict expression, never (print x).",
-    "Read go/rust/ts/fkwu separately; 'kernels agree' with no fourth leg is not four-way.",
-    "Clear form-stdlib/.cache/fourth between exploratory runs — stale tables masquerade as divergences.",
-    "Validate three-way via validate.sh, never bin-go (Go) alone, before claiming a band is proven."
+    "The fourth arm compares the band's RETURN value — bands must end in a bare verdict, never (print x).",
+    "Read go/rust/ts/fkwu separately; clear .cache/fourth between exploratory runs.",
+    "Validate three-way via validate.sh, never bin-go alone.",
+    "A divergence shared across two kernels (here Rust + fkwu) can have ONE root cause (a literal format); fix the cause, not each symptom."
   ]
 }

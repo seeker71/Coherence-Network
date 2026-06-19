@@ -165,12 +165,25 @@
 ; a '-' immediately before digits is a negative integer literal
 (defn flt-neg (ve) (list (fk-lit (sub 0 (nth ve 0))) (nth ve 1)))
 (defn flt-num (s pos env) (flt-num2 s pos (fp-digits s pos 0) env))
+; a bare integer mantissa followed by a valid exponent (1e-05, no decimal point —
+; Python repr's shape) is still a float; flt-fe-exp returns >ie only for a valid exponent.
+(defn flt-has-exp (s ie)
+    (if (and (lt ie (fp-len s)) (or (eq (fp-at s ie) 101) (eq (fp-at s ie) 69)))
+        (gt (flt-fe-exp s (add ie 1) ie) ie)
+        0))
+(defn flt-exp-lit (s ie whole start env)
+    (do
+        (let end (flt-fe-exp s (add ie 1) ie))
+        (let lit (substring s start end))
+        (list (fk-f64 (flt-sidx (flt-poolv env) lit 0) lit) end)))
 (defn flt-num2 (s pos ve env)
     (if (and (lt (nth ve 1) (fp-len s))
              (and (eq (fp-at s (nth ve 1)) 46)
                   (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
         (flt-float-lit s (nth ve 1) (nth ve 0) pos env)
-        (fp-num ve)))
+        (if (eq (flt-has-exp s (nth ve 1)) 1)
+            (flt-exp-lit s (nth ve 1) (nth ve 0) pos env)
+            (fp-num ve))))
 (defn flt-neg-num (s pos env)
     (do
         (let ve (fp-digits s (add pos 1) 0))
@@ -178,7 +191,9 @@
                  (and (eq (fp-at s (nth ve 1)) 46)
                       (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
             (flt-float-lit s (nth ve 1) (sub 0 (nth ve 0)) pos env)
-            (flt-neg ve))))
+            (if (eq (flt-has-exp s (nth ve 1)) 1)
+                (flt-exp-lit s (nth ve 1) (sub 0 (nth ve 0)) pos env)
+                (flt-neg ve)))))
 ; consume a run of digits
 (defn flt-fe-digits (s pos)
     (if (and (lt pos (fp-len s)) (fp-isdigit (fp-at s pos)))
@@ -735,7 +750,9 @@
              (and (eq (fp-at s (nth ve 1)) 46)
                   (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
         (flt-scan-float s pos (flt-float-end s (add (nth ve 1) 1)) acc)
-        (flt-scan s (nth ve 1) acc)))
+        (if (eq (flt-has-exp s (nth ve 1)) 1)
+            (flt-scan-float s pos (flt-fe-exp s (add (nth ve 1) 1) (nth ve 1)) acc)
+            (flt-scan s (nth ve 1) acc))))
 (defn flt-scan-float (s pos end acc)
     (flt-scan s end (flt-pool-add acc (substring s pos end))))
 (defn flt-pool-add (pool lit)

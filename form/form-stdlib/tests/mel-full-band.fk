@@ -1,3 +1,4 @@
+; preludes: form-stdlib/trig.fk form-stdlib/mel-frame.fk form-stdlib/mel-full.fk
 (do
   (defn mfb-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
   (defn mfb-vd (a b)
