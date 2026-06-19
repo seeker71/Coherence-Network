@@ -612,3 +612,7 @@ transformer-gelu-erf fks 255
 mel-frame fks 1023
 conv-stem fks 1
 transformer-gelu-erf fks 255
+mel-frame fks 1023
+positional fks 1
+conv-stem fks 1
+transformer-gelu-erf fks 255

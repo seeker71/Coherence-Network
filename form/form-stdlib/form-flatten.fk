@@ -179,10 +179,26 @@
                       (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
             (flt-float-lit s (nth ve 1) (sub 0 (nth ve 0)) pos env)
             (flt-neg ve))))
-(defn flt-float-end (s pos)
+; consume a run of digits
+(defn flt-fe-digits (s pos)
     (if (and (lt pos (fp-len s)) (fp-isdigit (fp-at s pos)))
-        (flt-float-end s (add pos 1))
+        (flt-fe-digits s (add pos 1))
         pos))
+; after the mantissa, consume a scientific-notation exponent (e/E [+/-] digits) if VALID;
+; otherwise stop before the 'e' (ep) so a bare 'e' stays a separate token. strtod parses the
+; captured literal, so the full "1.5e-05" must land in the lit substring (the fkwu float path).
+(defn flt-fe-exp (s p ep)
+    (do
+        (let q (if (and (lt p (fp-len s)) (or (eq (fp-at s p) 43) (eq (fp-at s p) 45))) (add p 1) p))
+        (if (and (lt q (fp-len s)) (fp-isdigit (fp-at s q)))
+            (flt-fe-digits s q)
+            ep)))
+(defn flt-float-end (s pos)
+    (do
+        (let e1 (flt-fe-digits s pos))
+        (if (and (lt e1 (fp-len s)) (or (eq (fp-at s e1) 101) (eq (fp-at s e1) 69)))
+            (flt-fe-exp s (add e1 1) e1)
+            e1)))
 (defn flt-float-lit (s dot whole start env)
     (do
         (let end (flt-float-end s (add dot 1)))
