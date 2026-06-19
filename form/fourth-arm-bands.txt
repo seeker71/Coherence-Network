@@ -624,6 +624,7 @@ ll-buffer fkc 1
 # BMF/dialect surface is provable on the fourth kernel.
 bmf-core fks 600
 bmf-grammar fks 300
+bmf-object-data fks 65535
 kernel-image-proposal fks 111111
 form-os-channel fks 111111
 # ── host-os surface lane — the membrane/grammar/ledger cells that compose to
