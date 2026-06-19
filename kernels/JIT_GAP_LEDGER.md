@@ -12,6 +12,27 @@ canonical truth. Companion finding records:
 Status: `OPEN` · `AGENT-ASSIGNED` (a sub-agent is on it) · `FIXED (PR)` ·
 `BY-DESIGN` (named refusal, honest fallback to the walker).
 
+**Scope — read this first; it ends a recurring confusion.** This ledger is the **Go
+in-process plugin JIT only**. The JIT is an *optional* per-kernel optimization that
+emits host-native code; the walk is always the correct fallback. Two things it is NOT:
+
+- **fkwu is NOT a JIT and has no "JIT features" to be missing.** fkwu is the AOT
+  flat-table *walker* — it flattens a recipe once and walks the table. Its coverage is
+  measured in *op families* (the standing walls in `form/fourth-arm-bands.txt`: the
+  remaining node/substrate intern-door family, host-io, multi-line output), never "JIT
+  features." **fkwu's float compute is complete and is the bit-identical reference** —
+  the float-pool wall was lifted and the transformer TRAINING bands cross four-way on
+  fkwu (`transformer-corpus-train` 31, `transformer-block-backward` 31, `neural-lm` 31).
+  "fkwu is missing a JIT feature" is a category error.
+- **The portable JIT *lowering* is a Form recipe, four-way including fkwu.**
+  `jit-lower.fk` lowers JIT shapes (logic, inline, closure-lift) and its bands cross the
+  fkwu gate (gaps #3, #4). The lowering is shared and proven; the bespoke host-native
+  *emit/dispatch* is the per-kernel carrier (Go plugin · Rust cdylib, i64-only · TS GPU).
+
+The north star is to unify all host-native emit/dispatch onto ONE shared,
+bit-identical-by-construction lane — see
+[`docs/coherence-substrate/one-acceleration-engine.form`](../docs/coherence-substrate/one-acceleration-engine.form).
+
 | # | Gap | Evidence | Status |
 |---|-----|----------|--------|
 | 1 | **Dispatch realization: compiled native not carrying recursive int workloads.** Was: JIT fib38 7.92s ≈ walker 8.10s. Root cause (instrumented): `jitRecipeNeedsValueABI` read the recipe's structural name slots — an IDENT's name child, an FNCALL's static callee, a LET's binding name — as runtime string values; every real body contains one, so EVERY compile was forced onto the boxed Value-only ABI (`jc.I64` never built; guard 3 ran the boxed native at walker speed). Fix: pre-filter skips name slots; f64 leg refuses float `mod` so mod-using int recipes keep their typed build (Go has no float `%`). After: fib38 compute **0.13s (62×)**, within 1.4× of handwritten Go's 0.095s; end-to-end 1.48s incl. the one-time plugin build; guard 1 (i64) crossed exactly once. | measured 2026-06-11 before/after; fix evidence JSON above; regression pinned by `form/form-kernel-go/jit_test.go` | FIXED (PR #2825) |
@@ -24,6 +45,8 @@ Status: `OPEN` · `AGENT-ASSIGNED` (a sub-agent is on it) · `FIXED (PR)` ·
 | 8 | **Auto-compile (2000-hit threshold) builds synchronously mid-walk.** The hot-path promotion in the FNCALL dispatch arm calls `jitCompileClosureGo` inline, so the first hot crossing pays the full ~1.3s plugin build inside the user's call. Now that the artifact is realized (gap #1), an async build that lets the walker continue until the artifact lands would remove the stall. | read 2026-06-11; landed 2026-06-13: the hot crossing kicks the build on a goroutine (jitAsyncKick/jitAsyncTake; only the landing-zone maps are shared, jitCompiledGo stays walker-only, adoption happens at dispatch); in-flight marker prevents duplicate builds, failures mark jitFailed once; TestJITAsyncHotThresholdBuild proves immediate interpreted answers and the eventual native flip, race-detector clean | FIXED (Go async hot-build; the walker never stalls on a plugin compile). |
 | 9 | **Full BMF compiler + engine/grammar not portable (apply-object-rule, cap-get/set, mk-*, bmf-compile/grammar ref-rep as recipe, only Go jit.go hardcode).** Remaining engine pieces (match-pattern + template, buckets, rule application) + grammar (cursor direct, rep) lived only in host Go lowering or Python; no lowered recipe for any minimal kernel to crystallize full folded/unboxed BMF compiler. | read 2026-06-11 from engine.fk:2175 (apply-object-rule), bmf-grammar.fk; the #2944 recipe extensions never validated and were composted in the 2026-06-12 band heal; seam proof 2026-06-13: `jit-lower-bmf-band.fk` (15, fkwu four-way) — the lowerer composes over bmf-compile output (parity, logic lowering wrapping compiled tissue, content-addressed determinism, and partial evaluation folding a whole compiled program to its literal answer). | OPEN — the compiler-AFTER-lowerer seam is proven; the compiler-AS-lowered-recipe is blocked by a named wall: the compiler's own body builds cells through the intern doors (`intern_node`/`bp`), an op family the walker/emit lanes still do not fully carry. This ratchet added `intern_trivial_int`, `node_eq`, and arena-melt rooting for node carrier fields; full BMF compiler closure still wants the rest of the intern-door op family + defunctionalization, milestone-shaped (M2), not row-shaped. |
 
+| 10 | **f64/Value native is NOT bit-identical to the walk → nondeterministic divergence on float-accumulating folds.** The f64/Value ABI *compiles* (exercise log below shows float arithmetic COMPILES), but its float arithmetic is not pinned to the walk's reduction order / rounding — the host compiler may fuse `a*b+c` into a single-rounding FMA. Combined with the async hot-build (gap #8) adopting the native body **mid-fold**, a float-accumulating loop uses walk-floats before adoption and native-floats after, so the final value depends on WHEN the build landed. This is *compiles ≠ bit-identical* — the gap the earlier rows did not name. | MEASURED 2026-06-19: the `neural-lm-corpus` band (real-corpus bigram LM) read **go=5 while rust=ts=fkwu=7, nondeterministically**; `FORM_JIT_HOT=high` (walk only) = 7 deterministic. The four-way floor caught it. | OPEN — tracked to [`one-acceleration-engine.form`](../docs/coherence-substrate/one-acceleration-engine.form) M1: route the float hot-path through the bit-identical shared lane (in-process fkwu walk, or the `jit-tensor-emit` C lane — both native = recipe by construction). The **i64 ABI is bit-exact and unaffected**; `FORM_JIT_HOT` (jit.go) forces the walk meanwhile. |
+
 ## Exercise log — measured coverage probes (2026-06-11, claude, worktree)
 
 Exercised `jit_compile` / `jit_compile_value` across shapes to map what the
@@ -33,7 +56,7 @@ because fixing it realizes every COMPILES row below at once.
 
 | shape | probe | result |
 |-------|-------|--------|
-| float scalar compute | `(add (mul x 0.5) 0.25)` | **COMPILES** (f64 ABI) — model arithmetic JITs |
+| float scalar compute | `(add (mul x 0.5) 0.25)` | **COMPILES** (f64 ABI) — but *compiles ≠ bit-identical*: the f64 native is not pinned to the walk's rounding (gap #10), so it must not be adopted mid-fold over a float-accumulating loop |
 | list / vector arg | `vsum` over `head`/`tail`/`len` | **COMPILES** (i64 + value ABI) — the matvec-shaped path |
 | cross-function sibling call | `withhelper` calls `outer` | **COMPILES** |
 | let binding | `(let x ... )` | **COMPILES** |
@@ -44,6 +67,8 @@ because fixing it realizes every COMPILES row below at once.
 **Strategic read:** the emitter is not the bottleneck for model arithmetic —
 float compute, vectors, cross-calls, let, logic, and capture-free inner
 helpers all lower today, the warm compile is a plugin.Open, and the hot
-crossing never stalls the walk. The standing edge is row 9's wall: the
+crossing never stalls the walk. Two standing edges: row 9's wall (the
 intern-door op family on the walker/emit lanes, which is what lets the BMF
-compiler itself (not just its output) crystallize through the lowerer.
+compiler itself — not just its output — crystallize through the lowerer); and
+row 10 (the f64/Value native *lowering* ≠ *bit-identical dispatch* — the
+correctness gap that float JIT actually has, distinct from any coverage gap).
