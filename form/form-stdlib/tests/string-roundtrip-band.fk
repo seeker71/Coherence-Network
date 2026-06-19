@@ -1,0 +1,6 @@
+; string-roundtrip-band.fk — int_to_str passes a string value through (boxed-string ABI)
+(do
+  (let s (intern_trivial_string "hello"))
+  (add (mul (if (str_eq (int_to_str (node_value s)) "hello") 1 0) 1)
+  (add (mul (if (str_eq (int_to_str 42) "42") 1 0) 10)
+       (mul (if (str_eq (str_concat "a" "b") "ab") 1 0) 100))))
