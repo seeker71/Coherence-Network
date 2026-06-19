@@ -1,0 +1,30 @@
+{
+  "title": "The clang-free FLOAT byte path gets its foundation — arm64 scalar-double FP instruction tier in form-asm, four-way incl. fkwu",
+  "date": "2026-06-19",
+  "thread_branch": "claude/ecstatic-hofstadter-cd3234",
+  "stone": "Sovereign-native-fkwu campaign, step 1. All three north-star docs (JIT_GAP_LEDGER #11, one-acceleration-engine.form M0, fourth-arm-bands.txt header) name one keystone gap: fkwu's self-JIT lowers pure INTEGER functions to native but not FLOATS. The truly clang-free native target is the byte path (form-asm -> form-lower -> form-macho/form-elf, clang dropped by form-asm's byte-identity conviction gate, kept only as oracle). That byte path carried only the integer + syscall + control-flow instruction tier — it could not emit a single floating-point instruction, so there was no clang-free target to lower floats to. This lands the missing FOUNDATION: the arm64 scalar-double FPDP instruction tier as DATA rows in form-asm.fk's existing generic packer.",
+  "what_landed": "fa-fadd / fa-fsub / fa-fmul / fa-fdiv / fa-fsqrt / fa-fmov / fa-fcmp / fa-scvtf / fa-fcvtzs / fa-ldr-d / fa-str-d — 11 arm64 double-precision FP instructions, each a (base, multipliers) DATA row through the same fa-pack/fa-asm packer the integer tier uses (core-abstraction: a new instruction is data, not new code).",
+  "oracle_use": "clang/LLVM as ORACLE only, exactly as authorized. `clang -c -arch arm64` + `otool -tvVj` produced the ground-truth encodings (fadd d0,d1,d2=1e622820, fsub=1e623820, fmul=1e620820, fdiv=1e621820, fsqrt d0,d1=1e61c020, fmov=1e604020, fcmp d1,d2=1e622020, scvtf d0,x1=9e620020, fcvtzs x0,d1=9e780020, ldr d0,[x1,#8]=fd400420, str=fd000420); the hand-computed ARM-ARM fields matched all 11 byte-for-byte. clang then drops out of the native path — the recipe carries the encoding, fa-conviction is the gate.",
+  "files_owned": [
+    "form/form-stdlib/form-asm.fk",
+    "form/form-stdlib/tests/form-asm-float-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "docs/coherence-substrate/one-acceleration-engine.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-float-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk"
+    ],
+    "summary": "form-asm-float-band -> 2047 FOUR-WAY (Go=Rust=TS=fkwu); 'fourth arm: 1 band four-way (fkwu + pre-flattened tables)' confirms the emitted fourth kernel ran the manifest table and agreed byte-for-byte. Each of the 11 fa-f* encodings == the clang-oracle little-endian bytes via fa-conviction. Integer regression form-asm-band -> 31 four-way unchanged. Manifest row: form-asm-float fkc 2047."
+  },
+  "remaining_campaign": {
+    "note": "This closes the FOUNDATION (the float instruction encodings), not the whole float native path. The remaining stones to fully close gap #11 (and with it gap #10) are named and sized, not waved at:",
+    "a_form_lower_float": "form-lower.fk float lowering — a float twin of lo-node/lo-tree: an FP register stack, the d0..d7 float calling convention, float spill via the new fa-ldr-d/fa-str-d. Then a band lowering a float function (e.g. f(x)=x*x+x) to bytes proven run-equal-to-the-walk via lowering-conviction.fk's lc-verdict (semantic gate; the byte-identity fa-conviction is for single instructions).",
+    "b_self_jit_byte_wiring": "Wire the self-JIT heat-flip (hati-os-kernel-emit.fk) to lower float-pure functions through form-lower->form-asm BYTES (clang-free), retiring the C-emit fkc-nat-expr interim. This is the bit-identical-by-construction native (runs the same fk_num/fk_fbox/f64 sequence as the walk) that makes the Go float plugin (gap #10, the neural-lm-corpus divergence) unnecessary.",
+    "c_gap_9_intern_doors": "Separate from floats: gap #9 / M2 — the BMF compiler AS a lowered recipe, blocked by the intern-door op family (intern_node/bp) on the walker/emit lanes. Milestone-shaped."
+  },
+  "north_star": "ONE acceleration engine: fkwu's self-JIT, extended to floats, lowering through the clang-free Form->asm byte path — the same recipe that proves four-way is the recipe that crystallizes to native bytes, no second impl, no host compiler in the path. clang/LLVM survive only as the oracle that teaches the encoding once and is then dropped by the byte-identity gate."
+}
