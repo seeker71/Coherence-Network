@@ -72,6 +72,18 @@
 #     Adding the two unary serializer rows beside tag 43 unblocked them:
 #     trivial-typed-leaf 1111111, json-codec-bml 8191, json-meaning-ingestion 1000,
 #     whisper-block0 1023.
+#   host value-null         — the reference kernels carry a VNull value and native
+#     value_kind / _dict_*; fkwu has no host-null in its value ABI. Carried
+#     STRUCTURALLY on the fourth arm: a reserved blueprint node (VALUE-NONE) is the
+#     absent/None value and node_eq (a four-way structural primitive) tests for it,
+#     never nil?/len which collapse int/string/empty in fkwu's scalar region. The
+#     shim mirrors _dict_new/_dict_get/_dict_has + value_kind over the "__dict__"
+#     cons-list (the shape fkwu's _get already shares); value_kind answers "null"
+#     for VALUE-NONE and "value" otherwise — exactly what json-node-null-value?
+#     (str_eq ... "null") reads. json-emitter (31) and json-promoted-types (115)
+#     cross. RESIDUAL: value_kind cannot yet split int from string (both x<<1) —
+#     the named next rung is a boxed-string region (like the float region) that
+#     lifts int_to_str(node_value(string)) passthrough and general value_kind.
 #
 # Current floor (2026-06-14 content-address + sibling-node floor): the admitted
 # manifest carries content-address, durable substrate-core, and the doc-xpath,
@@ -79,8 +91,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 364
-# four-way bands and 740 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 372
+# four-way bands and 745 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -631,3 +643,5 @@ json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
 form-cli fks 31
+json-emitter fks 31
+json-promoted-types fks 115
