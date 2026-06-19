@@ -122,9 +122,16 @@
     (if (eq (fk-tag n) 67) (fkc-bin2 67 (fkc-flat (ms-child (fk-body n) 0) acc) n)
     (if (eq (fk-tag n) 97) (fkc-bin2 97 (fkc-flat (ms-child (fk-body n) 0) acc) n)
     (if (eq (fk-tag n) 98) (fkc-tri2 98 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    ; 114 read_line / 116 isatty — nullary host-io leaves: the walker arm reads no
+    ; operands, so the row carries the tag alone (like 101 temp_dir, 18 empty).
+    ; 115 print_str — unary: the single child is the string value to write.
+    (if (eq (fk-tag n) 114) (cons (list 114 0 0 0) acc)
+    (if (eq (fk-tag n) 116) (cons (list 116 0 0 0) acc)
+    (if (eq (fk-tag n) 117) (cons (list 117 0 0 0) acc)
+    (if (eq (fk-tag n) 115) (fkc-un2 115 (fkc-flat (fk-body n) acc))
     (if (or (eq (fk-tag n) 81) (or (eq (fk-tag n) 82) (or (eq (fk-tag n) 83) (or (eq (fk-tag n) 85) (or (eq (fk-tag n) 87) (or (eq (fk-tag n) 88) (or (eq (fk-tag n) 89) (eq (fk-tag n) 90))))))))
         (fkc-un2 (fk-tag n) (fkc-flat (fk-body n) acc))
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 (defn fkc-call2 (fidx acc1) (cons (list 12 fidx (sub (len acc1) 1) 0) acc1))
 
@@ -162,7 +169,7 @@
         (str_concat (fkc-rows-text (tail rows)) (fkc-row-text (head rows)))))
 
 (defn fkc-pr-text ()
-    "extern int putchar(int); extern int printf(const char *, ...); extern void *malloc(unsigned long); extern void *realloc(void *, unsigned long); static double *fk_fv; static long long fk_fcap; static long long fk_fp; static const long long fk_fbase = -9000000000000000000LL; static long long fk_fidx(long long v) { return (fk_fbase - v) >> 1; } static long long fk_isf(long long v) { long long fi = fk_fidx(v); return v <= fk_fbase - 2 && fi > 0 && fi <= fk_fp; } static double fk_num(long long v) { if (fk_isf(v)) { return fk_fv[fk_fidx(v)]; } return (double)(v >> 1); } static long long fk_fbox(double d) { if (fk_fv == 0) { fk_fcap = 65536; fk_fv = malloc(fk_fcap * 8); } fk_fp = fk_fp + 1; if (fk_fp >= fk_fcap) { fk_fcap = fk_fcap * 2; fk_fv = realloc(fk_fv, fk_fcap * 8); } fk_fv[fk_fp] = d; return fk_fbase - (fk_fp << 1); } static void fk_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } static void fk_pv(long long v) { if (fk_isf(v)) { printf(\"%.15g\\n\", fk_num(v)); } else { if ((v & 1) == 0) { fk_pr(v >> 1); } else { fk_pr(v); } } } ")
+    "extern int putchar(int); extern int printf(const char *, ...); extern void *malloc(unsigned long); extern void *realloc(void *, unsigned long); extern long long read(int, void *, unsigned long); extern int isatty(int); static const unsigned char *fk_gen = 0; static long long fk_gen_len = 0; static double *fk_fv; static long long fk_fcap; static long long fk_fp; static const long long fk_fbase = -9000000000000000000LL; static long long fk_fidx(long long v) { return (fk_fbase - v) >> 1; } static long long fk_isf(long long v) { long long fi = fk_fidx(v); return v <= fk_fbase - 2 && fi > 0 && fi <= fk_fp; } static double fk_num(long long v) { if (fk_isf(v)) { return fk_fv[fk_fidx(v)]; } return (double)(v >> 1); } static long long fk_fbox(double d) { if (fk_fv == 0) { fk_fcap = 65536; fk_fv = malloc(fk_fcap * 8); } fk_fp = fk_fp + 1; if (fk_fp >= fk_fcap) { fk_fcap = fk_fcap * 2; fk_fv = realloc(fk_fv, fk_fcap * 8); } fk_fv[fk_fp] = d; return fk_fbase - (fk_fp << 1); } static void fk_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } static void fk_pv(long long v) { if (fk_isf(v)) { printf(\"%.15g\\n\", fk_num(v)); } else { if ((v & 1) == 0) { fk_pr(v >> 1); } else { fk_pr(v); } } } ")
 
 (defn fkc-decl-text (rows)
     (str_concat "static long long fk_arms[12]; static const long long fk_node["
@@ -430,7 +437,7 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
                 (fkc-melt-text)))))))))))))))
 
 (defn fkc-typed-stdout-text ()
-    "static long long fk_str_root_depth(long long i, long long d) { if (d > 64 || i < 0 || i >= fk_node_count) { return 0; } long long t = fk_node[i][0]; if (t == 24 || t == 27 || t == 29 || t == 32 || t == 33 || t == 62 || t == 63) { return 1; } if (t == 6) { if (fk_str_root_depth(fk_node[i][2], d + 1) && fk_str_root_depth(fk_node[i][3], d + 1)) { return 1; } return 0; } if (t == 12) { long long f = fk_node[i][1]; if (f >= 0 && f < fk_fn_count) { return fk_str_root_depth(fk_fn[f], d + 1); } return 0; } if (t == 69) { return fk_str_root_depth(fk_node[i][2], d + 1); } return 0; } static void fk_psv(long long v) { long long sa = v >> 1; if (sa >= 0 && sa < fk_sp) { long long j = 0; while (j < fk_sl[sa]) { putchar((int)(unsigned char)fk_sb[fk_so[sa] + j]); j = j + 1; } putchar(10); } else { fk_pv(v); } } static void fk_pv_root(long long root, long long v) { if (fk_str_root_depth(root, 0)) { fk_psv(v); } else { fk_pv(v); } } ")
+    "static long long fk_str_root_depth(long long i, long long d) { if (d > 64 || i < 0 || i >= fk_node_count) { return 0; } long long t = fk_node[i][0]; if (t == 24 || t == 27 || t == 29 || t == 32 || t == 33 || t == 62 || t == 63) { return 1; } if (t == 6) { if (fk_str_root_depth(fk_node[i][2], d + 1) && fk_str_root_depth(fk_node[i][3], d + 1)) { return 1; } return 0; } if (t == 12) { long long f = fk_node[i][1]; if (f >= 0 && f < fk_fn_count) { return fk_str_root_depth(fk_fn[f], d + 1); } return 0; } if (t == 69) { return fk_str_root_depth(fk_node[i][2], d + 1); } if (t == 109) { return fk_str_root_depth(fk_node[i][3], d + 1); } if (t == 111) { return fk_str_root_depth(fk_node[i][2], d + 1); } return 0; } static void fk_psv(long long v) { long long sa = v >> 1; if (sa >= 0 && sa < fk_sp) { long long j = 0; while (j < fk_sl[sa]) { putchar((int)(unsigned char)fk_sb[fk_so[sa] + j]); j = j + 1; } putchar(10); } else { fk_pv(v); } } static void fk_pv_root(long long root, long long v) { if (fk_str_root_depth(root, 0)) { fk_psv(v); } else { fk_pv(v); } } ")
 
 (defn fkc-decl-many-text (rows roots)
     (str_concat (fkc-arena-decl-text)
@@ -466,7 +473,7 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
                 (str_concat (fkc-record-field-arms-text)
                 (str_concat (fkc-record-blueprint-arms-text)
                 (str_concat (fkc-jit-lower-arms-text)
-                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } if (t == 102) { long long ae = fk_walk(fk_node[i][1], fp); long long be = fk_walk(fk_node[i][2], fp); if (fk_num(ae) == fk_num(be)) { return 2; } return 0; } if (t == 103) { long long al = fk_walk(fk_node[i][1], fp); long long bl = fk_walk(fk_node[i][2], fp); if (fk_num(al) < fk_num(bl)) { return 2; } return 0; } if (t == 109) { fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)] = fk_walk(fk_node[i][2], fp); return fk_walk(fk_node[i][3], fp); } if (t == 110) { return fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)]; } if (t == 111) { long long k111 = fk_walk(fk_node[i][1], fp) >> 1; long long sv111 = fk_vsp; long long need111 = fp + 1 + k111; while (fk_vsp < need111) { fk_vs[fk_vsp] = 0; fk_vsp = fk_vsp + 1; } long long r111 = fk_walk(fk_node[i][2], fp); fk_vsp = sv111; return r111; } return 0; } ")))))))))))))
+                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } if (t == 102) { long long ae = fk_walk(fk_node[i][1], fp); long long be = fk_walk(fk_node[i][2], fp); if (fk_num(ae) == fk_num(be)) { return 2; } return 0; } if (t == 103) { long long al = fk_walk(fk_node[i][1], fp); long long bl = fk_walk(fk_node[i][2], fp); if (fk_num(al) < fk_num(bl)) { return 2; } return 0; } if (t == 109) { fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)] = fk_walk(fk_node[i][2], fp); return fk_walk(fk_node[i][3], fp); } if (t == 110) { return fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)]; } if (t == 111) { long long k111 = fk_walk(fk_node[i][1], fp) >> 1; long long sv111 = fk_vsp; long long need111 = fp + 1 + k111; while (fk_vsp < need111) { fk_vs[fk_vsp] = 0; fk_vsp = fk_vsp + 1; } long long r111 = fk_walk(fk_node[i][2], fp); fk_vsp = sv111; return r111; } if (t == 114) { char rbuf[8192]; long long rn = 0; while (rn < 8191) { char rc; long long rg = read(0, &rc, 1); if (rg <= 0) { if (rn == 0) { return 0 - 2; } break; } if (rc == 10) { break; } rbuf[rn] = rc; rn = rn + 1; } while (fk_sbp + rn > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } long long rj = 0; while (rj < rn) { fk_sb[fk_sbp + rj] = rbuf[rj]; rj = rj + 1; } return fk_sintern(fk_sbp, rn) << 1; } if (t == 115) { long long psv = fk_walk(fk_node[i][1], fp); long long psa = psv >> 1; if (psa >= 0 && psa < fk_sp) { long long pj = 0; while (pj < fk_sl[psa]) { putchar((int)(unsigned char)fk_sb[fk_so[psa] + pj]); pj = pj + 1; } } putchar(10); return 0; } if (t == 116) { if (isatty(0)) { return 2; } return 0; } if (t == 117) { if (fk_gen_len <= 0) { return fk_sintern(fk_sbp, 0) << 1; } while (fk_sbp + fk_gen_len > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } long long gj = 0; while (gj < fk_gen_len) { fk_sb[fk_sbp + gj] = (char)fk_gen[gj]; gj = gj + 1; } return fk_sintern(fk_sbp, fk_gen_len) << 1; } return 0; } ")))))))))))))
 
 ; figure-ops arms (tags 34..42), emitted: each mirrors the walking kernels'
 ; native bit-for-bit — band/bor/bxor/mul are int64 ops; the *_u32 family
@@ -671,10 +678,44 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 ; an older table simply ends and fk_next answers 0 — an empty pool. The
 ; loader appends VERBATIM: the flattener is the interner and pool indices
 ; in SLIT rows must stay stable.
+; the shared loader: read argv[1]=table into the node heap + string pool, bind
+; argv[2]=scalar into fk_vs[0], stage argv[3]=fk_src. Both entries below share it
+; and differ only in what they do after the program is loaded and walked.
+; the parse: fk_buf already holds the table text — read function count + roots,
+; node rows, then the string pool. Shared by the file loader and the baked entry,
+; which differ only in HOW fk_buf gets filled (a file vs a baked-in literal).
+(defn fkc-main-parse-text ()
+    "long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } ")
+(defn fkc-main-load-text ()
+    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; "
+    (str_concat (fkc-main-parse-text)
+                "long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } if (argc > 3) { int sfd = open(argv[3], 0); if (sfd >= 0) { long long sg = read(sfd, fk_src, 262143); if (sg >= 0) { fk_src[sg] = 0; } } } fk_vs[0] = a; fk_vsp = 1; ")))
+; the value entry: walk fk_fn[0], print its result, then dump the arm-hit profile
+; (the framebuffer/JIT observation trace). Single-shot programs read line 1.
 (defn fkc-main-universal-text ()
-    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } if (argc > 3) { int sfd = open(argv[3], 0); if (sfd >= 0) { long long sg = read(sfd, fk_src, 262143); if (sg >= 0) { fk_src[sg] = 0; } } } fk_vs[0] = a; fk_vsp = 1; fk_pv_root(fk_fn[0], fk_walk(fk_fn[0], 0)); long long t = 1; while (t <= "
+    (str_concat (fkc-main-load-text)
+    (str_concat "fk_pv_root(fk_fn[0], fk_walk(fk_fn[0], 0)); long long t = 1; while (t <= "
     (str_concat (int_to_str (sub (fkc-arm-slots) 1))
-                ") { fk_pr(fk_arms[t]); t = t + 1; } return 0; }")))
+                ") { fk_pr(fk_arms[t]); t = t + 1; } return 0; }"))))
+; the interactive/effectful entry: walk fk_fn[0] for effect only — the program
+; does its own I/O (print_str inside the read_line loop) and neither the root
+; value nor the arm profile is printed, so a REPL's stdout is exactly the
+; responses it emits.
+(defn fkc-main-repl-text ()
+    (str_concat (fkc-main-load-text)
+                "fk_walk(fk_fn[0], 0); return 0; }"))
+; the COMBINED entry: the flattened program table is baked into the binary as the
+; fk_prog literal, so the executable IS the program — running it needs no table
+; file, no Go, no clang, no C source, nothing but the native binary itself. It
+; copies the baked table into fk_buf, parses it with the shared loader, then walks
+; fk_fn[0] for effect (the form-cli REPL drives its own stdout over fd 0). `table`
+; is the flattened program string, baked at emit time.
+(defn fkc-main-baked-repl-text (table)
+    (str_concat "static const char fk_prog[] = \""
+    (str_concat table
+    (str_concat "\"; extern const unsigned char fk_genesis[] __attribute__((weak)); extern const long long fk_genesis_len __attribute__((weak)); int main(int argc, char **argv) { if (&fk_genesis_len) { fk_gen = fk_genesis; fk_gen_len = fk_genesis_len; } long long ci = 0; while (fk_prog[ci] != 0) { fk_buf[ci] = fk_prog[ci]; ci = ci + 1; } fk_buf[ci] = 0; "
+    (str_concat (fkc-main-parse-text)
+                "fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); return 0; }")))))
 
 (defn fkc-emit-universal ()
     (str_concat (fkc-pr-text)
@@ -682,6 +723,25 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
     (str_concat (fkc-typed-stdout-text)
     (str_concat (fkc-walk-many-text)
                 (fkc-main-universal-text))))))
+
+; the same emitted walker with the effect-only entry — the native form-cli REPL
+; binary (and any effectful Form program that drives its own stdout).
+(defn fkc-emit-repl ()
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-universal-text)
+    (str_concat (fkc-typed-stdout-text)
+    (str_concat (fkc-walk-many-text)
+                (fkc-main-repl-text))))))
+
+; the combined walker+program: one self-contained native binary with `table`
+; (a flattened Form program) baked in. The build flattens form-cli once and bakes
+; it here; the resulting exe runs directly with no table file and no toolchain.
+(defn fkc-emit-combined-repl (table)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-universal-text)
+    (str_concat (fkc-typed-stdout-text)
+    (str_concat (fkc-walk-many-text)
+                (fkc-main-baked-repl-text table))))))
 
 (defn fkc-decl-server-universal-text ()
     (str_concat (fkc-arena-decl-text)
