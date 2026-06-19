@@ -155,3 +155,71 @@ func TestFkwuFormCliRepl(t *testing.T) {
 		t.Fatal("repl output not deterministic for identical input")
 	}
 }
+
+// TestFkwuFormCliCombined proves the north star: a single self-contained native
+// binary. The form-cli program is flattened once and BAKED into the emitted C
+// (fkc-emit-combined-repl) as the fk_prog literal, so the compiled executable IS
+// form-cli — it runs DIRECTLY with no table-file argument, no Go, no clang, no C
+// source, nothing at runtime but the binary and stdin. Build-time uses the
+// bootstrap (flatten) + clang (compile) once; runtime is pure native.
+func TestFkwuFormCliCombined(t *testing.T) {
+	clang := requireClang(t)
+	stdlib := filepath.Join("..", "form-stdlib")
+	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	formParse := filepath.Join(stdlib, "form-parse.fk")
+	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
+	shim := filepath.Join(stdlib, "fourth-shim.fk")
+	core := filepath.Join(stdlib, "core.fk")
+	cli := filepath.Join(stdlib, "form-cli.fk")
+	repl := filepath.Join(stdlib, "form-cli-repl.fk")
+
+	dir := t.TempDir()
+
+	// 1. flatten form-cli-repl into its program table (build-time, on the bootstrap).
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + cli + `"))`
+	band := `(read_file "` + repl + `")`
+	flattenExpr := "(fks-table-file (flt-band-sources-fns " + mods + " " + band + ") (flt-band-sources-pool " + mods + " " + band + "))"
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	table = strings.TrimSpace(table)
+	if len(table) < 100 {
+		t.Fatalf("flatten produced suspiciously small table (%d bytes)", len(table))
+	}
+
+	// 2. emit the COMBINED walker with the table baked in (fk_prog).
+	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-emit-combined-repl \""+table+"\")\n")
+	if !strings.Contains(cSrc, "fk_prog") {
+		t.Fatalf("combined emit missing the baked program literal")
+	}
+	cPath := filepath.Join(dir, "form-cli.c")
+	if err := os.WriteFile(cPath, []byte(cSrc), 0o644); err != nil {
+		t.Fatalf("write form-cli.c: %v", err)
+	}
+
+	// 3. compile once → the standalone binary.
+	binPath := filepath.Join(dir, "form-cli")
+	if out, err := exec.Command(clang, "-O2", "-o", binPath, cPath).CombinedOutput(); err != nil {
+		t.Fatalf("clang form-cli: %v\n%s", err, out)
+	}
+
+	// 4. run it DIRECTLY — NO arguments (no table file), only stdin. The program
+	// is inside the binary. This is the whole point: nothing else is present.
+	run := func(in string) string {
+		cmd := exec.Command(binPath)
+		cmd.Stdin = strings.NewReader(in)
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("form-cli run (input %q): %v", in, err)
+		}
+		return string(out)
+	}
+	want := "pong\n" +
+		"form-cli (native/fkwu): ping | help | version | <verb> ...\n" +
+		"form-cli native 0.1 - running on the emitted walker (fkwu)\n"
+	if got := run("ping\nhelp\nversion\nquit\n"); got != want {
+		t.Fatalf("combined form-cli transcript:\n got=%q\nwant=%q", got, want)
+	}
+	// EOF (no quit) ends cleanly too.
+	if eof := run("ping\nhelp\nversion\n"); eof != want {
+		t.Fatalf("combined form-cli EOF transcript:\n got=%q\nwant=%q", eof, want)
+	}
+}

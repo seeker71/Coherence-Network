@@ -680,8 +680,15 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 ; the shared loader: read argv[1]=table into the node heap + string pool, bind
 ; argv[2]=scalar into fk_vs[0], stage argv[3]=fk_src. Both entries below share it
 ; and differ only in what they do after the program is loaded and walked.
+; the parse: fk_buf already holds the table text — read function count + roots,
+; node rows, then the string pool. Shared by the file loader and the baked entry,
+; which differ only in HOW fk_buf gets filled (a file vs a baked-in literal).
+(defn fkc-main-parse-text ()
+    "long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } ")
 (defn fkc-main-load-text ()
-    "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } if (argc > 3) { int sfd = open(argv[3], 0); if (sfd >= 0) { long long sg = read(sfd, fk_src, 262143); if (sg >= 0) { fk_src[sg] = 0; } } } fk_vs[0] = a; fk_vsp = 1; ")
+    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; "
+    (str_concat (fkc-main-parse-text)
+                "long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } if (argc > 3) { int sfd = open(argv[3], 0); if (sfd >= 0) { long long sg = read(sfd, fk_src, 262143); if (sg >= 0) { fk_src[sg] = 0; } } } fk_vs[0] = a; fk_vsp = 1; ")))
 ; the value entry: walk fk_fn[0], print its result, then dump the arm-hit profile
 ; (the framebuffer/JIT observation trace). Single-shot programs read line 1.
 (defn fkc-main-universal-text ()
@@ -696,6 +703,18 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
 (defn fkc-main-repl-text ()
     (str_concat (fkc-main-load-text)
                 "fk_walk(fk_fn[0], 0); return 0; }"))
+; the COMBINED entry: the flattened program table is baked into the binary as the
+; fk_prog literal, so the executable IS the program — running it needs no table
+; file, no Go, no clang, no C source, nothing but the native binary itself. It
+; copies the baked table into fk_buf, parses it with the shared loader, then walks
+; fk_fn[0] for effect (the form-cli REPL drives its own stdout over fd 0). `table`
+; is the flattened program string, baked at emit time.
+(defn fkc-main-baked-repl-text (table)
+    (str_concat "static const char fk_prog[] = \""
+    (str_concat table
+    (str_concat "\"; int main(int argc, char **argv) { long long ci = 0; while (fk_prog[ci] != 0) { fk_buf[ci] = fk_prog[ci]; ci = ci + 1; } fk_buf[ci] = 0; "
+    (str_concat (fkc-main-parse-text)
+                "fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); return 0; }")))))
 
 (defn fkc-emit-universal ()
     (str_concat (fkc-pr-text)
@@ -712,6 +731,16 @@ extern int open(const char *, int, ...); extern long long read(int, void *, unsi
     (str_concat (fkc-typed-stdout-text)
     (str_concat (fkc-walk-many-text)
                 (fkc-main-repl-text))))))
+
+; the combined walker+program: one self-contained native binary with `table`
+; (a flattened Form program) baked in. The build flattens form-cli once and bakes
+; it here; the resulting exe runs directly with no table file and no toolchain.
+(defn fkc-emit-combined-repl (table)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-universal-text)
+    (str_concat (fkc-typed-stdout-text)
+    (str_concat (fkc-walk-many-text)
+                (fkc-main-baked-repl-text table))))))
 
 (defn fkc-decl-server-universal-text ()
     (str_concat (fkc-arena-decl-text)
