@@ -366,6 +366,7 @@ transformer-corpus-train fks 31
 transformer-corpus-train-wide fks 31
 corpus-license-gate fks 31
 neural-lm fks 31
+neural-lm-real fks 7
 llama-numerics fks 4095
 rope fks 4095
 llama-block fks 4095

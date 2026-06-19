@@ -61,5 +61,14 @@
     ; from a start embedding, emit k tokens (a list of vocabulary indices).
     (defn nl-gen (s table start-emb k eps) (nl-gen-loop s table start-emb k eps (list)))
 
+    ; --- EVALUATE: held-out next-token accuracy (the real-data measure). ---
+    ; held = list of (context-emb  true-next-index) pairs; count how many the trained
+    ; model renders correctly. The numerator of held-out accuracy; the caller divides
+    ; by (len held). This is what makes "predicts held-out words" a proven quantity.
+    (defn nl-eval-correct (s table held eps)
+        (if (eq (len held) 0) 0
+            (add (if (eq (nl-predict-token s table (nth (head held) 0) eps) (nth (head held) 1)) 1 0)
+                 (nl-eval-correct s table (tail held) eps))))
+
     (defn neural-lm-teaching () "lc-cognitive-sovereignty")
     0)
