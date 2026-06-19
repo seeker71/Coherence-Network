@@ -375,6 +375,19 @@
 ;        named host-io/node-family limitation as mel-frame). Remaining to a real transcript: real
 ;        d_model=384 weights via M5's JIT, conv stem + full 80×3000 mel, sinusoidal/learned positionals,
 ;        BPE tokenizer.]
+;        [REAL-WEIGHT + FRONT-END + TOKENIZER RUNGS SHIPPED: (1) REAL openai/whisper-tiny encoder
+;        block-0 weights (offline from the HF cache), REAL 6-head multi-head, run through tb-mh-block —
+;        at d_model=96 max|Form-numpy(tanh-gelu)|=3e-16, and at FULL d_model=384/head_dim=64 = 6.66e-15
+;        in 33.6s (a 34.6MB literal-emit program — it RUNS and is bit-right at full width; throughput for
+;        a whole 8-layer/1500-pos model is M5's JIT, not correctness). The only residual vs whisper's true
+;        output is erf-gelu vs the body's tanh-gelu (~4e-3) — the named M3 follow-up. scripts/
+;        whisper_block0_real_carrier.py + tests/whisper-mh-block-real-band.fk (d_model=12). (2) Encoder
+;        sinusoidal positional (positional.fk, 2e-10), conv stem — two 1-D convs, time-halving stride-2
+;        (conv-stem.fk, conv math exact), full log-mel as the proven cell walked (mel-full.fk, 2e-11),
+;        cross-attention KV cache for greedy decode (transformer-generate-cached.fk, identical ids). (3)
+;        BPE merge core proven against the REAL whisper tokenizer (bpe-tokenizer.fk: " the"→264,
+;        " tokenizer"→[14862,6545], exact). Remaining to an end-to-end transcript: assemble the pieces at
+;        real width via JIT, learned decoder positionals, byte-map + regex word-split carriers, exact-erf gelu.]
 ;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
 ;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
 ;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what
