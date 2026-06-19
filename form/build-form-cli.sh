@@ -39,6 +39,22 @@ printf '(fkc-emit-combined-repl "%s")\n' "$(cat "$W/table.txt")" > "$W/emit.fk"
 "$GB" $EMIT_CHAIN "$W/emit.fk" > "$W/form-cli.c"
 grep -q fk_prog "$W/form-cli.c" || { echo "emit missing baked program"; exit 1; }
 
-# 3. compile once -> the standalone native binary.
+# 3. bake the GENESIS — this binary's own Form source — so 'form-cli source' can
+#    print it and you can rebuild from the binary alone. It's the file-marked
+#    concatenation of every recipe the build reads plus this script, appended as a
+#    byte array (escape-free) and read at runtime by self_source (walker tag 117).
+SOURCES="minimal-surface hati-os-kernel hati-os-kernel-emit form-parse form-flatten core fourth-shim form-cli form-cli-main form-cli-repl"
+{
+  for f in $SOURCES; do printf ';;;; ==== FILE: %s/%s.fk ====\n' "$S" "$f"; cat "$S/$f.fk"; done
+  printf ';;;; ==== FILE: build-form-cli.sh ====\n'; cat "$(basename "$0")"
+} > "$W/genesis.txt"
+GEN_LEN=$(wc -c < "$W/genesis.txt" | tr -d ' ')
+{
+  printf '\nconst unsigned char fk_genesis[] = {'
+  od -An -v -tu1 "$W/genesis.txt" | tr -s ' \n' ',' | sed 's/^,//; s/,$//'
+  printf '};\nconst long long fk_genesis_len = %s;\n' "$GEN_LEN"
+} >> "$W/form-cli.c"
+
+# 4. compile once -> the standalone native binary (program + own source baked in).
 clang -O2 -o "$OUT" "$W/form-cli.c"
-echo "built $OUT  ($(wc -c < "$OUT") bytes, self-contained — runs with no Go/clang/table)"
+echo "built $OUT  ($(wc -c < "$OUT") bytes, self-contained — runs with no Go/clang/table; carries ${GEN_LEN}B of its own source)"

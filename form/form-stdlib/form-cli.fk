@@ -20,15 +20,23 @@
         (do (let sp (str_find cmd " " 0))
             (if (lt sp 0) cmd (substring cmd 0 sp))))
 
-    ; dispatch: self-contained verbs prove the native door end-to-end; the data
-    ; verbs (predict/gaps/score) route to their existing recipes next, and the
-    ; host-io verbs (ask/rag/ingest) follow as POST + dir-scan land.
+    ; the four-way dispatch: every verb here returns a pure string the shared
+    ; brain produces on Go/Rust/TS/fkwu alike (tests/form-cli-band.fk). The
+    ; native-only verbs that read the binary's own baked source (source, verify)
+    ; are intercepted by the fkwu runtime wrappers (form-cli-repl.fk /
+    ; form-cli-main.fk) before this dispatch, since they use a fkwu-only op.
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
-                (if (str_eq v "help")
-                    "form-cli (native/fkwu): ping | help | version | <verb> ..."
-                    (if (str_eq v "version")
-                        "form-cli native 0.1 - running on the emitted walker (fkwu)"
-                        (str_concat "form-cli: unknown verb " v))))))
+            (if (str_eq v "help")
+                "form-cli verbs: ping help about kernel source recreate verify version quit. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence."
+            (if (str_eq v "about")
+                "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
+            (if (str_eq v "kernel")
+                "form-cli runs on fkwu, a universal walker generated entirely from Form recipes and compiled to native code. The same walker runs any Form program. this binary has the form-cli program built into it."
+            (if (str_eq v "recreate")
+                "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own."
+            (if (str_eq v "version")
+                "form-cli 0.2"
+                (str_concat "form-cli: unknown verb " (str_concat v ", try help"))))))))))
     0)

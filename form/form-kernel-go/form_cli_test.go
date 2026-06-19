@@ -11,9 +11,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -56,10 +58,9 @@ func TestFkwuFormCli(t *testing.T) {
 		want string
 	}{
 		{"ping", "pong"},
-		{"help", "form-cli (native/fkwu): ping | help | version | <verb> ..."},
-		{"version", "form-cli native 0.1 - running on the emitted walker (fkwu)"},
+		{"version", "form-cli 0.2"},
 		{"ping extra", "pong"},
-		{"foobar", "form-cli: unknown verb foobar"},
+		{"foobar", "form-cli: unknown verb foobar, try help"},
 	}
 	for _, c := range cases {
 		got, err := FkwuEvalWithInput(fkwuBin, tablePath, 0, []byte(c.cmd))
@@ -68,6 +69,21 @@ func TestFkwuFormCli(t *testing.T) {
 		}
 		if got != c.want {
 			t.Fatalf("form-cli on fkwu: cmd %q -> fkwu=%q want=%q", c.cmd, got, c.want)
+		}
+	}
+	// the self-description verbs return their pure strings (exact match lives in
+	// the four-way band tests/form-cli-band.fk; here we confirm they reach fkwu).
+	for _, c := range []struct{ cmd, sub string }{
+		{"help", "ping help about kernel source recreate verify version"},
+		{"about", "one self-contained native binary"},
+		{"kernel", "fkwu, a universal walker"},
+	} {
+		got, err := FkwuEvalWithInput(fkwuBin, tablePath, 0, []byte(c.cmd))
+		if err != nil {
+			t.Fatalf("FkwuEvalWithInput(%q): %v", c.cmd, err)
+		}
+		if !strings.Contains(got, c.sub) {
+			t.Fatalf("form-cli %q -> %q, missing %q", c.cmd, got, c.sub)
 		}
 	}
 }
@@ -132,26 +148,31 @@ func TestFkwuFormCliRepl(t *testing.T) {
 
 	// quit ends the loop; each line before it produces exactly one response line,
 	// in input order, and nothing else (effect-only entry — no root/arm dump).
-	got := run("ping\nhelp\nversion\nquit\n")
-	want := "pong\n" +
-		"form-cli (native/fkwu): ping | help | version | <verb> ...\n" +
-		"form-cli native 0.1 - running on the emitted walker (fkwu)\n"
+	got := run("ping\nversion\nquit\n")
+	want := "pong\nform-cli 0.2\n"
 	if got != want {
 		t.Fatalf("repl transcript:\n got=%q\nwant=%q", got, want)
 	}
 
 	// EOF (closed stdin, no quit verb) also ends the loop cleanly — same output.
-	if eof := run("ping\nhelp\nversion\n"); eof != want {
+	if eof := run("ping\nversion\n"); eof != want {
 		t.Fatalf("repl EOF transcript:\n got=%q\nwant=%q", eof, want)
 	}
 
 	// An unknown verb echoes it back; the verb is the line up to the first space.
-	if u := run("wobble the cat\nquit\n"); u != "form-cli: unknown verb wobble\n" {
+	if u := run("wobble the cat\nquit\n"); u != "form-cli: unknown verb wobble, try help\n" {
 		t.Fatalf("repl unknown-verb: got=%q", u)
 	}
 
+	// This repl binary has no baked genesis (built emit-only), so 'source' is
+	// empty and 'verify' reports 0 bytes — the dispatch still works. The real
+	// baked genesis is proven in TestFkwuFormCliCombined and build-form-cli.sh.
+	if v := run("verify\nquit\n"); !strings.Contains(v, "coherent:") {
+		t.Fatalf("repl verify: got=%q", v)
+	}
+
 	// Determinism: identical input yields byte-identical output.
-	if run("ping\nhelp\nquit\n") != run("ping\nhelp\nquit\n") {
+	if run("ping\nversion\nquit\n") != run("ping\nversion\nquit\n") {
 		t.Fatal("repl output not deterministic for identical input")
 	}
 }
@@ -190,6 +211,23 @@ func TestFkwuFormCliCombined(t *testing.T) {
 	if !strings.Contains(cSrc, "fk_prog") {
 		t.Fatalf("combined emit missing the baked program literal")
 	}
+
+	// Bake a genesis blob (build-form-cli.sh appends the real Form source; here a
+	// recognizable marker proves self_source reads the baked bytes end to end via
+	// the weak fk_genesis symbol). Appended as a byte array — no escaping.
+	genesis := ";;;; ==== FILE: form-stdlib/form-cli.fk ====\n(self-describing form-cli source marker)\n"
+	var gb strings.Builder
+	gb.WriteString(cSrc)
+	gb.WriteString("\nconst unsigned char fk_genesis[] = {")
+	for i := 0; i < len(genesis); i++ {
+		if i > 0 {
+			gb.WriteByte(',')
+		}
+		gb.WriteString(strconv.Itoa(int(genesis[i])))
+	}
+	fmt.Fprintf(&gb, "}; const long long fk_genesis_len = %d;\n", len(genesis))
+	cSrc = gb.String()
+
 	cPath := filepath.Join(dir, "form-cli.c")
 	if err := os.WriteFile(cPath, []byte(cSrc), 0o644); err != nil {
 		t.Fatalf("write form-cli.c: %v", err)
@@ -212,14 +250,20 @@ func TestFkwuFormCliCombined(t *testing.T) {
 		}
 		return string(out)
 	}
-	want := "pong\n" +
-		"form-cli (native/fkwu): ping | help | version | <verb> ...\n" +
-		"form-cli native 0.1 - running on the emitted walker (fkwu)\n"
-	if got := run("ping\nhelp\nversion\nquit\n"); got != want {
+	want := "pong\nform-cli 0.2\n"
+	if got := run("ping\nversion\nquit\n"); got != want {
 		t.Fatalf("combined form-cli transcript:\n got=%q\nwant=%q", got, want)
 	}
 	// EOF (no quit) ends cleanly too.
-	if eof := run("ping\nhelp\nversion\n"); eof != want {
+	if eof := run("ping\nversion\n"); eof != want {
 		t.Fatalf("combined form-cli EOF transcript:\n got=%q\nwant=%q", eof, want)
+	}
+	// the binary expresses its OWN baked source (self_source reads fk_genesis).
+	if src := run("source\nquit\n"); src != genesis+"\n" {
+		t.Fatalf("combined source:\n got=%q\nwant=%q", src, genesis)
+	}
+	// and verifies it carries that source (length reported from the baked bytes).
+	if v := run("verify\nquit\n"); !strings.Contains(v, "coherent:") || !strings.Contains(v, fmt.Sprintf("%d bytes", len(genesis))) {
+		t.Fatalf("combined verify: got=%q", v)
 	}
 }

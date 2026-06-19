@@ -58,6 +58,7 @@
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
           (list "input_byte" 1 17)
           (list "read_line" 0 114) (list "print_str" 1 115) (list "isatty" 0 116)
+          (list "self_source" 0 117)
           (list "intern_trivial_int" 1 43)
           (list "intern_trivial_bool" 1 112) (list "intern_trivial_float" 1 113)
           (list "make_nodeid" 4 91)
