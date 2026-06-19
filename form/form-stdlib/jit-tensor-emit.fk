@@ -379,3 +379,27 @@
   (str_concat (jte-llama-blk-out)
   (str_concat (jte-llama-blk-rms2)
   (str_concat (jte-llama-blk-ffn) "}"))))))))))))
+
+; --- the CAUSAL llama block forward: the real autoregressive decoder on the GPU. Identical byte-for-byte
+;     to jte-llama-block-fwd-msl EXCEPT the attention mask — query at position s sees only keys/values 0..s
+;     (the per-query key PREFIX of tb-attn-seq-causal: every "while (t < S)" of the non-causal attn becomes
+;     "while (t < s + 1u)"). No numeric change to the per-pair dot/softmax (composes the same fexp/max-subtract
+;     fold), so it mirrors llama-block.fk's lblk-block-causal (proven FOUR-WAY 511 by tests/causal-attention-band.fk)
+;     serially and bit-for-bit. At the last token the prefix is the whole sequence so it equals the non-causal
+;     block; the first token attends only to itself (softmax of a single score = 1.0). This is the block the
+;     generation loop steps — it produces one token's next-state without leaking later positions. ---
+(defn jte-llama-blk-attn-causal ()
+  "{ uint s = 0; while (s < S) { uint t = 0; while (t < s + 1u) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float p = sc[oQ + s * dq + c] * sc[oK + t * dq + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < s + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < s + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < s + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + s * dv + i] = 0.0f; i += 1; } t = 0; while (t < s + 1u) { i = 0; while (i < dv) { float pv = sc[oV + t * dv + i] * sc[oSR + t]; sc[oA + s * dv + i] = sc[oA + s * dv + i] + pv; i += 1; } t += 1; } s += 1; } } ")
+
+(defn jte-llama-block-fwd-causal-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-llama-blk-sig fname)
+  (str_concat (jte-llama-blk-off)
+  (str_concat (jte-llama-blk-rms1)
+  (str_concat (jte-llama-blk-proj)
+  (str_concat (jte-llama-blk-rope)
+  (str_concat (jte-llama-blk-attn-causal)
+  (str_concat (jte-llama-blk-out)
+  (str_concat (jte-llama-blk-rms2)
+  (str_concat (jte-llama-blk-ffn) "}"))))))))))))
