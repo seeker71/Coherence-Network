@@ -8,17 +8,17 @@
 ; read the binary's baked source via the fkwu-only self_source op) live in the
 ; runtime wrappers, not here — this bands the verb-routing brain both surfaces call.
 ;
-; Response strings stay ASCII: fkwu corrupts multibyte bytes when it PRINTS a
-; pooled string (an em-dash came back as e2 ff ff), and these strings are printed
-; to the user. ; ' = are all fine four-way; plain ASCII keeps the printed output
-; byte-exact across all four kernels.
+; Responses carry real UTF-8: fkwu serializes the string pool byte-exact (via
+; str_byte_at in fks-lit-sp), so any locale's script prints identically on all
+; four kernels — the unknown-verb line below carries an em-dash (—) and proves it.
+; (locale-utf8 four-way coverage: form_cli_test.go TestFkwuLocaleUtf8.)
 ;
 ; Verdict 511:
 ;   1   ping -> pong
 ;   2   help -> the verb list
 ;   4   version -> the version string
 ;   8   verb-split: "ping extra" routes on the verb "ping" -> pong
-;   16  unknown verb -> "form-cli: unknown verb <v>, try help"
+;   16  unknown verb -> "form-cli: unknown verb '<v>' — type 'help'" (UTF-8 em-dash)
 ;   32  about  -> the self-description
 ;   64  kernel -> what it runs on
 ;  128  recreate -> how to rebuild
@@ -28,9 +28,9 @@
     (let c1 (if (str_eq (fc-respond "help") "form-cli verbs: ping help about kernel source recreate verify version quit. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence.") 2 0))
     (let c2 (if (str_eq (fc-respond "version") "form-cli 0.2") 4 0))
     (let c3 (if (str_eq (fc-respond "ping extra") "pong") 8 0))
-    (let c4 (if (str_eq (fc-respond "foobar") "form-cli: unknown verb foobar, try help") 16 0))
+    (let c4 (if (str_eq (fc-respond "foobar") "form-cli: unknown verb 'foobar' — type 'help'") 16 0))
     (let c5 (if (str_eq (fc-respond "about") "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs.") 32 0))
     (let c6 (if (str_eq (fc-respond "kernel") "form-cli runs on fkwu, a universal walker generated entirely from Form recipes and compiled to native code. The same walker runs any Form program. this binary has the form-cli program built into it.") 64 0))
     (let c7 (if (str_eq (fc-respond "recreate") "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own.") 128 0))
-    (let c8 (if (str_eq (fc-respond "") "form-cli: unknown verb , try help") 256 0))
+    (let c8 (if (str_eq (fc-respond "") "form-cli: unknown verb '' — type 'help'") 256 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
