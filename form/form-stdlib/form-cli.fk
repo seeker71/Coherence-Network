@@ -6,10 +6,11 @@
 ; (str_find/substring/str_eq/str_concat) and crosses four-way (Go/Rust/TS/fkwu) by
 ; tests/form-cli-band.fk — the brain BOTH surfaces call.
 ;
-; The two input surfaces wrap this dispatch (see form-cli-main.fk, the fkwu runtime
-; entry): HEADLESS reads the command staged in fk_src (input_byte = walker tag 17);
-; INTERACTIVE TTY adds a read-line loop + isatty prompt (the remaining host-io
-; emitter add-on). One native engine on the emitted kernel, not 23 bespoke carriers.
+; Two input surfaces wrap this one dispatch, both fkwu-native: HEADLESS reads the
+; command staged in fk_src (form-cli-main.fk, input_byte = walker tag 17);
+; INTERACTIVE TTY runs a read_line loop with an isatty prompt over real fd 0
+; (form-cli-repl.fk, tags 114/115/116). One native engine on the emitted kernel,
+; not 23 bespoke carriers.
 ;
 ; preludes: form-stdlib/core.fk
 

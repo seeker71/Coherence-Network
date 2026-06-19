@@ -57,6 +57,7 @@
           (list "substring" 3 29) (list "str_find" 3 30)
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
           (list "input_byte" 1 17)
+          (list "read_line" 0 114) (list "print_str" 1 115) (list "isatty" 0 116)
           (list "intern_trivial_int" 1 43)
           (list "intern_trivial_bool" 1 112) (list "intern_trivial_float" 1 113)
           (list "make_nodeid" 4 91)
@@ -289,6 +290,7 @@
 (defn flt-do-let-v (name s pos fns env val)
     (flt-do-let-done name (flt-peek s (fp-skip s pos)) s (flt-expr s pos fns env) fns env val))
 (defn flt-do-let-effect-op (op)
+    (if (str_eq op "read_line") 1
     (if (str_eq op "record_new") 1
     (if (str_eq op "file_append_bytes") 1
     (if (str_eq op "write_file_text") 1
@@ -302,7 +304,7 @@
     (if (str_eq op "file_mtime") 1
     (if (str_eq op "file_byte_at") 1
     (if (str_eq op "scan_run") 1
-    (if (str_eq op "http_get") 1 0)))))))))))))))
+    (if (str_eq op "http_get") 1 0))))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
     (if (eq (flt-do-let-store-op op fns env) 1)
         (flt-do-let-frame name s ve fns env val (add (flt-current-letdepth env) 1))

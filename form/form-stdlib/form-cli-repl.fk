@@ -1,0 +1,29 @@
+; form-cli-repl.fk — the interactive TTY front door on the emitted walker (fkwu).
+;
+; The INTERACTIVE surface (the headless one is form-cli-main.fk reading fk_src):
+; a read-eval-print loop over real fd 0. read_line (walker tag 114) reads one
+; line of stdin, fc-respond (form-cli.fk, four-way proven) dispatches the verb,
+; print_str (tag 115) writes the response, and the loop recurses. isatty (tag
+; 116) gates an interactive prompt so a piped session stays clean. The loop ends
+; on EOF (read_line returns a negative sentinel) or the quit/exit verb.
+;
+; Deterministic and testable: output is a pure function of the stdin bytes —
+; pipe a fixed transcript, get a fixed response stream (form_cli_test.go).
+; read_line/print_str/isatty are host-io ops the emitted walker carries (tags
+; 114/115/116); they are not in the three host walkers, so this is fkwu-native,
+; the same way input_byte (tag 17) is. One native engine, both surfaces.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
+(do
+    ; one self-recursive loop: prompt (only on a real tty), read a line, and
+    ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
+    ; let (an effect op) so it fires exactly once per turn, not once per use.
+    (defn repl ()
+        (do (if (eq (isatty) 2) (print_str "form-cli> ") 0)
+            (let line (read_line))
+            (if (lt line 0) ""
+                (if (str_eq (fc-verb line) "quit") ""
+                    (if (str_eq (fc-verb line) "exit") ""
+                        (do (print_str (fc-respond line))
+                            (repl)))))))
+    (repl))
