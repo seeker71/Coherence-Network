@@ -18,7 +18,7 @@
 ; --- vector slicing (monomorphic, fourth-arm-safe) ---
 (defn tb-drop (n xs) (if (eq n 0) xs (tb-drop (sub n 1) (tail xs))))
 (defn tb-take (n xs) (if (eq n 0) (empty) (cons (head xs) (tb-take (sub n 1) (tail xs)))))
-(defn tb-vslice (xs start len) (tb-take len (tb-drop start xs)))
+(defn tb-vslice (xs start vlen) (tb-take vlen (tb-drop start xs)))
 (defn tb-cat (a b) (if (eq (len a) 0) b (cons (head a) (tb-cat (tail a) b))))
 
 ; extract head h (width hd) from every position-vector of a sequence.

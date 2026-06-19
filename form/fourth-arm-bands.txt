@@ -607,3 +607,5 @@ storage-keys fks 7
 replica-merge fks 15
 replica-serve fks 7
 form-lower-writefile fkc 15
+mel-frame fks 1023
+transformer-gelu-erf fks 255
