@@ -153,6 +153,37 @@
                 android:layout_height="52dp"
                 android:layout_marginTop="14dp"
                 android:text="Check for update" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Speaker tracking"
+                android:textColor="#53615D"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/speakerIdField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="Tracked speaker id"
+                android:hint="speaker-1"
+                android:inputType="text" />
+
+            <EditText
+                android:id="@+id/speakerNameField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="Tracked speaker name"
+                android:hint="Name this speaker"
+                android:inputType="textPersonName" />
+
+            <Button
+                android:id="@+id/saveSpeakerBtn"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:text="Save speaker name" />
         </LinearLayout>
 
         <LinearLayout
@@ -199,6 +230,33 @@
                 android:background="#FFFFFF"
                 android:contentDescription="organ identity QR"
                 android:padding="8dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Speaker Tracking"
+                android:textColor="#1F2C2A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/speakerTrackingView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="monospace"
+                android:text="speakers: waiting"
+                android:textColor="#4D5A56"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <TextView

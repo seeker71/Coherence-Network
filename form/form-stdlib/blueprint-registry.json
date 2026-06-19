@@ -937,6 +937,20 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 32,
+      "name": "VALUE-NONE",
+      "meaning": "reserved absent/None value blueprint used by fourth-arm null/value parity",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/fourth-shim.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 40,
       "name": "PY-MODULE",
       "meaning": "root module: sequence of statements",

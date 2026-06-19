@@ -20,6 +20,18 @@
         (do (let sp (str_find cmd " " 0))
             (if (lt sp 0) cmd (substring cmd 0 sp))))
 
+    (defn fc-floor ()
+        "form-cli floor: a self-contained fkwu native binary can dispatch commands, show its own source, and carry four-way Form proof. Speech floor today is local teacher/oracle receipts: voiced/silence gates, local Whisper transcript receipts, speech corpus receipts, live Mac mic STT plus Android mic telemetry, local speaker fingerprint oracle receipts, and Form-native metadata gates. Ambient room STT, production diarization, strong voice identity match, topic/sentiment/conviction/confidence, and all-channel metadata are tracked capabilities until native recipes win heldout receipts.")
+
+    (defn fc-north-star ()
+        "form-cli north-star: one first-class Form-native room sense stack. The same recipes that prove four-way become the native runtime for visible local multi-mic listening, speaker diarization, voice identity matching, local STT, topic and intent summaries, sentiment, conviction, confidence, source/locality metadata, and consent-aware receipts. Each feature starts with a capable local oracle that performs the feature and writes receipts; one or multiple Form candidate models train and race on those receipts until a native candidate beats the oracle on heldout room receipts.")
+
+    (defn fc-speech-capabilities ()
+        "ambient speech capabilities: voiced gate, local STT receipt, multi-mic room loop, local speaker fingerprint oracle floor, speaker diarization, voice identity match, topic/meaning summary, sentiment, conviction, confidence, source/locality metadata, active-learning feedback, and candidate race. Status: teacher-led floor proven; local feature oracles are the teacher layer; one-or-many Form models train, compare, and retire each oracle only after heldout wins. Speaker ID now has a Form receipt floor from log-mel fingerprints; production diarization and strong voiceprint matching have a hard gate: local diarization provider, strong voiceprint provider, consent, model hash, and heldout native win.")
+
+    (defn fc-room-sense-gaps ()
+        "room-sense gaps toward north-star: ambient-room-stt=samples->train-native-recipe; production-diarization=source-local->build-local-oracle-source; strong-voiceprint-match=source-local->build-local-oracle-source; named-speaker-ledger=local-oracle->distill-samples-from-local-oracle; topic-intent-summary=local-oracle->distill-samples-from-local-oracle; affect-sentiment=samples->train-native-recipe; conviction-confidence=samples->train-native-recipe; source-locality-consent=samples->train-native-recipe. None are hidden claims: production promotion requires local provider receipts, consent, model hash/license, and heldout native wins.")
+
     ; the four-way dispatch: every verb here returns a pure string the shared
     ; brain produces on Go/Rust/TS/fkwu alike (tests/form-cli-band.fk). The
     ; native-only verbs that read the binary's own baked source (source, verify)
@@ -29,14 +41,22 @@
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
             (if (str_eq v "help")
-                "form-cli verbs: ping help about kernel source recreate verify version quit. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence."
+                "form-cli verbs: ping help about kernel floor north-star speech gaps source recreate verify version quit. floor: current proof. north-star: target runtime. speech: ambient speech capability ladder. gaps: room-sense gap ladder. source: its own Form source. verify: self-coherence."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
                 "form-cli runs on fkwu, a universal walker generated entirely from Form recipes and compiled to native code. The same walker runs any Form program. this binary has the form-cli program built into it."
+            (if (str_eq v "floor")
+                (fc-floor)
+            (if (str_eq v "north-star")
+                (fc-north-star)
+            (if (str_eq v "speech")
+                (fc-speech-capabilities)
+            (if (str_eq v "gaps")
+                (fc-room-sense-gaps)
             (if (str_eq v "recreate")
                 "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own."
             (if (str_eq v "version")
-                "form-cli 0.2"
-                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))
+                "form-cli 0.5"
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))))))
     0)

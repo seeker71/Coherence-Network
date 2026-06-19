@@ -1,0 +1,113 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-gaps.fk form-stdlib/speech-room-sense-gaps.fk
+;
+; speech-room-sense-gaps-band - room-sense gaps expressed toward the north star.
+;
+; Verdict 2047:
+;   1     eight room-sense gaps are named
+;   2     ambient room STT sits at samples -> train-native-recipe
+;   4     production diarization sits at source-local -> build-local-oracle-source
+;   8     strong voiceprint sits at source-local -> build-local-oracle-source
+;   16    named speaker ledger sits at local-oracle -> distill samples
+;   32    topic/intent sits at local-oracle -> distill samples
+;   64    affect/sentiment sits at samples -> train-native-recipe
+;   128   conviction/confidence sits at samples -> train-native-recipe
+;   256   source/locality/consent sits at samples -> train-native-recipe
+;   512   catalog is flight-ready: no remote-only/none gaps need network first
+;   1024  every gap has floor, north-star, next receipt, and promotion gate
+(do
+    (let gaps (srsg-room-gaps))
+    (let ambient (nth gaps 0))
+    (let diar (nth gaps 1))
+    (let voiceprint (nth gaps 2))
+    (let names (nth gaps 3))
+    (let topic (nth gaps 4))
+    (let affect (nth gaps 5))
+    (let conviction (nth gaps 6))
+    (let locality (nth gaps 7))
+
+    (let c0 (if (eq (srsg-gap-count) 8) 1 0))
+    (let c1
+        (if (and
+                (str_eq (srsg-id ambient) "ambient-room-stt")
+                (and
+                    (str_eq (srsg-rung ambient) (gaps-rung-samples))
+                    (str_eq (srsg-next-move ambient) "train-native-recipe")))
+            2
+            0))
+    (let c2
+        (if (and
+                (str_eq (srsg-id diar) "production-diarization")
+                (and
+                    (str_eq (srsg-rung diar) (gaps-rung-source))
+                    (and
+                        (str_eq (srsg-next-move diar) "build-local-oracle-source")
+                        (ge (str_find (srsg-next-receipt diar) "provider receipt" 0) 0))))
+            4
+            0))
+    (let c3
+        (if (and
+                (str_eq (srsg-id voiceprint) "strong-voiceprint-match")
+                (and
+                    (str_eq (srsg-rung voiceprint) (gaps-rung-source))
+                    (and
+                        (str_eq (srsg-next-move voiceprint) "build-local-oracle-source")
+                        (ge (str_find (srsg-promotion-gate voiceprint) "heldout enrolled-speaker receipts" 0) 0))))
+            8
+            0))
+    (let c4
+        (if (and
+                (str_eq (srsg-id names) "named-speaker-ledger")
+                (and
+                    (str_eq (srsg-rung names) (gaps-rung-local))
+                    (str_eq (srsg-next-move names) "distill-samples-from-local-oracle")))
+            16
+            0))
+    (let c5
+        (if (and
+                (str_eq (srsg-id topic) "topic-intent-summary")
+                (and
+                    (str_eq (srsg-rung topic) (gaps-rung-local))
+                    (ge (str_find (srsg-next-receipt topic) "local topic oracle receipt" 0) 0)))
+            32
+            0))
+    (let c6
+        (if (and
+                (str_eq (srsg-id affect) "affect-sentiment")
+                (and
+                    (str_eq (srsg-rung affect) (gaps-rung-samples))
+                    (str_eq (srsg-next-move affect) "train-native-recipe")))
+            64
+            0))
+    (let c7
+        (if (and
+                (str_eq (srsg-id conviction) "conviction-confidence")
+                (and
+                    (str_eq (srsg-rung conviction) (gaps-rung-samples))
+                    (ge (str_find (srsg-promotion-gate conviction) "without inflating conviction" 0) 0)))
+            128
+            0))
+    (let c8
+        (if (and
+                (str_eq (srsg-id locality) "source-locality-consent")
+                (and
+                    (str_eq (srsg-rung locality) (gaps-rung-samples))
+                    (ge (str_find (srsg-promotion-gate locality) "refuses claims missing source/locality/consent" 0) 0)))
+            256
+            0))
+    (let c9
+        (if (and
+                (eq (srsg-flight-ready?) 1)
+                (and
+                    (eq (srsg-stage-count) 0)
+                    (eq (srsg-offline-count) 8)))
+            512
+            0))
+    (let c10
+        (if (and
+                (eq (srsg-all-valid? gaps) 1)
+                (and
+                    (gt (str_len (srsg-floor diar)) 0)
+                    (gt (str_len (srsg-north-star voiceprint)) 0)))
+            1024
+            0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10)))

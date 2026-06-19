@@ -11,7 +11,53 @@
   (destination
     "One native binary — the form-cli — is a coding/agent CLI on par with codex, claude, grok, and gemini, and categorically beyond them (see self-extension): its body is Form: recipes, grammars, and learned local candidates run first; remote LLMs are oracles of last resort, not the engine."
     "It uses local resources as native as the host allows (form-macho/form-elf emit the runnable binary; GPU/DSP/MLX lanes are tool-channel protocols) and keeps capability choice sovereign and inspectable."
-    "Its purpose is to shift LLM cost into internal learning: each oracle call is a teacher whose result is captured, so future flows of the same shape run local. Usage decreases as the body learns.")
+    "Its purpose is to shift LLM cost into internal learning: each oracle call is a teacher whose result is captured, so future flows of the same shape run local. Usage decreases as the body learns."
+    "The same floor applies to room sense: ambient speech, speaker identity, topic, sentiment, conviction, confidence, source/locality metadata, and feedback all enter through local feature oracles that can perform the feature and write inspectable receipts first, then become first-class Form-native recipes when one or multiple native candidate models beat those oracles on heldout room receipts.")
+
+  (floor
+    "The current binary floor is a self-contained fkwu native form-cli that dispatches verbs, shows its own source, and proves the dispatcher four-way. The native CLI now exposes `floor`, `north-star`, `speech`, and `gaps` so the executable itself names what is proven and what is still climbing."
+    "The current speech floor is teacher-led and measured: voiced/silence gates, local Whisper transcript receipts, speech-teacher corpus receipts, live Mac speaker->mic STT, Android mic telemetry, local speaker fingerprint receipts, and Form-native metadata/candidate gates. These are proven by `speech-teacher-receipt`, `speech-teacher-corpus`, `speech-live-loop`, `speaker-identity-oracle`, `speech-model-learning`, `speech-kernel-channel`, `voiced`, and `voice-traits` fourth-arm bands."
+    "Speaker identity now has a named local floor: log-mel fingerprint oracle receipts lower enrollment/query matches into Form samples, carry confidence/agreement/hash/privacy fields, and race against one-or-many native speaker candidates. Production diarization and strong voiceprint matching are no longer only prose gaps: they have an explicit hard gate requiring local diarization provider availability, strong voiceprint provider availability, consent, model hash, license clearance, and heldout native win."
+    "The current non-claim is explicit: full ambient room STT, topic/intent summaries, sentiment, conviction, confidence, and all-channel metadata are not declared complete until native recipes win heldout receipts. The CLI surfaces them as named capability gaps, not as hidden promises.")
+
+  (room-sense-north-star
+    "One visible local multi-mic listener receives anyone speaking in the room through consent-aware host carriers, gates silence before transcript trust, diarizes speaker turns, matches enrolled voice identities with confidence, transcribes locally, summarizes topic/intent, and carries sentiment, conviction, confidence, source/locality, timing, and model identity as metadata."
+    "Every lane is first-class Form-native at the destination: the same recipes that pass Go/Rust/TypeScript/fkwu proof become the native runtime through fkwu self-JIT or Form->asm bytes. Local feature oracles remain as training lanes, score-card baselines, and fallback carriers only until native candidates win heldout room receipts with better trust, sovereignty, cost, and vitality."
+    "The closing ladder is capability-shaped: capable local oracle -> teacher receipt -> corpus -> one-or-many Form candidate models -> candidate race -> heldout native win -> runtime default -> oracle retirement. Each step leaves receipts a later cell can replay.")
+
+  (room-sense-gap-ladder
+    (gap ambient-room-stt
+      (rung samples)
+      (next-receipt "heldout transcript corpus with speaker turn, silence gate, locality, and model hash")
+      (promotion-gate "native transcript candidate beats local Whisper on heldout room receipts"))
+    (gap production-diarization
+      (rung source-local)
+      (next-receipt "local diarization provider receipt with consent, model hash, license, turn confidence, and heldout rows")
+      (promotion-gate "native diarization wins heldout turn-boundary receipts before it becomes default"))
+    (gap strong-voiceprint-match
+      (rung source-local)
+      (next-receipt "strong voiceprint provider receipt with consent, model hash, license, enrollment count, and heldout matches")
+      (promotion-gate "native voice identity beats strong oracle on heldout enrolled-speaker receipts"))
+    (gap named-speaker-ledger
+      (rung local-oracle)
+      (next-receipt "bidirectional name receipt with speaker id, manual label, source device, consent, and no raw audio retention")
+      (promotion-gate "native identity ledger binds names only after explicit consent and heldout identity receipts"))
+    (gap topic-intent-summary
+      (rung local-oracle)
+      (next-receipt "local topic oracle receipt over transcript window with span ids, confidence, and model hash")
+      (promotion-gate "native topic/intent candidate beats local oracle on heldout transcript windows"))
+    (gap affect-sentiment
+      (rung samples)
+      (next-receipt "heldout affect receipt with valence/arousal/dominance, sentiment confidence, and uncertainty band")
+      (promotion-gate "native affect candidate wins heldout room receipts and refuses low-confidence claims"))
+    (gap conviction-confidence
+      (rung samples)
+      (next-receipt "metadata receipt with confidence, conviction, evidence count, disagreement, and replayable source rows")
+      (promotion-gate "native metadata model wins heldout calibration without inflating conviction"))
+    (gap source-locality-consent
+      (rung samples)
+      (next-receipt "all-channel metadata receipt linking device, source locality, consent, retention, model hash, and timestamp")
+      (promotion-gate "native runtime refuses claims missing source/locality/consent receipts")))
 
   ; ── what no other agent CLI can do (the real differentiator) ─────────────────
   ; The host-tool reflexes other models are trained into are crutches, not the
@@ -44,6 +90,7 @@
     (catalog        training-catalog.fk        "the persistent training corpus: every oracle call stored as request + raw + transmuted (fear->opportunity, risk->data), content-addressed, yielding three separable composable models (raw / transmutation / vitality-reasoning) — proof tests/training-catalog-band.fk -> 31 four-way")
     (embodiment     tool-embodiment.fk         "a local lane embodies — replaces the external lane — only when ready (sovereignty/trust/confidence >= 70) AND cheaper")
     (oracles        oracle-catalog.fk          "remote LLMs are sampled teachers and baselines, not hidden authority")
+    (room-sense     speech-kernel-channel.fk   "speech lanes are explicit: audio frame/feature, transcript receipt, local LLM oracle receipt, metadata vector, candidate race, and output envelope; host carriers are named while model/meta/race lanes stay Form-native")
     (memory         rag-retrieve.fk            "the local lane recalls the body: a query embedding ranked over the doc index by L1 distance returns the nearest recipes/specs/concepts to ground the answer — offline semantic memory, proof tests/rag-retrieve-band.fk -> 31 four-way; carrier scripts/form_cli_rag.py over a local embedder (nomic-embed-text)")
     (binary         form-macho.fk              "the native arm64 ground-floor binary, zero clang (form-elf.fk for Linux/Android)"))
 

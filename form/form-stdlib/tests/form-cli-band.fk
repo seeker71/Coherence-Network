@@ -13,7 +13,7 @@
 ; four kernels — the unknown-verb line below carries an em-dash (—) and proves it.
 ; (locale-utf8 four-way coverage: form_cli_test.go TestFkwuLocaleUtf8.)
 ;
-; Verdict 511:
+; Verdict 32767:
 ;   1   ping -> pong
 ;   2   help -> the verb list
 ;   4   version -> the version string
@@ -23,14 +23,64 @@
 ;   64  kernel -> what it runs on
 ;  128  recreate -> how to rebuild
 ;  256  empty verb still routes -> unknown
+;  512  floor names current fkwu/form-cli proof and teacher-led speech floor
+; 1024  north-star names local feature oracles and one/many Form candidates
+; 2048  speech names teacher layer, candidate training/race, and oracle retirement
+; 4096  speech names speaker fingerprint floor and remaining production gaps
+; 8192  speech names hard production diarization/voiceprint gate
+; 16384 gaps names current room-sense rungs and production promotion gates
 (do
     (let c0 (if (str_eq (fc-respond "ping") "pong") 1 0))
-    (let c1 (if (str_eq (fc-respond "help") "form-cli verbs: ping help about kernel source recreate verify version quit. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence.") 2 0))
-    (let c2 (if (str_eq (fc-respond "version") "form-cli 0.2") 4 0))
+    (let c1 (if (str_eq (fc-respond "help") "form-cli verbs: ping help about kernel floor north-star speech gaps source recreate verify version quit. floor: current proof. north-star: target runtime. speech: ambient speech capability ladder. gaps: room-sense gap ladder. source: its own Form source. verify: self-coherence.") 2 0))
+    (let c2 (if (str_eq (fc-respond "version") "form-cli 0.5") 4 0))
     (let c3 (if (str_eq (fc-respond "ping extra") "pong") 8 0))
     (let c4 (if (str_eq (fc-respond "foobar") "form-cli: unknown verb 'foobar' — type 'help'") 16 0))
     (let c5 (if (str_eq (fc-respond "about") "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs.") 32 0))
     (let c6 (if (str_eq (fc-respond "kernel") "form-cli runs on fkwu, a universal walker generated entirely from Form recipes and compiled to native code. The same walker runs any Form program. this binary has the form-cli program built into it.") 64 0))
     (let c7 (if (str_eq (fc-respond "recreate") "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own.") 128 0))
     (let c8 (if (str_eq (fc-respond "") "form-cli: unknown verb '' — type 'help'") 256 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
+    (let floor (fc-respond "floor"))
+    (let north (fc-respond "north-star"))
+    (let speech (fc-respond "speech"))
+    (let gaps (fc-respond "gaps"))
+    (let c9
+        (if (ge (str_find floor "self-contained fkwu native binary" 0) 0)
+            (if (ge (str_find floor "local Whisper transcript receipts" 0) 0)
+                (if (ge (str_find floor "Ambient room STT" 0) 0) 512 0)
+                0)
+            0))
+    (let c10
+        (if (ge (str_find north "first-class Form-native room sense stack" 0) 0)
+            (if (ge (str_find north "voice identity matching" 0) 0)
+                (if (ge (str_find north "capable local oracle" 0) 0)
+                    (if (ge (str_find north "one or multiple Form candidate models" 0) 0) 1024 0)
+                    0)
+                0)
+            0))
+    (let c11
+        (if (ge (str_find speech "speaker diarization" 0) 0)
+            (if (ge (str_find speech "sentiment, conviction, confidence" 0) 0)
+                (if (ge (str_find speech "local feature oracles are the teacher layer" 0) 0)
+                    (if (ge (str_find speech "one-or-many Form models train" 0) 0) 2048 0)
+                    0)
+                0)
+            0))
+    (let c12
+        (if (ge (str_find speech "local speaker fingerprint oracle floor" 0) 0)
+            (if (ge (str_find speech "production diarization and strong voiceprint matching have a hard gate" 0) 0)
+                4096
+                0)
+            0))
+    (let c13
+        (if (ge (str_find speech "local diarization provider, strong voiceprint provider, consent, model hash, and heldout native win" 0) 0)
+            8192
+            0))
+    (let c14
+        (if (ge (str_find gaps "production-diarization=source-local->build-local-oracle-source" 0) 0)
+            (if (ge (str_find gaps "strong-voiceprint-match=source-local->build-local-oracle-source" 0) 0)
+                (if (ge (str_find gaps "heldout native wins" 0) 0)
+                    16384
+                    0)
+                0)
+            0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 c14)))))))))))))))

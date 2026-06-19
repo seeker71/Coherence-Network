@@ -94,6 +94,7 @@ class CapabilityHeartbeatService : Service() {
             .put("capability_heartbeat", capabilityHeartbeat())
             .put("organs_active", JSONArray(activeOrgans()))
             .put("channels_offered", JSONArray(offeredTransports()))
+            .put("speaker_tracking", speakerTracking())
             .put("body_state", bodyState())
             .put("tick", beat++)
         try {
@@ -123,6 +124,7 @@ class CapabilityHeartbeatService : Service() {
         val organs = mutableListOf("network", "screen")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) organs.add("bluetooth-le")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)) organs.add("mic-capable")
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)) organs.add("speaker-tracking")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) organs.add("camera-capable")
         return organs.distinct().sorted()
     }
@@ -131,6 +133,7 @@ class CapabilityHeartbeatService : Service() {
         val transports = mutableListOf("wifi", "screen")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) transports.add("ble")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)) transports.add("audio")
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)) transports.add("speaker:identity-summary")
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) transports.add("video")
         return transports.distinct().sorted()
     }
@@ -142,6 +145,39 @@ class CapabilityHeartbeatService : Service() {
             .put("surprise_count", 0)
             .put("error_count", 0)
             .put("sample_count", beat + 1)
+
+    private fun speakerTracking(): JSONObject {
+        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        val names = try {
+            JSONObject(prefs.getString(KEY_SPEAKER_NAMES, "{}").orEmpty())
+        } catch (_: Exception) {
+            JSONObject()
+        }
+        val speakers = JSONArray()
+        val keys = names.keys()
+        while (keys.hasNext()) {
+            val id = keys.next()
+            val name = names.optString(id)
+            if (id.isNotBlank() && name.isNotBlank()) {
+                speakers.put(
+                    JSONObject()
+                        .put("speaker_id", id)
+                        .put("name", name)
+                        .put("named", true),
+                )
+            }
+        }
+        return JSONObject()
+            .put("status", "heartbeat")
+            .put("source", "android-capability-heartbeat")
+            .put("claim", "manual-name-rms-activity-not-voiceprint")
+            .put("active_speaker_id", DEFAULT_SPEAKER_ID)
+            .put("active_speaker_name", names.optString(DEFAULT_SPEAKER_ID, "Speaker 1"))
+            .put("confidence", 0)
+            .put("turn_count", 0)
+            .put("speaker_count", speakers.length())
+            .put("speakers", speakers)
+    }
 
     private fun ensureNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -159,6 +195,8 @@ class CapabilityHeartbeatService : Service() {
         const val KEY_ORGAN_ID = "organ_id"
         const val KEY_WITNESS_BASE = "witness_base"
         const val KEY_SHARING_ENABLED = "sharing_enabled"
+        const val KEY_SPEAKER_NAMES = "speaker_names_json"
+        const val DEFAULT_SPEAKER_ID = "speaker-1"
         const val EXTRA_ORGAN_ID = "organ_id"
         const val EXTRA_WITNESS_BASE = "witness_base"
     }

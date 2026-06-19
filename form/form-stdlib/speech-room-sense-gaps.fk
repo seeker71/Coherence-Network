@@ -1,0 +1,125 @@
+; speech-room-sense-gaps.fk — named room-sense gaps expressed as a north-star ladder.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-gaps.fk
+;
+; This does not claim the gaps are closed. It lowers each gap into the shared
+; form-cli gap ladder: current rung, next receipt, and native promotion gate.
+
+(defn srsg-nonempty? (value) (gt (str_len value) 0))
+
+(defn srsg-gap (id floor north-star rung next-receipt promotion-gate)
+    (list
+        id
+        floor
+        north-star
+        rung
+        (gaps-item (gaps-kind-capability) id rung)
+        next-receipt
+        promotion-gate))
+
+(defn srsg-id (gap) (nth gap 0))
+(defn srsg-floor (gap) (nth gap 1))
+(defn srsg-north-star (gap) (nth gap 2))
+(defn srsg-rung (gap) (nth gap 3))
+(defn srsg-item (gap) (nth gap 4))
+(defn srsg-next-receipt (gap) (nth gap 5))
+(defn srsg-promotion-gate (gap) (nth gap 6))
+(defn srsg-next-move (gap) (gaps-i-next (srsg-item gap)))
+(defn srsg-stage? (gap) (gaps-i-stage? (srsg-item gap)))
+(defn srsg-offline? (gap) (gaps-i-offline? (srsg-item gap)))
+
+(defn srsg-valid? (gap)
+    (and
+        (srsg-nonempty? (srsg-id gap))
+        (and
+            (srsg-nonempty? (srsg-floor gap))
+            (and
+                (srsg-nonempty? (srsg-north-star gap))
+                (and
+                    (str_eq (gaps-i-id (srsg-item gap)) (srsg-id gap))
+                    (and
+                        (str_eq (gaps-i-rung (srsg-item gap)) (srsg-rung gap))
+                        (and
+                            (gaps-item-valid? (srsg-item gap))
+                            (and
+                                (srsg-nonempty? (srsg-next-receipt gap))
+                                (srsg-nonempty? (srsg-promotion-gate gap))))))))))
+
+(defn srsg-all-valid? (gaps)
+    (if (eq (len gaps) 0)
+        1
+        (if (srsg-valid? (head gaps))
+            (srsg-all-valid? (tail gaps))
+            0)))
+
+(defn srsg-items (gaps)
+    (if (eq (len gaps) 0)
+        (list)
+        (cons (srsg-item (head gaps)) (srsg-items (tail gaps)))))
+
+(defn srsg-room-gaps ()
+    (list
+        (srsg-gap
+            "ambient-room-stt"
+            "local Whisper and live dual-mic receipts exist, but full ambient room STT is not native default"
+            "multi-mic local STT receipts train one-or-many Form transcript models until heldout room windows win"
+            (gaps-rung-samples)
+            "heldout transcript corpus with speaker turn, silence gate, locality, and model hash"
+            "native transcript candidate beats local Whisper on heldout room receipts")
+        (srsg-gap
+            "production-diarization"
+            "speaker turns are visible as manual/RMS activity receipts; production diarization provider availability is still a gap"
+            "local diarization oracle writes turn-boundary receipts that train native speaker-turn recipes"
+            (gaps-rung-source)
+            "local diarization provider receipt with consent, model hash, license, turn confidence, and heldout rows"
+            "native diarization wins heldout turn-boundary receipts before it becomes default")
+        (srsg-gap
+            "strong-voiceprint-match"
+            "log-mel fingerprint receipts exist; strong voiceprint matching still needs a local embedding/verification provider receipt"
+            "local voiceprint oracle writes enrollment/query receipts that train native voice identity candidates"
+            (gaps-rung-source)
+            "strong voiceprint provider receipt with consent, model hash, license, enrollment count, and heldout matches"
+            "native voice identity beats strong oracle on heldout enrolled-speaker receipts")
+        (srsg-gap
+            "named-speaker-ledger"
+            "Android and Mac can save manual speaker names through summary-only speaker_tracking receipts"
+            "manual names, enrollment, diarization turns, and voiceprint matches converge into one consent-aware identity ledger"
+            (gaps-rung-local)
+            "bidirectional name receipt with speaker id, manual label, source device, consent, and no raw audio retention"
+            "native identity ledger binds names only after explicit consent and heldout identity receipts")
+        (srsg-gap
+            "topic-intent-summary"
+            "topic and intent are named capability gaps; local LLM/oracle receipts can teach them"
+            "room transcript windows lower into Form topic and intent summaries with cited utterance spans"
+            (gaps-rung-local)
+            "local topic oracle receipt over transcript window with span ids, confidence, and model hash"
+            "native topic/intent candidate beats local oracle on heldout transcript windows")
+        (srsg-gap
+            "affect-sentiment"
+            "affect/sentiment gates exist as earned metadata; live room sentiment is not native default"
+            "audio affect, transcript sentiment, and speaker-turn context become one earned Form metadata lane"
+            (gaps-rung-samples)
+            "heldout affect receipt with valence/arousal/dominance, sentiment confidence, and uncertainty band"
+            "native affect candidate wins heldout room receipts and refuses low-confidence claims")
+        (srsg-gap
+            "conviction-confidence"
+            "confidence and conviction are Form lanes, but room-speech conviction needs heldout receipts"
+            "each transcript, speaker, topic, and affect claim carries confidence plus conviction from independent evidence"
+            (gaps-rung-samples)
+            "metadata receipt with confidence, conviction, evidence count, disagreement, and replayable source rows"
+            "native metadata model wins heldout calibration without inflating conviction")
+        (srsg-gap
+            "source-locality-consent"
+            "speaker/audio receipts carry local hashes and privacy fields; all-channel locality is not yet universal"
+            "every room-sense claim carries source device, local/remote status, consent, model identity, and retention policy"
+            (gaps-rung-samples)
+            "all-channel metadata receipt linking device, source locality, consent, retention, model hash, and timestamp"
+            "native runtime refuses claims missing source/locality/consent receipts")))
+
+(defn srsg-catalog () (gaps-catalog (srsg-items (srsg-room-gaps))))
+(defn srsg-gap-count () (len (srsg-room-gaps)))
+(defn srsg-flight-ready? () (gaps-cat-flight-ready? (srsg-catalog)))
+(defn srsg-stage-count () (gaps-cat-stage-count (srsg-catalog)))
+(defn srsg-offline-count () (gaps-cat-offline-count (srsg-catalog)))
+
+0

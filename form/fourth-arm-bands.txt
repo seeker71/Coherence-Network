@@ -436,6 +436,8 @@ speech-model-learning fks 16383
 speech-teacher-corpus fks 16383
 speech-teacher-receipt fks 4095
 speech-live-loop fks 255
+speech-room-sense-gaps fks 2047
+speaker-identity-oracle fks 262143
 static-to-dynamic-cells fks 262143
 string-membership fks 9
 theme-resonance fks 111111
@@ -658,9 +660,9 @@ trivial-typed-leaf fks 1111111
 json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
-form-cli fks 31
+form-cli fks 32767
 json-emitter fks 31
 json-promoted-types fks 115
-form-cli-band fks 511
+form-cli-band fks 16383
 http-client-render fks 63
 nanite-mem-parse fks 15

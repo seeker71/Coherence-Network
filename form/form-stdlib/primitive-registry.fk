@@ -214,6 +214,8 @@
                 (method_invoke (record_new (bp "PRIM-REGISTRY-PROBE")) "pv-inv" 3))) 7 1)
         (prim "str_find" "access" "index of needle from start index, or -1"
             (defn pv-str-find () (str_find "satsang" "sang" 0)) 3 1)
+        (prim "str_byte_at" "access" "sibling-gap (go-only): raw byte value at byte index; panics on out-of-range"
+            (defn pv-str-byte-at () (str_byte_at (str_concat "A" (byte_to_str 200)) 1)) 200 0)
         (prim "str_line_at" "access" "sibling-gap (go-only): the full line containing byte index, CR trimmed"
             (defn pv-str-line-at () (if (str_eq (str_line_at "ab\ncd" 3) "cd") 1 0)) 1 0)
         (prim "str_ascii_prefix" "access" "sibling-gap (go-only): longest leading pure-ASCII run"
