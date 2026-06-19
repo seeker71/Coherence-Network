@@ -326,6 +326,7 @@ evidence-grounding fks 127
 forget-stale fks 127
 asm-pl-human-emit fks 31
 form-asm fks 31
+form-asm-float fkc 2047
 form-asm-table fks 7
 form-asm-syscall fks 31
 form-asm-branch fks 31

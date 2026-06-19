@@ -1,0 +1,26 @@
+; preludes: form-stdlib/form-asm.fk
+;
+; form-asm-float-band — the arm64 SCALAR DOUBLE FP instruction tier encodes byte-for-byte
+; to what the clang/LLVM oracle emits (otool -tvVj of clang -c). This is the FOUNDATION of
+; the clang-free FLOAT byte path: fkwu's float self-JIT (JIT_GAP_LEDGER #11 /
+; one-acceleration-engine.form M0) lowers float-pure hot functions to BYTES through these
+; encodings — no clang in the native path, clang only the oracle that confirmed them once.
+; Each reference 4-byte list is the little-endian image of the oracle's word:
+;   fadd d0,d1,d2=1e622820 fsub=1e623820 fmul=1e620820 fdiv=1e621820 fsqrt d0,d1=1e61c020
+;   fmov d0,d1=1e604020 fcmp d1,d2=1e622020 scvtf d0,x1=9e620020 fcvtzs x0,d1=9e780020
+;   ldr d0,[x1,#8]=fd400420 str d0,[x1,#8]=fd000420
+;
+; Verdict 2047 = all 11 encodings byte-identical to the oracle (fa-conviction = 1 for each).
+(do
+    (let c0  (if (eq (fa-conviction (fa-fadd   0 1 2) (list 32 40 98 30))  1) 1 0))
+    (let c1  (if (eq (fa-conviction (fa-fsub   0 1 2) (list 32 56 98 30))  1) 2 0))
+    (let c2  (if (eq (fa-conviction (fa-fmul   0 1 2) (list 32 8 98 30))   1) 4 0))
+    (let c3  (if (eq (fa-conviction (fa-fdiv   0 1 2) (list 32 24 98 30))  1) 8 0))
+    (let c4  (if (eq (fa-conviction (fa-fsqrt  0 1)   (list 32 192 97 30)) 1) 16 0))
+    (let c5  (if (eq (fa-conviction (fa-fmov   0 1)   (list 32 64 96 30))  1) 32 0))
+    (let c6  (if (eq (fa-conviction (fa-fcmp   1 2)   (list 32 32 98 30))  1) 64 0))
+    (let c7  (if (eq (fa-conviction (fa-scvtf  0 1)   (list 32 0 98 158))  1) 128 0))
+    (let c8  (if (eq (fa-conviction (fa-fcvtzs 0 1)   (list 32 0 120 158)) 1) 256 0))
+    (let c9  (if (eq (fa-conviction (fa-ldr-d  0 1 1) (list 32 4 64 253))  1) 512 0))
+    (let c10 (if (eq (fa-conviction (fa-str-d  0 1 1) (list 32 4 0 253))   1) 1024 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))

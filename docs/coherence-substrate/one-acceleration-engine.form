@@ -67,6 +67,15 @@
 ;       heat-flips to a native that equals the walk bit-for-bit (hati_os_kernel_audit.sh).
 ;       This is what makes float JIT correct AND fast AND shared — the answer to the
 ;       neural-lm-corpus divergence, in fkwu, not in a bespoke host plugin. (JIT_GAP_LEDGER #11.)
+;       M0 has TWO native targets and the truly sovereign one is the CLANG-FREE byte path
+;       (form-asm/form-lower/form-macho — clang only the byte-identity oracle), not the
+;       C-emit fkc-nat-expr lane (which compiles its C through clang). LANDED 2026-06-19:
+;       the FLOAT-encoding FOUNDATION of that byte path — the arm64 scalar-double FPDP tier
+;       (fadd/fsub/fmul/fdiv/fsqrt/fmov/fcmp/scvtf/fcvtzs/ldr-d/str-d) as DATA rows in
+;       form-asm.fk, every encoding clang-ORACLE-verified byte-for-byte, form-asm-float
+;       → 2047 FOUR-WAY incl. fkwu (JIT_GAP_LEDGER #12). REMAINING: form-lower float
+;       lowering (FP register stack + d0..d7 calling convention) then wiring the self-JIT
+;       heat-flip through form-lower→form-asm BYTES — float native with NO clang in the path.
 ;   M1  Host hot-paths dispatch to the in-process fkwu self-JIT instead of emitGoExpr→
 ;       go-build / the Rust cdylib emitter. TestFkwuOffloadBridge is the proven seed; the
 ;       open work is a Go/Rust kernel INTEGRATION task (fast in-process invocation), not
