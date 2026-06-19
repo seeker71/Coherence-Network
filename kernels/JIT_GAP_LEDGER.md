@@ -13,24 +13,29 @@ Status: `OPEN` · `AGENT-ASSIGNED` (a sub-agent is on it) · `FIXED (PR)` ·
 `BY-DESIGN` (named refusal, honest fallback to the walker).
 
 **Scope — read this first; it ends a recurring confusion.** This ledger is the **Go
-in-process plugin JIT only**. The JIT is an *optional* per-kernel optimization that
-emits host-native code; the walk is always the correct fallback. Two things it is NOT:
+in-process plugin JIT** (`jit.go`). It is one of several JIT carriers; the important
+context is what the OTHER carriers are, because the Go one is the *divergent* one:
 
-- **fkwu is NOT a JIT and has no "JIT features" to be missing.** fkwu is the AOT
-  flat-table *walker* — it flattens a recipe once and walks the table. Its coverage is
-  measured in *op families* (the standing walls in `form/fourth-arm-bands.txt`: the
-  remaining node/substrate intern-door family, host-io, multi-line output), never "JIT
-  features." **fkwu's float compute is complete and is the bit-identical reference** —
-  the float-pool wall was lifted and the transformer TRAINING bands cross four-way on
-  fkwu (`transformer-corpus-train` 31, `transformer-block-backward` 31, `neural-lm` 31).
-  "fkwu is missing a JIT feature" is a category error.
-- **The portable JIT *lowering* is a Form recipe, four-way including fkwu.**
-  `jit-lower.fk` lowers JIT shapes (logic, inline, closure-lift) and its bands cross the
-  fkwu gate (gaps #3, #4). The lowering is shared and proven; the bespoke host-native
-  *emit/dispatch* is the per-kernel carrier (Go plugin · Rust cdylib, i64-only · TS GPU).
+- **fkwu HAS its own self-JIT, 100% in Form, and it is the bit-identical one.**
+  `hati-os-kernel-emit.fk`'s **self-JIT on heat** lowers each pure function FROM ITS
+  CELLS to a native `fk_nat` (`fkc-nat-expr` / `fkc-emit-jit`); the emitted walker
+  counts heat per function and **flips dispatch to the native past a threshold**
+  (`fk_njit` probe); **melt-hot-swap** melts a cold native back to the walk,
+  champion-challenger gated with **the walk as the always-correct champion**. Because
+  the native is emitted from the same cells and the walk stays the reference, it is
+  bit-identical by construction. **It currently covers the pure-compute INTEGER family**
+  (tags 1-7, 12; `fk_nat` returns `long long`). The walk handles floats fully and
+  correctly (the float arms box `fk_fbox(fk_num(a) op fk_num(b))`), but the self-JIT
+  does **not yet lower floats** — that is the one real gap (see gap #11), and it is what
+  makes the bespoke Go float JIT (gap #10) unnecessary once closed.
+- **The portable JIT *lowering* is also a Form recipe, four-way including fkwu.**
+  `jit-lower.fk` lowers JIT shapes (logic, inline, closure-lift); its bands cross the
+  fkwu gate (gaps #3, #4). The bespoke host-native *emit/dispatch* — Go plugin (this
+  ledger), Rust cdylib (i64-only), TS GPU — are the per-kernel carriers the self-JIT
+  is meant to replace.
 
-The north star is to unify all host-native emit/dispatch onto ONE shared,
-bit-identical-by-construction lane — see
+The north star is ONE JIT: **fkwu's self-JIT, extended to floats**, shared by every
+kernel (they all run fkwu) — see
 [`docs/coherence-substrate/one-acceleration-engine.form`](../docs/coherence-substrate/one-acceleration-engine.form).
 
 | # | Gap | Evidence | Status |
@@ -45,7 +50,8 @@ bit-identical-by-construction lane — see
 | 8 | **Auto-compile (2000-hit threshold) builds synchronously mid-walk.** The hot-path promotion in the FNCALL dispatch arm calls `jitCompileClosureGo` inline, so the first hot crossing pays the full ~1.3s plugin build inside the user's call. Now that the artifact is realized (gap #1), an async build that lets the walker continue until the artifact lands would remove the stall. | read 2026-06-11; landed 2026-06-13: the hot crossing kicks the build on a goroutine (jitAsyncKick/jitAsyncTake; only the landing-zone maps are shared, jitCompiledGo stays walker-only, adoption happens at dispatch); in-flight marker prevents duplicate builds, failures mark jitFailed once; TestJITAsyncHotThresholdBuild proves immediate interpreted answers and the eventual native flip, race-detector clean | FIXED (Go async hot-build; the walker never stalls on a plugin compile). |
 | 9 | **Full BMF compiler + engine/grammar not portable (apply-object-rule, cap-get/set, mk-*, bmf-compile/grammar ref-rep as recipe, only Go jit.go hardcode).** Remaining engine pieces (match-pattern + template, buckets, rule application) + grammar (cursor direct, rep) lived only in host Go lowering or Python; no lowered recipe for any minimal kernel to crystallize full folded/unboxed BMF compiler. | read 2026-06-11 from engine.fk:2175 (apply-object-rule), bmf-grammar.fk; the #2944 recipe extensions never validated and were composted in the 2026-06-12 band heal; seam proof 2026-06-13: `jit-lower-bmf-band.fk` (15, fkwu four-way) — the lowerer composes over bmf-compile output (parity, logic lowering wrapping compiled tissue, content-addressed determinism, and partial evaluation folding a whole compiled program to its literal answer). | OPEN — the compiler-AFTER-lowerer seam is proven; the compiler-AS-lowered-recipe is blocked by a named wall: the compiler's own body builds cells through the intern doors (`intern_node`/`bp`), an op family the walker/emit lanes still do not fully carry. This ratchet added `intern_trivial_int`, `node_eq`, and arena-melt rooting for node carrier fields; full BMF compiler closure still wants the rest of the intern-door op family + defunctionalization, milestone-shaped (M2), not row-shaped. |
 
-| 10 | **f64/Value native is NOT bit-identical to the walk → nondeterministic divergence on float-accumulating folds.** The f64/Value ABI *compiles* (exercise log below shows float arithmetic COMPILES), but its float arithmetic is not pinned to the walk's reduction order / rounding — the host compiler may fuse `a*b+c` into a single-rounding FMA. Combined with the async hot-build (gap #8) adopting the native body **mid-fold**, a float-accumulating loop uses walk-floats before adoption and native-floats after, so the final value depends on WHEN the build landed. This is *compiles ≠ bit-identical* — the gap the earlier rows did not name. | MEASURED 2026-06-19: the `neural-lm-corpus` band (real-corpus bigram LM) read **go=5 while rust=ts=fkwu=7, nondeterministically**; `FORM_JIT_HOT=high` (walk only) = 7 deterministic. The four-way floor caught it. | OPEN — tracked to [`one-acceleration-engine.form`](../docs/coherence-substrate/one-acceleration-engine.form) M1: route the float hot-path through the bit-identical shared lane (in-process fkwu walk, or the `jit-tensor-emit` C lane — both native = recipe by construction). The **i64 ABI is bit-exact and unaffected**; `FORM_JIT_HOT` (jit.go) forces the walk meanwhile. |
+| 10 | **f64/Value native is NOT bit-identical to the walk → nondeterministic divergence on float-accumulating folds.** The f64/Value ABI *compiles* (exercise log below shows float arithmetic COMPILES), but its float arithmetic is not pinned to the walk's reduction order / rounding — the host compiler may fuse `a*b+c` into a single-rounding FMA. Combined with the async hot-build (gap #8) adopting the native body **mid-fold**, a float-accumulating loop uses walk-floats before adoption and native-floats after, so the final value depends on WHEN the build landed. This is *compiles ≠ bit-identical* — the gap the earlier rows did not name. | MEASURED 2026-06-19: the `neural-lm-corpus` band (real-corpus bigram LM) read **go=5 while rust=ts=fkwu=7, nondeterministically**; `FORM_JIT_HOT=high` (walk only) = 7 deterministic. The four-way floor caught it. | OPEN — tracked to [`one-acceleration-engine.form`](../docs/coherence-substrate/one-acceleration-engine.form) M1: route the float hot-path through the bit-identical shared lane (in-process fkwu walk, or the `jit-tensor-emit` C lane — both native = recipe by construction). The **i64 ABI is bit-exact and unaffected**; `FORM_JIT_HOT` (jit.go) forces the walk meanwhile. The real fix is gap #11 (fkwu's own float self-JIT), not perfecting this bespoke plugin. |
+| 11 | **fkwu's self-JIT does not yet lower FLOATS — the one real "missing JIT feature," and the north star.** fkwu's self-JIT (`hati-os-kernel-emit.fk` self-JIT-on-heat) crystallizes pure INTEGER functions to native `fk_nat` (`long long`); float-pure functions stay on the walk — correct and bit-identical, but not native-fast. The build: `fkc-nat-expr` gains float arms emitting `fk_fbox(<f64 expr over fk_num(a)>)` **through NAMED TEMPORARIES** (never `a*b+c` in one C expression, so clang cannot contract it to an FMA — the `jit-tensor-emit` no-contraction discipline), a boxed `fk_natf` table, the heat-walker dispatching it, and the honesty gate (`fkc-can-list`) extended to the float-pure family. Because the native then runs the EXACT same `fk_num`/`fk_fbox`/f64-op sequence as the walk, it is **bit-identical by construction** — unlike the Go f64 plugin (gap #10). | named 2026-06-19 (Urs: *"fkwu has a full JIT, 100% in fkwu, and if not, that is what we need"*). The integer self-JIT (`fkc-emit-jit`, `melt-hot-swap`, champion-challenger) is the proven template; fkwu's float WALK arms (tags 3/4/42/10/11/81/89/90) are the bit-identical reference the native must match. | OPEN — extend `fkc-nat-expr`+`fkc-emit-jit` to the float family with named-temp emission; prove a float-pure function JITs bit-identically (heat-flip native == walk) via the `hati_os_kernel_audit.sh` harness. Closing this **closes gap #10 too** — no bespoke host float JIT is needed. |
 
 ## Exercise log — measured coverage probes (2026-06-11, claude, worktree)
 
