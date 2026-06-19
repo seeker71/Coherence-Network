@@ -1,0 +1,53 @@
+; tests/bmf-object-data-band.fk — the BMF compiler's reversible-object DATA layer, four-way.
+;
+; preludes: form-stdlib/engine.fk
+;
+; Gap #9 / M2 is a milestone: making the BMF compiler's OWN BODY crystallize as a
+; lowered recipe. Its two hard walls are (a) defunctionalizing apply-object-rule (the
+; higher-order rule application) and (b) the rest of the intern-door op family. This band
+; closes one INDEPENDENT row of that milestone — the compiler's reversible-object DATA
+; layer — WITHOUT touching apply-object-rule and WITHOUT invoking any function-valued
+; inverse (so it stays clear of the defunctionalization wall). It proves four-way:
+;   - the capture environment (cap-set/cap-get/cap-merge — the rule body's binding store)
+;   - the match-result protocol (mk-match/mk-fail, match?/fail?, match-caps/match-rest, fail-reason)
+;   - the reversible-object INTERN DOOR: bmf-object = (cell kind value source inverse), built
+;     with a plain-value inverse, and projected back via cell-kind/value/origin/inverse
+;   - the match-source projection (bmf-match-source -> captures / span through a bmf-object)
+; The cell construction is exactly the intern door (content-address-intern_node, tag 47) the
+; compiler uses to emit objects; this row proves that door carries the compiler's object
+; shape four-way on fkwu, independent of the raced rule-application center.
+;
+; Verdict 65535 when all 16 claims land.
+(do
+    (defn b (c bit) (if c bit 0))
+
+    ; --- capture environment ---
+    (let caps1 (cap-set (cap-empty 0) "n" "7"))
+    (let caps2 (cap-set caps1 "k" "v"))
+    (let merged (cap-merge (cap-set (cap-empty 0) "a" "1") (cap-set (cap-empty 0) "z" "9")))
+
+    ; --- match results ---
+    (let m (mk-match caps2 (list "rest1" "rest2")))
+    (let f (mk-fail "nope"))
+
+    ; --- reversible object via the intern door (plain-value inverse, never invoked) ---
+    (let src (bmf-match-source caps1 (list 0 1 2)))
+    (let obj (bmf-object "int" "7" src "undo-marker"))
+
+    (sum (list
+        (b (str_eq (cap-get caps1 "n") "7") 1)
+        (b (eq (len (cap-get caps1 "x")) 0) 2)
+        (b (str_eq (cap-get merged "z") "9") 4)
+        (b (match? m) 8)
+        (b (str_eq (cap-get (match-caps m) "n") "7") 16)
+        (b (eq (len (match-rest m)) 2) 32)
+        (b (fail? f) 64)
+        (b (str_eq (fail-reason f) "nope") 128)
+        (b (bmf-match-source? src) 256)
+        (b (eq (len (bmf-match-source-span src)) 3) 512)
+        (b (bmf-object? obj) 1024)
+        (b (str_eq (bmf-object-kind obj) "int") 2048)
+        (b (str_eq (bmf-object-value obj) "7") 4096)
+        (b (str_eq (bmf-object-inverse obj) "undo-marker") 8192)
+        (b (str_eq (cap-get (bmf-object-source obj) "n") "7") 16384)
+        (b (eq (len (bmf-object-source-span obj)) 3) 32768))))

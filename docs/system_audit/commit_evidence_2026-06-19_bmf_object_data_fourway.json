@@ -1,0 +1,22 @@
+{
+  "title": "Gap #9 / M2 increment 1 — the BMF compiler's reversible-object DATA layer crosses four-way, independent of apply-object-rule",
+  "date": "2026-06-19",
+  "thread_branch": "claude/bmf-object-runtime-fourway",
+  "stone": "Gap #9 (JIT_GAP_LEDGER) is a milestone: make the BMF compiler's OWN BODY crystallize as a lowered recipe. Its two hard walls are defunctionalizing apply-object-rule (the higher-order rule application) and the rest of the intern-door op family. Rather than race the contended center (engine.fk / bmf-*.fk / the walker-emit, where ~20 codex cells live including compiler-lens-bmf-alignment and bml-native-gaps), this closes one INDEPENDENT row of the milestone: the compiler's reversible-object DATA layer, which has had NO four-way proof until now (every engine.fk-preluding band was outside the manifest).",
+  "what_proved": "tests/bmf-object-data-band.fk -> 65535 FOUR-WAY (Go=Rust=TS=fkwu) over engine.fk: (a) the capture environment cap-set/cap-get/cap-merge (the rule body's binding store); (b) the match-result protocol mk-match/mk-fail, match?/fail?, match-caps/match-rest, fail-reason; (c) the reversible-object INTERN DOOR — bmf-object = (cell kind value source inverse) constructed with a plain-value inverse and projected back via cell-kind/cell-value/cell-origin/cell-inverse; (d) the match-source projection (bmf-match-source -> captures / span through a bmf-object). The cell construction IS the content-address-intern_node door (tag 47), so this proves that door carries the compiler's object shape on the emitted fourth kernel.",
+  "why_independent": "It uses NO apply-object-rule (the higher-order rule application — the raced center and the defunctionalization wall) and constructs objects with a plain-value inverse so it never invokes a function-valued cell-undo. So it advances M2 without touching the contended compiler core: the only edits are a NEW band file and a manifest row.",
+  "files_owned": [
+    "form/form-stdlib/tests/bmf-object-data-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/tests/bmf-object-data-band.fk"
+    ],
+    "summary": "bmf-object-data-band -> 65535 FOUR-WAY, 'fourth arm: 1 band four-way (fkwu + pre-flattened tables)'. All 16 verdict bits land. Manifest row: bmf-object-data fks 65535."
+  },
+  "remaining": "The two hard walls of M2 stay open and sibling-area (sequence, do not race): (1) defunctionalize apply-object-rule — the higher-order rule application plus the cell-undo/inverse invocation path (function-valued cell slots); (2) the rest of the intern family — generated bp-table parity beyond the literal registry floor, and the symbol-wire bmf-global-symbol-cell constructor (which carries a function undo). These live in engine.fk / bmf-*.fk where compiler-lens-bmf-alignment and bml-native-gaps are active.",
+  "north_star": "The whole BMF compiler body crystallizes as a lowered recipe walked four-way — the compiler-AS-recipe, not just the compiler-AFTER-lowerer seam (jit-lower-bmf, already proven). This row lands the data foundation that the rule-application defunctionalization will build on."
+}
