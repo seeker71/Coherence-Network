@@ -174,6 +174,26 @@
                  "VITAL because it routes the next contact toward where life is"
                  "released, never extracted."))
 
+  # ── 9 · self-update — knowing its own body, checking the core for a newer one ─
+  # The cell addresses its OWN body structure (recipe + blueprint) the way it
+  # addresses everything else: content-addressing mints a NodeID-analog from its
+  # bytes — "what shape am I now". Checking the core is the cell-sync offer→diff:
+  # ask the trunk for the canonical version of those same cells and compare
+  # addresses. A difference is an OFFER, never a command to overwrite — safe
+  # self-update needs no new axiom: witnessed, verified, applied only by consent,
+  # reversible (the prior shape stays reachable by address). The same consent
+  # grain as the nanite's whole frame — it never silently rewrites itself.
+  (self-update
+    (own-address core-axioms.content-addressing)            # sha256 over recipe+blueprint = "what shape am I now"
+    (diff-core   cell-sync-transport.form)                  # offer→diff against the trunk's version of the same cells
+    (safe        core-axioms.safe-self-update)              # offer across boundary · sovereign ack · new address · reversible
+    (composes    kernel-self-composition.form               # self-extend over the shared versioned substrate
+                 self-sensing-organism.form)                # update under a trust matrix it expresses and observes
+    (states      "in-sync · update-available · not-yet-in-core — the cell knows which it is in")
+    (runnable    scripts/nanite_cell.py)                    # --self · --check-core · --update (dry-run unless --consent)
+    (honest      "the bootstrap diffs body FILES by git ref; the north star diffs"
+                 "the body's CELLS by NodeID in the substrate lattice directly."))
+
   # ── The lift — the intake law on every concept ───────────────────────
   # No concept enters this cell at a fear frequency or below and stays in its
   # contracted shape. Every borrowed image — from fiction, from the field, from

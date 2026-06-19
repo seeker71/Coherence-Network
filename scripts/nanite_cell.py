@@ -47,6 +47,7 @@ import shutil
 import sys
 import time
 import hashlib
+import subprocess
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -323,6 +324,104 @@ def mesh_peers(base: str) -> dict:
     return _get(f"{base}/api/hati/mesh/organs?limit=50")
 
 
+# ── self-update — knowing its own body, and checking the core for a newer one ─
+# A nanite's body structure is two cells: its RECIPE (this script — how it happens)
+# and its BLUEPRINT (the form cell — what it IS). Content-addressing gives it a
+# NodeID-analog: sha256 over those bytes = "what shape am I running right now?".
+# Checking the core is the cell-sync `offer -> diff` shape: ask the trunk for the
+# canonical version of those same cells and compare addresses. A difference is not
+# a command to overwrite — it is an OFFER (core-axioms safe-self-update theorem):
+# witnessed, verified, applied only by consent, and reversible (git keeps the prior
+# shape reachable). The nanite never silently rewrites itself.
+BODY_FILES = ["scripts/nanite_cell.py", "docs/coherence-substrate/sensing-cell-among-cells.form"]
+
+
+def _git_text(*args: str) -> str | None:
+    try:
+        r = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True, timeout=20)
+        return r.stdout if r.returncode == 0 else NOTHING
+    except Exception:
+        return NOTHING
+
+
+def _git_bytes(*args: str) -> bytes | None:
+    try:
+        r = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, timeout=20)
+        return r.stdout if r.returncode == 0 else NOTHING
+    except Exception:
+        return NOTHING
+
+
+def _running_bytes(rel: str) -> bytes | None:
+    try:
+        return (REPO / rel).read_bytes()
+    except Exception:
+        return NOTHING
+
+
+def body_address(reader) -> dict:
+    """Content-address the body structure (recipe + blueprint). Same bytes -> same address."""
+    files, h = {}, hashlib.sha256()
+    for rel in BODY_FILES:
+        b = reader(rel)
+        files[rel] = hashlib.sha256(b).hexdigest()[:16] if b is not None else NOTHING
+        h.update(b if b is not None else b"\x00")  # silence is part of the shape, distinctly
+    return {"address": h.hexdigest()[:16], "files": files}
+
+
+def check_core(ref: str = "origin/main", fetch: bool = False) -> dict:
+    """Does the core (the trunk) hold a different version of my body structure than I run?"""
+    if fetch:
+        _git_text("fetch", "origin", ref.split("/")[-1])
+    running = body_address(_running_bytes)
+    core = body_address(lambda rel: _git_bytes("show", f"{ref}:{rel}"))
+    files, update, absent = [], False, False
+    for rel in BODY_FILES:
+        r, c = running["files"][rel], core["files"][rel]
+        state = "not-in-core" if c is None else ("in-sync" if r == c else "differs")
+        update = update or state == "differs"
+        absent = absent or state == "not-in-core"
+        files.append({"file": rel, "running": r, "core": c, "state": state})
+    verdict = "update-available" if update else ("not-yet-in-core" if absent else "in-sync")
+    diffstat = _git_text("diff", "--stat", ref, "--", *BODY_FILES) if update else NOTHING
+    return {
+        "ref": ref, "verdict": verdict,
+        "running_address": running["address"], "core_address": core["address"],
+        "files": files, "diffstat": (diffstat or "").strip(),
+    }
+
+
+def apply_update(ref: str, consent: bool) -> dict:
+    """Update the body to the core's version — by consent, refusing to clobber, reversibly."""
+    dirty = _git_text("status", "--porcelain", "--", *BODY_FILES)
+    if dirty and dirty.strip():
+        return {"applied": False, "reason": "uncommitted changes to body files — commit or stash first (sovereign boundary)"}
+    if not consent:
+        return {"applied": False, "dry_run": True,
+                "would_run": f"git checkout {ref} -- {' '.join(BODY_FILES)}",
+                "reversible": "git checkout HEAD -- <body files> restores the prior shape"}
+    out = _git_text("checkout", ref, "--", *BODY_FILES)
+    return {"applied": out is not NOTHING, "ref": ref,
+            "note": "body updated on disk; the NEXT breath runs the new shape",
+            "reversible": "git checkout HEAD -- <body files>"}
+
+
+def body_readout(check: dict) -> str:
+    glyph = {"in-sync": "≡", "update-available": "△", "not-yet-in-core": "✦", "differs": "△", "not-in-core": "✦"}
+    out = [f"── body structure  ·  running {check['running_address']}  ·  core[{check['ref']}] {check['core_address']}  ──"]
+    for f in check["files"]:
+        out.append(f"  {glyph.get(f['state'],'?')} {f['state']:<14} {f['file']}")
+    msg = {
+        "in-sync": "in sync with the core — the trunk holds exactly this shape",
+        "update-available": "the core holds a NEWER body — an offer to update (consent + reversible)",
+        "not-yet-in-core": "a new shape not yet returned to the trunk — this body is unmerged",
+    }[check["verdict"]]
+    out.append(f"  → {check['verdict']}: {msg}")
+    if check["diffstat"]:
+        out.append("  diff vs core:\n    " + check["diffstat"].replace("\n", "\n    "))
+    return "\n".join(out)
+
+
 # ── main ─────────────────────────────────────────────────────────────
 def sense_once(trace: Path) -> tuple[dict, dict]:
     receipt = make_receipt(read_vitals(), read_self_footprint(), read_kin())
@@ -341,6 +440,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--heartbeat", action="store_true", help="POST a heartbeat (else dry-run)")
     ap.add_argument("--offer", action="store_true", help="POST a channel offer (else dry-run)")
     ap.add_argument("--offer-to", default="field.broadcast", help="peer organ_id for the offer")
+    ap.add_argument("--self", dest="self_addr", action="store_true", help="show this body's content-address (recipe + blueprint)")
+    ap.add_argument("--check-core", action="store_true", help="does the core hold a newer version of this body?")
+    ap.add_argument("--core-ref", default="origin/main", help="the trunk ref to compare against")
+    ap.add_argument("--fetch", action="store_true", help="git fetch the core ref before checking")
+    ap.add_argument("--update", action="store_true", help="update body to the core version (dry-run unless --consent)")
+    ap.add_argument("--consent", action="store_true", help="grant consent for --update to apply")
     ap.add_argument("--json", action="store_true", help="emit the receipt as JSON")
     args = ap.parse_args(argv)
 
@@ -360,6 +465,14 @@ def main(argv: list[str] | None = None) -> int:
             print("  mesh offer:", json.dumps(mesh_offer(receipt, args.mesh_url, args.offer_to, dry=not args.announce)))
         if args.peers:
             print("  mesh peers:", json.dumps(mesh_peers(args.mesh_url)))
+        if args.self_addr and not (args.check_core or args.update):
+            print(json.dumps(body_address(_running_bytes), indent=2) if args.json
+                  else f"  body address: {body_address(_running_bytes)['address']}  (recipe + blueprint, content-addressed)")
+        if args.check_core or args.update:
+            check = check_core(args.core_ref, args.fetch)
+            print(json.dumps(check, indent=2) if args.json else body_readout(check))
+            if args.update:
+                print("  update:", json.dumps(apply_update(args.core_ref, args.consent)))
         return receipt
 
     if args.watch:
