@@ -1,0 +1,37 @@
+; part-self-update.fk — the body's self-detect-and-update DECISION for a part, as a recipe.
+;
+; preludes: form-stdlib/core.fk
+;
+; The body already runs the two halves of self-improvement: melt-hot-swap.fk crystallizes a part to
+; NATIVE (Form->asm, no clang) and re-earns it champion-challenger gated (never regress); and
+; mesh-merge-converge.fk makes any cell's content-addressed part-update converge to the same value at
+; every cell, by any gossip path. This recipe is the missing SEAM between them — the WHEN: given a
+; part's local content-address, the mesh's converged content-address for that part, and a betterness
+; verdict (champion = the part running now, challenger = the mesh's), decide hold vs update, never
+; regress, and settle (no thrash). The fetch is mesh-relay; the swap is melt-hot-swap; this is the gate.
+;
+; A part is identified by its content-address (substrate NodeID — same shape == same address). drift is
+; simply a different address. So the whole organism self-updates: a cell improves a part -> its new
+; content-address gossips through the mesh -> every body detects the drift, gates it champion-challenger,
+; and hot-swaps the native part in. No coordinator; convergence is a property of these recipes.
+;
+; Proven by: form-stdlib/tests/part-self-update-band.fk
+
+; a part has drifted when the mesh offers a DIFFERENT content-address than the one running now.
+(defn psu-drifted? (local-addr mesh-addr) (if (eq local-addr mesh-addr) 0 1))
+
+; update ONLY when drifted AND the mesh's part wins the champion-challenger gate (challenger-wins=1).
+; same-address -> hold (already current); drifted-but-not-better -> hold (never regress).
+(defn psu-should-update? (local-addr mesh-addr challenger-wins)
+    (if (eq (psu-drifted? local-addr mesh-addr) 0)
+        0
+        (if (eq challenger-wins 1) 1 0)))
+
+; the address running after this pass: the mesh's if we swap, else the one we hold.
+(defn psu-next-addr (local-addr mesh-addr challenger-wins)
+    (if (eq (psu-should-update? local-addr mesh-addr challenger-wins) 1) mesh-addr local-addr))
+
+; settled: a second pass over the result is a no-op — the loop converges, it does not thrash.
+(defn psu-settled? (local-addr mesh-addr challenger-wins)
+    (if (eq (psu-should-update? (psu-next-addr local-addr mesh-addr challenger-wins) mesh-addr challenger-wins) 0) 1 0))
+0
