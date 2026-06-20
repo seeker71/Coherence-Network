@@ -1,0 +1,30 @@
+; mel-full.fk — the full log-mel spectrogram as the proven mel CELL walked over time × rows.
+;
+; preludes: form-stdlib/trig.fk form-stdlib/mel-frame.fk
+;
+; mel-frame.fk proves ONE whisper mel cell (one row, one frame) against the torch reference.
+; whisper's front-end is the 80×3000 log-mel; this is that same cell walked — over every hop-
+; spaced time frame and every filterbank row — no new arithmetic (the milestone's "the full
+; spectrogram is this recipe walked; speed is M5's JIT stone, not a new shape"). A real sample
+; buffer is windowed by the hann at each hop; the filterbank is a list of rows, each row the
+; (bin-indices, slaney-weights) DATA mel-frame already consumes. Proven here on a small tile;
+; the full 80×3000 walk is the same recipe at scale (JIT for throughput).
+
+; window a real sample buffer at offset `off`, length N, with the periodic hann
+(defn mfu-windowed (samples off N n)
+  (if (ge n N) (empty)
+      (cons (mul (nth samples (add off n)) (mf-hann n N)) (mfu-windowed samples off N (add n 1)))))
+
+; one frame's mel COLUMN: log-mel for each filterbank row (rows = list of (list ks ws))
+(defn mfu-col (xs rows N)
+  (if (eq (len rows) 0) (empty)
+      (cons (mf-log-mel xs (nth (head rows) 0) (nth (head rows) 1) N)
+            (mfu-col xs (tail rows) N))))
+
+; the spectrogram: `count` columns, hop-spaced from `start` (each column is one windowed frame)
+(defn mfu-spectrogram-acc (samples start hop N rows count)
+  (if (eq count 0) (empty)
+      (cons (mfu-col (mfu-windowed samples start N 0) rows N)
+            (mfu-spectrogram-acc samples (add start hop) hop N rows (sub count 1)))))
+(defn mfu-spectrogram (samples start hop N rows nframes)
+  (mfu-spectrogram-acc samples start hop N rows nframes))

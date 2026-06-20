@@ -1,0 +1,41 @@
+; positional.fk — whisper's encoder sinusoidal positional embedding, as a Form recipe.
+;
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk
+;
+; whisper's `sinusoids(length, channels)` (openai/whisper, model.py): with half = channels/2,
+;   inc      = ln(max_timescale) / (half - 1)        max_timescale = 10000
+;   inv[i]   = exp(-inc · i)                          i in 0 .. half-1
+;   row(p)   = [ sin(p·inv[0..half-1]) , cos(p·inv[0..half-1]) ]   (sin half then cos half)
+; The encoder adds this [length × channels] matrix to the conv-stem output before the blocks.
+; Composed from trig.fk (fsin/fcos/fln) and transformer-numerics.fk (tn-exp); the exp/sin/cos
+; are the body's own approximations, so this matches the numpy reference at ~1e-6, not 1e-15.
+
+(defn pe-cat (a b) (if (eq (len a) 0) b (cons (head a) (pe-cat (tail a) b))))
+
+; inv timescales: inv[i] = exp(-inc·i), i in 0..half-1
+(defn pe-inv-acc (i half inc)
+  (if (eq i half) (empty)
+      (cons (tn-exp (mul (sub 0.0 inc) (mul i 1.0))) (pe-inv-acc (add i 1) half inc))))
+(defn pe-inv (half inc) (pe-inv-acc 0 half inc))
+
+; sin / cos halves of one position row
+(defn pe-sin (p inv)
+  (if (eq (len inv) 0) (empty) (cons (fsin (mul p (head inv))) (pe-sin p (tail inv)))))
+(defn pe-cos (p inv)
+  (if (eq (len inv) 0) (empty) (cons (fcos (mul p (head inv))) (pe-cos p (tail inv)))))
+(defn pe-row (p inv) (pe-cat (pe-sin p inv) (pe-cos p inv)))
+
+; the [length × channels] sinusoid matrix
+(defn pe-rows-acc (p length inv)
+  (if (eq p length) (empty)
+      (cons (pe-row (mul p 1.0) inv) (pe-rows-acc (add p 1) length inv))))
+(defn pe-matrix (length channels)
+  (do
+    (let half (div channels 2))
+    (let inc (div (fln 10000.0) (mul (sub half 1) 1.0)))
+    (pe-rows-acc 0 length (pe-inv half inc))))
+
+; add the positional matrix to a sequence (encoder: conv-out + positional)
+(defn pe-add-seq (xs pos)
+  (if (eq (len xs) 0) (empty)
+      (cons (tb-vec-add (head xs) (head pos)) (pe-add-seq (tail xs) (tail pos)))))

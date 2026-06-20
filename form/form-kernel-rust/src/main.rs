@@ -2789,28 +2789,36 @@ fn source_native_scan_text(src: &str, lex: &SourceNativeLexicon) -> Value {
                 while j < bytes.len() && bytes[j].is_ascii_digit() {
                     j += 1;
                 }
+                let mut is_float = false;
                 if j < bytes.len()
                     && bytes[j] == b'.'
                     && j + 1 < bytes.len()
                     && bytes[j + 1].is_ascii_digit()
                 {
-                    kind = lex.float_kind.as_str();
+                    is_float = true;
                     j += 1;
                     while j < bytes.len() && bytes[j].is_ascii_digit() {
                         j += 1;
                     }
-                    if j < bytes.len() && matches!(bytes[j], b'e' | b'E') {
-                        let mut k = j + 1;
-                        if k < bytes.len() && matches!(bytes[k], b'+' | b'-') {
-                            k += 1;
-                        }
-                        if k < bytes.len() && bytes[k].is_ascii_digit() {
-                            j = k + 1;
-                            while j < bytes.len() && bytes[j].is_ascii_digit() {
-                                j += 1;
-                            }
+                }
+                // scientific-notation exponent, with OR without a fractional part:
+                // Python's repr emits e.g. 1e-05 (no decimal point), so the exponent
+                // must be consumed after a bare integer mantissa too, not only after '.'.
+                if j < bytes.len() && matches!(bytes[j], b'e' | b'E') {
+                    let mut k = j + 1;
+                    if k < bytes.len() && matches!(bytes[k], b'+' | b'-') {
+                        k += 1;
+                    }
+                    if k < bytes.len() && bytes[k].is_ascii_digit() {
+                        is_float = true;
+                        j = k + 1;
+                        while j < bytes.len() && bytes[j].is_ascii_digit() {
+                            j += 1;
                         }
                     }
+                }
+                if is_float {
+                    kind = lex.float_kind.as_str();
                 }
             }
             out.push(source_native_atom(kind, &src[i..j]));
@@ -7503,27 +7511,35 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 while i < bytes.len() && bytes[i].is_ascii_digit() {
                     i += 1;
                 }
-                // Float: digits '.' digits, optionally with an exponent.
-                // The dot must be followed by a digit so `(.foo bar)` and
-                // bare integers stay legible. Sibling-parity: TS reader
-                // recognises the same shape.
-                let is_float =
-                    i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit();
-                if is_float {
+                // Float: digits '.' digits, and/or a scientific exponent. The dot
+                // must be followed by a digit so `(.foo bar)` and bare integers stay
+                // legible. The exponent is consumed with OR without a fractional part —
+                // Python's repr emits e.g. 1e-05 with no decimal point. Sibling-parity:
+                // Go/TS readers parse the same shape.
+                let mut is_float = false;
+                if i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit() {
+                    is_float = true;
                     i += 1; // consume '.'
                     while i < bytes.len() && bytes[i].is_ascii_digit() {
                         i += 1;
                     }
-                    // Optional exponent: [eE][+-]?[0-9]+
-                    if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
-                        i += 1;
-                        if i < bytes.len() && (bytes[i] == b'+' || bytes[i] == b'-') {
-                            i += 1;
-                        }
+                }
+                // Optional exponent: [eE][+-]?[0-9]+ (only when a digit follows, so a
+                // bare 'e' stays a separate symbol token).
+                if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
+                    let mut k = i + 1;
+                    if k < bytes.len() && (bytes[k] == b'+' || bytes[k] == b'-') {
+                        k += 1;
+                    }
+                    if k < bytes.len() && bytes[k].is_ascii_digit() {
+                        is_float = true;
+                        i = k + 1;
                         while i < bytes.len() && bytes[i].is_ascii_digit() {
                             i += 1;
                         }
                     }
+                }
+                if is_float {
                     toks.push(SexpTok {
                         kind: "FLOAT",
                         value: src[start..i].to_string(),
@@ -7546,22 +7562,29 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
                 while i < bytes.len() && bytes[i].is_ascii_digit() {
                     i += 1;
                 }
-                let is_float =
-                    i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit();
-                if is_float {
+                let mut is_float = false;
+                if i + 1 < bytes.len() && bytes[i] == b'.' && bytes[i + 1].is_ascii_digit() {
+                    is_float = true;
                     i += 1;
                     while i < bytes.len() && bytes[i].is_ascii_digit() {
                         i += 1;
                     }
-                    if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
-                        i += 1;
-                        if i < bytes.len() && (bytes[i] == b'+' || bytes[i] == b'-') {
-                            i += 1;
-                        }
+                }
+                // exponent with OR without a fractional part (e.g. -2e-15)
+                if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
+                    let mut k = i + 1;
+                    if k < bytes.len() && (bytes[k] == b'+' || bytes[k] == b'-') {
+                        k += 1;
+                    }
+                    if k < bytes.len() && bytes[k].is_ascii_digit() {
+                        is_float = true;
+                        i = k + 1;
                         while i < bytes.len() && bytes[i].is_ascii_digit() {
                             i += 1;
                         }
                     }
+                }
+                if is_float {
                     toks.push(SexpTok {
                         kind: "FLOAT",
                         value: src[start..i].to_string(),
