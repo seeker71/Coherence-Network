@@ -1,0 +1,17 @@
+; windows-bootstrap-host.fk - minimal Windows exe + swappable DLL bootstrap ABI.
+;
+; The host exe is intentionally replaceable: it only loads a DLL, resolves an
+; exported i64 -> i64 entrypoint, calls it, and prints the result. The DLL can
+; be Form-emitted PE/COFF, so kernel bootstrap parts can move behind this ABI
+; one by one until the exe and libraries are all Form-native.
+
+(do
+    (defn wbh-host-exe () "form-bootstrap-host.exe")
+    (defn wbh-source () "form/native/windows/bootstrap/form_bootstrap_host.c")
+    (defn wbh-object-emitter () "form-pe-coff")
+    (defn wbh-link-carrier () "lld-link:/dll:/noentry:/export")
+    (defn wbh-loader-carrier () "LoadLibraryA/GetProcAddress")
+    (defn wbh-entry-symbol () "recipe")
+    (defn wbh-entry-abi () "windows-x64:i64-rcx->i64-rax")
+    (defn wbh-swap-contract () "exe-loads-swappable-form-dlls")
+    0)
