@@ -12,23 +12,22 @@
 ;   present   — the human is here and active
 ;   night     — local time is in the deep-rest window
 ;
-; Priority, highest first: something-happening (strained OR surprise) > human-present > night-rest > default.
-; Pure-compute (if / eq) — crosses four-way (fkwu). Proven by tests/presence-pacing-band.fk (verdict 63).
-; Companion: update-ingest.fk (the trust decision come home), surprise-salience.form, scheduler.form.
+; Priority, highest first: a real change (surprise) > night-rest > daytime-strain > human-present > default.
+; Night rest is deep: only an actual surprise breaks it. Chronic strain the presence cannot tend anyway
+; does NOT keep it up through the night — it waits for day. Pure-compute (if / eq), crosses four-way (fkwu).
+; Proven by tests/presence-pacing-band.fk (verdict 63). Companion: update-ingest.fk (the trust decision come home).
 
 (do
-    ; something is happening — the body is strained or the room just changed
-    (defn pp-urgent? (strained surprise)
-        (if (eq strained 1) 1 (if (eq surprise 1) 1 0)))
-
-    ; minutes until the next wake, by priority. Urgency overrides presence overrides night overrides default.
+    ; minutes until the next wake, by priority.
     (defn pp-pace (strained surprise present night)
-        (if (eq (pp-urgent? strained surprise) 1)
-            30                               ; something is happening -> wake soon
-            (if (eq present 1)
-                90                           ; the human is here, the field is calm -> moderate presence
-                (if (eq night 1)
-                    360                      ; night, no one present, settled -> deep rest
-                    180))))                  ; day, no one present, settled -> medium rest
+        (if (eq surprise 1)
+            30                               ; something actually changed -> wake soon, day or night
+            (if (eq night 1)
+                360                          ; night, no change -> deep rest (strain waits for day; it cannot be tended now)
+                (if (eq strained 1)
+                    30                       ; daytime + body strained -> attention soon
+                    (if (eq present 1)
+                        90                   ; the human is here, the field is calm -> moderate presence
+                        180)))))             ; day, no one present, settled -> medium rest
 
     0)
