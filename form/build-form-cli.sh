@@ -17,6 +17,22 @@ S=form-stdlib
 GB=form-kernel-go/bin-go
 OUT="${1:-form-cli}"
 
+is_windows_host() {
+    [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]
+}
+
+patch_windows_emitted_c() {
+    local c_file="$1"
+    sed -i '1i #define _CRT_SECURE_NO_WARNINGS 1' "$c_file"
+    sed -i 's|extern unsigned int arc4random(void);|extern int rand(void); static unsigned int arc4random(void) { return (unsigned int)rand(); }|' "$c_file"
+    sed -i 's|extern long long read(int, void \*, unsigned long);|extern int read(int, void *, unsigned int);|' "$c_file"
+    sed -i 's|extern long long write(long long, const void \*, unsigned long);|extern int write(int, const void *, unsigned int);|' "$c_file"
+    sed -i 's|mkdir(d, 0777)|mkdir(d)|g; s|mkdir(p, 0777)|mkdir(p)|g' "$c_file"
+    sed -i 's|extern int sprintf(char \*, const char \*, ...);|typedef __builtin_va_list fk_va_list; extern int vsnprintf(char *, unsigned long long, const char *, fk_va_list); static int sprintf(char *b, const char *fmt, ...) { fk_va_list ap; __builtin_va_start(ap, fmt); int n = vsnprintf(b, 4096ULL, fmt, ap); __builtin_va_end(ap); return n; }|' "$c_file"
+    sed -i 's|struct timeval { long tv_sec; int tv_usec; }; extern int gettimeofday(struct timeval \*, void \*);|struct timeval { long tv_sec; int tv_usec; }; struct fk_filetime { unsigned int dwLowDateTime; unsigned int dwHighDateTime; }; __declspec(dllimport) void __stdcall GetSystemTimeAsFileTime(struct fk_filetime *); static int gettimeofday(struct timeval *tv, void *tz) { (void)tz; struct fk_filetime ft; unsigned long long ticks; unsigned long long us; GetSystemTimeAsFileTime(\&ft); ticks = ((unsigned long long)ft.dwHighDateTime * 4294967296ULL) + (unsigned long long)ft.dwLowDateTime; us = (ticks / 10ULL) - 11644473600000000ULL; tv->tv_sec = (long)(us / 1000000ULL); tv->tv_usec = (int)(us % 1000000ULL); return 0; }|' "$c_file"
+    sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$c_file"
+}
+
 [[ -x "$GB" ]] || ( echo "building bootstrap kernel..."; cd form-kernel-go && go build -o bin-go . )
 command -v clang >/dev/null || { echo "clang is required at BUILD time (not at run time)"; exit 1; }
 
@@ -56,5 +72,18 @@ GEN_LEN=$(wc -c < "$W/genesis.txt" | tr -d ' ')
 } >> "$W/form-cli.c"
 
 # 4. compile once -> the standalone native binary (program + own source baked in).
-clang -O2 -o "$OUT" "$W/form-cli.c"
+out_dir="$(dirname "$OUT")"
+[[ "$out_dir" == "." ]] || mkdir -p "$out_dir"
+clang_args=(
+  -O2
+  -Wno-error=implicit-function-declaration
+  -Wno-implicit-function-declaration
+  -Wno-incompatible-library-redeclaration
+  -o "$OUT" "$W/form-cli.c"
+)
+if is_windows_host; then
+  patch_windows_emitted_c "$W/form-cli.c"
+  clang_args+=(-lws2_32 -llegacy_stdio_definitions)
+fi
+clang "${clang_args[@]}"
 echo "built $OUT  ($(wc -c < "$OUT") bytes, self-contained — runs with no Go/clang/table; carries ${GEN_LEN}B of its own source)"
