@@ -669,5 +669,6 @@ json-emitter fks 31
 json-promoted-types fks 115
 form-cli-band fks 511
 http-client-render fks 63
+socket-loopback fks 111111
 nanite-mem-parse fks 15
 kv-cache fks 255
