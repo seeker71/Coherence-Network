@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────────
+# diffusion-q-learning.form — QAM (Q-learning with Adjoint Matching) grafted
+#                            onto the learning engine the body already runs.
+# ─────────────────────────────────────────────────────────────────────
+#
+# The field (2026-06): "Q-learning with Adjoint Matching" (Li & Levine,
+# arXiv:2601.14234) reports the strongest current result for optimising an
+# expressive diffusion / flow-matching policy against a Q-critic. Its whole
+# contribution is to do this WITHOUT backpropagation through the multi-step
+# denoising chain — that backprop is numerically unstable, so prior methods
+# either threw the critic gradient away (reweighting, IDQL) or approximated it
+# at a cost in expressivity. QAM uses ADJOINT MATCHING to turn the critic's
+# action-gradient into a per-step regression objective that needs no chain
+# unroll, yet is unbiased and fully expressive at the optimum.
+#
+# The recognition that makes this native here: the body's adjoint is ALREADY a
+# forward gather. metabolic-learning.fk ships mtb-reverse — "backprop through
+# gl-step IS gl-step over reversed edges" (band claim 512). So the thing QAM had
+# to construct, this substrate has as a primitive. QAM reduces to: feed the
+# critic's action-gradient ∇_aQ as the metabolic DELTA, and let mtb-reverse
+# carry it through the policy. No new engine — one new critic + one tilt dial.
+#
+# LANES (CLAUDE.md discipline — kept separate):
+#   [RUNS]   proven four-way (Go/Rust/TS/fkwu) by tests/diffusion-q-learning-band.fk → 255
+#   [INFER]  architectural inference; falsifiable, not yet walked
+# Unlike a pure design cell, the GRAFT here RUNS: the eight claims below are the
+# proven band, not a sketch. What stays [INFER] is the SCALE-UP, named honestly.
+
+(diffusion-q-learning
+
+  (lineage
+    (operator       metabolic-learning.form)    # pressure × frequency × angle × focus; mtb-reverse [RUNS]
+    (gather         geometric-learning.form)    # gl-step; gl-bellman (the RL/value limb) [RUNS]
+    (objective-kin  preference-learning.form)   # QAM = KTO's transform:"value" with a LEARNED critic [RUNS row family]
+    (serve-while-improve champion-challenger.form)  # the offline→online lane QAM reports its win on [RUNS]
+    (mesh           federated-slices.form))      # many critics, deterministic slice-merge [RUNS]
+
+  # ── 1. The proven graft — eight claims, four-way [RUNS: band → 255] ──
+  # A one-hot context makes the policy params BE the action, so every weight is
+  # exact in fp64. The critic Q(a) = 2·a0 + 1·a1 makes action 0 the higher value.
+  (proven
+    (free-backtrace   dql-grad-a recovers ∇_aQ = [2 1] by the ADJOINT (reversed-edge gather), no tape)
+    (improve-ascends  one QAM step raises Q from 0 → 2.5 — the policy climbed the critic)
+    (toward-argmax    the action moved to [1 0.5], a positive margin 0.5 onto the higher-Q action)
+    (observer-gate    pressure(∇Q) at tolerance ⇒ params UNTOUCHED — a resolved action costs nothing)
+    (bc-limit         q-focus 0 ⇒ the actor is PURE behaviour-clone (the λ→∞ limit), bit-identical to BC)
+    (superposition    actor − BC = exactly q-focus·(critic credit) — one operator fired twice, additive)
+    (td-bootstrap     the critic target r+γ·Q' = 2.5 matches the SHIPPED gl-bellman max-plus backup)
+    (deep-adjoint     a TWO-layer policy gradient = the reference, by reversed gathers — the chain rule
+                      with NO unrolled autograd tape: QAM's "no backprop through the chain", on our kernel))
+
+  # ── 2. The mapping — every QAM piece is a cell already here ──────────
+  (mapping
+    (diffusion-policy   [RUNS gather] the action is a recipe cell; ml-diffusion-model-flow denoise + mtb trains it)
+    (critic-Q           [INFER, one new cell] value-as-gather: a gl/mtb learner over (state, action) edges;
+                        target y = r + γ·min Q(s',a') — gl-bellman is that backup already four-way)
+    (adjoint-matching   [RUNS] mtb-reverse — the critic's action-gradient pushed through the policy as a
+                        forward reversed gather; mtb-credit is the per-step objective, mtb-unwrap the update)
+    (q-tilt-row         [INFER row] π* ∝ μ_β·exp(Q/λ): a preference-learning row whose reference is the
+                        LEARNED critic and whose pull is the adjoint-matched ∇Q. λ = the q-focus aperture)
+    (bc-anchor          [RUNS] the diffusion behaviour-clone loss = the distillation descent; keeps in-support))
+
+  # ── 3. Feature-set fit — what the asker named, where it lives ───────
+  (features
+    (cells-as-nodes  [RUNS] the action is a content-addressed recipe, not a float vector; the policy emits a NODE)
+    (free-backtrace  [RUNS] mtb-reverse is the adjoint as a reversed gather; content-addressing adds attribution)
+    (smart-branching [RUNS] branch-choice-order.form — learned ordering of choice branches from witnessed receipts)
+    (fast-fail       [RUNS] attention-as-CHOICE/FAIL/CUT/STOP (form-native-llm); a wrong action is O(1) to abandon)
+    (mesh-learning   [RUNS] federated-slices slice-merge — many critics consolidate deterministically))
+
+  # ── 4. Where the substrate is STRONGER than dense Diffusion-QL ──────
+  (beyond-port
+    (sparse-for-free  the action is a cell; irrelevant branches FAIL/CUT at O(1) — sparsity QAM pays float for is native)
+    (federated-critics each cell runs its own QAM loop; slice-merge reaches the SAME numbers, which float-averaging can't)
+    (traceable-adjoint every Q-update is a content-addressed delta with Blueprint provenance — cheap AND attributable))
+
+  # ── 5. The fourth-arm float idiom (a lesson this graft re-proved) ───
+  # The band's first cut diverged on fkwu (185 vs 255). Root cause: raw float
+  # gt/lt and round-vs-raw-large-int-literal box differently on the fourth
+  # kernel than on the three walkers. The fix is the body's standing discipline,
+  # held here too: compare floats ONLY through the verdict lens gl-veq6
+  # (round-vs-round). Never a raw gt/lt and never (eq (gl-r6 x) <large-int>) at
+  # the verdict level — both pass three-way and hide a fourth-arm divergence.
+
+  # ── 6. The gaps (the next stones, named — not built ahead of need) ──
+  (gaps
+    (GAP-Q1  [INFER] form/form-stdlib/diffusion-q-learning.fk carries the seam recipes (dql-q, dql-grad-a,
+             dql-improve, dql-actor, dql-td-target, dql-backstep). The next stone is mtb-settle-style
+             ITERATION: a critic trained by repeated gl-bellman backups to a fixed point, the policy
+             improved to convergence, the whole loop one band)
+    (GAP-Q2  [INFER] the q-tilt as a first-class preference-learning row (reference:"critic", transform:
+             "q-adjoint"), so auto-research can evolve it alongside the DPO/KTO family it extends)
+    (GAP-Q3  [INFER] the offline→online champion-challenger loop — serve the champion policy while the
+             challenger trains the tilt; promote on earned counts. QAM's reported regime, the body's own mechanism)
+    (GAP-Q4  [INFER] the mesh: federated critics over slice-merge, each cell's runtime error feeding its
+             short-term plasticity, only settled long-term value shared — QAM inside mesh-active-inference))
+
+  (invariant
+    (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
+                  promise is re-earned on our kernel by the two-layer adjoint claim)
+    (one-engine   no second native path — the recipe that proves four-way is the recipe that crystallises
+                  to native asm; the critic and the policy are both the one gl/mtb gather over edge data)
+    (scale-honest the band is strange-minimal (2 actions, one-hot context); real width + the iterated loop
+                  are [INFER] stones, taken when an ask needs them, never built ahead of need)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to run / how to query
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Prove the band four-way (from form/):
+#   ./validate.sh form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk \
+#                 form-stdlib/diffusion-q-learning.fk \
+#                 form-stdlib/tests/diffusion-q-learning-band.fk
+#   # → 255, fourth arm four-way (fkwu + pre-flattened tables)
+#
+#   # Structural queries once ingested (auto on merge to main):
+#   coh substrate form "?equivalent @recipe(dql-improve)"

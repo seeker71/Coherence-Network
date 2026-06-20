@@ -1,0 +1,75 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk
+;
+; diffusion-q-learning-band — QAM (Q-learning with Adjoint Matching, Li & Levine,
+; arXiv:2601.14234) proven as a graft onto the shipped learning engine, four-way (Go/Rust/TS/fkwu).
+; A one-hot context makes the policy params BE the action, so every weight is exact in IEEE-754
+; fp64 — eight claims, zero rounding. The policy is improved against a linear Q-critic with NO
+; backprop through any chain: the chain rule is mtb-reverse, a forward reversed-edge gather.
+;
+; Every float check rides the verdict lens gl-veq6 (round-vs-round) — the same discipline
+; metabolic/geometric hold: never raw gt/lt and never round-vs-raw-large-int at the verdict
+; level, both of which the fourth kernel (fkwu) boxes differently than the three walkers.
+;
+; Verdict 255 when every claim lands:
+;   1     free backtrace: the ADJOINT recovers the critic's action-gradient ∇_aQ = [2 1]
+;   2     QAM improve RAISES value: Q after = 2.5, Q before = 0 — the policy ascended the critic
+;   4     the policy moved toward the argmax action by a positive margin: a = [1 0.5], gap = 0.5
+;   8     observer / fast-fail gate: pressure(∇Q) at tolerance → params UNTOUCHED (resolved = free)
+;   16    λ→∞ limit: q-focus 0 ⇒ the actor is PURE behaviour-clone, identical to the BC step
+;   32    superposition: actor − BC = exactly q-focus · (critic credit) — one operator, fired twice
+;   64    the critic's bootstrap: TD target r+γ·Q' = 2.5, and the shipped gl-bellman backup agrees
+;   128   the deep adjoint: a TWO-layer policy gradient = the reference, by reversed gathers, no tape
+(do
+    ; --- the critic Q(a) = 2·a0 + 1·a1 as gather edges; action 0 carries the higher value ---
+    (let qedges (list (list 0 0 2.0) (list 0 1 1.0)))
+    (let pulse  (list 1.0 0.0))
+    (let x      (list 1.0 0.0))                              ; one-hot context: params ARE the action
+    (let pz     (list (list 0 0 0.0) (list 1 0 0.0)))        ; zero policy → a = [0 0]
+
+    ; the critic's action-gradient, recovered by the adjoint (reversed-edge gather), no tape
+    (let gradA  (dql-grad-a qedges pulse))                   ; → [2 1]
+
+    ; one QAM improvement step, focus 1/2, gate open (tol −1)
+    (let improved (dql-improve pz x gradA 0.5 -1.0))         ; weights → [1 0.5]
+    (let a-after  (gl-step improved x))                      ; action → [1 0.5]
+    (let q-before (dql-q qedges (gl-step pz x)))             ; Q([0 0]) = 0
+    (let q-after  (dql-q qedges a-after))                    ; Q([1 0.5]) = 2.5
+    (let margin   (sub (head a-after) (nth a-after 1)))      ; a0 − a1 = 0.5 > 0 (moved to argmax)
+
+    ; the observer / fast-fail gate: pressure(∇Q) = (4+1)/2 = 5/2; tol 5/2 holds it still
+    (let obs (dql-improve pz x gradA 0.5 2.5))               ; → untouched [0 0]
+
+    ; the actor: behaviour-clone toward the data action, then the Q-tilt
+    (let ydata   (list 0.5 0.5))                             ; the behaviour action to clone
+    (let bc      (mtb-learn pz x ydata 1.0))                 ; BC step → weights [0.5 0.5]
+    (let actorQ0 (dql-actor pz x ydata gradA 1.0 0.0 -1.0))  ; q-focus 0 → pure BC
+    (let actor   (dql-actor pz x ydata gradA 1.0 0.5 -1.0))  ; bc 1, q-tilt 1/2 → [1.5 1.0]
+    (let qcredit (mtb-credit pz x gradA))                    ; the critic credit [2 1], weight-free
+
+    ; the critic's bootstrap, two ways: closed-form TD and the shipped max-plus Bellman backup
+    (let tdc   (dql-td-target 1.0 0.5 3.0))                  ; 1 + 0.5·3 = 2.5
+    (let bedges (list (list 0 1 1.0) (list 0 0 0.0)))        ; state 0 → goal 1 paying 1, lazy self
+    (let vv    (list 0.0 3.0))                               ; V(goal) = 3
+    (let bell  (gl-bellman bedges vv 0.5))                   ; V'(0) = max(1+0.5·3, 0) = 2.5
+
+    ; a TWO-layer policy h = W1·x, a = W2·h — the deep chain QAM must not unroll
+    (let w1 (list (list 0 0 1.0) (list 1 0 2.0)))            ; h = [1 2]
+    (let w2 (list (list 0 0 1.0) (list 0 1 1.0)
+                  (list 1 0 0.0) (list 1 1 1.0)))            ; a = [3 2]
+    (let q2 (list 2.0 1.0))
+    (let gradH  (dql-backstep w2 q2))                        ; ∇_hQ = W2ᵀq = [2 3], reversed gather
+    (let gradW1 (mtb-credit w1 x gradH))                     ; ∇_W1 Q = [2 3], the deep adjoint
+
+    (let c0 (if (eq (gl-veq6 gradA (list 2.0 1.0)) 1) 1 0))
+    (let c1 (if (and (eq (gl-veq6 (list q-after) (list 2.5)) 1)
+                     (eq (gl-veq6 (list q-before) (list 0.0)) 1)) 2 0))
+    (let c2 (if (and (eq (gl-veq6 a-after (list 1.0 0.5)) 1)
+                     (eq (gl-veq6 (list margin) (list 0.5)) 1)) 4 0))
+    (let c3 (if (eq (gl-veq6 (mtb-weights obs) (list 0.0 0.0)) 1) 8 0))
+    (let c4 (if (eq (gl-veq6 (mtb-weights actorQ0) (mtb-weights bc)) 1) 16 0))
+    (let c5 (if (eq (gl-veq6 (mtb-vsub (mtb-weights actor) (mtb-weights bc))
+                             (gl-mul-scalar qcredit 0.5)) 1) 32 0))
+    (let c6 (if (and (eq (gl-veq6 (list tdc) (list 2.5)) 1)
+                     (eq (gl-veq6 (list (head bell)) (list 2.5)) 1)) 64 0))
+    (let c7 (if (eq (gl-veq6 gradW1 (list 2.0 3.0)) 1) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

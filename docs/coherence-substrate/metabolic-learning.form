@@ -194,6 +194,12 @@
 #                                  edge-builder stone.
 #   ml-diffusion-model-flow.form   the generative reverse flow this
 #                                  module's forward heat-walk mirrors.
+#   diffusion-q-learning.form      QAM grafted on this operator: the critic's
+#                                  action-gradient fed as the metabolic delta,
+#                                  mtb-reverse carrying it through the policy —
+#                                  an expressive diffusion policy improved with
+#                                  NO backprop through the denoise chain
+#                                  (tests/diffusion-q-learning-band.fk → 255).
 #   cognitive-light-cone.form      the reach this learner moves: a
 #                                  learned sensing edge grows the cell's
 #                                  cone, release contracts it — proven
