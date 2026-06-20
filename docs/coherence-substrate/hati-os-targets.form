@@ -4,7 +4,7 @@
   (lineage
     (rests-on hati-os.form tool-channel.form fourth-kernel-physical-lanes.form)
     (recipe form/form-stdlib/hati-os-targets.fk)
-    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 16383 four-way-fkwu)
+    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 131071 four-way-fkwu)
     (native-cli-emit-proof form/form-stdlib/tests/hati-os-native-cli-emit-band.fk -> 7 four-way-fkwu)
     (metal-emit-proof form/form-stdlib/tests/metal-emit-band.fk -> 31 four-way-fkwu)
     (form-macho-proof form/form-stdlib/tests/form-macho-band.fk -> 31 four-way-fkwu)
@@ -20,8 +20,8 @@
     "Cells and recipes can discover which host OS target carries a protocol, which capability it requires, and where its native binary is published.")
 
   (floor
-    "macOS arm64 and Android arm64 have target rows, clang target triples, relocatable assembly/object oracle surfaces, Form-native Mach-O and ELF/aarch64 object wrappers running four-way on fkwu, a Form-native Android ELF/aarch64 executable shape running four-way on fkwu, Docker Linux/arm64 and Android adb stdout/stderr/exit receipts for that executable, a generated Mac+Android native core-axiom receipt channel over adb-forward TCP, package/install evidence with script/source/binary/channel-receipt SHA-256s and remote cleanup, native CLI/metal emit rows running four-way on fkwu, third-party oracle rows, Form-native arm64 assembler runtime rows, lowered JIT residual rows running four-way on fkwu, numeric conversion/transcendental rows and tensor quantization running four-way on fkwu, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates. Android support does not require a runtime clang dependency for the minimum JIT floor."
-    "GPU, DSP, and MLX are minimal floors today: discoverable protocol rows with capability names and target-specific implementation direction, not full native dispatch receipts.")
+    "macOS arm64, Android arm64, and Windows amd64 have target rows, clang/LLVM target-oracle coordinates where useful, relocatable assembly/object oracle surfaces, Form-native Mach-O and ELF/aarch64 object wrappers running four-way on fkwu, a Form-native Android ELF/aarch64 executable shape running four-way on fkwu, a Windows fkwu self-JIT runtime floor verified without Go/clang/LLVM on the runtime PATH, Docker Linux/arm64 and Android adb stdout/stderr/exit receipts for that executable, a generated Mac+Android native core-axiom receipt channel over adb-forward TCP, package/install evidence with script/source/binary/channel-receipt SHA-256s and remote cleanup, native CLI/metal emit rows running four-way on fkwu, third-party oracle rows, Form-native arm64 assembler runtime rows, lowered JIT residual rows running four-way on fkwu, numeric conversion/transcendental rows and tensor quantization running four-way on fkwu, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates. Android and Windows support do not require a runtime clang dependency for the minimum JIT floor."
+    "GPU, DSP, and MLX are minimal floors today: discoverable protocol rows with capability names and target-specific implementation direction, not full native dispatch receipts. Windows MLX is explicitly unsupported; its equivalent lane is CUDA/DirectML/Vulkan on the observed NVIDIA host.")
 
   (north-star
     "Every Hati-OS host target publishes signed native binaries, checksums, source-map/provenance receipts, native emit shape receipts, and per-lane physical proof receipts from hati.earth."
@@ -56,7 +56,21 @@
       (jit-model clang-oracle-sampled-form-native-recipe)
       (jit-compiler-binary optional-apk-oracle-not-floor)
       (package tar.zst)
-      (launcher hati-os)))
+      (launcher hati-os))
+    (windows-amd64
+      (os windows)
+      (arch amd64)
+      (clang-triple x86_64-pc-windows-msvc)
+      (binary-format pe-coff)
+      (assembly-surface pe-coff+x64-asm)
+      (form-native-object form-pe-coff-pending)
+      (form-native-executable form-pe-exec-pending)
+      (jit-oracle optional-clang-llvm-build-witness)
+      (jit-runtime fkwu-self-jit-no-runtime-toolchain)
+      (jit-model form-authored-fkc-nat-expr-hot-flip)
+      (proof scripts/verify_windows_fkwu_self_jit.ps1)
+      (package zip)
+      (launcher hati-os.exe)))
 
   (implementations
     (macos-arm64
@@ -76,7 +90,16 @@
       (sensor:signal cap.sensor.read SensorManager+LocationManager+GNSS-permission-gated)
       (gpu:compute cap.compute.gpu Vulkan+OpenGL-ES+GPU-counter-when-available)
       (dsp:signal cap.compute.dsp NNAPI+vendor-DSP-delegates)
-      (mlx:array cap.compute.mlx unsupported-on-android-equivalent-is-GPU-or-NNAPI)))
+      (mlx:array cap.compute.mlx unsupported-on-android-equivalent-is-GPU-or-NNAPI))
+    (windows-amd64
+      (host:process cap.host.process PowerShell+CIM+Get-Process)
+      (host:usage cap.host.usage CIM+PerformanceCounter+nvidia-smi)
+      (audio:pcm16 cap.audio.sample WASAPI+MediaFoundation)
+      (video:rgba-time cap.video.frame Windows.Graphics.Capture+MediaFoundation)
+      (sensor:signal cap.sensor.read Windows.Devices.Sensors+Location-when-present)
+      (gpu:compute cap.compute.gpu NVIDIA-CUDA-driver+DirectML+Vulkan)
+      (dsp:signal cap.compute.dsp DirectML+WASAPI-DSP-when-exposed)
+      (mlx:array cap.compute.mlx unsupported-on-windows-equivalent-is-CUDA-or-DirectML)))
 
   (accelerator-floor
     (macos-arm64
@@ -86,7 +109,11 @@
     (android-arm64
       (gpu "catalog and dashboard lane; north-star Vulkan/OpenGL ES compute plus pressure receipt")
       (dsp "catalog and NNAPI/vendor delegate row; north-star DSP/NPU signal receipt")
-      (mlx "explicitly unsupported; north-star maps the same semantic lane to Android GPU/NNAPI without pretending Apple MLX exists")))
+      (mlx "explicitly unsupported; north-star maps the same semantic lane to Android GPU/NNAPI without pretending Apple MLX exists"))
+    (windows-amd64
+      (gpu "observed NVIDIA RTX 4070 driver/CUDA floor; north-star CUDA/DirectML/Vulkan dispatch plus GPU pressure receipt")
+      (dsp "catalog DirectML/WASAPI-DSP row; north-star Windows ML/DSP signal receipt when exposed")
+      (mlx "explicitly unsupported; north-star maps the semantic lane to CUDA/DirectML/Vulkan without pretending Apple MLX exists")))
 
   (distribution
     (door https://hati.earth)
@@ -97,6 +124,10 @@
     (android-arm64
       (kind native-kernel-package)
       (url https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
+      (checksum sha256))
+    (windows-amd64
+      (kind native-kernel-package)
+      (url https://hati.earth/downloads/hati-os/windows/amd64/hati-os-windows-amd64.zip)
       (checksum sha256)))
 
   (release-contract
@@ -107,6 +138,8 @@
     (linux-arm64-docker-executable-runner-receipt)
     (android-device-executable-runner-receipt)
     (form-native-jit-runtime-per-target)
+    (windows-fkwu-self-jit-runtime-without-go-clang-llvm)
+    (windows-form-native-pe-coff-bootstrap-pending)
     (lowered-jit-residual-proof-per-target)
     (android-jit-floor-without-runtime-clang)
     (optional-apk-compiler-binary-receipt-when-shipped)
@@ -127,4 +160,4 @@
     (north-star "automated per-target screenshot/video artifacts, accessibility pass, and signed review receipt are attached to the release evidence"))
 
   (next
-    "Grow the clang/driver/MLK oracle sample corpus beyond the current four-way Form-native per-lane proof into measured choice windows, carry the Docker Linux/arm64 and Android adb stdout/stderr/exit receipts forward for the Form-native ELF executable, evaluate whether an APK-shipped clang-like binary is small and trustworthy enough to act as an optional Android accelerator, then wire the release build to publish the macOS tarball and Android native kernel package at the catalog URLs with sha256 files, target assembly/source-map receipts, lowered-JIT receipts, and physical-lane summary JSON beside each binary. The APK remains a separate mesh-organ release artifact with its own screenshot and channel proof."))
+    "Grow the clang/driver/MLK oracle sample corpus beyond the current four-way Form-native per-lane proof into measured choice windows, carry the Docker Linux/arm64 and Android adb stdout/stderr/exit receipts forward for the Form-native ELF executable, replace the Windows build witness with a Form-native PE/COFF x64 emitter so the bootstrap no longer needs clang, evaluate whether an APK-shipped clang-like binary is small and trustworthy enough to act as an optional Android accelerator, then wire the release build to publish the macOS tarball, Android native kernel package, and Windows zip at the catalog URLs with sha256 files, target assembly/source-map receipts, lowered-JIT receipts, and physical-lane summary JSON beside each binary. The APK remains a separate mesh-organ release artifact with its own screenshot and channel proof."))

@@ -1,17 +1,19 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
 ;
 ; hati-os-targets-band - host OS implementation and distribution catalog proof.
-; Verdict 16383 when macOS and Android target rows, clang oracle surfaces,
-; Form-native object/executable emitters, Form-native JIT runtime rows,
-; implementation rows, and hati.earth download coordinates are discoverable.
+; Verdict 131071 when macOS, Android, and Windows target rows, oracle surfaces,
+; Form-native object/executable emitters or explicit pending PE/COFF gaps,
+; fkwu self-JIT runtime rows, implementation rows, and hati.earth download
+; coordinates are discoverable.
 
 (do
-    (let c0 (if (eq (len (hos-targets)) 2)
-                (if (eq (len (hos-artifacts)) 2) 1 0)
+    (let c0 (if (eq (len (hos-targets)) 3)
+                (if (eq (len (hos-artifacts)) 3) 1 0)
                 0))
 
     (let mac (hos-target-by-name "macos-arm64"))
     (let android (hos-target-by-name "android-arm64"))
+    (let windows (hos-target-by-name "windows-amd64"))
     (let c1 (if (str_eq (hos-target-os mac) "macos")
                 (if (str_eq (hos-target-binary-format mac) "mach-o") 2 0)
                 0))
@@ -66,5 +68,25 @@
     (let c13 (if (str_eq (hos-target-form-native-executable mac) "form-macho+ld")
                 (if (str_eq (hos-target-form-native-executable android) "form-elf-exec") 8192 0)
                 0))
+    (let c14 (if (str_eq (hos-target-os windows) "windows")
+                (if (str_eq (hos-target-binary-format windows) "pe-coff")
+                    (if (str_eq (hos-target-clang-triple windows) "x86_64-pc-windows-msvc")
+                        (if (str_eq (hos-target-assembly-surface windows) "pe-coff+x64-asm") 16384 0)
+                        0)
+                    0)
+                0))
+    (let c15 (if (str_eq (hos-target-jit-oracle windows) "optional-clang-llvm-build-witness")
+                (if (str_eq (hos-target-jit-runtime windows) "fkwu-self-jit-no-runtime-toolchain")
+                    (if (str_eq (hos-target-jit-model windows) "form-authored-fkc-nat-expr-hot-flip") 32768 0)
+                    0)
+                0))
+    (let windows-gpu (hos-impl-for "windows-amd64" "gpu:compute"))
+    (let windows-mlx (hos-impl-for "windows-amd64" "mlx:array"))
+    (let windows-artifact (hos-artifact-for "windows-amd64"))
+    (let c16 (if (str_eq (hos-impl-implementation windows-gpu) "NVIDIA-CUDA-driver+DirectML+Vulkan")
+                (if (str_eq (hos-impl-implementation windows-mlx) "unsupported-on-windows")
+                    (if (str_eq (hos-artifact-format windows-artifact) "zip") 65536 0)
+                    0)
+                0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 c13))))))))))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15 c16)))))))))))))))))

@@ -1,0 +1,123 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-native-jit-floor",
+  "commit_scope": "Add the Windows amd64 Hati-OS target floor, prove the fkwu self-JIT runtime on this Windows 11 host without Go/clang/LLVM on the runtime PATH, and repair the fourth-arm fkwu builder so the hati-os-targets band runs four-way on Windows.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "form-native-jit",
+    "windows-native-floor",
+    "fourth-kernel-bootstrap"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "fourth-kernel-bootstrap",
+    "form-native-runtime"
+  ],
+  "task_ids": [
+    "windows-fkwu-self-jit-floor-20260620"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex-subagent-aquinas",
+      "contributor_type": "machine",
+      "roles": [
+        "independent-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/system_audit/commit_evidence_2026-06-20_windows_fkwu_self_jit_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/verify_windows_fkwu_self_jit.ps1"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/system_audit/commit_evidence_2026-06-20_windows_fkwu_self_jit_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/verify_windows_fkwu_self_jit.ps1"
+  ],
+  "evidence_refs": [
+    "scripts/verify_windows_fkwu_self_jit.ps1",
+    "form/scripts/fourth-arm.sh",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "subagent:019ee377-7e4d-7e30-bb5c-8a7b600b409a",
+    "local:nvidia-smi NVIDIA GeForce RTX 4070 driver 591.86 CUDA 13.1",
+    "local:clang version 22.1.8",
+    "local:gcc.exe tdm64-1 10.3.0"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe prompt-gate",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "cd form && bash scripts/fourth-arm-gate.sh hati-os-targets",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "git diff --check",
+      "subagent Aquinas: reran verify_windows_fkwu_self_jit.ps1, fourth-arm-gate, and git diff --check"
+    ],
+    "notes": "Windows host proof passed: verify_windows_fkwu_self_jit.ps1 reported cold=317811, hot=317811, njit=26, and runtime-toolchain-free with PATH=C:\\WINDOWS\\System32;C:\\WINDOWS and go=absent clang=absent llvm_objdump=absent. The fkwu manifest gate reported PASS-4WAY hati-os-targets after form/scripts/fourth-arm.sh learned the Windows generated-C compatibility shims and GCC fallback needed to build the emitted universal walker on this host. Focused validate reported fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables), verdict 131071, 1 ok, 0 divergent. Host facts collected locally: Microsoft Windows 11 Home 10.0.26200, PowerShell 5.1.26100.7920, NVIDIA GeForce RTX 4070 with driver 591.86 and CUDA 13.1 from nvidia-smi, LLVM clang 22.1.8, llvm-objdump present, and TDM-GCC 10.3.0 present as the Windows C carrier fallback. git diff --check passed with line-ending warnings only."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Not pushed yet; PR CI has not run for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "This slice changes Form target catalog, fourth-arm build harness, proof script, docs, and evidence only. Public route behavior is unchanged before merge."
+  },
+  "phase_gate": {
+    "phase": "windows-fkwu-self-jit-floor",
+    "gate": "Windows must expose a Hati-OS target row and prove the fkwu self-JIT runtime without requiring Go, clang, LLVM, or local oracles at runtime.",
+    "state": "local-proof-pass-ci-pending",
+    "can_move_next_phase": false,
+    "next": "Run pre-commit gates, push branch, open PR, monitor CI, then merge only if checks pass."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Windows host now has an explicit target row with GPU/CUDA/DirectML direction, explicit MLX unsupported status, and a verified fkwu self-JIT runtime floor. The runtime proof executes the generated fkwu self-JIT binary with no Go, clang, or LLVM tools resolvable on PATH and observes a hot native flip (njit=26). The Form catalog proof now runs four-way on fkwu for hati-os-targets at verdict 131071.",
+    "public_endpoints": [
+      "local-only: Form/fkwu runtime and target catalog; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Build the Form-emitted fkc-emit-jit witness, compile it with local clang as build oracle, strip runtime PATH to Windows system directories, run cold fib28 and hot fib28, and assert cold=317811 hot=317811 njit>0.",
+      "Build the emitted universal fkwu walker on Windows through the fourth-arm harness and run hati-os-targets through Go/Rust/TypeScript/fkwu, asserting PASS-4WAY and verdict 131071.",
+      "Run independent sub-agent validation over the same commands and confirm no edits were made."
+    ]
+  }
+}

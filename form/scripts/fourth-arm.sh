@@ -49,14 +49,42 @@ build_fourth() {
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth.XXXXXX")"
         cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk \
             form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
-        printf '(print "==UNI==")\n(print (fkc-emit-universal))\n(print "==END==")\n' >> "$d/uni-driver.fk"
-        "$GO_BIN" "$d/uni-driver.fk" 2>/dev/null > "$d/uni.out" || true
+        cat >> "$d/uni-driver.fk" <<'EOF'
+(do
+  (print "==UNI==")
+  (print (fkc-emit-universal))
+  (print "==END==")
+  0)
+EOF
+        "$GO_BIN" "$d/uni-driver.fk" 2>"$d/uni.err" > "$d/uni.out" || true
         sed -n '/^==UNI==$/,/^==END==$/p' "$d/uni.out" | sed -e '1d' -e '$d' > "$d/uni.c"
+        if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+            sed -i 's|extern unsigned int arc4random(void);|extern int rand(void); static unsigned int arc4random(void) { return (unsigned int)rand(); }|' "$d/uni.c"
+            sed -i 's|extern long long read(int, void \*, unsigned long);|extern int read(int, void *, unsigned int);|' "$d/uni.c"
+            sed -i 's|extern long long write(long long, const void \*, unsigned long);|extern int write(int, const void *, unsigned int);|' "$d/uni.c"
+            sed -i 's|mkdir(d, 0777)|mkdir(d)|g; s|mkdir(p, 0777)|mkdir(p)|g' "$d/uni.c"
+            sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$d/uni.c"
+        fi
         tmp="$(mktemp "$FOURTH_DIR/.fkwu-$stamp.XXXXXX")"
-        if [[ -s "$d/uni.c" ]] && clang -O2 -o "$tmp" "$d/uni.c" 2>/dev/null; then
+        if [[ -s "$d/uni.c" ]] && clang -O2 \
+            -Wno-error=implicit-function-declaration \
+            -Wno-implicit-function-declaration \
+            -Wno-incompatible-library-redeclaration \
+            -o "$tmp" "$d/uni.c" 2>"$d/clang.err"; then
+            mv -f "$tmp" "$out"
+        elif [[ -s "$d/uni.c" && ( "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ) ]] \
+            && command -v gcc >/dev/null 2>&1 \
+            && gcc -O2 -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -o "$tmp" "$d/uni.c" -lws2_32 2>"$d/gcc.err"; then
             mv -f "$tmp" "$out"
         else
             rm -f "$tmp"
+            if [[ ! -s "$d/uni.c" && -s "$d/uni.err" ]]; then
+                sed -n '1,12p' "$d/uni.err" >&2
+            elif [[ -s "$d/gcc.err" ]]; then
+                sed -n '1,12p' "$d/gcc.err" >&2
+            elif [[ -s "$d/clang.err" ]]; then
+                sed -n '1,12p' "$d/clang.err" >&2
+            fi
             echo "  fourth kernel build did not land — bands run three-kernel only" >&2
         fi
         rm -rf "$d"

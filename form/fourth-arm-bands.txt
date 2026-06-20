@@ -354,7 +354,7 @@ go-jit fks 8
 go-jit-value-list fks 4
 harmonic-geometry fks 111111
 hati-os-native-cli-emit fks 7
-hati-os-targets fks 16383
+hati-os-targets fks 131071
 heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
