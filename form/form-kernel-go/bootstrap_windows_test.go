@@ -66,8 +66,8 @@ func TestWindowsBootstrapHostExeLoadsAndSwapsFormDLLs(t *testing.T) {
 	linker := windowsLinker(t)
 	dir := t.TempDir()
 	exe := buildWindowsBootstrapHost(t, dir)
-	dllA := linkWindowsRecipeDLL(t, linker, dir, "bootstrap_recipe_a", emitWindowsRecipeObject(t, "pe-x64-recipe-mul3-add7-code"))
-	dllB := linkWindowsRecipeDLL(t, linker, dir, "bootstrap_recipe_b", emitWindowsRecipeObject(t, "pe-x64-recipe-mul5-add1-code"))
+	dllA := linkWindowsRecipeDLL(t, linker, dir, "bootstrap_recipe_a", emitWindowsRecipeObject(t, "WindowsX64RecipeEmitter_code_mul3_add7"))
+	dllB := linkWindowsRecipeDLL(t, linker, dir, "bootstrap_recipe_b", emitWindowsRecipeObject(t, "WindowsX64RecipeEmitter_code_mul5_add1"))
 
 	for _, tc := range []struct {
 		dll  string
