@@ -67,5 +67,6 @@ jobs:
         shell: pwsh
         run: |
           .\scripts\verify_windows_fkwu_socket_loopback.ps1
+          .\scripts\verify_windows_fkwu_http_verbs_socket.ps1
           .\scripts\verify_windows_fkwu_self_jit.ps1
           .\scripts\verify_windows_form_cli_native.ps1
