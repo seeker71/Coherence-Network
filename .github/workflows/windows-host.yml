@@ -66,5 +66,6 @@ jobs:
       - name: Prove Windows fkwu JIT and native form-cli runtime
         shell: pwsh
         run: |
+          .\scripts\verify_windows_fkwu_socket_loopback.ps1
           .\scripts\verify_windows_fkwu_self_jit.ps1
           .\scripts\verify_windows_form_cli_native.ps1
