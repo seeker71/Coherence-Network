@@ -1,0 +1,129 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-arm64-floor",
+  "commit_scope": "Add a distinct Windows ARM64 Hati-OS target floor on the shared ARM64 assembler lane while preserving Windows x86_64 as the separate Intel/AMD x64 instruction lane.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "form-native-jit",
+    "windows-native-floor",
+    "fourth-kernel-bootstrap"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "windows-arm64-floor",
+    "jit-metal-lanes",
+    "form-native-runtime"
+  ],
+  "task_ids": [
+    "windows-arm64-floor-20260620"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "target-architecture-correction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex-subagent-sagan",
+      "contributor_type": "machine",
+      "roles": [
+        "independent-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/jit-oracle-learning.form",
+    "docs/system_audit/commit_evidence_2026-06-20_windows_arm64_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/jit-metal-lanes-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_self_jit.ps1"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/jit-oracle-learning.form",
+    "docs/system_audit/commit_evidence_2026-06-20_windows_arm64_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/jit-metal-lanes-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_self_jit.ps1"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/jit-metal-lanes-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_self_jit.ps1",
+    "subagent:019ee3d7-46b4-7820-b5e3-edd5bb1c3a49"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe prompt-gate",
+      "git diff --check",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh hati-os-targets jit-metal-lanes",
+      "subagent Sagan: reran git diff --check, verify_windows_fkwu_self_jit.ps1, both focused validate commands, and fourth-arm-gate with no edits"
+    ],
+    "notes": "Focused validation reports hati-os-targets verdict 2097151 and jit-metal-lanes verdict 8191 with fourth arm attached and 0 divergent samples. The fourth-arm gate reports PASS-4WAY for both bands. The Windows self-JIT verifier remains the x64 lane proof and reports cold=317811 hot=317811 njit=26, runtime PATH without Go/clang/LLVM, and FLOOR target=windows-x86_64 alias=windows-amd64 instruction_lane=x64. Subagent Sagan independently verified the same commands and made no file changes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Not pushed yet; PR CI has not run for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "This slice changes Form target catalog, proof naming, docs, and evidence only. Public route behavior is unchanged before merge."
+  },
+  "phase_gate": {
+    "phase": "windows-arm64-floor",
+    "gate": "Windows ARM64 must be first-class and distinct from Windows x86_64: ARM64 shares the macOS/Linux/Android assembler lane but has a Windows PE/COFF linker-image surface, while x86_64 remains the Intel/AMD x64 instruction lane.",
+    "state": "local-proof-pass-ci-pending",
+    "can_move_next_phase": false,
+    "next": "Rebase, run local PR gates, push branch, open PR, monitor CI, then merge only if checks pass."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The catalog now exposes windows-arm64 as an ARM64 Windows target with a PE/COFF image surface and Form-native ARM64 assembler runtime, while windows-x86_64 remains the x64 Intel/AMD lane with the current fkwu self-JIT verifier.",
+    "public_endpoints": [
+      "local-only: Form/fkwu runtime and target catalog; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Run focused Form validation over hati-os-targets and assert verdict 2097151 with fourth arm attached.",
+      "Run focused Form validation over jit-metal-lanes and assert verdict 8191 with fourth arm attached.",
+      "Run the hati-os-targets and jit-metal-lanes fourth-arm gate and assert PASS-4WAY for both.",
+      "Run the Windows fkwu self-JIT verifier and assert cold=317811, hot=317811, njit>0, and instruction_lane=x64 for windows-x86_64.",
+      "Run independent sub-agent validation over the same checks and confirm no edits were made."
+    ]
+  }
+}
