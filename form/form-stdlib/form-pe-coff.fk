@@ -6,69 +6,136 @@
 ; lld-link turns the object into a loadable DLL; the kernel keeps the linker and
 ; LoadLibrary/GetProcAddress as dumb host carriers while the object bytes are a
 ; Form recipe.
+;
+; The executable byte rules are kept as source-level BML functions. The public
+; floor is a generic native object emitter class so recipes can swap host lanes
+; behind a stable object-producing contract instead of reaching for raw helpers.
 
-(do
-    (defn pe-nil? (xs) (eq (len xs) 0))
-    (defn pe-app (xs ys) (if (pe-nil? xs) ys (cons (head xs) (pe-app (tail xs) ys))))
-    (defn pe-cat (xss) (if (eq (len xss) 1) (head xss) (pe-app (head xss) (pe-cat (tail xss)))))
-    (defn pe-zeroes (n) (if (le n 0) (list) (cons 0 (pe-zeroes (sub n 1)))))
+section [form.bml] {
+    def pe-nil?(xs) = eq(len(xs), 0);
 
-    (defn pe-u16 (n) (list (mod n 256) (mod (div n 256) 256)))
-    (defn pe-u32 (n) (list (mod n 256) (mod (div n 256) 256)
-                           (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+    def pe-app(xs, ys) {
+        if pe-nil?(xs) then ys else cons(head(xs), pe-app(tail(xs), ys));
+    }
 
-    (defn pe-code-off () 60)                 ; COFF header 20 + one section header 40
-    (defn pe-sym-off (clen) (add (pe-code-off) clen))
-    (defn pe-text-characteristics () 1615855648) ; code | execute | read | align16
+    def pe-cat(xss) {
+        if eq(len(xss), 0) then empty else if eq(len(xss), 1) then head(xss) else pe-app(head(xss), pe-cat(tail(xss)));
+    }
 
-    (defn pe-coff-header (clen)
-        (pe-cat (list
-            (pe-u16 34404)                  ; IMAGE_FILE_MACHINE_AMD64, 0x8664
-            (pe-u16 1)                      ; one section
-            (pe-u32 0)                      ; deterministic timestamp
-            (pe-u32 (pe-sym-off clen))      ; symbol table follows raw code
-            (pe-u32 1)                      ; one external symbol
-            (pe-u16 0)                      ; no optional header in .obj
-            (pe-u16 0))))                   ; no image flags in .obj
+    def pe-zeroes(n) {
+        if le(n, 0) then empty else cons(0, pe-zeroes(sub(n, 1)));
+    }
 
-    (defn pe-section-text (clen)
-        (pe-cat (list
-            (list 46 116 101 120 116 0 0 0) ; ".text"
-            (pe-u32 0) (pe-u32 0)           ; virtual size/address unused in .obj
-            (pe-u32 clen)
-            (pe-u32 (pe-code-off))
-            (pe-u32 0) (pe-u32 0)           ; no relocations/line numbers
-            (pe-u16 0) (pe-u16 0)
-            (pe-u32 (pe-text-characteristics)))))
+    def pe-u16(n) = list(mod(n, 256), mod(div(n, 256), 256));
 
-    ; COFF short-name symbol. The supported floor uses <=8 byte export names,
-    ; enough for "recipe"; longer names stay with a future string-table lift.
-    (defn pe-name8 (name) (pe-app name (pe-zeroes (sub 8 (len name)))))
-    (defn pe-symbol-external-function (name)
-        (pe-cat (list
-            (pe-name8 name)
-            (pe-u32 0)                      ; value: start of .text
-            (pe-u16 1)                      ; section 1
-            (pe-u16 32)                     ; IMAGE_SYM_DTYPE_FUNCTION
-            (list 2 0))))                   ; external, no aux symbols
+    def pe-u32(n) {
+        list(
+            mod(n, 256),
+            mod(div(n, 256), 256),
+            mod(div(n, 65536), 256),
+            mod(div(n, 16777216), 256));
+    }
 
-    (defn pe-empty-string-table () (pe-u32 4))
+    def pe-code-off() = 60;
 
-    (defn pe-coff-object-sym (code name)
-        (pe-cat (list
-            (pe-coff-header (len code))
-            (pe-section-text (len code))
-            code
-            (pe-symbol-external-function name)
-            (pe-empty-string-table))))
+    def pe-sym-off(clen) = add(pe-code-off(), clen);
 
-    ; Windows x64 ABI: first integer arg in RCX, return in RAX.
-    ; lea rax, [rcx + rcx*2 + 7]; ret
-    (defn pe-x64-recipe-mul3-add7-code () (list 72 141 68 73 7 195))
-    ; lea rax, [rcx + rcx*4 + 1]; ret, used by the swap/load receipt.
-    (defn pe-x64-recipe-mul5-add1-code () (list 72 141 68 137 1 195))
-    ; lea rax, [rcx + 42]; ret, a third native recipe for bootstrap extension receipts.
-    (defn pe-x64-recipe-add42-code () (list 72 141 65 42 195))
-    (defn pe-recipe-object (code) (pe-coff-object-sym code (list 114 101 99 105 112 101)))
+    def pe-text-characteristics() = 1615855648;
 
-    0)
+    def pe-coff-header(clen) {
+        pe-cat(list(
+            pe-u16(34404),
+            pe-u16(1),
+            pe-u32(0),
+            pe-u32(pe-sym-off(clen)),
+            pe-u32(1),
+            pe-u16(0),
+            pe-u16(0)));
+    }
+
+    def pe-section-text(clen) {
+        pe-cat(list(
+            list(46, 116, 101, 120, 116, 0, 0, 0),
+            pe-u32(0),
+            pe-u32(0),
+            pe-u32(clen),
+            pe-u32(pe-code-off()),
+            pe-u32(0),
+            pe-u32(0),
+            pe-u16(0),
+            pe-u16(0),
+            pe-u32(pe-text-characteristics())));
+    }
+
+    def pe-name8(name) = pe-app(name, pe-zeroes(sub(8, len(name))));
+
+    def pe-symbol-external-function(name) {
+        pe-cat(list(
+            pe-name8(name),
+            pe-u32(0),
+            pe-u16(1),
+            pe-u16(32),
+            list(2, 0)));
+    }
+
+    def pe-empty-string-table() = pe-u32(4);
+
+    def pe-coff-object-sym(code, name) {
+        pe-cat(list(
+            pe-coff-header(len(code)),
+            pe-section-text(len(code)),
+            code,
+            pe-symbol-external-function(name),
+            pe-empty-string-table()));
+    }
+
+    def pe-x64-recipe-symbol() = list(114, 101, 99, 105, 112, 101);
+
+    def pe-x64-recipe-mul3-add7-code() = list(72, 141, 68, 73, 7, 195);
+
+    def pe-x64-recipe-mul5-add1-code() = list(72, 141, 68, 137, 1, 195);
+
+    def pe-x64-recipe-add42-code() = list(72, 141, 65, 42, 195);
+
+    def pe-recipe-object(code) = pe-coff-object-sym(code, pe-x64-recipe-symbol());
+
+    template NativeObjectEmitter<TCode, TObject> {
+        member target: HostTarget;
+        member abi: CallingConvention;
+        member symbol: ExportSymbol;
+    }
+
+    class WindowsX64RecipeEmitter : NativeObjectEmitter<X64MachineCode, PeCoffObject> {
+        def target() {
+            "windows-x86_64";
+        }
+
+        def abi() {
+            "windows-x64-i64-to-i64";
+        }
+
+        def symbol() {
+            pe-x64-recipe-symbol();
+        }
+
+        def object_for(code) {
+            pe-recipe-object(code);
+        }
+
+        def object_for_symbol(code, name) {
+            pe-coff-object-sym(code, name);
+        }
+
+        def code_mul3_add7() {
+            pe-x64-recipe-mul3-add7-code();
+        }
+
+        def code_mul5_add1() {
+            pe-x64-recipe-mul5-add1-code();
+        }
+
+        def code_add42() {
+            pe-x64-recipe-add42-code();
+        }
+    }
+}

@@ -71,3 +71,6 @@ jobs:
           .\scripts\verify_windows_fkwu_http_response_socket.ps1
           .\scripts\verify_windows_fkwu_self_jit.ps1
           .\scripts\verify_windows_form_cli_native.ps1
+          Push-Location form\form-kernel-go
+          go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1
+          Pop-Location
