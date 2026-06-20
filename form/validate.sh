@@ -121,7 +121,7 @@ SOURCE_CACHE_DIR="form-stdlib/.cache/source-compiled"
 mkdir -p "$SOURCE_CACHE_DIR"
 compiler_stamp=""
 compiler_chain=("form-stdlib/form-ontology-loader.fk" "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" "form-stdlib/bml-source.fk" "form-stdlib/source-compiler.fk")
-compiler_stamp="$(cat "${compiler_chain[@]}" "$GO_BIN" 2>/dev/null | shasum | cut -c1-16)"
+compiler_stamp="$(cat "${compiler_chain[@]}" "$GO_BIN" 2>/dev/null | form_hash | cut -c1-16)"
 
 prepared_args=()
 prepare_sources() {
@@ -129,7 +129,7 @@ prepare_sources() {
     local src out safe driver key cached
     for src in "$@"; do
         if grep -Eq '^[[:space:]]*section \[' "$src"; then
-            key="$(cat "$src" | shasum | cut -c1-16)-$compiler_stamp"
+            key="$(cat "$src" | form_hash | cut -c1-16)-$compiler_stamp"
             cached="$SOURCE_CACHE_DIR/$key.fk"
             if [[ ! -s "$cached" ]]; then
                 safe="${src//\//__}"
