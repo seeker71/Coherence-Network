@@ -1,0 +1,31 @@
+; preludes: form-stdlib/form-pe-coff.fk form-stdlib/form-pe-coff-affine.fk
+;
+; Proves the parametric affine lowering reproduces form-pe-coff's three
+; hand-encoded recipes byte-for-byte AND lowers specs it has never seen,
+; staying genuinely parametric. Verdict 127 = all seven claims land.
+
+(do
+    ; element-wise integer list equality -> 1/0 (no list_eq primitive).
+    (defn lst-eq-go (xs ys)
+        (if (eq (len xs) 0) 1
+            (if (eq (head xs) (head ys)) (lst-eq-go (tail xs) (tail ys)) 0)))
+    (defn lst-eq (xs ys)
+        (if (eq (len xs) (len ys)) (lst-eq-go xs ys) 0))
+
+    ; reproduces the three shipped constants exactly
+    (let c0 (if (eq (lst-eq (aff-code 3 7) (pe-x64-recipe-mul3-add7-code)) 1) 1 0))
+    (let c1 (if (eq (lst-eq (aff-code 5 1) (pe-x64-recipe-mul5-add1-code)) 1) 2 0))
+    (let c2 (if (eq (lst-eq (aff-code 1 42) (pe-x64-recipe-add42-code)) 1) 4 0))
+
+    ; lowers specs that have no hand-encoded constant: 9n+0 and 2n+100
+    (let c3 (if (eq (lst-eq (aff-code 9 0) (list 72 141 4 201 195)) 1) 8 0))
+    (let c4 (if (eq (lst-eq (aff-code 2 100) (list 72 141 68 9 100 195)) 1) 16 0))
+
+    ; the wrapped object matches the hand path's object length (COFF integrity)
+    (let c5 (if (eq (len (pe-affine-recipe-object 3 7))
+                    (len (pe-recipe-object (pe-x64-recipe-mul3-add7-code)))) 32 0))
+
+    ; genuinely parametric — distinct specs do NOT collapse to the same bytes
+    (let c6 (if (eq (lst-eq (aff-code 3 7) (aff-code 5 1)) 0) 64 0))
+
+    (add (add (add c0 c1) (add c2 c3)) (add (add c4 c5) c6)))

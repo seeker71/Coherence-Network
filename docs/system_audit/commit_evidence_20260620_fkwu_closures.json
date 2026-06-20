@@ -1,0 +1,56 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "claude/modest-brahmagupta-efcb89",
+  "commit_scope": "Move the closure-capturing-runtime-data 'wall' into the fkwu floor. The emitted fourth-arm walker carried named higher-order dispatch but not lexical closures, so factory closures (e.g. a handler bound to a learned model) only ran three-way. Per the fourth-arm-bands.txt law (a divergence is a bug to fix, never a band left unregistered), this is closed in the walker + flattener: a closure is now a partial application (fn-index, arity, captured-values), the indirect-call arm prepends the captured tail to the call args, and the flattener lifts a factory body to a top-level function whose leading params are the captured outer params. Single-level data-capturing factory closures now cross four-way; named refs are unchanged (purely additive).",
+  "files_owned": [
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/model-handler-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/learned-model-service.form",
+    "docs/system_audit/commit_evidence_20260620_fkwu_closures.json"
+  ],
+  "idea_ids": ["fkwu-lexical-closures", "closure-is-partial-application", "no-permanent-walls"],
+  "spec_ids": ["learned-model-service", "fourth-arm-substrate-carriers"],
+  "task_ids": ["task-2026-06-20-fkwu-closures"],
+  "contributors": [
+    { "contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "principle: no permanent walls, move the gap into the floor"] },
+    { "contributor_id": "claude", "contributor_type": "machine", "roles": ["root-cause", "walker-emitter-implementation", "validation", "evidence"] }
+  ],
+  "agent": { "name": "claude", "version": "claude-opus-4-8" },
+  "evidence_refs": [
+    "Root cause: form-flatten.fk flt-var3 lowered a name to flt-fref [fn-index, arity] with NO captured environment, and flt-form2/flt-do had no nested-defn case -- so a factory (do (defn inner ...) inner) broke the flatten (fourth=0). The three reference kernels have a native VClosure; fkwu did not.",
+    "Walker (Form spec): hati-os-kernel.fk fkm-icall now appends the ref's captured tail (tail (tail fv)) to the call args before dispatch (fkm-cap-append).",
+    "Walker (emitted C): hati-os-kernel-emit.fk tag-44 now reads caps = fk_ht[p44t], reverses and prepends them onto the call-args list (comb = captures ++ args), then packs by arity. Empty tail => comb == args, so named refs are unchanged.",
+    "Flattener: form-flatten.fk flt-factory-parse detects (do (defn inner (p..) body) inner), compiles inner with params = captured-outer-params ++ inner-params, and emits the outer body as flt-make-closure (fk-cons fn-index (fk-cons arity capture-access-chain)); flt-sig-scan already indexed the nested inner, so fns/rbodies stay aligned.",
+    "PROVEN four-way: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-handler-band.fk -> 7; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent. The model-capturing handler closure (ms-predict-handler bound to weights) serves the prediction on the emitted walker.",
+    "Before/after: model-service-band fourth leg went 7 -> 31 (bits c3,c4 -- the handler closure -- now pass on fkwu).",
+    "NO REGRESSION: higher-order-fn-arg 1111, bootstrap-host 4095, form-pe-coff 511, affine-train 31, presence-loop 1023 -- all still four-way, 0 divergent; a plain band-level defn band crosses four-way (20).",
+    "NEXT RUNG (owned): multi-level closures (a closure that captures and CALLS another closure -- the layer-wrap/stamp/gate middleware) do not yet cross; closure-of-closure faults the emitted walker. model-service-band (255) and presence-service-band (127) stay three-way until that lands."
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "Git Bash: export PATH=\"$PATH:/c/Program Files/LLVM/bin\"; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-handler-band.fk",
+      "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/higher-order-fn-arg-band.fk  (regression: 1111)",
+      "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk  (regression: 511)"
+    ],
+    "fourth_arm_outputs": [
+      "model-handler fks lane: fourth arm: 1 band(s) four-way; 1 ok, 0 divergent; verdict 7 -- the factory closure capturing the learned model crosses fkwu"
+    ]
+  },
+  "ci_validation": { "status": "pending", "commands": [], "notes": "PR CI not run yet." },
+  "deploy_validation": { "status": "pending", "environment": "not-deployed-runtime-floor", "notes": "Walker/flattener change affects only the emitted fourth arm; the three reference kernels are unchanged." },
+  "phase_gate": { "can_move_next_phase": false, "reason": "Single-level closures cross four-way and no band regressed; the multi-level closure rung (middleware) is the named next fix before the full service is four-way." },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The emitted fkwu walker now executes lexical closures that capture runtime data (single level), so a Form recipe that returns a function bound to learned weights runs identically across Go/Rust/TypeScript/fkwu. Closures of closures remain the next rung.",
+    "public_endpoints": ["local-only: Form stdlib walker/flattener and a four-way band; no public endpoint"],
+    "test_flows": [
+      "model-handler-band -> 7 four-way: ms-predict-handler(model) returns a handler closure capturing the weights; calling it serves the model's prediction on the emitted walker.",
+      "Additive proof: every prior four-way band unchanged; a 2-element function ref (no captures) prepends nothing, so named higher-order dispatch is identical."
+    ]
+  }
+}

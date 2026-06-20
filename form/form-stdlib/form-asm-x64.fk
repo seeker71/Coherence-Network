@@ -1,0 +1,53 @@
+; form-asm-x64.fk — x86-64 instruction byte encoders as a Form recipe (no clang).
+;
+; The x64 twin of form-asm.fk (arm64). x64 is variable-length (REX/opcode/ModRM/
+; imm) rather than fixed 32-bit words, so each instruction emits its byte list
+; directly. Calling convention: the i64 argument is banked in RCX (the Windows
+; x64 first-integer-arg register and what form_bootstrap_host.c passes to a
+; recipe(i64)->i64); the single accumulator is RAX (the return register); RDX is
+; the one-deep spill temp. Every value emitted is < 256 — host-integer-width
+; independent, the same discipline form-asm.fk holds.
+;
+; Verified against the clang/LLVM oracle per instruction; proven by EXECUTION
+; (the lowered recipe runs through the bootstrap host and returns its value,
+; zero clang in the code path).
+
+(do
+    (defn x64-app (a b) (if (eq (len a) 0) b (cons (head a) (x64-app (tail a) b))))
+    (defn x64-cat (xss) (if (eq (len xss) 1) (head xss) (x64-app (head xss) (x64-cat (tail xss)))))
+
+    ; a 32-bit immediate as 4 little-endian bytes (two's complement for negatives)
+    (defn x64-wrap32 (n) (if (lt n 0) (add n 4294967296) n))
+    (defn x64-imm32 (n) (x64-imm32b (x64-wrap32 n)))
+    (defn x64-imm32b (n)
+        (list (mod n 256) (mod (div n 256) 256)
+              (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+
+    ; --- the affine/arithmetic instruction set (REX.W = 0x48 = 72) ---
+    ; mov rax, rcx        48 89 C8    — ARG into the accumulator
+    (defn x64-mov-rax-rcx () (list 72 137 200))
+    ; mov rax, imm32      48 C7 C0 imm32   — a LIT into the accumulator
+    (defn x64-mov-rax-imm (n) (x64-app (list 72 199 192) (x64-imm32 n)))
+    ; add rax, imm32      48 05 imm32
+    (defn x64-add-rax-imm (n) (x64-app (list 72 5) (x64-imm32 n)))
+    ; sub rax, imm32      48 2D imm32
+    (defn x64-sub-rax-imm (n) (x64-app (list 72 45) (x64-imm32 n)))
+    ; imul rax, rax, imm32  48 69 C0 imm32
+    (defn x64-imul-rax-imm (n) (x64-app (list 72 105 192) (x64-imm32 n)))
+    ; add  rax, rcx       48 01 C8     ; sub rax, rcx 48 29 C8 ; imul rax,rcx 48 0F AF C1
+    (defn x64-add-rax-rcx () (list 72 1 200))
+    (defn x64-sub-rax-rcx () (list 72 41 200))
+    (defn x64-imul-rax-rcx () (list 72 15 175 193))
+    ; re-entrant spill via the system stack (nests correctly, unlike a fixed reg):
+    ; push rax  50 ; pop rdx  5A  (64-bit operand size is the default, no REX)
+    (defn x64-push-rax () (list 80))
+    (defn x64-pop-rdx () (list 90))
+    ; RDX-combining forms for a spilled left operand
+    (defn x64-mov-rax-rdx () (list 72 137 208))
+    (defn x64-add-rax-rdx () (list 72 1 208))
+    (defn x64-sub-rdx-rax () (list 72 41 194))      ; rdx := rdx - rax  (non-commutative SUB)
+    (defn x64-imul-rax-rdx () (list 72 15 175 194))
+    ; ret  C3
+    (defn x64-ret () (list 195))
+
+    0)

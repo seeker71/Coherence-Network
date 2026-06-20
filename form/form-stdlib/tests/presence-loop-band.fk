@@ -1,0 +1,37 @@
+; preludes: form-stdlib/cell-sync.fk form-stdlib/presence-loop.fk
+;
+; Proves the presence brain: pick-up diff, consent-gated answering (positive AND
+; negative), authenticity-gated accept (positive AND negative), live integration,
+; and the affine oracle that pins the exact native numbers the live DLLs return
+; (3*5+7=22, 5*10+1=51, 1*9+42=51). Verdict 1023 = all ten claims land.
+
+(do
+    ; A presence that already holds A and B, permitted to share only A, sees the
+    ; channel offer B (had), C and D (lacked).
+    (let have      (list "A" "B"))
+    (let permitted (list "A"))
+    (let offered   (list "B" "C" "D"))
+
+    ; pick-up diff: lacks exactly C and D, in order
+    (let c0 (if (eq (pl-pickup-count offered have) 2) 1 0))
+    (let c1 (if (str_eq (head (pl-pickup offered have)) "C") 2 0))
+
+    ; live integration: after one tick the callable set grew to four
+    (let c2 (if (eq (len (pl-step offered have)) 4) 4 0))
+
+    ; consent: answer for A (held + permitted) yes; B (held, NOT permitted) no;
+    ; C (not held) no — the two negatives matter as much as the positive
+    (let c3 (if (eq (pl-can-answer? "A" have permitted) 1) 8 0))
+    (let c4 (if (eq (pl-can-answer? "B" have permitted) 0) 16 0))
+    (let c5 (if (eq (pl-can-answer? "C" have permitted) 0) 32 0))
+
+    ; authenticity: re-addressing matches -> accept; mismatch -> reject
+    (let c6 (if (eq (pl-accept? (list "X" "X")) 1) 64 0))
+    (let c7 (if (eq (pl-accept? (list "X" "Y")) 0) 128 0))
+
+    ; affine oracle = the exact values the live native recipes must return
+    (let c8 (if (eq (pl-affine-eval 3 7 5) 22) 256 0))
+    (let c9 (if (eq (pl-affine-eval 5 1 10) 51)
+                (if (eq (pl-affine-eval 1 42 9) 51) 512 0) 0))
+
+    (add (add (add (add c0 c1) (add c2 c3)) (add (add c4 c5) (add c6 c7))) (add c8 c9)))

@@ -1,0 +1,20 @@
+; preludes: form-stdlib/affine-train.fk form-stdlib/model-service.fk
+;
+; The four-way-portable HEART of the learned-model service: inference over the
+; model-as-DATA and the JSON rendering of a prediction. These cross Go/Rust/TS
+; AND the emitted fkwu walker. The handler/middleware CLOSURES (factory-returned,
+; capturing runtime data) are a fourth-arm op-family wall — they stay three-way
+; in model-service-band / presence-service-band. Verdict 15 = all four claims.
+
+(do
+    (let model1 (list 2000 0))
+    (let model2 (list 3000 0))
+    ; learned weights are DATA: w=2.0,b=0 on x=3.0 -> 6.0 (scale 1000 -> 6000)
+    (let c0 (if (eq (ms-predict model1 3000) 6000) 1 0))
+    ; a different weight vector is a different model -> 9.0 (9000)
+    (let c1 (if (eq (ms-predict model2 3000) 9000) 2 0))
+    ; the model is not baked into code: swapping the data changes the prediction
+    (let c2 (if (eq (ms-predict model1 3000) (ms-predict model2 3000)) 0 4))
+    ; the prediction renders to a stable JSON body
+    (let c3 (if (str_eq (ms-body 6000) "{\"prediction\":6000}") 8 0))
+    (add (add c0 c1) (add c2 c3)))
