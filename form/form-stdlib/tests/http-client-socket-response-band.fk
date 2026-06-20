@@ -1,0 +1,63 @@
+; http-client-socket-response-band.fk - HTTP response read over real socket calls.
+;
+; preludes: form-stdlib/http-client.fk
+;
+; Extends the HTTP verb socket floor beyond request bytes: a high-grammar Form
+; recipe renders PATCH, sends it over socket_send, the loopback peer returns a
+; framed HTTP response over socket_send, and the client consumes the response
+; bytes with socket_recv before Form parses status/body/framing. Verdict: 8191.
+
+section [form.action] {
+    def hcsr-contains(s, needle) = ge(str_find(s, needle, 0), 0);
+    def hcsr-starts(s, prefix) = if gt(str_len(prefix), str_len(s)) then false else str_eq(substring(s, 0, str_len(prefix)), prefix);
+    def hcsr-score(ok, bit) = if ok then bit else 0;
+
+    let body = "{\"title\":\"native\"}";
+    let response = "HTTP/1.0 202 Accepted\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok";
+
+    let srv = socket_listen(0);
+    let listen-ok = hcsr-score(ge(srv, 0), 1);
+    let port = socket_port(srv);
+    let port-ok = hcsr-score(gt(port, 0), 2);
+
+    let cli = socket_connect("127.0.0.1", port);
+    let conn = if ge(cli, 0) then socket_accept(srv) else -1;
+    let pair-ok = hcsr-score(and(ge(cli, 0), ge(conn, 0)), 4);
+
+    let rendered = kh-render-request("PATCH", "/api/ideas", "127.0.0.1", body);
+    let request-sent = http-send-all(cli, rendered, 0);
+    let request = if gt(request-sent, 0) then socket_recv(conn, 65536) else "";
+    let request-sent-ok = hcsr-score(gt(request-sent, 0), 8);
+    let request-method-ok = hcsr-score(hcsr-starts(request, "PATCH /api/ideas HTTP/1.0\r\n"), 16);
+    let request-body-ok = hcsr-score(hcsr-contains(request, "Content-Length: 18\r\n\r\n{\"title\":\"native\"}"), 32);
+
+    let response-sent = if hcsr-contains(request, body) then http-send-all(conn, response, 0) else -1;
+    let response-sent-ok = hcsr-score(gt(response-sent, 0), 64);
+
+    let wire = if gt(response-sent, 0) then socket_recv(cli, 65536) else "";
+    let close-server = if gt(str_len(wire), 0) then socket_close(conn) else socket_close(conn);
+    let close-server-ok = hcsr-score(eq(close-server, 0), 128);
+    let close-client = socket_close(cli);
+    socket_close(srv);
+
+    let response-line-ok = hcsr-score(hcsr-starts(wire, "HTTP/1.0 202 Accepted\r\n"), 256);
+    let response-status-ok = hcsr-score(eq(kh-status-of(wire), 202), 512);
+    let response-body-ok = hcsr-score(str_eq(kh-msg-body(wire), "ok"), 1024);
+    let close-client-ok = hcsr-score(eq(close-client, 0), 2048);
+    let response-complete-ok = hcsr-score(http-response-complete?(wire), 4096);
+
+    sum(list(
+        listen-ok,
+        port-ok,
+        pair-ok,
+        request-sent-ok,
+        request-method-ok,
+        request-body-ok,
+        response-sent-ok,
+        response-line-ok,
+        response-status-ok,
+        response-body-ok,
+        close-server-ok,
+        close-client-ok,
+        response-complete-ok));
+}
