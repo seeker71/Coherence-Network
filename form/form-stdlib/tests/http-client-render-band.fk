@@ -1,21 +1,23 @@
-; http-client-render-band.fk — every HTTP method renders in pure Form, four-way.
+; http-client-render-band.fk - every HTTP method renders in source grammar.
 ;
 ; preludes: form-stdlib/http-client.fk
 ;
-; The method is data: POST/PUT/DELETE/OPTIONS and an arbitrary method (PROPFIND,
-; the * case) all render correctly, and a body adds Content-Length. No C native,
-; no host-io — so this crosses Go/Rust/TS/fkwu by construction. verdict -> 63.
+; Method is data. POST/PUT/DELETE/OPTIONS and arbitrary PROPFIND all render
+; through the same Form recipe, and bodies add Content-Length. Verdict: 63.
 
-(do
-    (let post (kh-render-request "POST" "/echo" "api.x" "abcdefg"))
-    (let put  (kh-render-request "PUT" "/x" "h" ""))
-    (let del  (kh-render-request "DELETE" "/y" "h" ""))
-    (let opt  (kh-render-request "OPTIONS" "/z" "h" ""))
-    (let any  (kh-render-request "PROPFIND" "/w" "h" "xy"))
-    (let c0 (if (eq (str_find post "POST /echo HTTP/1.0" 0) 0) 1 0))
-    (let c1 (if (gt (str_find post "Content-Length: 7" 0) 0) 2 0))
-    (let c2 (if (eq (str_find put "PUT /x HTTP/1.0" 0) 0) 4 0))
-    (let c3 (if (eq (str_find del "DELETE /y HTTP/1.0" 0) 0) 8 0))
-    (let c4 (if (eq (str_find opt "OPTIONS /z HTTP/1.0" 0) 0) 16 0))
-    (let c5 (if (eq (str_find any "PROPFIND /w HTTP/1.0" 0) 0) 32 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
+section [form.action] {
+    let post = kh-render-request("POST", "/echo", "api.x", "abcdefg");
+    let put = kh-render-request("PUT", "/x", "h", "");
+    let del = kh-render-request("DELETE", "/y", "h", "");
+    let opt = kh-render-request("OPTIONS", "/z", "h", "");
+    let any = kh-render-request("PROPFIND", "/w", "h", "xy");
+
+    let c0 = if eq(str_find(post, "POST /echo HTTP/1.0", 0), 0) then 1 else 0;
+    let c1 = if gt(str_find(post, "Content-Length: 7", 0), 0) then 2 else 0;
+    let c2 = if eq(str_find(put, "PUT /x HTTP/1.0", 0), 0) then 4 else 0;
+    let c3 = if eq(str_find(del, "DELETE /y HTTP/1.0", 0), 0) then 8 else 0;
+    let c4 = if eq(str_find(opt, "OPTIONS /z HTTP/1.0", 0), 0) then 16 else 0;
+    let c5 = if eq(str_find(any, "PROPFIND /w HTTP/1.0", 0), 0) then 32 else 0;
+
+    add(c0, add(c1, add(c2, add(c3, add(c4, c5)))));
+}

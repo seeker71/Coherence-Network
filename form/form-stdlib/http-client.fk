@@ -1,82 +1,133 @@
-; http-client.fk — render an HTTP/1.1 request for ANY method, in pure Form.
+; http-client.fk - Form-native HTTP client surface.
 ;
-; THE PRINCIPLE (Urs): the method is DATA, not control flow. ONE generic recipe
-; renders GET / POST / PUT / DELETE / OPTIONS — or any custom method (*) — because
-; the method is just the first token on the request line. Body presence is the
-; only branch: it adds Content-Type + Content-Length and the body. There is NO
-; per-method native and NO C: the whole method family is flow + choice over data,
-; so it walks one vocabulary on all four arms (Go / Rust / TS / fkwu).
+; Authored in the source-level Form/BML maintenance grammar. Kernel execution
+; receives lowered Form recipes from source-compiler.fk.
 ;
-; This is the corrected layer for HTTP client methods. The earlier move — a
-; monolithic per-method C native in the emitter — was the wrong layer. Rendering
-; and parsing are Form (http-parse.fk lexes the response). The ONE atom beneath
-; this recipe is the wire (connect / send / recv); see fkwu-host-io-port-plan.md.
-; Everything ABOVE the wire is this recipe.
+; Plain HTTP verbs are recipes over the host socket floor:
+; socket_connect / socket_send / socket_recv / socket_close. http_get and
+; sock_request remain compatibility natives, not the method layer.
 
-(defn kh-render-request (method path host body)
-  (do
-    (let blen (str_len body))
-    (let head (str_concat
-                (str_concat
-                  (str_concat
-                    (str_concat
-                      (str_concat method " ")
-                      path)
-                    " HTTP/1.0\r\nHost: ")
-                  host)
-                "\r\nConnection: close\r\n"))
-    (if (gt blen 0)
-        (str_concat
-          (str_concat
-            (str_concat
-              (str_concat head "Content-Type: application/json\r\nContent-Length: ")
-              (int_to_str blen))
-            "\r\n\r\n")
-          body)
-        (str_concat head "\r\n"))))
+section [form.bml] {
+    def kh-render-request(method, path, host, body) {
+        let blen = str_len(body);
+        let target = str_concat(str_concat(method, " "), path);
+        let request_line = str_concat(target, " HTTP/1.0\r\nHost: ");
+        let host_line = str_concat(str_concat(request_line, host), "\r\nConnection: close\r\n");
+        if gt(blen, 0) then
+            str_concat(
+                str_concat(
+                    str_concat(
+                        str_concat(host_line, "Content-Type: application/json\r\nContent-Length: "),
+                        int_to_str(blen)),
+                    "\r\n\r\n"),
+                body)
+        else
+            str_concat(host_line, "\r\n");
+    }
 
-; http-fetch — a COMPLETE HTTP client in pure Form: parse the url, render the
-; request (any method, kh-render-request), send it over the ONE wire primitive
-; (sock_request), return the raw response. http_get is just http-fetch "GET".
-; The wire is the only atom; everything else is flow + choice.
-(defn http-fetch (method url body)
-  (do
-    (let https (eq (str_find url "https://" 0) 0))
-    (let after (substring url (if https 8 7) (str_len url)))
-    (let slash (str_find after "/" 0))
-    (let hostport (if (eq slash -1) after (substring after 0 slash)))
-    (let path (if (eq slash -1) "/" (substring after slash (str_len after))))
-    (let colon (str_find hostport ":" 0))
-    (let host (if (eq colon -1) hostport (substring hostport 0 colon)))
-    (let port (if (eq colon -1) (if https "443" "80") (substring hostport (add colon 1) (str_len hostport))))
-    (let req (kh-render-request method path host body))
-    (if https (tls_request host port req) (sock_request host port req))))
+    def http-open(host, port) = socket_connect(host, str_to_int(port));
 
-; ── generic HTTP message parsing (works for a REQUEST or a RESPONSE) ──
-; The body is everything after the first blank line; the start-line is up to the
-; first CRLF. These are message-generic — the only request/response difference is
-; how the start-line is read (method vs status). High grammar: one parser, two views.
-(defn kh-msg-body (msg)
-  (do
-    (let crlf (str_find msg "\r\n\r\n" 0))
-    (if (gt crlf -1)
-        (substring msg (add crlf 4) (str_len msg))
-        (do
-          (let lf (str_find msg "\n\n" 0))
-          (if (gt lf -1) (substring msg (add lf 2) (str_len msg)) "")))))
+    def http-send-all-step(conn, bytes, from) {
+        let n = socket_send(conn, substring(bytes, from, str_len(bytes)));
+        if le(n, 0) then from else http-send-all(conn, bytes, add(from, n));
+    }
 
-(defn kh-msg-start-line (msg)
-  (do
-    (let nl (str_find msg "\r\n" 0))
-    (if (gt nl -1) (substring msg 0 nl) msg)))
+    def http-send-all(conn, bytes, from) = if ge(from, str_len(bytes)) then from else http-send-all-step(conn, bytes, from);
 
-; response status = the integer second token of the start line ("HTTP/1.0 200 OK" -> 200)
-(defn kh-status-of (response)
-  (do
-    (let line (kh-msg-start-line response))
-    (let sp (str_find line " " 0))
-    (if (eq sp -1) 0
-        (do
-          (let rest (substring line (add sp 1) (str_len line)))
-          (let sp2 (str_find rest " " 0))
-          (str_to_int (if (eq sp2 -1) rest (substring rest 0 sp2)))))))
+    def http-send-on-socket(conn, method, path, host, body) {
+        let req = kh-render-request(method, path, host, body);
+        http-send-all(conn, req, 0);
+    }
+
+    def http-body-offset(msg) {
+        let crlf = str_find(msg, "\r\n\r\n", 0);
+        let lf = str_find(msg, "\n\n", 0);
+        if ge(crlf, 0) then add(crlf, 4) else if ge(lf, 0) then add(lf, 2) else -1;
+    }
+
+    def http-header-end-from(msg, start) {
+        let crlf = str_find(msg, "\r\n", start);
+        if ge(crlf, 0) then crlf else str_find(msg, "\n", start);
+    }
+
+    def http-content-length-from(msg, key, at) {
+        let start = add(at, str_len(key));
+        let stop = http-header-end-from(msg, start);
+        str_to_int(substring(msg, start, if lt(stop, 0) then str_len(msg) else stop));
+    }
+
+    def http-content-length(msg) {
+        let key = "Content-Length: ";
+        let at = str_find(msg, key, 0);
+        if lt(at, 0) then -1 else http-content-length-from(msg, key, at);
+    }
+
+    def http-response-complete-at(msg, body-start) {
+        let expected = http-content-length(msg);
+        if lt(expected, 0) then true else ge(sub(str_len(msg), body-start), expected);
+    }
+
+    def http-response-complete?(msg) {
+        let body-start = http-body-offset(msg);
+        if lt(body-start, 0) then false else http-response-complete-at(msg, body-start);
+    }
+
+    def http-recv-response-next(conn, acc, chunk) {
+        let next = str_concat(acc, chunk);
+        if http-response-complete?(next) then next else http-recv-response-into(conn, next);
+    }
+
+    def http-recv-response-into(conn, acc) {
+        let chunk = socket_recv(conn, 65536);
+        if eq(str_len(chunk), 0) then acc else http-recv-response-next(conn, acc, chunk);
+    }
+
+    def http-recv-response(conn) = http-recv-response-into(conn, "");
+
+    def http-plain-request-connected(conn, req) {
+        let sent = http-send-all(conn, req, 0);
+        let response = if gt(sent, 0) then http-recv-response(conn) else "";
+        socket_close(conn);
+        response;
+    }
+
+    def http-plain-request(host, port, req) {
+        let conn = http-open(host, port);
+        if lt(conn, 0) then "" else http-plain-request-connected(conn, req);
+    }
+
+    def http-fetch(method, url, body) {
+        let https = eq(str_find(url, "https://", 0), 0);
+        let after = substring(url, if https then 8 else 7, str_len(url));
+        let slash = str_find(after, "/", 0);
+        let hostport = if eq(slash, -1) then after else substring(after, 0, slash);
+        let path = if eq(slash, -1) then "/" else substring(after, slash, str_len(after));
+        let colon = str_find(hostport, ":", 0);
+        let host = if eq(colon, -1) then hostport else substring(hostport, 0, colon);
+        let port = if eq(colon, -1) then if https then "443" else "80" else substring(hostport, add(colon, 1), str_len(hostport));
+        let req = kh-render-request(method, path, host, body);
+        if https then tls_request(host, port, req) else http-plain-request(host, port, req);
+    }
+
+    def kh-msg-body(msg) {
+        let crlf = str_find(msg, "\r\n\r\n", 0);
+        let lf = str_find(msg, "\n\n", 0);
+        if gt(crlf, -1) then substring(msg, add(crlf, 4), str_len(msg)) else if gt(lf, -1) then substring(msg, add(lf, 2), str_len(msg)) else "";
+    }
+
+    def kh-msg-start-line(msg) {
+        let nl = str_find(msg, "\r\n", 0);
+        if gt(nl, -1) then substring(msg, 0, nl) else msg;
+    }
+
+    def kh-status-of-rest(rest) {
+        let sp2 = str_find(rest, " ", 0);
+        str_to_int(if eq(sp2, -1) then rest else substring(rest, 0, sp2));
+    }
+
+    def kh-status-of(response) {
+        let line = kh-msg-start-line(response);
+        let sp = str_find(line, " ", 0);
+        if eq(sp, -1) then 0 else kh-status-of-rest(substring(line, add(sp, 1), str_len(line)));
+    }
+}
