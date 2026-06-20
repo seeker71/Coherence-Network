@@ -122,13 +122,15 @@ def _kernel_binary_available_lazy() -> bool:
 _KERNEL_BIN_ENV = "FORM_KERNEL_RUST_BIN"
 # Default path: repo-relative to api/app/services/, four levels up to repo
 # root, then into form/form-kernel-rust/target/release/form-kernel-rust.
+# On Windows, cargo emits the binary with a `.exe` suffix.
+_KERNEL_BIN_NAME = "form-kernel-rust.exe" if os.name == "nt" else "form-kernel-rust"
 _DEFAULT_KERNEL_BIN = (
     Path(__file__).resolve().parent.parent.parent.parent
     / "form"
     / "form-kernel-rust"
     / "target"
     / "release"
-    / "form-kernel-rust"
+    / _KERNEL_BIN_NAME
 )
 
 

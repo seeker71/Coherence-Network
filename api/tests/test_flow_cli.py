@@ -310,6 +310,10 @@ def _run_cli(api_base: str, *args: str) -> subprocess.CompletedProcess:
         _write_cli_config(Path(home), api_base=api_base)
         env = os.environ.copy()
         env["HOME"] = home
+        # node's os.homedir() reads USERPROFILE on Windows (HOME is ignored),
+        # so the CLI's ~/.coherence-network/config.json only resolves to the
+        # sandbox dir when USERPROFILE points there too.
+        env["USERPROFILE"] = home
         env.pop("COHERENCE_API_URL", None)
         env.pop("COHERENCE_HUB_URL", None)
         env.pop("COHERENCE_API_KEY", None)
