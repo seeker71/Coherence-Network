@@ -33,4 +33,4 @@
     "The proof band executes a tiny native Form recipe four-way, compares its value and measured metadata against a third-party oracle row, rejects a fast-but-wrong candidate, selects a parity-correct faster candidate, and proves continuing oracle/alternate sampling.")
 
   (next
-    "Feed real clang, GPU-driver, and MLK oracle receipts from the supported macOS and Android lanes into this schema, then replace the placeholder score with a Thompson/champion-challenger chooser over measured timing and correctness windows."))
+    "Feed real clang, GPU-driver, and MLK oracle receipts from the supported macOS, Android, and Windows ARM64 lanes into this schema, keep Windows x86_64 as its separate x64 instruction lane, then replace the placeholder score with a Thompson/champion-challenger chooser over measured timing and correctness windows."))
