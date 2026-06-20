@@ -216,6 +216,12 @@
     (load   "form-kernel-go native dylib_call dlopens the dylib, dlsyms _recipe, calls it int64 f(int64); jit_dylib_test.go proves emit->link->load->call across {5,0,10,100}")
     (only-the-recipe "the dylib's __text IS the recipe (20 bytes); the ~16KB is Mach-O + signature overhead ld adds, vs a 4.8MB Go-runtime plugin"))
 
+  (windows-recipe-dll-realized
+    (emit   "form-pe-coff pe-recipe-object wraps Windows x64 recipe bytes as a COFF .obj exporting recipe, four-way Go/Rust/TS/fkwu at tests/form-pe-coff-band.fk -> 255")
+    (link   "lld-link /dll /noentry /export:recipe turns the Form .obj into a loadable PE/COFF DLL; lld-link is the host linker carrier, not the compiler or assembler")
+    (load   "form-kernel-go native dylib_call on Windows uses LoadLibrary/GetProcAddress and calls int64 f(int64); jit_dll_windows_test.go proves emit->link->load->call and swaps two DLLs behind the same recipe symbol")
+    (lane   "this is the Windows x86_64 Intel/AMD instruction lane; Windows ARM64 remains the shared ARM64 assembler lane with its own PE/COFF image surface still to lift"))
+
   # The signature half of the direct (no-ld) dylib is now Form. Apple Silicon's
   # dyld refuses an unsigned dylib; form-codesign.fk (co-sign) builds the ad-hoc
   # EmbeddedSignature SuperBlob + CodeDirectory whose code slots are SHA256 of

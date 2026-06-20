@@ -5,7 +5,7 @@
 # (tags 1-7,12) to NATIVE and melts them on cool, champion-challenger re-earned
 # (jit-lower 15, full-jit-lower 63, champion-challenger 127). The native target
 # is Form -> asm BYTES, not clang: form-asm 31 / form-lower 31 / form-macho 31 /
-# form-elf 31 -> recipe-dylib 787349 -> codesign 632490, every stage a four-way
+# form-pe-coff 255 / form-elf 31 -> recipe-dylib 787349 -> codesign 632490, every stage a four-way
 # Form recipe; clang is dropped by form-asm's byte-identity conviction gate,
 # kept only as oracle. One row per band:
 #
@@ -345,6 +345,7 @@ form-lower-map fks 31
 form-lower-rec fks 31
 form-lower-streq fks 31
 form-macho fks 31
+form-pe-coff fks 255
 form-elf fks 31
 form-elf-exec fks 63
 form-mut fks 31
@@ -354,7 +355,7 @@ go-jit fks 8
 go-jit-value-list fks 4
 harmonic-geometry fks 111111
 hati-os-native-cli-emit fks 7
-hati-os-targets fks 2097151
+hati-os-targets fks 8388607
 heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9

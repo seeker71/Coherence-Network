@@ -24,7 +24,7 @@
     "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
 
   (floor
-    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, records real host/resource stdout or artifacts for the currently available physical lanes, carries a Mac+Android native receipt channel over adb-forward TCP, and keeps Windows ARM64 on the shared ARM64 assembler lane while reserving a separate Windows x86_64 lane for Intel/AMD x64 instructions.")
+    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/PE-COFF/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, records real host/resource stdout or artifacts for the currently available physical lanes, carries a Mac+Android native receipt channel over adb-forward TCP, keeps Windows ARM64 on the shared ARM64 assembler lane, and gives Windows x86_64 its separate Intel/AMD x64 native DLL load/swap receipt.")
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
@@ -103,13 +103,13 @@
       (assembly-surface pe-coff+x64-asm)
       (instruction-lane x64-intel-amd)
       (host-image-surface windows-pe-coff)
-      (form-native-object form-pe-coff-pending)
-      (form-native-executable form-pe-exec-pending)
+      (form-native-object form-pe-coff)
+      (form-native-executable form-pe-coff+lld-link-dll)
       (jit-oracle optional-clang-llvm-build-witness)
       (jit-runtime fkwu-self-jit-no-runtime-toolchain)
       (distribution https://hati.earth/downloads/hati-os/windows/x86_64/hati-os-windows-x86_64.zip)
       (resource-implementations PowerShell+CIM+Get-Process CIM+PerformanceCounter+nvidia-smi WASAPI+MediaFoundation Windows.Graphics.Capture+MediaFoundation Windows.Devices.Sensors+Location-when-present NVIDIA-CUDA-driver+DirectML+Vulkan DirectML+WASAPI-DSP unsupported-MLX)
-      (floor "Windows x86_64 is the Intel/AMD x64 instruction lane and is proven today by the Windows fkwu self-JIT runtime verifier without Go, clang, or LLVM on the runtime PATH")))
+      (floor "Windows x86_64 is the Intel/AMD x64 instruction lane; it is proven today by the Windows fkwu self-JIT runtime verifier without Go, clang, or LLVM on the runtime PATH, plus a Form-emitted PE/COFF object that lld-link turns into two loadable DLLs swapped through LoadLibrary/GetProcAddress behind the same recipe symbol")))
 
   (missing-physical-samples
     (tts-stt-loopback
@@ -154,8 +154,8 @@
       (floor "target row, clang oracle coordinate, PE/COFF ARM64 assembly surface, Form-native ARM64 assembler runtime row, Windows host implementation rows, and hati.earth URL are proven")
       (missing "Form-native PE/COFF ARM64 object/executable image emitter, published zip, sha256, source map, and Windows-on-ARM physical-lane summary JSON at the catalog URL"))
     (windows-x86_64
-      (floor "target row, x64 PE/COFF assembly surface, fkwu self-JIT runtime verifier, Windows host implementation rows, and hati.earth URL are proven")
-      (missing "Form-native PE/COFF x64 object/executable image emitter, published zip, sha256, source map, and Windows x86_64 physical-lane summary JSON at the catalog URL")))
+      (floor "target row, x64 PE/COFF assembly surface, Form-native PE/COFF x64 object proof, lld-link DLL load/swap receipt, fkwu self-JIT runtime verifier, Windows host implementation rows, and hati.earth URL are proven")
+      (missing "broader Form-native PE/COFF x64 executable image emitter, published zip, sha256, source map, and Windows x86_64 physical-lane summary JSON at the catalog URL")))
 
   (invariant
     (no-mock-data)
