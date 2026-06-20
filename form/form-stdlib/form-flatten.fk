@@ -38,12 +38,11 @@
 ; the current fourth-floor registry names fold onto make_nodeid packets; the
 ; full generated bp table remains a follow-on lift.
 ;
-; Native carrier floor: http_get lowers to tag 105 so external http:// and
-; verified https:// cross the emitted fourth arm as non-shell carriers. _get
-; lowers to tag 106 so source recipes can read the returned dict/list receipts,
-; including response-header rows, inside fkwu. North star: the same lowering
-; carries request headers, response headers, timing, status, body, and errors
-; across every host implementation through explicit native channels.
+; Native carrier floor: socket_listen/connect/accept/send/recv/close lower to
+; tags 120..126 as the host-OS socket boundary. http_get/sock_request remain
+; compatibility carriers above that floor; HTTP verbs belong in Form recipes
+; over socket bytes, not as the primitive substrate. _get lowers to tag 106 so
+; source recipes can read returned dict/list receipts inside fkwu.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 ; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
@@ -83,6 +82,13 @@
           (list "http_get" 3 105)
           (list "sock_request" 3 118)
           (list "tls_request" 3 119)
+          (list "socket_listen" 1 120)
+          (list "socket_port" 1 121)
+          (list "socket_accept" 1 122)
+          (list "socket_connect" 2 123)
+          (list "socket_send" 2 124)
+          (list "socket_recv" 2 125)
+          (list "socket_close" 1 126)
           (list "_get" 2 106)
           (list "file_mtime" 1 107) (list "scan_run" 3 108)
           (list "record_get" 2 65) (list "record_set" 3 66)

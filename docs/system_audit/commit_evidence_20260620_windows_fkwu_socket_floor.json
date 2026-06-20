@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-fkwu-http-api-floor",
+  "commit_scope": "Add the Windows fkwu socket primitive floor by lowering socket_listen, socket_port, socket_accept, socket_connect, socket_send, socket_recv, and socket_close as direct host-OS socket tags in the Form-emitted universal walker. HTTP carriers remain compatibility layers above socket bytes; the socket host-call boundary is now proven directly on Windows with no Go, clang, LLVM, or http_get available at runtime.",
+  "files_owned": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_fkwu_socket_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/verify_windows_fkwu_socket_loopback.ps1"
+  ],
+  "idea_ids": [
+    "windows-x86_64-floor",
+    "fkwu-native-runtime",
+    "host-os-socket-floor"
+  ],
+  "spec_ids": [
+    "fourth-kernel-physical-lanes",
+    "form-to-asm",
+    "hati-os-targets"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-fkwu-socket-floor"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-correction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-ohm",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-fkwu-http-api-floor before edits",
+    "form/form-stdlib/form-flatten.fk -> socket_listen/socket_port/socket_accept/socket_connect/socket_send/socket_recv/socket_close now lower to fkwu tags 120..126, with comments naming socket host calls as the primitive floor and HTTP as a higher Form layer",
+    "form/form-stdlib/hati-os-kernel-emit.fk -> universal fkwu C emitter now serializes socket tags, declares a cross-platform host socket bridge with Windows Winsock startup and POSIX socket calls, stores OS sockets behind stable Form handles, and dispatches tags 120..126 directly",
+    "form/form-stdlib/hati-os-kernel.fk -> recipe-side walker helpers and lowered dispatch mirror socket tags 120..126 against existing sibling kernel socket primitives",
+    "form/fourth-arm-bands.txt -> socket-loopback admitted as fks 111111 four-way proof",
+    "form/scripts/fourth-arm.sh -> Windows emitted-C patching keeps legacy request carriers routed through the source-defined socket aliases while direct socket_* tags are emitted by Form",
+    "scripts/verify_windows_fkwu_socket_loopback.ps1 -> PASS windows-fkwu-socket-loopback verdict=111111; PASS fkwu-socket-tags tags=120,121,122,123,124,125,126; runtime-toolchain-free path=C:\\WINDOWS\\System32;C:\\WINDOWS go=absent clang=absent llvm_objdump=absent",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1 -> PASS windows-fkwu-self-jit cold=317811 hot=317811 njit=26; runtime-toolchain-free path=C:\\WINDOWS\\System32;C:\\WINDOWS go=absent clang=absent llvm_objdump=absent",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_form_cli_native.ps1 -> PASS windows-form-cli-native bytes=500736; PASS windows-form-cli-ping output=pong; PASS windows-form-cli-verify native=fkwu embedded_source=true; runtime-toolchain-free path=C:\\WINDOWS\\System32;C:\\WINDOWS go=absent clang=absent llvm_objdump=absent",
+    "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/tests/adler32-band.fk -> verdict 5; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk -> verdict 31; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "git diff --check -> pass",
+    "git fetch origin main && git rebase origin/main -> Current branch codex/windows-fkwu-http-api-floor is up to date",
+    "py -3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> ready_for_push=True; local_preflight=pass",
+    "py -3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> codex_open_prs=0; stale_codex_prs=0",
+    "Subagent Ohm read-only verification -> PASS: git status scope matched expected files; socket primitive verifier passed; adler32 and form-asm each reported fourth arm: 1 band(s) four-way and 0 divergent; git diff --check passed with only LF/CRLF warnings"
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_fkwu_socket_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/verify_windows_fkwu_socket_loopback.ps1"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git diff --check",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_socket_loopback.ps1 -KeepCache",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_form_cli_native.ps1",
+      "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/tests/adler32-band.fk",
+      "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk",
+      "git fetch origin main && git rebase origin/main",
+      "py -3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "py -3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "subagent Ohm read-only verification -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "socket-loopback fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); direct fkwu runtime verdict 111111; socket tag counters 120..126 all > 0",
+      "adler32 fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 5",
+      "form-asm fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 31"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change updates the local Windows host floor and CI workflow. Public deployment validation remains pending until PR checks and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI and deploy validation remain pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Windows fkwu now carries the same minimal socket primitive boundary as the sibling kernels: Form code can open a loopback listener, read its OS-assigned port, connect, accept, send, receive, and close through fkwu-native host socket calls. HTTP verbs are no longer treated as the primitive proof surface.",
+    "public_endpoints": [
+      "local-only: Windows Form stdlib/fkwu socket primitive floor; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Socket primitive proof: verify_windows_fkwu_socket_loopback.ps1 forces a fresh fkwu/table build, runs socket-loopback four-way, then runs the cached fkwu binary directly under a sanitized runtime PATH and verifies verdict 111111 plus socket tag counters 120..126.",
+      "Regression proof: adler32 and form-asm focused bands each validate on Go, Rust, TypeScript, and fkwu with 0 divergent.",
+      "Runtime proof: existing Windows self-JIT and standalone form-cli verifiers still run under a sanitized runtime PATH where Go, clang, and llvm-objdump are absent."
+    ]
+  }
+}
