@@ -23,7 +23,13 @@ fi
 
 echo "Resetting project manager and creating spec task for first backlog item ..."
 cd "$API_DIR"
-.venv/bin/python scripts/project_manager.py --once -v --reset
+# Resolve the venv python for either layout (Windows .venv/Scripts, POSIX .venv/bin).
+if [ -x ".venv/Scripts/python.exe" ]; then
+  VENV_PY=".venv/Scripts/python.exe"
+else
+  VENV_PY=".venv/bin/python"
+fi
+"$VENV_PY" scripts/project_manager.py --once -v --reset
 
 echo "Done. Run the agent runner to execute the spec task (then PM again for impl, etc.):"
-echo "  cd api && .venv/bin/python scripts/agent_runner.py --once -v"
+echo "  cd api && $VENV_PY scripts/agent_runner.py --once -v"

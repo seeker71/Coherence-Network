@@ -322,6 +322,10 @@ def _run_cli(api_base: str, *args: str) -> subprocess.CompletedProcess:
             cwd=str(REPO_ROOT),
             capture_output=True,
             text=True,
+            # Decode the CLI's UTF-8 stdout as UTF-8 regardless of the host
+            # locale; on Windows text=True defaults to cp1252 and mangles
+            # non-ASCII (e.g. the em-dash in `coh help`).
+            encoding="utf-8",
             timeout=20,
             check=False,
             env=env,
