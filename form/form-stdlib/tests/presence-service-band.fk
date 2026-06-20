@@ -1,0 +1,42 @@
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/presence-service.fk
+;
+; Proves a LEARNED-MODEL HTTP service assembled from independently-shared parts:
+; the verb router, a model-backed handler (weights are DATA), and middleware
+; layers anyone can add. Verdict 127 = all seven claims land.
+;   model1 (w=2.0,b=0) predicts x=3.0 -> 6000 ; model2 (w=3.0) -> 9000 (model is data)
+;   stamp layer adds a provenance header ; gate layer 401s without the key, serves with it
+;   a second route (health) is served by its own handler ; the body echoes the oracle
+
+(do
+    (let model1 (list 2000 0))
+    (let model2 (list 3000 0))
+    (let none (list))
+    (let stamp (layer-stamp "X-Served-By" "presence-alpha"))
+    (let gate  (layer-gate "X-Key"))
+    (let reqp "GET /predict?x=3000 HTTP/1.1\r\nHost: x\r\n\r\n")
+    (let reqk "GET /predict?x=3000 HTTP/1.1\r\nHost: x\r\nX-Key: yes\r\n\r\n")
+    (let reqh "GET /health HTTP/1.1\r\nHost: x\r\n\r\n")
+
+    (let r1 (psvc-serve model1 none reqp))
+    (let r2 (psvc-serve model2 none reqp))
+    (let r3 (psvc-serve model1 (list stamp) reqp))
+    (let r4 (psvc-serve model1 (list stamp gate) reqp))
+    (let r5 (psvc-serve model1 (list stamp gate) reqk))
+    (let r6 (psvc-serve model1 none reqh))
+
+    ; learned prediction served over HTTP, body echoes the model output
+    (let c0 (if (and (ge (str_find r1 "200 OK" 0) 0) (ge (str_find r1 "6000" 0) 0)) 1 0))
+    ; the model is DATA: a different weight vector predicts differently
+    (let c1 (if (ge (str_find r2 "9000" 0) 0) 2 0))
+    ; anyone adds a layer: the stamp layer's provenance header is present
+    (let c2 (if (ge (str_find r3 "X-Served-By: presence-alpha" 0) 0) 4 0))
+    ; the gate layer rejects without the key (negative claim)
+    (let c3 (if (and (ge (str_find r4 "401" 0) 0) (eq (str_find r4 "6000" 0) -1)) 8 0))
+    ; the gate layer serves with the key AND the stamp still applies
+    (let c4 (if (and (ge (str_find r5 "6000" 0) 0) (ge (str_find r5 "X-Served-By: presence-alpha" 0) 0)) 16 0))
+    ; a second, independently-added route is served by its own handler (not predict)
+    (let c5 (if (and (ge (str_find r6 "200 OK" 0) 0) (eq (str_find r6 "prediction" 0) -1)) 32 0))
+    ; the served body echoes the four-way oracle exactly
+    (let c6 (if (eq (ms-predict model1 3000) 6000) 64 0))
+
+    (add (add (add c0 c1) (add c2 c3)) (add (add c4 c5) c6)))

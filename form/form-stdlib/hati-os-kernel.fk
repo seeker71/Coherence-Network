@@ -337,8 +337,14 @@
 
 (defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
 
+; A function-ref value is (fn-index arity . captured-values). A bare named
+; function captures nothing — the tail is empty, so the call args pass straight
+; through. A CLOSURE carries captured values after the arity; they ride as the
+; LEADING packed args, so the callee reads them as its first params (the closure
+; is a partial application: captures ++ call-args, packed by arity).
+(defn fkm-cap-append (a b) (if (eq (len a) 0) b (cons (head a) (fkm-cap-append (tail a) b))))
 (defn fkm-icall (fns fv args)
-    (fkm-icall2 fns (head fv) (head (tail fv)) args))
+    (fkm-icall2 fns (head fv) (head (tail fv)) (fkm-cap-append (tail (tail fv)) args)))
 (defn fkm-icall2 (fns fidx arity args)
     (if (eq arity 0) (fkm-walk fns (nth fns fidx) (list))
         (if (eq arity 1) (fkm-walk fns (nth fns fidx) (head args))

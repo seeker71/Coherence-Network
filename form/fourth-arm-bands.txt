@@ -255,8 +255,10 @@ http-render fks 63
 http-parse fks 11
 http-request fks 63
 http-server fks 1023
+model-serve-core fks 15
 tool-channel fks 255
 cell-sync fks 127
+presence-loop fks 1023
 chakra-column fks 127
 champion-challenger fks 127
 classifier-eval fks 63
@@ -348,6 +350,7 @@ form-lower-rec fks 31
 form-lower-streq fks 31
 form-macho fks 31
 form-pe-coff fks 511
+form-pe-coff-affine fks 127
 bootstrap-host fks 4095
 form-elf fks 31
 form-elf-exec fks 63
@@ -753,3 +756,5 @@ speech-real-candidate-race fks 4095
 substrate-cell-gc fks 5000
 symbols-merge fks 12
 word-roots fks 511
+model-handler fks 7
+form-lower-x64 fkc 15

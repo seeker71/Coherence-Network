@@ -1,0 +1,34 @@
+; presence-service.fk — assemble a learned-model HTTP service from shared parts.
+;
+; This is where the independently-authored, independently-shared parts compose
+; into one running service: the verb router (http-server.fk), the learned-model
+; handler (model-service.fk), and the middleware layers (http-layer.fk). Routes
+; are DATA; the registry binds a name to the model-backed, layer-wrapped handler.
+; Adding a part is adding a row — a new route, a new handler, a new layer — never
+; an edit to the flow. The model travels as data; the layers travel as choices;
+; the router is the shared vocabulary every presence already holds.
+;
+; preludes: form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk
+
+(do
+    ; the service routes (DATA): a learned-prediction endpoint + a health probe.
+    ; Anyone adds an endpoint by extending this list and the registry.
+    (defn psvc-routes ()
+        (list (kh-route "predict" "GET" "/predict" 0 "predict" "" 100)
+              (kh-route "health"  "GET" "/health"  0 "health"  "" 100)))
+
+    ; a trivial liveness handler — the second, independently-added part.
+    (defn psvc-health (request) (kh-response 200 (list) "ok"))
+
+    ; the registry binds names -> handlers. predict is the model-backed handler
+    ; wrapped in the presence's chosen layers; health is plain. The model and the
+    ; layers are PARAMETERS — a different presence supplies its own.
+    (defn psvc-registry (model layers)
+        (list (list "predict" (layer-stack (ms-predict-handler model) layers))
+              (list "health"  psvc-health)))
+
+    ; serve a raw HTTP/1.1 request through the assembled service.
+    (defn psvc-serve (model layers raw)
+        (kh-serve (psvc-routes) (psvc-registry model layers) raw))
+
+    0)

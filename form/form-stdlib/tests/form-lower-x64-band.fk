@@ -1,0 +1,32 @@
+; preludes: form-stdlib/form-asm-x64.fk form-stdlib/form-lower-x64.fk
+;
+; Proves the clang-free x86-64 lowering byte-encodes general expression trees,
+; four-way (Go/Rust/TypeScript/fkwu). The x64 twin of form-lower-band. Each tree
+; lowers to the exact standard x64 byte sequence (oracle-checked instruction
+; encodings); execution conviction is in scripts/x64_lower_run.ps1. Verdict 15.
+
+(do
+    (defn lst-eq-go (xs ys)
+        (if (eq (len xs) 0) 1 (if (eq (head xs) (head ys)) (lst-eq-go (tail xs) (tail ys)) 0)))
+    (defn lst-eq (xs ys) (if (eq (len xs) (len ys)) (lst-eq-go xs ys) 0))
+
+    ; n*3+7 = ADD(MUL(ARG,3),7) -> mov rax,rcx; imul rax,rax,3; add rax,7; ret
+    (let p1 (list (list 2) (list 1 3) (list 5 0 1) (list 1 7) (list 3 2 3)))
+    (let c0 (if (eq (lst-eq (lx-compile-fn p1 4)
+                    (list 72 137 200 72 105 192 3 0 0 0 72 5 7 0 0 0 195)) 1) 1 0))
+
+    ; (n+n)*n = MUL(ADD(ARG,ARG),ARG) -> mov rax,rcx; add rax,rcx; imul rax,rcx; ret
+    (let p2 (list (list 2) (list 3 0 0) (list 2) (list 5 1 2)))
+    (let c1 (if (eq (lst-eq (lx-compile-fn p2 3)
+                    (list 72 137 200 72 1 200 72 15 175 193 195)) 1) 2 0))
+
+    ; n*n - 3 = SUB(MUL(ARG,ARG),3) -> mov rax,rcx; imul rax,rcx; sub rax,3; ret
+    (let p3 (list (list 2) (list 5 0 0) (list 1 3) (list 4 1 2)))
+    (let c2 (if (eq (lst-eq (lx-compile-fn p3 3)
+                    (list 72 137 200 72 15 175 193 72 45 3 0 0 0 195)) 1) 4 0))
+
+    ; every recipe begins REX.W (0x48=72) and ends ret (0xC3=195) — the i64 ABI shape
+    (let img (lx-compile-fn p1 4))
+    (let c3 (if (eq (nth img 0) 72) (if (eq (nth img (sub (len img) 1)) 195) 8 0) 0))
+
+    (add (add c0 c1) (add c2 c3)))

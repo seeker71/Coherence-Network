@@ -1,0 +1,55 @@
+; presence-loop.fk — the decision brain of a running native presence.
+;
+; A presence is a minimal native binary that, by default, just *is* and
+; *observes*; when it chooses, it converses with sibling presences. The OS
+; loader (LoadLibrary/dlopen) and the tick live in the thin C host
+; (form/native/presence/form_presence_host.c); ALL policy lives here, in Form,
+; so it is four-way honest and identical on every platform fkwu emits to.
+;
+; The loop's questions, each delegated to the proven substrate logic:
+;   - which minted recipes on the channel do I lack and should pick up?  (diff)
+;   - may I answer a sibling's request for a recipe?                      (consent)
+;   - is an arrival authentic — does re-addressing reproduce its address? (verify)
+;   - integrate the accepted recipe into what I can call — still running. (live)
+;
+; The affine oracle (pl-affine-eval) is the bridge to the metal: the value a
+; lowered  recipe(n)=a*n+b  native DLL must return is computed here in Form, so
+; the four-way verdict IS the oracle the live native call is checked against.
+;
+; preludes: form-stdlib/cell-sync.fk
+
+(do
+    ; --- oracle: what the native-lowered affine recipe must compute ---
+    ; recipe(n) = a*n + b. This is the four-way truth the live DLL is checked on.
+    (defn pl-affine-eval (a b n) (add (mul a n) b))
+
+    ; --- pick up: the minted addresses on the channel that I lack ---
+    (defn pl-pickup (offered have) (cs-missing offered have))
+    (defn pl-pickup-count (offered have) (cs-want-count offered have))
+
+    ; --- answer: I answer a sibling's QUERY for `addr` iff I hold it AND
+    ;     consent permits sharing it. Holding without permission stays silent. ---
+    (defn pl-can-answer? (addr have permitted)
+        (if (eq (cs-has? addr have) 1)
+            (cs-has? addr permitted)
+            0))
+
+    ; --- accept: a transferred item (offered-addr recomputed-addr) is accepted
+    ;     iff re-addressing the payload reproduced the offered address. No trust
+    ;     in the channel — the same no-trusted-prover grain validate.sh holds. ---
+    (defn pl-accept? (item) (cs-authentic? item))
+
+    ; --- integrate: fold an accepted address into what I can call. Pure: the
+    ;     grown capability set is a returned value, never a mutation. This is the
+    ;     model of "a new recipe becomes available while the presence keeps running." ---
+    (defn pl-integrate (addr have) (cons addr have))
+
+    ; --- one tick: pick up every minted address I lack, integrate each, return
+    ;     the grown have-set. The entry never restarts; capability only grows. ---
+    (defn pl-step-go (want have)
+        (if (eq (len want) 0) have
+            (pl-step-go (tail want) (pl-integrate (head want) have))))
+    (defn pl-step (offered have)
+        (pl-step-go (pl-pickup offered have) have))
+
+    0)

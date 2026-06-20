@@ -1,0 +1,50 @@
+# learned-model-service.form - a learned model served over HTTP, from shared parts
+
+(learned-model-service
+  (lineage
+    (rests-on native-presence.form http-server.fk affine-train.fk channel.fk cell-sync-transport.form)
+    (model-handler form/form-stdlib/model-service.fk)
+    (middleware form/form-stdlib/http-layer.fk)
+    (assembly form/form-stdlib/presence-service.fk)
+    (proof-core form/form-stdlib/tests/model-serve-core-band.fk -> 15 four-way)
+    (proof-service form/form-stdlib/tests/model-service-band.fk -> 255 three-way)
+    (proof-wire form/form-stdlib/tests/presence-service-band.fk -> 127 three-way)
+    (federation scripts/federation_service.ps1 -> status pass))
+
+  (purpose
+    "Extend the presence beyond a toy affine recipe to something complex and meaningful: a LEARNED model served over the HTTP verb surface, assembled from parts each cell can build and share independently."
+    "Each part is its own recipe + proof band: a model-backed handler (the ML part), a middleware layer (the 'anyone can add a layer' part), and an assembly that composes them with the existing data-driven router. The model is DATA — train it on one presence, share the weights, serve the same predictions on another."
+    "Anyone can add a part: a new route, a new handler, a new middleware layer, or a new trained model is one recipe/one row, picked up by a running presence without restart.")
+
+  (parts
+    (verb-router "http-server.fk + kernel-http.fk (existing, four-way 1023): data-driven dispatch — routes are kh-route DATA, handlers a named registry. Adding a route is adding a row, never editing the flow.")
+    (model-handler "model-service.fk: ms-predict runs the learned affine model (weights = (list w b), scale 1000, from affine-train.fk's SGD); ms-predict-handler is a FACTORY that returns a handler closure bound to a presence's own weights; ms-body renders the prediction as JSON.")
+    (middleware "http-layer.fk: the layer concept http-server lacks. layer-wrap turns (handler, layer-fn) into a handler; layer-stamp adds a provenance header; layer-gate is an auth gate (401 without the key); layer-stack folds a LIST of layers so adding one is appending a row.")
+    (assembly "presence-service.fk: psvc-serve composes router + model handler + chosen layers into one served service; the model and the layers are PARAMETERS each presence supplies."))
+
+  (floor
+    "Four-way (Go/Rust/TypeScript/fkwu): model-serve-core-band -> 15 — the learned inference as data and the JSON render cross the emitted universal walker."
+    "Three-way (Go/Rust/TypeScript): model-service-band -> 255 (model-backed handler closure, stamp + gate middleware, at the value level) and presence-service-band -> 127 (the full HTTP wire: 200 OK with the prediction, model-as-data swap 6000 vs 9000, stamp header, gate 401-without / serve-with, a second route, oracle-tied body)."
+    "Federation proven LIVE on Windows (scripts/federation_service.ps1 -> status pass): presence A LEARNS a y=2x model by SGD and freezes the model node to a channel (.fkb); B reads the SAME node and serves it; Go and Rust kernels serve the byte-identical prediction {\"prediction\":5964} (content-addressed across kernels); a running presence serves the shared model live, then serves contributor C's different y=3x model {\"prediction\":8965} — same PID, one awake, no restart. 5964 != 8965 proves the model is data, not code.")
+
+  (fourth-arm-floor-advance
+    "There is no permanent wall. The factory closure that captures runtime data (ms-predict-handler bound to the model) was the case the emitted fkwu walker could not carry. It was moved INTO THE FLOOR with proof of work: the walker's indirect-call arm (tag 44) now prepends a ref's captured tail to the call args -- a closure is a partial application (captures ++ args, packed by arity) -- and the flattener lifts a factory body (do (defn inner (p..) body) inner) to a top-level function whose leading params are the captured outer params, emitting the outer body as a make-closure ref (fn-index arity . captured-values). A named ref has an empty tail, so this is purely additive (higher-order-fn-arg still 1111; every prior four-way band unchanged)."
+    "PROVEN: model-handler-band -> 7 four-way (Go/Rust/TypeScript/fkwu) -- the model-capturing handler closure serves the prediction on the emitted walker. The change lives in hati-os-kernel.fk (fkm-icall), hati-os-kernel-emit.fk (tag-44 C), and form-flatten.fk (flt-factory-parse + flt-make-closure)."
+    "NEXT RUNG (owned, not buried): multi-level closures -- a closure that captures and CALLS another closure (the layer-wrap/layer-stamp/layer-gate middleware, where a layer-fn is itself a closure passed and invoked) -- does not yet cross the emitted walker (single-level data capture works; closure-of-closure faults it). So the full middleware composition (model-service-band 255, presence-service-band 127) stays three-way until that rung lands -- a tracked walker-emitter fix, the same discipline that crossed higher-order-fn-arg and the float-pool capacity wall before it, never a permanent wall."
+
+  (north-star
+    "Presences run a real service mesh: a model trained on one host is gossiped over a channel, picked up by peers, served per host (native-first where the recipe lowers, kernel-walked otherwise), and offered onward. A new layer (auth, rate-limit, translation) authored by anyone composes into every presence's stack by appending one row."
+    "The HTTP verb surface is the example; the same shape carries any BML recipe — a learned classifier, a translation lens, a compute kernel — built as a part, shared as a node, integrated live.")
+
+  (receipt-command
+    (four-way "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-serve-core-band.fk")
+    (three-way-service "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/tests/model-service-band.fk")
+    (three-way-wire "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/presence-service.fk form-stdlib/tests/presence-service-band.fk")
+    (federation "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/federation_service.ps1"))
+
+  (gaps
+    (no-real-socket "psvc-serve takes a raw HTTP/1.1 STRING and returns a response STRING — the verb logic is real and proven, but no TCP socket is bound; the socket carrier is the dumb host boundary, named not claimed (like the OS loader for native).")
+    (closures-three-way "The model/middleware closure composition is three-way; only the data-level inference+render is four-way. Lifting closures-capturing-data to the fourth arm is a walker capability gap.")
+    (live-serve-is-kernel-walk "The running presence serves rich recipes by walking them on the kernel (a popen cmd job), not by native machine code — the affine subset lowers to native; HTTP/ML do not lower yet. Native-first when ready, walk otherwise.")
+    (shared-vocabulary-deps "A shared model crosses as DATA; the predict/render recipe must already exist in the receiver (the shared stdlib vocabulary). A recipe that calls an unknown function needs that dependency shipped or registry-resolved — named in cell-sync-transport.form, not built here.")
+    (windows-only-live "The live federation ran on Windows; mac/android reuse the proven recipe-dylib and kernel-on-android lanes but have not been run live.")))

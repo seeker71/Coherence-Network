@@ -222,6 +222,25 @@
     (load   "form-kernel-go native dylib_call on Windows uses LoadLibrary/GetProcAddress and calls int64 f(int64); jit_dll_windows_test.go proves emit->link->load->call and swaps DLL recipes behind the same recipe symbol")
     (lane   "this is the Windows x86_64 Intel/AMD instruction lane; Windows ARM64 remains the shared ARM64 assembler lane with its own PE/COFF image surface still to lift"))
 
+  # ── The x64 LOWERING — REALIZED: a general expression compiler, zero clang ──
+  # form-pe-coff wrapped caller-supplied bytes; the Windows x64 lane had no
+  # general LOWERING (only hand-encoded recipes + the affine lea). form-asm-x64.fk
+  # (the x64 instruction byte encoders: mov/add/sub/imul reg+imm, push/pop spill,
+  # ret) and form-lower-x64.fk (the x64 twin of form-lower: an op-tagged tree ->
+  # single-accumulator RAX codegen, arg banked in RCX, operand-aware fold, re-
+  # entrant stack spill for nested subtrees) compile an arbitrary LIT/ARG/ADD/SUB/
+  # MUL tree to x64 machine bytes — no clang. Proven four-way (tests/form-lower-x64-
+  # band.fk -> 15) and by EXECUTION: scripts/x64_lower_run.ps1 lowers n*3+7, n*n+n,
+  # (n+n)*n, n*n-3 -> form-pe-coff object -> lld-link DLL -> bootstrap host RUNS
+  # them (22/307/90/50/33), the recipe code 100% Form-emitted, clang nowhere in the
+  # code path (gcc builds only the host exe; lld-link is the linker carrier).
+  (x64-lowering-realized
+    (encoder  "form-asm-x64.fk -> the x86-64 byte encoders (REX.W mov/add/sub/imul, push/pop, ret)")
+    (lowering "form-lower-x64.fk -> lo-node's x64 twin: tree -> RAX single-accumulator, RCX-banked arg, operand-aware fold + re-entrant push/pop spill")
+    (fourth-arm "tests/form-lower-x64-band.fk is in the fourth-arm manifest and passes fkwu four-way at 15")
+    (runs     "scripts/x64_lower_run.ps1: five trees (incl. non-affine) lower -> PE/COFF -> DLL -> bootstrap host RUN, byte-correct results, zero clang in the code path")
+    (next     "branches (cmp + jcc) and CALL/recursion for the full fib shape, the x64 twin of form-lower's COND/bl; then general register allocation beyond single-accumulator"))
+
   (bootstrap-exe-realized
     (source "form/native/bootstrap/form_bootstrap_host.c is the minimal cross-platform host exe source: LoadLibraryA/GetProcAddress on Windows, dlopen/dlsym on macOS/Linux/Android, call i64->i64, print result")
     (abi    "form/form-stdlib/bootstrap-host.fk names the contract four-way at tests/bootstrap-host-band.fk -> 4095: form-bootstrap-host + swappable Form dynamic libraries")
