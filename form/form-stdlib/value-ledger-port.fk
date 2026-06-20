@@ -1,0 +1,121 @@
+; value-ledger-port.fk -- the CC ledger as a Form-native storage-port layer.
+;
+; The append-only CC ledger: POST an entry, read it, list an account's entries,
+; and derive an account BALANCE by FOLDING the entry log (+amount). Balance is
+; never a stored mutable counter — it is recomputed from the appends, so an
+; account cannot be corrupted independently of its entries; a duplicate post is
+; refused (the single-node double-spend guard). Same call-site shape across
+; memory / file / db carriers: offline the file carrier IS the journal and
+; cache-phase is the double-spend detector on merge-back, online the db carrier
+; is the same recipe. The first real value-ledger-port rung of offline-endpoints.
+;
+; Python contract mirrored at the boundary:
+;   api/app/services/coherence_credit_service.py (balances, supply)
+;   api/app/routers/value_lineage.py, cc_economics.py, treasury.py
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk
+;
+(do
+    ;; ---- storage keys -----------------------------------------------------
+    (defn vl-entry-key (id) (str_concat "value-cc/entry/" id))
+    (defn vl-amount-key (id) (str_concat "value-cc/entry/" (str_concat id "/amt")))
+    (defn vl-account-index-key (account) (str_concat "value-cc/index/account/" account))
+    (defn vl-total-count-key () "value-cc/count/total")
+
+    ;; entry envelope (durable plain string) — id/account/kind/amount. A native
+    ;; route returns this as proof now; a later codec projects the same fields.
+    (defn vl-entry-value (id account kind amount)
+        (str_concat "id=" (str_concat id
+        (str_concat "\naccount=" (str_concat account
+        (str_concat "\nkind=" (str_concat kind
+        (str_concat "\namount=" (int_to_str amount)))))))))
+
+    ;; ---- small string/list helpers (generic; lift to a shared storage-index later) ----
+    (defn vl-split-lines-loop (s i n acc cur)
+        (if (eq i n)
+            (reverse (if (str_eq cur "") acc (cons cur acc)))
+            (if (str_eq (char_at s i) "\n")
+                (vl-split-lines-loop s (add i 1) n
+                    (if (str_eq cur "") acc (cons cur acc)) "")
+                (vl-split-lines-loop s (add i 1) n acc
+                    (str_concat cur (char_at s i))))))
+    (defn vl-split-lines (s) (vl-split-lines-loop s 0 (str_len s) (empty) ""))
+
+    ;; ---- count helpers ----------------------------------------------------
+    (defn vl-count-value (carrier store key)
+        (do
+            (let got (storage-get carrier store key))
+            (if (eq (storage-found? got) 1) (str_to_int (storage-value got)) 0)))
+    (defn vl-put-count (carrier store key value)
+        (storage-put carrier store key (int_to_str value)))
+    (defn vl-bump-count (carrier store key delta)
+        (vl-put-count carrier store key (add (vl-count-value carrier store key) delta)))
+
+    ;; ---- account index (newline-joined entry ids) -------------------------
+    (defn vl-index-text (carrier store account)
+        (do
+            (let got (storage-get carrier store (vl-account-index-key account)))
+            (if (eq (storage-found? got) 1) (storage-value got) "\n")))
+    ;; vl-post refuses duplicate entry ids, so the index never sees an id twice —
+    ;; the append is unconditional (no contains? guard needed).
+    (defn vl-index-add-id (carrier store account id)
+        (storage-put carrier store (vl-account-index-key account)
+            (str_concat (vl-index-text carrier store account) (str_concat id "\n"))))
+    (defn vl-account-entry-ids (carrier store account)
+        (vl-split-lines (vl-index-text carrier store account)))
+
+    ;; ---- ledger ops -------------------------------------------------------
+    (defn vl-entry-exists? (carrier store id)
+        (storage-has? carrier store (vl-entry-key id)))
+
+    (defn vl-get (carrier store id) (storage-get carrier store (vl-entry-key id)))
+
+    ;; POST: append-only. A duplicate id is REFUSED (replay / double-count guard);
+    ;; a correction is a new compensating entry, never a mutation of an old one.
+    (defn vl-post (carrier store id account kind amount)
+        (if (eq (vl-entry-exists? carrier store id) 1)
+            store
+            (do
+                (let s1 (storage-put carrier store (vl-entry-key id)
+                    (vl-entry-value id account kind amount)))
+                (let s2 (storage-put carrier s1 (vl-amount-key id) (int_to_str amount)))
+                (let s3 (vl-index-add-id carrier s2 account id))
+                (vl-bump-count carrier s3 (vl-total-count-key) 1))))
+
+    (defn vl-amount-of (carrier store id)
+        (do
+            (let got (storage-get carrier store (vl-amount-key id)))
+            (if (eq (storage-found? got) 1) (str_to_int (storage-value got)) 0)))
+
+    ;; BALANCE = fold (+amount) over the account's entry ids — the read-model.
+    ;; Signed amounts: a debit is a negative entry, summed by the same fold.
+    (defn vl-balance-loop (carrier store ids acc)
+        (if (nil? ids) acc
+            (vl-balance-loop carrier store (tail ids)
+                (add acc (vl-amount-of carrier store (head ids))))))
+    (defn vl-balance (carrier store account)
+        (vl-balance-loop carrier store (vl-account-entry-ids carrier store account) 0))
+
+    (defn vl-count (carrier store) (vl-count-value carrier store (vl-total-count-key)))
+
+    ;; ---- executable proof -------------------------------------------------
+    ;; 111111 = post/credit/debit fold, unknown-account 0, duplicate refused,
+    ;; entry exists, and conservation (sum of balances) all hold for any carrier.
+    (defn vl-test (carrier config)
+        (do
+            (let s0 (storage-open carrier config))
+            (let s1 (vl-post carrier s0 "e1" "alice" "credit" 100))
+            (let s2 (vl-post carrier s1 "e2" "alice" "credit" 50))
+            (let s3 (vl-post carrier s2 "e3" "alice" "debit" (sub 0 30)))
+            (let s4 (vl-post carrier s3 "e1" "alice" "credit" 999))  ; duplicate id -> refused
+            (let s5 (vl-post carrier s4 "e4" "bob" "credit" 40))
+
+            (let alice-ok (if (eq (vl-balance carrier s5 "alice") 120) 1 0))        ; 100+50-30
+            (let bob-ok (if (eq (vl-balance carrier s5 "bob") 40) 10 0))
+            (let unknown-ok (if (eq (vl-balance carrier s5 "carol") 0) 100 0))      ; unknown account = 0
+            (let count-ok (if (eq (vl-count carrier s5) 4) 1000 0))                 ; duplicate refused -> 4 not 5
+            (let exists-ok (if (eq (vl-entry-exists? carrier s5 "e1") 1) 10000 0))
+            (let conserve-ok
+                (if (eq (add (vl-balance carrier s5 "alice") (vl-balance carrier s5 "bob")) 160) 100000 0))
+            (sum (list alice-ok bob-ok unknown-ok count-ok exists-ok conserve-ok))))
+    0)
