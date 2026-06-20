@@ -28,12 +28,25 @@ Non-negotiable:
 
 Minimum startup sequence:
 
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1
+git fetch origin main
+git worktree add "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>" -b "codex/<thread-name>" origin/main
+Set-Location "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>"
+git pull --ff-only origin main
+make prompt-guide
+```
+
+Git Bash / Linux / macOS:
+
 ```bash
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
-make prompt-gate
+make prompt-guide
 ```
 
 ### Phase 0: Start Gate (required before new task work)
@@ -41,7 +54,7 @@ make prompt-gate
 Run from the target worktree:
 
 ```bash
-make prompt-gate
+make prompt-guide
 ```
 
 Gate status:
@@ -50,7 +63,8 @@ Gate status:
 - PASS only when thread context is valid: linked worktree OR `codex/*` branch.
 
 Start command:
-- `make prompt-gate` is the required prompt-entry command. It is intentionally cheap: CLAUDE.md orientation, branch/worktree safety, and sibling continuity guidance.
+- `make prompt-guide` is the required prompt-entry command. It is intentionally cheap: CLAUDE.md orientation, branch/worktree safety, and sibling continuity guidance.
+- `make prompt-gate` remains a legacy alias.
 - `./scripts/prompt_entry_gate.sh --force-full` runs the heavier start-gate + rebase + local guard proof when a thread explicitly needs it before commit/push.
 - `make start-gate` is intentionally minimal and only validates branch/worktree safety.
 

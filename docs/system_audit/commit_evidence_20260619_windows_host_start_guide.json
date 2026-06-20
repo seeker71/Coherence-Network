@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-19",
+  "thread_branch": "codex/windows-host-start-guide",
+  "commit_scope": "Enable Windows 11 startup by adding a host bootstrap, making startup Makefile targets Windows-aware, and documenting PowerShell worktree flow.",
+  "files_owned": [
+    "AGENTS.md",
+    "Makefile",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/audit_bml_bmf_kernel_natives.py",
+    "scripts/check_ghx_auth.sh",
+    "scripts/ghx.sh",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/setup_windows_host.ps1",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "idea_ids": [
+    "coherence-network-windows-host-enablement"
+  ],
+  "spec_ids": [
+    "process-worktree-quickstart"
+  ],
+  "task_ids": [
+    "task-2026-06-19-windows-host-start-guide"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "documentation",
+        "host-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_windows_host.ps1 -> pass; installed/prepared host prerequisites, ghx profile, and env files",
+    "scripts/ghx.sh auth profile mapping -> fixed credentialed HTTPS remote parsing so ghx selects gh-seeker71 in tokenized Windows worktrees",
+    "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' start-guide -> pass",
+    "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' prompt-guide -> pass",
+    "py -3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> pass after fixing Windows python3 shim path, UTF-8 read in audit_bml_bmf_kernel_natives.py, and nested Python subprocess calls in worktree_pr_guard.py",
+    "py -3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> pass",
+    "make -n setup -> cd api && py -3 -m venv .venv && .venv/Scripts/pip.exe install -e \".[dev]\"",
+    "make -n web-dev -> cd web && npm.cmd run dev",
+    "make -n pr-preflight -> py -3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "Makefile",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "scripts/audit_bml_bmf_kernel_natives.py",
+    "scripts/check_ghx_auth.sh",
+    "scripts/ghx.sh",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/setup_windows_host.ps1",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_windows_host.ps1",
+      "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' prompt-guide",
+      "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' start-guide",
+      "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' -n setup",
+      "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' -n web-dev",
+      "& 'C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe' -n pr-preflight",
+      "py -3 scripts\\validate_commit_evidence.py --file docs\\system_audit\\commit_evidence_20260619_windows_host_start_guide.json",
+      "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main",
+      "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-required-process-only"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Local validation passed; CI and deploy validation remain pending until commit, push, and PR."
+  }
+}
