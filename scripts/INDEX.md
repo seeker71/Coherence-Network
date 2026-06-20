@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 300
+**Total files**: 303
 
 | File | Purpose |
 |---|---|
@@ -36,6 +36,8 @@
 | [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | Bootstrap a persistent agent session against the real substrate. |
 | [bootstrap_sqlite_from_production_archive.py](bootstrap_sqlite_from_production_archive.py) | Bootstrap a local SQLite DB from a real archived production Postgres dump. |
 | [build_arrival_symbol_pack.py](build_arrival_symbol_pack.py) | Build the arrival symbol pack — the MDL-optimal, complete, self-referential |
+| [build_form_knowledge_corpus.py](build_form_knowledge_corpus.py) | Build the Form-knowledge fine-tune corpus from the body's OWN files. |
+| [build_form_llama.sh](build_form_llama.sh) | build_form_llama.sh — train + fuse + serve the Form-knowledge local oracle. |
 | [build_hati_os_public_assets.sh](build_hati_os_public_assets.sh) | build_hati_os_public_assets.sh - build public Hati-OS native release assets. |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
@@ -70,6 +72,7 @@
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
+| [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
 | [export_graph_to_repo.py](export_graph_to_repo.py) | Export graph-stored content back into the repo as files. |

@@ -89,9 +89,13 @@
 
 ; the verb entry: ask uses the default local model. The question is everything after
 ; the verb word (the caller strips "ask "); empty question -> a usage line.
+; The default oracle is form-llama — the base llama3.2:3b LoRA-tuned on the body's
+; own Form/substrate corpus (scripts/build_form_knowledge_corpus.py +
+; scripts/build_form_llama.sh), so the local lane reasons about Form natively
+; instead of escalating. Served by ollama at the same /api/generate wire.
 (defn fca-ask (question)
     (if (eq (str_len question) 0)
         "ask: usage — ask <question>   (answered by the local oracle, native on fkwu)"
-        (fca-ask-model "llama3.2:3b" question)))
+        (fca-ask-model "form-llama" question)))
 
 0
