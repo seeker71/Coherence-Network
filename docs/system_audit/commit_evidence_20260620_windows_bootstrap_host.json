@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-form-host-bootstrap",
+  "commit_scope": "Add a minimal Windows bootstrap host executable source that loads swappable Form-emitted PE/COFF recipe DLLs, proving a replaceable exe surface with kernel parts behind dynamic-library boundaries.",
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/offline-endpoints.form",
+    "docs/system_audit/commit_evidence_20260620_windows_bootstrap_host.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bootstrap_windows_test.go",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/windows-bootstrap-host-band.fk",
+    "form/form-stdlib/windows-bootstrap-host.fk",
+    "form/fourth-arm-bands.txt",
+    "form/native/",
+    "form/native/windows/bootstrap/form_bootstrap_host.c"
+  ],
+  "idea_ids": [
+    "form-native-models",
+    "windows-x86_64-native-floor",
+    "swappable-kernel-bootstrap"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "fourth-kernel-physical-lanes",
+    "form-to-asm"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-bootstrap-host"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-tesla",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-form-host-bootstrap",
+    "form/native/windows/bootstrap/form_bootstrap_host.c -> minimal C host exe source: LoadLibraryA, GetProcAddress, call i64->i64, print result",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/windows-bootstrap-host.fk form-stdlib/tests/windows-bootstrap-host-band.fk -> core.fk+windows-bootstrap-host.fk+windows-bootstrap-host-band.fk -> 255; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk -> core.fk+hati-os-targets.fk+hati-os-targets-band.fk -> 8388607; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && bash scripts/fourth-arm-gate.sh windows-bootstrap-host hati-os-targets -> PASS-4WAY windows-bootstrap-host and PASS-4WAY hati-os-targets",
+    "cd form/form-kernel-go && go test . -run \"TestWindowsBootstrapHostExeLoadsAndSwapsFormDLLs|TestWindowsRecipeDLLLoadsCallsAndSwaps|TestWindowsDylibCallRefusesMissing\" -v -> Windows host exe compiles, two Form-emitted PE/COFF recipe DLLs link, and the exe loads/swaps both behind recipe",
+    "Subagent Tesla final read-only verification -> PASS: git diff --check, focused Form validates, fourth-arm gate, and Windows bootstrap exe/DLL swap Go tests"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/offline-endpoints.form",
+    "docs/system_audit/commit_evidence_20260620_windows_bootstrap_host.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bootstrap_windows_test.go",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/windows-bootstrap-host-band.fk",
+    "form/form-stdlib/windows-bootstrap-host.fk",
+    "form/fourth-arm-bands.txt",
+    "form/native/",
+    "form/native/windows/bootstrap/form_bootstrap_host.c"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git diff --check",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/windows-bootstrap-host.fk form-stdlib/tests/windows-bootstrap-host-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && bash scripts/fourth-arm-gate.sh windows-bootstrap-host hati-os-targets",
+      "cd form/form-kernel-go && go test . -run \"TestWindowsBootstrapHostExeLoadsAndSwapsFormDLLs|TestWindowsRecipeDLLLoadsCallsAndSwaps|TestWindowsDylibCallRefusesMissing\" -v",
+      "subagent Tesla read-only verification -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "windows-bootstrap-host fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 255",
+      "hati-os-targets fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 8388607"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change adds a local Windows native bootstrap floor. Public deployment validation remains pending until PR checks and post-merge deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI and deploy validation remain pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Windows x86_64 now has a minimal compiled host exe that can load a Form-emitted recipe DLL, call the recipe entrypoint, and swap DLL implementations without relinking the exe.",
+    "public_endpoints": [
+      "local-only: Form stdlib, Windows bootstrap C source, and Go native loader tests; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Form four-way proof: windows-bootstrap-host band validates to 255 on Go, Rust, TypeScript, and fkwu with 0 divergent.",
+      "Target catalog proof: hati-os-targets validates to 8388607 with Windows x64 executable floor promoted to form-pe-coff+dll-bootstrap-exe.",
+      "Runtime proof: Go test compiles form_bootstrap_host.c into form-bootstrap-host.exe, emits two Form PE/COFF objects, links two DLLs with lld-link /dll /noentry /machine:x64 /export:recipe, and confirms the exe swaps both DLLs behind the same exported recipe symbol."
+    ]
+  }
+}
