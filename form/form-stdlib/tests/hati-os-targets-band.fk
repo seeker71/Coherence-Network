@@ -1,10 +1,11 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
 ;
 ; hati-os-targets-band - host OS implementation and distribution catalog proof.
-; Verdict 2097151 when macOS, Android, Windows ARM64, Windows amd64, and
+; Verdict 8388607 when macOS, Android, Windows ARM64, Windows amd64, and
 ; Windows x86_64 target rows, oracle surfaces, Form-native object/executable
-; emitters or explicit pending PE/COFF gaps, arm64/x64 JIT runtime rows,
-; implementation rows, and hati.earth download coordinates are discoverable.
+; emitters or explicit pending ARM64 PE/COFF gaps, arm64/x64 JIT runtime rows,
+; Windows x64 loadable-DLL carrier rows, implementation rows, and hati.earth
+; download coordinates are discoverable.
 
 (do
     (let c0 (if (eq (len (hos-targets)) 5)
@@ -128,6 +129,18 @@
                         0)
                     0)
                 0))
+    (let c21 (if (str_eq (hos-target-form-native-object win64) "form-pe-coff")
+                (if (str_eq (hos-target-form-native-executable win64) "form-pe-coff+lld-link-dll")
+                    (if (str_eq (hos-target-form-native-object windows) "form-pe-coff")
+                        (if (str_eq (hos-target-form-native-executable windows) "form-pe-coff+lld-link-dll") 2097152 0)
+                        0)
+                    0)
+                0))
+    (let c22 (if (str_eq (hos-target-binary-format win64) "pe-coff")
+                (if (str_eq (hos-target-assembly-surface win64) "pe-coff+x64-asm")
+                    (if (str_eq (hos-target-jit-runtime win64) "fkwu-self-jit-no-runtime-toolchain") 4194304 0)
+                    0)
+                0))
 
     (let total0 (add c0 c1))
     (let total1 (add total0 c2))
@@ -148,4 +161,6 @@
     (let total16 (add total15 c17))
     (let total17 (add total16 c18))
     (let total18 (add total17 c19))
-    (add total18 c20))
+    (let total19 (add total18 c20))
+    (let total20 (add total19 c21))
+    (add total20 c22))

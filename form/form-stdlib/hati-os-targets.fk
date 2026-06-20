@@ -27,8 +27,8 @@
             (hos-target "macos-arm64" "macos" "arm64" "mach-o" "tar.zst" "hati-os" "arm64-apple-macosx" "mach-o-relocatable+arm64-asm" "form-macho" "form-macho+ld" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
             (hos-target "android-arm64" "android" "arm64" "elf" "tar.zst" "hati-os" "aarch64-linux-android" "elf-relocatable+aarch64-asm" "form-elf" "form-elf-exec" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
             (hos-target "windows-arm64" "windows" "arm64" "pe-coff" "zip" "hati-os.exe" "aarch64-pc-windows-msvc" "pe-coff+arm64-asm" "form-pe-coff-arm64-pending" "form-pe-arm64-exec-pending" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
-            (hos-target "windows-amd64" "windows" "amd64" "pe-coff" "zip" "hati-os.exe" "x86_64-pc-windows-msvc" "pe-coff+x64-asm" "form-pe-coff-pending" "form-pe-exec-pending" "optional-clang-llvm-build-witness" "fkwu-self-jit-no-runtime-toolchain" "form-authored-fkc-nat-expr-hot-flip")
-            (hos-target "windows-x86_64" "windows" "x86_64" "pe-coff" "zip" "hati-os.exe" "x86_64-pc-windows-msvc" "pe-coff+x64-asm" "form-pe-coff-pending" "form-pe-exec-pending" "optional-clang-llvm-build-witness" "fkwu-self-jit-no-runtime-toolchain" "form-authored-fkc-nat-expr-hot-flip")))
+            (hos-target "windows-amd64" "windows" "amd64" "pe-coff" "zip" "hati-os.exe" "x86_64-pc-windows-msvc" "pe-coff+x64-asm" "form-pe-coff" "form-pe-coff+lld-link-dll" "optional-clang-llvm-build-witness" "fkwu-self-jit-no-runtime-toolchain" "form-authored-fkc-nat-expr-hot-flip")
+            (hos-target "windows-x86_64" "windows" "x86_64" "pe-coff" "zip" "hati-os.exe" "x86_64-pc-windows-msvc" "pe-coff+x64-asm" "form-pe-coff" "form-pe-coff+lld-link-dll" "optional-clang-llvm-build-witness" "fkwu-self-jit-no-runtime-toolchain" "form-authored-fkc-nat-expr-hot-flip")))
 
     (defn hos-impl (target protocol capability implementation floor north-star)
         (list target protocol capability implementation floor north-star))
