@@ -42,9 +42,8 @@ trap 'rm -rf "$W"' EXIT
 # the emit chain (plain Form) + the flatten chain.
 EMIT_CHAIN="$S/minimal-surface.fk $S/hati-os-kernel.fk $S/hati-os-kernel-emit.fk"
 FLAT_CHAIN="$EMIT_CHAIN $S/form-parse.fk $S/form-flatten.fk"
-# http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's 'ask'
-# verb calls fca-ask -> http-fetch -> sock_request (the fkwu-native wire), so the
-# ask lane must be defined before the dispatcher that routes to it.
+# The ask lane routes through http-fetch over the socket host-call floor for
+# plaintext HTTP, so it must be defined before the dispatcher that routes to it.
 MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/form-cli.fk\"))"
 BAND="(read_file \"$S/form-cli-repl.fk\")"
 

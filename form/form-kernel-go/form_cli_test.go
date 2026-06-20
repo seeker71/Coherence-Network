@@ -29,9 +29,8 @@ func TestFkwuFormCli(t *testing.T) {
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
-	// http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's
-	// 'ask' verb calls fca-ask -> http-fetch, so the ask lane must be defined
-	// before the dispatcher. Mirrors build-form-cli.sh's MODS.
+	// The ask lane rides ahead of form-cli.fk so fc-respond can route through
+	// http-fetch before dispatch. Mirrors build-form-cli.sh's MODS.
 	httpClient := filepath.Join(stdlib, "http-client.fk")
 	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	mainCli := filepath.Join(stdlib, "form-cli-main.fk")
@@ -109,9 +108,8 @@ func TestFkwuFormCliRepl(t *testing.T) {
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
-	// http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's
-	// 'ask' verb calls fca-ask -> http-fetch, so the ask lane must be defined
-	// before the dispatcher. Mirrors build-form-cli.sh's MODS.
+	// The ask lane rides ahead of form-cli.fk so fc-respond can route through
+	// http-fetch before dispatch. Mirrors build-form-cli.sh's MODS.
 	httpClient := filepath.Join(stdlib, "http-client.fk")
 	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	repl := filepath.Join(stdlib, "form-cli-repl.fk")
@@ -202,9 +200,8 @@ func TestFkwuFormCliCombined(t *testing.T) {
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
-	// http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's
-	// 'ask' verb calls fca-ask -> http-fetch, so the ask lane must be defined
-	// before the dispatcher. Mirrors build-form-cli.sh's MODS.
+	// The ask lane rides ahead of form-cli.fk so fc-respond can route through
+	// http-fetch before dispatch. Mirrors build-form-cli.sh's MODS.
 	httpClient := filepath.Join(stdlib, "http-client.fk")
 	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	repl := filepath.Join(stdlib, "form-cli-repl.fk")

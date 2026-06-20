@@ -1,23 +1,37 @@
 ; http-client-render-band.fk - every HTTP method renders in source grammar.
 ;
-; preludes: form-stdlib/http-client.fk
+; preludes: form-stdlib/language-model.fk form-stdlib/http-client.fk form-stdlib/http-client-exchange.fk
 ;
 ; Method is data. POST/PUT/DELETE/OPTIONS and arbitrary PROPFIND all render
-; through the same Form recipe, and bodies add Content-Length. Verdict: 63.
+; through the same generic HttpExchange class, and bodies add Content-Length.
+; Verdict: 2047.
 
-section [form.action] {
-    let post = kh-render-request("POST", "/echo", "api.x", "abcdefg");
-    let put = kh-render-request("PUT", "/x", "h", "");
-    let del = kh-render-request("DELETE", "/y", "h", "");
-    let opt = kh-render-request("OPTIONS", "/z", "h", "");
-    let any = kh-render-request("PROPFIND", "/w", "h", "xy");
+section [form.bml] {
+    def hcr_score(ok, bit) {
+        if ok then bit else 0;
+    }
 
-    let c0 = if eq(str_find(post, "POST /echo HTTP/1.0", 0), 0) then 1 else 0;
-    let c1 = if gt(str_find(post, "Content-Length: 7", 0), 0) then 2 else 0;
-    let c2 = if eq(str_find(put, "PUT /x HTTP/1.0", 0), 0) then 4 else 0;
-    let c3 = if eq(str_find(del, "DELETE /y HTTP/1.0", 0), 0) then 8 else 0;
-    let c4 = if eq(str_find(opt, "OPTIONS /z HTTP/1.0", 0), 0) then 16 else 0;
-    let c5 = if eq(str_find(any, "PROPFIND /w HTTP/1.0", 0), 0) then 32 else 0;
+    def http_client_render_band_score() {
+        let post = PlainSocketHttpExchange_render_request("POST", "/echo", "api.x", "abcdefg");
+        let put = PlainSocketHttpExchange_render_request("PUT", "/x", "h", "");
+        let del = PlainSocketHttpExchange_render_request("DELETE", "/y", "h", "");
+        let opt = PlainSocketHttpExchange_render_request("OPTIONS", "/z", "h", "");
+        let any = PlainSocketHttpExchange_render_request("PROPFIND", "/w", "h", "xy");
+        let render_member = language-class-member-named(language-class-members(PlainSocketHttpExchange), "render_request");
+        let fetch_member = language-class-member-named(language-class-members(PlainSocketHttpExchange), "fetch");
+        sum(list(
+            hcr_score(eq(str_find(post, "POST /echo HTTP/1.0", 0), 0), 1),
+            hcr_score(gt(str_find(post, "Content-Length: 7", 0), 0), 2),
+            hcr_score(eq(str_find(put, "PUT /x HTTP/1.0", 0), 0), 4),
+            hcr_score(eq(str_find(del, "DELETE /y HTTP/1.0", 0), 0), 8),
+            hcr_score(eq(str_find(opt, "OPTIONS /z HTTP/1.0", 0), 0), 16),
+            hcr_score(eq(str_find(any, "PROPFIND /w HTTP/1.0", 0), 0), 32),
+            hcr_score(language-template-valid?(HttpExchange), 64),
+            hcr_score(language-class-valid?(PlainSocketHttpExchange), 128),
+            hcr_score(eq(len(language-template-members(HttpExchange)), 3), 256),
+            hcr_score(eq(language-class-member-kind(render_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), 512),
+            hcr_score(eq(language-class-member-kind(fetch_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), 1024)));
+    }
 
-    add(c0, add(c1, add(c2, add(c3, add(c4, c5)))));
+    http_client_render_band_score();
 }

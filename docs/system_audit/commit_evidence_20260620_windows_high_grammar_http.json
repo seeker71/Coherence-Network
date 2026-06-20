@@ -1,0 +1,160 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-high-grammar-http",
+  "commit_scope": "Lift the Windows fkwu HTTP client proof to the highest currently executable grammar: BML socket runtime recipes plus a separated generic HttpExchange class wrapper, with fkwu socket/runtime verification preserved.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260620_windows_high_grammar_http.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/build-form-cli.sh",
+    "form/form-kernel-go/form_cli_test.go",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/http-client-exchange.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/http-client-render-band.fk",
+    "form/form-stdlib/tests/http-client-socket-response-band.fk",
+    "form/form-stdlib/tests/http-client-socket-verbs-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_http_response_socket.ps1",
+    "scripts/verify_windows_fkwu_http_verbs_socket.ps1"
+  ],
+  "idea_ids": [
+    "windows-x86_64-native-floor",
+    "form-native-http",
+    "high-grammar-form-runtime",
+    "fkwu-socket-floor"
+  ],
+  "spec_ids": [
+    "fourth-kernel-physical-lanes",
+    "fkwu-host-io-port-plan",
+    "bml-source-lowering"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-high-grammar-http"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-raman",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-high-grammar-http on branch codex/windows-high-grammar-http",
+    "git stash push --include-untracked; git fetch origin main; git rebase origin/main; git stash pop -> current branch up to date with origin/main, stash restored cleanly",
+    "py -3 scripts\\validate_commit_evidence.py --file docs\\system_audit\\commit_evidence_20260620_windows_high_grammar_http.json -> OK: evidence validation passed",
+    "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main -> local_preflight=pass; ready_for_push=True; all selected readings clear",
+    "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> codex_open_prs=0; stale_codex_prs=0",
+    "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-socket-verbs-band.fk -> verdict 127; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-socket-response-band.fk -> verdict 8191; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/http-client.fk form-stdlib/http-client-exchange.fk form-stdlib/tests/http-client-render-band.fk -> verdict 2047; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "PowerShell .\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1 -> PASS windows-fkwu-http-client-socket-verbs verdict=127; PASS windows-fkwu-http-exchange-render verdict=2047; socket tags 120..126 hit; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_fkwu_http_response_socket.ps1 -> PASS windows-fkwu-http-client-socket-response verdict=8191; socket tags 120..126 hit; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_form_cli_native.ps1 -> PASS windows-form-cli-native; ping=pong; verify native=fkwu embedded_source=true; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_fkwu_socket_loopback.ps1 -> PASS windows-fkwu-socket-loopback verdict=111111; socket tags 120..126 hit; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_fkwu_self_jit.ps1 -> PASS windows-fkwu-self-jit cold=317811 hot=317811 njit=26; runtime PATH without Go, clang, or LLVM",
+    "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk -> verdict 511; 1 ok, 0 divergent",
+    "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk -> verdict 0; 1 ok, 0 divergent",
+    "go test . -run TestFkwuFormCli -count=1 from form/form-kernel-go -> ok form-kernel-go",
+    "git diff --check -> no whitespace errors; Windows CRLF warnings only",
+    "Source inspection: form/form-stdlib/http-client.fk keeps the minimal executable section [form.bml] socket runtime; form/form-stdlib/http-client-exchange.fk holds template HttpExchange<TRequest,TResponse> and class PlainSocketHttpExchange; socket bands keep top-level socket effects for fkwu stability",
+    "Source inspection: touched HTTP/form-cli runtime code contains no http_get(...) or sock_request(...) calls; remaining mentions are comment-only exclusions or compatibility notes",
+    "Subagent Raman read-only verification -> PASS: reran request verifier, response verifier, native form-cli verifier, socket loopback, self-JIT, Go form-cli tests, source split inspection, and forbidden-call scan"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_20260620_windows_high_grammar_http.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/build-form-cli.sh",
+    "form/form-kernel-go/form_cli_test.go",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/http-client-exchange.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/http-client-render-band.fk",
+    "form/form-stdlib/tests/http-client-socket-response-band.fk",
+    "form/form-stdlib/tests/http-client-socket-verbs-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_http_response_socket.ps1",
+    "scripts/verify_windows_fkwu_http_verbs_socket.ps1"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main && git rebase origin/main",
+      "py -3 scripts\\validate_commit_evidence.py --file docs\\system_audit\\commit_evidence_20260620_windows_high_grammar_http.json",
+      "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main",
+      "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check",
+      "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-socket-verbs-band.fk",
+      "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-socket-response-band.fk",
+      "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/http-client.fk form-stdlib/http-client-exchange.fk form-stdlib/tests/http-client-render-band.fk",
+      ".\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1",
+      ".\\scripts\\verify_windows_fkwu_http_response_socket.ps1",
+      ".\\scripts\\verify_windows_form_cli_native.ps1",
+      ".\\scripts\\verify_windows_fkwu_socket_loopback.ps1",
+      ".\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "cd form\\form-kernel-go && go test . -run TestFkwuFormCli -count=1",
+      "subagent Raman read-only verification rerun -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "http-client-socket-verbs: fourth arm: 1 band(s) four-way; verdict 127",
+      "http-client-socket-response: fourth arm: 1 band(s) four-way; verdict 8191",
+      "http-client-render + http-client-exchange: fourth arm: 1 band(s) four-way; verdict 2047",
+      "Windows request verifier: verdict 127, exchange render verdict 2047, socket tags 120..126 hit under sanitized runtime PATH",
+      "Windows response verifier: verdict 8191, socket tags 120..126 hit under sanitized runtime PATH"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change updates Form stdlib and Windows floor CI proof; public deployment validation remains pending until PR checks and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI/deploy status remains pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Windows fkwu HTTP slice now has a higher grammar class/template wrapper proof without widening the minimal socket runtime path. Request and response socket bands remain fkwu-stable and runtime-toolchain-free.",
+    "public_endpoints": [
+      "local-only: Form stdlib and Windows fkwu verifier; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Generic grammar proof: HttpExchange<TRequest,TResponse> and PlainSocketHttpExchange validate through http-client-render to verdict 2047 on Go, Rust, TypeScript, and fkwu.",
+      "Runtime request proof: verify_windows_fkwu_http_verbs_socket emits and runs fkwu against http-client-socket-verbs, returns verdict 127, and shows nonzero socket tag counters.",
+      "Runtime response proof: verify_windows_fkwu_http_response_socket emits and runs fkwu against http-client-socket-response, returns verdict 8191, and shows nonzero socket tag counters.",
+      "Runtime isolation proof: the fkwu verifiers execute with PATH restricted to C:\\WINDOWS\\System32;C:\\WINDOWS and confirm Go, clang, and llvm-objdump are absent."
+    ]
+  }
+}
