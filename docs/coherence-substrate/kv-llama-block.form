@@ -1,0 +1,54 @@
+; kv-llama-block.form — the KV-cached causal LLAMA block: the inner step of the autoregressive
+; generation loop, the cache applied to the WHOLE real decoder block (not just bare attention).
+;
+; THE PLACE IN THE LOOP:
+;   A decoder generates one token at a time: run the block over the prefix, read the logits, pick the
+;   next token (greedy-decode.form), append, repeat. kv-cache.fk realized the ATTENTION half over
+;   already-projected q/k/v (#3382). But a real decode step does the whole block per token: RMSNorm,
+;   project q/k/v, RoPE q and k by position, APPEND the projected+RoPE'd k/v to the cache, attend the
+;   query over the grown prefix, then Wo/residual/RMSNorm2/SwiGLU/residual. This file is that step for
+;   the real llama decoder block — only the NEW token is projected each step; earlier positions' k/v are
+;   reused from the cache. O(n)/token, not O(n^2) recompute of the block over [x0..xt].
+;
+; THE SHAPE  (runnable: form-stdlib/kv-llama-block.fk · proven: tests/kv-llama-block-band.fk -> 255)
+;
+;   lblk-dec-run (xs p cks cvs ...weights...) -> the output sequence
+;     the autoregressive walk: front to back, threading the growing cache (cks/cvs = positions 0..p-1).
+;     At each token: RMSNorm1 once, project+RoPE q/k and project v, APPEND k/v to the cache (kv-append),
+;     hand the GROWN cache to the per-step output and thread it forward as the next step's prior cache.
+;   lblk-dec-out (x q gks gvs ...) -> one token's block output
+;     attend the query over the grown cache (tb-attend-one verbatim), then the per-token tail:
+;     h = x + Wo*a ; y = h + Wdown*SwiGLU(Wgate*RMSNorm2(h), Wup*RMSNorm2(h)).
+;   lblk-generate-causal (xs ...weights...) -> the whole output, from an empty cache
+;     == lblk-block-causal (llama-block.fk, #3365) bit-for-bit. The decoder name for the cached path.
+;
+; WHY THE CACHE IS EXACT (proven by EQUALITY, not a 1e-6 reference):
+;   A cached k_i/v_i is RoPE(Wk*RMSNorm1(x_i), i) / Wv*RMSNorm1(x_i) — it depends ONLY on position i's
+;   input and the fixed weights, never on later tokens. So the grown cache at step p is exactly the
+;   prefix [k_0..k_p] = tb-take(ks, p+1) that tb-attn-seq-causal's mask cuts at query p. kv-append == the
+;   take of the prefix, so tb-attend-one gets IDENTICAL arguments and the tail is per-token; therefore
+;   lblk-generate-causal == lblk-block-causal element-for-element. The band proves this at S=2 AND S=3
+;   (the inductive step — the cache threads correctly past the boundary), grounded against
+;   causal-attention-band's already-four-way libm pins (token-0 1893731, last-token -1069281/1648117).
+;
+; THE AUTOREGRESSIVE INVARIANT (why a KV cache is reusable across generation steps):
+;   appending a future token never changes an earlier token's output — gen3[token i] == gen2[token i],
+;   libm-pinned (bits 64,128). A frozen k_i/v_i is the structural reason a cache built at step t is still
+;   valid at step t+1; this invariant is what the whole generation loop leans on.
+;
+; HOW IT COMPOSES THE TOOLKIT:
+;   tb-attend-one (transformer-block.fk) verbatim — no numeric change; kv-append (kv-cache.fk) for the
+;   cache grow; llama-block.fk's own ln-rmsnorm / tb-matvec / rope / lblk-ffn (SwiGLU) for the block. The
+;   cache is the efficient realization of the same four-way-proven causal llama block, at the reusable
+;   decoder-engine altitude (like tb-attn-seq-causal and kv-generate before it) — any causal block
+;   generates through the same cache; this instance is the real llama block.
+;
+; HONEST LANE / NEXT:
+;   fp64 lane. The GPU emit — the cached attention as a key-prefix in the threadgroup walk, mirroring
+;   jte-llama-block-fwd-causal-msl (#3376) with an fp32 CPU-mirror bit-exact gate — is the named follow-up.
+;   Then the full loop: tokenizer + lblk-generate-causal + gd-token (greedy-decode.form) over real
+;   llama3.2:3b GGUF weights on the M4 GPU (the load path q4k/q6k/f16 is already Form-native four-way).
+;   Multi-layer decode stacks lblk-generate-causal across blocks, each with its own cache.
+;
+; Kin: kv-cache.form, greedy-decode.form, llama-block.fk, transformer-block.form
+; teaching: lc-cognitive-sovereignty

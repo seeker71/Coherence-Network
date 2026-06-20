@@ -1,0 +1,37 @@
+{
+  "date": "2026-06-20",
+  "brick": "kv-llama-block (3x)",
+  "title": "the KV-cached causal LLAMA block crosses four-way — lblk-generate-causal proven BIT-IDENTICAL to the full causal llama block, the inner step of the autoregressive generation loop",
+  "north_star_track": "real local llama inference on the M4 GPU — the generation loop (named next stone after #3382, the bare-attention KV cache)",
+  "what": "Lifted the KV cache from the bare-attention altitude (kv-generate, #3382) to the WHOLE real llama decoder block. The generation loop steps one token at a time: kv-cache.fk proved the cache over already-projected q/k/v; a real decode step must do more — for each new token RMSNorm, project q/k/v, RoPE q and k by the token's absolute position, APPEND the projected+RoPE'd k/v to the running cache, attend the query over the grown prefix, then run the Wo/residual/RMSNorm2/SwiGLU/residual tail. Only the NEW token is projected each step; earlier positions' keys/values are reused from the cache (O(n)/token, not O(n^2) recompute of the block over [x0..xt]). The load-bearing proof is that the cache is EXACT: a cached k_i/v_i is RoPE(Wk*RMSNorm1(x_i), i) / Wv*RMSNorm1(x_i) — it depends ONLY on position i's input and the fixed weights, never on later tokens. So the grown cache at step p is exactly [k_0..k_p] = tb-take(ks, p+1) — the very prefix tb-attn-seq-causal's mask cuts at query p. tb-attend-one gets IDENTICAL arguments and the block tail is per-token, so lblk-generate-causal == lblk-block-causal (#3365, four-way) bit-for-bit. Composes tb-attend-one and llama-block's own RMSNorm/proj/RoPE/SwiGLU verbatim — no numeric change. Lives at the reusable decoder-engine altitude (like tb-attn-seq-causal and kv-generate before it).",
+  "files": {
+    "recipe": "form/form-stdlib/kv-llama-block.fk",
+    "band": "form/form-stdlib/tests/kv-llama-block-band.fk",
+    "manifest_row": "kv-llama-block fks 255"
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/tests/kv-llama-block-band.fk",
+    "verdict": 255,
+    "fourth_arm": "1 band four-way (fkwu + pre-flattened tables)",
+    "divergent": 0,
+    "kernels": "Go, Rust, TypeScript, fkwu — agree on every sample",
+    "wall_clock_seconds": 29
+  },
+  "fixture": "the llama-block-band / causal-attention-band fixture: S=2 (and S=3) tokens, d=4, HD=4 single head, FFN hidden 4, scale = 1/sqrt(4), every weight non-trivial. Grounded against causal-attention-band's already-four-way libm fp64 pins (#3365).",
+  "claims": {
+    "1": "gen2[0][0] -> 1893731   cache reproduces causal token 0 (libm-pinned, mask-restricted) with no recompute of earlier tokens",
+    "2": "gen2[1][0] -> -1069281  cache reproduces causal last token (libm-pinned)",
+    "4": "gen2[1][2] -> 1648117",
+    "8": "gen2 == yc2   (S=2: the KV-cached decode EXACTLY equals the full causal llama block lblk-block-causal, element-for-element — the heart)",
+    "16": "gen3 == yc3  (S=3: the cache threads correctly past the boundary — the inductive step, grounded by equivalence to the already-four-way lblk-block-causal)",
+    "32": "gen2[0][0] (1893731) != non-causal block token 0 (1115890)   the cache respects causality — not a no-op",
+    "64": "gen3[0][0] -> 1893731   token 0 unchanged by appending future tokens — the autoregressive INVARIANT",
+    "128": "gen3[1][0] -> -1069281  token 1 unchanged by appending token 2 — the AR invariant mid-sequence (why a KV cache is reusable across generation steps)"
+  },
+  "lesson": "Read-the-body held again: the per-step KV-cached decode of the real llama block was the named next stone in #3382's own receipt — the cache lived at the bare-attention altitude but had never been composed with the real RMSNorm/RoPE/SwiGLU block. Provable by EXACT equality (not a 1e-6 reference) because a cached k_i/v_i is frozen at position i, so the grown cache hands tb-attend-one bit-identical arguments to what the causal mask cuts. The strongest part is the autoregressive INVARIANT — appending a future token never changes an earlier token's output (gen3[token i] == gen2[token i]) — which is exactly why the cache is reusable across generation steps. Design (recognizing the per-token block tail decomposes cleanly, the strange-minimal S=2/S=3 fixtures, the invariant claim) was the cost; the four-way proof was seconds. NEW-recipe composition brick (like 3r) at the reusable decoder altitude, not llama-specific.",
+  "named_next_stones": [
+    "emit the KV-cached causal llama block to Metal: the cached attention as a key-prefix in the threadgroup walk, mirroring jte-llama-block-fwd-causal-msl (#3376), with an fp32 CPU-mirror bit-exact gate (the 3m/3s/3u GPU lane)",
+    "the full generation loop: tokenizer (text-tokenize.fk) + lblk-generate-causal (this brick) + greedy-decode (gd-token, #3402) over real llama3.2:3b GGUF weights on the M4 GPU — the load path q4k/q6k/f16 dequant is already Form-native four-way",
+    "multi-layer decode: stack lblk-generate-causal across the model's blocks, each with its own KV cache, threading the residual stream"
+  ]
+}
