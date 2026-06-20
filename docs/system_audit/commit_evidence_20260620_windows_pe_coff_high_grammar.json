@@ -1,0 +1,146 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-native-next-floor",
+  "commit_scope": "Lift the Windows x86_64 PE/COFF native recipe DLL floor from raw Form helper shape into BML template/class grammar and make the Windows DLL/bootstrap swap proof exercise the class entrypoint.",
+  "files_owned": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_pe_coff_high_grammar.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bootstrap_windows_test.go",
+    "form/form-kernel-go/jit_dll_windows_test.go",
+    "form/form-stdlib/form-pe-coff.fk",
+    "form/form-stdlib/tests/form-pe-coff-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "idea_ids": [
+    "windows-x86_64-native-floor",
+    "form-native-pe-coff",
+    "high-grammar-form-runtime",
+    "swappable-native-dll-kernel-parts"
+  ],
+  "spec_ids": [
+    "fourth-kernel-physical-lanes",
+    "bml-source-lowering",
+    "windows-native-bootstrap-dll-floor"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-pe-coff-high-grammar"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-goodall",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-native-next-floor on branch codex/windows-native-next-floor",
+    "git stash push --include-untracked; git fetch origin main; git rebase origin/main; git stash pop -> initial pre-commit rebase was up to date and stash restored cleanly",
+    "After PR merge conflict report: git fetch origin main; git rebase origin/main -> conflict in form/fourth-arm-bands.txt resolved by keeping form-pe-coff fks 16383 and current main's form-pe-coff-affine fks 127; rebase completed",
+    "py -3 scripts\\validate_commit_evidence.py --file docs\\system_audit\\commit_evidence_20260620_windows_pe_coff_high_grammar.json -> OK: evidence validation passed",
+    "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main -> local_preflight=pass; ready_for_push=True; all selected readings clear",
+    "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> codex_open_prs=0; stale_codex_prs=0",
+    "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk -> verdict 16383; 1 ok, 0 divergent; kernels agree",
+    "PowerShell: cd form\\form-kernel-go; go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1 -> ok form-kernel-go",
+    "PowerShell .\\scripts\\verify_windows_fkwu_socket_loopback.ps1 -> PASS windows-fkwu-socket-loopback verdict=111111; socket tags 120..126; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1 -> PASS windows-fkwu-http-client-socket-verbs verdict=127; PASS windows-fkwu-http-exchange-render verdict=2047; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_fkwu_http_response_socket.ps1 -> PASS windows-fkwu-http-client-socket-response verdict=8191; socket tags 120..126; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_cross_platform_bootstrap_host_no_go.ps1 -> status pass; recipe swaps returned 22, 26, and 51; boundary=form-native-to-host-os-loader; loader=LoadLibraryA/GetProcAddress",
+    "PowerShell .\\scripts\\verify_windows_fkwu_self_jit.ps1 -> PASS windows-fkwu-self-jit cold=317811 hot=317811 njit=26; runtime PATH without Go, clang, or LLVM",
+    "PowerShell .\\scripts\\verify_windows_form_cli_native.ps1 -> PASS windows-form-cli-native; ping=pong; verify native=fkwu embedded_source=true; runtime PATH without Go, clang, or LLVM",
+    "git diff --check -> no whitespace errors; Windows CRLF warnings only",
+    "Source inspection: form/form-stdlib/form-pe-coff.fk is now section [form.bml], defines template NativeObjectEmitter<TCode,TObject>, and defines class WindowsX64RecipeEmitter with object_for, object_for_symbol, symbol, target, abi, and recipe code methods",
+    "Source inspection: form/form-kernel-go/jit_dll_windows_test.go source-compiles form-pe-coff.fk through form-source-compile-file, loads the compiled prelude, and calls WindowsX64RecipeEmitter_object_for instead of pe-recipe-object directly",
+    "Source inspection: form/form-kernel-go/bootstrap_windows_test.go passes WindowsX64RecipeEmitter_code_mul3_add7 and WindowsX64RecipeEmitter_code_mul5_add1 into the shared DLL emitter helper",
+    "Subagent Goodall read-only verification -> PASS: reran PE/COFF BML validate to verdict 16383, reran Windows RecipeDLL/BootstrapHost Go tests, confirmed class/template lift and class-method test path, with no edits"
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_pe_coff_high_grammar.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bootstrap_windows_test.go",
+    "form/form-kernel-go/jit_dll_windows_test.go",
+    "form/form-stdlib/form-pe-coff.fk",
+    "form/form-stdlib/tests/form-pe-coff-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main && git rebase origin/main",
+      "post-PR-conflict git fetch origin main && git rebase origin/main; resolved form/fourth-arm-bands.txt by keeping form-pe-coff 16383 and form-pe-coff-affine 127",
+      "py -3 scripts\\validate_commit_evidence.py --file docs\\system_audit\\commit_evidence_20260620_windows_pe_coff_high_grammar.json",
+      "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main",
+      "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check",
+      "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk",
+      "cd form\\form-kernel-go; go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1",
+      ".\\scripts\\verify_windows_fkwu_socket_loopback.ps1",
+      ".\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1",
+      ".\\scripts\\verify_windows_fkwu_http_response_socket.ps1",
+      ".\\scripts\\verify_cross_platform_bootstrap_host_no_go.ps1",
+      ".\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      ".\\scripts\\verify_windows_form_cli_native.ps1",
+      "subagent Goodall read-only verification rerun -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "form-pe-coff: verdict 16383, 1 ok, 0 divergent, kernels agree",
+      "socket-loopback: verdict 111111, socket tags 120..126 under sanitized runtime PATH",
+      "http-client-socket-verbs: verdict 127 plus exchange render 2047 under sanitized runtime PATH",
+      "http-client-socket-response: verdict 8191 under sanitized runtime PATH"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch. The Windows host workflow now includes go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change updates Form stdlib, Go Windows tests, and Windows floor CI proof; public deployment validation remains pending until PR checks and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI/deploy status remains pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Windows x86_64 PE/COFF native recipe object floor now exposes a BML generic template/class contract while preserving byte-identical COFF object emission and swappable DLL loading through the bootstrap host.",
+    "public_endpoints": [
+      "local-only: Form stdlib, Windows native DLL/bootstrap tests, and Windows host workflow; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "High grammar proof: NativeObjectEmitter<TCode,TObject> and WindowsX64RecipeEmitter validate through form-pe-coff-band to verdict 16383 on the sibling kernels; fourth-arm manifest expectation is updated to the same verdict.",
+      "DLL swap proof: TestWindowsRecipeDLLLoadsCallsAndSwaps links Form-emitted PE/COFF objects into DLLs and calls swapped recipe implementations through dylib_call.",
+      "Bootstrap host proof: TestWindowsBootstrapHostExeLoadsAndSwapsFormDLLs builds the minimal host exe and swaps Form-emitted recipe DLLs behind the same exported symbol.",
+      "Regression proof: Windows fkwu socket, HTTP, self-JIT, and form-cli native verifiers still pass under sanitized runtime PATHs without Go, clang, or LLVM."
+    ]
+  }
+}

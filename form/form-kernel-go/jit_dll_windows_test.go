@@ -38,19 +38,53 @@ func fileExists(path string) bool {
 	return err == nil && !st.IsDir()
 }
 
-func emitWindowsRecipeObject(t *testing.T, fn string) []byte {
+func compileFormSourceFileForTest(t *testing.T, stdlib, sourcePath string) string {
+	t.Helper()
+	out := filepath.Join(t.TempDir(), filepath.Base(sourcePath)+".compiled.fk")
+	absSource, err := filepath.Abs(sourcePath)
+	if err != nil {
+		t.Fatalf("abs source %s: %v", sourcePath, err)
+	}
+	absOut, err := filepath.Abs(out)
+	if err != nil {
+		t.Fatalf("abs output %s: %v", out, err)
+	}
+	driver := fmt.Sprintf(
+		"(do (form-source-compile-file %s %s))\n",
+		sexpStringLiteral(filepath.ToSlash(absSource)),
+		sexpStringLiteral(filepath.ToSlash(absOut)),
+	)
+	compiler := readFiles(t,
+		filepath.Join(stdlib, "form-ontology-loader.fk"),
+		filepath.Join(stdlib, "line-grammar.fk"),
+		filepath.Join(stdlib, "bmf-core.fk"),
+		filepath.Join(stdlib, "bmf-grammar.fk"),
+		filepath.Join(stdlib, "bml.fk"),
+		filepath.Join(stdlib, "bml-source.fk"),
+		filepath.Join(stdlib, "source-compiler.fk"),
+	)
+	runFormSource(t, compiler+"\n"+driver)
+	compiled, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("read compiled BML output %s: %v", out, err)
+	}
+	return string(compiled)
+}
+
+func emitWindowsRecipeObject(t *testing.T, classCodeMethod string) []byte {
 	t.Helper()
 	stdlib := filepath.Join("..", "form-stdlib")
-	preludes := readFiles(t,
-		filepath.Join(stdlib, "form-pe-coff.fk"),
-	)
-	src := fmt.Sprintf(`%s
-(do
-  (pe-recipe-object (%s)))`, preludes, fn)
+	compiledEmitter := compileFormSourceFileForTest(t, stdlib, filepath.Join(stdlib, "form-pe-coff.fk"))
 	k := NewKernel()
+	src := fmt.Sprintf(`%s
+%s
+(WindowsX64RecipeEmitter_object_for (%s))`,
+		readFiles(t, filepath.Join(stdlib, "language-model.fk")),
+		compiledEmitter,
+		classCodeMethod)
 	res := k.walk(readRootFromSource(k, src), NewFrame(nil))
 	if res.Kind != VList {
-		t.Fatalf("pe-recipe-object did not return a byte list (kind %v)", res.Kind)
+		t.Fatalf("WindowsX64RecipeEmitter_object_for did not return a byte list (kind %v)", res.Kind)
 	}
 	out := make([]byte, len(res.List))
 	for i, b := range res.List {
@@ -94,8 +128,8 @@ func TestWindowsRecipeDLLLoadsCallsAndSwaps(t *testing.T) {
 	linker := windowsLinker(t)
 	dir := t.TempDir()
 
-	dllA := linkWindowsRecipeDLL(t, linker, dir, "recipe_a", emitWindowsRecipeObject(t, "pe-x64-recipe-mul3-add7-code"))
-	dllB := linkWindowsRecipeDLL(t, linker, dir, "recipe_b", emitWindowsRecipeObject(t, "pe-x64-recipe-mul5-add1-code"))
+	dllA := linkWindowsRecipeDLL(t, linker, dir, "recipe_a", emitWindowsRecipeObject(t, "WindowsX64RecipeEmitter_code_mul3_add7"))
+	dllB := linkWindowsRecipeDLL(t, linker, dir, "recipe_b", emitWindowsRecipeObject(t, "WindowsX64RecipeEmitter_code_mul5_add1"))
 
 	for _, tc := range []struct {
 		dll  string

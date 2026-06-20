@@ -1,69 +1,43 @@
-; preludes: form-stdlib/core.fk form-stdlib/form-pe-coff.fk
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk
 ;
 ; form-pe-coff-band - Windows x86_64 native recipe object floor.
-; Verdict 511 when Form emits a minimal x64 COFF object for a loadable recipe
-; DLL: AMD64 machine header, .text section, Windows-x64 machine-code bytes,
-; external recipe symbol, empty string table, and a second swappable recipe body
-; plus a third native recipe behind the same symbol.
+; Verdict 16383 when Form emits a minimal x64 COFF object for a loadable recipe
+; DLL through the high-grammar WindowsX64RecipeEmitter class: AMD64 machine
+; header, .text section, Windows-x64 machine-code bytes, external recipe symbol,
+; empty string table, swappable recipe bodies, and a generic template/class
+; contract around the native object emitter.
 
-(do
-    (let code (pe-x64-recipe-mul3-add7-code))
-    (let obj (pe-recipe-object code))
-    (let code2 (pe-x64-recipe-mul5-add1-code))
-    (let obj2 (pe-recipe-object code2))
-    (let code3 (pe-x64-recipe-add42-code))
-    (let obj3 (pe-recipe-object code3))
+section [form.bml] {
+    def pe_score(ok, bit) {
+        if ok then bit else 0;
+    }
 
-    (let c0 (if (eq (len obj) 88) 1 0))
-    (let c1 (if (eq (nth obj 0) 100)
-                (if (eq (nth obj 1) 134)
-                    (if (eq (nth obj 2) 1) 2 0)
-                    0)
-                0))
-    (let c2 (if (eq (nth obj 8) 66)
-                (if (eq (nth obj 12) 1) 4 0)
-                0))
-    (let c3 (if (eq (nth obj 20) 46)
-                (if (eq (nth obj 21) 116)
-                    (if (eq (nth obj 36) 6)
-                        (if (eq (nth obj 40) 60) 8 0)
-                        0)
-                    0)
-                0))
-    (let c4 (if (eq (nth obj 60) 72)
-                (if (eq (nth obj 61) 141)
-                    (if (eq (nth obj 64) 7)
-                        (if (eq (nth obj 65) 195) 16 0)
-                        0)
-                    0)
-                0))
-    (let c5 (if (eq (nth obj 66) 114)
-                (if (eq (nth obj 67) 101)
-                    (if (eq (nth obj 70) 112) 32 0)
-                    0)
-                0))
-    (let c6 (if (eq (nth obj 78) 1)
-                (if (eq (nth obj 80) 32)
-                    (if (eq (nth obj 82) 2) 64 0)
-                    0)
-                0))
-    (let c7 (if (eq (nth obj 84) 4)
-                (if (eq (len obj2) 88)
-                    (if (eq (nth obj2 63) 137)
-                        (if (eq (nth obj2 64) 1) 128 0)
-                        0)
-                    0)
-                0))
-    (let c8 (if (eq (len obj3) 87)
-                (if (eq (nth obj3 60) 72)
-                    (if (eq (nth obj3 61) 141)
-                        (if (eq (nth obj3 62) 65)
-                            (if (eq (nth obj3 63) 42)
-                                (if (eq (nth obj3 64) 195) 256 0)
-                                0)
-                            0)
-                        0)
-                    0)
-                0))
+    def form_pe_coff_band_score() {
+        let code = WindowsX64RecipeEmitter_code_mul3_add7();
+        let obj = WindowsX64RecipeEmitter_object_for(code);
+        let code2 = WindowsX64RecipeEmitter_code_mul5_add1();
+        let obj2 = WindowsX64RecipeEmitter_object_for(code2);
+        let code3 = WindowsX64RecipeEmitter_code_add42();
+        let obj3 = WindowsX64RecipeEmitter_object_for(code3);
+        let raw_obj = pe-recipe-object(code);
+        let object_member = language-class-member-named(language-class-members(WindowsX64RecipeEmitter), "object_for");
+        let symbol_member = language-class-member-named(language-class-members(WindowsX64RecipeEmitter), "symbol");
+        sum(list(
+            pe_score(eq(len(obj), 88), 1),
+            pe_score(and(eq(nth(obj, 0), 100), and(eq(nth(obj, 1), 134), eq(nth(obj, 2), 1))), 2),
+            pe_score(and(eq(nth(obj, 8), 66), eq(nth(obj, 12), 1)), 4),
+            pe_score(and(eq(nth(obj, 20), 46), and(eq(nth(obj, 21), 116), and(eq(nth(obj, 36), 6), eq(nth(obj, 40), 60)))), 8),
+            pe_score(and(eq(nth(obj, 60), 72), and(eq(nth(obj, 61), 141), and(eq(nth(obj, 64), 7), eq(nth(obj, 65), 195)))), 16),
+            pe_score(and(eq(nth(obj, 66), 114), and(eq(nth(obj, 67), 101), eq(nth(obj, 70), 112))), 32),
+            pe_score(and(eq(nth(obj, 78), 1), and(eq(nth(obj, 80), 32), eq(nth(obj, 82), 2))), 64),
+            pe_score(and(eq(nth(obj, 84), 4), and(eq(len(obj2), 88), and(eq(nth(obj2, 63), 137), eq(nth(obj2, 64), 1)))), 128),
+            pe_score(and(eq(len(obj3), 87), and(eq(nth(obj3, 60), 72), and(eq(nth(obj3, 61), 141), and(eq(nth(obj3, 62), 65), and(eq(nth(obj3, 63), 42), eq(nth(obj3, 64), 195)))))), 256),
+            pe_score(language-template-valid?(NativeObjectEmitter), 512),
+            pe_score(language-class-valid?(WindowsX64RecipeEmitter), 1024),
+            pe_score(eq(len(language-template-members(NativeObjectEmitter)), 3), 2048),
+            pe_score(eq(language-class-member-kind(object_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), 4096),
+            pe_score(and(eq(language-class-member-kind(symbol_member), LANGUAGE-CLASS-MEMBER-KIND-METHOD), and(eq(len(WindowsX64RecipeEmitter_symbol()), 6), and(eq(len(obj), len(raw_obj)), and(eq(nth(obj, 60), nth(raw_obj, 60)), eq(nth(obj, 84), nth(raw_obj, 84)))))), 8192)));
+    }
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8)))
+    form_pe_coff_band_score();
+}
