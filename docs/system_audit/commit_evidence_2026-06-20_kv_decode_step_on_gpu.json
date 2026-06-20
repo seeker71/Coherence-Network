@@ -1,0 +1,45 @@
+{
+  "date": "2026-06-20",
+  "brick": "the KV-CACHED DECODE STEP runs on the M4 Max GPU — autoregressive generation on silicon, the cache bit-identical to the full causal recompute",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "north_star_rung": "form-native-models.form rung (2) full transformer block on the GPU — extended to the AUTOREGRESSIVE DECODE LOOP: the generation inner loop now runs on the M4 GPU with a KV cache, the GPU realization of kv-llama-block.fk's lblk-generate-causal (#3408)",
+  "named_next_stone_from": "#3408 (brick 3x) receipt: 'emit this block to Metal (cached attention as a key-prefix in the threadgroup walk, mirroring jte-llama-block-fwd-causal-msl #3376) with an fp32 CPU-mirror bit-exact gate — the 3m/3s/3u GPU lane'",
+  "what": "jit-tensor-emit.fk's new jte-llama-block-decode-step-msl emits ONE autoregressive decode step as a Metal kernel over a PERSISTENT KV cache: for the new token at position p it RMSNorms, projects q/k/v from the SINGLE new token, RoPEs q/k by p, APPENDS the RoPE'd k_p/v_p into cache slot p, attends the query over the grown prefix cache[0..p], then runs Wo/residual/RMSNorm2/SwiGLU/residual -> y_p. Only the NEW token is projected each step; earlier positions' k/v are reused from the cache (O(n) per token, not the O(n^2) whole-block recompute over [x0..xt]).",
+  "proofs": {
+    "1_emit_band_four_way": {
+      "band": "tests/llama-block-decode-emit-band.fk",
+      "manifest_row": "llama-block-decode-emit fks 7",
+      "verdict": 7,
+      "divergent": 0,
+      "fourth_arm": "1 band(s) four-way (fkwu + pre-flattened tables)",
+      "meaning": "Go/Rust/TS/fkwu all emit the 6416-byte decode-step MSL byte-identical; the emitter is a deterministic function of the kernel name"
+    },
+    "2_on_gpu_equivalence": {
+      "script": "scripts/metal_llama_block_decode_audit.sh",
+      "hardware": "Apple M4 Max, 40-core GPU, Metal 4, mathMode .safe (IEEE, no fma contraction)",
+      "fixture": "kv-llama-block-band.fk fixture extended to S=3 (the inductive step: 3 cache appends), d=4 dq=dv=4 hid=4 HD=4 single head, scale=1/sqrt(4)",
+      "decode_loop": "3 dispatches over ONE persistent KV cache (slot p written by step p, read 0..p), 1.321 ms total",
+      "y_full_causal_recompute": [1.893731, -0.066971, 0.762083, 2.285373, -1.069281, 0.365812, 1.648117, -1.118617, 0.210686, 1.445908, -1.368373, -0.005072],
+      "y_decode_kv_cached": [1.893731, -0.066971, 0.762083, 2.285373, -1.069281, 0.365812, 1.648117, -1.118617, 0.210686, 1.445908, -1.368373, -0.005072],
+      "equivalence": "BIT-FOR-BIT identical — the KV-cached decode loop reproduces the full causal recompute kernel (jte-llama-block-fwd-causal-msl, brick 3u/#3376) exactly ON SILICON",
+      "recipe_parity": "GPU fp32 decode vs fp64 lblk-block-causal (four-way proven, #3365) *1e6: max|delta|=0.5 — tracks the proven recipe within fp32 epsilon",
+      "grounding": "token-0 y[0][0]*1e6=1893731 matches causal-attention-band.fk's published pin (mask-restricted, != non-causal 1115890); fp64 recipe ground truth via the Go kernel over the same fixture"
+    }
+  },
+  "why_bit_identical": "a cached k_i/v_i = RoPE(Wk*RMSNorm1(x_i), i) / Wv*RMSNorm1(x_i) depends ONLY on position i's input and the fixed weights, never on later tokens; so the grown cache the front-to-back walk holds at step p is exactly the prefix [k_0..k_p] the full causal kernel's mask (while t < s+1u) cuts at query p, and the decode kernel walks the IDENTICAL fold order (downward right-fold dots, max-subtract softmax over the recipe's own fexp, Newton-sqrt RMSNorm, trig.fk Taylor RoPE). The autoregressive invariant the S=3 loop exercises: appending a future token never changes an earlier token's output (each cache slot frozen at its position).",
+  "transcendentals": "the recipe's OWN — RMSNorm's 50-step Newton sqrt, SiLU's fexp Taylor, RoPE's fsin/fcos/fln Taylor (trig.fk), softmax over fexp — never Metal's. The transcendental floor stays the body's.",
+  "carriers": "form-kernel-go (the mouth that emits the MSL), swiftc + Metal.framework (the driver-organ idiom, an allowed host carrier per host-kernel.form host-resource-access); the emitter intelligence lives in the Form recipe.",
+  "lane": "NEW-GPU-kernel + persistent-cache loop + bit-exact gate, ~40m. Design (the single-token decode ABI: 22 buffers with device-writable cache slots, the single-token scratch layout with scores sized to p+1u, threading one persistent cache across S dispatches, and keeping the fold order bit-identical to the full causal kernel so the cache==recompute) was the cost; both proofs were seconds. READ-THE-BODY paid off: the full causal kernel (3u) was the exact template, and lblk-generate-causal (3x) + lblk-block-causal (3t) were already four-way proven — so the brick was a single-token re-skin of the causal kernel reading a persistent cache instead of recomputing all projections.",
+  "files": [
+    "form/form-stdlib/jit-tensor-emit.fk (jte-llama-block-decode-step-msl + 8 fragment defns)",
+    "form/form-stdlib/tests/llama-block-decode-emit-band.fk (new four-way emit band)",
+    "form/fourth-arm-bands.txt (llama-block-decode-emit fks 7)",
+    "scripts/metal_llama_block_decode_audit.sh (new GPU audit)"
+  ],
+  "named_next_stones": [
+    "the full generation loop: tokenizer + lblk-generate-causal decode-step kernel + gd-token (greedy argmax, #3402) over real llama3.2:3b GGUF on the M4 GPU — the load path is already Form-native four-way (q4k/q6k/f16)",
+    "parallelize the decode step across rows/heads (one threadgroup per output row) instead of the single-thread gid==0 serial walk",
+    "multi-layer decode: stack the decode-step kernel across blocks, each its own persistent cache"
+  ],
+  "teaching": "lc-cognitive-sovereignty"
+}
