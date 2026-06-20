@@ -1,0 +1,72 @@
+; form-pe-coff.fk - PE/COFF x64 object wrapper for Windows native recipe DLLs.
+;
+; This is the Windows x86_64 twin of form-macho's recipe-object floor. It wraps
+; caller-supplied x64 machine-code bytes in a minimal COFF object with one .text
+; section and one external function symbol. A host linker carrier such as
+; lld-link turns the object into a loadable DLL; the kernel keeps the linker and
+; LoadLibrary/GetProcAddress as dumb host carriers while the object bytes are a
+; Form recipe.
+
+(do
+    (defn pe-nil? (xs) (eq (len xs) 0))
+    (defn pe-app (xs ys) (if (pe-nil? xs) ys (cons (head xs) (pe-app (tail xs) ys))))
+    (defn pe-cat (xss) (if (eq (len xss) 1) (head xss) (pe-app (head xss) (pe-cat (tail xss)))))
+    (defn pe-zeroes (n) (if (le n 0) (list) (cons 0 (pe-zeroes (sub n 1)))))
+
+    (defn pe-u16 (n) (list (mod n 256) (mod (div n 256) 256)))
+    (defn pe-u32 (n) (list (mod n 256) (mod (div n 256) 256)
+                           (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+
+    (defn pe-code-off () 60)                 ; COFF header 20 + one section header 40
+    (defn pe-sym-off (clen) (add (pe-code-off) clen))
+    (defn pe-text-characteristics () 1615855648) ; code | execute | read | align16
+
+    (defn pe-coff-header (clen)
+        (pe-cat (list
+            (pe-u16 34404)                  ; IMAGE_FILE_MACHINE_AMD64, 0x8664
+            (pe-u16 1)                      ; one section
+            (pe-u32 0)                      ; deterministic timestamp
+            (pe-u32 (pe-sym-off clen))      ; symbol table follows raw code
+            (pe-u32 1)                      ; one external symbol
+            (pe-u16 0)                      ; no optional header in .obj
+            (pe-u16 0))))                   ; no image flags in .obj
+
+    (defn pe-section-text (clen)
+        (pe-cat (list
+            (list 46 116 101 120 116 0 0 0) ; ".text"
+            (pe-u32 0) (pe-u32 0)           ; virtual size/address unused in .obj
+            (pe-u32 clen)
+            (pe-u32 (pe-code-off))
+            (pe-u32 0) (pe-u32 0)           ; no relocations/line numbers
+            (pe-u16 0) (pe-u16 0)
+            (pe-u32 (pe-text-characteristics)))))
+
+    ; COFF short-name symbol. The supported floor uses <=8 byte export names,
+    ; enough for "recipe"; longer names stay with a future string-table lift.
+    (defn pe-name8 (name) (pe-app name (pe-zeroes (sub 8 (len name)))))
+    (defn pe-symbol-external-function (name)
+        (pe-cat (list
+            (pe-name8 name)
+            (pe-u32 0)                      ; value: start of .text
+            (pe-u16 1)                      ; section 1
+            (pe-u16 32)                     ; IMAGE_SYM_DTYPE_FUNCTION
+            (list 2 0))))                   ; external, no aux symbols
+
+    (defn pe-empty-string-table () (pe-u32 4))
+
+    (defn pe-coff-object-sym (code name)
+        (pe-cat (list
+            (pe-coff-header (len code))
+            (pe-section-text (len code))
+            code
+            (pe-symbol-external-function name)
+            (pe-empty-string-table))))
+
+    ; Windows x64 ABI: first integer arg in RCX, return in RAX.
+    ; lea rax, [rcx + rcx*2 + 7]; ret
+    (defn pe-x64-recipe-mul3-add7-code () (list 72 141 68 73 7 195))
+    ; lea rax, [rcx + rcx*4 + 1]; ret, used by the swap/load receipt.
+    (defn pe-x64-recipe-mul5-add1-code () (list 72 141 68 137 1 195))
+    (defn pe-recipe-object (code) (pe-coff-object-sym code (list 114 101 99 105 112 101)))
+
+    0)
