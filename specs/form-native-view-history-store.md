@@ -54,9 +54,11 @@ exist.
 4. - [ ] The kernel carrier that served the ordering is observable (the `runtime` string), exactly as the vitality route exposes it; missing kernel remains a hard failure (no silent Python fallback).
 
 ## Files to Create/Modify
-- `form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk` — new ordering recipe (the determinism core).
-- `form/form-stdlib/tests/view-history-order-band.fk` — new four-way band for the ordering recipe.
-- `api/app/services/translation_cache_service.py` — `list_history` becomes a thin shell over the Form runtime; the Python comparator is removed.
+- `form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_view_history_order_demo.py` — the Python twin (source of truth the compiler lowers). **Landed** and verified as plain Python.
+- `form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-compile` — `cygpath -m` path normalization so recipe generation runs on Windows/MSYS. **Landed** (unblocks generation on this host).
+- `form/form-kernel-ts/seedbank/python-adapter/examples/view_history_order.fk` — generated ordering recipe. **Blocked** — see the lifter gap in Known Gaps.
+- `form/form-stdlib/tests/view-history-order-band.fk` — new four-way band for the ordering recipe (after the recipe generates cleanly).
+- `api/app/services/translation_cache_service.py` — `list_history` becomes a thin shell over the Form runtime; the Python comparator is removed (only once the recipe exists and crosses four-way).
 
 ## Acceptance Criteria
 - `cd api && python -m pytest tests/test_flow_multilingual.py -q` passes, including `test_history_preserves_superseded_views`, deterministically across `PYTHONHASHSEED` 0–8 (the prior failing seed was 0).
@@ -92,10 +94,13 @@ python3 scripts/validate_spec_quality.py --file specs/form-native-view-history-s
 ## Risks and Assumptions
 - **Marshalling shape**: `serve_via_kernel` must return a list/permutation, not only a scalar like `_breath_balance`. Assumption: the kernel's `list`/`head`/`tail` primitives support this; the band validates the returned shape before Python is wired, and `list_history` applies the returned index order to the SQLAlchemy rows it already holds (so only the comparison, not the row data, crosses the kernel boundary).
 - **Round-trip cost**: one kernel call per history read. Assumption: the route-preload/inline carrier keeps this within the budget the vitality route already pays; if a hot path needs it, the ordered result is memoized per `(entity, lang, row-set hash)`.
-- **Four-way tooling on this host**: the Windows dev host has the Rust kernel built and can serve the recipe via the subprocess carrier, so Python-level behavior is verifiable locally; full four-way `validate.sh` (incl. fkwu's clang-emitted carrier) may need CI/Linux. The four-way band is the gate of record, run in CI.
+- **Four-way tooling on this host**: the Windows dev host now builds both kernels and (after the `kernel-bmf-compile` cygpath fix) runs the generation pipeline locally; full four-way `validate.sh` (incl. fkwu's clang-emitted carrier) still needs CI/Linux and remains the gate of record.
+- **Compiler-gap dependency (confirmed blocker)**: the python-bmf lifter cannot yet lower a multi-branch comparison (the rank → key-desc → index ladder), in either nested-`else` or flat-`if` form — it emits invalid Form (`unsupported kind/rule [else]` → parse error). Phase 1's recipe therefore cannot be generated until that lift arm exists. A degenerate "compose a single key in Python, sort one key in Form" encoding is explicitly rejected: it pushes the tie-break decision back into Python, defeating the point.
 - **Tie semantics**: ordering must be total and deterministic even when `updated_at` ties across rows; the recipe breaks ties by `status` rank first, then a stable secondary key (e.g. `id`), so no hash-dependent comparison remains.
 
 ## Known Gaps and Follow-up Tasks
+- **PHASE 1 PRECONDITION (the blocker) — close the python-bmf lifter gap**: add a lift arm for multi-branch `if` / comparison ladders to `form/form-stdlib/python-bmf-lift.fk` (+ matching eval arm in `python-bmf-eval.fk`), proven by a small band, so `endpoint_view_history_order_demo.py` compiles to a valid recipe. Until this lands, `list_history` keeps its deterministic Python comparator (already merged) and is NOT rewired.
+- **Landed this slice**: the verified Python twin (`endpoint_view_history_order_demo.py`) and the `kernel-bmf-compile` cygpath fix (Windows recipe generation now runs). The generated `.fk`, the four-way band, and the `list_history` rewire are all gated on the lifter gap above.
 - **Phase 2 — view-store over the storage port**: `view-store.fk` (`vs-list-history`/`vs-canonical`) reading Form cells via `storage-get`/`storage-put`, with `upsert_view` projecting rows into the carrier and a read-parity band; retire the SQLAlchemy read for this family once parity holds.
 - **Generalize** to `canonical_views`/`all_canonical_views` and then to other entity families.
 - **The crux** — `intern_node` → storage-port bridge (`substrate-core.fk`) per `services-on-form-plan.md` Step 1 — remains the highest-leverage follow-up this slice de-risks but does not deliver.
