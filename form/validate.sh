@@ -25,8 +25,17 @@ export npm_config_update_notifier=false
 # Keep the kernel-resident bp lookup table in sync with the registry before the
 # staleness check decides whether to rebuild. Writes only on change, so a no-op
 # run leaves mtimes (and the rebuild decision) untouched.
-if command -v python3 >/dev/null 2>&1 && [[ -f ../scripts/gen_bp_table.py ]]; then
-    python3 ../scripts/gen_bp_table.py >/dev/null || true
+# Resolve a working Python 3: prefer `py -3` on Windows (a bare `python3` there
+# resolves to the App-Execution-Alias stub that prints "Python was not found"),
+# and verify the interpreter actually runs before using it.
+BP_PY=""
+if command -v py >/dev/null 2>&1 && py -3 --version >/dev/null 2>&1; then
+    BP_PY="py -3"
+elif command -v python3 >/dev/null 2>&1 && python3 --version >/dev/null 2>&1; then
+    BP_PY="python3"
+fi
+if [[ -n "$BP_PY" && -f ../scripts/gen_bp_table.py ]]; then
+    $BP_PY ../scripts/gen_bp_table.py >/dev/null 2>&1 || true
 fi
 
 GO_DIR="form-kernel-go"
