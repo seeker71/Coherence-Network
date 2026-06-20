@@ -1,0 +1,45 @@
+; tests/value-ledger-port-band.fk -- the CC ledger over the storage port.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/value-ledger-port.fk
+;
+; Proves the value-ledger port over two carriers with one carrier-agnostic test:
+; memory for pure logic, file for durable native storage — the substitutability
+; the offline replica rides (online=db, offline=file, the SAME recipe). The first
+; real value-ledger-port rung of offline-endpoints.form.
+;
+; Proof state: 3-way PROVEN (go=rust=ts=111111). NOT yet in the fourth-arm
+; manifest: the local fresh-flatten path is currently broken in this checkout — a
+; known-four-way control band (graph-node-port) ALSO returns fkwu=0 on a clean
+; single-generation rebuild, so the break is the toolchain, not this recipe. The
+; row is HELD until the fourth arm can verify it on a working flatten (runner /
+; clean env), per "a band that never touched the fourth arm is not proven."
+;
+; Band verdict: 111111 when both carriers fully pass and file persistence holds.
+;   memory ledger contract pass (post/fold/dup-refuse/conserve)  -> 1
+;   file ledger contract pass                                    -> 10
+;   memory and file verdicts agree                               -> 100
+;   reopened file keeps the folded balance (120)                 -> 1000
+;   reopened file keeps the entry count (4)                      -> 10000
+;   reopened file refuses a duplicate post (no double-count)     -> 100000
+
+(do
+    (let dir (str_concat (temp_dir) "/value-ledger-port-band.d"))
+    (fs_rmdir dir)
+
+    (let mem-verdict (vl-test (carrier-memory) ""))
+    (let file-verdict (vl-test (carrier-file) dir))
+
+    (let mem-ok (if (eq mem-verdict 111111) 1 0))
+    (let file-ok (if (eq file-verdict 111111) 10 0))
+    (let agree-ok (if (eq mem-verdict file-verdict) 100 0))
+
+    (let cf (carrier-file))
+    (let reopened (storage-open cf dir))
+    (let balance-ok (if (eq (vl-balance cf reopened "alice") 120) 1000 0))
+    (let count-ok (if (eq (vl-count cf reopened) 4) 10000 0))
+    ;; a duplicate post against the reopened durable store is still refused
+    (let after-dup (vl-post cf reopened "e1" "alice" "credit" 999))
+    (let dup-ok (if (eq (vl-count cf after-dup) 4) 100000 0))
+
+    (fs_rmdir dir)
+    (sum (list mem-ok file-ok agree-ok balance-ok count-ok dup-ok)))
