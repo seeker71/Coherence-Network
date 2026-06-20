@@ -4,8 +4,9 @@ Verify Windows fkwu HTTP response recipes over the socket host-call floor.
 The build step uses Go and clang as local carriers/oracles to emit and compile
 the Form-authored fkwu walker. The acceptance step strips runtime PATH before
 executing the cached fkwu binary against the HTTP response loopback table,
-proving request and response bytes use socket_listen/port/connect/accept/send/
-recv/close without Go, clang, LLVM, http_get, or sock_request at runtime.
+proving request and response bytes use BML HTTP recipes over socket_listen/
+port/connect/accept/send/recv/close without Go, clang, LLVM, http_get, or
+sock_request at runtime.
 #>
 [CmdletBinding()]
 param(
