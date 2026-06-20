@@ -29,6 +29,11 @@ func TestFkwuFormCli(t *testing.T) {
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
+	// http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's
+	// 'ask' verb calls fca-ask -> http-fetch, so the ask lane must be defined
+	// before the dispatcher. Mirrors build-form-cli.sh's MODS.
+	httpClient := filepath.Join(stdlib, "http-client.fk")
+	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	mainCli := filepath.Join(stdlib, "form-cli-main.fk")
 
 	dir := t.TempDir()
@@ -36,7 +41,7 @@ func TestFkwuFormCli(t *testing.T) {
 
 	// Flatten form-cli-main (preludes: shim + core + form-cli, band: the runtime
 	// entry) to a string-pool node table — the fks path that carries strings.
-	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + cli + `"))`
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + httpClient + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
 	band := `(read_file "` + mainCli + `")`
 	flattenExpr := "(fks-table-file " +
 		"(flt-band-sources-fns " + mods + " " + band + ") " +
@@ -74,7 +79,7 @@ func TestFkwuFormCli(t *testing.T) {
 	// the self-description verbs return their pure strings (exact match lives in
 	// the four-way band tests/form-cli-band.fk; here we confirm they reach fkwu).
 	for _, c := range []struct{ cmd, sub string }{
-		{"help", "ping help about kernel source recreate verify version"},
+		{"help", "ping ask help about kernel source recreate verify version"},
 		{"about", "one self-contained native binary"},
 		{"kernel", "fkwu, a universal walker"},
 	} {
@@ -104,6 +109,11 @@ func TestFkwuFormCliRepl(t *testing.T) {
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
+	// http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's
+	// 'ask' verb calls fca-ask -> http-fetch, so the ask lane must be defined
+	// before the dispatcher. Mirrors build-form-cli.sh's MODS.
+	httpClient := filepath.Join(stdlib, "http-client.fk")
+	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	repl := filepath.Join(stdlib, "form-cli-repl.fk")
 
 	dir := t.TempDir()
@@ -120,7 +130,7 @@ func TestFkwuFormCliRepl(t *testing.T) {
 		t.Fatalf("clang fkwu-repl: %v\n%s", err, out)
 	}
 
-	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + cli + `"))`
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + httpClient + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
 	band := `(read_file "` + repl + `")`
 	flattenExpr := "(fks-table-file " +
 		"(flt-band-sources-fns " + mods + " " + band + ") " +
@@ -192,12 +202,17 @@ func TestFkwuFormCliCombined(t *testing.T) {
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
+	// http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's
+	// 'ask' verb calls fca-ask -> http-fetch, so the ask lane must be defined
+	// before the dispatcher. Mirrors build-form-cli.sh's MODS.
+	httpClient := filepath.Join(stdlib, "http-client.fk")
+	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	repl := filepath.Join(stdlib, "form-cli-repl.fk")
 
 	dir := t.TempDir()
 
 	// 1. flatten form-cli-repl into its program table (build-time, on the bootstrap).
-	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + cli + `"))`
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + httpClient + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
 	band := `(read_file "` + repl + `")`
 	flattenExpr := "(fks-table-file (flt-band-sources-fns " + mods + " " + band + ") (flt-band-sources-pool " + mods + " " + band + "))"
 	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")

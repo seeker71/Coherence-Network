@@ -1,66 +1,97 @@
-; form-cli-ask.fk — the form-cli ASK flow as a PURE FORM recipe the kernel runs (no Python body).
+; form-cli-ask.fk — the form-cli ASK verb, 100% native on the fkwu walker.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk
+; preludes: form-stdlib/core.fk form-stdlib/http-client.fk
 ;
-; Local-first ask, IN THE KERNEL: call the local oracle (host-exec), judge its answer (host-exec),
-; let the four-way-proven form-cli-sufficiency.fk decide accept / escalate, and on escalate call the
-; subscription oracle (host-exec `claude -p`) for the real answer — recording the crossing (host-exec
-; append) so the gap teaches the local lane. The body is Form; the kernel is the runtime; host-io is
-; the only carrier. Modeled on form-native-run.fk. Witness: scripts/form_cli_ask.sh (bin/form-cli ask+).
+; THE LANE (Urs north star): the body asks the local oracle and the kernel is the
+; only runtime. The question goes to the local LLM (ollama at localhost:11434) over
+; the ONE wire the walker carries natively — sock_request (tag 118), reached through
+; http-fetch (http-client.fk). NO host-exec, NO subprocess, NO clang/go at run time:
+; the request is RENDERED in Form (kh-render-request), SENT on the native socket op,
+; and the reply is PARSED in Form (a field-extractor over the JSON body). The whole
+; ask is flow + choice + string ops on the emitted kernel.
+;
+; This composts the earlier host-exec ask (oracle via `ollama run` / `claude -p`
+; subprocess): that lane needed a shell at run time, which the native binary is built
+; to NOT need. The fourth-arm host-io family (sock_request) is the carrier instead —
+; the one atom beneath http-fetch; everything above it is this recipe. Escalation to
+; a subscription oracle is a later rung (Anthropic API over tls_request); this rung is
+; the local oracle only.
 
-; call an oracle: write the prompt to a file, exec `oracle < file`, return its stdout
-(defn fca-oracle (oracle prompt)
-    (do (host-write "/tmp/fca_prompt.txt" prompt)
-        (host-exec (str_concat oracle " < /tmp/fca_prompt.txt 2>/dev/null"))))
+; ── JSON string escaping: the question becomes a JSON string value ──
+; Only the bytes JSON forbids inside a "..." string need escaping: '"' '\' and the
+; control bytes. We render \" \\ \n \r \t for the common ones and pass the rest
+; through (the question is plain text). One char at a time — flow over data.
+(defn fca-esc-char (c)
+    (do (let cp (ord c))
+        (if (eq cp 34) "\\\""
+        (if (eq cp 92) "\\\\"
+        (if (eq cp 10) "\\n"
+        (if (eq cp 13) "\\r"
+        (if (eq cp 9)  "\\t"
+            c)))))))
+(defn fca-esc-loop (s i acc)
+    (if (ge i (str_len s)) acc
+        (fca-esc-loop s (add i 1) (str_concat acc (fca-esc-char (char_at s i))))))
+(defn fca-json-string (s) (fca-esc-loop s 0 ""))
 
-; the first integer embedded in a string (so a chatty judge "the score is 84" still reads 84)
-(defn fca-isdigit (c) (if (ge c 48) (if (le c 57) 1 0) 0))
-; end of the digit run starting at i (str_to_int rejects trailing non-digits, so we slice exactly)
-(defn fca-numend (s i)
-    (if (ge i (str_len s)) i
-        (if (eq (fca-isdigit (ord (char_at s i))) 1) (fca-numend s (add i 1)) i)))
-; the LAST integer in a string — robust for a rating, since chatty judges ("0 issues, so 95")
-; put the verdict last; taking the first would grab a leaked leading 0.
-(defn fca-scan-nums (s i last)
-    (if (ge i (str_len s)) last
-        (if (eq (fca-isdigit (ord (char_at s i))) 1)
-            (fca-scan-nums s (fca-numend s i) (str_to_int (substring s i (fca-numend s i))))
-            (fca-scan-nums s (add i 1) last))))
-(defn fca-clamp100 (n) (if (gt n 100) 100 n))
-(defn fca-lastnum (s) (fca-clamp100 (fca-scan-nums s 0 0)))
+; ── the ollama /api/generate request body, rendered in Form ──
+; {"model":"<model>","prompt":"<question>","stream":false}
+(defn fca-gen-body (model question)
+    (str_concat "{\"model\":\""
+        (str_concat (fca-json-string model)
+            (str_concat "\",\"prompt\":\""
+                (str_concat (fca-json-string question)
+                    "\",\"stream\":false}")))))
 
-; judge the answer's coverage of the question, 0..100 (the fcj content axis), via the local judge.
-(defn fca-judge (judge question answer)
-    (fca-lastnum (fca-oracle judge
-        (str_concat "How fully does the ANSWER address the QUESTION? Reply with ONLY a single integer percent (higher means more complete), nothing else.\nQUESTION: "
-            (str_concat question (str_concat "\nANSWER: " answer))))))
+; ── extract the "response" string value out of the JSON reply ──
+; ollama's non-stream reply is one JSON object: {"model":...,"response":"<answer>",...}.
+; We find the `"response":"` key, then read the string value up to its closing quote,
+; honouring \" (an escaped quote does NOT end the value) and decoding the few escapes
+; the value carries back to real bytes. A pure-Form field reader — no substrate node.
+(defn fca-unesc-char (c)
+    (do (let cp (ord c))
+        (if (eq cp 110) "\n"        ; \n
+        (if (eq cp 114) "\r"        ; \r
+        (if (eq cp 116) "\t"        ; \t
+        (if (eq cp 34) "\""         ; \"
+        (if (eq cp 92) "\\"         ; \\
+        (if (eq cp 47) "/"          ; \/
+            c))))))))
+; walk from i (just inside the opening quote) to the unescaped closing quote.
+(defn fca-read-string (s i acc)
+    (if (ge i (str_len s)) acc
+        (do (let c (char_at s i))
+            (if (str_eq c "\"") acc
+                (if (str_eq c "\\")
+                    (if (ge (add i 1) (str_len s)) acc
+                        (fca-read-string s (add i 2)
+                            (str_concat acc (fca-unesc-char (char_at s (add i 1))))))
+                    (fca-read-string s (add i 1) (str_concat acc c)))))))
+; pull the value of the "response" field out of the JSON reply, or "" if absent.
+(defn fca-field (reply key)
+    (do (let marker (str_concat "\"" (str_concat key "\":\"")))
+        (let at (str_find reply marker 0))
+        (if (lt at 0) ""
+            (fca-read-string reply (add at (str_len marker)) ""))))
 
-; did the local lane punt? -> shape-ok 0
-(defn fca-refused? (ans)
-    (if (ge (str_find ans "do not answer" 0) 0) 1
-        (if (ge (str_find ans "cannot answer" 0) 0) 1
-            (if (ge (str_find ans "not enough" 0) 0) 1
-                (if (ge (str_find ans "don't have" 0) 0) 1 0)))))
+; ── THE ask: render -> POST over the native socket -> parse the answer ──
+; http-fetch POST to the local oracle; the response body holds the JSON; lift the
+; "response" field. fc-respond passes the model; the URL is the local ollama door.
+(defn fca-ask-model (model question)
+    (do (let body (fca-gen-body model question))
+        (let reply (http-fetch "POST" "http://localhost:11434/api/generate" body))
+        (let answer (fca-field reply "response"))
+        ; the (str_concat "" answer) keeps this return STRING-TYPED to the headless
+        ; root printer's fk_str_root_depth walk (it recognizes str_concat as string-
+        ; producing; a bare let-bound var it cannot prove). Identity at runtime.
+        (if (gt (str_len answer) 0) (str_concat "" answer)
+            (str_concat "[ask: no answer from local oracle — is ollama running at localhost:11434?]\n" reply))))
 
-; record the crossing (reason code) for learning — host-io append, the gap teaches the local lane
-(defn fca-record (reason)
-    (host-exec (str_concat "printf '%d\\n' " (str_concat (int_to_str reason)
-        " >> $HOME/.coherence-network/form-cli-escalations.log"))))
+; the verb entry: ask uses the default local model. The question is everything after
+; the verb word (the caller strips "ask "); empty question -> a usage line.
+(defn fca-ask (question)
+    (if (eq (str_len question) 0)
+        "ask: usage — ask <question>   (answered by the local oracle, native on fkwu)"
+        (fca-ask-model "llama3.2:3b" question)))
 
-; THE ask: local -> judge -> sufficiency verdict -> accept locally, or escalate for the real answer.
-; trust is the lane's accumulated confidence (0..100), passed in; retries the re-try budget.
-(defn fca-ask (question model judge remote trust retries)
-    (do
-        (let local (fca-oracle (str_concat "ollama run " model) question))
-        (let hasout (if (gt (str_len local) 0) 1 0))
-        (let shape (if (eq (fca-refused? local) 1) 0 1))
-        (let content (if (eq hasout 1) (fca-judge judge question local) 0))
-        (let sig (fsuf-signals hasout shape content trust trust retries))
-        (let v (fsuf-verdict sig))
-        (let r (fsuf-reason sig))
-        (if (eq v 0)
-            (str_concat "[local · sufficient · 0 subscription tokens]\n" local)
-            (do
-                (fca-record r)
-                (str_concat "[escalated -> remote · reason " (str_concat (int_to_str r)
-                    (str_concat "]\n" (fca-oracle remote question))))))))
+0
