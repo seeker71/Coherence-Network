@@ -1,0 +1,54 @@
+; diffusion-q-learning.fk — QAM (Q-learning with Adjoint Matching, Li & Levine, arXiv:2601.14234)
+; as a graft onto the learning engine the body already runs. NO new engine: a diffusion / flow
+; policy is improved against a Q-critic WITHOUT backprop through the multi-step denoise chain,
+; because the chain rule is already a forward reversed-edge gather here — mtb-reverse IS the
+; adjoint (metabolic-learning.fk claim 512). QAM's whole move reduces to: feed the critic's
+; ACTION-gradient ∇_aQ as the metabolic delta, and let the adjoint carry it through the policy.
+;
+; The pieces are all shipped four-way:
+;   gl-step        the forward policy / the linear critic readout            (geometric-learning.fk)
+;   mtb-credit     per-edge credit g_e = delta_i · x_j — the adjoint-matched step-wise objective
+;   mtb-unwrap     the gift: w' = w + focus·angle·g_e — angle +1 ASCENDS the critic
+;   mtb-reverse    the adjoint carrier — backprop through gl-step is gl-step over reversed edges
+;   mtb-step-d     the observer gate — pressure ≤ tol ⇒ untouched (a resolved action costs nothing)
+;   gl-bellman     the critic's bootstrap: V'(i) = max(r + γ·V(j)) — the same max-plus gather
+;
+; The QAM/λ tilt — π* ∝ μ_β · exp(Q/λ) — lives in two dials: bc-focus anchors to the behaviour
+; (the diffusion BC loss, in-support), q-focus is the Q-tilt aperture (q-focus 0 ⇒ pure BC, the
+; λ→∞ limit). The two injections superpose because mtb-unwrap is additive — one operator, fired
+; twice. Proven by tests/diffusion-q-learning-band.fk → 255, four-way (Go/Rust/TS/fkwu).
+;
+; Kin: metabolic-learning.fk (the operator) · geometric-learning.fk (the gather + Bellman limb) ·
+; preference-learning.form (QAM is KTO's transform:"value" with a LEARNED critic in place of the
+; fixed reference point) · champion-challenger.fk (serve champion policy while the challenger
+; trains the tilt — the offline→online lane QAM reports its win on) · federated-slices.fk (the
+; mesh: many critics, deterministic slice-merge).
+(do
+    ; --- the critic: Q(a) = <q, a>, read as the head of the linear gather over qedges (0 j q_j) ---
+    (defn dql-q (qedges a) (head (gl-step qedges a)))
+
+    ; --- the critic's ACTION-gradient ∇_aQ, recovered by the ADJOINT (reversed-edge gather) on a
+    ;     unit pulse — free backtrace, no tape. For a linear critic this returns the q-vector. ---
+    (defn dql-grad-a (qedges pulse) (gl-step (mtb-reverse qedges) pulse))
+
+    ; --- QAM improvement: adjoint-MATCH the critic gradient into the policy params. gradA IS the
+    ;     metabolic delta; mtb-credit assigns it per policy-edge; angle +1.0 ASCENDS Q; tol is the
+    ;     observer / fast-fail gate — when the action is already resolved no parameter moves. ---
+    (defn dql-improve (pedges x gradA focus tol)
+        (mtb-step-d pedges gradA x focus 1.0 (mtb-ones (len pedges)) tol))
+
+    ; --- the ACTOR objective: behaviour-clone anchor toward the data action (the diffusion BC loss,
+    ;     keeping the policy in-support), THEN the Q-tilt. q-focus is the λ dial — 0 ⇒ pure BC. The
+    ;     two injections superpose; the policy is one operator fired twice, never a second engine. ---
+    (defn dql-actor (pedges x ydata gradA bc-focus q-focus gradtol)
+        (dql-improve (mtb-learn pedges x ydata bc-focus) x gradA q-focus gradtol))
+
+    ; --- the critic's bootstrap target: TD/Bellman y = r + γ·Q(s', a'). Closed form here; the
+    ;     shipped gl-bellman is the SAME backup as a max-plus gather over transition edges. ---
+    (defn dql-td-target (r gamma qnext) (add r (mul gamma qnext)))
+
+    ; --- one layer of the chain-rule adjoint: push an upstream action-gradient back through a
+    ;     gl-step layer to the layer below — gl-step over the layer's REVERSED edges. Stack to any
+    ;     depth: the deep policy's gradient is the chain of adjoints, no unrolled autograd tape. ---
+    (defn dql-backstep (wedges gradup) (gl-step (mtb-reverse wedges) gradup))
+    0)
