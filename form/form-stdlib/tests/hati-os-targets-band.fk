@@ -4,7 +4,7 @@
 ; Verdict 8388607 when macOS, Android, Windows ARM64, Windows amd64, and
 ; Windows x86_64 target rows, oracle surfaces, Form-native object/executable
 ; emitters or explicit pending ARM64 PE/COFF gaps, arm64/x64 JIT runtime rows,
-; Windows x64 loadable-DLL carrier rows, implementation rows, and hati.earth
+; Windows x64 DLL bootstrap exe rows, implementation rows, and hati.earth
 ; download coordinates are discoverable.
 
 (do
@@ -130,9 +130,9 @@
                     0)
                 0))
     (let c21 (if (str_eq (hos-target-form-native-object win64) "form-pe-coff")
-                (if (str_eq (hos-target-form-native-executable win64) "form-pe-coff+lld-link-dll")
+                (if (str_eq (hos-target-form-native-executable win64) "form-pe-coff+dll-bootstrap-exe")
                     (if (str_eq (hos-target-form-native-object windows) "form-pe-coff")
-                        (if (str_eq (hos-target-form-native-executable windows) "form-pe-coff+lld-link-dll") 2097152 0)
+                        (if (str_eq (hos-target-form-native-executable windows) "form-pe-coff+dll-bootstrap-exe") 2097152 0)
                         0)
                     0)
                 0))
