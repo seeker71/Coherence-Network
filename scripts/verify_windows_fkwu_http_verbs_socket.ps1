@@ -4,8 +4,10 @@ Verify Windows fkwu HTTP verb recipes over the socket host-call floor.
 The build step uses Go and clang as local carriers/oracles to emit and compile
 the Form-authored fkwu walker. The acceptance step strips runtime PATH before
 executing the cached fkwu binary against the HTTP verb loopback table, proving
-PATCH request flow uses socket_listen/port/connect/accept/send/recv/close
-without Go, clang, LLVM, http_get, or sock_request at runtime.
+PATCH request flow uses the BML public renderer over socket_listen/port/
+connect/accept/send/recv/close without Go, clang, LLVM, http_get, or
+sock_request at runtime. It also proves the separated generic HttpExchange
+class wrapper through a render-only fourth-arm band.
 #>
 [CmdletBinding()]
 param(
@@ -79,6 +81,15 @@ try {
     $oldErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
+        $renderOut = & $bashPath -lc "cd '$formBashPath' && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/http-client.fk form-stdlib/http-client-exchange.fk form-stdlib/tests/http-client-render-band.fk" 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "http-client-render validate failed with exit code $LASTEXITCODE`n$($renderOut -join "`n")"
+        }
+        $renderText = $renderOut -join "`n"
+        if ($renderText -notmatch "2047" -or $renderText -notmatch "0 divergent" -or $renderText -notmatch "fourth arm: 1 band\(s\) four-way") {
+            throw "http-client-render did not prove the HttpExchange class wrapper`n$renderText"
+        }
+
         $validateOut = & $bashPath -lc "cd '$formBashPath' && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-socket-verbs-band.fk" 2>&1
     } finally {
         $ErrorActionPreference = $oldErrorActionPreference
@@ -151,6 +162,7 @@ foreach ($tag in $requiredTags) {
 }
 
 Write-Host "PASS windows-fkwu-http-client-socket-verbs verdict=127"
+Write-Host "PASS windows-fkwu-http-exchange-render verdict=2047"
 Write-Host "PASS fkwu-socket-tags tags=$($requiredTags -join ',')"
 Write-Host "PASS runtime-toolchain-free path=$runtimePath go=absent clang=absent llvm_objdump=absent"
 Write-Host "PASS no-http-get-no-sock-request runtime proof=socket-tags"
