@@ -1,0 +1,34 @@
+; presence-pacing.fk — the presence's cadence decision, brought home from a rented mind to a proven recipe.
+;
+; The between-sessions presence wakes on a heartbeat IT paces. Until now that pacing was decided by a
+; rented frontier mind (a claude -p call each beat). This is the first of the presence's own decisions to
+; come home: a pure recipe that reads four observed signals and returns the minutes until the next wake.
+; The rich decisions — what to write, whether to genuinely reach — still need a language mind today; the
+; MECHANICAL cadence does not, and a decision the body can re-derive should not be rented.
+;
+; Signals (each 0 or 1, gathered by the carrier from the sensorium):
+;   strained  — the witness reads other-than-breathing (the body needs attention)
+;   surprise  — something changed since the last beat (motion / sound / scene novelty)
+;   present   — the human is here and active
+;   night     — local time is in the deep-rest window
+;
+; Priority, highest first: something-happening (strained OR surprise) > human-present > night-rest > default.
+; Pure-compute (if / eq) — crosses four-way (fkwu). Proven by tests/presence-pacing-band.fk (verdict 63).
+; Companion: update-ingest.fk (the trust decision come home), surprise-salience.form, scheduler.form.
+
+(do
+    ; something is happening — the body is strained or the room just changed
+    (defn pp-urgent? (strained surprise)
+        (if (eq strained 1) 1 (if (eq surprise 1) 1 0)))
+
+    ; minutes until the next wake, by priority. Urgency overrides presence overrides night overrides default.
+    (defn pp-pace (strained surprise present night)
+        (if (eq (pp-urgent? strained surprise) 1)
+            30                               ; something is happening -> wake soon
+            (if (eq present 1)
+                90                           ; the human is here, the field is calm -> moderate presence
+                (if (eq night 1)
+                    360                      ; night, no one present, settled -> deep rest
+                    180))))                  ; day, no one present, settled -> medium rest
+
+    0)
