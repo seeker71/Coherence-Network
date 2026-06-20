@@ -1,0 +1,51 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "claude/modest-brahmagupta-efcb89",
+  "commit_scope": "After the C-emit lane, make the x86-64 asm-emit independent of clang. The arm64 form-asm/form-lower lane already emits machine bytes with no clang; the x64 (Windows/Intel) lane had only form-pe-coff (wraps caller bytes) + hand-encoded recipes + the affine lea -- no general LOWERING. Adds form-asm-x64.fk (x64 instruction byte encoders) and form-lower-x64.fk (the x64 twin of form-lower: an op-tagged expression tree -> single-accumulator RAX codegen, arg banked in RCX, operand-aware fold + re-entrant push/pop spill), so an arbitrary LIT/ARG/ADD/SUB/MUL tree compiles to x64 machine bytes with zero clang. Proven four-way and by execution.",
+  "files_owned": [
+    "form/form-stdlib/form-asm-x64.fk",
+    "form/form-stdlib/form-lower-x64.fk",
+    "form/form-stdlib/tests/form-lower-x64-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/x64_lower_run.ps1",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/system_audit/commit_evidence_20260620_form_lower_x64.json"
+  ],
+  "idea_ids": ["x64-asm-emit-no-clang", "form-lower-x64", "asm-emit-independent-of-c"],
+  "spec_ids": ["form-to-asm"],
+  "task_ids": ["task-2026-06-20-form-lower-x64"],
+  "contributors": [
+    { "contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction: after the C-emit, the asm-emit must be independent of C (clang)"] },
+    { "contributor_id": "claude", "contributor_type": "machine", "roles": ["implementation", "validation", "execution-conviction", "evidence"] }
+  ],
+  "agent": { "name": "claude", "version": "claude-opus-4-8" },
+  "evidence_refs": [
+    "form-asm-x64.fk -> x86-64 byte encoders verified against the clang/llvm-objdump oracle per instruction: mov rax,rcx (48 89 C8), mov rax,imm32 (48 C7 C0 ..), add/sub rax,imm32 (48 05 / 48 2D), imul rax,rax,imm32 (48 69 C0 ..), add/sub/imul rax,rcx (48 01/29 C8, 48 0F AF C1), push rax (50) / pop rdx (5A), ret (C3)",
+    "form-lower-x64.fk -> lx-node single-accumulator codegen: n*3+7 lowers to [72 137 200 | 72 105 192 3 0 0 0 | 72 5 7 0 0 0 | 195]; (n+n)*n to [72 137 200 | 72 1 200 | 72 15 175 193 | 195]",
+    "Git Bash + Windows toolchain: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm-x64.fk form-stdlib/form-lower-x64.fk form-stdlib/tests/form-lower-x64-band.fk -> 15; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "EXECUTION conviction (the deepest witness, per form-to-asm.form): powershell -File scripts/x64_lower_run.ps1 -> status pass. Five trees lower -> form-pe-coff object -> lld-link DLL -> bootstrap host RUN: 3n+7@5=22, 3n+7@100=307, n*n+n@9=90, (n+n)*n@5=50, n*n-3@6=33. The recipe machine code is 100% Form-emitted; clang/gcc never touch it (gcc builds only the host exe; lld-link is the linker carrier)."
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "Git Bash: export PATH=\"$PATH:/c/Program Files/LLVM/bin\"; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm-x64.fk form-stdlib/form-lower-x64.fk form-stdlib/tests/form-lower-x64-band.fk",
+      "PowerShell: $env:Path += ';C:\\Program Files\\LLVM\\bin'; powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\x64_lower_run.ps1"
+    ],
+    "fourth_arm_outputs": [
+      "form-lower-x64 fkc lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 15"
+    ]
+  },
+  "ci_validation": { "status": "pending", "commands": [], "notes": "PR CI not run yet." },
+  "deploy_validation": { "status": "pending", "environment": "not-deployed-runtime-floor", "notes": "Additive Form recipes + a Windows execution proof; no existing file's behavior changed." },
+  "phase_gate": { "can_move_next_phase": false, "reason": "The x64 lowering for the arithmetic subset is clang-free and execution-proven; branches (cmp+jcc) and CALL/recursion (the x64 twin of form-lower's COND/bl) plus general register allocation are the named next increments toward parity with the arm64 lane." },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Windows/x86-64 native lane gains a general expression-tree compiler that emits machine bytes with no clang -- the x64 twin of the arm64 form-asm/form-lower lane. A Form recipe over LIT/ARG/ADD/SUB/MUL now becomes a running native DLL with clang nowhere in the code path.",
+    "public_endpoints": ["local-only: Form stdlib x64 encoder/lowering, a four-way band, and a Windows execution proof"],
+    "test_flows": [
+      "Four-way: form-lower-x64-band -> 15 (Go/Rust/TS/fkwu, 0 divergent) -- the lowering byte-encodes identically across kernels.",
+      "Execution: five trees (incl. non-affine n*n+n, (n+n)*n, n*n-3) lower -> PE/COFF -> DLL -> bootstrap host run with byte-correct results, zero clang in the code path."
+    ]
+  }
+}

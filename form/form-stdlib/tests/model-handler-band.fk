@@ -1,0 +1,15 @@
+; preludes: form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk
+;
+; Proves the FACTORY CLOSURE that captures runtime data crosses fkwu four-way:
+; ms-predict-handler(model) returns a handler closure bound to the learned
+; weights; calling it serves the model's prediction. This is the closure the
+; old "fourth-arm wall" blocked — now in the floor (walker tag-44 capture +
+; flattener factory lowering). Verdict 7.
+(do
+    (let model (list 2000 0))
+    (let req (kh-request "GET" "/predict" (list) (list (kh-field "x" "3000")) ""))
+    (let h (ms-predict-handler model))
+    (let c0 (if (eq (kh-response-status (h req)) 200) 1 0))
+    (let c1 (if (str_eq (kh-response-body (h req)) "{\"prediction\":6000}") 2 0))
+    (let c2 (if (eq (ms-predict model 3000) 6000) 4 0))
+    (add c0 (add c1 c2)))

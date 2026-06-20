@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "claude/modest-brahmagupta-efcb89",
+  "commit_scope": "Extend the native presence beyond a toy affine recipe to a LEARNED-MODEL HTTP service assembled from independently-shared parts: a model-backed handler (the ML part, weights as data via affine-train SGD), a composable middleware layer (the 'anyone can add a layer' part http-server lacked), and an assembly composing them with the data-driven router. Prove the model trains on one process, is shared over a channel as a recipe node, served byte-identically across Go and Rust, and served live by a running presence that also picks up a second contributor's model — no restart.",
+  "files_owned": [
+    "form/form-stdlib/model-service.fk",
+    "form/form-stdlib/http-layer.fk",
+    "form/form-stdlib/presence-service.fk",
+    "form/form-stdlib/tests/model-serve-core-band.fk",
+    "form/form-stdlib/tests/model-service-band.fk",
+    "form/form-stdlib/tests/presence-service-band.fk",
+    "form/native/presence/form_presence_host.c",
+    "form/fourth-arm-bands.txt",
+    "scripts/federation_service.ps1",
+    "docs/coherence-substrate/learned-model-service.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_20260620_learned_model_service.json"
+  ],
+  "idea_ids": [
+    "learned-model-http-service",
+    "composable-http-middleware-layer",
+    "share-a-trained-model-as-a-node",
+    "anyone-adds-a-part-live"
+  ],
+  "spec_ids": [
+    "native-presence",
+    "learned-model-service"
+  ],
+  "task_ids": [
+    "task-2026-06-20-learned-model-service"
+  ],
+  "contributors": [
+    { "contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "north-star", "acceptance-criteria"] },
+    { "contributor_id": "claude", "contributor_type": "machine", "roles": ["architecture", "implementation", "validation", "evidence", "adversarial-verification"] }
+  ],
+  "agent": { "name": "claude", "version": "claude-opus-4-8" },
+  "evidence_refs": [
+    "form/form-stdlib/model-service.fk -> ms-predict (learned model as data), ms-predict-handler (factory closure bound to a presence's weights), ms-body (JSON render)",
+    "form/form-stdlib/http-layer.fk -> layer-wrap/layer-stamp/layer-gate/layer-stack: the composable middleware http-server lacked; anyone adds a layer by appending a row",
+    "form/form-stdlib/presence-service.fk -> psvc-serve composes router + model handler + chosen layers; model and layers are parameters",
+    "Git Bash + Windows toolchain: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-serve-core-band.fk -> 15; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash + Windows toolchain: cd form && ./validate.sh ... model-service-band.fk -> 255; 1 ok, 0 divergent (three-way; model-capturing + middleware closures)",
+    "Git Bash + Windows toolchain: cd form && ./validate.sh ... presence-service-band.fk -> 127; 1 ok, 0 divergent (three-way; full HTTP wire: prediction, model-as-data swap, stamp, gate 401/serve, second route, oracle)",
+    "Fourth-arm wall named honestly: model-service fourth=7, presence-service fourth=64 — factory closures capturing runtime data do not cross the emitted walker; only the data-level inference+render core (model-serve-core, verdict 15) is four-way",
+    "powershell -File scripts/federation_service.ps1 -> status pass: train_share served {prediction:5964} (learned y=2x, not constant); sibling_parity go==rust=={prediction:5964} identical; live_serve pid_stable served modelA 5964 then contributor C y=3x model 8965, no_restart true, distinct_models true",
+    "form/native/presence/form_presence_host.c -> added a kernel-walk (cmd/popen) job kind so a running presence integrates RICH recipes (HTTP/ML) the native lane cannot lower yet; the native dll path is unchanged"
+  ],
+  "change_files": [
+    "form/form-stdlib/model-service.fk",
+    "form/form-stdlib/http-layer.fk",
+    "form/form-stdlib/presence-service.fk",
+    "form/form-stdlib/tests/model-serve-core-band.fk",
+    "form/form-stdlib/tests/model-service-band.fk",
+    "form/form-stdlib/tests/presence-service-band.fk",
+    "form/native/presence/form_presence_host.c",
+    "form/fourth-arm-bands.txt",
+    "scripts/federation_service.ps1",
+    "docs/coherence-substrate/learned-model-service.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_20260620_learned_model_service.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "Git Bash: export PATH=\"$PATH:/c/Program Files/LLVM/bin\"; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/tests/model-serve-core-band.fk",
+      "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/tests/model-service-band.fk",
+      "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk form-stdlib/presence-service.fk form-stdlib/tests/presence-service-band.fk",
+      "Git Bash: cd form && gcc native/presence/form_presence_host.c -O2 -Wall -o .cache/presence/form-presence-host.exe (0 warnings)",
+      "PowerShell: $env:Path += ';C:\\Program Files\\LLVM\\bin'; powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\federation_service.ps1"
+    ],
+    "fourth_arm_outputs": [
+      "model-serve-core fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 15",
+      "model-service / presence-service: three-way only (Go/Rust/TS); fourth-arm wall = factory closures capturing runtime data; NOT listed in fourth-arm-bands.txt"
+    ]
+  },
+  "ci_validation": { "status": "pending", "commands": [], "notes": "PR CI has not run yet for this branch." },
+  "deploy_validation": { "status": "pending", "environment": "not-deployed-runtime-floor", "notes": "Local runtime feature. No TCP socket is bound (the verb logic is string->string); the socket carrier is the named host boundary. mac/android live serving reuses proven lowering lanes, not yet run live." },
+  "phase_gate": { "can_move_next_phase": false, "reason": "Local four-way + three-way bands and the live federation passed and were adversarially re-verified; CI, deploy, real-socket carrier, and mac/android live remain pending." },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native presence now serves a learned-model HTTP capability assembled from independently-shareable parts. A trained model travels as a content-addressed recipe node and serves identically across kernels; a running presence integrates rich (kernel-walked) recipes and new contributors' models live without restart. Middleware layers compose over any handler.",
+    "public_endpoints": ["local-only: Form stdlib recipes, a kernel-walk presence host, and a PowerShell federation proof; no public HTTP endpoint and no bound socket"],
+    "test_flows": [
+      "Four-way core: model-serve-core band -> 15 (Go/Rust/TS/fkwu, 0 divergent) proves the learned inference-as-data and JSON render are portable.",
+      "Three-way service: model-service band -> 255 proves the model-backed handler closure and the stamp/gate middleware at the value level; presence-service band -> 127 proves the full HTTP wire including model-as-data swap, the stamp header, the gate 401-without/serve-with, and a second added route.",
+      "Federation share: a model trained by SGD on process A is frozen to a channel and read by process B; Go and Rust serve the byte-identical learned prediction (content-addressed).",
+      "Live integration: a running presence serves the shared model via a kernel-walk job, then serves a second contributor's differently-trained model, at a stable PID with one awake event — a new part integrated with no restart.",
+      "Honest wall: the closure composition is three-way; the fourth-arm capacity wall (closures capturing runtime data) is named, not papered over."
+    ]
+  }
+}

@@ -600,6 +600,68 @@
 (defn flt-defn-recursive (name s pos)
     (flt-calls-name name s (fp-skip s pos) (flt-expr-end s pos)))
 
+; ── closure factories ────────────────────────────────────────────────────
+; A defn whose body is  (do (defn inner (p..) body) inner)  is a CLOSURE
+; FACTORY: it returns a function that closes over the outer params. The inner is
+; lifted to a top-level function whose LEADING params are the captured outer
+; params, then the real params; the outer body becomes a make-closure ref
+; (fn-index arity . captured-values). flt-sig-scan already gave `inner` a
+; function index (it scans into bodies), so we compile its body here with the
+; capture params and place it in rbodies right after the outer — keeping
+; fns/rbodies aligned. The walker's tag-44 prepends the captured tail to the
+; call args (a closure is a partial application); a named ref (empty tail) is
+; unchanged, so this is purely additive.
+(defn flt-special-key? (name)
+    (if (str_eq name (flt-recq)) 1
+    (if (str_eq name (flt-fidxq)) 1
+    (if (str_eq name (flt-letdepth-q)) 1
+    (if (str_eq name (flt-poolq)) 1 0)))))
+; the LEADING non-special env rows are exactly the outer function's params
+; (flt-env-append puts penv first, then the recq/fidxq specials, then module env)
+(defn flt-cap-rows (env)
+    (if (eq (len env) 0) (list)
+        (if (eq (flt-special-key? (nth (head env) 0)) 1) (list)
+            (cons (head env) (flt-cap-rows (tail env))))))
+(defn flt-names-of (rows) (if (eq (len rows) 0) (list) (cons (nth (head rows) 0) (flt-names-of (tail rows)))))
+(defn flt-access-of (rows) (if (eq (len rows) 0) (list) (cons (nth (head rows) 1) (flt-access-of (tail rows)))))
+(defn flt-append-l (a b) (if (eq (len a) 0) b (cons (head a) (flt-append-l (tail a) b))))
+(defn flt-cap-chain (caps) (if (eq (len caps) 0) (fk-empty) (fk-cons (head caps) (flt-cap-chain (tail caps)))))
+(defn flt-make-closure (fidx arity caps) (fk-cons (fk-lit fidx) (fk-cons (fk-lit arity) (flt-cap-chain caps))))
+
+(defn flt-do-first (s dopos) (fp-skip s (fp-sym-end s (fp-skip s (add dopos 1)))))
+(defn flt-factory-shape? (s dopos)
+    (if (str_eq (flt-peek s dopos) "do")
+        (if (str_eq (flt-peek s (flt-do-first s dopos)) "defn") 1 0) 0))
+; -> (outer-body inner-body endpos) for a valid factory, else (list).
+(defn flt-factory-parse (s pos fns benv)
+    (if (eq (flt-factory-shape? s (fp-skip s pos)) 1)
+        (flt-fp-name s (fp-skip s pos) fns benv (flt-fp-name-pos s (flt-do-first s (fp-skip s pos))))
+        (list)))
+(defn flt-fp-name-pos (s ipos) (fp-skip s (fp-sym-end s (fp-skip s (add ipos 1)))))
+(defn flt-fp-name (s dopos fns benv npos)
+    (flt-fp-params s dopos fns benv (flt-word s npos)
+        (flt-params s (add (fp-skip s (fp-sym-end s npos)) 1))))
+(defn flt-fp-params (s dopos fns benv iname pe)
+    (flt-fp-build s dopos fns iname (nth pe 0) (nth pe 1) (flt-cap-rows benv) (nth (flt-assoc iname fns) 1)))
+(defn flt-fp-build (s dopos fns iname iparams ibodypos caprows fidx)
+    (flt-fp-compile s dopos fns iname ibodypos fidx (flt-access-of caprows)
+        (flt-append-l (flt-names-of caprows) iparams)))
+(defn flt-fp-compile (s dopos fns iname ibodypos fidx capaccess allparams)
+    (flt-fp-finish s dopos fidx capaccess (len allparams)
+        (flt-expr s ibodypos fns (flt-penv allparams (len allparams) 0)) ibodypos iname))
+(defn flt-fp-finish (s dopos fidx capaccess total ibe ibodypos iname)
+    (flt-fp-emit s dopos fidx capaccess total ibe ibodypos
+        (flt-fp-ret-ok? s (fp-close s (nth ibe 1)) iname)))
+(defn flt-fp-ret-ok? (s afterinner iname)
+    (if (str_eq (flt-word s (fp-skip s afterinner)) iname)
+        (if (eq (fp-at s (fp-skip s (fp-sym-end s (fp-skip s afterinner)))) 41) 1 0) 0))
+(defn flt-fp-emit (s dopos fidx capaccess total ibe ibodypos ok)
+    (if (eq ok 1)
+        (list (flt-make-closure fidx total capaccess)
+              (flt-reserve-wrap-k (flt-count-lets s ibodypos (fp-close s (nth ibe 1))) (nth ibe 0))
+              (fp-close s dopos))
+        (list)))
+
 (defn flt-defn (s pos fns rbodies env main)
     (flt-defn-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
 (defn flt-defn-n (s pos fns rbodies env main)
@@ -624,7 +686,11 @@
                           (cons (list (flt-fidxq) (nth row 1)) env)))
                 rbodies env main))
 (defn flt-defn-b (s pos fns benv rbodies env main)
-    (flt-defn-b2 s pos (flt-expr s pos fns benv) fns rbodies env main))
+    (flt-defn-b-disp (flt-factory-parse s pos fns benv) s pos fns benv rbodies env main))
+(defn flt-defn-b-disp (fac s pos fns benv rbodies env main)
+    (if (eq (len fac) 0)
+        (flt-defn-b2 s pos (flt-expr s pos fns benv) fns rbodies env main)
+        (flt-items s (nth fac 2) fns (cons (nth fac 1) (cons (nth fac 0) rbodies)) env main)))
 (defn flt-defn-b2 (s pos be fns rbodies env main)
     (flt-defn-done s (flt-count-lets s pos (fp-close s (nth be 1))) be fns rbodies env main))
 (defn flt-defn-done (s k be fns rbodies env main)
@@ -677,7 +743,11 @@
                             (cons (list (flt-fidxq) (nth row 1)) env)))
                   rbodies env main))
 (defn flt-defn-b-s (s pos fns benv rbodies env main)
-    (flt-defn-b2-s s pos (flt-expr s pos fns benv) fns rbodies env main))
+    (flt-defn-b-s-disp (flt-factory-parse s pos fns benv) s pos fns benv rbodies env main))
+(defn flt-defn-b-s-disp (fac s pos fns benv rbodies env main)
+    (if (eq (len fac) 0)
+        (flt-defn-b2-s s pos (flt-expr s pos fns benv) fns rbodies env main)
+        (flt-items-s s (nth fac 2) fns (cons (nth fac 1) (cons (nth fac 0) rbodies)) env main)))
 (defn flt-defn-b2-s (s pos be fns rbodies env main)
     (flt-defn-done-s s (flt-count-lets s pos (fp-close s (nth be 1))) be fns rbodies env main))
 (defn flt-defn-done-s (s k be fns rbodies env main)

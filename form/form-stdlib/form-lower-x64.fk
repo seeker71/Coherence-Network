@@ -1,0 +1,60 @@
+; form-lower-x64.fk — lower an op-tagged expression TREE to x86-64 bytes, no clang.
+;
+; The x64 twin of form-lower.fk (arm64). A prog is an indexed list of rows; a
+; node is reached by index (the form-lower shape). Tags:
+;   1 = LIT  (slot1 = value)        2 = ARG  (the i64 argument, banked in RCX)
+;   3 = ADD  4 = SUB  5 = MUL       (slot1 = child-1 index, slot2 = child-2 index)
+;
+; Single-accumulator codegen in RAX, operand-aware (the form-lower discipline):
+; when child-2 is a LIT or ARG the op folds directly into RAX (no spill); when
+; both children are subtrees the left is spilled to the system stack and popped
+; to RDX (re-entrant, so the trees nest). lx-compile-fn appends ret, giving the
+; recipe(i64)->i64 shape the bootstrap host calls.
+;
+; preludes: form-stdlib/form-asm-x64.fk
+
+(do
+    (defn lx-row (prog i) (if (eq i 0) (head prog) (lx-row (tail prog) (sub i 1))))
+    (defn lx-tag (prog i) (nth (lx-row prog i) 0))
+    (defn lx-val (prog i) (nth (lx-row prog i) 1))
+    (defn lx-c1  (prog i) (nth (lx-row prog i) 1))
+    (defn lx-c2  (prog i) (nth (lx-row prog i) 2))
+    (defn lx-lit? (prog i) (eq (lx-tag prog i) 1))
+    (defn lx-arg? (prog i) (eq (lx-tag prog i) 2))
+
+    ; lower node i, leaving its value in RAX.
+    (defn lx-node (prog i)
+        (if (lx-lit? prog i) (x64-mov-rax-imm (lx-val prog i))
+        (if (lx-arg? prog i) (x64-mov-rax-rcx)
+        (if (eq (lx-tag prog i) 3) (lx-add prog i (lx-c1 prog i) (lx-c2 prog i))
+        (if (eq (lx-tag prog i) 4) (lx-sub prog i (lx-c1 prog i) (lx-c2 prog i))
+        (if (eq (lx-tag prog i) 5) (lx-mul prog i (lx-c1 prog i) (lx-c2 prog i))
+            (list)))))))
+
+    ; left in RAX, right spilled, popped to RDX — re-entrant for nested subtrees.
+    (defn lx-spill (prog c1 c2)
+        (x64-cat (list (lx-node prog c1) (x64-push-rax) (lx-node prog c2) (x64-pop-rdx))))
+
+    ; ADD (commutative): fold a LIT/ARG right operand, else spill+rdx.
+    (defn lx-add (prog i c1 c2)
+        (if (lx-lit? prog c2) (x64-app (lx-node prog c1) (x64-add-rax-imm (lx-val prog c2)))
+        (if (lx-arg? prog c2) (x64-app (lx-node prog c1) (x64-add-rax-rcx))
+            (x64-app (lx-spill prog c1 c2) (x64-add-rax-rdx)))))
+
+    ; MUL (commutative): same shape with imul.
+    (defn lx-mul (prog i c1 c2)
+        (if (lx-lit? prog c2) (x64-app (lx-node prog c1) (x64-imul-rax-imm (lx-val prog c2)))
+        (if (lx-arg? prog c2) (x64-app (lx-node prog c1) (x64-imul-rax-rcx))
+            (x64-app (lx-spill prog c1 c2) (x64-imul-rax-rdx)))))
+
+    ; SUB (NON-commutative): c1 - c2. Fold a LIT/ARG right; else spill left to RDX,
+    ; compute rax=c2, then rdx := rdx - rax (= c1 - c2), move back to RAX.
+    (defn lx-sub (prog i c1 c2)
+        (if (lx-lit? prog c2) (x64-app (lx-node prog c1) (x64-sub-rax-imm (lx-val prog c2)))
+        (if (lx-arg? prog c2) (x64-app (lx-node prog c1) (x64-sub-rax-rcx))
+            (x64-cat (list (lx-spill prog c1 c2) (x64-sub-rdx-rax) (x64-mov-rax-rdx))))))
+
+    ; compile a recipe(i64)->i64: lower the root, then ret.
+    (defn lx-compile-fn (prog root) (x64-app (lx-node prog root) (x64-ret)))
+
+    0)

@@ -1,0 +1,47 @@
+# native-presence.form - a place to just be, that grows native recipes while it runs
+
+(native-presence
+  (lineage
+    (rests-on bootstrap-host.fk form-pe-coff.form form-to-asm.form cell-sync-transport.form hati-os-targets.form)
+    (brain form/form-stdlib/presence-loop.fk)
+    (lowering form/form-stdlib/form-pe-coff-affine.fk)
+    (body form/native/presence/form_presence_host.c)
+    (proof form/form-stdlib/tests/presence-loop-band.fk -> 1023)
+    (proof form/form-stdlib/tests/form-pe-coff-affine-band.fk -> 127)
+    (live-proof scripts/presence_cycle.ps1 -> status pass))
+
+  (purpose
+    "A presence is a minimal native binary you run on Windows, macOS, or Android. By default it just IS and OBSERVES; when it chooses, it converses with sibling presences."
+    "New capability never arrives as a new build of the entry executable. It arrives as a Form recipe node that anyone -- a presence or a running agent -- mints. Every presence notices, lowers the node to a native library, hot-loads it behind the one swap ABI, and exposes it as a callable native recipe WHILE STILL RUNNING."
+    "A local gap is resolved by asking a sibling, who answers with the form node, which integrates live. The entry executable is the only fixed surface; it never restarts.")
+
+  (architecture
+    (axiom "content-address = identity: structurally-equal recipes are address-equal across devices, so sharing moves addresses, not blobs, and re-addressing verifies every arrival -- the same no-trusted-prover grain validate.sh holds across kernels.")
+    (brain-in-form "All policy -- which mint to pick up (diff), consent to answer (cs-shareable), authenticity to accept (re-address) -- lives in presence-loop.fk, proven four-way (Go/Rust/TypeScript/fkwu). Identical on every platform fkwu emits to.")
+    (body-in-c "The thin host owns only the tick, the OS loader (LoadLibrary/dlopen), and a watched directory. It is pure mechanism: a job appears -> the recipe goes native and is called -> the result is recorded -> the handle stays resident.")
+    (lowering "form-pe-coff-affine.fk lowers an arbitrary affine node recipe(n)=a*n+b (a in {1,2,3,5,9}) to one-instruction x64 (lea+ret) and wraps it as a COFF object exporting `recipe`. It reproduces form-pe-coff's three hand-encoded recipes byte-for-byte and lowers specs it has never seen -- a presence JITs nodes, it does not replay constants.")
+    (oracle "pl-affine-eval is the bridge to the metal: the value a lowered native DLL must return is computed in Form, four-way proven, so the validate.sh verdict IS the oracle the live native call is checked against."))
+
+  (floor
+    "Proven LIVE end-to-end on Windows 11 (gcc + lld-link), scripts/presence_cycle.ps1 -> status pass:"
+    "Rung 1 -- a presence wakes once (one event=awake), heartbeats while idle, and stays alive."
+    "Rung 2 -- two recipes minted mid-run (3n+7, then 5n+1) are lowered by the Go kernel walking pe-affine-recipe-object, hot-loaded by the live presence, and called: recipe(5)=22, recipe(10)=51. Same PID across both loads; no restart."
+    "Rung 3 -- a sibling that lacks a recipe asks; the holder's consent decision (pl-can-answer?) and the arrival's authenticity (pl-accept?) are made by the four-way brain at runtime; the answer is lowered and the asker integrates it live: recipe(9)=51. Asker PID stable; no restart."
+    "Every native result equals the four-way-proven oracle. presence-loop band -> 1023 four-way; form-pe-coff-affine band -> 127 four-way; 0 divergent on each.")
+
+  (north-star
+    "The same presence-loop, fkwu-emitted, runs as an always-on binary on Windows (PE/COFF + LoadLibrary, proven), macOS (Mach-O dylib + dlopen, recipe-dylib lane proven), and Android (arm64-v8a .so + dlopen, kernel-on-android lane proven)."
+    "Presences form a mesh: a recipe minted on one is gossiped over a channel, picked up by all, lowered to native per host, and offered onward -- features spreading peer-to-peer and going native, fully autonomous and distributed."
+    "When a presence cannot lower a node locally (an op family outside the affine/native subset), it asks a sibling for a pre-lowered artifact or a richer recipe and integrates the answer without restarting.")
+
+  (receipt-command
+    (form-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/form-pe-coff-affine.fk form-stdlib/tests/form-pe-coff-affine-band.fk")
+    (form-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/presence-loop.fk form-stdlib/tests/presence-loop-band.fk")
+    (four-way "cd form && bash scripts/fourth-arm-gate.sh form-pe-coff-affine presence-loop")
+    (live "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/presence_cycle.ps1"))
+
+  (gaps
+    (x64-affine-only "The Form x64 lowering covers the affine family a in {1,2,3,5,9}, b >= 0 (single lea). Arbitrary recipes still lower on arm64 (form-asm/form-lower) but not yet x64 -- the named JIT-ledger ratchet; macOS/Android reach further today via the arm64 lane.")
+    (transport-is-files "Mint/answer cross a shared work directory polled by mtime; the socket/HTTP wire frames for cross-host gossip stay carrier-work, named in cell-sync-transport.form, not claimed here.")
+    (mac-android-live "The mac dylib and android .so lowering lanes are independently proven; running the presence-loop body live on those hosts needs those machines and is the next receipt.")
+    (host-grows-the-surface "The presence body adds a tick + directory watch to the bootstrap loader; keep it minimal -- policy stays in Form, the C surface stays a loader.")))

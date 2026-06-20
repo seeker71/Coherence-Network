@@ -1,0 +1,36 @@
+; model-service.fk — serve a LEARNED model over the HTTP verb surface.
+;
+; This is the ML part made shareable. The model is DATA: (list w b) at fixed
+; point scale 1000, exactly the state affine-train.fk learns by SGD. A presence
+; that holds learned weights binds them into a handler; a presence that receives
+; the weights over a channel binds the SAME data and serves the SAME predictions
+; (content-addressing makes the weights and the aff-pred code identical across
+; the gap). Swap the weights -> the service predicts differently: the model is
+; not baked into code, it is a value that travels.
+;
+; preludes: form-stdlib/affine-train.fk form-stdlib/kernel-http.fk
+
+(do
+    ; pure inference over the model-as-data — the four-way oracle the HTTP body
+    ; must echo. y = (w*x + b)/1000, w,b,x at scale 1000 (reuses aff-pred).
+    (defn ms-predict (model x) (aff-pred (aff-w model) (aff-b model) x))
+
+    ; the feature the request carries: GET /predict?x=<scaled-int>.
+    (defn ms-feature (request) (kh-query-int-or request "x" 0))
+
+    ; the JSON body for a prediction.
+    (defn ms-body (y) (str_concat "{\"prediction\":" (str_concat (int_to_str y) "}")))
+
+    ; the model-backed handler FACTORY: given learned weights, return a
+    ; handler(request) -> response that runs the model on the request feature.
+    ; The returned closure captures `model`, so each presence serves its own
+    ; weights without editing the handler.
+    (defn ms-predict-handler (model)
+        (do
+            (defn ms-handle (request)
+                (kh-response 200
+                    (list (kh-header "Content-Type" "application/json"))
+                    (ms-body (ms-predict model (ms-feature request)))))
+            ms-handle))
+
+    0)

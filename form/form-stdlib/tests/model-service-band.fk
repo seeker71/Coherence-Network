@@ -1,0 +1,34 @@
+; preludes: form-stdlib/kernel-http.fk form-stdlib/affine-train.fk form-stdlib/model-service.fk form-stdlib/http-layer.fk
+;
+; Proves the MEANINGFUL CORE at the value level (no HTTP string render): a
+; learned model served as data, the model-capturing handler closure, and the
+; stamp/gate middleware composition. Verdict 255 = all eight claims land.
+; This is the four-way-portable heart; the full wire render lives in
+; presence-service-band (three-way — the walker's render-table capacity wall).
+
+(do
+    (let model1 (list 2000 0))
+    (let model2 (list 3000 0))
+    ; a request carrying feature x=3.0 (scale 1000), built as a value.
+    (let req  (kh-request "GET" "/predict" (list) (list (kh-field "x" "3000")) ""))
+    (let reqk (kh-request "GET" "/predict" (list (kh-header "X-Key" "yes")) (list (kh-field "x" "3000")) ""))
+
+    (let h  (ms-predict-handler model1))
+    (let hs (layer-stack (ms-predict-handler model1) (list (layer-stamp "X-Served-By" "alpha"))))
+    (let hg (layer-stack (ms-predict-handler model1) (list (layer-gate "X-Key"))))
+
+    ; the learned model is DATA: different weights, different prediction
+    (let c0 (if (eq (ms-predict model1 3000) 6000) 1 0))
+    (let c1 (if (eq (ms-predict model2 3000) 9000) 2 0))
+    ; the prediction renders to a JSON body
+    (let c2 (if (str_eq (ms-body 6000) "{\"prediction\":6000}") 4 0))
+    ; the model-capturing handler closure answers 200 with the model's body
+    (let c3 (if (eq (kh-response-status (h req)) 200) 8 0))
+    (let c4 (if (str_eq (kh-response-body (h req)) "{\"prediction\":6000}") 16 0))
+    ; the stamp layer adds its provenance header to the response
+    (let c5 (if (kh-header-present? (kh-response-headers (hs req)) "X-Served-By") 32 0))
+    ; the gate layer rejects without the key, serves with it
+    (let c6 (if (eq (kh-response-status (hg req)) 401) 64 0))
+    (let c7 (if (eq (kh-response-status (hg reqk)) 200) 128 0))
+
+    (add (add (add c0 c1) (add c2 c3)) (add (add c4 c5) (add c6 c7))))
