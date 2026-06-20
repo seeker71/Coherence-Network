@@ -1,16 +1,18 @@
 ; preludes: form-stdlib/core.fk form-stdlib/form-pe-coff.fk
 ;
 ; form-pe-coff-band - Windows x86_64 native recipe object floor.
-; Verdict 255 when Form emits a minimal x64 COFF object for a loadable recipe
+; Verdict 511 when Form emits a minimal x64 COFF object for a loadable recipe
 ; DLL: AMD64 machine header, .text section, Windows-x64 machine-code bytes,
 ; external recipe symbol, empty string table, and a second swappable recipe body
-; behind the same symbol.
+; plus a third native recipe behind the same symbol.
 
 (do
     (let code (pe-x64-recipe-mul3-add7-code))
     (let obj (pe-recipe-object code))
     (let code2 (pe-x64-recipe-mul5-add1-code))
     (let obj2 (pe-recipe-object code2))
+    (let code3 (pe-x64-recipe-add42-code))
+    (let obj3 (pe-recipe-object code3))
 
     (let c0 (if (eq (len obj) 88) 1 0))
     (let c1 (if (eq (nth obj 0) 100)
@@ -52,5 +54,16 @@
                         0)
                     0)
                 0))
+    (let c8 (if (eq (len obj3) 87)
+                (if (eq (nth obj3 60) 72)
+                    (if (eq (nth obj3 61) 141)
+                        (if (eq (nth obj3 62) 65)
+                            (if (eq (nth obj3 63) 42)
+                                (if (eq (nth obj3 64) 195) 256 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8)))
