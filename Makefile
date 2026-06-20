@@ -4,11 +4,11 @@ ifeq ($(OS),Windows_NT)
 PYTHON ?= py -3
 GIT_BASH ?= C:/Program Files/Git/bin/bash.exe
 NPM ?= npm.cmd
-API_VENV_PYTHON ?= .venv/Scripts/python.exe
-API_VENV_PIP ?= .venv/Scripts/pip.exe
-API_VENV_PYTEST ?= .venv/Scripts/pytest.exe
-API_VENV_RUFF ?= .venv/Scripts/ruff.exe
-API_VENV_UVICORN ?= .venv/Scripts/uvicorn.exe
+API_VENV_PYTHON ?= .venv\Scripts\python.exe
+API_VENV_PIP ?= .venv\Scripts\pip.exe
+API_VENV_PYTEST ?= .venv\Scripts\pytest.exe
+API_VENV_RUFF ?= .venv\Scripts\ruff.exe
+API_VENV_UVICORN ?= .venv\Scripts\uvicorn.exe
 else
 PYTHON ?= python3
 GIT_BASH ?= bash
@@ -46,7 +46,7 @@ endif
 
 seed:
 ifeq ($(OS),Windows_NT)
-	api/.venv/Scripts/python.exe scripts/seed_db.py
+	api\.venv\Scripts\python.exe scripts/seed_db.py
 else
 	api/.venv/bin/python scripts/seed_db.py
 endif
