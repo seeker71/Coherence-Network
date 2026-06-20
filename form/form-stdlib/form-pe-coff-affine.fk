@@ -1,0 +1,60 @@
+; form-pe-coff-affine.fk — parametric x64 lowering for the affine recipe family.
+;
+; form-pe-coff.fk wraps caller-supplied x64 bytes; its three named recipes
+; (mul3-add7, mul5-add1, add42) are hand-encoded constants. This sibling lowers
+; an ARBITRARY affine form node  recipe(n) = a*n + b  to the same one-instruction
+; x64 shape, so a presence can JIT a node it has never seen — not replay a fixed
+; set. The encoding is the project's existing trick generalised:
+;
+;   Windows x64 ABI: arg in RCX, return in RAX.
+;     a in {2,3,5,9}:  lea rax, [rcx + rcx*s + b]   ; a = 1 + s, s in {1,2,4,8}
+;     a == 1:          lea rax, [rcx + b]           ; no index register
+;     ret
+;
+; The SIB scale field encodes s: a=2->*1, a=3->*2, a=5->*4, a=9->*8. The three
+; hand-encoded recipes in form-pe-coff.fk are exactly (3,7) (5,1) (1,42) — the
+; band proves this lowering reproduces them byte-for-byte and lowers new specs.
+;
+; b is supported in 0..127 (single-byte displacement, mod=01) and b==0 (mod=00).
+; Negative b and 32-bit displacements stay a named ratchet (two's-complement
+; disp32 form) — every proof recipe here uses a small non-negative b.
+;
+; preludes: form-stdlib/form-pe-coff.fk
+
+(do
+    ; SIB byte for a given multiplier a: (scale<<6) | (index=rcx<<3) | (base=rcx).
+    ; index=base=rcx=001, so the low byte is always 0x09; scale rides the top bits.
+    ;   a=2 -> 0x09(9)   a=3 -> 0x49(73)   a=5 -> 0x89(137)   a=9 -> 0xC9(201)
+    ; -1 marks an unsupported multiplier (the affine family is {1,2,3,5,9}).
+    (defn aff-sib (a)
+        (if (eq a 2) 9
+            (if (eq a 3) 73
+                (if (eq a 5) 137
+                    (if (eq a 9) 201 -1)))))
+
+    (defn aff-supported? (a)
+        (if (eq a 1) 1
+            (if (eq a 2) 1
+                (if (eq a 3) 1
+                    (if (eq a 5) 1
+                        (if (eq a 9) 1 0))))))
+
+    ; aff-code a b -> the x64 machine bytes for  recipe(n) = a*n + b.
+    ; 72=REX.W, 141=0x8D(lea), then modrm[/SIB]/disp, 195=0xC3(ret).
+    (defn aff-code (a b)
+        (if (eq a 1)
+            ; no index register: lea rax, [rcx (+ disp8)]
+            (if (eq b 0)
+                (list 72 141 1 195)          ; modrm 0x01 (mod00, rm=rcx)
+                (list 72 141 65 b 195))      ; modrm 0x41 (mod01 disp8)
+            ; indexed: lea rax, [rcx + rcx*s (+ disp8)]
+            (if (eq b 0)
+                (list 72 141 4 (aff-sib a) 195)        ; modrm 0x04 (mod00, rm=SIB)
+                (list 72 141 68 (aff-sib a) b 195))))   ; modrm 0x44 (mod01 disp8)
+
+    ; pe-affine-recipe-object a b -> a full COFF object exporting `recipe`,
+    ; ready for lld-link, computed from the affine spec alone.
+    (defn pe-affine-recipe-object (a b)
+        (pe-recipe-object (aff-code a b)))
+
+    0)

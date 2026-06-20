@@ -1,0 +1,46 @@
+; http-layer.fk — composable middleware LAYERS over the HTTP verb surface.
+;
+; http-server.fk routes requests to handlers; it has no middleware concept. This
+; adds one, as data+closures so anyone can contribute a layer without editing the
+; router or any handler. A layer is a function  layer-fn(inner, request) ->
+; response : it may run `inner`, wrap its response, or short-circuit. layer-wrap
+; turns (handler, layer-fn) into a new handler; layer-stack folds a LIST of layers
+; over a handler, so adding capability is appending one row.
+;
+; This is the "anyone can add a layer" surface: a stamp layer (provenance), a
+; gate layer (auth), and any future layer compose by the same primitive. Layers
+; are ordered: the LAST in the list is outermost (runs first) and may reject
+; before inner layers ever see the request.
+;
+; preludes: form-stdlib/kernel-http.fk
+
+(do
+    ; layer-wrap : (handler, layer-fn) -> handler. The one composition primitive.
+    (defn layer-wrap (inner layer-fn)
+        (do (defn lw-handler (request) (layer-fn inner request)) lw-handler))
+
+    ; --- a provenance layer : run inner, then add a response header. ---
+    ; top-level helper keeps the closure body let-free (a defn-body trap).
+    (defn ml-add-header (resp hn hv)
+        (kh-response (kh-response-status resp)
+                     (cons (kh-header hn hv) (kh-response-headers resp))
+                     (kh-response-body resp)))
+    (defn layer-stamp (hn hv)
+        (do (defn ls-fn (inner request) (ml-add-header (inner request) hn hv)) ls-fn))
+
+    ; --- a gate layer : 401 unless the request carries `required-header`. ---
+    (defn layer-gate (required-header)
+        (do (defn lg-fn (inner request)
+                (if (kh-header-present? (kh-request-headers request) required-header)
+                    (inner request)
+                    (kh-response 401 (list) "unauthorized")))
+            lg-fn))
+
+    ; layer-stack : fold a list of layer-fns over a handler. First in the list is
+    ; innermost; last is outermost. Anyone adds a layer by extending the list.
+    (defn layer-stack (handler layer-fns)
+        (if (eq (len layer-fns) 0)
+            handler
+            (layer-stack (layer-wrap handler (head layer-fns)) (tail layer-fns))))
+
+    0)
