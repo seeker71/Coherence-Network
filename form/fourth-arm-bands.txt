@@ -215,6 +215,7 @@ oracle-distillation-learning fks 4095
 oracle-distill-corpus fks 255
 metabolic-learning fks 4095
 diffusion-q-learning fkc 255
+diffusion-q-cc fks 31
 form-cli-loop fks 31
 form-cli-router fks 31
 form-cli-membrane fks 1023

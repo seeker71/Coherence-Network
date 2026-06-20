@@ -1,0 +1,46 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk form-stdlib/champion-challenger.fk form-stdlib/diffusion-q-cc.fk
+;
+; diffusion-q-cc-band — the diffusion-Q policy wired into the champion-challenger promotion loop,
+; four-way (Go/Rust/TS/fkwu). QAM's offline→online regime: a served champion policy already reaches
+; the target value (Q=2.5); a challenger starts raw (Q=0) and earns authority ONLY by the Q-tilt.
+; dql-improve is the move that flips its trials from losing to winning; cc-promote? is the gate.
+; The coin is gl-veq6 equality (round-vs-round, fourth-arm safe); the competition is integer counts.
+;
+; Verdict 31 when every claim lands:
+;   1   the raw challenger (no tilt, Q=0) stays behind → the champion keeps authority
+;   2   a SUFFICIENT Q-tilt (focus 1/2, Q=2.5) reaches the champion → PROMOTED, authority flips
+;   4   the trusted-window gate: a winning challenger on a SHORT window (< min-samples) is NOT promoted
+;   8   an INSUFFICIENT Q-tilt (focus 1/8, Q=0.625) has not reached → still behind, not promoted
+;   16  the kernel earned it: dql-improve raised the challenger's value 0 → 2.5 (the champion's level)
+(do
+    ; the critic Q(a) = 2·a0 + 1·a1; a one-hot context makes policy params BE the action
+    (let qedges (list (list 0 0 2.0) (list 0 1 1.0)))
+    (let x      (list 1.0 0.0))
+    (let target 2.5)                                         ; the served champion's value (the bar to reach)
+
+    ; the served CHAMPION already reaches the target: a = [1 0.5], Q = 2.5
+    (let champ (list (list 0 0 1.0) (list 1 0 0.5)))
+    ; the CHALLENGER starts raw: a = [0 0], Q = 0
+    (let raw   (list (list 0 0 0.0) (list 1 0 0.0)))
+
+    ; train the challenger by the Q-tilt — the online move that earns its wins
+    (let good  (dqcc-improve qedges raw x 0.5))             ; Q → 2.5 (reaches the champion)
+    (let weak  (dqcc-improve qedges raw x 0.125))           ; Q → 0.625 (has not reached)
+
+    ; offline replay windows of 10 identical-context trials
+    (let w-raw   (dqcc-window qedges champ raw  x target 10))   ; (1 0)×10 → challenger behind
+    (let w-good  (dqcc-window qedges champ good x target 10))   ; (1 1)×10 → challenger reaches
+    (let w-weak  (dqcc-window qedges champ weak x target 10))   ; (1 0)×10 → challenger behind
+    (let w-good3 (dqcc-window qedges champ good x target 3))    ; reaches, but window too short to trust
+
+    (let c0 (if (and (eq (cc-promote? w-raw 10 0) 0)
+                     (str_eq (cc-authority w-raw 10 0) "champion")) 1 0))
+    (let c1 (if (and (eq (cc-promote? w-good 10 0) 1)
+                     (str_eq (cc-authority w-good 10 0) "challenger")) 2 0))
+    (let c2 (if (and (eq (cc-promote? w-good3 10 0) 0)
+                     (str_eq (cc-authority w-good3 10 0) "champion")) 4 0))
+    (let c3 (if (and (eq (cc-promote? w-weak 10 0) 0)
+                     (str_eq (cc-authority w-weak 10 0) "champion")) 8 0))
+    (let c4 (if (and (eq (gl-veq6 (list (dql-q qedges (gl-step good x))) (list 2.5)) 1)
+                     (eq (gl-veq6 (list (dql-q qedges (gl-step raw  x))) (list 0.0)) 1)) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

@@ -39,7 +39,10 @@
 ;   min-samples floor is the same shape as ce-passes?'s min-correct) · value-execution.fk (credit
 ;   only what's proven, turned onto model promotion) · recognition-router.fk (route among
 ;   model-carriers by strength — there the carriers are peers fanned in parallel; here two named
-;   arms compete for authority over a window) · lc-honest-lane (earned confidence only, never
+;   arms compete for authority over a window) · diffusion-q-cc.fk (a NEW consumer — the diffusion-Q
+;   policy as the challenger: dql-improve earns the wins, cc-promote? gates the offline→online flip,
+;   the trusted-window floor reused so a lucky short run never promotes; tests/diffusion-q-cc-band.fk
+;   → 31, four-way) · lc-honest-lane (earned confidence only, never
 ;   asserted) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS agreement).
 ;
 ; LINEAGE:
