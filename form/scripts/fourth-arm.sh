@@ -36,13 +36,22 @@ FKWU=""
 
 fourth_available() { [[ -n "$FKWU" && -x "$FKWU" ]]; }
 
+# Portable content hash for cache stamps. macOS ships `shasum`; Linux and Git
+# Bash ship `sha256sum`; they don't overlap. The value is only ever a per-host
+# cache key, so the algorithm is free — only availability matters.
+form_hash() {
+    if command -v shasum >/dev/null 2>&1; then shasum
+    elif command -v sha256sum >/dev/null 2>&1; then sha256sum
+    else cksum; fi
+}
+
 # build_fourth — the standing fkwu binary, cached by emitter content.
 build_fourth() {
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
     command -v clang >/dev/null 2>&1 || return 0
     mkdir -p "$FOURTH_DIR"
     local stamp out tmp d
-    stamp="$(cat "${FOURTH_CHAIN[@]}" "$GO_BIN" 2>/dev/null | shasum | cut -c1-16)"
+    stamp="$(cat "${FOURTH_CHAIN[@]}" "$GO_BIN" 2>/dev/null | form_hash | cut -c1-16)"
     out="$FOURTH_DIR/fkwu-$stamp"
     if [[ ! -x "$out" ]]; then
         echo "  building fourth kernel (fkwu)..." >&2
@@ -176,7 +185,7 @@ fourth_table() {
     [[ -n "$kind" ]] || return 0
     while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
     [[ "${#srcs[@]}" -ge 1 ]] || return 0
-    key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | shasum | cut -c1-16)"
+    key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | form_hash | cut -c1-16)"
     out="$FOURTH_DIR/t-$stem-$key.txt"
     if [[ ! -s "$out" ]]; then
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-t.XXXXXX")"
@@ -239,7 +248,7 @@ fourth_prepare_all() {
         srcs=()
         while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
         [[ "${#srcs[@]}" -ge 1 ]] || continue
-        key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | shasum | cut -c1-16)"
+        key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | form_hash | cut -c1-16)"
         out="$FOURTH_DIR/t-$stem-$key.txt"
         [[ -s "$out" ]] && continue
         missing=$((missing + 1))
