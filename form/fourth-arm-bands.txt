@@ -687,6 +687,7 @@ form-cli-band fks 511
 http-client-render fks 63
 socket-loopback fks 111111
 http-client-socket-verbs fks 127
+http-client-socket-response fks 8191
 nanite-mem-parse fks 15
 kv-cache fks 255
 greedy-decode fks 255

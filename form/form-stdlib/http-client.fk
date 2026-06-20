@@ -109,10 +109,15 @@ section [form.bml] {
         if https then tls_request(host, port, req) else http-plain-request(host, port, req);
     }
 
+    def kh-msg-body-framed(msg, body-start, body-len) {
+        let body-end = if lt(body-len, 0) then str_len(msg) else add(body-start, body-len);
+        substring(msg, body-start, body-end);
+    }
+
     def kh-msg-body(msg) {
-        let crlf = str_find(msg, "\r\n\r\n", 0);
-        let lf = str_find(msg, "\n\n", 0);
-        if gt(crlf, -1) then substring(msg, add(crlf, 4), str_len(msg)) else if gt(lf, -1) then substring(msg, add(lf, 2), str_len(msg)) else "";
+        let body-start = http-body-offset(msg);
+        let body-len = http-content-length(msg);
+        if lt(body-start, 0) then "" else kh-msg-body-framed(msg, body-start, body-len);
     }
 
     def kh-msg-start-line(msg) {
