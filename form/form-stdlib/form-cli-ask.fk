@@ -1,0 +1,101 @@
+; form-cli-ask.fk — the form-cli ASK verb, 100% native on the fkwu walker.
+;
+; preludes: form-stdlib/core.fk form-stdlib/http-client.fk
+;
+; THE LANE (Urs north star): the body asks the local oracle and the kernel is the
+; only runtime. The question goes to the local LLM (ollama at localhost:11434) over
+; the ONE wire the walker carries natively — sock_request (tag 118), reached through
+; http-fetch (http-client.fk). NO host-exec, NO subprocess, NO clang/go at run time:
+; the request is RENDERED in Form (kh-render-request), SENT on the native socket op,
+; and the reply is PARSED in Form (a field-extractor over the JSON body). The whole
+; ask is flow + choice + string ops on the emitted kernel.
+;
+; This composts the earlier host-exec ask (oracle via `ollama run` / `claude -p`
+; subprocess): that lane needed a shell at run time, which the native binary is built
+; to NOT need. The fourth-arm host-io family (sock_request) is the carrier instead —
+; the one atom beneath http-fetch; everything above it is this recipe. Escalation to
+; a subscription oracle is a later rung (Anthropic API over tls_request); this rung is
+; the local oracle only.
+
+; ── JSON string escaping: the question becomes a JSON string value ──
+; Only the bytes JSON forbids inside a "..." string need escaping: '"' '\' and the
+; control bytes. We render \" \\ \n \r \t for the common ones and pass the rest
+; through (the question is plain text). One char at a time — flow over data.
+(defn fca-esc-char (c)
+    (do (let cp (ord c))
+        (if (eq cp 34) "\\\""
+        (if (eq cp 92) "\\\\"
+        (if (eq cp 10) "\\n"
+        (if (eq cp 13) "\\r"
+        (if (eq cp 9)  "\\t"
+            c)))))))
+(defn fca-esc-loop (s i acc)
+    (if (ge i (str_len s)) acc
+        (fca-esc-loop s (add i 1) (str_concat acc (fca-esc-char (char_at s i))))))
+(defn fca-json-string (s) (fca-esc-loop s 0 ""))
+
+; ── the ollama /api/generate request body, rendered in Form ──
+; {"model":"<model>","prompt":"<question>","stream":false}
+(defn fca-gen-body (model question)
+    (str_concat "{\"model\":\""
+        (str_concat (fca-json-string model)
+            (str_concat "\",\"prompt\":\""
+                (str_concat (fca-json-string question)
+                    "\",\"stream\":false}")))))
+
+; ── extract the "response" string value out of the JSON reply ──
+; ollama's non-stream reply is one JSON object: {"model":...,"response":"<answer>",...}.
+; We find the `"response":"` key, then read the string value up to its closing quote,
+; honouring \" (an escaped quote does NOT end the value) and decoding the few escapes
+; the value carries back to real bytes. A pure-Form field reader — no substrate node.
+(defn fca-unesc-char (c)
+    (do (let cp (ord c))
+        (if (eq cp 110) "\n"        ; \n
+        (if (eq cp 114) "\r"        ; \r
+        (if (eq cp 116) "\t"        ; \t
+        (if (eq cp 34) "\""         ; \"
+        (if (eq cp 92) "\\"         ; \\
+        (if (eq cp 47) "/"          ; \/
+            c))))))))
+; walk from i (just inside the opening quote) to the unescaped closing quote.
+(defn fca-read-string (s i acc)
+    (if (ge i (str_len s)) acc
+        (do (let c (char_at s i))
+            (if (str_eq c "\"") acc
+                (if (str_eq c "\\")
+                    (if (ge (add i 1) (str_len s)) acc
+                        (fca-read-string s (add i 2)
+                            (str_concat acc (fca-unesc-char (char_at s (add i 1))))))
+                    (fca-read-string s (add i 1) (str_concat acc c)))))))
+; pull the value of the "response" field out of the JSON reply, or "" if absent.
+(defn fca-field (reply key)
+    (do (let marker (str_concat "\"" (str_concat key "\":\"")))
+        (let at (str_find reply marker 0))
+        (if (lt at 0) ""
+            (fca-read-string reply (add at (str_len marker)) ""))))
+
+; ── THE ask: render -> POST over the native socket -> parse the answer ──
+; http-fetch POST to the local oracle; the response body holds the JSON; lift the
+; "response" field. fc-respond passes the model; the URL is the local ollama door.
+(defn fca-ask-model (model question)
+    (do (let body (fca-gen-body model question))
+        (let reply (http-fetch "POST" "http://localhost:11434/api/generate" body))
+        (let answer (fca-field reply "response"))
+        ; the (str_concat "" answer) keeps this return STRING-TYPED to the headless
+        ; root printer's fk_str_root_depth walk (it recognizes str_concat as string-
+        ; producing; a bare let-bound var it cannot prove). Identity at runtime.
+        (if (gt (str_len answer) 0) (str_concat "" answer)
+            (str_concat "[ask: no answer from local oracle — is ollama running at localhost:11434?]\n" reply))))
+
+; the verb entry: ask uses the default local model. The question is everything after
+; the verb word (the caller strips "ask "); empty question -> a usage line.
+; The default oracle is form-llama — the base llama3.2:3b LoRA-tuned on the body's
+; own Form/substrate corpus (scripts/build_form_knowledge_corpus.py +
+; scripts/build_form_llama.sh), so the local lane reasons about Form natively
+; instead of escalating. Served by ollama at the same /api/generate wire.
+(defn fca-ask (question)
+    (if (eq (str_len question) 0)
+        "ask: usage — ask <question>   (answered by the local oracle, native on fkwu)"
+        (fca-ask-model "form-llama" question)))
+
+0

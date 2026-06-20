@@ -1,0 +1,26 @@
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-decoder.fk
+;
+; transformer-decoder-band — whisper-tiny's decoder block (masked self-attn + cross-attn
+; + FFN), proven against the numpy/fp64 reference. Decoder len=2, encoder len=2 (the
+; cross-attention spans differing sequence lengths), n_head=2, head_dim=2, d_model=4.
+; Verdict 1 when the block output matches the reference within 1e-6.
+
+(do
+  (defn dcb-vmaxdiff (a b)
+    (if (eq (len a) 0) 0.0
+        (do (let d (tn-abs (sub (head a) (head b))))
+            (let r (dcb-vmaxdiff (tail a) (tail b)))
+            (if (gt d r) d r))))
+  (defn dcb-maxdiff (as bs)
+    (if (eq (len as) 0) 0.0
+        (do (let d (dcb-vmaxdiff (head as) (head bs)))
+            (let r (dcb-maxdiff (tail as) (tail bs)))
+            (if (gt d r) d r))))
+  (let x (list (list -0.278 0.3707 -0.2933 0.4186) (list -0.0116 0.1117 0.2659 0.0184))) (let enc (list (list -0.2032 -0.3123 -0.4193 0.2384) (list -0.0587 -0.3417 0.3799 -0.2259))) (let eps 1e-05) (let scale 0.7071067811865475) (let n 2) (let hd 2)
+  (let g1 (list -0.0858 -0.2039 0.1288 0.0798)) (let be1 (list 0.0999 -0.2342 -0.2153 -0.2464)) (let g2 (list -0.1724 -0.3558 -0.3344 0.4639)) (let be2 (list 0.4602 -0.3116 -0.4757 -0.2954)) (let g3 (list 0.1998 0.2795 -0.4771 0.0777)) (let be3 (list -0.4984 0.0155 0.1398 0.4856))
+  (let sq (list (list -0.2409 0.3025 0.3705 0.4227) (list -0.4978 -0.0305 0.4815 -0.1011) (list 0.3137 0.0465 0.2709 -0.0151) (list -0.4709 -0.4135 -0.3885 -0.2488))) (let sbq (list -0.0476 0.2029 -0.168 -0.14)) (let sk (list (list 0.4649 0.1318 0.3167 0.0661) (list 0.1354 0.3119 0.4267 0.4126) (list 0.3248 -0.4058 -0.139 -0.4645) (list 0.0464 0.2961 -0.4489 -0.3113))) (let sbk (list 0.0 0.0 0.0 0.0)) (let sv (list (list -0.1345 -0.2557 0.2951 -0.1479) (list 0.1389 -0.0066 0.0835 0.4393) (list 0.4435 -0.3883 0.3436 -0.154) (list -0.3992 -0.1166 0.0104 0.4611))) (let sbv (list 0.4215 0.4536 -0.0923 0.3986)) (let so (list (list -0.1285 -0.4876 0.3597 -0.3889) (list -0.0217 0.35 0.0147 -0.0534) (list 0.3005 -0.4796 0.0726 -0.0886) (list 0.4851 0.3014 -0.446 -0.3095))) (let sbo (list -0.1697 -0.4173 0.0267 0.1608))
+  (let cq (list (list 0.393 0.4652 0.2699 0.2591) (list 0.21 0.2016 0.2673 0.4743) (list -0.1263 -0.4169 -0.2604 -0.2785) (list -0.1364 0.3103 -0.4399 -0.0503))) (let cbq (list -0.3656 -0.1981 -0.3635 -0.1823)) (let ck (list (list 0.3132 -0.2358 -0.4366 -0.2579) (list -0.4149 0.3078 -0.3297 -0.3047) (list 0.3146 0.3103 0.0894 0.4147) (list -0.4402 0.465 0.071 -0.1975))) (let cbk (list 0.0 0.0 0.0 0.0)) (let cv (list (list 0.3257 0.1594 0.4865 -0.3925) (list 0.0809 -0.0272 0.1523 -0.2581) (list -0.4689 0.0442 -0.1353 0.3923) (list -0.0407 -0.0813 0.1329 0.0272))) (let cbv (list 0.1792 0.1013 0.4972 0.0609)) (let co (list (list 0.4612 0.289 -0.0033 -0.2889) (list 0.104 0.2486 0.2559 0.4935) (list -0.2815 -0.0744 -0.0762 -0.1814) (list -0.1347 -0.0221 0.0421 -0.2348))) (let cbo (list 0.0487 0.1423 0.2268 0.1158))
+  (let w1 (list (list 0.0885 0.105 -0.1452 0.2774) (list 0.1046 -0.1908 -0.2544 -0.4287) (list -0.1523 -0.4872 -0.3344 -0.4396) (list -0.2218 -0.1517 0.0912 0.275))) (let b1 (list 0.1248 -0.3403 0.3938 0.2306)) (let w2 (list (list -0.0022 0.1436 0.0095 -0.3318) (list 0.1415 0.4882 0.2703 -0.3185) (list -0.3802 0.4303 0.4101 0.2492) (list 0.2605 -0.3571 0.3119 -0.3077))) (let b2 (list -0.3453 -0.0929 -0.4996 0.3455))
+  (let expected (list (list -1.2033646167815077 0.1376217934003071 -0.7051587429102664 1.2026291957792627) (list -0.8939093419446544 -0.06478276670584263 -0.06396694402642589 0.8804566279134425)))
+  (let got (tb-dec-block x enc eps g1 be1 sq sbq sk sbk sv sbv so sbo g2 be2 cq cbq ck cbk cv cbv co cbo n hd scale g3 be3 w1 b1 w2 b2))
+  (if (lt (dcb-maxdiff got expected) 0.000001) 1 0))

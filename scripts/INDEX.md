@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 292
+**Total files**: 303
 
 | File | Purpose |
 |---|---|
@@ -13,6 +13,8 @@
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | Add Task Card and Research Inputs sections to spec files that don't have them. |
 | [agent-coord.sh](agent-coord.sh) | agent-coord.sh — the carrier for agent-coordination-membrane.form. |
 | [agent_status.py](agent_status.py) | Show active work across all coding agents (worktrees + tasks). |
+| [agent_tooluse_featurize.py](agent_tooluse_featurize.py) | agent_tooluse_featurize.py — CARRIER (data prep only). Turns the real agent corpus |
+| [agent_tooluse_train.sh](agent_tooluse_train.sh) | agent_tooluse_train.sh — a REAL model on REAL data at full scale, natively. |
 | [android_core_axiom_apk_receipt.sh](android_core_axiom_apk_receipt.sh) | Build a native arm64 core-axiom receipt library into the Android APK and |
 | [android_mac_core_axiom_receipt.sh](android_mac_core_axiom_receipt.sh) | Build and run a native Mac + Android core-axiom receipt pair. |
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
@@ -34,6 +36,8 @@
 | [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | Bootstrap a persistent agent session against the real substrate. |
 | [bootstrap_sqlite_from_production_archive.py](bootstrap_sqlite_from_production_archive.py) | Bootstrap a local SQLite DB from a real archived production Postgres dump. |
 | [build_arrival_symbol_pack.py](build_arrival_symbol_pack.py) | Build the arrival symbol pack — the MDL-optimal, complete, self-referential |
+| [build_form_knowledge_corpus.py](build_form_knowledge_corpus.py) | Build the Form-knowledge fine-tune corpus from the body's OWN files. |
+| [build_form_llama.sh](build_form_llama.sh) | build_form_llama.sh — train + fuse + serve the Form-knowledge local oracle. |
 | [build_hati_os_public_assets.sh](build_hati_os_public_assets.sh) | build_hati_os_public_assets.sh - build public Hati-OS native release assets. |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
@@ -68,6 +72,7 @@
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
+| [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
 | [export_graph_to_repo.py](export_graph_to_repo.py) | Export graph-stored content back into the repo as files. |
@@ -82,6 +87,9 @@
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
+| [form_cli_agent.sh](form_cli_agent.sh) | form_cli_agent.sh — thin WITNESS: the kernel runs the TIERED agent loop (form-native-run.fk). |
+| [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS: the kernel runs form-cli-ask.fk (the body is Form, not this shell). |
+| [form_cli_ask_smart.py](form_cli_ask_smart.py) | form_cli_ask_smart.py — thin REPL CARRIER. The form-cli interactive shell. |
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
 | [form_cli_close_gap.sh](form_cli_close_gap.sh) | form_cli_close_gap.sh — close a Form recipe gap OFFLINE with a local oracle. |
@@ -100,6 +108,7 @@
 | [form_cli_roadmap.sh](form_cli_roadmap.sh) | form_cli_roadmap.sh — list the floor->north-star steps and the next one to build. |
 | [form_cli_self_review.sh](form_cli_self_review.sh) | form_cli_self_review.sh — the self-review flywheel, driven through form-cli. |
 | [form_cli_slice.sh](form_cli_slice.sh) | form_cli_slice.sh — compile a Form recipe slice to a RUNNABLE native binary, |
+| [form_cli_stats.py](form_cli_stats.py) | form_cli_stats.py — CARRIER. The `form-cli stats` dashboard: six lenses on the body's real records. |
 | [form_cli_tiered.sh](form_cli_tiered.sh) | form_cli_tiered.sh — retire the REMOTE oracle on reasoning: local-first, tiered. |
 | [form_cli_train_predict.sh](form_cli_train_predict.sh) | form_cli_train_predict.sh — train a NATIVE tool predictor on the corpus, then |
 | [form_cli_transformer_train.sh](form_cli_transformer_train.sh) | form_cli_transformer_train.sh — train the Form-native transformer on the REAL |
@@ -161,6 +170,7 @@
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
 | [jit_assembly_audit.sh](jit_assembly_audit.sh) | jit_assembly_audit.sh — read the JIT's machine code and measure the gap. |
+| [jit_matvec_speedup_audit.py](jit_matvec_speedup_audit.py) | scripts/jit_matvec_speedup_audit.py — witness: the Form-emitted native matvec speedup. |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
@@ -297,6 +307,7 @@
 | [wander.py](wander.py) | Launch a wandering sense into the field. |
 | [wellness_check.py](wellness_check.py) | Wellness check — a gentle sensing of the body. |
 | [whisper_block0_carrier.py](whisper_block0_carrier.py) | scripts/whisper_block0_carrier.py — M6 carrier: load safetensors, slice, quantize, and run reference forward pass. |
+| [whisper_block0_real_carrier.py](whisper_block0_real_carrier.py) | scripts/whisper_block0_real_carrier.py — run REAL whisper-tiny encoder block-0 weights, |
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |

@@ -23,8 +23,26 @@ usage() {
   cat <<EOF
 form-cli — the one door (local-first, Form-native)
 
+  form-cli                          interactive REPL (bare at a terminal) — like claude/codex
+  form-cli -p "<question>"          one-shot print mode (scripts/pipes); also: echo q | form-cli
+  form-cli repl                     force the interactive REPL
+
   form-cli ask "<question>" [-k N] [-m MODEL]
         answer from the body + local docs, grounded (local oracle, no network)
+  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"]
+        daily-driver ask: local-first, then a multi-signal sufficiency check
+        (form-cli-sufficiency.fk, four-way proven) escalates to the subscription
+        oracle for the real answer when local is not enough — claude-code quality
+  form-cli stats
+        dashboard: learning · models · tools · tool->native · local/remote oracle
+        (counts read from the body's records; stats by form-cli-stats.fk, four-way)
+  form-cli train [hid epochs lr]
+        train the native tool-use predictor on the real agent corpus (M4 Max GPU),
+        caching its held-out scores for `form-cli stats` tool->native
+  form-cli shadow [N] [model]
+        SHADOW MODE: replay N real captured agent turns through the native lane and
+        score its tool-prediction against what the agent actually did (vs baseline)
+        — watch how form-cli would have handled real work, without it being live
   form-cli index [--docs DIR ...]
         (re)build the searchable index over the body and any local doc folders
   form-cli search "<query>" [-k N]
@@ -54,9 +72,19 @@ Models are local (ollama): coder, qwen2.5:72b, deepseek-r1:32b, llama3.2:3b.
 EOF
 }
 
-cmd="${1:-help}"; shift 2>/dev/null || true
+cmd="${1:-}"; shift 2>/dev/null || true
 case "$cmd" in
+  "")          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" ;;        # bare: recipe picks the mode (TTY -> REPL)
+  repl)        exec python3 "$ROOT/scripts/form_cli_ask_smart.py" --repl ;; # force interactive
+  -p|--print)  exec python3 "$ROOT/scripts/form_cli_ask_smart.py" -p "$@" ;; # one-shot print mode (scripts/pipes)
+  -*)          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$cmd" "$@" ;; # flags (-m/-j/--local-only/...) -> ask engine
   ask)       exec python3 "$RAG" ask "$@" ;;
+  ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
+  do)        exec bash "$ROOT/scripts/form_cli_agent.sh" "$@" ;;  # tiered agent loop (local-first, escalate)
+  stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
+  train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
+  shadow)    exec env FORM_CLI_CORPUS="${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}" \
+                  bash "$ROOT/scripts/form_cli_replay.sh" "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;
   index)     exec python3 "$RAG" build "$@" ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;

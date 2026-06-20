@@ -42,7 +42,10 @@ trap 'rm -rf "$W"' EXIT
 # the emit chain (plain Form) + the flatten chain.
 EMIT_CHAIN="$S/minimal-surface.fk $S/hati-os-kernel.fk $S/hati-os-kernel-emit.fk"
 FLAT_CHAIN="$EMIT_CHAIN $S/form-parse.fk $S/form-flatten.fk"
-MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/form-cli.fk\"))"
+# http-client.fk + form-cli-ask.fk ride ahead of form-cli.fk: fc-respond's 'ask'
+# verb calls fca-ask -> http-fetch -> sock_request (the fkwu-native wire), so the
+# ask lane must be defined before the dispatcher that routes to it.
+MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/form-cli.fk\"))"
 BAND="(read_file \"$S/form-cli-repl.fk\")"
 
 # 1. flatten form-cli-repl into its program table (string pool rides behind it).
@@ -59,7 +62,7 @@ grep -q fk_prog "$W/form-cli.c" || { echo "emit missing baked program"; exit 1; 
 #    print it and you can rebuild from the binary alone. It's the file-marked
 #    concatenation of every recipe the build reads plus this script, appended as a
 #    byte array (escape-free) and read at runtime by self_source (walker tag 117).
-SOURCES="minimal-surface hati-os-kernel hati-os-kernel-emit form-parse form-flatten core fourth-shim form-cli form-cli-main form-cli-repl"
+SOURCES="minimal-surface hati-os-kernel hati-os-kernel-emit form-parse form-flatten core fourth-shim http-client form-cli-ask form-cli form-cli-main form-cli-repl"
 {
   for f in $SOURCES; do printf ';;;; ==== FILE: %s/%s.fk ====\n' "$S" "$f"; cat "$S/$f.fk"; done
   printf ';;;; ==== FILE: build-form-cli.sh ====\n'; cat "$(basename "$0")"

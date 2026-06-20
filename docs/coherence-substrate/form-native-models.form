@@ -8,6 +8,71 @@
 ; path: what is already proven, the architecture, and the ordered milestones (two background spikes
 ; mapped the JIT/GPU and whisper-import details — cited inline).
 ;
+; ── FLOOR / NORTH STAR / GAPS — whisper-tiny in Form (updated 2026-06-19; extends the 2026-06-14 review below) ──
+;   FLOOR (proven this arc — every piece bit-checked against the numpy/fp64 reference through the kernel):
+;     whisper-tiny's WHOLE architecture now runs in Form. Encoder: multi-head self-attention + layer stack
+;     (transformer-mh.fk, 4e-16 over a 4-layer stack). Decoder: causal masked self-attention + cross-attention
+;     + FFN + stack (transformer-decoder.fk, 2e-16; mask proven genuinely causal). Decode: greedy
+;     autoregressive loop — embed+positional → decoder → layernorm_post → tied-embedding logits → argmax →
+;     feed back (transformer-generate.fk, exact token-id parity) + cross-attention KV cache
+;     (transformer-generate-cached.fk, identical ids). Front-end: sinusoidal positional (positional.fk, 2e-10),
+;     two-conv stem with time-halving stride-2 (conv-stem.fk, conv math exact), full log-mel as the proven cell
+;     walked (mel-full.fk, 2e-11). Tokenizer: BPE merge core proven against the REAL whisper tokenizer
+;     (bpe-tokenizer.fk: " the"→264, " tokenizer"→[14862,6545]). REAL WEIGHTS: openai/whisper-tiny block-0's
+;     actual trained weights, real 6-head, run through the Form block at FULL d_model=384 = 6.66e-15
+;     (whisper_block0_real_carrier.py). SPEED: the Form matvec emitter (jit-tensor-emit.fk) → rustc cdylib runs
+;     a 384×384 matvec in ~0.1ms and the full 384 block in ~3ms — ~10^4× the tree-walker, bit-exact
+;     (jit_matvec_speedup_audit.py). With EXACT-erf gelu (transformer-gelu-erf.fk) the real block-0 matches
+;     whisper's TRUE output at 3.1e-7 — the last numerics gap, closed. fkwu DOES support float four-way
+;     (transformer-block 511, transformer-corpus-train 31, mel-frame 1023, transformer-gelu-erf 255,
+;     conv-stem, positional, AND the multi-head stack — transformer-mh/decoder/generate +
+;     whisper-mh-block-real — now all FOUR-WAY). FIXED this arc: scientific-notation float literals
+;     (eps=1e-05, Python repr's shape) were mis-handled in BOTH the Rust kernel's S-expr lexer (it stopped
+;     at 'e' without a decimal point → kernel_panic) and fkwu's table flattener (parse + float-pool scan).
+;     The supposed "Rust multi-head divergence" was never multi-head — it was the 1e-05 literal; fixing the
+;     two lexers crossed ALL the whisper-tiny bands (commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json).
+;     Full suite: fourth arm 369 four-way, 0 divergent — the WHOLE whisper-tiny stack (mel-frame, mel-full,
+;     positional, conv-stem, transformer-mh/decoder/generate, gelu-erf, whisper-mh-block-real) is four-way
+;     proven (Go=Rust=TS=fkwu). mel-full was the same e-notation bug (its e-15 samples), masked by stale cache.
+;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT) and text →
+;     audio (TTS) — where the model's architecture AND weights are content-addressed recipe DATA, one engine
+;     (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and TRAINABLE/fine-tunable
+;     locally from local oracles. A mind that hears and speaks at home, offerable to others without a gated
+;     provider (lc-cognitive-sovereignty, living-vision.form).
+;   GAPS (ordered; none are new math — the architecture and the fast matvec are proven; what remains is wiring):
+;     1. ASSEMBLE end-to-end at real width: wire mel → conv stem → encoder → decoder → tokenizer through the
+;        native matvec lane (M5's buffer bridge: Form list ↔ flat f64 slice) + a CPU/GPU block emitter, so a
+;        real .wav produces a transcript — then score WER vs whisper-cli on held-out audio (the real metric).
+;     2. exact-erf gelu — SHIPPED (transformer-gelu-erf.fk: tn-erf A&S 7.1.26 + tn-gelu-erf + tb-mh-block-erf).
+;        tn-gelu-erf matches libm erf-gelu at 5e-7; the real whisper block-0 (d_model=96) via tb-mh-block-erf
+;        now matches whisper's TRUE output at 3.1e-7 (was 4.3e-4 with tanh-gelu). The last numerics gap closed.
+;     3. learned DECODER positionals; byte-map + GPT-2 regex word-split carriers feeding the tokenizer; the full
+;        80×3000 mel at JIT speed.
+;     4. in-process jit_compile realization-gap fix (the dispatch bug) for the zero-carrier native path.
+;     5. cross-kernel parity: DONE — scientific-notation float bug fixed in BOTH the Rust kernel lexer and
+;        fkwu's flattener; the WHOLE whisper-tiny stack crosses FOUR-WAY (fourth arm 369, 0 divergent).
+;        Evidence: commit_evidence_2026-06-19_fkwu_scientific_notation_float_fix.json.
+;     6. LEARNING ON REAL DATA — now a PROVEN FACT, not a "would": transformer-real-train-band (→ 31,
+;        FOUR-WAY) trains the real two-block transformer (backprop SGD) on REAL EN->FR (char,word) pairs
+;        from web/messages/{en,fr}.json — weights START at a fixed init and EMERGE (block-A W1[0][0] moves
+;        0.3→0.496), train loss 1.68→0.36, held-out 0.55→0.085 on UNSEEN pairs (generalizes), and it BEATS
+;        the predict-the-mean baseline (0.085 < 0.359). The data is baked; the weights are learned; the
+;        verdict proves the dynamic (loss-fall + generalize + beat-baseline + weights-moved), not a baked
+;        output. Honest scale: 2-block / 24-param / 13+5 pairs / a simple ~1.2x signal — the LEARNING is
+;        proven, not whisper-scale. Scaling = the same machinery + M5's JIT for speed + more data + a real
+;        model (fine-tune real weights with local oracles).
+;     7. A REAL MODEL ON REAL DATA AT FULL SCALE, NATIVELY — the scaling step taken. scripts/agent_tooluse_*
+;        train a Form-emitted FFN (jte-mlp-train-msl, the recipe metal_ffn_audit bit-parity-proves) on the
+;        REAL agent corpus: 939 captured agent turns → 53 task-text features → 8 tool labels, 751 train /
+;        188 held. Weights start at a fixed small init and EMERGE over 60,080 native GPU SGD steps in ~7.8s.
+;        Held-out (unseen turns): micro-acc 84.8% vs 79.9% majority baseline, exact-set match 26.6% vs 11.2%
+;        (doubled), covers-used 53.7% vs 23.4% (doubled). Per-tool the learning is legible: Edit 67/53,
+;        Write 68/57, StructuredOutput 99/82, WebSearch 99.5/98 — the model reads the task and predicts the
+;        tools; Bash ties (near-universal), Read ties (keyword-blind), ToolSearch/Agent so rare "never" wins.
+;        First real insight surfaced by real data: held loss bottoms ~epoch 20 then rises while train keeps
+;        falling — overfitting, the handle for the architecture experiments (early-stop / regularize / the
+;        adaptive-swappable-kernel + branch + fast-fail + backtrack playground this foundation now enables).
+;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
 ;     quantization, transformer numerics, one transformer block, mel-frame, Metal emitter lanes, and
@@ -364,6 +429,39 @@
 ;        is this recipe walked — speed is M5's JIT stone, not a new shape. Remaining for M6: safetensors
 ;        carrier + block-0 activation match — and the reference teacher is now a LOCAL oracle on this host
 ;        (whisper.cpp / whisper-cli, on-device, Metal+BLAS), not a cloud HF pull. See oracle-catalog.fk.]
+;        [FORWARD-PASS EXTENSION SHIPPED: the whole whisper-tiny ARCHITECTURE now runs in Form, each piece
+;        proven against the numpy/fp64 reference at tiny dims — multi-head self-attention + encoder stack
+;        (transformer-mh.fk, max|Δ| 4e-16 over a 4-layer stack); the decoder block — causal masked
+;        self-attention + cross-attention + FFN + stack (transformer-decoder.fk, max|Δ| 2e-16, and the
+;        causal mask proven genuinely causal: a future token moves position-0 output by exactly 0.0); and
+;        the greedy autoregressive loop — embed+positional → decoder → layernorm_post → tied-embedding
+;        logits → argmax → feed back (transformer-generate.fk, EXACT token-id-sequence parity). Bands:
+;        tests/transformer-{mh,decoder,generate}-band.fk, three-way (the fkwu float-band gap is the same
+;        named host-io/node-family limitation as mel-frame). Remaining to a real transcript: real
+;        d_model=384 weights via M5's JIT, conv stem + full 80×3000 mel, sinusoidal/learned positionals,
+;        BPE tokenizer.]
+;        [REAL-WEIGHT + FRONT-END + TOKENIZER RUNGS SHIPPED: (1) REAL openai/whisper-tiny encoder
+;        block-0 weights (offline from the HF cache), REAL 6-head multi-head, run through tb-mh-block —
+;        at d_model=96 max|Form-numpy(tanh-gelu)|=3e-16, and at FULL d_model=384/head_dim=64 = 6.66e-15
+;        in 33.6s (a 34.6MB literal-emit program — it RUNS and is bit-right at full width; throughput for
+;        a whole 8-layer/1500-pos model is M5's JIT, not correctness). The only residual vs whisper's true
+;        output is erf-gelu vs the body's tanh-gelu (~4e-3) — the named M3 follow-up. scripts/
+;        whisper_block0_real_carrier.py + tests/whisper-mh-block-real-band.fk (d_model=12). (2) Encoder
+;        sinusoidal positional (positional.fk, 2e-10), conv stem — two 1-D convs, time-halving stride-2
+;        (conv-stem.fk, conv math exact), full log-mel as the proven cell walked (mel-full.fk, 2e-11),
+;        cross-attention KV cache for greedy decode (transformer-generate-cached.fk, identical ids). (3)
+;        BPE merge core proven against the REAL whisper tokenizer (bpe-tokenizer.fk: " the"→264,
+;        " tokenizer"→[14862,6545], exact). Remaining to an end-to-end transcript: assemble the pieces at
+;        real width via JIT, learned decoder positionals, byte-map + regex word-split carriers, exact-erf gelu.]
+;        [NATIVE SPEEDUP MEASURED (the 33s interpreter block is a walker cost, not a real one): the
+;        Form matvec EMITTER (jit-tensor-emit.fk jte-matvec-rust) → rustc cdylib runs a 384×384 matvec
+;        in ~0.1ms and 1280×1280 (whisper-large width) in ~1.6ms, bit-exact vs numpy (the j-DOWN fold).
+;        The full d_model=384 block with its matvecs routed through that native lane runs in ~3-4ms —
+;        ~7000-12000× the 31s tree-walk — projecting a full 8-layer pass at ~20-35ms. Witness:
+;        scripts/jit_matvec_speedup_audit.py. The block is matvec-dominated, so SPEED is already solved
+;        by the proven emit→compile→exec lane; the remaining wiring is the buffer bridge (Form list ↔
+;        flat slice) + a CPU block emitter so the WHOLE block runs pure-Form-native end to end, plus the
+;        in-process jit_compile realization-gap fix (the dispatch bug) for the zero-carrier path.]
 ;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
 ;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
 ;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what

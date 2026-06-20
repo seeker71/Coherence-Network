@@ -1,0 +1,24 @@
+; preludes: form-stdlib/core.fk form-stdlib/part-self-update.fk
+;
+; part-self-update-band — the self-detect-and-update decision, proven four-way. Content-addresses are
+; ints here (100 = the part running now, 200 = the mesh's offered part). The seam that turns
+; mesh-merge-converge (the better part converges) + melt-hot-swap (replace it native) into one loop:
+; detect drift, gate champion-challenger (never regress), settle (no thrash).
+;
+; Verdict 127:
+;   1    drift detected when the mesh offers a different address      (drifted? 100 200 = 1)
+;   2    no drift when the address already matches                    (drifted? 100 100 = 0)
+;   4    hold when already current                                    (should-update? 100 100 1 = 0)
+;   8    NEVER REGRESS — drifted but not better -> hold               (should-update? 100 200 0 = 0)
+;   16   update when drifted AND the mesh's part wins                 (should-update? 100 200 1 = 1)
+;   32   after update the body runs the mesh's address                (next-addr 100 200 1 = 200)
+;   64   SETTLES — the next pass is a no-op, no thrash                (settled? 100 200 1 = 1)
+(do
+    (let c0 (if (eq (psu-drifted? 100 200) 1) 1 0))
+    (let c1 (if (eq (psu-drifted? 100 100) 0) 2 0))
+    (let c2 (if (eq (psu-should-update? 100 100 1) 0) 4 0))
+    (let c3 (if (eq (psu-should-update? 100 200 0) 0) 8 0))
+    (let c4 (if (eq (psu-should-update? 100 200 1) 1) 16 0))
+    (let c5 (if (eq (psu-next-addr 100 200 1) 200) 32 0))
+    (let c6 (if (eq (psu-settled? 100 200 1) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

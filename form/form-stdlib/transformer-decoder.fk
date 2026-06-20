@@ -1,0 +1,73 @@
+; transformer-decoder.fk — whisper-tiny's decoder block: masked self-attn + cross-attn + FFN.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk
+;
+; The encoder (transformer-mh.fk) is self-attention only. The DECODER block is three
+; pre-LN residual sub-blocks — the piece that turns encoder states into tokens:
+;   h1 = x  + MHA_masked(LN1(x))            causal self-attention (position i sees only ≤ i)
+;   h2 = h1 + MHA_cross(LN2(h1), enc)       cross-attention: q from the decoder, k/v from the ENCODER
+;   y  = h2 + FFN(LN3(h2))
+; Masked attention is the multi-head walk with each query truncated to the keys/values up
+; to its own position (the causal mask, done by construction — no -inf needed). Cross-
+; attention is the same multi-head walk with k/v projected from the encoder output instead
+; of the decoder sequence. Both reuse transformer-mh.fk's proven head-slice/concat and
+; transformer-block.fk's proven projections — no new arithmetic, bit-deterministic.
+
+; --- causal (masked) single-head attention over a (head-sliced) sequence ---
+; query at position i attends ONLY to keys/values 0..i (whisper's causal decoder mask).
+(defn tb-attn-causal-acc (qs ks vs scale i)
+  (if (eq (len qs) 0) (empty)
+      (cons (tb-attend-one (head qs) (tb-take (add i 1) ks) (tb-take (add i 1) vs) scale)
+            (tb-attn-causal-acc (tail qs) ks vs scale (add i 1)))))
+(defn tb-attn-causal-seq (qs ks vs scale) (tb-attn-causal-acc qs ks vs scale 0))
+
+; --- multi-head masked self-attention (per-head causal, concatenated) ---
+(defn tb-mh-causal-head (qs ks vs h hd scale)
+  (tb-attn-causal-seq (tb-seq-headslice qs h hd) (tb-seq-headslice ks h hd) (tb-seq-headslice vs h hd) scale))
+(defn tb-mh-causal-loop (qs ks vs h n hd scale)
+  (if (eq h (sub n 1))
+      (tb-mh-causal-head qs ks vs h hd scale)
+      (tb-seq-cat (tb-mh-causal-head qs ks vs h hd scale) (tb-mh-causal-loop qs ks vs (add h 1) n hd scale))))
+(defn tb-mh-causal (qs ks vs n hd scale) (tb-mh-causal-loop qs ks vs 0 n hd scale))
+
+; --- the three decoder sub-blocks ---
+; 1. masked self-attention: q/k/v all from the decoder sequence, causal.
+(defn tb-mh-causal-sub (lns wq bq wk bk wv bv wo bo n hd scale)
+  (tb-proj-seq wo bo
+    (tb-mh-causal (tb-proj-seq wq bq lns) (tb-proj-seq wk bk lns) (tb-proj-seq wv bv lns) n hd scale)))
+(defn tb-dec-self (xs eps g1 be1 wq bq wk bk wv bv wo bo n hd scale)
+  (tb-add-seq xs (tb-mh-causal-sub (tb-ln-seq xs eps g1 be1) wq bq wk bk wv bv wo bo n hd scale)))
+
+; 2. cross-attention: q from the decoder (post-LN), k/v from the ENCODER output, no mask.
+(defn tb-mh-cross-sub (dlns enc wq bq wk bk wv bv wo bo n hd scale)
+  (tb-proj-seq wo bo
+    (tb-mh-attn (tb-proj-seq wq bq dlns) (tb-proj-seq wk bk enc) (tb-proj-seq wv bv enc) n hd scale)))
+(defn tb-dec-cross (h1 enc eps g2 be2 wq bq wk bk wv bv wo bo n hd scale)
+  (tb-add-seq h1 (tb-mh-cross-sub (tb-ln-seq h1 eps g2 be2) enc wq bq wk bk wv bv wo bo n hd scale)))
+
+; 3. FFN sub-block is tb-ffn-block (transformer-block.fk), unchanged.
+
+; --- the full decoder block: self → cross → ffn, all pre-LN residual ---
+(defn tb-dec-block
+  (xs enc eps
+   g1 be1 sq sbq sk sbk sv sbv so sbo
+   g2 be2 cq cbq ck cbk cv cbv co cbo
+   n hd scale
+   g3 be3 w1 c1 w2 c2)
+  (tb-ffn-block
+    (tb-dec-cross
+      (tb-dec-self xs eps g1 be1 sq sbq sk sbk sv sbv so sbo n hd scale)
+      enc eps g2 be2 cq cbq ck cbk cv cbv co cbo n hd scale)
+    eps g3 be3 w1 c1 w2 c2))
+
+; --- the decoder as a SEQUENCE of blocks over a shared encoder output ---
+; a layer = (g1 be1 sq sbq sk sbk sv sbv so sbo g2 be2 cq cbq ck cbk cv cbv co cbo g3 be3 w1 b1 w2 b2) — 26 params.
+(defn tb-dec-layer (xs enc eps n hd scale L)
+  (tb-dec-block xs enc eps
+    (nth L 0) (nth L 1) (nth L 2) (nth L 3) (nth L 4) (nth L 5) (nth L 6) (nth L 7) (nth L 8) (nth L 9)
+    (nth L 10) (nth L 11) (nth L 12) (nth L 13) (nth L 14) (nth L 15) (nth L 16) (nth L 17) (nth L 18) (nth L 19)
+    n hd scale
+    (nth L 20) (nth L 21) (nth L 22) (nth L 23) (nth L 24) (nth L 25)))
+(defn tb-dec-stack (xs enc eps n hd scale layers)
+  (if (eq (len layers) 0) xs
+      (tb-dec-stack (tb-dec-layer xs enc eps n hd scale (head layers)) enc eps n hd scale (tail layers))))

@@ -1,0 +1,50 @@
+; transformer-generate.fk — the autoregressive decode loop: encoder states → token ids.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-decoder.fk
+;
+; The decoder block (transformer-decoder.fk) maps a token sequence + encoder output to
+; hidden states. This cell closes the loop into actual TOKENS — whisper's greedy decode:
+;   input(ids)   = for each position p, token_embed[id_p] + positional_embed[p]
+;   states       = decoder stack over (input, encoder output)
+;   logits(last) = embed · layernorm_post(last state)     (whisper ties logits to the embedding)
+;   next id      = argmax(logits)                          (greedy)
+;   repeat, appending next id, until the length cap (real whisper stops on the EOT token).
+; Pure recipe over the proven decoder + matvec — no new arithmetic. No KV-cache: each step
+; recomputes the decoder over all ids so far (correct, unoptimized; the cache is M5's stone).
+
+; --- argmax: index of the largest element (ties → lowest index, matching numpy) ---
+(defn tb-argmax-acc (xs i best bi)
+  (if (eq (len xs) 0) bi
+      (if (gt (head xs) best)
+          (tb-argmax-acc (tail xs) (add i 1) (head xs) i)
+          (tb-argmax-acc (tail xs) (add i 1) best bi))))
+(defn tb-argmax (xs) (tb-argmax-acc (tail xs) 1 (head xs) 0))
+
+; --- list helpers ---
+(defn tb-last (xs) (if (eq (len xs) 1) (head xs) (tb-last (tail xs))))
+(defn tb-append (xs v) (if (eq (len xs) 0) (cons v (empty)) (cons (head xs) (tb-append (tail xs) v))))
+
+; --- embedding: token row + learned positional row, per position ---
+(defn tb-embed-pos (embed pos t p) (tb-vec-add (nth embed t) (nth pos p)))
+(defn tb-embed-seq-acc (embed pos ids p)
+  (if (eq (len ids) 0) (empty)
+      (cons (tb-embed-pos embed pos (head ids) p) (tb-embed-seq-acc embed pos (tail ids) (add p 1)))))
+(defn tb-embed-seq (embed pos ids) (tb-embed-seq-acc embed pos ids 0))
+
+; --- logits for one state: whisper ties the output projection to the token embedding ---
+(defn tb-logits (embed state) (tb-matvec embed state))
+
+; --- one greedy step: current ids → next token id ---
+(defn tb-decode-next (ids embed pos enc eps n hd scale layers gf bf)
+  (do
+    (let din (tb-embed-seq embed pos ids))
+    (let dout (tb-dec-stack din enc eps n hd scale layers))
+    (let last (tb-last dout))
+    (let lnf (tb-vec-add (tb-vec-mul (tn-layernorm last eps) gf) bf))
+    (tb-argmax (tb-logits embed lnf))))
+
+; --- greedy autoregressive generation until the length cap ---
+(defn tb-generate (ids embed pos enc eps n hd scale layers gf bf maxlen)
+  (if (ge (len ids) maxlen) ids
+      (tb-generate (tb-append ids (tb-decode-next ids embed pos enc eps n hd scale layers gf bf))
+                   embed pos enc eps n hd scale layers gf bf maxlen)))
