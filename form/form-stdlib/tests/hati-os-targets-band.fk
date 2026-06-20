@@ -1,18 +1,19 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
 ;
 ; hati-os-targets-band - host OS implementation and distribution catalog proof.
-; Verdict 524287 when macOS, Android, Windows amd64, and Windows x86_64 target
-; rows, oracle surfaces, Form-native object/executable emitters or explicit
-; pending PE/COFF gaps, fkwu self-JIT runtime rows, implementation rows, and
-; hati.earth download coordinates are discoverable.
+; Verdict 2097151 when macOS, Android, Windows ARM64, Windows amd64, and
+; Windows x86_64 target rows, oracle surfaces, Form-native object/executable
+; emitters or explicit pending PE/COFF gaps, arm64/x64 JIT runtime rows,
+; implementation rows, and hati.earth download coordinates are discoverable.
 
 (do
-    (let c0 (if (eq (len (hos-targets)) 4)
-                (if (eq (len (hos-artifacts)) 4) 1 0)
+    (let c0 (if (eq (len (hos-targets)) 5)
+                (if (eq (len (hos-artifacts)) 5) 1 0)
                 0))
 
     (let mac (hos-target-by-name "macos-arm64"))
     (let android (hos-target-by-name "android-arm64"))
+    (let winarm (hos-target-by-name "windows-arm64"))
     (let windows (hos-target-by-name "windows-amd64"))
     (let win64 (hos-target-by-name "windows-x86_64"))
     (let c1 (if (str_eq (hos-target-os mac) "macos")
@@ -106,5 +107,45 @@
                         0)
                     0)
                 0))
+    (let c19 (if (str_eq (hos-target-os winarm) "windows")
+                (if (str_eq (hos-target-arch winarm) "arm64")
+                    (if (str_eq (hos-target-clang-triple winarm) "aarch64-pc-windows-msvc")
+                        (if (str_eq (hos-target-assembly-surface winarm) "pe-coff+arm64-asm")
+                            (if (str_eq (hos-target-jit-runtime winarm) "form-native-arm64-assembler") 524288 0)
+                            0)
+                        0)
+                    0)
+                0))
+    (let winarm-gpu (hos-impl-for "windows-arm64" "gpu:compute"))
+    (let winarm-mlx (hos-impl-for "windows-arm64" "mlx:array"))
+    (let winarm-artifact (hos-artifact-for "windows-arm64"))
+    (let c20 (if (str_eq (hos-target-binary-format winarm) "pe-coff")
+                (if (str_eq (hos-target-form-native-object winarm) "form-pe-coff-arm64-pending")
+                    (if (str_eq (hos-impl-implementation winarm-gpu) "DirectML+D3D12+Vulkan")
+                        (if (str_eq (hos-impl-implementation winarm-mlx) "unsupported-on-windows")
+                            (if (str_eq (hos-artifact-url winarm-artifact) "https://hati.earth/downloads/hati-os/windows/arm64/hati-os-windows-arm64.zip") 1048576 0)
+                            0)
+                        0)
+                    0)
+                0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15 (add c16 (add c17 c18)))))))))))))))))))
+    (let total0 (add c0 c1))
+    (let total1 (add total0 c2))
+    (let total2 (add total1 c3))
+    (let total3 (add total2 c4))
+    (let total4 (add total3 c5))
+    (let total5 (add total4 c6))
+    (let total6 (add total5 c7))
+    (let total7 (add total6 c8))
+    (let total8 (add total7 c9))
+    (let total9 (add total8 c10))
+    (let total10 (add total9 c11))
+    (let total11 (add total10 c12))
+    (let total12 (add total11 c13))
+    (let total13 (add total12 c14))
+    (let total14 (add total13 c15))
+    (let total15 (add total14 c16))
+    (let total16 (add total15 c17))
+    (let total17 (add total16 c18))
+    (let total18 (add total17 c19))
+    (add total18 c20))

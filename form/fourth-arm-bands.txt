@@ -354,7 +354,7 @@ go-jit fks 8
 go-jit-value-list fks 4
 harmonic-geometry fks 111111
 hati-os-native-cli-emit fks 7
-hati-os-targets fks 524287
+hati-os-targets fks 2097151
 heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
@@ -364,7 +364,7 @@ jit-lower-program fks 15
 full-jit-lower fks 63
 jit-lower-bmf fks 15
 jit-lower-emit fks 63
-jit-metal-lanes fks 4095
+jit-metal-lanes fks 8191
 jit-native-span fks 255
 jit-oracle-learning fks 1023
 jit-tensor-emit fks 7

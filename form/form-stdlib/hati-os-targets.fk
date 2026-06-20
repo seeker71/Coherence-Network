@@ -26,6 +26,7 @@
         (list
             (hos-target "macos-arm64" "macos" "arm64" "mach-o" "tar.zst" "hati-os" "arm64-apple-macosx" "mach-o-relocatable+arm64-asm" "form-macho" "form-macho+ld" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
             (hos-target "android-arm64" "android" "arm64" "elf" "tar.zst" "hati-os" "aarch64-linux-android" "elf-relocatable+aarch64-asm" "form-elf" "form-elf-exec" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
+            (hos-target "windows-arm64" "windows" "arm64" "pe-coff" "zip" "hati-os.exe" "aarch64-pc-windows-msvc" "pe-coff+arm64-asm" "form-pe-coff-arm64-pending" "form-pe-arm64-exec-pending" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
             (hos-target "windows-amd64" "windows" "amd64" "pe-coff" "zip" "hati-os.exe" "x86_64-pc-windows-msvc" "pe-coff+x64-asm" "form-pe-coff-pending" "form-pe-exec-pending" "optional-clang-llvm-build-witness" "fkwu-self-jit-no-runtime-toolchain" "form-authored-fkc-nat-expr-hot-flip")
             (hos-target "windows-x86_64" "windows" "x86_64" "pe-coff" "zip" "hati-os.exe" "x86_64-pc-windows-msvc" "pe-coff+x64-asm" "form-pe-coff-pending" "form-pe-exec-pending" "optional-clang-llvm-build-witness" "fkwu-self-jit-no-runtime-toolchain" "form-authored-fkc-nat-expr-hot-flip")))
 
@@ -57,6 +58,14 @@
             (hos-impl "android-arm64" "gpu:compute" "cap.compute.gpu" "Vulkan+OpenGL-ES+GPU-counter-when-available" "GPU catalog row and dashboard unavailable/sample gap" "native GPU dispatch and pressure receipt")
             (hos-impl "android-arm64" "dsp:signal" "cap.compute.dsp" "NNAPI+vendor-DSP-delegates" "NNAPI/DSP capability catalog row" "native DSP/NPU signal receipt")
             (hos-impl "android-arm64" "mlx:array" "cap.compute.mlx" "unsupported-on-android" "explicit unsupported row" "route to Android GPU/NNAPI equivalent without pretending MLX exists")
+            (hos-impl "windows-arm64" "host:process" "cap.host.process" "PowerShell+CIM+Get-Process" "Windows-on-ARM process carrier receipt pending" "typed direct process snapshot")
+            (hos-impl "windows-arm64" "host:usage" "cap.host.usage" "CIM+PerformanceCounter+DirectML" "Windows-on-ARM utilization carrier receipt pending" "typed utilization and accelerator pressure sample")
+            (hos-impl "windows-arm64" "audio:pcm16" "cap.audio.sample" "WASAPI+MediaFoundation" "device inventory carrier receipt pending" "native PCM stream")
+            (hos-impl "windows-arm64" "video:rgba-time" "cap.video.frame" "Windows.Graphics.Capture+MediaFoundation" "screen/camera inventory carrier receipt pending" "native camera and screen frame stream")
+            (hos-impl "windows-arm64" "sensor:signal" "cap.sensor.read" "Windows.Devices.Sensors+Location-when-present" "inventory receipt pending" "typed sensor and location stream")
+            (hos-impl "windows-arm64" "gpu:compute" "cap.compute.gpu" "DirectML+D3D12+Vulkan" "Windows-on-ARM accelerator capability catalog row" "native DirectML/D3D12/Vulkan dispatch and pressure receipt")
+            (hos-impl "windows-arm64" "dsp:signal" "cap.compute.dsp" "DirectML+WASAPI-DSP-when-exposed" "DirectML/DSP capability catalog row" "native Windows ML/DSP signal receipt")
+            (hos-impl "windows-arm64" "mlx:array" "cap.compute.mlx" "unsupported-on-windows" "explicit unsupported row; DirectML equivalent available" "route to Windows DirectML/Vulkan without pretending MLX exists")
             (hos-impl "windows-amd64" "host:process" "cap.host.process" "PowerShell+CIM+Get-Process" "Get-Process/CIM carrier receipt" "typed direct process snapshot")
             (hos-impl "windows-amd64" "host:usage" "cap.host.usage" "CIM+PerformanceCounter+nvidia-smi" "Windows 11 + RTX 4070 CUDA driver receipt" "typed utilization and GPU pressure sample")
             (hos-impl "windows-amd64" "audio:pcm16" "cap.audio.sample" "WASAPI+MediaFoundation" "device inventory carrier receipt" "native PCM stream")
@@ -88,6 +97,7 @@
         (list
             (hos-artifact "macos-arm64" "native-binary" "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst" "tar.zst" "sha256" "public-asset-door")
             (hos-artifact "android-arm64" "native-kernel-package" "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst" "tar.zst" "sha256" "public-asset-door")
+            (hos-artifact "windows-arm64" "native-kernel-package" "https://hati.earth/downloads/hati-os/windows/arm64/hati-os-windows-arm64.zip" "zip" "sha256" "target-floor-door")
             (hos-artifact "windows-amd64" "native-kernel-package" "https://hati.earth/downloads/hati-os/windows/amd64/hati-os-windows-amd64.zip" "zip" "sha256" "target-floor-door")
             (hos-artifact "windows-x86_64" "native-kernel-package" "https://hati.earth/downloads/hati-os/windows/x86_64/hati-os-windows-x86_64.zip" "zip" "sha256" "target-floor-door")))
 
