@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-x86_64-floor",
+  "commit_scope": "Promote the Windows Hati-OS floor to a canonical windows-x86_64 target while preserving windows-amd64 as a compatibility alias, and prove the expanded target catalog four-way on fkwu.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "form-native-jit",
+    "windows-native-floor",
+    "fourth-kernel-bootstrap"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "windows-x86_64-floor",
+    "form-native-runtime"
+  ],
+  "task_ids": [
+    "windows-x86_64-floor-20260620"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "target-naming",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex-subagent-erdos",
+      "contributor_type": "machine",
+      "roles": [
+        "independent-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/system_audit/commit_evidence_2026-06-20_windows_x86_64_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_self_jit.ps1"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/system_audit/commit_evidence_2026-06-20_windows_x86_64_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_self_jit.ps1"
+  ],
+  "evidence_refs": [
+    "scripts/verify_windows_fkwu_self_jit.ps1",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "subagent:019ee38e-04b3-7cb0-981f-8c2bf5dd6ec9",
+    "subagent-blocked:019ee37f-3c21-72c0-8a8f-3ee558c2afd4"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe prompt-gate",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "cd form && bash scripts/fourth-arm-gate.sh hati-os-targets",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "git diff --check",
+      "subagent Erdos: reran verify_windows_fkwu_self_jit.ps1, fourth-arm-gate, focused validate, and git diff --check"
+    ],
+    "notes": "The verifier reported PASS windows-fkwu-self-jit cold=317811 hot=317811 njit=26 and FLOOR target=windows-x86_64 alias=windows-amd64 runtime=fkwu-self-jit-no-runtime-toolchain bootstrap_pe_coff=form-native-pending. The fourth-arm gate reported PASS-4WAY hati-os-targets. Focused validate reported verdict 524287 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. git diff --check passed with CRLF warnings only. The first verification sub-agent Cicero stalled before running commands and made no edits; the second sub-agent Erdos independently ran all four commands successfully and made no edits."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Not pushed yet; PR CI has not run for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "This slice changes Form target catalog, proof naming, docs, and evidence only. Public route behavior is unchanged before merge."
+  },
+  "phase_gate": {
+    "phase": "windows-x86_64-floor",
+    "gate": "Windows x86_64 must be a first-class Hati-OS target floor with the same fkwu self-JIT runtime proof and honest MLX refusal as the existing Windows amd64 compatibility row.",
+    "state": "local-proof-pass-ci-pending",
+    "can_move_next_phase": false,
+    "next": "Rebase, run local PR gates, push branch, open PR, monitor CI, then merge only if checks pass."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The catalog now exposes windows-x86_64 as the canonical Windows PE/COFF target while retaining windows-amd64 as a compatibility alias. The runtime verifier names target=windows-x86_64 alias=windows-amd64, and the Form target band proves the expanded catalog four-way on fkwu at verdict 524287.",
+    "public_endpoints": [
+      "local-only: Form/fkwu runtime and target catalog; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Run the Windows fkwu self-JIT verifier and assert cold=317811, hot=317811, njit>0, and target=windows-x86_64 alias=windows-amd64.",
+      "Run the hati-os-targets fourth-arm gate and assert PASS-4WAY.",
+      "Run focused Form validation over hati-os-targets and assert verdict 524287 with fourth arm attached.",
+      "Run independent sub-agent validation over the same checks and confirm no edits were made."
+    ]
+  }
+}
