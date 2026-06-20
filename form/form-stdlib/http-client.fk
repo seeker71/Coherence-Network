@@ -1,5 +1,7 @@
 ; http-client.fk - Form-native HTTP client surface.
 ;
+; preludes: form-stdlib/core.fk
+;
 ; Authored in the source-level Form/BML maintenance grammar. Kernel execution
 ; receives lowered Form recipes from source-compiler.fk.
 ;

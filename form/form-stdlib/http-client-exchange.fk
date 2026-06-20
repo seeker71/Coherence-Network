@@ -1,0 +1,53 @@
+; http-client-exchange.fk - generic class wrapper for the HTTP client.
+;
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/http-client.fk
+;
+; This file keeps the abstract source-language class surface separate from the
+; minimal socket runtime module. The wrapper is proven by render/class bands;
+; fkwu socket bands load only the minimal executable client.
+
+section [form.bml] {
+    template HttpExchange<TRequest, TResponse> {
+        member renderer: RequestRenderer;
+        member connector: SocketConnector;
+        member parser: ResponseParser;
+    }
+
+    class PlainSocketHttpExchange : HttpExchange<KernelHTTPRequest, KernelHTTPResponse> {
+        def render_request(method, path, host, body) {
+            kh-render-request(method, path, host, body);
+        }
+
+        def open(host, port) {
+            http-open(host, port);
+        }
+
+        def send_all(conn, bytes, from) {
+            http-send-all(conn, bytes, from);
+        }
+
+        def send_on_socket(conn, method, path, host, body) {
+            http-send-on-socket(conn, method, path, host, body);
+        }
+
+        def recv_response(conn) {
+            http-recv-response(conn);
+        }
+
+        def plain_request(host, port, req) {
+            http-plain-request(host, port, req);
+        }
+
+        def fetch(method, url, body) {
+            http-fetch(method, url, body);
+        }
+
+        def body(msg) {
+            kh-msg-body(msg);
+        }
+
+        def status_of(response) {
+            kh-status-of(response);
+        }
+    }
+}
