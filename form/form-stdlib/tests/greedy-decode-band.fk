@@ -1,0 +1,42 @@
+; preludes: form-stdlib/core.fk form-stdlib/histogram-peak.fk form-stdlib/greedy-decode.fk
+;
+; greedy-decode-band — greedy argmax over logits (gd-argmax / gd-token) lifted to the four-kernel floor.
+; This is the SELECTION half of the autoregressive generation loop (the kv-cache, #3382, is the
+; attention half): in temperature-0 decode the next token is the argmax of the final logit vector. It
+; lived only as emitted C in tk-emit-llama (`for t: if logits[t] > logits[best] best=t`); this proves
+; the standalone recipe reproduces that rule on Go/Rust/TS/fkwu.
+;
+; The proof is the RELATIONSHIP each logit vector forces — WHICH index wins, not a magnitude:
+;
+;   a clear winner is picked, anywhere in the vector — front (bit 2), interior via gd-token (bit 1),
+;     and the LAST index (bit 4), which only the full ascending walk reaches.
+;   the TIE RULE (the load-bearing law): two equal logits resolve to the LOWEST index (bit 8), and an
+;     all-equal vector picks index 0 (bit 16) — bit-for-bit the emitted-C strictly-greater `>` rule.
+;     A decoder that broke this would let two correct kernels pick different tokens from identical logits.
+;   NEGATIVE logits (bit 32): the least-negative wins — gt must hold across the sign boundary, since
+;     real logits are unbounded reals, often all negative after the classifier.
+;   fp RESOLUTION (bit 64): 1.000001 beats 1.0 — a hair above is NOT collapsed to a tie; the comparison
+;     has real floating-point resolution, it is not integer-rounded.
+;   the CONSOLIDATION (bit 128): gd-argmax over a float vector == histogram-peak.fk's hp-peak-bin
+;     bit-for-bit — this is the decoder-altitude name for the body's already-proven max-select-by-index
+;     spine, not a fourth copy. (Named core-lift: fold hp-peak / ns-best / sp-predict onto one generic
+;     argmax-by-index primitive; this band proves the equivalence that makes that fold sound.)
+;
+; Verdict 255 when greedy decode lands four-way.
+(do
+    (let clear  (list 0.1 0.9 0.3))
+    (let front  (list 2.0 1.0 0.5))
+    (let last   (list 0.1 0.2 0.5))
+    (let tie    (list 0.5 0.5 0.2))
+    (let flat   (list 0.3 0.3 0.3))
+    (let negs   (list -3.0 -1.0 -5.0))
+    (let hair   (list 1.000001 1.0 0.0))
+    (let c0 (if (eq (gd-token clear) 1) 1 0))            ; gd-token: clear interior winner
+    (let c1 (if (eq (gd-argmax front) 0) 2 0))           ; winner at front
+    (let c2 (if (eq (gd-argmax last) 2) 4 0))            ; winner at last index (full walk)
+    (let c3 (if (eq (gd-argmax tie) 0) 8 0))             ; tie -> lowest index
+    (let c4 (if (eq (gd-argmax flat) 0) 16 0))           ; all-equal -> 0
+    (let c5 (if (eq (gd-argmax negs) 1) 32 0))           ; negative logits: least-negative wins
+    (let c6 (if (eq (gd-argmax hair) 0) 64 0))           ; 1.000001 > 1.0 is no tie
+    (let c7 (if (eq (gd-argmax clear) (hp-peak-bin clear)) 128 0))  ; same spine as hp-peak-bin
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
