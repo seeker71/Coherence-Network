@@ -1,0 +1,68 @@
+; kv-llama-block.fk — the KV-cached causal llama decoder block: the inner step of the autoregressive
+; generation loop, proven BIT-IDENTICAL to the full causal llama block (lblk-block-causal, four-way #3365).
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/kv-cache.fk
+;
+; The named next stone after #3382 (the bare-attention KV cache, kv-generate) and #3376 (the causal
+; llama block on the M4 GPU): the generation loop steps the WHOLE block one token at a time. kv-cache.fk
+; proved the cache at the bare-attention altitude — q/k/v already projected. A real decoder step does
+; more: for each new token it must RMSNorm, project q/k/v, RoPE q and k by the token's position, APPEND
+; the projected+RoPE'd k/v to the running cache, attend the query over the grown prefix, then run the
+; Wo/residual/RMSNorm2/SwiGLU/residual tail. Only the NEW token is projected each step — the earlier
+; positions' keys/values are reused from the cache (O(n) work per token, not O(n²) recompute of the
+; whole block over [x0..xt]).
+;
+; The load-bearing claim is that the cache is EXACT, composing kv-cache + llama-block, not approximating.
+; A cached k_i/v_i is RoPE(Wk·RMSNorm1(x_i), i) / Wv·RMSNorm1(x_i) — it depends ONLY on position i's
+; input and the fixed weights, never on later tokens. So the grown cache the front-to-back walk holds at
+; step p is exactly [k_0..k_p] = (tb-take ks (add p 1)) — the very prefix tb-attn-seq-causal's mask cuts
+; at query p (transformer-block.fk). kv-append == tb-take of the prefix, so tb-attend-one gets IDENTICAL
+; arguments, and the block tail (Wo/residual/RMSNorm2/SwiGLU/residual) is per-token. Therefore
+; lblk-generate-causal == lblk-block-causal (llama-block.fk) bit-for-bit. The decode step is the efficient
+; realization of the same four-way-proven causal llama block, composing tb-attend-one and llama-block's
+; own RMSNorm/proj/RoPE/SwiGLU verbatim — no numeric change.
+;
+; The defining autoregressive INVARIANT this makes provable: appending a future token never changes an
+; earlier token's output (a cached k_i/v_i is frozen at position i). That invariant is exactly why a KV
+; cache can be reused across generation steps — proven here as gen3[token i] == gen2[token i].
+;
+; This lives at the reusable decoder-engine altitude (like tb-attn-seq-causal and kv-generate before it):
+; any causal block generates through the same cache; this instance is the real llama block (RMSNorm +
+; RoPE + SwiGLU). Position = absolute token index. fp64 lane; the GPU emit (the cached attention as a
+; key-prefix in the threadgroup walk, mirroring jte-llama-block-fwd-causal-msl, #3376) is the named
+; follow-up. Proven four-way against lblk-block-causal (#3365) and causal-attention-band's libm pins by
+; tests/kv-llama-block-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- the block TAIL, per token: h = x + Wo·a ; y = h + Wdown·SwiGLU(Wgate·RMSNorm2(h), Wup·RMSNorm2(h)).
+;     Identical to lblk-block-causal's attn-residual + ffn-block, taken one token at a time. ---
+(defn lblk-dec-tail (h g2 eps wg wu wd)
+  (tb-vec-add h (lblk-ffn wg wu wd (ln-rmsnorm h g2 eps))))
+(defn lblk-dec-out (x q gks gvs scale wo g2 eps wg wu wd)
+  (lblk-dec-tail (tb-vec-add x (tb-matvec wo (tb-attend-one q gks gvs scale))) g2 eps wg wu wd))
+
+; --- one decode step over an already-grown cache (gks/gvs hold positions 0..p): emit this token's block
+;     output, then thread the grown cache forward as the next step's prior cache (the genuine cache, not
+;     a re-take from the full sequence — the grown cache is computed ONCE per step in lblk-dec-n1). ---
+(defn lblk-dec-grow (x q gks gvs xs p g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (cons (lblk-dec-out x q gks gvs scale wo g2 eps wg wu wd)
+        (lblk-dec-run xs p gks gvs g1 eps wq wk wv wo scale HD g2 wg wu wd)))
+
+; --- per token: RMSNorm1 once (n1), then project+RoPE q/k and project v, APPEND k/v to the cache, and
+;     hand the grown cache to lblk-dec-grow. Position p is the token's absolute index. ---
+(defn lblk-dec-n1 (x n1 xs p cks cvs g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (lblk-dec-grow x (rope (tb-matvec wq n1) p HD)
+                 (kv-append cks (rope (tb-matvec wk n1) p HD))
+                 (kv-append cvs (tb-matvec wv n1))
+                 xs (add p 1) g1 eps wq wk wv wo scale HD g2 wg wu wd))
+
+; --- the autoregressive walk: front to back, threading the growing cache (cks/cvs = positions 0..p-1) ---
+(defn lblk-dec-run (xs p cks cvs g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (if (eq (len xs) 0) (empty)
+      (lblk-dec-n1 (head xs) (ln-rmsnorm (head xs) g1 eps) (tail xs) p cks cvs
+                   g1 eps wq wk wv wo scale HD g2 wg wu wd)))
+
+; --- generate the whole output sequence incrementally from an empty cache. Equals
+;     (lblk-block-causal xs ...) bit-for-bit — the equivalence the band proves. ---
+(defn lblk-generate-causal (xs g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (lblk-dec-run xs 0 (empty) (empty) g1 eps wq wk wv wo scale HD g2 wg wu wd))

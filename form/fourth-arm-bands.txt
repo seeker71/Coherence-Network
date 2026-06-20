@@ -694,6 +694,7 @@ http-client-socket-response fks 8191
 nanite-mem-parse fks 15
 kv-cache fks 255
 greedy-decode fks 255
+kv-llama-block fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
 # GATED four-way by scripts/fourth-arm-gate.sh (validate.sh: 0 divergent AND

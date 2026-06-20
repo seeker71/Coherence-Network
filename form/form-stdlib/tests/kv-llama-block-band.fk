@@ -1,0 +1,61 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk
+;
+; kv-llama-block-band — the KV-cached causal llama decoder block (lblk-generate-causal) lifted to the
+; four-kernel floor. This is the inner step of the autoregressive generation loop: each token is RMSNorm'd,
+; q/k/v projected, q/k RoPE'd by position, k/v APPENDED to the cache, the query attends over the grown
+; prefix, then the Wo/residual/RMSNorm2/SwiGLU/residual tail runs — only the NEW token projected each step.
+; The proof is that the cache is EXACT — lblk-generate-causal is BIT-IDENTICAL to the full causal llama
+; block (lblk-block-causal, four-way #3365) — because a cached k_i/v_i depends only on position i, never
+; the future, so the grown cache at step p equals exactly the prefix the causal mask cuts. The proof is the
+; RELATIONSHIPS, each grounded against causal-attention-band's already-four-way libm fp64 pins:
+;
+;   the cache reproduces causal-attention-band's libm-pinned llama values — token-0 y[0][0]=1893731 (the
+;     mask-restricted value, DIFFERING from non-causal 1115890), last-token y[1][0]=-1069281, y[1][2]=
+;     1648117 — with NO recompute of earlier tokens' attention.
+;   the EQUIVALENCE LAW (the heart): lblk-generate-causal == lblk-block-causal element-for-element, at S=2
+;     AND S=3 — the S=3 fixture proves the recursion threads the cache correctly past the boundary (the
+;     inductive step), grounded by equivalence to the already-four-way lblk-block-causal.
+;   the cache respects CAUSALITY (not a no-op): token 0's cached output ≠ the non-causal block's token 0.
+;   the autoregressive INVARIANT (why a KV cache is reusable across generation steps): appending a future
+;     token never changes an earlier token's output — gen3[token i] == gen2[token i], libm-pinned.
+;
+; Verdict 255 when the KV-cached causal llama block lands four-way:
+;   1     gen2[0][0] → 1893731   (cache reproduces causal token 0, libm-pinned, mask-restricted)
+;   2     gen2[1][0] → -1069281  (cache reproduces causal last token, libm-pinned — no recompute)
+;   4     gen2[1][2] → 1648117
+;   8     gen2 == yc2  (S=2: the KV-cached decode EXACTLY equals the full causal llama block, bit-for-bit)
+;   16    gen3 == yc3  (S=3: the cache threads correctly past the boundary — the inductive step)
+;   32    gen2[0][0] ≠ ncy[0][0] (1115890)  (the cache respects causality — not a no-op)
+;   64    gen3[0][0] → 1893731   (token 0 unchanged by appending future tokens — the AR invariant)
+;   128   gen3[1][0] → -1069281  (token 1 unchanged by appending token 2 — the AR invariant, mid-sequence)
+(do
+    ; --- the llama-block-band / causal-attention-band fixture (S=2 tokens, d=4, HD=4, scale=1/√4) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    (let eps 0.00001)
+    (let HD 4)
+    (let scale (div 1.0 (tn-sqrt 4.0)))
+    (let gen2 (lblk-generate-causal x g1 eps wq wk wv wo scale HD g2 wg wu wd))
+    (let yc2  (lblk-block-causal     x g1 eps wq wk wv wo scale HD g2 wg wu wd))
+    (let ncy  (lblk-block            x g1 eps wq wk wv wo scale HD g2 wg wu wd))
+    ; --- a 3-token fixture: proves the cache threads correctly for S>2 (the inductive step) AND the AR
+    ;     invariant (earlier tokens unchanged when a future token is appended). Same weights. ---
+    (let x3 (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75) (list 0.5 1.0 -0.5 0.25)))
+    (let gen3 (lblk-generate-causal x3 g1 eps wq wk wv wo scale HD g2 wg wu wd))
+    (let yc3  (lblk-block-causal     x3 g1 eps wq wk wv wo scale HD g2 wg wu wd))
+    (let c0 (if (eq (round (mul (nth (nth gen2 0) 0) 1000000.0)) 1893731) 1 0))
+    (let c1 (if (eq (round (mul (nth (nth gen2 1) 0) 1000000.0)) -1069281) 2 0))
+    (let c2 (if (eq (round (mul (nth (nth gen2 1) 2) 1000000.0)) 1648117) 4 0))
+    (let c3 (if (eq (kv-lol-eq gen2 yc2) 1) 8 0))
+    (let c4 (if (eq (kv-lol-eq gen3 yc3) 1) 16 0))
+    (let c5 (if (eq (round (mul (nth (nth ncy 0) 0) 1000000.0)) 1115890) 32 0))
+    (let c6 (if (eq (round (mul (nth (nth gen3 0) 0) 1000000.0)) 1893731) 64 0))
+    (let c7 (if (eq (round (mul (nth (nth gen3 1) 0) 1000000.0)) -1069281) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
