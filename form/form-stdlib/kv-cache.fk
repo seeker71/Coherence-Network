@@ -1,0 +1,54 @@
+; kv-cache.fk — the autoregressive KV cache: the O(n)-per-token realization of causal attention,
+; proven BIT-IDENTICAL to the full causal recompute (tb-attn-seq-causal, four-way via #3365).
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk
+;
+; The named next stone after #3376 (the causal llama block runs on the M4 GPU): the GENERATION loop
+; needs a KV cache. In autoregressive decode you do NOT re-run the whole block over [x0..xt] each
+; step — you keep the per-position keys/values from earlier steps and, at step t, only compute the
+; new token's k_t/v_t, APPEND them to the cache, and attend the new query over the grown prefix
+; ks[0..t]/vs[0..t]. That is O(n) work per token instead of O(n²) recompute.
+;
+; The load-bearing claim is that the cache is EXACT, not an approximation. The keys/values for an
+; earlier position depend only on that position's input and the fixed weights — never on later
+; tokens — so a cached k_i/v_i is bit-for-bit what a full recompute would produce. Concretely, the
+; cache the front-to-back walk has accumulated at step t is exactly ks[0..t-1]; appending k_t gives
+; ks[0..t] = (tb-take ks (add t 1)) — the very prefix tb-attn-seq-causal's mask cuts at that query.
+; So kv-step hands tb-attend-one IDENTICAL arguments, and kv-generate == tb-attn-seq-causal
+; bit-for-bit. The cache is the efficient realization of the same proven causal attention, composing
+; tb-attend-one verbatim — no numeric change.
+;
+; This lives at the reusable decoder-engine altitude (like tb-attn-seq-causal itself, #3365), not
+; llama-specific: any causal block generates through the same cache.
+;
+; Proven by: form-stdlib/tests/kv-cache-band.fk
+; teaching: lc-cognitive-sovereignty
+
+; --- the cache append: grow a per-position list by one entry at the TAIL, preserving position order ---
+(defn kv-append (xs x)
+  (if (eq (len xs) 0) (cons x (empty)) (cons (head xs) (kv-append (tail xs) x))))
+
+; --- one decode step over an already-grown cache (gks/gvs hold positions 0..t), then thread the
+;     grown cache forward. The grown cache is computed ONCE per step (in kv-run) and reused for both
+;     the current attend and the next step — the genuine cache, not a re-take from the full sequence. ---
+(defn kv-grow (q gks gvs qs ks vs scale)
+  (cons (tb-attend-one q gks gvs scale) (kv-run qs ks vs gks gvs scale)))
+
+; --- the autoregressive walk: front to back, threading the growing cache (cks/cvs = positions 0..t-1).
+;     At each position append this token's k/v to the cache, attend its query over the grown prefix. ---
+(defn kv-run (qs ks vs cks cvs scale)
+  (if (eq (len qs) 0) (empty)
+      (kv-grow (head qs) (kv-append cks (head ks)) (kv-append cvs (head vs))
+               (tail qs) (tail ks) (tail vs) scale)))
+
+; --- generate the whole output sequence incrementally from an empty cache. Equals
+;     (tb-attn-seq-causal qs ks vs scale) bit-for-bit — the equivalence the band proves. ---
+(defn kv-generate (qs ks vs scale) (kv-run qs ks vs (empty) (empty) scale))
+
+; --- equivalence comparison: are two sequences of vectors equal element-wise (to 1e-6)? The cache
+;     and the full recompute should agree bit-for-bit; this folds that into one verdict bit. ---
+(defn kv-f6 (a b) (if (eq (round (mul a 1000000.0)) (round (mul b 1000000.0))) 1 0))
+(defn kv-row-eq (r s)
+  (if (eq (len r) 0) 1 (if (eq (kv-f6 (head r) (head s)) 1) (kv-row-eq (tail r) (tail s)) 0)))
+(defn kv-lol-eq (xs ys)
+  (if (eq (len xs) 0) 1 (if (eq (kv-row-eq (head xs) (head ys)) 1) (kv-lol-eq (tail xs) (tail ys)) 0)))

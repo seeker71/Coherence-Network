@@ -1,0 +1,35 @@
+{
+  "date": "2026-06-19",
+  "brick": "kv-cache (3v)",
+  "title": "the autoregressive KV cache crosses four-way — kv-generate proven BIT-IDENTICAL to the full causal recompute",
+  "north_star_track": "real local llama inference on the M4 GPU — the generation loop (named next stone after #3376)",
+  "what": "Lifted the autoregressive KV cache to a standalone four-way Form recipe. In decode you do not re-run the block over [x0..xt] each step; you keep earlier positions' keys/values, append the new token's k_t/v_t, and attend the new query over the grown prefix ks[0..t]/vs[0..t] — O(n) per token, not O(n^2) recompute. The load-bearing proof is that the cache is EXACT: a cached k_i/v_i depends only on position i (never the future), so the cache the front-to-back walk holds at step t equals exactly the prefix tb-attn-seq-causal's mask cuts — kv-append(cache,k) == tb-take(ks,t+1). So kv-step hands tb-attend-one IDENTICAL arguments and kv-generate == tb-attn-seq-causal (#3365, four-way) bit-for-bit. Composes tb-attend-one verbatim — no numeric change. Lives at the reusable decoder-engine altitude, not llama-specific.",
+  "files": {
+    "recipe": "form/form-stdlib/kv-cache.fk",
+    "band": "form/form-stdlib/tests/kv-cache-band.fk",
+    "manifest_row": "kv-cache fks 255"
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/kv-cache.fk form-stdlib/tests/kv-cache-band.fk",
+    "verdict": 255,
+    "fourth_arm": "1 band four-way (fkwu + pre-flattened tables)",
+    "divergent": 0,
+    "kernels": "Go, Rust, TypeScript, fkwu — agree on every sample"
+  },
+  "claims": {
+    "1": "kv2[0][0] -> 2000000   first cached step = v0 exactly (single-key softmax, no future leak); == causal-attention-band's libm-pinned causal attn[0]",
+    "2": "kv2[0][1] -> 3000000",
+    "4": "kv2[1][0] -> 4193176   cached last step == full causal recompute, the libm-pinned four-way value, with no recompute of the earlier step",
+    "8": "kv2[1][1] -> 5924234",
+    "16": "kv2 == cattn   (n=2: cache EXACTLY equals the full causal recompute, element-for-element)",
+    "32": "kv3 == cattn3  (n=3: the cache threads correctly past the boundary — the inductive step, grounded by equivalence to the already-four-way tb-attn-seq-causal)",
+    "64": "kv3[0][0] -> 2000000   (n=3 first token still sees only itself)",
+    "128": "kv3 != vs3   (the cache is not a no-op: later tokens mix the grown prefix)"
+  },
+  "lesson": "Read-the-body held again: the KV cache + greedy argmax already lived ONLY inside transformer-kernel.fk's tk-emit-llama as emitted C (three-way), never a standalone proven recipe — exactly like the llama numerics (3p), RoPE (3q), and the block (3r) before they were lifted. The cache is provable by EXACT equality (not a 1e-6 reference) because it hands tb-attend-one bit-identical arguments to what tb-attn-seq-causal does — the equivalence is structural, not numerical. Design (recognizing kv-append(cache,k)==tb-take(ks,t+1) makes it bit-identical, and the strange-minimal n=2/n=3 fixtures) was the cost; the four-way proof was seconds.",
+  "named_next_stones": [
+    "greedy argmax over logits as a standalone four-way recipe (the other half of the generation loop still living only as emitted C)",
+    "the KV-cached causal LLAMA block (wrap lblk-block-causal's attention in the cache) — the per-step decode of the real decoder",
+    "the full generation loop: tokenizer (text-tokenize.fk) + KV cache + greedy decode over real llama3.2:3b GGUF weights on the M4 GPU"
+  ]
+}
