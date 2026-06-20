@@ -1,0 +1,54 @@
+; form-bml-lower.fk — lower the form.bml cursor AST (form-bml-grammar over the
+; bmf-grammar engine) into the hand line compiler's executable recipe shape.
+;
+; The whole point is node_eq parity: by rebuilding with source-compiler.fk's OWN
+; constructors (fsc-rec-fndef / fsc-rec-if3 / fsc-rec-form-call / fsc-rec-ident /
+; fsc-rec-call), content-addressing makes the result identical to
+; fsc-compile-form-bml-def-recipe — same category, same children, same NodeID.
+;
+; fsc-rec-form-call does the primitive lookup (eq/add/len -> typed category node;
+; user names -> FNCALL[ident...]), so the cursor path reproduces that split for free.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk
+
+(do
+    ;; category probe: the engine emits via (bp "<op>"); compare a node's category
+    ;; against a node freshly interned under the same op (mirrors bmf-to-fk's b2f-op?).
+    (defn fbl-cat (name) (node_category (intern_node (bp name) (list (intern_trivial_string "")))))
+    (defn fbl-is? (n name) (value_eq (node_category n) (fbl-cat name)))
+
+    ;; param leaves (trivial-strings under the grammar's do-node) -> name strings.
+    (defn fbl-names (kids)
+        (if (nil? kids) (empty)
+            (cons (node_value (head kids)) (fbl-names (tail kids)))))
+
+    (defn fbl-lower-list (xs)
+        (if (nil? xs) (empty)
+            (cons (fbl-lower (head xs)) (fbl-lower-list (tail xs)))))
+
+    (defn fbl-lower (n)
+        (if (fbl-is? n "fndef")
+            (do (let kids (node_children n))
+                (fsc-rec-fndef (node_value (nth kids 0))
+                               (fbl-names (node_children (nth kids 1)))
+                               (fbl-lower (nth kids 2))))
+        (if (fbl-is? n "if")
+            (do (let kids (node_children n))
+                (fsc-rec-if3 (fbl-lower (nth kids 0))
+                             (fbl-lower (nth kids 1))
+                             (fbl-lower (nth kids 2))))
+        (if (fbl-is? n "fncall")
+            (do (let kids (node_children n))
+                (let fname (node_value (nth (node_children (nth kids 0)) 0)))
+                (let args (fbl-lower-list (tail kids)))
+                ;; bare `empty` — the line compiler emits FNCALL[ident empty]
+                ;; (fsc-rec-call, NOT a primitive lookup), so mirror that exactly.
+                (if (and (str_eq fname "empty") (nil? args))
+                    (fsc-rec-call "empty" (empty))
+                    (fsc-rec-form-call fname args)))
+        (if (fbl-is? n "ident")
+            (fsc-rec-ident (node_value (nth (node_children n) 0)))
+            ;; literal leaves (trivial int / string / bool) are already
+            ;; content-identical to the line compiler's — pass through.
+            n)))))
+)
