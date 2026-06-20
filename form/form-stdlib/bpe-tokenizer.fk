@@ -1,0 +1,48 @@
+; bpe-tokenizer.fk — the byte-pair-encoding merge core (whisper/GPT-2 BPE), as a Form recipe.
+;
+; preludes: (none beyond the kernel — pure list/int recipe)
+;
+; whisper tokenizes text with byte-level BPE: bytes → byte-mapped symbols → repeatedly merge the
+; adjacent pair with the LOWEST merge-rank until none remain → vocab ids. This cell is the merge
+; CORE — the part that is real algorithm, not table lookup. Symbols are interned to their vocab
+; INTEGER ids; the merge table is DATA: a list of rows (left-id right-id merged-id rank). The
+; recipe finds the minimum-rank adjacent pair, merges its first occurrence, and repeats — which
+; converges to the same final encoding as GPT-2's merge-all-occurrences pass (the chosen bigram
+; stays minimal until all its occurrences are consumed). Final symbol-ids ARE the token ids.
+;
+; Carrier-last note: byte→symbol mapping and the GPT-2 regex pre-tokenization (word splitting),
+; plus the full 50000-merge table, load as DATA from whisper's tokenizer files; this recipe is
+; the merge engine proven against the real tokenizer on real merges.
+
+(defn bpe-big () 999999999)
+
+; rank of pair (a b) in the table, or big if absent
+(defn bpe-rank (a b table)
+  (if (eq (len table) 0) (bpe-big)
+      (do (let row (head table))
+          (if (and (eq a (nth row 0)) (eq b (nth row 1))) (nth row 3) (bpe-rank a b (tail table))))))
+; merged id of pair (a b), or -1 if absent
+(defn bpe-merged (a b table)
+  (if (eq (len table) 0) -1
+      (do (let row (head table))
+          (if (and (eq a (nth row 0)) (eq b (nth row 1))) (nth row 2) (bpe-merged a b (tail table))))))
+
+; the minimum rank over all adjacent pairs of the symbol list
+(defn bpe-min-rank (syms table best)
+  (if (lt (len syms) 2) best
+      (do (let r (bpe-rank (nth syms 0) (nth syms 1) table))
+          (bpe-min-rank (tail syms) table (if (lt r best) r best)))))
+
+; merge the FIRST adjacent pair whose rank equals target into its merged id
+(defn bpe-merge-at (syms table target)
+  (if (lt (len syms) 2) syms
+      (do (let a (nth syms 0)) (let b (nth syms 1))
+          (if (eq (bpe-rank a b table) target)
+              (cons (bpe-merged a b table) (tail (tail syms)))
+              (cons a (bpe-merge-at (tail syms) table target))))))
+
+; encode: while some adjacent pair is mergeable, merge the lowest-rank one; else stop
+(defn bpe-encode (syms table)
+  (do (let m (bpe-min-rank syms table (bpe-big)))
+      (if (eq m (bpe-big)) syms
+          (bpe-encode (bpe-merge-at syms table m) table))))

@@ -1,0 +1,37 @@
+; http-client-socket-verbs-band.fk - HTTP verbs over real socket calls.
+;
+; preludes: form-stdlib/http-client.fk
+;
+; Proves the client method lane is not built on http_get or sock_request:
+; the BML public request renderer emits a non-GET request, sends it over
+; socket_send, receives the request with socket_recv, and closes both sides.
+; Verdict: 127.
+
+section [form.bml] {
+    def hcsv-contains(s, needle) = ge(str_find(s, needle, 0), 0);
+    def hcsv-starts(s, prefix) = if gt(str_len(prefix), str_len(s)) then false else str_eq(substring(s, 0, str_len(prefix)), prefix);
+    def hcsv-score(ok, bit) = if ok then bit else 0;
+
+    let body = "{\"title\":\"native\"}";
+    let srv = socket_listen(0);
+    let listen-ok = hcsv-score(ge(srv, 0), 1);
+    let port = socket_port(srv);
+    let port-ok = hcsv-score(gt(port, 0), 2);
+
+    let cli = socket_connect("127.0.0.1", port);
+    let conn = if ge(cli, 0) then socket_accept(srv) else -1;
+    let pair-ok = hcsv-score(and(ge(cli, 0), ge(conn, 0)), 4);
+
+    let rendered = kh-render-request("PATCH", "/api/ideas", "127.0.0.1", body);
+    let sent = socket_send(cli, rendered);
+    let request = if gt(sent, 0) then socket_recv(conn, 65536) else "";
+    let sent-ok = hcsv-score(gt(sent, 0), 8);
+    let method-ok = hcsv-score(hcsv-starts(request, "PATCH /api/ideas HTTP/1.0\r\n"), 16);
+    let host-ok = hcsv-score(hcsv-contains(request, "Host: 127.0.0.1\r\n"), 32);
+    let body-ok = hcsv-score(hcsv-contains(request, "Content-Length: 18\r\n\r\n{\"title\":\"native\"}"), 64);
+    socket_close(conn);
+    socket_close(cli);
+    socket_close(srv);
+
+    sum(list(listen-ok, port-ok, pair-ok, sent-ok, method-ok, host-ok, body-ok));
+}

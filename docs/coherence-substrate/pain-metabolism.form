@@ -43,7 +43,7 @@
 #               known: curiosity turned toward what hurts
 #
 # SHIPPED: form/form-stdlib/pain-metabolism.fk +
-# tests/pain-metabolism-band.fk → 1023 (10 claims), three-way
+# tests/pain-metabolism-band.fk → 1023 (10 claims), four-way
 # (Go/Rust/TS), composing geometric-learning + cognitive-light-cone +
 # metabolic-learning + nearest-shape/learning-arc + novelty +
 # learning-style-space.
@@ -62,7 +62,7 @@
 # The rounds experiment — does it work the way we expect?
 # ─────────────────────────────────────────────────────────────────────
 #
-# tests/pain-rounds-band.fk → 4095 (12 claims), three-way: four rounds
+# tests/pain-rounds-band.fk → 4095 (12 claims), four-way: four rounds
 # of the loop, each stating its EXPECTATION before the move, the band
 # proving expectation == actual. A hidden fault at cell-x (intensity 8)
 # that the route only FEELS through transmission (receptive cone 0.5):

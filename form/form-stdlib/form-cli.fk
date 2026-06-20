@@ -20,6 +20,11 @@
         (do (let sp (str_find cmd " " 0))
             (if (lt sp 0) cmd (substring cmd 0 sp))))
 
+    ; the argument is everything after the first space (or "" when there is none).
+    (defn fc-arg (cmd)
+        (do (let sp (str_find cmd " " 0))
+            (if (lt sp 0) "" (substring cmd (add sp 1) (str_len cmd)))))
+
     ; the four-way dispatch: every verb here returns a pure string the shared
     ; brain produces on Go/Rust/TS/fkwu alike (tests/form-cli-band.fk). The
     ; native-only verbs that read the binary's own baked source (source, verify)
@@ -28,8 +33,9 @@
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
+            (if (str_eq v "ask") (fca-ask (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping help about kernel source recreate verify version quit. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence."
+                "form-cli verbs: ping ask help about kernel source recreate verify version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
@@ -38,5 +44,5 @@
                 "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own."
             (if (str_eq v "version")
                 "form-cli 0.2"
-                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'")))))))))))
     0)

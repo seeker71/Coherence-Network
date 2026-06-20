@@ -9,7 +9,7 @@
 ; THE RESOLUTION: there are TWO addresses, and only one crosses the wire.
 ;   LOCAL NodeID (the counter)  — a fast runtime-local HANDLE. Never portable. For ice, water, and gas alike.
 ;   MERKLE ROOT (merkle.fk = sha256 of the structure) — the CONTENT address. Insertion-order-INDEPENDENT,
-;       proven deterministic three-way (tests/merkle-band.fk). The SAME structure hashes to the SAME root
+;       proven deterministic four-way (tests/merkle-band.fk). The SAME structure hashes to the SAME root
 ;       on every runtime. THIS is the cross-runtime address — the GUID-free federation key.
 ;   The wire carries the MERKLE root, never the local NodeID. Each runtime keeps its own NodeID↔merkle
 ;   handle; "re-address on receipt" = re-intern the received structure locally to get your own handle for

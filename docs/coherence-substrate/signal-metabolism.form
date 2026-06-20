@@ -7,7 +7,7 @@
 # auto-research, and the cell's own signals — infer-error, pain,
 # surprise, warning, error, fatal. This file and
 # `form/form-stdlib/signal-metabolism.fk` carry the closed loop.
-# SHIPPED: `tests/signal-metabolism-band.fk` → 1023, three-way
+# SHIPPED: `tests/signal-metabolism-band.fk` → 1023, four-way
 # (Go/Rust/TS).
 #
 # The loop, one beat:

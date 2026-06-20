@@ -1,4 +1,4 @@
-; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
+; preludes: form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli.fk
 ;
 ; form-cli-band — the native form-cli DISPATCH crosses four-way.
 ;
@@ -25,7 +25,7 @@
 ;  256  empty verb still routes -> unknown
 (do
     (let c0 (if (str_eq (fc-respond "ping") "pong") 1 0))
-    (let c1 (if (str_eq (fc-respond "help") "form-cli verbs: ping help about kernel source recreate verify version quit. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence.") 2 0))
+    (let c1 (if (str_eq (fc-respond "help") "form-cli verbs: ping ask help about kernel source recreate verify version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence.") 2 0))
     (let c2 (if (str_eq (fc-respond "version") "form-cli 0.2") 4 0))
     (let c3 (if (str_eq (fc-respond "ping extra") "pong") 8 0))
     (let c4 (if (str_eq (fc-respond "foobar") "form-cli: unknown verb 'foobar' — type 'help'") 16 0))
