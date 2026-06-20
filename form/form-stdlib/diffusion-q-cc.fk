@@ -1,0 +1,36 @@
+; diffusion-q-cc.fk — wire the diffusion-Q policy into the champion-challenger promotion loop.
+; The QAM offline→online regime made executable on the body's own mechanism: a trusted CHAMPION
+; policy is served while a CHALLENGER trains by the Q-tilt (dql-improve); authority flips to the
+; challenger ONLY when its earned value REACHES the champion over a trusted window. dql-improve is
+; what earns the wins; champion-challenger's cc-promote? is the gate — never asserted, always proven.
+;
+; The competition coin stays INTEGER (champion-challenger compares exact counts, identical on every
+; kernel). The only value touch is an EQUALITY through the verdict lens gl-veq6 (round-vs-round) —
+; never a float ordering, which boxes differently on the fourth kernel (see diffusion-q-learning.form
+; §5). A policy is "correct" on a context when its critic value MEETS the served target value.
+;
+; Composes: diffusion-q-learning.fk (dql-q, dql-grad-a, dql-improve) + champion-challenger.fk
+; (cc-promote?, cc-authority, cc-reaches?). Proven by tests/diffusion-q-cc-band.fk (four-way).
+
+(do
+    ; --- the coin: does this policy's action reach the served target value on context x? ---
+    ; Q(action) == target, as champion-challenger's integer 0/1 — gl-veq6 equality, no float ordering.
+    (defn dqcc-correct (qedges pedges x targetq)
+        (if (eq (gl-veq6 (list (dql-q qedges (gl-step pedges x))) (list targetq)) 1) 1 0))
+
+    ; --- one head-to-head trial on a context: (champion-correct challenger-correct) ---
+    (defn dqcc-trial (qedges champ chall x targetq)
+        (list (dqcc-correct qedges champ x targetq) (dqcc-correct qedges chall x targetq)))
+
+    ; --- the offline replay window: n identical-context trials the two policies are scored over ---
+    (defn dqcc-window (qedges champ chall x targetq n)
+        (if (eq n 0) (empty)
+            (cons (dqcc-trial qedges champ chall x targetq)
+                  (dqcc-window qedges champ chall x targetq (sub n 1)))))
+
+    ; --- the online step: improve the challenger by the Q-tilt (the critic's adjoint-matched gradient
+    ;     at focus), the move that earns its wins. The critic action-gradient is recovered by the
+    ;     adjoint on the unit pulse; angle +1 ascends; gate open. ---
+    (defn dqcc-improve (qedges chall x focus)
+        (dql-improve chall x (dql-grad-a qedges (list 1.0 0.0)) focus -1.0))
+    0)
