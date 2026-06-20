@@ -672,3 +672,4 @@ http-client-render fks 63
 socket-loopback fks 111111
 nanite-mem-parse fks 15
 kv-cache fks 255
+greedy-decode fks 255

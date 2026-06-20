@@ -1,0 +1,48 @@
+; greedy-decode.form — greedy argmax over logits: the SELECTION half of the autoregressive generation loop.
+;
+; THE PLACE IN THE LOOP:
+;   A decoder generates one token at a time: run the block over the prefix, read the final logit vector
+;   over the vocabulary, PICK the next token, append, repeat. kv-cache.form realizes the ATTENTION half
+;   efficiently (O(n)/token, #3382); this is the SELECTION half — in temperature-0 (greedy) decode the
+;   next token is simply the argmax of the logit vector. It answers the one-word question the logits pose:
+;   "which token?" Together kv-cache + greedy-decode are the two halves of the generation step.
+;
+; THE SHAPE  (runnable: form-stdlib/greedy-decode.fk · proven: tests/greedy-decode-band.fk -> 255)
+;
+;   gd-argmax-loop (xs i best-i best-v) -> winning index
+;     the max-select spine over token INDICES. Carry the best index and its logit; replace them only on a
+;     STRICTLY-greater logit (gt, not ge). Walk ascending, stop at (eq i (len xs)). The gt-not-ge choice
+;     is the whole tie policy — bit-for-bit the emitted C in tk-emit-llama: `if (logits[t] > logits[best])`.
+;
+;   gd-argmax (xs) -> index of the largest logit
+;     seeds index 0 as the incumbent and walks from index 1, so index 0 holds on any tie. The argmax of
+;     the logit vector — ties to the LOWEST index. Logits are unbounded reals (often all negative after
+;     the classifier), so the comparison rides gt across the sign boundary, not a probability in [0,1].
+;
+;   gd-token (logits) -> the next token index
+;     the decoder name — the greedy next token IS the argmax of the logit vector. The whole selection step.
+;
+; HOW IT COMPOSES THE TOOLKIT:
+;   This is the SAME max-select-by-index walk as histogram-peak.form's hp-peak-loop (most-full bin wins),
+;   nearest-shape.form's ns-best-loop (most agreement wins), and sequence-predictor.form's sp-predict-loop
+;   (most followers win) — one spine, four scores: bin counts, agreeing prototypes, follower counts, and
+;   now token LOGITS. The band PROVES it: gd-argmax over a float vector equals hp-peak-bin bit-for-bit, so
+;   greedy-decode is the decoder-altitude NAME for an already-proven spine, not a fourth copy. The tie rule
+;   (gt-not-ge, seed-index-0, walk-ascending) is identical across all four. Downstream the generation loop
+;   wires (block over prefix) -> logits -> gd-token -> append -> kv-cache for the next step.
+;
+; NAMED CORE-LIFT (the consolidation this proof makes sound):
+;   fold hp-peak-loop / ns-best-loop / sp-predict-loop / gd-argmax-loop onto ONE generic argmax-by-index
+;   primitive and let each domain be the thin score-source over it. The bit-128 equivalence (gd-argmax ==
+;   hp-peak-bin) is the proof that the fold is value-preserving. Until the fold lands, each spine carries
+;   the same tie policy independently — this teaching is the registry of where it repeats.
+;
+; HONEST LANE / CAVEAT:
+;   greedy decode is temperature-0 — it always picks the single largest logit, deterministic and mode-
+;   seeking. It does NOT sample (no temperature, top-k, or nucleus), so it cannot express the distribution's
+;   tail; that is a separate selection recipe over the same logits (a softmax + a sampled draw). gd-argmax
+;   is also magnitude-blind in the same sense as the rest of the spine: it names the winner, not its margin
+;   over the runner-up — a near-tie and a landslide both report the same index.
+;
+; Kin: kv-cache.form, transformer-block.form, histogram-peak.form, nearest-shape.form, sequence-predictor.form
+; teaching: lc-cognitive-sovereignty
