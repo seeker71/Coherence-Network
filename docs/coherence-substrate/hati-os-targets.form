@@ -8,8 +8,8 @@
     (native-cli-emit-proof form/form-stdlib/tests/hati-os-native-cli-emit-band.fk -> 7 four-way-fkwu)
     (metal-emit-proof form/form-stdlib/tests/metal-emit-band.fk -> 31 four-way-fkwu)
     (form-macho-proof form/form-stdlib/tests/form-macho-band.fk -> 31 four-way-fkwu)
-    (form-pe-coff-proof form/form-stdlib/tests/form-pe-coff-band.fk -> 255 four-way-fkwu)
-    (windows-bootstrap-host-proof form/form-stdlib/tests/windows-bootstrap-host-band.fk -> 255 four-way-fkwu)
+    (form-pe-coff-proof form/form-stdlib/tests/form-pe-coff-band.fk -> 511 four-way-fkwu)
+    (bootstrap-host-proof form/form-stdlib/tests/bootstrap-host-band.fk -> 4095 four-way-fkwu)
     (form-elf-proof form/form-stdlib/tests/form-elf-band.fk -> 31 four-way-fkwu)
     (form-elf-exec-proof form/form-stdlib/tests/form-elf-exec-band.fk -> 63 four-way-fkwu)
     (asm-human-emit-proof form/form-stdlib/tests/asm-pl-human-emit-band.fk -> 31 four-way-fkwu)
@@ -22,7 +22,7 @@
     "Cells and recipes can discover which host OS target carries a protocol, which capability it requires, and where its native binary is published.")
 
   (floor
-    "macOS arm64, Android arm64, Windows arm64, Windows amd64, and Windows x86_64 have target rows, clang/LLVM target-oracle coordinates where useful, relocatable assembly/object oracle surfaces, Form-native Mach-O, PE/COFF x64, and ELF/aarch64 object wrappers running four-way on fkwu, a Form-native Android ELF/aarch64 executable shape running four-way on fkwu, a Windows ARM64 target row on the shared ARM64 assembler lane with a distinct PE/COFF host image/linker surface still pending, a Windows x86_64 fkwu self-JIT runtime floor on the separate x64 instruction lane verified without Go/clang/LLVM on the runtime PATH, a Windows x86_64 Form-emitted COFF object that lld-link turns into a loadable DLL, the Go kernel swaps through LoadLibrary/GetProcAddress, and a minimal bootstrap host exe loads those swappable DLLs through the same recipe symbol, Docker Linux/arm64 and Android adb stdout/stderr/exit receipts for that executable, a generated Mac+Android native core-axiom receipt channel over adb-forward TCP, package/install evidence with script/source/binary/channel-receipt SHA-256s and remote cleanup, native CLI/metal emit rows running four-way on fkwu, third-party oracle rows, Form-native arm64 assembler runtime rows, lowered JIT residual rows running four-way on fkwu, numeric conversion/transcendental rows and tensor quantization running four-way on fkwu, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates. Android and Windows support do not require a runtime clang dependency for the minimum JIT floor."
+    "macOS arm64, Android arm64, Windows arm64, Windows amd64, and Windows x86_64 have target rows, clang/LLVM target-oracle coordinates where useful, relocatable assembly/object oracle surfaces, Form-native Mach-O, PE/COFF x64, and ELF/aarch64 object wrappers running four-way on fkwu, a Form-native Android ELF/aarch64 executable shape running four-way on fkwu, a Windows ARM64 target row on the shared ARM64 assembler lane with a distinct PE/COFF host image/linker surface still pending, a Windows x86_64 fkwu self-JIT runtime floor on the separate x64 instruction lane verified without Go/clang/LLVM on the runtime PATH, a Windows local LLVM/clang build oracle for the emitted fkwu C carrier itself, a Windows x86_64 Form-emitted COFF object that lld-link turns into a loadable DLL, the Go kernel swaps through LoadLibrary/GetProcAddress, and a cross-platform minimal bootstrap host source covers Windows LoadLibrary/GetProcAddress plus macOS/Linux/Android dlopen/dlsym while emitting boundary timing fields for load, resolve, call, and total, Docker Linux/arm64 and Android adb stdout/stderr/exit receipts for that executable, a generated Mac+Android native core-axiom receipt channel over adb-forward TCP, package/install evidence with script/source/binary/channel-receipt SHA-256s and remote cleanup, native CLI/metal emit rows running four-way on fkwu, third-party oracle rows, Form-native arm64 assembler runtime rows, lowered JIT residual rows running four-way on fkwu, numeric conversion/transcendental rows and tensor quantization running four-way on fkwu, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates. Android and Windows support do not require a runtime clang dependency for the minimum JIT floor."
     "GPU, DSP, and MLX are minimal floors today: discoverable protocol rows with capability names and target-specific implementation direction, not full native dispatch receipts. Windows MLX is explicitly unsupported; its equivalent lane is CUDA/DirectML/Vulkan on the observed NVIDIA host.")
 
   (north-star
@@ -82,8 +82,8 @@
       (assembly-surface pe-coff+x64-asm)
       (form-native-object form-pe-coff)
       (form-native-executable form-pe-coff+dll-bootstrap-exe)
-      (bootstrap-host form/native/windows/bootstrap/form_bootstrap_host.c)
-      (jit-oracle optional-clang-llvm-build-witness)
+      (bootstrap-host form/native/bootstrap/form_bootstrap_host.c)
+      (jit-oracle local-llvm-clang-fkwu-build-witness)
       (jit-runtime fkwu-self-jit-no-runtime-toolchain)
       (jit-model form-authored-fkc-nat-expr-hot-flip)
       (proof scripts/verify_windows_fkwu_self_jit.ps1)
@@ -98,8 +98,8 @@
       (assembly-surface pe-coff+x64-asm)
       (form-native-object form-pe-coff)
       (form-native-executable form-pe-coff+dll-bootstrap-exe)
-      (bootstrap-host form/native/windows/bootstrap/form_bootstrap_host.c)
-      (jit-oracle optional-clang-llvm-build-witness)
+      (bootstrap-host form/native/bootstrap/form_bootstrap_host.c)
+      (jit-oracle local-llvm-clang-fkwu-build-witness)
       (jit-runtime fkwu-self-jit-no-runtime-toolchain)
       (jit-model form-authored-fkc-nat-expr-hot-flip)
       (proof scripts/verify_windows_fkwu_self_jit.ps1)
