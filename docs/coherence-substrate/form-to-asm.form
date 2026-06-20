@@ -246,6 +246,7 @@
     (abi    "form/form-stdlib/bootstrap-host.fk names the contract four-way at tests/bootstrap-host-band.fk -> 4095: form-bootstrap-host + swappable Form dynamic libraries")
     (measure "FORM_BOOTSTRAP_MEASURE=1 emits boundary=form-native-to-host-os-loader, primitive=dynamic-library-call, loader, load_ns, resolve_ns, call_ns, total_ns")
     (prove  "scripts/verify_cross_platform_bootstrap_host_no_go.ps1 compiles the exe on Windows without Go, links three PE/COFF recipe DLLs, proves the exe can load/swap them behind the same recipe symbol, and checks measurement fields")
+    (prove-posix "scripts/verify_bootstrap_host_posix.sh is the POSIX twin: compiles the exe on macOS/Linux/Android(Termux), builds three swappable recipe dylib/.so, proves dlopen/dlsym load/swap behind the same recipe symbol, and checks the same measurement fields (loader=dlopen/dlsym)")
     (future "the C exe is only the starting host surface; as Form-native PE/COFF/Mach-O/ELF grows, the same ABI lets bootstrap parts move into dynamic libraries and then replace the exe itself"))
 
   # The signature half of the direct (no-ld) dylib is now Form. Apple Silicon's
