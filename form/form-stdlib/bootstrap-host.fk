@@ -1,0 +1,22 @@
+; bootstrap-host.fk - minimal cross-platform exe + swappable dynamic library ABI.
+;
+; The host exe is intentionally replaceable: it only loads a dynamic library,
+; resolves an exported i64 -> i64 entrypoint, calls it, and prints the result.
+; Windows uses LoadLibrary/GetProcAddress; macOS, Linux, and Android use
+; dlopen/dlsym. The library can be Form-emitted, so kernel bootstrap parts can
+; move behind this ABI until exe and libraries are all Form-native.
+
+(do
+    (defn bh-host-exe () "form-bootstrap-host")
+    (defn bh-source () "form/native/bootstrap/form_bootstrap_host.c")
+    (defn bh-object-emitter-windows () "form-pe-coff")
+    (defn bh-link-carrier-windows () "lld-link:/dll:/noentry:/export")
+    (defn bh-loader-windows () "LoadLibraryA/GetProcAddress")
+    (defn bh-loader-posix () "dlopen/dlsym")
+    (defn bh-os-lanes () "windows,macos,linux,android")
+    (defn bh-entry-symbol () "recipe")
+    (defn bh-entry-abi () "i64->i64;windows-x64-rcx-rax;posix-target-abi")
+    (defn bh-swap-contract () "exe-loads-swappable-form-dynamic-libraries")
+    (defn bh-measure-fields () "load_ns,resolve_ns,call_ns,total_ns")
+    (defn bh-boundary () "form-native-to-host-os-loader;dynamic-library-call")
+    0)
