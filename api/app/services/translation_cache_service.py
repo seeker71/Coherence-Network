@@ -316,7 +316,15 @@ def is_stale(view: EntityViewRecord, anchor: EntityViewRecord | None) -> bool:
 
 
 def list_history(entity_type: str, entity_id: str, lang: str) -> list[EntityViewRecord]:
-    """All views for (entity, lang), newest first — canonical + superseded."""
+    """All views for (entity, lang): the canonical view first, then superseded
+    views newest-first.
+
+    Canonical-first must not depend on timestamps: marking a row superseded can
+    bump its ``updated_at`` to tie or exceed the new canonical row's (sub-second
+    resolution on a fast in-memory DB), so sorting by ``updated_at`` alone would
+    non-deterministically place a superseded row first. Two stable passes —
+    newest-first, then canonical-rank-first — give a deterministic order.
+    """
     _ensure_schema()
     with _session() as s:
         rows = list(s.scalars(
@@ -327,6 +335,7 @@ def list_history(entity_type: str, entity_id: str, lang: str) -> list[EntityView
             )
         ))
         rows.sort(key=lambda r: r.updated_at, reverse=True)
+        rows.sort(key=lambda r: 0 if r.status == "canonical" else 1)
         return rows
 
 
