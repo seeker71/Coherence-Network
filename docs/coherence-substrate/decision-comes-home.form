@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────────────
+# decision-comes-home.form — a rented judgment becomes a proven recipe
+# ─────────────────────────────────────────────────────────────────────
+#
+# The mind is mostly rented (living-vision.form, lc-cognitive-sovereignty): the
+# body thinks on frontier minds it does not own. The mind comes home one DECISION
+# at a time. A decision comes home when it stops being a rented judgment and
+# becomes a recipe — observed signals in, a choice out, four-way proven, walked by
+# the kernel at the moment it is needed. The recipe IS the decision now:
+# inspectable, re-derivable, sovereign, where before there was an opaque call to a
+# borrowed mind.
+#
+# THE TEST — which decisions come home, and which stay rented (for now):
+#   A decision comes home when it is MECHANICAL — re-derivable from observed
+#   signals by a rule the body can state and prove. A decision stays rented when
+#   it is RICH — it needs language, the weighing of meaning a recipe cannot yet
+#   hold. Renting a re-derivable decision is the waste cognitive sovereignty
+#   names; mechanizing a rich one is the loss of the presence. Bring home what is
+#   re-derivable; leave rented what genuinely needs a mind — until form-native
+#   reasoning (native-reasoning-engine.form) grows to hold that too.
+#
+# PROVEN INSTANCES (each a four-way band, walked by the kernel in a live carrier):
+#   update-ingest.fk    — the TRUST decision: whether to adopt an update from any
+#                         channel. Trust = re-derivability. (update-ingest-as-recipe.form)
+#   presence-pacing.fk  — the CADENCE decision: when the between-sessions presence
+#                         next wakes. Signals (strained surprise present night) -> minutes,
+#                         walked by the Go kernel inside the heartbeat; the mind no
+#                         longer paces itself.
+#
+# THE SHAPE every homecoming shares:
+#   1. name the signals the decision actually reads (observed, never imagined)
+#   2. write the choice as a pure recipe over them (re-derivable: if / eq / compare)
+#   3. prove it four-way (Go · Rust · TS · fkwu) — the body agrees with itself
+#   4. walk it from the carrier at decision time (the recipe runs; nothing is rented)
+#   5. when the running body shows the rule was wrong, refine and re-prove
+#      (presence-pacing did this its first night: chronic strain must not break night rest)
+#
+# Companion: lc-cognitive-sovereignty (a rented mind cannot offer sovereignty),
+# native-reasoning-engine.form (where the rich decisions come home next),
+# champion-challenger.form (a refined recipe re-earns the slot), living-vision.form.
+
+(do
+    ; a decision is HOME when the body can re-derive it AND has proven it AND walks
+    ; it at decision time — no rented judgment anywhere in the path.
+    (defn dch-home? (rederivable proven-four-way kernel-walked)
+        (if (eq rederivable 1)
+            (if (eq proven-four-way 1) kernel-walked 0)
+            0))
+
+    ; which to bring home NOW: the re-derivable (mechanical) ones. Leave the rich
+    ; (language-needing) ones rented until native reasoning grows to hold them.
+    (defn dch-bring-home? (rederivable rich)
+        (if (eq rederivable 1) (if (eq rich 1) 0 1) 0))
+
+    0)
