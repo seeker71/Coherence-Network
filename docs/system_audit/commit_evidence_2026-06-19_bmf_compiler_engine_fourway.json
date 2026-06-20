@@ -1,0 +1,27 @@
+{
+  "title": "Gap #9/M2 increment 3 — the BMF compiler-engine source-rule→runtime crosses four-way; corrects the false 'harness flake' claim",
+  "date": "2026-06-19",
+  "thread_branch": "claude/bmf-compiler-engine-fourway",
+  "stone": "The next M2 floor move: register the two compiler-engine bands that prove the BMF compiler transforms source-rules into the reversible object runtime four-way. These complete the engine floor of M2 beyond the two hard walls (apply-object-rule defunctionalization + symbol-wire, both already merged).",
+  "what_proved": "bmf-source-rule-to-runtime-band.fk -> 1023 and bmf-component-runtime-exec-band.fk -> 1023, both FOUR-WAY (Go=Rust=TS=fkwu), over engine.fk + compiler.fk + grammar-chars.fk. Manifest rows bmf-source-rule-to-runtime fks 1023, bmf-component-runtime-exec fks 1023.",
+  "correction": {
+    "claim_corrected": "The increment-2 evidence (commit_evidence_2026-06-19_bmf_compiler_both_walls.json) and the gap #9 ledger row stated these bands were 'gated on a fourth_prepare_all batch-table-build robustness fix' and that cold parallel builds 'contaminate/empty tables (the BUILD path flakes).' That was WRONG. There is no harness flake.",
+    "real_cause": "A TEST-INVOCATION artifact. The verification commands used an unquoted shell variable for the prelude list (`./validate.sh $pre form-stdlib/tests/X-band.fk`). The session shell is zsh, which does NOT word-split an unquoted parameter (bash does). So validate.sh's three walkers received the entire prelude string as ONE filename argument and errored ('open form-stdlib/core.fk form-stdlib/grammar-chars.fk ...: no such file or directory'), while the fourth arm (fkwu) reads the band's own `; preludes:` header via fourth_band_srcs and computed the correct verdict. Walkers-errored-vs-fkwu-correct was reported as 'divergent.'",
+    "proof_of_correction": "Re-running with the preludes as separate literal args — `./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk` — yields '-> 1023, fourth arm: 1 band four-way, 0 divergent.' Same for component-runtime-exec. The harness, the kernels, and the bands were always correct.",
+    "implication": "The 'resource saturation / batch-build contention' conclusion from the prior session was also this zsh word-splitting bug, not a real harness condition. No fourth_prepare_all fix is needed (the dismissed chip task_46a9362f stands; its stated reason was wrong but the conclusion — no harness fix — holds). Lesson: in zsh, always quote prelude-list variables (\"$pre\") or pass preludes as separate literal args."
+  },
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk"
+    ],
+    "summary": "Both -> 1023 FOUR-WAY, 'fourth arm: 1 band four-way (fkwu + pre-flattened tables)', 0 divergent. (Bands authored by a prior thread; this registers them four-way.)"
+  },
+  "remaining": "M2 surface still to register four-way: the ~60 language-grammar bands (python-bmf / typescript-bmf / go-bmf / rust-bmf / media grammars), each verified individually since many carry their own host-io / source-compiler / multi-line standing walls; and generated bp-table parity beyond the literal registry floor. The two hard conceptual walls (apply-object-rule defunctionalization + symbol-wire) and the compiler engine (this increment) are now four-way.",
+  "north_star": "The whole BMF compiler body crystallizes as a lowered recipe walked four-way. Walls + engine are crossed; the remaining surface is per-band registration, no longer blocked by any phantom harness issue."
+}
