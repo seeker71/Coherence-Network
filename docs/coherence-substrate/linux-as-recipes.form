@@ -27,7 +27,7 @@
                             compute organ; the POLICY is a pure data row (key-field, least-wins, floor,
                             requeue) in ONE chooser engine — fifo/round-robin/priority/fitness are four
                             rows, never four branches; recognition-router's max-over-a-floor choosing is
-                            now a row of this engine (tests/scheduler-band.fk -> 511 three-way); THE
+                            now a row of this engine (tests/scheduler-band.fk -> 511 four-way); THE
                             ROWS READ BOTH DIRECTIONS: afferent delivery priority is these same rows —
                             fifo's data over signal numbers, priority's data over IRQ levels
                             (afferent-priority.fk, tests/afferent-priority-band.fk -> 1023))
@@ -36,7 +36,7 @@
                             one structure (timeout==nothing IS the SIGALRM shape, checked at the window
                             edge); sigprocmask is AO-MASK data — masked stays pending, delivers when the
                             mask lifts; coalescing free by content-addressing
-                            (tests/afferent-offer-band.fk -> 511 three-way); LIVE: afferent-live.fk
+                            (tests/afferent-offer-band.fk -> 511 four-way); LIVE: afferent-live.fk
                             lowers ao-wait's verdict onto op 15 TIME — the armed timer's tick arrives on
                             the host clock, the empty window yields nothing only after real elapsed time
                             (tests/afferent-live-band.fk -> 63; audit section 18); multi-offer
@@ -128,7 +128,7 @@
     (interrupts       RUNS  afferent-offer.fk — the SAME ao-wait engine as signals, readings as data:
                             ao-irq latches a device payload on an IRQ line; a masked or silent line
                             acknowledges nothing, and the two readings' silence is the SAME NodeID — one
-                            engine, two readings (tests/afferent-offer-band.fk -> 511 three-way); LIVE:
+                            engine, two readings (tests/afferent-offer-band.fk -> 511 four-way); LIVE:
                             the latched irq dispatches its payload through the same op-15 carrier the
                             signals reading breathes (audit section 18))
     (boot-init        RUNS  boot.fk — kernel-self-composition's boot theorem walks: load a .fkb image (the

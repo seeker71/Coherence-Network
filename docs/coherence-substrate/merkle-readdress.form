@@ -3,7 +3,7 @@
 ; THE GAP THIS CLOSES (named in federation-addressing.form, line 48-52):
 ;   federation-addressing.form establishes that the MERKLE ROOT is the cross-runtime address — the
 ;   GUID-free federation key that a per-runtime NodeID counter can never be. It points at
-;   tests/merkle-band.fk for "proven deterministic three-way." But merkle-band proves root WELL-FORMEDNESS
+;   tests/merkle-band.fk for "proven deterministic four-way." But merkle-band proves root WELL-FORMEDNESS
 ;   and PROOF VERIFICATION; it does not prove the RE-ADDRESS property itself. That property — the actual
 ;   load-bearing claim of federation addressing — is what this band pins:
 ;

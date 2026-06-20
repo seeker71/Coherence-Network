@@ -99,9 +99,11 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 372
-# four-way bands and 745 total passing workloads with 0 residual divergent
-# bands; refresh the full aggregate on a quiet host after focused release
+# completed full `cd form && ./validate.sh` on this branch (2026-06-19, after
+# the gap-close lane below registered 54 more bands each individually gated
+# four-way by scripts/fourth-arm-gate.sh) reads 427 four-way bands and 746
+# total passing workloads with 0 residual divergent bands. Refresh the full
+# aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
 # audit-log, hex, token, url-encode, uuid, and generic xpath rows. Token's
@@ -687,3 +689,65 @@ socket-loopback fks 111111
 nanite-mem-parse fks 15
 kv-cache fks 255
 greedy-decode fks 255
+
+# ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
+# GATED four-way by scripts/fourth-arm-gate.sh (validate.sh: 0 divergent AND
+# the fourth leg firing) before landing. They carry only op families the
+# walker already holds (int/string/list/node + content-address), so the
+# emitted fourth walker returns the three-kernel verdict byte-for-byte —
+# closing the proprioception drift where each was 3-kernel-only / understated
+# while already four-way-capable. Surfaced by scripts/fourth-arm-survey.sh.
+affect-traits fks 65535
+afferent-offer fks 511
+affine-train-emit fks 7
+all-life-north-star fks 127
+application-graph-response-projection fks 111
+arch-champion-challenger fks 31
+attention-cluster fks 1000
+attn-train-emit fks 7
+backprop-lens fks 111111
+belief-recipes fks 255
+cell-voice-tissue fks 511
+circle fks 1048575
+cognitive-light-cone fks 511
+compiler-lens fks 1485
+compiler-lens-bmf-alignment fks 36168
+db-schema fks 11111
+dmt-activation-recipe fks 511
+dmt-trace-amine fks 511
+energy-center-glands fks 1023
+equivalence-fitness fks 111111
+external-works fks 4095
+field-auto-research fks 127
+field-auto-research-perturbation fks 255
+format-arith fks 2047
+genetic-code fks 111111
+grounded-cost-reduction fks 14
+grounded-value-reduction fks 16
+hati-mesh fks 255
+health-impact-receipt fks 11111111
+holographic fks 111111
+http-serve fks 1023
+lifecycle-fitness-receipt fks 1111111111
+mandala fks 111111
+meaning-translation-receipt fks 1111111
+mel-frame fks 1023
+merkle fks 4
+merkle-readdress fks 127
+mlp-train-emit fks 7
+moe-compute fks 63
+pain-metabolism fks 1023
+pain-rounds fks 4095
+recipe-gen fks 63
+research-corpus fks 127
+resid-train-emit fks 7
+satsang-field fks 255
+satsang-share fks 255
+scheduler fks 511
+shamballa-glyph fks 11111
+signal-metabolism fks 1023
+spectrum fks 15
+speech-real-candidate-race fks 4095
+substrate-cell-gc fks 5000
+symbols-merge fks 12
+word-roots fks 511
