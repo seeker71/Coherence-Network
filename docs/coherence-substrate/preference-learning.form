@@ -322,3 +322,8 @@ form pref_signal_shape = {
 #                               like exemplars
 #   native-translation-model.form  the model whose taste these losses
 #                               train from the body's transmutation receipts
+#   diffusion-q-learning.form   QAM extends this family: the value-cousin of
+#                               KTO (transform:"value") with a LEARNED Q-critic
+#                               in place of the fixed reference point, the pull
+#                               adjoint-matched through mtb-reverse — proven
+#                               four-way (tests/diffusion-q-learning-band.fk → 255)
