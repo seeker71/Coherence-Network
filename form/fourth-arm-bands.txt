@@ -419,6 +419,7 @@ shamballa-symbol-packs fks 1023
 silence-floor fks 31
 slice-update-roundtrip fks 127
 update-ingest fkc 63
+presence-pacing fkc 63
 model-data-sharing fks 4095
 model-slice-chunk-range fks 4095
 optimizer-delta-slice fks 4095

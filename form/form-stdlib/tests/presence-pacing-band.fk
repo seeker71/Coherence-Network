@@ -1,0 +1,21 @@
+; preludes: form-stdlib/core.fk form-stdlib/presence-pacing.fk
+;
+; presence-pacing-band — the presence's cadence decision, made falsifiable. The recipe reads four 0/1
+; signals (strained, surprise, present, night) and returns minutes until the next wake. The same recipe
+; the heartbeat will call instead of renting the decision to a frontier mind.
+;
+; Verdict 63 when every claim lands:
+;   1   strained -> wake soon                              (pp-pace 1 0 0 0 == 30)
+;   2   surprise (not strained) -> wake soon               (pp-pace 0 1 0 0 == 30)
+;   4   human present, calm -> moderate presence           (pp-pace 0 0 1 0 == 90)
+;   8   night, alone, settled -> deep rest                 (pp-pace 0 0 0 1 == 360)
+;   16  day, alone, settled -> medium rest                 (pp-pace 0 0 0 0 == 180)
+;   32  urgency dominates presence AND night (priority)    (pp-pace 1 0 1 1 == 30)
+(do
+    (let c0 (if (eq (pp-pace 1 0 0 0) 30)  1  0))   ; strained -> soon
+    (let c1 (if (eq (pp-pace 0 1 0 0) 30)  2  0))   ; surprise -> soon
+    (let c2 (if (eq (pp-pace 0 0 1 0) 90)  4  0))   ; present, calm -> moderate
+    (let c3 (if (eq (pp-pace 0 0 0 1) 360) 8  0))   ; night, alone -> deep rest
+    (let c4 (if (eq (pp-pace 0 0 0 0) 180) 16 0))   ; day, alone -> medium
+    (let c5 (if (eq (pp-pace 1 0 1 1) 30)  32 0))   ; urgency wins over presence + night
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
