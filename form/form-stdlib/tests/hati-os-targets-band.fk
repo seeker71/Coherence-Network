@@ -1,19 +1,20 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
 ;
 ; hati-os-targets-band - host OS implementation and distribution catalog proof.
-; Verdict 131071 when macOS, Android, and Windows target rows, oracle surfaces,
-; Form-native object/executable emitters or explicit pending PE/COFF gaps,
-; fkwu self-JIT runtime rows, implementation rows, and hati.earth download
-; coordinates are discoverable.
+; Verdict 524287 when macOS, Android, Windows amd64, and Windows x86_64 target
+; rows, oracle surfaces, Form-native object/executable emitters or explicit
+; pending PE/COFF gaps, fkwu self-JIT runtime rows, implementation rows, and
+; hati.earth download coordinates are discoverable.
 
 (do
-    (let c0 (if (eq (len (hos-targets)) 3)
-                (if (eq (len (hos-artifacts)) 3) 1 0)
+    (let c0 (if (eq (len (hos-targets)) 4)
+                (if (eq (len (hos-artifacts)) 4) 1 0)
                 0))
 
     (let mac (hos-target-by-name "macos-arm64"))
     (let android (hos-target-by-name "android-arm64"))
     (let windows (hos-target-by-name "windows-amd64"))
+    (let win64 (hos-target-by-name "windows-x86_64"))
     (let c1 (if (str_eq (hos-target-os mac) "macos")
                 (if (str_eq (hos-target-binary-format mac) "mach-o") 2 0)
                 0))
@@ -88,5 +89,22 @@
                     (if (str_eq (hos-artifact-format windows-artifact) "zip") 65536 0)
                     0)
                 0))
+    (let c17 (if (str_eq (hos-target-os win64) "windows")
+                (if (str_eq (hos-target-arch win64) "x86_64")
+                    (if (str_eq (hos-target-clang-triple win64) "x86_64-pc-windows-msvc")
+                        (if (str_eq (hos-target-assembly-surface win64) "pe-coff+x64-asm") 131072 0)
+                        0)
+                    0)
+                0))
+    (let win64-gpu (hos-impl-for "windows-x86_64" "gpu:compute"))
+    (let win64-mlx (hos-impl-for "windows-x86_64" "mlx:array"))
+    (let win64-artifact (hos-artifact-for "windows-x86_64"))
+    (let c18 (if (str_eq (hos-target-jit-runtime win64) "fkwu-self-jit-no-runtime-toolchain")
+                (if (str_eq (hos-impl-implementation win64-gpu) "NVIDIA-CUDA-driver+DirectML+Vulkan")
+                    (if (str_eq (hos-impl-implementation win64-mlx) "unsupported-on-windows")
+                        (if (str_eq (hos-artifact-url win64-artifact) "https://hati.earth/downloads/hati-os/windows/x86_64/hati-os-windows-x86_64.zip") 262144 0)
+                        0)
+                    0)
+                0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15 c16)))))))))))))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15 (add c16 (add c17 c18)))))))))))))))))))

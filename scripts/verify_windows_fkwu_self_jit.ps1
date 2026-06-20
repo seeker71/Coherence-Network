@@ -174,7 +174,7 @@ try {
 
     Write-Host "PASS windows-fkwu-self-jit cold=$coldValue hot=$hotValue njit=$njit"
     Write-Host "PASS runtime-toolchain-free path=$runtimePath go=absent clang=absent llvm_objdump=absent"
-    Write-Host "FLOOR target=windows-amd64 runtime=fkwu-self-jit-no-runtime-toolchain bootstrap_pe_coff=form-native-pending"
+    Write-Host "FLOOR target=windows-x86_64 alias=windows-amd64 runtime=fkwu-self-jit-no-runtime-toolchain bootstrap_pe_coff=form-native-pending"
     Write-Host "BUILD_CARRIER go=$goPath"
     Write-Host "BUILD_ORACLE clang=$clangPath"
 
