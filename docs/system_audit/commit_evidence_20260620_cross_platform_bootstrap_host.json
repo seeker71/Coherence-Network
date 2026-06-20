@@ -1,0 +1,155 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/cross-platform-bootstrap-host",
+  "commit_scope": "Lift the minimal bootstrap host from a Windows-only C loader to a cross-platform host source with Windows LoadLibrary/GetProcAddress, POSIX dlopen/dlsym, boundary timing output, a third Form-native recipe DLL proof, and Windows LLVM/clang support for building the emitted fkwu fourth kernel.",
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/offline-endpoints.form",
+    "docs/system_audit/commit_evidence_20260620_cross_platform_bootstrap_host.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/bootstrap-host.fk",
+    "form/form-stdlib/form-pe-coff.fk",
+    "form/form-stdlib/tests/bootstrap-host-band.fk",
+    "form/form-stdlib/tests/form-pe-coff-band.fk",
+    "form/form-stdlib/tests/windows-bootstrap-host-band.fk",
+    "form/form-stdlib/windows-bootstrap-host.fk",
+    "form/fourth-arm-bands.txt",
+    "form/validate.sh",
+    "form/scripts/fourth-arm.sh",
+    "form/native/",
+    "form/native/bootstrap/form_bootstrap_host.c",
+    "form/native/windows/bootstrap/form_bootstrap_host.c",
+    "scripts/verify_cross_platform_bootstrap_host_no_go.ps1"
+  ],
+  "idea_ids": [
+    "form-native-models",
+    "cross-platform-bootstrap-host",
+    "swappable-kernel-bootstrap"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "fourth-kernel-physical-lanes",
+    "form-to-asm"
+  ],
+  "task_ids": [
+    "task-2026-06-20-cross-platform-bootstrap-host"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-hubble",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\cross-platform-bootstrap-host",
+    "form/native/bootstrap/form_bootstrap_host.c -> cross-platform C host source: Windows LoadLibraryA/GetProcAddress branch plus macOS/Linux/Android dlopen/dlsym branch",
+    "FORM_BOOTSTRAP_MEASURE=1 -> emits boundary=form-native-to-host-os-loader, primitive=dynamic-library-call, loader, load_ns, resolve_ns, call_ns, total_ns",
+    "form/scripts/fourth-arm.sh -> Windows fkwu build path now patches the emitted C carrier for arc4random, gettimeofday, sprintf, mkdir arity, dlopen/dlsym stubs, and links LLVM/clang with ws2_32 plus legacy_stdio_definitions before any GCC fallback",
+    "form/validate.sh and form/scripts/fourth-arm.sh -> cache-key hashing now probes shasum and falls back to sha1sum, so Git Bash does not require /usr/bin/core_perl on PATH",
+    "Git Bash with fake gcc fallback disabled and fake shasum first in PATH: rm -f form-stdlib/.cache/fourth/fkwu-*; PATH=.cache/fake-bin:$PATH ./validate.sh form-stdlib/core.fk form-stdlib/bootstrap-host.fk form-stdlib/tests/bootstrap-host-band.fk -> 4095; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent; proves local LLVM/clang builds fkwu on Windows and sha1sum carries cache keys when shasum is unavailable",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bootstrap-host.fk form-stdlib/tests/bootstrap-host-band.fk -> core.fk+bootstrap-host.fk+bootstrap-host-band.fk -> 4095; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk -> core.fk+form-pe-coff.fk+form-pe-coff-band.fk -> 511; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk -> core.fk+hati-os-targets.fk+hati-os-targets-band.fk -> 8388607; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && bash scripts/fourth-arm-gate.sh bootstrap-host form-pe-coff hati-os-targets -> PASS-4WAY bootstrap-host, PASS-4WAY form-pe-coff, PASS-4WAY hati-os-targets",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_cross_platform_bootstrap_host_no_go.ps1 -> PASS; no Go command is used; compiler=C:\\TDM-GCC-64\\bin\\gcc.exe; linker=C:\\Program Files\\LLVM\\bin\\lld-link.exe; recipe results 22, 26, 51; loader=LoadLibraryA/GetProcAddress load_ns=674200 resolve_ns=5900 call_ns=1800 total_ns=681900",
+    "Subagent Hubble corrected read-only verification -> PASS with no go test: bootstrap-host 4095, form-pe-coff 511, hati-os-targets 8388607, PASS-4WAY for all three, no-Go C proof status=pass with recipes 22/26/51 and measurement load_ns=126200 resolve_ns=2600 call_ns=1000 total_ns=129800"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/offline-endpoints.form",
+    "docs/system_audit/commit_evidence_20260620_cross_platform_bootstrap_host.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/bootstrap-host.fk",
+    "form/form-stdlib/form-pe-coff.fk",
+    "form/form-stdlib/tests/bootstrap-host-band.fk",
+    "form/form-stdlib/tests/form-pe-coff-band.fk",
+    "form/form-stdlib/tests/windows-bootstrap-host-band.fk",
+    "form/form-stdlib/windows-bootstrap-host.fk",
+    "form/fourth-arm-bands.txt",
+    "form/validate.sh",
+    "form/scripts/fourth-arm.sh",
+    "form/native/",
+    "form/native/bootstrap/form_bootstrap_host.c",
+    "form/native/windows/bootstrap/form_bootstrap_host.c",
+    "scripts/verify_cross_platform_bootstrap_host_no_go.ps1"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git diff --check",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bootstrap-host.fk form-stdlib/tests/bootstrap-host-band.fk",
+      "Git Bash: cd form; rm -f form-stdlib/.cache/fourth/fkwu-*; PATH=/c/Users/umuff/.claude-worktrees/Coherence-Network/cross-platform-bootstrap-host/.cache/fake-bin:$PATH ./validate.sh form-stdlib/core.fk form-stdlib/bootstrap-host.fk form-stdlib/tests/bootstrap-host-band.fk (fake gcc exits 99; fake shasum exits 98)",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && bash scripts/fourth-arm-gate.sh bootstrap-host form-pe-coff hati-os-targets",
+      "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\verify_cross_platform_bootstrap_host_no_go.ps1",
+      "subagent Hubble corrected read-only verification -> pass without go test"
+    ],
+    "fourth_arm_outputs": [
+      "bootstrap-host fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 4095",
+      "form-pe-coff fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 511",
+      "hati-os-targets fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 8388607"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change adds a local cross-platform bootstrap source and Windows host proof. Public deployment validation remains pending until PR checks and post-merge deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI and deploy validation remain pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The bootstrap host is now a cross-platform dynamic-library loader contract, the Windows proof extends the native DLL shape from two to three Form-emitted recipes with boundary timing measurements, and Windows can build the emitted fkwu fourth kernel through local LLVM/clang instead of skipping that leg.",
+    "public_endpoints": [
+      "local-only: Form stdlib, cross-platform bootstrap C source, and Go native loader tests; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Form four-way proof: bootstrap-host band validates to 4095 on Go, Rust, TypeScript, and fkwu with 0 divergent.",
+      "Windows fkwu build proof: with fake gcc and fake shasum earlier in PATH and the fkwu cache cleared, validate.sh rebuilds fkwu through local LLVM/clang, uses sha1sum for cache keys, and still attaches the fourth arm.",
+      "Form native recipe expansion proof: form-pe-coff band validates to 511, adding pe-x64-recipe-add42-code as a third emitted native recipe body.",
+      "Target catalog proof: hati-os-targets remains 8388607 after the bootstrap source moves to form/native/bootstrap/form_bootstrap_host.c.",
+      "Runtime proof: no-Go PowerShell verifier compiles the cross-platform C source on Windows, writes three PE/COFF objects matching the Form-proven object shape, links three DLLs with lld-link /dll /noentry /machine:x64 /export:recipe, confirms the exe swaps all three behind recipe, and verifies load/resolve/call/total timing fields."
+    ]
+  }
+}

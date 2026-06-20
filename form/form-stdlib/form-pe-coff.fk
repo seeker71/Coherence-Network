@@ -67,6 +67,8 @@
     (defn pe-x64-recipe-mul3-add7-code () (list 72 141 68 73 7 195))
     ; lea rax, [rcx + rcx*4 + 1]; ret, used by the swap/load receipt.
     (defn pe-x64-recipe-mul5-add1-code () (list 72 141 68 137 1 195))
+    ; lea rax, [rcx + 42]; ret, a third native recipe for bootstrap extension receipts.
+    (defn pe-x64-recipe-add42-code () (list 72 141 65 42 195))
     (defn pe-recipe-object (code) (pe-coff-object-sym code (list 114 101 99 105 112 101)))
 
     0)

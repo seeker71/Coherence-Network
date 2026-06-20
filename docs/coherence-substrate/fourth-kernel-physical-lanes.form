@@ -105,12 +105,12 @@
       (host-image-surface windows-pe-coff)
       (form-native-object form-pe-coff)
       (form-native-executable form-pe-coff+dll-bootstrap-exe)
-      (bootstrap-host form/native/windows/bootstrap/form_bootstrap_host.c)
+      (bootstrap-host form/native/bootstrap/form_bootstrap_host.c)
       (jit-oracle optional-clang-llvm-build-witness)
       (jit-runtime fkwu-self-jit-no-runtime-toolchain)
       (distribution https://hati.earth/downloads/hati-os/windows/x86_64/hati-os-windows-x86_64.zip)
       (resource-implementations PowerShell+CIM+Get-Process CIM+PerformanceCounter+nvidia-smi WASAPI+MediaFoundation Windows.Graphics.Capture+MediaFoundation Windows.Devices.Sensors+Location-when-present NVIDIA-CUDA-driver+DirectML+Vulkan DirectML+WASAPI-DSP unsupported-MLX)
-      (floor "Windows x86_64 is the Intel/AMD x64 instruction lane; it is proven today by the Windows fkwu self-JIT runtime verifier without Go, clang, or LLVM on the runtime PATH, plus a Form-emitted PE/COFF object that lld-link turns into two loadable DLLs swapped through LoadLibrary/GetProcAddress behind the same recipe symbol, and a minimal bootstrap exe that loads those DLLs so kernel parts can be replaced independently of the host surface")))
+      (floor "Windows x86_64 is the Intel/AMD x64 instruction lane; it is proven today by the Windows fkwu self-JIT runtime verifier without Go, clang, or LLVM on the runtime PATH, plus a Form-emitted PE/COFF object that lld-link turns into loadable DLLs swapped through LoadLibrary/GetProcAddress behind the same recipe symbol, and a cross-platform minimal bootstrap exe source that loads dynamic libraries on Windows/macOS/Linux/Android while measuring load/resolve/call boundary crossings")))
 
   (missing-physical-samples
     (tts-stt-loopback

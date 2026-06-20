@@ -39,10 +39,19 @@ fourth_available() { [[ -n "$FKWU" && -x "$FKWU" ]]; }
 # Portable content hash for cache stamps. macOS ships `shasum`; Linux and Git
 # Bash ship `sha256sum`; they don't overlap. The value is only ever a per-host
 # cache key, so the algorithm is free — only availability matters.
-form_hash() {
-    if command -v shasum >/dev/null 2>&1; then shasum
-    elif command -v sha256sum >/dev/null 2>&1; then sha256sum
-    else cksum; fi
+fourth_hash16() {
+    if command -v shasum >/dev/null 2>&1 && printf test | shasum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | shasum | cut -c1-16
+    elif command -v sha1sum >/dev/null 2>&1 && printf test | sha1sum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | sha1sum | cut -c1-16
+    elif command -v sha256sum >/dev/null 2>&1 && printf test | sha256sum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | sha256sum | cut -c1-16
+    elif command -v cksum >/dev/null 2>&1 && printf test | cksum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | cksum | cut -c1-16
+    else
+        echo "fourth-arm.sh: need shasum, sha1sum, sha256sum, or cksum for cache keys" >&2
+        return 1
+    fi
 }
 
 # build_fourth — the standing fkwu binary, cached by emitter content.
@@ -50,8 +59,13 @@ build_fourth() {
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
     command -v clang >/dev/null 2>&1 || return 0
     mkdir -p "$FOURTH_DIR"
-    local stamp out tmp d
-    stamp="$(cat "${FOURTH_CHAIN[@]}" "$GO_BIN" 2>/dev/null | form_hash | cut -c1-16)"
+    local stamp out tmp d is_windows
+    local -a clang_args
+    is_windows=0
+    if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+        is_windows=1
+    fi
+    stamp="$(fourth_hash16 "${FOURTH_CHAIN[@]}" "$GO_BIN")"
     out="$FOURTH_DIR/fkwu-$stamp"
     if [[ ! -x "$out" ]]; then
         echo "  building fourth kernel (fkwu)..." >&2
@@ -67,21 +81,30 @@ build_fourth() {
 EOF
         "$GO_BIN" "$d/uni-driver.fk" 2>"$d/uni.err" > "$d/uni.out" || true
         sed -n '/^==UNI==$/,/^==END==$/p' "$d/uni.out" | sed -e '1d' -e '$d' > "$d/uni.c"
-        if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+        if [[ "$is_windows" == "1" ]]; then
+            sed -i '1i #define _CRT_SECURE_NO_WARNINGS 1' "$d/uni.c"
             sed -i 's|extern unsigned int arc4random(void);|extern int rand(void); static unsigned int arc4random(void) { return (unsigned int)rand(); }|' "$d/uni.c"
             sed -i 's|extern long long read(int, void \*, unsigned long);|extern int read(int, void *, unsigned int);|' "$d/uni.c"
             sed -i 's|extern long long write(long long, const void \*, unsigned long);|extern int write(int, const void *, unsigned int);|' "$d/uni.c"
             sed -i 's|mkdir(d, 0777)|mkdir(d)|g; s|mkdir(p, 0777)|mkdir(p)|g' "$d/uni.c"
+            sed -i 's|extern int sprintf(char \*, const char \*, ...);|typedef __builtin_va_list fk_va_list; extern int vsnprintf(char *, unsigned long long, const char *, fk_va_list); static int sprintf(char *b, const char *fmt, ...) { fk_va_list ap; __builtin_va_start(ap, fmt); int n = vsnprintf(b, 4096ULL, fmt, ap); __builtin_va_end(ap); return n; }|' "$d/uni.c"
+            sed -i 's|struct timeval { long tv_sec; int tv_usec; }; extern int gettimeofday(struct timeval \*, void \*);|struct timeval { long tv_sec; int tv_usec; }; struct fk_filetime { unsigned int dwLowDateTime; unsigned int dwHighDateTime; }; __declspec(dllimport) void __stdcall GetSystemTimeAsFileTime(struct fk_filetime *); static int gettimeofday(struct timeval *tv, void *tz) { (void)tz; struct fk_filetime ft; unsigned long long ticks; unsigned long long us; GetSystemTimeAsFileTime(\&ft); ticks = ((unsigned long long)ft.dwHighDateTime * 4294967296ULL) + (unsigned long long)ft.dwLowDateTime; us = (ticks / 10ULL) - 11644473600000000ULL; tv->tv_sec = (long)(us / 1000000ULL); tv->tv_usec = (int)(us % 1000000ULL); return 0; }|' "$d/uni.c"
             sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$d/uni.c"
         fi
         tmp="$(mktemp "$FOURTH_DIR/.fkwu-$stamp.XXXXXX")"
-        if [[ -s "$d/uni.c" ]] && clang -O2 \
-            -Wno-error=implicit-function-declaration \
-            -Wno-implicit-function-declaration \
-            -Wno-incompatible-library-redeclaration \
-            -o "$tmp" "$d/uni.c" 2>"$d/clang.err"; then
+        clang_args=(
+            -O2
+            -Wno-error=implicit-function-declaration
+            -Wno-implicit-function-declaration
+            -Wno-incompatible-library-redeclaration
+            -o "$tmp" "$d/uni.c"
+        )
+        if [[ "$is_windows" == "1" ]]; then
+            clang_args+=(-lws2_32 -llegacy_stdio_definitions)
+        fi
+        if [[ -s "$d/uni.c" ]] && clang "${clang_args[@]}" 2>"$d/clang.err"; then
             mv -f "$tmp" "$out"
-        elif [[ -s "$d/uni.c" && ( "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ) ]] \
+        elif [[ -s "$d/uni.c" && "$is_windows" == "1" ]] \
             && command -v gcc >/dev/null 2>&1 \
             && gcc -O2 -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -o "$tmp" "$d/uni.c" -lws2_32 2>"$d/gcc.err"; then
             mv -f "$tmp" "$out"
@@ -185,7 +208,7 @@ fourth_table() {
     [[ -n "$kind" ]] || return 0
     while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
     [[ "${#srcs[@]}" -ge 1 ]] || return 0
-    key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | form_hash | cut -c1-16)"
+    key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_CHAIN[@]}")"
     out="$FOURTH_DIR/t-$stem-$key.txt"
     if [[ ! -s "$out" ]]; then
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-t.XXXXXX")"
@@ -248,7 +271,7 @@ fourth_prepare_all() {
         srcs=()
         while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
         [[ "${#srcs[@]}" -ge 1 ]] || continue
-        key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | form_hash | cut -c1-16)"
+        key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_CHAIN[@]}")"
         out="$FOURTH_DIR/t-$stem-$key.txt"
         [[ -s "$out" ]] && continue
         missing=$((missing + 1))

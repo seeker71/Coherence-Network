@@ -45,6 +45,21 @@ GO_BIN="$GO_DIR/bin-go"
 RS_BIN="$RS_DIR/target/release/form-kernel-rust"
 HOST_STACK_KB="262144"
 
+form_hash16() {
+    if command -v shasum >/dev/null 2>&1 && printf test | shasum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | shasum | cut -c1-16
+    elif command -v sha1sum >/dev/null 2>&1 && printf test | sha1sum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | sha1sum | cut -c1-16
+    elif command -v sha256sum >/dev/null 2>&1 && printf test | sha256sum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | sha256sum | cut -c1-16
+    elif command -v cksum >/dev/null 2>&1 && printf test | cksum >/dev/null 2>&1; then
+        cat "$@" 2>/dev/null | cksum | cut -c1-16
+    else
+        echo "validate.sh: need shasum, sha1sum, sha256sum, or cksum for cache keys" >&2
+        return 1
+    fi
+}
+
 # --- build compiled sibling kernels if stale -----------------------------
 build_go() {
     if [[ ! -x "$GO_BIN" ]] || find "$GO_DIR" -name '*.go' -newer "$GO_BIN" -print -quit | grep -q .; then
@@ -121,7 +136,7 @@ SOURCE_CACHE_DIR="form-stdlib/.cache/source-compiled"
 mkdir -p "$SOURCE_CACHE_DIR"
 compiler_stamp=""
 compiler_chain=("form-stdlib/form-ontology-loader.fk" "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" "form-stdlib/bml-source.fk" "form-stdlib/source-compiler.fk")
-compiler_stamp="$(cat "${compiler_chain[@]}" "$GO_BIN" 2>/dev/null | form_hash | cut -c1-16)"
+compiler_stamp="$(form_hash16 "${compiler_chain[@]}" "$GO_BIN")"
 
 prepared_args=()
 prepare_sources() {
@@ -129,7 +144,7 @@ prepare_sources() {
     local src out safe driver key cached
     for src in "$@"; do
         if grep -Eq '^[[:space:]]*section \[' "$src"; then
-            key="$(cat "$src" | form_hash | cut -c1-16)-$compiler_stamp"
+            key="$(form_hash16 "$src")-$compiler_stamp"
             cached="$SOURCE_CACHE_DIR/$key.fk"
             if [[ ! -s "$cached" ]]; then
                 safe="${src//\//__}"
