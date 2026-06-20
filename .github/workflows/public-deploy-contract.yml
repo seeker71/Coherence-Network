@@ -39,7 +39,7 @@ jobs:
       PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS: ${{ vars.PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS || '60' }}
       PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS: ${{ vars.PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS || '600' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v6
