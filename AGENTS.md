@@ -87,7 +87,7 @@ Spec → Test → Implement → CI → Review → Merge
 
 - Provider limits, remaining quota, and routing behavior are claimed from machine evidence, not from assumptions or static docs.
 - For Cursor/Codex/OpenRouter/OpenAI usage-limit claims, include machine evidence from:
-  1. local fact report: `cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py`
+  1. local fact report from the active worktree: `cd api && python scripts/cursor_fact_report.py` (Windows PowerShell: `cd api; py -3 scripts/cursor_fact_report.py`)
   2. live usage/readiness API snapshots:
      - `curl -sS https://api.coherencycoin.com/api/automation/usage/readiness`
      - `curl -sS https://api.coherencycoin.com/api/automation/usage`
@@ -177,6 +177,18 @@ Spec → Test → Implement → CI → Review → Merge
 - **Future** — OpenClaw, Agent Zero, etc. when multi-agent framework is set up
 
 ## Commands
+
+Windows 11 PowerShell bootstrap:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1
+git fetch origin main
+git worktree add "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>" -b "codex/<thread-name>" origin/main
+Set-Location "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>"
+make prompt-guide
+```
+
+Use `npm.cmd` from PowerShell. `npm.ps1` can be blocked by execution policy on this host.
 
 ```bash
 # First step for every prompt (new thread + follow-up)
@@ -406,6 +418,9 @@ Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS`
 
 ### Gotchas
 
+- Windows 11 host setup is `powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1`.
+- In Windows PowerShell, use `py -3` for Python and `npm.cmd` for npm commands.
+- Repo `.sh` scripts run through Git Bash at `C:\Program Files\Git\bin\bash.exe`; the Makefile startup targets call it automatically.
 - `python3.12-venv` is not installed by default on the VM; the update script handles this.
 - `ruff` is not listed in `pyproject.toml` dev dependencies but is required for `make lint`. The update script installs it into the API venv.
 - `next lint` requires an ESLint config file that does not exist in the repo. The command prompts interactively and cannot be run non-interactively. Use `next build` for type-checking validation instead.
