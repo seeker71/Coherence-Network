@@ -121,6 +121,14 @@ if ((-not (Test-Path "web\.env.local")) -or $ForceEnv) {
     Write-Host "prepared web\.env.local"
 }
 
+# Force Python UTF-8 mode for every process on this host. Much of the codebase
+# reads UTF-8 files with bare open()/read_text() (no encoding=); without UTF-8
+# mode, Windows' cp1252 default raises UnicodeDecodeError on non-ASCII bytes and
+# the test suite fails. PYTHONUTF8=1 is CPython's sanctioned remedy.
+[Environment]::SetEnvironmentVariable("PYTHONUTF8", "1", "User")
+$env:PYTHONUTF8 = "1"
+Write-Host "set PYTHONUTF8=1 (user env)"
+
 Write-Host ""
 Write-Host "host checks:"
 git --version
