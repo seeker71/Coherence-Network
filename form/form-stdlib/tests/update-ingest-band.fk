@@ -1,0 +1,23 @@
+; preludes: form-stdlib/core.fk form-stdlib/update-ingest.fk
+;
+; update-ingest-band — ONE recipe, ANY channel; trust is re-derivability, made falsifiable.
+;
+; A champion holds the current best value. A channel offers a delta: a re-derivable recipe (a b) over
+; observed x, a CLAIMED value, and whether the channel is native. ui-ingest returns the champion AFTER
+; the offer. The same recipe handles every channel; only the native flag changes the path.
+;
+; Verdict 63 when every claim lands:
+;   1   native, re-derives, OUT-derives champion -> ADOPT                  (champ 5 -> 7)
+;   2   native, re-derives, weaker than champion -> melt back, champ kept  (champ stays 10)
+;   4   native but the claim does NOT re-derive  -> reject (nativeness is not trust) (champ stays 5)
+;   8   non-native, claim would improve          -> quarantine (we cannot walk it)   (champ stays 5)
+;   16  a NATIVE summary re-derives + out-derives -> adopted as body                 (champ 4 -> 7)
+;   32  the SAME summary on a NON-native channel -> quarantined (trust = re-derivability) (champ stays 4)
+(do
+    (let c0 (if (eq (ui-ingest 5  1 2 1 3 7)  7)  1 0))   ; ADOPT
+    (let c1 (if (eq (ui-ingest 10 1 2 1 3 7)  10) 2 0))   ; melt back — weaker native delta
+    (let c2 (if (eq (ui-ingest 5  1 2 1 3 99) 5)  4 0))   ; reject — native but un-re-derivable
+    (let c3 (if (eq (ui-ingest 5  0 2 1 3 7)  5)  8 0))   ; quarantine — non-native, would-improve
+    (let c4 (if (eq (ui-ingest 4  1 3 1 2 7)  7)  16 0))  ; native summary adopted
+    (let c5 (if (eq (ui-ingest 4  0 3 1 2 7)  4)  32 0))  ; same summary, non-native -> quarantined
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
