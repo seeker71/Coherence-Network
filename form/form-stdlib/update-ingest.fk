@@ -1,0 +1,44 @@
+; update-ingest.fk — one recipe by which ANY channel ingests an update; trust is RE-DERIVABILITY.
+;
+; The runnable heart of update-ingest-as-recipe.form (GAP-U0 closed). Every channel — mesh neighbor,
+; file pull, llm summary, sensor stream, git delta — ingests through ONE recipe; what differs is a single
+; field: nativeness, and nativeness is whether we can RE-DERIVE the offer over data we observed.
+;
+; Modeled minimally and exactly: an offer carries a re-derivable recipe (a b) and an observed input x,
+; the value the channel CLAIMS, and whether the channel is native. The delta's value is re-derived as
+; (a*x + b) — our own walk. Trust = the re-derivation reproduces the claim (no trust in the channel).
+; Champion-challenger: a re-derived delta takes the slot only by OUT-DERIVING the incumbent champion;
+; else it melts back. A non-native (opaque) offer is never adopted — we cannot walk it, so it stays
+; quarantined as hypothesis even when its claimed value would improve. Summarization falls out: a summary
+; is an update on a channel; a native summary is rederivable, a non-native one is oracle-not-master.
+;
+; Composes (by reference; each already four-way): slice-update-roundtrip.fk (delta-as-cell transport),
+; champion-challenger.fk (the out-derive gate). Pure-compute ops only -> crosses four-way (fkwu).
+; Proven by: form-stdlib/tests/update-ingest-band.fk (verdict 63, four-way at validate.sh).
+
+(do
+    ; re-derive the delta's value from its recipe (a b) over observed input x — our own walk
+    (defn ui-derive (a b x) (add (mul a x) b))
+
+    ; trust = re-derivability: 1 iff our walk reproduces the channel's claim (no trust in the channel)
+    (defn ui-rederives? (a b x claimed) (eq (ui-derive a b x) claimed))
+
+    ; champion-challenger: the challenger out-derives the incumbent champion (higher is better)
+    (defn ui-beats? (champ a b x) (gt (ui-derive a b x) champ))
+
+    ; adopt iff NATIVE and RE-DERIVED and it OUT-DERIVES the champion — three gates, in that order
+    (defn ui-adopt? (champ native a b x claimed)
+        (if (eq native 1)
+            (if (eq (ui-rederives? a b x claimed) 1)
+                (ui-beats? champ a b x)
+                0)
+            0))
+
+    ; THE ONE RECIPE every channel ingests through: adopt the re-derived value, else keep the champion
+    ; (melt-back on a weaker native delta; quarantine on a non-native one — the same keep, one recipe)
+    (defn ui-ingest (champ native a b x claimed)
+        (if (eq (ui-adopt? champ native a b x claimed) 1)
+            (ui-derive a b x)
+            champ))
+
+    0)

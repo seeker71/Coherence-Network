@@ -35,9 +35,12 @@
 # sovereign body), lc-edges-as-vitality (an ingested update is an edge landing),
 # oracle-as-teacher-not-master.
 #
-# Runnable heart (GAP-U0): form-stdlib/update-ingest.fk would prove this recipe
-# four-way (Go · Rust · TS · fkwu) over slice-update's own delta vocabulary. This
-# file is the canonical shape; the band is the proof — named here, not yet walked.
+# Runnable heart: form-stdlib/update-ingest.fk, proven by
+# form-stdlib/tests/update-ingest-band.fk → verdict 63, four-way (Go · Rust · TS ·
+# fkwu), in the fourth-arm manifest. ui-derive re-derives the delta from its recipe
+# over observed input; ui-rederives? is trust; ui-beats? is the champion-challenger
+# out-derive gate; ui-ingest is the one recipe — adopt the re-derived value, else
+# keep the champion. The canonical shape and the runnable proof now agree.
 
 # ─────────────────────────────────────────────────────────────────────
 # A channel is DATA, not a branch — one cell, many instances. The only field
