@@ -4,6 +4,30 @@ Date: 2026-02-17
 
 Purpose: remove repeated setup mistakes by making every Codex/Claude thread follow one exact worktree startup flow.
 
+## Windows 11 Host Bootstrap
+
+Run once from a PowerShell prompt in any Coherence Network checkout:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1
+```
+
+What it prepares:
+
+- Git Bash as the shell for repo `.sh` scripts.
+- GNU Make from winget when `make` is missing.
+- `%USERPROFILE%\.local\bin\python3` shim so Git Bash avoids the broken Windows Store `python3` alias and uses `py -3`.
+- `~\.config\gh-seeker71` from the existing GitHub CLI login when `gh auth status` is already authenticated.
+- `api\.env` and `web\.env.local` copied from examples when they do not already exist.
+- PATH entries for GNU Make and `%USERPROFILE%\.local\bin`.
+
+PowerShell notes for this host:
+
+- Use `npm.cmd`, not `npm`, because `npm.ps1` can be blocked by execution policy.
+- Open a fresh PowerShell after bootstrap so the updated user PATH is inherited. In the current shell, use the printed absolute `make.exe` command if needed.
+- Git Bash is at `C:\Program Files\Git\bin\bash.exe`; the Makefile uses it automatically for startup targets on Windows.
+- Run `gh auth login` before unbypassed `make prompt-guide` and PR checks if the bootstrap warns that GitHub CLI is not authenticated.
+
 ## Rule 0
 
 - Never implement from the primary repo workspace.
@@ -11,24 +35,30 @@ Purpose: remove repeated setup mistakes by making every Codex/Claude thread foll
 
 ## Start New Thread (copy/paste)
 
-From primary workspace:
+Windows PowerShell:
+
+```powershell
+git fetch origin main
+git worktree add "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>" -b "codex/<thread-name>" origin/main
+Set-Location "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>"
+git pull --ff-only origin main
+make prompt-guide
+```
+
+Git Bash / Linux / macOS:
 
 ```bash
 git fetch origin main
 git worktree add ~/.claude-worktrees/Coherence-Network/<thread-name> -b codex/<thread-name> origin/main
-```
-
-Enter worktree:
-
-```bash
 cd ~/.claude-worktrees/Coherence-Network/<thread-name>
 git pull --ff-only origin main
+make prompt-guide
 ```
 
 ## Mandatory Preflight (before edits)
 
 ```bash
-make prompt-gate
+make prompt-guide
 ```
 
 Mandatory for every prompt (new or follow-up). This command is continuation-safe:
@@ -38,7 +68,8 @@ Mandatory for every prompt (new or follow-up). This command is continuation-safe
 - sibling continuity guard: treats sibling worktrees, including dirty, detached, patch-equivalent, and old unpushed-ahead branches, as guidance. It fails fast only for recent unpushed-ahead sibling history without an upstream.
 - autonomous worker sidecars under `.claude/worktrees/*` are excluded from sibling continuity risk so Claude workers can run in parallel without blocking Codex prompt entry.
 
-Full proof on demand: `./scripts/prompt_entry_gate.sh --force-full`.
+Legacy alias: `make prompt-gate`.
+Full proof on demand: `./scripts/prompt_entry_gate.sh --force-full` from Git Bash.
 Equivalent minimal branch/worktree check: `make start-gate`.
 
 ### If prompt-gate blocks on continuity risk
@@ -70,7 +101,7 @@ SQLite artifact rule:
 Temporary bypass (not recommended):
 
 ```bash
-PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate
+PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide
 ```
 
 ## Mandatory Local Guard (before commit/push)
@@ -89,8 +120,9 @@ git rebase origin/main
 ```
 
 ```bash
-# Optional: set deployed n8n version when automation flows depend on n8n
-# export N8N_VERSION=1.123.17
+# Optional: set deployed n8n version when automation flows depend on n8n.
+# Windows PowerShell: $env:N8N_VERSION = "1.123.17"
+# Git Bash/Linux/macOS: export N8N_VERSION=1.123.17
 python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 ./scripts/verify_worktree_local_web.sh
 # optional explicit startup (for manual end-to-end contract check)
@@ -142,9 +174,12 @@ Interpretation:
 
 ## Recover Common Failures
 
-- `next: command not found`: run `cd web && npm ci --cache /tmp/npm-codex-cache`.
-- missing pytest in worktree: use repo venv path for validation:
-  - `cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q`.
+- `make: The term 'make' is not recognized`: run `powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows_host.ps1`, then open a new PowerShell.
+- `process_begin ... env bash ... failed` from GNU Make on Windows: rebase onto the Makefile startup target fix, or run `make prompt-guide` after this guide's Windows bootstrap.
+- `Python was not found; run without arguments to install from the Microsoft Store`: run `.\scripts\setup_windows_host.ps1`; Git Bash will use `%USERPROFILE%\.local\bin\python3` -> `py -3`.
+- `npm.ps1 cannot be loaded`: use `npm.cmd`, for example `cd web; npm.cmd ci`.
+- `next: command not found`: run `cd web; npm.cmd ci --cache "$env:TEMP\coherence-npm-cache"` in PowerShell, or `cd web && npm ci --cache /tmp/npm-codex-cache` in Git Bash.
+- missing pytest in worktree: create the API venv with `cd api; py -3 -m venv .venv; .\.venv\Scripts\python.exe -m pip install -e ".[dev]"`, then run `.\.venv\Scripts\pytest.exe -q`.
 - maintainability gate fail: run
   - `python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression`
   and refactor before re-push.
@@ -162,8 +197,18 @@ THREAD_RUNTIME_API_BASE_PORT=18200 THREAD_RUNTIME_WEB_BASE_PORT=3120 ./scripts/v
 
 After merge and deploy validation:
 
+Windows PowerShell:
+
+```powershell
+Set-Location <primary-workspace>
+git worktree remove "$env:USERPROFILE\.claude-worktrees\Coherence-Network\<thread-name>"
+git branch -D "codex/<thread-name>"
+```
+
+Git Bash / Linux / macOS:
+
 ```bash
-cd /Users/ursmuff/source/Coherence-Network
+cd <primary-workspace>
 git worktree remove ~/.claude-worktrees/Coherence-Network/<thread-name>
 git branch -D codex/<thread-name> 2>/dev/null || true
 ```

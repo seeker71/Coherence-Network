@@ -42,6 +42,23 @@ done
 
 cd "$REPO_ROOT"
 
+if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+  export PATH="${HOME}/.local/bin:${PATH}"
+fi
+
+PYTHON3_CMD=(python3)
+if ! "${PYTHON3_CMD[@]}" --version >/dev/null 2>&1; then
+  if command -v py >/dev/null 2>&1 && py -3 --version >/dev/null 2>&1; then
+    PYTHON3_CMD=(py -3)
+  elif command -v python >/dev/null 2>&1 && python --version 2>&1 | grep -q '^Python 3'; then
+    PYTHON3_CMD=(python)
+  else
+    echo "prompt-entry-guide: Python 3 not found."
+    echo "On Windows, run: powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_windows_host.ps1"
+    exit 1
+  fi
+fi
+
 ./scripts/ensure_coord_cli.sh --quiet || true
 
 print_claude_orientation() {
@@ -92,7 +109,7 @@ if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
   if [[ "${PROMPT_GATE_CONTINUITY_STRICT:-0}" == "1" ]]; then
     continuity_args=(--fail-on-risk)
   fi
-  if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
+  if ! "${PYTHON3_CMD[@]}" scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
     echo "prompt-entry-guide: sibling worktree continuity risk detected."
     echo "Sibling worktrees are guidance; recent unpushed-ahead siblings without an upstream can strand history."
     echo "Continue from that worktree, push it, or merge/cherry-pick its branch before starting new work."
@@ -108,7 +125,7 @@ if [[ "$force_full" == "1" ]]; then
   exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
 fi
 
-if ! make start-guide; then
+if ! "${PYTHON3_CMD[@]}" scripts/start_gate.py; then
   exit 1
 fi
 

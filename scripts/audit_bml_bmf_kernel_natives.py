@@ -44,7 +44,7 @@ FORBIDDEN_SCANNER_PATTERNS = [
 
 
 def native_names(path: Path) -> list[str]:
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     names: list[str] = []
     for pattern in REGISTER_PATTERNS:
         names.extend(pattern.findall(text))
@@ -52,7 +52,7 @@ def native_names(path: Path) -> list[str]:
 
 
 def forbidden_scanner_hits(path: Path) -> list[str]:
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     hits: list[str] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
         for pattern in FORBIDDEN_SCANNER_PATTERNS:
