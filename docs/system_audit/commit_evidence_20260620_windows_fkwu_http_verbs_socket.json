@@ -1,0 +1,132 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-fkwu-http-verbs",
+  "commit_scope": "Move the Form HTTP client plaintext method lane onto high-grammar source sections over direct socket host calls, and prove a Windows fkwu PATCH request path without http_get or sock_request at runtime.",
+  "files_owned": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_fkwu_http_verbs_socket.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/tests/http-client-render-band.fk",
+    "form/form-stdlib/tests/http-client-socket-verbs-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_http_verbs_socket.ps1"
+  ],
+  "idea_ids": [
+    "windows-x86_64-native-floor",
+    "form-native-http",
+    "fkwu-socket-floor"
+  ],
+  "spec_ids": [
+    "fourth-kernel-physical-lanes",
+    "fkwu-host-io-port-plan"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-fkwu-http-verbs-socket"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-correction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-volta",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-fkwu-http-verbs on branch codex/windows-fkwu-http-verbs",
+    "git stash push --include-untracked; git fetch origin main; git rebase origin/main; git stash pop -> rebase pass, branch up to date with origin/main, stash reapplied cleanly",
+    "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main -> local_preflight=pass; ready_for_push=True; all selected readings clear",
+    "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> codex_open_prs=0; stale_codex_prs=0",
+    "git diff --check -> pass; only Git CRLF working-copy warnings were printed",
+    "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-render-band.fk -> verdict 63; 1 ok, 0 divergent",
+    "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-render-band.fk -> verdict 63; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "PowerShell .\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1 -> PASS windows-fkwu-http-client-socket-verbs verdict=127; PASS fkwu-socket-tags tags=120,121,122,123,124,125,126; PASS runtime-toolchain-free path=C:\\WINDOWS\\System32;C:\\WINDOWS go=absent clang=absent llvm_objdump=absent; PASS no-http-get-no-sock-request runtime proof=socket-tags",
+    "PowerShell .\\scripts\\verify_windows_fkwu_socket_loopback.ps1 -> PASS windows-fkwu-socket-loopback verdict=111111; socket tags 120..126 hit; runtime toolchain absent",
+    "PowerShell .\\scripts\\verify_windows_fkwu_self_jit.ps1 -> PASS windows-fkwu-self-jit cold=317811 hot=317811 njit=26; runtime toolchain absent",
+    "PowerShell .\\scripts\\verify_windows_form_cli_native.ps1 -> PASS windows-form-cli-native; ping=pong; verify native=fkwu embedded_source=true; runtime toolchain absent",
+    "Source inspection: form/form-stdlib/http-client.fk is section [form.bml], form/form-stdlib/tests/http-client-socket-verbs-band.fk is section [form.action], plaintext path uses socket_connect/socket_send/socket_recv/socket_close, and strict search found no http_get(...) or sock_request(...) calls in the touched HTTP client source or socket-verbs band",
+    "Subagent Volta final read-only verification -> PASS: socket HTTP verifier, base socket verifier, self-JIT verifier, native form-cli verifier, high-grammar inspection, and no http_get/sock_request calls in inspected files"
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_fkwu_http_verbs_socket.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/tests/http-client-render-band.fk",
+    "form/form-stdlib/tests/http-client-socket-verbs-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_windows_fkwu_http_verbs_socket.ps1"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main && git rebase origin/main",
+      "py -3 scripts\\worktree_pr_guard.py --mode local --base-ref origin/main",
+      "py -3 scripts\\check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check",
+      "Git Bash: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-render-band.fk",
+      "Git Bash with Windows Go/LLVM PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/tests/http-client-render-band.fk",
+      ".\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1",
+      ".\\scripts\\verify_windows_fkwu_socket_loopback.ps1",
+      ".\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      ".\\scripts\\verify_windows_form_cli_native.ps1",
+      "subagent Volta read-only verification rerun -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "http-client-render fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 63",
+      "http-client-socket-verbs fkwu verifier: verdict 127; socket tags 120,121,122,123,124,125,126 hit under sanitized runtime PATH"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change updates Form stdlib and Windows floor CI proof; public deployment validation remains pending until PR checks and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI/deploy status remains pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Plaintext HTTP method recipes are authored in source-level Form/BML, render arbitrary methods as data, and use the Windows fkwu socket host-call floor for request transport instead of http_get or sock_request.",
+    "public_endpoints": [
+      "local-only: Form stdlib and Windows fkwu verifier; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "High-grammar render proof: http-client-render validates to 63 on Go, Rust, TypeScript, and fkwu with 0 divergent.",
+      "Runtime socket proof: verify_windows_fkwu_http_verbs_socket emits and runs fkwu against http-client-socket-verbs, returns verdict 127, and shows nonzero tag counters for socket_listen/port/accept/connect/send/recv/close.",
+      "Runtime isolation proof: the fkwu verifier executes with PATH restricted to C:\\WINDOWS\\System32;C:\\WINDOWS and confirms Go, clang, and llvm-objdump are absent."
+    ]
+  }
+}
