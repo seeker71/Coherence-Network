@@ -1,0 +1,56 @@
+name: Windows Host Floor
+
+# Proves the Form-native floor is portable to Windows: the Go/Rust/TS kernels
+# build and agree three-way on windows-latest. The floor is portable by
+# construction — UTF-8 strings, byte-level I/O, per-platform native emit — so
+# this gate needs no PYTHONUTF8, no encoding config, no Python at all. The fkwu
+# fourth leg (clang-emitted carrier) is covered by the fkwu native-carrier work,
+# not this gate; validate.sh degrades to three-way when clang is absent.
+
+on:
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-floor:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      # Rust (rustup + cargo) is preinstalled on the windows-latest image;
+      # validate.sh builds the Go/Rust kernels and bundles the TS kernel itself.
+
+      - name: Prove the Form-native floor (three-way Go/Rust/TS on Windows)
+        shell: bash
+        run: |
+          # Toolchain the floor needs (validate.sh builds Go/Rust + bundles TS).
+          echo "go:    $(go version 2>&1 || echo MISSING)"
+          echo "cargo: $(cargo --version 2>&1 || echo MISSING)"
+          echo "node:  $(node --version 2>&1 || echo MISSING)"
+          echo "npx:   $(npx --version 2>&1 || echo MISSING)"
+          cd form
+          # validate.sh requires cwd=form. Derive its path from $(pwd) (a unix
+          # path in Git Bash) — $GITHUB_WORKSPACE is a Windows backslash path the
+          # bash shell can't exec. The dynamic ref is skipped by the workflow
+          # reference validator. Output streams live so a failing band is visible.
+          VALIDATE="$(pwd)/validate.sh"
+          bash "$VALIDATE" form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/tests/adler32-band.fk | tee band1.out
+          grep -q '0 divergent' band1.out || { echo "::error::kernels diverged (adler32)"; exit 1; }
+          bash "$VALIDATE" form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk | tee band2.out
+          grep -q '0 divergent' band2.out || { echo "::error::kernels diverged (form-asm)"; exit 1; }
