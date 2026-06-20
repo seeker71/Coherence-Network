@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-fkwu-native-lowering",
+  "commit_scope": "Require the Windows fkwu fourth arm in CI and make both the self-JIT verifier and standalone Windows form-cli build support the same emitted-C host shims, so the resulting native executables run on fkwu with no Go, clang, LLVM, or table file available at runtime.",
+  "files_owned": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_fkwu_form_cli_native.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/build-form-cli.sh",
+    "scripts/verify_windows_fkwu_self_jit.ps1",
+    "scripts/verify_windows_form_cli_native.ps1"
+  ],
+  "idea_ids": [
+    "windows-x86_64-floor",
+    "fkwu-native-runtime",
+    "form-cli-native"
+  ],
+  "spec_ids": [
+    "fourth-kernel-physical-lanes",
+    "form-to-asm",
+    "hati-os-targets"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-fkwu-form-cli-native"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-hooke",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-fkwu-native-lowering",
+    "form/build-form-cli.sh -> Windows emitted-C patch path now applies arc4random, read/write prototype, mkdir arity, sprintf/vsnprintf, gettimeofday, and dlopen/dlsym host shims before clang compiles the standalone form-cli executable",
+    "scripts/verify_windows_fkwu_self_jit.ps1 -> Windows emitted-C patch path now applies the same shims and links ws2_32 plus legacy_stdio_definitions before compiling the self-JIT witness, so CI's LLVM/MSVC link path supports the POSIX-shaped symbols instead of skipping the proof",
+    "form/build-form-cli.sh -> explicit output parent directories are created before linking, so .cache/form-cli-win.exe works on Windows",
+    ".github/workflows/windows-host.yml -> Windows floor now adds LLVM to PATH, requires fourth arm: 1 band(s) four-way for adler32 and form-asm, and runs both Windows fkwu self-JIT plus native form-cli runtime verifiers",
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1 -> PASS windows-fkwu-self-jit cold=317811 hot=317811 njit=26; runtime-toolchain-free path=C:\\WINDOWS\\System32;C:\\WINDOWS go=absent clang=absent llvm_objdump=absent",
+    "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_form_cli_native.ps1 -> PASS windows-form-cli-native bytes=485888; PASS windows-form-cli-ping output=pong; PASS windows-form-cli-verify native=fkwu embedded_source=true; runtime-toolchain-free path=C:\\WINDOWS\\System32;C:\\WINDOWS go=absent clang=absent llvm_objdump=absent",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/tests/adler32-band.fk -> verdict 5; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk -> verdict 31; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "Subagent Hooke read-only verification -> PASS: diff scope limited to workflow, form/build-form-cli.sh, and scripts/verify_windows_form_cli_native.ps1; both PowerShell verifiers passed; adler32 and form-asm each reported fourth arm: 1 band(s) four-way and 0 divergent"
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_20260620_windows_fkwu_form_cli_native.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/build-form-cli.sh",
+    "scripts/verify_windows_fkwu_self_jit.ps1",
+    "scripts/verify_windows_form_cli_native.ps1"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git diff --check",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_form_cli_native.ps1",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/tests/adler32-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk",
+      "subagent Hooke read-only verification -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "adler32 fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 5",
+      "form-asm fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 31"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change updates the local Windows host floor and CI workflow. Public deployment validation remains pending until PR checks and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI and deploy validation remain pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Windows no longer treats fkwu as an optional skipped leg in the host floor, the self-JIT verifier supports CI's Windows linker surface, and the standalone Windows form-cli .exe can be built from the current Form carrier then run with no runtime access to Go, clang, LLVM, or table files.",
+    "public_endpoints": [
+      "local-only: Windows Form stdlib/fkwu/form-cli floor; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Form four-way proof: adler32 and form-asm bands each validate on Go, Rust, TypeScript, and fkwu with 0 divergent.",
+      "Runtime proof: verify_windows_fkwu_self_jit.ps1 runs the emitted self-JIT witness under a sanitized runtime PATH and reports cold=317811 hot=317811 njit=26.",
+      "CLI proof: verify_windows_form_cli_native.ps1 builds .cache/form-cli-win.exe, strips runtime PATH to Windows system directories, verifies go/clang/llvm-objdump are absent, then proves ping, verify, and source responses come from the native fkwu CLI executable."
+    ]
+  }
+}

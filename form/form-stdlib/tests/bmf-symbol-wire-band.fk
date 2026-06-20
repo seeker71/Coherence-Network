@@ -1,0 +1,30 @@
+; tests/bmf-symbol-wire-band.fk — the BMF symbol-wire constructor, four-way.
+;
+; preludes: form-stdlib/engine.fk
+;
+; Gap #9 / M2 names two hard walls: defunctionalizing apply-object-rule (proven four-way
+; by bmf-form-object-runtime-band) and "the rest of the intern-door op family" — including
+; the SYMBOL-WIRE sibling constructor. A binary Form object is not named by its payload;
+; bmf-global-symbol-cell binds an anchor to the symbols/names useful for one domain/lens,
+; as a content-addressed cell whose inverse (cell-undo) is a FUNCTION. This band closes
+; that named wall: it builds a symbol cell, projects its binding (anchor/domain/lens/
+; symbol/name), and INVOKES the function-valued inverse (bmf-reverse-object = cell-undo)
+; — exercising the same defunctionalized higher-order cell-undo path apply-object-rule's
+; reverse emission rides, now over the symbol-wire constructor. Four-way incl. fkwu.
+;
+; Verdict 255 when all 8 claims land.
+(do
+    (defn b (c bit) (if c bit 0))
+
+    (let sym (bmf-global-symbol-cell "anchor1" "py" "lens1" "ret" (list "n1" "n2") "origin-x"))
+    (let binding (bmf-symbol-cell-binding sym))
+
+    (sum (list
+        (b (bmf-object? sym) 1)
+        (b (str_eq (bmf-symbol-binding-anchor binding) "anchor1") 2)
+        (b (str_eq (bmf-symbol-binding-domain binding) "py") 4)
+        (b (str_eq (bmf-symbol-binding-lens binding) "lens1") 8)
+        (b (str_eq (bmf-symbol-binding-symbol binding) "ret") 16)
+        (b (str_eq (bmf-symbol-binding-name binding) "n1") 32)
+        (b (eq (len (bmf-symbol-binding-names binding)) 2) 64)
+        (b (str_eq (bmf-reverse-object sym) "origin-x") 128))))

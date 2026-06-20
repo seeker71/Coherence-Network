@@ -1,0 +1,111 @@
+{
+  "eval_size": 20,
+  "scoring": "keyphrase-coverage (deterministic, any-of fact groups)",
+  "base_model": "llama3.2:3b",
+  "tuned_model": "form-llama",
+  "base_avg": 0.2933,
+  "tuned_avg": 0.4942,
+  "lift_points": 20.08,
+  "per_question": [
+    {
+      "q": "Explain what a Blueprint NodeID is and what it is made of.",
+      "base": 0.0,
+      "tuned": 0.667
+    },
+    {
+      "q": "How are SUBSTANCE and STATE related in the substrate?",
+      "base": 0.333,
+      "tuned": 0.667
+    },
+    {
+      "q": "Describe the three thermodynamic states a cell can be in.",
+      "base": 0.667,
+      "tuned": 1.0
+    },
+    {
+      "q": "When a cell freezes from water to ice, what stays the same?",
+      "base": 0.5,
+      "tuned": 0.0
+    },
+    {
+      "q": "What are the five core axioms?",
+      "base": 0.2,
+      "tuned": 0.8
+    },
+    {
+      "q": "Is the ability of the system to safely change itself an axiom or something derived?",
+      "base": 1.0,
+      "tuned": 0.5
+    },
+    {
+      "q": "What does the Form kernel serve, and what header marks a native route?",
+      "base": 0.5,
+      "tuned": 0.5
+    },
+    {
+      "q": "What is Python's job in this architecture?",
+      "base": 0.0,
+      "tuned": 1.0
+    },
+    {
+      "q": "When should I use the substrate instead of my conversation context?",
+      "base": 0.0,
+      "tuned": 0.0
+    },
+    {
+      "q": "Why must I never write (and a b c) in Form?",
+      "base": 0.5,
+      "tuned": 0.0
+    },
+    {
+      "q": "What is the trap with (empty x) in Form?",
+      "base": 0.5,
+      "tuned": 0.0
+    },
+    {
+      "q": "How do I express a less-than comparison in the curated Form band primitives?",
+      "base": 0.0,
+      "tuned": 0.0
+    },
+    {
+      "q": "Name the four phase transitions in the substrate.",
+      "base": 0.0,
+      "tuned": 0.25
+    },
+    {
+      "q": "What is the difference between an fkwu divergence and an unsupported op?",
+      "base": 0.0,
+      "tuned": 0.667
+    },
+    {
+      "q": "How does form-cli ask reach the local oracle?",
+      "base": 0.0,
+      "tuned": 0.333
+    },
+    {
+      "q": "What is the proof floor for a new Form band?",
+      "base": 0.0,
+      "tuned": 0.5
+    },
+    {
+      "q": "Write a Form recipe that returns the maximum of two integers.",
+      "base": 0.0,
+      "tuned": 1.0
+    },
+    {
+      "q": "Write a Form recipe that sums a list of integers by recursion.",
+      "base": 0.667,
+      "tuned": 1.0
+    },
+    {
+      "q": "What three counts determine a cell's state?",
+      "base": 0.0,
+      "tuned": 0.333
+    },
+    {
+      "q": "Can the kernel use a host's own drivers, or must everything be reimplemented natively?",
+      "base": 1.0,
+      "tuned": 0.667
+    }
+  ]
+}

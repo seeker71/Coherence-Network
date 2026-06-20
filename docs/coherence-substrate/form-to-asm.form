@@ -216,6 +216,19 @@
     (load   "form-kernel-go native dylib_call dlopens the dylib, dlsyms _recipe, calls it int64 f(int64); jit_dylib_test.go proves emit->link->load->call across {5,0,10,100}")
     (only-the-recipe "the dylib's __text IS the recipe (20 bytes); the ~16KB is Mach-O + signature overhead ld adds, vs a 4.8MB Go-runtime plugin"))
 
+  (windows-recipe-dll-realized
+    (emit   "form-pe-coff pe-recipe-object wraps Windows x64 recipe bytes as a COFF .obj exporting recipe, four-way Go/Rust/TS/fkwu at tests/form-pe-coff-band.fk -> 511")
+    (link   "lld-link /dll /noentry /export:recipe turns the Form .obj into a loadable PE/COFF DLL; lld-link is the host linker carrier, not the compiler or assembler")
+    (load   "form-kernel-go native dylib_call on Windows uses LoadLibrary/GetProcAddress and calls int64 f(int64); jit_dll_windows_test.go proves emit->link->load->call and swaps DLL recipes behind the same recipe symbol")
+    (lane   "this is the Windows x86_64 Intel/AMD instruction lane; Windows ARM64 remains the shared ARM64 assembler lane with its own PE/COFF image surface still to lift"))
+
+  (bootstrap-exe-realized
+    (source "form/native/bootstrap/form_bootstrap_host.c is the minimal cross-platform host exe source: LoadLibraryA/GetProcAddress on Windows, dlopen/dlsym on macOS/Linux/Android, call i64->i64, print result")
+    (abi    "form/form-stdlib/bootstrap-host.fk names the contract four-way at tests/bootstrap-host-band.fk -> 4095: form-bootstrap-host + swappable Form dynamic libraries")
+    (measure "FORM_BOOTSTRAP_MEASURE=1 emits boundary=form-native-to-host-os-loader, primitive=dynamic-library-call, loader, load_ns, resolve_ns, call_ns, total_ns")
+    (prove  "scripts/verify_cross_platform_bootstrap_host_no_go.ps1 compiles the exe on Windows without Go, links three PE/COFF recipe DLLs, proves the exe can load/swap them behind the same recipe symbol, and checks measurement fields")
+    (future "the C exe is only the starting host surface; as Form-native PE/COFF/Mach-O/ELF grows, the same ABI lets bootstrap parts move into dynamic libraries and then replace the exe itself"))
+
   # The signature half of the direct (no-ld) dylib is now Form. Apple Silicon's
   # dyld refuses an unsigned dylib; form-codesign.fk (co-sign) builds the ad-hoc
   # EmbeddedSignature SuperBlob + CodeDirectory whose code slots are SHA256 of

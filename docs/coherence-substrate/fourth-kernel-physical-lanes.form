@@ -16,7 +16,7 @@
     (executable-floor form-native-elf-exec-recipe)
     (choice measured-oracle-learning-samples)
     (hardware-classes cpu gpu ml)
-    (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095 four-way-fkwu)
+    (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 8191 four-way-fkwu)
     (learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu))
 
   (claim
@@ -24,7 +24,7 @@
     "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
 
   (floor
-    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, records real host/resource stdout or artifacts for the currently available physical lanes, and now carries a Mac+Android native receipt channel over adb-forward TCP.")
+    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/PE-COFF/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, records real host/resource stdout or artifacts for the currently available physical lanes, carries a Mac+Android native receipt channel over adb-forward TCP, keeps Windows ARM64 on the shared ARM64 assembler lane, and gives Windows x86_64 its separate Intel/AMD x64 native DLL load/swap receipt.")
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
@@ -46,7 +46,7 @@
     (host-usage    host:usage   "CPU, memory, load, disk, network, and energy counters are constructible as native host OS call lanes; current physical floor may use host counter carriers")
     (gpu-compute   gpu:compute  "GPU lanes are constructible as native accelerator calls; current floor is catalog and dashboard visibility without active dispatch receipt")
     (dsp-signal    dsp:signal   "DSP/NPU lanes are constructible as native signal/NN accelerator calls; current floor is catalog visibility without active dispatch receipt")
-    (mlx-array     mlx:array    "MLX lanes are constructible on Apple hosts; Android records explicit unsupported and maps equivalent semantics to GPU/NNAPI")
+    (mlx-array     mlx:array    "MLX lanes are constructible on Apple hosts; Android and Windows record explicit unsupported rows and map equivalent semantics to GPU/NNAPI or DirectML/Vulkan")
     (shell-applets stream:read  "grep/find/awk/xmllint over local files through the Hati driver")
     (agent-model   kernel:call  "ollama model choice through the Hati driver")
     (audio-mic     host:file    "rec captures a local WAV when the OS grants mic access")
@@ -83,7 +83,34 @@
       (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
       (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated Vulkan+OpenGL-ES NNAPI+vendor-DSP-delegates unsupported-MLX)
-      (floor "Android executable shape is Form-native and inspectable; Docker Linux/arm64 executes the image for stdout/stderr/exit; an authorized Android arm64 device executes the same image through adb with stdout/stderr/exit receipt; the phone also runs a generated native receipt binary that exchanges a bounded verifier receipt with a generated Mac binary over adb-forward TCP")))
+      (floor "Android executable shape is Form-native and inspectable; Docker Linux/arm64 executes the image for stdout/stderr/exit; an authorized Android arm64 device executes the same image through adb with stdout/stderr/exit receipt; the phone also runs a generated native receipt binary that exchanges a bounded verifier receipt with a generated Mac binary over adb-forward TCP"))
+    (windows-arm64
+      (clang-triple aarch64-pc-windows-msvc)
+      (binary-format pe-coff)
+      (assembly-surface pe-coff+arm64-asm)
+      (instruction-lane arm64-shared-with-macos-linux-android)
+      (host-image-surface windows-pe-coff)
+      (form-native-object form-pe-coff-arm64-pending)
+      (form-native-executable form-pe-arm64-exec-pending)
+      (jit-oracle clang)
+      (jit-runtime form-native-arm64-assembler)
+      (distribution https://hati.earth/downloads/hati-os/windows/arm64/hati-os-windows-arm64.zip)
+      (resource-implementations PowerShell+CIM+Get-Process CIM+PerformanceCounter+DirectML WASAPI+MediaFoundation Windows.Graphics.Capture+MediaFoundation Windows.Devices.Sensors+Location-when-present DirectML+D3D12+Vulkan DirectML+WASAPI-DSP unsupported-MLX)
+      (floor "Windows ARM64 shares the ARM64 assembler/JIT lane with macOS, Linux, and Android; the distinct work is the Windows PE/COFF object, executable, import, relocation, and loader/linker image surface"))
+    (windows-x86_64
+      (clang-triple x86_64-pc-windows-msvc)
+      (binary-format pe-coff)
+      (assembly-surface pe-coff+x64-asm)
+      (instruction-lane x64-intel-amd)
+      (host-image-surface windows-pe-coff)
+      (form-native-object form-pe-coff)
+      (form-native-executable form-pe-coff+dll-bootstrap-exe)
+      (bootstrap-host form/native/bootstrap/form_bootstrap_host.c)
+      (jit-oracle optional-clang-llvm-build-witness)
+      (jit-runtime fkwu-self-jit-no-runtime-toolchain)
+      (distribution https://hati.earth/downloads/hati-os/windows/x86_64/hati-os-windows-x86_64.zip)
+      (resource-implementations PowerShell+CIM+Get-Process CIM+PerformanceCounter+nvidia-smi WASAPI+MediaFoundation Windows.Graphics.Capture+MediaFoundation Windows.Devices.Sensors+Location-when-present NVIDIA-CUDA-driver+DirectML+Vulkan DirectML+WASAPI-DSP unsupported-MLX)
+      (floor "Windows x86_64 is the Intel/AMD x64 instruction lane; it is proven today by the Windows fkwu self-JIT runtime verifier without Go, clang, or LLVM on the runtime PATH, plus a Form-emitted PE/COFF object that lld-link turns into loadable DLLs swapped through LoadLibrary/GetProcAddress behind the same recipe symbol, and a cross-platform minimal bootstrap exe source that loads dynamic libraries on Windows/macOS/Linux/Android while measuring load/resolve/call boundary crossings")))
 
   (missing-physical-samples
     (tts-stt-loopback
@@ -123,7 +150,13 @@
       (missing "published tarball, sha256, source map, and physical-lane summary JSON at the catalog URL"))
     (android-arm64
       (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native ELF/aarch64 object proof, Form-native ELF/aarch64 executable shape proof, Docker Linux/arm64 stdout/stderr/exit receipt, Android adb stdout/stderr/exit receipt, and hati.earth URL are proven")
-      (missing "published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels")))
+      (missing "published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels"))
+    (windows-arm64
+      (floor "target row, clang oracle coordinate, PE/COFF ARM64 assembly surface, Form-native ARM64 assembler runtime row, Windows host implementation rows, and hati.earth URL are proven")
+      (missing "Form-native PE/COFF ARM64 object/executable image emitter, published zip, sha256, source map, and Windows-on-ARM physical-lane summary JSON at the catalog URL"))
+    (windows-x86_64
+      (floor "target row, x64 PE/COFF assembly surface, Form-native PE/COFF x64 object proof, lld-link DLL load/swap receipt, fkwu self-JIT runtime verifier, Windows host implementation rows, and hati.earth URL are proven")
+      (missing "broader Form-native PE/COFF x64 executable image emitter, published zip, sha256, source map, and Windows x86_64 physical-lane summary JSON at the catalog URL")))
 
   (invariant
     (no-mock-data)

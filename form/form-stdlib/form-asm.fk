@@ -154,6 +154,38 @@
     (defn fa-str-w (rt rn off) (fa-asm 3103784960 (list 1 32 256) (list rt rn off)))
     (defn fa-ldr-w (rt rn off) (fa-asm 3107979264 (list 1 32 256) (list rt rn off)))
 
+    ; ── arm64 SCALAR DOUBLE floating-point tier — the FLOAT half of the byte path ──
+    ; The integer tier above lowers pure-INTEGER hot functions to native bytes; this is
+    ; the missing FOUNDATION for lowering FLOAT-pure functions to BYTES with NO clang —
+    ; the substrate fkwu's float self-JIT needs (JIT_GAP_LEDGER #11 /
+    ; one-acceleration-engine.form M0). Same generic packer, new DATA rows (core-lift).
+    ; Each base is the ARM ARM FPDP encoding; every word VERIFIED byte-for-byte against
+    ; the clang/LLVM oracle (otool -tvVj of clang -c) — oracle as teacher, dropped by
+    ; fa-conviction once byte-proven. All double-precision (ptype=01); d0..d31 share the
+    ; register-number space, so the same small ints index them.
+    ; fadd d<rd>, d<rn>, d<rm> : base 0x1E602800 | rm<<16 | rn<<5 | rd   (oracle 1e622820)
+    (defn fa-fadd (rd rn rm) (fa-asm 509618176 (list 1 32 65536) (list rd rn rm)))
+    ; fsub d<rd>, d<rn>, d<rm> : base 0x1E603800                         (oracle 1e623820)
+    (defn fa-fsub (rd rn rm) (fa-asm 509622272 (list 1 32 65536) (list rd rn rm)))
+    ; fmul d<rd>, d<rn>, d<rm> : base 0x1E600800                         (oracle 1e620820)
+    (defn fa-fmul (rd rn rm) (fa-asm 509609984 (list 1 32 65536) (list rd rn rm)))
+    ; fdiv d<rd>, d<rn>, d<rm> : base 0x1E601800                         (oracle 1e621820)
+    (defn fa-fdiv (rd rn rm) (fa-asm 509614080 (list 1 32 65536) (list rd rn rm)))
+    ; fsqrt d<rd>, d<rn> : base 0x1E61C000 | rn<<5 | rd                  (oracle 1e61c020)
+    (defn fa-fsqrt (rd rn) (fa-asm 509722624 (list 1 32) (list rd rn)))
+    ; fmov d<rd>, d<rn> : base 0x1E604000                               (oracle 1e604020)
+    (defn fa-fmov (rd rn) (fa-asm 509624320 (list 1 32) (list rd rn)))
+    ; fcmp d<rn>, d<rm> (sets NZCV; read by fa-bcond) : base 0x1E602000 | rm<<16 | rn<<5  (oracle 1e622020)
+    (defn fa-fcmp (rn rm) (fa-asm 509616128 (list 32 65536) (list rn rm)))
+    ; scvtf d<rd>, x<rn> (signed i64 -> f64) : base 0x9E620000 | rn<<5 | rd               (oracle 9e620020)
+    (defn fa-scvtf (rd rn) (fa-asm 2657222656 (list 1 32) (list rd rn)))
+    ; fcvtzs x<rd>, d<rn> (f64 -> signed i64, toward zero) : base 0x9E780000 | rn<<5 | rd (oracle 9e780020)
+    (defn fa-fcvtzs (rd rn) (fa-asm 2658664448 (list 1 32) (list rd rn)))
+    ; ldr d<rt>, [x<rn>, #imm] (f64 load; caller passes imm/8) : base 0xFD400000 | imm<<10 | rn<<5 | rt (oracle fd400420)
+    (defn fa-ldr-d (rt rn imm) (fa-asm 4248829952 (list 1 32 1024) (list rt rn imm)))
+    ; str d<rt>, [x<rn>, #imm] (f64 store; caller passes imm/8) : base 0xFD000000                       (oracle fd000420)
+    (defn fa-str-d (rt rn imm) (fa-asm 4244635648 (list 1 32 1024) (list rt rn imm)))
+
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
             (if (nil? cand) 1

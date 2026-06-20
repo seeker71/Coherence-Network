@@ -1,0 +1,21 @@
+; preludes: form-stdlib/core.fk form-stdlib/bootstrap-host.fk
+;
+; bootstrap-host-band - cross-platform bootstrap exe contract.
+; Verdict 4095 when the minimal exe surface, portable source path, Windows and
+; POSIX loader carriers, exported recipe symbol, i64 ABI, swap contract,
+; measurement fields, and boundary labels are all named and discoverable.
+
+(do
+    (let c0 (if (str_eq (bh-host-exe) "form-bootstrap-host") 1 0))
+    (let c1 (if (str_eq (bh-source) "form/native/bootstrap/form_bootstrap_host.c") 2 0))
+    (let c2 (if (str_eq (bh-object-emitter-windows) "form-pe-coff") 4 0))
+    (let c3 (if (str_eq (bh-link-carrier-windows) "lld-link:/dll:/noentry:/export") 8 0))
+    (let c4 (if (str_eq (bh-loader-windows) "LoadLibraryA/GetProcAddress") 16 0))
+    (let c5 (if (str_eq (bh-loader-posix) "dlopen/dlsym") 32 0))
+    (let c6 (if (str_eq (bh-os-lanes) "windows,macos,linux,android") 64 0))
+    (let c7 (if (str_eq (bh-entry-symbol) "recipe") 128 0))
+    (let c8 (if (str_eq (bh-entry-abi) "i64->i64;windows-x64-rcx-rax;posix-target-abi") 256 0))
+    (let c9 (if (str_eq (bh-swap-contract) "exe-loads-swappable-form-dynamic-libraries") 512 0))
+    (let c10 (if (str_eq (bh-measure-fields) "load_ns,resolve_ns,call_ns,total_ns") 1024 0))
+    (let c11 (if (str_eq (bh-boundary) "form-native-to-host-os-loader;dynamic-library-call") 2048 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))

@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-20",
+  "thread_branch": "codex/windows-native-dylib-floor",
+  "commit_scope": "Raise the Windows x86_64 floor from fkwu self-JIT only to a Form-emitted PE/COFF object floor, lld-link DLL carrier, and Windows LoadLibrary/GetProcAddress dynamic swap path.",
+  "files_owned": [
+    ".gitattributes",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/offline-endpoints.form",
+    "docs/system_audit/commit_evidence_20260620_windows_pe_coff_dll_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/jit_dll_windows_test.go",
+    "form/form-kernel-go/jit_inram_other.go",
+    "form/form-kernel-go/jit_inram_windows.go",
+    "form/form-stdlib/form-pe-coff.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/form-pe-coff-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "idea_ids": [
+    "form-native-models",
+    "windows-x86_64-native-floor"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "task-2026-06-20-windows-pe-coff-dll-floor"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-aristotle",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only-verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "make prompt-gate -> pass in C:\\Users\\umuff\\.claude-worktrees\\Coherence-Network\\windows-native-dylib-floor",
+    ".gitattributes adds '*.sh text eol=lf'; git ls-files --eol reports form/validate.sh, form/scripts/fourth-arm.sh, and form/scripts/fourth-arm-gate.sh as w/lf with attr/text eol=lf on this Windows checkout",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk -> core.fk+form-pe-coff.fk+form-pe-coff-band.fk -> 255; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk -> core.fk+hati-os-targets.fk+hati-os-targets-band.fk -> 8388607; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+    "Git Bash with Windows toolchain PATH: cd form && bash scripts/fourth-arm-gate.sh form-pe-coff hati-os-targets -> PASS-4WAY hati-os-targets and PASS-4WAY form-pe-coff",
+    "cd form/form-kernel-go && go test . -run \"TestWindowsRecipeDLLLoadsCallsAndSwaps|TestWindowsDylibCallRefusesMissing\" -v -> both tests PASS; recipe_a returns n*3+7 and recipe_b returns n*5+1 behind the same exported recipe symbol",
+    "Subagent Aristotle final read-only verification -> PASS: git diff --check, focused Form validates, fourth-arm gate, and Windows Go DLL load/swap tests"
+  ],
+  "change_files": [
+    ".gitattributes",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/offline-endpoints.form",
+    "docs/system_audit/commit_evidence_20260620_windows_pe_coff_dll_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/jit_dll_windows_test.go",
+    "form/form-kernel-go/jit_inram_other.go",
+    "form/form-kernel-go/jit_inram_windows.go",
+    "form/form-stdlib/form-pe-coff.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/form-pe-coff-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git diff --check",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "Git Bash: export PATH=/c/Users/umuff/.cargo/bin:/c/PROGRA~1/Go/bin:/c/PROGRA~1/nodejs:/c/Users/umuff/AppData/Roaming/npm:/c/PROGRA~1/LLVM/bin:/c/TDM-GCC-64/bin:$PATH; cd form && bash scripts/fourth-arm-gate.sh form-pe-coff hati-os-targets",
+      "cd form/form-kernel-go && go test . -run \"TestWindowsRecipeDLLLoadsCallsAndSwaps|TestWindowsDylibCallRefusesMissing\" -v",
+      "subagent Aristotle read-only verification rerun with explicit Windows PATH -> pass"
+    ],
+    "fourth_arm_outputs": [
+      "form-pe-coff fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 255",
+      "hati-os-targets fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent; verdict 8388607"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "This change adds Form and local Go runtime floor support. Public deployment validation remains pending until PR checks and post-merge deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and sub-agent validation passed; CI and deploy validation remain pending until commit, push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Windows x86_64 can now emit a Form-native PE/COFF x64 object, link it into a DLL with lld-link, load it through LoadLibrary/GetProcAddress, and swap two DLL implementations behind the same recipe symbol.",
+    "public_endpoints": [
+      "local-only: Form stdlib and Go native loader; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Form four-way proof: form-pe-coff band validates to 255 on Go, Rust, TypeScript, and fkwu with 0 divergent.",
+      "Target catalog proof: hati-os-targets validates to 8388607 with Windows x86_64 form-pe-coff and form-pe-coff+lld-link-dll cells covered by the fourth arm.",
+      "Runtime proof: Go test emits two Form PE/COFF objects, links two DLLs with lld-link /dll /noentry /machine:x64 /export:recipe, loads both with dylib_call, and confirms the swapped recipes return different native results for the same exported symbol."
+    ]
+  }
+}

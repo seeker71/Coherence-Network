@@ -41,7 +41,7 @@ need lsof
 
 select_python() {
   local candidate
-  for candidate in "${API_DIR}/.venv/bin/python" "${API_DIR}/.venv/bin/python3" "$(command -v python3 || true)"; do
+  for candidate in "${API_DIR}/.venv/bin/python" "${API_DIR}/.venv/Scripts/python.exe" "${API_DIR}/.venv/bin/python3" "$(command -v python3 || true)"; do
     if [[ -n "${candidate}" && -x "${candidate}" ]]; then
       if "${candidate}" -c "import fastapi, uvicorn" >/dev/null 2>&1; then
         echo "${candidate}"

@@ -29,6 +29,13 @@ in_py_abs="$(cd "$(dirname "$in_py")" && pwd)/$(basename "$in_py")"
 out_fk_dir="$(cd "$(dirname "$out_fk")" && pwd)"
 out_fk_abs="$out_fk_dir/$(basename "$out_fk")"
 
+# On Windows/MSYS the native kernel binaries resolve Windows-form paths, not the
+# MSYS `/c/...` form bash produces. Mixed form (`C:/...`) is accepted by BOTH bash
+# redirects and the native kernels, so normalize every path handed to a kernel.
+to_native() { if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi; }
+in_py_abs="$(to_native "$in_py_abs")"
+out_fk_abs="$(to_native "$out_fk_abs")"
+
 # Locate the form/ directory.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 FORM_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
@@ -65,6 +72,7 @@ PRELUDES=(
 
 # Working directory for compiled artifacts.
 work_dir="$(mktemp -d "${TMPDIR:-/tmp}/kernel-bmf-compile.XXXXXX")"
+work_dir="$(to_native "$work_dir")"
 cleanup() { rm -rf "$work_dir"; }
 trap cleanup EXIT
 

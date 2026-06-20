@@ -20,10 +20,11 @@
 ; residual walks of transformer-block.fk (tb-dot/tb-matvec/tb-attn-seq/tb-add-seq, 511). Nothing
 ; re-derived. Weights are arguments — recipe DATA all the way down; a layer stack is a SEQUENCE of
 ; lblk-block calls, mutable at runtime (the dynamic-recipe advantage). fp64 lane; the GPU emit
-; (fp32 mirror) and format lanes are the named follow-ups. Attention is non-causal here, matching
-; tb-block's whisper attention and the jte-blk-attn GPU walk it reuses; the causal mask is a named
-; orthogonal follow-up (a per-query key-prefix, no numeric change). Position = absolute token index.
-; Proven four-way against the libm fp64 reference by tests/llama-block-band.fk.
+; (fp32 mirror) and format lanes are the named follow-ups. lblk-block is non-causal (matching the
+; jte-llama-block-fwd-msl GPU walk it backs); lblk-block-causal applies the autoregressive mask
+; (tb-attn-seq-causal — a per-query key-prefix, no numeric change) for the real decoder that the
+; generation loop steps. Position = absolute token index. Proven four-way against the libm fp64
+; reference by tests/llama-block-band.fk; the causal mask by tests/causal-attention-band.fk.
 
 ; --- RMSNorm each token-vector of a sequence (gain g, no bias) ---
 (defn lblk-rms-seq (xs g eps)
@@ -67,3 +68,18 @@
 ; --- the whole llama block ---
 (defn lblk-block (xs g1 eps wq wk wv wo scale HD g2 wg wu wd)
   (lblk-ffn-block (lblk-attn-block xs g1 eps wq wk wv wo scale HD) g2 eps wg wu wd))
+
+; --- the causal llama block: the real autoregressive decoder. Identical to lblk-block but each
+;     token attends only to itself and the tokens before it (tb-attn-seq-causal). At the last token
+;     the prefix is the whole sequence, so the last position is bit-identical to lblk-block; earlier
+;     tokens differ because the non-causal block let them see the future. This is the block the
+;     generation loop steps: it produces one token's next-state without leaking later positions. ---
+(defn lblk-attn-sub-causal (n1 wq wk wv wo scale HD)
+  (lblk-proj-seq wo
+    (tb-attn-seq-causal (lblk-rope-seq (lblk-proj-seq wq n1) HD)
+                        (lblk-rope-seq (lblk-proj-seq wk n1) HD)
+                        (lblk-proj-seq wv n1) scale)))
+(defn lblk-attn-block-causal (xs g1 eps wq wk wv wo scale HD)
+  (tb-add-seq xs (lblk-attn-sub-causal (lblk-rms-seq xs g1 eps) wq wk wv wo scale HD)))
+(defn lblk-block-causal (xs g1 eps wq wk wv wo scale HD g2 wg wu wd)
+  (lblk-ffn-block (lblk-attn-block-causal xs g1 eps wq wk wv wo scale HD) g2 eps wg wu wd))

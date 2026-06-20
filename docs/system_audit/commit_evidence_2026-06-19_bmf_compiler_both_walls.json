@@ -1,0 +1,29 @@
+{
+  "title": "Gap #9 / M2 — BOTH hard walls cross four-way: apply-object-rule (the whole rule runtime) + the symbol-wire constructor",
+  "date": "2026-06-19",
+  "thread_branch": "claude/bmf-object-rule-fourway",
+  "stone": "The largest step on M2 (make the BMF compiler's own body crystallize four-way). The body named two hard walls: (1) defunctionalize apply-object-rule (the higher-order rule application), and (2) the rest of the intern-door family (incl. the symbol-wire constructor). This crosses BOTH four-way. The key finding: the defunctionalization wall was already CARRIED by the higher-order function-arg support (flt-fref + tag-44 indirect call) that landed earlier — it had simply never been PROVEN by registering the full object-rule runtime band. fkwu computes the entire rule engine correctly.",
+  "what_proved": {
+    "wall_1_apply_object_rule": "tests/bmf-form-object-runtime-band.fk -> 67108863 FOUR-WAY (Go=Rust=TS=fkwu). The WHOLE object-rule runtime crystallizes: apply-object-rule, match-object-pattern, apply-object-rule-set, the object-rule dispatch index (known/candidate/skip/bucket/segment counts), cut/stop failure behavior, choice-direct-safety, AND reverse emission (the function-valued cell-undo invocation path). The emit functions (emit-captures/emit-source-span) pass as function-refs and dispatch through the tag-44 indirect call.",
+    "wall_2_symbol_wire": "tests/bmf-symbol-wire-band.fk -> 255 FOUR-WAY. bmf-global-symbol-cell (a content-addressed cell whose inverse is a FUNCTION) constructs; its binding projects (anchor/domain/lens/symbol/name/names); and bmf-reverse-object INVOKES the function-valued undo. The symbol-wire sibling constructor named in the node/substrate standing wall crosses."
+  },
+  "files_owned": [
+    "form/form-stdlib/tests/bmf-symbol-wire-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/tests/bmf-form-object-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/tests/bmf-symbol-wire-band.fk"
+    ],
+    "summary": "bmf-form-object-runtime -> 67108863 four-way (3/3 cold rounds stable, 0 divergent); bmf-symbol-wire -> 255 four-way (2/2 cold rounds stable). Manifest rows: bmf-form-object-runtime fks 67108863, bmf-symbol-wire fks 255."
+  },
+  "harness_finding": {
+    "issue": "fourth_prepare_all batch table-build is NOT robust when cold-building many large fourth-arm tables in one chunked pass. Registering 5 new large tables (bmf-object-data, bmf-form-object-runtime, bmf-symbol-wire, bmf-source-rule-to-runtime, bmf-component-runtime-exec) and clearing the cache made ALL of them intermittently read 'divergent' or empty — yet running each band's table SINGLY and feeding it to the fkwu binary directly gives the CORRECT value (67108863 / 255 / 1023 / 1023). So the kernel is correct; the chunked table-BUILD path (fourth_run_chunk marker-split / parallel chunks) contaminates/truncates tables under cold multi-table load. With 1-2 new rows it is stable. This is also a latent CI red-flake risk for the whole fourth-arm suite on a cold runner.",
+    "consequence": "Only the two reliably-building walls (apply-object-rule runtime, symbol-wire) are registered here. bmf-source-rule-to-runtime and bmf-component-runtime-exec (the source-rule->runtime compiler engine, fkwu-correct at 1023) and the ~60 language-grammar bands stay UNregistered until the batch-build is hardened. Flagged as a separate task."
+  },
+  "remaining": "(1) Harden fourth_prepare_all/fourth_run_chunk so cold multi-table builds are deterministic — unblocks registering the rest of the BMF compiler/grammar surface. (2) generated bp-table parity beyond the literal registry floor. (3) Then register bmf-source-rule-to-runtime + bmf-component-runtime-exec (already fkwu-correct) and sweep the language-grammar bands.",
+  "north_star": "The whole BMF compiler body crystallizes as a lowered recipe walked four-way. With both hard walls down (rule-application defunctionalization + symbol-wire), what remains is mechanical surface registration + a harness robustness fix — the conceptual walls of M2 are crossed."
+}

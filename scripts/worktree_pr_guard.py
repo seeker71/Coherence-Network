@@ -146,10 +146,21 @@ def _hint_for_step(name: str, command: str, output: str) -> str:
     return "Review command output tail, fix root cause, and re-run this guard before push."
 
 
+def _python_argv(*args: str) -> list[str]:
+    return [sys.executable, *args]
+
+
+def _python_command(*args: str) -> str:
+    argv = _python_argv(*args)
+    if os.name == "nt":
+        return subprocess.list2cmdline(argv)
+    return " ".join(shlex.quote(part) for part in argv)
+
+
 def _existing_script_command(*relative_candidates: str) -> str | None:
     for rel in relative_candidates:
         if (REPO_ROOT / rel).exists():
-            return f"python3 {rel}"
+            return _python_command(rel)
     return None
 
 
@@ -523,6 +534,14 @@ def _is_runtime_web_scoped_change(path: str) -> bool:
 
 def _run_commit_evidence_guard(base_ref: str) -> StepResult:
     start = time.monotonic()
+    evidence_range_command = _python_command(
+        "scripts/validate_commit_evidence.py",
+        "--base",
+        base_ref,
+        "--head",
+        "HEAD",
+        "--require-changed-evidence",
+    )
     changed, diff_error = _changed_paths_range(base_ref)
     raw_worktree_changed = _changed_paths_worktree()
     ignored_artifacts = sorted(path for path in raw_worktree_changed if _is_skippable_local_artifact(path))
@@ -530,7 +549,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
     if diff_error:
         return StepResult(
             name="commit-evidence-guard",
-            command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+            command=evidence_range_command,
             ok=False,
             exit_code=1,
             duration_seconds=round(time.monotonic() - start, 2),
@@ -544,7 +563,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
             artifact_note = f" Ignored local artifacts: {', '.join(ignored_artifacts)}."
         return StepResult(
             name="commit-evidence-guard",
-            command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+            command=evidence_range_command,
             ok=True,
             exit_code=0,
             duration_seconds=round(time.monotonic() - start, 2),
@@ -558,7 +577,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
     tails: list[str] = []
     if changed:
         cmd = [
-            "python3",
+            sys.executable,
             "scripts/validate_commit_evidence.py",
             "--base",
             base_ref,
@@ -578,7 +597,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
         if proc.returncode != 0:
             return StepResult(
                 name="commit-evidence-guard",
-                command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                command=evidence_range_command,
                 ok=False,
                 exit_code=proc.returncode,
                 duration_seconds=round(time.monotonic() - start, 2),
@@ -593,7 +612,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
         if not evidence_files:
             return StepResult(
                 name="commit-evidence-guard",
-                command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                command=evidence_range_command,
                 ok=False,
                 exit_code=1,
                 duration_seconds=round(time.monotonic() - start, 2),
@@ -603,7 +622,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
 
         declared: set[str] = set()
         for evidence_file in evidence_files:
-            cmd = ["python3", "scripts/validate_commit_evidence.py", "--file", evidence_file]
+            cmd = _python_argv("scripts/validate_commit_evidence.py", "--file", evidence_file)
             proc = subprocess.run(
                 cmd,
                 cwd=REPO_ROOT,
@@ -616,7 +635,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
             if proc.returncode != 0:
                 return StepResult(
                     name="commit-evidence-guard",
-                    command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                    command=evidence_range_command,
                     ok=False,
                     exit_code=proc.returncode,
                     duration_seconds=round(time.monotonic() - start, 2),
@@ -628,7 +647,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
             except Exception as exc:  # pragma: no cover - defensive guard
                 return StepResult(
                     name="commit-evidence-guard",
-                    command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                    command=evidence_range_command,
                     ok=False,
                     exit_code=1,
                     duration_seconds=round(time.monotonic() - start, 2),
@@ -649,7 +668,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
             tails.append(f"ERROR: worktree evidence coverage missing changed paths: {missing}")
             return StepResult(
                 name="commit-evidence-guard",
-                command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+                command=evidence_range_command,
                 ok=False,
                 exit_code=1,
                 duration_seconds=round(time.monotonic() - start, 2),
@@ -661,7 +680,7 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
 
     return StepResult(
         name="commit-evidence-guard",
-        command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
+        command=evidence_range_command,
         ok=True,
         exit_code=0,
         duration_seconds=round(time.monotonic() - start, 2),
@@ -697,22 +716,27 @@ def _local_steps(
         [
             (
                 "spec-quality-guard",
-                f"python3 scripts/validate_spec_quality.py --base {base_ref} --head HEAD",
+                _python_command("scripts/validate_spec_quality.py", "--base", base_ref, "--head", "HEAD"),
             ),
             (
                 "runtime-drift-guard",
-                "python3 scripts/check_runtime_drift.py",
+                _python_command("scripts/check_runtime_drift.py"),
             ),
             (
                 "maintainability-regression-guard",
-                f"python3 api/scripts/run_maintainability_audit.py --output {shlex.quote(maintainability_output)} --fail-on-regression",
+                _python_command(
+                    "api/scripts/run_maintainability_audit.py",
+                    "--output",
+                    maintainability_output,
+                    "--fail-on-regression",
+                ),
             ),
         ]
     )
     if not _worktree_has_maintainability_scoped_changes(base_ref):
         steps = [s for s in steps if s[0] != "maintainability-regression-guard"]
     if require_gh_auth:
-        steps.insert(0, ("dev-auth-preflight", "python3 scripts/check_dev_auth.py --json"))
+        steps.insert(0, ("dev-auth-preflight", _python_command("scripts/check_dev_auth.py", "--json")))
     api_scoped = force_api_tests or _worktree_has_scoped_changes(base_ref, _is_api_test_scoped_change)
     web_scoped = force_web_build or _worktree_has_scoped_changes(base_ref, _is_web_build_scoped_change)
     runtime_scoped = force_runtime_web or _worktree_has_scoped_changes(base_ref, _is_runtime_web_scoped_change)
@@ -728,19 +752,37 @@ def _local_steps(
 def _check_run_hint(name: str) -> str:
     value = name.lower()
     mapping: list[tuple[str, str]] = [
-        ("validate commit evidence", "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"),
-        ("spec quality", "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"),
-        ("workflow file references", "python3 scripts/validate_workflow_references.py"),
-        ("maintainability", "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression"),
+        (
+            "validate commit evidence",
+            _python_command(
+                "scripts/validate_commit_evidence.py",
+                "--base",
+                "origin/main",
+                "--head",
+                "HEAD",
+                "--require-changed-evidence",
+            ),
+        ),
+        ("spec quality", _python_command("scripts/validate_spec_quality.py", "--base", "origin/main", "--head", "HEAD")),
+        ("workflow file references", _python_command("scripts/validate_workflow_references.py")),
+        (
+            "maintainability",
+            _python_command(
+                "api/scripts/run_maintainability_audit.py",
+                "--output",
+                "maintainability_audit_report.json",
+                "--fail-on-regression",
+            ),
+        ),
         ("run api tests", "cd api && pytest -q"),
         ("test", "cd api && pytest -q"),
         ("build web", "cd web && npm ci --allow-git=none && npm run build"),
-        ("thread gates", "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"),
+        ("thread gates", _python_command("scripts/worktree_pr_guard.py", "--mode", "local", "--base-ref", "origin/main")),
     ]
     for key, cmd in mapping:
         if key in value:
             return cmd
-    return "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    return _python_command("scripts/worktree_pr_guard.py", "--mode", "local", "--base-ref", "origin/main")
 
 
 def _parse_optional_status_contexts(raw: str) -> set[str]:

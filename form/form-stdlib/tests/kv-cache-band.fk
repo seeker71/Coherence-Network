@@ -1,0 +1,50 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/kv-cache.fk
+;
+; kv-cache-band — the autoregressive KV cache (kv-generate) lifted to the four-kernel floor. The cache
+; is the O(n)-per-token realization of causal attention: keep earlier positions' keys/values, append
+; the new token's, attend over the grown prefix. The proof is that the cache is EXACT — kv-generate is
+; BIT-IDENTICAL to the full causal recompute (tb-attn-seq-causal, four-way #3365) — because a cached
+; k_i/v_i depends only on position i, never the future, so the grown cache at step t equals exactly the
+; prefix the causal mask cuts. The proof is the RELATIONSHIPS, each grounded:
+;
+;   the first cached step sees ONLY itself — single-key softmax = 1, output = v0 exactly (no future leak);
+;     and its value (2000000/3000000) is the causal-attention-band's libm-pinned causal attn[0].
+;   the cached LAST step == the full causal recompute — its value (4193176/5924234) is causal attn[1],
+;     so the cache reproduces the libm-pinned four-way value with no recompute of the earlier step.
+;   the EQUIVALENCE LAW (the heart): kv-generate == tb-attn-seq-causal element-for-element, at n=2 AND
+;     n=3 — the n=3 fixture proves the recursion threads the cache correctly past the boundary (the
+;     inductive step), grounded by equivalence to the already-four-way tb-attn-seq-causal.
+;   the cache is NOT a no-op: the generated sequence != the raw values (later tokens mix the prefix),
+;     while the first token still equals v0 — the mask restricts the start, the cache grows after.
+;
+; Verdict 255 when the cache lands four-way:
+;   1     kv2[0][0] → 2000000   (first cached step = v0 exactly: single-key softmax, no future)
+;   2     kv2[0][1] → 3000000
+;   4     kv2[1][0] → 4193176   (cached last step == full causal recompute, libm-pinned)
+;   8     kv2[1][1] → 5924234
+;   16    kv2 == cattn  (n=2: cache EXACTLY equals the full causal recompute, bit-for-bit)
+;   32    kv3 == cattn3 (n=3: the cache threads correctly past the boundary — the inductive step)
+;   64    kv3[0][0] → 2000000   (n=3 first token still sees only itself)
+;   128   kv3 != vs3            (the cache is not a no-op: later tokens mix the grown prefix)
+(do
+    ; --- the causal-attention-band fixture (scale 1, d=2), 2 positions ---
+    (let qs (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let ks (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let vs (list (list 2.0 3.0) (list 5.0 7.0)))
+    (let kv2   (kv-generate qs ks vs 1.0))
+    (let cattn (tb-attn-seq-causal qs ks vs 1.0))
+    ; --- a 3-position fixture: proves the cache threads correctly for n>2 (the inductive step) ---
+    (let qs3 (list (list 1.0 0.0) (list 0.0 1.0) (list 1.0 1.0)))
+    (let ks3 (list (list 1.0 0.0) (list 0.0 1.0) (list 1.0 1.0)))
+    (let vs3 (list (list 2.0 3.0) (list 5.0 7.0) (list 11.0 13.0)))
+    (let kv3    (kv-generate qs3 ks3 vs3 1.0))
+    (let cattn3 (tb-attn-seq-causal qs3 ks3 vs3 1.0))
+    (let c0 (if (eq (round (mul (nth (nth kv2 0) 0) 1000000.0)) 2000000) 1 0))
+    (let c1 (if (eq (round (mul (nth (nth kv2 0) 1) 1000000.0)) 3000000) 2 0))
+    (let c2 (if (eq (round (mul (nth (nth kv2 1) 0) 1000000.0)) 4193176) 4 0))
+    (let c3 (if (eq (round (mul (nth (nth kv2 1) 1) 1000000.0)) 5924234) 8 0))
+    (let c4 (if (eq (kv-lol-eq kv2 cattn) 1) 16 0))
+    (let c5 (if (eq (kv-lol-eq kv3 cattn3) 1) 32 0))
+    (let c6 (if (eq (round (mul (nth (nth kv3 0) 0) 1000000.0)) 2000000) 64 0))
+    (let c7 (if (eq (kv-lol-eq kv3 vs3) 0) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

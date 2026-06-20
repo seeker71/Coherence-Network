@@ -1,0 +1,82 @@
+; http-client.fk — render an HTTP/1.1 request for ANY method, in pure Form.
+;
+; THE PRINCIPLE (Urs): the method is DATA, not control flow. ONE generic recipe
+; renders GET / POST / PUT / DELETE / OPTIONS — or any custom method (*) — because
+; the method is just the first token on the request line. Body presence is the
+; only branch: it adds Content-Type + Content-Length and the body. There is NO
+; per-method native and NO C: the whole method family is flow + choice over data,
+; so it walks one vocabulary on all four arms (Go / Rust / TS / fkwu).
+;
+; This is the corrected layer for HTTP client methods. The earlier move — a
+; monolithic per-method C native in the emitter — was the wrong layer. Rendering
+; and parsing are Form (http-parse.fk lexes the response). The ONE atom beneath
+; this recipe is the wire (connect / send / recv); see fkwu-host-io-port-plan.md.
+; Everything ABOVE the wire is this recipe.
+
+(defn kh-render-request (method path host body)
+  (do
+    (let blen (str_len body))
+    (let head (str_concat
+                (str_concat
+                  (str_concat
+                    (str_concat
+                      (str_concat method " ")
+                      path)
+                    " HTTP/1.0\r\nHost: ")
+                  host)
+                "\r\nConnection: close\r\n"))
+    (if (gt blen 0)
+        (str_concat
+          (str_concat
+            (str_concat
+              (str_concat head "Content-Type: application/json\r\nContent-Length: ")
+              (int_to_str blen))
+            "\r\n\r\n")
+          body)
+        (str_concat head "\r\n"))))
+
+; http-fetch — a COMPLETE HTTP client in pure Form: parse the url, render the
+; request (any method, kh-render-request), send it over the ONE wire primitive
+; (sock_request), return the raw response. http_get is just http-fetch "GET".
+; The wire is the only atom; everything else is flow + choice.
+(defn http-fetch (method url body)
+  (do
+    (let https (eq (str_find url "https://" 0) 0))
+    (let after (substring url (if https 8 7) (str_len url)))
+    (let slash (str_find after "/" 0))
+    (let hostport (if (eq slash -1) after (substring after 0 slash)))
+    (let path (if (eq slash -1) "/" (substring after slash (str_len after))))
+    (let colon (str_find hostport ":" 0))
+    (let host (if (eq colon -1) hostport (substring hostport 0 colon)))
+    (let port (if (eq colon -1) (if https "443" "80") (substring hostport (add colon 1) (str_len hostport))))
+    (let req (kh-render-request method path host body))
+    (if https (tls_request host port req) (sock_request host port req))))
+
+; ── generic HTTP message parsing (works for a REQUEST or a RESPONSE) ──
+; The body is everything after the first blank line; the start-line is up to the
+; first CRLF. These are message-generic — the only request/response difference is
+; how the start-line is read (method vs status). High grammar: one parser, two views.
+(defn kh-msg-body (msg)
+  (do
+    (let crlf (str_find msg "\r\n\r\n" 0))
+    (if (gt crlf -1)
+        (substring msg (add crlf 4) (str_len msg))
+        (do
+          (let lf (str_find msg "\n\n" 0))
+          (if (gt lf -1) (substring msg (add lf 2) (str_len msg)) "")))))
+
+(defn kh-msg-start-line (msg)
+  (do
+    (let nl (str_find msg "\r\n" 0))
+    (if (gt nl -1) (substring msg 0 nl) msg)))
+
+; response status = the integer second token of the start line ("HTTP/1.0 200 OK" -> 200)
+(defn kh-status-of (response)
+  (do
+    (let line (kh-msg-start-line response))
+    (let sp (str_find line " " 0))
+    (if (eq sp -1) 0
+        (do
+          (let rest (substring line (add sp 1) (str_len line)))
+          (let sp2 (str_find rest " " 0))
+          (str_to_int (if (eq sp2 -1) rest (substring rest 0 sp2)))))))

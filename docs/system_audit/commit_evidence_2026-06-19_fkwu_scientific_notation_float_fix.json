@@ -1,0 +1,26 @@
+{
+  "kind": "kernel-fix",
+  "date": "2026-06-19",
+  "headline": "Scientific-notation float literals (1e-05) were mis-handled in BOTH the Rust kernel's S-expr lexer AND fkwu's table flattener. Fixed both. The supposed 'Rust multi-head divergence' was never multi-head — it was the eps=1e-05 literal. transformer-mh / decoder / generate / whisper-mh-block-real + positional now cross FOUR-WAY.",
+  "root_cause": {
+    "symptom": "transformer-mh-band: go=1, rust=0, ts=1 (fails three-way); fkwu errors -5. Traced (bare-return value probes) through tb-mh-block → tb-ln-seq → tn-sqrt → its input. The input carried eps, baked by Python repr as `1e-05`.",
+    "rust": "main.rs SexpTok reader (and source_native_lex): the [eE][+-]?digits exponent was only consumed INSIDE the `.`-fraction branch, so `1e-05` (no decimal point) lexed `1` as an INT and `e-05` as a separate symbol → fatal[kernel_panic]: unbound: e-05. Go/TS readers already parse the bare-mantissa exponent.",
+    "fkwu": "form-flatten.fk flt-num2/flt-neg-num and the flt-scan-num2 pre-pass both only treated digits.digits as a float, stopping at a bare `e`. The parse path emitted a wrong literal AND the scan path never interned `1e-05` into the float pool → fkwu strtod read the wrong pool string → 0. (An earlier partial fix had only covered the after-the-dot exponent case.)"
+  },
+  "fix": {
+    "rust": "main.rs: both number arms (positive and `-`-prefixed) now set is_float and consume [eE][+-]?digits after the integer mantissa with or without a fractional part; a bare `e` not followed by a valid exponent stays a separate symbol.",
+    "fkwu": "form-flatten.fk: flt-float-end consumes a trailing exponent; new flt-has-exp/flt-exp-lit handle the no-decimal-point case in BOTH flt-num2/flt-neg-num (parse) and flt-scan-num2 (the float-pool pre-pass)."
+  },
+  "verified_four_way": {
+    "minimal_repro": "(round (mul 1e-05 1000000000.0)) → 10000 on go/rust/ts/fkwu (was: rust panic, fkwu 0)",
+    "bands": ["transformer-mh", "transformer-decoder", "transformer-generate", "whisper-mh-block-real", "positional", "mel-frame", "conv-stem", "transformer-gelu-erf"],
+    "full_suite": "fourth arm 369 bands four-way; 0 divergent. The WHOLE whisper-tiny stack crosses (incl. mel-full).",
+    "mel-full_resolved": "mel-full was the SAME e-notation bug (its samples buffer carries e-15 values); its earlier fourth=0 was stale-cache noise + a lost `; preludes:` header (both fixed). Component probes (nth over the 560-element buffer, mfu-windowed, mfu-spectrogram, mfb-maxdiff) all cross four-way; with a fresh cache mel-full-band is four-way (maxdiff 1.8e-11). Registered."
+  },
+  "methodology_lessons": [
+    "The fourth arm compares the band's RETURN value — bands must end in a bare verdict, never (print x).",
+    "Read go/rust/ts/fkwu separately; clear .cache/fourth between exploratory runs.",
+    "Validate three-way via validate.sh, never bin-go alone.",
+    "A divergence shared across two kernels (here Rust + fkwu) can have ONE root cause (a literal format); fix the cause, not each symptom."
+  ]
+}

@@ -310,6 +310,10 @@ def _run_cli(api_base: str, *args: str) -> subprocess.CompletedProcess:
         _write_cli_config(Path(home), api_base=api_base)
         env = os.environ.copy()
         env["HOME"] = home
+        # node's os.homedir() reads USERPROFILE on Windows (HOME is ignored),
+        # so the CLI's ~/.coherence-network/config.json only resolves to the
+        # sandbox dir when USERPROFILE points there too.
+        env["USERPROFILE"] = home
         env.pop("COHERENCE_API_URL", None)
         env.pop("COHERENCE_HUB_URL", None)
         env.pop("COHERENCE_API_KEY", None)
@@ -318,6 +322,10 @@ def _run_cli(api_base: str, *args: str) -> subprocess.CompletedProcess:
             cwd=str(REPO_ROOT),
             capture_output=True,
             text=True,
+            # Decode the CLI's UTF-8 stdout as UTF-8 regardless of the host
+            # locale; on Windows text=True defaults to cp1252 and mangles
+            # non-ASCII (e.g. the em-dash in `coh help`).
+            encoding="utf-8",
             timeout=20,
             check=False,
             env=env,

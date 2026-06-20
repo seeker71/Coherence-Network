@@ -1,5 +1,13 @@
 # fourth-arm-bands.txt — the bands proven to cross four-way on the emitted
-# fourth kernel (fkwu, the universal walker). One row per band:
+# fourth kernel (fkwu). fkwu has two faces over the SAME emit: the universal
+# PROOF-WALKER (fkc-emit-universal) this manifest gates four-way, and a
+# SELF-JIT (fkc-nat-expr / fkc-emit-jit2) that crystallizes hot pure functions
+# (tags 1-7,12) to NATIVE and melts them on cool, champion-challenger re-earned
+# (jit-lower 15, full-jit-lower 63, champion-challenger 127). The native target
+# is Form -> asm BYTES, not clang: form-asm 31 / form-lower 31 / form-macho 31 /
+# form-pe-coff 511 / bootstrap-host 4095 / form-elf 31 -> recipe-dylib 787349 -> codesign 632490, every stage a four-way
+# Form recipe; clang is dropped by form-asm's byte-identity conviction gate,
+# kept only as oracle. One row per band:
 #
 #   <band-stem> <table-emitter> <expected-verdict>
 #
@@ -320,6 +328,7 @@ evidence-grounding fks 127
 forget-stale fks 127
 asm-pl-human-emit fks 31
 form-asm fks 31
+form-asm-float fkc 2047
 form-asm-table fks 7
 form-asm-syscall fks 31
 form-asm-branch fks 31
@@ -332,11 +341,14 @@ form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31
 form-lower fks 31
+form-lower-float fkc 15
 form-lower-cond fks 31
 form-lower-map fks 31
 form-lower-rec fks 31
 form-lower-streq fks 31
 form-macho fks 31
+form-pe-coff fks 511
+bootstrap-host fks 4095
 form-elf fks 31
 form-elf-exec fks 63
 form-mut fks 31
@@ -346,7 +358,7 @@ go-jit fks 8
 go-jit-value-list fks 4
 harmonic-geometry fks 111111
 hati-os-native-cli-emit fks 7
-hati-os-targets fks 16383
+hati-os-targets fks 8388607
 heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
@@ -356,12 +368,13 @@ jit-lower-program fks 15
 full-jit-lower fks 63
 jit-lower-bmf fks 15
 jit-lower-emit fks 63
-jit-metal-lanes fks 4095
+jit-metal-lanes fks 8191
 jit-native-span fks 255
 jit-oracle-learning fks 1023
 jit-tensor-emit fks 7
 block-fwd-emit fks 7
 llama-block-fwd-emit fks 7
+llama-block-fwd-causal-emit fks 7
 float-conversions fks 31
 trig fks 127
 trig-atan fks 1111111
@@ -385,6 +398,7 @@ neural-lm-real fks 7
 llama-numerics fks 4095
 rope fks 4095
 llama-block fks 4095
+causal-attention fks 511
 geometric-learning fks 8388607
 transcendental-natives fks 16
 learning-arc fks 127
@@ -408,6 +422,8 @@ shamballa-light-codes fks 111111
 shamballa-symbol-packs fks 1023
 silence-floor fks 31
 slice-update-roundtrip fks 127
+update-ingest fkc 63
+presence-pacing fkc 63
 model-data-sharing fks 4095
 model-slice-chunk-range fks 4095
 optimizer-delta-slice fks 4095
@@ -614,6 +630,11 @@ ll-buffer fkc 1
 # BMF/dialect surface is provable on the fourth kernel.
 bmf-core fks 600
 bmf-grammar fks 300
+bmf-object-data fks 65535
+bmf-form-object-runtime fks 67108863
+bmf-symbol-wire fks 255
+bmf-source-rule-to-runtime fks 1023
+bmf-component-runtime-exec fks 1023
 kernel-image-proposal fks 111111
 form-os-channel fks 111111
 # ── host-os surface lane — the membrane/grammar/ledger cells that compose to
@@ -632,6 +653,7 @@ arch-gen fks 31
 arch-type fks 31
 arch-search fks 31
 arch-joint fks 31
+op-gen fks 31
 moe-router fks 127
 form-lower-callconv fkc 15
 transformer-kernel fks 511
@@ -640,6 +662,20 @@ storage-keys fks 7
 replica-merge fks 15
 replica-serve fks 7
 form-lower-writefile fkc 15
+mel-frame fks 1023
+transformer-gelu-erf fks 255
+conv-stem fks 1
+positional fks 1
+transformer-mh fks 1
+transformer-decoder fks 1
+transformer-generate fks 1
+whisper-mh-block-real fks 1
+mel-full fks 1
+transformer-real-train fks 31
+form-cli-sufficiency fks 255
+form-cli-stats fks 255
+form-native-run fks 63
+part-self-update fks 127
 trivial-typed-leaf fks 1111111
 json-codec-bml fks 8191
 whisper-block0 fks 1023
@@ -647,6 +683,12 @@ json-meaning-ingestion fks 1000
 form-cli fks 31
 json-emitter fks 31
 json-promoted-types fks 115
+form-cli-band fks 511
+http-client-render fks 63
+socket-loopback fks 111111
+nanite-mem-parse fks 15
+kv-cache fks 255
+greedy-decode fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
 # GATED four-way by scripts/fourth-arm-gate.sh (validate.sh: 0 divergent AND

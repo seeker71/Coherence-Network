@@ -38,12 +38,11 @@
 ; the current fourth-floor registry names fold onto make_nodeid packets; the
 ; full generated bp table remains a follow-on lift.
 ;
-; Native carrier floor: http_get lowers to tag 105 so external http:// and
-; verified https:// cross the emitted fourth arm as non-shell carriers. _get
-; lowers to tag 106 so source recipes can read the returned dict/list receipts,
-; including response-header rows, inside fkwu. North star: the same lowering
-; carries request headers, response headers, timing, status, body, and errors
-; across every host implementation through explicit native channels.
+; Native carrier floor: socket_listen/connect/accept/send/recv/close lower to
+; tags 120..126 as the host-OS socket boundary. http_get/sock_request remain
+; compatibility carriers above that floor; HTTP verbs belong in Form recipes
+; over socket bytes, not as the primitive substrate. _get lowers to tag 106 so
+; source recipes can read returned dict/list receipts inside fkwu.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 ; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
@@ -57,6 +56,8 @@
           (list "substring" 3 29) (list "str_find" 3 30)
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
           (list "input_byte" 1 17)
+          (list "read_line" 0 114) (list "print_str" 1 115) (list "isatty" 0 116)
+          (list "self_source" 0 117)
           (list "intern_trivial_int" 1 43)
           (list "intern_trivial_bool" 1 112) (list "intern_trivial_float" 1 113)
           (list "make_nodeid" 4 91)
@@ -79,6 +80,15 @@
           (list "read_file" 1 63) (list "temp_dir" 0 101)
           (list "write_file_text" 2 104)
           (list "http_get" 3 105)
+          (list "sock_request" 3 118)
+          (list "tls_request" 3 119)
+          (list "socket_listen" 1 120)
+          (list "socket_port" 1 121)
+          (list "socket_accept" 1 122)
+          (list "socket_connect" 2 123)
+          (list "socket_send" 2 124)
+          (list "socket_recv" 2 125)
+          (list "socket_close" 1 126)
           (list "_get" 2 106)
           (list "file_mtime" 1 107) (list "scan_run" 3 108)
           (list "record_get" 2 65) (list "record_set" 3 66)
@@ -167,12 +177,25 @@
 ; a '-' immediately before digits is a negative integer literal
 (defn flt-neg (ve) (list (fk-lit (sub 0 (nth ve 0))) (nth ve 1)))
 (defn flt-num (s pos env) (flt-num2 s pos (fp-digits s pos 0) env))
+; a bare integer mantissa followed by a valid exponent (1e-05, no decimal point —
+; Python repr's shape) is still a float; flt-fe-exp returns >ie only for a valid exponent.
+(defn flt-has-exp (s ie)
+    (if (and (lt ie (fp-len s)) (or (eq (fp-at s ie) 101) (eq (fp-at s ie) 69)))
+        (gt (flt-fe-exp s (add ie 1) ie) ie)
+        0))
+(defn flt-exp-lit (s ie whole start env)
+    (do
+        (let end (flt-fe-exp s (add ie 1) ie))
+        (let lit (substring s start end))
+        (list (fk-f64 (flt-sidx (flt-poolv env) lit 0) lit) end)))
 (defn flt-num2 (s pos ve env)
     (if (and (lt (nth ve 1) (fp-len s))
              (and (eq (fp-at s (nth ve 1)) 46)
                   (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
         (flt-float-lit s (nth ve 1) (nth ve 0) pos env)
-        (fp-num ve)))
+        (if (eq (flt-has-exp s (nth ve 1)) 1)
+            (flt-exp-lit s (nth ve 1) (nth ve 0) pos env)
+            (fp-num ve))))
 (defn flt-neg-num (s pos env)
     (do
         (let ve (fp-digits s (add pos 1) 0))
@@ -180,11 +203,29 @@
                  (and (eq (fp-at s (nth ve 1)) 46)
                       (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
             (flt-float-lit s (nth ve 1) (sub 0 (nth ve 0)) pos env)
-            (flt-neg ve))))
-(defn flt-float-end (s pos)
+            (if (eq (flt-has-exp s (nth ve 1)) 1)
+                (flt-exp-lit s (nth ve 1) (sub 0 (nth ve 0)) pos env)
+                (flt-neg ve)))))
+; consume a run of digits
+(defn flt-fe-digits (s pos)
     (if (and (lt pos (fp-len s)) (fp-isdigit (fp-at s pos)))
-        (flt-float-end s (add pos 1))
+        (flt-fe-digits s (add pos 1))
         pos))
+; after the mantissa, consume a scientific-notation exponent (e/E [+/-] digits) if VALID;
+; otherwise stop before the 'e' (ep) so a bare 'e' stays a separate token. strtod parses the
+; captured literal, so the full "1.5e-05" must land in the lit substring (the fkwu float path).
+(defn flt-fe-exp (s p ep)
+    (do
+        (let q (if (and (lt p (fp-len s)) (or (eq (fp-at s p) 43) (eq (fp-at s p) 45))) (add p 1) p))
+        (if (and (lt q (fp-len s)) (fp-isdigit (fp-at s q)))
+            (flt-fe-digits s q)
+            ep)))
+(defn flt-float-end (s pos)
+    (do
+        (let e1 (flt-fe-digits s pos))
+        (if (and (lt e1 (fp-len s)) (or (eq (fp-at s e1) 101) (eq (fp-at s e1) 69)))
+            (flt-fe-exp s (add e1 1) e1)
+            e1)))
 (defn flt-float-lit (s dot whole start env)
     (do
         (let end (flt-float-end s (add dot 1)))
@@ -289,6 +330,7 @@
 (defn flt-do-let-v (name s pos fns env val)
     (flt-do-let-done name (flt-peek s (fp-skip s pos)) s (flt-expr s pos fns env) fns env val))
 (defn flt-do-let-effect-op (op)
+    (if (str_eq op "read_line") 1
     (if (str_eq op "record_new") 1
     (if (str_eq op "file_append_bytes") 1
     (if (str_eq op "write_file_text") 1
@@ -302,7 +344,7 @@
     (if (str_eq op "file_mtime") 1
     (if (str_eq op "file_byte_at") 1
     (if (str_eq op "scan_run") 1
-    (if (str_eq op "http_get") 1 0)))))))))))))))
+    (if (str_eq op "http_get") 1 0))))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
     (if (eq (flt-do-let-store-op op fns env) 1)
         (flt-do-let-frame name s ve fns env val (add (flt-current-letdepth env) 1))
@@ -721,7 +763,9 @@
              (and (eq (fp-at s (nth ve 1)) 46)
                   (fp-isdigit (fp-at s (add (nth ve 1) 1)))))
         (flt-scan-float s pos (flt-float-end s (add (nth ve 1) 1)) acc)
-        (flt-scan s (nth ve 1) acc)))
+        (if (eq (flt-has-exp s (nth ve 1)) 1)
+            (flt-scan-float s pos (flt-fe-exp s (add (nth ve 1) 1) (nth ve 1)) acc)
+            (flt-scan s (nth ve 1) acc))))
 (defn flt-scan-float (s pos end acc)
     (flt-scan s end (flt-pool-add acc (substring s pos end))))
 (defn flt-pool-add (pool lit)

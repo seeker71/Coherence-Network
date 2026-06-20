@@ -2279,8 +2279,10 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                     status_match = re.search(r"^status:\s*(\S+)", spec_text, re.MULTILINE)
                     spec_status = status_match.group(1).strip().lower() if status_match else ""
                     try:
-                        context_spec_path = str(
-                            Path(resolved_spec_path).resolve().relative_to(_get_repo_dir().resolve())
+                        # as_posix() keeps the repo-relative spec path forward-slashed
+                        # on Windows; downstream git/API paths require '/'.
+                        context_spec_path = (
+                            Path(resolved_spec_path).resolve().relative_to(_get_repo_dir().resolve()).as_posix()
                         )
                     except ValueError:
                         context_spec_path = resolved_spec_path

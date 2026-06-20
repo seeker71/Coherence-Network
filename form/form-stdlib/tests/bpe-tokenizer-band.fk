@@ -1,0 +1,16 @@
+; preludes: form-stdlib/bpe-tokenizer.fk
+;
+; bpe-tokenizer-band — the byte-pair-encoding merge core proven against the REAL openai/whisper-tiny
+; tokenizer (BPE, 50258 vocab, 50000 merges). Encoding the byte-mapped word " tokenizer" (initial symbol
+; ids → merges) yields token ids [14862, 6545], identical to the reference tokenizer. The merge ENGINE is
+; the recipe; byte-mapping + regex word-splitting + the full merge table load as carrier DATA.
+; Verdict 1 when the Form merge output equals the reference token ids exactly.
+
+(do
+  (defn ids-eq (a b)
+    (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+        (if (eq (head a) (head b)) (ids-eq (tail a) (tail b)) 0)))
+  (let syms (list 220 83 78 74 68 77 72 89 68 81))
+  (let table (list (list 220 83 256 0) (list 68 81 260 4) (list 68 77 268 12) (list 256 78 281 25) (list 72 89 590 334) (list 74 268 2653 2397) (list 590 260 6545 6289) (list 281 2653 14862 14606)))
+  (let expected (list 14862 6545))
+  (ids-eq (bpe-encode syms table) expected))

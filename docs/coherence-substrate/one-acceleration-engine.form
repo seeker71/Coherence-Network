@@ -31,37 +31,58 @@
 ;       compiler can contract them into an fma." MEASURED: native = recipe to the last
 ;       bit, 20,077× on a 1280² matvec; the MSL lanes bit-exact vs the CPU reference in
 ;       the lane's own conversion chain (scripts/metal_matvec_audit.sh).
-;     - fkwu — the universal walker, emitted in C by Form recipes (hati-os-kernel-emit.fk)
-;       and ALREADY bridged INTO the Go kernel in-process: TestFkwuOffloadBridge proves
-;       the carrier→fkwu→value loop matches the in-process walker BIT-FOR-BIT. fkwu walks
-;       ANY flattened closure, floats included, deterministically — it is the general
-;       bit-identical executor, not a per-shape emitter.
+;     - fkwu's SELF-JIT — the one already in the body. hati-os-kernel-emit.fk's
+;       "self-JIT on heat" lowers each pure function FROM ITS CELLS to a native fk_nat
+;       (fkc-nat-expr / fkc-emit-jit); the emitted walker counts heat per function and
+;       FLIPS dispatch to the native past a threshold (fk_njit probe); melt-hot-swap
+;       melts a cold native back to the walk, champion-challenger gated with THE WALK AS
+;       THE ALWAYS-CORRECT CHAMPION. The native is emitted from the same cells and the
+;       walk stays the reference, so it is bit-identical by construction — the same
+;       discipline jit-tensor-emit proves at tensor scale (named-temp, no fma contraction).
+;       This IS a full JIT, 100% in Form, inside the universal walker.
 ;
-; ── THE ONE PIPELINE: one front-end, two bit-identical back-ends ──
-;   FRONT-END (shared): flatten the hot closure ONCE into the content-addressed
-;     node-table (the fkc/fks flattener, a Form recipe). Identical emitted artifact
-;     regardless of which host kernel asked — content-addressed, so two identical
-;     emissions intern to one NodeID (the crystallization cache comes free).
-;   BACK-END A — WALK (the general floor): run the flat table through in-process fkwu.
-;     Bit-identical (it IS the fourth-arm walk), general (any op family fkwu carries),
-;     fast (pre-flattened table, milliseconds — no per-call boot-compile). This is the
-;     correct default for float/value/list closures the bespoke JITs got wrong.
-;   BACK-END B — EMIT-NATIVE (the fast lane): for a hot tensor shape, the SAME flat
-;     source feeds jit-tensor-emit's Form-recipe C/MSL emitter → clang → dlopen →
-;     dispatch. Bit-identical by the j-down/no-contraction discipline; native-fast.
-;   Both back-ends are bit-identical to the walk and to each other; the choice is a
-;   cost decision (walk vs native), never a correctness fork.
+; ── THE ONE ENGINE: fkwu's self-JIT, extended to floats ──
+;   The unified pipeline is not a new thing to build beside fkwu — it is fkwu's OWN
+;   self-JIT. Front-end: flatten a function's cells (already done). Engine: emit fk_nat
+;   from the cells, heat-flip to native, melt cold natives back, walk-as-champion
+;   (already done for the pure-compute INTEGER family — tags 1-7, 12; fk_nat is long long).
+;   Because every kernel runs fkwu, ONE self-JIT serves all four — no Go-plugin,
+;   Rust-cdylib, or TS bespoke emitter needed.
+;   THE ONE GAP (Urs, 2026-06-19 — "fkwu has a full JIT, 100% in fkwu, and if not, that
+;   is what we need"): the self-JIT does not yet lower FLOATS. The WALK handles floats
+;   fully (the float arms box fk_fbox(fk_num(a) op fk_num(b)) — the bit-identical
+;   reference); fk_nat does not. Closing it: fkc-nat-expr gains float arms emitting
+;   fk_fbox(<f64 expr over fk_num(a)>) THROUGH NAMED TEMPORARIES (never a*b+c in one C
+;   expression, so clang cannot contract to an fma), a boxed fk_natf table, the
+;   heat-walker dispatching it, and the honesty gate (fkc-can-list) widened to the
+;   float-pure family. The native then runs the EXACT fk_num/fk_fbox/f64 sequence the
+;   walk runs → bit-identical by construction, unlike the Go f64 plugin.
+;   For tensor-shaped hot paths the jit-tensor-emit C/MSL lane is the same discipline at
+;   width (native = recipe bit-for-bit, 20,077×) — the self-JIT's vectorized face, not a
+;   separate engine.
 ;
-; ── THE MIGRATION (each step provable; the pieces exist, the wiring is the work) ──
-;   M1  Go hot-path dispatch routes through the in-process fkwu offload bridge instead
-;       of emitGoExpr→go-build. Float support arrives for free (fkwu walks floats
-;       bit-identically); the neural-lm-corpus divergence resolves to four-way WITH
-;       float JIT intact, not shrunk. (TestFkwuOffloadBridge is the proven seed; the
-;       open work is fast in-process invocation — flatten-and-walk the closure's table
-;       in-process rather than fork/exec per call.)
-;   M2  Rust and TS hot-paths dispatch to the same bridge. Three emitters → one.
-;   M3  The native fast lane (jit-tensor-emit C/MSL) generalizes from the matvec/train
-;       shapes to the closure families the walk identifies as hot, shared by all kernels.
+; ── THE MIGRATION (each step provable; the integer self-JIT is the proven template) ──
+;   M0  FLOAT SELF-JIT IN fkwu — the one real gap. Extend fkc-nat-expr + fkc-emit-jit to
+;       the float-pure family with named-temp emission; prove a float-pure function
+;       heat-flips to a native that equals the walk bit-for-bit (hati_os_kernel_audit.sh).
+;       This is what makes float JIT correct AND fast AND shared — the answer to the
+;       neural-lm-corpus divergence, in fkwu, not in a bespoke host plugin. (JIT_GAP_LEDGER #11.)
+;       M0 has TWO native targets and the truly sovereign one is the CLANG-FREE byte path
+;       (form-asm/form-lower/form-macho — clang only the byte-identity oracle), not the
+;       C-emit fkc-nat-expr lane (which compiles its C through clang). LANDED 2026-06-19:
+;       the FLOAT-encoding FOUNDATION of that byte path — the arm64 scalar-double FPDP tier
+;       (fadd/fsub/fmul/fdiv/fsqrt/fmov/fcmp/scvtf/fcvtzs/ldr-d/str-d) as DATA rows in
+;       form-asm.fk, every encoding clang-ORACLE-verified byte-for-byte, form-asm-float
+;       → 2047 FOUR-WAY incl. fkwu (JIT_GAP_LEDGER #12). REMAINING: form-lower float
+;       lowering (FP register stack + d0..d7 calling convention) then wiring the self-JIT
+;       heat-flip through form-lower→form-asm BYTES — float native with NO clang in the path.
+;   M1  Host hot-paths dispatch to the in-process fkwu self-JIT instead of emitGoExpr→
+;       go-build / the Rust cdylib emitter. TestFkwuOffloadBridge is the proven seed; the
+;       open work is a Go/Rust kernel INTEGRATION task (fast in-process invocation), not
+;       an fkwu gap.
+;   M2  Rust and TS hot-paths dispatch to the same self-JIT. Three bespoke emitters → one.
+;   M3  The jit-tensor-emit C/MSL vectorized face generalizes from matvec/train shapes to
+;       the closure families the walk identifies as hot, shared by all kernels.
 ;   M4  Compost emitGoExpr (jit.go), the Rust cdylib emitter, and the bespoke TS path —
 ;       once dispatch is unified, three host-language emitters are duplicated tissue.
 ;
@@ -70,9 +91,10 @@
 ;   CORRECT on fkwu/rust/ts (7); the lone diverger is the Go BESPOKE float JIT (an
 ;   optimization path, not the walk). Per the four-way rule the divergence is
 ;   root-caused (host-compiler FMA on the non-bit-identical float plugin, adopted
-;   mid-fold) and tracked HERE to its specific fix: M1 above. The band stays out of
-;   form/fourth-arm-bands.txt until M1 lands — owned, named, not silently omitted. The
-;   FORM_JIT_HOT knob (jit.go) lets a workload run the deterministic walk meanwhile.
+;   mid-fold) and tracked HERE to its specific fix: M0 above (fkwu's float self-JIT —
+;   the bit-identical native that makes the bespoke plugin unnecessary). The band stays
+;   out of form/fourth-arm-bands.txt until that lands — owned, named, not silently
+;   omitted. The FORM_JIT_HOT knob (jit.go) lets a workload run the deterministic walk meanwhile.
 ;
 ; KIN: jit-tensor-emit.fk (the emitter-as-recipe, bit-identical by construction) ·
 ;   form/form-kernel-go/fkwu_bridge_test.go (the in-process offload bridge, proven) ·

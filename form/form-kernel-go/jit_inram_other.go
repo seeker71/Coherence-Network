@@ -1,4 +1,4 @@
-//go:build !(darwin && arm64 && cgo)
+//go:build !(darwin && arm64 && cgo) && !windows
 
 // jit_inram_other.go — the in-RAM JIT executor is darwin/arm64 + cgo only
 // (it needs MAP_JIT + pthread_jit_write_protect_np). On every other target the
