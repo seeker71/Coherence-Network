@@ -32,7 +32,7 @@
     (operator       metabolic-learning.form)    # pressure × frequency × angle × focus; mtb-reverse [RUNS]
     (gather         geometric-learning.form)    # gl-step; gl-bellman (the RL/value limb) [RUNS]
     (objective-kin  preference-learning.form)   # QAM = KTO's transform:"value" with a LEARNED critic [RUNS row family]
-    (serve-while-improve champion-challenger.form)  # the offline→online lane QAM reports its win on [RUNS]
+    (serve-while-improve champion-challenger.form)  # the offline→online loop — WIRED + proven: diffusion-q-cc.fk + band → 31 [RUNS]
     (mesh           federated-slices.form))      # many critics, deterministic slice-merge [RUNS]
 
   # ── 1. The proven graft — eight claims, four-way [RUNS: band → 255] ──
@@ -48,6 +48,19 @@
     (td-bootstrap     the critic target r+γ·Q' = 2.5 matches the SHIPPED gl-bellman max-plus backup)
     (deep-adjoint     a TWO-layer policy gradient = the reference, by reversed gathers — the chain rule
                       with NO unrolled autograd tape: QAM's "no backprop through the chain", on our kernel))
+
+  # ── 1b. Wired into a live loop — the offline→online promotion [RUNS: band → 31] ──
+  # No longer an island: diffusion-q-cc.fk grafts dql-improve onto champion-challenger.
+  # A served champion policy already reaches the target value (Q=2.5); a raw challenger
+  # (Q=0) earns authority ONLY by the Q-tilt. dql-improve is the move that flips its trials
+  # from losing to winning; cc-promote? is the gate. The coin stays gl-veq6 equality
+  # (round-vs-round, fourth-arm safe) and the competition is champion-challenger's integer counts.
+  (consumed-by-loop
+    (raw-stays-behind   the un-improved challenger (Q=0) loses every trial → the champion keeps authority)
+    (tilt-earns-it      a sufficient Q-tilt (focus 1/2, Q→2.5) reaches the champion → PROMOTED, authority flips)
+    (trusted-window     a winning challenger on a SHORT window (< min-samples) is NOT promoted — earned, not lucky)
+    (insufficient-tilt  a partial tilt (focus 1/8, Q→0.625) has not reached → still behind, not promoted)
+    (kernel-earned-it   dql-improve raised the challenger's value 0 → 2.5, the champion's level, by the adjoint))
 
   # ── 2. The mapping — every QAM piece is a cell already here ──────────
   (mapping
@@ -90,10 +103,9 @@
              improved to convergence, the whole loop one band)
     (GAP-Q2  [INFER] the q-tilt as a first-class preference-learning row (reference:"critic", transform:
              "q-adjoint"), so auto-research can evolve it alongside the DPO/KTO family it extends)
-    (GAP-Q3  [INFER] the offline→online champion-challenger loop — serve the champion policy while the
-             challenger trains the tilt; promote on earned counts. QAM's reported regime, the body's own mechanism)
-    (GAP-Q4  [INFER] the mesh: federated critics over slice-merge, each cell's runtime error feeding its
+    (GAP-Q3  [INFER] the mesh: federated critics over slice-merge, each cell's runtime error feeding its
              short-term plasticity, only settled long-term value shared — QAM inside mesh-active-inference))
+  # (the offline→online champion-challenger loop landed — see §1b, diffusion-q-cc.fk + band → 31)
 
   (invariant
     (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
