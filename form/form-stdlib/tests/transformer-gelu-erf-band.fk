@@ -1,0 +1,15 @@
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-gelu-erf.fk
+;
+; transformer-gelu-erf-band — whisper's EXACT (erf) gelu, proven against the libm erf reference
+; (Abramowitz & Stegun 7.1.26, max ~5e-7). Verdict 255 when all 8 sample points match within 1e-5.
+;
+(do
+  (let c0 (if (lt (tn-abs (sub (tn-gelu-erf -1.5) -0.10021080190328713)) 0.00001) 1 0))
+  (let c1 (if (lt (tn-abs (sub (tn-gelu-erf -0.75) -0.16997051428265114)) 0.00001) 2 0))
+  (let c2 (if (lt (tn-abs (sub (tn-gelu-erf -0.1) -0.0460172162722971)) 0.00001) 4 0))
+  (let c3 (if (lt (tn-abs (sub (tn-gelu-erf 0.0) 0.0)) 0.00001) 8 0))
+  (let c4 (if (lt (tn-abs (sub (tn-gelu-erf 0.5) 0.3457312306370065)) 0.00001) 16 0))
+  (let c5 (if (lt (tn-abs (sub (tn-gelu-erf 1.0) 0.8413447460685429)) 0.00001) 32 0))
+  (let c6 (if (lt (tn-abs (sub (tn-gelu-erf 2.0) 1.9544997361036416)) 0.00001) 64 0))
+  (let c7 (if (lt (tn-abs (sub (tn-gelu-erf 3.0) 2.99595030590511)) 0.00001) 128 0))
+  (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

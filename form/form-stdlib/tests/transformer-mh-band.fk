@@ -1,0 +1,26 @@
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk
+;
+; transformer-mh-band — multi-head self-attention (whisper-tiny's real n_head>1 block),
+; proven against the numpy/fp64 reference (same softmax / layernorm eps=1e-5 / gelu-tanh
+; conventions as transformer-block-band). n_head=2, head_dim=2, T=2, d_model=4.
+; Verdict 1 when the whole block output matches the reference within 1e-6.
+
+(do
+  (defn mhb-vmaxdiff (a b)
+    (if (eq (len a) 0) 0.0
+        (do (let d (tn-abs (sub (head a) (head b))))
+            (let r (mhb-vmaxdiff (tail a) (tail b)))
+            (if (gt d r) d r))))
+  (defn mhb-maxdiff (as bs)
+    (if (eq (len as) 0) 0.0
+        (do (let d (mhb-vmaxdiff (head as) (head bs)))
+            (let r (mhb-maxdiff (tail as) (tail bs)))
+            (if (gt d r) d r))))
+  (let x (list (list 0.0508 0.2081 -0.2091 0.0108) (list 0.3929 0.3963 -0.3744 -0.2928))) (let eps 1e-05) (let scale 0.7071067811865475) (let n 2) (let hd 2)
+  (let g1 (list -0.4485 -0.0592 -0.4701 -0.0432)) (let be1 (list 0.1491 -0.2215 0.1763 0.0909)) (let g2 (list -0.476 0.0589 -0.2407 -0.0849)) (let be2 (list -0.2165 0.1931 -0.0595 -0.3431))
+  (let wq (list (list 0.0446 0.2803 -0.1936 -0.278) (list -0.112 0.4364 0.476 0.1724) (list 0.4028 0.3458 -0.122 -0.4078) (list 0.1534 0.0578 -0.1384 -0.2749))) (let bq (list 0.4267 0.3392 0.2263 -0.0198)) (let wk (list (list -0.0935 -0.0311 -0.2308 -0.2082) (list -0.0423 0.3605 0.0863 -0.2165) (list -0.222 -0.0454 -0.2946 -0.2986) (list 0.014 -0.4128 -0.0164 -0.1378))) (let bk (list 0.0 0.0 0.0 0.0))
+  (let wv (list (list 0.2077 0.2467 0.1911 0.1892) (list -0.1264 0.1681 -0.1602 0.0728) (list -0.1742 -0.0549 -0.4385 -0.2573) (list 0.4716 -0.2694 0.1915 0.1505))) (let bv (list 0.3421 0.2448 0.1603 0.414)) (let wo (list (list 0.2239 -0.0249 0.0967 -0.433) (list -0.4274 -0.301 -0.3481 -0.3999) (list -0.3707 0.0533 -0.3122 0.4521) (list 0.1816 0.041 0.2072 -0.2361))) (let bo (list 0.1337 -0.1341 0.0528 -0.3036))
+  (let w1 (list (list -0.3079 0.2257 0.2849 0.4721) (list 0.351 0.0436 -0.4102 -0.0111) (list 0.4279 0.2876 -0.0149 -0.0447) (list -0.282 -0.3228 -0.4264 0.3924) (list 0.1402 -0.3567 -0.0859 -0.4509) (list -0.2906 0.2307 0.1511 -0.021))) (let b1 (list -0.2252 0.1522 0.4564 -0.0645 -0.4299 -0.4423)) (let w2 (list (list -0.4171 0.4597 0.0408 0.3375 -0.33 -0.2397) (list 0.192 0.3956 -0.1593 -0.4353 0.3641 -0.2091) (list 0.2411 -0.342 0.195 0.3414 0.2272 -0.1409) (list 0.2267 -0.3605 -0.1862 -0.0804 0.3772 -0.3463))) (let b2 (list 0.3801 0.299 0.4716 -0.1323))
+  (let expected (list (list 0.5253050460573768 -0.09469882725856749 0.49159425733115536 -0.6031133716372725) (list 0.7860705550177001 0.0831808858193232 0.3415386732339837 -0.8682796285162828)))
+  (let got (tb-mh-block x eps g1 be1 wq bq wk bk wv bv wo bo n hd scale g2 be2 w1 b1 w2 b2))
+  (if (lt (mhb-maxdiff got expected) 0.000001) 1 0))

@@ -1,0 +1,51 @@
+; greedy-decode.fk — greedy argmax over logits: the SELECTION half of the autoregressive generation
+; loop, the other half of the body kv-cache.fk (#3382) realizes for the ATTENTION half.
+;
+; preludes: form-stdlib/core.fk
+;
+; In temperature-0 (greedy) decode, the next token is simply the argmax of the model's final logit
+; vector over the vocabulary: the index of the largest logit wins. This lived ONLY inside
+; transformer-kernel.fk's tk-emit-llama as emitted C —
+;     for (int t = 1; t < V; t++) if (logits[t] > logits[best]) best = t;
+; — never a standalone proven recipe, exactly like the llama numerics (#3308), RoPE (#3319), the
+; block (#3346), and the KV cache (#3382) before they were lifted. This lifts the selection step to a
+; Form recipe on the four-kernel floor.
+;
+; The load-bearing semantic is the TIE RULE: the emitted C replaces the incumbent only on a STRICTLY
+; greater logit (`>`, not `>=`), so when two logits tie, the FIRST-seen (lowest index) token wins. A
+; deterministic decoder must reproduce that exactly, or two correct kernels would pick different
+; tokens from identical logits. gd-argmax walks the vector ascending and replaces the best only on
+; `gt` (strictly greater) — bit-for-bit the emitted-C rule. Logits are unbounded reals (often all
+; negative after the classifier), so the comparison must hold across the sign boundary; the band pins
+; that with an all-negative case.
+;
+; This is the SAME max-select-by-index spine the body already runs in histogram-peak.fk (hp-peak-loop,
+; over integer bin counts), nearest-shape.fk (ns-best, most-agreement-wins), and sequence-predictor.fk
+; (sp-predict, most-followers-wins) — only here the score is a float LOGIT and the candidates are token
+; indices. The band PROVES the consolidation: gd-argmax over a float vector equals hp-peak-bin
+; bit-for-bit, so this is the decoder-altitude name for one already-proven spine, not a fourth copy.
+; NAMED core-lift follow-up: fold hp-peak-loop / ns-best / sp-predict onto one generic argmax-by-index
+; primitive (the gt-not-ge, seed-index-0, walk-ascending shape they all share) and let each domain be
+; the thin score-source over it.
+;
+; This lives at the reusable decoder-engine altitude (like kv-cache.fk's kv-generate, #3382): any
+; model that emits logits decodes greedily through the same selection.
+;
+; Proven by: form-stdlib/tests/greedy-decode-band.fk
+; teaching: lc-cognitive-sovereignty
+
+; --- MAX-SELECT over INDICES: carry the best index + its logit; a STRICTLY-greater logit replaces them
+;     (gt, not ge), so on a tie the earlier/lower index stays — bit-for-bit the emitted-C `>` rule.
+;     Walk ascending, stop when i reaches the length. Same spine as hp-peak-loop / ns-best-loop. ---
+(defn gd-argmax-loop (xs i best-i best-v)
+  (if (eq i (len xs)) best-i
+      (if (gt (nth xs i) best-v)
+          (gd-argmax-loop xs (add i 1) i (nth xs i))
+          (gd-argmax-loop xs (add i 1) best-i best-v))))
+
+; --- ARGMAX INDEX: the token index of the largest logit, ties to the lowest index. Seed with index 0
+;     as the incumbent, then walk from index 1 — index 0 holds on any tie. ---
+(defn gd-argmax (xs) (gd-argmax-loop xs 1 0 (nth xs 0)))
+
+; --- GREEDY TOKEN: the decoder name — the next token is the argmax of the logit vector. ---
+(defn gd-token (logits) (gd-argmax logits))

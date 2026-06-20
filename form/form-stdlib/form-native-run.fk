@@ -30,13 +30,21 @@
 
 ; ── the system prompt (Hermes tool protocol) ──
 (defn fnr-sys ()
-    "You are form-cli, a coding agent. Tools (reply with ONE line of JSON to use one): {\"name\":\"bash\",\"arguments\":{\"cmd\":\"...\"}} | {\"name\":\"read_file\",\"arguments\":{\"path\":\"...\"}} | {\"name\":\"write_file\",\"arguments\":{\"path\":\"...\",\"content\":\"...\"}} | {\"name\":\"search\",\"arguments\":{\"pattern\":\"...\"}}. After each tool you receive an OBSERVATION. When the task is done, reply with your final answer as plain text (no JSON).\n\n")
+    "You are form-cli, a coding agent. Tools (reply with ONE line of JSON to use one): {\"name\":\"bash\",\"arguments\":{\"cmd\":\"...\"}} | {\"name\":\"read_file\",\"arguments\":{\"path\":\"...\"}} | {\"name\":\"write_file\",\"arguments\":{\"path\":\"...\",\"content\":\"...\"}} | {\"name\":\"edit\",\"arguments\":{\"path\":\"...\",\"find\":\"...\",\"replace\":\"...\"}} | {\"name\":\"search\",\"arguments\":{\"pattern\":\"...\"}} | {\"name\":\"glob\",\"arguments\":{\"pattern\":\"*.fk\"}}. After each tool you receive an OBSERVATION. When the task is done, reply with your final answer as plain text (no JSON).\n\n")
 
 ; ── call the oracle: write the prompt to a file, exec `oracle < file` ──
 (defn fnr-oracle (oracle prompt)
     (do
         (host-write "/tmp/fnr_prompt.txt" prompt)
         (host-exec (str_concat oracle " < /tmp/fnr_prompt.txt 2>/dev/null"))))
+
+; ── structured edit: replace the FIRST occurrence of `find` with `repl` in s (pure Form, four-way) ──
+(defn fnr-replace (s find repl)
+    (do
+        (let i (str_find s find 0))
+        (if (lt i 0) s
+            (str_concat (substring s 0 i)
+                (str_concat repl (substring s (add i (str_len find)) (str_len s)))))))
 
 ; ── execute a parsed tool-call (tc is the reply text carrying the JSON) ──
 (defn fnr-exec (name tc)
@@ -49,7 +57,13 @@
                     (str_concat "wrote " (fnr-jf tc "path")))
                 (if (str_eq name "search")
                     (host-exec (str_concat "grep -rn -- '" (str_concat (fnr-jf tc "pattern") "' . 2>/dev/null | head -40")))
-                    "(unknown tool)")))))
+                    (if (str_eq name "edit")
+                        (do (host-write (fnr-jf tc "path")
+                                (fnr-replace (host-read (fnr-jf tc "path")) (fnr-jf tc "find") (fnr-jf tc "replace")))
+                            (str_concat "edited " (fnr-jf tc "path")))
+                        (if (str_eq name "glob")
+                            (host-exec (str_concat "find . -name '" (str_concat (fnr-jf tc "pattern") "' 2>/dev/null | head -40")))
+                            "(unknown tool)")))))))
 
 ; ── is this reply a tool-call? (carries both "name" and "arguments") ──
 (defn fnr-toolcall? (reply)
@@ -83,3 +97,44 @@
 ; ── self-guided entry: the runner runs with the predictor's likely-tools hint. ──
 (defn fnr-run-guided (task oracle max guide)
     (fnr-step oracle guide (str_concat "TASK: " task) 1 max))
+
+; ── FRONTIER-IN-THE-LOOP: a step's reply is usable if it is a tool-call OR a substantive final
+;    answer; a garbled/empty local reply (the weak-model failure we saw) is not. ──
+(defn fnr-usable? (reply)
+    (if (eq (fnr-toolcall? reply) 1) 1 (if (gt (str_len reply) 40) 1 0)))
+
+; tiered step: try the LOCAL oracle; if its reply is not usable, escalate THIS step to the REMOTE
+; (frontier) oracle — local-first quality, frontier when local can't, learning toward sovereignty.
+(defn fnr-step-tiered (local remote guide transcript step max)
+    (if (ge step max)
+        (str_concat "(reached max-steps)\n" transcript)
+        (do
+            (let prompt (str_concat (fnr-sys) (str_concat guide (str_concat transcript "\nYour reply:"))))
+            (let lr (fnr-oracle local prompt))
+            (let reply (if (eq (fnr-usable? lr) 1) lr (fnr-oracle remote prompt)))
+            (if (eq (fnr-toolcall? reply) 0)
+                reply
+                (do
+                    (let nm (fnr-jf reply "name"))
+                    (let obs (fnr-exec nm reply))
+                    (fnr-step-tiered local remote guide
+                        (str_concat transcript
+                            (str_concat "\nACTION " (str_concat (int_to_str step)
+                                (str_concat ": " (str_concat reply (str_concat "\nOBSERVATION: " obs))))))
+                        (add step 1) max))))))
+
+; ── SESSION MEMORY (logs now, substrate later): read recent session context, persist this run. ──
+(defn fnr-recent ()
+    (host-exec "tail -c 1500 $HOME/.coherence-network/form-cli-sessions.log 2>/dev/null"))
+(defn fnr-persist (transcript)
+    (do (host-write "/tmp/fnr_session.txt" transcript)
+        (host-exec "cat /tmp/fnr_session.txt >> $HOME/.coherence-network/form-cli-sessions.log; printf '\\n=== /turn ===\\n' >> $HOME/.coherence-network/form-cli-sessions.log")))
+
+; tiered entry WITH memory: prepend recent session context, run local-first+escalating, persist the run
+; (the persisted transcript is both cross-turn memory AND a training corpus of real agent work).
+(defn fnr-run-tiered (task local remote max)
+    (do
+        (let mem (fnr-recent))
+        (let guide (if (gt (str_len mem) 0) (str_concat "RECENT SESSION (memory):\n" (str_concat mem "\n\n")) ""))
+        (let result (fnr-step-tiered local remote guide (str_concat "TASK: " task) 1 max))
+        (do (fnr-persist result) result)))

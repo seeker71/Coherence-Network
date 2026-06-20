@@ -1,0 +1,28 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-stats.fk
+;
+; form-cli-stats-band — the dashboard math (frequency, rate, sovereignty share, learning trend),
+; proven four-way. Tools coded 0=Bash 1=Read 2=Edit over a small run; outcomes are time-ordered
+; 0/1 (1 = local sufficed) so the trend recipes can see the flywheel turn.
+;
+; Verdict 255:
+;   1    tool frequency counts (Bash appears 3x)             (fcst-count tools 0 = 3)
+;   2    a second tool frequency (Read 2x)                   (fcst-count tools 1 = 2)
+;   4    rate is an integer percent                          (fcst-pct 3 6 = 50)
+;   8    rate is divide-by-zero safe                         (fcst-pct 0 0 = 0)
+;   16   native sovereignty share                            (fcst-native-share 7 10 = 70)
+;   32   a rising late-vs-early rate reads as improving       (fcst-improving? rising = 1)
+;   64   a falling rate reads as NOT improving                (fcst-improving? falling = 0)
+;   128  the signed lift is the rise in pass-rate (pp)        (fcst-lift rising = 100)
+(do
+    (let tools (list 0 1 0 2 1 0))
+    (let rising  (list 0 0 1 1))
+    (let falling (list 1 1 0 0))
+    (let c0 (if (eq (fcst-count tools 0) 3) 1 0))
+    (let c1 (if (eq (fcst-count tools 1) 2) 2 0))
+    (let c2 (if (eq (fcst-pct 3 6) 50) 4 0))
+    (let c3 (if (eq (fcst-pct 0 0) 0) 8 0))
+    (let c4 (if (eq (fcst-native-share 7 10) 70) 16 0))
+    (let c5 (if (eq (fcst-improving? rising) 1) 32 0))
+    (let c6 (if (eq (fcst-improving? falling) 0) 64 0))
+    (let c7 (if (eq (fcst-lift rising) 100) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

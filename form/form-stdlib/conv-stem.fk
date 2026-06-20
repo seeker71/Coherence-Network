@@ -1,0 +1,47 @@
+; conv-stem.fk — whisper's encoder conv front-end (two 1-D convolutions), as Form recipes.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk
+;
+; whisper's encoder turns the [80 × n_frames] log-mel into the model-width sequence with:
+;   x = gelu(Conv1d(80,  d_model, kernel=3, stride=1, padding=1)(mel))
+;   x = gelu(Conv1d(d_model, d_model, kernel=3, stride=2, padding=1)(x))      # halves time
+; then transposes to [n_frames/2 × d_model] and adds the sinusoidal positional (positional.fk).
+;
+; A sequence here is a list of TIME-frames, each frame a vector of in-channels. A weight is
+; out_ch × kernel × in_ch (PyTorch's [out,in,k] transposed to [out,k,in] so each tap is an
+; in_ch row to dot a frame with). The conv1d MATH is exact (matvec/dot), proven vs numpy at
+; ~1e-12. gelu here is transformer-numerics' tanh approximation (tn-gelu); whisper's conv uses
+; the EXACT erf gelu — a ~1e-3 difference, the named exact-erf follow-up (M3).
+
+(defn cv-take (n xs) (if (eq n 0) (empty) (cons (head xs) (cv-take (sub n 1) (tail xs)))))
+(defn cv-drop (n xs) (if (eq n 0) xs (cv-drop (sub n 1) (tail xs))))
+(defn cv-zeros (n) (if (eq n 0) (empty) (cons 0.0 (cv-zeros (sub n 1)))))
+(defn cv-zero-frames (p w) (if (eq p 0) (empty) (cons (cv-zeros w) (cv-zero-frames (sub p 1) w))))
+(defn cv-cat (a b) (if (eq (len a) 0) b (cons (head a) (cv-cat (tail a) b))))
+(defn cv-pad (input pad w) (cv-cat (cv-zero-frames pad w) (cv-cat input (cv-zero-frames pad w))))
+
+; one output channel over a window of k frames: Σ_j  Wo[j] · frame[j]   (Wo = k × in_ch)
+(defn cv-window-dot (Wo window)
+  (if (eq (len Wo) 0) 0.0 (add (tb-dot (head Wo) (head window)) (cv-window-dot (tail Wo) (tail window)))))
+; the full out_ch vector at one window: bias[o] + the window-dot, per channel
+(defn cv-out-vec (W b window)
+  (if (eq (len W) 0) (empty)
+      (cons (add (cv-window-dot (head W) window) (head b)) (cv-out-vec (tail W) (tail b) window))))
+
+; slide the window over the padded sequence with the given stride
+(defn cv-conv-acc (W b padded start stride k plen)
+  (if (gt (add start k) plen) (empty)
+      (cons (cv-out-vec W b (cv-take k (cv-drop start padded)))
+            (cv-conv-acc W b padded (add start stride) stride k plen))))
+(defn cv-conv (W b input pad stride k)
+  (do (let w (len (head input)))
+      (let padded (cv-pad input pad w))
+      (cv-conv-acc W b padded 0 stride k (len padded))))
+
+; gelu over every element of every frame in a sequence
+(defn cv-gelu-seq (xs) (if (eq (len xs) 0) (empty) (cons (tb-gelu-map (head xs)) (cv-gelu-seq (tail xs)))))
+(defn cv-conv-gelu (W b input pad stride k) (cv-gelu-seq (cv-conv W b input pad stride k)))
+
+; whisper's two-conv stem: conv1 (k3 s1 p1) → gelu → conv2 (k3 s2 p1) → gelu
+(defn cv-stem (input W1 b1 W2 b2)
+  (cv-conv-gelu W2 b2 (cv-conv-gelu W1 b1 input 1 1 3) 1 2 3))

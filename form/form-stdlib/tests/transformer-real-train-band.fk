@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-backprop.fk form-stdlib/transformer-corpus-train.fk
+;
+; transformer-real-train-band — the REAL transformer architecture LEARNS from REAL data, four-way.
+; Data: 13 train + 5 held-out EN->FR (char-len, word-count) pairs, normalized,
+; extracted from web/messages/{en,fr}.json (genuine translated UI strings, the ~1.2x expansion).
+; Weights START at a fixed init (NOT the answer) and EMERGE via the proven two-block residual SGD
+; (tct-train-blocks / tbp-stack-step). The verdict proves the DYNAMIC of learning — nothing baked is
+; the answer; the data is real and the weights are learned. Loss x1e6 rounded → byte-identical four-way.
+;
+; Verdict 31:
+;   1   the fixed-init stack carries real corpus loss (l0 > 0)
+;   2   training on REAL data LEARNS — train loss falls (lT < l0)
+;   4   it GENERALIZES to unseen real pairs (hT < h0), not memorization
+;   8   it BEATS the no-learning predict-the-mean baseline on held-out (hT < hmean)
+;   16  the weights EMERGED — block-A W1[0][0] moved off its 0.3 init (|Δ| > 0)
+(do
+    (defn rt-base (m held) (if (eq (len held) 0) 0.0
+        (add (tbp-sse m (tct-ex-t (head held))) (rt-base m (tail held)))))
+    (let ba (tbp-bk (list (list 0.3 -0.2) (list 0.1 0.4)) (list 0.0 0.0)
+                    (list (list 0.5 0.2) (list -0.3 0.6)) (list 0.0 0.0)))
+    (let bb (tbp-bk (list (list 0.2 0.1) (list -0.1 0.3)) (list 0.0 0.0)
+                    (list (list 0.4 -0.2) (list 0.3 0.5)) (list 0.0 0.0)))
+    (let train (list
+        (list (list 0.185714 0.25) (list 0.2 0.25))
+        (list (list 0.214286 0.25) (list 0.257143 0.25))
+        (list (list 0.228571 0.25) (list 0.271429 0.25))
+        (list (list 0.271429 0.25) (list 0.471429 0.416667))
+        (list (list 0.3 0.25) (list 0.457143 0.416667))
+        (list (list 0.314286 0.25) (list 0.4 0.333333))
+        (list (list 0.371429 0.416667) (list 0.842857 0.666667))
+        (list (list 0.385714 0.416667) (list 0.685714 0.75))
+        (list (list 0.414286 0.5) (list 0.414286 0.5))
+        (list (list 0.485714 0.583333) (list 0.585714 0.583333))
+        (list (list 0.542857 0.666667) (list 0.628571 0.833333))
+        (list (list 0.6 0.833333) (list 0.742857 0.833333))
+        (list (list 0.757143 0.75) (list 0.857143 0.833333))))
+    (let held (list
+        (list (list 0.142857 0.25) (list 0.228571 0.25))
+        (list (list 0.257143 0.333333) (list 0.271429 0.333333))
+        (list (list 0.328571 0.333333) (list 0.442857 0.416667))
+        (list (list 0.442857 0.583333) (list 0.385714 0.5))
+        (list (list 0.657143 0.75) (list 0.7 0.666667))))
+    (let meanT (list 0.524176 0.532051))
+    (let eps 0.00001) (let lr 0.1)
+    (let s0 (list ba bb))
+    (let sT (tct-train-blocks ba bb train lr eps 120))
+    (let l0 (round (mul (tct-corpus-loss s0 train eps) 1000000.0)))
+    (let lT (round (mul (tct-corpus-loss sT train eps) 1000000.0)))
+    (let h0 (round (mul (tct-corpus-loss s0 held eps) 1000000.0)))
+    (let hT (round (mul (tct-corpus-loss sT held eps) 1000000.0)))
+    (let hmean (round (mul (rt-base meanT held) 1000000.0)))
+    (let moved (round (mul (tn-abs (sub (head (head (tbp-bk-w1 (nth sT 0)))) 0.3)) 1000000.0)))
+    (let c0 (if (gt l0 0) 1 0))
+    (let c1 (if (lt lT l0) 2 0))
+    (let c2 (if (lt hT h0) 4 0))
+    (let c3 (if (lt hT hmean) 8 0))
+    (let c4 (if (gt moved 0) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

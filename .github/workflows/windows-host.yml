@@ -1,11 +1,9 @@
 name: Windows Host Floor
 
 # Proves the Form-native floor is portable to Windows: the Go/Rust/TS kernels
-# build and agree three-way on windows-latest. The floor is portable by
-# construction — UTF-8 strings, byte-level I/O, per-platform native emit — so
-# this gate needs no PYTHONUTF8, no encoding config, no Python at all. The fkwu
-# fourth leg (clang-emitted carrier) is covered by the fkwu native-carrier work,
-# not this gate; validate.sh degrades to three-way when clang is absent.
+# build and agree with the Form-emitted fkwu fourth arm on windows-latest, and
+# the standalone native form-cli .exe runs with no Go/clang/LLVM available at
+# runtime.
 
 on:
   pull_request:
@@ -33,24 +31,43 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Add LLVM to PATH
+        shell: pwsh
+        run: |
+          $llvmBin = "C:\Program Files\LLVM\bin"
+          if (-not (Test-Path -LiteralPath (Join-Path $llvmBin "clang.exe"))) {
+            throw "clang.exe missing from $llvmBin"
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $llvmBin
+
       # Rust (rustup + cargo) is preinstalled on the windows-latest image;
       # validate.sh builds the Go/Rust kernels and bundles the TS kernel itself.
-
-      - name: Prove the Form-native floor (three-way Go/Rust/TS on Windows)
+      - name: Prove the Form-native floor (four-way with fkwu on Windows)
         shell: bash
         run: |
-          # Toolchain the floor needs (validate.sh builds Go/Rust + bundles TS).
+          # Toolchain the floor needs (validate.sh builds Go/Rust/TS + fkwu).
           echo "go:    $(go version 2>&1 || echo MISSING)"
           echo "cargo: $(cargo --version 2>&1 || echo MISSING)"
           echo "node:  $(node --version 2>&1 || echo MISSING)"
           echo "npx:   $(npx --version 2>&1 || echo MISSING)"
+          echo "clang: $(clang --version 2>&1 | head -1 || echo MISSING)"
           cd form
-          # validate.sh requires cwd=form. Derive its path from $(pwd) (a unix
-          # path in Git Bash) — $GITHUB_WORKSPACE is a Windows backslash path the
-          # bash shell can't exec. The dynamic ref is skipped by the workflow
-          # reference validator. Output streams live so a failing band is visible.
+          # validate.sh requires cwd=form. Derive its path from $(pwd), a unix
+          # path in Git Bash; $GITHUB_WORKSPACE is a Windows backslash path the
+          # bash shell cannot execute directly.
           VALIDATE="$(pwd)/validate.sh"
           bash "$VALIDATE" form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/tests/adler32-band.fk | tee band1.out
           grep -q '0 divergent' band1.out || { echo "::error::kernels diverged (adler32)"; exit 1; }
+          grep -q 'fourth arm: 1 band(s) four-way' band1.out || { echo "::error::fkwu fourth arm missing (adler32)"; exit 1; }
           bash "$VALIDATE" form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/tests/form-asm-band.fk | tee band2.out
           grep -q '0 divergent' band2.out || { echo "::error::kernels diverged (form-asm)"; exit 1; }
+          grep -q 'fourth arm: 1 band(s) four-way' band2.out || { echo "::error::fkwu fourth arm missing (form-asm)"; exit 1; }
+
+      - name: Prove Windows fkwu JIT and native form-cli runtime
+        shell: pwsh
+        run: |
+          .\scripts\verify_windows_fkwu_socket_loopback.ps1
+          .\scripts\verify_windows_fkwu_http_verbs_socket.ps1
+          .\scripts\verify_windows_fkwu_http_response_socket.ps1
+          .\scripts\verify_windows_fkwu_self_jit.ps1
+          .\scripts\verify_windows_form_cli_native.ps1

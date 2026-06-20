@@ -1,0 +1,62 @@
+; transformer-generate-cached.fk — greedy decode with the cross-attention KV cache.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-decoder.fk form-stdlib/transformer-generate.fk
+;
+; The uncached loop (transformer-generate.fk) re-projects the ENCODER output into cross-
+; attention keys/values on every step — but those depend only on the (fixed) encoder output,
+; so they are identical across all steps. This cell precomputes cross K/V ONCE per decoder
+; layer before the loop, then each step's decoder reuses them. In real whisper the encoder is
+; ~1500 frames, so this is the dominant cache. (Self-attention K/V over the short generated
+; sequence are still recomputed — incremental self-KV caching is a further optimization.)
+; Correctness-preserving: tb-generate-cached must produce the IDENTICAL token ids as tb-generate.
+;
+; A normal layer L has 26 entries (see tb-dec-layer). A CACHED layer CL has 24: the cross K/V
+; WEIGHTS (L[14..17]: Ck, cbk, Cv, cbv) are replaced by the two precomputed sequences ck, cv.
+;   CL = (g1 be1 sq sbq sk sbk sv sbv so sbo  g2 be2 cq cbq  ck cv  co cbo  g3 be3 w1 b1 w2 b2)
+
+; precompute one layer's cross K/V from the encoder output → a cached layer
+(defn tb-dec-precompute-layer (L enc)
+  (do
+    (let ck (tb-proj-seq (nth L 14) (nth L 15) enc))
+    (let cv (tb-proj-seq (nth L 16) (nth L 17) enc))
+    (list (nth L 0) (nth L 1) (nth L 2) (nth L 3) (nth L 4) (nth L 5) (nth L 6) (nth L 7) (nth L 8) (nth L 9)
+          (nth L 10) (nth L 11) (nth L 12) (nth L 13) ck cv (nth L 18) (nth L 19)
+          (nth L 20) (nth L 21) (nth L 22) (nth L 23) (nth L 24) (nth L 25))))
+(defn tb-dec-precompute (layers enc)
+  (if (eq (len layers) 0) (empty)
+      (cons (tb-dec-precompute-layer (head layers) enc) (tb-dec-precompute (tail layers) enc))))
+
+; cross-attention using the precomputed ck/cv (no enc re-projection)
+(defn tb-mh-cross-sub-cached (dlns ck cv wq bq wo bo n hd scale)
+  (tb-proj-seq wo bo (tb-mh-attn (tb-proj-seq wq bq dlns) ck cv n hd scale)))
+(defn tb-dec-cross-cached (h1 ck cv eps g2 be2 wq bq wo bo n hd scale)
+  (tb-add-seq h1 (tb-mh-cross-sub-cached (tb-ln-seq h1 eps g2 be2) ck cv wq bq wo bo n hd scale)))
+
+; one cached decoder layer/block: self (causal) → cross (cached) → ffn
+(defn tb-dec-layer-cached (xs eps n hd scale CL)
+  (tb-ffn-block
+    (tb-dec-cross-cached
+      (tb-dec-self xs eps (nth CL 0) (nth CL 1) (nth CL 2) (nth CL 3) (nth CL 4) (nth CL 5)
+                   (nth CL 6) (nth CL 7) (nth CL 8) (nth CL 9) n hd scale)
+      (nth CL 14) (nth CL 15) eps (nth CL 10) (nth CL 11) (nth CL 12) (nth CL 13) (nth CL 16) (nth CL 17) n hd scale)
+    eps (nth CL 18) (nth CL 19) (nth CL 20) (nth CL 21) (nth CL 22) (nth CL 23)))
+(defn tb-dec-stack-cached (xs eps n hd scale clayers)
+  (if (eq (len clayers) 0) xs
+      (tb-dec-stack-cached (tb-dec-layer-cached xs eps n hd scale (head clayers)) eps n hd scale (tail clayers))))
+
+; one greedy step over cached layers (encoder already folded into ck/cv)
+(defn tb-decode-next-cached (ids embed pos eps n hd scale clayers gf bf)
+  (do
+    (let din (tb-embed-seq embed pos ids))
+    (let dout (tb-dec-stack-cached din eps n hd scale clayers))
+    (let last (tb-last dout))
+    (let lnf (tb-vec-add (tb-vec-mul (tn-layernorm last eps) gf) bf))
+    (tb-argmax (tb-logits embed lnf))))
+(defn tb-generate-cached-loop (ids embed pos eps n hd scale clayers gf bf maxlen)
+  (if (ge (len ids) maxlen) ids
+      (tb-generate-cached-loop
+        (tb-append ids (tb-decode-next-cached ids embed pos eps n hd scale clayers gf bf))
+        embed pos eps n hd scale clayers gf bf maxlen)))
+; precompute the cross KV cache ONCE, then run the greedy loop
+(defn tb-generate-cached (ids embed pos enc eps n hd scale layers gf bf maxlen)
+  (tb-generate-cached-loop ids embed pos eps n hd scale (tb-dec-precompute layers enc) gf bf maxlen))

@@ -1,0 +1,39 @@
+{
+  "date": "2026-06-20",
+  "brick": "greedy-decode (3w)",
+  "title": "greedy argmax over logits crosses four-way — the SELECTION half of the generation loop, proven equal to the body's existing argmax spine",
+  "north_star_track": "real local llama inference on the M4 GPU — the generation loop (the named next stone after #3382's KV cache)",
+  "what": "Lifted greedy argmax over logits to a standalone four-way Form recipe. In temperature-0 (greedy) decode the next token is simply the argmax of the model's final logit vector over the vocabulary. This is the SELECTION half of the generation step; kv-cache.fk (#3382) is the ATTENTION half. It lived ONLY inside transformer-kernel.fk's tk-emit-llama as emitted C — `for (int t = 1; t < V; t++) if (logits[t] > logits[best]) best = t;` — never a standalone proven recipe, exactly like the llama numerics (3p), RoPE (3q), the block (3r), and the KV cache (3v) before they were lifted. gd-argmax walks the vector ascending and replaces the incumbent only on a STRICTLY-greater logit (gt, not ge), so on a tie the lowest index wins — bit-for-bit the emitted-C `>` rule. gd-token is the decoder name. Lives at the reusable decoder-engine altitude, not llama-specific.",
+  "files": {
+    "recipe": "form/form-stdlib/greedy-decode.fk",
+    "band": "form/form-stdlib/tests/greedy-decode-band.fk",
+    "teaching": "docs/coherence-substrate/greedy-decode.form",
+    "index_row": "docs/coherence-substrate/INDEX.md (greedy-decode.form)",
+    "manifest_row": "greedy-decode fks 255"
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/histogram-peak.fk form-stdlib/greedy-decode.fk form-stdlib/tests/greedy-decode-band.fk",
+    "verdict": 255,
+    "fourth_arm": "1 band four-way (fkwu + pre-flattened tables)",
+    "divergent": 0,
+    "kernels": "Go, Rust, TypeScript, fkwu — agree on every sample",
+    "reference": "python argmax with strictly-greater tie rule — all 8 cases confirmed before authoring"
+  },
+  "claims": {
+    "1": "gd-token [0.1,0.9,0.3] -> 1   a clear interior winner is picked (the decoder name gd-token exercised)",
+    "2": "gd-argmax [2.0,1.0,0.5] -> 0   winner at the front",
+    "4": "gd-argmax [0.1,0.2,0.5] -> 2   winner at the LAST index (only the full ascending walk reaches it)",
+    "8": "gd-argmax [0.5,0.5,0.2] -> 0   TIE -> lowest index (the load-bearing law; bit-for-bit the emitted-C strictly-greater rule)",
+    "16": "gd-argmax [0.3,0.3,0.3] -> 0   all-equal -> index 0",
+    "32": "gd-argmax [-3.0,-1.0,-5.0] -> 1   NEGATIVE logits: least-negative wins (gt holds across the sign boundary; real logits are unbounded reals, not probabilities)",
+    "64": "gd-argmax [1.000001,1.0,0.0] -> 0   a hair above is NOT collapsed to a tie (real fp resolution, not integer-rounded)",
+    "128": "gd-argmax [0.1,0.9,0.3] == hp-peak-bin [0.1,0.9,0.3]   the CONSOLIDATION: greedy-decode is the decoder-altitude name for the body's already-proven max-select-by-index spine (histogram-peak), proven equal bit-for-bit — not a fourth copy"
+  },
+  "lesson": "Read-the-body held an EIGHTH time in spirit: 3v's receipt named this exact stone (greedy argmax still living only as emitted C). gt was already proven float-safe via transformer-numerics' tn-max-acc (4095, four-way), so the only question was whether a standalone argmax-INDEX-over-floats recipe existed at four-way — it did not (tn-max gives the max VALUE; histogram-peak's hp-peak-bin gives the index but is integer-bin-scoped). The honest move was NOT a fourth duplicate of the max-select spine but a decoder-altitude name whose band PROVES equivalence to hp-peak-bin (bit 128) — making the consolidation sound and naming the core-lift follow-up (fold hp-peak / ns-best / sp-predict / gd-argmax onto one generic argmax-by-index primitive). Design (the strange-minimal tie/negative/fp-resolution fixtures and the consolidation claim) was the cost; the four-way proof was seconds.",
+  "named_next_stones": [
+    "fold hp-peak-loop / ns-best-loop / sp-predict-loop / gd-argmax-loop onto ONE generic argmax-by-index primitive (the core-lift the bit-128 equivalence makes sound)",
+    "the KV-cached causal LLAMA block (wrap lblk-block-causal's attention in kv-cache) — the per-step decode of the real decoder",
+    "the full generation loop: tokenizer (text-tokenize.fk) + KV cache + greedy decode (gd-token) over real llama3.2:3b GGUF weights on the M4 GPU",
+    "temperature/top-k/nucleus sampling as a separate selection recipe over the same logits (softmax + a sampled draw)"
+  ]
+}
