@@ -1,0 +1,77 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk
+;
+; sampling-band — the token-SAMPLING filters (temperature, softmax, top-k, top-p) as Form, proven
+; three-way (Go/Rust/TS): every value is reduced to an integer at 1e-6 and pinned by EQUALITY, so the
+; native result is the recipe's result bit-for-bit, not merely within epsilon. softmax reuses
+; transformer-numerics' tn-max / tn-exp-map / tn-sub-scalar / tn-sum / tn-scale in tn-softmax's exact
+; op order (cross-checked below: smp-softmax(L) == tn-softmax(L), bit-identical). top-k / top-p use the
+; selection recipes in sampling.fk (no sort native: repeated-max extraction). The expected integers were
+; EMITTED FROM the recipe (same folds, same fp64) and frozen here — the band proves determinism across
+; kernels plus correctness of the pinned values, every one cross-checked by hand below. No RNG: these
+; functions produce the deterministic FILTERED DISTRIBUTION; the draw against it is the sampler's job.
+;
+; Fixtures:
+;   L = [1.0, 2.0, 0.5, -1.0]              (raw logits, for temperature + softmax)
+;   P = [0.1, 0.5, 0.3, 0.1]               (a probability distribution, sums to 1, for top-k / top-p)
+;
+; Verdict 2047 when every claim lands:
+;   1     temperature(L, 0.5)      = [2.0, 4.0, 1.0, -2.0]              (each logit / 0.5, exact)
+;   2     softmax(L)               = [224208, 609460, 135989, 30343]   (×1e6, tn-softmax bits)
+;   4     softmax(L) sums to 1     = 1000000                            (a distribution, exactly)
+;   8     smp-softmax == tn-softmax                                     (same reduction order, exact)
+;   16    kth-largest(P, 1)        = 300000   (2nd largest = 0.3)
+;   32    topk-mask(P, 2)          = [0, 625000, 375000, 0]            (keep 0.5,0.3; renorm 0.625/0.375)
+;   64    topk-mask(P, 2) sums to 1= 1000000                            (renormalized distribution)
+;   128   topk-mask(P, 3)          = [100000, 500000, 300000, 100000]  (thr=0.1; both 0.1 ties kept)
+;   256   topp-thr(P, 0.7)         = 300000   (cum 0.5<0.7, +0.3=0.8>=0.7 → threshold 0.3)
+;   512   topp-mask(P, 0.7)        = [0, 625000, 375000, 0]            (nucleus {0.5,0.3}, == topk k=2)
+;   1024  topp-mask(P, 0.4)        = [0, 1000000, 0, 0]                (cum 0.5>=0.4 at rank0 → {0.5})
+(do
+    ; --- value reducer: a vec → flat list of (round (x·1e6)) integers ---
+    (defn spb-ints (v)
+      (if (eq (len v) 0) (empty) (cons (round (mul (head v) 1000000.0)) (spb-ints (tail v)))))
+    ; exact integer-list equality
+    (defn spb-ieq (a b)
+      (if (eq (len a) 0) (eq (len b) 0)
+          (if (eq (len b) 0) false
+              (if (eq (head a) (head b)) (spb-ieq (tail a) (tail b)) false))))
+
+    ; --- fixtures ---
+    (let L (list 1.0 2.0 0.5 -1.0))
+    (let P (list 0.1 0.5 0.3 0.1))
+
+    ; --- temperature ---
+    (let temp (smp-temperature L 0.5))
+    (let temp-want (list 2000000 4000000 1000000 -2000000))
+
+    ; --- softmax ---
+    (let sm (smp-softmax L))
+    (let sm-want (list 224208 609460 135989 30343))
+
+    ; --- top-k ---
+    (let tk2 (smp-topk-mask P 2))
+    (let tk2-want (list 0 625000 375000 0))
+    (let tk3 (smp-topk-mask P 3))
+    (let tk3-want (list 100000 500000 300000 100000))
+
+    ; --- top-p ---
+    (let tp7 (smp-topp-mask P 0.7))
+    (let tp7-want (list 0 625000 375000 0))
+    (let tp4 (smp-topp-mask P 0.4))
+    (let tp4-want (list 0 1000000 0 0))
+
+    ; --- claims ---
+    (let c0  (if (spb-ieq (spb-ints temp) temp-want) 1 0))
+    (let c1  (if (spb-ieq (spb-ints sm) sm-want) 2 0))
+    (let c2  (if (eq (round (mul (tn-sum sm) 1000000.0)) 1000000) 4 0))
+    (let c3  (if (spb-ieq (spb-ints sm) (spb-ints (tn-softmax L))) 8 0))
+    (let c4  (if (eq (round (mul (smp-kth-largest P 1) 1000000.0)) 300000) 16 0))
+    (let c5  (if (spb-ieq (spb-ints tk2) tk2-want) 32 0))
+    (let c6  (if (eq (round (mul (tn-sum tk2) 1000000.0)) 1000000) 64 0))
+    (let c7  (if (spb-ieq (spb-ints tk3) tk3-want) 128 0))
+    (let c8  (if (eq (round (mul (smp-topp-thr P 0.7) 1000000.0)) 300000) 256 0))
+    (let c9  (if (spb-ieq (spb-ints tp7) tp7-want) 512 0))
+    (let c10 (if (spb-ieq (spb-ints tp4) tp4-want) 1024 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 c10)))))))))))

@@ -1,0 +1,71 @@
+; sampling.fk — token-SAMPLING filters for serving: temperature, softmax, top-k, top-p (nucleus).
+;
+; preludes: form-stdlib/transformer-numerics.fk
+;
+; transformer-generate.fk closes the decode loop with tb-argmax — greedy, the single most-likely
+; token. Serving needs the rung above greedy: shape the distribution BEFORE the choice. This stone is
+; the deterministic half of sampling — the part the recipe owns bit-for-bit. It produces the filtered
+; distribution; drawing from it is the RNG's job (one uniform draw against the cumulative), and the RNG
+; is not a recipe — so the band proves the FILTERED DISTRIBUTION, which is fully determined by the
+; logits and the cutoffs. No randomness here: every value below is a fold the kernels must agree on.
+;
+; All fp64, float-counted (no int/float mixing), pure list-walk recursion — same discipline as
+; transformer-numerics.fk. Reuses tn-max / tn-exp-map / tn-sub-scalar / tn-sum / tn-scale so softmax
+; computes the SAME bits as tn-softmax (same reduction order, same Taylor exp). top-k / top-p need a
+; descending order and the Form DSL has no sort native, so selection is built as a recipe below
+; (repeated-max extraction — O(n²), fine for a vocabulary slice; determinism, not speed, is the point).
+
+; --- temperature: divide every logit by t (t<1 sharpens, t>1 flattens). Pure scale by 1/t. ---
+(defn smp-temperature (logits t) (tn-scale logits (div 1.0 t)))
+
+; --- softmax: SAME op order as tn-softmax — subtract max (stability), exp each, normalize by sum. ---
+; Kept as its own name so callers read sampling.fk as the one surface; the bits are tn-softmax's.
+(defn smp-softmax (logits)
+  (tn-scale (tn-exp-map (tn-sub-scalar logits (tn-max logits)))
+            (div 1.0 (tn-sum (tn-exp-map (tn-sub-scalar logits (tn-max logits)))))))
+
+; --- selection primitives (no sort native: extract the running maximum, fold the rest) ---
+; smp-kth-largest: the value at rank k (0-based) in descending order. Find the max, then recurse on
+; the list with that one occurrence removed, k times. Ties: each pass removes one occurrence, so a
+; repeated max is consumed rank by rank (k=0 → largest, k=1 → second copy of it if it repeats).
+(defn smp-drop-one (xs v)
+  (if (eq (len xs) 0) (empty)
+      (if (eq (head xs) v) (tail xs)
+          (cons (head xs) (smp-drop-one (tail xs) v)))))
+(defn smp-kth-largest (xs k)
+  (if (eq k 0) (tn-max xs)
+      (smp-kth-largest (smp-drop-one xs (tn-max xs)) (sub k 1))))
+
+; --- renormalize: scale a (masked) distribution back to sum 1. Sum is over the kept mass only. ---
+(defn smp-renorm (xs) (tn-scale xs (div 1.0 (tn-sum xs))))
+
+; --- top-k mask: keep the k largest probabilities, zero the rest, renormalize. ---
+; Threshold = the k-th-largest value (rank k-1). Every prob >= threshold survives; the rest go to 0.
+; (Boundary ties at the threshold are kept — matches "keep the k largest" when values repeat there;
+;  exactly k survive when the top-k values are distinct, the common serving case.)
+(defn smp-topk-keep (xs thr)
+  (if (eq (len xs) 0) (empty)
+      (cons (if (ge (head xs) thr) (head xs) 0.0) (smp-topk-keep (tail xs) thr))))
+(defn smp-topk-mask (probs k)
+  (smp-renorm (smp-topk-keep probs (smp-kth-largest probs (sub k 1)))))
+
+; --- top-p (nucleus) mask: in descending-prob order, keep the smallest prefix whose cumulative ---
+; --- prob >= p; zero the rest; renormalize. ---
+; The cutoff is a VALUE threshold: walk ranks high→low accumulating mass until it reaches p; the
+; value at the last rank added is the threshold. Then keep every prob >= that threshold (the same
+; value-mask shape as top-k — order-independent, so masking the original positions is exact).
+; smp-topp-thr: descend by rank from the running max; stop at the first rank whose cumulative >= p
+; and return that rank's value. n = list length, guards the walk from over-running.
+(defn smp-topp-thr-acc (xs cum p k n)
+  (do
+    (let v (smp-kth-largest xs k))
+    (let cum2 (add cum v))
+    (if (ge cum2 p) v
+        (if (ge (add k 1) n) v
+            (smp-topp-thr-acc xs cum2 p (add k 1) n)))))
+(defn smp-topp-thr (probs p) (smp-topp-thr-acc probs 0.0 p 0 (len probs)))
+(defn smp-topp-keep (xs thr)
+  (if (eq (len xs) 0) (empty)
+      (cons (if (ge (head xs) thr) (head xs) 0.0) (smp-topp-keep (tail xs) thr))))
+(defn smp-topp-mask (probs p)
+  (smp-renorm (smp-topp-keep probs (smp-topp-thr probs p))))

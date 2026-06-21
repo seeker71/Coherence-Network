@@ -1,0 +1,51 @@
+//
+// form-ptx affine-gb f32: y[i][j] = x[i][j] * gamma[j] + beta[j]  (tb-ln-seq's *gamma+beta).
+// one thread per element; gamma/beta are per-channel (length cols).
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_affine_gb_f32(
+    .param .u64 p_x,
+    .param .u64 p_g,
+    .param .u64 p_be,
+    .param .u64 p_y,
+    .param .u32 p_rows,
+    .param .u32 p_cols
+)
+{
+    .reg .pred  %p<2>;
+    .reg .f32   %f<6>;
+    .reg .b32   %r<10>;
+    .reg .b64   %rd<12>;
+
+    ld.param.u64    %rd1, [p_x];
+    ld.param.u64    %rd2, [p_g];
+    ld.param.u64    %rd3, [p_be];
+    ld.param.u64    %rd4, [p_y];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;       // tid
+    mul.lo.s32      %r7, %r1, %r2;            // total
+    setp.ge.u32     %p1, %r6, %r7;
+    @%p1 bra        DONE;
+    rem.u32         %r8, %r6, %r2;            // j = tid%cols
+    mul.wide.u32    %rd5, %r6, 4;
+    add.s64         %rd6, %rd1, %rd5;
+    ld.global.f32   %f1, [%rd6];             // x
+    mul.wide.u32    %rd7, %r8, 4;
+    add.s64         %rd8, %rd2, %rd7;
+    ld.global.f32   %f2, [%rd8];             // gamma[j]
+    add.s64         %rd9, %rd3, %rd7;
+    ld.global.f32   %f3, [%rd9];             // beta[j]
+    mul.f32         %f4, %f1, %f2;
+    add.f32         %f5, %f4, %f3;
+    add.s64         %rd10, %rd4, %rd5;
+    st.global.f32   [%rd10], %f5;
+DONE:
+    ret;
+}

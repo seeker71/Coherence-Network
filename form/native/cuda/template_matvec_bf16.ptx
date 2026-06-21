@@ -1,0 +1,65 @@
+//
+// form-ptx matvec bf16: storage bf16 (2 bytes), accumulate fp32, one round-to-nearest store.
+// load bf16 -> cvt.f32.bf16 (exact widen); mul.f32 + add.f32 (two roundings); cvt.rn.bf16.f32 store.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_matvec_bf16(
+    .param .u64 p_w,
+    .param .u64 p_x,
+    .param .u64 p_y,
+    .param .u32 p_rows,
+    .param .u32 p_cols
+)
+{
+    .reg .pred  %p<2>;
+    .reg .b16   %rs<4>;
+    .reg .f32   %f<6>;
+    .reg .b32   %r<10>;
+    .reg .b64   %rd<10>;
+
+    ld.param.u64    %rd1, [p_w];
+    ld.param.u64    %rd2, [p_x];
+    ld.param.u64    %rd3, [p_y];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+
+    mul.lo.s32      %r7, %r6, %r2;
+    mov.f32         %f1, 0f00000000;
+    mov.u32         %r8, %r2;
+
+LOOP:
+    setp.eq.u32     %p1, %r8, 0;
+    @%p1 bra        ENDLOOP;
+    sub.u32         %r8, %r8, 1;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd4, %r9, 2;
+    add.s64         %rd5, %rd1, %rd4;
+    ld.global.b16   %rs1, [%rd5];
+    cvt.f32.bf16   %f2, %rs1;
+    mul.wide.u32    %rd6, %r8, 2;
+    add.s64         %rd7, %rd2, %rd6;
+    ld.global.b16   %rs2, [%rd7];
+    cvt.f32.bf16   %f3, %rs2;
+    mul.f32         %f4, %f2, %f3;
+    add.f32         %f1, %f4, %f1;
+    bra             LOOP;
+
+ENDLOOP:
+    cvt.rn.bf16.f32 %rs3, %f1;
+    mul.wide.u32    %rd8, %r6, 2;
+    add.s64         %rd9, %rd3, %rd8;
+    st.global.b16   [%rd9], %rs3;
+
+DONE:
+    ret;
+}

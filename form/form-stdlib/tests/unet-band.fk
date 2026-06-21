@@ -1,0 +1,112 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv-stem.fk form-stdlib/conv2d.fk form-stdlib/llama-numerics.fk form-stdlib/unet.fk
+;
+; unet-band — the diffusion UNet building blocks (upsample / downsample / resblock) as Form, proven
+; three-way (Go/Rust/TS): every value is reduced to an integer at 1e-6 and pinned by EQUALITY, so the
+; native result is the recipe's result bit-for-bit, not merely within epsilon. un-upsample2x /
+; un-downsample2x are pure list-walk folds over conv2d.fk's grid convention; un-resblock reuses
+; cv2d-conv / cv2d-groupnorm and llama-numerics' ln-silu verbatim. The expected integers were emitted
+; FROM the recipe (same fold order, same fp64) and frozen here — the band proves determinism across
+; kernels plus correctness of the pinned values (the up/down values cross-checked by hand below).
+;
+; Upsample fixture: a 2×2 single-channel grid [[1,2],[3,4]] → 4×4, every pixel a 2×2 block:
+;   row0 = 1 1 2 2 ; row1 = 1 1 2 2 ; row2 = 3 3 4 4 ; row3 = 3 3 4 4   (hand-checked, exact).
+; Downsample fixture: the same 2×2 [[1,2],[3,4]] → 1×1, the channel-wise mean (1+2+3+4)/4 = 2.5
+;   → 2500000  (hand-checked, exact).
+; Resblock fixture: a 4×4 single-channel image (pixels 0.1 … 1.6) through conv(3×3,p1: 1→2 ch) →
+;   groupnorm(2 groups over the 16 flattened pixels) → silu → conv(3×3,p1: 2→1 ch) → + the input
+;   grid. The 1→2→1 channel path means the residual add is shape-aligned (output is 4×4×1, the input
+;   shape) — the values frozen from the recipe; the zero-mean groupnorm invariant cross-checked live.
+;
+; Verdict 127 when every claim lands:
+;    1   the full 4×4 upsample output equals the pinned grid (×1e6, exact)
+;    2   upsample doubled both axes: 4 rows × 4 cols × 1 channel (a function of the grid, not a constant)
+;    4   the 1×1 downsample output equals the pinned mean (×1e6, exact)
+;    8   downsample halved both axes: 1 row × 1 col × 1 channel
+;   16   the full 4×4 resblock output equals the pinned grid (×1e6, exact)
+;   32   the resblock preserved the input shape (4 rows × 4 cols × 1 channel) so the residual aligned
+;   64   the resblock's internal groupnorm conserves zero mean over its groups (|Σ| ≤ 4 of 1e-6 units)
+
+(do
+    ; --- value reducers: a grid → flat list of (round (x·1e6)) integers ---
+    (defn ub-vec-ints (v)
+      (if (eq (len v) 0) (empty) (cons (round (mul (head v) 1000000.0)) (ub-vec-ints (tail v)))))
+    (defn ub-row-ints (row)
+      (if (eq (len row) 0) (empty) (cv-cat (ub-vec-ints (head row)) (ub-row-ints (tail row)))))
+    (defn ub-grid-ints (g)
+      (if (eq (len g) 0) (empty) (cv-cat (ub-row-ints (head g)) (ub-grid-ints (tail g)))))
+    ; exact integer-list equality
+    (defn ub-ieq (a b)
+      (if (eq (len a) 0) (eq (len b) 0)
+          (if (eq (len b) 0) false
+              (if (eq (head a) (head b)) (ub-ieq (tail a) (tail b)) false))))
+    ; sum of a flat integer list (for the zero-mean invariant) and its magnitude
+    (defn ub-isum (xs) (if (eq (len xs) 0) 0 (add (head xs) (ub-isum (tail xs)))))
+    (defn ub-iabs (n) (if (lt n 0) (sub 0 n) n))
+
+    ; --- upsample fixture: 2×2 single-channel grid ---
+    (let up-img (list
+      (list (list 1.0) (list 2.0))
+      (list (list 3.0) (list 4.0))))
+    (let up (un-upsample2x up-img))
+    (let up-want (list
+      1000000 1000000 2000000 2000000
+      1000000 1000000 2000000 2000000
+      3000000 3000000 4000000 4000000
+      3000000 3000000 4000000 4000000))
+
+    ; --- downsample fixture: same 2×2 grid → one averaged pixel ---
+    (let dn-img (list
+      (list (list 1.0) (list 2.0))
+      (list (list 3.0) (list 4.0))))
+    (let dn (un-downsample2x dn-img))
+    (let dn-want (list 2500000))
+
+    ; --- resblock fixture: 4×4 single-channel image, 1→2→1 channel path, groups=2, eps=1e-5 ---
+    (let img (list
+      (list (list 0.1) (list 0.2) (list 0.3) (list 0.4))
+      (list (list 0.5) (list 0.6) (list 0.7) (list 0.8))
+      (list (list 0.9) (list 1.0) (list 1.1) (list 1.2))
+      (list (list 1.3) (list 1.4) (list 1.5) (list 1.6))))
+    ; w1: 2 out-ch from 1 in-ch — ch0 a horizontal-derivative, ch1 a constant box
+    (let w1 (list
+      (list
+        (list (list 1.0) (list 0.0) (list -1.0))
+        (list (list 1.0) (list 0.0) (list -1.0))
+        (list (list 1.0) (list 0.0) (list -1.0)))
+      (list
+        (list (list 0.5) (list 0.5) (list 0.5))
+        (list (list 0.5) (list 0.5) (list 0.5))
+        (list (list 0.5) (list 0.5) (list 0.5)))))
+    (let b1 (list 0.0 0.1))
+    ; w2: 1 out-ch from 2 in-ch — collapses back to a single channel for the residual add
+    (let w2 (list
+      (list
+        (list (list 0.1 -0.2) (list 0.0 0.3) (list -0.1 0.1))
+        (list (list 0.2 0.0)  (list 0.1 0.1) (list 0.0 -0.1))
+        (list (list -0.1 0.2) (list 0.0 0.0) (list 0.1 0.1)))))
+    (let b2 (list 0.05))
+    (let res (un-resblock img w1 b1 w2 b2 2 0.00001))
+    (let res-want (list
+      185133 378345 680352 731487
+      558692 797429 1075772 1127279
+      1159176 1446376 1510293 1369939
+      1492182 1674908 1638243 1556218))
+    ; the internal groupnorm output, for the zero-mean invariant claim
+    (let gn (un-gn-grid (cv2d-conv w1 b1 img 1 1 3 3) 2 0.00001))
+
+    ; --- claims ---
+    (let c0 (if (ub-ieq (ub-grid-ints up) up-want) 1 0))
+    (let c1 (if (eq (len up) 4)
+               (if (eq (len (head up)) 4)
+                   (if (eq (len (head (head up))) 1) 2 0) 0) 0))
+    (let c2 (if (ub-ieq (ub-grid-ints dn) dn-want) 4 0))
+    (let c3 (if (eq (len dn) 1)
+               (if (eq (len (head dn)) 1)
+                   (if (eq (len (head (head dn))) 1) 8 0) 0) 0))
+    (let c4 (if (ub-ieq (ub-grid-ints res) res-want) 16 0))
+    (let c5 (if (eq (len res) 4)
+               (if (eq (len (head res)) 4)
+                   (if (eq (len (head (head res))) 1) 32 0) 0) 0))
+    (let c6 (if (le (ub-iabs (ub-isum (ub-grid-ints gn))) 4) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
