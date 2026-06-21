@@ -17,16 +17,32 @@
 # Width 2 is the proven floor; this proves the recipe is dimension-generic — at
 # width 4 the matrices are 4×4 and only the fixture changes, no new logic.
 #
+# LEARNED (2026-06-21, diagnostic sweep): the old default lr=0.03 was too high —
+# the loss sat at ~1.33-1.37/row (WORSE than predict-the-mean, ~0.76/row) and even
+# ROSE at high epochs (oscillation): the model UNDERfit, never overfit (train ≈
+# held throughout — no generalization gap). The fix is the optimizer, not the
+# size: lr=0.003 (10x lower) is stable and converges by ~400 epochs to held-out
+# that BEATS-or-MATCHES the predict-mean baseline (0.39/row on an easy 100-row
+# held slice, 0.76/row on a representative 200-row slice — the 0.39 was a small-
+# sample mirage; the honest converged number is ~baseline). lr=0.1 DIVERGES.
+# The lr fix recovers the OPTIMIZATION headroom only — the model still sits ~2x
+# above the irreducible feature floor (~0.19-0.35/row, best any model can do with
+# these 4 coarse features; 72% of rows share a feature vector with a different
+# tool-set). Closing THAT gap needs more CAPACITY and richer FEATURES (embeddings),
+# not a better optimizer. So lr=0.003 is the new default (override via FORM_LR).
+# The LOGIC is unchanged Form (transformer-corpus-train.fk, band 31 four-way) —
+# only this carrier's hyperparameters moved.
+#
 # Optional 4th arg [eval-corpus]: a SEPARATE corpus to measure the trained model's
 # loss on, NEVER folded into training. This is how copyright-restricted material is
 # used for TESTING — partition first (scripts/corpus_partition_by_license.sh), train
 # on the .train-eligible file, pass the .eval-only file here as the copyright test set.
-# Usage: form_cli_transformer_train_wide.sh [corpus] [epochs] [cap] [eval-corpus]
+# Usage: form_cli_transformer_train_wide.sh [corpus] [epochs] [cap] [eval-corpus]   (env: FORM_LR)
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
 CORPUS="${1:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
-EPOCHS="${2:-60}"; CAP="${3:-200}"; EVAL_CORPUS="${4:-}"
+EPOCHS="${2:-400}"; CAP="${3:-800}"; EVAL_CORPUS="${4:-}"
 [[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && GOPROXY=off go build -o bin-go . ) 2>/dev/null  # offline: build from module cache, never the network
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
@@ -104,7 +120,7 @@ prog="$(mktemp)"
   echo "  (let bb (tbp-bk (list (list 0.20 0.10 -0.05 0.15) (list -0.10 0.30 0.20 -0.15) (list 0.25 -0.20 0.35 0.10) (list -0.05 0.15 -0.10 0.40)) (list 0.0 0.0 0.0 0.0) (list (list 0.40 -0.20 0.15 -0.10) (list 0.30 0.50 -0.25 0.20) (list -0.15 0.25 0.45 0.10) (list 0.20 -0.10 0.30 0.35)) (list 0.0 0.0 0.0 0.0)))"
   echo "  $body"
   [[ -n "$eval_body" ]] && echo "  $eval_body"
-  echo "  (let eps 0.00001) (let lr 0.03)"
+  echo "  (let eps 0.00001) (let lr ${FORM_LR:-0.003})"
   echo "  (let s0 (list ba bb))"
   echo "  (let sN (tct-train-blocks ba bb train lr eps $EPOCHS))"
   echo "  (print (round (mul (tct-corpus-loss s0 train eps) 1000000.0)))"
@@ -129,7 +145,7 @@ f6(){ printf "%d.%06d" "$(( ${1:-0}/1000000 ))" "$(( ${1:-0}<0 ? -${1:-0}%100000
 echo
 printf "  corpus            %s train turns, %s held-out (real Claude turns, 4-dim tool vector)\n" "$ntr" "$nhd"
 printf "  shape             4→4→4 two-block residual stack (x=[len,code,path,?]  t=[Read,Edit,Bash,Write])\n"
-printf "  epochs            %s   (SGD lr=0.03)\n" "$EPOCHS"
+printf "  epochs            %s   (SGD lr=%s)\n" "$EPOCHS" "${FORM_LR:-0.003}"
 printf "  train loss        %s  →  %s\n" "$(f6 "$tr0")" "$(f6 "$trN")"
 printf "  held-out loss     %s  →  %s\n" "$(f6 "$hd0")" "$(f6 "$hdN")"
 if [[ -n "$eval_body" ]]; then
