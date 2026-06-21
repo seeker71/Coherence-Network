@@ -107,7 +107,9 @@
 ;        form-native-llm.form (idea->spec->code as (intent->Form) pairs — the floor, already named),
 ;        form-cli-predict.fk + form-native-models.form (the 939-turn agent-corpus proof, 84.8%),
 ;        training-catalog.fk + corpus-license-gate.fk (the corpus registry and its boundary gate),
-;        spec-as-playable-recipe.form + code-tool-learning.form (the chain as a playable transform).
+;        spec-as-playable-recipe.form + code-tool-learning.form (the chain as a playable transform),
+;        native-reasoning.form (the capstone — a parsed Form recipe is what a trusted thought-step
+;        walks; parsing feeds reasoning, both held to the same satsang/four-kernel trust floor).
 ;   source: Urs 2026-06-21, deepening idea 2bd655d7 (the sovereign translator) from NL->NL to
 ;           NL->Form taught by a witnessed model council with self-update crystallization. Sibling
 ;           idea recorded in the idea DB when endpoint_ideas breathes (the native-mutation write

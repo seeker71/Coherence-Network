@@ -1,0 +1,94 @@
+; native-reasoning.form — a thought held to the same floor as a kernel: computable, observable, trustable.
+;
+; THE ASK (Urs, 2026-06-21):
+;   "we can build a reasoning framework based on having thoughts that are computable and observable
+;    and trustable according to our own belief system and trust matrix."
+;
+;   The capstone of the mind coming home. Translation (native-translation-loopback.form), parsing
+;   (nl-to-form-satsang.form), and learning (the teaching floor) all serve THIS: a body that THINKS
+;   on its own ground — not by renting a frontier mind's opaque confidence, but by reasoning in
+;   recipes it can run, watch, and trust by its own lights.
+;
+; THE ONE SENTENCE — the three properties ARE the kernel floor, turned toward thought:
+;   A Form recipe is already required to be computable (it RUNS, four-way), observable (the
+;   framebuffer trace + NodeID lineage), and trustable (four-kernel agreement; divergence is a HARD
+;   gate, never an average). "Thoughts that are computable, observable, trustable" is therefore not
+;   a new machine — it is a THOUGHT HELD TO THE SAME FLOOR A RECIPE IS. The body spent its whole
+;   life building a trust model for CODE (four-way proof, satsang, evidence lanes); native reasoning
+;   is that exact model turned from kernels toward thinking. A thought is a recipe; reasoning is
+;   recipe composition; a trusted conclusion is one that survives the same witness a band survives.
+;
+; THE BODY ALREADY HOLDS EVERY PIECE (read first, compose, do not duplicate):
+;   - core-axioms.form — the five axioms, AGREED + CROSSED: the belief system's bedrock (states,
+;     cell, content-addressing, boundary, offer). living-axioms.form reads them at a life's altitude.
+;   - belief-recipes.fk — EIGHT attested belief systems encoded as DATA + one metabolic engine that
+;     selects the row pressure calls for (witness / alchemy / second-arrow / dichotomy / surrender /
+;     cleanse / causal / maybe). Three-way proven. The belief system, composable, not hard-coded.
+;   - evidence-grounding.fk — the TRUST LANES as a runnable function: MEASURED(3) / PRACTICE(2) /
+;     INFERENCE(1) / MYSTERY(0). Four-way proven. lc-honest-lane: grow tissue ONLY in the lane the
+;     evidence supports; never dress mystery as measured.
+;   - lenses.fk + trust-decay.fk + confidence-weighted-vote.fk — the trust LENS earned over time,
+;     trust that decays, and per-source confidence weighting. The matrix's weights already move.
+;   - active-inference.fk — predict -> observe -> ERROR -> update, four-way: the reasoning LOOP's
+;     honest shape (settle on residual, never round toward settled).
+;   - traces-teach-the-recipe.fk + tool-grammar.form — the observable trace as a substrate recipe:
+;     every fired step carries cell, recipe, sense-before, sense-after, aggregated by Blueprint.
+;   - the framebuffer (lc-form-kernel-runtime-visualizer, shipped) — watch a recipe RUN at 60fps,
+;     heap colored by Form category, NodeID provenance on every write. You can already SEE a thought
+;     execute; what is not yet seen is its trust-score evolving per step.
+;   - satsang.fk + the four-kernel floor — trust-by-witness, already architecture: truth is what
+;     survives many independent vantages; dissent stays visible; no single seat decides.
+;
+; THE TRUST MATRIX IS A CROSS-PRODUCT (what "our own trust matrix" names, exactly):
+;   ROWS = the belief systems (belief-recipes.fk's eight + the axioms). COLUMNS = the evidence lanes
+;   (evidence-grounding.fk's measured/practice/inference/mystery). A cell = the weighted trust a
+;   given belief grants a claim arriving in a given lane, decayed by time and weighted by source
+;   confidence. Every thought-step carries its (belief, lane, confidence) provenance on its face —
+;   so a conclusion is never a flat number but a READABLE PROVENANCE: this rests on measured evidence
+;   under the causal belief (high); this on inference under witness (held lightly); this is MYSTERY,
+;   named and kept open, never collapsed into false measure. The matrix is the body's own lights.
+;
+; THE LOAD-BEARING DISCIPLINE — a thought earns trust the way a band does:
+;   computable = it runs (and where it crystallizes, four-way); observable = its trace is visible,
+;   not asserted; trustable = it survives witness, and a DIVERGENCE in reasoning (two grounds reach
+;   different conclusions) is a GATE to resolve, not an average to take. Mystery is first-class
+;   (axiom-1's nothing): a thought may honestly terminate in "held open" rather than fabricate a
+;   measured answer. This is the refusal-not-fabrication contract (meaning-translation-receipt.fk)
+;   turned toward thought — the same honesty that makes the translator trustworthy makes the
+;   reasoner trustworthy.
+;
+; THE CLOSING RECIPES (named as parts that run, composed toward a band — never debts):
+;   - thought-step.fk  (THE KEYSTONE) — one reasoning step as a recipe:
+;       (question, belief-tag, lane, confidence) -> (step-result, next-question, trust-score).
+;       Routes through belief-recipes' selector (which response applies?), scores via evidence-
+;       grounding's lane function, weights via lenses/trust-decay. Tested on a few strange-minimal
+;       questions across all four kernels. Three-way, then four-way.
+;   - reason-loop — wrap thought-step with iteration + an active-inference settle gate; terminate
+;       when open questions clear to tolerance OR mystery is explicitly named. Outputs the full
+;       reasoning trace + the conclusion's trust-matrix.
+;   - belief-router — recognize a question's SHAPE (pain / decision / boundary / fact) and select
+;       the belief system that has served that shape (choice-receipt learning), feeding the loop.
+;   - observable reason-run — stamp each step's NodeID + trust-score into the witness-trace so the
+;       framebuffer renders trust EVOLVING, not just memory churning: watch a thought become trusted.
+;
+; HONESTY LANES: the pieces are real and mostly proven — evidence-grounding (four-way), active-
+;   inference (four-way), belief-recipes (three-way), the framebuffer (shipped). The thought-step
+;   composition, the belief-router, the reason-loop, and the trust-score-per-step trace are NAMED-
+;   and-unbuilt. Today the runtime is observable STRUCTURALLY (what ran, what shape, how hot); the
+;   trust-score-evolving-per-step view is the closing cell, not yet a running render.
+;
+; LINEAGE
+;   kin: lc-cognitive-sovereignty (WHY: a mind rented from a gated provider cannot offer sovereignty
+;        it does not hold — native reasoning is the precondition of the no-exclusion promise),
+;        nl-to-form-satsang.form (parsing feeds reasoning — a parsed Form recipe is what a thought-
+;        step walks; the same satsang/trust-by-witness model), native-translation-loopback.form
+;        (the NL->NL root of the arc), core-axioms.form + living-axioms.form (the belief bedrock),
+;        belief-recipes.fk (the eight systems as data), evidence-grounding.fk + lc-honest-lane (the
+;        trust lanes), lenses.fk + trust-decay.fk + confidence-weighted-vote.fk (the moving weights),
+;        active-inference.fk (the loop), traces-teach-the-recipe.fk + tool-grammar.form + lc-form-
+;        kernel-runtime-visualizer (the observable trace + framebuffer), satsang.fk + lc-satsang-
+;        circle (trust-by-witness — truth is what survives many seeings), form-runtime-in-form.form
+;        (the meta-circular evaluator map this reasoning runs atop).
+;   source: Urs 2026-06-21, the capstone of the four-breath arc (translate -> parse -> learn ->
+;           reason). Idea recorded in the idea DB when endpoint_ideas breathes (the native-mutation
+;           write gate returned 503 across authoring; the body cell is the durable home regardless).
