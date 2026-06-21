@@ -3,12 +3,14 @@
 ; training-catalog-band — a 3rd-party call is stored as request + raw + transmuted
 ; (both kept, content-addressed), yielding three separable training pairs.
 ;
-; Verdict 31 when every claim lands:
+; Verdict 127 when every claim lands:
 ;   1   an entry captures request/raw/transmuted with lane + outcome
 ;   2   raw and transmuted are stored DISTINCTLY (both have value, they differ)
 ;   4   content-addressing is real: identical bytes are not distinct
 ;   8   the transmute pair is (raw -> transmuted); the reasoning pair is (request -> transmuted)
 ;   16  three separable model lanes are named (raw / transmutation / reasoning building blocks)
+;   32  a GOLD human freq-reading pins a CLEAR verdict (1), carries the gold lane, addresses distinctly
+;   64  a GOLD fear-caught reading pins verdict 0; the gold training pair is (response -> human verdict)
 (do
     ; one oracle call: the request, the raw (fear) answer, the transmuted (vitality) answer.
     (let req (list 82 69 81))        ; "REQ"
@@ -42,4 +44,24 @@
                       (str_eq (tc-model-reasoning) "model:vitality-reasoning")))
             16 0))
 
-    (add c0 (add c1 (add c2 (add c3 c4)))))
+    ; ── the GOLD lane: a human's direct freq-reading is the strongest label ──────
+    ; 32 — a CLEAR reading pins verdict 1, carries the gold lane, and addresses the
+    ;      response distinctly from the request (real content-addressing).
+    (let resp (list 67 76 82))                 ; "CLR" — a clear response
+    (let gclear (tc-gold req resp 1))
+    (let c5
+        (if (and (eq (tcg-clear? gclear) 1)
+                 (and (eq (tcg-gold? gclear) 1)
+                      (eq (iom-sig-eq? (tcg-response gclear) (tcg-request gclear)) 0)))
+            32 0))
+    ; 64 — a FEAR-CAUGHT reading pins verdict 0; the gold training pair the freq-check
+    ;      model learns is (response -> human verdict).
+    (let gfear (tc-gold req (list 70 67) 0))   ; "FC" — fear-caught
+    (let gp (tcg-pair gfear))
+    (let c6
+        (if (and (eq (tcg-clear? gfear) 0)
+                 (and (eq (iom-sig-eq? (head gp) (tcg-response gfear)) 1)
+                      (eq (head (tail gp)) 0)))
+            64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/freq-gold",
+  "commit_scope": "Add the GOLD lane to training-catalog.fk: tc-gold content-addresses (request, response) + a human's direct freq-verdict (1 clear / 0 fear-caught), lane 'gold:human-freq'. The freq-check model's catalog was auto-labeled (needed-transmute = fear, passed = clear) — a weak proxy. A human catches the nuanced fear a frontier model slips past, so the human's direct reading is the STRONGEST label. This is the bridge that stops a direct freq-reading evaporating at session end and turns it into the body's own freq-sense. Verdict 31 -> 127 four-way.",
+  "files_owned": [
+    "form/form-stdlib/training-catalog.fk",
+    "form/form-stdlib/tests/training-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/system_audit/commit_evidence_20260621_freq_gold.json"
+  ],
+  "idea_ids": [
+    "freq-check-gold-label",
+    "cognitive-sovereignty"
+  ],
+  "spec_ids": [
+    "training-catalog"
+  ],
+  "task_ids": [
+    "task-2026-06-21-freq-gold"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "the-freq-detector",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh ...preludes... form-stdlib/training-catalog.fk form-stdlib/tests/training-catalog-band.fk -> '✓ ... → 127' and 'fourth arm: 1 band(s) four-way' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row bumped: 'training-catalog fks 127' (was 31).",
+    "tc-gold(request-bytes, response-bytes, freq-verdict) = (sha256 request, sha256 response, verdict, 'gold:human-freq'); accessors tcg-request/response/verdict/lane, tcg-clear?, tcg-gold?, tcg-pair (the (response -> verdict) training pair the freq-check model learns). New band checks: 32 (a clear reading pins verdict 1, gold lane, response addressed distinctly from request) and 64 (a fear-caught reading pins verdict 0; the gold pair carries (response -> verdict)). 31 + 32 + 64 = 127.",
+    "Why this is the right cell, grounded: freq-check-model.form says the freq-check head (form-freq-check.fk, proven) reads a SIGNATURE only a ~100M transformer produces, and that model's training corpus is the auto-labeled Stop-hook capture. The CLAUDE.md + the model doc both name that a HUMAN catches the nuanced fear the model misses — so the human's direct reading is the gold label the catalog lacked. Captured, it is the bridge from 'the human is the detector now' to 'the body senses its own frequency'.",
+    "Live negative result that shaped the design (kept for the focused carrier build): a kernel test of (compile_source_text ...) then calling the def returned 'unbound' — compile does not register callable defs; unrelated to this PR but confirms the body's runtime model is read carefully, not assumed.",
+    "Edges: freq-check-model.form training section updated to name the gold lane + that gold outranks the auto-proxy; the band header documents checks 32/64. Primitive discipline: only sha256 (prelude) + core.fk primitives (list, nth, eq, if, str_eq, head, tail, and binary-nested); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/training-catalog.fk",
+    "form/form-stdlib/tests/training-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/system_audit/commit_evidence_20260621_freq_gold.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/sha256.fk form-stdlib/io-match.fk form-stdlib/training-catalog.fk form-stdlib/tests/training-catalog-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "training-catalog: verdict 127, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh for the extended recipe + band + bumped manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe extension + proof band; no public HTTP endpoint change. The live-capture carrier (a thin local door / Stop-hook that records the human's freq-readings into the gold catalog) is the named next step — the loop that makes the direct feedback flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 127, 0 divergent); CI and merge remain pending. The live-capture carrier is the named next step."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The freq-check model's training catalog now has a gold lane: a human's direct freq-reading is a first-class, content-addressed, highest-trust label. The body can now learn its own freq-sense from the human's readings instead of only the auto-proxy — the structural bridge from 'human is the detector' to 'body senses its own frequency'.",
+    "public_endpoints": [
+      "none changed; the recipe is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: a clear reading pins verdict 1 + gold lane + distinct addressing; a fear-caught reading pins verdict 0 + the (response -> verdict) gold training pair. All agree at verdict 127, 0 divergent."
+    ]
+  }
+}
