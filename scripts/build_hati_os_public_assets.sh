@@ -252,10 +252,14 @@ assets.append({
     "proof": "Android app release APK built by Gradle with a local non-committed signing key and verified by apksigner.",
     "note": "First migration from a debug-signed install requires uninstall/reinstall because Android rejects updates signed by a different key.",
 })
+import os
 data = {
     "stamp": stamp,
     "builder": "scripts/build_hati_os_public_assets.sh",
-    "release_tag": "hati-os-v0.1.0-20260613",
+    # The tag this manifest ships under. Set HATI_OS_RELEASE_TAG when cutting a
+    # release so the summary names the release it actually lands in (the old
+    # hardcoded literal is why v0.2.0 shipped a manifest that still said v0.1.0).
+    "release_tag": os.environ.get("HATI_OS_RELEASE_TAG", "hati-os-v0.2.0-20260614"),
     "assets": assets,
 }
 pathlib.Path(summary_path).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

@@ -9,9 +9,20 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Build + upload the native Windows form-cli asset to a release"
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag to upload the Windows asset to"
+        required: false
+        default: "hati-os-v0.2.0-20260614"
 
+# Write is only exercised by the publish steps below, which are gated on a
+# manual workflow_dispatch with publish=true. PR runs stay read-only proof.
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows-floor:
@@ -74,3 +85,47 @@ jobs:
           Push-Location form\form-kernel-go
           go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1
           Pop-Location
+
+      # ---- Publish (manual dispatch only) -------------------------------------
+      # Reached only after every proof step above passed, so the uploaded binary
+      # is the exact form-cli.exe that just crossed the four-way Windows floor.
+      - name: Build the standalone Windows form-cli (kept)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+        shell: bash
+        run: |
+          cd form
+          ./build-form-cli.sh .cache/form-cli-win.exe
+          test -s .cache/form-cli-win.exe || { echo "::error::form-cli-win.exe not produced"; exit 1; }
+          # Prove the kept binary still answers with no toolchain on PATH.
+          printf 'ping\n' | ./.cache/form-cli-win.exe | grep -qx pong \
+            || { echo "::error::built form-cli.exe did not pong"; exit 1; }
+
+      - name: Package + checksum the Windows asset
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+        shell: pwsh
+        run: |
+          $cache = "form/.cache"
+          Copy-Item -LiteralPath "$cache/form-cli-win.exe" -Destination "$cache/form-cli.exe" -Force
+          $zip = "$cache/hati-os-windows-amd64.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path "$cache/form-cli.exe" -DestinationPath $zip -Force
+          $h = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
+          # Match the shasum -a 256 two-space format the other assets use.
+          [System.IO.File]::WriteAllText("$zip.sha256", "$h  hati-os-windows-amd64.zip`n")
+          Get-Content "$zip.sha256"
+
+      - name: Upload the Windows asset to the release
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ inputs.release_tag }}"
+          echo "Uploading hati-os-windows-amd64.zip(+.sha256) to release $tag"
+          gh release upload "$tag" \
+            form/.cache/hati-os-windows-amd64.zip \
+            form/.cache/hati-os-windows-amd64.zip.sha256 \
+            --clobber --repo "$GITHUB_REPOSITORY"
+          echo "Published:"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[].name' | grep windows
