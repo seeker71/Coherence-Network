@@ -448,8 +448,15 @@ defn translator_first_night = r_autoresearch_loop(
 #         form/form-stdlib/diffusion-q-autoresearch.fk (dqa-step = propose→measure→keep-or-rollback,
 #         dqa-search = the iteration fold) + tests/diffusion-q-autoresearch-band.fk → 63, four-way.
 #         The fold's candidate stream stands in for agent_propose; the loop tracks the target and
-#         rediscovers the catalog gene. REMAINING: a real proposer (agent_propose), governance/never-stop,
-#         the experiment-cell history record, and the full (pool, core, pref-loss) triple (only the
-#         pref-loss coordinate runs today). See diffusion-q-learning.form Q4-autoresearch + GAP-Q6.
+#         rediscovers the catalog gene. See diffusion-q-learning.form Q4-autoresearch.
+#
+# GAP-A6: a REAL PROPOSER + POPULATION landed (closing the agent_propose half of GAP-A1/A4).
+#         form/form-stdlib/model-search.fk is the TOURNAMENT RATCHET: a population of candidate genes,
+#         train+measure each, and ms-improve = the proposer that IMPROVES THE WORST from the findings
+#         (the measurements reveal the uphill direction), repeated until the worst can no longer be
+#         improved (the population fixpoint — the honest never-stop halt). It finds the best gene PER
+#         USAGE — no free lunch. tests/model-search-band.fk → 31, four-way. So agent_propose is no longer
+#         vaporware: a measurement-driven proposer exists. REMAINING: the gene carrying the full
+#         (pool, core, pref-loss) triple, governance rule-cells, and the experiment-history record.
 #
 # None require kernel change. All compost into existing primitives.
