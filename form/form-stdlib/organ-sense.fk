@@ -1,0 +1,44 @@
+; organ-sense.fk — the universal organ-sensing law: any organ can be USED to
+; sense any organ of any cell that OFFERS, gated by the interface-consent law.
+;
+; The runnable establishment of "all organs can sense other organs of other
+; cells." It composes the organ model with channel-interface's ci-honors?: the
+; capability is universal (any organ may be the observer; any organ may be the
+; target), the actuality is consent-gated (a reading flows only through the
+; sense-interface the target offers; silence is always honored). Sensing is
+; reach, never breach — the boundary axiom (core-axioms.form, axiom-4) holds: a
+; cell meets the world only through the interface it offers. Cross-cell is the
+; SAME recipe, no special case — the cells differ, the law does not.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk
+
+(do
+    ; an organ is (cell name kind reading offer): identity (cell + name + kind), a
+    ; READING (its sensable state), and OFFER (the list of sense modes it offers,
+    ; drawn from channel-interface: m-witness / m-see / m-reflect / ...).
+    (defn organ (cell name kind reading offer) (list cell name kind reading offer))
+    (defn organ-cell    (o) (nth o 0))
+    (defn organ-name    (o) (nth o 1))
+    (defn organ-kind    (o) (nth o 2))
+    (defn organ-reading (o) (nth o 3))
+    (defn organ-offer   (o) (nth o 4))
+
+    ; SENSE: an observer organ senses a target organ via `action` (a sense mode).
+    ; The target's reading flows iff its offered interface honors the action;
+    ; otherwise silence. Any organ may be the observer — "can be USED to sense";
+    ; any organ may be the target — "sense OTHER organs"; the target may live on
+    ; another cell. One recipe carries all three.
+    (defn organ-sense (observer action target)
+        (if (ci-honors? action (organ-offer target))
+            (organ-reading target)
+            (m-silence)))
+
+    ; did the reading actually cross — or was it honored-as-silence (withheld)?
+    (defn organ-sensed? (observer action target)
+        (ci-honors? action (organ-offer target)))
+
+    ; explicit cross-cell sense: observer and target live on different cells.
+    ; Same law, no special case — universality is that this needs no new path.
+    (defn organ-cross-cell? (observer target)
+        (if (str_eq (organ-cell observer) (organ-cell target)) false true))
+    0)
