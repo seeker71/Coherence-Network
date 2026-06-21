@@ -1,0 +1,27 @@
+; shell-parse-band.fk — proves the grammar-loader + shell grammar parse a bash
+; subset to the exact fncall AST. Verdict = sum of bit flags (all pass = 31),
+; asserted byte-identical across Go/Rust/TS and the 4th kernel (fkwu).
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk
+
+(do
+    (defn lf (s) (intern_trivial_string s))
+    (defn fc (tag kids) (intern_node (bp "fncall") (cons (lf tag) kids)))
+    (defn ao (p) (fc "__andor__" (list p)))   ;; a pipeline with no &&/|| is a 1-element and-or list
+
+    ;; expected ASTs (the uniform fncall(TAG, kids...) shape)
+    (let e-echo (fc "__seq__" (list (ao (fc "__pipe__" (list (fc "echo" (list (lf "hi")))))))))
+    (let e-pipe (fc "__seq__" (list (ao (fc "__pipe__" (list (fc "a" (empty)) (fc "b" (empty))))))))
+    (let e-seq  (fc "__seq__" (list (ao (fc "__pipe__" (list (fc "echo" (list (lf "a"))))))
+                                    (ao (fc "__pipe__" (list (fc "echo" (list (lf "b")))))))))
+    (let e-var  (fc "__seq__" (list (ao (fc "__pipe__" (list (fc "echo" (list (fc "__var__" (list (lf "X")))))))))))
+    (let e-redir (fc "__seq__" (list (ao (fc "__pipe__" (list (fc "cat" (list (lf "f") (fc "__redir__" (list (lf "o")))))))))))
+
+    (let c1 (if (node_eq (sh-parse "echo hi") e-echo) 1 0))
+    (let c2 (if (node_eq (sh-parse "a | b") e-pipe) 2 0))
+    (let c3 (if (node_eq (sh-parse "echo a ; echo b") e-seq) 4 0))
+    (let c4 (if (node_eq (sh-parse "echo $X") e-var) 8 0))
+    (let c5 (if (node_eq (sh-parse "cat f > o") e-redir) 16 0))
+
+    ; expected total: 31
+    (add c1 (add c2 (add c3 (add c4 c5)))))

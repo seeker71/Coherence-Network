@@ -1,0 +1,20 @@
+; sh-live-demo.fk — drive the two-tier model: native builtins run in Form,
+; host tools are emitted as passthrough cmdlines for the native presence host.
+(do
+    (let src "seq 3 | grep 2 ; echo native-form-tools ; git --version")
+    (print (str_concat "SCRIPT: " src))
+    ; whole-script native execution (passthrough commands show as a [passthrough] label)
+    (print (str_concat "FSH-OUT:\n" (sh-out src)))
+    ; the dispatch plan: native (runs in Form) vs passthrough (host tool via popen)
+    (defn dump (steps)
+        (if (nil? steps) 0
+            (do (let s (head steps))
+                (print (str_concat "STEP " (str_concat (sh-step-kind s)
+                        (str_concat "\t" (sh-cmdline (sh-step-name s) (sh-step-args s))))))
+                ; emit a presence-host job line for each passthrough step
+                (if (str_eq (sh-step-kind s) "passthrough")
+                    (print (str_concat "PASSTHROUGH-CMD\t" (sh-cmdline (sh-step-name s) (sh-step-args s))))
+                    0)
+                (dump (tail steps)))))
+    (dump (sh-plan (sh-parse src)))
+    0)
