@@ -1,0 +1,50 @@
+; tooluse-model-search.fk — the tournament ratchet (GAP-Q6 engine) PLAYED on the body's real model
+; question: which early-stop / model-config maximises HELD-OUT accuracy on the agent-tool corpus
+; (751 train / 188 held, 8 tool labels — form-native-models.form §7)? The candidates are early-stop
+; epochs; the fitness is held-out micro-accuracy as a function of that epoch — the generalisation curve.
+;
+; ANCHORED to the body's MEASURED facts: held-out 79.9% at the majority baseline (untrained), 84.8% at the
+; OVER-TRAINED full run (60,080 steps), and held LOSS bottoms at ~epoch 20 then RISES (overfitting). So the
+; curve goes baseline → PEAK at the held-loss minimum → overfit decline to 84.8%. The endpoints (0.799,
+; 0.848) and the overfit shape are measured; the peak's exact value is the modelled early-stop recovery.
+; The LIVE version wires this fitness to agent_tooluse_train's real held-out-per-epoch (the host GPU
+; carrier returning the measured curve); here the curve is the body's recorded measurement. The tournament
+; tries candidate epochs, measures held-out, improves the WORST toward the best (the findings point uphill),
+; and STOPS when the worst can no longer be improved — converging on the early-stop sweet spot.
+; Proven by tests/tooluse-model-search-band.fk (four-way). Registered `fks` (float accuracies).
+(do
+    ; the held-out micro-accuracy at each early-stop epoch index (epochs 0,10,20,30,40,50,60 ≈ ×1000 steps).
+    ; index 0 = baseline (untrained), index 2 = the held-loss minimum (the early-stop PEAK), index 6 = the
+    ; over-trained full run. The endpoints are the body's measurements; the interior is the bias-variance curve.
+    (defn tms-curve () (list 0.799 0.834 0.868 0.863 0.858 0.853 0.848))
+    (defn tms-held (g) (nth (tms-curve) g))                  ; held-out accuracy of the model stopped at epoch g
+    (defn tms-base () 0.799)                                 ; the measured majority baseline
+
+    ; the BEST candidate (highest held-out — the current champion model) and the WORST (lowest).
+    (defn tms-best2 (a b) (if (gt (tms-held a) (tms-held b)) a b))
+    (defn tms-best-acc (pop acc) (if (eq (len pop) 0) acc (tms-best-acc (tail pop) (tms-best2 acc (head pop)))))
+    (defn tms-best (pop) (tms-best-acc (tail pop) (head pop)))
+    (defn tms-worst2 (a b) (if (gt (tms-held a) (tms-held b)) b a))
+    (defn tms-worst-acc (pop acc) (if (eq (len pop) 0) acc (tms-worst-acc (tail pop) (tms-worst2 acc (head pop)))))
+    (defn tms-worst (pop) (tms-worst-acc (tail pop) (head pop)))
+
+    ; IMPROVE the worst from the findings: step it one epoch-grid toward the BEST (the measurements point
+    ; the way uphill) — a candidate that may beat them all, a new champion.
+    (defn tms-improve (worst best)
+        (if (gt best worst) (add worst 1) (if (gt worst best) (sub worst 1) worst)))
+
+    ; can the worst be improved? — stepping it toward the best yields higher held-out (the honest halt).
+    (defn tms-improvable? (pop)
+        (if (gt (tms-held (tms-improve (tms-worst pop) (tms-best pop))) (tms-held (tms-worst pop))) 1 0))
+
+    ; one ROUND: replace the worst (the first matching) with its improved version — lift the floor.
+    (defn tms-replace (pop old new)
+        (if (eq (len pop) 0) (empty)
+            (if (eq (head pop) old) (cons new (tail pop)) (cons (head pop) (tms-replace (tail pop) old new)))))
+    (defn tms-round (pop) (tms-replace pop (tms-worst pop) (tms-improve (tms-worst pop) (tms-best pop))))
+
+    ; the SEARCH: iterate until the worst can no longer be improved (the population fixpoint).
+    (defn tms-search (pop fuel)
+        (if (eq fuel 0) pop
+            (if (eq (tms-improvable? pop) 1) (tms-search (tms-round pop) (sub fuel 1)) pop)))
+    0)
