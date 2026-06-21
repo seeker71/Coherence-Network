@@ -3,8 +3,9 @@
 ; Form-native NL -> NL translation through the language-neutral pivot. The logic
 ; lives in form-stdlib/nl-translate.fk (loaded as a prelude); this band exercises
 ; it: cross-tongue PIVOT equality, both translation directions, a second content
-; pair (not hard-coded), and a full round-trip held stable. Bitmask witness; all
-; five → 31, across Go / Rust / TS / fkwu.
+; pair (not hard-coded), a full round-trip held stable, and three words added as
+; lexicon DATA ROWS (body / cell / recipe / witness) translating with no code change
+; — vocabulary is data. Bitmask witness; all eight → 255, across Go / Rust / TS / fkwu.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/nl-translate.fk
 
@@ -23,4 +24,8 @@
         ;; 4. a second content pair (not hard-coded): kernel <-> inti
         (if (str_eq (tr-en-id "the kernel is native") "inti adalah asli") 8 0)
         ;; 5. full round-trip through the pivot, both directions, stays stable
-        (if (str_eq (tr-en-id (tr-id-en "inti adalah asli")) "inti adalah asli") 16 0))))
+        (if (str_eq (tr-en-id (tr-id-en "inti adalah asli")) "inti adalah asli") 16 0)
+        ;; 6-8. vocabulary is DATA: words added as lexicon ROWS translate with no code change
+        (if (str_eq (tr-en-id "the body is native")   "tubuh adalah asli")  32 0)
+        (if (str_eq (tr-en-id "the cell is recipe")   "sel adalah resep")   64 0)
+        (if (str_eq (tr-id-en "saksi adalah asli")    "the witness is native") 128 0))))
