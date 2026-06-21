@@ -64,14 +64,33 @@
 ; human's verdict: 1 = clear, 0 = fear-caught. This is how a direct freq-reading
 ; stops evaporating at session end and becomes the body's own freq-sense — the
 ; bridge from "the human is the detector now" to "the body senses its own frequency".
+; The richest gold carries the NAMED BOUNDARY — the human's words for WHERE the fear
+; sat (or what made it clear), not just a scalar verdict. freq-check-model.form learns
+; the boundary in MEANING-SPACE, so a described boundary trains it faster than a flag,
+; and the transmute lane (fear -> opportunity) acts on a NAMED fear. tc-gold-named is
+; the full reading; tc-gold is the verdict-only reading (no boundary named yet).
+; The boundary address is empty when no boundary is named — never hash an empty one.
+(defn tcg-bnd-addr (boundary-bytes)
+    (if (eq (len boundary-bytes) 0) (list) (sha256 boundary-bytes)))
+(defn tc-gold-named (request-bytes response-bytes freq-verdict boundary-bytes)
+    (list (sha256 request-bytes)
+          (sha256 response-bytes)
+          freq-verdict
+          "gold:human-freq"
+          (tcg-bnd-addr boundary-bytes)
+          (if (eq (len boundary-bytes) 0) 0 1)))    ; named? — 1 when a boundary is described
 (defn tc-gold (request-bytes response-bytes freq-verdict)
-    (list (sha256 request-bytes) (sha256 response-bytes) freq-verdict "gold:human-freq"))
+    (tc-gold-named request-bytes response-bytes freq-verdict (list)))
 (defn tcg-request (g) (nth g 0))
 (defn tcg-response (g) (nth g 1))
 (defn tcg-verdict (g) (nth g 2))         ; 1 = clear, 0 = fear-caught
 (defn tcg-clear? (g) (tcg-verdict g))
 (defn tcg-lane (g) (nth g 3))
+(defn tcg-boundary (g) (nth g 4))        ; addr of the human's boundary-naming (empty when none)
+(defn tcg-named? (g) (nth g 5))          ; 1 when the reading names WHERE the fear sat
 ; gold outranks auto: a human freq-reading is the highest-trust label in the catalog.
 (defn tcg-gold? (g) (if (str_eq (tcg-lane g) "gold:human-freq") 1 0))
 ; the gold training pair the freq-check model learns: response -> human freq-verdict.
 (defn tcg-pair (g) (list (tcg-response g) (tcg-verdict g)))
+; the RICHER triple a named reading teaches: response -> (verdict, where-the-fear-sat).
+(defn tcg-triple (g) (list (tcg-response g) (tcg-verdict g) (tcg-boundary g)))

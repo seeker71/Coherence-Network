@@ -3,7 +3,7 @@
 ; training-catalog-band — a 3rd-party call is stored as request + raw + transmuted
 ; (both kept, content-addressed), yielding three separable training pairs.
 ;
-; Verdict 127 when every claim lands:
+; Verdict 1023 when every claim lands:
 ;   1   an entry captures request/raw/transmuted with lane + outcome
 ;   2   raw and transmuted are stored DISTINCTLY (both have value, they differ)
 ;   4   content-addressing is real: identical bytes are not distinct
@@ -11,6 +11,9 @@
 ;   16  three separable model lanes are named (raw / transmutation / reasoning building blocks)
 ;   32  a GOLD human freq-reading pins a CLEAR verdict (1), carries the gold lane, addresses distinctly
 ;   64  a GOLD fear-caught reading pins verdict 0; the gold training pair is (response -> human verdict)
+;   128 a NAMED reading carries the boundary (the human's words for WHERE the fear sat): named? = 1
+;   256 a verdict-only reading names no boundary (honest absence — no empty hash)
+;   512 the richer triple teaches (response -> verdict, where-the-fear-sat)
 (do
     ; one oracle call: the request, the raw (fear) answer, the transmuted (vitality) answer.
     (let req (list 82 69 81))        ; "REQ"
@@ -64,4 +67,22 @@
                       (eq (head (tail gp)) 0)))
             64 0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
+    ; ── the NAMED boundary: the richest gold carries WHERE the fear sat, not a scalar ──
+    ; 128 — a reading WITH a named boundary: named? = 1, boundary addresses the words.
+    (let bnd (list 72 69 68 71 69))            ; "HEDGE" — the human's naming of the boundary
+    (let gnamed (tc-gold-named req (list 70 67) 0 bnd))
+    (let c7
+        (if (and (eq (tcg-named? gnamed) 1)
+                 (eq (iom-sig-eq? (tcg-boundary gnamed) (sha256 bnd)) 1))
+            128 0))
+    ; 256 — a verdict-only reading names NO boundary (honest absence, no empty hash).
+    (let c8 (if (eq (tcg-named? gclear) 0) 256 0))
+    ; 512 — the richer triple teaches (response -> verdict, where-the-fear-sat).
+    (let tr (tcg-triple gnamed))
+    (let c9
+        (if (and (eq (iom-sig-eq? (head tr) (tcg-response gnamed)) 1)
+                 (and (eq (head (tail tr)) 0)
+                      (eq (iom-sig-eq? (head (tail (tail tr))) (sha256 bnd)) 1)))
+            512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

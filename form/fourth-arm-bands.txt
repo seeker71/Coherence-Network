@@ -204,7 +204,7 @@ choice-outcome-learning fks 32767
 code-tool-learning fks 1048575
 tool-embodiment fks 127
 io-match fks 127
-training-catalog fks 127
+training-catalog fks 1023
 form-train-step fks 31
 affine-train fks 31
 affine-corpus-fit fks 31

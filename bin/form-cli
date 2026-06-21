@@ -92,6 +92,7 @@ case "$cmd" in
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
   train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
   learn)     exec bash "$ROOT/scripts/form_cli_learn.sh" "$@" ;;
+  gold)      exec bash "$ROOT/scripts/form_cli_gold.sh" "$@" ;;  # record a human freq-reading (verdict + named boundary) into the gold catalog
   shadow)    exec env FORM_CLI_CORPUS="${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}" \
                   bash "$ROOT/scripts/form_cli_replay.sh" "$@" ;;
   search)    exec python3 "$RAG" search "$@" ;;

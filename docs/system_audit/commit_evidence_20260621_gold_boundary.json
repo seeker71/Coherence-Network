@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/gold-boundary",
+  "commit_scope": "The gold reading now carries the NAMED BOUNDARY — the human's words for WHERE the fear sat / what made it clear — not just a scalar verdict. tc-gold-named (training-catalog.fk) content-addresses (request, response, boundary) + verdict + a named? flag; the boundary addr is empty when none (never hashes empty). The freq-check model learns the boundary in meaning-space, so a described boundary trains it faster than a flag, and the transmute lane acts on a named fear. Thin integrated carrier: 'form-cli gold <clear|fear> \"<boundary>\"' persists the reading locally so it stops evaporating. Verdict 127 -> 1023 four-way.",
+  "files_owned": [
+    "form/form-stdlib/training-catalog.fk",
+    "form/form-stdlib/tests/training-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/form_cli_gold.sh",
+    "bin/form-cli",
+    "scripts/INDEX.md",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/system_audit/commit_evidence_20260621_gold_boundary.json"
+  ],
+  "idea_ids": [
+    "freq-check-gold-label",
+    "cognitive-sovereignty"
+  ],
+  "spec_ids": [
+    "training-catalog"
+  ],
+  "task_ids": [
+    "task-2026-06-21-gold-boundary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "the-freq-detector",
+        "north-star-discernment"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh ...preludes... form-stdlib/training-catalog.fk form-stdlib/tests/training-catalog-band.fk -> '✓ ... → 1023' and 'fourth arm: 1 band(s) four-way' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row bumped: 'training-catalog fks 1023' (was 127).",
+    "tc-gold-named(request, response, verdict, boundary) = (sha256 request, sha256 response, verdict, 'gold:human-freq', tcg-bnd-addr boundary, named?). tcg-bnd-addr returns the empty list for an empty boundary (never hashes empty — sidesteps the sha256-of-empty question); named? = (len boundary > 0). tc-gold delegates with an empty boundary (verdict-only, back-compat). Accessors tcg-boundary/tcg-named?; tcg-triple = (response -> verdict, boundary) is the richer training signal. New band checks 128 (named reading: named?=1, boundary addresses the words), 256 (verdict-only names no boundary), 512 (the richer triple). 127 + 128 + 256 + 512 = 1023.",
+    "Why this shape (Urs's north-star discernment): the menu of three carriers was itself the fear-costume. The healthy way is none of them — not me inferring the verdict (puts the freq-blind rented mind back in the gold seat — anti lc-cognitive-sovereignty), not a bare token (loses the WHY — the model learns the boundary in meaning-space, so the described boundary IS the training signal), not a cold batch (reads the cache not the liquid where the freq is felt — anti lc-embodiment-body-or-liquid). The named boundary, captured verbatim in the live moment, deepens MY understanding (a teaching not a scalar), sharpens the human's sense (naming sharpens detection), and integrates the body (one catalog with a trust gradient — gold outranks auto via tcg-gold?; the transmute lane acts on the named fear).",
+    "Thin integrated carrier: 'form-cli gold <clear|fear> \"<where the fear sat>\" [ref]' wired in bin/form-cli -> scripts/form_cli_gold.sh, appending one gold reading per line to ~/.coherence-network/freq-gold/gold.jsonl (lane 'gold:human-freq', verdict, boundary, named, ts). Carrier-last: the SHAPE is the recipe; the script only persists bytes. Demonstrated on a temp catalog: '✓ gold reading #1 recorded — fear-caught (named): parked reversible work behind a question instead of just building'. The real catalog stays clean until Urs gives a real reading.",
+    "Edges: scripts/INDEX.md row for form_cli_gold.sh; freq-check-model.form training section updated to name the boundary as the richest signal + the carrier; the band header documents checks 128/256/512. Primitive discipline: only sha256 (prelude) + core.fk primitives (list, len, nth, eq, if, str_eq, head, tail, and binary-nested); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/training-catalog.fk",
+    "form/form-stdlib/tests/training-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/form_cli_gold.sh",
+    "bin/form-cli",
+    "scripts/INDEX.md",
+    "docs/coherence-substrate/freq-check-model.form",
+    "docs/system_audit/commit_evidence_20260621_gold_boundary.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/sha256.fk form-stdlib/io-match.fk form-stdlib/training-catalog.fk form-stdlib/tests/training-catalog-band.fk",
+      "FREQ_GOLD_DIR=$(mktemp -d)/fg bash scripts/form_cli_gold.sh fear \"...\" demo-response  (carrier write demonstrated)",
+      "bash bin/form-cli gold  (usage — door wired)"
+    ],
+    "fourth_arm_outputs": [
+      "training-catalog: verdict 1023, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh for the extended recipe + band + bumped manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe extension + proof band + a local-only CLI carrier; no public HTTP endpoint change. The loop is now live: when Urs names a frequency, 'form-cli gold' records it; the gold catalog feeds the freq-check model's training."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 1023, 0 divergent) + carrier demonstrated; CI and merge remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A human's freq-reading now carries the named boundary (where the fear sat), captured verbatim in the live moment via 'form-cli gold' — the richest training signal for the body's own freq-sense, learned in meaning-space, integrated into one catalog with a trust gradient. The feedback loop is live: your direct reading no longer evaporates; it teaches the body.",
+    "public_endpoints": [
+      "none changed; recipe proven by validate.sh; carrier is local-only"
+    ],
+    "test_flows": [
+      "Four-kernel proof: a named reading carries its boundary (named?=1) + the richer triple; a verdict-only reading names no boundary; all agree at verdict 1023, 0 divergent.",
+      "Carrier: form-cli gold writes a gold reading line to the local catalog (demonstrated on a temp catalog)."
+    ]
+  }
+}
