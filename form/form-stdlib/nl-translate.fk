@@ -1,0 +1,55 @@
+; nl-translate.fk — Form-native NL -> NL translation through the language-neutral
+; pivot. The reusable BODY behind tests/nl-translate-band.fk (witness 31, four-way)
+; and the live carrier (experiments/coherence-sense-android/native-translate-speak.sh).
+;
+; surface --g-parse(tongue grammar)--> raw node --normalize(lexicon)--> PIVOT
+; PIVOT --decode(target tongue)--> target surface
+;
+; Each tongue is its own grammar over the ONE engine; content words normalize
+; through a lexicon onto ONE pivot node (cjk-channel: one cell, many tongues), so
+; "the source is native" and "sumber adalah asli" intern to the SAME node. Adding
+; a tongue is adding a (grammar, lexicon-direction, decoder) — pivot and engine
+; never change. Grammars are nullary defns (global, fourth-arm-safe), not top-level
+; lets, so the carrier and the band can both call tr-en-id / tr-id-en directly.
+
+(do
+    (defn nlt-s (x) (intern_trivial_string x))
+    (defn nlt-kidv (n i) (node_value (nth (node_children n) i)))
+    (defn nlt-sp (a b) (str_concat a (str_concat " " b)))
+
+    ;; --- the two tongue grammars (data over the one engine) ---
+    (defn nl-en ()
+        (grammar "s" (list
+            (rule3 "s" (p-cap "v" (p-ref "prop")) (t-splice "v"))
+            (rule3 "prop"
+                (list "seq" (p-lit "the") (p-cap "s" (p-run "alpha")) (p-lit "is") (p-cap "a" (p-run "alpha")))
+                (t-emit "property" (list (t-splice "s") (t-splice "a")))))))
+    (defn nl-id ()
+        (grammar "s" (list
+            (rule3 "s" (p-cap "v" (p-ref "prop")) (t-splice "v"))
+            (rule3 "prop"
+                (list "seq" (p-cap "s" (p-run "alpha")) (p-lit "adalah") (p-cap "a" (p-run "alpha")))
+                (t-emit "property" (list (t-splice "s") (t-splice "a")))))))
+
+    ;; --- the lexicon: content words <-> neutral concept (English lemma here) ---
+    (defn nlt-en->c (w) w)
+    (defn nlt-c->en (w) w)
+    (defn nlt-id->c (w)
+        (if (str_eq w "sumber") "source"
+        (if (str_eq w "asli")   "native"
+        (if (str_eq w "inti")   "kernel" w))))
+    (defn nlt-c->id (w)
+        (if (str_eq w "source") "sumber"
+        (if (str_eq w "native") "asli"
+        (if (str_eq w "kernel") "inti" w))))
+
+    ;; --- normalize raw parse -> PIVOT ---
+    (defn norm-en (n) (intern_node (bp "property") (list (nlt-s (nlt-en->c (nlt-kidv n 0))) (nlt-s (nlt-en->c (nlt-kidv n 1))))))
+    (defn norm-id (n) (intern_node (bp "property") (list (nlt-s (nlt-id->c (nlt-kidv n 0))) (nlt-s (nlt-id->c (nlt-kidv n 1))))))
+    ;; --- decode PIVOT -> a tongue's surface ---
+    (defn dec-en (p) (nlt-sp "the" (nlt-sp (nlt-c->en (nlt-kidv p 0)) (nlt-sp "is" (nlt-c->en (nlt-kidv p 1))))))
+    (defn dec-id (p) (nlt-sp (nlt-c->id (nlt-kidv p 0)) (nlt-sp "adalah" (nlt-c->id (nlt-kidv p 1)))))
+    ;; --- the translators: encode one tongue -> pivot -> decode the other ---
+    (defn tr-en-id (x) (dec-id (norm-en (g-parse (nl-en) x))))
+    (defn tr-id-en (x) (dec-en (norm-id (g-parse (nl-id) x))))
+    0)
