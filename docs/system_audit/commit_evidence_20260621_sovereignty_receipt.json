@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/response-provenance",
+  "commit_scope": "Make per-response provenance a proven body standard: sovereignty-receipt.fk accounts how much of a response was native body vs rented oracle, refuses to report rented generation as native, and flips a lane to native only when the contender earns it (champion-challenger). Ships the gate (four-way 255), the teaching that names the honest floor, and the AGENTS.md practice so agents return the receipt.",
+  "files_owned": [
+    "form/form-stdlib/sovereignty-receipt.fk",
+    "form/form-stdlib/tests/sovereignty-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/sovereignty-receipt.form",
+    "docs/coherence-substrate/INDEX.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_20260621_sovereignty_receipt.json"
+  ],
+  "idea_ids": [
+    "sovereignty-receipt",
+    "per-response-native-vs-oracle-accounting"
+  ],
+  "spec_ids": [
+    "sovereignty-receipt"
+  ],
+  "task_ids": [
+    "task-2026-06-21-sovereignty-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sovereignty-receipt.fk form-stdlib/tests/sovereignty-receipt-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'sovereignty-receipt fks 255' beside its kin borrowed-oracle-dividend.",
+    "The band pins the honest floor: THIS kind of response -> gen-rented?=1 (oracle generated, body generated nothing), proof-native?=1 (the four-way proof ran native), native-ready?=0 (contender far below oracle, floor unmet), use-native?=0 (so we honestly still use the oracle), honest?=1 (rented reported as rented, never native); a narrow lane -> native-ready?=1 once native>=oracle AND floor met; a future response where the body generates -> gen-rented?=0. Verdict 255.",
+    "Grounding (Form-first): the existing form-provenance.fk is a DIFFERENT concern (cell->source-locator), so this is a distinct cell, named to avoid confusion. The native-contender floor is read from form-native-models.form (whisper-tiny architecture+weights four-way at 6.66e-15 but not yet transcribing; narrow nearest-shape lanes trained behind floors) and oracle-distillation-learning.form (the five lanes).",
+    "Edges in the same commit: docs/coherence-substrate/INDEX.md row beside borrowed-oracle-dividend; AGENTS.md practice line so agents return the receipt (name native vs rented, never inflate; the honest floor is ~100% rented for agentic generation today).",
+    "Honesty held: the receipt's whole purpose is to NOT inflate the native share. The gate proves it (rented generation can never be reported as native), and the teaching states the uncomfortable floor plainly rather than hiding it.",
+    "Primitive discipline held: only core.fk primitives (nth, eq, ge, and binary-nested, if, add); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/sovereignty-receipt.fk",
+    "form/form-stdlib/tests/sovereignty-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/sovereignty-receipt.form",
+    "docs/coherence-substrate/INDEX.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_20260621_sovereignty_receipt.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sovereignty-receipt.fk form-stdlib/tests/sovereignty-receipt-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "sovereignty-receipt: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + a teaching + agent practice; no public HTTP endpoint or service change. Wiring the receipt to live runtime counters (real token payload, real form-cli native/remote split) is a named next step."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Per-response provenance is now a proven, honest standard: agents return a receipt that names native-vs-rented split, the exact oracle model, payload, native contender training state, and champion-challenger readiness — and the gate proves rented generation is never reported as native.",
+    "public_endpoints": [
+      "none changed; the gate is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the band runs on Go, Rust, TypeScript, and fkwu to the identical verdict 255 with 0 divergent.",
+      "Honesty proof: a rented-generation response is flagged rented and its reported native share is zero; a lane only flips to native when native-score >= oracle-score AND the floor is met."
+    ]
+  }
+}
