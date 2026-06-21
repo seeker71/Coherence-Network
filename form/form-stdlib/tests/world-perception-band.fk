@@ -1,0 +1,64 @@
+; preludes: form-stdlib/core.fk form-stdlib/world-perception.fk
+;
+; world-perception-band — the node's surface as one channel engine, three threads.
+;
+; Verdict 255:
+;   1    floor and north-star are present
+;   2    native earns the transcript slot when it clears the floor and costs no more
+;   4    oracle honestly HOLDS the slot when native is below the floor (mind not home)
+;   8    translation is one tap away from any transcript channel
+;   16   audibility: a node hears a strong ping, is deaf to a weak one
+;   32   echo-location distance is correct from round-trip time-of-flight
+;   64   travel detects movement across a location series
+;   128  a broadcast reaches a co-located audible node (shared awareness)
+(do
+    ;; bit 1 — floor + north star present
+    (defn wp-b1 ()
+        (if (gt (len (wp-floor)) 0)
+            (if (gt (len (wp-north-star)) 0) 1 0) 0))
+
+    ;; threads 1+2 — champion (oracle, costly) vs challenger (native, cheap).
+    ;; oracle: conf 90, cost 100 (rented mind). native: conf 88, cost 5 (home).
+    (defn wp-oracle () (wp-tc "form native speech surface" 90 100 "oracle:whisper-cli"))
+    (defn wp-native-strong () (wp-tc "form native speech surface" 88 5 "form-native:whisper"))
+    (defn wp-native-weak () (wp-tc "frm ntv spch srfc" 40 5 "form-native:whisper"))
+
+    ;; bit 2 — native (conf 88 >= floor 80, cost 5 <= 100) earns the slot
+    (defn wp-b2 ()
+        (if (str_eq (wp-source (wp-transcript-channel (wp-oracle) (wp-native-strong) 80))
+                    "form-native:whisper") 2 0))
+    ;; bit 4 — native below floor (40 < 80): oracle holds (mind not yet home)
+    (defn wp-b4 ()
+        (if (str_eq (wp-source (wp-transcript-channel (wp-oracle) (wp-native-weak) 80))
+                    "oracle:whisper-cli") 4 0))
+
+    ;; bit 8 — translation one tap away from the chosen transcript channel
+    (defn wp-tchan () (wp-transcript-channel (wp-oracle) (wp-native-strong) 80))
+    (defn wp-b8 ()
+        (if (eq (wp-can-translate? (wp-tchan)) 1)
+            (if (str_eq (wp-translation-tongue (wp-translate (wp-tchan) "de")) "de") 8 0) 0))
+
+    ;; bit 16 — hears a strong ping (80>=50), deaf to a weak one (20<50)
+    (defn wp-b16 ()
+        (if (eq (wp-edge-heard (wp-audibility-edge "A" "B" 80 50)) 1)
+            (if (eq (wp-edge-heard (wp-audibility-edge "A" "C" 20 50)) 0) 16 0) 0))
+
+    ;; bit 32 — echo distance: 2000us round trip -> 343 mm one way
+    (defn wp-b32 () (if (eq (wp-echo-distance-mm 2000) 343) 32 0))
+
+    ;; bit 64 — travel: a series that jumps detects movement
+    (defn wp-geo () (list (list 0 0) (list 1 1) (list 50 50)))
+    (defn wp-b64 () (if (eq (wp-value (wp-place-channel (wp-geo) 10)) 1) 64 0))
+
+    ;; bit 128 — broadcast reaches a node whose audibility edge can hear us
+    (defn wp-b128 ()
+        (if (eq (wp-broadcast-reaches? (wp-audibility-edge "co" "me" 90 50)) 1) 128 0))
+
+    (add (wp-b1)
+        (add (wp-b2)
+            (add (wp-b4)
+                (add (wp-b8)
+                    (add (wp-b16)
+                        (add (wp-b32)
+                            (add (wp-b64) (wp-b128))))))))
+)

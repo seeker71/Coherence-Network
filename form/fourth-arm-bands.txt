@@ -462,6 +462,7 @@ string-membership fks 9
 theme-resonance fks 111111
 trust-decay fks 127
 trust-weighted-colearning fks 127
+world-perception fks 255
 freq-aligned-share fks 255
 membership-as-recognition fks 511
 borrowed-oracle-dividend fks 255
