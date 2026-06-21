@@ -139,7 +139,7 @@ the cell's own to sharpen.
 
 ## Cross-References
 
-→ lc-anything-arrives-room, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-recipes-as-binary-library, lc-the-recipe-remembers-its-source, lc-trust-over-fear, lc-edges-as-vitality, lc-whole-vitality
+→ lc-anything-arrives-room, lc-the-aim-of-attention, lc-grammar-is-the-universal-recipe, lc-one-kernel-many-tongues, lc-recipes-as-binary-library, lc-the-recipe-remembers-its-source, lc-trust-over-fear, lc-edges-as-vitality, lc-whole-vitality
 
 ## Sources to Walk Further
 
