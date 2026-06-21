@@ -165,7 +165,9 @@
 ;        #1); the ordered rungs to ECAPA-level: (a) the AAM TRAINER — chain the margin gradient (softmax−onehot
 ;        through cos(θ+m)) into the W and embedding updates, the one new piece beyond loss.fk's backward; (b) DATA
 ;        + augmentation (VAD 2-4s chunks + MUSAN/RIR/speed — the binding wall at 26 voices × 1 recording); (c) the
-;        EER/minDCF harness (replace the single hard-pair cosine readout); (d) attentive stats pooling +
+;        EER harness — the metric RECIPE is SHIPPED (eer.fk, four-way verdict 63: trial matrix → FAR/FRR
+;        crossover → one comparable EER number, the fitness tooluse-model-search can optimize); wiring real
+;        corpus trials through it is the application; (d) attentive stats pooling +
 ;        per-utterance CMVN feeding the AAM head; (e) the shallow dilated TDNN; (f) the native asm training lane
 ;        (gap 1's emit→compile→exec) so corpus-scale training runs in minutes, not the 0.8 s/column tree-walker.
 ;        Then either VoxCeleb pretrain or distil ECAPA's weights into the asm lane. Companion: CHALLENGERS.md.
