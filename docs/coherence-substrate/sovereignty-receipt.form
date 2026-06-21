@@ -45,6 +45,21 @@
     (how-close "for narrow lanes: some reduce oracle budget once they clear the floor. For GENERAL agentic"
                "reasoning like this response: a native generator is architecture-proven, NOT generating — not close."))
 
+  ; MEASURED, not estimated — the report reads two live feeds (scripts/sovereignty_report.sh)
+  (measured
+    (feed-payload   "the active Claude Code session transcript -> real input/output token counts")
+    (feed-readiness "form-cli stats -> real held-out scores, local-suffice rate, captured-sample count")
+    (why "estimates lie: a hand-estimated payload of 'tens of K out' measured at ~2.05M out this session"
+         "— off by ~100x. The measured number is the signal; the estimate was a costume."))
+
+  ; where to pay attention — attention-signal.fk ranks the measured per-lane gap (four-way 255)
+  (attention
+    (recipe form/form-stdlib/attention-signal.fk)
+    (rule "tier 2 ATTEND = high volume AND far from native; tier 1 last-mile = high volume but near-native;"
+          "tier 0 rest = low volume. Pay attention where closing the gap matters most.")
+    (now-2026-06-21 "ATTEND: Read/Edit/Write tool-prediction (~65%, high volume). LAST MILE: Bash 97%,"
+                    "StructuredOutput 99%. GROW: route more asks through form-cli ask — the corpus has only 7."))
+
   ; the gate's honesty invariant
   (honesty
     (never report-rented-generation-as-native)
