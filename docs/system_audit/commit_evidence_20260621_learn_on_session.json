@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/learn-on-session",
+  "commit_scope": "Make tool-use learning truly CONTINUOUS: a SessionEnd trigger (scripts/form_cli_learn_on_session.sh) runs `form-cli learn` detached on every session end, so the corpus grows and the predictor retrains automatically. Guarded (no-op unless bin/form-cli is built; never overlaps GPU retrains via a pid lock) and bash-3.2-safe. The capability is committed; activation is per-machine (a SessionEnd hook in settings.local.json, because the corpus + GPU are local).",
+  "files_owned": [
+    "scripts/form_cli_learn_on_session.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_learn_on_session.json"
+  ],
+  "idea_ids": [
+    "continuous-learning-session-end-trigger",
+    "form-cli-learn-on-session"
+  ],
+  "spec_ids": [
+    "sovereignty-receipt"
+  ],
+  "task_ids": [
+    "task-2026-06-21-learn-on-session"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "cadence-decision",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Cadence chosen by Urs: full learn on every session-stop. Verified hook event via claude-code-guide: SessionEnd fires ONCE per session (Stop fires once per turn, wrong for a 15s GPU job); a SessionEnd hook can launch a detached process that survives teardown as long as the hook itself exits cleanly.",
+    "form_cli_learn_on_session.sh launches `form-cli learn` detached (nohup ... &), guarded: (1) exits 0 silently unless bin/form-cli is built — safe on clones without the GPU/corpus; (2) skips if the last learn's pid is still alive (no overlapping GPU retrains).",
+    "Live proof of both guards: trigger 1 -> exit 0, lock pid 52084 written and alive; trigger 2 -> exit 0 with NO new job launched (learn-process count before=1, after=1). bash -n clean.",
+    "bash 3.2 fix: the first version used $BASHPID (absent on macOS bash 3.2) under set -u and errored, so the lock never wrote and the overlap guard failed; rewritten to use $! and a kill -0 staleness check (no trap), which is portable.",
+    "Activation is per-machine and NOT committed: the SessionEnd hook is added to settings.local.json on the GPU/corpus machine (Urs's Mac); other clones get the committed capability but no auto-trigger until they opt in. This avoids running a GPU retrain on contributors' machines.",
+    "Edges: scripts/INDEX.md + MANIFEST.md regenerated (--check clean).",
+    "Honest nuance carried from form-cli learn: this improves form-cli's OWN agent predictor (the sovereign path); it does not make a rented Claude Code session native — the predictor drives form-cli-as-agent."
+  ],
+  "change_files": [
+    "scripts/form_cli_learn_on_session.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_learn_on_session.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/form_cli_learn_on_session.sh",
+      "trigger 1 -> launches detached learn, writes lock (pid alive); trigger 2 -> skips (no second job)",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "A carrier trigger script; no kernel proof bands apply. INDEX --check clean."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-tooling",
+    "notes": "Local agent tooling; the committed script is a no-op without form-cli built. Activation is a local settings.local.json SessionEnd hook on the GPU/corpus machine."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed (detached launch + overlap guard proven); CI and merge pending. Activation hook lands in local settings (not this PR)."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "On a GPU/corpus machine with the SessionEnd hook wired, every session end now auto-runs form-cli learn (tap the session into the corpus, re-featurize, retrain) in the background — closing the loop from manual command to continuous learning.",
+    "public_endpoints": [
+      "none changed; local agent tooling"
+    ],
+    "test_flows": [
+      "Trigger launches a detached learn and records a pid lock; a concurrent trigger skips; a clone without form-cli built no-ops."
+    ]
+  }
+}
