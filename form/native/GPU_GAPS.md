@@ -19,7 +19,7 @@ Backends: **Metal** (Mac, MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan**
 | attention (MHA/causal/KV) | ✅ | 🟡 (single-head done; MHA/causal next) | ⬜ | ⬜ |
 | layernorm / rmsnorm | ✅ | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ⬜ | ⬜ |
 | residual (vec-add) | ✅ | ✅ f32 *(verdict 8191)* | ⬜ | ⬜ |
-| transformer block fwd | ✅ | ✅ f32 **end-to-end on GPU, bit-exact** (12-launch kernel-graph, pre-LN self-attn) | ⬜ | ⬜ |
+| transformer block fwd | ✅ | ✅ **EXACT tb-block** (QKVO proj + gamma/beta), bit-exact, 19-launch graph; also model-forward + autoregressive generation | ⬜ | ⬜ |
 | llama block (fwd/causal/decode) | ✅ | ✅ | ⬜ | ⬜ |
 | conv2d / groupnorm (diffusion) | ✅ recipe *(verdict 15, 3-way)* | ⬜ | ⬜ | ⬜ |
 
