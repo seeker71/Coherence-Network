@@ -1,0 +1,90 @@
+#version 450
+
+// form-native conv2d f32 compute shader (Android/Vulkan lane, prototyped on RTX).
+// One invocation per OUTPUT element (oc, oy, ox). Mirrors form_conv2d_f32.ptx (cv2d-conv) op-for-op:
+//   out[oy][ox][oc] = bias[oc] + SUM_ky( SUM_kx( tb-dot(W[oc][ky][kx], in[iy][ix]) ) )
+//   iy = oy*stride + ky - pad ; ix = ox*stride + kx - pad
+// Triple DOWNWARD right-fold with nested accumulators:
+//   ky from kh-1 down (cv2d-window-dot), kx from kw-1 down (cv-window-dot), ic from IC-1 down (tb-dot)
+//   td  (per patch pixel) = SUM_ic (W*in),  wd (per kernel-row) = SUM_kx td,  acc = SUM_ky wd
+// Zero-padding: an out-of-bounds patch pixel contributes a zero vector -> its tb-dot is 0 -> the
+// whole IC loop is skipped, td stays 0, wd += 0 (bit-identical to summing zeros).
+// layout: in[(y*Wd+x)*IC+ic], W[((oc*kh+ky)*kw+kx)*IC+ic], out[(oy*outW+ox)*OC+oc].
+// There is NO float division anywhere (the /,% for index decomposition are INTEGER ops) -> no
+// RoundingModeRTE needed (like residual.comp). Every float op is `precise` -> SPIR-V NoContraction
+// so the driver cannot fuse mul+add into FMA and cannot reassociate -> bit-exact to the CPU oracle
+// and the PTX/MSL lanes. Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer W   { float w[]; };     // OC*kh*kw*IC
+layout(std430, binding = 1) readonly  buffer Bi  { float bias[]; };  // OC
+layout(std430, binding = 2) readonly  buffer In  { float inp[]; };   // H*Wd*IC
+layout(std430, binding = 3) writeonly buffer Out { float o[]; };     // outH*outW*OC
+
+layout(push_constant) uniform Push {
+    uint ic; uint h; uint wd; uint oc; uint kh; uint kw; uint pad; uint stride;
+} pc;
+
+void main() {
+    // outW = (Wd + 2*pad - kw)/stride + 1 ; outH = (H + 2*pad - kh)/stride + 1  (integer)
+    uint outW = (pc.wd + 2u * pc.pad - pc.kw) / pc.stride + 1u;
+    uint outH = (pc.h  + 2u * pc.pad - pc.kh) / pc.stride + 1u;
+
+    uint tid    = gl_GlobalInvocationID.x;
+    uint hw     = outH * outW;                  // outH*outW
+    uint total  = pc.oc * hw;                   // OC*outH*outW
+    if (tid >= total) return;
+
+    uint ocx = tid / hw;                        // oc = tid/(outH*outW)
+    uint rem = tid % hw;
+    uint oy  = rem / outW;                      // oy = rem/outW
+    uint ox  = rem % outW;                      // ox = rem%outW
+
+    // W base for oc = oc*kh*kw*IC
+    uint khkwic = pc.kh * pc.kw * pc.ic;
+    uint wbase_oc = ocx * khkwic;
+    int  oys = int(oy * pc.stride);             // oy*stride
+    int  oxs = int(ox * pc.stride);             // ox*stride
+
+    precise float acc = 0.0;                     // total accumulator
+    // ky = kh; while (ky!=0){ ky-- ... }  -> ky from kh-1 down to 0
+    uint ky = pc.kh;
+    while (ky != 0u) {
+        ky = ky - 1u;
+        int iy = oys + int(ky) - int(pc.pad);   // iy (may be negative)
+        precise float wd = 0.0;                  // per-kernel-row accumulator
+        // kx = kw; while (kx!=0){ kx-- ... }
+        uint kx = pc.kw;
+        while (kx != 0u) {
+            kx = kx - 1u;
+            int ix = oxs + int(kx) - int(pc.pad);
+            precise float td = 0.0;              // per-patch-pixel accumulator
+            // bounds: 0<=iy<H && 0<=ix<Wd  (signed); out of bounds -> td stays 0
+            bool inb = (iy >= 0) && (iy < int(pc.h)) && (ix >= 0) && (ix < int(pc.wd));
+            if (inb) {
+                // W elem base for (oc,ky,kx) = wbase_oc + ((ky*kw)+kx)*IC
+                uint wb = ((ky * pc.kw) + kx) * pc.ic + wbase_oc;
+                // in elem base for (iy,ix) = (iy*Wd+ix)*IC
+                uint ib = (uint(iy) * pc.wd + uint(ix)) * pc.ic;
+                // ic = IC; while (ic!=0){ ic--; td = W*in + td }  (DOWNWARD right-fold)
+                uint icc = pc.ic;
+                while (icc != 0u) {
+                    icc = icc - 1u;
+                    precise float wv = w[wb + icc];
+                    precise float iv = inp[ib + icc];
+                    precise float p  = wv * iv;
+                    td = p + td;                 // td = W*in + td
+                }
+            }
+            wd = td + wd;                        // wd = td + wd
+        }
+        acc = wd + acc;                          // acc = wd + acc
+    }
+
+    // out = acc + bias[oc]
+    precise float bo = bias[ocx];
+    precise float outv = acc + bo;
+    // out idx = (oy*outW+ox)*OC + oc
+    uint oidx = (oy * outW + ox) * pc.oc + ocx;
+    o[oidx] = outv;
+}
