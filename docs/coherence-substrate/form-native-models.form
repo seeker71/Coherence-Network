@@ -59,12 +59,18 @@
 ;     whisper's 80-d log-mel (mel-frame/mel-full + the new 80-row Slaney bank mel-filterbank.fk, four-way 63)
 ;     + CMVN dropped the HARD same-gender pair 0.768 → 0.588 (ECAPA 0.13) — features + normalization sharpen
 ;     the geometry as predicted; raw log-mel WITHOUT CMVN is worse (~0.97, the shared envelope dominates).
-;     EER REALITY-CHECK (eer.fk, the new four-way metric, on 15 real same/different-speaker trials — the
-;     instrument's FIRST lesson): raw log-mel EER 0.33, but global IN-SAMPLE CMVN EER 0.67 — WORSE than
-;     chance. It collapses same-speaker similarity (genuine cosines fall to 0.21/0.37, below several impostor
-;     pairs). The hard-pair-cosine "CMVN win" did NOT generalize to verification — #3's "one cosine misleads"
-;     proven on our own data. The lesson the metric forced: per-utterance CMVN (NOT global in-sample) + a
-;     TRAINED embedder are required, not optional; both front-ends are near/under chance untrained.
+;     EER REALITY-CHECK (eer.fk, the new four-way metric — the instrument earning its keep): the
+;     segment-trial generator (3 voices × 8 crops → 276 trials, 84 genuine) + bootstrap CI gives stable
+;     numbers, and a pooling DECOMPOSITION confirms the panel on our OWN data. EER (0=perfect, 0.5=chance):
+;     mean-only 0.380 [p5 .319, p95 .456]  ·  std-only 0.497 (≈ chance)  ·  mean+std 0.414. So the std half
+;     is NUISANCE (channel/breath/energy, Grok): alone a coin-flip, and adding it to the mean makes EER WORSE
+;     (.380→.414). This also explains the earlier global-in-sample-CMVN disaster (EER 0.67 on 15 trials):
+;     CMVN zeroes the mean — the only carrier of identity untrained — leaving ~std-only. The single hard-pair
+;     cosine that suggested "CMVN helped" measured discrimination, not verification (#3's "one cosine
+;     misleads", proven). The lessons the metric forced: drop std from the UNTRAINED baseline (mean-only is
+;     best, EER .380); CMVN belongs per-utterance and AFTER a trained embedder, never global-in-sample on raw
+;     features; and the real unlock is the TRAINED AAM embedder + augmentation — no untrained front-end
+;     verifies (best is still EER .380). Instrument: experiments/rune-galdr/eer-measure.sh.
 ;     OBJECTIVE WIN: the consensus #1 fix is SHIPPED — speaker-aam.fk (AAM-Softmax / ArcFace head, four-way,
 ;     verdict 63) replaces the MSE-to-speaker-codes objective that collapsed C3: L2-normalized cosine logits +
 ;     additive angular margin on the target (cos(θ+m) = cosθ·cosm − √(1−cos²θ)·sinm) + loss.fk's softmax-CE.
@@ -185,16 +191,19 @@
 ;        (using the host carrier IS having the resource), so each is internalized when we CHOOSE (need-driven,
 ;        oracle→native→retire), never blocked. The whole voice→voice pipeline is already sovereign in
 ;        principle; what remains is sequence, not permission. Companion: translation-pipeline-pivot.form.
-;     9. SPEAKER IDENTITY — the AAM-Softmax objective is shipped four-way (speaker-aam, verdict 63, the consensus
-;        #1); the ordered rungs to ECAPA-level: (a) the AAM TRAINER — chain the margin gradient (softmax−onehot
-;        through cos(θ+m)) into the W and embedding updates, the one new piece beyond loss.fk's backward; (b) DATA
-;        + augmentation (VAD 2-4s chunks + MUSAN/RIR/speed — the binding wall at 26 voices × 1 recording); (c) the
-;        EER harness — the metric RECIPE is SHIPPED (eer.fk, four-way verdict 63: trial matrix → FAR/FRR
-;        crossover → one comparable EER number, the fitness tooluse-model-search can optimize); wiring real
-;        corpus trials through it is the application; (d) attentive stats pooling +
-;        per-utterance CMVN feeding the AAM head; (e) the shallow dilated TDNN; (f) the native asm training lane
-;        (gap 1's emit→compile→exec) so corpus-scale training runs in minutes, not the 0.8 s/column tree-walker.
-;        Then either VoxCeleb pretrain or distil ECAPA's weights into the asm lane. Companion: CHALLENGERS.md.
+;     9. SPEAKER IDENTITY — objective SHIPPED (speaker-aam, verdict 63) + metric SHIPPED (eer.fk, verdict 63,
+;        with the segment-trial generator + bootstrap CI in eer-measure.sh). The post-EER panel (Grok+Cursor,
+;        2026-06-21) RE-ORDERED the rungs against the measured floor: untrained features don't verify (best
+;        EER .380, mean-only), so feature tuning is low ROI — the unlock is the TRAINED embedder, now. Ordered:
+;        (a) the AAM TRAINER on the native asm lane (gap 1's emit→compile→exec) — chain the margin gradient
+;        (softmax−onehot through cos(θ+m)) into W + embedding updates (the one new piece beyond loss.fk's
+;        backward), trained WITH (b) augmentation from day one (random 2-4s multi-crops per recording +
+;        MUSAN/RIR/speed + in-batch hard-negative mining — turns 26×1 into many samples/speaker); these two
+;        are now ONE step, ahead of feature work. (c) score normalization (z-norm / AS-norm vs an impostor
+;        cohort) folded into eer.fk — may beat architecture tweaks on small trials, and it's what production
+;        verification uses. (d) attentive stats pooling (LEARNED mean+std weights) + per-utterance CMVN feeding
+;        the AAM head — NOT raw mean+std (std is nuisance untrained) and NOT global CMVN. (e) shallow dilated
+;        TDNN. Then VoxCeleb pretrain or distil ECAPA's weights into the asm lane. Companion: CHALLENGERS.md.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
