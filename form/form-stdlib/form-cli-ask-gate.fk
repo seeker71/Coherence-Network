@@ -2,7 +2,7 @@
 ; answer-signals into the accept / retry / escalate decision, composing the
 ; four-way-proven form-cli-sufficiency.fk.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/trust-row.fk
 ;
 ; form-cli-sufficiency.fk reads six signals and returns accept / retry / escalate.
 ; This is the ask lane's adapter onto it: the live carrier (form-cli-ask.fk) reads
@@ -61,4 +61,14 @@
 ; the trust-row PATH signal, read from the FINAL verdict (after any retry resolved):
 ; 1 = native (the local body answered and stood), 0 = rented (escalated to the oracle)
 (defn fca-ask-path (final-verdict) (if (eq final-verdict 0) 1 0))
+
+; ── the live per-step trust row: render THIS step's trust matrix as one line via
+;    the four-way-proven trust-row.fk. For the ask+ lane the body-only signals read
+;    from the verdict — path is native + suffic when local stood, rented + not when
+;    it escalated. grounded and freq are 0: the pure oracle lane carries neither a
+;    substrate NodeID nor a freq reading, so the row honestly shows them absent and
+;    the answer never claims full trust-observation. The row makes the native-vs-
+;    rented mix visible on every query. ──
+(defn fca-ask-trace-row (final-verdict)
+    (tr-row (fca-ask-path final-verdict) 0 0 (fca-ask-path final-verdict)))
 0

@@ -1,4 +1,4 @@
-; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/form-cli-ask-gate.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/trust-row.fk form-stdlib/form-cli-ask-gate.fk
 ;
 ; form-cli-ask-band — the ask verb's posterior accept / retry / escalate decision, proven
 ; four-way. Eight strange-minimal cases walk the boundary at the trust=60 prior: a usable,
@@ -21,6 +21,8 @@
 ;   512   the "[ask: .." error marker is NOT usable (okp 0)
 ;   1024  a real answer IS usable         (okp 1)
 ;   2048  intrinsic content: usable -> 70, unusable -> 0  (the sovereignty-first read)
+;   4096  the live trust row for a native accept  (path:native suffic:yes -> native-partial)
+;   8192  the live trust row for a rented escalate (path:rented suffic:no  -> rented)
 (do
     (let c0  (if (eq  (fca-ask-verdict 1 80 60 1) 0)                                       1    0))
     (let c1  (if (and (eq (fca-ask-verdict 1 40 60 1) 2) (eq (fca-ask-reason 1 40 60 1) 3))  2  0))
@@ -34,6 +36,10 @@
     (let c9  (if (eq  (fca-usable? "[ask: no answer from the local oracle]") 0)            512  0))
     (let c10 (if (eq  (fca-usable? "Four.") 1)                                             1024 0))
     (let c11 (if (and (eq (fca-content-intrinsic "Four.") 70) (eq (fca-content-intrinsic "") 0)) 2048 0))
+    (let c12 (if (str_eq (fca-ask-trace-row 0)
+                  "trust  path:native  grounded:no  freq:no  suffic:yes  -> native-partial") 4096 0))
+    (let c13 (if (str_eq (fca-ask-trace-row 2)
+                  "trust  path:rented  grounded:no  freq:no  suffic:no  -> rented")          8192 0))
 
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
-        (add c8 (add c9 (add c10 c11))))))))))))
+        (add c8 (add c9 (add c10 (add c11 (add c12 c13))))))))))))))
