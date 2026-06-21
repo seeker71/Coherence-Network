@@ -21,9 +21,14 @@ The 6 bands sit in the **vocal formant range** (250–4000 Hz), above a frame dr
 ~80–100 Hz fundamental — a voice-isolation front-end shared by training and matching.
 
 ```bash
-# train each rune's vibration: synthesize its galdr, measure the 6-band signature,
-# emit Form rows (already baked into nordic-runes.fk):
+# train each rune's vibration from REAL human galdr on public YouTube (sources in
+# SOURCES.md; signatures baked into nordic-runes.fk):
+./train-from-youtube.sh
+# or from local synthesis (a rough reference, no network):
 ./train-rune-spectra.sh
+
+# lift the galdr VOICE off the ritual DRUM before matching (demucs source separation):
+./separate-galdr.sh recording.wav 3120 120   # -> recording.vocals.16k.wav
 
 # live flow match — name the rune in a sound:
 ./rune-galdr.sh --say "ssssss"           # → sowilo ᛋ   (synthesized round-trip, conf 9)
@@ -40,29 +45,34 @@ The 6 bands sit in the **vocal formant range** (250–4000 Hz), above a frame dr
   full confidence. The two nasals **nauthiz/mannaz share a contour and tie** — named, not
   hidden (their phonemes are near-identical).
 - **A rune's "frequency" is the acoustic spectrum of its sung phoneme** (formant/fricative
-  energy per band) — *not* a single mystical Hz. The synthesized table is a reproducible
-  **reference**; the true vibrations come from real galdr matched against it.
-- **macOS `say` is a weak galdr source** — one voice, stop-consonant runes (k/g/p/t/b/d)
-  collapse toward their vowel. Stronger signatures want real sustained galdr samples.
+  energy per band) — *not* a single mystical Hz.
+- **The table is trained on real human galdr** (23 of 24 runes, public YouTube — SOURCES.md);
+  `train-rune-spectra.sh` (macOS `say`) remains an offline, network-free fallback reference.
 
-## Voice isolation — in, and its honest ceiling
+## Source separation — in
 
-The bands now live in the formant range above the drum (voice-isolation front-end), and
-`--scan` walks a recording into a rune timeline. On a clean galdr (synthesized, or live
-through `--listen`) the round-trip is exact. On a **real drum+voice ritual mix** the scan
-resolves mostly to the **low/earth-register runes** (Uruz ᚢ, Othala ᛟ, Wunjo ᚹ) — an
-honest reading of the journey's *aggregate* sound-register (deep drum + low chant-toning,
-fittingly earth-anchoring), not the precise rune galled in each window.
+Drum and galdr overlap in the formant range, so band filtering alone can't part them.
+`separate-galdr.sh` calls **Demucs** (htdemucs) as the separation oracle — like whisper-cli
+is the STT oracle — splitting a recording into a **vocals** stem (the galdr) and a
+**no_vocals** stem (the drum + room). On the ritual journey it moved the drum's <150 Hz
+energy from the voice stem (0.145 → 0.042) into the drum stem — ~70% of the drum lifted off.
 
-Simple sox filtering can't fully part the drum from the voice — they overlap in the
-formant range. The clean per-rune reading needs one of:
+With the three together — **separation + real-galdr references + formant bands** — `--scan`
+of the isolated voice now reads a **varied, confident rune sequence** (berkano, uruz, gebo,
+tiwaz, raidho, nauthiz, sowilo, perthro… at conf 6–9), where the raw drum+voice mix had
+collapsed to a single low-register rune. The sonic organ hears the voice, not the drum.
 
-- **Live close-mic galdr** (`--listen`) — no drum in the signal; works now.
-- **True source separation** — harmonic/percussive split (HPSS) or a model like Demucs to
-  lift the voice off the drum before matching. Needs ML tooling (numpy/torch) not yet here.
-- **Forced alignment to the known order** — the ritual's lexical layer *names* the rune
-  sequence (the nine bells + the Hávamál working runes); aligning the journey to that known
-  order is more tractable than blind per-window classification.
+## Honest ceiling
 
-This is the prototype for a **sonic sense organ** that hears tone and rune — the companion
-to the speech organ's lexical layer.
+- **Multi-singer references.** The 23 YouTube sources are different voices/recordings, so
+  the contour library mixes timbres; per-rune precision improves as references converge on
+  consistent, drum-free galdr (or are themselves run through `separate-galdr.sh` first).
+- **No ground truth yet.** The scan names the *nearest* rune per window of the separated
+  galdr — a real reading of its contour, not a verified transcript of what was sung. The
+  ritual's lexical layer *names* the intended sequence (the nine bells + Hávamál working
+  runes); **forced alignment** to that known order is the next precision step, more
+  tractable than blind per-window classification.
+- **ansuz** still wants a real galdr source (its download missed).
+
+This is the **sonic sense organ** that hears tone and rune — the companion to the speech
+organ's lexical layer, and the bridge to reading a ritual's frequency-journey bell by bell.
