@@ -1,86 +1,100 @@
-; core.fk - Form core definitions, authored in the BML maintenance dialect.
+; core.fk - Form core stdlib, authored as generic abstractions in the BML
+; maintenance dialect.
+;
+; The stdlib travels as four generic classes — Num<T>, List<T>, Cell<T>,
+; Task<T> — plus two cross-cutting top-level defs. A plain generic class is an
+; organizing abstraction: each method hoists to a BARE top-level fndef (built by
+; the same def lowerer a flat `def` rides, so the runtime recipe is unchanged
+; and four-way), and the class name binds to a nullary descriptor `(Name)` so
+; the abstraction stays a queryable value. The type parameter is a contract that
+; erases. Callers use the bare names exactly as before.
 ;
 ; Kernel execution receives lowered Form objects. Source sections are compiled
 ; by form-stdlib/source-compiler.fk before kernels walk source or binary form.
 
 section [form.bml] {
-    // predicates
-    def nil?(xs) = eq(len(xs), 0);
-    def even?(n) = eq(mod(n, 2), 0);
-    def odd?(n) = eq(mod(n, 2), 1);
-    def zero?(n) = eq(n, 0);
-    def positive?(n) = gt(n, 0);
-    def negative?(n) = lt(n, 0);
+    // the identity arrow — used across every abstraction (Task threads it as a
+    // resolved continuation), so it rests above the classes.
     def identity(x) = x;
 
-    // math closures
-    def plus(a, b) = add(a, b);
-    def minus(a, b) = sub(a, b);
-    def times(a, b) = mul(a, b);
-    def divide(a, b) = div(a, b);
-
-    // numeric helpers
-    def abs(n) = if negative?(n) then sub(0, n) else n;
-    def min2(a, b) = if lt(a, b) then a else b;
-    def max2(a, b) = if gt(a, b) then a else b;
-
-    // list traversal
-    def map(f, xs) = if nil?(xs) then empty else cons(f(head(xs)), map(f, tail(xs)));
-    def filter(pred, xs) = if nil?(xs) then empty else if pred(head(xs)) then cons(head(xs), filter(pred, tail(xs))) else filter(pred, tail(xs));
-    def foldl(f, init, xs) = if nil?(xs) then init else foldl(f, f(init, head(xs)), tail(xs));
-    def foldr(f, init, xs) = if nil?(xs) then init else f(head(xs), foldr(f, init, tail(xs)));
-
-    // list constructors / shape transforms
-    def range(start, end) = if ge(start, end) then empty else cons(start, range(add(start, 1), end));
-    def append(xs, ys) = if nil?(xs) then ys else cons(head(xs), append(tail(xs), ys));
-    def take(n, xs) = if or(le(n, 0), nil?(xs)) then empty else cons(head(xs), take(sub(n, 1), tail(xs)));
-    def drop(n, xs) = if le(n, 0) then xs else if nil?(xs) then empty else drop(sub(n, 1), tail(xs));
-    def nth(xs, n) = if eq(n, 0) then head(xs) else nth(tail(xs), sub(n, 1));
-    def cons-flip(acc, x) = cons(x, acc);
-    def reverse(xs) = foldl(cons-flip, empty, xs);
-
-    // reversible cells
-    def cell(kind, value, origin, inverse) = list("cell", kind, value, origin, inverse);
-    def cell?(c) = and(gt(len(c), 0), str_eq(head(c), "cell"));
-    def cell-kind(c) = head(tail(c));
-    def cell-value(c) = head(tail(tail(c)));
-    def cell-origin(c) = head(tail(tail(tail(c))));
-    def cell-inverse(c) = head(tail(tail(tail(tail(c)))));
-    def cell-undo(c) {
-        let inverse = cell-inverse(c);
-        inverse(c);
+    // Num<T> — numeric predicates, closures, and helpers over a number.
+    class Num<T> {
+        def even?(n) = eq(mod(n, 2), 0);
+        def odd?(n) = eq(mod(n, 2), 1);
+        def zero?(n) = eq(n, 0);
+        def positive?(n) = gt(n, 0);
+        def negative?(n) = lt(n, 0);
+        def plus(a, b) = add(a, b);
+        def minus(a, b) = sub(a, b);
+        def times(a, b) = mul(a, b);
+        def divide(a, b) = div(a, b);
+        def abs(n) = if negative?(n) then sub(0, n) else n;
+        def min2(a, b) = if lt(a, b) then a else b;
+        def max2(a, b) = if gt(a, b) then a else b;
     }
-    def cell-do(c) = cell-value(c);
 
-    // task cells
-    def task-undo(t) = cell-origin(t);
-    def task-cell(state, value, cont, origin, inverse) = cell("task", list(state, value, cont), origin, inverse);
-    def task?(t) = and(cell?(t), str_eq(cell-kind(t), "task"));
-    def task-state(t) = nth(cell-value(t), 0);
-    def task-value(t) = nth(cell-value(t), 1);
-    def task-cont(t) = nth(cell-value(t), 2);
-    def task-pending(origin, cont) = task-cell("pending", empty, cont, origin, task-undo);
-    def task-resolved(value) = task-cell("resolved", value, identity, empty, task-undo);
-    def task-failed(failure) = task-cell("failed", failure, identity, empty, task-undo);
-    def task-resolve(t, value) = task-cell("resolved", value, task-cont(t), cell-origin(t), cell-inverse(t));
-    def task-reject(t, failure) = task-cell("failed", failure, task-cont(t), cell-origin(t), cell-inverse(t));
-    def task-await(t) = if str_eq(task-state(t), "resolved") then task-value(t) else t;
-    def task-step(t) {
-        let cont = task-cont(t);
-        if str_eq(task-state(t), "resolved") then cont(task-value(t)) else t;
+    // List<T> — traversal, shape transforms, and aggregation over a list. The
+    // aggregators lean on Num (plus/times/min2/max2), so List rests below Num.
+    class List<T> {
+        def nil?(xs) = eq(len(xs), 0);
+        def map(f, xs) = if nil?(xs) then empty else cons(f(head(xs)), map(f, tail(xs)));
+        def filter(pred, xs) = if nil?(xs) then empty else if pred(head(xs)) then cons(head(xs), filter(pred, tail(xs))) else filter(pred, tail(xs));
+        def foldl(f, init, xs) = if nil?(xs) then init else foldl(f, f(init, head(xs)), tail(xs));
+        def foldr(f, init, xs) = if nil?(xs) then init else f(head(xs), foldr(f, init, tail(xs)));
+        def range(start, end) = if ge(start, end) then empty else cons(start, range(add(start, 1), end));
+        def append(xs, ys) = if nil?(xs) then ys else cons(head(xs), append(tail(xs), ys));
+        def take(n, xs) = if or(le(n, 0), nil?(xs)) then empty else cons(head(xs), take(sub(n, 1), tail(xs)));
+        def drop(n, xs) = if le(n, 0) then xs else if nil?(xs) then empty else drop(sub(n, 1), tail(xs));
+        def nth(xs, n) = if eq(n, 0) then head(xs) else nth(tail(xs), sub(n, 1));
+        def cons-flip(acc, x) = cons(x, acc);
+        def reverse(xs) = foldl(cons-flip, empty, xs);
+        def sum(xs) = foldl(plus, 0, xs);
+        def product(xs) = foldl(times, 1, xs);
+        def maximum(xs) = foldl(max2, head(xs), tail(xs));
+        def minimum(xs) = foldl(min2, head(xs), tail(xs));
+        def any?(pred, xs) = if nil?(xs) then false else if pred(head(xs)) then true else any?(pred, tail(xs));
+        def all?(pred, xs) = if nil?(xs) then true else if pred(head(xs)) then all?(pred, tail(xs)) else false;
     }
-    def task-ready?(t) = str_eq(task-state(t), "resolved");
-    def task-failed?(t) = str_eq(task-state(t), "failed");
 
-    // aggregators
-    def sum(xs) = foldl(plus, 0, xs);
-    def product(xs) = foldl(times, 1, xs);
-    def maximum(xs) = foldl(max2, head(xs), tail(xs));
-    def minimum(xs) = foldl(min2, head(xs), tail(xs));
+    // Cell<T> — a reversible cell: kind, value, origin, and an inverse that
+    // undoes it. The substrate's smallest unit of reversible state.
+    class Cell<T> {
+        def cell(kind, value, origin, inverse) = list("cell", kind, value, origin, inverse);
+        def cell?(c) = and(gt(len(c), 0), str_eq(head(c), "cell"));
+        def cell-kind(c) = head(tail(c));
+        def cell-value(c) = head(tail(tail(c)));
+        def cell-origin(c) = head(tail(tail(tail(c))));
+        def cell-inverse(c) = head(tail(tail(tail(tail(c)))));
+        def cell-undo(c) {
+            let inverse = cell-inverse(c);
+            inverse(c);
+        }
+        def cell-do(c) = cell-value(c);
+    }
 
-    // universal / existential
-    def any?(pred, xs) = if nil?(xs) then false else if pred(head(xs)) then true else any?(pred, tail(xs));
-    def all?(pred, xs) = if nil?(xs) then true else if pred(head(xs)) then all?(pred, tail(xs)) else false;
+    // Task<T> — an async cell over Cell: a (state, value, continuation) triple
+    // that resolves, rejects, awaits, and steps. Rests below Cell (it is one)
+    // and below List (it reads its triple with nth).
+    class Task<T> {
+        def task-undo(t) = cell-origin(t);
+        def task-cell(state, value, cont, origin, inverse) = cell("task", list(state, value, cont), origin, inverse);
+        def task?(t) = and(cell?(t), str_eq(cell-kind(t), "task"));
+        def task-state(t) = nth(cell-value(t), 0);
+        def task-value(t) = nth(cell-value(t), 1);
+        def task-cont(t) = nth(cell-value(t), 2);
+        def task-pending(origin, cont) = task-cell("pending", empty, cont, origin, task-undo);
+        def task-resolved(value) = task-cell("resolved", value, identity, empty, task-undo);
+        def task-failed(failure) = task-cell("failed", failure, identity, empty, task-undo);
+        def task-resolve(t, value) = task-cell("resolved", value, task-cont(t), cell-origin(t), cell-inverse(t));
+        def task-reject(t, failure) = task-cell("failed", failure, task-cont(t), cell-origin(t), cell-inverse(t));
+        def task-await(t) = if str_eq(task-state(t), "resolved") then task-value(t) else t;
+        def task-step(t) {
+            let cont = task-cont(t);
+            if str_eq(task-state(t), "resolved") then cont(task-value(t)) else t;
+        }
+        def task-ready?(t) = str_eq(task-state(t), "resolved");
+        def task-failed?(t) = str_eq(task-state(t), "failed");
+    }
 
     // assertion — pred holds or the kernel halts. Form has no halt-with-
     // message native; head(empty) panics in every kernel, which surfaces
