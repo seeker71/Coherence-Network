@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 308
+**Total files**: 311
 
 | File | Purpose |
 |---|---|
@@ -65,6 +65,8 @@
 | [coord-watcher.sh](coord-watcher.sh) | coord-watcher.sh — the naive watcher: asks silly questions to keep the field honest. |
 | [corpus_partition_by_license.sh](corpus_partition_by_license.sh) | corpus_partition_by_license.sh — split a downloaded corpus into the part that is |
 | [cross_isa_assembly_audit.sh](cross_isa_assembly_audit.sh) | cross_isa_assembly_audit.sh — one recipe, every ISA the host can show. |
+| [cuda_affine_train_audit.sh](cuda_affine_train_audit.sh) | cuda_affine_train_audit.sh — GPU witness for the Form CUDA affine-layer TRAINING-STEP emitter |
+| [cuda_matvec_audit.sh](cuda_matvec_audit.sh) | cuda_matvec_audit.sh — GPU witness for the Form CUDA matvec emitter (jte-matvec-cuda in |
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
 | [db_api_server_demo.sh](db_api_server_demo.sh) | db_api_server_demo.sh — emit a self-contained native binary (from the Form |
 | [demo_dual_identity.py](demo_dual_identity.py) | Demo: Idea Dual Identity — UUID + Slug |
@@ -120,6 +122,7 @@
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_echo_demo.sh](form_echo_demo.sh) | form_echo_demo.sh — `echo $1`, built with ZERO clang and direct Form -> asm, and |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
+| [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the body home so Form-first answers OFFLINE. |
 | [form_headn_demo.sh](form_headn_demo.sh) | form_headn_demo.sh — `head N`, the REAL head, built with ZERO clang and direct |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
 | [form_macho_demo.sh](form_macho_demo.sh) | form_macho_demo.sh — a RUNNABLE native binary built with ZERO clang. The Form |
