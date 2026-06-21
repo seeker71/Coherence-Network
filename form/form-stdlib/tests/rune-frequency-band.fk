@@ -1,6 +1,7 @@
 ; preludes: form-stdlib/nordic-runes.fk form-stdlib/rune-frequency.fk
 ;
 ; rune-frequency-band — the symbol <-> frequency-spectrum flow-match, three-way.
+; Test vectors are the real-galdr signatures: fehu (9 3 2 2 6 1, ætt 1), sowilo (6 7 9 3 1 1, ætt 2).
 ;
 ; Verdict 255 when every claim lands (numeric decisions only):
 ;   1   |−5| = 5                            (rf-abs)
@@ -13,11 +14,11 @@
 ;   128 a drifted contour still finds fehu    (rf-aett perturbed fehu = 1)
 (do
     (let c0 (if (eq (rf-abs (sub 0 5)) 5) 1 0))
-    (let c1 (if (eq (rf-dist (list 4 9 1 4 4 3) (list 4 9 1 4 4 3)) 0) 2 0))
+    (let c1 (if (eq (rf-dist (list 9 3 2 2 6 1) (list 9 3 2 2 6 1)) 0) 2 0))
     (let c2 (if (eq (rf-dist (list 9 9) (list 0 0)) 18) 4 0))
-    (let c3 (if (eq (rf-distance (list 4 9 1 4 4 3)) 0) 8 0))
-    (let c4 (if (eq (rf-aett (list 4 9 1 4 4 3)) 1) 16 0))
-    (let c5 (if (eq (rf-aett (list 6 9 2 4 5 4)) 2) 32 0))
-    (let c6 (if (eq (rf-confidence (list 4 9 1 4 4 3)) 9) 64 0))
-    (let c7 (if (eq (rf-aett (list 4 9 1 4 5 3)) 1) 128 0))
+    (let c3 (if (eq (rf-distance (list 9 3 2 2 6 1)) 0) 8 0))
+    (let c4 (if (eq (rf-aett (list 9 3 2 2 6 1)) 1) 16 0))
+    (let c5 (if (eq (rf-aett (list 6 7 9 3 1 1)) 2) 32 0))
+    (let c6 (if (eq (rf-confidence (list 9 3 2 2 6 1)) 9) 64 0))
+    (let c7 (if (eq (rf-aett (list 9 3 2 2 5 1)) 1) 128 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
