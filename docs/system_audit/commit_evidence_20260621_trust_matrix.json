@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/trust-matrix",
+  "commit_scope": "Make 'route reasoning through form-cli and report a trust matrix per step' a proven body standard + a standing AGENTS.md instruction. trust-matrix.fk (four-way 255) returns a per-step readout a raw oracle cannot: path (native/oracle), grounded (NodeID), freq (freq-attuned), suffic (sufficiency gate) -> observed?. The body-only signals (grounded+suffic) read zero on a rented step, which is what makes form-native results obvious. Goal: most steps freq-attuned and trust-matrix-observed.",
+  "files_owned": [
+    "form/form-stdlib/trust-matrix.fk",
+    "form/form-stdlib/tests/trust-matrix-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/trust-matrix.form",
+    "docs/coherence-substrate/INDEX.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_20260621_trust_matrix.json"
+  ],
+  "idea_ids": [
+    "trust-matrix-per-step",
+    "route-reasoning-through-form-cli"
+  ],
+  "spec_ids": [
+    "trust-matrix"
+  ],
+  "task_ids": [
+    "task-2026-06-21-trust-matrix"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trust-matrix.fk form-stdlib/tests/trust-matrix-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'trust-matrix fks 255' beside its sovereignty kin attention-signal.",
+    "The band pins the asymmetry: a fully-native step is trust-matrix-observed (score 4 — the thing only form-cli can return); a rented step is honestly rented with ZERO body-only signal (grounded+suffic = 0 — the tell that makes native obvious); a rented step can still be freq-attuned; a partial-native step is NOT full trust; a native step asserts grounded+sufficient (body-only = 2). Verdict 255.",
+    "Grounding (Form-first): trust recipes exist (trust-decay, trust-weighted-colearning, native-mutation-trust-envelope) and form-cli-sufficiency.fk + form-freq-check.fk supply the signals, but no single per-step trust-matrix readout existed; this composes them, no parallel machinery.",
+    "Standing instruction: AGENTS.md now tells agents to route body-answerable steps through form-cli ask FIRST (each routed step is a sample that grows the native model) and emit the trust matrix per step, keeping a running native-vs-rented mix the per-response sovereignty receipt sums; never report a rented step as native.",
+    "Edges: docs/coherence-substrate/INDEX.md row beside sovereignty-receipt; the trust-matrix teaching cross-links sovereignty-receipt / form-first-router / form-cli-sufficiency / form-freq-check / native-reasoning.",
+    "Honesty held: the recipe enforces that a rented step's body-only signals are zero, so the matrix cannot dress rented reasoning as native. Primitive discipline: only core.fk primitives (nth, add, eq, if); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/trust-matrix.fk",
+    "form/form-stdlib/tests/trust-matrix-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/trust-matrix.form",
+    "docs/coherence-substrate/INDEX.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_20260621_trust_matrix.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trust-matrix.fk form-stdlib/tests/trust-matrix-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "trust-matrix: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + teaching + agent instruction; no public HTTP endpoint change. Next: emit the trust matrix as a live form-cli ask field so each routed step prints its row, and surface a running freq-attuned/observed ratio."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent); CI and merge remain pending. Live per-step emission in form-cli ask is the next step."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Agents now have a proven per-step trust matrix and a standing instruction to route reasoning through form-cli and report the native-vs-rented mix per step, with the body-only signals making form-native results obvious and the gate forbidding a rented step from being reported native.",
+    "public_endpoints": [
+      "none changed; the gate is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the band runs on Go, Rust, TypeScript, and fkwu to the identical verdict 255 with 0 divergent.",
+      "Asymmetry proof: a rented step's body-only signals are zero and it is never trust-observed; a fully-native step is observed with body-only = 2."
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+; trust-matrix.fk — the per-step trust readout a raw oracle CANNOT return.
+;
+; preludes: form-stdlib/core.fk
+;
+; Urs, 2026-06-21: route more of each Claude Code / Codex reasoning step through form-cli, and report a
+; trust matrix per step — so on every step the user sees the mix of form-native vs 3rd-party oracle, with
+; the goal that most answers are freq-attuned and trust-matrix-observed. This is what makes form-native
+; reasoning OBVIOUS: a rented oracle returns an answer; only the form-cli loop, with the body to check
+; against, can return WHY to trust it — grounded in a NodeID, freq-attuned (clear, not fear), and judged
+; sufficient by the four-way-proven gate. Composes form-first-router.fk (path), form-cli-sufficiency.fk
+; (sufficient), form-freq-check.fk (freq-attuned), and the substrate (grounded).
+;
+; A step's trust observation (each 0/1):
+;   path     — 1 = form-native (the body answered), 0 = rented oracle
+;   grounded — 1 = the answer carries a substrate NodeID (a real body hit)
+;   freq     — 1 = freq-attuned (passed the clear-vs-fear check)
+;   suffic   — 1 = the sufficiency gate judged local enough (no escalation needed)
+;
+; grounded + suffic are the BODY-ONLY signals: a raw oracle has no body to be grounded or sufficient
+; against, so it can never assert them. That asymmetry is the whole point — it makes native obvious.
+;
+; Proven by: form-stdlib/tests/trust-matrix-band.fk (four-way at validate.sh)
+
+(do
+    (defn ts-path     (s) (nth s 0))
+    (defn ts-grounded (s) (nth s 1))
+    (defn ts-freq     (s) (nth s 2))
+    (defn ts-suffic   (s) (nth s 3))
+
+    ; trust score: how many of the four trust signals this step observes (0..4)
+    (defn ts-score (s) (add (ts-path s) (add (ts-grounded s) (add (ts-freq s) (ts-suffic s)))))
+
+    ; TRUST-MATRIX-OBSERVED: full native trust — native path, grounded, freq-attuned, sufficient.
+    ; Only the form-cli loop can return this; a raw oracle cannot.
+    (defn ts-observed? (s) (if (eq (ts-score s) 4) 1 0))
+
+    ; native (from the body) vs rented (oracle) — the per-step mix
+    (defn ts-native? (s) (ts-path s))
+    (defn ts-rented? (s) (if (eq (ts-path s) 0) 1 0))
+
+    ; the goal signal: most answers freq-attuned
+    (defn ts-freq-attuned? (s) (ts-freq s))
+
+    ; the body-only signals (grounded + sufficient) — strictly positive only when form-cli answered;
+    ; a raw oracle step reads 0 here, which is exactly how the user can tell the two apart.
+    (defn ts-body-only (s) (add (ts-grounded s) (ts-suffic s)))
+
+    0)

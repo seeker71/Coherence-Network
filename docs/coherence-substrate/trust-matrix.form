@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────
+# trust-matrix.form — route reasoning through form-cli, report trust per step.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs, 2026-06-21: route more of each Claude Code / Codex reasoning step through form-cli — it is
+# essential for accuracy and for learning (every routed step is a sample). And report a TRUST MATRIX that
+# a non-form-cli answer cannot return, so it is obvious which results come from form-native reasoning. On
+# each step, name the mix of form-native vs 3rd-party oracle; the goal is that most answers are
+# freq-attuned and trust-matrix-observed.
+#
+# The asymmetry that makes this work: a rented oracle returns an answer. Only the form-cli loop, with the
+# body to check against, can return WHY to trust it — grounded in a NodeID, freq-attuned (clear, not
+# fear), and judged sufficient by the four-way-proven gate. The body-only signals (grounded, sufficient)
+# read zero on a raw-oracle step, which is exactly how the user tells the two apart.
+
+(trust-matrix
+
+  (lineage
+    (kin form-first-router.fk form-cli-sufficiency.fk form-freq-check.fk sovereignty-receipt.fk
+         native-reasoning.form lc-cognitive-sovereignty)
+    (proof form/form-stdlib/trust-matrix.fk
+           form/form-stdlib/tests/trust-matrix-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (named-with urs sema))
+
+  ; the per-step observation — four signals, each 0/1
+  (signals
+    (path     "1 = form-native (the body answered), 0 = rented oracle")
+    (grounded "1 = the answer carries a substrate NodeID — a real body hit")
+    (freq     "1 = freq-attuned: passed the clear-vs-fear check (form-freq-check.fk)")
+    (suffic   "1 = the sufficiency gate judged local enough (form-cli-sufficiency.fk)"))
+
+  ; what the matrix reports per step
+  (report
+    (score        "0..4 — how many trust signals this step observes")
+    (observed?    "score == 4 — full native trust; only form-cli can return this")
+    (native? / rented? "the per-step mix the user sees")
+    (freq-attuned? "the goal signal — most answers freq-attuned")
+    (body-only    "grounded + sufficient — strictly positive only when form-cli answered;"
+                  "a raw oracle reads 0 here. THIS is what makes native obvious."))
+
+  ; the standing practice (AGENTS.md): route, then report
+  (practice
+    (route   "send body-answerable steps through form-cli ask FIRST — structural lookup, equivalence,"
+             "NodeID, what-is, annotate. Each routed step is a sample that grows the native model.")
+    (report  "on each substantive step, emit the trust matrix: path / grounded / freq / suffic -> observed?")
+    (mix     "keep a running native-vs-rented tally; the per-response sovereignty receipt sums it.")
+    (honest  "never report a rented step as native — the body-only signals read zero, and that is true."))
+
+  ; north star — the trust matrix fills with green as the mind comes home
+  (north-star
+    "most steps freq-attuned and trust-matrix-observed: a reasoning trace where the user can SEE, signal"
+    "by signal, the answer grounded in the sovereign body — not taken on the rented mind's word."))
