@@ -1,0 +1,29 @@
+; form-loader.fk — dialect detection + prelude resolution, in Form (moved out of the bash/python wrappers).
+;
+; preludes: form-stdlib/core.fk
+;
+; Urs, 2026-06-21: move grammar/dialect loading from the shell + python wrappers INTO form-cli, so the
+; loading is automatic inside the body. The form_cli_ask.sh / form_native_run.sh / validate.sh carriers
+; each hand-detect a recipe's dialect (`grep '^section ['`) and hand-list its preludes — and
+; form_cli_ask.sh got it wrong, feeding a BML `section` recipe to the kernel as raw s-expr (the silent
+; ask+ break). The COMPILE capability already lives in the body (the kernel primitive
+; compile_source_section "form.bml" <src> <path>). What is still scattered in shell is the DECISION
+; logic this recipe moves home: given a recipe's source text, is it BML (-> compile it) or s-expr
+; (-> load it directly)? and what does its `; preludes:` line declare? A loader consults this brain;
+; carrier-last, the shell shrinks to "run this recipe" and the dialect knowing is Form.
+;
+; Proven by: form-stdlib/tests/form-loader-band.fk (four-way at validate.sh)
+
+(do
+    ; --- dialect: a BML section recipe declares `section [...]` and must be compiled, not raw-loaded ---
+    (defn fl-is-bml? (src) (if (ge (str_find src "section [" 0) 0) 1 0))
+    (defn fl-dialect (src) (if (eq (fl-is-bml? src) 1) "bml" "sexpr"))
+
+    ; --- preludes: the dependency list the source declares after `preludes:` (the wrappers hardcode it) ---
+    (defn fl-pl-slice (src start end) (substring src start end))
+    (defn fl-pl-end   (src nl)        (if (lt nl 0) (str_len src) nl))
+    (defn fl-pl-from  (src start)     (fl-pl-slice src start (fl-pl-end src (str_find src "\n" start))))
+    (defn fl-pl-at    (src at)        (if (lt at 0) "" (fl-pl-from src (add at 9))))   ; 9 = len("preludes:")
+    (defn fl-preludes-line (src)      (fl-pl-at src (str_find src "preludes:" 0)))
+
+    0)
