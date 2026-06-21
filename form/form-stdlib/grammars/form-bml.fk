@@ -1,31 +1,52 @@
 ; grammars/form-bml.fk — the form.bml maintenance dialect as cursor rules, tuned to
-; core.fk's actual surface: `def name(params) = expr;` with `?`/`-`/`!` in identifiers
-; (nil?, cons-flip), call-form primitives + user calls, if..then..else, literals.
+; core.fk's actual surface: `def name(params) = expr;` AND `def name(params) { stmts }`
+; (multi-line block bodies with `let n = e;` + a final expr), `?`/`-`/`!` in names,
+; call-form primitives + user calls, if..then..else, literals, and a trailing bare
+; `expr;` statement (core.fk ends with `0;`).
 ;
-; This is the BMF cursor front end for the dialect core.fk is authored in. It emits
-; the universal vocabulary the engine uses ((bp "fndef")/(bp "fncall")/(bp "if")/...);
-; form-bml-lower.fk lowers that to the hand line compiler's executable recipe shape,
-; so the cursor path is node_eq-identical to fsc-compile-form-bml-def-recipe.
+; Two entry points over the SAME rule set:
+;   form-bml-grammar          — start "fdef": one single-expr def (the per-construct bands)
+;   form-bml-section-grammar  — start "section": a whole section body -> do[defs.. , final]
+;
+; Emits the universal vocabulary the engine uses; form-bml-lower.fk lowers it to the
+; hand line compiler's executable recipe shape, so the cursor output is node_eq to
+; fsc-compile-form-bml-section-recipe over the same body.
 ;
 ; Names use the "bmlname" char class (alnum + - ? !), defined in bmf-core.fk so the
 ; fourth-arm flattener binds gm-run's cp-in-class? to the class-aware definition.
 ;
-; Single-construct breath: start rule is one `fdef`. Multi-line `{ }` bodies, `let`,
-; `match`, and top-level `==` are later breaths (the line compiler still owns them).
-;
 ; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk
 
 (do
-    (defn form-bml-grammar () (grammar "fdef" (list
+    (defn form-bml-rules () (list
 
-        ;; -- def name(params) = expr ;  ->  fndef[name, do[params], body] --------
+        ;; -- whole section body: zero+ top statements -> do[ ... ] -------------
+        (rule3 "section" (p-cap "ds" (p-rep (p-ref "topstmt"))) (t-emit "do" (list (t-splices "ds"))))
+        ;; def-block BEFORE def-expr (shared `def name(params)` prefix; the `{` vs `=`
+        ;; decides), both BEFORE exprstmt (else `def` parses as a bare ident).
+        (rule3 "topstmt" (p-cap "v" (list "alt" (p-ref "defblock") (p-ref "fdef") (p-ref "exprstmt"))) (t-splice "v"))
+
+        ;; -- def name(params) { stmts }  ->  fndef[name, do[params], do[stmts]] --
+        (rule3 "defblock" (list "seq"
+            (p-lit "def") (p-cap "name" (p-run "bmlname"))
+            (p-lit "(") (p-cap "ps" (p-sep (p-run "bmlname") (p-lit ","))) (p-lit ")")
+            (p-lit "{") (p-cap "body" (p-rep (p-ref "blockstmt"))) (p-lit "}"))
+          (t-emit "fndef" (list (t-splice "name") (t-emit "do" (list (t-splices "ps"))) (t-emit "do" (list (t-splices "body"))))))
+
+        ;; -- def name(params) = expr ;  ->  fndef[name, do[params], body] -------
         (rule3 "fdef" (list "seq"
             (p-lit "def") (p-cap "name" (p-run "bmlname"))
             (p-lit "(") (p-cap "ps" (p-sep (p-run "bmlname") (p-lit ","))) (p-lit ")")
             (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";"))
           (t-emit "fndef" (list (t-splice "name") (t-emit "do" (list (t-splices "ps"))) (t-splice "e"))))
 
-        ;; -- expr = if-then-else | postfix call-chain over a primary -------------
+        ;; -- block statements: let n = e;  |  bare e; ---------------------------
+        (rule3 "blockstmt" (p-cap "v" (list "alt" (p-ref "letstmt") (p-ref "exprstmt"))) (t-splice "v"))
+        (rule3 "letstmt" (list "seq" (p-lit "let") (p-cap "n" (p-run "bmlname")) (p-lit "=") (p-cap "e" (p-ref "expr")) (p-lit ";"))
+          (t-emit "let" (list (t-splice "n") (t-splice "e"))))
+        (rule3 "exprstmt" (list "seq" (p-cap "e" (p-ref "expr")) (p-lit ";")) (t-splice "e"))
+
+        ;; -- expr = if-then-else | postfix call-chain over a primary -----------
         (rule3 "expr" (p-cap "v" (list "alt" (p-ref "ifx") (p-ref "callchain"))) (t-splice "v"))
         (rule3 "ifx" (list "seq"
             (p-lit "if")   (p-cap "c" (p-ref "expr"))
@@ -34,8 +55,7 @@
           (t-emit "if" (list (t-splice "c") (t-splice "t") (t-splice "e"))))
         (rule3 "callchain" (p-cap "v" (p-chain (p-ref "primary") (p-ref "expr"))) (t-splice "v"))
 
-        ;; -- primary: keyword literals first (they also match the name run),
-        ;; then numbers (digit-led), then names, strings, parens ----------------
+        ;; -- primary: keyword literals first, then numbers, names, strings, parens
         (rule3 "primary" (p-cap "v" (list "alt"
             (p-ref "litempty") (p-ref "littrue") (p-ref "litfalse")
             (p-ref "litnum") (p-ref "litstr") (p-ref "ident") (p-ref "paren"))) (t-splice "v"))
@@ -46,5 +66,8 @@
         (rule3 "litstr" (p-cap "v" (p-str)) (t-splice "v"))
         (rule3 "litnum" (p-cap "v" (p-num)) (t-splice-int "v"))
         (rule3 "ident"  (p-cap "v" (p-run "bmlname")) (t-emit "ident" (list (t-splice "v"))))
-        )))
+        ))
+
+    (defn form-bml-grammar () (grammar "fdef" (form-bml-rules)))
+    (defn form-bml-section-grammar () (grammar "section" (form-bml-rules)))
 )
