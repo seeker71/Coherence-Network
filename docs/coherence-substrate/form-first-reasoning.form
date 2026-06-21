@@ -14,6 +14,13 @@
 # its REACH is agent-orientation text (CLAUDE.md, AGENTS.md) plus session/
 # turn hooks. The lookup that fills `grounded` is a thin swappable carrier.
 #
+# Why no "trust list": a cloud sandbox's egress allowlist is the PLATFORM's, not
+# ours — and it only bites while the body is remote. Bring the body home at setup
+# (scripts/form_first_offline_setup.sh ingests the repo's OWN content into the
+# per-clone lattice, offline) and the agent answers without crossing the sandbox
+# boundary — no allowlist, the trust list dissolves. A body that travels whole
+# needs no permission to think.
+#
 # STATUS: crossed into committed config 2026-06-21 — travels to local and
 # cloud/phone Claude Code and Codex (both read CLAUDE.md / AGENTS.md
 # natively; both run committed hooks — Codex only when the project is
@@ -54,8 +61,9 @@
                    (engine form-kernel-go)
                    (built-once scripts/ensure_form_cli_kernel.sh)
                    (gate form-cli-sufficiency.fk))
-    (local-lattice (sovereign offline)                     ; the structural layer the router reads
-                   (ready-by "python3 scripts/coh_substrate.py ingest --all"))
+    (local-lattice (sovereign offline)                     ; the DEFAULT — the structural layer the router reads
+                   (ready-by "scripts/form_first_offline_setup.sh")  ; ingests the repo's own content; offline, no allowlist
+                   (scope "concepts by default; FORM_FIRST_INGEST=all for the whole body"))
     (public-door   (our-body networked)
                    (at "https://api.coherencycoin.com/api/substrate"))
     (adaptive      try-native-router-then-lattice-then-miss))
@@ -64,13 +72,14 @@
   (carriers
     (directive      CLAUDE.md AGENTS.md)                  ; read natively everywhere
     (reminder       .claude/settings.json .codex/hooks.json) ; session + turn echo
-    (setup          ingest-at-setup-for-offline-reach)
+    (setup          scripts/form_first_offline_setup.sh)   ; the cloud setup-script default — bring the body home, the trust list dissolves
     (proven-recipe  form-first-router.fk))                ; the gate's decision, four-way at 511
 
   ; platform reach, verified 2026-06-21 against current docs
   (reach
     (claude-cloud (hooks run) (claude-md honored)
-                  (egress allowlist-needs api.coherencycoin.com or ingest-at-setup))
+                  (offline-default form_first_offline_setup.sh -> answers offline, NO allowlist)
+                  (or-else allowlist api.coherencycoin.com for the live public door))
     (codex-cloud  (agents-md read) (hooks run-when-trusted)
                   (egress off-during-task on-during-setup
                           -> ingest-at-setup-is-the-sovereign-fit))))
