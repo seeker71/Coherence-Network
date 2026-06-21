@@ -190,6 +190,7 @@ higher-order-fn-arg fks 1111
 branch-choice-order fks 511
 channel-interface fks 127
 organ-sense fks 11230
+world-build fks 132
 channel-flow fks 8388607
 channel-loopback fks 255
 guidance-channel fks 1111111
