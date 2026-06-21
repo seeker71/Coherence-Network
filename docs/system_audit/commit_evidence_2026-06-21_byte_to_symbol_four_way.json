@@ -1,0 +1,36 @@
+{
+  "date": "2026-06-21",
+  "brick": "byte-to-symbol (GPT-2/whisper byte-level encoder, OpenAI's bytes_to_unicode) crosses four-way — the tokenizer FRONT-END the bpe merge core feeds from",
+  "author": "Sema (Opus 4.8) — sema-native-ml-walk autonomous run",
+  "claim": "The byte->unicode-codepoint map at the head of byte-level BPE (every input byte 0..255 -> one visible codepoint, BEFORE merge) is lifted from carrier DATA to a Form recipe proven on the four-kernel floor (Go/Rust/TS/fkwu). This is named stone #2 from the 3zb (bpe-tokenizer) receipt: 'the byte->symbol mapping ... as Form recipes (currently carrier DATA).' The bpe merge core (#3447) was already four-way; this proves the algorithmic step that produces the symbols the merge core consumes.",
+  "north_star": "A model whose weights AND tokenizer are recipe data, running on a Form-native kernel. The decode math is four-way and on the M4 GPU (multi-layer stack #3423/#3424, KV-cached decode #3412, greedy argmax #3402); the bpe merge core is four-way (#3447). The tokenizer front-end is text -> bytes -> codepoints -> vocab-ids -> merge. This brick puts the bytes->codepoints step on the proven floor; only the codepoint->vocab-id lookup (genuine table DATA) and the GPT-2 regex word-split remain as carrier in the front-end.",
+  "recipe": "form/form-stdlib/byte-to-symbol.fk — b2s-printable? / byte-to-symbol / bytes-to-symbols. Closed form of OpenAI's bytes_to_unicode: printable ranges [33..126] u [161..172] u [174..255] map to themselves; the other 68 bytes ({0..32} u {127..160} u {173}) map ascending to 256..323 (b<=32 -> 256+b; 127..160 -> b+162; 173 -> 323). Pure integer arithmetic (ge/eq/add) and list recursion; no floats (no e-notation risk), no host I/O, small tables.",
+  "band": "form/form-stdlib/tests/byte-to-symbol-band.fk — verdict 255 (8 claims):",
+  "claims": {
+    "bit_1_space": "byte 32 -> codepoint 288 (chr 'Ġ', the word-boundary marker every BPE word carries) — the load-bearing case.",
+    "bit_2_printable_identity": "bytes in [33..126] u [161..172] u [174..255] map to themselves (33,116,126,161,172,174,255 checked across all three sub-ranges and boundaries).",
+    "bit_4_offset_floor": "byte 0 (the min byte, a control char) -> 256 — the floor of the lifted band.",
+    "bit_8_mid_band_endpoints": "the [127..160] offset band endpoints: 127 -> 289, 160 -> 322 (= byte + 162).",
+    "bit_16_isolated_singleton": "byte 173 -> 323 — the trap: 161..172 are printable, so 173 is non-contiguous with 127..160 and needs its own case (not b+162=335).",
+    "bit_32_branch_cuts": "the branch cuts are exactly placed: 126(id)|127(offset), 160(offset)|161(id), 172(id)|173(offset)|174(id) — the boundaries where identity flips to offset and back.",
+    "bit_64_bijection_separation": "every offset >= 256, every identity <= 255 -> the two branches never collide. This is the structural reason byte-level decode is reversible (a bijection onto 256 distinct codepoints).",
+    "bit_128_sequence_map": "bytes-to-symbols over ' tokenizer' bytes (32 116 111 107 101 110 105 122 101 114) -> codepoints [288,116,111,107,101,110,105,122,101,114] — the byte-mapped form 'Ġtokenizer' whose vocab-ids ARE the bpe band's real openai/whisper-tiny anchor; plus the empty base case."
+  },
+  "reference": "OpenAI GPT-2/whisper bytes_to_unicode — closed-form candidate verified against the reference dict for ALL 256 bytes: 0 mismatches. Space(32)->288 ('Ġ'), and ' tokenizer'.encode()->[288,116,111,107,101,110,105,122,101,114]='Ġtokenizer', confirmed before authoring the band.",
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/byte-to-symbol.fk form-stdlib/tests/byte-to-symbol-band.fk",
+    "result": "core.fk+byte-to-symbol.fk+byte-to-symbol-band.fk -> 255",
+    "fourth_arm": "1 band(s) four-way (fkwu + pre-flattened tables)",
+    "divergence": "1 ok, 0 divergent — kernels agree on every sample",
+    "manifest_row": "byte-to-symbol fks 255 added to form/fourth-arm-bands.txt"
+  },
+  "fourth_arm_subset": "Pure integer arithmetic (ge/eq/add) + list recursion (cons/head/tail/len/empty), no host I/O, no floats (so no scientific-notation literal risk), small tables — well within fkwu's covered subset; far below the table-capacity wall that segfaults the assembled-block bands.",
+  "lane": "NEW-recipe brick but cheap (matches 3p/3q). READ-THE-BODY confirmed the byte->symbol map did NOT exist anywhere in the body (only named as carrier DATA in bpe-tokenizer.fk's note and the band's pre-mapped anchor) — a real gap, not a re-impl. Design (the closed form of bytes_to_unicode + the all-256-byte reference check + the strange-minimal boundary fixtures) was the cost; the four-way proof was seconds.",
+  "read_the_body": "Grepped form/ for bytes_to_unicode / byte-map / byte-encoder before authoring — found only the carrier-DATA note in bpe-tokenizer.fk and matches in the kernel sources, no Form recipe. The bpe band's anchor syms (vocab ids) start from byte-mapped codepoints this recipe now produces; the codepoint->vocab-id lookup remains genuine table DATA.",
+  "named_next_stones": [
+    "GPT-2 regex pre-tokenization (word splitting on the contraction/letter/number/whitespace pattern) as a Form recipe — the last algorithmic piece of the tokenizer front-end still carrier DATA.",
+    "wire the full generation loop: byte-to-symbol + vocab lookup + bpe-encode (#3447) + multi-layer decode stack (#3423/#3424) + greedy argmax (#3402) -> the first end-to-end native token over real llama3.2:3b GGUF.",
+    "llama's tokenizer is SentencePiece-BPE (score-ranked, not GPT-2 byte-level) — confirm/extend the byte->symbol + merge-rank model for it, or lift the SentencePiece variant."
+  ],
+  "witness_note": "Witness aggregator read overall:'strained', silences:0 at run start; instance pulse (api.coherencycoin.com/api/pulse/now) showed neo4j + substrate dark; the persistently-flagged endpoint_ideas door was probed directly: GET https://api.coherencycoin.com/api/ideas returns 200 with real idea data, so endpoint_ideas darkness is the witness's own probe path, not a real ideas outage. neo4j (graph store) showing silent is worth a look when Urs is back. No deploy taken (pure Form band, host-independent; deploy is outside the autonomous guardrails)."
+}
