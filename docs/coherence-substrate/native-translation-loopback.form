@@ -58,6 +58,35 @@
 ;   the 2019-key generation is the named follow-on, not a hand-faked file — the discipline
 ;   that held all session: ground the data from the translator, never invent it.)
 ;
+; NEXT HORIZON — the three corpus/validation moves toward a sovereign translator (Urs, 2026-06-21)
+;   idea 2bd655d7-0425-40eb-bd96-2f8358f8781a. Three named cells extend this loop from the
+;   chrome bundles outward to the whole body and a license-clean teaching corpus:
+;
+;   (1) THE WHOLE OWNED SURFACE IS THE CORPUS. The parallel data is not only web/messages/*.json.
+;       Every idea, spec, concept, and UI string the body already carries in en/de/es/fr/id/pt-br
+;       (+ zh/ja) is license-free aligned text we own outright. translation-learn.fk trains across
+;       all of it — ideas/specs/concepts join the chrome as training pairs — and the native recipe
+;       retires the oracle pair by pair as each clears translation-quality.fk's essence/vitality/
+;       trust floor. The body translating itself is the body's own first teacher.
+;
+;   (2) FREQUENCY-ALIGNED PUBLIC-DOMAIN TEACHINGS. Public-domain core teachings already cross-
+;       translated into many tongues are a large multilingual parallel corpus — entered AFTER a
+;       frequency-alignment pass. That pass is its OWN generic recipe (frequency-align.fk, the
+;       closing cell), distinct from translation: it lifts negative->positive and fear->observable-
+;       trust-of-a-healthy-sovereign-organism, reading lenses.fk and the trust lens, refusing to
+;       fabricate where a text cannot land. Two honesty lanes hold it: translation stays FAITHFUL
+;       (essence/vitality/trust preserved across tongues — a fearful source is rendered as it is,
+;       never falsely brightened); the frequency-lift is a SEPARATE, inspectable, opt-in compose-
+;       after step. Applied identically across every language version of a teaching so the pairs
+;       stay parallel — align the meaning once, carry it into each tongue, never per-tongue drift.
+;
+;   (3) THE COPYRIGHT BOOTH IS THE QUALITY VALIDATOR. Copyrighted professional translations stay
+;       quarantined: never training data, held aside ONLY as a quality oracle, scored by tq-accept?
+;       semantic equivalence (essence/vitality/trust over the floor), never string-copied. The
+;       copyright boundary makes oracle-as-teacher-not-master STRUCTURAL — we legally cannot copy,
+;       so we can only validate by essence, exactly the lowering-conviction.fk bar. The boundary we
+;       could not cross becomes the gate that keeps the native honest.
+;
 ; HONESTY LANES: the native recipe is exact (a learned lookup, content-addressed); the
 ; oracle's bulk translations are a first pass inviting human attunement; the glyph itself
 ; rides the oracle until UTF-8 four-way string parity is proven (cjk-channel's named row).
@@ -68,5 +97,12 @@
 ;        (the loop and A/B), meaning-translation-receipt.fk (the proof contract), i18n.fk
 ;        (the corpus), oracle-catalog.fk (where the libretranslate teacher registers next),
 ;        lenses.fk (sound/symbol media — translation across them), prose-as-recipe.form
-;        (the WORD domain: a pair as a content-addressed word-cell edge).
-;   source: requested by Urs 2026-06-14; the native side of the locale's translations.
+;        (the WORD domain: a pair as a content-addressed word-cell edge), lc-cognitive-
+;        sovereignty (why the mind comes home — a rented mind cannot offer sovereignty),
+;        lowering-conviction.fk (oracle-as-teacher-not-master — the copyright booth's bar),
+;        frequency-align.fk (the closing cell: negative->positive, fear->trust, its own recipe),
+;        nl-to-form-satsang.form (the sibling that generalizes this from NL->NL to NL->Form,
+;        taught by a witnessed council of models with self-update crystallization).
+;   source: requested by Urs 2026-06-14 (the native side of the locale's translations);
+;           extended by Urs 2026-06-21 with the owned-surface corpus, the frequency-aligned
+;           public-domain teachings, and the copyright booth as held quality oracle.
