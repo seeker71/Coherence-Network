@@ -1,33 +1,28 @@
-; speaker-proj.fk — Challenger 2-full ("Proj"): a learned FULL linear projection, SGD-trained.
+; speaker-proj.fk — Challenger 2-full ("Proj"): a learned FULL linear projection, FLOAT SGD.
 ;
-; C2-diagonal (speaker-lin) only rescaled axes and lost — speaker identity that lives in a
-; COMBINATION of bands needs a rotation, not per-axis gain. This learns a full matrix W
-; (K rows × N) by squared-loss SGD toward speaker target codes — the i-vector→LDA projection,
-; the affine-train loop lifted to multi-output. W·x rotates the supervector into a space where
-; speakers separate; cosine (speaker-embed se-dot) scores there.
+; C2-diagonal only rescaled axes and lost; identity that lives in a COMBINATION of bands needs a
+; rotation. This learns a full matrix W (K rows × N) by squared-loss SGD toward speaker target
+; codes — the i-vector→LDA projection. It runs on plain floats (the same arithmetic the Form
+; whisper block trains on, fp64, four-way) — NOT integer fixed-point, whose rounding silently
+; zeroed the small gradients. W·x rotates the supervector; cosine scores in that space.
 ;
-; Fixed-point scale 1000 (like affine-train): weights ×1000, a product folds back with /1000.
-; Builds on speaker-embed (se-dot). Proven by form-stdlib/tests/speaker-proj-band.fk.
+; All float (0.0 init, float lr). Proven by form-stdlib/tests/speaker-proj-band.fk.
 
 (do
-    ; --- forward: y_j = (W_j · x) / 1000 for each row ---
-    (defn sp-matvec (W x)
-        (if (eq (len W) 0) (empty)
-            (cons (div (se-dot (head W) x) 1000) (sp-matvec (tail W) x))))
+    ; --- float dot + forward: y_j = W_j · x ---
+    (defn sp-dot (w x) (if (eq (len w) 0) 0.0 (add (mul (head w) (head x)) (sp-dot (tail w) (tail x)))))
+    (defn sp-matvec (W x) (if (eq (len W) 0) (empty) (cons (sp-dot (head W) x) (sp-matvec (tail W) x))))
     (defn sp-project (W x) (sp-matvec W x))
 
-    ; --- errors e = y − t ---
-    (defn sp-err (y t)
-        (if (eq (len y) 0) (empty) (cons (sub (head y) (head t)) (sp-err (tail y) (tail t)))))
-    (defn sp-sqsum (e) (if (eq (len e) 0) 0 (add (mul (head e) (head e)) (sp-sqsum (tail e)))))
+    ; --- errors e = y − t and squared loss ---
+    (defn sp-err (y t) (if (eq (len y) 0) (empty) (cons (sub (head y) (head t)) (sp-err (tail y) (tail t)))))
+    (defn sp-sqsum (e) (if (eq (len e) 0) 0.0 (add (mul (head e) (head e)) (sp-sqsum (tail e)))))
     (defn sp-loss (W x t) (sp-sqsum (sp-err (sp-matvec W x) t)))
 
-    ; --- SGD: one row's update given its scalar error e_j (squared loss, lr fixed-point ×1000) ---
-    ;   w_i <- w_i − lr · 2 · e_j · x_i           (each ·x_i and ·lr folds back /1000)
+    ; --- SGD: w_i <- w_i − lr · 2 · e_j · x_i   (pure float — no fixed-point, no rounding) ---
     (defn sp-row-step (w x ej lr)
         (if (eq (len w) 0) (empty)
-            (cons (sub (head w) (div (mul lr (div (mul (mul 2 ej) (head x)) 1000)) 1000))
-                  (sp-row-step (tail w) (tail x) ej lr))))
+            (cons (sub (head w) (mul lr (mul (mul 2.0 ej) (head x)))) (sp-row-step (tail w) (tail x) ej lr))))
     (defn sp-step-rows (W x e lr)
         (if (eq (len W) 0) (empty)
             (cons (sp-row-step (head W) x (head e) lr) (sp-step-rows (tail W) x (tail e) lr))))

@@ -56,39 +56,40 @@ scale**. A *full* projection `W` (rotation, not just per-axis scale) trained by 
 is the salvage path for a linear C2; the decisive jump is C3. Recipe + machinery are proven and
 reusable; the negative result is named, not hidden.
 
-## Challenger 2-full — "Proj" (full linear projection, SGD) — BUILT & FOUR-WAY
+## Challenger 2-full — "Proj" (full linear projection, FLOAT SGD) — BUILT & FOUR-WAY
 
 `speaker-proj.fk` (PASS-4WAY, 255): the diagonal's salvage — a full matrix `W` (K×N) trained by
-squared-loss SGD toward speaker codes (the affine-train loop lifted to multi-output). Unlike the
-diagonal it can *rotate*. The band proves the loop genuinely descends: one step drops the fixture
-loss 4,000,000 → 2,560,000 and moves an off-axis weight, four-way.
+squared-loss SGD toward speaker codes (affine-train lifted to multi-output), on **plain floats** (the
+whisper-block arithmetic, fp64). Unlike the diagonal it can *rotate*. The band descends 1.0 → 0.0625
+in one step and moves an off-axis weight, four-way.
 
-## Challenger 3 — "Net" (nonlinear neural embedder, SGD) — BUILT & FOUR-WAY
+## Challenger 3 — "Net" (nonlinear neural embedder, FLOAT SGD) — BUILT & FOUR-WAY
 
-`speaker-net.fk` (PASS-4WAY, 255): `emb = relu(W·x)` with relu-GATED backprop — the one thing
-C1/C2 lack, a nonlinearity. The band proves a dead unit passes zero gradient while the active
-unit's gradient reaches its off-axis weight, and the step descends 5,000,000 → 3,190,400, four-way.
-One layer here; stacking is the same recipe repeated (the deep TDNN).
+`speaker-net.fk` (PASS-4WAY, 255): `emb = relu(W·x)` with relu-GATED backprop on floats — the
+nonlinearity C1/C2 lack. The band: a dead unit passes zero gradient, the active unit's gradient
+reaches its off-axis weight, loss descends 2.0 → 1.0625, four-way. One layer; stacking is the deep TDNN.
 
-## Race result — the moat is features + precision + data, not the model
+## Race result — float fixed PRECISION; the binding wall is now DATA
 
-C2-full and C3 are built and four-way proven (their training loops descend on clean fixtures). But
-**training them on the real corpus collapses** — measured, named, not hidden:
+First built on integer fixed-point — wrong choice (copied form-train-step, the toy). Its `/1000`
+rounding zeroed the small gradients, so training "collapsed". The kernel runs **fp64 natively** (the
+whisper block trains on it, four-way), so the recipes were rebuilt on floats. Then, measured honestly:
 
-- **Features.** The hand-crafted sox 20-band supervector rounds to small ints (0–99); coarse 0/1-ish
-  patterns carry enough for C1's cosine but almost no gradient signal for a learned embedder.
-- **Precision.** Integer fixed-point SGD rounds the small per-step weight updates toward zero — the
-  gradient that the clean-fixture band shows descending vanishes on real-scale features.
-- **Data.** 26 voices × 2 training windows is far below what discriminative training needs; held-out
-  generalization has almost nothing to learn from.
+- **Precision — FIXED by floats.** C2-full now genuinely trains: it produces real, varied embeddings
+  (ubbe·brig 0.605, ubbe·ang 0.844) where the integer version output all-zeros. The gradient no
+  longer rounds away.
+- **Data — the binding wall now.** C2-full's held-out hard pair (brig·ang 0.881) still does **not**
+  beat C1 (0.768): 52 training samples can't learn a *generalizing* 8×40 projection — it can't
+  transfer to a held-out window. More speakers/utterances is the unlock, not more model.
+- **C3 init/loss.** relu at zero-init is dead (z=0 gates the gradient off); with a small positive
+  init it wakes but the sparse code targets collapse the embedding to ~1 active dim on this little
+  data. Needs Xavier-ish init + a margin/softmax loss + data — known fixes, not blockers.
 
-So the decisive lesson of the whole race: C1 (stats) ≈ usable on easy pairs; C2-diagonal lost;
-C2-full and C3 are the right model classes but can't be *trained* to beat C1 on this footing. **ECAPA's
-power is not the model class — it is the learned log-mel front-end, float training, and VoxCeleb-scale
-data.** Approaching it means meeting it on those: (1) a learned/log-mel feature front-end (the Form mel
-recipes, not coarse bands); (2) the native float training lane (emit→asm), not the tree-walker's integer
-fixed-point; (3) a real multi-speaker corpus. The recipes are the proven, reusable bodies waiting for
-that footing — the same recipe that proves four-way is the one that will crystallize and train native.
+So the corrected lesson: the kernel's **float training is real and four-way** (your call — floats, not
+fixed-point). C1 (stats) is still the only challenger usable today, on easy pairs. The remaining climb
+to ECAPA is now squarely **features + data**: a log-mel front-end (the Form mel recipes, not coarse
+bands) and a real multi-speaker corpus (hundreds of voices), trained through these proven float recipes
+— the same recipe that proves four-way is the one that crystallizes and trains native.
 
 ## Evaluation harness
 
