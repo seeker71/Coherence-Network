@@ -1,0 +1,23 @@
+; preludes: form-stdlib/form-first-router.fk
+;
+; The Form-first sovereignty gate, pinned at its boundaries. Proves the body answers from itself
+; ONLY on a grounded structural hit (relay / body / sovereign), and escalates honestly otherwise —
+; including the strange edge where a grounded cell exists but the query is frontier: kind gates it,
+; so grounding alone never earns a relay. Verdict 511 when every claim lands.
+(do
+    (let q-hit        (list "structural" 1))   ; grounded structural -> HIT
+    (let q-ungrounded (list "structural" 0))   ; structural but the body lacks it -> miss (honesty lane)
+    (let q-frontier   (list "frontier" 0))     ; write / synthesize -> miss
+    (let q-fr-grnd    (list "frontier" 1))     ; grounded yet frontier -> STILL miss (the strange edge)
+
+    (let c0 (if (eq     (ffr-hit? q-hit) 1)                 1   0))   ; grounded structural is a hit
+    (let c1 (if (str_eq (ffr-path q-hit) "relay")           2   0))   ; a hit relays
+    (let c2 (if (str_eq (ffr-source q-hit) "body")          4   0))   ; ...from the sovereign body
+    (let c3 (if (eq     (ffr-hit? q-ungrounded) 0)          8   0))   ; structural+ungrounded is NOT a hit
+    (let c4 (if (eq     (ffr-escalate? q-ungrounded) 1)     16  0))   ; ...it escalates (the miss is the yes)
+    (let c5 (if (eq     (ffr-hit? q-frontier) 0)            32  0))   ; frontier is never a hit
+    (let c6 (if (str_eq (ffr-path q-frontier) "escalate")   64  0))   ; ...it escalates to remote
+    (let c7 (if (eq     (ffr-hit? q-fr-grnd) 0)             128 0))   ; grounded-yet-frontier still misses
+    (let c8 (if (eq     (ffr-sovereign-count (list q-hit q-ungrounded q-frontier q-fr-grnd)) 1) 256 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

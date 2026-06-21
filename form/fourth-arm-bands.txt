@@ -295,6 +295,7 @@ provisioning fks 127
 recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
+form-first-router fks 511
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
 # resource cells, application graph SQL strings, and auth/header/hash wrappers.
