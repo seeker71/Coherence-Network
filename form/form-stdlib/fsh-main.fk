@@ -1,0 +1,34 @@
+; fsh-main.fk — native form-shell entry on the emitted walker (fkwu).
+;
+; The HEADLESS front door, mirroring form-cli-main.fk. The SCRIPT arrives staged
+; in fk_src (fkwu's argv[3], or a persistent fkwu-server per-request buffer).
+; fsh-read walks it byte-by-byte via input_byte (walker tag 17) — NO tokenizer,
+; NO line parser — and sh-out parses it with the BMF cursor grammar and runs it,
+; returning the output string which fkwu prints natively (fk_pv_root / fk_psv).
+;
+; This entry is fkwu-NATIVE: input_byte (tag 17) is the staged-input op the
+; emitted walker carries; it is NOT registered in the Go/Rust/TS walkers, so this
+; runs on the emitted 4th kernel only — the native form-shell exe — with no Go,
+; Rust, TypeScript, Python, or clang in the runtime path. The grammar it drives
+; (shell-grammar.fk) is the BMF cursor, scannerless: a command line is parsed by
+; walking the staged bytes through bmf-core's cursor, not split into lines/tokens.
+;
+; Build (one-time): flatten this + its preludes into a fkwu table, then
+;   fkwu fsh.tbl 0 <script.fsh>
+; runs ANY script at runtime with zero re-flatten — the script is read live via
+; input_byte, parsed by the cursor, executed by the native walker.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/shell-exec.fk
+
+(do
+    ; read the whole staged script from fk_src: input_byte i -> the i-th byte,
+    ; stop at the NUL terminator. Newlines are kept (the cursor skips them as ws;
+    ; `;` separates statements), so multi-line scripts read in full.
+    (defn fsh-read (i acc)
+        (do (let b (input_byte i))
+            (if (eq b 0) acc
+                (fsh-read (add i 1) (str_concat acc (byte_to_str b))))))
+    (defn fsh-script () (fsh-read 0 ""))
+
+    ; parse (BMF cursor) + execute -> the output string; fkwu prints it natively.
+    (sh-out (fsh-script)))

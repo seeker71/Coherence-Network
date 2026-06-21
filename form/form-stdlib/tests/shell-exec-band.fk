@@ -1,0 +1,17 @@
+; shell-exec-band.fk — proves the form-native executor: native builtins compute
+; real output, pipes/sequences/variables thread, and host tools dispatch to
+; passthrough. Verdict = 63 (all pass), asserted byte-identical on the 4th kernel.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/shell-exec.fk
+
+(do
+    (let e1 (if (str_eq (sh-out "echo hi") "hi\n") 1 0))
+    (let e2 (if (str_eq (sh-out "seq 3 | wc -l") "3\n") 2 0))
+    (let e3 (if (str_eq (sh-out "echo abc | rev") "cba\n") 4 0))
+    (let e4 (if (str_eq (sh-out "x=hi ; echo $x") "hi\n") 8 0))
+    (let e5 (if (str_eq (sh-out "seq 5 | grep 3") "3\n") 16 0))
+    ; dispatch: a non-builtin command is labelled passthrough (host tool until native)
+    (let e6 (if (str_eq (sh-step-kind (head (sh-plan (sh-parse "git status")))) "passthrough") 32 0))
+
+    ; expected total: 63
+    (add e1 (add e2 (add e3 (add e4 (add e5 e6))))))
