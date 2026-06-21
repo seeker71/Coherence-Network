@@ -1,0 +1,54 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-organ-senses.fk
+;
+; mesh-organ-senses-band — two unlike organs join the mesh as DATA through the SAME engine the GPU
+; lane rides: wellness (the body sensing its own shape) and pulse (the body sensing each organ's
+; breath). Fixtures are this session's real readings: wellness proprioception/chain aligned, and the
+; live witness organs (api/web/neo4j breathing). The negatives — a wellness drift, a sensed silence,
+; a dark witness door — are constructed to prove the three states of axiom-1 stay distinct.
+;
+; Verdict 2047 when every claim lands:
+;   1     an aligned wellness section becomes an OBSERVED wmg-sense row
+;   2     a wellness drift becomes ABSENT (the body SAW it — a verified no, not silence)
+;   4     a breathing organ's pulse becomes OBSERVED
+;   8     a sensed-silent organ becomes ABSENT (an observed silence, the witness answered)
+;   16    a dark witness door becomes NOTHING (cannot sense -> held as silence, never a 0)
+;   32    the wellness sense is named "wellness:<section>" with kind "wellness"
+;   64    the pulse sense is named "pulse:<organ>" with kind "pulse"
+;   128   a trusted reading is obs-trusted? through the engine — the world-model may act on it
+;   256   a dark-door pulse is NOT trusted — silence never grows the world
+;   512   the full receipt stays inspectable in the wmg-sense payload (no hidden metadata)
+;   1024  a timeout (deadline < tick) yields "nothing" even for an aligned section — freshness holds
+(do
+    ; this session's real wellness readings (aligned), plus a constructed drift negative
+    (let w-prop  (wellness-receipt "proprioception" 1 "specs/ideas/vision-kb maps aligned"))
+    (let w-chain (wellness-receipt "chain"          1 "chain healthy 121/153 reach"))
+    (let w-drift (wellness-receipt "locale"         0 "one tongue drifted from en"))
+    ; the live witness organs, plus a constructed silence and a dark-door negative
+    (let p-api   (pulse-receipt "api"     1 1 5))
+    (let p-down  (pulse-receipt "neo4j"   1 0 2))
+    (let p-dark  (pulse-receipt "witness" 0 0 0))
+
+    (let s-prop  (wmls-from-reading (wellness-reading w-prop  10 5)))
+    (let s-drift (wmls-from-reading (wellness-reading w-drift 10 5)))
+    (let s-api   (wmls-from-reading (pulse-reading p-api  10 5)))
+    (let s-down  (wmls-from-reading (pulse-reading p-down 10 5)))
+    (let s-dark  (wmls-from-reading (pulse-reading p-dark 10 5)))
+    (let wpay    (wmg-sense-payload s-prop))
+    (let ppay    (wmg-sense-payload s-api))
+
+    (let c0  (if (str_eq (wmg-sense-verdict s-prop)  "observed") 1 0))
+    (let c1  (if (str_eq (wmg-sense-verdict s-drift) "absent")   2 0))
+    (let c2  (if (str_eq (wmg-sense-verdict s-api)   "observed") 4 0))
+    (let c3  (if (str_eq (wmg-sense-verdict s-down)  "absent")   8 0))
+    (let c4  (if (str_eq (wmg-sense-verdict s-dark)  "nothing")  16 0))
+    (let c5  (if (and (str_eq (wmg-sense-name s-prop) "wellness:proprioception")
+                      (str_eq (wmg-sense-kind s-prop) "wellness")) 32 0))
+    (let c6  (if (and (str_eq (wmg-sense-name s-api) "pulse:api")
+                      (str_eq (wmg-sense-kind s-api) "pulse")) 64 0))
+    (let c7  (if (eq (organ-sense-trusted? (wellness-reading w-prop 10 5)) 1) 128 0))
+    (let c8  (if (eq (organ-sense-trusted? (pulse-reading p-dark 10 5)) 0) 256 0))
+    (let c9  (if (and (str_eq (nth wpay 2) "proprioception")
+                      (str_eq (nth ppay 2) "api")) 512 0))
+    (let c10 (if (str_eq (wmg-sense-verdict (wmls-from-reading (wellness-reading w-prop 3 5))) "nothing") 1024 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))
