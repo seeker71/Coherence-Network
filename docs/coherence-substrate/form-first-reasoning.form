@@ -9,10 +9,10 @@
 # remote reasoning. This is lc-cognitive-sovereignty as a runtime loop,
 # not a doc.
 #
-# Substance: a reasoning DISCIPLINE carried by agent-orientation text
-# (CLAUDE.md, AGENTS.md) and reinforced by session/turn hooks. The gate
-# itself wants to become a four-way-proven recipe (form-first-router.fk);
-# until then the discipline is the body and the hooks are thin carriers.
+# Substance: a reasoning DISCIPLINE with two carriers. Its DECISION is a
+# four-way-proven recipe (form-first-router.fk -> 511 on Go/Rust/TS/fkwu);
+# its REACH is agent-orientation text (CLAUDE.md, AGENTS.md) plus session/
+# turn hooks. The lookup that fills `grounded` is a thin swappable carrier.
 #
 # STATUS: crossed into committed config 2026-06-21 — travels to local and
 # cloud/phone Claude Code and Codex (both read CLAUDE.md / AGENTS.md
@@ -61,7 +61,7 @@
     (directive      CLAUDE.md AGENTS.md)                  ; read natively everywhere
     (reminder       .claude/settings.json .codex/hooks.json) ; session + turn echo
     (setup          ingest-at-setup-for-offline-reach)
-    (closing-recipe form-first-router.fk))                ; the gate as four-way proof, next breath
+    (proven-recipe  form-first-router.fk))                ; the gate's decision, four-way at 511
 
   ; platform reach, verified 2026-06-21 against current docs
   (reach
