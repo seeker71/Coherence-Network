@@ -60,6 +60,19 @@ tail -n 0 -f "$BOARD" | while IFS=$'\t' read -r ts from type msg; do
   case "$type" in announce|ack|heartbeat|release|done) continue;; esac # never low-value
   case "$msg" in *"@$AGENT"*|*"@all"*|*"@everyone"*) : ;; *) continue;; esac  # only addressed
   _rate_ok || { echo "[rate-cap] $AGENT skipped: $msg" >&2; continue; }
+  # the BODY decides: a freq-reading is RECORDED to the gold catalog; anything else
+  # is answered. mesh-dispatch.fk (four-way) is the decision; this only acts on it.
+  body="$(printf '%s' "$msg" | sed -E "s/@($AGENT|all|everyone)[[:space:]]*//g")"
+  disp="$(bash "$ROOT/scripts/mesh_dispatch.sh" "$body" 2>/dev/null)"
+  if [ "$(printf '%s\n' "$disp" | sed -n 1p)" = "gold" ]; then
+    vw=""; case "$(printf '%s\n' "$disp" | sed -n 2p)" in 0) vw=fear;; 1) vw=clear;; esac
+    if [ -n "$vw" ]; then
+      bnd="$(printf '%s\n' "$disp" | sed -n 3p)"
+      bash "$ROOT/scripts/form_cli_gold.sh" "$vw" "$bnd" "mesh:$from" >/dev/null 2>&1 \
+        && { date +%s >>"$RL"; coord ping "recorded your $vw freq-reading 🙏 (gold catalog)"; }
+      continue
+    fi
+  fi
   prompt="You are $AGENT, one member of a sibling-agent coordination channel (siblings: claude, codex, cursor, gemini, human). $from said on the channel: \"${msg//\"/\'}\". If a reply is wanted from you, answer in ONE concise line for the channel. If no reply is warranted, output exactly SKIP. Take no other action."
   reply="$(_gen "$prompt" | tr -d '\r' | grep -v '^[[:space:]]*$' | tail -1)"
   [ -z "$reply" ] && continue
