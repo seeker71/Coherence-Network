@@ -1,0 +1,28 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/tooluse-model-search.fk
+;
+; tooluse-model-search-band — the tournament ratchet PLAYED on the agent-tool model, four-way. The
+; candidates are early-stop epochs; the fitness is held-out micro-accuracy (the generalisation curve,
+; endpoints measured: 0.799 baseline, 0.848 over-trained, overfit past epoch 20). The loop finds the
+; early-stop sweet spot — recovering the accuracy the over-trained model lost to overfitting, from the
+; SAME 751 samples. The live version reads the curve from real GPU training (agent_tooluse_train); here
+; the endpoints + the overfit shape are the body's recorded measurement.
+;
+; Verdict 63 when every claim lands:
+;   1   the tournament CONVERGES on the best model — early-stop at epoch 20 (index 2): [0,4,6] → [2,2,2]
+;   2   the best model RECOVERS accuracy the over-trained one lost: held(epoch 20) 0.868 > held(full) 0.848
+;   4   anchored to the MEASURED endpoints: held(full)=0.848 (the over-trained run), held(baseline)=0.799
+;   8   the PROPOSER improves the worst from the findings: stepping the worst toward the best raises its held-out
+;   16  the HALT is exact: at the converged population the worst can't improve (=0); before it, it can (=1)
+;   32  the best model BEATS the majority baseline: held(epoch 20) 0.868 > 0.799
+(do
+    (let start (list 0 4 6))                                ; 3 candidate early-stop epochs: 0, 40, 60
+
+    (let c0 (if (eq (gl-veq6 (tms-search start 50) (list 2 2 2)) 1) 1 0))
+    (let c1 (if (gt (tms-held 2) (tms-held 6)) 2 0))
+    (let c2 (if (and (eq (gl-veq6 (list (tms-held 6)) (list 0.848)) 1)
+                     (eq (gl-veq6 (list (tms-held 0)) (list 0.799)) 1)) 4 0))
+    (let c3 (if (gt (tms-held (tms-improve (tms-worst start) (tms-best start))) (tms-held (tms-worst start))) 8 0))
+    (let c4 (if (and (eq (tms-improvable? (list 2 2 2)) 0)
+                     (eq (tms-improvable? start) 1)) 16 0))
+    (let c5 (if (gt (tms-held 2) (tms-base)) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

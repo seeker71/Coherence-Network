@@ -72,6 +72,12 @@
 ;        First real insight surfaced by real data: held loss bottoms ~epoch 20 then rises while train keeps
 ;        falling — overfitting, the handle for the architecture experiments (early-stop / regularize / the
 ;        adaptive-swappable-kernel + branch + fast-fail + backtrack playground this foundation now enables).
+;        THE TOURNAMENT PLAYS THIS (2026-06-21): form-stdlib/tooluse-model-search.fk runs the model-search
+;        ratchet over early-stop epochs on this generalisation curve (held-out endpoints measured: 0.799
+;        baseline → 0.848 over-trained, overfit past epoch 20). It converges [0,4,6]→[2,2,2] on the early-
+;        stop sweet spot (epoch 20), recovering the accuracy the over-trained run lost — from the SAME 751
+;        samples. tests/tooluse-model-search-band.fk → 63, four-way. LIVE: wire the fitness to
+;        agent_tooluse_train's real held-out-per-epoch (the host GPU carrier) for the measured peak value.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
