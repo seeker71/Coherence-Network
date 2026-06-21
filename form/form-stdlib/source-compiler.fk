@@ -1263,6 +1263,10 @@
         (do
             (let value (fsc-strip-semi line))
             (if (fsc-bml-comment-line? value) (empty)
+            ;; `import NAME;` is a declaration consumed by the ref resolver, not
+            ;; runtime code — it adds NAME to the section's known-abstraction set
+            ;; and lowers to nothing.
+            (if (fsc-prefix? value "import ") (empty)
             (if (fsc-prefix? value "template ")
                 (list (fsc-compile-form-bml-template-recipe value))
             (if (fsc-prefix? value "class ")
@@ -1271,7 +1275,7 @@
                 (list (fsc-compile-form-bml-def-recipe value))
             (if (fsc-prefix? value "let ")
                 (list (fsc-compile-form-bml-let-recipe value))
-                (list (fsc-compile-form-bml-expr-recipe value)))))))))
+                (list (fsc-compile-form-bml-expr-recipe value))))))))))
 
     ;; --- plain generic stdlib class ----------------------------------
     ;;
@@ -1489,8 +1493,76 @@
                             (fsc-line-next body p)
                             (fsc-rec-append-rev line-recipes acc))))))))))
 
+    ;; --- import + ref resolution (compile-time) ----------------------
+    ;;
+    ;; A `ref NAME = TARGET;` member names another abstraction. TARGET must
+    ;; resolve to a class defined in THIS section or a declared `import NAME;`.
+    ;; An unresolved ref is a COMPILE error here — a clear diagnostic at the
+    ;; ref site — not an `unbound identifier` crash when the recipe is later
+    ;; walked. Scope is deliberately narrow: only ref TARGETS (which name
+    ;; abstractions) are gated. Method-body names still resolve at runtime
+    ;; against the prelude, so existing sections are unaffected. (Whether an
+    ;; imported name actually exists in some prelude is the cross-prelude
+    ;; resolver's job — the next step; the import here is the honest
+    ;; declaration that satisfies the ref.)
+
+    ;; leading identifier of an expression: "Seed()" -> "Seed", "Foo" -> "Foo"
+    (defn fsc-bml-leading-name (s)
+        (do
+            (let t (fsc-trim s))
+            (fsc-sub t 0 (fsc-bml-word-end t 0))))
+
+    (defn fsc-bml-member? (xs name)
+        (if (fsc-empty? xs) 0
+            (if (str_eq (head xs) name) 1
+                (fsc-bml-member? (tail xs) name))))
+
+    ;; referenced targets that resolve to no known abstraction
+    (defn fsc-bml-unresolved-refs (known targets)
+        (if (fsc-empty? targets) (empty)
+            (if (eq (fsc-bml-member? known (head targets)) 1)
+                (fsc-bml-unresolved-refs known (tail targets))
+                (cons (head targets) (fsc-bml-unresolved-refs known (tail targets))))))
+
+    ;; one line-scan, dispatched by prefix, collecting whichever names the
+    ;; caller asked for: "class " names, "import " names, or "ref " targets.
+    (defn fsc-bml-section-names-loop (body i prefix kind acc)
+        (do
+            (let p (fsc-skip-spaces body i))
+            (if (ge p (str_len body)) (fsc-rev acc)
+                (do
+                    (let e (fsc-line-end body p))
+                    (let line (fsc-trim (fsc-sub body p e)))
+                    (if (fsc-prefix? line prefix)
+                        (fsc-bml-section-names-loop body (fsc-line-next body p) prefix kind
+                            (cons
+                                (if (str_eq kind "ref")
+                                    (do
+                                        (let eq-pos (fsc-find-char-from line "=" (str_len prefix)))
+                                        (fsc-bml-leading-name
+                                            (fsc-sub line (add eq-pos 1) (str_len line))))
+                                    (fsc-bml-leading-name
+                                        (fsc-sub line (str_len prefix) (str_len line))))
+                                acc))
+                        (fsc-bml-section-names-loop body (fsc-line-next body p) prefix kind acc))))))
+
+    (defn fsc-bml-check-section-refs (body)
+        (do
+            (let classes (fsc-bml-section-names-loop body 0 "class " "name" (empty)))
+            (let imports (fsc-bml-section-names-loop body 0 "import " "name" (empty)))
+            (let known (fsc-list-append classes imports))
+            (let targets (fsc-bml-section-names-loop body 0 "ref " "ref" (empty)))
+            (let unresolved (fsc-bml-unresolved-refs known targets))
+            (if (fsc-empty? unresolved) 0
+                (fsc-compiler-error
+                    (str_concat "unresolved ref target: "
+                        (str_concat (head unresolved)
+                            " — define it as a class in this section or declare `import <name>;`"))))))
+
     (defn fsc-compile-form-bml-section-recipe (body)
-        (fsc-rec-do (fsc-form-bml-lines-recipes-loop body 0 (empty))))
+        (do
+            (fsc-bml-check-section-refs body)
+            (fsc-rec-do (fsc-form-bml-lines-recipes-loop body 0 (empty)))))
 
     (defn fsc-compile-form-route-section-recipe (body)
         (fsc-compile-form-bml-section-recipe body))
