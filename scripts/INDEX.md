@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 311
+**Total files**: 312
 
 | File | Purpose |
 |---|---|
@@ -254,6 +254,7 @@
 | [shared_heart_demo.sh](shared_heart_demo.sh) | shared_heart_demo.sh — one binary carrying the SHARED SHAPE of the wisdom |
 | [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
 | [source_gh_token.sh](source_gh_token.sh) | _no top-of-file purpose_ |
+| [sovereignty_report.sh](sovereignty_report.sh) | sovereignty_report.sh — the MEASURED sovereignty receipt: real token payload + real native readiness. |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
 | [speech_teacher_corpus_receipt.sh](speech_teacher_corpus_receipt.sh) | speech_teacher_corpus_receipt.sh - live local speech teacher corpus receipt. |
 | [speech_teacher_receipt.sh](speech_teacher_receipt.sh) | speech_teacher_receipt.sh - live local TTS -> STT teacher receipt. |

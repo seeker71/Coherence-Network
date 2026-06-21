@@ -1,0 +1,23 @@
+; preludes: form-stdlib/attention-signal.fk
+;
+; The attention ranking, pinned to the REAL measured form-cli stats (2026-06-21): the native tool
+; predictor reads Bash 97% / StructuredOutput 99% (near-native, last mile) but Read 64% / Edit 67% /
+; Write 68% at high volume (where to pay attention). Proves a high-volume weak lane ranks ATTEND (2), a
+; high-volume near-native lane ranks last-mile (1), a low-volume lane rests (0), and the pairwise prefer
+; picks the lane that most needs attention. Verdict 255 when every claim lands.
+(do
+    (let l-read (list 64 612 100))   ; Read: weak + high volume -> ATTEND
+    (let l-bash (list 97 907 100))   ; Bash: near-native + high volume -> last mile
+    (let l-so   (list 99 168 100))   ; StructuredOutput: near-native -> last mile
+    (let l-rare (list 50  20 100))   ; a rare lane: weak but low volume -> rest
+
+    (let c0 (if (eq (at-tier l-read) 2)                            1   0))   ; high-volume weak lane = ATTEND
+    (let c1 (if (eq (at-tier l-bash) 1)                            2   0))   ; high-volume near-native = last mile
+    (let c2 (if (eq (at-tier l-so) 1)                              4   0))   ; near-native = last mile
+    (let c3 (if (eq (at-tier l-rare) 0)                            8   0))   ; low volume = rest
+    (let c4 (if (eq (at-matters? l-read) 1)                       16   0))   ; Read carries real volume
+    (let c5 (if (eq (at-near-native? l-bash) 1)                   32   0))   ; Bash is near-native
+    (let c6 (if (eq (at-tier (at-prefer l-read l-bash)) 2)        64   0))   ; prefer picks the lane that needs it most
+    (let c7 (if (eq (at-near-native? l-read) 0)                  128   0))   ; Read is NOT near-native (the gap to close)
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

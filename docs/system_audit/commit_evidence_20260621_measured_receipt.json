@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/measured-receipt",
+  "commit_scope": "Make the sovereignty receipt MEASURED, not estimated, and turn the measured numbers into a ranked attention signal. Adds attention-signal.fk (four-way 255) that tiers per-lane native readiness by gap x volume, and scripts/sovereignty_report.sh — a thin carrier reading two live feeds (the session transcript for real token payload; form-cli stats for real held-out native scores). The measured run proved the point: a hand estimate of 'tens of K out' measured at ~2.05M out this session.",
+  "files_owned": [
+    "form/form-stdlib/attention-signal.fk",
+    "form/form-stdlib/tests/attention-signal-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/sovereignty_report.sh",
+    "docs/coherence-substrate/sovereignty-receipt.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_measured_receipt.json"
+  ],
+  "idea_ids": [
+    "measured-sovereignty-receipt",
+    "attention-signal-ranking"
+  ],
+  "spec_ids": [
+    "sovereignty-receipt"
+  ],
+  "task_ids": [
+    "task-2026-06-21-measured-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/attention-signal.fk form-stdlib/tests/attention-signal-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'attention-signal fks 255' beside its kin sovereignty-receipt.",
+    "The band pins the ranking on REAL measured form-cli stats (2026-06-21): a high-volume weak lane (Read 64%, vol 612) ranks tier-2 ATTEND; a high-volume near-native lane (Bash 97%, vol 907) ranks tier-1 last-mile; StructuredOutput (99%) last-mile; a low-volume lane rests at tier-0; at-prefer picks the lane that most needs attention. Verdict 255.",
+    "Carrier proven live: bash scripts/sovereignty_report.sh produced a real receipt — payload measured from the session transcript at ~174866 in / ~2049540 out tokens (vs a prior hand-estimate of 'tens of K out' — measurement corrected the estimate by ~100x), and native readiness from form-cli stats (catalog 497, local-suffice 42%, held-out micro-accuracy 84.8% vs 79.9% baseline, per-lane Bash 97% / Read 64% / Edit 67% / Write 68%).",
+    "Carrier discipline: scripts/sovereignty_report.sh only GATHERS measured numbers from two live feeds (transcript + form-cli stats) and presents them; the ranking logic is the Form recipe attention-signal.fk (four-way) and the honesty logic is sovereignty-receipt.fk. No new logic-Python.",
+    "Edges in the same commit: scripts/INDEX.md + MANIFEST.md regenerated (--check clean); sovereignty-receipt.form extended with a (measured ...) feed section and an (attention ...) section naming the current ATTEND lanes.",
+    "Primitive discipline held: attention-signal.fk uses only core.fk primitives (nth, eq, ge, if); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/attention-signal.fk",
+    "form/form-stdlib/tests/attention-signal-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/sovereignty_report.sh",
+    "docs/coherence-substrate/sovereignty-receipt.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_measured_receipt.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/attention-signal.fk form-stdlib/tests/attention-signal-band.fk",
+      "bash -n scripts/sovereignty_report.sh && bash scripts/sovereignty_report.sh",
+      "python3 scripts/generate_repo_indexes.py && python3 scripts/generate_repo_indexes.py --check"
+    ],
+    "fourth_arm_outputs": [
+      "attention-signal: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row, and INDEX --check."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + a report carrier + teaching; no public HTTP endpoint or service change. Next: emit the receipt into the runtime per-response rather than on demand, and add the per-lane attention ranking to form-cli stats directly."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent) and the carrier ran live with measured numbers; CI and merge remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The sovereignty receipt is now measured from live feeds rather than hand-supplied, and attention-signal.fk ranks the measured per-lane gap so attention lands where closing it matters most. Running scripts/sovereignty_report.sh prints real token payload + real native readiness + the current ATTEND lanes.",
+    "public_endpoints": [
+      "none changed; the gate is a Form stdlib body proven by validate.sh; the carrier reads local feeds"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the attention-signal band runs on Go, Rust, TypeScript, and fkwu to the identical verdict 255 with 0 divergent.",
+      "Live carrier: scripts/sovereignty_report.sh emits measured token payload and form-cli held-out scores, and names the ATTEND lanes."
+    ]
+  }
+}
