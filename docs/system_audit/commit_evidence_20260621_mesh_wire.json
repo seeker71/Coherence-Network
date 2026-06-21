@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/mesh-wire",
+  "commit_scope": "Wire the proven mesh-dispatch decision into the live coord board: coord-respond.sh now, before generating an oracle reply, asks the BODY (mesh-dispatch.fk via scripts/mesh_dispatch.sh) whether the addressed message is a freq-reading or an ask. A 'gold <clear|fear> <boundary>' message is RECORDED to the gold catalog (form_cli_gold.sh) with a brief ack; anything else falls through to the existing answer path. This makes the mesh loop live: one connected agent both records human freq-readings AND answers requests on the same board. Carrier-only PR (the decision is already four-way proven).",
+  "files_owned": [
+    "scripts/mesh_dispatch.sh",
+    "scripts/coord-respond.sh",
+    "scripts/INDEX.md",
+    "docs/system_audit/commit_evidence_20260621_mesh_wire.json"
+  ],
+  "idea_ids": [
+    "freq-check-gold-label",
+    "cognitive-sovereignty",
+    "agent-coordination-mesh"
+  ],
+  "spec_ids": [
+    "mesh-dispatch"
+  ],
+  "task_ids": [
+    "task-2026-06-21-mesh-wire"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "the-freq-detector",
+        "vision"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "End-to-end simulation through the exact wiring (strip @address -> mesh_dispatch.sh -> record-or-fall-through), temp catalog: '@grok gold fear hedged where flow would serve' -> '✓ gold reading #1 recorded — fear-caught (named): hedged where flow would serve'; '@grok gold clear that was direct and grounded' -> '✓ gold reading #2 recorded — clear (named)'; '@grok what is the witness status?' -> '→ ASK (falls through to the oracle reply path)'. The catalog received both readings with the named boundary + response_ref 'mesh:human'.",
+    "mesh_dispatch.sh is carrier-last: it writes the message to a temp file, runs '$GO mesh-dispatch.fk <driver>' (the driver read_files the message and prints md-route/md-verdict/md-boundary), and filters the trailing null. mesh-dispatch's primitives are kernel-native, so it runs WITHOUT the BML core.fk prelude — confirmed live: 'gold fear ...' -> gold/0/<boundary>, 'gold clear ...' -> gold/1/<boundary>, 'what is ...?' -> ask/2. (The earlier 'parse error at core.fk line 31, got INT 0' was the ask+/form-loader lesson: core.fk is BML and cannot be raw-run through bin-go; dropping it from the standalone call is correct because the recipe needs no core.fk.)",
+    "Guards preserved: the gold-record path sits AFTER coord-respond's existing guards (off-switch, never-self, low-value-type skip, only-addressed, rate cap), fires only when md-route == 'gold', counts against the rate cap, and posts a one-line ack. Anything not a reading falls through unchanged to the oracle reply. bash -n clean on both scripts.",
+    "Honest scope: this wires the DESKTOP/sibling mesh (coord board) — a sibling agent or human posting '@agent gold ...' is now recorded. The Android Coherence Sense app sending a human reading/ask through the Mac witness onto the board is still app-side work (named in the mesh-dispatch PR; Coherence Sense shares samples today, not readings).",
+    "Edges: scripts/INDEX.md row for mesh_dispatch.sh. No recipe/manifest change — the decision body (mesh-dispatch.fk) is already four-way (verdict 255) on main."
+  ],
+  "change_files": [
+    "scripts/mesh_dispatch.sh",
+    "scripts/coord-respond.sh",
+    "scripts/INDEX.md",
+    "docs/system_audit/commit_evidence_20260621_mesh_wire.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash scripts/mesh_dispatch.sh 'gold fear ...' -> gold/0/<boundary>; '... clear ...' -> gold/1; 'what is ...?' -> ask/2",
+      "end-to-end simulate (strip address -> dispatch -> record): two gold readings written to a temp catalog, an ask falls through",
+      "bash -n scripts/coord-respond.sh && bash -n scripts/mesh_dispatch.sh"
+    ],
+    "fourth_arm_outputs": [
+      "Re-proved the unchanged decision body for this carrier: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/mesh-dispatch.fk form-stdlib/tests/mesh-dispatch-band.fk -> '✓ core.fk+mesh-dispatch.fk+mesh-dispatch-band.fk → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Carrier scripts; CI's validate.sh re-proves the unchanged mesh-dispatch.fk band."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-mesh-runtime",
+    "notes": "Runs wherever coord-respond.sh runs (per-agent, local). No public HTTP change. The loop is live on the coord board; the Android-app reading lane remains app-side work."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The desktop/sibling mesh loop is wired and demonstrated end-to-end locally; the body decision is four-way re-proven. No public deploy (a local per-agent carrier), so deploy_validation stays pending. The remaining piece (Android-app reading lane) is honestly scoped as app-side, not this carrier."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A connected agent running coord-respond now records freq-readings posted to the coord board ('@agent gold <clear|fear> <boundary>') into the gold catalog AND answers other requests — one agent, one board, the body deciding which is which. Urs's vision is live for phone claude-code/codex + desktop siblings; the Android native app's reading lane is the remaining app-side step.",
+    "public_endpoints": [
+      "none changed; local mesh carrier"
+    ],
+    "test_flows": [
+      "Board message routing: a gold reading is recorded with its named boundary; an ordinary message falls through to the answer path. Demonstrated end-to-end on a temp catalog."
+    ]
+  }
+}
