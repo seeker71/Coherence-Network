@@ -1,0 +1,58 @@
+; form-gen.fk — the form-cli gen conductor: compile source into a RAM recipe,
+; run it, and hand it to another cell over a byte channel.
+;
+; gen is Go-hosted — it runs where the compiler lives. The LOGIC is here in
+; Form; the carriers are thin kernel primitives:
+;   form_compile   source -> recipe NodeID (RAM, content-addressed) — the handle
+;   form_walk      recipe NodeID -> value                            — run it
+;   recipe_to_bytes / bytes_to_recipe   recipe <-> bytes             — the channel
+;   node_eq        two NodeIDs equal?                                — integrity
+;
+; Content-addressing is the channel: a recipe one cell generates and one a peer
+; deserializes are the SAME NodeID if structurally identical — so the handle is
+; verifiable end-to-end, no trust in the wire.
+;
+; Honest seams: the run leg (form_walk over an arbitrary recipe) is Go/Rust/TS;
+; fkwu runs FLATTENED recipes, so the four-way composable evaluator is the named
+; deeper rung (docs/coherence-substrate/form-engine.form). form_compile takes the
+; plain Form recipe surface; section/class source rides the compile chain next.
+; gen is Go-hosted, like serve/jit — the conductor runs where the compiler lives.
+;
+; Demo (Go kernel):
+;   printf '(gen "(add 1 2)")\n' > /tmp/g.fk
+;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; [3, @0.2.12.48]
+;   printf '(gen-share-roundtrip "(add (mul 6 7) 1)")\n' > /tmp/g.fk
+;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; [43, 43, 1]
+;
+; preludes: (none — uses only kernel primitives)
+
+(do
+    ; the content-addressed handle for a piece of source: compile into RAM
+    (defn gen-handle (src) (form_compile src))
+
+    ; run a recipe you generated — or one a peer handed you
+    (defn gen-run (recipe) (form_walk recipe))
+
+    ; gen: compile source into a RAM recipe and run it -> (value handle)
+    (defn gen (src)
+        (do
+            (let r (form_compile src))
+            (list (form_walk r) r)))
+
+    ; the channel legs: a recipe <-> bytes any cell can carry
+    (defn gen-to-bytes (recipe) (recipe_to_bytes recipe))
+    (defn gen-from-bytes (bytes) (bytes_to_recipe bytes))
+
+    ; the whole arc end to end: generate here, run, serialize to bytes, let a
+    ; peer deserialize and run the SAME content-addressed recipe.
+    ; -> (value-here value-there same-node?)
+    (defn gen-share-roundtrip (src)
+        (do
+            (let r (form_compile src))
+            (let v (form_walk r))
+            (let wire (recipe_to_bytes r))
+            (let r2 (bytes_to_recipe wire))
+            (let v2 (form_walk r2))
+            (list v v2 (node_eq r r2))))
+
+    0)
