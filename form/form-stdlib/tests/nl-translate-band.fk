@@ -3,9 +3,10 @@
 ; Form-native NL -> NL translation through the language-neutral pivot. The logic
 ; lives in form-stdlib/nl-translate.fk (loaded as a prelude); this band exercises
 ; it: cross-tongue PIVOT equality, both translation directions, a second content
-; pair (not hard-coded), a full round-trip held stable, and three words added as
-; lexicon DATA ROWS (body / cell / recipe / witness) translating with no code change
-; — vocabulary is data. Bitmask witness; all eight → 255, across Go / Rust / TS / fkwu.
+; pair (not hard-coded), a full round-trip held stable, three words added as lexicon
+; DATA ROWS (vocabulary is data), AND the PIVOT speaking the body's own NEUTRAL symbol
+; (n0 — not any tongue's lemma, no language privileged) with ice/water/gas phase tags.
+; Bitmask witness; all eleven → 2047, across Go / Rust / TS / fkwu.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/nl-translate.fk
 
@@ -28,4 +29,9 @@
         ;; 6-8. vocabulary is DATA: words added as lexicon ROWS translate with no code change
         (if (str_eq (tr-en-id "the body is native")   "tubuh adalah asli")  32 0)
         (if (str_eq (tr-en-id "the cell is recipe")   "sel adalah resep")   64 0)
-        (if (str_eq (tr-id-en "saksi adalah asli")    "the witness is native") 128 0))))
+        (if (str_eq (tr-id-en "saksi adalah asli")    "the witness is native") 128 0)
+        ;; 9. the PIVOT speaks the body's own NEUTRAL symbol, not English — no tongue privileged
+        (if (str_eq (nlt-kidv (norm-en (g-parse (nl-en) "the source is native")) 0) "n0") 256 0)
+        ;; 10-11. the symbol space is phase-tagged ice/water/gas (substrate-thermodynamics)
+        (if (str_eq (nlt-phase "n0") "ice") 512 0)
+        (if (str_eq (nlt-phase "n6") "gas") 1024 0))))

@@ -31,19 +31,25 @@
                 (list "seq" (p-cap "s" (p-run "alpha")) (p-lit "adalah") (p-cap "a" (p-run "alpha")))
                 (t-emit "property" (list (t-splice "s") (t-splice "a")))))))
 
-    ;; --- the lexicon AS DATA: rows of (concept en id). A tongue is a COLUMN, a word
-    ;; is a ROW. Adding vocabulary is adding a row; adding a tongue is adding a column —
-    ;; never editing code. The north-star form grows this table by ingesting the
-    ;; parallel corpus (web/messages/*); seeded here from a small attested set.
+    ;; --- the lexicon AS DATA: rows of (symbol phase en id). The pivot speaks the
+    ;; body's OWN neutral symbol — n0, n1, … — NOT any tongue's lemma, so no language
+    ;; is privileged ("source", "sumber", "shan" are equal doors onto n0). The symbol
+    ;; is a door over the numeric NodeID (identity invariant under renaming); the
+    ;; self-authored-symbol-space MDL loop refines it toward minimal (frequent → short).
+    ;; PHASE is the thermodynamic state (substrate-thermodynamics): ice = frozen,
+    ;; load-bearing, widely referenced; water = actively circulating; gas = provisional,
+    ;; just-invented. A symbol phase-changes WITHIN its identity as it settles.
+    ;; A tongue is a COLUMN, a word a ROW: grown by ingesting the parallel corpus.
     (defn nlt-lexicon ()
         (list
-            (list "source"  "source"  "sumber")
-            (list "native"  "native"  "asli")
-            (list "kernel"  "kernel"  "inti")
-            (list "body"    "body"    "tubuh")
-            (list "cell"    "cell"    "sel")
-            (list "recipe"  "recipe"  "resep")
-            (list "witness" "witness" "saksi")))
+            ;;     symbol  phase    en         id
+            (list "n0"   "ice"    "source"  "sumber")
+            (list "n1"   "ice"    "native"  "asli")
+            (list "n2"   "ice"    "kernel"  "inti")
+            (list "n3"   "water"  "body"    "tubuh")
+            (list "n4"   "water"  "cell"    "sel")
+            (list "n5"   "water"  "recipe"  "resep")
+            (list "n6"   "gas"    "witness" "saksi")))
     ;; generic lookup: scan rows for column-i == w, return column-j; passthrough unknown
     (defn nlt-find (rows i w)
         (if (nil? rows) (empty)
@@ -51,11 +57,12 @@
                 (nlt-find (tail rows) i w))))
     (defn nlt-pick (r j w) (if (nil? r) w (nth r j)))
     (defn nlt-map (i j w) (nlt-pick (nlt-find (nlt-lexicon) i w) j w))
-    ;; the four tongue<->concept maps, all ONE generic lookup (col 0=concept 1=en 2=id)
-    (defn nlt-en->c (w) (nlt-map 1 0 w))
-    (defn nlt-c->en (w) (nlt-map 0 1 w))
-    (defn nlt-id->c (w) (nlt-map 2 0 w))
-    (defn nlt-c->id (w) (nlt-map 0 2 w))
+    ;; columns: 0=neutral symbol, 1=phase, 2=en, 3=id. concept ≡ the neutral symbol.
+    (defn nlt-en->c (w)  (nlt-map 2 0 w))   ; en surface  -> neutral symbol
+    (defn nlt-c->en (sy) (nlt-map 0 2 sy))  ; neutral symbol -> en surface
+    (defn nlt-id->c (w)  (nlt-map 3 0 w))   ; id surface  -> neutral symbol
+    (defn nlt-c->id (sy) (nlt-map 0 3 sy))  ; neutral symbol -> id surface
+    (defn nlt-phase (sy) (nlt-map 0 1 sy))  ; neutral symbol -> thermodynamic phase
 
     ;; --- normalize raw parse -> PIVOT ---
     (defn norm-en (n) (intern_node (bp "property") (list (nlt-s (nlt-en->c (nlt-kidv n 0))) (nlt-s (nlt-en->c (nlt-kidv n 1))))))

@@ -32,6 +32,20 @@
 # all encode onto ONE pivot. Many surfaces -> one pivot is the whole point;
 # the Blueprint NodeID is the meaning's identity (lc-grammar-is-the-universal-
 # recipe, cjk-channel: mountain == shan == yama, one cell read many tongues).
+#
+# The pivot speaks its OWN NEUTRAL SYMBOL SPACE — not any tongue's lemma. A pivot
+# concept is the body's self-authored symbol (n0, n1, … — a door over the numeric
+# NodeID, identity invariant under renaming), so "source" / "sumber" / "shan" are
+# equal doors onto n0 and NO language is privileged (the i18n no-source-of-truth
+# discipline, made structural). The symbol space is the translation pivot's instance
+# of self-authored-symbol-space.form: invented by the body, refined toward MINIMAL by
+# the MDL auto-ML loop (frequent meaning → short symbol), trainable, dynamic. Each
+# symbol carries a thermodynamic PHASE (substrate-thermodynamics): ICE — a frozen,
+# load-bearing, widely-shared meaning (mountain/shan/yama); WATER — actively
+# circulating; GAS — provisional, just-invented. A meaning phase-changes WITHIN its
+# identity as it settles (champion-challenger crystallizes/composts, NodeID conserved).
+# Proven (form-stdlib/nl-translate.fk, tests/nl-translate-band.fk → 2047 four-way): the
+# pivot node carries n0, not "source", and each symbol carries its ice/water/gas phase.
 
 form pipeline_shape = {
     encode:  ~Recipe,   # surface  -> pivot   (R_Encode; one per source tongue/PL)
@@ -112,7 +126,9 @@ defn nl_to_form = pipeline_shape { encode: @encode(nl), pivot: @pivot(meaning), 
 # LINEAGE
 #   kin: universal-translator.form (pivot = Blueprint), encoder-decoder-as-recipe.form
 #        (the two codec arms), native-translation-loopback.form (NL -> NL),
-#        nl-to-form-satsang.form (NL -> Form via a council), substrate-thermodynamics.form
+#        nl-to-form-satsang.form (NL -> Form via a council), self-authored-symbol-space.form
+#        (the pivot's neutral symbols, refined minimal by MDL auto-ML — the body invents
+#        its own meaning-tokens), substrate-thermodynamics.form
 #        (ice / water / gas), native-translation-model.form + offline-nl-translation-
 #        training.form (training the arms), translation-quality.fk (the round-trip
 #        gate), corpus-license-gate.fk (the provenance boundary), cjk-channel.fk
