@@ -300,6 +300,7 @@ online-accuracy fks 63
 predictor-train fks 63
 prototype-merge fks 127
 provisioning fks 127
+recognition fks 63
 recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31

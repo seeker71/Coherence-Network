@@ -20,9 +20,11 @@ import {
   Mic,
   Radio,
   Ruler,
+  ScanSearch,
   Cloud,
 } from "lucide-react";
 import { wpRun, type WpRun } from "@/lib/form-kernel/world-perception-recipe";
+import { recRun } from "@/lib/form-kernel/recognition-recipe";
 
 // Sanitize a string for embedding inside a Form double-quoted literal.
 const q = (s: string) => s.replace(/["()\\]/g, "").trim();
@@ -127,6 +129,22 @@ const TONGUES = [
   { id: "es", label: "Español" },
 ];
 
+// Recognition — one recipe, four libraries. A reading vector (a quantized
+// fingerprint) matched against a library of known signatures. The recipe never
+// changes; only the library differs per sense. Readings here are sample
+// fingerprints, the way the scenes are sample snapshots — the logic is the
+// proven body's (nearest-shape + recognition, four-way 63).
+const REC_SENSES = [
+  { kind: "place", label: "Place", from: "wifi fingerprint", reading: "(list 5 5 5 5)",
+    library: '(list (list "home" (list 5 5 5 5)) (list "cafe" (list 1 8 1 8)) (list "office" (list 9 1 9 1)))' },
+  { kind: "room", label: "Room", from: "echo signature", reading: "(list 2 7 2 7)",
+    library: '(list (list "kitchen" (list 2 7 2 7)) (list "hall" (list 9 9 1 1)))' },
+  { kind: "who", label: "Who", from: "face · voice", reading: "(list 3 1 4 1)",
+    library: '(list (list "aria" (list 3 1 4 1)) (list "kai" (list 8 8 8 8)))' },
+  { kind: "what", label: "What", from: "sound · vision", reading: "(list 6 2 6 2)",
+    library: '(list (list "dog" (list 6 2 6 2)) (list "cat" (list 1 1 9 9)) (list "bird" (list 7 7 7 1)))' },
+] as const;
+
 type Surface = {
   transcript: { text: string; source: string; isHome: boolean; conf: string };
   audibility: Array<{ emitter: string; heard: boolean; strength: number }>;
@@ -212,6 +230,19 @@ export function PerceptionSurface() {
     const tongueOut = wpRun(`(wp-translation-tongue (wp-translate ${chan} "${tongue}"))`).value;
     return { can, tongueOut };
   }, [tongue, transcript]);
+
+  // Recognition — one recipe, four libraries, all walked on the same kernel.
+  const recognized = useMemo(
+    () =>
+      REC_SENSES.map((s) => ({
+        label: s.label,
+        from: s.from,
+        result: recRun(
+          `(rec-label (recognize "${s.kind}" ${s.reading} ${s.library} "${s.from}"))`,
+        ).value,
+      })),
+    [],
+  );
 
   const mm = (v: number) => (v / 1000).toFixed(2);
 
@@ -431,6 +462,26 @@ export function PerceptionSurface() {
             </div>
           </article>
         )}
+
+        {/* Recognized — one recipe, four senses */}
+        <article className="rounded-xl border border-stone-800/50 bg-stone-900/40 p-4">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-stone-500">
+            <ScanSearch className="h-3.5 w-3.5 text-green-300/75" aria-hidden="true" />
+            Recognized — one recipe, four senses
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
+            {recognized.map((r) => (
+              <div key={r.label} className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="text-stone-500">{r.label}</span>
+                <span className="font-mono text-stone-200">{r.result}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 text-xs text-stone-500">
+            place by wifi · room by echo · who by face/voice · what by sound/vision — the same{" "}
+            <code className="text-green-300/70">recognize</code> recipe; only the library differs.
+          </div>
+        </article>
       </div>
     </div>
   );
