@@ -3,6 +3,8 @@ vulkan/.tools/
 # compiled host binaries
 *.exe
 vulkan/matvec_vk_android
+metal/form_metal_conv2d_host
+metal/*.err
 # minted GPU cells (reproducible from the recipes/templates): keep template_*.ptx (canonical source),
 # drop recipe-minted form_*.ptx, cubins, SPIR-V, flattened tables, and re-emitted shaders
 cuda/form_*.ptx

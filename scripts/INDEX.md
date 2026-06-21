@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 308
+**Total files**: 311
 
 | File | Purpose |
 |---|---|
@@ -65,6 +65,8 @@
 | [coord-watcher.sh](coord-watcher.sh) | coord-watcher.sh — the naive watcher: asks silly questions to keep the field honest. |
 | [corpus_partition_by_license.sh](corpus_partition_by_license.sh) | corpus_partition_by_license.sh — split a downloaded corpus into the part that is |
 | [cross_isa_assembly_audit.sh](cross_isa_assembly_audit.sh) | cross_isa_assembly_audit.sh — one recipe, every ISA the host can show. |
+| [cuda_affine_train_audit.sh](cuda_affine_train_audit.sh) | cuda_affine_train_audit.sh — GPU witness for the Form CUDA affine-layer TRAINING-STEP emitter |
+| [cuda_matvec_audit.sh](cuda_matvec_audit.sh) | cuda_matvec_audit.sh — GPU witness for the Form CUDA matvec emitter (jte-matvec-cuda in |
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
 | [db_api_server_demo.sh](db_api_server_demo.sh) | db_api_server_demo.sh — emit a self-contained native binary (from the Form |
 | [demo_dual_identity.py](demo_dual_identity.py) | Demo: Idea Dual Identity — UUID + Slug |
@@ -186,6 +188,7 @@
 | [metal_attn_audit.sh](metal_attn_audit.sh) | metal_attn_audit.sh — the ARCHITECT'S ATTENTION layer learning on Metal (M4 Max GPU witness). |
 | [metal_backprop_audit.sh](metal_backprop_audit.sh) | metal_backprop_audit.sh — the LEARNING KERNEL on Metal (M4 Max GPU witness). |
 | [metal_block_audit.sh](metal_block_audit.sh) | metal_block_audit.sh — the WHOLE TRANSFORMER BLOCK running FORWARD on Metal (M4 Max GPU witness). |
+| [metal_conv2d_audit.sh](metal_conv2d_audit.sh) | metal_conv2d_audit.sh — GPU witness for conv2d on the real Apple GPU. The Metal mirror of the |
 | [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
 | [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
