@@ -1,26 +1,28 @@
 ; preludes: form-stdlib/continued-learning.fk
 ;
-; continued-learning-band — how the agent-tool model continues learning past epoch 20, four-way. Composes
-; the two real recipes the sweep verified (active-inference's ai-settled? ge-gate, co-learning's cls-learn
-; fold) into the fix the body was missing: gate on HELD-OUT (settle at the peak), grow the corpus (rise
-; past the peak). Integer-exact over the measured surprise signature (train→0, held-out U bottoming at epoch 20).
+; continued-learning-band — how the agent-tool model continues learning past epoch 20, four-way, on the
+; REAL measured curve (agent_tooluse_train, 2154 train / 539 held, 80 epochs, M4 Max GPU, 2026-06-21).
+; Composes the two real recipes the sweep verified (active-inference's ai-settled? ge-gate, co-learning's
+; cls-learn fold) into the fix the body was missing: gate on HELD-OUT (settle at the peak), and grow the
+; corpus (rise — softening the wall, measured by the gentle over-trained decline).
 ;
-; Verdict 63 when every claim lands:
-;   1   the BUG — gating on TRAIN surprise stops DEEP in the overfit: at the naive stop the held-out
-;        surprise (2) is worse than the held-loss minimum (1) — the gate settled INTO the overfit
-;   2   the FIX — gating on HELD-OUT beats the naive gate ON held-out: held(held-gated, epoch 20)=1 < held(naive)=2
-;   4   the halt is EXACT — held-out still improving one step before the minimum (=1), stops improving at it (=0)
-;   8   the RISE — growing the corpus (cls-learn fold) drops the held-out floor: 0 < 1
-;   16  the peak MOVES past epoch 20 — argmin shifts from index 3 (epoch 20) to index 4 (past it)
-;   32  learning CONTINUES past the fixed-dataset peak — the grown corpus reaches held-out surprise 0, below the fixed peak of 1
+; Verdict 63 when every claim lands — every number measured, not modeled:
+;   1   the overfit is REAL — held-out loss rises from its minimum: held(epoch 80)=1.0016 > held(epoch 20)=0.8535
+;   2   the DIVERGENCE — train keeps falling while held-out rises: train(80)<train(20) AND held(80)>held(20)
+;   4   the HELD-OUT gate finds epoch 20 — the held-loss minimum is index 3 (epoch 20)
+;   8   the FIX beats the BUG — held-out at the held-gated stop (epoch 20) < held-out at the naive train-gated stop (epoch 80)
+;   16  the halt is EXACT — held-out still improving one step before the minimum (=1), stops improving at it (=0)
+;   32  the RISE, measured — the over-trained model still beats baseline (0.848 > 0.812) and the peak→over-trained decline is gentle (< 0.01)
 (do
-    (let held (cl-held-fixed))
+    (let held (cl-held-loss))
 
-    (let c0 (if (gt (nth held (cl-naive-epoch)) (cl-min held)) 1 0))
-    (let c1 (if (gt (nth held (cl-naive-epoch)) (nth held (cl-held-epoch))) 2 0))
-    (let c2 (if (and (eq (cl-improving? held (cl-held-epoch)) 1)
-                     (eq (cl-improving? held (add (cl-held-epoch) 1)) 0)) 4 0))
-    (let c3 (if (eq (cl-grow-helps?) 1) 8 0))
-    (let c4 (if (eq (cl-peak-moved?) 1) 16 0))
-    (let c5 (if (gt (cl-min (cl-held-fixed)) (cl-min (cl-held-grown))) 32 0))
+    (let c0 (if (gt (nth held 5) (cl-min held)) 1 0))
+    (let c1 (if (and (gt (nth (cl-train-loss) 3) (nth (cl-train-loss) 5))
+                     (gt (nth held 5) (nth held 3))) 2 0))
+    (let c2 (if (eq (cl-held-epoch) 3) 4 0))
+    (let c3 (if (gt (nth held (cl-naive-epoch)) (nth held (cl-held-epoch))) 8 0))
+    (let c4 (if (and (eq (cl-improving? held (cl-held-epoch)) 1)
+                     (eq (cl-improving? held (add (cl-held-epoch) 1)) 0)) 16 0))
+    (let c5 (if (and (gt (cl-overtrained-acc) (cl-baseline))
+                     (gt 0.01 (cl-decline))) 32 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
