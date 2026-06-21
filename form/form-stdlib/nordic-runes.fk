@@ -1,0 +1,51 @@
+; nordic-runes.fk — the 24 Elder Futhark runes as Form cells, each carrying its galdr
+; spectral signature (the "vibration"): a 6-band, peak-normalized SHAPE (0..9) over
+; [0–200, 200–500, 500–1k, 1k–2k, 2k–4k, 4k–8k] Hz.
+;
+; The signatures are TRAINED by the carrier experiments/rune-galdr/train-rune-spectra.sh
+; (synthesize each rune's sung sound, measure its band energies with sox). They are a
+; reproducible REFERENCE; the true galdr vibrations come from real recordings matched
+; against this table. A rune's "frequency" is the honest acoustic spectrum of its sung
+; phoneme — formant/fricative energy per band — never a single mystical Hz.
+;
+; The flow-match (spectrum <-> rune) lives in rune-frequency.fk. Proven by
+; form-stdlib/tests/nordic-runes-band.fk.
+
+(do
+    (defn rune (glyph name phoneme aett keyword spectrum) (list glyph name phoneme aett keyword spectrum))
+    (defn rune-glyph    (r) (nth r 0))
+    (defn rune-name     (r) (nth r 1))
+    (defn rune-phoneme  (r) (nth r 2))
+    (defn rune-aett     (r) (nth r 3))
+    (defn rune-keyword  (r) (nth r 4))
+    (defn rune-spectrum (r) (nth r 5))
+
+    (defn nordic-runes () (list
+; nordic-rune spectral signatures (peak-normalized SHAPE 0..9) — VOICE=Daniel RATE=110
+        (rune "ᚠ" "fehu" "f" 1 "wealth" (list 5 8 9 5 6 0))
+        (rune "ᚢ" "uruz" "u" 1 "strength" (list 3 9 4 2 2 0))
+        (rune "ᚦ" "thurisaz" "th" 1 "thorn" (list 4 9 2 2 5 1))
+        (rune "ᚨ" "ansuz" "a" 1 "breath-god" (list 3 9 3 2 5 0))
+        (rune "ᚱ" "raidho" "r" 1 "journey" (list 4 7 8 9 2 0))
+        (rune "ᚲ" "kenaz" "k" 1 "torch" (list 5 9 6 4 4 0))
+        (rune "ᚷ" "gebo" "g" 1 "gift" (list 4 9 4 3 4 1))
+        (rune "ᚹ" "wunjo" "w" 1 "joy" (list 4 9 4 2 2 0))
+        (rune "ᚺ" "hagalaz" "h" 2 "hail" (list 8 9 7 7 4 0))
+        (rune "ᚾ" "nauthiz" "n" 2 "need" (list 7 9 5 3 5 0))
+        (rune "ᛁ" "isa" "i" 2 "ice" (list 4 9 2 2 3 1))
+        (rune "ᛃ" "jera" "y" 2 "harvest" (list 5 9 4 2 5 0))
+        (rune "ᛇ" "eihwaz" "ei" 2 "yew" (list 4 9 3 3 4 0))
+        (rune "ᛈ" "perthro" "p" 2 "fate-lot" (list 6 9 6 4 4 0))
+        (rune "ᛉ" "algiz" "z" 2 "protection" (list 5 9 3 2 3 2))
+        (rune "ᛋ" "sowilo" "s" 2 "sun" (list 7 9 7 4 6 4))
+        (rune "ᛏ" "tiwaz" "t" 3 "justice" (list 5 9 6 4 4 1))
+        (rune "ᛒ" "berkano" "b" 3 "birch-birth" (list 5 9 6 4 3 0))
+        (rune "ᛖ" "ehwaz" "e" 3 "horse" (list 5 9 1 0 5 0))
+        (rune "ᛗ" "mannaz" "m" 3 "human" (list 7 9 5 3 5 0))
+        (rune "ᛚ" "laguz" "l" 3 "water" (list 4 9 8 3 3 1))
+        (rune "ᛜ" "ingwaz" "ng" 3 "seed" (list 5 9 3 2 5 0))
+        (rune "ᛟ" "othala" "o" 3 "home-dna" (list 3 9 1 1 1 0))
+        (rune "ᛞ" "dagaz" "d" 3 "day-dawn" (list 4 9 4 3 3 0))
+    ))
+    (defn rune-count () (len (nordic-runes)))
+    (defn rune-at (i) (nth (nordic-runes) i)))

@@ -1,0 +1,23 @@
+; preludes: form-stdlib/nordic-runes.fk
+;
+; nordic-runes-band — the 24 Elder Futhark cells, their ætt order and spectral shape, three-way.
+;
+; Verdict 255 when every claim lands:
+;   1   the full futhark is present        (rune-count = 24)
+;   2   first cell is Freyr's ætt           (rune-at 0 = fehu, ætt 1)
+;   4   ætt 1 runs through index 7          (rune-at 7 = wunjo, ætt 1)
+;   8   ætt 2 begins at index 8             (rune-at 8 = hagalaz, ætt 2)
+;   16  ætt 2 runs through index 15         (rune-at 15 = sowilo, ætt 2)
+;   32  ætt 3 begins at index 16            (rune-at 16 = tiwaz, ætt 3)
+;   64  ætt 3 runs through index 23         (rune-at 23 = dagaz, ætt 3)
+;   128 each cell carries a 6-band shape    (rune-spectrum has 6 bands)
+(do
+    (let c0 (if (eq (rune-count) 24) 1 0))
+    (let c1 (if (eq (rune-aett (rune-at 0)) 1) 2 0))
+    (let c2 (if (eq (rune-aett (rune-at 7)) 1) 4 0))
+    (let c3 (if (eq (rune-aett (rune-at 8)) 2) 8 0))
+    (let c4 (if (eq (rune-aett (rune-at 15)) 2) 16 0))
+    (let c5 (if (eq (rune-aett (rune-at 16)) 3) 32 0))
+    (let c6 (if (eq (rune-aett (rune-at 23)) 3) 64 0))
+    (let c7 (if (eq (len (rune-spectrum (rune-at 0))) 6) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

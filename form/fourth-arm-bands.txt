@@ -462,6 +462,8 @@ voice-traits fks 1023
 voiced fks 511
 speech-organ fks 255
 host-sense-organ fks 255
+nordic-runes fks 255
+rune-frequency fks 255
 wav-sense fks 63
 witness-theorem fks 31
 witness-to-co-regulate fks 127
