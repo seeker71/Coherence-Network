@@ -682,10 +682,12 @@ natural-language fks 262143
 # other tongue. Cross-tongue equality is content-addressing ("the source is native"
 # and "sumber adalah asli" intern to the same node); translation is encode->pivot->
 # decode, both directions, with a full round-trip held stable. The lexicon is DATA
-# (rows of (concept en id)); adding vocabulary is adding a row, not editing code —
-# three added words (body/cell/recipe/witness) translate with no code change.
-# 255 = all eight checks.
-nl-translate fks 255
+# (rows of (symbol phase en id)); adding vocabulary is adding a row, not editing code.
+# The PIVOT speaks the body's OWN neutral symbol (n0, … — a door over the numeric
+# NodeID, no tongue privileged; self-authored-symbol-space MDL refines it minimal),
+# each symbol carrying an ice/water/gas phase (substrate-thermodynamics).
+# 2047 = all eleven checks.
+nl-translate fks 2047
 # form.bml lifted onto the cursor: the form.bml grammar PARSES `def ..=expr;` on
 # the fourth arm too (cursor-only; rides bmf-core/bmf-grammar's op families). The
 # recipe-shape parity vs the hand line compiler is the three-way band

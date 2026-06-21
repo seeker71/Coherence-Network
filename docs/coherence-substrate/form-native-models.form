@@ -118,8 +118,11 @@
 ;     8. THE LIVE VOICE LOOP — the translate stage is now NATIVE and running (2026-06-21), but the floor is
 ;        honest: a TINY grammar + a small DATA lexicon (one sentence shape, EN↔ID, vocabulary grown by adding
 ;        rows not editing code — form-stdlib/nl-translate.fk). The ordered rungs to the any-voice→any-voice
-;        north star: (a) OPEN VOCAB — grow the content-addressed word-cell lexicon by ingesting the parallel
-;        corpus (web/messages/* — the EN→FR learned-train seed of gap 6 is the same data), then let the learned
+;        north star: (a) OPEN VOCAB — DONE structurally: the lexicon is DATA and the PIVOT speaks the body's
+;        OWN neutral symbol space (n0, … — no tongue privileged, a door over the NodeID, phase-tagged
+;        ice/water/gas, refined minimal by self-authored-symbol-space.form's MDL auto-ML), proven four-way
+;        (nl-translate-band → 2047). Remaining: GROW that symbol/lexicon table by ingesting the parallel corpus
+;        (web/messages/* — the EN→FR learned-train seed of gap 6 is the same data), then let the learned
 ;        encoder/decoder (gap 6 dynamic, gap 7b optimizer fixed) replace the hand templates. (b) SURFACE-ROBUST
 ;        encoding — case / punctuation / contractions owned by the Form ENCODER, not the carrier's input
 ;        cleaning (the live loop surfaced this: whisper returns "The kernel is native."). (c) the round-trip
