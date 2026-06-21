@@ -26,4 +26,16 @@
     (defn fl-pl-at    (src at)        (if (lt at 0) "" (fl-pl-from src (add at 9))))   ; 9 = len("preludes:")
     (defn fl-preludes-line (src)      (fl-pl-at src (str_find src "preludes:" 0)))
 
+    ; --- the prelude LIST: split the line into ordered file paths (the loader loads each, in order) ---
+    (defn fl-rev2 (xs acc)  (if (eq (len xs) 0) acc (fl-rev2 (tail xs) (cons (head xs) acc))))
+    (defn fl-rev  (xs)      (fl-rev2 xs (list)))
+    (defn fl-push (out tok) (if (eq (str_len tok) 0) out (cons tok out)))   ; skip empty tokens (the leading space)
+    (defn fl-sp (s i start out)
+        (if (ge i (str_len s))
+            (fl-rev (fl-push out (substring s start i)))                          ; flush the last token, restore order
+            (if (str_eq (substring s i (add i 1)) " ")
+                (fl-sp s (add i 1) (add i 1) (fl-push out (substring s start i))) ; on a space, flush the token
+                (fl-sp s (add i 1) start out))))
+    (defn fl-prelude-list (src) (fl-sp (fl-preludes-line src) 0 0 (list)))
+
     0)
