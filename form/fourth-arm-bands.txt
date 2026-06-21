@@ -324,6 +324,7 @@ dynamic-grammar-carrier fks 4095
 form-control-backtracking-ml fks 65535
 self-grounding-classifier fks 63
 self-translate-universal fks 15
+sense-liveness fks 63
 sequence-predictor fks 127
 shared-sensing fks 127
 surprise-salience fks 127
