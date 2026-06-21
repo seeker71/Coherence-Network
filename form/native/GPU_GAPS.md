@@ -6,6 +6,8 @@ Backends: **Metal** (Mac **+ iPhone/iOS** — same Apple-GPU MSL) · **PTX** (RT
 iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-msl` lane IS the iPhone path. iPhone-specific gap = an iOS host app (Metal.framework/MetalKit, code-signed) vs the macOS swiftc CLI runner, + an `ios-arm64` row in hati-os-targets.fk, + on-device run (needs Mac+Xcode+iPhone). MoltenVK would also let the Vulkan lane run on iOS.
 "Proven" = bit-exact (or named-epsilon) on real hardware vs the CPU recipe oracle.
 
+**Layer-matrix status (2026-06-21): PTX 13/13 ✅ · Vulkan 13/13 ✅ · Metal 13/13 ✅ — the ENTIRE layer matrix is COMPLETE on all three backends.** Leaf numerics through two full decoder blocks (whisper exact tb-block + the FULL llama block: RMSNorm→RoPE→causal attn→SwiGLU), every cell bit-exact vs the CPU recipe on real hardware (RTX 4070 for PTX+Vulkan, M4 Max for Metal), driver-only. Remaining work is non-layer: §B precision (f16/bf16 on block kernels), §C cross-cutting runtime (KV-cache, weight-load), §E infra, and the Android **on-device RUN** (the witness script is ready; awaiting a phone on adb).
+
 ## A. Layer carriers (the math exists as portable Form recipes; this tracks the GPU CARRIERS)
 
 | Layer | Recipe (CPU) | Metal | PTX (RTX) | Vulkan (Android) |
@@ -21,8 +23,8 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 | layernorm / rmsnorm | ✅ | ✅ (in block) | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ✅ layernorm f32 *(GLSL)* |
 | residual (vec-add) | ✅ | ✅ (in block) | ✅ f32 *(verdict 8191)* | ✅ f32 *(GLSL)* |
 | transformer block fwd | ✅ | ✅ block fwd | ✅ **EXACT tb-block** (QKVO+γβ) + model→logits + autoregressive generation, bit-exact (19-launch graph) | ✅ **multi-dispatch graph** (19 dispatches, 16 barriers, bit-exact) |
-| llama block (fwd/causal/decode) | ✅ | ✅ **FULL block** (RMSNorm→RoPE'd QKV→causal attn→res→RMSNorm→SwiGLU FFN→res), bit-exact, 42-launch graph | ⬜ |
-| conv2d / groupnorm (diffusion) | ✅ recipe *(verdict 15, 3-way)* | ✅ conv2d f32 **bit-exact to cv2d-conv** (hand-MSL, M4 Max, pad/stride/1x1..5x5) | ✅ conv2d f32 **bit-exact to cv2d-conv** (multi-ch, pad/stride, nested ky↓kx↓ic↓) | ✅ conv2d f32 *(GLSL)* |
+| llama block (fwd/causal/decode) | ✅ | ✅ **FULL block** (RMSNorm→RoPE'd QKV→causal attn→res→RMSNorm→SwiGLU FFN→res), bit-exact, 42-launch graph | ✅ **FULL block** multi-dispatch graph (21-node, bit-exact 64/64, 256/256) |
+| conv2d / groupnorm (diffusion) | ✅ recipe *(verdict 15, 3-way)* | ✅ conv2d f32 **bit-exact on M4 Max** (hand-MSL, pad/stride/1x1..5x5) | ✅ conv2d f32 **bit-exact to cv2d-conv** (multi-ch, pad/stride, nested ky↓kx↓ic↓) | ✅ conv2d f32 *(GLSL)* |
 
 ## B. Precision coverage
 - ⬜ f16/bf16 across the **block-level** PTX+Metal kernels (only matvec has all three on PTX/Metal).
@@ -51,13 +53,16 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 - ⬜ `hati-os-targets.fk` rows for `windows-x64-cuda` and `android-vulkan` (each needs the targets-band extension: count + verdict bit + artifact row).
 
 ## Active lanes (who's on what)
-- **RTX climb**: ✅ 13 kernels (form-ptx 8191 + form-ptx-block 3, four-way) + **EXACT tb-block** (QKVO proj + gamma/beta) + **model forward → logits** + **autoregressive generation**, all bit-exact end-to-end. NEXT: MHA/causal/KV on GPU; FFN backprop; llama block; f16/bf16 on the block-level kernels.
-- **Android/Vulkan**: ✅ matvec proven (RTX Vulkan) + Form-emitted + arm64-android cross-compiled + **one-command on-device witness ready** (`scripts/android_matvec_vk_run.sh`; both artifacts build on the Mac, awaiting a connected phone). NEXT: on-device run (connect device, re-run the script); f16/bf16 GLSL; FFN/attention compute shaders.
-- **Diffusion**: ✅ conv2d/groupnorm recipe + conv2d GPU carriers on all three backends (PTX ✅, **MSL ✅ M4 Max bit-exact**, GLSL ✅). NEXT: groupnorm GPU carriers; Form-emit the conv2d MSL/PTX (jte-conv2d-*).
-- **Serving/Training**: ✅ sampling (top-k/p, temperature). NEXT: loss functions (cross-entropy + log) — agent.
+- **RTX/PTX**: ✅ **layer column COMPLETE (13/13)** — every leaf numeric (matvec f32/f16/bf16, affine-train, gelu, softmax, FFN fwd+backprop, attention SDPA + causal-MHA, layernorm/rmsnorm, residual, conv2d, RoPE, SwiGLU) + whisper exact-block + model→logits + generation + **the FULL llama block**, all bit-exact driver-only. NEXT (non-layer): f16/bf16 on block kernels; KV-cache; weight-load-to-device.
+- **Android/Vulkan**: ✅ **layer column COMPLETE (13/13)** — all the same kernels as GLSL compute shaders (the dividing ones carry RoundingModeRTE) + the transformer-block AND llama-block as multi-dispatch kernel-graphs, all bit-exact on the RTX Vulkan ICD, Form-recipe-shaped, Android-portable `.spv`. **One-command on-device witness ready** (`scripts/android_matvec_vk_run.sh`; both artifacts build on the Mac, SKIP-with-name awaiting a connected phone). NEXT: on-device RUN (connect device, re-run); f16/bf16 GLSL.
+- **Metal (Mac)**: ✅ **layer column COMPLETE (13/13)** — conv2d proved bit-exact on the M4 Max (hand-MSL); the rest via the jte-*-msl audits. NEXT: Form-emit conv2d MSL (jte-conv2d-msl); ios-arm64 target row.
+- **Diffusion**: ✅ conv2d carrier on all THREE backends (PTX ✅, **MSL ✅ M4 Max**, GLSL ✅). NEXT: groupnorm GPU carriers; full UNet/VAE; Form-emit conv2d (jte-conv2d-*).
+- **Serving/Training**: ✅ sampling + loss recipes; FFN backprop on GPU (PTX+Vulkan). NEXT: batch training, KV-cache decode.
 
-## Proven milestones (RTX/PTX lane)
-- **11 kernels** bit-exact on RTX 4070, driver-only, `form-ptx` band **verdict 8191 PASS-4WAY**: matvec f32/f16/bf16, affine-train, gelu(Taylor), FFN, softmax, attention, layernorm, rmsnorm, residual.
+## Proven milestones
+- **FULL llama decoder block** end-to-end on GPU, bit-exact, on BOTH lanes: PTX `form_cuda_ptx_llama_block_host.c` (42-launch graph) and Vulkan `llama_block_vk.c` (21-node multi-dispatch graph): RMSNorm → bias-free QKV proj → RoPE(q,k) → causal single-head attn → Wo+residual → RMSNorm → SwiGLU FFN → +residual. 64/64 and 256/256, driver-only. The hardest primitives — RoPE (frexp-ln + range-reduced 10-term sin + Taylor pow) and SwiGLU (sigmoid via Taylor fexp) — are recipe-own, no hardware transcendentals.
+- **Vulkan transformer-block** as the first multi-dispatch Vulkan kernel-graph (`block_vk.c`, 19 dispatches / 16 barriers, single submit), bit-exact to the PTX exact-block oracle.
+- **15+ kernels** bit-exact on RTX 4070, driver-only: the `form-ptx` band **verdict 8191 PASS-4WAY** (matvec f32/f16/bf16, affine-train, gelu, FFN, softmax, attention, layernorm, rmsnorm, residual) + causal-MHA, conv2d, FFN-backprop, RoPE, SwiGLU.
 - **Full transformer block** end-to-end on GPU, bit-exact (`form_cuda_ptx_block_host.c`, 12-launch kernel-graph).
 - **Tiny transformer FORWARD → logits** end-to-end on GPU, bit-exact (`form_cuda_ptx_model_host.c`: embed → N×block → final-ln → logits; 3 layers/144, 4 layers/576).
 - **AUTOREGRESSIVE GENERATION** on GPU, bit-exact (`form_cuda_ptx_generate_host.c`: greedy loop, growing seq; prompt [1,2,3] → `13 21 16 12 12 9 13 20`, token-id seq matches CPU oracle, final logits bit-exact). A form-native transformer GENERATES.

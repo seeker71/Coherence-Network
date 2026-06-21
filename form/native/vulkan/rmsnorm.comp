@@ -1,0 +1,66 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32; RMSNorm divides in meansq =
+// sumsq/cols, in the Newton-50 sqrt (g = 0.5*(g + (meansq+eps)/g)), and in r = 1.0/rms; this pins it.
+// Needs SPIR-V >= 1.3 (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native RMSNorm compute shader (Android/Vulkan lane, prototyped on RTX). One invocation per ROW.
+// Mirrors template_rmsnorm.ptx (ln-rmsnorm) op-for-op:
+//   sumsq = sum x_j^2 (forward);  meansq = sumsq/cols;  rms = sqrt(meansq+eps) via Newton-50;
+//   r = 1/rms;  y_j = (x_j * r) * g_j     (per-channel gain g, broadcast to rows*cols so g[row*cols+j]).
+// No mean subtraction. Newton sqrt: g0 = meansq+eps; g = 0.5*(g + (meansq+eps)/g), 50 iterations.
+// Every float op is `precise` -> SPIR-V NoContraction so the driver cannot fuse mul+add into FMA and
+// cannot reassociate -> bit-exact to the CPU oracle (c_rms) and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT use inversesqrt/sqrt; do NOT run spirv-opt. Same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer X { float x[]; };   // rows*cols
+layout(std430, binding = 1) readonly  buffer G { float g[]; };   // rows*cols (per-channel gain, broadcast)
+layout(std430, binding = 2) writeonly buffer Y { float y[]; };   // rows*cols
+
+layout(push_constant) uniform Push { uint rows; uint cols; uint eps_bits; } pc;
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= pc.rows) return;
+
+    uint rowbase = row * pc.cols;            // r7 = row*cols
+    precise float flen = float(pc.cols);     // cvt.rn.f32.u32 (float)cols
+    precise float eps  = uintBitsToFloat(pc.eps_bits);
+
+    // sumsq (forward): for j=0..cols-1: sumsq += x_j*x_j
+    precise float sumsq = 0.0;
+    for (uint j = 0u; j < pc.cols; ++j) {
+        precise float xv = x[rowbase + j];
+        precise float sq = xv * xv;
+        sumsq = sumsq + sq;
+    }
+
+    precise float meansq = sumsq / flen;     // meansq = sumsq/cols
+    precise float sd = meansq + eps;         // meansq + eps  (the value we sqrt)
+
+    // Newton-50 sqrt of sd: g0 = sd; for 50 iters: g = 0.5*(g + sd/g)
+    precise float gg = sd;                    // g0 = sd
+    for (uint it = 0u; it < 50u; ++it) {
+        precise float t  = sd / gg;           // sd/g
+        precise float ss = gg + t;            // g + sd/g
+        precise float C_HALF = uintBitsToFloat(0x3F000000u); // 0.5
+        gg = C_HALF * ss;                     // 0.5*(g + sd/g)
+    }
+
+    precise float C_ONE = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float r = C_ONE / gg;             // r = 1/rms
+
+    // out: y_j = (x_j * r) * g_j
+    for (uint j = 0u; j < pc.cols; ++j) {
+        precise float xv = x[rowbase + j];
+        precise float xr = xv * r;            // x_j * r
+        precise float gj = g[rowbase + j];    // g_j   (g indexed row*cols+j, like the PTX)
+        precise float o  = xr * gj;           // * g_j
+        y[rowbase + j] = o;
+    }
+}
