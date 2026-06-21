@@ -1,0 +1,21 @@
+; preludes: form-stdlib/form-loader.fk
+;
+; The dialect+prelude brain, pinned. Proves a BML `section [...]` source is detected as bml (the
+; decision form_cli_ask.sh got wrong), an s-expr source as sexpr, and the `preludes:` dependency list
+; is extracted from the source text (no shell hardcoding) — including the no-preludes case. Verdict 255.
+(do
+    (let s-bml   "stuff section [form.bml] more")
+    (let s-sexpr "(defn f (x) x)")
+    (let s-prel  "preludes: a.fk b.fk")
+    (let s-nopl  "(defn g () 1)")
+
+    (let c0 (if (eq     (fl-is-bml? s-bml) 1)                      1   0))   ; BML section detected
+    (let c1 (if (eq     (fl-is-bml? s-sexpr) 0)                    2   0))   ; s-expr not BML
+    (let c2 (if (str_eq (fl-dialect s-bml) "bml")                 4   0))   ; dialect name bml
+    (let c3 (if (str_eq (fl-dialect s-sexpr) "sexpr")             8   0))   ; dialect name sexpr
+    (let c4 (if (str_eq (fl-preludes-line s-prel) " a.fk b.fk")  16   0))   ; prelude list extracted
+    (let c5 (if (str_eq (fl-preludes-line s-nopl) "")            32   0))   ; no preludes -> empty
+    (let c6 (if (eq     (fl-is-bml? s-nopl) 0)                    64   0))   ; plain s-expr not BML
+    (let c7 (if (str_eq (fl-dialect s-prel) "sexpr")            128   0))   ; a preludes line alone is not a section
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

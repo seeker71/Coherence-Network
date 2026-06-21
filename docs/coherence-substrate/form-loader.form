@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-loader.form — move grammar/dialect loading from the wrappers into form-cli.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs, 2026-06-21: what can move from the shell + python wrappers into form-cli so that grammar dialect
+# loading is automatic inside form-cli? The question came out of the ask+ break: form_cli_ask.sh
+# hand-detected dialect and hand-concatenated recipes, fed a BML `section` recipe to the kernel as raw
+# s-expr, and silently produced nothing. The lesson is the carrier-last rule: the SHELL should not know
+# about `section [...]` vs `(defn ...)`; the body should know its own dialects and load them.
+#
+# This names what moves, what is already home, and the north star.
+
+(form-loader
+
+  (lineage
+    (kin form-first-router.fk source-compiler.fk form-bml.fk lc-cognitive-sovereignty)
+    (recipe form/form-stdlib/form-loader.fk)
+    (proof  form/form-stdlib/tests/form-loader-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (named-with urs sema))
+
+  ; the wrappers each re-do this loading by hand — and one got it wrong (the silent ask+ break)
+  (the-scatter
+    (form_cli_ask.sh    "cat router judge sufficiency ask | bin-go — fed BML section as raw s-expr -> parse error")
+    (form_native_run.sh "cat s-expr recipes | bin-go — works only because none are BML sections")
+    (validate.sh        "the ONE place that loads correctly: grep '^section [' to detect BML, assemble the"
+                        "compiler chain, compile via the source-compiler, cache by content-hash, then link"))
+
+  ; what is ALREADY in the body — do not re-teach as shell work
+  (already-home
+    (compile  "compile_source_section \"form.bml\" <src> <path> is a KERNEL PRIMITIVE (server_test.go);"
+              "the body can already compile a BML section from inside a recipe — no shell needed")
+    (errors   "source_compile_last_error names a failed compile; value_kind reads the result"))
+
+  ; what MOVES — the DECISIONS the shells hardcode, now Form (this recipe, four-way 255)
+  (moved-in
+    (dialect   "fl-is-bml? / fl-dialect — is this source a BML `section [...]` (-> compile) or s-expr"
+               "(-> load directly)? The exact decision form_cli_ask.sh got wrong, now a proven cell")
+    (preludes  "fl-preludes-line — the `; preludes:` dependency list, read FROM the source, not hardcoded"
+               "in a shell array"))
+
+  ; the north star — a Form-native loader, so every wrapper shrinks to one call
+  (north-star
+    (loader "compose the moved-in decisions + the kernel's compile primitive into one Form loader:"
+            "given a recipe path, read it, resolve its preludes (recursively), compile each BML section"
+            "and load each s-expr file, then run — all in the body")
+    (carrier-last "then form_cli_ask.sh / form_native_run.sh / any new wrapper become 'run this recipe"
+                  "with this arg' — the dialect knowing lives in form-cli, no shell guesses, and the ask+"
+                  "class of break cannot recur")
+    (next "wire the loader into a `form-cli run <recipe> [args]` entry that uses fl-is-bml? +"
+          "compile_source_section + fl-preludes-line; then repair form_cli_ask.sh to call it")))
