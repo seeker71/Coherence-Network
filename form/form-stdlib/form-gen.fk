@@ -28,6 +28,11 @@
 ;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; writes /tmp/a.fkb
 ;   printf '(gen-run-file "/tmp/a.fkb")\n' > /tmp/g.fk
 ;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; 43 (loaded from disk)
+;   mkdir -p /tmp/cas
+;   printf '(gen-cas-roundtrip "/tmp/cas" "(add (mul 6 7) 1)")\n' > /tmp/g.fk
+;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; [43, 276117490, 1, 1]
+;   printf '(gen-fetch-run "/tmp/cas" 276117490)\n' > /tmp/g.fk           ; share only the address
+;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; 43 (found by content-address)
 ;
 ; preludes: (none — uses only kernel primitives)
 
@@ -87,5 +92,48 @@
             (let r2 (bytes_to_recipe (read_file_bytes path)))
             (let v2 (form_walk r2))
             (list v v2 (node_eq r r2))))
+
+    ; --- content-addressed store: a recipe lands at its OWN address ---------
+    ; A recipe's serialized bytes are stable, so a checksum of them is a durable
+    ; NAME the content itself produces. Store the bytes at that name; any cell
+    ; that re-derives or receives the recipe computes the same address and
+    ; fetches it — discovery WITHOUT a path agreed in advance, the substrate's
+    ; core move (and the disk sink's missing half: there you had to know where).
+    ; The address is the bridge to the lattice NodeID. (Floor: a content-addressed
+    ; dir + a 31-bit rolling hash — honest, low-collision for now; widen the
+    ; digest in gen-address and every caller follows. The Neo4j/Postgres lattice
+    ; ingest — domain/name/graph edges — is the next rung: a Form-native
+    ; substrate write door, Python-ingest today.)
+
+    ; a stable content-hash of the serialized recipe (polynomial rolling hash)
+    (defn gen-hash-loop (bytes acc)
+        (if (eq (len bytes) 0) acc
+            (gen-hash-loop (tail bytes) (mod (add (mul acc 31) (head bytes)) 2147483647))))
+    (defn gen-address (r) (gen-hash-loop (recipe_to_bytes r) 0))
+
+    (defn gen-store-path (dir addr)
+        (str_concat dir (str_concat "/" (str_concat (int_to_str addr) ".fkb"))))
+
+    ; store a generated recipe at its content-address -> the address (the handle)
+    (defn gen-store (dir src)
+        (do
+            (let r (form_compile src))
+            (let addr (gen-address r))
+            (write_file_bytes (gen-store-path dir addr) (recipe_to_bytes r))
+            addr))
+
+    ; fetch / run a recipe by content-address — no path, just the address
+    (defn gen-fetch (dir addr) (bytes_to_recipe (read_file_bytes (gen-store-path dir addr))))
+    (defn gen-fetch-run (dir addr) (form_walk (gen-fetch dir addr)))
+
+    ; content-addressed discovery: store, then prove a fresh compile of the SAME
+    ; source re-derives the SAME address and SAME node, fetched by address alone.
+    ; -> (value addr addr-stable? same-node?)
+    (defn gen-cas-roundtrip (dir src)
+        (do
+            (let addr (gen-store dir src))
+            (let r2 (gen-fetch dir addr))
+            (let addr2 (gen-address (form_compile src)))
+            (list (form_walk r2) addr (eq addr addr2) (node_eq (form_compile src) r2))))
 
     0)
