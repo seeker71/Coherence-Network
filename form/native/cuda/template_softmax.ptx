@@ -1,0 +1,121 @@
+//
+// form-ptx softmax f32: one thread per row, the recipe's exact op order (tn-softmax):
+//   m = max(row);  e_j = fexp(x_j - m);  s = sum_forward(e);  r = 1.0/s;  y_j = e_j * r
+// fexp is the recipe's 14-term Taylor (halving-reduce + square-back), NOT ex2.approx, so bit-exact to
+// tn-softmax / smp-softmax. sum is the FORWARD left fold (tn-sum-acc), normalize is multiply-by-recip
+// (tn-scale es (div 1.0 (tn-sum es))). explicit mul/add/div.rn (two roundings); JIT -O0 unfused.
+// fexp uses a dedicated register range (%f20+/%r15/%p2) so it can't clobber the pass loops.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_softmax_f32(
+    .param .u64 p_x,
+    .param .u64 p_y,
+    .param .u32 p_rows,
+    .param .u32 p_cols
+)
+{
+    .reg .pred  %p<3>;
+    .reg .f32   %f<40>;
+    .reg .b32   %r<20>;
+    .reg .b64   %rd<12>;
+
+    ld.param.u64    %rd1, [p_x];
+    ld.param.u64    %rd2, [p_y];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+    mul.lo.s32      %r7, %r6, %r2;          // rowbase
+
+    // pass1: m = max over row (forward: m=x[0], walk j=1..cols-1)
+    mul.wide.u32    %rd3, %r7, 4;
+    add.s64         %rd4, %rd1, %rd3;
+    ld.global.f32   %f1, [%rd4];
+    mov.u32         %r8, 1;
+MAXLOOP:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        ENDMAX;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd5, %r9, 4;
+    add.s64         %rd6, %rd1, %rd5;
+    ld.global.f32   %f2, [%rd6];
+    setp.gt.f32     %p1, %f2, %f1;
+    @%p1 mov.f32    %f1, %f2;
+    add.u32         %r8, %r8, 1;
+    bra             MAXLOOP;
+ENDMAX:
+
+    // pass2: s=0; for j=0..cols-1: e=fexp(x_j-m); y_j=e; s=s+e (forward)
+    mov.f32         %f3, 0f00000000;
+    mov.u32         %r8, 0;
+SUMLOOP:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        ENDSUM;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd5, %r9, 4;
+    add.s64         %rd6, %rd1, %rd5;
+    ld.global.f32   %f4, [%rd6];
+    sub.f32         %f20, %f4, %f1;        // arg = x_j - m
+    // --- inline fexp(%f20) -> %f30 ---
+    mov.u32         %r15, 0;
+FREDUCE:
+    abs.f32         %f27, %f20;
+    setp.gt.f32     %p2, %f27, 0f3F000000;
+    @!%p2 bra       FENDRED;
+    div.rn.f32      %f20, %f20, 0f40000000;
+    add.u32         %r15, %r15, 1;
+    bra             FREDUCE;
+FENDRED:
+    mov.f32         %f28, 0f3F800000;
+    mov.f32         %f29, 0f3F800000;
+    mov.f32         %f30, 0f3F800000;
+FSMALL:
+    setp.gt.f32     %p2, %f28, 0f41600000;
+    @%p2 bra        FENDSM;
+    div.rn.f32      %f31, %f20, %f28;
+    mul.f32         %f29, %f29, %f31;
+    add.f32         %f30, %f30, %f29;
+    add.f32         %f28, %f28, 0f3F800000;
+    bra             FSMALL;
+FENDSM:
+FSQUARE:
+    setp.eq.u32     %p2, %r15, 0;
+    @%p2 bra        FENDSQ;
+    mul.f32         %f30, %f30, %f30;
+    sub.u32         %r15, %r15, 1;
+    bra             FSQUARE;
+FENDSQ:
+    // --- e = %f30 ---
+    mul.wide.u32    %rd7, %r9, 4;
+    add.s64         %rd8, %rd2, %rd7;
+    st.global.f32   [%rd8], %f30;
+    add.f32         %f3, %f3, %f30;
+    add.u32         %r8, %r8, 1;
+    bra             SUMLOOP;
+ENDSUM:
+    mov.f32         %f6, 0f3F800000;       // 1.0
+    div.rn.f32      %f5, %f6, %f3;         // r = 1.0 / s
+
+    // pass3: y_j = y_j * r (forward)
+    mov.u32         %r8, 0;
+NORMLOOP:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        DONE;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd7, %r9, 4;
+    add.s64         %rd8, %rd2, %rd7;
+    ld.global.f32   %f7, [%rd8];
+    mul.f32         %f8, %f7, %f5;
+    st.global.f32   [%rd8], %f8;
+    add.u32         %r8, %r8, 1;
+    bra             NORMLOOP;
+DONE:
+    ret;
+}

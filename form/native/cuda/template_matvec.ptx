@@ -1,0 +1,62 @@
+//
+// form-ptx matvec: one thread per output row, downward right-fold (j: cols-1..0).
+// explicit mul.f32 + add.f32 (two roundings); driver JIT at -O0 keeps them unfused.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_matvec_f32(
+    .param .u64 p_w,
+    .param .u64 p_x,
+    .param .u64 p_y,
+    .param .u32 p_rows,
+    .param .u32 p_cols
+)
+{
+    .reg .pred  %p<2>;
+    .reg .f32   %f<5>;
+    .reg .b32   %r<10>;
+    .reg .b64   %rd<10>;
+
+    ld.param.u64    %rd1, [p_w];
+    ld.param.u64    %rd2, [p_x];
+    ld.param.u64    %rd3, [p_y];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;
+
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+
+    mul.lo.s32      %r7, %r6, %r2;
+    mov.f32         %f1, 0f00000000;
+    mov.u32         %r8, %r2;
+
+LOOP:
+    setp.eq.u32     %p1, %r8, 0;
+    @%p1 bra        ENDLOOP;
+    sub.u32         %r8, %r8, 1;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd4, %r9, 4;
+    add.s64         %rd5, %rd1, %rd4;
+    ld.global.f32   %f2, [%rd5];
+    mul.wide.u32    %rd6, %r8, 4;
+    add.s64         %rd7, %rd2, %rd6;
+    ld.global.f32   %f3, [%rd7];
+    mul.f32         %f4, %f2, %f3;
+    add.f32         %f1, %f4, %f1;
+    bra             LOOP;
+
+ENDLOOP:
+    mul.wide.u32    %rd8, %r6, 4;
+    add.s64         %rd9, %rd3, %rd8;
+    st.global.f32   [%rd9], %f1;
+
+DONE:
+    ret;
+}

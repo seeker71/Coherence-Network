@@ -375,6 +375,8 @@ jit-metal-lanes fks 8191
 jit-native-span fks 255
 jit-oracle-learning fks 1023
 jit-tensor-emit fks 7
+form-ptx fks 8191
+form-ptx-block fks 3
 block-fwd-emit fks 7
 llama-block-fwd-emit fks 7
 llama-block-fwd-causal-emit fks 7

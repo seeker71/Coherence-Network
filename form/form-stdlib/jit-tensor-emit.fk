@@ -124,6 +124,89 @@
 (defn jte-affine-train-msl (fname) (jte-affine-train-msl-fmt fname "f32"))
 
 
+; --- CUDA / NVIDIA (RTX, sm_89) lane: __global__ twins of the MSL matvec + affine-train spines ---
+; The Metal lane's exact transform for NVIDIA, every byte still authored by this recipe:
+;   kernel void                  -> __global__ void
+;   device / device const / [[buffer(n)]]  -> plain pointers (drop the qualifiers)
+;   constant uint& rows ...      -> unsigned rows ...        constant <ac>& lr -> <ac> lr (by value)
+;   uint i [[thread_position_in_grid]]  -> unsigned i = blockIdx.x * blockDim.x + threadIdx.x
+; The ARITHMETIC BODY is byte-for-byte the MSL body — same downward right-fold, same two-rounding
+; mul-then-add, fp32 accumulator. Compiled with nvcc --fmad=false (no FMA contraction) the GPU
+; result is the recipe's result to the last bit; scripts/cuda_matvec_audit.sh / cuda_affine_train_audit.sh
+; gate it bit-exact against the CPU right-fold (the CUDA twins of metal_matvec_audit.sh / metal_backprop_audit.sh).
+; No `extern "C"` — that needs quote chars (the recipe stays a plain Form string, like the rust sibling's
+; `extern fn`); the audit's host main() calls the kernel in the same .cu, so C++ mangling is irrelevant.
+; elem/acc rows mirror jte-msl-elem/acc: f32 is the bit-exact ground; the __half / __nv_bfloat16 lanes
+; are the next rung (one RNE store at the lane boundary, same as the MSL f16/bf16 lanes).
+(defn jte-cuda-elem (fmt) (if (str_eq fmt "f16") "__half" (if (str_eq fmt "bf16") "__nv_bfloat16" "float")))
+(defn jte-cuda-acc (fmt) "float")
+
+(defn jte-matvec-cuda-spine (fname elemty accty)
+  (str_concat "__global__ void "
+  (str_concat fname
+  (str_concat "(const "
+  (str_concat elemty
+  (str_concat "* w, const "
+  (str_concat elemty
+  (str_concat "* x, "
+  (str_concat elemty
+  (str_concat "* y, unsigned rows, unsigned cols) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; const "
+  (str_concat elemty
+  (str_concat "* row = w + i * cols; "
+  (str_concat accty
+  (str_concat " acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; "
+  (str_concat accty
+  (str_concat " p = "
+  (str_concat accty
+  (str_concat "(row[j]) * "
+  (str_concat accty
+  (str_concat "(x[j]); acc = p + acc; } y[i] = "
+  (str_concat elemty "(acc); }")))))))))))))))))))))
+(defn jte-matvec-cuda-fmt (fname fmt) (jte-matvec-cuda-spine fname (jte-cuda-elem fmt) (jte-cuda-acc fmt)))
+(defn jte-matvec-cuda (fname) (jte-matvec-cuda-fmt fname "f32"))
+
+(defn jte-train-cuda-sig (fname el ac)
+  (str_concat "__global__ void "
+  (str_concat fname
+  (str_concat "("
+  (str_concat el
+  (str_concat "* w, "
+  (str_concat el
+  (str_concat "* b, const "
+  (str_concat el
+  (str_concat "* x, const "
+  (str_concat el
+  (str_concat "* t, "
+  (str_concat ac
+  (str_concat "* loss, unsigned rows, unsigned cols, "
+  (str_concat ac
+  " lr) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; ")))))))))))))))
+(defn jte-train-cuda-fwd (el ac)
+  (str_concat el
+  (str_concat "* row = w + i * cols; " (str_concat ac
+  (str_concat " acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; " (str_concat ac
+  (str_concat " p = " (str_concat ac
+  (str_concat "(row[j]) * " (str_concat ac
+  (str_concat "(x[j]); acc = p + acc; } " (str_concat ac
+  (str_concat " y = acc + " (str_concat ac
+  (str_concat "(b[i]); " (str_concat ac
+  (str_concat " d = y - " (str_concat ac
+  (str_concat "(t[i]); loss[i] = d * d; " (str_concat ac
+  " g = 2.0f * d; "))))))))))))))))))))
+(defn jte-train-cuda-upd (el ac)
+  (str_concat "unsigned k = cols; while (k > 0) { k -= 1; row[k] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  (str_concat "(row[k]) - lr * g * " (str_concat ac
+  (str_concat "(x[k])); } b[i] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  "(b[i]) - lr * g); }")))))))))))
+(defn jte-affine-train-cuda-spine (fname el ac)
+  (str_concat (jte-train-cuda-sig fname el ac)
+  (str_concat (jte-train-cuda-fwd el ac) (jte-train-cuda-upd el ac))))
+(defn jte-affine-train-cuda-fmt (fname fmt) (jte-affine-train-cuda-spine fname (jte-cuda-elem fmt) (jte-cuda-acc fmt)))
+(defn jte-affine-train-cuda (fname) (jte-affine-train-cuda-fmt fname "f32"))
+
+
 ; --- FFN (MLP) TRAINING-STEP kernel, emitted as a Form recipe — the architect's layer, learning on Metal ---
 ; transformer-backprop.fk's tbp-mlp-step is the algorithm (fp64, proven three-way): one SGD step over the
 ; two-layer FFN y = W2·gelu(W1·x + b1) + b2 — the exact block ac-ffn-layer builds and the architect trains.

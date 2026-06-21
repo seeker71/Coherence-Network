@@ -1,0 +1,12 @@
+# fetched toolchains (multi-GB: Android NDK, glslang, Vulkan-Headers) — re-fetch, never commit
+vulkan/.tools/
+# compiled host binaries
+*.exe
+vulkan/matvec_vk_android
+# minted GPU cells (reproducible from the recipes/templates): keep template_*.ptx (canonical source),
+# drop recipe-minted form_*.ptx, cubins, SPIR-V, flattened tables, and re-emitted shaders
+cuda/form_*.ptx
+*.cubin
+*.spv
+*.fkt
+vulkan/*_emitted.comp

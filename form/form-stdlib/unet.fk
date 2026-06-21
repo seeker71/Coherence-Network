@@ -1,0 +1,82 @@
+; unet.fk — the diffusion UNet building blocks (upsample / downsample / resblock) as Form recipes.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv-stem.fk form-stdlib/conv2d.fk form-stdlib/llama-numerics.fk
+;
+; conv2d.fk gave the diffusion/vision floor: Conv2d over a GRID of pixels (a list of ROWS, each row a
+; list of PIXELS, each pixel a vector of in-channels) plus GroupNorm. A diffusion UNet stacks three
+; more pieces on top, and all three are pure list-walk folds over that exact same grid convention:
+;
+;   un-upsample2x   — nearest-neighbour 2× up: every pixel becomes a 2×2 block (rows and cols doubled).
+;   un-downsample2x — 2×2 average-pool down: every output pixel is the channel-wise mean of a 2×2 block.
+;   un-resblock     — the diffusion residual block: conv(3×3,p1) → groupnorm → silu → conv(3×3,p1) → +x.
+;
+; The conv / groupnorm math is reused verbatim from conv2d.fk (cv2d-conv / cv2d-groupnorm), the silu
+; atom from llama-numerics.fk (ln-silu, built on tn-exp). All fp64, float-counted, no int/float mixing
+; — the recipe DEFINES the fold order so every kernel computes the same bits. Pure algorithm, no GPU.
+
+; --- nearest-neighbour 2× upsample ----------------------------------------------------------------
+; Each pixel (an in_ch vector) becomes a 2×2 block of identical pixels: cols double (every pixel
+; emitted twice across a row), then rows double (every produced row emitted twice down the grid).
+; un-dup-row doubles the columns of one row; we emit each doubled row twice for the row-doubling.
+(defn un-dup-row (row)
+  (if (eq (len row) 0) (empty)
+      (cons (head row) (cons (head row) (un-dup-row (tail row))))))
+(defn un-upsample2x (img)
+  (if (eq (len img) 0) (empty)
+      (do (let r (un-dup-row (head img)))
+          (cons r (cons r (un-upsample2x (tail img)))))))
+
+; --- 2×2 average-pool downsample ------------------------------------------------------------------
+; Output pixel (i,j) = channel-wise mean of the four input pixels at (2i,2j),(2i,2j+1),(2i+1,2j),
+; (2i+1,2j+1). un-vec-add4 sums four equal-length channel-vectors; the mean divides by 4.0 (float-
+; counted). un-pool-cols walks two source rows in lockstep, consuming two columns per output pixel;
+; un-pool-rows walks the grid two rows at a time. Assumes even H and W (the UNet invariant).
+(defn un-vec-add4 (a b c d)
+  (if (eq (len a) 0) (empty)
+      (cons (add (add (head a) (head b)) (add (head c) (head d)))
+            (un-vec-add4 (tail a) (tail b) (tail c) (tail d)))))
+(defn un-pool-cols (top bot)
+  (if (eq (len top) 0) (empty)
+      (cons (tn-scale (un-vec-add4 (head top) (head (tail top))
+                                   (head bot) (head (tail bot)))
+                      (div 1.0 4.0))
+            (un-pool-cols (tail (tail top)) (tail (tail bot))))))
+(defn un-downsample2x (img)
+  (if (eq (len img) 0) (empty)
+      (cons (un-pool-cols (head img) (head (tail img)))
+            (un-downsample2x (tail (tail img))))))
+
+; --- diffusion residual block -------------------------------------------------------------------
+; conv(3×3,pad1,stride1) → groupnorm(groups,eps) → silu → conv(3×3,pad1,stride1) → + input grid.
+; Both convs preserve the grid shape (3×3 pad-1 stride-1), so the residual add is shape-aligned with
+; the input. GroupNorm normalizes over ALL spatial positions within a channel-group (the diffusion
+; shape): flatten the grid into one list of pixels (each a channel-vector), run cv2d-groupnorm over
+; that list once — pooling spatially exactly as conv2d.fk's groupnorm pools its vector list — then
+; rebuild the grid by re-chunking the normalized pixels back into rows of the original width.
+; silu then maps over each pixel's channel elements (un-silu-grid → un-silu-vec → ln-silu).
+(defn un-silu-vec (v)
+  (if (eq (len v) 0) (empty) (cons (ln-silu (head v)) (un-silu-vec (tail v)))))
+(defn un-silu-row (row)
+  (if (eq (len row) 0) (empty) (cons (un-silu-vec (head row)) (un-silu-row (tail row)))))
+(defn un-silu-grid (g)
+  (if (eq (len g) 0) (empty) (cons (un-silu-row (head g)) (un-silu-grid (tail g)))))
+; flatten a grid (rows of pixels) into one flat list of pixels, then re-chunk into rows of width w
+(defn un-flatten-grid (g)
+  (if (eq (len g) 0) (empty) (cv-cat (head g) (un-flatten-grid (tail g)))))
+(defn un-chunk-rows (flat w)
+  (if (eq (len flat) 0) (empty)
+      (cons (cv-take w flat) (un-chunk-rows (cv-drop w flat) w))))
+(defn un-gn-grid (g groups eps)
+  (do (let w (len (head g)))
+      (un-chunk-rows (cv2d-groupnorm (un-flatten-grid g) groups eps) w)))
+; elementwise grid add (the residual): two grids of identical shape, pixel-wise vector add.
+(defn un-add-row (a b)
+  (if (eq (len a) 0) (empty) (cons (tb-vec-add (head a) (head b)) (un-add-row (tail a) (tail b)))))
+(defn un-add-grid (a b)
+  (if (eq (len a) 0) (empty) (cons (un-add-row (head a) (head b)) (un-add-grid (tail a) (tail b)))))
+(defn un-resblock (img w1 b1 w2 b2 groups eps)
+  (do (let h1 (cv2d-conv w1 b1 img 1 1 3 3))
+      (let hn (un-gn-grid h1 groups eps))
+      (let ha (un-silu-grid hn))
+      (let h2 (cv2d-conv w2 b2 ha 1 1 3 3))
+      (un-add-grid h2 img)))

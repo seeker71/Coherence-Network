@@ -1,0 +1,99 @@
+//
+// form-ptx affine-train: one thread per output row of y = W.x + b; SGD step.
+// forward dot is a downward right-fold; update is row[k] -= (lr*g)*x[k], b[i] -= lr*g.
+// explicit mul.f32 + add.f32/sub.f32 (two roundings); driver JIT at -O0 keeps them unfused.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_affine_train_f32(
+    .param .u64 p_w,
+    .param .u64 p_b,
+    .param .u64 p_x,
+    .param .u64 p_t,
+    .param .u64 p_loss,
+    .param .u32 p_rows,
+    .param .u32 p_cols,
+    .param .f32 p_lr
+)
+{
+    .reg .pred  %p<2>;
+    .reg .f32   %f<20>;
+    .reg .b32   %r<16>;
+    .reg .b64   %rd<24>;
+
+    ld.param.u64    %rd1, [p_w];
+    ld.param.u64    %rd2, [p_b];
+    ld.param.u64    %rd3, [p_x];
+    ld.param.u64    %rd4, [p_t];
+    ld.param.u64    %rd5, [p_loss];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+    ld.param.f32    %f1, [p_lr];
+
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+
+    mul.lo.s32      %r7, %r6, %r2;
+
+    mov.f32         %f2, 0f00000000;
+    mov.u32         %r8, %r2;
+FWD:
+    setp.eq.u32     %p1, %r8, 0;
+    @%p1 bra        ENDFWD;
+    sub.u32         %r8, %r8, 1;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd6, %r9, 4;
+    add.s64         %rd7, %rd1, %rd6;
+    ld.global.f32   %f3, [%rd7];
+    mul.wide.u32    %rd8, %r8, 4;
+    add.s64         %rd9, %rd3, %rd8;
+    ld.global.f32   %f4, [%rd9];
+    mul.f32         %f5, %f3, %f4;
+    add.f32         %f2, %f5, %f2;
+    bra             FWD;
+ENDFWD:
+
+    mul.wide.u32    %rd10, %r6, 4;
+    add.s64         %rd11, %rd2, %rd10;
+    ld.global.f32   %f6, [%rd11];
+    add.f32         %f7, %f2, %f6;
+    add.s64         %rd12, %rd4, %rd10;
+    ld.global.f32   %f8, [%rd12];
+    sub.f32         %f9, %f7, %f8;
+    mul.f32         %f10, %f9, %f9;
+    add.s64         %rd13, %rd5, %rd10;
+    st.global.f32   [%rd13], %f10;
+    mov.f32         %f11, 0f40000000;
+    mul.f32         %f12, %f11, %f9;
+    mul.f32         %f13, %f1, %f12;
+
+    mov.u32         %r10, %r2;
+UPD:
+    setp.eq.u32     %p1, %r10, 0;
+    @%p1 bra        ENDUPD;
+    sub.u32         %r10, %r10, 1;
+    add.s32         %r11, %r7, %r10;
+    mul.wide.u32    %rd14, %r11, 4;
+    add.s64         %rd15, %rd1, %rd14;
+    ld.global.f32   %f14, [%rd15];
+    mul.wide.u32    %rd16, %r10, 4;
+    add.s64         %rd17, %rd3, %rd16;
+    ld.global.f32   %f15, [%rd17];
+    mul.f32         %f16, %f13, %f15;
+    sub.f32         %f17, %f14, %f16;
+    st.global.f32   [%rd15], %f17;
+    bra             UPD;
+ENDUPD:
+
+    sub.f32         %f18, %f6, %f13;
+    st.global.f32   [%rd11], %f18;
+
+DONE:
+    ret;
+}

@@ -1,0 +1,26 @@
+#version 450
+
+// form-native matvec compute shader (Android/Vulkan lane, prototyped on RTX).
+// One invocation per output row; serial DOWNWARD right-fold (j = cols-1..0), the same
+// op order as jte-matvec-msl / fptx-matvec / tb-dot. `precise` -> NoContraction so the
+// driver does NOT fuse mul+add into FMA -> bit-exact to the CPU right-fold and to the
+// PTX/MSL lanes. Do NOT call fma(); do NOT run spirv-opt (its MergeMulAddArithmetic
+// re-fuses on Adreno). The same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer W { float w[]; };   // rows*cols
+layout(std430, binding = 1) readonly  buffer X { float x[]; };   // cols
+layout(std430, binding = 2) writeonly buffer Y { float y[]; };   // rows
+
+layout(push_constant) uniform Push { uint rows; uint cols; } pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.rows) return;
+    precise float acc = 0.0;
+    for (int j = int(pc.cols) - 1; j >= 0; --j) {
+        precise float prod = w[i * pc.cols + uint(j)] * x[uint(j)];
+        acc = prod + acc;
+    }
+    y[i] = acc;
+}
