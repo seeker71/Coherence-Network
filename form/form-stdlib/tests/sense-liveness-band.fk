@@ -1,0 +1,35 @@
+; preludes: form-stdlib/core.fk form-stdlib/sense-liveness.fk
+;
+; sense-liveness-band — the tri-state that measures shipped vs actively used.
+;
+; Verdict 63:
+;   1   floor is present
+;   2   fresh + recognized -> ACTIVE          (the sense is truly used)
+;   4   fresh + unrecognized -> RECEIVING     (data flows, nothing interprets it)
+;   8   stale -> DARK                          (built but unfed, or the feed died)
+;   16  the active count across a mixed inventory is right (only 1 of 5 is active)
+;   32  awakeness is active/total percent (1 of 5 active -> 20% awake)
+(do
+    ;; a mixed inventory mirroring the honest current floor: one sense recognized
+    ;; live, two receiving raw data, two dark. window = 60s.
+    (defn sl-inv ()
+        (list
+            (sl-sense "motion" 3 1)          ;; recognized live -> active
+            (sl-sense "mic" 4 0)             ;; fresh raw, not interpreted -> receiving
+            (sl-sense "light" 6 0)           ;; fresh raw, not interpreted -> receiving
+            (sl-sense "audibility" 999 0)    ;; no recent data -> dark
+            (sl-sense "recognition" 999 0))) ;; built, unfed -> dark
+
+    (defn sl-b1 () (if (gt (len (sl-floor)) 0) 1 0))
+    (defn sl-b2 () (if (str_eq (sl-status (sl-sense "motion" 3 1) 60) "active") 2 0))
+    (defn sl-b4 () (if (str_eq (sl-status (sl-sense "mic" 4 0) 60) "receiving") 4 0))
+    (defn sl-b8 () (if (str_eq (sl-status (sl-sense "audibility" 999 0) 60) "dark") 8 0))
+    (defn sl-b16 () (if (eq (sl-active (sl-inv) 60) 1) 16 0))
+    (defn sl-b32 () (if (eq (sl-awake-pct (sl-inv) 60) 20) 32 0))
+
+    (add (sl-b1)
+        (add (sl-b2)
+            (add (sl-b4)
+                (add (sl-b8)
+                    (add (sl-b16) (sl-b32))))))
+)

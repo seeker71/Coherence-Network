@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 318
+**Total files**: 319
 
 | File | Purpose |
 |---|---|
@@ -160,7 +160,7 @@
 | [gpu_mesh_sense_emit.sh](gpu_mesh_sense_emit.sh) | gpu_mesh_sense_emit.sh — the GPU sensing organ reports live into the mesh. |
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [grounded_cost_endpoint_probe.py](grounded_cost_endpoint_probe.py) | Focused end-to-end probe for /api/utils/grounded_cost. |
-| [grow_nl_lexicon.sh](grow_nl_lexicon.sh) | grow_nl_lexicon.sh — grow the translation pivot's neutral-symbol lexicon from the |
+| [grow_nl_lexicon.sh](grow_nl_lexicon.sh) | grow_nl_lexicon.sh — LAUNCHER ONLY. All projection LOGIC is Form: |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
 | [hati_os_kernel_audit.sh](hati_os_kernel_audit.sh) | hati_os_kernel_audit.sh — M1 carrier for docs/coherence-substrate/hati-os.form: |
 | [hati_os_physical_lanes_probe.sh](hati_os_physical_lanes_probe.sh) | Emit, compile, and run local Hati-OS native binaries against real host lanes. |
@@ -249,6 +249,7 @@
 | [self_translate_demo.sh](self_translate_demo.sh) | self_translate_demo.sh — emit, compile, and run the self-contained binary that |
 | [self_translate_universal_demo.sh](self_translate_universal_demo.sh) | self_translate_universal_demo.sh — emit a NUMERIC-ONLY core binary (zero |
 | [sense_external_signals.py](sense_external_signals.py) | Sense the outer skin of the organism and record what is found. |
+| [sense_liveness.py](sense_liveness.py) | sense_liveness.py — read the body's senses and report which are ACTIVELY USED |
 | [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | sense_strategy_efficacy.py — read accumulated strategy_fired traces and |
 | [sense_subscription_circulation.py](sense_subscription_circulation.py) | Sense subscription circulation — are the AI subscriptions we pay for actually flowing? |
 | [sense_world.py](sense_world.py) | Sense the world through the new earth lens. |
