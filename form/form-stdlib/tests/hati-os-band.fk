@@ -11,31 +11,32 @@
 ; Verdict 15 when the OS face holds:
 ;   1   the table FILE is canonical — ADD(LIT 40, LIT 2) serializes to
 ;       1 2 3 1 40 0 0 1 2 0 0 3 0 1 0 (function count, roots, row count, rows)
-;   2   the universal walker's full emission is 23024 bytes and deterministic —
+;   2   the universal walker's full emission is 74599 bytes and deterministic —
 ;       program-independent constant tissue: loader (sign-aware: table rows
 ;       may carry negative literals), organ arms, the BMF cursor's eye
 ;       (op 17 BUF), the m4e2 arena with its melt door
 ;       (ops 18..23 + fk_arena/fk_mlive/fk_mcopy/fk_melt, melt-on-cool-band),
 ;       the walker-managed value stack (fk_vs — args melt-rooted), the
-;       string pool with its loader string section (tags 24..28), and the
+;       string pool with its loader string section (tags 24..28), the
 ;       root-typed stdout bridge that prints string pool bytes at the CLI
-;       boundary while leaving numeric values boxed, plus figure-ops arms
-;       (tags 34..42, m4e5)
+;       boundary while leaving numeric values boxed, the figure-ops arms
+;       (tags 34..42, m4e5), and the big-stack launcher that runs fk_walk on
+;       a FORM_KERNEL_STACK_MB-sized thread (the sibling stack-depth floor)
 ;   4   the native lowering is faithful text — ADD(LIT 1, ARG) lowers to
-;       (2 + a): literals lower ENCODED (ints even, refs odd — the tagged ABI) — and the jit emission for CALL-fib is 22248 bytes
+;       (2 + a): literals lower ENCODED (ints even, refs odd — the tagged ABI) — and the jit emission for CALL-fib is 73079 bytes
 ;   8   the organ program (RAM roundtrip + clock + entropy, mask 7) flattens
 ;       to its 23 rows with tags 13..16 present in the table
 (do
     (let c0 (if (str_eq (fkc-table-file (list (fk-add (fk-lit 40) (fk-lit 2)))) "1 2 3 1 40 0 0 1 2 0 0 3 0 1 0") 1 0))
 
-    (let c1 (if (eq (str_len (fkc-emit-universal)) 23024)
+    (let c1 (if (eq (str_len (fkc-emit-universal)) 74599)
                 (if (str_eq (fkc-emit-universal) (fkc-emit-universal)) 2 0) 0))
 
     (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
                      (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
                              (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
     (let c2 (if (str_eq (fkc-nat-expr (fk-add (fk-lit 1) (fk-arg))) "(2 + a)")
-                (if (eq (str_len (fkc-emit-jit (list fibc))) 22248) 4 0) 0))
+                (if (eq (str_len (fkc-emit-jit (list fibc))) 73079) 4 0) 0))
 
     (let organ (fk-add (fk-if (fk-sub (fk-set (fk-lit 7) (fk-lit 42)) (fk-get (fk-lit 7))) (fk-lit 0) (fk-lit 1))
                (fk-add (fk-if (fk-le (fk-time) (fk-lit 0)) (fk-lit 0) (fk-lit 2))

@@ -103,6 +103,12 @@ EOF
         )
         if [[ "$is_windows" == "1" ]]; then
             clang_args+=(-lws2_32 -llegacy_stdio_definitions)
+        else
+            # the emitted walker runs fk_walk on a sized pthread (the stack-depth
+            # floor its siblings already stand on) — link the pthread carrier so
+            # it resolves across CI libc versions. macOS folds it into libSystem;
+            # the flag is harmless there. Windows keeps its main-thread entry.
+            clang_args+=(-pthread)
         fi
         if [[ -s "$d/uni.c" ]] && clang "${clang_args[@]}" 2>"$d/clang.err"; then
             mv -f "$tmp" "$out"
