@@ -47,7 +47,7 @@
 | [api/tests/INDEX.md](api/tests/INDEX.md) | 274 | API tests — flow-centric |
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 36 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 53 | Web components — shared React surfaces |
-| [web/app/INDEX.md](web/app/INDEX.md) | 165 | Web routes — every visible page in the app |
+| [web/app/INDEX.md](web/app/INDEX.md) | 166 | Web routes — every visible page in the app |
 | [scripts/INDEX.md](scripts/INDEX.md) | 316 | Scripts — operational tools, generators, syncers |
 
 ## Convention

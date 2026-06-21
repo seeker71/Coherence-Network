@@ -53,6 +53,8 @@ DEFAULT_PATHS = [
     "/practice",
     "/people/contributor%3Aactualize-earth-4d812a0238eb",
     "/substrate",
+    "/sense",          # the install door — phone/Mac as a sense organ
+    "/sense/surface",  # the live world-perception surface (channels from world-perception.fk)
     "/portfolio/investments",
     "/hati-suci",   # the resident-service nervous system (first Light Hub membrane)
 ]
