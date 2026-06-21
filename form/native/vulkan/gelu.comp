@@ -1,0 +1,88 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32 (gelu divides in the Taylor
+// reduce, the term recurrence, and the tanh ratio); this pins it. Needs SPIR-V >= 1.3
+// (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1, advertised on Adreno/Mali).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native gelu compute shader (Android/Vulkan lane, prototyped on RTX).
+// Elementwise y[i] = gelu(x[i]) using the recipe's OWN tanh-gelu (jte-mlp fgelu / tn-gelu),
+// composed from a 14-term Taylor fexp (halving-reduce + square-back) and tanh=(e-1)/(e+1) --
+// NOT any hardware exp/tanh -- so it stays bit-exact. Mirrors template_gelu.ptx op-for-op:
+//   z = 0.7978845608028654 * (x + 0.044715 * (x*(x*x)))      [0f3F4C422A, 0f3D372713]
+//   v = 2*z
+//   fexp(v): k=0; while (|v|>0.5) { v=v/2; k++ }
+//   fexp_small: n=1; term=1; acc=1; while (n<=14) { t=v/n; term=term*t; acc=acc+term; n=n+1 }
+//   square back: while (k>0) { acc=acc*acc; k-- }
+//   tanh = (acc-1)/(acc+1);  gelu = (0.5*x)*(1+tanh)
+// Constants pinned to the PTX hex bit patterns via uintBitsToFloat so the literal floats are
+// identical. Every float op is `precise` -> SPIR-V NoContraction so the driver cannot fuse
+// mul+add into FMA -> bit-exact to the CPU oracle and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer X { float x[]; };   // n
+layout(std430, binding = 1) writeonly buffer Y { float y[]; };   // n
+
+layout(push_constant) uniform Push { uint n; uint pad; } pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.n) return;
+
+    // PTX constants by exact bit pattern.
+    precise float C_044715 = uintBitsToFloat(0x3D372713u); // 0.044715
+    precise float C_SQRT2PI = uintBitsToFloat(0x3F4C422Au); // 0.7978845608028654
+    precise float C_TWO     = uintBitsToFloat(0x40000000u); // 2.0
+    precise float C_HALF    = uintBitsToFloat(0x3F000000u); // 0.5
+    precise float C_ONE     = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float C_14      = uintBitsToFloat(0x41600000u); // 14.0
+
+    precise float xv = x[i];
+
+    // z = 0.7978845608028654 * (x + 0.044715 * (x*(x*x)))
+    precise float f2 = xv * xv;
+    precise float f3 = xv * f2;
+    precise float f4 = C_044715 * f3;
+    precise float f5 = xv + f4;
+    precise float f6 = C_SQRT2PI * f5;
+    // v = 2*z
+    precise float v = C_TWO * f6;
+
+    // fexp(v): k=0; while (|v|>0.5) { v=v/2; k++ }
+    uint k = 0u;
+    while (abs(v) > C_HALF) {
+        v = v / C_TWO;
+        k = k + 1u;
+    }
+
+    // fexp_small(v): n=1; term=1; acc=1; while (n<=14) { t=v/n; term=term*t; acc=acc+term; n=n+1 }
+    precise float nf = C_ONE;
+    precise float term = C_ONE;
+    precise float acc = C_ONE;
+    while (nf <= C_14) {
+        precise float t = v / nf;
+        term = term * t;
+        acc = acc + term;
+        nf = nf + C_ONE;
+    }
+
+    // square back: while (k>0) { acc=acc*acc; k-- }
+    while (k > 0u) {
+        acc = acc * acc;
+        k = k - 1u;
+    }
+
+    // tanh = (acc-1)/(acc+1);  gelu = (0.5*x)*(1+tanh)
+    precise float e_m1 = acc - C_ONE;
+    precise float e_p1 = acc + C_ONE;
+    precise float tanh_ = e_m1 / e_p1;
+    precise float half_x = C_HALF * xv;
+    precise float one_p_tanh = C_ONE + tanh_;
+    precise float g = half_x * one_p_tanh;
+
+    y[i] = g;
+}
