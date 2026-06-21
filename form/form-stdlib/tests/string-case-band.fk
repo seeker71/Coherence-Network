@@ -1,0 +1,18 @@
+; string-case-band.fk — proves form-stdlib/string-case.fk four-way.
+;
+; Form-native lowercasing + punctuation stripping. Real STT-shaped input
+; ("The Source Is Native.") canonicalizes inside Form. Bitmask witness; all
+; five → 31, across Go / Rust / TS / fkwu.
+;
+; preludes: form-stdlib/core.fk form-stdlib/string-case.fk
+
+(do
+    (defn chk (got exp bit) (if (str_eq got exp) bit 0))
+    (defn total (xs) (if (nil? xs) 0 (add (head xs) (total (tail xs)))))
+
+    (total (list
+        (chk (str-lower "The Kernel Is Native")      "the kernel is native" 1)
+        (chk (str-lower "SUMBER")                     "sumber"               2)
+        (chk (str-strip-punct "native.")             "native"               4)
+        (chk (str-normalize "The Source Is Native.")  "the source is native" 8)
+        (chk (str-lower "already-lower 9")            "already-lower 9"     16))))

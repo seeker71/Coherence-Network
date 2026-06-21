@@ -115,6 +115,9 @@
     (defn dec-en (p) (nlt-sp "the" (nlt-sp (nlt-c->en (nlt-kidv p 0)) (nlt-sp "is" (nlt-c->en (nlt-kidv p 1))))))
     (defn dec-id (p) (nlt-sp (nlt-c->id (nlt-kidv p 0)) (nlt-sp "adalah" (nlt-c->id (nlt-kidv p 1)))))
     ;; --- the translators: encode one tongue -> pivot -> decode the other ---
-    (defn tr-en-id (x) (dec-id (norm-en (g-parse (nl-en) x))))
-    (defn tr-id-en (x) (dec-en (norm-id (g-parse (nl-id) x))))
+    ;; the ENCODER owns surface normalization (str-normalize from string-case.fk:
+    ;; lowercase + strip punctuation), so noisy real input — "The Source Is Native." —
+    ;; canonicalizes INSIDE Form, not in a shell carrier.
+    (defn tr-en-id (x) (dec-id (norm-en (g-parse (nl-en) (str-normalize x)))))
+    (defn tr-id-en (x) (dec-en (norm-id (g-parse (nl-id) (str-normalize x)))))
     0)
