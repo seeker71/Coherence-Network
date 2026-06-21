@@ -179,9 +179,12 @@
 ;        case. NOTE — the same primitive unblocks the Form-native PROJECTOR: scripts/grow_nl_lexicon.sh's
 ;        bash+python should become a Form recipe over read_file + json-parse + string-case + write_file_text
 ;        (fsh / shell-grammar.fk is the form-native shell for the host-exec shims). (c) the round-trip
-;        QUALITY gate (translation-quality.fk essence/vitality/trust) on the pivot. (d) STT END-TO-END (gap 1)
-;        and (e) Form-native TTS — UNBUILT, the long pole — to drop the last two oracles (whisper-cli, say) so
-;        the whole voice→voice pipeline is sovereign. Companion floor/north-star: translation-pipeline-pivot.form.
+;        QUALITY gate (translation-quality.fk essence/vitality/trust) on the pivot. (d) STT and (e) TTS
+;        native — and these are NOT a boundary. whisper-cli / say / sox / even process-exec are CURRENT
+;        third-party carriers, not walls: host-kernel.form names using a host driver as carrier-not-debt
+;        (using the host carrier IS having the resource), so each is internalized when we CHOOSE (need-driven,
+;        oracle→native→retire), never blocked. The whole voice→voice pipeline is already sovereign in
+;        principle; what remains is sequence, not permission. Companion: translation-pipeline-pivot.form.
 ;     9. SPEAKER IDENTITY — the AAM-Softmax objective is shipped four-way (speaker-aam, verdict 63, the consensus
 ;        #1); the ordered rungs to ECAPA-level: (a) the AAM TRAINER — chain the margin gradient (softmax−onehot
 ;        through cos(θ+m)) into the W and embedding updates, the one new piece beyond loss.fk's backward; (b) DATA
