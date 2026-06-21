@@ -1,0 +1,188 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) RoPE divides in
+// many places: e = (-hd)/(HD), fln's z=(m-1)/(m+1) and its atanh-series term/denom, fexp's halving
+// (v/2) and Taylor (v/nn), the fsin range-reduce q=a/TAU, and the sin-series term/denom. The default
+// NVIDIA Vulkan OpFDiv is off by 1 ULP from div.rn.f32 -> this pins every divide.
+// Needs SPIR-V >= 1.3 (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native RoPE compute shader (Android/Vulkan lane, prototyped on RTX). One invocation per adjacent
+// PAIR t (n/2 invocations). Mirrors template_rope.ptx (rope.fk over trig.fk) op-for-op:
+//   i = 2*t ; hd = i mod HD
+//   e = (-1.0*hd) / (HD*1.0)
+//   lb = fln(10000.0)        [exponent by repeated-halving loop + mantissa-to-[1,2) + 14-term atanh
+//                             series z+sum(z^(2k+1)/(2k+1)); ln-m = 2*(z+acc); fln = e2*LN2 + ln-m]
+//   freq = fexp(e*lb)        [recipe 14-term Taylor: halving-reduce + small Taylor + square-back]
+//   a = (pos*1.0) * freq
+//   s = fsin(a) ; c = fcos(a) = fsin(a + HALF_PI)
+//        fsin(x): range-reduce r = x - TAU*trunc(x/TAU + copysign(0.5, x/TAU)); 10-term odd Taylor.
+//   out[i] = q0*c - q1*s ; out[i+1] = q0*s + q1*c     (planar rotation)
+// fln/fexp/fsin/fcos are the recipe's OWN series -- NO sin()/exp()/log()/pow()/inversesqrt. Every float
+// op is `precise` -> SPIR-V NoContraction so the driver cannot fuse mul+add into FMA and cannot
+// reassociate -> bit-exact to the CPU oracle (c_rope) and the PTX/MSL lanes. cvt.rzi.f32.f32 -> trunc().
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer Qin { float q[]; };   // n   (input vector)
+layout(std430, binding = 1) writeonly buffer Out { float o[]; };   // n   (rotated output)
+
+layout(push_constant) uniform Push { uint pos; uint HD; uint n; } pc;
+
+// exact f32 constants (same bit patterns as template_rope.ptx)
+const uint U_LN2     = 0x3F317218u; // LN2     = 0.6931472
+const uint U_TAU     = 0x40C90FDBu; // TAU     = 6.2831855
+const uint U_HALF_PI = 0x3FC90FDBu; // HALF_PI = 1.5707964
+const uint U_BASE    = 0x461C4000u; // 10000.0
+const uint U_NEG1    = 0xBF800000u; // -1.0
+const uint U_ONE     = 0x3F800000u; // 1.0
+const uint U_TWO     = 0x40000000u; // 2.0
+const uint U_HALF    = 0x3F000000u; // 0.5
+const uint U_14      = 0x41600000u; // 14.0
+const uint U_ZERO    = 0x00000000u; // 0.0
+
+// fsin(x) op-for-op with the PTX SIN1/SIN2 blocks: range-reduce then 10-term odd Taylor.
+precise float fsin(float xin) {
+    precise float x = xin;
+    precise float TAU  = uintBitsToFloat(U_TAU);
+    precise float ZERO = uintBitsToFloat(U_ZERO);
+    precise float HALF = uintBitsToFloat(U_HALF);
+    precise float NEG1 = uintBitsToFloat(U_NEG1);
+
+    // range-reduce: q = x/TAU; hsign = copysign(0.5,q); rnd = trunc(q+hsign); r = x - TAU*rnd
+    precise float qd = x / TAU;               // q = x/TAU
+    precise float hsign = HALF;
+    if (qd < ZERO) hsign = -hsign;            // copysign(0.5, q)
+    precise float qph = qd + hsign;           // q + hsign
+    precise float rnd = trunc(qph);           // cvt.rzi.f32.f32 (trunc toward zero)
+    precise float taur = TAU * rnd;           // TAU*rnd
+    precise float r = x - taur;               // r
+
+    // sin-acc: x2 = r*r; term = r; acc = 0; for k=0..9:
+    //   acc += term; t1 = term*-1.0; t2 = t1*x2; denom = (2(k+1))*(2(k+1)+1); term = t2/denom
+    precise float x2 = r * r;                 // x2
+    precise float term = r;                   // term = r
+    precise float acc = ZERO;                 // acc = 0
+    for (uint k = 0u; k < 10u; ++k) {
+        acc = acc + term;                     // acc += term
+        precise float t1 = term * NEG1;       // term*-1.0
+        precise float t2 = t1 * x2;           // *x2
+        uint k1 = k + 1u;                     // k+1
+        uint two_k1 = k1 << 1;                // 2(k+1)
+        uint denom_i = two_k1 * (two_k1 + 1u);// (2(k+1))*(2(k+1)+1)
+        precise float denom = float(denom_i); // cvt.rn.f32.u32
+        term = t2 / denom;                    // new term
+    }
+    return acc;
+}
+
+void main() {
+    uint t = gl_GlobalInvocationID.x;
+    uint npairs = pc.n >> 1;                  // n/2
+    if (t >= npairs) return;
+
+    uint i = t << 1;                          // i = 2*t
+    uint hd = i % pc.HD;                      // hd = i mod HD
+
+    precise float q0 = q[i];                  // q[i]
+    precise float q1 = q[i + 1u];             // q[i+1]
+
+    precise float NEG1 = uintBitsToFloat(U_NEG1);
+    precise float ONE  = uintBitsToFloat(U_ONE);
+    precise float TWO  = uintBitsToFloat(U_TWO);
+    precise float HALF = uintBitsToFloat(U_HALF);
+    precise float C14  = uintBitsToFloat(U_14);
+    precise float ZERO = uintBitsToFloat(U_ZERO);
+    precise float LN2  = uintBitsToFloat(U_LN2);
+    precise float HPI  = uintBitsToFloat(U_HALF_PI);
+
+    // e = (-1.0*hd) / (HD*1.0)
+    precise float hdf = float(hd);            // cvt.rn.f32.u32 (float)hd
+    precise float nhd = NEG1 * hdf;           // -1.0 * hd
+    precise float HDf = float(pc.HD);         // (float)HD
+    precise float HDm = HDf * ONE;            // HD * 1.0
+    precise float e = nhd / HDm;              // e
+
+    // ---- lb = fln(10000.0) ----
+    // exponent: a = base; e2 = 0; while (a >= 2.0) { a *= 0.5; e2++ }
+    precise float a_e = uintBitsToFloat(U_BASE);
+    uint e2 = 0u;
+    while (a_e >= TWO) {
+        a_e = a_e * HALF;
+        e2 = e2 + 1u;
+    }
+    // mantissa: m = base; while (m >= 2) m *= 0.5; while (m < 1) m *= 2
+    precise float m = uintBitsToFloat(U_BASE);
+    while (m >= TWO) { m = m * HALF; }
+    while (m < ONE)  { m = m * TWO; }
+    // z = (m-1)/(m+1); z2 = z*z
+    precise float mm1 = m - ONE;              // m-1
+    precise float mp1 = m + ONE;              // m+1
+    precise float z = mm1 / mp1;              // z
+    precise float z2 = z * z;                 // z2
+    // ln-ser: zpow=z; acc=0; j=0..13: num=zpow*z2; term=num/(2*(j+1)+1); acc+=term; zpow=num
+    precise float zpow = z;                   // zpow = z
+    precise float lacc = ZERO;                // acc = 0
+    for (uint j = 0u; j < 14u; ++j) {
+        precise float num = zpow * z2;        // num = zpow*z2
+        uint d_i = ((j + 1u) << 1) + 1u;      // 2*(j+1)+1
+        precise float d = float(d_i);         // (float)denom
+        precise float term = num / d;         // term
+        lacc = lacc + term;                   // acc += term
+        zpow = num;                           // zpow = num
+    }
+    // ln-m = 2*(z + acc); fln = e2*LN2 + ln-m
+    precise float zpacc = z + lacc;           // z + acc
+    precise float lnm = TWO * zpacc;          // 2*(...)
+    precise float e2f = float(e2);            // (float)e2
+    precise float e2ln2 = e2f * LN2;          // e2*LN2
+    precise float lb = e2ln2 + lnm;           // lb = fln(10000.0)
+
+    // ---- freq = fexp(e*lb) ----
+    precise float v = e * lb;                 // v = e*lb
+    // reduce: k=0; while (|v| > 0.5) { v /= 2; k++ }
+    uint kf = 0u;
+    while (abs(v) > HALF) {
+        v = v / TWO;
+        kf = kf + 1u;
+    }
+    // small: nn=1; term=1; acc=1; while (nn <= 14) { t=v/nn; term*=t; acc+=term; nn++ }
+    precise float nn  = ONE;
+    precise float ft  = ONE;
+    precise float facc = ONE;
+    while (nn <= C14) {
+        precise float tt = v / nn;            // t = v/nn
+        ft = ft * tt;                         // term *= t
+        facc = facc + ft;                     // acc += term
+        nn = nn + ONE;                        // nn += 1
+    }
+    // square back: while (k>0) { acc=acc*acc; k-- }
+    while (kf > 0u) {
+        facc = facc * facc;
+        kf = kf - 1u;
+    }
+    precise float freq = facc;                // freq
+
+    // a = (pos*1.0) * freq
+    precise float posf = float(pc.pos);       // (float)pos
+    precise float pos1 = posf * ONE;          // pos*1.0
+    precise float ang = pos1 * freq;          // a = pos * freq
+
+    // s = fsin(a) ; c = fcos(a) = fsin(a + HALF_PI)
+    precise float s = fsin(ang);              // s
+    precise float ahp = ang + HPI;            // a + HALF_PI
+    precise float c = fsin(ahp);              // c
+
+    // rotate: out[i] = q0*c - q1*s ; out[i+1] = q0*s + q1*c
+    precise float q0c = q0 * c;               // q0*c
+    precise float q1s = q1 * s;               // q1*s
+    precise float out0 = q0c - q1s;           // out0
+    precise float q0s = q0 * s;               // q0*s
+    precise float q1c = q1 * c;               // q1*c
+    precise float out1 = q0s + q1c;           // out1
+
+    o[i]      = out0;
+    o[i + 1u] = out1;
+}

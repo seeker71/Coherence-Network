@@ -1,0 +1,73 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32; SwiGLU divides in the recipe's
+// own fexp (halving-reduce v/2 and Taylor recurrence v/nn) and in sig = 1/(1+fexp(-g)); this pins it.
+// Needs SPIR-V >= 1.3 (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native SwiGLU compute shader (Android/Vulkan lane, prototyped on RTX). One invocation per j.
+// Mirrors template_swiglu.ptx (ln-swiglu) op-for-op:
+//   out[j] = silu(g[j]) * u[j];  silu(x) = x*sigmoid(x);  sigmoid(x) = 1/(1+fexp(-x))
+//   fexp = the recipe's OWN 14-term Taylor (halving-reduce + square-back), NOT any hw exp;
+//   same body as softmax.comp / attention_mhc.comp.
+// Every float op is `precise` -> SPIR-V NoContraction so the driver cannot fuse mul+add into FMA and
+// cannot reassociate -> bit-exact to the CPU oracle (swiglu) and the PTX/MSL lanes.
+// Do NOT call fma()/exp(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer G   { float gbuf[]; };  // n  (gate)
+layout(std430, binding = 1) readonly  buffer U   { float ubuf[]; };  // n  (up)
+layout(std430, binding = 2) writeonly buffer Out { float obuf[]; };  // n
+
+layout(push_constant) uniform Push { uint n; } pc;
+
+void main() {
+    uint j = gl_GlobalInvocationID.x;
+    if (j >= pc.n) return;
+
+    // PTX constants by exact bit pattern (shared fexp body, same as softmax.comp).
+    precise float C_HALF = uintBitsToFloat(0x3F000000u); // 0.5
+    precise float C_TWO  = uintBitsToFloat(0x40000000u); // 2.0
+    precise float C_ONE  = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float C_14   = uintBitsToFloat(0x41600000u); // 14.0
+    precise float C_ZERO = uintBitsToFloat(0x00000000u); // 0.0
+
+    precise float gv = gbuf[j];               // g
+    precise float uv = ubuf[j];               // u
+
+    // sig = 1/(1+fexp(-g));  arg = 0 - g
+    precise float arg = C_ZERO - gv;          // -g
+
+    // ---- inline fexp(arg) ----  (op-for-op with the PTX RED/SM/SQ loops)
+    // reduce: k=0; while (|arg| > 0.5) { arg = arg/2; k++ }
+    uint k = 0u;
+    while (abs(arg) > C_HALF) {
+        arg = arg / C_TWO;
+        k = k + 1u;
+    }
+    // small Taylor: nf=1; term=1; acc=1; while (nf <= 14) { t=arg/nf; term*=t; acc+=term; nf++ }
+    precise float nf   = C_ONE;
+    precise float term = C_ONE;
+    precise float acc  = C_ONE;
+    while (nf <= C_14) {
+        precise float t = arg / nf;
+        term = term * t;
+        acc = acc + term;
+        nf = nf + C_ONE;
+    }
+    // square back: while (k>0) { acc = acc*acc; k-- }
+    while (k > 0u) {
+        acc = acc * acc;
+        k = k - 1u;
+    }
+    precise float e = acc;                    // e = fexp(-g)
+
+    precise float onepe = C_ONE + e;          // 1+e
+    precise float sig = C_ONE / onepe;        // sig = 1/(1+e)
+    precise float silu = gv * sig;            // silu = g*sig
+    precise float o = silu * uv;              // out = silu*u
+    obuf[j] = o;
+}
