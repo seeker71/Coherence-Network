@@ -136,4 +136,35 @@
             (let addr2 (gen-address (form_compile src)))
             (list (form_walk r2) addr (eq addr addr2) (node_eq (form_compile src) r2))))
 
+    ; --- the gen command surface: drive the conductor from a command string -
+    ; The form-cli that can GENERATE. A verb-router over the conductor, the same
+    ; shape as form-cli's fc-respond — but gen lives where the compiler lives
+    ; (the full kernel), so it stays OUT of the four-way fc-respond (which fkwu
+    ; walks and cannot compile). This is the full-kernel form-cli's gen door; the
+    ; fkwu binary stays the sovereign reasoning router (ask/help/...).
+
+    (defn fg-verb (cmd)
+        (do (let sp (str_find cmd " " 0))
+            (if (lt sp 0) cmd (substring cmd 0 sp))))
+    (defn fg-arg (cmd)
+        (do (let sp (str_find cmd " " 0))
+            (if (lt sp 0) "" (substring cmd (add sp 1) (str_len cmd)))))
+
+    ; gen <src>            compile + run            -> (value handle)
+    ; address <src>        the content-address       -> addr
+    ; store <dir> <src>    store at content-address  -> addr
+    ; fetch <dir> <addr>   fetch + run by address    -> value
+    ; run-file <path>      load + run a .fkb         -> value
+    (defn fg-dispatch (cmd)
+        (do
+            (let v (fg-verb cmd))
+            (let a (fg-arg cmd))
+            (if (str_eq v "gen") (gen a)
+            (if (str_eq v "address") (gen-address (form_compile a))
+            (if (str_eq v "store") (gen-store (fg-verb a) (fg-arg a))
+            (if (str_eq v "fetch") (gen-fetch-run (fg-verb a) (str_to_int (fg-arg a)))
+            (if (str_eq v "run-file") (gen-run-file a)
+                (str_concat "gen: unknown verb '"
+                    (str_concat v "' — gen|address|store|fetch|run-file")))))))))
+
     0)
