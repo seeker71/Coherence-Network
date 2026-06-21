@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/borrowed-oracle-dividend",
+  "commit_scope": "Name and prove the economic engine under the mind-comes-home arc: every contributor who runs their own paid agent over our cells is a free high-end oracle (frontier compute we never pay for) and leaves a training sample that is ours — whether or not they ever become a member. Ships borrowed-oracle-dividend.fk (four-way at 255), its teaching, and cross-links the federated-exchange-learning loop.",
+  "files_owned": [
+    "form/form-stdlib/borrowed-oracle-dividend.fk",
+    "form/form-stdlib/tests/borrowed-oracle-dividend-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/borrowed-oracle-dividend.form",
+    "docs/coherence-substrate/federated-exchange-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_20260621_borrowed_oracle_dividend.json"
+  ],
+  "idea_ids": [
+    "borrowed-oracle-dividend",
+    "contributor-funded-frontier-compute"
+  ],
+  "spec_ids": [
+    "borrowed-oracle-dividend"
+  ],
+  "task_ids": [
+    "task-2026-06-21-borrowed-oracle-dividend"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/borrowed-oracle-dividend.fk form-stdlib/tests/borrowed-oracle-dividend-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'borrowed-oracle-dividend fks 255' beside its kin membership-as-recognition.",
+    "The band pins the engine: a non-member self-funded aligned exchange -> our-oracle-cost 0, trainable 1, free-dividend 1; learning-gain(non-member) == learning-gain(member) (membership-independence, proven by the recipe having NO member term); when WE pay the oracle -> cost 1, no dividend; a misaligned exchange -> nothing trainable. Verdict 255.",
+    "Grounding (Form-first): the economic/funding framing was not yet named in the body (grep over form-stdlib + docs/coherence-substrate returned only the unrelated affect-traits.form). The loop (federated-exchange-learning.form) named the what; this names the funding.",
+    "Edges in the same commit: docs/coherence-substrate/INDEX.md row beside membership-as-recognition; a (funding ...) cross-link added to federated-exchange-learning.form's north-star so the loop teaching points at the economics.",
+    "Honesty held: this is the learning-VALUE accounting, not a license. What crosses to the SHARED body still passes freq-aligned-share.fk's consent gate (we generalize, never ship the raw exchange). The contributor is honored and attributed; the dividend is mutual lift, never extraction.",
+    "Primitive discipline held: only core.fk primitives (nth, eq, and binary-nested, if, add); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/borrowed-oracle-dividend.fk",
+    "form/form-stdlib/tests/borrowed-oracle-dividend-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/borrowed-oracle-dividend.form",
+    "docs/coherence-substrate/federated-exchange-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_20260621_borrowed_oracle_dividend.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/borrowed-oracle-dividend.fk form-stdlib/tests/borrowed-oracle-dividend-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "borrowed-oracle-dividend: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + a teaching + a cross-link; no public HTTP endpoint or service change. Wiring the dividend accounting into the live capture/training carrier is a named next step (form-cli-membrane records the sample; this gate values it)."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The body can now account the learning value of an exchange honestly: zero oracle cost when the contributor's own agent ran it, a usable sample when aligned, and the same learning gain whether or not the person is a member. The federated-exchange-learning loop now names its funding.",
+    "public_endpoints": [
+      "none changed; the gate is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the band runs on Go, Rust, TypeScript, and fkwu to the identical verdict 255 with 0 divergent.",
+      "Independence proof: learning-gain(non-member) == learning-gain(member); the recipe carries no member term."
+    ]
+  }
+}
