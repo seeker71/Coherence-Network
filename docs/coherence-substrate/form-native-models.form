@@ -23,12 +23,20 @@
 ;     content-addressed recipe DATA, the N-block graph at real width, tokenizer + KV-cache native,
 ;     producing a token from a real prompt. The rented oracle's job done by the body it offers others:
 ;     cognitive sovereignty as a running loop, not a description (lc-cognitive-sovereignty).
-;   GAP (the wiring, not new numerics — the ordered walk; started 2026-06-21 at rung 1): (1) weight-load
-;     — parse the real GGUF + dequant (Q4_K/Q6_K recipes exist) into resident GPU buffers; (2) run the
-;     proven llama block at REAL width (d=3072, 24 heads, hidden=8192) on block-0's real weights,
-;     bit-exact vs the CPU recipe; (3) stack the real layer count (28) + embed + final RMSNorm + LM head
-;     -> real logits -> token; (4) KV-cache + tokenizer carriers native; (5) the on-device phone RUN
-;     (scripts/android_matvec_vk_run.sh, awaiting a connected device).
+;   WALK PROGRESS (2026-06-21): rungs 1-3 PROVEN on CPU. (1) weight-load: GGUF dequant (Q4_K/Q6_K) +
+;     f16-decode mirrored in C (gguf_dequant.c) from the proven recipes; the GGUF container PARSE is now
+;     itself a FORM recipe (gguf.fk + gguf-band.fk, three-way Go=Rust=TS verdict 511 on the REAL
+;     llama3.2:3b header; fourth arm pending a clang host). (2)+(3) THE REAL llama3.2:3b RUNS END-TO-END
+;     on the recipe math (llama_forward.c): all 28 blocks at real width (d=3072), GQA (24 q / 8 kv heads),
+;     RoPE base=500000, SwiGLU, tied LM head — every transcendental the project's own Taylor/Newton (no
+;     libm), and the greedy next-token MATCHES OLLAMA on every prompt ("The capital of France is"->" Paris",
+;     "The sun rises in the"->" east", "Water is made of hydrogen and"->" oxygen"). The two real deltas the
+;     toy block lacked are closed: GQA also runs bit-exact on the GPU (template_attention_gqa.ptx, 24/8/hd128
+;     = 18432/18432). This CPU forward IS the oracle the GPU kernels mirror.
+;   REMAINING GAP: (4) port the full forward to the proven GPU kernels at real width (GQA in, rope_base
+;     param, weights resident on-device); (5) KV-cache + a real BPE tokenizer carrier (current is exact
+;     whole-token vocab match); (6) the on-device phone RUN of the block-graphs (matvec already proven on
+;     Adreno 740). Then: a real public model thinking on the phone, on the Form recipes alone.
 ;
 ; ── FLOOR / NORTH STAR / GAPS — whisper-tiny in Form (updated 2026-06-19; extends the 2026-06-14 review below) ──
 ;   FLOOR (proven this arc — every piece bit-checked against the numpy/fp64 reference through the kernel):

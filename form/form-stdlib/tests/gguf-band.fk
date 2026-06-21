@@ -1,0 +1,30 @@
+; preludes: form-stdlib/core.fk form-stdlib/gguf.fk
+;
+; gguf-band — the Form-native GGUF container parse against the REAL llama3.2:3b header. The fixture is the
+; first 64 bytes of the actual ollama GGUF blob (sha256-dde5aa...): magic 'GGUF', version 3, 255 tensors,
+; 30 metadata KVs, and the first KV — key "general.architecture" (len 20, ends at byte 52), value-type 8
+; (string), value "llama" (len 5). The checks exercise both LE decoders (u32 + u64), the header fields,
+; and gguf-string navigation across a real key->type->value chain. If every field lands, the GGUF parse
+; runs Form-native, not C — and composes with q4k/q6k-dequant for a fully native weight load.
+;
+; Verdict 511 when all nine decode correctly:
+;   1   magic 'GGUF' ok        16   le-u32@8 = 255 (tensor_count low word)
+;   2   version = 3            32   str-len@24 = 20  ("general.architecture")
+;   4   tensor_count = 255    64   str-end@24 = 52
+;   8   kv_count = 30        128   kv-type@24 = 8   (GGUF string value-type)
+;                            256   str-len@56 = 5   ("llama")
+(do
+    (let B (list 71 71 85 70 3 0 0 0 255 0 0 0 0 0 0 0 30 0 0 0 0 0 0 0
+                 20 0 0 0 0 0 0 0 103 101 110 101 114 97 108 46
+                 97 114 99 104 105 116 101 99 116 117 114 101 8 0 0 0
+                 5 0 0 0 0 0 0 0))
+    (let c0 (if (gguf-magic-ok B) 1 0))
+    (let c1 (if (eq (gguf-version B) 3) 2 0))
+    (let c2 (if (eq (gguf-tensor-count B) 255) 4 0))
+    (let c3 (if (eq (gguf-kv-count B) 30) 8 0))
+    (let c4 (if (eq (gguf-le-u32 B 8) 255) 16 0))
+    (let c5 (if (eq (gguf-str-len B 24) 20) 32 0))
+    (let c6 (if (eq (gguf-str-end B 24) 52) 64 0))
+    (let c7 (if (eq (gguf-kv-type B 24) 8) 128 0))
+    (let c8 (if (eq (gguf-str-len B 56) 5) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

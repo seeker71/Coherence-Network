@@ -33,7 +33,7 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 
 ## C. Cross-cutting runtime (needed to go from "a kernel" to "a model")
 - 🟡 **Kernel-graph / scheduler**: DEMONSTRATED — `form_cuda_ptx_block_host.c` chains 12 launches through resident intermediate device buffers (a full block). Generalize to many layers + persistent weights/KV-cache next.
-- ⬜ **Weight load → device**: GGUF dequant recipes exist; loading + keeping resident on GPU not wired.
+- 🟡 **Weight load → device**: DONE on CPU — `form/native/llama/` loads the REAL llama3.2:3b GGUF (dequant Q4_K/Q6_K mirrors the proven recipes; the GGUF **container parse is now a Form recipe** `gguf.fk`, three-way 511 on the real header) and runs the **full 28-block forward at real width** — GQA, rope_base=500000, SwiGLU, tied head — matching ollama (" Paris"/" east"/" oxygen"). GQA also bit-exact on the GPU (`template_attention_gqa.ptx`). REMAINING: weights resident on the GPU buffers + the full forward on the kernels (the CPU forward is the oracle).
 - ⬜ **Parallel reductions** (perf path): current GPU reductions are serial (bit-exact, O(n)); block/warp reductions need the named-epsilon gate.
 - ⬜ **Memory model**: workspace/scratch pooling, KV-cache device buffers.
 

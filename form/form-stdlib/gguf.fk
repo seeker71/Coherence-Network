@@ -1,0 +1,41 @@
+; gguf.fk — the GGUF container PARSE as a FORM recipe (the loader's parse half, native — not C).
+;
+; The dequant CORE is already Form (q4k-dequant.fk / q6k-dequant.fk / f16-decode.fk, four-way proven):
+; it turns a tensor's raw bytes into f32. What was still carried by C (gguf_inspect.c / gguf_dequant.c)
+; is the CONTAINER WALK — reading the header, metadata KVs, and tensor directory to FIND each tensor's
+; bytes. That walk is pure integer arithmetic over a byte-list (little-endian decode = add/mul/nth on
+; non-negative bytes), so it belongs on the same four-way arithmetic floor the dequant already crosses.
+; This file lifts it into Form. With this + the dequant recipes, the only thing left to a host carrier is
+; the raw file READ (the substrate's storage port / aec-load-json-style host-io) — the bytes-in, not the
+; logic. Bootstrap C stays as a bridge until the native emit lane carries the whole load (same honest
+; bridge shape as the Python fan-out): the recipe that proves four-way here is the one that crystallizes.
+;
+; GGUF v3 layout: magic[4]='GGUF' | version:u32 | tensor_count:u64 | kv_count:u64 | KVs | tensor-infos | data.
+; A gguf-string is u64 length then that many raw bytes (not null-terminated). All multibyte ints are LE.
+
+; --- little-endian byte->int decoders (the four-way floor: add/mul/nth, bytes are 0..255) ---
+(defn gguf-le-u32 (b o)
+  (add (nth b o)
+    (mul 256 (add (nth b (add o 1))
+      (mul 256 (add (nth b (add o 2))
+        (mul 256 (nth b (add o 3)))))))))
+(defn gguf-le-u64 (b o)
+  (add (gguf-le-u32 b o) (mul 4294967296 (gguf-le-u32 b (add o 4)))))
+
+; --- header (24 bytes) ---
+(defn gguf-magic-ok (b)
+  (and (eq (nth b 0) 71) (and (eq (nth b 1) 71) (and (eq (nth b 2) 85) (eq (nth b 3) 70)))))
+(defn gguf-version (b)      (gguf-le-u32 b 4))
+(defn gguf-tensor-count (b) (gguf-le-u64 b 8))
+(defn gguf-kv-count (b)     (gguf-le-u64 b 16))
+(defn gguf-header-end ()    24)
+
+; --- gguf-string navigation at byte offset o: u64 length, then `len` bytes ---
+(defn gguf-str-len (b o) (gguf-le-u64 b o))
+(defn gguf-str-body (b o) (add o 8))          ; offset of the first char
+(defn gguf-str-end (b o) (add (add o 8) (gguf-str-len b o)))   ; offset just past the string
+
+; --- a metadata KV starts with its key string; the value-type (u32) follows the key ---
+(defn gguf-kv-type-off (b o) (gguf-str-end b o))            ; where the value-type u32 sits
+(defn gguf-kv-type (b o) (gguf-le-u32 b (gguf-kv-type-off b o)))
+(defn gguf-kv-val-off (b o) (add (gguf-kv-type-off b o) 4)) ; where the value bytes begin
