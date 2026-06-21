@@ -14,7 +14,9 @@
 ;   that sample right, else 0. A HISTORY is a list of trials: the competition record over the window.
 ;
 ;   1. SCORE     cc-champ-score / cc-chall-score: count each model's correct samples over the window.
-;                Recursion is the loop; exact integer counts, no ratio, no float.
+;                Recursion is the loop; exact integer counts for the CLASSIFICATION reading. A second,
+;                VALUE reading (cc-val-*) sums a real-float per-sample value and compares with float
+;                ordering — fkwu does that correctly four-way (float-compare-band); diffusion-q-cc uses it.
 ;   2. REACHES   cc-reaches? (h margin): the challenger is within `margin` of the champion (or over).
 ;                margin is slack allowed below the champion; margin=0 means equal-or-exceed. No
 ;                subtraction — the slack is added to the challenger's side: (chall + margin >= champ).
@@ -40,9 +42,9 @@
 ;   only what's proven, turned onto model promotion) · recognition-router.fk (route among
 ;   model-carriers by strength — there the carriers are peers fanned in parallel; here two named
 ;   arms compete for authority over a window) · diffusion-q-cc.fk (a NEW consumer — the diffusion-Q
-;   policy as the challenger: dql-improve earns the wins, cc-promote? gates the offline→online flip,
-;   the trusted-window floor reused so a lucky short run never promotes; tests/diffusion-q-cc-band.fk
-;   → 31, four-way) · lc-honest-lane (earned confidence only, never
+;   policy as the challenger: dql-improve raises its VALUE, cc-val-promote? gates the offline→online
+;   flip on real-float value comparison, the trusted-window floor reused so a lucky short run never
+;   promotes; tests/diffusion-q-cc-band.fk → 63, four-way) · lc-honest-lane (earned confidence only, never
 ;   asserted) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS agreement).
 ;
 ; LINEAGE:
