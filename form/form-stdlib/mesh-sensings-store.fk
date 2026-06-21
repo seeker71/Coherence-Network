@@ -1,0 +1,81 @@
+; mesh-sensings-store.fk — the DURABLE backend beneath the mesh-sensings contract. Readings survive
+; to a .fkb file that co-located presences (claude, sema, codex on one machine) all append to and read
+; back, so the consensus map persists across sessions, not just within one. This is the carrier
+; persistence.fk's header names: the store is the contract (mesh-sensings.fk), the backend swappable
+; beneath it — this is the .fkb backend; the HTTP/Postgres backend for cross-machine sharing is next.
+;
+; HOST-IO: write_form_binary / read_form_binary (via persistence.fk / channel.fk) are the fourth-arm
+; "host io family" standing wall, so this carrier proves 3-kernel (Go/Rust/TS). The CONSENSUS LOGIC it
+; feeds is four-way (mesh-sensings.fk); only the disk round-trip is host-io — named, never buried.
+;
+; Identity is (presence, subject): the presence rides the cell DOMAIN ("sensing:<presence>"), the
+; subject rides the cell NAME. So two presences reporting the same subject are two witnesses, while one
+; presence re-reporting is last-write-wins. store-cells returns every appended message (superseded ones
+; included), so load DEDUPS per (domain,name) keeping the latest before consensus — no presence votes
+; twice. A durable cell carries the verdict-bearing fields (answered, ok, when, deadline, kind); the
+; live inspectable payload is a session detail, re-attached when present — consensus needs only the
+; verdict-bearing fields, which round-trip exactly through node_value.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk form-stdlib/mesh-sensings.fk
+;
+; Proven by: form-stdlib/tests/mesh-sensings-store-band.fk
+
+(do
+    (let SENSING-V0 (bp "SENSING-V0"))
+
+    ; encode a reading's verdict-bearing fields as the cell ctor (ints + the kind string)
+    (defn sensing-ctor (rd)
+        (intern_node SENSING-V0
+            (list (intern_trivial_int (or-answered rd))
+                  (intern_trivial_int (or-ok rd))
+                  (intern_trivial_int (or-when rd))
+                  (intern_trivial_int (or-deadline rd))
+                  (intern_trivial_string (or-kind rd)))))
+
+    ; a durable store at a path the co-located presences share
+    (defn sensings-store-create (path) (cell-store-create path))
+
+    ; append one reading durably — subject is the cell name, "sensing:<presence>" the domain, so a
+    ; second presence is a distinct witness and a re-report from the same presence is last-write-wins.
+    (defn sensings-persist (path presence rd)
+        (cell-put path (or-name rd) (str_concat "sensing:" presence) SENSING-V0 (sensing-ctor rd)))
+
+    ; decode a stored cell back into an organ-reading (the live payload becomes a durable marker)
+    (defn cell-to-reading (c)
+        (do
+            (let kids (node_children (cell-ctor c)))
+            (organ-reading
+                (cell-name c)
+                (node_value (ps-nth kids 4))
+                (node_value (ps-nth kids 0))
+                (node_value (ps-nth kids 1))
+                (node_value (ps-nth kids 2))
+                (node_value (ps-nth kids 3))
+                (list "durable"))))
+
+    ; dedup per (domain,name) keeping the LATEST appended — a presence's re-report supersedes its prior
+    (defn cell-key-eq (a b)
+        (if (and (str_eq (cell-domain a) (cell-domain b))
+                 (str_eq (cell-name a) (cell-name b))) 1 0))
+    (defn cell-in-rest? (c rest)
+        (if (ps-nil? rest)
+            0
+            (if (eq (cell-key-eq c (head rest)) 1) 1 (cell-in-rest? c (tail rest)))))
+    (defn sensings-dedup (cells)
+        (if (ps-nil? cells)
+            (empty)
+            (if (eq (cell-in-rest? (head cells) (tail cells)) 1)
+                (sensings-dedup (tail cells))
+                (cons (head cells) (sensings-dedup (tail cells))))))
+
+    (defn cells-to-readings (cells)
+        (if (ps-nil? cells)
+            (empty)
+            (cons (cell-to-reading (head cells)) (cells-to-readings (tail cells)))))
+
+    ; load the durable store back as the in-memory reading list the consensus contract consumes
+    (defn sensings-load (path) (cells-to-readings (sensings-dedup (store-cells path))))
+
+    ; the durable consensus — read every presence's persisted readings, group, quorum each subject
+    (defn sensings-durable-map (path k) (sensings-consensus-map (sensings-load path) k))
+    (defn sensings-durable-consensus (path name k) (sensings-consensus (sensings-load path) name k)))
