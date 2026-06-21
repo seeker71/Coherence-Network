@@ -1,0 +1,62 @@
+; speech-organ.fk — the speech BODY: VAD gate, voice traits, speaker grouping.
+;
+; The carrier (experiments/coherence-sense-android/mac-speech-organ.sh) does ONLY
+; physical I/O + measurement: record the mic, read rms + rough-frequency with sox,
+; transcribe with whisper-cli (the STT oracle/teacher). EVERY decision lives HERE:
+; is this speech (VAD), what pitch band, how trusted, and which speaker cell —
+; matched by nearest-shape or enrolled as novel.
+;
+; Speaker grouping is honest acoustic clustering keyed on PITCH, which voice-traits
+; names as the speaker-stable acoustic reading (arousal/energy are state, not identity,
+; so they never enter the identity feature). It says "this sounds like the same voice
+; band as before", never "this is person X". Verified identity needs enrolled, consented
+; exemplars — the north star, not this floor.
+;
+; Composes voice-traits (band/trust), nearest-shape (match/enroll), feature-vector
+; (binning) — builtins only on the hot path, so the live carrier calls these directly.
+;
+; Proven by: form-stdlib/tests/speech-organ-band.fk
+
+(do
+    ; --- VAD: silence(0) / audible(1) / voiced-with-text(2) ---
+    ; rms-ppm is the sox RMS (0..1) scaled by 1e6; 10000 ppm = 0.01 = the room floor.
+    (defn so-vad-gate (rms-ppm has-text)
+        (if (lt rms-ppm 10000) 0
+            (if (gt has-text 0) 2 1)))
+    (defn so-voiced? (gate) (ge gate 2))
+
+    ; --- speaker feature: a coarse, match-friendly PITCH cell (content-addressed) ---
+    ; The carrier's per-utterance frequency jitters (zero-crossing estimate); a hard
+    ; bin edge would split one voice across two cells. So round to a coarse grid first
+    ; (nearest 100) — same voice → same cell, ns-sim matches by equality. Granularity is
+    ; the honest knob: coarser tolerates more jitter but merges nearer voices. This is
+    ; approximate PITCH grouping, never verified identity.
+    (defn so-freq-grid () 100)
+    (defn so-freq-round (freq) (mul (div (add freq (div (so-freq-grid) 2)) (so-freq-grid)) (so-freq-grid)))
+    (defn so-feature (freq) (list (so-freq-round freq)))
+
+    ; --- speaker identify: matched label if the pitch bin agrees, else "new" ---
+    ; ns-sim counts matching bins; a 1-bin feature needs that 1 bin to agree (floor 1).
+    (defn so-speaker-floor () 1)
+    (defn so-identify (feature speakers)
+        (if (eq (len speakers) 0) "new"
+            (if (ge (ns-strength feature speakers) (so-speaker-floor))
+                (ns-label feature speakers)
+                "new")))
+    (defn so-enroll (speakers label feature) (ns-intern speakers label feature))
+
+    ; --- the receipt the carrier emits (transcript stays carrier-local for privacy) ---
+    ; speech, gate, pitch-band (speaker-band from voice-traits), trust (trust-vec),
+    ; speaker cell label, measured frequency.
+    (defn so-receipt (gate freq speechiness speaker)
+        (list "speech"
+              gate
+              (speaker-band freq)
+              (trust-vec gate speechiness 0)
+              speaker
+              freq))
+    (defn so-rec-gate    (r) (nth r 1))
+    (defn so-rec-band    (r) (nth r 2))
+    (defn so-rec-trust   (r) (nth r 3))
+    (defn so-rec-speaker (r) (nth r 4))
+    (defn so-rec-freq    (r) (nth r 5)))
