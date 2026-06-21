@@ -32,6 +32,11 @@
                 (fsc-rec-fndef (node_value (nth kids 0))
                                (fbl-names (node_children (nth kids 1)))
                                (fbl-lower (nth kids 2))))
+        (if (fbl-is? n "do")
+            (fsc-rec-do (fbl-lower-list (node_children n)))
+        (if (fbl-is? n "let")
+            (do (let kids (node_children n))
+                (fsc-rec-let (node_value (nth kids 0)) (fbl-lower (nth kids 1))))
         (if (fbl-is? n "if")
             (do (let kids (node_children n))
                 (fsc-rec-if3 (fbl-lower (nth kids 0))
@@ -50,5 +55,5 @@
             (fsc-rec-ident (node_value (nth (node_children n) 0)))
             ;; literal leaves (trivial int / string / bool) are already
             ;; content-identical to the line compiler's — pass through.
-            n)))))
+            n)))))))
 )
