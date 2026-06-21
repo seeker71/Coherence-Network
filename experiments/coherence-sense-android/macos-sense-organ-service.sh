@@ -1,143 +1,95 @@
 #!/usr/bin/env bash
-# Install and control the always-on macOS Coherence Sense host organ.
-# Twin of macos-witness-service.sh: the witness RECEIVES the phone's senses; this
-# daemon SENSES the Mac's own organs and self-registers on the cloud Hati mesh.
+# Install and control the always-on macOS Coherence Sense organs.
+# Twin of macos-witness-service.sh: the witness RECEIVES the phone's senses; these
+# daemons SENSE the Mac's own organs and self-register on the cloud Hati mesh. Both are
+# THIN carriers — the body is Form (host-sense-organ.fk, speech-organ.fk, proven four-way).
+#
+#   host   — mac-sense-organ.sh   (cpu/ram/disk/network/gpu/thermal/battery → mesh)
+#   speech — mac-speech-organ.sh  (mic → VAD → whisper STT → speaker grouping → mesh)
 set -euo pipefail
 
-LABEL="earth.hati.coherence-sense.mac-sense-organ"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG_DIR="$HOME/Library/Logs/CoherenceSense"
-PYTHON="/opt/homebrew/bin/python3"
-MESH="https://api.coherencycoin.com/api"
-WITNESS="http://127.0.0.1:8800"
-INTERVAL="5"
-MEDIA="on"
-# tools the media senses need (ffmpeg/sox/rec) live in /opt/homebrew/bin, which
-# launchd does not put on PATH by default.
+# sox / whisper-cli / jq / rec live in /opt/homebrew/bin, off launchd's default PATH.
 TOOL_PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+ORGANS=(host speech)
 
 usage() {
     cat <<'EOF'
-usage: macos-sense-organ-service.sh <command> [options]
+usage: macos-sense-organ-service.sh <command> [host|speech]
 
 commands:
-  install    write LaunchAgent, start now, keep alive on login/crash
-  uninstall  stop and remove the LaunchAgent
-  start|stop|restart|status
-  tail       follow the organ log
+  install [organ]    write LaunchAgent(s), start now, keep alive on login/crash
+  uninstall [organ]  stop and remove
+  start|stop|restart|status [organ]
+  tail <organ>       follow the organ log
 
-options:
-  --mesh URL        cloud Hati mesh base, default https://api.coherencycoin.com/api
-  --interval S      heartbeat/sense interval seconds, default 5
-  --no-media        host vitals only (skip mic/camera/screen)
-  --python PATH     interpreter, default /opt/homebrew/bin/python3
+organ:  host | speech | (omitted = both)
 EOF
 }
-
 die() { echo "FAIL $*" >&2; exit 1; }
 xml_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g' <<<"$1"; }
 gui_target() { echo "gui/$(id -u)"; }
-service_target() { echo "$(gui_target)/$LABEL"; }
+
+label_of() { echo "earth.hati.coherence-sense.mac-${1}-organ"; }
+script_of() { case "$1" in host) echo "$SCRIPT_DIR/mac-sense-organ.sh";; speech) echo "$SCRIPT_DIR/mac-speech-organ.sh";; *) die "unknown organ: $1";; esac; }
+plist_of() { echo "$HOME/Library/LaunchAgents/$(label_of "$1").plist"; }
 
 write_plist() {
-    mkdir -p "$(dirname "$PLIST")" "$LOG_DIR"
-    local script_path="$SCRIPT_DIR/mac-sense-organ.py"
-    [[ -f "$script_path" ]] || die "organ script not found: $script_path"
-    [[ -x "$PYTHON" ]] || die "python not executable: $PYTHON"
-    local media_arg=""
-    [[ "$MEDIA" == "off" ]] && media_arg="    <string>--no-media</string>"
-
-    cat > "$PLIST" <<EOF
+    local organ="$1" label plist script
+    label="$(label_of "$organ")"; plist="$(plist_of "$organ")"; script="$(script_of "$organ")"
+    [[ -f "$script" ]] || die "carrier not found: $script"
+    mkdir -p "$(dirname "$plist")" "$LOG_DIR"
+    cat > "$plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key>
-  <string>$LABEL</string>
+  <key>Label</key><string>$label</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$(xml_escape "$PYTHON")</string>
-    <string>$(xml_escape "$script_path")</string>
-    <string>--mesh</string>
-    <string>$(xml_escape "$MESH")</string>
-    <string>--witness</string>
-    <string>$(xml_escape "$WITNESS")</string>
-    <string>--interval</string>
-    <string>$(xml_escape "$INTERVAL")</string>
-$media_arg
+    <string>/bin/bash</string>
+    <string>$(xml_escape "$script")</string>
   </array>
-  <key>WorkingDirectory</key>
-  <string>$(xml_escape "$SCRIPT_DIR")</string>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <dict>
-    <key>SuccessfulExit</key>
-    <false/>
-  </dict>
-  <key>StandardOutPath</key>
-  <string>$(xml_escape "$LOG_DIR/mac-sense-organ.out.log")</string>
-  <key>StandardErrorPath</key>
-  <string>$(xml_escape "$LOG_DIR/mac-sense-organ.err.log")</string>
+  <key>WorkingDirectory</key><string>$(xml_escape "$SCRIPT_DIR")</string>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>StandardOutPath</key><string>$(xml_escape "$LOG_DIR/mac-$organ-organ.out.log")</string>
+  <key>StandardErrorPath</key><string>$(xml_escape "$LOG_DIR/mac-$organ-organ.err.log")</string>
   <key>EnvironmentVariables</key>
-  <dict>
-    <key>PYTHONUNBUFFERED</key>
-    <string>1</string>
-    <key>PATH</key>
-    <string>$(xml_escape "$TOOL_PATH")</string>
-  </dict>
+  <dict><key>PATH</key><string>$(xml_escape "$TOOL_PATH")</string></dict>
 </dict>
 </plist>
 EOF
-    plutil -lint "$PLIST" >/dev/null
+    plutil -lint "$plist" >/dev/null
 }
 
-is_loaded() { launchctl print "$(service_target)" >/dev/null 2>&1; }
-stop_service() {
-    launchctl bootout "$(gui_target)" "$PLIST" >/dev/null 2>&1 || true
-    launchctl bootout "$(service_target)" >/dev/null 2>&1 || true
+stop_one() { launchctl bootout "$(gui_target)/$(label_of "$1")" >/dev/null 2>&1 || true; }
+start_one() {
+    local plist; plist="$(plist_of "$1")"; [[ -f "$plist" ]] || die "not installed: $1"
+    launchctl bootout "$(gui_target)/$(label_of "$1")" >/dev/null 2>&1 || true
+    launchctl bootstrap "$(gui_target)" "$plist"
+    launchctl kickstart -k "$(gui_target)/$(label_of "$1")" >/dev/null
 }
-start_service() {
-    [[ -f "$PLIST" ]] || die "LaunchAgent not installed: $PLIST"
-    if is_loaded; then
-        launchctl kickstart -k "$(service_target)" >/dev/null
-    else
-        launchctl bootstrap "$(gui_target)" "$PLIST"
-        launchctl kickstart -k "$(service_target)" >/dev/null
-    fi
-}
-status_service() {
-    echo "label: $LABEL"; echo "plist: $PLIST"; echo "logs: $LOG_DIR/mac-sense-organ.{out,err}.log"
-    if is_loaded; then
-        echo "launchd: loaded"
-        launchctl print "$(service_target)" | grep -nE "state =|pid =|last exit code" || true
-    else
-        echo "launchd: not loaded"
-    fi
-    [[ -f "$LOG_DIR/mac-sense-organ.out.log" ]] && { echo "--- last log ---"; tail -4 "$LOG_DIR/mac-sense-organ.out.log"; }
+status_one() {
+    local label; label="$(label_of "$1")"
+    if launchctl print "$(gui_target)/$label" >/dev/null 2>&1; then
+        echo "$1: $(launchctl print "$(gui_target)/$label" | grep -E 'state =|pid =' | tr -d '\t' | paste -sd' ' -)"
+    else echo "$1: not loaded"; fi
+    [[ -f "$LOG_DIR/mac-$1-organ.out.log" ]] && tail -2 "$LOG_DIR/mac-$1-organ.out.log" | sed 's/^/   /'
 }
 
-COMMAND="${1:-status}"; [[ $# -gt 0 ]] && shift || true
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --mesh) MESH="${2:-}"; shift 2 ;;
-        --interval) INTERVAL="${2:-}"; shift 2 ;;
-        --no-media) MEDIA="off"; shift ;;
-        --python) PYTHON="${2:-}"; shift 2 ;;
-        -h|--help) usage; exit 0 ;;
-        *) die "unknown option: $1" ;;
-    esac
-done
+CMD="${1:-status}"; [[ $# -gt 0 ]] && shift || true
+TARGETS=("${ORGANS[@]}"); [[ $# -gt 0 ]] && TARGETS=("$1")
 
-case "$COMMAND" in
-    install) write_plist; stop_service; start_service; sleep 2; status_service ;;
-    uninstall) stop_service; rm -f "$PLIST"; echo "removed: $PLIST" ;;
-    start) start_service; sleep 2; status_service ;;
-    stop) stop_service; echo "stopped: $LABEL" ;;
-    restart) stop_service; start_service; sleep 2; status_service ;;
-    status) status_service ;;
-    tail) tail -f "$LOG_DIR/mac-sense-organ.out.log" ;;
-    -h|--help|help) usage ;;
-    *) usage >&2; exit 2 ;;
+case "$CMD" in
+    install)   for o in "${TARGETS[@]}"; do write_plist "$o"; start_one "$o"; done; sleep 2; for o in "${TARGETS[@]}"; do status_one "$o"; done;;
+    uninstall) for o in "${TARGETS[@]}"; do stop_one "$o"; rm -f "$(plist_of "$o")"; echo "removed: $o"; done;;
+    start)     for o in "${TARGETS[@]}"; do start_one "$o"; done; sleep 2; for o in "${TARGETS[@]}"; do status_one "$o"; done;;
+    stop)      for o in "${TARGETS[@]}"; do stop_one "$o"; echo "stopped: $o"; done;;
+    restart)   for o in "${TARGETS[@]}"; do start_one "$o"; done; sleep 2; for o in "${TARGETS[@]}"; do status_one "$o"; done;;
+    status)    for o in "${TARGETS[@]}"; do status_one "$o"; done;;
+    tail)      tail -f "$LOG_DIR/mac-${TARGETS[0]}-organ.out.log";;
+    -h|--help|help) usage;;
+    *) usage >&2; exit 2;;
 esac
