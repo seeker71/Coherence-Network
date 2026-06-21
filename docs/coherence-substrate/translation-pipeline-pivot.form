@@ -80,15 +80,25 @@ defn nl_to_form = pipeline_shape { encode: @encode(nl), pivot: @pivot(meaning), 
 # (witness 262143): the ENCODER maps ten English sentence classes onto universal
 # recipe nodes, and TWO decoders read the same pivot — back to an NL surface
 # (NL -> meaning -> NL round-trip) and to a Form s-expr surface (meaning -> Form).
-# Encoder and decoders are separate cells composing through one pivot.
+# Encoder and decoders are separate cells composing through one pivot. And the
+# SECOND TONGUE now crosses four-way too — form-stdlib/tests/nl-translate-band.fk
+# (witness 31): English <-> Indonesian through the language-neutral pivot, each
+# tongue its own grammar over the one engine, content words normalized through a
+# lexicon so "the source is native" and "sumber adalah asli" intern to the SAME
+# node; translation is encode -> pivot -> decode in both directions, full round-
+# trip held stable. Adding a tongue is adding a (grammar, lexicon, decoder); the
+# pivot and engine never change. This is real NL->NL (parse meaning, re-render),
+# not phrase lookup.
 #
-# NAMED, not yet built: the LEARNED encoder/decoders (today the grammar and the
-# emit templates are hand-authored data, not trained); more tongues sharing the
-# pivot with vocabulary normalization (so "der Zähler ist 13" reaches the SAME
-# pivot as "the count is 13" — the NL->NL decoder feeding the NL->Form pivot);
+# NAMED, not yet built: the LEARNED encoder/decoders (today the grammar, the emit
+# templates, and the lexicon are hand-authored data, not trained — the diagnostic
+# in form-native-models / this session showed a bigger NET is not the lever; the
+# embedding featurizer is); OPEN-VOCABULARY coverage the hand-lexicon can't reach;
 # the round-trip QUALITY gate (translation-quality.fk: essence / vitality / trust
 # above a floor, not string equality) wired onto the pivot; the model-council
-# (nl-to-form-satsang.form) proposing parses the circle agrees on.
+# (nl-to-form-satsang.form) proposing parses the circle agrees on; and the live
+# carrier wiring — this native NL->NL stage running between the STT and TTS oracles
+# on the Android speech loop (speech-organ.fk), the rung toward voice -> voice.
 #
 # LINEAGE
 #   kin: universal-translator.form (pivot = Blueprint), encoder-decoder-as-recipe.form

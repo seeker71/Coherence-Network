@@ -673,6 +673,13 @@ bmf-grammar fks 300
 # eighteen checks. This is the NL->Form floor crossing fkwu, where the section-DSL
 # front end (source-compiler + file IO) reaches only three.
 natural-language fks 262143
+# Form-native NL -> NL translation through the language-neutral pivot: English and
+# Indonesian surfaces parse (each tongue its own grammar over the one engine),
+# normalize content words through a lexicon onto ONE pivot node, and decode to the
+# other tongue. Cross-tongue equality is content-addressing ("the source is native"
+# and "sumber adalah asli" intern to the same node); translation is encode->pivot->
+# decode, both directions, with a full round-trip held stable. 31 = all five checks.
+nl-translate fks 31
 # form.bml lifted onto the cursor: the form.bml grammar PARSES `def ..=expr;` on
 # the fourth arm too (cursor-only; rides bmf-core/bmf-grammar's op families). The
 # recipe-shape parity vs the hand line compiler is the three-way band
