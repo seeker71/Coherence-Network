@@ -88,10 +88,18 @@
 ;       the next breath's work).
 ;
 ; HONESTY LANES: the generic engine, the satsang circle, the self-update theorem, the Form->asm
-;   native path are PROVEN and four-way. The NL grammar is a skeleton; the model-council, the
-;   promotion observer, and the feedback loop are NAMED-and-unbuilt. The native NL->Form cell is
-;   exact (a content-addressed recipe); the council's proposals are a first pass inviting agreement;
-;   a node only freezes when the circle agrees and the round-trip keeps essence, vitality, and trust.
+;   native path are PROVEN and four-way. The NL grammar now has a FOUR-WAY parse floor:
+;   tests/natural-language-band.fk parses ten English sentence classes — fact / property / isa /
+;   relation / question / meaning, plus one generic subject-verb-object rule (verb captured, not
+;   hard-coded) — into UNIVERSAL recipe nodes (bp fact/property/isa/relation/question/meaning,
+;   registered NodeIDs 1.2.99.32-37) across Go / Rust / TS / fkwu (witness 1023, a bitmask naming
+;   which classes parse). This is the grammar growing one rule at a time against the proven g-parse
+;   engine — the same engine the arithmetic grammar uses, so NL is one row of grammar DATA. Still
+;   skeleton beyond syntax: more classes/tongues, negation, recursion, and round-trip are the open
+;   grammar work; the model-council, the promotion observer, and the feedback loop are NAMED-and-
+;   unbuilt. The native NL->Form cell is exact (a content-addressed recipe); the council's proposals
+;   are a first pass inviting agreement; a node only freezes when the circle agrees and the round-
+;   trip keeps essence, vitality, and trust.
 ;
 ; LINEAGE
 ;   kin: native-translation-loopback.form (the NL->NL sibling — this generalizes its target from
