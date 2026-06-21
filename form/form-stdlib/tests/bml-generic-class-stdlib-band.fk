@@ -1,0 +1,41 @@
+; bml-generic-class-stdlib-band.fk — a plain generic stdlib class hoists its
+; methods to BARE top-level fndefs that execute identically to flat defs, on
+; all four kernels.
+;
+; `class Name<T> { def m(..) = ..; }` with no `: Template` extension is an
+; organizing abstraction: the methods keep bare names (callers unchanged), the
+; type parameter erases, and the class name binds to a nullary global
+; abstraction descriptor `(Name)` = (list "abstraction" Name (type-params)
+; (member-names)). The descriptor rides a `defn`, not a top-level `let`, so it
+; stays global and portable across all four arms.
+;
+; The strangeness packs the boundary into one class: a recursive higher-order
+; method (recursion + function argument + if/then/else + cons/head/tail/nil?),
+; a block-bodied method with a local let, and the erased <T> — every hoisted
+; path a real stdlib (core.fk) walks. The witness is computed inside the one
+; section form so it reads identically on every kernel.
+;
+; preludes: form-stdlib/core.fk
+
+section [form.bml] {
+    class ListKit<T> {
+        def gc-inc(x) = add(x, 1);
+        def gc-map(f, xs) = if nil?(xs) then empty else cons(f(head(xs)), gc-map(f, tail(xs)));
+        def gc-bump(xs) {
+            let ys = gc-map(gc-inc, xs);
+            ys;
+        }
+    }
+
+    ; gc-bump (1 2 3) -> (2 3 4); sum -> 9
+    let a = sum(gc-bump(list(1, 2, 3)));
+    ; gc-map gc-inc over (2 3 4) -> (3 4 5); sum -> 12
+    let b = sum(gc-map(gc-inc, gc-bump(list(1, 2, 3))));
+    ; descriptor: (ListKit) = ("abstraction" "ListKit" ("T") ("gc-inc" "gc-map" "gc-bump"))
+    let desc = ListKit();
+    let d-name = if str_eq(nth(desc, 1), "ListKit") then 1 else 0;
+    let d-tparams = len(nth(desc, 2));
+    let d-members = len(nth(desc, 3));
+    ; 9 + 12*1000 + 1*100000 + 1*1000000 + 3*10000000 = 31112009
+    add(a, add(mul(b, 1000), add(mul(d-name, 100000), add(mul(d-tparams, 1000000), mul(d-members, 10000000)))));
+}
