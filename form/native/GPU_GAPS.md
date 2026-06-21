@@ -2,7 +2,8 @@
 
 Living tracker for "any ML layer / diffusion / transformer / attention fully enabled on Mac, Android, RTX."
 Status: ✅ done+proven · 🟡 in progress · ⬜ not started · ⛔ blocked.
-Backends: **Metal** (Mac, MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan** (Android+desktop, SPIR-V).
+Backends: **Metal** (Mac **+ iPhone/iOS** — same Apple-GPU MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan** (Android+desktop, SPIR-V).
+iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-msl` lane IS the iPhone path. iPhone-specific gap = an iOS host app (Metal.framework/MetalKit, code-signed) vs the macOS swiftc CLI runner, + an `ios-arm64` row in hati-os-targets.fk, + on-device run (needs Mac+Xcode+iPhone). MoltenVK would also let the Vulkan lane run on iOS.
 "Proven" = bit-exact (or named-epsilon) on real hardware vs the CPU recipe oracle.
 
 ## A. Layer carriers (the math exists as portable Form recipes; this tracks the GPU CARRIERS)
@@ -16,7 +17,7 @@ Backends: **Metal** (Mac, MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan**
 | FFN/MLP fwd | ✅ | ✅ | ✅ f32 *(verdict 255, bar.sync)* | ⬜ |
 | FFN/MLP backprop | ✅ | ✅ | ⬜ | ⬜ |
 | attention (single-head SDPA) | ✅ | ✅ f32 *(verdict 1023, fused dot·scale→softmax→·V)* | ⬜ | ⬜ |
-| attention (MHA/causal/KV) | ✅ | 🟡 (single-head done; MHA/causal next) | ⬜ | ⬜ |
+| attention (MHA/causal/KV) | ✅ | ✅ f32 **causal multi-head** (per-head slice, masked [0..i]); KV-cache next | ⬜ | ⬜ |
 | layernorm / rmsnorm | ✅ | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ⬜ | ⬜ |
 | residual (vec-add) | ✅ | ✅ f32 *(verdict 8191)* | ⬜ | ⬜ |
 | transformer block fwd | ✅ | ✅ **EXACT tb-block** (QKVO proj + gamma/beta), bit-exact, 19-launch graph; also model-forward + autoregressive generation | ⬜ | ⬜ |
@@ -50,7 +51,7 @@ Backends: **Metal** (Mac, MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan**
 - ⬜ `hati-os-targets.fk` rows for `windows-x64-cuda` and `android-vulkan` (each needs the targets-band extension: count + verdict bit + artifact row).
 
 ## Active lanes (who's on what)
-- **RTX climb**: ✅ 11 kernels (verdict 8191, four-way) + **a FULL transformer block end-to-end on the GPU, bit-exact** (kernel-graph). NEXT: stack N blocks (the kernel-graph generalizes) → a whole tiny model forward; add projections/gamma-beta for the exact tb-block; MHA/causal/KV.
+- **RTX climb**: ✅ 13 kernels (form-ptx 8191 + form-ptx-block 3, four-way) + **EXACT tb-block** (QKVO proj + gamma/beta) + **model forward → logits** + **autoregressive generation**, all bit-exact end-to-end. NEXT: MHA/causal/KV on GPU; FFN backprop; llama block; f16/bf16 on the block-level kernels.
 - **Android/Vulkan**: ✅ matvec proven (RTX Vulkan) + Form-emitted + arm64-android cross-compiled. NEXT: on-device run (needs device); f16/bf16 GLSL; FFN/attention compute shaders.
 - **Diffusion**: ✅ conv2d/groupnorm recipe. NEXT: GPU carriers (PTX/MSL/GLSL) for conv2d.
 - **Serving/Training**: ✅ sampling (top-k/p, temperature). NEXT: loss functions (cross-entropy + log) — agent.
@@ -60,5 +61,5 @@ Backends: **Metal** (Mac, MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan**
 - **Full transformer block** end-to-end on GPU, bit-exact (`form_cuda_ptx_block_host.c`, 12-launch kernel-graph).
 - **Tiny transformer FORWARD → logits** end-to-end on GPU, bit-exact (`form_cuda_ptx_model_host.c`: embed → N×block → final-ln → logits; 3 layers/144, 4 layers/576).
 - **AUTOREGRESSIVE GENERATION** on GPU, bit-exact (`form_cuda_ptx_generate_host.c`: greedy loop, growing seq; prompt [1,2,3] → `13 21 16 12 12 9 13 20`, token-id seq matches CPU oracle, final logits bit-exact). A form-native transformer GENERATES.
-- **+2 kernels for the EXACT tb-block**: projection (matvec+bias) + gamma/beta affine — `form-ptx-block` band **verdict 3 PASS-4WAY** (13 kernels total now). Compose the exact block next.
+- **EXACT tb-block** end-to-end on GPU, bit-exact (`form_cuda_ptx_exact_block_host.c`, 19-launch graph): ln-seq(gamma/beta) → Q/K/V/O projections → attention → +residual → ln-seq → FFN → +residual. Closes the "simplified block" caveat. 13 kernels total (proj + gamma/beta = `form-ptx-block` band verdict 3).
 - Ideas: `04d35058-...` (lane), `0702a906-...` (carrier).
