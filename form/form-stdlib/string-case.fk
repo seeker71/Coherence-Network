@@ -1,0 +1,41 @@
+; string-case.fk — Form-native case folding + punctuation stripping.
+;
+; The four-way string primitive whose ABSENCE kept pushing text work into bash/python:
+; lowercasing and punctuation-stripping, built from pure substring + str_eq +
+; str_concat — no host, no codepoint arithmetic. This is surface normalization the
+; ENCODER can own, so noisy real input ("The Kernel Is Native.") reaches a clean
+; canonical surface inside Form instead of being scrubbed by a shell carrier.
+;
+; A 26-letter map (upper <-> lower) read by index keeps it codepoint-free and so
+; trivially four-way; the recursion depth is the string length (short surfaces).
+
+(do
+    (defn sc-upper () "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    (defn sc-lower () "abcdefghijklmnopqrstuvwxyz")
+    ;; index of a 1-char string ch in s, or -1
+    (defn sc-idx (s ch i)
+        (if (ge i (str_len s)) -1
+            (if (str_eq (substring s i (add i 1)) ch) i
+                (sc-idx s ch (add i 1)))))
+    (defn sc-fold-char (ch i) (if (lt i 0) ch (substring (sc-lower) i (add i 1))))
+    (defn sc-lc-char (ch) (sc-fold-char ch (sc-idx (sc-upper) ch 0)))
+    (defn str-lower-from (s i acc)
+        (if (ge i (str_len s)) acc
+            (str-lower-from s (add i 1) (str_concat acc (sc-lc-char (substring s i (add i 1)))))))
+    ;; str-lower — every A..Z folded to a..z, all else unchanged
+    (defn str-lower (s) (str-lower-from s 0 ""))
+
+    ;; punctuation set to drop; sc-keep? is true when a char is NOT punctuation
+    (defn sc-punct () ".,!?;:")
+    (defn sc-keep? (ch) (lt (sc-idx (sc-punct) ch 0) 0))
+    (defn str-strip-punct-from (s i acc)
+        (if (ge i (str_len s)) acc
+            (str-strip-punct-from s (add i 1)
+                (if (sc-keep? (substring s i (add i 1)))
+                    (str_concat acc (substring s i (add i 1))) acc))))
+    ;; str-strip-punct — drop . , ! ? ; :
+    (defn str-strip-punct (s) (str-strip-punct-from s 0 ""))
+
+    ;; str-normalize — the surface canonicalizer: lowercase, then drop punctuation
+    (defn str-normalize (s) (str-strip-punct (str-lower s)))
+    0)

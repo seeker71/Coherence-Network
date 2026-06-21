@@ -21,7 +21,7 @@ STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
 [[ -x "$GO" ]] || { echo "FAIL no Form kernel (bin-go) — build: (cd $ROOT/form/form-kernel-go && go build -o bin-go .)"; exit 1; }
 # core.fk is the only source-compiled prelude; nl-translate's deps are all builtins
 # + already-low-level cells, so the native translate runs without it.
-PRELUDE=(json cache form-ontology-loader line-grammar bmf-core bmf-grammar nl-translate)
+PRELUDE=(json cache form-ontology-loader line-grammar bmf-core bmf-grammar string-case nl-translate)
 SRCS=(); for p in "${PRELUDE[@]}"; do SRCS+=("$STD/$p.fk"); done
 
 # native translate: ONE kernel call, all logic is Form. dir = en-id | id-en
@@ -52,12 +52,9 @@ if [[ "$MODE" == "voice" ]]; then
   rm -f "$wav" "$aiff"
 fi
 
-# surface I/O cleaning: STT yields capitalized, punctuated text ("The kernel is
-# native."); the grammar tokenizes canonical lowercase words. This is input
-# sanitation, not translation logic. (Making the Form ENCODER own surface
-# normalization — case, contractions, richer punctuation — is the next refinement.)
-CLEAN="$(printf '%s' "$TEXT" | tr '[:upper:]' '[:lower:]' | tr -d '.,!?;:')"
-OUT="$(translate "$CLEAN" "$DIR")"
+# surface normalization (case, punctuation) is now owned by the Form ENCODER
+# (str-normalize in form-stdlib/string-case.fk) — no shell cleaning here.
+OUT="$(translate "$TEXT" "$DIR")"
 echo "[native-translate · form-stdlib/nl-translate.fk · $DIR]  \"$TEXT\"  ->  \"$OUT\""
 if command -v say >/dev/null; then say "$OUT" 2>/dev/null && echo "[tts-oracle say] spoke the translation"; fi
 
