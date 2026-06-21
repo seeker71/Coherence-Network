@@ -107,15 +107,25 @@
     (Q3-mesh           [RUNS: diffusion-q-mesh.fk + band → 31] federated critics consolidated by slice-merge
              (TIES sign-election + trust-weighted FedAvg, integer-exact): three cells hold partial critics,
              the merge yields the full critic no single cell held, dql-improve ascends the policy against
-             the consolidated value. QAM inside mesh-active-inference))
+             the consolidated value. QAM inside mesh-active-inference)
+    (Q1-fixpoint       [RUNS: q-actor-critic-fixpoint-band → 255] the actor-critic's two convergence loops in
+             one band: the CRITIC value-iterates to the Bellman fixpoint V* (gl-value-iterate, gl-bellman(V*)=V*),
+             the POLICY genuinely improves against its Q-critic (dql-actor: the Q-tilt raises value above the BC
+             anchor) and rests at its BC+Q equilibrium, with mtb-settle — newly lifted into metabolic-learning.fk
+             — descending an under-relaxed residual over multiple steps and halting at the observer gate)
+    (Q4-autoresearch   [RUNS: diffusion-q-autoresearch.fk + band → 63] the autoresearch keep-or-rollback loop
+             evolves the q-tilt GENE (a pl_qam row whose mutable beta is the pref-loss coordinate): propose →
+             measure pl-fitness → keep-or-rollback, the fold converging to the best gene; the loop TRACKS the
+             target (a different target selects a different gene) and rediscovers the catalog gene under a
+             derived target. dqa-step/dqa-search are one_iteration's keep-or-rollback core, made runnable))
   (gaps
-    (GAP-Q1  [INFER] the next stone is mtb-settle-style ITERATION: a critic trained by repeated gl-bellman
-             backups to a fixed point, the policy improved to convergence, the whole loop one band)
-    (GAP-Q4  [INFER] the full auto-research GENOME coordinate: autoresearch-runtime evolving (pool, core,
-             pref-loss) end-to-end with the qam row as a mutable gene — the seam is named (pl-fitness), the
-             loop-level integration in autoresearch-runtime.form is the remaining stone))
+    (GAP-Q5  [INFER] full state→action COUPLING: feed the critic's value-iterated V* into the policy's
+             improvement target so the two convergence loops are data-linked, not parallel demonstrations)
+    (GAP-Q6  [INFER] the FULL genome triple: the autoresearch loop over (pool, core, pref-loss) end-to-end
+             with a real proposer (agent_propose) + governance + experiment-history — the pref-loss coordinate
+             is now a selectable gene (Q4); the style-space genome and the proposer are the remaining wiring))
   # (the offline→online champion-challenger loop landed value-native — §1b, diffusion-q-cc.fk + band → 63;
-  #  Q2 the preference row and Q3 the mesh landed too — see §6 closed.)
+  #  Q2 preference row, Q3 mesh, Q1 actor-critic fixpoint, Q4 autoresearch gene all landed — see §6 closed.)
 
   (invariant
     (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain

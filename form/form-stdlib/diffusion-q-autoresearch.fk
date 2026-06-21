@@ -1,0 +1,36 @@
+; diffusion-q-autoresearch.fk — GAP-Q4: r_autoresearch_loop made RUNNABLE for the pref-loss coordinate.
+; autoresearch-runtime.form names the loop (propose → measure → keep-or-rollback) but its primitives are
+; spec-only cell-refs. This is a runnable instance for ONE coordinate: the q-tilt gene. The genome's
+; pref-loss coordinate is a pl_qam row whose mutable gene is its beta (the q-focus / λ aperture); the
+; evaluator is pl-fitness (the achieved value); keep-or-rollback is higher-better on the fitness. The
+; loop evolves the gene and converges to the best one — the q-tilt is now a SELECTED gene, not a fixed dial.
+;
+; Composes preference-learning.fk (pl-qam-apply, pl-fitness — the gene + the evaluator seam) +
+; diffusion-q-learning.fk. Proven by tests/diffusion-q-autoresearch-band.fk (four-way). Registered `fks`.
+
+(do
+    ; the raw policy each gene improves from (the behaviour anchor)
+    (defn dqa-raw () (list (list 0 0 0.0) (list 1 0 0.0)))
+    ; the qam GENE at a given beta — a mutable pl_qam row, the pref-loss coordinate
+    (defn dqa-gene (beta) (list "qam" "q-adjoint" beta))
+    ; the gene's achieved value: apply the q-tilt at the gene's beta, score by the auto-research evaluator
+    (defn dqa-value (qedges x beta)
+        (pl-fitness qedges (pl-qam-apply (dqa-gene beta) qedges (dqa-raw) x) x))
+
+    ; the auto-research FITNESS: closeness of the gene's value to the served target — an INTERIOR
+    ; optimum (peaks at the beta whose policy lands the target), so selection is real, not "max beta wins".
+    (defn dqa-absdiff (a b) (if (gt a b) (sub a b) (sub b a)))
+    (defn dqa-fitness (qedges x target beta) (sub 0.0 (dqa-absdiff (dqa-value qedges x beta) target)))
+
+    ; ONE iteration of the autoresearch loop, runnable: propose a candidate gene, measure its fitness,
+    ; KEEP it if it beats the incumbent (higher-better), else ROLL BACK to the incumbent. This is
+    ; autoresearch-runtime.form one_iteration's keep-or-rollback for the pref-loss coordinate.
+    (defn dqa-step (qedges x target best cand)
+        (if (gt (dqa-fitness qedges x target cand) (dqa-fitness qedges x target best)) cand best))
+
+    ; the loop: fold the candidate genes through one_iteration; the surviving gene is the search result.
+    ; The fold IS the history; the returned gene is the kept champion. Never regresses (keep-or-rollback).
+    (defn dqa-search (qedges x target best cands)
+        (if (eq (len cands) 0) best
+            (dqa-search qedges x target (dqa-step qedges x target best (head cands)) (tail cands))))
+    0)
