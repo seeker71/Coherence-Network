@@ -8,6 +8,28 @@
 ; path: what is already proven, the architecture, and the ordered milestones (two background spikes
 ; mapped the JIT/GPU and whisper-import details — cited inline).
 ;
+; ── FLOOR / NORTH STAR / GAPS — GPU layer matrix + real-model load (2026-06-21) ──
+;   FLOOR (proven this arc, bit-exact vs the CPU recipe on REAL hardware — RTX 4070 for PTX+Vulkan,
+;     Apple M4 Max for Metal): the ENTIRE GPU layer matrix is green on all three backends (Metal/PTX/
+;     Vulkan, 13/13 each) — matvec (f16/bf16), affine-train, gelu, softmax, FFN fwd+backprop, attention
+;     SDPA + causal-MHA, layernorm/rmsnorm, residual, conv2d, RoPE, SwiGLU — AND two FULL decoder blocks
+;     composed from them as kernel-graphs: the whisper exact tb-block AND the FULL llama block
+;     (RMSNorm -> RoPE'd QKV -> causal attn -> residual -> RMSNorm -> SwiGLU FFN -> residual). All
+;     DRIVER-ONLY (no nvcc/nvrtc/go/python/rust/clang at runtime); the same Form recipe is the proof
+;     AND the kernel. RoPE's frexp-ln + range-reduced sin and SwiGLU's sigmoid are recipe-own Taylor,
+;     no hardware transcendentals. Tracker: form/native/GPU_GAPS.md.
+;   NORTH STAR: a real PUBLIC model (start: llama3.2:3b, already on disk as an ollama GGUF v3) running
+;     ON-DEVICE (the phone GPU) entirely on the Form-native execution recipes — weights loaded as
+;     content-addressed recipe DATA, the N-block graph at real width, tokenizer + KV-cache native,
+;     producing a token from a real prompt. The rented oracle's job done by the body it offers others:
+;     cognitive sovereignty as a running loop, not a description (lc-cognitive-sovereignty).
+;   GAP (the wiring, not new numerics — the ordered walk; started 2026-06-21 at rung 1): (1) weight-load
+;     — parse the real GGUF + dequant (Q4_K/Q6_K recipes exist) into resident GPU buffers; (2) run the
+;     proven llama block at REAL width (d=3072, 24 heads, hidden=8192) on block-0's real weights,
+;     bit-exact vs the CPU recipe; (3) stack the real layer count (28) + embed + final RMSNorm + LM head
+;     -> real logits -> token; (4) KV-cache + tokenizer carriers native; (5) the on-device phone RUN
+;     (scripts/android_matvec_vk_run.sh, awaiting a connected device).
+;
 ; ── FLOOR / NORTH STAR / GAPS — whisper-tiny in Form (updated 2026-06-19; extends the 2026-06-14 review below) ──
 ;   FLOOR (proven this arc — every piece bit-checked against the numpy/fp64 reference through the kernel):
 ;     whisper-tiny's WHOLE architecture now runs in Form. Encoder: multi-head self-attention + layer stack
