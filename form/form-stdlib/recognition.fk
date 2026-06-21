@@ -1,0 +1,56 @@
+; recognition.fk — recognize WHERE / WHICH ROOM / WHO / WHAT by fingerprint.
+;
+; One recipe under almost every sense the node has. WiFi access-point strengths →
+; which PLACE. Echo bounce-times → which ROOM. A face or voice embedding → WHO.
+; A sound or vision spectrum → WHAT (object, animal, word). Every one of these is
+; the SAME act: a reading vector matched against a library of known signatures,
+; returning the nearest label and how sure. The recipe never changes — only the
+; LIBRARY (the DATA) differs per sense. This is core-abstraction-first: place,
+; room, person, animal are not four code paths, they are four libraries through
+; one engine.
+;
+; Recognition is content-addressed nearest-shape (nearest-shape.fk): similarity is
+; a count of agreeing bins, the nearest prototype's label is the recognition, its
+; agreement count is the confidence. Learning is the smallest act — intern one more
+; (label vector) into the library, and the next reading can route to it. The Mac
+; proves the recognizer; the phone receives the SAME cell, verifiable by NodeID.
+;
+; A reading = a feature vector (small-int bins, the quantized fingerprint of a
+; sense). A library = a list of (label vector) prototypes. A recognition rides as
+; a channel (kind label confidence source) — the world-perception surface renders it.
+;
+; Proven by: form-stdlib/tests/recognition-band.fk
+
+(do
+    (defn rec-floor ()
+        (list
+            "place (wifi) / room (echo) / who (face·voice) / what (sound·vision) are one recipe"
+            "only the library differs per sense; the recognizer never forks into special cases"
+            "recognition is content-addressed nearest-shape — confidence is agreeing bins"
+            "learning is interning one more (label vector); the next reading can route to it"
+            "the Mac proves the recognizer, the phone receives the same cell by NodeID"))
+    (defn rec-north-star ()
+        (list
+            "the node knows where it is, which room, who is here, and what it senses — natively"
+            "every modality quantizes to bins then recognizes through one engine"
+            "libraries are learned exemplars, not trained weight-blobs; a new cell is a new prototype"))
+
+    ;; --- the recognition channel: same shape as every other sense ---------
+    (defn rec-channel (kind label confidence source) (list kind label confidence source))
+    (defn rec-kind (c) (nth c 0))
+    (defn rec-label (c) (nth c 1))
+    (defn rec-confidence (c) (nth c 2))
+    (defn rec-source (c) (nth c 3))
+
+    ;; --- recognize: ONE recipe, the library is the only thing that changes -
+    ;; reading: a quantized feature vector. library: a list of (label vector).
+    ;; the recognition is nearest-shape's label; the confidence is its strength.
+    (defn recognize (kind reading library source)
+        (rec-channel kind
+            (ns-label reading library)
+            (ns-strength reading library)
+            source))
+
+    ;; full confidence = every bin of the reading agreed (an exact fingerprint hit).
+    (defn rec-full? (chan reading) (eq (rec-confidence chan) (len reading)))
+)
