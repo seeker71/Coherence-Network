@@ -20,8 +20,8 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 | attention (MHA/causal/KV) | ✅ | 🟡 (single-head; MHA next) | ✅ f32 **causal multi-head** (per-head slice, masked [0..i]); KV-cache next | ✅ f32 *(GLSL, causal multi-head)* |
 | layernorm / rmsnorm | ✅ | ✅ (in block) | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ✅ layernorm f32 *(GLSL)* |
 | residual (vec-add) | ✅ | ✅ (in block) | ✅ f32 *(verdict 8191)* | ✅ f32 *(GLSL)* |
-| transformer block fwd | ✅ | ✅ block fwd | ✅ **EXACT tb-block** (QKVO+γβ) + model→logits + autoregressive generation, bit-exact (19-launch graph) | ⬜ |
-| llama block (fwd/causal/decode) | ✅ | ✅ | ⬜ | ⬜ |
+| transformer block fwd | ✅ | ✅ block fwd | ✅ **EXACT tb-block** (QKVO+γβ) + model→logits + autoregressive generation, bit-exact (19-launch graph) | ✅ **multi-dispatch graph** (19 dispatches, 16 barriers, bit-exact) |
+| llama block (fwd/causal/decode) | ✅ | ✅ **FULL block** (RMSNorm→RoPE'd QKV→causal attn→res→RMSNorm→SwiGLU FFN→res), bit-exact, 42-launch graph | ⬜ |
 | conv2d / groupnorm (diffusion) | ✅ recipe *(verdict 15, 3-way)* | ⬜ | ✅ conv2d f32 **bit-exact to cv2d-conv** (multi-ch, pad/stride, nested ky↓kx↓ic↓) | ✅ conv2d f32 *(GLSL)* |
 
 ## B. Precision coverage

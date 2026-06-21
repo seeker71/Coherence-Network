@@ -1,0 +1,45 @@
+#version 450
+
+// form-native projection compute shader (Android/Vulkan lane, prototyped on RTX).
+// Batched projection Y[t] = W . X[t] + b  (tb-affine per token / the Q/K/V/O proj kernel in the
+// tb-block). One invocation per (token, out). Mirrors form_proj_f32.ptx (K_pr in the tb-block host)
+// op-for-op:
+//   tid = global id; total = ntok*outd; if tid >= total return
+//   t = tid / outd;  o = tid % outd
+//   wbase = o*ind;   xbase = t*ind
+//   acc = 0; l = ind; while (l != 0) { l--; acc = W[wbase+l]*X[xbase+l] + acc }   (DOWNWARD right-fold)
+//   Y[tid] = acc + b[o]
+// No divide here (the integer t/o split is uint div, not float), so no RoundingModeRTE execution
+// mode is required (same as matvec.comp / residual.comp). `precise` -> SPIR-V NoContraction so the
+// driver cannot fuse mul+add into an FMA and cannot reassociate the fold -> bit-exact to the CPU
+// oracle (c_proj) and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer W { float w[]; };   // outd*ind
+layout(std430, binding = 1) readonly  buffer B { float b[]; };   // outd
+layout(std430, binding = 2) readonly  buffer X { float x[]; };   // ntok*ind
+layout(std430, binding = 3) writeonly buffer Y { float y[]; };   // ntok*outd
+
+layout(push_constant) uniform Push { uint ntok; uint outd; uint ind; } pc;
+
+void main() {
+    uint tid = gl_GlobalInvocationID.x;
+    if (tid >= pc.ntok * pc.outd) return;
+
+    uint t = tid / pc.outd;            // token
+    uint o = tid % pc.outd;            // out channel
+    uint wbase = o * pc.ind;           // wbase = o*ind
+    uint xbase = t * pc.ind;           // xbase = t*ind
+
+    // DOWNWARD right-fold dot: l = ind; while (l!=0){ l--; acc = W*X + acc }
+    precise float acc = 0.0;
+    uint l = pc.ind;
+    while (l != 0u) {
+        l = l - 1u;
+        precise float p = w[wbase + l] * x[xbase + l];
+        acc = p + acc;
+    }
+    precise float r = acc + b[o];      // + b[o]
+    y[tid] = r;
+}
