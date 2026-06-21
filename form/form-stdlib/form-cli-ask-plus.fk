@@ -73,9 +73,14 @@ section [form.bml] {
     }
 
     ; ── escalate to the remote oracle (the subscription agent CLI) ───────────
+    ; the prompt file lives under temp_dir() (the kernel's $TMPDIR), not a hardcoded
+    ; /tmp — so the same recipe escalates on macOS, Termux, and an Android device
+    ; (/data/local/tmp), where /tmp does not exist. The question goes through a file
+    ; rather than the command line so its content is never re-parsed by the shell.
     def fcap-escalate(remote, question) {
-        let wrote = host-write("/tmp/fca_plus_prompt.txt", question);
-        host-exec(str_concat(remote, " < /tmp/fca_plus_prompt.txt 2>/dev/null"));
+        let pf = str_concat(temp_dir(), "/fca_plus_prompt.txt");
+        let wrote = host-write(pf, question);
+        host-exec(str_concat(remote, str_concat(" < ", str_concat(pf, " 2>/dev/null"))));
     }
 
     ; ── pack THIS turn's outcome: the live trust row (from the four-way-proven
