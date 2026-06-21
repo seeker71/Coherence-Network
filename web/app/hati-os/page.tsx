@@ -1,26 +1,16 @@
-const downloads = [
-  {
-    target: "macOS arm64",
-    artifact: "Native CLI tarball",
-    href: "/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
-    checksum: "/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst.sha256",
-    proof: "Form-emitted C compiled to Mach-O arm64 and executed locally for fib, sum, and ack parity.",
-  },
-  {
-    target: "Android arm64",
-    artifact: "Native kernel package",
-    href: "/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
-    checksum: "/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst.sha256",
-    proof: "Android ARM64 ELF executable and C-ABI shared library cross-compiled with local file and symbol proof.",
-  },
-  {
-    target: "Android app",
-    artifact: "Hati mesh sensing-organ release APK",
-    href: "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk",
-    checksum: "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk.sha256",
-    proof: "Release APK is signed with the Hati mesh app key, verified by apksigner, announces to hati.mesh, and checks signed update metadata.",
-  },
-];
+import {
+  HATI_OS_ASSETS,
+  HATI_OS_RELEASE_TAG,
+  hatiOsHref,
+} from "@/lib/hati-os-release";
+
+const downloads = HATI_OS_ASSETS.filter((a) => a.surfaced).map((a) => ({
+  target: a.target,
+  artifact: a.artifact,
+  href: hatiOsHref(a),
+  checksum: `${hatiOsHref(a)}.sha256`,
+  proof: a.proof,
+}));
 
 export default function HatiOsPage() {
   return (
@@ -36,6 +26,12 @@ export default function HatiOsPage() {
           <p className="max-w-3xl text-base leading-7 text-stone-700">
             Public native packages for the Form fourth-kernel surface. Each
             download has a checksum and release receipt beside it.
+          </p>
+          <p className="text-sm text-stone-500">
+            Release{" "}
+            <code className="rounded bg-stone-100 px-1.5 py-0.5 text-stone-700">
+              {HATI_OS_RELEASE_TAG}
+            </code>
           </p>
         </div>
 

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 35
+**Total files**: 36
 
 | File | Purpose |
 |---|---|
@@ -18,6 +18,7 @@
 | [egress.ts](egress.ts) | _no top-of-file purpose_ |
 | [entry-paths.ts](entry-paths.ts) | _no top-of-file purpose_ |
 | [fetch.ts](fetch.ts) | _no top-of-file purpose_ |
+| [hati-os-release.ts](hati-os-release.ts) | Single source of truth for the published Hati-OS native release. |
 | [home-presence-traces.ts](home-presence-traces.ts) | _no top-of-file purpose_ |
 | [html-entities.ts](html-entities.ts) | Many imported asset descriptions arrive carrying WordPress HTML |
 | [humanize.ts](humanize.ts) | _no top-of-file purpose_ |
