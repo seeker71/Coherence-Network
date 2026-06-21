@@ -1,0 +1,50 @@
+; model-search.fk — the tournament ratchet (GAP-Q6): try the top ways, train, measure, analyze, improve
+; the WORST candidate from the findings, repeat; stop ONLY when the worst can no longer be improved.
+; This is autoresearch-runtime.form's loop with a real PROPOSER and a real POPULATION: the candidates
+; are pref-loss/model genes (here the qam beta on a dyadic grid; extensible to the full (pool, core,
+; pref-loss) triple — the gene is data). PER USAGE the loop converges to that usage's best model — no
+; free lunch (a different usage = a different target = a different optimum). Generalises diffusion-q-
+; autoresearch.fk's single keep-or-rollback into a multi-candidate ratchet. Proven by
+; tests/model-search-band.fk (four-way). Registered `fks` (float genes).
+(do
+    ; --- TRAIN + MEASURE: a gene's measured score, and its fitness for a usage (closeness to the usage's
+    ;     target — an INTERIOR optimum, so "best" is a real point, not "biggest gene wins"). ---
+    (defn ms-value (beta) (mul 5.0 beta))                         ; the model's measured score at gene beta
+    (defn ms-absdiff (a b) (if (gt a b) (sub a b) (sub b a)))
+    (defn ms-fitness (target beta) (sub 0.0 (ms-absdiff (ms-value beta) target)))
+    (defn ms-step () 0.125)                                       ; the grid the proposer searches on
+
+    ; --- ANALYZE + IMPROVE: the proposer. The measurements reveal the uphill DIRECTION at the worst
+    ;     gene (value below the target ⇒ raise it, above ⇒ lower it); step it one grid-step that way →
+    ;     a candidate that may beat them all (a new top). This IS "improve the bottom with the findings". ---
+    (defn ms-improve (target beta)
+        (if (gt target (ms-value beta)) (add beta (ms-step)) (sub beta (ms-step))))
+
+    ; --- the WORST of the population: the least-fitness gene (the bottom-most model this round). ---
+    (defn ms-worst2 (target a b) (if (gt (ms-fitness target a) (ms-fitness target b)) b a))
+    (defn ms-worst-acc (target pop acc)
+        (if (eq (len pop) 0) acc (ms-worst-acc target (tail pop) (ms-worst2 target acc (head pop)))))
+    (defn ms-worst (target pop) (ms-worst-acc target (tail pop) (head pop)))
+
+    ; --- the HALT: the worst can no longer be improved ⇔ stepping it yields no higher fitness. At the
+    ;     usage's optimum this fires (the global max; a step either way is worse), and since the optimum
+    ;     is the global best, "worst is at the optimum" ⇔ the whole population has converged. ---
+    (defn ms-improvable? (target beta)
+        (if (gt (ms-fitness target (ms-improve target beta)) (ms-fitness target beta)) 1 0))
+
+    ; --- one ROUND: replace the worst gene (the FIRST one matching the worst value) with its improved
+    ;     version — the population ratchets up by lifting its floor. ---
+    (defn ms-replace-one (pop old new)
+        (if (eq (len pop) 0) (empty)
+            (if (eq (gl-veq6 (list (head pop)) (list old)) 1) (cons new (tail pop))
+                (cons (head pop) (ms-replace-one (tail pop) old new)))))
+    (defn ms-round (target pop)
+        (ms-replace-one pop (ms-worst target pop) (ms-improve target (ms-worst target pop))))
+
+    ; --- the SEARCH: iterate rounds until the worst can no longer be improved (fuel bounds the walk). ---
+    (defn ms-search (target pop fuel)
+        (if (eq fuel 0) pop
+            (if (eq (ms-improvable? target (ms-worst target pop)) 1)
+                (ms-search target (ms-round target pop) (sub fuel 1))
+                pop)))
+    0)

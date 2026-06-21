@@ -797,3 +797,4 @@ shell-parse fks 31
 shell-exec fks 63
 shell-cell fks 15
 const-recipe fks 511
+model-search fks 31

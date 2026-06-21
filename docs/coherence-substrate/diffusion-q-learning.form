@@ -121,11 +121,17 @@
   (gaps
     (GAP-Q5  [INFER] full state→action COUPLING: feed the critic's value-iterated V* into the policy's
              improvement target so the two convergence loops are data-linked, not parallel demonstrations)
-    (GAP-Q6  [INFER] the FULL genome triple: the autoresearch loop over (pool, core, pref-loss) end-to-end
-             with a real proposer (agent_propose) + governance + experiment-history — the pref-loss coordinate
-             is now a selectable gene (Q4); the style-space genome and the proposer are the remaining wiring))
+    (Q6-modelsearch  [RUNS: model-search.fk + band → 31] the autoresearch loop with a real PROPOSER and a
+             real POPULATION — the tournament ratchet: try the top candidates, train+measure each, improve
+             the WORST from the findings (ms-improve: the measurements reveal the uphill direction), repeat,
+             STOP only when the worst can no longer be improved (the population fixpoint). Finds the best
+             model PER USAGE — no free lunch (target 2.5 → gene 0.5; target 1.25 → gene 0.25). Candidates are
+             model genes (data — the qam beta here; the full (pool, core, pref-loss) triple is the gene-as-
+             data extension, no engine change). REMAINING: the gene carrying the full triple + an
+             experiment-history cell; the mechanics — propose/measure/improve-the-worst/halt — are proven))
   # (the offline→online champion-challenger loop landed value-native — §1b, diffusion-q-cc.fk + band → 63;
-  #  Q2 preference row, Q3 mesh, Q1 actor-critic fixpoint, Q4 autoresearch gene all landed — see §6 closed.)
+  #  Q2 preference row, Q3 mesh, Q1 actor-critic fixpoint, Q4 autoresearch gene, Q6 model-search tournament
+  #  all landed. Open: Q5 state→action coupling, the Q6 gene-triple-as-data residual, the Q7 native arc.)
 
   (invariant
     (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
