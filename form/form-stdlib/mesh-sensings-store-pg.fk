@@ -1,0 +1,134 @@
+; mesh-sensings-store-pg.fk — the Postgres backend beneath the mesh-sensings contract: the
+; CROSS-MACHINE sibling of the .fkb store (mesh-sensings-store.fk). The .fkb backend let co-located
+; presences on ONE machine share a body that survives the session; this backend lets presences on
+; DIFFERENT machines append into one durable table and read back the same consensus. Same contract
+; (mesh-sensings.fk), swapped backend — exactly the "store is the contract, the backend swappable
+; beneath it" the .fkb store named as next.
+;
+; What is four-way (Go/Rust/TS/fkwu): the SQL builders AND the whole decode pipeline — a pg_query
+; result string (rows \n-separated, columns \t-separated) parses back into the reading list the
+; consensus consumes, so a band proves decode + consensus with a pure fixture, no live DB. The ONLY
+; host-io is the two boundary calls pg_exec / pg_query — the standing wall (3-kernel), named here,
+; never buried, exactly as the .fkb store named write_form_binary.
+;
+; Identity is (presence, subject): both are the table PRIMARY KEY, so a second presence reporting the
+; same subject is a distinct witness, and one presence re-reporting is last-write-wins via the
+; database's own ON CONFLICT DO UPDATE — the dedup the .fkb store did in-recipe is now the UPSERT.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk form-stdlib/mesh-sensings.fk
+;
+; Proven by: form-stdlib/tests/mesh-sensings-store-pg-band.fk
+
+(do
+    (defn msp-table () "sensing_readings")
+
+    ; ── SQL string building (pure, four-way) ────────────────────────────
+    ; single-quote escaping, local so this carrier stands alone (agn-esc shape)
+    (defn msp-esc-loop (s i n acc)
+        (if (ge i n)
+            acc
+            (do
+                (let c (substring s i (add i 1)))
+                (msp-esc-loop s (add i 1) n
+                    (str_concat acc (if (str_eq c "'") "''" c))))))
+    (defn msp-esc (s) (msp-esc-loop s 0 (str_len s) ""))
+    (defn msp-quote (s) (str_concat "'" (str_concat (msp-esc s) "'")))
+
+    ; non-negative int -> decimal string (portable, four-way; cls-int-str shape)
+    (defn msp-int-str (n)
+        (if (lt n 10)
+            (substring "0123456789" n (add n 1))
+            (str_concat (msp-int-str (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+
+    (defn msp-join (sep xs)
+        (if (nil? xs)
+            ""
+            (if (nil? (tail xs))
+                (head xs)
+                (str_concat (head xs) (str_concat sep (msp-join sep (tail xs)))))))
+
+    ; CREATE TABLE — presence + subject are the PK, so identity is (presence, subject)
+    (defn msp-ddl-sql ()
+        (msp-join " " (list
+            "CREATE TABLE IF NOT EXISTS"
+            (msp-table)
+            "(presence text not null, subject text not null, answered integer not null, ok integer not null, reading_at bigint not null, deadline bigint not null, kind text not null, primary key (presence, subject))")))
+
+    ; UPSERT one reading — last-write-wins per (presence, subject) is the DB's ON CONFLICT
+    (defn msp-insert-sql (presence rd)
+        (msp-join " " (list
+            (str_concat "INSERT INTO " (str_concat (msp-table)
+                " (presence, subject, answered, ok, reading_at, deadline, kind)"))
+            (str_concat "VALUES (" (str_concat
+                (msp-join ", " (list
+                    (msp-quote presence)
+                    (msp-quote (or-name rd))
+                    (msp-int-str (or-answered rd))
+                    (msp-int-str (or-ok rd))
+                    (msp-int-str (or-when rd))
+                    (msp-int-str (or-deadline rd))
+                    (msp-quote (or-kind rd))))
+                ")"))
+            "ON CONFLICT (presence, subject) DO UPDATE SET"
+            "answered = EXCLUDED.answered, ok = EXCLUDED.ok, reading_at = EXCLUDED.reading_at, deadline = EXCLUDED.deadline, kind = EXCLUDED.kind")))
+
+    ; SELECT all readings — every (presence, subject) is already deduped by the PK
+    (defn msp-select-sql ()
+        (str_concat "SELECT presence, subject, answered, ok, reading_at, deadline, kind FROM "
+            (msp-table)))
+
+    ; ── decode a pg_query result string -> reading list (pure, four-way) ─
+    ; pg_query returns rows \n-separated, columns \t-separated. parse a positive int from a column.
+    (defn msp-str-int-loop (s i n acc)
+        (if (ge i n)
+            acc
+            (msp-str-int-loop s (add i 1) n
+                (add (mul acc 10) (sub (ord (char_at s i)) 48)))))
+    (defn msp-str-int (s) (msp-str-int-loop s 0 (str_len s) 0))
+
+    ; the value of column `wanted` in a \t-separated row (agrp-col shape)
+    (defn msp-col-loop (row wanted current start pos)
+        (if (ge pos (str_len row))
+            (if (eq current wanted) (substring row start (str_len row)) "")
+            (if (str_eq (char_at row pos) "\t")
+                (if (eq current wanted)
+                    (substring row start pos)
+                    (msp-col-loop row wanted (add current 1) (add pos 1) (add pos 1)))
+                (msp-col-loop row wanted current start (add pos 1)))))
+    (defn msp-col (row idx) (msp-col-loop row idx 0 0 0))
+
+    ; split the pg_query result into row-strings (no empty trailing row)
+    (defn msp-split (s pos n start)
+        (if (ge pos n)
+            (if (gt n start) (cons (substring s start n) (empty)) (empty))
+            (if (str_eq (char_at s pos) "\n")
+                (cons (substring s start pos) (msp-split s (add pos 1) n (add pos 1)))
+                (msp-split s (add pos 1) n start))))
+    (defn msp-rows-split (s) (msp-split s 0 (str_len s) 0))
+
+    ; one row -> organ-reading. SELECT order: 0 presence 1 subject 2 answered 3 ok 4 reading_at
+    ; 5 deadline 6 kind. The subject is the reading name; the live payload is now a durable marker.
+    (defn msp-row-reading (row)
+        (organ-reading
+            (msp-col row 1)
+            (msp-col row 6)
+            (msp-str-int (msp-col row 2))
+            (msp-str-int (msp-col row 3))
+            (msp-str-int (msp-col row 4))
+            (msp-str-int (msp-col row 5))
+            (list "durable")))
+    (defn msp-rows-readings (rows)
+        (if (nil? rows)
+            (empty)
+            (cons (msp-row-reading (head rows)) (msp-rows-readings (tail rows)))))
+    (defn msp-decode (result) (msp-rows-readings (msp-rows-split result)))
+
+    ; ── host-io wrappers (pg_exec / pg_query — the standing wall, 3-kernel) ──
+    (defn msp-ensure-table (conn) (do (pg_exec conn (msp-ddl-sql)) conn))
+    (defn msp-persist (conn presence rd) (do (pg_exec conn (msp-insert-sql presence rd)) conn))
+    (defn msp-load (conn) (msp-decode (pg_query conn (msp-select-sql))))
+
+    ; the durable cross-machine consensus — read every presence's persisted readings, quorum each
+    (defn msp-durable-map (conn k) (sensings-consensus-map (msp-load conn) k))
+    (defn msp-durable-consensus (conn name k) (sensings-consensus (msp-load conn) name k)))

@@ -1,0 +1,71 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk form-stdlib/mesh-sensings.fk form-stdlib/mesh-sensings-store-pg.fk
+;
+; mesh-sensings-store-pg-band — the Postgres backend beneath the mesh-sensings contract: presences on
+; DIFFERENT machines append into one durable table and read back the same consensus. The SQL builders
+; AND the whole decode pipeline are four-way — a pg_query result string parses back into readings and
+; runs consensus with no live DB. Only pg_exec / pg_query (the two boundary calls in the carrier) are
+; the host-io wall; this band never touches them, so it crosses four-way.
+;
+; The fixture is a real pg_query result shape: rows \n-separated, columns \t-separated, in the SELECT
+; order (presence, subject, answered, ok, reading_at, deadline, kind). Three machines report
+; gpu:matvec bit-exact; on claim:foo two agree and one dissents.
+;
+; Verdict 4095 when every claim lands:
+;   1     DDL names the table and the (presence, subject) primary key
+;   2     DDL declares all seven columns
+;   4     INSERT escapes a single quote in a value (no injection)
+;   8     INSERT carries the verdict ints and the kind string
+;   16    INSERT is an UPSERT — last-write-wins per (presence, subject)
+;   32    SELECT names the table and the column order the decoder expects
+;   64    a pg_query result string decodes to the right number of readings
+;   128   CROSS-MACHINE: three machines' gpu:matvec readings reach consensus-observed
+;   256   a dissent on claim:foo is divergent (one machine disagrees; resolve, never ship)
+;   512   the consensus map carries one entry per distinct subject
+;   1024  decode fidelity: a reading read back carries the ok flag and subject it was stored with
+;   2048  int round-trips: msp-str-int . msp-int-str is identity (the column codec is honest)
+(do
+    ; string-contains, local to the band (agn-contains? shape) — assertions only, not carrier tissue
+    (defn mc-at? (s needle i j)
+        (if (eq j (str_len needle)) 1
+            (if (ge (add i j) (str_len s)) 0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (mc-at? s needle i (add j 1)) 0))))
+    (defn mc-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle))) 0
+            (if (eq (mc-at? s needle i 0) 1) 1 (mc-loop? s needle (add i 1)))))
+    (defn mc? (s needle)
+        (if (eq (str_len needle) 0) 1
+            (if (lt (str_len s) (str_len needle)) 0 (mc-loop? s needle 0))))
+
+    (let ddl (msp-ddl-sql))
+    (let sel (msp-select-sql))
+    ; a reading whose presence carries a quote, to prove escaping
+    (let rd-q  (organ-reading "gpu:x" "gpu-bit-exact" 1 1 5 10 (list "live")))
+    (let ins   (msp-insert-sql "o'brien" rd-q))
+
+    ; a real pg_query result: three machines on gpu:matvec (all bit-exact), a split on claim:foo
+    (let result (str_concat
+        "claude\tgpu:matvec\t1\t1\t5\t10\tgpu-bit-exact\n" (str_concat
+        "codex\tgpu:matvec\t1\t1\t5\t10\tgpu-bit-exact\n" (str_concat
+        "sema\tgpu:matvec\t1\t1\t5\t10\tgpu-bit-exact\n" (str_concat
+        "claude\tclaim:foo\t1\t1\t5\t10\tverdict-vote\n" (str_concat
+        "codex\tclaim:foo\t1\t1\t5\t10\tverdict-vote\n"
+        "sema\tclaim:foo\t1\t0\t5\t10\tverdict-vote"))))))
+    (let decoded (msp-decode result))
+    (let r5 (nth decoded 5))
+
+    (let c0  (if (and (mc? ddl "sensing_readings") (mc? ddl "primary key (presence, subject)")) 1 0))
+    (let c1  (if (and (mc? ddl "answered integer")
+                      (and (mc? ddl "reading_at bigint") (mc? ddl "kind text"))) 2 0))
+    (let c2  (if (mc? ins "'o''brien'") 4 0))
+    (let c3  (if (and (mc? ins "1, 1, 5, 10,") (mc? ins "'gpu-bit-exact'")) 8 0))
+    (let c4  (if (mc? ins "ON CONFLICT (presence, subject) DO UPDATE") 16 0))
+    (let c5  (if (mc? sel "SELECT presence, subject, answered, ok, reading_at, deadline, kind FROM sensing_readings") 32 0))
+    (let c6  (if (eq (len decoded) 6) 64 0))
+    (let c7  (if (str_eq (sensings-consensus decoded "gpu:matvec" 2) "consensus-observed") 128 0))
+    (let c8  (if (str_eq (sensings-consensus decoded "claim:foo" 2) "divergent") 256 0))
+    (let c9  (if (eq (len (sensings-consensus-map decoded 2)) 2) 512 0))
+    (let c10 (if (and (str_eq (or-name r5) "claim:foo") (eq (or-ok r5) 0)) 1024 0))
+    (let c11 (if (eq (msp-str-int (msp-int-str 80435)) 80435) 2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
