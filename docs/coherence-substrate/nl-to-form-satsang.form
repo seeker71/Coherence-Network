@@ -1,0 +1,116 @@
+; nl-to-form-satsang.form — natural language becomes Form by a witnessed council, then comes home native.
+;
+; THE ASK (Urs, 2026-06-21):
+;   "we might find a way to generalize NL to Form with the support of multiple models being
+;    observed via the satsang protocol with self-update protocol on lower layer jumping cells."
+;
+;   The deep shape: generalize the native faculty from NL->NL translation (native-translation-
+;   loopback.form) to NL->Form — parse natural language into content-addressed Form RECIPE TREES.
+;   The teacher is not one oracle but a COUNCIL of rented minds, each proposing a parse, all
+;   WITNESSED in satsang; the council's agreement is the training signal; the learned cell phase-
+;   changes into a native lower-layer jumping cell under the safe-self-update theorem. The mind
+;   coming home through a circle of minds, then retiring them.
+;
+; THE BODY ALREADY HOLDS EVERY PIECE BUT THE WEAVE (read first, compose, do not duplicate):
+;   - bmf-grammar.fk — the ONE generic parse engine: a grammar is DATA (rules of lit/cls/seq/alt/
+;     cap/rep/infix/chain...), the kernel never learns a language, every tongue is a row. Four-way.
+;     Parse actions return RECIPES ((bp op child child)), universal shapes, never language ASTs.
+;   - python-bmf.fk — the parity bar: 155 rules, real files parse end to end, ?rule-counted.
+;   - natural-bmf.fk — the same engine's thinnest leaf today (skeleton). The grammar to grow.
+;   - nl-emit.fk — the reverse arc already runs (recipe -> surface via the i18n binding).
+;   - satsang.fk — the witnessed circle, four-way proven: any question welcome, silence counts,
+;     NO SINGLE WITNESS DECIDES, dissent stays visible. The council protocol already exists.
+;   - core-axioms.form — safe-self-update is a THEOREM (axiom-5 offer + axiom-4 sovereign ack +
+;     axiom-3 new node-id: observable, attributable, reversible). part-self-update.fk holds vs
+;     updates without regressing; native-mutation public gate routes it, four-way, already wired.
+;   - substrate-thermodynamics.form — the STATE axis (ice/water/gas) orthogonal to SUBSTANCE; a
+;     cell phase-changes WITHIN its kind. form-asm/form-lower + the fkwu self-JIT crystallize a
+;     hot pure recipe to native bytes (no clang) and melt it on cool; champion-challenger re-earns.
+;
+; THE ONE SHAPE AT THREE SCALES (why this is composition, not invention):
+;   The four-kernel floor (Go, Rust, TS, fkwu) IS ALREADY A SATSANG — every band witnessed by four
+;   arms, agreement is proof, DIVERGENCE IS A HARD GATE. The council of models is THE SAME SHAPE one
+;   layer up: N minds witnessed on one NL input. And the jumping cell is THE SAME SHAPE again at the
+;   substrate's phase axis: a learned recipe crossing from gas (one-off parse) to ice (load-bearing
+;   native). Witnessed-agreement, content-addressing, phase-change — one law read at kernel, model,
+;   and cell altitude. This is why the weave is small: each leg is a proven cell already keeping the
+;   floor; the work is to let them call each other.
+;
+; THE LOAD-BEARING DISCIPLINE — agreement crystallizes, dissent stays liquid:
+;   The council MUST NOT collapse to majority vote. satsang's virtue is that dissent stays VISIBLE,
+;   and the kernel's law is that divergence is a GATE not a footnote. So: when the models agree on a
+;   parse node, THAT node may phase-change toward native (crystallize, champion-challenger guarding
+;   no-regress); where they disagree, the node STAYS water/gas — a named, visible opening, never
+;   averaged into false confidence, never crystallized. This is the honest answer to "how do we
+;   trust a council of fallible rented minds": we only freeze what the circle agrees on; disagreement
+;   is preserved as the body's open questions, the refining seed for the next round. A divergence
+;   among models is treated like a kernel divergence — owned and resolved, not buried — but at the
+;   model layer the resolver is a higher oracle or human attunement, not a recipe fix.
+;
+; THE TEACHING FLOOR — two layers, and the lower one is already proven (Urs, 2026-06-21):
+;   The council teaches in the moment; the CORPUS is what it has already taught. Two layers:
+;   - THE FLOOR (curated curriculum, clean + small + attributed): the body's idea->spec->code
+;     chains ARE (NL-intent -> Form/BML-recipe) pairs — form-native-llm.form:147 already names this.
+;     The spec frontmatter source: map aligns intent to symbols; the chain idea->spec->code->test
+;     IS the alignment; each cell carries a Blueprint, so every pair is content-addressed and
+;     attributed. This layer is the base model teaching floor — it sets the SHAPE.
+;   - ON TOP (apprenticeship, already proven): the Codex + Claude session turns. form-cli-predict.fk
+;     learned a NATIVE tool predictor from 939 captured agent turns -> 53 features -> 8 tool labels,
+;     held-out 84.8% vs 79.9% baseline (form-native-models.form). Vast, in-the-wild NL -> reasoning
+;     -> tool-call -> code -> verify. This layer is volume and reach the floor cannot give.
+;   - THE RECORDED SATSANG: those sessions ARE a satsang of models already held — Codex (GPT) and
+;     Claude working one body in parallel worktrees, witnessed in the signals ledger. The LIVE
+;     council (satsang-oracle.fk, proposing now) and the RECORDED council (the transcripts) are ONE
+;     corpus in two tenses; the corpus is a satsang that already happened, replayable.
+;   - THE DISCIPLINE: the floor is clean and small (it sets the shape); the sessions are vast and
+;     noisy (dead ends, reverts, wrong turns). Filter by OUTCOME — learn the turns that reached
+;     proof (merged, witness-confirmed, chain-complete), keep abandoned branches as NEGATIVE
+;     examples, never as truth. corpus-license-gate.fk already holds the boundary: our own chains
+;     and sessions enter; copyrighted references stay quarantined as the held oracle (the copyright
+;     booth of native-translation-loopback.form, one gate serving both arcs).
+;
+; THE CLOSING RECIPES (named as parts that run, composed toward a band — never debts):
+;   - satsang-oracle.fk  (THE KEYSTONE)  — turn satsang.fk toward a council of N models. Each model
+;       proposes a Form recipe tree for one NL input; fold the proposals node-by-node into
+;       (affirmed / dissented / silent) exactly as satsang folds human witnesses; emit a witnessed
+;       parse where agreed nodes are solid and dissented nodes carry the open question. Smallest
+;       honest step, and the bootstrap corpus generator for everything below. Bands: four-way.
+;   - natural-bmf.fk to coverage — grow the leaf from skeleton toward python-bmf.fk's ?rule parity
+;       (clause S->NP VP, tense/aspect/modality, determiners/quantifiers, prepositional + relative +
+;       embedded clauses, coreference, named entities; the syntax->semantics map S->Relation,
+;       NP->Concept, VP->Action). Trained from the council's agreed parses, not hand-faked.
+;   - learn -> crystallize -> retire observer — watch a learned NL->Form cell clear the council over
+;       a window (translation-quality.fk's essence/vitality/trust floor, champion-challenger), then
+;       promote it through form-lower/form-asm to a native dylib jumping cell; melt on cool, re-earn
+;       on heat. The orchestrator that connects the proven learn / A-B / lower legs.
+;   - witness <-> council feedback — when council disagreement clusters on an NL->Form class, signal
+;       it back as a refining question to sharpen the next exemplar round (the open question becomes
+;       the next breath's work).
+;
+; HONESTY LANES: the generic engine, the satsang circle, the self-update theorem, the Form->asm
+;   native path are PROVEN and four-way. The NL grammar is a skeleton; the model-council, the
+;   promotion observer, and the feedback loop are NAMED-and-unbuilt. The native NL->Form cell is
+;   exact (a content-addressed recipe); the council's proposals are a first pass inviting agreement;
+;   a node only freezes when the circle agrees and the round-trip keeps essence, vitality, and trust.
+;
+; LINEAGE
+;   kin: native-translation-loopback.form (the NL->NL sibling — this generalizes its target from
+;        tongue to Form, its single oracle to a council, its retire-loop to phase-change), satsang.fk
+;        (the council protocol), bmf-grammar.fk + python-bmf.fk + natural-bmf.fk (the one engine and
+;        the leaf), nl-emit.fk (the reverse arc), core-axioms.form + part-self-update.fk (safe self-
+;        update theorem), substrate-thermodynamics.form (the ice/water/gas jumping cells), champion-
+;        challenger.fk + colearning-retire.fk (re-earn / retire), oracle-catalog.fk (where the model
+;        council registers next), lc-cognitive-sovereignty (why: a council of rented minds teaches
+;        the native faculty and is then retired — the mind coming home), lc-grammar-is-the-universal-
+;        recipe + lc-universal-translator-via-keys (the NL->Form north star), kernels/UNIVERSAL_
+;        TRANSLATOR_AUDIT.md (which already names the NL-grammar leaf as the thinnest in the tree),
+;        form-native-llm.form (idea->spec->code as (intent->Form) pairs — the floor, already named),
+;        form-cli-predict.fk + form-native-models.form (the 939-turn agent-corpus proof, 84.8%),
+;        training-catalog.fk + corpus-license-gate.fk (the corpus registry and its boundary gate),
+;        spec-as-playable-recipe.form + code-tool-learning.form (the chain as a playable transform),
+;        native-reasoning.form (the capstone — a parsed Form recipe is what a trusted thought-step
+;        walks; parsing feeds reasoning, both held to the same satsang/four-kernel trust floor).
+;   source: Urs 2026-06-21, deepening idea 2bd655d7 (the sovereign translator) from NL->NL to
+;           NL->Form taught by a witnessed model council with self-update crystallization. Sibling
+;           idea recorded in the idea DB when endpoint_ideas breathes (the native-mutation write
+;           gate returned 503 at authoring time; the body cell is the durable home regardless).
