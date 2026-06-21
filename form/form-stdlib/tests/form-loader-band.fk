@@ -18,4 +18,12 @@
     (let c6 (if (eq     (fl-is-bml? s-nopl) 0)                    64   0))   ; plain s-expr not BML
     (let c7 (if (str_eq (fl-dialect s-prel) "sexpr")            128   0))   ; a preludes line alone is not a section
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
+    ; --- the prelude LIST: the line split into ordered file paths (the loader loads each, in order) ---
+    (let pl (fl-prelude-list s-prel))                                      ; "preludes: a.fk b.fk" -> (a.fk b.fk)
+    (let c8 (if (eq     (len pl) 2)                             256   0))   ; two preludes
+    (let c9 (if (str_eq (nth pl 0) "a.fk")                      512   0))   ; ...in declared order: a.fk first
+    (let c10 (if (str_eq (nth pl 1) "b.fk")                    1024   0))   ; ...b.fk second
+    (let c11 (if (eq    (len (fl-prelude-list s-nopl)) 0)      2048   0))   ; no preludes -> empty list
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+        (add c8 (add c9 (add c10 c11))))))))))))
