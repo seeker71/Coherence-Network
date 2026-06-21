@@ -1,0 +1,84 @@
+; gpu-mesh-sense.fk — a GPU bit-exact proof verdict enters the world-model as a wmg-sense row.
+;
+; Floor: a GPU lane's bit-exact verdict (backend, device, kernel, parity N/N, max-abs ULP) lowers
+; into the SAME wmg-sense shape the world-model learner already consumes from active samples,
+; capability receipts, and model evals (world-model-live-sense.fk). The GPU organ stops reporting
+; only to stdout/CI and starts reporting into the mesh, in one canonical reading shape — so every
+; cell that reads the world-model stream sees what the silicon proved, and learns from it.
+;
+; This is the GPU sibling of wmls-from-capability-receipt: same destination (wmg-sense / ov-reading),
+; a converter for a new organ. witness-state-receipt.fk already carries gpu-samples / gpu-latency-us
+; and names "GPU learners consume live counters as first-class receipts" as its north star; this
+; closes that for the bit-exact PROOF verdict (not just a frame counter).
+;
+; Integers + strings only — bit-exact means max-abs ULP = 0, so no float crosses the recipe.
+;
+; North star: every sensing organ — speech, vision, GPU, model — emits one reading shape into the
+; live stream so cells learn from each other; the GPU lane is the first organ wired here.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk
+;
+; Proven by: form-stdlib/tests/gpu-mesh-sense-band.fk
+
+(do
+    ; a GPU bit-exact proof receipt — one backend/device proved one kernel bit-exact (or not).
+    ; max-abs-ulp is the worst element's ULP delta vs the CPU recipe oracle: 0 means bit-identical.
+    (defn gpu-receipt (backend device kernel parity-num parity-den max-abs-ulp)
+        (list "gpu-receipt" backend device kernel parity-num parity-den max-abs-ulp))
+    (defn gpu-backend     (r) (nth r 1))
+    (defn gpu-device      (r) (nth r 2))
+    (defn gpu-kernel      (r) (nth r 3))
+    (defn gpu-parity-num  (r) (nth r 4))
+    (defn gpu-parity-den  (r) (nth r 5))
+    (defn gpu-max-abs-ulp (r) (nth r 6))
+
+    ; bit-exact iff EVERY output element matched AND the worst ULP delta is 0
+    (defn gpu-bit-exact? (r)
+        (if (and (eq (gpu-parity-num r) (gpu-parity-den r))
+                 (eq (gpu-max-abs-ulp r) 0))
+            1 0))
+
+    ; the observable reading: answered=1 (the proof ran), value=bit-exact?, when=tick
+    (defn gpu-receipt-reading (r tick)
+        (ov-reading 1 (gpu-bit-exact? r) tick))
+
+    ; inspectable payload — the full verdict travels with the sense (no hidden metadata)
+    (defn gpu-receipt-payload (r)
+        (list "gpu-bit-exact-receipt"
+              "backend"     (gpu-backend r)
+              "device"      (gpu-device r)
+              "kernel"      (gpu-kernel r)
+              "parity-num"  (gpu-parity-num r)
+              "parity-den"  (gpu-parity-den r)
+              "max-abs-ulp" (gpu-max-abs-ulp r)))
+
+    ; the converter: a GPU receipt becomes a wmg-sense row, named "<backend>:<kernel>", kind
+    ; "gpu-bit-exact" — the same shape world-model-growth ingests, digests, and embodies.
+    (defn wmls-from-gpu-receipt (r deadline tick)
+        (wmg-sense
+            (str_concat (gpu-backend r) (str_concat ":" (gpu-kernel r)))
+            "gpu-bit-exact"
+            (gpu-receipt-reading r tick)
+            deadline
+            (gpu-receipt-payload r)))
+
+    ; a GPU receipt the world-model can TRUST and act on: verified within deadline, not "nothing"
+    (defn gpu-sense-trusted? (r deadline tick)
+        (obs-trusted? (wmg-sense-verdict (wmls-from-gpu-receipt r deadline tick))))
+
+    ; two backends proving the SAME kernel bit-exact = cross-vendor agreement the mesh can see
+    ; (e.g. Metal on Apple silicon AND Vulkan on Adreno both observed-bit-exact on matvec).
+    (defn gpu-cross-vendor-agree? (ra rb deadline tick)
+        (if (and (eq (gpu-bit-exact? ra) 1)
+                 (and (eq (gpu-bit-exact? rb) 1)
+                      (str_eq (gpu-kernel ra) (gpu-kernel rb))))
+            1 0))
+
+    ; a one-line render of the sense for the live mesh board — STRING parts only (name, kind,
+    ; verdict), so it crosses four-way (int_to_str lives only in the fourth shim). The carrier
+    ; appends the parity/device numbers it already holds.
+    (defn gpu-sense-render (r deadline tick)
+        (str_concat (wmg-sense-name (wmls-from-gpu-receipt r deadline tick))
+            (str_concat " "
+                (str_concat (wmg-sense-kind (wmls-from-gpu-receipt r deadline tick))
+                    (str_concat " " (wmg-sense-verdict (wmls-from-gpu-receipt r deadline tick))))))))

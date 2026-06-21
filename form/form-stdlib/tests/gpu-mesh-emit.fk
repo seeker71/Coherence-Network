@@ -1,0 +1,14 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk
+;
+; gpu-mesh-emit — render THIS session's real GPU organ readings as one mesh line, through the
+; proven gpu-mesh-sense converter (proof: gpu-mesh-sense-band, verdict 511 four-way). The carrier
+; scripts/gpu_mesh_sense_emit.sh runs this, then posts each reading to the live field board.
+; Output is one string, byte-identical across the kernels — the GPU organ's reading in the mesh shape.
+(do
+    (let metal-conv2d  (gpu-receipt "metal"  "Apple M4 Max"    "conv2d" 75 75 0))
+    (let metal-matvec  (gpu-receipt "metal"  "Apple M4 Max"    "matvec" 1280 1280 0))
+    (let adreno-matvec (gpu-receipt "vulkan" "Adreno (TM) 740" "matvec" 1280 1280 0))
+    (str_concat (gpu-sense-render metal-conv2d 10 5)
+        (str_concat " | "
+            (str_concat (gpu-sense-render metal-matvec 10 5)
+                (str_concat " | " (gpu-sense-render adreno-matvec 10 5))))))

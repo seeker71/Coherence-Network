@@ -241,6 +241,7 @@ text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
 android-mesh-learning fks 131071
 witness-state-receipt fks 67108863
+gpu-mesh-sense fks 511
 model-executor-proof-ledger fks 4095
 model-vitality fks 4095
 field-model-form-runtime fks 63

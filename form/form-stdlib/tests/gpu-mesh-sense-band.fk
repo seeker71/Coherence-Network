@@ -1,0 +1,43 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk
+;
+; gpu-mesh-sense-band — a GPU bit-exact proof verdict enters the world-model stream as a
+; wmg-sense row, the same shape the learner consumes from active samples and capability receipts.
+; Fixtures are THIS session's real verdicts: Metal conv2d 75/75 on Apple M4 Max, Vulkan matvec
+; 1280/1280 on Adreno 740. The mesh sees what the silicon proved — and two GPU vendors agree.
+;
+; Verdict 511 when every claim lands:
+;   1    a bit-exact GPU receipt (metal conv2d 75/75 ulp0) becomes an OBSERVED wmg-sense row
+;   2    a short-parity receipt becomes ABSENT (verified-not-bit-exact, not silence)
+;   4    full parity but ULP>0 also becomes ABSENT (a 1-ULP divergence is NOT bit-exact)
+;   8    the sense is named "<backend>:<kernel>" with kind "gpu-bit-exact"
+;   16   the full verdict stays inspectable in the wmg-sense payload (no hidden metadata)
+;   32   a trusted bit-exact receipt is obs-trusted? — the world-model may act on it
+;   64   a timeout (deadline < tick) yields "nothing" — silence stays silence, untrusted
+;   128  cross-vendor agreement: Metal/Apple AND Vulkan/Adreno both bit-exact on matvec
+;   256  a disagreement (one bit-exact, one short) is NOT cross-vendor agreement
+(do
+    ; this session's real GPU organ readings, as receipts
+    (let metal-conv2d  (gpu-receipt "metal"  "Apple M4 Max"     "conv2d" 75 75 0))
+    (let metal-matvec  (gpu-receipt "metal"  "Apple M4 Max"     "matvec" 1280 1280 0))
+    (let adreno-matvec (gpu-receipt "vulkan" "Adreno (TM) 740"  "matvec" 1280 1280 0))
+    ; negative fixtures: a short parity, a full-parity-but-1-ULP divergence
+    (let short-matvec  (gpu-receipt "vulkan" "RTX 4070"         "matvec" 11 13 0))
+    (let ulp1-matvec   (gpu-receipt "vulkan" "RTX 4070"         "matvec" 256 256 1))
+
+    (let sense-conv2d  (wmls-from-gpu-receipt metal-conv2d 10 5))
+    (let payload       (wmg-sense-payload sense-conv2d))
+
+    (let c0 (if (str_eq (wmg-sense-verdict sense-conv2d) "observed") 1 0))
+    (let c1 (if (str_eq (wmg-sense-verdict (wmls-from-gpu-receipt short-matvec 10 5)) "absent") 2 0))
+    (let c2 (if (str_eq (wmg-sense-verdict (wmls-from-gpu-receipt ulp1-matvec 10 5)) "absent") 4 0))
+    (let c3 (if (and (str_eq (wmg-sense-name sense-conv2d) "metal:conv2d")
+                     (str_eq (wmg-sense-kind sense-conv2d) "gpu-bit-exact")) 8 0))
+    (let c4 (if (and (str_eq (nth payload 2) "metal")
+                     (and (str_eq (nth payload 4) "Apple M4 Max")
+                          (str_eq (nth payload 6) "conv2d"))) 16 0))
+    (let c5 (if (eq (gpu-sense-trusted? metal-conv2d 10 5) 1) 32 0))
+    (let c6 (if (eq (gpu-sense-trusted? metal-conv2d 3 5) 0) 64 0))
+    (let c7 (if (eq (gpu-cross-vendor-agree? metal-matvec adreno-matvec 10 5) 1) 128 0))
+    (let c8 (if (eq (gpu-cross-vendor-agree? metal-matvec short-matvec 10 5) 0) 256 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
