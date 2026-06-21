@@ -1,25 +1,24 @@
-; speaker-net.fk — Challenger 3 ("Net"): a NONLINEAR neural embedder, SGD-trained.
+; speaker-net.fk — Challenger 3 ("Net"): a NONLINEAR neural embedder, FLOAT SGD.
 ;
-; C2 (linear, diagonal and full) can only carve speakers apart with hyperplanes. C3 adds the
-; one thing ECAPA's power rests on — a NONLINEARITY. The minimal x-vector: emb = relu(W·x),
-; trained by squared loss to speaker target codes with relu-GATED backprop (gradient flows only
-; through active units). One nonlinear layer here; stacking more (the deep TDNN) is the same
-; recipe repeated — this proves the loop. Reuses speaker-proj's matvec + row-SGD.
+; C2 (linear) can only carve with hyperplanes; C3 adds the nonlinearity ECAPA's power rests on.
+; The minimal x-vector: emb = relu(W·x), trained by squared loss to speaker codes with relu-GATED
+; backprop (gradient flows only through active units). Plain floats (fp64, the whisper-block
+; arithmetic, four-way) — not integer fixed-point. One nonlinear layer here; stacking more (the
+; deep TDNN) is the same recipe repeated. Reuses speaker-proj's float matvec + row-SGD.
 ;
-; Fixed-point scale 1000. Builds on speaker-embed (se-dot) + speaker-proj (sp-*). Proven by
-; form-stdlib/tests/speaker-net-band.fk.
+; Proven by form-stdlib/tests/speaker-net-band.fk.
 
 (do
     ; --- forward: emb = relu(W·x) ---
     (defn sn-relu-vec (v)
         (if (eq (len v) 0) (empty)
-            (cons (if (lt (head v) 0) 0 (head v)) (sn-relu-vec (tail v)))))
+            (cons (if (lt (head v) 0.0) 0.0 (head v)) (sn-relu-vec (tail v)))))
     (defn sn-forward (W x) (sn-relu-vec (sp-matvec W x)))
 
-    ; --- relu-gated error: dL/dz_j = (relu(z)_j − t_j) if z_j>0 else 0 (dead units pass no gradient) ---
+    ; --- relu-gated error: dL/dz_j = (relu(z)_j − t_j) if z_j>0 else 0.0 (dead units pass none) ---
     (defn sn-gated-err (z t)
         (if (eq (len z) 0) (empty)
-            (cons (if (gt (head z) 0) (sub (head z) (head t)) 0)
+            (cons (if (gt (head z) 0.0) (sub (head z) (head t)) 0.0)
                   (sn-gated-err (tail z) (tail t)))))
 
     ; --- one SGD step: update each row by its gated error (sp-row-step is the squared-loss rule) ---

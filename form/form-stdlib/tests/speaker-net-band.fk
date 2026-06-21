@@ -1,37 +1,30 @@
-; preludes: form-stdlib/speaker-embed.fk form-stdlib/speaker-proj.fk form-stdlib/speaker-net.fk
+; preludes: form-stdlib/speaker-proj.fk form-stdlib/speaker-net.fk
 ;
-; speaker-net-band — Challenger 3's nonlinear relu embedder + gated backprop, three-way.
+; speaker-net-band — Challenger 3's FLOAT relu embedder + gated backprop, three-way.
 ;
-; W=identity×1000, x=[3000,−2000] → z=[3000,−2000] → relu emb=[3000,0] (unit1 DEAD).
-; t=[1000,1000]; loss=(3000−1000)²+(0−1000)²=5,000,000. The dead unit passes NO gradient;
-; the active unit's gradient flows to BOTH its weights (incl. the off-axis one). One step
-; (lr=10) → w00 880, w01 80; loss falls to 3,190,400.
+; Identity W, x=[2,−1] → z=[2,−1] → relu emb=[2,0] (unit1 DEAD). t=[1,1]; loss=2. Dead unit
+; passes no gradient; active unit's gradient reaches its off-axis weight. Step lr=0.125: w00→0.5,
+; w01→0.25, loss 2→1.0625. All f64-exact.
 ;
-; Verdict 255 when every claim lands — the nonlinearity behaves:
-;   1   relu keeps the positive unit    (emb0 = 3000)
-;   2   relu zeroes the negative unit    (emb1 = 0)
-;   4   dead unit gets zero gradient     (gated-err1 = 0)
-;   8   active unit's error              (gated-err0 = 2000)
-;   16  loss before                      (= 5,000,000)
-;   32  loss strictly falls              (after < before)
-;   64  gradient reaches the off-axis w   (w01 0 → 80)
-;   128 loss after exact                 (= 3,190,400)
+; Verdict 255:
+;   1 emb0=2.0   2 emb1=0.0 (relu)   4 gated-err1=0.0 (dead)   8 gated-err0=1.0
+;   16 loss-before=2.0   32 loss strictly falls   64 w01=0.25 (off-axis got gradient)   128 loss-after=1.0625
 (do
-    (let W (list (list 1000 0) (list 0 1000)))
-    (let x (list 3000 -2000))
-    (let t (list 1000 1000))
+    (let W (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let x (list 2.0 -1.0))
+    (let t (list 1.0 1.0))
     (let z (sp-matvec W x))
     (let emb (sn-forward W x))
     (let ge (sn-gated-err z t))
     (let before (sn-loss W x t))
-    (let W2 (sn-step W x t 10))
+    (let W2 (sn-step W x t 0.125))
     (let after (sn-loss W2 x t))
-    (let c0 (if (eq (head emb) 3000) 1 0))
-    (let c1 (if (eq (head (tail emb)) 0) 2 0))
-    (let c2 (if (eq (head (tail ge)) 0) 4 0))
-    (let c3 (if (eq (head ge) 2000) 8 0))
-    (let c4 (if (eq before 5000000) 16 0))
+    (let c0 (if (eq (head emb) 2.0) 1 0))
+    (let c1 (if (eq (head (tail emb)) 0.0) 2 0))
+    (let c2 (if (eq (head (tail ge)) 0.0) 4 0))
+    (let c3 (if (eq (head ge) 1.0) 8 0))
+    (let c4 (if (eq before 2.0) 16 0))
     (let c5 (if (lt after before) 32 0))
-    (let c6 (if (eq (head (tail (head W2))) 80) 64 0))
-    (let c7 (if (eq after 3190400) 128 0))
+    (let c6 (if (eq (head (tail (head W2))) 0.25) 64 0))
+    (let c7 (if (eq after 1.0625) 128 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
