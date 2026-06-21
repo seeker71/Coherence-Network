@@ -1,0 +1,32 @@
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/loss.fk form-stdlib/speaker-aam.fk
+;
+; speaker-aam-band — the AAM-Softmax head's geometry, four-way.
+;
+; Fixture: x=[3,4] (x̂=[0.6,0.8]); W_0=[3,4] (same direction → cosθ_0=1.0), W_1=[4,−3] (orthogonal →
+; cosθ_1=0.0). target y=0, scale s=4, margin (cos m, sin m)=(0.8, 0.6).
+;
+; Verdict 63 when every claim lands:
+;   1   self-cosine = 1.0            (W_0 ∥ x → cosθ_0 = 1.0)
+;   2   orthogonal cosine = 0.0      (W_1 ⟂ x → cosθ_1 = 0.0)
+;   4   L2-norm is a unit vector     (x̂·x̂ = 1.0)
+;   8   margin REDUCES the target    (cos(0+m)=0.8 < 1.0 — the angular penalty)
+;   16  margin RAISES the loss       (target made harder → CE_margin > CE_no-margin)
+;   32  margin-off is the identity   (cos m=1, sin m=0 → AAM-loss = plain softmax-CE on s·cosines)
+(do
+    (defn ab-i (x) (round (mul x 1000000.0)))
+    (defn ab-eq (a b) (if (eq a b) 1 0))
+    (let x  (list 3.0 4.0))
+    (let W  (list (list 3.0 4.0) (list 4.0 -3.0)))
+    (let xh (aam-l2norm x))
+    (let cs (aam-cosines W xh))
+    (let mc (aam-margin-cos (head cs) 0.8 0.6))
+    (let lm (aam-loss W x 0 4.0 0.8 0.6))                          ; with margin
+    (let l0 (aam-loss W x 0 4.0 1.0 0.0))                          ; margin off
+    (let lref (loss-softmax-ce (aam-scale cs 4.0) 0))             ; plain softmax-CE on s·cosines
+    (let c0 (mul 1  (ab-eq (ab-i (head cs)) 1000000)))
+    (let c1 (mul 2  (ab-eq (ab-i (head (tail cs))) 0)))
+    (let c2 (mul 4  (ab-eq (ab-i (aam-dot xh xh)) 1000000)))
+    (let c3 (mul 8  (if (eq (ab-eq (ab-i mc) 800000) 1) (if (gt 1.0 mc) 1 0) 0)))
+    (let c4 (mul 16 (if (gt lm l0) 1 0)))
+    (let c5 (mul 32 (ab-eq (ab-i l0) (ab-i lref))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

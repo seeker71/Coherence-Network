@@ -487,6 +487,7 @@ speaker-stat fks 255
 speaker-lin fks 1023
 speaker-proj fks 255
 speaker-net fks 255
+speaker-aam fks 63
 wav-sense fks 63
 witness-theorem fks 31
 witness-to-co-regulate fks 127

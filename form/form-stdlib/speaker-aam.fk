@@ -1,0 +1,40 @@
+; speaker-aam.fk — AAM-Softmax (additive angular margin / ArcFace) head, FLOAT.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/loss.fk
+;
+; The consensus #1 fix (Grok + Cursor): the challengers regressed embeddings to one-hot speaker CODES by
+; squared error — C3 collapsed because MSE-to-sparse-codes has no angular structure and the dead-relu eats
+; the gradient. The objective every strong speaker embedder (ECAPA included) actually trains on is
+; AAM-Softmax: score by the COSINE between the L2-normalized embedding and each class's L2-normalized
+; weight column, push an ADDITIVE ANGULAR MARGIN into the target class so it must be not just closest but
+; closest-by-a-margin, scale, then ordinary softmax cross-entropy. cos(θ+m) = cosθ·cos m − sinθ·sin m, with
+; sinθ = √(1−cos²θ); margin m enters as the constants (cos m, sin m). The loss is loss.fk's loss-softmax-ce
+; over the margin-adjusted logits — its backward is softmax − onehot, so the trainer needs no new gradient
+; node, only the chain through this cosine geometry (the next rung). All fp64; reuses tn-sqrt + loss-*.
+;
+; Proven by form-stdlib/tests/speaker-aam-band.fk.
+
+(do
+    ; --- L2 normalize: x̂ = x / ‖x‖ (so cosine = plain dot of normalized vectors) ---
+    (defn aam-dot (a b) (if (eq (len a) 0) 0.0 (add (mul (head a) (head b)) (aam-dot (tail a) (tail b)))))
+    (defn aam-scale (v s) (if (eq (len v) 0) (empty) (cons (mul (head v) s) (aam-scale (tail v) s))))
+    (defn aam-l2norm (v) (aam-scale v (div 1.0 (tn-sqrt (aam-dot v v)))))
+
+    ; --- cosines: for each class weight column W_j, cosθ_j = Ŵ_j · x̂ ---
+    (defn aam-cosines (W xhat)
+        (if (eq (len W) 0) (empty)
+            (cons (aam-dot (aam-l2norm (head W)) xhat) (aam-cosines (tail W) xhat))))
+
+    ; --- additive angular margin on one cosine: cos(θ+m) = cosθ·cosm − √(1−cos²θ)·sinm ---
+    (defn aam-margin-cos (c cosm sinm)
+        (sub (mul c cosm) (mul (tn-sqrt (sub 1.0 (mul c c))) sinm)))
+
+    ; --- logits: margin ONLY on the target index y, all scaled by s ---
+    (defn aam-logits-idx (cs i y s cosm sinm)
+        (if (eq (len cs) 0) (empty)
+            (cons (mul s (if (eq i y) (aam-margin-cos (head cs) cosm sinm) (head cs)))
+                  (aam-logits-idx (tail cs) (add i 1) y s cosm sinm))))
+    (defn aam-logits (W x y s cosm sinm) (aam-logits-idx (aam-cosines W (aam-l2norm x)) 0 y s cosm sinm))
+
+    ; --- AAM-softmax loss for one sample (embedding x, weights W, label y) ---
+    (defn aam-loss (W x y s cosm sinm) (loss-softmax-ce (aam-logits W x y s cosm sinm) y)))

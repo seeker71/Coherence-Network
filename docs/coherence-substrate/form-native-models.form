@@ -51,12 +51,34 @@
 ;     An OPTIMIZER bug first (gap 7b: lr=0.003 converges and matches the baseline), then a residual ~2x above
 ;     the irreducible feature floor (capacity + the coarse 4-dim featurization, 72% feature-collision). The
 ;     count predictor reaches 98% majority / 48% full-cover. Lesson: normalize per-row before trusting a loss.
+;   FLOOR — SPEAKER IDENTITY (proven 2026-06-21, this session — the WHO-speaks faculty begins):
+;     who is speaking is the fourth voice faculty beside STT/translate/TTS. From-scratch Form challengers
+;     race the ECAPA-TDNN oracle (ecapa_embed.py, cosine ~0.09-0.13 cross-speaker): speaker-stat (C1, log-mel
+;     mean+std supervector) and the speaker-embed/lin/proj/net ladder (i-vector → diagonal-LDA → full linear
+;     projection → relu x-vector) all four-way. FEATURE WIN: swapping the coarse 20-band sox front-end for
+;     whisper's 80-d log-mel (mel-frame/mel-full + the new 80-row Slaney bank mel-filterbank.fk, four-way 63)
+;     + CMVN dropped the HARD same-gender pair 0.768 → 0.588 (ECAPA 0.13) — features + normalization sharpen
+;     the geometry as predicted; raw log-mel WITHOUT CMVN is worse (~0.97, the shared envelope dominates).
+;     OBJECTIVE WIN: the consensus #1 fix is SHIPPED — speaker-aam.fk (AAM-Softmax / ArcFace head, four-way,
+;     verdict 63) replaces the MSE-to-speaker-codes objective that collapsed C3: L2-normalized cosine logits +
+;     additive angular margin on the target (cos(θ+m) = cosθ·cosm − √(1−cos²θ)·sinm) + loss.fk's softmax-CE.
+;     Proven: margin REDUCES the target cosine and RAISES the loss (the defining angular penalty), margin-off
+;     is the plain-softmax identity. EXTERNAL REVIEW (Grok + Cursor, headless, converged, recorded in
+;     CHALLENGERS.md): #1 AAM-softmax not MSE-codes (DONE); #2 data + augmentation (VAD chunks + MUSAN/RIR/
+;     speed — 26 voices × 1 recording is the binding wall); #3 EER/minDCF + score-norm (one hard-pair cosine
+;     misleads); #4 attentive stats pooling + per-UTTERANCE CMVN; #5 shallow dilated TDNN; #6 hard-negative
+;     mining + centroid enrollment; #7 native asm training lane (tree-walker 0.8 s/log-mel column = demo-scale).
+;     HONEST CEILING: from scratch on 26 voices won't reach ECAPA 0.13 without VoxCeleb-scale pretrain OR
+;     distilling/porting ECAPA's weights into our asm lane (the "architecture AND weights are recipe data"
+;     path). Race design + measured table: experiments/rune-galdr/CHALLENGERS.md (recordings/roster/timeline
+;     stay private in ~/.coherence-network — voiceprints are biometric).
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL
 ;     TRANSLATE through the language-neutral pivot, and text → audio (TTS) — so ANY input voice in ANY tongue
 ;     becomes ANY output voice in ANY tongue, where every stage's architecture AND weights are content-addressed
 ;     recipe DATA, one engine (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and
 ;     TRAINABLE/fine-tunable locally from local oracles. A mind that hears, understands across tongues, and speaks
-;     at home — offerable to others without a gated provider (lc-cognitive-sovereignty, living-vision.form).
+;     at home — and KNOWS WHO is speaking (speaker identity), so the body recognizes the cells in a room the way
+;     it recognizes a face. Offerable to others without a gated provider (lc-cognitive-sovereignty, living-vision.form).
 ;   GAPS (ordered; none are new math — the architecture and the fast matvec are proven; what remains is wiring):
 ;     1. ASSEMBLE end-to-end at real width: wire mel → conv stem → encoder → decoder → tokenizer through the
 ;        native matvec lane (M5's buffer bridge: Form list ↔ flat f64 slice) + a CPU/GPU block emitter, so a
@@ -135,6 +157,14 @@
 ;        QUALITY gate (translation-quality.fk essence/vitality/trust) on the pivot. (d) STT END-TO-END (gap 1)
 ;        and (e) Form-native TTS — UNBUILT, the long pole — to drop the last two oracles (whisper-cli, say) so
 ;        the whole voice→voice pipeline is sovereign. Companion floor/north-star: translation-pipeline-pivot.form.
+;     9. SPEAKER IDENTITY — the AAM-Softmax objective is shipped four-way (speaker-aam, verdict 63, the consensus
+;        #1); the ordered rungs to ECAPA-level: (a) the AAM TRAINER — chain the margin gradient (softmax−onehot
+;        through cos(θ+m)) into the W and embedding updates, the one new piece beyond loss.fk's backward; (b) DATA
+;        + augmentation (VAD 2-4s chunks + MUSAN/RIR/speed — the binding wall at 26 voices × 1 recording); (c) the
+;        EER/minDCF harness (replace the single hard-pair cosine readout); (d) attentive stats pooling +
+;        per-utterance CMVN feeding the AAM head; (e) the shallow dilated TDNN; (f) the native asm training lane
+;        (gap 1's emit→compile→exec) so corpus-scale training runs in minutes, not the 0.8 s/column tree-walker.
+;        Then either VoxCeleb pretrain or distil ECAPA's weights into the asm lane. Companion: CHALLENGERS.md.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
