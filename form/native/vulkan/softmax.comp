@@ -1,0 +1,88 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32 (softmax divides in the Taylor
+// fexp reduce/recurrence and in r = 1.0/s); this pins it. Needs SPIR-V >= 1.3
+// (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1, advertised on Adreno/Mali).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native softmax compute shader (Android/Vulkan lane, prototyped on RTX).
+// One invocation per ROW. Mirrors form_softmax_f32.ptx (tn-softmax) op-for-op:
+//   pass1: m = forward max over the row (m=x[0]; for j=1..cols-1: if x_j>m m=x_j)
+//   pass2: s=0; for j=0..cols-1: e=fexp(x_j-m); y_j=e; s=s+e   (FORWARD sum)
+//          fexp = the recipe's 14-term Taylor (halving-reduce + square-back), NOT any hw exp.
+//   r = 1.0 / s
+//   pass3: y_j = y_j * r   (re-read y_j from the output buffer, mirroring the PTX)
+// Every float op is `precise` -> SPIR-V NoContraction so the driver cannot fuse mul+add into
+// FMA and cannot reassociate -> bit-exact to the CPU oracle and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer X { float x[]; };   // rows*cols
+layout(std430, binding = 1)           buffer Y { float y[]; };   // rows*cols (written then re-read)
+
+layout(push_constant) uniform Push { uint rows; uint cols; } pc;
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= pc.rows) return;
+
+    uint rowbase = row * pc.cols;
+
+    // PTX constants by exact bit pattern (shared fexp body, same as gelu.comp).
+    precise float C_HALF = uintBitsToFloat(0x3F000000u); // 0.5
+    precise float C_TWO  = uintBitsToFloat(0x40000000u); // 2.0
+    precise float C_ONE  = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float C_14   = uintBitsToFloat(0x41600000u); // 14.0
+
+    // pass1: forward max
+    precise float m = x[rowbase + 0u];
+    for (uint j = 1u; j < pc.cols; ++j) {
+        precise float xj = x[rowbase + j];
+        if (xj > m) m = xj;
+    }
+
+    // pass2: s=0; e_j=fexp(x_j-m); y_j=e_j; s += e_j  (forward)
+    precise float s = 0.0;
+    for (uint j = 0u; j < pc.cols; ++j) {
+        precise float arg = x[rowbase + j] - m;
+
+        // inline fexp(arg): k=0; while (|arg|>0.5) { arg=arg/2; k++ }
+        uint k = 0u;
+        while (abs(arg) > C_HALF) {
+            arg = arg / C_TWO;
+            k = k + 1u;
+        }
+        // fexp_small: nf=1; term=1; acc=1; while (nf<=14) { t=arg/nf; term=term*t; acc=acc+term; nf+=1 }
+        precise float nf   = C_ONE;
+        precise float term = C_ONE;
+        precise float acc  = C_ONE;
+        while (nf <= C_14) {
+            precise float t = arg / nf;
+            term = term * t;
+            acc = acc + term;
+            nf = nf + C_ONE;
+        }
+        // square back: while (k>0) { acc=acc*acc; k-- }
+        while (k > 0u) {
+            acc = acc * acc;
+            k = k - 1u;
+        }
+
+        precise float e = acc;
+        y[rowbase + j] = e;
+        s = s + e;
+    }
+
+    // r = 1.0 / s
+    precise float r = C_ONE / s;
+
+    // pass3: y_j = y_j * r  (re-read from output buffer, op-for-op with the PTX)
+    for (uint j = 0u; j < pc.cols; ++j) {
+        precise float yj = y[rowbase + j];
+        precise float yn = yj * r;
+        y[rowbase + j] = yn;
+    }
+}
