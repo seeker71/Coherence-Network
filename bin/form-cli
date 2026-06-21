@@ -29,10 +29,12 @@ form-cli — the one door (local-first, Form-native)
 
   form-cli ask "<question>" [-k N] [-m MODEL]
         answer from the body + local docs, grounded (local oracle, no network)
-  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"]
-        daily-driver ask: local-first, then a multi-signal sufficiency check
-        (form-cli-sufficiency.fk, four-way proven) escalates to the subscription
-        oracle for the real answer when local is not enough — claude-code quality
+  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
+        daily-driver ask: local-first, then the four-way-proven sufficiency gate
+        (form-cli-sufficiency.fk via form-cli-ask-gate.fk) escalates to the
+        subscription oracle when local is not enough. Sovereignty-first by default
+        (a usable local answer stands; a local failure escalates); --judge-gate adds
+        the judge model as the content scorer — claude-code quality at its latency
   form-cli stats
         dashboard: learning · models · tools · tool->native · local/remote oracle
         (counts read from the body's records; stats by form-cli-stats.fk, four-way)
