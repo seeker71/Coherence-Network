@@ -264,7 +264,9 @@ def test_homepage_invites_anyone_or_anything_to_canonical_paths() -> None:
     assert 't("home.meetEyebrow")' in source
     assert 't("home.meetBody")' in source
     assert "For anyone or anything finding us" in home_messages["meetEyebrow"]
-    assert "shared doorway is the human web page" in home_messages["meetBody"]
+    # the web page is named as one shared door among the body's surfaces (the invitation framing
+    # #3333 moved to: "the web page, API, CLI, MCP, Form, source, and witness" — same intent, body-altitude)
+    assert "web page, API, CLI, MCP, Form, source, and witness" in home_messages["meetBody"]
     assert "same body answers" in home_messages["meetBody"]
     assert 'href="/come-in"' in source
     assert 'href="/with-us"' in source
