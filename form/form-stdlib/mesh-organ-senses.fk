@@ -1,0 +1,87 @@
+; mesh-organ-senses.fk — two more organs join the mesh as DATA: wellness (proprioception) and
+; pulse (liveness). Each is a small ADAPTER over the generic organ-reading engine (organ-reading.fk)
+; — no new converter, trust, or grow code. The GPU lane proved the engine carries a COMPUTE sense;
+; these two prove it carries DIFFERENT KINDS — the body sensing its own shape (wellness) and the
+; body sensing whether each organ still breathes (pulse). Three unlike senses, one engine, organs
+; as rows: that is the "every verdict-emitting organ joins the same stream, no parallel machinery"
+; north star earned across more than one kind.
+;
+; Integers + strings only — the readings carry counts and names, never floats.
+;
+; The three states of axiom-1 (obs-verify.fk) carry the witness teaching exactly:
+;   wellness aligned   -> observed   (the map matches the body)
+;   wellness drift      -> absent     (the body SAW the drift — a verified no, not silence)
+;   pulse breathing     -> observed   (the organ breathes)
+;   pulse sensed-silent -> absent     (an OBSERVED silence — the witness answered, the organ is down)
+;   pulse dark-door     -> nothing    (we could not sense it at all — held as silence, never a 0)
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk
+;
+; Proven by: form-stdlib/tests/mesh-organ-senses-band.fk
+
+(do
+    ; ── wellness: one proprioception-check section result ────────────────
+    ;   section  which sense the wellness check ran ("chain", "proprioception", "locale", ...)
+    ;   aligned  1 if the body's map matches the body, 0 if drift was sensed
+    ;   detail   the inspectable readout line
+    (defn wellness-receipt (section aligned detail)
+        (list "wellness-receipt" section aligned detail))
+    (defn wellness-section (r) (nth r 1))
+    (defn wellness-aligned (r) (nth r 2))
+    (defn wellness-detail  (r) (nth r 3))
+
+    (defn wellness-payload (r)
+        (list "wellness-receipt"
+              "section" (wellness-section r)
+              "aligned" (wellness-aligned r)
+              "detail"  (wellness-detail r)))
+
+    ; the wellness ADAPTER: name "wellness:<section>", kind "wellness", answered=1 (the check ran),
+    ; ok = aligned. A drift becomes a verified-ABSENT reading — the body saw it, so the mesh learns it.
+    (defn wellness-reading (r deadline tick)
+        (organ-reading
+            (str_concat "wellness:" (wellness-section r))
+            "wellness"
+            1
+            (wellness-aligned r)
+            tick
+            deadline
+            (wellness-payload r)))
+
+    ; ── pulse: one organ's breath as the witness reports it ──────────────
+    ;   organ     which organ the witness reports on ("api", "web", "neo4j", "postgres", "witness")
+    ;   sensed    1 if the witness answered for this organ, 0 if its door was dark (cannot sense)
+    ;   breathing 1 if the organ is breathing, 0 if it has gone silent
+    ;   last-beat the tick of the organ's last observed breath (inspectable, no hidden state)
+    (defn pulse-receipt (organ sensed breathing last-beat)
+        (list "pulse-receipt" organ sensed breathing last-beat))
+    (defn pulse-organ     (r) (nth r 1))
+    (defn pulse-sensed    (r) (nth r 2))
+    (defn pulse-breathing (r) (nth r 3))
+    (defn pulse-last-beat (r) (nth r 4))
+
+    (defn pulse-payload (r)
+        (list "pulse-receipt"
+              "organ"     (pulse-organ r)
+              "breathing" (pulse-breathing r)
+              "last-beat" (pulse-last-beat r)))
+
+    ; the pulse ADAPTER: name "pulse:<organ>", kind "pulse". answered = sensed (a dark witness door
+    ; is "nothing" — genuine silence, held, never a 0), ok = breathing (a sensed silence is "absent",
+    ; an OBSERVED down-organ the world-model must hold differently from never-asked).
+    (defn pulse-reading (r deadline tick)
+        (organ-reading
+            (str_concat "pulse:" (pulse-organ r))
+            "pulse"
+            (pulse-sensed r)
+            (pulse-breathing r)
+            tick
+            deadline
+            (pulse-payload r)))
+
+    ; both organs ride the engine's converter / trust-gate / grow with ZERO new code — the proof of
+    ; the lift: adding a sense KIND to the mesh is an adapter + a data shape, never new machinery.
+    (defn wellness-grow (state r deadline tick)
+        (organ-grow state (wellness-reading r deadline tick)))
+    (defn pulse-grow (state r deadline tick)
+        (organ-grow state (pulse-reading r deadline tick))))
