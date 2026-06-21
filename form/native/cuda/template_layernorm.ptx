@@ -1,0 +1,105 @@
+//
+// form-ptx layernorm f32: one thread per row, tn-layernorm exact order:
+//   mean = sum/flen (forward sum);  var = sum (x-mean)^2 / flen (forward);  sd = var+eps;
+//   g = sqrt(sd) via Newton 50 (g0=sd, g=0.5*(g + sd/g));  inv = 1/g;  y_j = (x_j-mean)*inv
+// explicit mul/add/sub/div.rn (two roundings); JIT -O0 unfused. flen = cvt.rn.f32.u32(cols).
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_layernorm_f32(
+    .param .u64 p_x,
+    .param .u64 p_y,
+    .param .u32 p_rows,
+    .param .u32 p_cols,
+    .param .f32 p_eps
+)
+{
+    .reg .pred  %p<2>;
+    .reg .f32   %f<20>;
+    .reg .b32   %r<12>;
+    .reg .b64   %rd<10>;
+
+    ld.param.u64    %rd1, [p_x];
+    ld.param.u64    %rd2, [p_y];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+    ld.param.f32    %f1, [p_eps];
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+    mul.lo.s32      %r7, %r6, %r2;            // rowbase
+    cvt.rn.f32.u32  %f2, %r2;                 // flen = (float)cols
+
+    // sum (forward)
+    mov.f32         %f3, 0f00000000;
+    mov.u32         %r8, 0;
+SUM:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        ENDSUM;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd3, %r9, 4;
+    add.s64         %rd4, %rd1, %rd3;
+    ld.global.f32   %f4, [%rd4];
+    add.f32         %f3, %f3, %f4;
+    add.u32         %r8, %r8, 1;
+    bra             SUM;
+ENDSUM:
+    div.rn.f32      %f12, %f3, %f2;           // mean
+
+    // var (forward): sum (x-mean)^2
+    mov.f32         %f6, 0f00000000;
+    mov.u32         %r8, 0;
+VAR:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        ENDVAR;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd3, %r9, 4;
+    add.s64         %rd4, %rd1, %rd3;
+    ld.global.f32   %f4, [%rd4];
+    sub.f32         %f5, %f4, %f12;
+    mul.f32         %f7, %f5, %f5;
+    add.f32         %f6, %f6, %f7;
+    add.u32         %r8, %r8, 1;
+    bra             VAR;
+ENDVAR:
+    div.rn.f32      %f13, %f6, %f2;           // var
+    add.f32         %f8, %f13, %f1;           // sd = var + eps
+
+    // Newton sqrt(sd) 50 iters: g0=sd; g = 0.5*(g + sd/g)
+    mov.f32         %f9, %f8;                 // g = sd
+    mov.u32         %r10, 50;
+NEWT:
+    setp.eq.u32     %p1, %r10, 0;
+    @%p1 bra        ENDNEWT;
+    div.rn.f32      %f10, %f8, %f9;           // sd/g
+    add.f32         %f11, %f9, %f10;          // g + sd/g
+    mul.f32         %f9, 0f3F000000, %f11;    // 0.5*(...)
+    sub.u32         %r10, %r10, 1;
+    bra             NEWT;
+ENDNEWT:
+    mov.f32         %f14, 0f3F800000;
+    div.rn.f32      %f15, %f14, %f9;          // inv = 1/g
+
+    // y_j = (x_j - mean) * inv
+    mov.u32         %r8, 0;
+OUT:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        DONE;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd3, %r9, 4;
+    add.s64         %rd4, %rd1, %rd3;
+    ld.global.f32   %f4, [%rd4];
+    sub.f32         %f5, %f4, %f12;
+    mul.f32         %f16, %f5, %f15;
+    add.s64         %rd5, %rd2, %rd3;
+    st.global.f32   [%rd5], %f16;
+    add.u32         %r8, %r8, 1;
+    bra             OUT;
+DONE:
+    ret;
+}

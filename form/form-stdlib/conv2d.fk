@@ -1,0 +1,92 @@
+; conv2d.fk — 2-D convolution + GroupNorm as Form recipes (the diffusion/vision prerequisite).
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv-stem.fk
+;
+; Conv1d (conv-stem.fk) walks a sequence of TIME-frames; Conv2d walks a GRID of frames. An image
+; here is a list of ROWS, each row a list of PIXELS, each pixel a vector of in-channels — the exact
+; same "frame is a vector of channels" convention as conv-stem (a 1-channel image is rows of 1-vecs).
+; A weight is out_ch × kh × kw × in_ch: per output channel a kh×kw window, each tap an in_ch row to
+; dot a pixel with. The conv MATH reuses conv-stem's pieces verbatim — cv-window-dot over one kernel
+; row (Σ_j Wrow[j]·pixel[j], built on tb-dot's exact downward right-fold) — so every kernel computes
+; the same bits. GroupNorm reuses transformer-numerics' tn-mean / tn-var / tn-sqrt with tn-layernorm's
+; exact op order. All fp64, float-counted (no int/float mixing). Pure algorithm — no GPU code.
+
+; --- 2-D zero padding: pad `pad` zero rows/cols of width-w channel-c frames around the grid ---
+(defn cv2d-zero-row (n c) (if (eq n 0) (empty) (cons (cv-zeros c) (cv2d-zero-row (sub n 1) c))))
+(defn cv2d-zero-rows (p w c) (if (eq p 0) (empty) (cons (cv2d-zero-row w c) (cv2d-zero-rows (sub p 1) w c))))
+; pad one row on the left and right with `pad` zero pixels (each an in_ch zero-vector)
+(defn cv2d-pad-row (row pad c) (cv-cat (cv2d-zero-row pad c) (cv-cat row (cv2d-zero-row pad c))))
+(defn cv2d-pad-rows (rows pad c)
+  (if (eq (len rows) 0) (empty)
+      (cons (cv2d-pad-row (head rows) pad c) (cv2d-pad-rows (tail rows) pad c))))
+; full 2-D pad: widen every row by `pad` cols, then frame top/bottom with `pad` full zero rows
+(defn cv2d-pad (input pad)
+  (do (let c (len (head (head input))))
+      (let w (len (head input)))
+      (let wide (cv2d-pad-rows input pad c))
+      (cv-cat (cv2d-zero-rows pad (add w (mul 2 pad)) c)
+              (cv-cat wide (cv2d-zero-rows pad (add w (mul 2 pad)) c)))))
+
+; --- one output channel over a kh×kw patch: Σ_i ( Σ_j  Wo[i][j] · patch[i][j] ) ---
+; Wo is kh × kw × in_ch ; patch is kh rows of kw pixels. Each kernel-row dot is conv-stem's
+; cv-window-dot (built on tb-dot), so the patch sum is exactly that fold, row by row.
+(defn cv2d-window-dot (Wo patch)
+  (if (eq (len Wo) 0) 0.0
+      (add (cv-window-dot (head Wo) (head patch))
+           (cv2d-window-dot (tail Wo) (tail patch)))))
+; the full out_ch vector at one patch: bias[o] + the patch-dot, per output channel
+(defn cv2d-out-vec (W b patch)
+  (if (eq (len W) 0) (empty)
+      (cons (add (cv2d-window-dot (head W) patch) (head b)) (cv2d-out-vec (tail W) (tail b) patch))))
+
+; --- extract a kh×kw patch whose top-left is (row r0, col c0) of the padded grid ---
+; take kh rows from r0, then from each take kw pixels from c0
+(defn cv2d-take-cols (kw c0 row) (cv-take kw (cv-drop c0 row)))
+(defn cv2d-patch-rows (kw c0 rows)
+  (if (eq (len rows) 0) (empty)
+      (cons (cv2d-take-cols kw c0 (head rows)) (cv2d-patch-rows kw c0 (tail rows)))))
+(defn cv2d-patch (padded r0 c0 kh kw)
+  (cv2d-patch-rows kw c0 (cv-take kh (cv-drop r0 padded))))
+
+; --- slide across one output row (fixed r0, c0 from 0..) producing the row of out_ch vectors ---
+(defn cv2d-row-acc (W b padded r0 c0 stride kh kw pw)
+  (if (gt (add c0 kw) pw) (empty)
+      (cons (cv2d-out-vec W b (cv2d-patch padded r0 c0 kh kw))
+            (cv2d-row-acc W b padded r0 (add c0 stride) stride kh kw pw))))
+; --- slide down the rows (r0 from 0..) producing the grid of output rows ---
+(defn cv2d-conv-acc (W b padded r0 stride kh kw ph pw)
+  (if (gt (add r0 kh) ph) (empty)
+      (cons (cv2d-row-acc W b padded r0 0 stride kh kw pw)
+            (cv2d-conv-acc W b padded (add r0 stride) stride kh kw ph pw))))
+
+; cv2d-conv — 2-D convolution. W: out_ch × kh × kw × in_ch, b: out_ch bias. input: rows of pixels
+; (pixel = in_ch vector). Zero-pad by `pad`, slide with `stride` in both H and W. Output: a grid
+; (list of rows) of out_ch vectors, same recipe-data shape as the input.
+(defn cv2d-conv (W b input pad stride kh kw)
+  (do (let padded (cv2d-pad input pad))
+      (let ph (len padded))
+      (let pw (len (head padded)))
+      (cv2d-conv-acc W b padded 0 stride kh kw ph pw)))
+
+; --- GroupNorm over a list of channel-vectors split into `groups` groups ----------------------
+; Concatenate the group's vectors into one flat list, take its mean/var across ALL members
+; (tn-mean / tn-var — biased variance), then mean-subtract every vector and divide by
+; sqrt(var+eps) — exactly tn-layernorm's op order, applied per group instead of per vector.
+(defn cv2d-gn-flatten (xs)
+  (if (eq (len xs) 0) (empty) (cv-cat (head xs) (cv2d-gn-flatten (tail xs)))))
+(defn cv2d-gn-apply (xs m inv)
+  (if (eq (len xs) 0) (empty)
+      (cons (tn-scale (tn-sub-scalar (head xs) m) inv) (cv2d-gn-apply (tail xs) m inv))))
+; normalize one group (a list of channel-vectors) by its pooled mean/var
+(defn cv2d-gn-group (g eps)
+  (do (let flat (cv2d-gn-flatten g))
+      (let m (tn-mean flat))
+      (let inv (div 1.0 (tn-sqrt (add (tn-var flat) eps))))
+      (cv2d-gn-apply g m inv)))
+; split xs into `groups` groups of equal size, normalize each, concatenate back in order
+(defn cv2d-gn-acc (xs groups gsize eps)
+  (if (eq groups 0) (empty)
+      (cv-cat (cv2d-gn-group (cv-take gsize xs) eps)
+              (cv2d-gn-acc (cv-drop gsize xs) (sub groups 1) gsize eps))))
+(defn cv2d-groupnorm (xs groups eps)
+  (cv2d-gn-acc xs groups (div (len xs) groups) eps))

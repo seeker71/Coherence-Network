@@ -1,0 +1,190 @@
+//
+// form-ptx attention f32: scaled dot-product attention, one thread per query (tb-attend-one).
+//   pass A: scores[j] = tb-dot(Q[i], K[j]) * scale         (downward right-fold dot, then *scale)
+//   pass B: alphas = tn-softmax(scores)                    (forward max, Taylor fexp, forward sum, *1/s)
+//   pass C: out[m] = sum_j (forward) alphas[j] * V[j][m]   (tb-weighted-acc: acc + V[j][m]*alpha_j)
+// scores[] is a per-query scratch row [nq x nk]. explicit mul/add/div.rn (two roundings); JIT -O0
+// unfused; fexp uses a dedicated reg range (%f20+/%r15/%p2). Bit-exact to tb-attend-one.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_attention_f32(
+    .param .u64 p_q,
+    .param .u64 p_k,
+    .param .u64 p_v,
+    .param .u64 p_out,
+    .param .u64 p_scores,
+    .param .u32 p_nq,
+    .param .u32 p_nk,
+    .param .u32 p_d,
+    .param .f32 p_scale
+)
+{
+    .reg .pred  %p<3>;
+    .reg .f32   %f<40>;
+    .reg .b32   %r<24>;
+    .reg .b64   %rd<16>;
+
+    ld.param.u64    %rd1, [p_q];
+    ld.param.u64    %rd2, [p_k];
+    ld.param.u64    %rd3, [p_v];
+    ld.param.u64    %rd4, [p_out];
+    ld.param.u64    %rd5, [p_scores];
+    ld.param.u32    %r1, [p_nq];
+    ld.param.u32    %r2, [p_nk];
+    ld.param.u32    %r3, [p_d];
+    ld.param.f32    %f1, [p_scale];
+    mov.u32         %r12, %ctaid.x;
+    mov.u32         %r13, %ntid.x;
+    mov.u32         %r14, %tid.x;
+    mad.lo.s32      %r4, %r12, %r13, %r14;    // query i
+    setp.ge.u32     %p1, %r4, %r1;
+    @%p1 bra        DONE;
+    mul.lo.s32      %r5, %r4, %r3;            // qbase = i*d
+    mul.lo.s32      %r6, %r4, %r2;            // sbase = i*nk
+
+    // ---- pass A: scores[j] = dot(Q[i],K[j]) * scale ----
+    mov.u32         %r7, 0;                   // j
+PASSA:
+    setp.ge.u32     %p1, %r7, %r2;
+    @%p1 bra        ENDA;
+    mul.lo.s32      %r8, %r7, %r3;            // kbase = j*d
+    mov.f32         %f2, 0f00000000;          // acc
+    mov.u32         %r9, %r3;                 // l = d
+DOTA:
+    setp.eq.u32     %p1, %r9, 0;
+    @%p1 bra        ENDDOTA;
+    sub.u32         %r9, %r9, 1;
+    add.s32         %r10, %r5, %r9;           // Q idx = qbase+l
+    mul.wide.u32    %rd6, %r10, 4;
+    add.s64         %rd7, %rd1, %rd6;
+    ld.global.f32   %f3, [%rd7];
+    add.s32         %r11, %r8, %r9;           // K idx = kbase+l
+    mul.wide.u32    %rd8, %r11, 4;
+    add.s64         %rd9, %rd2, %rd8;
+    ld.global.f32   %f4, [%rd9];
+    mul.f32         %f5, %f3, %f4;
+    add.f32         %f2, %f5, %f2;
+    bra             DOTA;
+ENDDOTA:
+    mul.f32         %f6, %f2, %f1;            // * scale
+    add.s32         %r10, %r6, %r7;           // scores idx = sbase+j
+    mul.wide.u32    %rd6, %r10, 4;
+    add.s64         %rd7, %rd5, %rd6;
+    st.global.f32   [%rd7], %f6;
+    add.u32         %r7, %r7, 1;
+    bra             PASSA;
+ENDA:
+
+    // ---- pass B: softmax over scores[sbase .. sbase+nk-1] in place ----
+    mul.wide.u32    %rd6, %r6, 4;
+    add.s64         %rd8, %rd5, %rd6;         // &scores[sbase]
+    ld.global.f32   %f7, [%rd8];              // m = scores[sbase]
+    mov.u32         %r7, 1;
+MAXB:
+    setp.ge.u32     %p1, %r7, %r2;
+    @%p1 bra        ENDMAXB;
+    add.s32         %r10, %r6, %r7;
+    mul.wide.u32    %rd9, %r10, 4;
+    add.s64         %rd10, %rd5, %rd9;
+    ld.global.f32   %f8, [%rd10];
+    setp.gt.f32     %p1, %f8, %f7;
+    @%p1 mov.f32    %f7, %f8;
+    add.u32         %r7, %r7, 1;
+    bra             MAXB;
+ENDMAXB:
+    mov.f32         %f9, 0f00000000;          // s
+    mov.u32         %r7, 0;
+SUMB:
+    setp.ge.u32     %p1, %r7, %r2;
+    @%p1 bra        ENDSUMB;
+    add.s32         %r10, %r6, %r7;
+    mul.wide.u32    %rd9, %r10, 4;
+    add.s64         %rd10, %rd5, %rd9;
+    ld.global.f32   %f10, [%rd10];
+    sub.f32         %f20, %f10, %f7;          // arg = score - m
+    // inline fexp(%f20) -> %f30
+    mov.u32         %r15, 0;
+FREDUCE:
+    abs.f32         %f27, %f20;
+    setp.gt.f32     %p2, %f27, 0f3F000000;
+    @!%p2 bra       FENDRED;
+    div.rn.f32      %f20, %f20, 0f40000000;
+    add.u32         %r15, %r15, 1;
+    bra             FREDUCE;
+FENDRED:
+    mov.f32         %f28, 0f3F800000;
+    mov.f32         %f29, 0f3F800000;
+    mov.f32         %f30, 0f3F800000;
+FSMALL:
+    setp.gt.f32     %p2, %f28, 0f41600000;
+    @%p2 bra        FENDSM;
+    div.rn.f32      %f31, %f20, %f28;
+    mul.f32         %f29, %f29, %f31;
+    add.f32         %f30, %f30, %f29;
+    add.f32         %f28, %f28, 0f3F800000;
+    bra             FSMALL;
+FENDSM:
+FSQUARE:
+    setp.eq.u32     %p2, %r15, 0;
+    @%p2 bra        FENDSQ;
+    mul.f32         %f30, %f30, %f30;
+    sub.u32         %r15, %r15, 1;
+    bra             FSQUARE;
+FENDSQ:
+    st.global.f32   [%rd10], %f30;           // scores[j] = e
+    add.f32         %f9, %f9, %f30;          // s += e
+    add.u32         %r7, %r7, 1;
+    bra             SUMB;
+ENDSUMB:
+    mov.f32         %f11, 0f3F800000;
+    div.rn.f32      %f12, %f11, %f9;         // r = 1/s
+    mov.u32         %r7, 0;
+NORMB:
+    setp.ge.u32     %p1, %r7, %r2;
+    @%p1 bra        ENDNORMB;
+    add.s32         %r10, %r6, %r7;
+    mul.wide.u32    %rd9, %r10, 4;
+    add.s64         %rd10, %rd5, %rd9;
+    ld.global.f32   %f13, [%rd10];
+    mul.f32         %f14, %f13, %f12;
+    st.global.f32   [%rd10], %f14;
+    add.u32         %r7, %r7, 1;
+    bra             NORMB;
+ENDNORMB:
+
+    // ---- pass C: out[m] = sum_j (forward) alpha_j * V[j][m] ----
+    mov.u32         %r11, 0;                  // m
+PASSC:
+    setp.ge.u32     %p1, %r11, %r3;
+    @%p1 bra        DONE;
+    mov.f32         %f2, 0f00000000;          // acc
+    mov.u32         %r7, 0;                   // j
+WSUM:
+    setp.ge.u32     %p1, %r7, %r2;
+    @%p1 bra        ENDWSUM;
+    add.s32         %r10, %r6, %r7;           // scores idx (alpha)
+    mul.wide.u32    %rd9, %r10, 4;
+    add.s64         %rd10, %rd5, %rd9;
+    ld.global.f32   %f3, [%rd10];             // alpha_j
+    mul.lo.s32      %r9, %r7, %r3;
+    add.s32         %r9, %r9, %r11;           // V idx = j*d + m
+    mul.wide.u32    %rd11, %r9, 4;
+    add.s64         %rd12, %rd3, %rd11;
+    ld.global.f32   %f4, [%rd12];             // V[j][m]
+    mul.f32         %f5, %f4, %f3;            // V[j][m] * alpha_j
+    add.f32         %f2, %f2, %f5;            // acc += (forward)
+    add.u32         %r7, %r7, 1;
+    bra             WSUM;
+ENDWSUM:
+    add.s32         %r10, %r5, %r11;          // out idx = qbase + m
+    mul.wide.u32    %rd9, %r10, 4;
+    add.s64         %rd10, %rd4, %rd9;
+    st.global.f32   [%rd10], %f2;
+    add.u32         %r11, %r11, 1;
+    bra             PASSC;
+DONE:
+    ret;
+}

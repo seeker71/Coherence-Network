@@ -1,0 +1,69 @@
+//
+// form-ptx proj f32: batched projection Y[t] = W . X[t] + b  (tb-affine per token).
+// one thread per (token,out): Y[t*outd+o] = (downward right-fold dot of W[o], X[t]) + b[o].
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_proj_f32(
+    .param .u64 p_w,
+    .param .u64 p_b,
+    .param .u64 p_x,
+    .param .u64 p_y,
+    .param .u32 p_ntok,
+    .param .u32 p_outd,
+    .param .u32 p_ind
+)
+{
+    .reg .pred  %p<2>;
+    .reg .f32   %f<6>;
+    .reg .b32   %r<16>;
+    .reg .b64   %rd<12>;
+
+    ld.param.u64    %rd1, [p_w];
+    ld.param.u64    %rd2, [p_b];
+    ld.param.u64    %rd3, [p_x];
+    ld.param.u64    %rd4, [p_y];
+    ld.param.u32    %r1, [p_ntok];
+    ld.param.u32    %r2, [p_outd];
+    ld.param.u32    %r3, [p_ind];
+    mov.u32         %r4, %ctaid.x;
+    mov.u32         %r5, %ntid.x;
+    mov.u32         %r6, %tid.x;
+    mad.lo.s32      %r7, %r4, %r5, %r6;       // tid
+    mul.lo.s32      %r8, %r1, %r2;            // total = ntok*outd
+    setp.ge.u32     %p1, %r7, %r8;
+    @%p1 bra        DONE;
+    div.u32         %r9, %r7, %r2;            // t = tid/outd
+    rem.u32         %r10, %r7, %r2;           // o = tid%outd
+    mul.lo.s32      %r11, %r10, %r3;          // wbase = o*ind
+    mul.lo.s32      %r12, %r9, %r3;           // xbase = t*ind
+    mov.f32         %f1, 0f00000000;
+    mov.u32         %r13, %r3;                // l = ind
+DOT:
+    setp.eq.u32     %p1, %r13, 0;
+    @%p1 bra        ENDDOT;
+    sub.u32         %r13, %r13, 1;
+    add.s32         %r14, %r11, %r13;
+    mul.wide.u32    %rd5, %r14, 4;
+    add.s64         %rd6, %rd1, %rd5;
+    ld.global.f32   %f2, [%rd6];
+    add.s32         %r15, %r12, %r13;
+    mul.wide.u32    %rd7, %r15, 4;
+    add.s64         %rd8, %rd3, %rd7;
+    ld.global.f32   %f3, [%rd8];
+    mul.f32         %f4, %f2, %f3;
+    add.f32         %f1, %f4, %f1;
+    bra             DOT;
+ENDDOT:
+    mul.wide.u32    %rd9, %r10, 4;
+    add.s64         %rd10, %rd2, %rd9;
+    ld.global.f32   %f5, [%rd10];            // b[o]
+    add.f32         %f1, %f1, %f5;
+    mul.wide.u32    %rd11, %r7, 4;
+    add.s64         %rd6, %rd4, %rd11;
+    st.global.f32   [%rd6], %f1;
+DONE:
+    ret;
+}

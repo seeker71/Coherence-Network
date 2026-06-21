@@ -1,0 +1,25 @@
+; preludes: form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk
+;
+; jit-tensor-cuda-emit-band — the CUDA/NVIDIA JIT emitter as recipe, proven three-way: the emitted
+; __global__ matvec + affine-train (SGD step) source is byte-identical across kernels (str_eq vs the
+; canonical text), the function name parameterizes cleanly, emission is deterministic, and the loop
+; carries the matvec spine's exact downward right-fold — so, compiled with nvcc --fmad=false and an
+; fp32 accumulator, the GPU result is the recipe's result bit-for-bit, not merely within epsilon. The
+; live GPU witness that closes that claim on an RTX is scripts/cuda_matvec_audit.sh /
+; cuda_affine_train_audit.sh (the CUDA twins of metal_matvec_audit.sh / metal_backprop_audit.sh).
+;
+; Verdict 15 when the emission lands:
+;   1   the full emitted CUDA matvec for form_matvec_f32 equals the canonical text
+;   2   a different name (mv2) lands in the same frame (emission is a function, not a constant)
+;   4   two emissions of the same name are str_eq (deterministic text — the crystallization cache's ground)
+;   8   the full emitted CUDA affine-train SGD step for form_affine_train_f32 equals the canonical text
+(do
+    (let want "__global__ void form_matvec_f32(const float* w, const float* x, float* y, unsigned rows, unsigned cols) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; const float* row = w + i * cols; float acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = float(acc); }")
+    (let got (jte-matvec-cuda "form_matvec_f32"))
+    (let other (jte-matvec-cuda "mv2"))
+    (let twant "__global__ void form_affine_train_f32(float* w, float* b, const float* x, const float* t, float* loss, unsigned rows, unsigned cols, float lr) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; float* row = w + i * cols; float acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } float y = acc + float(b[i]); float d = y - float(t[i]); loss[i] = d * d; float g = 2.0f * d; unsigned k = cols; while (k > 0) { k -= 1; row[k] = float(float(row[k]) - lr * g * float(x[k])); } b[i] = float(float(b[i]) - lr * g); }")
+    (let c0 (if (str_eq got want) 1 0))
+    (let c1 (if (str_eq other (str_concat "__global__ void " (str_concat "mv2" "(const float* w, const float* x, float* y, unsigned rows, unsigned cols) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; const float* row = w + i * cols; float acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = float(acc); }"))) 2 0))
+    (let c2 (if (str_eq (jte-matvec-cuda "form_matvec_f32") got) 4 0))
+    (let c3 (if (str_eq (jte-affine-train-cuda "form_affine_train_f32") twant) 8 0))
+    (add c0 (add c1 (add c2 c3))))
