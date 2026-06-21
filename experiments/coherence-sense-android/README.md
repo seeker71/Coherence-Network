@@ -137,47 +137,61 @@ Useful commands:
 Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
 `~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
-### The Mac as a sensing organ too — `mac-sense-organ.py`
+### The Mac as a sensing organ too — Form body, shell carrier
 
-The witness *receives* the phone's senses. `mac-sense-organ.py` is its twin: the Mac
-senses **its own** organs and self-registers on the cloud Hati mesh as a `host-kernel`
-organ, exactly as the phone registers as `android-phone`. Now the world is sensed from
-**two angles at once** — `GET /api/hati/mesh/organs` shows both streaming.
+The witness *receives* the phone's senses. The Mac is now its twin: it senses **its own**
+organs and self-registers on the cloud Hati mesh, exactly as the phone registers as
+`android-phone`. `GET /api/hati/mesh/organs` shows phone + Mac host + Mac speech all streaming.
 
-It is a carrier-last host-glue daemon (Python stdlib only). The body — recognition,
-world-growth, voice-traits, perception — stays in the Form recipes
-(`form/form-stdlib/world-model-live-sense.fk`, `perception-pipeline.fk`, `voice-traits.fk`);
-this script only reads the host and feeds them. Same privacy floor as the phone:
-**summaries only** — mic → RMS amplitude, camera/screen → mean luma. No raw audio, frames,
-or screenshots are stored or transmitted.
+These are **thin carriers — the body is Form**, proven four-way (Go/Rust/TS/fkwu). The shell
+does only physical I/O + measurement; every decision is the recipe's:
 
-Senses each tick: cpu load, ram, disk usage, network rx/tx rates, GPU identity +
-best-effort utilization, thermal pressure, battery, uptime — plus mic RMS, camera luma,
-and screen luma when the macOS permission is granted. It writes a full local receipt to
-`~/.coherence-network/hati/mac-sense-latest.json` and announces + heartbeats to the mesh.
+| organ | carrier (I/O only) | Form body (every decision) |
+|-------|--------------------|----------------------------|
+| host  | `mac-sense-organ.sh` | [`host-sense-organ.fk`](../../form/form-stdlib/host-sense-organ.fk) — active organs, power-cost/signal metrics, discovery state |
+| speech| `mac-speech-organ.sh` | [`speech-organ.fk`](../../form/form-stdlib/speech-organ.fk) — VAD gate, pitch band, trust, speaker grouping (composes `voice-traits.fk` + `nearest-shape.fk`) |
+
+- **host** reads cpu/ram/disk/network-rates/gpu/thermal/battery (sysctl/vm_stat/ioreg/pmset/
+  netstat), the kernel decides which organs are live and the mesh metrics, and it POSTs +
+  writes `~/.coherence-network/hati/mac-sense-latest.json`.
+- **speech** records the mic in rolling windows, measures rms + a lowpass-stabilized pitch
+  with sox, transcribes voiced windows with whisper-cli (the STT *oracle*), and the kernel
+  decides VAD, pitch band, and which speaker cell — matched by nearest-shape or enrolled as
+  novel. Speaker grouping is honest acoustic clustering keyed on pitch ("same voice as
+  before"), never verified identity. Privacy: the **transcript stays local**; the mesh sees
+  only presence + counts, never the words.
 
 ```bash
 cd experiments/coherence-sense-android
+# build the Form kernel once (the carriers call it for every decision):
+(cd ../../form && ./validate.sh form-stdlib/core.fk form-stdlib/host-sense-organ.fk \
+   form-stdlib/tests/host-sense-organ-band.fk form-stdlib/voice-traits.fk \
+   form-stdlib/nearest-shape.fk form-stdlib/speech-organ.fk form-stdlib/tests/speech-organ-band.fk)
 chmod +x macos-sense-organ-service.sh
-./macos-sense-organ-service.sh install            # all senses
-./macos-sense-organ-service.sh install --no-media  # host vitals only
-./macos-sense-organ-service.sh status | restart | tail | uninstall
+./macos-sense-organ-service.sh install          # both organs (host + speech)
+./macos-sense-organ-service.sh install host      # host vitals only
+./macos-sense-organ-service.sh status | restart | tail host | uninstall
+# prove the bodies four-way:
+(cd ../../form && bash scripts/fourth-arm-gate.sh host-sense-organ speech-organ)  # PASS-4WAY
+# self-test the speech body without a mic (two macOS voices → two speaker cells):
+./mac-speech-organ.sh --self-test
 ```
 
-That writes `~/Library/LaunchAgents/earth.hati.coherence-sense.mac-sense-organ.plist`,
-starts now, restarts on crash, and starts again at login. Logs:
-`~/Library/Logs/CoherenceSense/mac-sense-organ.{out,err}.log`.
+Each writes `~/Library/LaunchAgents/earth.hati.coherence-sense.mac-{host,speech}-organ.plist`,
+starts now, restarts on crash, starts again at login. Logs:
+`~/Library/Logs/CoherenceSense/mac-{host,speech}-organ.{out,err}.log`.
 
-**Permissions (TCC):** host vitals need none and stream immediately. `mic`, `camera`, and
-`screen` each need a one-time grant to the running interpreter under **System Settings →
-Privacy & Security → Microphone / Camera / Screen Recording**. Until granted, those lanes
-report `denied?` and the organ keeps streaming everything else — honest degradation, not
-failure. The mesh announce uses a non-default `User-Agent` (Cloudflare 1010-blocks the
-stock `Python-urllib` agent).
+**Permissions (TCC):** host vitals need none and stream immediately. The mic needs a one-time
+grant under **System Settings → Privacy & Security → Microphone**; camera/screen likewise when
+the live-vision organ lands. Mesh POSTs carry a non-default `User-Agent` (Cloudflare
+1010-blocks the stock agent).
 
-One engine, two carriers: the *same* Form world-model recipes recognize the phone's frames
-and the Mac's frames. Windows is the next twin (`form/form-stdlib/hati-os-targets.fk`:
-WASAPI + Windows.Graphics.Capture + CIM), once a host is reachable.
+**Honest floor:** VAD + STT are solid. Speaker grouping resolution is bounded by the carrier's
+pitch reading (lowpassed zero-crossing rate — stable enough to separate distinct voices, coarse
+within a band); finer, verified speaker identity awaits kernel-native feature extraction, the
+missing tissue named in [`speech-kernel-channel.fk`](../../form/form-stdlib/speech-kernel-channel.fk).
+Windows is the next twin (`form/form-stdlib/hati-os-targets.fk`: WASAPI + Windows.Graphics.Capture
++ CIM), running the *same* Form bodies, once a host is reachable.
 
 ### Keep the Android + Mac learning receipt proven
 
