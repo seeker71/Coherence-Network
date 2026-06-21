@@ -77,8 +77,16 @@ section [form.bml] {
     ; so nothing touches the filesystem: no temp file, no writable /tmp, no shell
     ; re-parsing the question's content. The same recipe escalates on macOS, Termux,
     ; and a bare Android device where there is no writable temp dir at all.
+    ;
+    ; SUBSCRIPTION-ONLY, enforced in the body: the remote runs with ANTHROPIC_API_KEY
+    ; stripped (env -u), so a stray key in the environment can never silently meter the
+    ; call — `claude -p` falls back to its flat-rate subscription login, the only oracle
+    ; cost this body pays (the borrowed-oracle-dividend). This is the router's "no
+    ; metered API" law made true at the carrier boundary, for every caller, not a hope
+    ; about a clean environment. (env -u UNSETS it — ANTHROPIC_API_KEY= would leave an
+    ; empty key that still wins precedence and fails auth.)
     def fcap-escalate(remote, question) {
-        host-exec(remote, question);
+        host-exec(str_concat("env -u ANTHROPIC_API_KEY ", remote), question);
     }
 
     ; ── pack THIS turn's outcome: the live trust row (from the four-way-proven
