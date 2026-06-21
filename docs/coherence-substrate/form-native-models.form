@@ -149,11 +149,15 @@
 ;        north star: (a) OPEN VOCAB — DONE structurally: the lexicon is DATA and the PIVOT speaks the body's
 ;        OWN neutral symbol space (n0, … — no tongue privileged, a door over the NodeID, phase-tagged
 ;        ice/water/gas, refined minimal by self-authored-symbol-space.form's MDL auto-ML), proven four-way
-;        (nl-translate-band → 2047). Remaining: GROW that symbol/lexicon table by ingesting the parallel corpus
-;        (web/messages/* — the EN→FR learned-train seed of gap 6 is the same data), then let the learned
-;        encoder/decoder (gap 6 dynamic, gap 7b optimizer fixed) replace the hand templates. (b) SURFACE-ROBUST
+;        (nl-translate-band → 2047). GROWN FROM THE CORPUS (done): scripts/grow_nl_lexicon.sh projects real
+;        single-word EN/ID pairs from web/messages/* into the lexicon (40 corpus rows + 7 ice seeds), each a
+;        neutral symbol at phase water; corpus words translate four-way (nl-translate-band → 16383) and run live
+;        (the company is home → perusahaan adalah rumah). Remaining on (a): MDL-minimal symbol assignment
+;        (frequent meaning → short symbol), the full 373 pairs, and then the learned encoder/decoder (gap 6
+;        dynamic, gap 7b optimizer fixed) replacing the hand templates. (b) SURFACE-ROBUST
 ;        encoding — case / punctuation / contractions owned by the Form ENCODER, not the carrier's input
-;        cleaning (the live loop surfaced this: whisper returns "The kernel is native."). (c) the round-trip
+;        cleaning (the live loop surfaced this: whisper returns "The kernel is native."; needs a four-way
+;        Form str-lower, not yet present). (c) the round-trip
 ;        QUALITY gate (translation-quality.fk essence/vitality/trust) on the pivot. (d) STT END-TO-END (gap 1)
 ;        and (e) Form-native TTS — UNBUILT, the long pole — to drop the last two oracles (whisper-cli, say) so
 ;        the whole voice→voice pipeline is sovereign. Companion floor/north-star: translation-pipeline-pivot.form.
