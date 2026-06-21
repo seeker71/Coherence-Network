@@ -441,4 +441,12 @@ defn translator_first_night = r_autoresearch_loop(
 #         the body's version composes this from governance_shape rules
 #         already named here.
 #
+# GAP-A5: the pref-loss GENOME COORDINATE now has a concrete mutable gene —
+#         preference-learning.fk's row catalog, including pl_qam (the diffusion-Q
+#         tilt), with pl-fitness (achieved value) as the evaluator seam. The
+#         remaining stone is loop-level: r_autoresearch_loop evolving
+#         (pool, core, pref-loss) end-to-end with the qam row as a mutated gene,
+#         kept-or-rolled on pl-fitness. See preference-learning.form Part 5 and
+#         diffusion-q-learning.form GAP-Q4.
+#
 # None require kernel change. All compost into existing primitives.

@@ -1,0 +1,40 @@
+; preference-learning.fk — the preference-loss family as DATA rows, one combinator (GAP-P1 + GAP-Q2).
+; A preference method is a row in (id, transform, beta); the inductive bias lives ENTIRELY in the row,
+; the engine holds still. DPO/IPO/KTO are points in this space (preference-learning.form Part 1); the
+; QAM q-tilt is KTO's value-cousin with a LEARNED critic in place of the fixed reference point:
+; reference = the critic, the pull = the adjoint-matched ∇Q. A new method is an appended row, never an
+; engine change. The combinator runs them all; auto-research evolves the genome coordinate (pool, core,
+; pref-loss) and the value-native fitness selects the winning row.
+;
+; Composes diffusion-q-learning.fk (dql-grad-a, dql-improve) + metabolic-learning.fk (mtb-step, the
+; two-angle operator the preference step IS). Proven by tests/preference-learning-band.fk (four-way).
+
+(do
+    ; --- a preference-loss row as DATA: (id transform beta) ---
+    (defn pl-id        (row) (nth row 0))
+    (defn pl-transform (row) (nth row 1))
+    (defn pl-beta      (row) (nth row 2))
+
+    ; --- the family as data (slugs). qam appends to DPO/IPO/KTO with no engine change. ---
+    (defn pl-ipo () (list "ipo" "squared"   0.1))   ; IPO: the squared-margin transform (mtb-pressure)
+    (defn pl-kto () (list "kto" "value"     0.1))   ; KTO: unpaired prospect-value around a point
+    (defn pl-qam () (list "qam" "q-adjoint" 0.5))   ; QAM: the q-tilt; beta = the q-focus / λ aperture
+
+    ; --- the pull combinator: a margin m → a scalar pull, dispatched on the row's transform.
+    ;     squared (IPO) = 2·(m − 1/2); value (KTO) = the prospect-value gap m; q-adjoint (qam) routes
+    ;     the margin through the adjoint at apply-time (pl-qam-apply). logistic/odds-ratio ride the
+    ;     round-lens for exact four-way and are appended rows, not shown here. ---
+    (defn pl-pull (transform m)
+        (if (str_eq transform "squared") (mul 2.0 (sub m 0.5))
+        (if (str_eq transform "value")   m
+            m)))
+
+    ; --- the QAM apply: the q-tilt row fires dql-improve — the adjoint-matched critic gradient at the
+    ;     row's beta. The row is not a parallel path: pl-qam-apply IS dql-improve, the same engine. ---
+    (defn pl-qam-apply (row qedges policy x)
+        (dql-improve policy x (dql-grad-a qedges (list 1.0 0.0)) (pl-beta row) -1.0))
+
+    ; --- the value a policy achieves under a critic — the auto-research FITNESS the loop maximizes
+    ;     when it evolves the pref-loss coordinate; the row that earns the most value is kept. ---
+    (defn pl-fitness (qedges policy x) (dql-q qedges (gl-step policy x)))
+    0)

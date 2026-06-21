@@ -1,0 +1,31 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk form-stdlib/preference-learning.fk
+;
+; preference-learning-band — the q-tilt as a first-class preference row, four-way (GAP-Q2, + GAP-P1
+; opened). The preference family is DATA rows over (id, transform, beta); one combinator runs them;
+; the QAM q-tilt (pl-qam) appends with NO engine change and its application IS dql-improve. The
+; auto-research fitness (achieved value) selects the row that earns the most value. Registered `fks`.
+;
+; Verdict 31 when every claim lands:
+;   1   the inductive bias is in the ROW: squared and value transforms give different pulls from m=0.75
+;   2   the q-tilt is first-class DATA: pl-qam carries transform "q-adjoint" and beta 0.5 (the λ aperture)
+;   4   the row is NOT a parallel path: pl-qam-apply == dql-improve, weight-for-weight (same engine)
+;   8   the q-tilt EARNS value: applying pl-qam raises the policy's fitness 0 → 2.5
+;   16  auto-research SELECTS it: the value fitness ranks the qam-improved policy above the raw one
+(do
+    (let qedges (list (list 0 0 2.0) (list 0 1 1.0)))
+    (let x      (list 1.0 0.0))
+    (let raw    (list (list 0 0 0.0) (list 1 0 0.0)))
+    (let qam    (pl-qam))
+
+    ; the row's application, and the bare dql-improve it must equal
+    (let applied (pl-qam-apply qam qedges raw x))
+    (let direct  (dql-improve raw x (dql-grad-a qedges (list 1.0 0.0)) 0.5 -1.0))
+
+    (let c0 (if (and (eq (gl-veq6 (list (pl-pull "squared" 0.75)) (list 0.5)) 1)
+                     (eq (gl-veq6 (list (pl-pull "value" 0.75)) (list 0.75)) 1)) 1 0))
+    (let c1 (if (and (str_eq (pl-transform qam) "q-adjoint")
+                     (eq (gl-veq6 (list (pl-beta qam)) (list 0.5)) 1)) 2 0))
+    (let c2 (if (eq (gl-veq6 (mtb-weights applied) (mtb-weights direct)) 1) 4 0))
+    (let c3 (if (eq (gl-veq6 (list (pl-fitness qedges applied x)) (list 2.5)) 1) 8 0))
+    (let c4 (if (gt (pl-fitness qedges applied x) (pl-fitness qedges raw x)) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))
