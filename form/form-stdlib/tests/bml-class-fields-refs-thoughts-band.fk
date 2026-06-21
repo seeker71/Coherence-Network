@@ -1,0 +1,45 @@
+; bml-class-fields-refs-thoughts-band.fk — a generic class carries embedded
+; knowledge: fields (constants), refs (to other abstractions), and thoughts
+; (computed derived knowledge), all four-way.
+;
+; field NAME = V;   -> a nullary global (defn NAME () V), read NAME(): embedded
+;                      knowledge a method can use.
+; ref NAME = OTHER; -> a reference to another abstraction's cell.
+; thought NAME = E; -> a nullary global computing derived knowledge from fields.
+; def m(..) = ..;   -> a method (hoisted bare, as before).
+;
+; The class descriptor records each member under its kind, so the abstraction
+; DECLARES its structure: (Name) = (list "abstraction" Name (type-params)
+;   (methods) (fields) (refs) (thoughts)).
+;
+; Strangeness in one class: a method uses its own field AND a referenced
+; abstraction's field; a thought derives from a field; the descriptor counts
+; one of each kind. Computed inside the one section form so it reads identically
+; on every kernel.
+;
+; preludes: form-stdlib/core.fk
+
+section [form.bml] {
+    class Seed<T> {
+        field val = 41;
+    }
+
+    class Kit<E> {
+        ref seed = Seed();
+        field base = 100;
+        thought base1 = add(base(), 1);
+        def scaled(x) = add(mul(x, base()), val());
+    }
+
+    ; scaled(3) = 3*base() + val() = 300 + 41 = 341 (own field + ref'd field)
+    let a = scaled(3);
+    ; thought derived from the field: base() + 1 = 101
+    let b = base1();
+    ; the ref resolves to the Seed abstraction descriptor
+    let refok = if str_eq(nth(seed(), 1), "Seed") then 1 else 0;
+    ; Kit descriptor records one member of each kind -> counts sum to 4
+    let k = Kit();
+    let counts = add(len(nth(k, 3)), add(len(nth(k, 4)), add(len(nth(k, 5)), len(nth(k, 6)))));
+    ; 341 + 101*1000 + 1*1000000 + 4*10000000 = 41101341
+    add(a, add(mul(b, 1000), add(mul(refok, 1000000), mul(counts, 10000000))));
+}

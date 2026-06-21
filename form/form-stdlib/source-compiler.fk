@@ -1307,8 +1307,49 @@
             (let open (fsc-find-char-from line "(" 4))
             (fsc-trim (fsc-sub line 4 open))))
 
-    ;; Hoist each `def` inside the class body to a bare top-level fndef recipe,
-    ;; reusing the flat def lowerers verbatim (= node_eq to the flat form).
+    ;; A class member is a method (def), a field, a ref, or a thought. Methods
+    ;; hoist to bare fndefs (reusing the flat def lowerers verbatim = node_eq to
+    ;; the flat form). field / ref / thought each bind a nullary global
+    ;; (defn NAME () <expr>): a field holds embedded knowledge (a constant), a
+    ;; ref points at another cell, a thought computes derived knowledge. They
+    ;; read as NAME(); the kind is recorded in the descriptor so the abstraction
+    ;; DECLARES its structure (its knowledge), not just its callables.
+
+    (defn fsc-bml-nullary-after-kw (line)
+        (fsc-skip-spaces line (fsc-bml-word-end line 0)))
+
+    (defn fsc-bml-nullary-line-name (line)
+        (do
+            (let after-kw (fsc-bml-nullary-after-kw line))
+            (let eq-pos (fsc-find-char-from line "=" after-kw))
+            (fsc-trim (fsc-sub line after-kw eq-pos))))
+
+    (defn fsc-compile-form-bml-nullary-recipe (line)
+        (do
+            (let after-kw (fsc-bml-nullary-after-kw line))
+            (let eq-pos (fsc-find-char-from line "=" after-kw))
+            (let name (fsc-trim (fsc-sub line after-kw eq-pos)))
+            ;; `;` terminates the statement; anything after it (e.g. an inline
+            ;; comment) is not part of the expression.
+            (let semi (fsc-find-char-from line ";" eq-pos))
+            (let expr-end (if (ge semi 0) semi (str_len line)))
+            (let expr-text (fsc-trim (fsc-sub line (add eq-pos 1) expr-end)))
+            (fsc-rec-fndef name (empty)
+                (fsc-compile-form-bml-expr-recipe expr-text))))
+
+    (defn fsc-bml-class-nullary-member? (line)
+        (or (fsc-prefix? line "field ")
+            (or (fsc-prefix? line "ref ")
+                (fsc-prefix? line "thought "))))
+
+    (defn fsc-bml-class-member-kind (line)
+        (if (fsc-prefix? line "def ") "method"
+        (if (fsc-prefix? line "field ") "field"
+        (if (fsc-prefix? line "ref ") "ref"
+        (if (fsc-prefix? line "thought ") "thought" "")))))
+
+    ;; Walk the class body once, hoisting every member to its recipe. Methods
+    ;; ride the flat def lowerers; field/ref/thought ride the nullary lowerer.
     (defn fsc-bml-generic-class-defs-loop (body i end acc)
         (do
             (let p (fsc-skip-spaces body i))
@@ -1332,10 +1373,16 @@
                             (fsc-line-next body p) end
                             (cons (fsc-compile-form-bml-def-recipe (fsc-strip-semi line))
                                   acc))
+                    (if (fsc-bml-class-nullary-member? line)
                         (fsc-bml-generic-class-defs-loop body
-                            (fsc-line-next body p) end acc))))))))
+                            (fsc-line-next body p) end
+                            (cons (fsc-compile-form-bml-nullary-recipe line) acc))
+                        (fsc-bml-generic-class-defs-loop body
+                            (fsc-line-next body p) end acc)))))))))
 
-    (defn fsc-bml-generic-class-names-loop (body i end acc)
+    ;; Walk the class body once more, collecting (kind name) pairs. Skips def
+    ;; block bodies so an inner `field` line inside a method is never miscounted.
+    (defn fsc-bml-class-member-pairs-loop (body i end acc)
         (do
             (let p (fsc-skip-spaces body i))
             (if (ge p end) (fsc-rev acc)
@@ -1343,21 +1390,33 @@
                     (let line-end (fsc-line-end body p))
                     (let line (fsc-trim (fsc-sub body p line-end)))
                     (if (fsc-bml-comment-line? line)
-                        (fsc-bml-generic-class-names-loop body
+                        (fsc-bml-class-member-pairs-loop body
                             (fsc-line-next body p) end acc)
                     (if (and (fsc-prefix? line "def ") (fsc-line-opens-block? line))
                         (do
                             (let method-start (fsc-line-next body p))
                             (let method-end (fsc-bml-block-end body method-start 0))
-                            (fsc-bml-generic-class-names-loop body
+                            (fsc-bml-class-member-pairs-loop body
                                 (fsc-line-next body method-end) end
-                                (cons (fsc-bml-def-line-name line) acc)))
+                                (cons (list "method" (fsc-bml-def-line-name line)) acc)))
                     (if (fsc-prefix? line "def ")
-                        (fsc-bml-generic-class-names-loop body
+                        (fsc-bml-class-member-pairs-loop body
                             (fsc-line-next body p) end
-                            (cons (fsc-bml-def-line-name line) acc))
-                        (fsc-bml-generic-class-names-loop body
-                            (fsc-line-next body p) end acc))))))))
+                            (cons (list "method" (fsc-bml-def-line-name line)) acc))
+                    (if (fsc-bml-class-nullary-member? line)
+                        (fsc-bml-class-member-pairs-loop body
+                            (fsc-line-next body p) end
+                            (cons (list (fsc-bml-class-member-kind line)
+                                        (fsc-bml-nullary-line-name line)) acc))
+                        (fsc-bml-class-member-pairs-loop body
+                            (fsc-line-next body p) end acc)))))))))
+
+    (defn fsc-bml-names-of-kind (pairs kind)
+        (if (fsc-empty? pairs) (empty)
+            (if (str_eq (head (head pairs)) kind)
+                (cons (head (tail (head pairs)))
+                      (fsc-bml-names-of-kind (tail pairs) kind))
+                (fsc-bml-names-of-kind (tail pairs) kind))))
 
     (defn fsc-compile-form-bml-generic-class-block-recipes (body line body-start)
         (do
@@ -1373,11 +1432,11 @@
                             (fsc-sub line (add lt-pos 1) gt-pos) 0 (empty)))
                     (empty)))
             (let body-end (fsc-bml-block-end body body-start 0))
-            (let method-defs
+            (let member-defs
                 (fsc-bml-generic-class-defs-loop body body-start body-end (empty)))
-            (let member-names
-                (fsc-bml-generic-class-names-loop body body-start body-end (empty)))
-            (fsc-list-append method-defs
+            (let pairs
+                (fsc-bml-class-member-pairs-loop body body-start body-end (empty)))
+            (fsc-list-append member-defs
                 (list
                     (fsc-rec-fndef class-name (empty)
                         (fsc-rec-call "list"
@@ -1385,7 +1444,10 @@
                                 (fsc-rec-string "abstraction")
                                 (fsc-rec-string class-name)
                                 (fsc-rec-string-list type-params)
-                                (fsc-rec-string-list member-names))))))))
+                                (fsc-rec-string-list (fsc-bml-names-of-kind pairs "method"))
+                                (fsc-rec-string-list (fsc-bml-names-of-kind pairs "field"))
+                                (fsc-rec-string-list (fsc-bml-names-of-kind pairs "ref"))
+                                (fsc-rec-string-list (fsc-bml-names-of-kind pairs "thought")))))))))
 
     (defn fsc-form-bml-lines-recipes-loop (body i acc)
         (do
