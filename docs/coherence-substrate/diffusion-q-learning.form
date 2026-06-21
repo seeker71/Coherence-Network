@@ -155,6 +155,27 @@
   #   (forbidden: native is what a proven recipe BECOMES, not a parallel hand-lowering).
   # GAP-Q7 [INFER]: lower the gl/mtb cons-list + boxed-fp64 runtime onto the Form→asm native lane so a
   #   diffusion-Q band runs as no-clang native machine code, matching its walked verdict byte-for-byte.
+  #   A second audit (2026-06-21) mapped the sub-frontiers in dependency order — none is a one-breath step:
+  #   (Q7a) FLOAT EXPRESSIONS beyond single-arg. lo-fnode lowers a one-float-arg function to arm64 bytes
+  #         (form-lower-float → 15); the "two non-ARG subtrees" case returns (list) — the named frontier.
+  #         The clean register-mirror of the integer lo-tree (caller-saved FP temps d16+, fa-fmov, no frame)
+  #         is blocked by the conviction gate: form-lower's fa-conviction is WHOLE-FUNCTION byte-identity to
+  #         the clang oracle, and the two-subtree register allocation is not clang-verified — matching clang's
+  #         allocation is the oracle-as-MASTER ceiling (register allocation has many valid lowerings, unlike
+  #         a single instruction's one-true encoding). Resolve by giving form-lower a SEMANTIC-parity claim
+  #         (lowered-walks-to-same-answer, as jit-lower has) for register allocation, keeping byte-identity
+  #         only for per-instruction encodings — then the FP register-stack lands honestly.
+  #   (Q7b) LIST-TRAVERSAL native — the real diffusion-Q blocker, ABSENT entirely. gl-step/mtb walk cons
+  #         cells (nth/head/tail, tags 18-23); the native lane has no cons value model. Needs the value-model
+  #         BRIDGE: native code reading the walker's node-table heap (a heap-pointer convention) OR a flat
+  #         native list encoding. This is the deep stone — a runtime, not an op.
+  #   (Q7c) NATIVE EXECUTION within the four-way floor. Today the emitted dylib's bytes are four-way (Form),
+  #         but EXECUTION (dlopen+dlsym+call) is a host Go test (jit_dylib_test.go) — not sovereign. A fkwu
+  #         dylib_call native would let a band run its own emitted dylib inside validate.sh — native execution
+  #         proven with no Go, no clang. Absent today.
+  #   Roadmap placement: the body's named native roadmap (one-acceleration-engine.form M0-M2) targets the
+  #   SCALAR-FLOAT self-JIT (M0). Q7a is a piece of M0's sovereign byte path; Q7b/Q7c are BEYOND it. So
+  #   diffusion-Q native is genuinely several stones past the current native frontier — recorded, not faked.
 
 # ─────────────────────────────────────────────────────────────────────
 # How to run / how to query
