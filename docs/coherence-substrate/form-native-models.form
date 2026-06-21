@@ -148,6 +148,16 @@
 ;        the derived (token,tool) pairs can feed fcp-boost-pair (form-cli-predict, four-way) or the FFN input.
 ;        North star (sweep w5ype51k7: spec-only-form): the WORD domain / NodeID-as-embedding — features given
 ;        by structure, no vocabulary at all. The derived scorer is the honest step toward it, not ahead of it.
+;        CARRIER DRIFT NAMED (2026-06-21): the training scripts hold THREE layers — (1) irreducible host
+;        (read corpus.jsonl off disk, Metal compile + GPU dispatch — the silicon device driver, allowed per
+;        host-kernel.form); (2) already-Form (jte-mlp-train-msl, fs-score); (3) logic TRAPPED in the carrier
+;        — runner.swift re-implements gelu (fgelu), the FFN forward, and the multi-label eval IN SWIFT,
+;        duplicating four-way recipes and computing the held-out numbers we trust. First lift landed:
+;        form-stdlib/tool-eval.fk carries the held-out verdict (micro-acc, exact-set, covers-used) as the
+;        multi-label generalization of active-inference's hit-count; tests/tool-eval-band.fk → 63, four-way.
+;        Remaining compost: the Swift fgelu (= transformer-gelu-erf, four-way) and forward (= jte fwd) should
+;        dylib-call the recipe, not copy it; featurize.py's tokenize+count+split should lift to the WORD-domain
+;        fold + fs-score so it shrinks to line-reading. The carrier earns its host lines only as device driver.
 ;        MEASURED (2026-06-21): a real GPU run (2154 train / 539 held, corpus now 2717 turns) confirms the
 ;        diagnosis — train loss falls 2.7969→0.6340 while held-out loss bottoms at epoch 20 (0.8535) then
 ;        rises (0.8908, 1.0016); the held-out gate's minimum IS epoch 20. The band now carries that measured

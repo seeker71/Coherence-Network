@@ -847,3 +847,4 @@ continued-learning fks 63
 feature-selection fkc 63
 string-case fks 31
 nl-lexicon-grow fks 3
+tool-eval fkc 63
