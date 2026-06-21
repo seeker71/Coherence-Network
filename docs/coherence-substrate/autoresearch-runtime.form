@@ -443,10 +443,13 @@ defn translator_first_night = r_autoresearch_loop(
 #
 # GAP-A5: the pref-loss GENOME COORDINATE now has a concrete mutable gene —
 #         preference-learning.fk's row catalog, including pl_qam (the diffusion-Q
-#         tilt), with pl-fitness (achieved value) as the evaluator seam. The
-#         remaining stone is loop-level: r_autoresearch_loop evolving
-#         (pool, core, pref-loss) end-to-end with the qam row as a mutated gene,
-#         kept-or-rolled on pl-fitness. See preference-learning.form Part 5 and
-#         diffusion-q-learning.form GAP-Q4.
+#         tilt), with pl-fitness (achieved value) as the evaluator seam. one_iteration's
+#         keep-or-rollback CORE is now RUNNABLE for that coordinate:
+#         form/form-stdlib/diffusion-q-autoresearch.fk (dqa-step = propose→measure→keep-or-rollback,
+#         dqa-search = the iteration fold) + tests/diffusion-q-autoresearch-band.fk → 63, four-way.
+#         The fold's candidate stream stands in for agent_propose; the loop tracks the target and
+#         rediscovers the catalog gene. REMAINING: a real proposer (agent_propose), governance/never-stop,
+#         the experiment-cell history record, and the full (pool, core, pref-loss) triple (only the
+#         pref-loss coordinate runs today). See diffusion-q-learning.form Q4-autoresearch + GAP-Q6.
 #
 # None require kernel change. All compost into existing primitives.

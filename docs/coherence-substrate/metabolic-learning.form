@@ -210,9 +210,13 @@
 #                                  configuration of THIS engine, each
 #                                  with an exact signature (255).
 #
+# mtb-settle SHIPPED (iterate the metabolic step toward a target until the
+# residual pressure falls within tolerance — the observer gate IS the halt; the
+# numeric twin of ai-settled? and the policy's twin of gl-value-iterate; proven by
+# tests/q-actor-critic-fixpoint-band.fk → 255, four-way).
+#
 # Next stones when an ask needs them (named, honest):
-# mtb-settle (iterate mtb-step until the observer arm holds — the
-# numeric ai-settled? loop); the edge-builder gradient (attention
+# the edge-builder gradient (attention
 # learned end-to-end — gradients flowing through data-dependent edge
 # lists); layered stacks chaining mtb-reverse (depth as adjoint
 # composition); curvature builders (hyperbolic / gauge domains as edge

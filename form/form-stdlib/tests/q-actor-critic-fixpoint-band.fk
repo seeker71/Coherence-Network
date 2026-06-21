@@ -1,0 +1,62 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk form-stdlib/active-inference.fk
+;
+; q-actor-critic-fixpoint-band — GAP-Q1: the two convergence loops of QAM's actor-critic, four-way.
+;   CRITIC — repeated gl-bellman backups (value iteration) reach the Bellman fixpoint V* and stay there.
+;   POLICY — the QAM tilt genuinely IMPROVES the policy against the critic (the Q-term raises value above
+;     the behaviour-clone anchor), and the actor rests at its BC+Q equilibrium (applying the actor step
+;     again is the identity). mtb-settle — the lifted iterate-to-convergence driver — descends an
+;     under-relaxed residual over MULTIPLE real steps and HALTS at the observer gate.
+; These are the actor-critic's two convergence behaviours. Feeding the critic's V* into the policy's
+; target (full state→action coupling) is the named next stone; here the policy improves against its own
+; Q-critic, not by regressing to a hand-set optimum. Floats ride gl-veq6 (round) or float ordering (gt),
+; both four-way (float-compare-band → 4095).
+;
+; Verdict 255 when every claim lands:
+;   1    CRITIC reaches the value fixpoint: value-iterate(bell, 0, γ, 3) = V* = [3 4 4 0] (converged by iter 2)
+;   2    V* is a Bellman FIXPOINT: gl-bellman(V*) = V* (one more backup is the identity)
+;   4    settled past the fixpoint: value-iterate(...,3) = value-iterate(...,8)
+;   8    the POLICY IMPROVES against the critic: the Q-tilt raises value above the behaviour clone (4 > 1.5)
+;   16   the actor rests at its QAM fixpoint: dql-actor(actor) = actor (idempotent, non-trivial weights)
+;   32   genuine MULTI-step settling: an under-relaxed descent strictly shrinks the residual p1 > p2 > p3
+;   64   mtb-settle (the lifted driver) converges and HALTS at the gate: a focus-1 settle lands its target
+;   128  the discrete twin agrees: ai-settled? = 1 on a flawless run, 0 on a surprising one
+(do
+    ; ── CRITIC: value iteration to the Bellman fixpoint ──
+    (let bell (list (list 0 1 0.0) (list 0 2 1.0) (list 1 3 0.0)
+                    (list 1 2 2.0) (list 2 3 4.0) (list 3 3 0.0)))
+    (let v0    (list 0.0 0.0 0.0 0.0))
+    (let vstar (gl-value-iterate bell v0 0.5 3))            ; → [3 4 4 0] (the value moves 0→[1 2 4 0]→[3 4 4 0])
+
+    ; ── POLICY: QAM improvement against the action critic, resting at the BC+Q equilibrium ──
+    (let qedges (list (list 0 0 2.0) (list 0 1 1.0)))       ; Q(a) = 2·a0 + 1·a1
+    (let x      (list 1.0 0.0))                             ; one-hot context: params ARE the action
+    (let gradA  (dql-grad-a qedges (list 1.0 0.0)))         ; ∇_aQ = [2 1], the adjoint
+    (let pz     (list (list 0 0 0.0) (list 1 0 0.0)))
+    (let ydata  (list 0.5 0.5))                             ; the behaviour-clone action (the anchor)
+    (let bc     (mtb-learn pz x ydata 1.0))                 ; behaviour clone only → a = [0.5 0.5], Q = 1.5
+    (let actor  (dql-actor pz x ydata gradA 1.0 0.5 -1.0))  ; BC anchor + Q-tilt → a = [1.5 1.0], Q = 4.0
+    (let re-act (dql-actor actor x ydata gradA 1.0 0.5 -1.0)) ; applying the actor step again — the equilibrium
+
+    ; ── multi-step settling: an under-relaxed (focus 1/2) descent that genuinely iterates ──
+    (let tgt (list 1.0 0.0))
+    (let s1  (mtb-learn pz x tgt 0.5))                      ; residual halves each step
+    (let s2  (mtb-learn s1 x tgt 0.5))
+    (let s3  (mtb-learn s2 x tgt 0.5))
+    (let p1  (mtb-pressure s1 x tgt))                       ; 0.125
+    (let p2  (mtb-pressure s2 x tgt))                       ; 0.03125
+    (let p3  (mtb-pressure s3 x tgt))                       ; 0.0078125
+
+    ; ── the lifted driver converges + halts at the gate; the discrete twin ──
+    (let settled (mtb-settle pz x (list 1.0 0.5) 1.0 0.0 5))
+    (let run-ok  (list (list "a" "a") (list "b" "b")))
+    (let run-no  (list (list "a" "b")))
+
+    (let c0 (if (eq (gl-veq6 vstar (list 3.0 4.0 4.0 0.0)) 1) 1 0))
+    (let c1 (if (eq (gl-veq6 (gl-bellman bell vstar 0.5) vstar) 1) 2 0))
+    (let c2 (if (eq (gl-veq6 (gl-value-iterate bell v0 0.5 3) (gl-value-iterate bell v0 0.5 8)) 1) 4 0))
+    (let c3 (if (gt (dql-q qedges (gl-step actor x)) (dql-q qedges (gl-step bc x))) 8 0))
+    (let c4 (if (eq (gl-veq6 (mtb-weights re-act) (mtb-weights actor)) 1) 16 0))
+    (let c5 (if (and (gt p1 p2) (gt p2 p3)) 32 0))
+    (let c6 (if (eq (gl-veq6 (gl-step settled x) (list 1.0 0.5)) 1) 64 0))
+    (let c7 (if (and (eq (ai-settled? run-ok 0) 1) (eq (ai-settled? run-no 0) 0)) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

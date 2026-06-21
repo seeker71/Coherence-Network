@@ -77,6 +77,8 @@ defn pl_rdpo  = pref_loss_shape { id:"rdpo",  reference:"champion", pairing:"pai
 # the reference is a LEARNED CRITIC, not a fixed point — the pull is the adjoint-matched ∇Q. beta is
 # the q-focus / λ aperture. SHIPPED: form/form-stdlib/preference-learning.fk (pl-qam) +
 # tests/preference-learning-band.fk → 31, four-way; pl-qam-apply IS dql-improve. See diffusion-q-learning.form.
+# The qam row's beta is an evolvable GENE: diffusion-q-autoresearch.fk runs the autoresearch keep-or-
+# rollback loop over it (propose→measure pl-fitness→keep), converging to the best beta (band → 63, four-way).
 defn pl_qam   = pref_loss_shape { id:"qam",   reference:"critic",   pairing:"unpaired", transform:"q-adjoint",  normalize:"none",   aux:"none", beta:0.5, margin:0.0 };
 
 # ─────────────────────────────────────────────────────────────────────
