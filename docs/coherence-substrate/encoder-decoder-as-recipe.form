@@ -7,6 +7,13 @@
 # into a Recipe tree, and (eventually) a decoder that emits the Recipe
 # back into a target surface. Today most modality files ship only the
 # encoder side; the decoder side lives in experiments/form-stdlib/emits/.
+# The natural-language modality now proves BOTH arms four-way through one
+# shared pivot (form-stdlib/tests/natural-language-band.fk, witness 262143):
+# the encoder maps many NL surfaces onto one universal recipe node, and two
+# decoders read that SAME pivot — back to an NL surface (NL -> meaning -> NL
+# round-trip) and to a Form s-expr surface (meaning -> Form). Because the
+# arms compose through the pivot, each improves independently — the decoupled
+# pipeline named in translation-pipeline-pivot.form.
 #
 # This file names what's structurally true regardless of modality:
 # *encoder and decoder are duals of one Blueprint*. R_Encode and

@@ -1,0 +1,102 @@
+# ─────────────────────────────────────────────────────────────────────
+# translation-pipeline-pivot.form — one generic-meaning pivot, many
+# independently-improvable codec arms
+# ─────────────────────────────────────────────────────────────────────
+#
+# THE ASK (Urs, 2026-06-21):
+#   "we can probably improve the NL to NL and NL to form model by introducing
+#    a NL => generic meaning => NL, and generic meaning => form middle model
+#    ... that generic meaning can be a cell/recipe space that lives part in
+#    (ice, water and gas) and allows for the translation flow to have two or
+#    more components in the pipeline that can independently improve."
+#
+# This is the named architecture, made one center. The body already holds
+# every piece:
+#   - universal-translator.form: "the pivot is the Blueprint, not the symbol"
+#     — a translator that cannot lie because the lattice refuses equivalences
+#     not structurally present.
+#   - encoder-decoder-as-recipe.form: encoder and decoder are two arms of ONE
+#     R_Codec, duals of a Blueprint — not two primitives.
+#   - substrate-thermodynamics.form: any cell sits on the STATE axis
+#     (ice / water / gas) orthogonally to its SUBSTANCE.
+# This file names what Urs's framing adds: the translation FLOW factored as a
+# pipeline through the pivot, so its components improve independently.
+#
+# ─────────────────────────────────────────────────────────────────────
+# The pivot IS the generic meaning
+# ─────────────────────────────────────────────────────────────────────
+#
+# The "generic meaning" is not a new artifact to build — it is the universal
+# recipe node, content-addressed. A "fact" node is meaning, not English:
+# "the count is 13", "count is 13", and (one tongue over) "der Zähler ist 13"
+# all encode onto ONE pivot. Many surfaces -> one pivot is the whole point;
+# the Blueprint NodeID is the meaning's identity (lc-grammar-is-the-universal-
+# recipe, cjk-channel: mountain == shan == yama, one cell read many tongues).
+
+form pipeline_shape = {
+    encode:  ~Recipe,   # surface  -> pivot   (R_Encode; one per source tongue/PL)
+    pivot:   ~Blueprint,# the generic meaning (the universal recipe node)
+    decode:  ~Recipe,   # pivot    -> surface (R_Decode; one per target tongue/Form)
+};
+
+# NL -> NL and NL -> Form are the SAME pipeline sharing encode + pivot, differing
+# ONLY in the decode arm. So a better encoder lifts both flows at once, and a new
+# target (another tongue, or Form) is a new decoder against the pivot — never a
+# new end-to-end model. Each arm is a separate cell; each improves independently.
+defn nl_to_nl   = pipeline_shape { encode: @encode(nl), pivot: @pivot(meaning), decode: @decode(nl) };
+defn nl_to_form = pipeline_shape { encode: @encode(nl), pivot: @pivot(meaning), decode: @decode(form) };
+
+# ─────────────────────────────────────────────────────────────────────
+# The pivot lives in ice / water / gas
+# ─────────────────────────────────────────────────────────────────────
+#
+# A meaning cell is not one temperature. A canonical, widely-referenced meaning
+# (mountain == shan == yama) is ICE — frozen, load-bearing, shared by every arm.
+# A meaning interned mid-parse this second is WATER — fluid, in-flight. A one-off
+# meaning seen once and never reused is GAS — diffuse potential. The phase change
+# is champion-challenger: a meaning that proves stable across many surfaces and
+# many round-trips crystallizes toward ice; one that stops circulating composts
+# back to gas. The pivot space breathes; the NodeID is conserved through the
+# phase change (substrate-thermodynamics.form).
+#
+# ─────────────────────────────────────────────────────────────────────
+# Trained from what the body already has
+# ─────────────────────────────────────────────────────────────────────
+#
+# Every arm is trainable from pairs already on disk: idea->spec->code as
+# (intent -> Form) pairs (17 ideas, 170 specs), the locale corpus as a parallel
+# (surface, surface) set (~2019 keys x tongues), the agent sessions (939 turns,
+# 84.8% — form-cli-predict). Because the arms are separate, each trains on the
+# slice it needs: the encoder on surface->pivot pairs, each decoder on
+# pivot->surface pairs. The copyright gate (corpus-license-gate.fk) decides
+# train-eligible vs eval-only by provenance, fail-closed.
+#
+# ─────────────────────────────────────────────────────────────────────
+# HONESTY LANES
+# ─────────────────────────────────────────────────────────────────────
+#
+# PROVEN, four-way (Go / Rust / TS / fkwu): the full factored codec runs and
+# crosses on the emitted fourth kernel — form-stdlib/tests/natural-language-band.fk
+# (witness 262143): the ENCODER maps ten English sentence classes onto universal
+# recipe nodes, and TWO decoders read the same pivot — back to an NL surface
+# (NL -> meaning -> NL round-trip) and to a Form s-expr surface (meaning -> Form).
+# Encoder and decoders are separate cells composing through one pivot.
+#
+# NAMED, not yet built: the LEARNED encoder/decoders (today the grammar and the
+# emit templates are hand-authored data, not trained); more tongues sharing the
+# pivot with vocabulary normalization (so "der Zähler ist 13" reaches the SAME
+# pivot as "the count is 13" — the NL->NL decoder feeding the NL->Form pivot);
+# the round-trip QUALITY gate (translation-quality.fk: essence / vitality / trust
+# above a floor, not string equality) wired onto the pivot; the model-council
+# (nl-to-form-satsang.form) proposing parses the circle agrees on.
+#
+# LINEAGE
+#   kin: universal-translator.form (pivot = Blueprint), encoder-decoder-as-recipe.form
+#        (the two codec arms), native-translation-loopback.form (NL -> NL),
+#        nl-to-form-satsang.form (NL -> Form via a council), substrate-thermodynamics.form
+#        (ice / water / gas), native-translation-model.form + offline-nl-translation-
+#        training.form (training the arms), translation-quality.fk (the round-trip
+#        gate), corpus-license-gate.fk (the provenance boundary), cjk-channel.fk
+#        (one cell, many tongues), lc-grammar-is-the-universal-recipe,
+#        lc-universal-translator-via-keys, lc-cognitive-sovereignty (why: the mind
+#        comes home when the arms are native, not rented).
