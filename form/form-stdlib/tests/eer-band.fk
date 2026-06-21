@@ -1,0 +1,28 @@
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/eer.fk
+;
+; eer-band — Equal Error Rate over a trial matrix, four-way.
+;
+; OVERLAP fixture (genuine and impostor scores interleave so EER > 0):
+;   genuine (label 1): 0.8 0.6 0.4   ·   impostor (label 0): 0.7 0.5 0.3
+;   the FAR/FRR crossover is at θ=0.6: FAR=1/3 (impostor 0.7 accepted), FRR=1/3 (genuine 0.4 rejected) → EER=1/3.
+; SEPARABLE fixture: genuine 0.9 0.8, impostor 0.2 0.1 → a clean threshold exists → EER = 0.
+;
+; Verdict 63 when every claim lands:
+;   1   FAR at the crossover θ=0.6 = 1/3
+;   2   FRR at the crossover θ=0.6 = 1/3
+;   4   EER (swept) = 1/3            (the rates meet at θ=0.6)
+;   8   separable trials → EER = 0
+;   16  FAR at θ=0 = 1.0             (every impostor accepted)
+;   32  FRR at θ=1 = 1.0             (every genuine rejected)
+(do
+    (defn eb-i (x) (round (mul x 1000000.0)))
+    (defn eb-eq (a b) (if (eq a b) 1 0))
+    (let T (list (list 0.8 1.0) (list 0.6 1.0) (list 0.4 1.0) (list 0.7 0.0) (list 0.5 0.0) (list 0.3 0.0)))
+    (let S (list (list 0.9 1.0) (list 0.8 1.0) (list 0.2 0.0) (list 0.1 0.0)))
+    (let c0 (mul 1  (eb-eq (eb-i (eer-far T 0.6)) 333333)))
+    (let c1 (mul 2  (eb-eq (eb-i (eer-frr T 0.6)) 333333)))
+    (let c2 (mul 4  (eb-eq (eb-i (eer T)) 333333)))
+    (let c3 (mul 8  (eb-eq (eb-i (eer S)) 0)))
+    (let c4 (mul 16 (eb-eq (eb-i (eer-far T 0.0)) 1000000)))
+    (let c5 (mul 32 (eb-eq (eb-i (eer-frr T 1.0)) 1000000)))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
