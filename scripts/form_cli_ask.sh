@@ -68,11 +68,18 @@ HTTP="$(compile_bml "$STD/http-client.fk")"
 ASK="$(compile_bml "$STD/form-cli-ask.fk")"
 ASKPLUS="$(compile_bml "$STD/form-cli-ask-plus.fk")"
 
-# ── invoke: local-first ask through the escalating flow ──
+# ── invoke: local-first ask through the escalating flow, traced ──
+# fca-ask-plus-traced returns the live trust row on line 1 and the answer below it.
+# The row (the per-query "field": native vs rented, grounded/freq/sufficient) goes to
+# stderr — visible at a terminal, out of the way of a piped answer; the answer goes to
+# stdout. The trust LOGIC is Form (form-cli-ask-gate.fk, four-way proven); the shell
+# only routes the two streams.
 esc(){ printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
-printf '(print (fca-ask-plus "%s" "%s" "%s" "%s" %s %s %s))\n' \
+printf '(print (fca-ask-plus-traced "%s" "%s" "%s" "%s" %s %s %s))\n' \
   "$(esc "$Q")" "$(esc "$MODEL")" "$(esc "$JUDGE")" "$(esc "$REMOTE")" "$TRUST" "$RETRIES" "$JUDGE_GATE" > "$work/ask.fk"
 
-"$GO" "$CORE" "$HTTP" "$ASK" \
-  "$STD/form-cli-router.fk" "$STD/form-cli-judge.fk" "$STD/form-cli-sufficiency.fk" "$STD/form-cli-ask-gate.fk" \
-  "$ASKPLUS" "$work/ask.fk" | sed '/^null$/d'
+out="$("$GO" "$CORE" "$HTTP" "$ASK" \
+  "$STD/form-cli-router.fk" "$STD/form-cli-judge.fk" "$STD/form-cli-sufficiency.fk" "$STD/trust-row.fk" "$STD/form-cli-ask-gate.fk" \
+  "$ASKPLUS" "$work/ask.fk" | sed '/^null$/d')"
+printf '%s\n' "$out" | sed -n '1p' >&2   # line 1: the live trust row -> stderr
+printf '%s\n' "$out" | sed '1d'          # the answer -> stdout
