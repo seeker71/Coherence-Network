@@ -90,15 +90,24 @@ defn nl_to_form = pipeline_shape { encode: @encode(nl), pivot: @pivot(meaning), 
 # pivot and engine never change. This is real NL->NL (parse meaning, re-render),
 # not phrase lookup.
 #
+# LIVE: the native NL->NL stage now runs in the speech loop —
+# experiments/coherence-sense-android/native-translate-speak.sh wires the proven
+# Form translate (form-stdlib/nl-translate.fk) between the STT oracle (whisper-cli)
+# and the TTS oracle (say): voice(en) -> transcribe -> NATIVE translate -> voice(id),
+# verified end to end ("The source is native." -> "sumber adalah asli"). The middle
+# is the only non-oracle stage; the carrier is thin host-IO, the logic is Form.
+#
 # NAMED, not yet built: the LEARNED encoder/decoders (today the grammar, the emit
 # templates, and the lexicon are hand-authored data, not trained — the diagnostic
 # in form-native-models / this session showed a bigger NET is not the lever; the
 # embedding featurizer is); OPEN-VOCABULARY coverage the hand-lexicon can't reach;
-# the round-trip QUALITY gate (translation-quality.fk: essence / vitality / trust
-# above a floor, not string equality) wired onto the pivot; the model-council
-# (nl-to-form-satsang.form) proposing parses the circle agrees on; and the live
-# carrier wiring — this native NL->NL stage running between the STT and TTS oracles
-# on the Android speech loop (speech-organ.fk), the rung toward voice -> voice.
+# SURFACE-ROBUST encoding (case / punctuation / contractions) owned by the Form
+# encoder instead of carrier-side cleaning; the round-trip QUALITY gate
+# (translation-quality.fk: essence / vitality / trust above a floor, not string
+# equality) wired onto the pivot; the model-council (nl-to-form-satsang.form)
+# proposing parses the circle agrees on; and the two OTHER stages going native —
+# STT end-to-end (Form whisper is four-way-proven but not yet real-.wav->transcript)
+# and Form-native TTS (unbuilt, the long pole) — to drop the last two oracles.
 #
 # LINEAGE
 #   kin: universal-translator.form (pivot = Blueprint), encoder-decoder-as-recipe.form
