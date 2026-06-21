@@ -1,0 +1,64 @@
+; form-cli-ask-gate.fk — the ask verb's POSTERIOR gate: turn THIS run's local
+; answer-signals into the accept / retry / escalate decision, composing the
+; four-way-proven form-cli-sufficiency.fk.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk
+;
+; form-cli-sufficiency.fk reads six signals and returns accept / retry / escalate.
+; This is the ask lane's adapter onto it: the live carrier (form-cli-ask.fk) reads
+; the real local answer this turn and reduces it to four numbers; the gate maps
+; those into the sufficiency signal list and lets the proven verdict decide. The
+; gate is pure + numeric, so it crosses four-way; the oracle calls (local lane via
+; http-fetch, judge via http-fetch, remote escalation via host-exec) wrap it.
+;
+; Signals the carrier computes from the real local answer:
+;   okp      1 if the local oracle produced a usable answer (non-empty, not an
+;            error / refusal marker), else 0 — it feeds BOTH has-output and
+;            shape-ok (an unusable answer fails both at once)
+;   content  0..100 substance score: the judge's coverage rating when a judge ran,
+;            else the carrier's intrinsic read of the answer
+;   trust    0..100 prior trust in this local lane — it seeds the confidence and
+;            trust axes alike (the policy seed until per-lane stats are tracked)
+;   retries  local re-tries still available this turn
+;
+; Proven by: form-stdlib/tests/form-cli-ask-band.fk (four-way at validate.sh)
+
+; ── read the local answer into signals (pure; the carrier hands over the text) ──
+; the local lane returns its "[ask: ..." marker when the oracle did not answer.
+(defn fca-error-marker? (answer)
+    (if (eq (str_find answer "[ask:" 0) 0) 1 0))
+
+; usable: a real answer — non-empty and not the error marker. This is okp.
+(defn fca-usable? (answer)
+    (if (eq (str_len answer) 0) 0
+        (if (eq (fca-error-marker? answer) 1) 0 1)))
+
+; intrinsic content (sovereignty-first): trust ANY usable answer above the gate's
+; accept threshold; an unusable one reads 0 so the gate escalates. Length is not
+; substance — only the presence of a real answer is. The carrier's judge can refine
+; this score when its gate is on; this is the default.
+(defn fca-content-intrinsic (answer)
+    (if (eq (fca-usable? answer) 1) 70 0))
+
+; assemble the sufficiency signal list for one ask turn. okp drives has-output AND
+; shape-ok; trust seeds confidence and trust alike.
+(defn fca-ask-signals (okp content trust retries)
+    (fsuf-signals okp okp content trust trust retries))
+
+; the posterior verdict for this turn: 0 accept (local stands) / 1 retry / 2 escalate
+(defn fca-ask-verdict (okp content trust retries)
+    (fsuf-verdict (fca-ask-signals okp content trust retries)))
+
+; why it ruled that way (0 ok / 1 empty / 2 bad-shape / 3 weak / 4 low-conf / 5 low-trust)
+(defn fca-ask-reason (okp content trust retries)
+    (fsuf-reason (fca-ask-signals okp content trust retries)))
+
+; the three carrier gates over a verdict
+(defn fca-ask-accept?   (v) (if (eq v 0) 1 0))
+(defn fca-ask-retry?    (v) (if (eq v 1) 1 0))
+(defn fca-ask-escalate? (v) (if (eq v 2) 1 0))
+
+; the trust-row PATH signal, read from the FINAL verdict (after any retry resolved):
+; 1 = native (the local body answered and stood), 0 = rented (escalated to the oracle)
+(defn fca-ask-path (final-verdict) (if (eq final-verdict 0) 1 0))
+0

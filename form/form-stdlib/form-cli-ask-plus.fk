@@ -1,0 +1,105 @@
+; form-cli-ask-plus.fk — the `ask+` daily-driver: local-first, then the four-way
+; sufficiency gate escalates to the subscription oracle when local is not enough.
+;
+; preludes: form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/form-cli-ask-gate.fk
+;
+; form-cli-ask.fk's `fca-ask` is the PURE local verb (the native binary's `ask`:
+; one socket call to the local oracle, no host-exec). This is its escalating
+; sibling — the verb `ask+` runs. The flow:
+;
+;   1. ask the LOCAL oracle (model) over http-fetch — same socket lane as fca-ask
+;   2. read THIS run's signals: usable? (non-empty, not an error marker) and a
+;      0..100 content score. The DEFAULT score is the intrinsic, sovereignty-first
+;      read — a usable answer is trusted; only a local failure reads 0. With the
+;      judge gate on, the judge model's coverage rating replaces it (a small judge
+;      is noisy enough to escalate correct answers, so it is opt-in)
+;   3. let form-cli-ask-gate.fk (composing the four-way-proven form-cli-sufficiency.fk)
+;      return the verdict: accept (local stands) / retry (re-run local once) / escalate
+;   4. on escalate, run the REMOTE oracle (the subscription agent CLI, e.g. claude -p)
+;      via host-exec — the only host-exec in the path; the local + judge lanes stay
+;      pure socket calls
+;
+; The decision math is the gate's, proven four-way; this file is the live carrier
+; that feeds it real signals and carries the verdict out to the oracles.
+
+section [form.bml] {
+    ; usable? and the intrinsic content read live in form-cli-ask-gate.fk (pure,
+    ; four-way proven): fca-usable? / fca-content-intrinsic. This carrier composes
+    ; them; the judge path below is the opt-in refinement.
+
+    ; ── scan the first integer out of a reply (the judge's 0..100) ───────────
+    def fcap-digit?(c) {
+        let cp = ord(c);
+        if lt(cp, 48) then 0 else if gt(cp, 57) then 0 else 1;
+    }
+    ; index of the first digit, or str_len(s) when the reply carries no digit
+    def fcap-first-digit(s, i) {
+        if ge(i, str_len(s)) then str_len(s) else
+        if eq(fcap-digit?(char_at(s, i)), 1) then i else fcap-first-digit(s, add(i, 1));
+    }
+    def fcap-take-int(s, i, acc) {
+        if ge(i, str_len(s)) then acc else
+        if eq(fcap-digit?(char_at(s, i)), 1) then
+            fcap-take-int(s, add(i, 1), add(mul(acc, 10), sub(ord(char_at(s, i)), 48)))
+        else acc;
+    }
+    def fcap-clamp100(n) {
+        if gt(n, 100) then 100 else n;
+    }
+
+    ; ── the judge content score (the membrane: a local judge model rates the
+    ;    local answer's coverage; intrinsic read when the judge errors or
+    ;    returns no number) ──
+    def fcap-judge-prompt(question, answer) {
+        str_concat("Rate 0 to 100 how fully the ANSWER addresses the QUESTION. Reply with ONLY the integer.\nQUESTION: ",
+            str_concat(question, str_concat("\nANSWER: ", answer)));
+    }
+    def fcap-judge-content(judge, question, answer) {
+        let reply = fca-ask-model(judge, fcap-judge-prompt(question, answer));
+        if eq(fca-usable?(reply), 0) then fca-content-intrinsic(answer) else
+        if ge(fcap-first-digit(reply, 0), str_len(reply)) then fca-content-intrinsic(answer) else
+            fcap-clamp100(fcap-take-int(reply, fcap-first-digit(reply, 0), 0));
+    }
+
+    ; the content signal for one answer: 0 for an unusable answer (escalate); else
+    ; the judge's coverage score when the judge gate is on, otherwise the intrinsic
+    ; sovereignty-first read (trust the local body). The judge gate is opt-in because
+    ; a small local judge is noisy enough to escalate correct answers — off, the body
+    ; is trusted; on, the membrane refines the score.
+    def fcap-content(usejudge, judge, question, answer) {
+        if eq(fca-usable?(answer), 0) then 0 else
+        if eq(usejudge, 1) then fcap-judge-content(judge, question, answer)
+        else fca-content-intrinsic(answer);
+    }
+
+    ; ── escalate to the remote oracle (the subscription agent CLI) ───────────
+    def fcap-escalate(remote, question) {
+        let wrote = host-write("/tmp/fca_plus_prompt.txt", question);
+        host-exec(str_concat(remote, " < /tmp/fca_plus_prompt.txt 2>/dev/null"));
+    }
+
+    ; ── one ask turn: local -> gate -> accept / retry-once / escalate ────────
+    def fcap-decide(local, question, model, judge, remote, trust, retries, usejudge) {
+        let okp = fca-usable?(local);
+        let verdict = fca-ask-verdict(okp, fcap-content(usejudge, judge, question, local), trust, retries);
+        if eq(verdict, 0) then local else
+        if eq(verdict, 1) then fcap-retry(question, model, judge, remote, trust, usejudge)
+        else fcap-escalate(remote, question);
+    }
+    ; retry re-runs the local lane once with no re-tries left: accept it or escalate.
+    def fcap-retry(question, model, judge, remote, trust, usejudge) {
+        let local = fca-ask-model(model, question);
+        let okp = fca-usable?(local);
+        let verdict = fca-ask-verdict(okp, fcap-content(usejudge, judge, question, local), trust, 0);
+        if eq(verdict, 0) then local else fcap-escalate(remote, question);
+    }
+
+    def fca-ask-plus(question, model, judge, remote, trust, retries, usejudge) {
+        if eq(str_len(question), 0) then
+            "ask+: usage - ask+ <question>   (local-first; the sufficiency gate escalates to the oracle when local is not enough)"
+        else
+            fcap-decide(fca-ask-model(model, question), question, model, judge, remote, trust, retries, usejudge);
+    }
+}
+
+0
