@@ -1,0 +1,89 @@
+//
+// form-ptx rmsnorm f32: one thread per row, ln-rmsnorm exact order:
+//   sumsq = sum x_j^2 (forward);  meansq = sumsq/flen;  rms = sqrt(meansq+eps) Newton 50;
+//   r = 1/rms;  y_j = (x_j * r) * g_j   (per-channel gain g). No mean subtraction.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_rmsnorm_f32(
+    .param .u64 p_x,
+    .param .u64 p_g,
+    .param .u64 p_y,
+    .param .u32 p_rows,
+    .param .u32 p_cols,
+    .param .f32 p_eps
+)
+{
+    .reg .pred  %p<2>;
+    .reg .f32   %f<20>;
+    .reg .b32   %r<12>;
+    .reg .b64   %rd<12>;
+
+    ld.param.u64    %rd1, [p_x];
+    ld.param.u64    %rd2, [p_g];
+    ld.param.u64    %rd3, [p_y];
+    ld.param.u32    %r1, [p_rows];
+    ld.param.u32    %r2, [p_cols];
+    ld.param.f32    %f1, [p_eps];
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+    mul.lo.s32      %r7, %r6, %r2;
+    cvt.rn.f32.u32  %f2, %r2;
+
+    // sumsq (forward)
+    mov.f32         %f3, 0f00000000;
+    mov.u32         %r8, 0;
+SUMSQ:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        ENDSQ;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd4, %r9, 4;
+    add.s64         %rd5, %rd1, %rd4;
+    ld.global.f32   %f4, [%rd5];
+    mul.f32         %f5, %f4, %f4;
+    add.f32         %f3, %f3, %f5;
+    add.u32         %r8, %r8, 1;
+    bra             SUMSQ;
+ENDSQ:
+    div.rn.f32      %f6, %f3, %f2;            // meansq
+    add.f32         %f7, %f6, %f1;            // meansq + eps
+
+    mov.f32         %f9, %f7;                 // g0 = sd
+    mov.u32         %r10, 50;
+NEWT:
+    setp.eq.u32     %p1, %r10, 0;
+    @%p1 bra        ENDNEWT;
+    div.rn.f32      %f10, %f7, %f9;
+    add.f32         %f11, %f9, %f10;
+    mul.f32         %f9, 0f3F000000, %f11;
+    sub.u32         %r10, %r10, 1;
+    bra             NEWT;
+ENDNEWT:
+    mov.f32         %f14, 0f3F800000;
+    div.rn.f32      %f15, %f14, %f9;          // r = 1/rms
+
+    mov.u32         %r8, 0;
+OUT:
+    setp.ge.u32     %p1, %r8, %r2;
+    @%p1 bra        DONE;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd4, %r9, 4;
+    add.s64         %rd5, %rd1, %rd4;
+    ld.global.f32   %f4, [%rd5];
+    mul.f32         %f16, %f4, %f15;          // x_j * r
+    add.s64         %rd6, %rd2, %rd4;
+    ld.global.f32   %f17, [%rd6];             // g_j
+    mul.f32         %f18, %f16, %f17;         // * g_j
+    add.s64         %rd7, %rd3, %rd4;
+    st.global.f32   [%rd7], %f18;
+    add.u32         %r8, %r8, 1;
+    bra             OUT;
+DONE:
+    ret;
+}

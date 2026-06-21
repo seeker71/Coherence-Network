@@ -1,0 +1,54 @@
+; loss.fk — the TRAINING LOSS surface as pure Form recipes: MAE, natural-log, softmax cross-entropy.
+;
+; preludes: form-stdlib/transformer-numerics.fk
+;
+; transformer-backprop.fk closes the backward pass on ONE loss: sum-of-squared-error (tbp-sse), exact
+; and integer-clean, the right loss to prove a gradient against. Training needs the rung above SSE — the
+; losses a real objective is written in: MAE for robust regression, and softmax cross-entropy for every
+; classification head (the loss whisper-tiny's decoder, and every LM, is trained on). This stone is the
+; FORWARD value of those losses — the scalar the gradient descends. The backward of softmax-CE is already
+; here: d/dlogits CE = softmax(logits) − onehot(target), which is tn-softmax minus a basis vector, so no
+; new gradient node is needed — only the forward objective, which is this file.
+;
+; All fp64, float-counted (no int/float mixing), pure list-walk folds — the same discipline as
+; transformer-numerics.fk. Reuses tn-abs / tn-max / tn-exp / tn-sum so cross-entropy's logsumexp computes
+; the SAME bits as tn-softmax's denominator (same max-subtract, same Taylor exp, same reduction order).
+; The one genuinely new primitive is the natural log: no ln existed on this dependency path (trig.fk's fln
+; is off it and pulls math_exp via fpow), so loss-ln is built here in the established fixed-iteration style.
+
+; --- mean absolute error: mean over |y_i − t_i|. The L1 regression loss (robust to outliers). ---
+(defn loss-mae-acc (y t acc)
+  (if (eq (len y) 0) acc
+      (loss-mae-acc (tail y) (tail t) (add acc (tn-abs (sub (head y) (head t)))))))
+(defn loss-mae (y t) (div (loss-mae-acc y t 0.0) (tn-flen y)))
+
+; --- natural log: ln(x) for x > 0, deterministic three-way by FIXED iteration count (the tn-exp/tn-sqrt
+;     discipline). Range-reduce x = m·2^k with m in [1,2) by counting halvings/doublings (k tracked as a
+;     float), then ln(m) via the atanh series ln(m) = 2·(u + u³/3 + u⁵/5 + …), u = (m−1)/(m+1) (|u| ≤ 1/3,
+;     so a FIXED 20 terms reach fp64 depth), then ln(x) = ln(m) + k·ln(2) with ln(2) a literal constant.
+;     Proven bit-exact to libm at 1e-9 in tests/loss-band.fk (ln(2), ln(e)=1, ln(1)=0, ln(0.5), ln(10)). ---
+(defn LN2 () 0.6931471805599453)                                   ; ln(2), the reduction constant
+(defn loss-ln-up   (m k) (if (ge m 2.0) (loss-ln-up   (mul m 0.5) (add k 1.0)) k))  ; count doublings out
+(defn loss-ln-down (m k) (if (lt m 1.0) (loss-ln-down (mul m 2.0) (sub k 1.0)) k))  ; count halvings out
+(defn loss-ln-k (x) (if (ge x 1.0) (loss-ln-up x 0.0) (loss-ln-down x 0.0)))        ; the exponent k
+(defn loss-ln-mant (m)                                                              ; reduce m to [1,2)
+  (if (ge m 2.0) (loss-ln-mant (mul m 0.5)) (if (lt m 1.0) (loss-ln-mant (mul m 2.0)) m)))
+(defn loss-ln-ser (u2 upow j acc n)                                                 ; Σ u^(2j+1)/(2j+1)
+  (if (ge j n) acc
+      (loss-ln-ser u2 (mul upow u2) (add j 1.0)
+                   (add acc (div (mul upow u2) (add (mul 2.0 (add j 1.0)) 1.0))) n)))
+(defn loss-ln-m (m)                                                                 ; ln(m), m in [1,2)
+  (do (let u (div (sub m 1.0) (add m 1.0)))
+      (mul 2.0 (add u (loss-ln-ser (mul u u) u 0.0 0.0 20.0)))))
+(defn loss-ln (x)                                                                   ; ln(x) = ln(m) + k·ln(2)
+  (add (mul (loss-ln-k (mul x 1.0)) (LN2)) (loss-ln-m (loss-ln-mant (mul x 1.0)))))
+
+; --- softmax cross-entropy for a single target class:
+;     CE = −( logits[target] − logsumexp(logits) ), where logsumexp(L) = m + ln( Σ_i exp(L_i − m) ),
+;     m = tn-max(L). The max-subtract is tn-softmax's own stability shift, so exp here computes the same
+;     bits as the softmax denominator; ln is loss-ln. Equivalently CE = −ln(softmax(logits)[target]). ---
+(defn loss-exp-shift (l m)                                          ; exp(L_i − m), the softmax numerators
+  (if (eq (len l) 0) (empty) (cons (tn-exp (sub (head l) m)) (loss-exp-shift (tail l) m))))
+(defn loss-logsumexp (l) (do (let m (tn-max l)) (add m (loss-ln (tn-sum (loss-exp-shift l m))))))
+(defn loss-softmax-ce (logits target_index)
+  (sub (loss-logsumexp logits) (nth logits target_index)))

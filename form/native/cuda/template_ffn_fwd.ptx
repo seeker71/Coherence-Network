@@ -1,0 +1,155 @@
+//
+// form-ptx FFN forward: y = W2 . gelu(W1.x + b1) + b2, one CUDA block, one token.
+// Phase 1: thread k strides over hidden units, a[k] = gelu(W1[k].x + b1[k]) (serial right-fold dot,
+//          bias, then the recipe's Taylor gelu inlined). bar.sync. Phase 2: thread i strides over
+//          outputs, y[i] = W2[i].a + b2[i]. Explicit mul/add/div.rn (two roundings); JIT -O0 unfused;
+//          gelu uses the proven fptx-gelu body in a dedicated register range (%f20+/%r15/%p2).
+// Bit-exact to tb-ffn / tbp-mlp-fwd (gelu = tn-gelu). a[] is a global scratch buffer (any hidden dim).
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_ffn_fwd_f32(
+    .param .u64 p_w1,
+    .param .u64 p_b1,
+    .param .u64 p_w2,
+    .param .u64 p_b2,
+    .param .u64 p_x,
+    .param .u64 p_y,
+    .param .u64 p_a,
+    .param .u32 p_indim,
+    .param .u32 p_hid,
+    .param .u32 p_outd
+)
+{
+    .reg .pred  %p<3>;
+    .reg .f32   %f<40>;
+    .reg .b32   %r<20>;
+    .reg .b64   %rd<16>;
+
+    ld.param.u64    %rd1, [p_w1];
+    ld.param.u64    %rd2, [p_b1];
+    ld.param.u64    %rd3, [p_w2];
+    ld.param.u64    %rd4, [p_b2];
+    ld.param.u64    %rd5, [p_x];
+    ld.param.u64    %rd6, [p_y];
+    ld.param.u64    %rd7, [p_a];
+    ld.param.u32    %r1, [p_indim];
+    ld.param.u32    %r2, [p_hid];
+    ld.param.u32    %r3, [p_outd];
+    mov.u32         %r4, %tid.x;
+    mov.u32         %r5, %ntid.x;
+
+    // ---- PHASE 1: a[k] = gelu(W1[k].x + b1[k]) ----
+    mov.u32         %r6, %r4;            // k = tid
+PH1:
+    setp.ge.u32     %p1, %r6, %r2;
+    @%p1 bra        ENDPH1;
+    mul.lo.s32      %r7, %r6, %r1;       // k*indim
+    mov.f32         %f1, 0f00000000;     // acc
+    mov.u32         %r8, %r1;            // j = indim
+PH1DOT:
+    setp.eq.u32     %p1, %r8, 0;
+    @%p1 bra        ENDPH1DOT;
+    sub.u32         %r8, %r8, 1;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd8, %r9, 4;
+    add.s64         %rd9, %rd1, %rd8;
+    ld.global.f32   %f2, [%rd9];
+    mul.wide.u32    %rd10, %r8, 4;
+    add.s64         %rd11, %rd5, %rd10;
+    ld.global.f32   %f3, [%rd11];
+    mul.f32         %f4, %f2, %f3;
+    add.f32         %f1, %f4, %f1;
+    bra             PH1DOT;
+ENDPH1DOT:
+    mul.wide.u32    %rd12, %r6, 4;
+    add.s64         %rd13, %rd2, %rd12;
+    ld.global.f32   %f5, [%rd13];
+    add.f32         %f20, %f1, %f5;      // hk -> gelu input (%f20)
+    // ---- inline gelu(%f20) -> %f37 (dedicated regs %f20+/%r15/%p2) ----
+    mul.f32         %f21, %f20, %f20;
+    mul.f32         %f22, %f20, %f21;
+    mul.f32         %f23, 0f3D372713, %f22;
+    add.f32         %f24, %f20, %f23;
+    mul.f32         %f25, 0f3F4C422A, %f24;
+    mul.f32         %f26, 0f40000000, %f25;
+    mov.u32         %r15, 0;
+GREDUCE:
+    abs.f32         %f27, %f26;
+    setp.gt.f32     %p2, %f27, 0f3F000000;
+    @!%p2 bra       GENDREDUCE;
+    div.rn.f32      %f26, %f26, 0f40000000;
+    add.u32         %r15, %r15, 1;
+    bra             GREDUCE;
+GENDREDUCE:
+    mov.f32         %f28, 0f3F800000;
+    mov.f32         %f29, 0f3F800000;
+    mov.f32         %f30, 0f3F800000;
+GSMALL:
+    setp.gt.f32     %p2, %f28, 0f41600000;
+    @%p2 bra        GENDSMALL;
+    div.rn.f32      %f31, %f26, %f28;
+    mul.f32         %f29, %f29, %f31;
+    add.f32         %f30, %f30, %f29;
+    add.f32         %f28, %f28, 0f3F800000;
+    bra             GSMALL;
+GENDSMALL:
+GSQUARE:
+    setp.eq.u32     %p2, %r15, 0;
+    @%p2 bra        GENDSQUARE;
+    mul.f32         %f30, %f30, %f30;
+    sub.u32         %r15, %r15, 1;
+    bra             GSQUARE;
+GENDSQUARE:
+    sub.f32         %f32, %f30, 0f3F800000;
+    add.f32         %f33, %f30, 0f3F800000;
+    div.rn.f32      %f34, %f32, %f33;
+    mul.f32         %f35, 0f3F000000, %f20;
+    add.f32         %f36, 0f3F800000, %f34;
+    mul.f32         %f37, %f35, %f36;
+    // ---- a[k] = gelu ----
+    mul.wide.u32    %rd14, %r6, 4;
+    add.s64         %rd15, %rd7, %rd14;
+    st.global.f32   [%rd15], %f37;
+    add.u32         %r6, %r6, %r5;       // k += ntid
+    bra             PH1;
+ENDPH1:
+    bar.sync        0;
+
+    // ---- PHASE 2: y[i] = W2[i].a + b2[i] ----
+    mov.u32         %r6, %r4;            // i = tid
+PH2:
+    setp.ge.u32     %p1, %r6, %r3;
+    @%p1 bra        ENDPH2;
+    mul.lo.s32      %r7, %r6, %r2;       // i*hid
+    mov.f32         %f1, 0f00000000;
+    mov.u32         %r8, %r2;            // k = hid
+PH2DOT:
+    setp.eq.u32     %p1, %r8, 0;
+    @%p1 bra        ENDPH2DOT;
+    sub.u32         %r8, %r8, 1;
+    add.s32         %r9, %r7, %r8;
+    mul.wide.u32    %rd8, %r9, 4;
+    add.s64         %rd9, %rd3, %rd8;
+    ld.global.f32   %f2, [%rd9];
+    mul.wide.u32    %rd10, %r8, 4;
+    add.s64         %rd11, %rd7, %rd10;
+    ld.global.f32   %f3, [%rd11];
+    mul.f32         %f4, %f2, %f3;
+    add.f32         %f1, %f4, %f1;
+    bra             PH2DOT;
+ENDPH2DOT:
+    mul.wide.u32    %rd12, %r6, 4;
+    add.s64         %rd13, %rd4, %rd12;
+    ld.global.f32   %f5, [%rd13];
+    add.f32         %f6, %f1, %f5;
+    mul.wide.u32    %rd14, %r6, 4;
+    add.s64         %rd15, %rd6, %rd14;
+    st.global.f32   [%rd15], %f6;
+    add.u32         %r6, %r6, %r5;
+    bra             PH2;
+ENDPH2:
+    ret;
+}
