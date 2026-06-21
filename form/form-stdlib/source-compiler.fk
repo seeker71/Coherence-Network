@@ -1273,6 +1273,120 @@
                 (list (fsc-compile-form-bml-let-recipe value))
                 (list (fsc-compile-form-bml-expr-recipe value)))))))))
 
+    ;; --- plain generic stdlib class ----------------------------------
+    ;;
+    ;; A plain generic class `class Name<T,...> { def m(params) = expr; ... }`
+    ;; (no `: Template` extension) is an organizing abstraction over stdlib
+    ;; recipes. Its methods hoist to BARE top-level fndefs — built by the SAME
+    ;; def lowerers a flat `def` rides, so the executable recipe is node-for-
+    ;; node identical to writing those defs at the section top level. Callers
+    ;; keep using the bare names; the type parameter is a contract that erases.
+    ;; The class name also binds to a structural abstraction descriptor —
+    ;; a nullary global `(defn Name () (list "abstraction" Name (type-params)
+    ;; (member-names)))`, read as `(Name)`. A top-level `let` would leak its
+    ;; binding to global scope on three kernels but stay `do`-scoped on fkwu
+    ;; (the correct reading), so the descriptor rides a `defn` like every other
+    ;; core binding — global and portable across all four arms.
+
+    (defn fsc-bml-word-end (s i)
+        (if (ge i (str_len s)) i
+            (if (fsc-word-char? (char_at s i))
+                (fsc-bml-word-end s (add i 1))
+                i)))
+
+    ;; A language class extends a template — `class Name : Template<..> { ..`.
+    ;; A plain generic class has no `:` before its opening brace.
+    (defn fsc-bml-class-header-has-colon? (line)
+        (do
+            (let colon (fsc-find-char-from line ":" 6))
+            (let brace (fsc-find-char-from line "{" 6))
+            (and (ge colon 0) (and (ge brace 0) (lt colon brace)))))
+
+    (defn fsc-bml-def-line-name (line)
+        (do
+            (let open (fsc-find-char-from line "(" 4))
+            (fsc-trim (fsc-sub line 4 open))))
+
+    ;; Hoist each `def` inside the class body to a bare top-level fndef recipe,
+    ;; reusing the flat def lowerers verbatim (= node_eq to the flat form).
+    (defn fsc-bml-generic-class-defs-loop (body i end acc)
+        (do
+            (let p (fsc-skip-spaces body i))
+            (if (ge p end) (fsc-rev acc)
+                (do
+                    (let line-end (fsc-line-end body p))
+                    (let line (fsc-trim (fsc-sub body p line-end)))
+                    (if (fsc-bml-comment-line? line)
+                        (fsc-bml-generic-class-defs-loop body
+                            (fsc-line-next body p) end acc)
+                    (if (and (fsc-prefix? line "def ") (fsc-line-opens-block? line))
+                        (do
+                            (let method-start (fsc-line-next body p))
+                            (let method-end (fsc-bml-block-end body method-start 0))
+                            (fsc-bml-generic-class-defs-loop body
+                                (fsc-line-next body method-end) end
+                                (cons (fsc-compile-form-bml-def-block-recipe body line method-start)
+                                      acc)))
+                    (if (fsc-prefix? line "def ")
+                        (fsc-bml-generic-class-defs-loop body
+                            (fsc-line-next body p) end
+                            (cons (fsc-compile-form-bml-def-recipe (fsc-strip-semi line))
+                                  acc))
+                        (fsc-bml-generic-class-defs-loop body
+                            (fsc-line-next body p) end acc))))))))
+
+    (defn fsc-bml-generic-class-names-loop (body i end acc)
+        (do
+            (let p (fsc-skip-spaces body i))
+            (if (ge p end) (fsc-rev acc)
+                (do
+                    (let line-end (fsc-line-end body p))
+                    (let line (fsc-trim (fsc-sub body p line-end)))
+                    (if (fsc-bml-comment-line? line)
+                        (fsc-bml-generic-class-names-loop body
+                            (fsc-line-next body p) end acc)
+                    (if (and (fsc-prefix? line "def ") (fsc-line-opens-block? line))
+                        (do
+                            (let method-start (fsc-line-next body p))
+                            (let method-end (fsc-bml-block-end body method-start 0))
+                            (fsc-bml-generic-class-names-loop body
+                                (fsc-line-next body method-end) end
+                                (cons (fsc-bml-def-line-name line) acc)))
+                    (if (fsc-prefix? line "def ")
+                        (fsc-bml-generic-class-names-loop body
+                            (fsc-line-next body p) end
+                            (cons (fsc-bml-def-line-name line) acc))
+                        (fsc-bml-generic-class-names-loop body
+                            (fsc-line-next body p) end acc))))))))
+
+    (defn fsc-compile-form-bml-generic-class-block-recipes (body line body-start)
+        (do
+            (let name-end (fsc-bml-word-end line 6))
+            (let class-name (fsc-trim (fsc-sub line 6 name-end)))
+            (let lt-pos (fsc-find-char-from line "<" name-end))
+            (let brace (fsc-find-char-from line "{" name-end))
+            (let type-params
+                (if (and (ge lt-pos 0) (lt lt-pos brace))
+                    (do
+                        (let gt-pos (fsc-find-char-from line ">" lt-pos))
+                        (fsc-bml-name-list-strings-loop
+                            (fsc-sub line (add lt-pos 1) gt-pos) 0 (empty)))
+                    (empty)))
+            (let body-end (fsc-bml-block-end body body-start 0))
+            (let method-defs
+                (fsc-bml-generic-class-defs-loop body body-start body-end (empty)))
+            (let member-names
+                (fsc-bml-generic-class-names-loop body body-start body-end (empty)))
+            (fsc-list-append method-defs
+                (list
+                    (fsc-rec-fndef class-name (empty)
+                        (fsc-rec-call "list"
+                            (list
+                                (fsc-rec-string "abstraction")
+                                (fsc-rec-string class-name)
+                                (fsc-rec-string-list type-params)
+                                (fsc-rec-string-list member-names))))))))
+
     (defn fsc-form-bml-lines-recipes-loop (body i acc)
         (do
             (let p (fsc-skip-spaces body i))
@@ -1293,7 +1407,9 @@
                         (let body-start (fsc-line-next body p))
                         (let body-end (fsc-bml-block-end body body-start 0))
                         (let class-recipes
-                            (fsc-compile-form-bml-language-class-block-recipes body line body-start))
+                            (if (fsc-bml-class-header-has-colon? line)
+                                (fsc-compile-form-bml-language-class-block-recipes body line body-start)
+                                (fsc-compile-form-bml-generic-class-block-recipes body line body-start)))
                         (fsc-form-bml-lines-recipes-loop body
                             (fsc-line-next body body-end)
                             (fsc-rec-append-rev class-recipes acc)))

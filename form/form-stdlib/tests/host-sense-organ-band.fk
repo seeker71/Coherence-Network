@@ -1,0 +1,27 @@
+; preludes: form-stdlib/host-sense-organ.fk
+;
+; host-sense-organ-band — the host-organ BODY: derived metrics, active organs, state, three-way.
+;
+; The carrier only reads sensors (sysctl/vm_stat/ioreg/pmset/netstat) + POSTs to the mesh;
+; every decision is proven here. Same recipe serves macOS now and the Windows host twin next.
+;
+; Verdict 255 when every claim lands:
+;   1   power-cost is cpu/gpu mean   (cpu 42% + gpu 70% → 56%)
+;   2   signal caps at full scale    (0.9M + 0.9M → 1.0M, not 1.8M)
+;   4   signal passes through low     (10k + 27k → 37k)
+;   8   vitals-only = 7 organs        (no mic/camera/screen grant)
+;   16  +mic = 8 organs               (mic granted)
+;   32  +all media = 10 organs        (mic + camera + screen)
+;   64  receipt carries power-cost    (hso-rec-power reads back 560000)
+;   128 receipt carries the signal    (hso-rec-signal reads back 37000)
+(do
+    (let c0 (if (eq (hso-power-cost 420000 700000) 560000) 1 0))
+    (let c1 (if (eq (hso-signal 900000 900000) 1000000) 2 0))
+    (let c2 (if (eq (hso-signal 10000 27000) 37000) 4 0))
+    (let c3 (if (eq (hso-organ-count 0 0 0) 7) 8 0))
+    (let c4 (if (eq (hso-organ-count 1 0 0) 8) 16 0))
+    (let c5 (if (eq (hso-organ-count 1 1 1) 10) 32 0))
+    (let r (hso-receipt 420000 700000 10000 27000 800000 1 1 1))
+    (let c6 (if (eq (hso-rec-power r) 560000) 64 0))
+    (let c7 (if (eq (hso-rec-signal r) 37000) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

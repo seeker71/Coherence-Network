@@ -1,0 +1,200 @@
+# ─────────────────────────────────────────────────────────────────────
+# diffusion-q-learning.form — QAM (Q-learning with Adjoint Matching) grafted
+#                            onto the learning engine the body already runs.
+# ─────────────────────────────────────────────────────────────────────
+#
+# The field (2026-06): "Q-learning with Adjoint Matching" (Li & Levine,
+# arXiv:2601.14234) reports the strongest current result for optimising an
+# expressive diffusion / flow-matching policy against a Q-critic. Its whole
+# contribution is to do this WITHOUT backpropagation through the multi-step
+# denoising chain — that backprop is numerically unstable, so prior methods
+# either threw the critic gradient away (reweighting, IDQL) or approximated it
+# at a cost in expressivity. QAM uses ADJOINT MATCHING to turn the critic's
+# action-gradient into a per-step regression objective that needs no chain
+# unroll, yet is unbiased and fully expressive at the optimum.
+#
+# The recognition that makes this native here: the body's adjoint is ALREADY a
+# forward gather. metabolic-learning.fk ships mtb-reverse — "backprop through
+# gl-step IS gl-step over reversed edges" (band claim 512). So the thing QAM had
+# to construct, this substrate has as a primitive. QAM reduces to: feed the
+# critic's action-gradient ∇_aQ as the metabolic DELTA, and let mtb-reverse
+# carry it through the policy. No new engine — one new critic + one tilt dial.
+#
+# LANES (CLAUDE.md discipline — kept separate):
+#   [RUNS]   proven four-way (Go/Rust/TS/fkwu) by tests/diffusion-q-learning-band.fk → 255
+#   [INFER]  architectural inference; falsifiable, not yet walked
+# Unlike a pure design cell, the GRAFT here RUNS: the eight claims below are the
+# proven band, not a sketch. What stays [INFER] is the SCALE-UP, named honestly.
+
+(diffusion-q-learning
+
+  (lineage
+    (operator       metabolic-learning.form)    # pressure × frequency × angle × focus; mtb-reverse [RUNS]
+    (gather         geometric-learning.form)    # gl-step; gl-bellman (the RL/value limb) [RUNS]
+    (objective-kin  preference-learning.form)   # QAM = KTO's transform:"value" with a LEARNED critic [RUNS row family]
+    (serve-while-improve champion-challenger.form)  # the offline→online loop — WIRED + proven: diffusion-q-cc.fk + band → 31 [RUNS]
+    (mesh           federated-slices.form))      # many critics, deterministic slice-merge [RUNS]
+
+  # ── 1. The proven graft — eight claims, four-way [RUNS: band → 255] ──
+  # A one-hot context makes the policy params BE the action, so every weight is
+  # exact in fp64. The critic Q(a) = 2·a0 + 1·a1 makes action 0 the higher value.
+  (proven
+    (free-backtrace   dql-grad-a recovers ∇_aQ = [2 1] by the ADJOINT (reversed-edge gather), no tape)
+    (improve-ascends  one QAM step raises Q from 0 → 2.5 — the policy climbed the critic)
+    (toward-argmax    the action moved to [1 0.5], a positive margin 0.5 onto the higher-Q action)
+    (observer-gate    pressure(∇Q) at tolerance ⇒ params UNTOUCHED — a resolved action costs nothing)
+    (bc-limit         q-focus 0 ⇒ the actor is PURE behaviour-clone (the λ→∞ limit), bit-identical to BC)
+    (superposition    actor − BC = exactly q-focus·(critic credit) — one operator fired twice, additive)
+    (td-bootstrap     the critic target r+γ·Q' = 2.5 matches the SHIPPED gl-bellman max-plus backup)
+    (deep-adjoint     a TWO-layer policy gradient = the reference, by reversed gathers — the chain rule
+                      with NO unrolled autograd tape: QAM's "no backprop through the chain", on our kernel))
+
+  # ── 1b. Wired into a live loop — the offline→online promotion, VALUE-NATIVE [RUNS: band → 63] ──
+  # No longer an island: diffusion-q-cc.fk grafts dql-improve onto champion-challenger.
+  # A served champion policy reaches value Q=2.5; a raw challenger (Q=0) earns authority ONLY by the
+  # Q-tilt. The competition compares REAL FLOAT VALUE (summed Q over the window) with real float
+  # ordering (cc-val-reaches? / cc-val-exceeds?, ge/gt) — not a binary count. dql-improve raises the
+  # value; cc-val-promote? is the gate.
+  (consumed-by-loop
+    (raw-stays-behind   the un-improved challenger (Q=0) is behind on value → the champion keeps authority)
+    (tilt-earns-it      a sufficient Q-tilt (focus 1/2, Q→2.5) reaches the champion's value → PROMOTED)
+    (trusted-window     reaching value on a SHORT window (< min-samples) is NOT promoted — earned, not lucky)
+    (insufficient-tilt  a partial tilt (focus 1/8, Q→0.625) has not reached the value → still behind)
+    (strict-beat        an overshoot (focus 3/4, Q→3.75) cc-val-exceeds by float gt; a tie does not)
+    (real-margin        the slack is a real float — the weak challenger reaches with margin 18.75, not with 0))
+
+  # ── 2. The mapping — every QAM piece is a cell already here ──────────
+  (mapping
+    (diffusion-policy   [RUNS gather] the action is a recipe cell; ml-diffusion-model-flow denoise + mtb trains it)
+    (critic-Q           [INFER, one new cell] value-as-gather: a gl/mtb learner over (state, action) edges;
+                        target y = r + γ·min Q(s',a') — gl-bellman is that backup already four-way)
+    (adjoint-matching   [RUNS] mtb-reverse — the critic's action-gradient pushed through the policy as a
+                        forward reversed gather; mtb-credit is the per-step objective, mtb-unwrap the update)
+    (q-tilt-row         [INFER row] π* ∝ μ_β·exp(Q/λ): a preference-learning row whose reference is the
+                        LEARNED critic and whose pull is the adjoint-matched ∇Q. λ = the q-focus aperture)
+    (bc-anchor          [RUNS] the diffusion behaviour-clone loss = the distillation descent; keeps in-support))
+
+  # ── 3. Feature-set fit — what the asker named, where it lives ───────
+  (features
+    (cells-as-nodes  [RUNS] the action is a content-addressed recipe, not a float vector; the policy emits a NODE)
+    (free-backtrace  [RUNS] mtb-reverse is the adjoint as a reversed gather; content-addressing adds attribution)
+    (smart-branching [RUNS] branch-choice-order.form — learned ordering of choice branches from witnessed receipts)
+    (fast-fail       [RUNS] attention-as-CHOICE/FAIL/CUT/STOP (form-native-llm); a wrong action is O(1) to abandon)
+    (mesh-learning   [RUNS] federated-slices slice-merge — many critics consolidate deterministically))
+
+  # ── 4. Where the substrate is STRONGER than dense Diffusion-QL ──────
+  (beyond-port
+    (sparse-for-free  the action is a cell; irrelevant branches FAIL/CUT at O(1) — sparsity QAM pays float for is native)
+    (federated-critics each cell runs its own QAM loop; slice-merge reaches the SAME numbers, which float-averaging can't)
+    (traceable-adjoint every Q-update is a content-addressed delta with Blueprint provenance — cheap AND attributable))
+
+  # ── 5. The fourth-arm float registration rule (the real lesson) ─────
+  # The band's first cut "diverged" on fkwu (185 vs 255), and an earlier note here
+  # blamed fkwu's float ordering. That was WRONG — a misdiagnosis. fkwu computes
+  # gt/lt/le/ge/eq on floats correctly, four-way (tests/float-compare-band.fk → 4095).
+  # The real cause: a band carrying float LITERALS must be registered `fks` in
+  # fourth-arm-bands.txt, because a float literal lowers to fk-f64 → tag 50 (strtod of
+  # a string slot) and the `fks` table carries that source text in the string pool.
+  # Registered `fkc` (pool-free), the literals collapse to one value and ordering
+  # diverges — a REGISTRATION error, never a kernel bug. This cell's bands are `fks`.
+
+  # ── 6. The stones, and what remains ─────────────────────────────────
+  (closed
+    (Q2-preference-row [RUNS: preference-learning.fk + band → 31] the q-tilt is a first-class preference
+             row (id "qam", transform "q-adjoint", beta = the λ aperture) in the DATA catalog beside
+             IPO/KTO; one combinator runs them; pl-qam-apply IS dql-improve (not a parallel path); the
+             auto-research value fitness selects it. Also opens GAP-P1 — preference-learning.fk now exists)
+    (Q3-mesh           [RUNS: diffusion-q-mesh.fk + band → 31] federated critics consolidated by slice-merge
+             (TIES sign-election + trust-weighted FedAvg, integer-exact): three cells hold partial critics,
+             the merge yields the full critic no single cell held, dql-improve ascends the policy against
+             the consolidated value. QAM inside mesh-active-inference)
+    (Q1-fixpoint       [RUNS: q-actor-critic-fixpoint-band → 255] the actor-critic's two convergence loops in
+             one band: the CRITIC value-iterates to the Bellman fixpoint V* (gl-value-iterate, gl-bellman(V*)=V*),
+             the POLICY genuinely improves against its Q-critic (dql-actor: the Q-tilt raises value above the BC
+             anchor) and rests at its BC+Q equilibrium, with mtb-settle — newly lifted into metabolic-learning.fk
+             — descending an under-relaxed residual over multiple steps and halting at the observer gate)
+    (Q4-autoresearch   [RUNS: diffusion-q-autoresearch.fk + band → 63] the autoresearch keep-or-rollback loop
+             evolves the q-tilt GENE (a pl_qam row whose mutable beta is the pref-loss coordinate): propose →
+             measure pl-fitness → keep-or-rollback, the fold converging to the best gene; the loop TRACKS the
+             target (a different target selects a different gene) and rediscovers the catalog gene under a
+             derived target. dqa-step/dqa-search are one_iteration's keep-or-rollback core, made runnable))
+  (gaps
+    (GAP-Q5  [INFER] full state→action COUPLING: feed the critic's value-iterated V* into the policy's
+             improvement target so the two convergence loops are data-linked, not parallel demonstrations)
+    (GAP-Q6  [INFER] the FULL genome triple: the autoresearch loop over (pool, core, pref-loss) end-to-end
+             with a real proposer (agent_propose) + governance + experiment-history — the pref-loss coordinate
+             is now a selectable gene (Q4); the style-space genome and the proposer are the remaining wiring))
+  # (the offline→online champion-challenger loop landed value-native — §1b, diffusion-q-cc.fk + band → 63;
+  #  Q2 preference row, Q3 mesh, Q1 actor-critic fixpoint, Q4 autoresearch gene all landed — see §6 closed.)
+
+  (invariant
+    (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
+                  promise is re-earned on our kernel by the two-layer adjoint claim)
+    (one-engine   no second native path — the recipe that proves four-way IS the recipe that would
+                  crystallise to native asm (one engine, never a hand-written fast-path beside it); the
+                  critic and the policy are both the one gl/mtb gather over edge data)
+    (scale-honest the band is strange-minimal (2 actions, one-hot context); real width + the iterated loop
+                  are [INFER] stones, taken when an ask needs them, never built ahead of need)))
+
+  # ── 7. The native-execution floor (honest: sovereign in logic, walked in execution) ──
+  # An audit (2026-06-20) of "is all of this on the 4th kernel native — no Go/Rust/Python/clang/toolchain?":
+  # SOVEREIGN already — the LOGIC and the PROOF. Every recipe here is pure Form; no Go/Rust/Python/TS
+  #   carries the body. The bands cross FOUR-WAY: Go = Rust = TS = fkwu, byte-identical. fkwu IS the 4th kernel.
+  # NOT YET — no-clang NATIVE EXECUTION. The bands are EXECUTED by the fkwu WALKER (a tree-walker over the
+  #   flattened node-table), and the fkwu binary is emitted-C compiled by CLANG. So "runs on fkwu" today =
+  #   interpreted by a clang-built C program, NOT machine code from the body's own compiler.
+  # THE LANE IS REAL. The no-clang Form→asm lane (jit-lower → form-lower → form-asm → form-macho →
+  #   recipe-dylib → codesign → dylib_call) compiles Form to native arm64 BYTES with zero clang — proven
+  #   four-way, and it runs whole Unix tools native (echo/head/rot13/tr/wc/syscall; form-asm fks 31). The
+  #   arm64 FLOAT encoders exist (fa-fadd/fa-fmul).
+  # THE FRONTIER. That lane targets a FLAT byte/int/syscall value model. These recipes live on the walker's
+  #   TAGGED-VALUE model: cons-cell LISTS of BOXED fp64 floats, traversed by nth/head/tail (tags 18-23), with
+  #   float ops. Lowering THAT runtime onto Form→asm — the cons/float value model, end-to-end — is the
+  #   standing "op coverage is what grows" frontier (JIT_GAP_LEDGER #11 is float; list-traversal is beyond).
+  #   It is deep kernel work, named here as the next ground — never faked with a hand-written asm fast-path
+  #   (forbidden: native is what a proven recipe BECOMES, not a parallel hand-lowering).
+  # GAP-Q7 [INFER]: lower the gl/mtb cons-list + boxed-fp64 runtime onto the Form→asm native lane so a
+  #   diffusion-Q band runs as no-clang native machine code, matching its walked verdict byte-for-byte.
+  #   A second audit (2026-06-21) mapped the sub-frontiers in dependency order — none is a one-breath step:
+  #   (Q7a) FLOAT EXPRESSIONS beyond single-arg. lo-fnode lowers a one-float-arg function to arm64 bytes
+  #         (form-lower-float → 15); the "two non-ARG subtrees" case returns (list) — the named frontier.
+  #         The clean register-mirror of the integer lo-tree (caller-saved FP temps d16+, fa-fmov, no frame)
+  #         is blocked by the conviction gate: form-lower's fa-conviction is WHOLE-FUNCTION byte-identity to
+  #         the clang oracle, and the two-subtree register allocation is not clang-verified — matching clang's
+  #         allocation is the oracle-as-MASTER ceiling (register allocation has many valid lowerings, unlike
+  #         a single instruction's one-true encoding). KEYSTONE LANDED (2026-06-21): form-lower-sim.fk is a
+  #         32-register arm64 FP machine in Form (fsim) that EXECUTES a lowered float sequence and reproduces
+  #         the function (f(3)=12, f(5)=30) — register allocation validated by execution-equivalence, NOT by
+  #         clang byte-match; byte-identity kept only per-instruction (fa-fmul = 1e610820). Proven four-way:
+  #         tests/form-lower-sim-band.fk → 15. FP REGISTER STACK LANDED (2026-06-21): lo-ftree in
+  #         form-lower.fk is the abstract float lowering — mirrors lo-fnode's ARG-folding AND adds the two
+  #         non-ARG subtree case (bank the left to caller-saved d16+, lower the right a depth deeper, op
+  #         against the bank; FSUB/FDIV order kept). Correctness by fsim execution (g(x)=(x*x)-(x+x): g(3)=3,
+  #         g(4)=8; h(x)=(x+x)-(x*x): h(3)=-3), and a FAITHFUL generalization — encodes byte-for-byte to
+  #         lo-fcompile-fn on the single-arg overlap. Proven four-way: tests/form-lower-fp-stack-band.fk → 31.
+  #         The first op-coverage growth on the no-clang float lane past single-arg, no clang allocation rented.
+  #         Q7a remaining: unify lo-fnode onto lo-ftree (one lowering), wire the self-JIT heat-flip (M0).
+  #   (Q7b) LIST-TRAVERSAL native — the real diffusion-Q blocker, ABSENT entirely. gl-step/mtb walk cons
+  #         cells (nth/head/tail, tags 18-23); the native lane has no cons value model. Needs the value-model
+  #         BRIDGE: native code reading the walker's node-table heap (a heap-pointer convention) OR a flat
+  #         native list encoding. This is the deep stone — a runtime, not an op.
+  #   (Q7c) NATIVE EXECUTION within the four-way floor. Today the emitted dylib's bytes are four-way (Form),
+  #         but EXECUTION (dlopen+dlsym+call) is a host Go test (jit_dylib_test.go) — not sovereign. A fkwu
+  #         dylib_call native would let a band run its own emitted dylib inside validate.sh — native execution
+  #         proven with no Go, no clang. Absent today.
+  #   Roadmap placement: the body's named native roadmap (one-acceleration-engine.form M0-M2) targets the
+  #   SCALAR-FLOAT self-JIT (M0). Q7a is a piece of M0's sovereign byte path; Q7b/Q7c are BEYOND it. So
+  #   diffusion-Q native is genuinely several stones past the current native frontier — recorded, not faked.
+
+# ─────────────────────────────────────────────────────────────────────
+# How to run / how to query
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Prove the band four-way (from form/):
+#   ./validate.sh form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk \
+#                 form-stdlib/diffusion-q-learning.fk \
+#                 form-stdlib/tests/diffusion-q-learning-band.fk
+#   # → 255, fourth arm four-way (fkwu + pre-flattened tables)
+#
+#   # Structural queries once ingested (auto on merge to main):
+#   coh substrate form "?equivalent @recipe(dql-improve)"

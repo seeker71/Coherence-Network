@@ -1,0 +1,32 @@
+; preludes: form-stdlib/geometric-learning.fk
+;
+; float-compare-band — fkwu computes float ORDERING correctly, four-way (Go/Rust/TS/fkwu).
+; The standing evidence that gt/lt/le/ge/eq on floats cross the fourth arm. The ONE requirement:
+; a band carrying float LITERALS must be registered `fks` in fourth-arm-bands.txt (string pool),
+; because a float literal lowers to fk-f64 → tag 50 (strtod of a string slot) and the pool carries
+; that source text. Registered `fkc` (pool-free) the literals collapse and ordering diverges — a
+; REGISTRATION error, never a kernel bug. This band is the falsifiable proof of both halves.
+;
+; Verdict 4095 when every claim lands (literal AND computed operands; equal, <, >, against the
+; round-lens integer, and the boundary):
+;   1     le(0.5, 1.0) true                         8     gt(1.0, 0.5) true
+;   2     le(1.0, 0.5) false                        16    eq(1.0, 0.5) false (the collapse canary)
+;   4     lt(0.5, 1.0) true                         32    eq(0.5, 0.5) true
+;   64    ge(1.0, 0.5) true                         128   ge(0.5, 1.0) false
+;   256   computed gt: gt(2.0·0.5, 0.25) true       512   round-vs-large-int: gl-r6(2.5) == 2500000
+;   1024  ordering on a computed value vs literal: lt(gl-mean[0.5 0.5 0.5], 1.0) true
+;   2048  the boundary: le(1.0, 1.0) true, lt(1.0, 1.0) false
+(do
+    (let c0  (if (le 0.5 1.0) 1 0))
+    (let c1  (if (le 1.0 0.5) 0 2))
+    (let c2  (if (lt 0.5 1.0) 4 0))
+    (let c3  (if (gt 1.0 0.5) 8 0))
+    (let c4  (if (eq 1.0 0.5) 0 16))
+    (let c5  (if (eq 0.5 0.5) 32 0))
+    (let c6  (if (ge 1.0 0.5) 64 0))
+    (let c7  (if (ge 0.5 1.0) 0 128))
+    (let c8  (if (gt (mul 2.0 0.5) 0.25) 256 0))           ; computed 1.0 > literal 0.25
+    (let c9  (if (eq (gl-r6 2.5) 2500000) 512 0))          ; round result vs large int literal
+    (let c10 (if (lt (gl-mean (list 0.5 0.5 0.5)) 1.0) 1024 0))  ; computed 0.5 < literal 1.0
+    (let c11 (if (and (le 1.0 1.0) (if (lt 1.0 1.0) 0 1)) 2048 0))  ; the equal boundary
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

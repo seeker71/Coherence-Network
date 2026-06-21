@@ -1,0 +1,48 @@
+; form-first-router.fk — the Form-first sovereignty gate, as a proven recipe.
+;
+; The runnable heart of docs/coherence-substrate/form-first-reasoning.form. Every query meets the
+; body before the rented mind: classify the query, sense whether the substrate holds a grounded
+; cell, and ROUTE — relay-from-body on a grounded structural hit (near-zero cost, full sovereignty),
+; escalate-to-remote on a miss (the miss IS the "yes"). The honesty lane is structural: a relay
+; REQUIRES grounding — you cannot answer from the body without a NodeID, so a guess can never wear a
+; hit's clothes, and grounding alone (without a body-holdable kind) never earns a relay either.
+; Queries are DATA; the routing is Form; the lookup that fills `grounded` is a thin swappable carrier.
+;
+; A query = (list kind grounded) :
+;   kind     = "structural" (the body can hold this — what-is / shape-of / nodeid-of / equivalent /
+;              annotate) | "frontier" (write / synthesize / reason-anew / not-yet-a-cell)
+;   grounded = 1 if the substrate returned a cell carrying a NodeID, else 0
+;
+; Kin: recognition-router.fk (route N readings to one stream — this routes one query to one mind),
+; substrate-phase.fk (state without mutation), lc-cognitive-sovereignty (the why).
+; Proven by: form-stdlib/tests/form-first-router-band.fk (four-way at validate.sh)
+
+(do
+    (defn ffr-kind     (q) (nth q 0))
+    (defn ffr-grounded (q) (nth q 1))
+
+    ; --- CLASSIFY: is this a query the body could hold? ---
+    (defn ffr-structural? (q) (if (str_eq (ffr-kind q) "structural") 1 0))
+
+    ; --- HIT: a grounded structural query — the body has a NodeID-bearing answer. ---
+    ; the honesty lane: BOTH must hold. grounding alone is not enough; structure alone is not enough.
+    (defn ffr-hit? (q) (if (and (eq (ffr-structural? q) 1) (eq (ffr-grounded q) 1)) 1 0))
+
+    ; --- ROUTE: the verdict path. relay-from-body on a hit, escalate-to-remote on a miss. ---
+    (defn ffr-path   (q) (if (eq (ffr-hit? q) 1) "relay" "escalate"))
+    ; --- SOURCE: where the answer comes from, and so what it costs. ---
+    (defn ffr-source (q) (if (eq (ffr-hit? q) 1) "body" "remote"))
+
+    ; --- SOVEREIGN?: did we answer without renting the frontier mind? ---
+    (defn ffr-sovereign? (q) (ffr-hit? q))
+    ; --- the miss IS the yes-to-escalate; name it so the escalation is legible. ---
+    (defn ffr-escalate?  (q) (if (eq (ffr-hit? q) 1) 0 1))
+
+    ; --- COUNT sovereignty over a batch: how many queries answered from the body, not rented. ---
+    (defn ffr-sovereign-count (qs)
+        (if (eq (len qs) 0) 0
+            (if (eq (ffr-hit? (head qs)) 1)
+                (add 1 (ffr-sovereign-count (tail qs)))
+                (ffr-sovereign-count (tail qs)))))
+
+    0)

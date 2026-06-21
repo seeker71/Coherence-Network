@@ -1,0 +1,29 @@
+; form-bml-cursor-lower-band.fk — proves the form.bml cursor LOWERING crosses the
+; fourth arm (fkwu): g-parse + fbl-lower produce the SAME runnable recipe (the
+; executable form, via source-compiler's fsc-rec-* constructors) on Go, Rust, TS,
+; and the emitted-C walker. Companion to form-bml-cursor-parse (which proves the
+; parse): together they put the full form.bml source->recipe path on the fourth arm,
+; independent of the s-expr line compiler (which is source-scan-bound and three-way).
+;
+; Verdict = summed node count of the LOWERED recipe across the fixture: structure-
+; sensitive over the executable tree (FNDEF/IF3/FNCALL/primitive/IDENT/leaf).
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammars/form-bml.fk form-stdlib/form-bml-lower.fk
+
+(do
+    (defn flc-count-list (xs)
+        (if (nil? xs) 0 (add (flc-count (head xs)) (flc-count-list (tail xs)))))
+    (defn flc-count (n) (add 1 (flc-count-list (node_children n))))
+
+    (let g (form-bml-grammar))
+    (defn flc-sig (deftext) (flc-count (fbl-lower (g-parse g deftext))))
+
+    (add (flc-sig "def identity(x) = x;")
+    (add (flc-sig "def zero?(n) = eq(n, 0);")
+    (add (flc-sig "def plus(a, b) = add(a, b);")
+    (add (flc-sig "def nil?(xs) = eq(len(xs), 0);")
+    (add (flc-sig "def abs(n) = if negative?(n) then sub(0, n) else n;")
+    (add (flc-sig "def min2(a, b) = if lt(a, b) then a else b;")
+    (add (flc-sig "def cons-flip(acc, x) = cons(x, acc);")
+         (flc-sig "def map(f, xs) = if nil?(xs) then empty else cons(f(head(xs)), map(f, tail(xs)));"))))))))
+)

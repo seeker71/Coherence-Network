@@ -1842,6 +1842,19 @@ export class Kernel {
       const s = argStr(args, 0);
       return { kind: "int", int: s.length === 0 ? -1 : s.charCodeAt(0) };
     });
+    // str_byte_at: the i-th raw UTF-8 BYTE of the string (0-255), byte-exact —
+    // the byte twin of char_at (which is unit-aware and answers "" inside a
+    // surrogate pair). JS strings are UTF-16, so the bytes come through a UTF-8
+    // Buffer; this is the byte door the string-pool serializer (fks-lit-sp)
+    // emits any locale's script through, matching Go/Rust's byte index.
+    this.registerNative("str_byte_at", catAccess(), (_k, args) => {
+      const bytes = Buffer.from(argStr(args, 0), "utf8");
+      const i = argInt(args, 1);
+      if (i < 0 || i >= bytes.length) {
+        throw new Error(`str_byte_at: bounds out of range index=${i} len=${bytes.length}`);
+      }
+      return { kind: "int", int: bytes[i]! };
+    });
     this.registerNative("byte_to_str", catAccess(), (_k, args) => {
       const b = argInt(args, 0);
       return { kind: "str", str: b >= 0 && b <= 255 ? String.fromCharCode(b) : "" };

@@ -1,0 +1,35 @@
+; diffusion-q-cc.fk — wire the diffusion-Q policy into the champion-challenger promotion loop.
+; The QAM offline→online regime made executable on the body's own mechanism: a trusted CHAMPION
+; policy is served while a CHALLENGER trains by the Q-tilt (dql-improve); authority flips to the
+; challenger ONLY when its earned VALUE reaches the champion over a trusted window. dql-improve is
+; what earns the value; champion-challenger's cc-val-promote? is the gate — never asserted, proven.
+;
+; VALUE-NATIVE: the per-sample coin is the policy's achieved critic VALUE — a real float, compared
+; with real float ordering (ge/gt), which crosses the fourth arm four-way (tests/float-compare-band.fk
+; → 4095). The earlier binary-coin form mistook a band-registration error (float literals need the
+; `fks` string pool) for a kernel float bug; there is none. The competition is value, not a count.
+;
+; Composes: diffusion-q-learning.fk (dql-q, dql-grad-a, dql-improve) + champion-challenger.fk
+; (cc-val-promote?, cc-val-authority, cc-val-reaches?). Proven by tests/diffusion-q-cc-band.fk
+; (four-way). The band MUST register `fks` — it carries float literals.
+
+(do
+    ; --- the value coin: each policy's achieved critic value on a context (a real float) ---
+    (defn dqcc-value (qedges pedges x) (dql-q qedges (gl-step pedges x)))
+
+    ; --- one head-to-head trial on a context: (champion-value challenger-value), real floats ---
+    (defn dqcc-trial (qedges champ chall x)
+        (list (dqcc-value qedges champ x) (dqcc-value qedges chall x)))
+
+    ; --- the offline replay window: n identical-context trials the two policies are scored over ---
+    (defn dqcc-window (qedges champ chall x n)
+        (if (eq n 0) (empty)
+            (cons (dqcc-trial qedges champ chall x)
+                  (dqcc-window qedges champ chall x (sub n 1)))))
+
+    ; --- the online step: improve the challenger by the Q-tilt (the critic's adjoint-matched gradient
+    ;     at focus), the move that earns its value. The critic action-gradient is recovered by the
+    ;     adjoint on the unit pulse; angle +1 ascends; gate open. ---
+    (defn dqcc-improve (qedges chall x focus)
+        (dql-improve chall x (dql-grad-a qedges (list 1.0 0.0)) focus -1.0))
+    0)

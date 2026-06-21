@@ -14,6 +14,14 @@
           {
             "type": "command",
             "command": "COORD_AGENT=codex bash \"$(git rev-parse --show-toplevel)/scripts/agent-coord.sh\" join \"$(git rev-parse --show-toplevel)\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/scripts/ensure_form_cli_kernel.sh\""
+          },
+          {
+            "type": "command",
+            "command": "echo '⟐ FORM-FIRST REASONING (the sovereignty gate). On every query, ask the Form body before the rented mind — through the native router  form-cli ask  (the one door, built once + cached: it grounds in the body and runs the four-way-proven sufficiency gate, escalating to the remote oracle only when local was not enough). Structural lookups (NodeID, equivalence, annotate) go straight to the lattice:  python3 scripts/coh_substrate.py form  (ingest --all at setup-script-time on Codex cloud, where the agent phase has no network)  or  https://api.coherencycoin.com/api/substrate . A grounded / sufficient hit — relay it attributed and STOP, no frontier compute. A miss is the YES to escalate to remote reasoning. Always name which path you took; never dress a remote guess as a body hit. Teaching: docs/coherence-substrate/form-first-reasoning.form'"
           }
         ]
       }

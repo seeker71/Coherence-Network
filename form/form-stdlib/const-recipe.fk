@@ -1,0 +1,61 @@
+; const-recipe.fk — numbers as const-recipe resolvers, not literals.
+;
+; THESIS (the user's): we don't need to store every number as a literal. We can
+; build ANY integer from a tiny core basis — here {zero, one} under {add, mul} —
+; as a RECIPE (structure), and let a JIT/fold resolve the recipe back into the
+; const on demand. The only place a numeric literal ever appears is the basis
+; itself (0 and 1, in cr-resolve's two base cases); every other number — 255,
+; 1300, 31415 — is carried as shape, never as a stored literal.
+;
+; WHY IT SELF-FLATTENS ON fkwu. The recipe is the uniform fncall(TAG, kids)
+; encoding the shell uses: TAG is the first child (a string), kids are the rest.
+; The resolver reads the TAG from that first child (node_value), NEVER from the
+; node's blueprint — so it does not matter that `(bp "fncall")` resolves to a
+; real NodeID on a sibling kernel but to a tag-45 string on fkwu. Tag-first
+; reading is blueprint-agnostic, so the same recipe folds identically on every
+; kernel AND on the self-hosted fkwu flatten.
+;
+; SHARING IS THE COMPACTION. intern_node is content-addressed, so cr-zero(),
+; cr-one(), cr-two() return the SAME interned node every call. Building a million
+; numbers reuses one zero, one one, one two — the basis is shared, not copied.
+; A single number costs ~log2(n) structural nodes; a corpus of numbers costs the
+; shared basis plus the distinct shapes, instead of one fat literal each.
+
+(do
+    ;; ---- encoding: fncall(TAG, kids), tag-first (blueprint-agnostic) ----
+    (defn cr-node (tag kids)
+        (intern_node (bp "fncall") (cons (intern_trivial_string tag) kids)))
+    (defn cr-tag (n) (node_value (head (node_children n))))
+    (defn cr-kid (n i) (nth (tail (node_children n)) i))
+
+    ;; ---- the core basis and the two operators ----
+    (defn cr-zero () (cr-node "zero" (empty)))
+    (defn cr-one  () (cr-node "one"  (empty)))
+    (defn cr-add (a b) (cr-node "add" (cons a (cons b (empty)))))
+    (defn cr-mul (a b) (cr-node "mul" (cons a (cons b (empty)))))
+    (defn cr-two () (cr-add (cr-one) (cr-one)))
+    (defn cr-bit (b) (if (eq b 0) (cr-zero) (cr-one)))
+
+    ;; ---- cr-build n -> the recipe AST (Horner over binary digits) ----
+    ;; n = (n/2)*2 + (n%2); bottoms out at the basis {zero, one}. No literal > 1
+    ;; ever enters the recipe — TWO is itself add(one, one).
+    (defn cr-build (n)
+        (if (eq n 0) (cr-zero)
+            (if (eq n 1) (cr-one)
+                (cr-add (cr-mul (cr-build (div n 2)) (cr-two)) (cr-bit (mod n 2))))))
+
+    ;; ---- cr-resolve node -> n : the JIT/fold. ONLY site of literals 0 and 1 ----
+    (defn cr-resolve (node)
+        (do (let t (cr-tag node))
+            (if (str_eq t "zero") 0
+                (if (str_eq t "one") 1
+                    (if (str_eq t "add")
+                        (add (cr-resolve (cr-kid node 0)) (cr-resolve (cr-kid node 1)))
+                        (mul (cr-resolve (cr-kid node 0)) (cr-resolve (cr-kid node 1))))))))
+
+    ;; ---- cr-size node -> structural node count (the cost a literal would avoid) ----
+    (defn cr-size (node)
+        (do (let t (cr-tag node))
+            (if (or (str_eq t "zero") (str_eq t "one")) 1
+                (add 1 (add (cr-size (cr-kid node 0)) (cr-size (cr-kid node 1)))))))
+    0)

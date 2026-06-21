@@ -1,0 +1,53 @@
+; fourth-win-patch.fk — patch the emitted fourth-arm walker C for Windows, in Form.
+;
+; build_fourth (form/scripts/fourth-arm.sh) applies ~10 `sed -i` fixups to the
+; emitted universal-walker C before clang/gcc can build it on Windows (read/write/
+; mkdir signature clashes with mingw io.h, arc4random, sprintf, gettimeofday,
+; dlopen stubs, socket-call -> fk_sock_* wrappers). This recipe does the SAME
+; fixups as pure Form string replacement, so the 4th-kernel bootstrap needs no
+; bash and no sed — only a kernel to run this + clang/gcc to compile. North star:
+; all native, all form. The output (patched C) is PRINTED; capture it to a file.
+;
+; Reads form-stdlib/.cache/fourth/uni.c, prints the patched C.
+;
+; preludes: form-stdlib/core.fk form-stdlib/line-grammar.fk
+
+(do
+    ;; replace EVERY occurrence of `from` with `to` (to is never re-scanned).
+    (defn str-replace-all (s from to)
+        (do (let i (find-from s from 0))
+            (if (lt i 0) s
+                (str_concat (substring s 0 i)
+                    (str_concat to
+                        (str-replace-all (substring s (add i (str_len from)) (str_len s)) from to))))))
+
+    (defn fwp-apply-pairs (s pairs)
+        (if (nil? pairs) s
+            (fwp-apply-pairs
+                (str-replace-all s (head (head pairs)) (head (tail (head pairs))))
+                (tail pairs))))
+
+    ;; the Windows fixups, in order — same set as fourth-arm.sh's sed block.
+    (defn fwp-pairs () (list
+        (list "extern unsigned int arc4random(void);"
+              "extern int rand(void); static unsigned int arc4random(void) { return (unsigned int)rand(); }")
+        (list "extern long long read(int, void *, unsigned long);"
+              "extern int read(int, void *, unsigned int);")
+        (list "extern long long write(long long, const void *, unsigned long);"
+              "extern int write(int, const void *, unsigned int);")
+        (list "mkdir(d, 0777)" "mkdir(d)")
+        (list "mkdir(p, 0777)" "mkdir(p)")
+        (list "extern int sprintf(char *, const char *, ...);"
+              "typedef __builtin_va_list fk_va_list; extern int vsnprintf(char *, unsigned long long, const char *, fk_va_list); static int sprintf(char *b, const char *fmt, ...) { fk_va_list ap; __builtin_va_start(ap, fmt); int n = vsnprintf(b, 4096ULL, fmt, ap); __builtin_va_end(ap); return n; }")
+        (list "struct timeval { long tv_sec; int tv_usec; }; extern int gettimeofday(struct timeval *, void *);"
+              "struct timeval { long tv_sec; int tv_usec; }; struct fk_filetime { unsigned int dwLowDateTime; unsigned int dwHighDateTime; }; __declspec(dllimport) void __stdcall GetSystemTimeAsFileTime(struct fk_filetime *); static int gettimeofday(struct timeval *tv, void *tz) { (void)tz; struct fk_filetime ft; unsigned long long ticks; unsigned long long us; GetSystemTimeAsFileTime(&ft); ticks = ((unsigned long long)ft.dwHighDateTime * 4294967296ULL) + (unsigned long long)ft.dwLowDateTime; us = (ticks / 10ULL) - 11644473600000000ULL; tv->tv_sec = (long)(us / 1000000ULL); tv->tv_usec = (int)(us % 1000000ULL); return 0; }")
+        (list "extern void *dlopen(const char *, int); extern void *dlsym(void *, const char *);"
+              "static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }")))
+        ;; NOTE: this emit carries its own portable socket layer (fk_os_socket_t /
+        ;; fk_sock_* wrappers), so the older sed socket-call renames are obsolete
+        ;; here and would forward-reference a static def — dropped on purpose.
+
+    (let src (read_file "form-stdlib/.cache/fourth/uni.c"))
+    (print (str_concat "#define _CRT_SECURE_NO_WARNINGS 1" (str_concat "
+" (fwp-apply-pairs src (fwp-pairs)))))
+    "")

@@ -137,6 +137,62 @@ Useful commands:
 Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
 `~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
+### The Mac as a sensing organ too — Form body, shell carrier
+
+The witness *receives* the phone's senses. The Mac is now its twin: it senses **its own**
+organs and self-registers on the cloud Hati mesh, exactly as the phone registers as
+`android-phone`. `GET /api/hati/mesh/organs` shows phone + Mac host + Mac speech all streaming.
+
+These are **thin carriers — the body is Form**, proven four-way (Go/Rust/TS/fkwu). The shell
+does only physical I/O + measurement; every decision is the recipe's:
+
+| organ | carrier (I/O only) | Form body (every decision) |
+|-------|--------------------|----------------------------|
+| host  | `mac-sense-organ.sh` | [`host-sense-organ.fk`](../../form/form-stdlib/host-sense-organ.fk) — active organs, power-cost/signal metrics, discovery state |
+| speech| `mac-speech-organ.sh` | [`speech-organ.fk`](../../form/form-stdlib/speech-organ.fk) — VAD gate, pitch band, trust, speaker grouping (composes `voice-traits.fk` + `nearest-shape.fk`) |
+
+- **host** reads cpu/ram/disk/network-rates/gpu/thermal/battery (sysctl/vm_stat/ioreg/pmset/
+  netstat), the kernel decides which organs are live and the mesh metrics, and it POSTs +
+  writes `~/.coherence-network/hati/mac-sense-latest.json`.
+- **speech** records the mic in rolling windows, measures rms + a lowpass-stabilized pitch
+  with sox, transcribes voiced windows with whisper-cli (the STT *oracle*), and the kernel
+  decides VAD, pitch band, and which speaker cell — matched by nearest-shape or enrolled as
+  novel. Speaker grouping is honest acoustic clustering keyed on pitch ("same voice as
+  before"), never verified identity. Privacy: the **transcript stays local**; the mesh sees
+  only presence + counts, never the words.
+
+```bash
+cd experiments/coherence-sense-android
+# build the Form kernel once (the carriers call it for every decision):
+(cd ../../form && ./validate.sh form-stdlib/core.fk form-stdlib/host-sense-organ.fk \
+   form-stdlib/tests/host-sense-organ-band.fk form-stdlib/voice-traits.fk \
+   form-stdlib/nearest-shape.fk form-stdlib/speech-organ.fk form-stdlib/tests/speech-organ-band.fk)
+chmod +x macos-sense-organ-service.sh
+./macos-sense-organ-service.sh install          # both organs (host + speech)
+./macos-sense-organ-service.sh install host      # host vitals only
+./macos-sense-organ-service.sh status | restart | tail host | uninstall
+# prove the bodies four-way:
+(cd ../../form && bash scripts/fourth-arm-gate.sh host-sense-organ speech-organ)  # PASS-4WAY
+# self-test the speech body without a mic (two macOS voices → two speaker cells):
+./mac-speech-organ.sh --self-test
+```
+
+Each writes `~/Library/LaunchAgents/earth.hati.coherence-sense.mac-{host,speech}-organ.plist`,
+starts now, restarts on crash, starts again at login. Logs:
+`~/Library/Logs/CoherenceSense/mac-{host,speech}-organ.{out,err}.log`.
+
+**Permissions (TCC):** host vitals need none and stream immediately. The mic needs a one-time
+grant under **System Settings → Privacy & Security → Microphone**; camera/screen likewise when
+the live-vision organ lands. Mesh POSTs carry a non-default `User-Agent` (Cloudflare
+1010-blocks the stock agent).
+
+**Honest floor:** VAD + STT are solid. Speaker grouping resolution is bounded by the carrier's
+pitch reading (lowpassed zero-crossing rate — stable enough to separate distinct voices, coarse
+within a band); finer, verified speaker identity awaits kernel-native feature extraction, the
+missing tissue named in [`speech-kernel-channel.fk`](../../form/form-stdlib/speech-kernel-channel.fk).
+Windows is the next twin (`form/form-stdlib/hati-os-targets.fk`: WASAPI + Windows.Graphics.Capture
++ CIM), running the *same* Form bodies, once a host is reachable.
+
 ### Keep the Android + Mac learning receipt proven
 
 From the repository root, prove the connected phone and Mac witness shape as

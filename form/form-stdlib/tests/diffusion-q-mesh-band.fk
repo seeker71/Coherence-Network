@@ -1,0 +1,38 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk form-stdlib/slice-merge.fk form-stdlib/diffusion-q-mesh.fk
+;
+; diffusion-q-mesh-band — the mesh closes GAP-Q3: federated Q-critics consolidated by slice-merge,
+; four-way. Three cells each hold a PARTIAL critic; the deterministic merge (TIES sign-election +
+; trust-weighted FedAvg) yields the full critic no single cell held, and dql-improve ascends the
+; policy against the consolidated value. Each critic coefficient is an integer task-vector entry
+; (the merge is integer-exact); the value reads are real floats (registered `fks`).
+;
+; The cells (slice = (weight, delta) over the 2-action value coefficients):
+;   A  weight 3, delta [ 2  0]   — knows action-0 is worth 2, silent on action-1
+;   B  weight 1, delta [ 0  1]   — knows action-1 is worth 1
+;   C  weight 1, delta [-1  0]   — a faded/wrong cell, OPPOSES action-0
+;
+; Verdict 31 when every claim lands:
+;   1   action-0 merges to 2.0 — trust-weighted, the opposing cell C sign-elected OUT (TIES)
+;   2   action-1 merges to 1.0 — only cell B held it; the mesh kept it
+;   4   collaboration reveals value: cell A ALONE values action [0 1] at 0; the merged critic at 1.0
+;   8   the merged critic IS the full critic: Q_merged([1 0.5]) = 2.5, the reference value
+;   16  dql-improve against the CONSOLIDATED critic raises a raw policy 0 → 2.5 — QAM in the mesh
+(do
+    (let A (list 3 (list 2 0)))
+    (let B (list 1 (list 0 1)))
+    (let C (list 1 (list -1 0)))
+    (let slices  (list A B C))
+    (let soloA   (list A))
+    (let merged  (dqm-critic2 slices))
+    (let x       (list 1.0 0.0))
+    (let raw     (list (list 0 0 0.0) (list 1 0 0.0)))
+    (let improved (dqm-improve slices raw x 0.5))
+
+    (let c0 (if (eq (gl-veq6 (list (dqm-coef slices 0)) (list 2.0)) 1) 1 0))
+    (let c1 (if (eq (gl-veq6 (list (dqm-coef slices 1)) (list 1.0)) 1) 2 0))
+    (let c2 (if (and (eq (gl-veq6 (list (dql-q (dqm-critic2 soloA) (list 0.0 1.0))) (list 0.0)) 1)
+                     (eq (gl-veq6 (list (dql-q merged (list 0.0 1.0))) (list 1.0)) 1)) 4 0))
+    (let c3 (if (eq (gl-veq6 (list (dql-q merged (list 1.0 0.5))) (list 2.5)) 1) 8 0))
+    (let c4 (if (and (eq (gl-veq6 (list (dql-q merged (gl-step raw x))) (list 0.0)) 1)
+                     (eq (gl-veq6 (list (dql-q merged (gl-step improved x))) (list 2.5)) 1)) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

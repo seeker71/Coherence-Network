@@ -432,6 +432,13 @@
 (defn flt-bp-fallback (name env)
     (fk-node 45 (fk-slit (flt-sidx (flt-poolv env) name 0) name)))
 (defn flt-bp-node (name env)
+    ;; flatten-internal blueprints — folded so the flattener SELF-HOSTS on fkwu.
+    ;; fkwu has no runtime bp-name table; an unfolded name hits the tag-45 fallback,
+    ;; which returns the name STRING, so intern_node gets a string-not-a-nodeid and
+    ;; every built node is malformed. MS-PAIR carries every ms-intern composition;
+    ;; VALUE-NONE is the None sentinel. (1 2 99 1300 is MS-PAIR's registry nodeid.)
+    (if (str_eq name "MS-PAIR")    (flt-nodeid4 1 2 99 1300)
+    (if (str_eq name "VALUE-NONE") (flt-nodeid4 1 2 99 1399)
     (if (str_eq name "HEX-DECODE-ERROR") (flt-nodeid4 1 2 99 1770)
     (if (str_eq name "AUDIT-ENTRY")      (flt-nodeid4 1 2 99 1770)
     (if (str_eq name "URL-DECODE-ERROR") (flt-nodeid4 1 2 99 1771)
@@ -463,7 +470,7 @@
     (if (str_eq name "SYMBOL-BIND")       (flt-nodeid4 1 2 99 1730)
     (if (str_eq name "SYMBOL-TABLE")      (flt-nodeid4 1 2 99 1731)
     (if (str_eq name "SYMBOL-NOT-FOUND")  (flt-nodeid4 1 2 99 1732)
-        (flt-bp-fallback name env)))))))))))))))))))))))))))))))))
+        (flt-bp-fallback name env)))))))))))))))))))))))))))))))))))
 
 ; table ops by arity, else a user function call (one evaluated argument)
 (defn flt-op (op s pos fns env) (flt-op2 (flt-assoc op (flt-ops)) op s pos fns env))

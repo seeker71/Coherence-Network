@@ -1,0 +1,41 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk form-stdlib/preference-learning.fk form-stdlib/diffusion-q-autoresearch.fk
+;
+; diffusion-q-autoresearch-band — GAP-Q4: the autoresearch keep-or-rollback loop evolves the q-tilt
+; GENE, four-way. The pref-loss coordinate is a pl_qam row whose mutable gene is its beta; the evaluator
+; is pl-fitness (value vs a served target); keep-or-rollback is higher-better. The fold IS one_iteration's
+; keep-or-rollback core: the candidate stream stands in for agent_propose; governance/never-stop and the
+; experiment-cell history are the named remaining wiring (autoresearch-runtime.form GAP-A1/A5). The
+; genome here is the SINGLE pref-loss coordinate, not the full (pool, core, pref-loss) triple — that
+; rides the style-space genome and is the named next stone.
+;
+; value(beta) = 5·beta (Q of dql-improve from zero at focus beta); fitness = −|value − target|, an
+; INTERIOR optimum so selection is real, not "max beta wins". Registered `fks`.
+;
+; Verdict 63 when every claim lands:
+;   1   the fitness is NON-MONOTONE (interior optimum): gene 0.5 beats both 0.75 and 0.1 at target 2.5
+;   2   the loop SELECTS the best gene from [0.25 0.5 0.75] starting at 0.1 → 0.5
+;   4   keep-or-rollback per step: a better candidate is KEPT (0.1→0.5), a worse one ROLLED BACK (0.5 vs 0.75)
+;   8   the selected gene's value tracks the critic: value moves with beta — dqa-value(0.25) = 1.25, not 2.5
+;   16  the loop TRACKS the target: a DIFFERENT target (1.25) selects a DIFFERENT gene (0.25), not hardwired to 0.5
+;   32  it rediscovers the CATALOG gene under a DERIVED target: target = the qam row's served value → loop picks pl-beta(pl-qam)
+(do
+    (let qedges (list (list 0 0 2.0) (list 0 1 1.0)))
+    (let x      (list 1.0 0.0))
+    (let target 2.5)
+    (let cands  (list 0.25 0.5 0.75))
+    (let best   (dqa-search qedges x target 0.1 cands))     ; the surviving gene → 0.5
+    ; the catalog gene's served value — a DERIVED target, so the loop tracks the catalog, not a literal
+    (let cat-beta   (pl-beta (pl-qam)))                     ; 0.5
+    (let cat-target (dqa-value qedges x cat-beta))          ; = value(0.5) = 2.5, derived from the gene
+    (let cat-found  (dqa-search qedges x cat-target 0.1 cands))
+
+    (let c0 (if (and (gt (dqa-fitness qedges x target 0.5) (dqa-fitness qedges x target 0.75))
+                     (gt (dqa-fitness qedges x target 0.5) (dqa-fitness qedges x target 0.1))) 1 0))
+    (let c1 (if (eq (gl-veq6 (list best) (list 0.5)) 1) 2 0))
+    (let c2 (if (and (eq (gl-veq6 (list (dqa-step qedges x target 0.1 0.5)) (list 0.5)) 1)
+                     (eq (gl-veq6 (list (dqa-step qedges x target 0.5 0.75)) (list 0.5)) 1)) 4 0))
+    (let c3 (if (and (eq (gl-veq6 (list (dqa-value qedges x 0.5)) (list 2.5)) 1)
+                     (eq (gl-veq6 (list (dqa-value qedges x 0.25)) (list 1.25)) 1)) 8 0))
+    (let c4 (if (eq (gl-veq6 (list (dqa-search qedges x 1.25 0.1 cands)) (list 0.25)) 1) 16 0))
+    (let c5 (if (eq (gl-veq6 (list cat-found) (list cat-beta)) 1) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

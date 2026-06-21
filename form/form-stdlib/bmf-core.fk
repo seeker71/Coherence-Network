@@ -108,12 +108,33 @@
     ;; Char classes (named, so the pattern stays data).
     ;; ──────────────────────────────────────────────────────────────────
 
+    ;; shell / path "word" char: any printable byte that is NOT whitespace and
+    ;; NOT a shell metacharacter ( "  $  &  '  (  )  ;  <  >  `  | ). This lets a
+    ;; path, flag, glob, or =-assignment be a single word token, while the
+    ;; metacharacters that STRUCTURE a command line stop the word. Additive: no
+    ;; existing grammar names the "word" class, so digit/alpha/alnum/ws are
+    ;; unchanged — this is the named-class extension point this file documents.
+    (defn is-shell-meta-cp (cp)
+        (or (eq cp 34) (or (eq cp 36) (or (eq cp 38) (or (eq cp 39)
+        (or (eq cp 40) (or (eq cp 41) (or (eq cp 59) (or (eq cp 60)
+        (or (eq cp 62) (or (eq cp 96) (eq cp 124))))))))))))
+    (defn is-word-cp (cp)
+        (and (ge cp 33) (and (le cp 126) (not (is-shell-meta-cp cp)))))
+
     (defn cp-in-class? (cp cls)
         (if (str_eq cls "digit") (is-digit-cp cp)
             (if (str_eq cls "alpha") (is-alpha-cp cp)
                 (if (str_eq cls "alnum") (is-ident-cont-cp cp)
                     (if (str_eq cls "ws") (is-ws-cp cp)
-                        false)))))
+                        ;; form.bml identifiers also admit - ? ! (nil?, cons-flip,
+                        ;; cell-undo) — additive superset; no other grammar uses it,
+                        ;; so every prior parse is byte-unchanged. Lives here (not an
+                        ;; override) so the flattener binds gm-run to it on fkwu too.
+                        (if (str_eq cls "bmlname")
+                            (or (is-ident-cont-cp cp) (or (eq cp 45) (or (eq cp 63) (eq cp 33))))
+                            ;; shell/path "word" class — additive (see is-word-cp above)
+                            (if (str_eq cls "word") (is-word-cp cp)
+                                false)))))))
 
     ;; Whitespace-aware matching — the thesis's "whitespace-aware literals":
     ;; the dispatcher skips leading whitespace before every match, so grammars

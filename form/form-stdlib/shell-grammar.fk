@@ -1,0 +1,119 @@
+; shell-grammar.fk — a bash-like shell grammar, as pure BMF data.
+;
+; The form-native shell ("fsh"): scripts you would write in bash / powershell /
+; python, written instead in a form-native surface that parses to a Form AST,
+; lowers to a recipe -> blueprint -> cell, runs on the 4th kernel, and reaches
+; host tools only by passthrough until a native form builtin replaces them.
+;
+; The AST reuses ONE universal op — `fncall` — because new blueprint names can't
+; be minted without rebuilding every kernel. Every node is fncall(TAG, kids...):
+;   command   echo a b        fncall("echo", "a", "b")          ; TAG = command name
+;   pipeline  a | b           fncall("__pipe__", <a>, <b>)
+;   script    a ; b           fncall("__seq__", <a>, <b>)
+;   variable  $NAME           fncall("__var__", "NAME")
+;   redirect  > f / >> f / <f fncall("__redir__"/"__append__"/"__from__", <f>)
+; Literal words and quoted strings are bare string leaves (no children); the
+; executor reads node_value of a node's FIRST child as the tag (a leaf has none,
+; so a leaf is always a literal). Reserved tags start with "__" so they cannot
+; collide with a real command word.
+;
+; rung-1 subset (a small, genuine bash subset):
+;   - `;` separates statements (newline is whitespace to the BMF cursor; a
+;     whitespace-significant mode is the next rung)
+;   - `|` pipelines; `>` `>>` `<` redirects; `$NAME` variables; "..." strings
+;   - bare words carry the "word" char class (alnum + path/flag/glob/= chars)
+;   - assignment NAME=VALUE is recognised by the executor from a lone word.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk
+
+(do
+    ;; the shell grammar value — pure data over the BMF engine.
+    (defn shell-grammar ()
+        (grammar "script" (list
+            ;; script  : andor (";" andor)*  ->  fncall(__seq__, andors...)
+            (rule3 "script"
+                (p-cap "ps" (p-sep (p-ref "andor") (p-lit ";")))
+                (t-emit "fncall" (list (t-const "__seq__") (t-splices "ps"))))
+
+            ;; andor   : pipeline ( ("&&"|"||") pipeline )*  (short-circuit list)
+            ;;   -> fncall(__andor__, first, opnode...) where opnode = fncall(__&&__/__||__, rhs)
+            (rule3 "andor"
+                (list "seq" (p-cap "first" (p-ref "pipeline")) (p-cap "ops" (p-rep (p-ref "aoop"))))
+                (t-emit "fncall" (list (t-const "__andor__") (t-splice "first") (t-splices "ops"))))
+            (rule3 "aoop"
+                (p-cap "v" (list "alt" (p-ref "opand") (p-ref "opor")))
+                (t-splice "v"))
+            (rule3 "opand"
+                (list "seq" (p-lit "&&") (p-cap "p" (p-ref "pipeline")))
+                (t-emit "fncall" (list (t-const "__&&__") (t-splice "p"))))
+            (rule3 "opor"
+                (list "seq" (p-lit "||") (p-cap "p" (p-ref "pipeline")))
+                (t-emit "fncall" (list (t-const "__||__") (t-splice "p"))))
+
+            ;; pipeline: command ("|" command)*   ->  fncall(__pipe__, commands...)
+            (rule3 "pipeline"
+                (p-cap "cs" (p-sep (p-ref "command") (p-lit "|")))
+                (t-emit "fncall" (list (t-const "__pipe__") (t-splices "cs"))))
+
+            ;; command : word part*               ->  fncall(name, parts...)
+            (rule3 "command"
+                (list "seq"
+                    (p-cap "name" (p-ref "word"))
+                    (p-cap "parts" (p-rep (p-ref "part"))))
+                (t-emit "fncall" (list (t-splice "name") (t-splices "parts"))))
+
+            ;; part    : redirect | arg           (pass the matched node through)
+            (rule3 "part"
+                (p-cap "v" (list "alt"
+                    (p-ref "rdapp") (p-ref "rdout") (p-ref "rdin") (p-ref "arg")))
+                (t-splice "v"))
+
+            ;; redirects — longest operator first (>> before >)
+            (rule3 "rdapp"
+                (list "seq" (p-lit ">>") (p-cap "t" (p-ref "arg")))
+                (t-emit "fncall" (list (t-const "__append__") (t-splice "t"))))
+            (rule3 "rdout"
+                (list "seq" (p-lit ">") (p-cap "t" (p-ref "arg")))
+                (t-emit "fncall" (list (t-const "__redir__") (t-splice "t"))))
+            (rule3 "rdin"
+                (list "seq" (p-lit "<") (p-cap "t" (p-ref "arg")))
+                (t-emit "fncall" (list (t-const "__from__") (t-splice "t"))))
+
+            ;; arg     : $? | $NAME | 'literal' | "string" | bare word
+            (rule3 "arg"
+                (p-cap "v" (list "alt"
+                    (p-ref "varq") (p-ref "var") (p-ref "sqstr") (p-ref "qstr") (p-ref "word")))
+                (t-splice "v"))
+
+            ;; $?  ->  fncall(__var__, "?")   (last exit status)
+            (rule3 "varq"
+                (list "seq" (p-lit "$") (p-lit "?"))
+                (t-emit "fncall" (list (t-const "__var__") (t-const "?"))))
+
+            ;; variable: $NAME                     ->  fncall(__var__, "NAME")
+            (rule3 "var"
+                (list "seq" (p-lit "$") (p-cap "n" (p-run "alnum")))
+                (t-emit "fncall" (list (t-const "__var__") (t-splice "n"))))
+
+            ;; 'literal' -> raw single-quoted leaf (no escapes — shell semantics)
+            (rule3 "sqstr"
+                (p-cap "s" (p-char))
+                (t-splice "s"))
+
+            ;; "string"  -> the unescaped string leaf
+            (rule3 "qstr"
+                (p-cap "s" (p-str))
+                (t-splice "s"))
+
+            ;; bare word -> the run text as a string leaf
+            (rule3 "word"
+                (p-cap "w" (p-run "word"))
+                (t-splice "w")))))
+
+    ;; a registry preloaded with the shell grammar under "shell" and "fsh".
+    (defn shell-registry ()
+        (gl-register (gl-register (gl-empty) "fsh" (shell-grammar)) "shell" (shell-grammar)))
+
+    ;; parse shell SOURCE into the fncall AST (the any-source door, shell grammar).
+    (defn sh-parse (src) (gl-parse-with (shell-grammar) src))
+)
