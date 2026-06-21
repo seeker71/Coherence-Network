@@ -16,9 +16,13 @@
 ; North star: every sensing organ — speech, vision, GPU, model — emits one reading shape into the
 ; live stream so cells learn from each other; the GPU lane is the first organ wired here.
 ;
-; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk
 ;
 ; Proven by: form-stdlib/tests/gpu-mesh-sense-band.fk
+;
+; Lifted (2026-06-21): the GPU converter is now an ADAPTER over the generic organ-reading engine
+; (organ-reading.fk) — gpu-reading fills the uniform reading, wmls-from-gpu-receipt is one line over
+; wmls-from-reading. The output wmg-sense is byte-identical to the old bespoke build (band still 511).
 
 (do
     ; a GPU bit-exact proof receipt — one backend/device proved one kernel bit-exact (or not).
@@ -38,10 +42,6 @@
                  (eq (gpu-max-abs-ulp r) 0))
             1 0))
 
-    ; the observable reading: answered=1 (the proof ran), value=bit-exact?, when=tick
-    (defn gpu-receipt-reading (r tick)
-        (ov-reading 1 (gpu-bit-exact? r) tick))
-
     ; inspectable payload — the full verdict travels with the sense (no hidden metadata)
     (defn gpu-receipt-payload (r)
         (list "gpu-bit-exact-receipt"
@@ -52,15 +52,22 @@
               "parity-den"  (gpu-parity-den r)
               "max-abs-ulp" (gpu-max-abs-ulp r)))
 
-    ; the converter: a GPU receipt becomes a wmg-sense row, named "<backend>:<kernel>", kind
-    ; "gpu-bit-exact" — the same shape world-model-growth ingests, digests, and embodies.
-    (defn wmls-from-gpu-receipt (r deadline tick)
-        (wmg-sense
+    ; the GPU ADAPTER: a receipt fills the uniform organ-reading — name "<backend>:<kernel>", kind
+    ; "gpu-bit-exact", answered=1 (the proof ran), ok = bit-exact?, when = tick, the payload inspectable.
+    (defn gpu-reading (r deadline tick)
+        (organ-reading
             (str_concat (gpu-backend r) (str_concat ":" (gpu-kernel r)))
             "gpu-bit-exact"
-            (gpu-receipt-reading r tick)
+            1
+            (gpu-bit-exact? r)
+            tick
             deadline
             (gpu-receipt-payload r)))
+
+    ; the converter is now ONE LINE over the generic engine — no bespoke wmg-sense build. The output
+    ; is byte-identical to the old hand-written converter; the GPU organ is the first to ride the lift.
+    (defn wmls-from-gpu-receipt (r deadline tick)
+        (wmls-from-reading (gpu-reading r deadline tick)))
 
     ; a GPU receipt the world-model can TRUST and act on: verified within deadline, not "nothing"
     (defn gpu-sense-trusted? (r deadline tick)

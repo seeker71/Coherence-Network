@@ -1,0 +1,43 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/gpu-mesh-sense.fk
+;
+; organ-reading-band — the core lift: ONE engine, organs drop in as DATA. wmls-from-reading turns
+; any uniform organ-reading into a wmg-sense; the per-organ converters become one-line adapters.
+; The GPU organ now RIDES the engine (its wmls-from-gpu-receipt is one line over wmls-from-reading),
+; and a brand-new organ (wellness) reports into the mesh with ZERO new recipe code — just a data row.
+;
+; Verdict 255 when every claim lands:
+;   1    the engine turns a GPU-shaped reading into an observed wmg-sense
+;   2    a NEW organ (wellness), built inline as a data row, becomes an observed wmg-sense — no new converter
+;   4    a verified-negative reading (ok 0) becomes absent — a real negative any organ can report
+;   8    a reading the organ could not take (answered 0) becomes nothing — silence, not a verdict
+;   16   FAITHFUL LIFT: the re-routed wmls-from-gpu-receipt still names metal:conv2d / gpu-bit-exact / observed
+;   32   trust rides the engine: a verified reading is trusted, an unanswered one is not
+;   64   grow rides the engine: organ-grow ingests any organ-reading into a world-model state
+;   128  cross-organ: a GPU reading AND a wellness reading both grow one state — two organs, two trusted senses
+(do
+    (let model (wmm-identity "organ-mesh:self" 10 12 10 5 (list (ov-reading 1 1 5) (ov-reading 1 1 6))))
+
+    ; readings as DATA — the same uniform shape for every organ
+    (let gpu-rd     (organ-reading "metal:conv2d"  "gpu-bit-exact" 1 1 5 10 (list "gpu-bit-exact-receipt" "parity" "75/75")))
+    (let wellness-rd (organ-reading "wellness:chain" "wellness"     1 1 5 10 (list "wellness-receipt" "chain-ok" 1 "reach-pct" 79)))
+    (let negative-rd (organ-reading "pulse:neo4j"   "pulse"         1 0 5 10 (list "pulse-receipt" "status" "silent")))
+    (let silent-rd   (organ-reading "wellness:chain" "wellness"     0 0 5 10 (list "wellness-receipt" "could-not-sense" 1)))
+
+    ; the GPU organ now rides the engine (real receipt through the re-routed converter)
+    (let gpu-s (wmls-from-gpu-receipt (gpu-receipt "metal" "Apple M4 Max" "conv2d" 75 75 0) 10 5))
+
+    (let c0 (if (str_eq (wmg-sense-verdict (wmls-from-reading gpu-rd)) "observed") 1 0))
+    (let c1 (if (str_eq (wmg-sense-verdict (wmls-from-reading wellness-rd)) "observed") 2 0))
+    (let c2 (if (str_eq (wmg-sense-verdict (wmls-from-reading negative-rd)) "absent") 4 0))
+    (let c3 (if (str_eq (wmg-sense-verdict (wmls-from-reading silent-rd)) "nothing") 8 0))
+    (let c4 (if (and (str_eq (wmg-sense-name gpu-s) "metal:conv2d")
+                     (and (str_eq (wmg-sense-kind gpu-s) "gpu-bit-exact")
+                          (str_eq (wmg-sense-verdict gpu-s) "observed"))) 16 0))
+    (let c5 (if (and (eq (organ-sense-trusted? gpu-rd) 1)
+                     (eq (organ-sense-trusted? silent-rd) 0)) 32 0))
+    (let c6 (if (eq (len (wmg-state-senses (organ-grow (wmg-empty "organ-mesh" model) gpu-rd))) 1) 64 0))
+    (let c7 (if (eq (len (wmg-trusted-senses
+                            (wmg-state-senses
+                                (organ-grow (organ-grow (wmg-empty "organ-mesh" model) gpu-rd) wellness-rd)))) 2) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -1,4 +1,4 @@
-; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/gpu-mesh-sense.fk
 ;
 ; gpu-mesh-emit — render THIS session's real GPU organ readings as one mesh line, through the
 ; proven gpu-mesh-sense converter (proof: gpu-mesh-sense-band, verdict 511 four-way). The carrier
