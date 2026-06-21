@@ -130,3 +130,4 @@ form/form-samples/cross-modal/16-megabyte-channel/channel/*.txt
 form/form-stdlib/drafts/
 form/form-samples/agent-turns/corpus.jsonl
 .nanite/
+experiments/rune-galdr/.ecapa-model/
