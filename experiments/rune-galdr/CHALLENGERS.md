@@ -170,3 +170,23 @@ margin-off is the plain-softmax identity. The objective is now the right one; th
 **trainer** (chain the margin gradient into W + embedding updates) on augmented data. Integrated into
 the body's floor/north-star: `docs/coherence-substrate/form-native-models.form` (FLOOR — SPEAKER
 IDENTITY + gap 9).
+
+## First EER numbers — the instrument earns its keep (and overturns a cosine)
+
+`eer.fk` (four-way) wired to a real trial matrix via `eer-measure.sh`: each of the 3 ceremony voices
+split into two time-windows → 3 genuine (same-speaker) + 12 impostor (cross-speaker) trials, scored by
+log-mel-supervector cosine.
+
+| front-end | EER (0=perfect, 0.5=chance) | what the distributions show |
+|---|---|---|
+| log-mel RAW | **0.33** | genuine 0.97–0.99 and impostor 0.97–0.99 **all tangled** (shared envelope) |
+| log-mel + global CMVN | **0.67** (worse than chance) | genuine collapses (ubbe 0.21, brig 0.37) **below** impostor pairs |
+
+The lesson, immediate and humbling: the earlier "CMVN win" (hard pair 0.768→0.588) measured cross-speaker
+*discrimination*, but on the actual *verification* metric, **global in-sample CMVN is anti-correlated** —
+it destroys same-speaker similarity. This is exactly the consensus #3 warning ("one hard-pair cosine
+misleads") **proven on our own data with our own metric**. EER didn't just give a number — it overturned a
+conclusion. What it forces next: **per-utterance** CMVN (not global in-sample) and a **trained** embedder
+(the AAM head); both untrained front-ends are at/under chance on verification. The metric is now the
+fitness the model-search ratchet (`tooluse-model-search`) can optimize — design improvement becomes a
+loop the body runs, not a cosine we eyeball.
