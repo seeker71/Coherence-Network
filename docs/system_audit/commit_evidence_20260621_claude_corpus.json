@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/claude-corpus",
+  "commit_scope": "Find more training samples for the low-performing tool-prediction lanes the sovereignty attention signal named (Read/Edit/Write). Adds scripts/claude_corpus.py — a thin carrier that taps Claude Code session transcripts into (task -> tools-used) corpus turns, the untapped sibling source to codex_corpus.py. Claude Code sessions are Read/Edit/Write-heavy, so the tap over-samples exactly the weak lanes: it nearly triples the corpus (949 -> 2704) and adds Read +1242, Edit +769, Write +546.",
+  "files_owned": [
+    "scripts/claude_corpus.py",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_claude_corpus.json"
+  ],
+  "idea_ids": [
+    "claude-transcript-corpus-tap",
+    "grow-weak-tool-prediction-lanes"
+  ],
+  "spec_ids": [
+    "sovereignty-receipt"
+  ],
+  "task_ids": [
+    "task-2026-06-21-claude-corpus"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Grounding: the tool-use corpus (~/.coherence-network/form-cli-corpus/corpus.jsonl) is read by agent_tooluse_featurize.py (task text -> keyword features; steps[].tool -> labels) and was fed only from Codex sessions (codex_corpus.py). Claude Code transcripts (~/.claude/projects/**/*.jsonl) were untapped, yet carry hundreds of real Read/Edit/Write tool calls per session.",
+    "Schema matched from a real corpus line: keys task / oracle / steps[{tool}] / outcome / task_sig; the featurizer needs only task + steps[].tool.",
+    "Result: baseline 949 (codex) -> tap added 1755 new turns -> 2704 total (~2.85x). New-turn lane weighting: Bash 1703, Read 1242, Edit 769, Write 546 — the weak lanes (Read/Edit/Write) grew most.",
+    "Idempotent (after a fix): the first version computed the dedup key from the full task but stored it truncated to 1500 chars, so long (CLAUDE.md-injected) tasks re-added on re-run; fixed by truncating before keying. Verified: restore-to-baseline 949 -> tap 2704 -> RE-RUN adds 0 new turns.",
+    "Privacy: stores only task text (truncated) + tool names, never reasoning or answers; appends to a LOCAL file (~/.coherence-network/, not git); restricted to Coherence-Network sessions.",
+    "Carrier discipline: claude_corpus.py is a thin host-IO data-prep carrier, the exact sibling of codex_corpus.py (also Python). No new decision-logic; the featurize/label logic and the model (a Form FFN step) already exist.",
+    "Edges: scripts/INDEX.md + MANIFEST.md regenerated (--check clean).",
+    "Next (named, not in this change): retrain the tool-use predictor on the grown corpus (agent_tooluse_train.sh, M4 Max GPU) and re-measure the per-lane held-out scores to confirm the lift on Read/Edit/Write."
+  ],
+  "change_files": [
+    "scripts/claude_corpus.py",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_claude_corpus.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/claude_corpus.py --dry-run  (1797 candidate turns across 989 sessions)",
+      "restore baseline 949 -> python3 scripts/claude_corpus.py  (1755 new -> 2704) -> re-run (0 new, idempotent)",
+      "python3 scripts/agent_tooluse_featurize.py /tmp/tu.dat  (corpus featurizes; Read/Edit/Write base-rates rise)",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "A data-prep carrier script; no kernel proof bands apply. INDEX --check clean."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-tooling",
+    "notes": "The corpus is a local training file (not git); the script reaches contributors through the repo. The retrain that turns these samples into a measured held-out lift is the named next step."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed (corpus grew, tap idempotent, INDEX clean); CI and merge remain pending; the predictor retrain to measure the lift is the next step."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Running scripts/claude_corpus.py grows the tool-use corpus from Claude Code transcripts, over-sampling the weak Read/Edit/Write lanes (~2.85x corpus growth), so the next predictor retrain has far more signal on exactly the lanes the attention report flagged.",
+    "public_endpoints": [
+      "none changed; the tap reads local transcripts and writes a local corpus file"
+    ],
+    "test_flows": [
+      "Dry-run reports candidate turns + lane distribution; real run grows the corpus and is idempotent on re-run.",
+      "The featurizer reads the grown corpus and shows raised Read/Edit/Write representation."
+    ]
+  }
+}
