@@ -1,0 +1,39 @@
+; trust-row.fk — render the per-step trust matrix as one human-readable line (the live "field").
+;
+; preludes: form-stdlib/core.fk
+;
+; The canonical format for the per-step trust rows AGENTS.md asks for (route reasoning through form-cli,
+; report trust per step). It turns the four signals — path / grounded / freq / suffic (each 0/1) — into
+; a single line a reader scans at a glance: which step came from the native body, and how fully it is
+; trusted. Same observed? logic as trust-matrix.fk, here rendered to text. The body-only signals
+; (grounded, suffic) read "no" on a rented step — visible without reading the numbers.
+;
+; Proven by: form-stdlib/tests/trust-row-band.fk (four-way at validate.sh)
+
+(do
+    (defn tr-mark      (b) (if (eq b 1) "yes" "no"))
+    (defn tr-path-name (p) (if (eq p 1) "native" "rented"))
+    (defn tr-score     (p g f s) (add p (add g (add f s))))
+
+    ; full native trust: all four signals — only form-cli can return this
+    (defn tr-observed? (p g f s) (if (eq (tr-score p g f s) 4) 1 0))
+
+    ; the verdict word: OBSERVED (full native trust), native-partial (native but not fully verified),
+    ; or rented (the oracle answered)
+    (defn tr-verdict (p g f s)
+        (if (eq (tr-observed? p g f s) 1) "OBSERVED"
+            (if (eq p 1) "native-partial" "rented")))
+
+    ; the one-line field
+    (defn tr-row (p g f s)
+        (str_concat "trust  path:"
+        (str_concat (tr-path-name p)
+        (str_concat "  grounded:"
+        (str_concat (tr-mark g)
+        (str_concat "  freq:"
+        (str_concat (tr-mark f)
+        (str_concat "  suffic:"
+        (str_concat (tr-mark s)
+        (str_concat "  -> " (tr-verdict p g f s)))))))))))
+
+    0)
