@@ -8,13 +8,18 @@
 ; asks a distinct question: not "is our reading correct" but "WHICH MODEL is the authority right now",
 ; decided by proven head-to-head competition. The champion is the incumbent 3rd-party model; the
 ; challenger is the Form-native arm. Authority flips to the challenger only on earned competition,
-; never on asserted accuracy — value-execution.fk's credit gate turned onto model promotion. No
-; ratio, no float: the kernels compare exact integer counts, so the verdict is identical on Go=Rust=TS.
+; never on asserted accuracy — value-execution.fk's credit gate turned onto model promotion.
 ;
-; A trial = (list champion-correct challenger-correct) for ONE sample — each 1 if that model got
-; that sample right, else 0. A history is a list of trials — the competition record over the window.
+; TWO readings of the same competition, by what the per-sample coin measures:
+;   CLASSIFICATION (cc-*): the coin is correct/incorrect (0/1); the competition is exact INTEGER
+;     counts — no ratio, identical on every kernel. A trial = (list champion-correct challenger-correct).
+;   VALUE / RL (cc-val-*): the coin is the policy's achieved VALUE (a real float); the competition
+;     sums value and compares with real float ordering (ge/gt). A trial = (list champion-value
+;     challenger-value). Float comparison crosses four-way (tests/float-compare-band.fk → 4095), so
+;     this is as deterministic as the integer reading. diffusion-q-cc.fk uses it for the QAM loop.
 ;
-; Proven by: tests/champion-challenger-band.fk (four-way at validate.sh, incl. fkwu)
+; Proven by: tests/champion-challenger-band.fk (classification) + tests/diffusion-q-cc-band.fk
+; (value-native), both four-way at validate.sh, incl. fkwu.
 
 (do
     (defn cc-champ  (t) (nth t 0))   ; 1 if the 3rd-party champion was correct on this sample
@@ -50,5 +55,24 @@
     ;     competition is proven. ---
     (defn cc-authority (h min-samples margin)
         (if (eq (cc-promote? h min-samples margin) 1) "challenger" "champion"))
+
+    ; --- VALUE-NATIVE reading: for RL/value competition the per-sample coin is the policy's
+    ;     achieved VALUE (a real float), not a binary correct/incorrect. A value trial is
+    ;     (list champion-value challenger-value); authority flips when the challenger's TOTAL value
+    ;     reaches the champion's over a trusted window. Float comparison crosses four-way
+    ;     (tests/float-compare-band.fk → 4095) — the integer-count reading above is for
+    ;     classification; this one is for value. margin is a real-valued slack. ---
+    (defn cc-val-champ-score (h)
+        (if (eq (len h) 0) 0.0 (add (cc-champ (head h)) (cc-val-champ-score (tail h)))))
+    (defn cc-val-chall-score (h)
+        (if (eq (len h) 0) 0.0 (add (cc-chall (head h)) (cc-val-chall-score (tail h)))))
+    (defn cc-val-reaches? (h margin)
+        (if (ge (add (cc-val-chall-score h) margin) (cc-val-champ-score h)) 1 0))
+    (defn cc-val-exceeds? (h)
+        (if (gt (cc-val-chall-score h) (cc-val-champ-score h)) 1 0))
+    (defn cc-val-promote? (h min-samples margin)
+        (if (and (ge (len h) min-samples) (eq (cc-val-reaches? h margin) 1)) 1 0))
+    (defn cc-val-authority (h min-samples margin)
+        (if (eq (cc-val-promote? h min-samples margin) 1) "challenger" "champion"))
 
     0)
