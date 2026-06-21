@@ -1,0 +1,36 @@
+; mesh-dispatch.fk — a connected agent's decision on an incoming mesh message:
+; is it a FREQ-READING (-> record to the gold catalog) or an ASK (-> answer it)?
+;
+; preludes: form-stdlib/core.fk
+;
+; This is the cell that lets ONE agent on the mesh both record gold freq-readings
+; AND answer other requests in the same channel — what Urs named: "use this on the
+; phone in claude code / codex and on android through the mesh to an agent that is
+; connected and can answer other things when requested." The same membrane
+; (agent-coordination-membrane.form ask/offer family), the same coord board /
+; witness, the same agent loop (form_cli_agent.sh) — a freq-reading is just one more
+; typed message the mesh already knows how to carry.
+;
+; The message BODY convention (the form-cli gold shape, carried on the mesh):
+;   "gold <clear|fear> <boundary...>"   -> a human's freq-reading
+;   anything else                       -> an ask the connected agent answers
+; The carrier strips any "@agent " address before calling these; the recipe is the
+; decision over the body. verdict: clear -> 1, fear -> 0, neither -> 2 (no verdict).
+;
+; Proven by: form-stdlib/tests/mesh-dispatch-band.fk (four-way at validate.sh)
+
+(do
+    ; a message is a freq-reading when its body opens with the "gold " marker.
+    (defn md-is-freq? (msg) (if (eq (str_find msg "gold " 0) 0) 1 0))
+    ; route: "gold" -> record to the catalog; "ask" -> answer the request.
+    (defn md-route (msg) (if (eq (md-is-freq? msg) 1) "gold" "ask"))
+    ; end of the word starting at i (next space, or end of string).
+    (defn md-word-end (msg i) (if (lt (str_find msg " " i) 0) (str_len msg) (str_find msg " " i)))
+    ; the verdict word sits right after "gold " (5 chars).
+    (defn md-verdict-word (msg) (substring msg 5 (md-word-end msg 5)))
+    (defn md-verdict (msg)
+        (if (str_eq (md-verdict-word msg) "clear") 1
+            (if (str_eq (md-verdict-word msg) "fear") 0 2)))      ; 2 = no verdict named
+    ; the boundary: the human's words for WHERE the fear sat — everything after the verdict word.
+    (defn md-boundary (msg) (substring msg (add (md-word-end msg 5) 1) (str_len msg)))
+    0)

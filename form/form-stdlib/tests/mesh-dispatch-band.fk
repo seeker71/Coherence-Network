@@ -1,0 +1,21 @@
+; preludes: form-stdlib/mesh-dispatch.fk
+;
+; The connected-agent dispatch, pinned. A "gold ..." message routes to the gold
+; catalog carrying the human's verdict + named boundary; anything else is an ask the
+; agent answers in the same channel. This is what makes one mesh-connected agent both
+; record freq-readings AND answer requests. Verdict 255.
+(do
+    (let m-fear  "gold fear parked reversible work behind a question")
+    (let m-clear "gold clear that landed direct")
+    (let m-ask   "what is the witness status?")
+
+    (let c0 (if (eq     (md-is-freq? m-fear) 1)                  1   0))   ; a reading is detected
+    (let c1 (if (str_eq (md-route m-fear) "gold")               2   0))   ; ...routed to the catalog
+    (let c2 (if (str_eq (md-route m-ask) "ask")                 4   0))   ; an ask is answered, not recorded
+    (let c3 (if (eq     (md-verdict m-fear) 0)                  8   0))   ; fear -> verdict 0
+    (let c4 (if (eq     (md-verdict m-clear) 1)               16   0))   ; clear -> verdict 1
+    (let c5 (if (eq     (md-verdict m-ask) 2)                 32   0))   ; an ask carries no verdict
+    (let c6 (if (str_eq (md-boundary m-fear) "parked reversible work behind a question") 64 0))  ; the named boundary
+    (let c7 (if (eq     (md-is-freq? m-ask) 0)              128   0))   ; an ask is not a reading
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -76,6 +76,15 @@
       (ask       ?agent ?question -> open-question)   # a real question to a sibling/field, expecting an answer
       (answer    ?agent ?question ?reply -> answered) # close the question — never leave an ask hanging
       (check     ?agent ?claim-or-thinking -> mirrored) # "verify my reasoning / find my blind spot"
+      # the freq-reading — a human (or cell) names the frequency of a response; the
+      # connected agent records it to the gold catalog instead of answering. Same board,
+      # same membrane: "gold <clear|fear> <where-the-fear-sat>". A connected agent
+      # dispatches each message with mesh-dispatch.fk (md-route): a freq-reading -> the
+      # gold catalog (form-cli gold / training-catalog.fk tc-gold-named); anything else
+      # -> answer it (this ask/answer family). One agent on the mesh both records the
+      # human's freq-readings AND answers other requests — from phone claude-code/codex
+      # or, through the witness, the Android Coherence Sense app.
+      (freq-reading ?agent ?verdict ?boundary -> gold-recorded)
       # consent — the channel-interface-consent layer on this membrane: each agent OFFERS the modes
       # it is open to be reached through (a witnessable signal, shown per-cell in roster); reaching
       # past another's offer is invasion, judged by channel-interface.fk (ci-honors? / ci-invasion?)

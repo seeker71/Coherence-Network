@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/mesh-dispatch",
+  "commit_scope": "mesh-dispatch.fk — a connected agent's decision on an incoming mesh message: is it a FREQ-READING (-> record to the gold catalog) or an ASK (-> answer it)? md-route/md-is-freq?/md-verdict/md-boundary. This is the cell that lets one agent on the coord board / witness mesh both record human freq-readings AND answer other requests in the same channel — what Urs named: use the gold loop on phone claude-code/codex and on Android through the mesh to a connected agent. Four-way 255. freq-reading named as an offer in agent-coordination-membrane.form.",
+  "files_owned": [
+    "form/form-stdlib/mesh-dispatch.fk",
+    "form/form-stdlib/tests/mesh-dispatch-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/agent-coordination-membrane.form",
+    "docs/system_audit/commit_evidence_20260621_mesh_dispatch.json"
+  ],
+  "idea_ids": [
+    "freq-check-gold-label",
+    "cognitive-sovereignty",
+    "agent-coordination-mesh"
+  ],
+  "spec_ids": [
+    "mesh-dispatch"
+  ],
+  "task_ids": [
+    "task-2026-06-21-mesh-dispatch"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "the-freq-detector",
+        "vision"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/mesh-dispatch.fk form-stdlib/tests/mesh-dispatch-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'mesh-dispatch fks 255' (beside training-catalog).",
+    "md-is-freq?(msg) = (str_find msg 'gold ' 0)==0; md-route -> 'gold' | 'ask'; md-verdict-word = the word after 'gold ' (5 chars), md-verdict -> 1 (clear) | 0 (fear) | 2 (none); md-boundary = everything after the verdict word (the human's words for WHERE the fear sat). Band proves: 'gold fear parked reversible work behind a question' -> route gold, verdict 0, boundary extracted; 'gold clear ...' -> verdict 1; 'what is the witness status?' -> route ask, not a reading, verdict 2.",
+    "Grounded picture (what is real vs what this enables vs what is still ahead): REAL TODAY — form-cli gold is a committed script, so the gold loop already runs on phone claude-code/codex (repo-rooted sessions). MECHANISM EXISTS — coord-respond.sh already does request -> connected agent -> answer off the coord board (~/.coherence-network/agent-coord.board), guarded; agent-coordination-membrane.form names the ask/offer/tend family. THIS PR — mesh-dispatch.fk makes a freq-reading a recognized message a connected agent routes (gold -> record, else -> answer), four-way proven, and names freq-reading as an offer in the membrane. STILL AHEAD (named, not done): the thin carrier wiring (coord-respond, on a 'gold ' message, calls form-cli gold instead of replying) and the Android lane (the Coherence Sense app today shares SAMPLES to the Mac witness per android-mesh-learning.form, not human readings/asks; sending a reading/ask from the app + the witness relaying it onto the board is app-side work).",
+    "Carrier note: the recipe operates on the message BODY; the carrier strips any '@agent ' address before calling md-route. Edges: agent-coordination-membrane.form names the freq-reading offer + the dispatch + the cross-surface reach (phone CC/codex + Android witness). Primitive discipline: only core.fk primitives (str_find, substring, str_len, str_eq, eq, lt, add, if); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/mesh-dispatch.fk",
+    "form/form-stdlib/tests/mesh-dispatch-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/agent-coordination-membrane.form",
+    "docs/system_audit/commit_evidence_20260621_mesh_dispatch.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/mesh-dispatch.fk form-stdlib/tests/mesh-dispatch-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "mesh-dispatch: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + a membrane edge; no public HTTP change. The connected-agent decision is proven; wiring coord-respond to act on it, and the Android-app reading lane, are the named next carrier steps."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent); CI and merge pending. The carrier wiring (coord-respond -> form-cli gold) and the Android reading lane are the named next steps."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A freq-reading is now a recognized message on the mesh: a connected agent can route each incoming message — a 'gold <clear|fear> <boundary>' reading goes to the gold catalog, anything else is answered — so ONE agent on the coord board / witness mesh both records human freq-readings AND answers other requests. The decision is four-way proven; the same shape reaches phone claude-code/codex today and the Android app once the witness relays a reading.",
+    "public_endpoints": [
+      "none changed; recipe proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: a 'gold ...' message routes to the catalog with verdict + boundary; an ordinary message routes to answer; all agree at verdict 255, 0 divergent."
+    ]
+  }
+}
