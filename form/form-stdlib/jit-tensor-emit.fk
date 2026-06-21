@@ -486,3 +486,70 @@
   (str_concat (jte-llama-blk-out)
   (str_concat (jte-llama-blk-rms2)
   (str_concat (jte-llama-blk-ffn) "}"))))))))))))
+
+; --- the KV-CACHED DECODE STEP: the autoregressive generation inner loop on the GPU. One token per dispatch,
+;     over a PERSISTENT cache the host threads across dispatches. This is the GPU realization of kv-llama-block.fk's
+;     lblk-generate-causal (#3408, four-way 255), proven there BIT-IDENTICAL to the full causal recompute
+;     (lblk-block-causal, #3365). Each step p: RMSNorm1(x_p) -> project q/k/v from the SINGLE new token ->
+;     RoPE q and k by position p -> APPEND the RoPE'd k_p / v_p into the running cache slot p -> attend the
+;     query over the grown prefix cache[0..p] -> Wo/residual/RMSNorm2/SwiGLU/residual -> y_p. Only the NEW
+;     token is projected each step; earlier positions' k/v are reused from the cache (O(n) per token, not the
+;     O(n^2) recompute of the whole block over [x0..xt]). A cached k_i/v_i depends ONLY on position i, never the
+;     future, so the cache the front-to-back walk holds at step p is exactly the prefix the full causal kernel's
+;     mask (while t < s+1u) cuts at query p, with identical fold order — so looping this kernel reproduces
+;     jte-llama-block-fwd-causal-msl's whole-sequence output BIT-FOR-BIT on silicon. The new token's slot is p,
+;     so the cache is passed device-writable; the host owns the persistent cacheK/cacheV buffers. Single-thread
+;     (gid==0) serial walk matches the recipe; the transcendentals stay the recipe's OWN (Newton sqrt, fexp,
+;     trig Taylor). Proven byte-stable four-way by tests/llama-block-decode-emit-band.fk; run on the M4 GPU by
+;     scripts/metal_llama_block_decode_audit.sh (the decode loop == the full causal kernel, bit-exact). ---
+(defn jte-llama-dec-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* wk [[buffer(1)]], device const float* wv [[buffer(2)]], device const float* wo [[buffer(3)]], device const float* g1 [[buffer(4)]], device const float* wg [[buffer(5)]], device const float* wu [[buffer(6)]], device const float* wd [[buffer(7)]], device const float* g2 [[buffer(8)]], device const float* x [[buffer(9)]], device float* ck [[buffer(10)]], device float* cv [[buffer(11)]], device float* y [[buffer(12)]], device float* sc [[buffer(13)]], constant uint& p [[buffer(14)]], constant uint& d [[buffer(15)]], constant uint& dq [[buffer(16)]], constant uint& dv [[buffer(17)]], constant uint& hid [[buffer(18)]], constant uint& HD [[buffer(19)]], constant float& scale [[buffer(20)]], constant float& eps [[buffer(21)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; scratch for a single token; scores/exp use (p+1u) slots, sized generously by the host
+(defn jte-llama-dec-off ()
+  "uint oN1 = 0; uint oQ = oN1 + d; uint oA = oQ + dv; uint oH = oA + dv; uint oN2 = oH + d; uint oSR = oN2 + d; uint oE = oSR + (p + 1u); uint oG = oE + (p + 1u); uint oU = oG + hid; uint oACT = oU + hid; ")
+
+; RMSNorm1 of the single new token x -> oN1
+(defn jte-llama-dec-rms1 ()
+  "{ float ss = 0.0f; uint j = 0; while (j < d) { float xv = x[j]; float sq = xv * xv; ss = ss + sq; j += 1; } float meansq = ss / float(d); float sdv = meansq + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = x[j] * inv; sc[oN1 + j] = nm * g1[j]; j += 1; } } ")
+
+; bias-free q -> oQ, k -> cache slot p (ck[p]), v -> cache slot p (cv[p]); downward right-fold dot
+(defn jte-llama-dec-proj ()
+  (str_concat "{ uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wq[r * d + c] * sc[oN1 + c]; acc = pp + acc; } sc[oQ + r] = acc; r += 1; } } "
+  (str_concat "{ uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wk[r * d + c] * sc[oN1 + c]; acc = pp + acc; } ck[p * dq + r] = acc; r += 1; } } "
+  "{ uint r = 0; while (r < dv) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wv[r * d + c] * sc[oN1 + c]; acc = pp + acc; } cv[p * dv + r] = acc; r += 1; } } ")))
+
+; RoPE the query (oQ) and the new key (ck[p]) at position p — each pair rotated by theta = p*base^(-(i mod HD)/HD)
+(defn jte-llama-dec-rope ()
+  (str_concat "{ uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oQ + i]; float q1 = sc[oQ + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oQ + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oQ + i + 1u] = t2 + t3; i += 2u; } } "
+  "{ uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = ck[p * dq + i]; float q1 = ck[p * dq + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; ck[p * dq + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; ck[p * dq + i + 1u] = t2 + t3; i += 2u; } } "))
+
+; causal attention of the query over the grown cache 0..p -> oA (scores*scale, max-subtract softmax, value fold)
+(defn jte-llama-dec-attn ()
+  "{ uint t = 0; while (t < p + 1u) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float pp = sc[oQ + c] * ck[t * dq + c]; acc = pp + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < p + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < p + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < p + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + i] = 0.0f; i += 1; } t = 0; while (t < p + 1u) { i = 0; while (i < dv) { float pv = cv[t * dv + i] * sc[oSR + t]; sc[oA + i] = sc[oA + i] + pv; i += 1; } t += 1; } } ")
+
+; output projection Wo*attn (bias-free) + residual x -> oH
+(defn jte-llama-dec-out ()
+  "{ uint i = 0; while (i < d) { float acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; float pp = wo[i * dv + c] * sc[oA + c]; acc = pp + acc; } sc[oH + i] = x[i] + acc; i += 1; } } ")
+
+; RMSNorm2 of oH -> oN2
+(defn jte-llama-dec-rms2 ()
+  "{ float ss = 0.0f; uint j = 0; while (j < d) { float xv = sc[oH + j]; float sq = xv * xv; ss = ss + sq; j += 1; } float meansq = ss / float(d); float sdv = meansq + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = sc[oH + j] * inv; sc[oN2 + j] = nm * g2[j]; j += 1; } } ")
+
+; SwiGLU FFN: gate=Wg*n2, up=Wu*n2 (hid), act_i = silu(gate_i)*up_i, out = Wd*act (d), + residual oH -> y
+(defn jte-llama-dec-ffn ()
+  "{ uint k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wg[k * d + c] * sc[oN2 + c]; acc = pp + acc; } sc[oG + k] = acc; k += 1; } k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wu[k * d + c] * sc[oN2 + c]; acc = pp + acc; } sc[oU + k] = acc; k += 1; } k = 0; while (k < hid) { float gv = sc[oG + k]; float sig = 1.0f / (1.0f + fexp(-1.0f * gv)); float sl = gv * sig; sc[oACT + k] = sl * sc[oU + k]; k += 1; } uint i = 0; while (i < d) { float acc2 = 0.0f; uint kk = hid; while (kk > 0) { kk -= 1; float p2 = wd[i * hid + kk] * sc[oACT + kk]; acc2 = p2 + acc2; } y[i] = sc[oH + i] + acc2; i += 1; } } ")
+
+(defn jte-llama-block-decode-step-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-llama-dec-sig fname)
+  (str_concat (jte-llama-dec-off)
+  (str_concat (jte-llama-dec-rms1)
+  (str_concat (jte-llama-dec-proj)
+  (str_concat (jte-llama-dec-rope)
+  (str_concat (jte-llama-dec-attn)
+  (str_concat (jte-llama-dec-out)
+  (str_concat (jte-llama-dec-rms2)
+  (str_concat (jte-llama-dec-ffn) "}"))))))))))))

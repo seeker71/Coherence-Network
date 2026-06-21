@@ -1,0 +1,30 @@
+; form-lower-sim.fk — a tiny arm64 scalar-double register MACHINE in Form: the SEMANTIC-PARITY oracle
+; for the float lowering (GAP-Q7a keystone). It EXECUTES a lowered float instruction sequence and
+; returns d0, so a lowering's REGISTER ALLOCATION is validated by execution-equivalence with the
+; source function — NOT by byte-matching clang's whole-function codegen (the oracle-as-MASTER ceiling
+; form-lower's fa-conviction otherwise imposes; register allocation has many valid lowerings, only an
+; instruction's encoding has one true answer). Byte-identity stays where it belongs: each instruction's
+; one-true ISA encoding (form-asm.fk's fa-f*, clang-oracle byte-verified). This lifts the ceiling so the
+; FP register-stack — two non-ARG subtrees on caller-saved d16+ — can land SEMANTICALLY, no clang rented.
+;
+; An abstract FP instr is (op rd rn rm): op 0 = fmov (rd ← rn); 3/4/5/8 = fadd/fsub/fmul/fdiv
+; (rd = rn OP rm) — the SAME tag algebra lo-fnode lowers. The machine is 32 fp64 registers (d0..d31).
+(do
+    (defn fsim-zeros (n) (if (eq n 0) (empty) (cons 0.0 (fsim-zeros (sub n 1)))))
+    (defn fsim-get (regs i) (nth regs i))
+    (defn fsim-set (regs i v)
+        (if (eq i 0) (cons v (tail regs))
+            (cons (head regs) (fsim-set (tail regs) (sub i 1) v))))
+    ; one instruction: read rn (and rm) from the file, write the result to rd.
+    (defn fsim-step (regs instr)
+        (if (eq (nth instr 0) 0) (fsim-set regs (nth instr 1) (fsim-get regs (nth instr 2)))
+        (if (eq (nth instr 0) 3) (fsim-set regs (nth instr 1) (add (fsim-get regs (nth instr 2)) (fsim-get regs (nth instr 3))))
+        (if (eq (nth instr 0) 4) (fsim-set regs (nth instr 1) (sub (fsim-get regs (nth instr 2)) (fsim-get regs (nth instr 3))))
+        (if (eq (nth instr 0) 5) (fsim-set regs (nth instr 1) (mul (fsim-get regs (nth instr 2)) (fsim-get regs (nth instr 3))))
+        (if (eq (nth instr 0) 8) (fsim-set regs (nth instr 1) (div (fsim-get regs (nth instr 2)) (fsim-get regs (nth instr 3))))
+            regs))))))
+    (defn fsim-run (regs instrs)
+        (if (eq (len instrs) 0) regs (fsim-run (fsim-step regs (head instrs)) (tail instrs))))
+    ; load the single float arg into d0, run the sequence, read d0 back — the function's native value.
+    (defn fsim-eval (arg instrs) (fsim-get (fsim-run (fsim-set (fsim-zeros 32) 0 arg) instrs) 0))
+    0)

@@ -1,0 +1,51 @@
+; host-sense-organ.fk — the host-organ BODY: which senses are live, derived mesh metrics.
+;
+; The carrier (experiments/coherence-sense-android/mac-sense-organ.sh) does ONLY physical
+; I/O: read cpu/ram/disk/network/gpu/thermal/battery with sysctl/vm_stat/ioreg/pmset/netstat,
+; probe mic/camera/screen reachability, and POST to the mesh. EVERY decision lives HERE:
+; which organs count as active, the derived power-cost and signal metrics the mesh reads,
+; and the discovery state. This is the macOS twin of android-mesh-learning's organ shape;
+; the same recipe serves the Windows host carrier once it lands.
+;
+; Builtins only (cons/list/let/if/add/div/gt/...) — kernel-fast on the carrier hot path.
+; Proven by: form-stdlib/tests/host-sense-organ-band.fk
+
+(do
+    ; --- derived mesh metrics (ppm) ---
+    ; power-cost: the mean of cpu and gpu utilization — how hard the host is working.
+    (defn hso-power-cost (cpu-ppm gpu-ppm) (div (add cpu-ppm gpu-ppm) 2))
+    ; signal-strength: network throughput as a liveness proxy, capped at full scale.
+    (defn hso-signal (rx-bps tx-bps)
+        (do
+            (let total (add rx-bps tx-bps))
+            (if (gt total 1000000) 1000000 total)))
+
+    ; --- which senses are live right now (flags from the carrier's reachability probes) ---
+    ; vitals are always sensed; mic/camera/screen join only when the host grants them.
+    (defn hso-organs-active (mic-ok cam-ok screen-ok)
+        (do
+            (let base (list "cpu" "ram" "disk" "network" "gpu" "thermal" "battery"))
+            (let m (if (gt mic-ok 0) (cons "mic" base) base))
+            (let c (if (gt cam-ok 0) (cons "camera" m) m))
+            (if (gt screen-ok 0) (cons "screen" c) c)))
+    (defn hso-organ-count (mic-ok cam-ok screen-ok)
+        (len (hso-organs-active mic-ok cam-ok screen-ok)))
+
+    ; --- discovery state: a sensing host that reaches the mesh is streaming ---
+    (defn hso-discovery-state (organ-count) (if (gt organ-count 0) "streaming" "declared"))
+
+    ; --- the receipt the carrier marshals into announce/heartbeat ---
+    ; host, active-organs, power-cost, signal, battery, discovery-state.
+    (defn hso-receipt (cpu-ppm gpu-ppm rx-bps tx-bps battery-ppm mic-ok cam-ok screen-ok)
+        (do
+            (let organs (hso-organs-active mic-ok cam-ok screen-ok))
+            (list "host"
+                  organs
+                  (hso-power-cost cpu-ppm gpu-ppm)
+                  (hso-signal rx-bps tx-bps)
+                  battery-ppm
+                  (hso-discovery-state (len organs)))))
+    (defn hso-rec-organs    (r) (nth r 1))
+    (defn hso-rec-power     (r) (nth r 2))
+    (defn hso-rec-signal    (r) (nth r 3))
+    (defn hso-rec-state     (r) (nth r 5)))

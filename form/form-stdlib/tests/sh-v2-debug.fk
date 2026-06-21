@@ -1,0 +1,33 @@
+; sh-v2-debug.fk — exercise the v2 executor (dev only).
+(do
+    (defn t (label src) (print (str_concat label (str_concat " => |" (str_concat (sh-out src) "|")))))
+    (defn te (label src) (print (str_concat label (str_concat " exit=" (int_to_str (sh-exit src))))))
+
+    ; && / ||
+    (t  "true && echo yes   " "true && echo yes")
+    (t  "false && echo no   " "false && echo no")
+    (t  "false || echo rec  " "false || echo recovered")
+    (t  "true || echo skip  " "true || echo skip")
+    ; exit codes + $?
+    (te "false              " "false")
+    (te "true               " "true")
+    (t  "false ; echo $?    " "false ; echo $?")
+    (t  "true ; echo $?     " "true ; echo $?")
+    (te "seq 5|grep 9 (none)" "seq 5 | grep 9")
+    (t  "test 1 -lt 2;echo $?" "test 1 -lt 2 ; echo $?")
+    (t  "[ a = b ];echo $?  " "[ a = b ] ; echo $?")
+    ; new builtins
+    (t  "sort lines         " "printf x | rev")
+    (t  "echo c;echo a|sort " "echo c ; echo a")
+    (t  "seq 3|tail 2       " "seq 3 | tail 2")
+    (t  "echo HI|tr HI hi   " "echo HI | tr HI hi")
+    (t  "seq 3|nl           " "seq 3 | nl")
+    (t  "echo a b c|wc -w   " "echo a b c | wc -w")
+    (t  "grep -v 2 (inv)    " "seq 3 | grep -v 2")
+    (t  "grep -c . (count)  " "seq 3 | grep -c .")
+    ; quoting
+    (t  "echo 'hello world' " "echo 'hello world'")
+    (t  "echo -n no-newline " "echo -n hi")
+    ; passthrough quoting
+    (t  "git commit -m 'a b'" "git commit -m 'a b'")
+    0)

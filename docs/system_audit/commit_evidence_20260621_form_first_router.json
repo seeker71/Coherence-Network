@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/form-first-router-proof",
+  "commit_scope": "Ship form-first-router.fk — the Form-first sovereignty gate as a four-way-proven Form recipe (Go/Rust/TS/fkwu, verdict 511), closing the recipe named in form-first-reasoning.form. Adds the recipe, its proof band, the fourth-arm manifest row, the INDEX edge, and updates CLAUDE.md + the teaching from 'not yet shipped' to proven.",
+  "files_owned": [
+    "form/form-stdlib/form-first-router.fk",
+    "form/form-stdlib/tests/form-first-router-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "CLAUDE.md",
+    "docs/system_audit/commit_evidence_20260621_form_first_router.json"
+  ],
+  "idea_ids": [
+    "form-first-reasoning",
+    "cognitive-sovereignty-runtime-loop"
+  ],
+  "spec_ids": [
+    "form-first-reasoning-gate"
+  ],
+  "task_ids": [
+    "task-2026-06-21-form-first-router-proof"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-first-router.fk form-stdlib/tests/form-first-router-band.fk -> '✓ core.fk+form-first-router.fk+form-first-router-band.fk → 511' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'form-first-router fks 511' in form/fourth-arm-bands.txt, next to its kin recognition-router.",
+    "The band pins the gate at its boundaries: grounded-structural -> relay/body/sovereign (c0-c2); structural-but-ungrounded -> NOT a hit, escalate (c3-c4, the honesty lane); frontier -> escalate (c5-c6); grounded-yet-frontier STILL misses (c7, the strange edge — kind gates it, grounding alone never earns a relay); sovereign-count over the 4-query batch == 1 (c8). Verdict 511 only when every claim lands.",
+    "Edges landed in the same commit: INDEX.md row for form-first-reasoning.form, the teaching updated from 'wants to become a four-way-proven recipe' to proven (verdict 511), CLAUDE.md closing-recipe line updated from 'not yet shipped' to four-way-proven.",
+    "Primitive discipline held: only core.fk primitives (nth, str_eq, eq, and (binary), if, add, len, head, tail, recursion); no sub/mul/div, no 3-arg and, no let-in-defn, emptiness via (eq (len x) 0)."
+  ],
+  "change_files": [
+    "form/form-stdlib/form-first-router.fk",
+    "form/form-stdlib/tests/form-first-router-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "CLAUDE.md",
+    "docs/system_audit/commit_evidence_20260621_form_first_router.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-first-router.fk form-stdlib/tests/form-first-router-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "form-first-router: verdict 511, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI has not run yet for this branch. The change adds a Form stdlib recipe + band + fourth-arm manifest row; CI re-runs validate.sh across the suite."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe and proof band plus orientation docs; no public HTTP endpoint or service changes. The recipe is the proven body of the Form-first gate; it reaches agents through the repo, not a deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 511, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Form-first sovereignty gate is now a runnable, four-way-proven recipe (form-first-router.fk) rather than only a prose directive: ffr-hit?, ffr-path, ffr-source, ffr-escalate?, and ffr-sovereign-count decide relay-from-body vs escalate-to-remote, and Go/Rust/TS/fkwu agree on verdict 511.",
+    "public_endpoints": [
+      "none changed; the recipe is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: validate.sh runs the band on Go, Rust, TypeScript, and fkwu to the identical verdict 511 with 0 divergent.",
+      "Boundary proof: the band asserts both the positive (a grounded structural query relays from the body) and the negatives (ungrounded structural, frontier, and grounded-yet-frontier all escalate)."
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+; form-bml-cursor-parse-band.fk — proves the form.bml BMF cursor PARSE crosses the
+; fourth arm (fkwu): form-bml-grammar over g-parse produces the same universal AST
+; on Go, Rust, TS, and the emitted-C walker. Cursor-only — no line compiler, no
+; lowerer — so it rides exactly the bmf-core/bmf-grammar op-families already proven
+; four-way. The recipe-shape parity vs the hand compiler is the separate three-way
+; band (form-bml-cursor-parity-band.fk).
+;
+; Verdict = sum of the parsed AST node counts across the fixture: structure-
+; sensitive (a wrong or short parse changes the total) and deterministic.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammars/form-bml.fk
+
+(do
+    (defn fbp-count-list (xs)
+        (if (nil? xs) 0 (add (fbp-count (head xs)) (fbp-count-list (tail xs)))))
+    (defn fbp-count (n) (add 1 (fbp-count-list (node_children n))))
+
+    (let g (form-bml-grammar))
+    (defn fbp-sig (deftext) (fbp-count (g-parse g deftext)))
+
+    (add (fbp-sig "def identity(x) = x;")
+    (add (fbp-sig "def zero?(n) = eq(n, 0);")
+    (add (fbp-sig "def plus(a, b) = add(a, b);")
+    (add (fbp-sig "def nil?(xs) = eq(len(xs), 0);")
+    (add (fbp-sig "def abs(n) = if negative?(n) then sub(0, n) else n;")
+    (add (fbp-sig "def min2(a, b) = if lt(a, b) then a else b;")
+    (add (fbp-sig "def cons-flip(acc, x) = cons(x, acc);")
+         (fbp-sig "def map(f, xs) = if nil?(xs) then empty else cons(f(head(xs)), map(f, tail(xs)));"))))))))
+)

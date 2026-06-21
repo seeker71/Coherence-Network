@@ -1,0 +1,30 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-lower-sim.fk
+;
+; form-lower-fp-stack-band — the FP REGISTER STACK lands: two non-ARG float subtrees lower via
+; caller-saved d16+, validated by the fsim semantic-parity oracle (NOT clang byte-identity), four-way.
+; The first op-coverage GROWTH on the no-clang float lane past single-arg — the frontier lo-fnode left
+; as (list), now open because GAP-Q7a's fsim lifted the oracle-as-master ceiling. The abstract lowering
+; lo-ftree is a FAITHFUL generalization: for the single-arg overlap it encodes byte-for-byte to the
+; production lo-fcompile-fn; for two-subtree it extends, correctness proven by execution, not by clang.
+;
+; Verdict 31 when every claim lands:
+;   1  two-subtree: g(x)=(x*x)-(x+x) lowers via the register stack; fsim runs it to g(3)=9-6=3
+;   2  it TRACKS the function: g(4)=16-8=8 (the register stack computes g, not a fixed value)
+;   4  NON-COMMUTATIVE order kept: h(x)=(x+x)-(x*x) → fsim h(3)=6-9=-3 (left banked, right in d0, fsub order)
+;   8  FAITHFUL GENERALIZATION: the abstract path encodes byte-for-byte to lo-fcompile-fn on the overlap f(x)=x*x+x
+;   16 the two-subtree native image is real arm64 bytes: lo-fencode-prog(g) emits a non-empty image
+(do
+    (let prog-g (list (list 2) (list 5 0 0) (list 3 0 0) (list 4 1 2)))   ; g(x) = SUB(MUL(ARG,ARG), ADD(ARG,ARG))
+    (let prog-h (list (list 2) (list 3 0 0) (list 5 0 0) (list 4 1 2)))   ; h(x) = SUB(ADD(ARG,ARG), MUL(ARG,ARG))
+    (let prog-f (list (list 2) (list 5 0 0) (list 3 1 0)))                ; f(x) = ADD(MUL(ARG,ARG), ARG) — the overlap
+
+    (let abs-g (lo-fcompile-abstract prog-g 3))
+    (let abs-h (lo-fcompile-abstract prog-h 3))
+    (let abs-f (lo-fcompile-abstract prog-f 2))
+
+    (let c0 (if (eq (fsim-eval 3.0 abs-g) 3.0) 1 0))
+    (let c1 (if (eq (fsim-eval 4.0 abs-g) 8.0) 2 0))
+    (let c2 (if (eq (fsim-eval 3.0 abs-h) -3.0) 4 0))
+    (let c3 (if (eq (fa-conviction (lo-app (lo-fencode-prog abs-f) (fa-ret)) (lo-fcompile-fn prog-f 2)) 1) 8 0))
+    (let c4 (if (gt (len (lo-fencode-prog abs-g)) 0) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

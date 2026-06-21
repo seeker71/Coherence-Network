@@ -3698,6 +3698,24 @@ impl Kernel {
                 Value::Int(s.as_bytes()[0] as i64)
             }
         });
+        // str_byte_at: the i-th raw BYTE of the string (0-255), byte-exact —
+        // the byte twin of char_at (which is rune-aware and answers "" inside a
+        // multibyte char). A string is a UTF-8 byte sequence, so this is the
+        // byte door the string-pool serializer (fks-lit-sp) emits any locale's
+        // script through, matching the emitted walker's byte-indexed char_at.
+        self.register_native("str_byte_at", cat_access(), |_, _, args| {
+            let s = args[0].as_str();
+            let bytes = s.as_bytes();
+            let i = args[1].as_int();
+            if i < 0 || i as usize >= bytes.len() {
+                panic!(
+                    "str_byte_at: bounds out of range index={} len={}",
+                    i,
+                    bytes.len()
+                );
+            }
+            Value::Int(bytes[i as usize] as i64)
+        });
         self.register_native("byte_to_str", cat_access(), |_, _, args| {
             let b = args[0].as_int();
             if !(0..=255).contains(&b) {

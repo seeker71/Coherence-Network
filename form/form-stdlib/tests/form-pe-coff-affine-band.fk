@@ -1,4 +1,4 @@
-; preludes: form-stdlib/form-pe-coff.fk form-stdlib/form-pe-coff-affine.fk
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk form-stdlib/form-pe-coff-affine.fk
 ;
 ; Proves the parametric affine lowering reproduces form-pe-coff's three
 ; hand-encoded recipes byte-for-byte AND lowers specs it has never seen,

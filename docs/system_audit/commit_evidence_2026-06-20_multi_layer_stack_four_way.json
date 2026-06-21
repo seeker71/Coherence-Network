@@ -1,0 +1,38 @@
+{
+  "brick": "3z",
+  "date": "2026-06-20",
+  "title": "the MULTI-LAYER causal llama DECODE STACK crosses four-way — N decoder blocks, each its own KV cache, the KV-cached depth stack BIT-IDENTICAL to the full causal recompute stack",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "summary": "A real llama3.2:3b is depth — 28 decoder blocks, each layer with its OWN weights and OWN KV cache (x¹=block₀(x⁰); x²=block₁(x¹); …). The single block runs on the M4 GPU forward (#3355/#3376) and steps incrementally via the KV cache (lblk-generate-causal, #3408); brick #3412 ran the KV-cached decode step on the GPU. This is #3412's named next stone — 'multi-layer decode: stack the kernel, each its own cache.' multi-layer-stack.fk folds the causal llama block across depth two ways — the full causal recompute (lblk-stack-causal) and the KV-cached incremental decode (lblk-stack-generate) — and proves them BIT-IDENTICAL four-way, with the stacked magnitudes grounded by an independent libm fp64 reference.",
+  "recipe": "form/form-stdlib/multi-layer-stack.fk",
+  "band": "form/form-stdlib/tests/multi-layer-stack-band.fk",
+  "reference": "scripts/multi_layer_stack_reference.py",
+  "manifest_row": "multi-layer-stack fks 255",
+  "verdict": 255,
+  "four_way": true,
+  "divergent": 0,
+  "validate_cmd": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/tests/multi-layer-stack-band.fk",
+  "validate_result": "core.fk+...+multi-layer-stack.fk+multi-layer-stack-band.fk → 255 ; fourth arm: 1 band four-way (fkwu + pre-flattened tables) ; 1 ok, 0 divergent",
+  "claims": {
+    "1": "scn1[0][0] → 1893731 (1-layer stack base case, libm-pinned == causal-attention-band)",
+    "2": "scn2[0][0] → 1936158 (2-layer recompute stack, independent libm pin)",
+    "4": "scn2[1][2] → 1944810 (2-layer recompute stack, last token, libm pin)",
+    "8": "sgn2 == scn2 (S=2: KV-cached depth stack EXACTLY equals recompute stack, bit-for-bit — the heart)",
+    "16": "sgn3 == scn3 (S=3: cache threads past the boundary through depth — the inductive step)",
+    "32": "scn2[0][0] ≠ scn1[0][0] (depth does work — the 2-layer stack is not the 1-layer stack)",
+    "64": "sgn3[0][0] → 1936158 (cached stack token 0 unchanged by appending token 2 — AR invariant through depth)",
+    "128": "sgn3[1][0] → -1145553 (cached stack token 1 unchanged by appending token 2 — AR invariant, mid-sequence)"
+  },
+  "load_bearing_claim": "The KV-cached depth stack is BIT-IDENTICAL to the full-recompute depth stack. lblk-generate-causal == lblk-block-causal bit-for-bit per layer (#3408); lblk-block-causal is four-way #3365; so folding the cached decode across layers feeds each layer exactly the input the recompute fold feeds it — by induction over depth, lblk-stack-generate == lblk-stack-causal. Composes lblk-block-causal and lblk-generate-causal verbatim; no numeric change, nothing re-derived. The magnitudes are independently grounded by a pure-libm reference (self-checked to reproduce causal-attention-band's published pins 1893731/-1069281/1648117 at the 1-layer base case).",
+  "ar_invariant_through_depth": "Appending a future token never changes an earlier token's STACKED output (stack-gen3[token i] == stack-gen2[token i]) — because every layer is causal and every cache entry is frozen at its (layer, position). That invariant THROUGH the depth is exactly why a multi-layer KV cache is reusable across generation steps.",
+  "two_distinct_layers": "L0 = the causal-attention-band weights; L1 = a second, different bundle — so the stack genuinely threads per-layer weights forward, not one block applied twice.",
+  "read_the_body": "lblk-block-causal (#3365), lblk-generate-causal (#3408), and the tb-*/RMSNorm/RoPE/SwiGLU walks were all already four-way. The brick composed them at the reusable decoder-engine altitude into a depth fold — no new numeric, no re-derive. The independent libm reference was the design cost; the four-way proof was seconds (the cheapest-brick lesson, holding again for a composition brick).",
+  "lane": "recipe-altitude four-way (like 3r/3v/3x). Design (the depth-fold shape, the two-distinct-layer fixture, the independent libm reference + its self-check) was the cost; the four-way proof was seconds.",
+  "named_next_stones": [
+    "emit the multi-layer decode stack to Metal — stack the decode-step kernel (#3412), each layer its OWN device KV-cache buffer, threaded across S dispatches; fp32 CPU-mirror bit-exact gate (the 3m/3s/3u/3y GPU lane)",
+    "the full generation loop: tokenizer + multi-layer decode + greedy argmax (#3402) over real llama3.2:3b GGUF weights (load path q4k/q6k/f16 already Form-native four-way) — the first end-to-end native local llama token",
+    "parallelize the decode step across rows/heads (one threadgroup per query)"
+  ],
+  "predecessor_bricks": ["#3365 (causal block four-way)", "#3408 (KV-cached causal block four-way)", "#3412 (KV-cached decode step on the M4 GPU)"],
+  "teaching": "lc-cognitive-sovereignty"
+}

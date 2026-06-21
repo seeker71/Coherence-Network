@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 303
+**Total files**: 308
 
 | File | Purpose |
 |---|---|
@@ -72,6 +72,7 @@
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
+| [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — the native Form kernel that form-cli routes body-first |
 | [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
@@ -188,7 +189,9 @@
 | [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
 | [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
+| [metal_llama_block_decode_audit.sh](metal_llama_block_decode_audit.sh) | metal_llama_block_decode_audit.sh — the KV-CACHED DECODE STEP running on Metal (M4 Max GPU witness): the |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
+| [metal_multi_layer_stack_audit.sh](metal_multi_layer_stack_audit.sh) | metal_multi_layer_stack_audit.sh — the MULTI-LAYER causal llama DECODE STACK running on Metal (M4 Max GPU |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
 | [minimal_kernel_census.sh](minimal_kernel_census.sh) | minimal_kernel_census.sh — count the Go kernel's registered natives by the four |
@@ -196,6 +199,7 @@
 | [model_vitality_native_http_capture_probe.sh](model_vitality_native_http_capture_probe.sh) | model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get. |
 | [model_vitality_production_ingest_probe.sh](model_vitality_production_ingest_probe.sh) | model_vitality_production_ingest_probe.sh — capture live production pulse/runtime slices for Form model vitality rows. |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
+| [multi_layer_stack_reference.py](multi_layer_stack_reference.py) | multi_layer_stack_reference.py — independent pure-libm fp64 reference for the |
 | [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
@@ -292,6 +296,7 @@
 | [validate_spec_quality.py](validate_spec_quality.py) | Validate spec quality so implementation does not need manual follow-up gap fixes. |
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
+| [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |

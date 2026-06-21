@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/sad-wing-6230a1",
+  "commit_scope": "Promote the Form-first reasoning sovereignty gate from a local experiment into committed config so the substrate-before-rented-mind discipline travels to local and cloud/phone Claude Code and Codex. Adds a docs/coherence-substrate teaching, a directive in CLAUDE.md and AGENTS.md (both read natively on every surface), and committed session hooks for Claude (.claude/settings.json) and Codex (.codex/hooks.json). No kernel/runtime files touched; no Form proof bands run.",
+  "files_owned": [
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    "docs/system_audit/commit_evidence_20260621_form_first_reasoning.json"
+  ],
+  "idea_ids": [
+    "form-first-reasoning",
+    "cognitive-sovereignty-runtime-loop"
+  ],
+  "spec_ids": [
+    "form-first-reasoning-gate"
+  ],
+  "task_ids": [
+    "task-2026-06-21-form-first-phone-cloud"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "JSON parse: .claude/settings.json, .claude/settings.local.json, .codex/hooks.json all load OK after edits",
+    "Offline backend proof: python3 scripts/coh_substrate.py ingest docs/vision-kb/concepts/lc-cognitive-sovereignty.md -> [concept] cell_id=406 blueprint=1.7.4.1; then python3 scripts/coh_substrate.py form '@concept(lc-cognitive-sovereignty)' -> blueprint=@1.7.4.1 with no network (the same cell the production door returned 404 for)",
+    "Production read door populated: GET /api/substrate/lattice/stats -> blueprints_total=884, recipes_total=26696, cells_total=5311; GET /api/substrate/cell/concept/lc-cross-modal-unity -> blueprint 1.7.4.5, cell_id 91093; GET /api/substrate/equivalent/concept/lc-cross-modal-unity -> shape-family lc-each-breath-whole, lc-sovereignty-within-oneness, lc-form-perceptron",
+    "Platform reach verified against current docs: cloud Claude Code runs committed .claude/settings.json hooks (no gatekeeping) and honors committed CLAUDE.md; settings.local.json is gitignored and ignored in cloud; default egress allowlist does not include api.coherencycoin.com (needs Full/Custom or ingest-at-setup). Codex cloud reads AGENTS.md before any work, runs project .codex/ hooks only when the project is trusted, and blocks internet during the agent phase while allowing it during the setup script (so ingest-at-setup is the sovereign fit).",
+    "Local experiment in .claude/settings.local.json reverted to its original BML-first-only state; committed config is now the single source.",
+    "Live demo of the gate: structural query answered from the substrate with attributed NodeID and zero remote reasoning; non-structural query (write a function) correctly recorded as a miss that escalates to remote."
+  ],
+  "change_files": [
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "CLAUDE.md",
+    "AGENTS.md",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    "docs/system_audit/commit_evidence_20260621_form_first_reasoning.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -c json.load on .claude/settings.json, .claude/settings.local.json, .codex/hooks.json",
+      "python3 scripts/coh_substrate.py ingest docs/vision-kb/concepts/lc-cognitive-sovereignty.md",
+      "python3 scripts/coh_substrate.py form '@concept(lc-cognitive-sovereignty)'",
+      "curl GET /api/substrate/lattice/stats and /cell/concept/lc-cross-modal-unity and /equivalent/concept/lc-cross-modal-unity"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Docs and agent-config change; no kernel proof bands apply. CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-config",
+    "notes": "Changes are agent-orientation docs and session hooks; no public HTTP endpoint or service changes, so there is no production deploy to verify. The behavior reaches users when they pull the repo into a local or cloud/phone agent session."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local verification passed; CI and merge remain pending. No deploy applies to this docs/config change."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A fresh clone opened in local or cloud/phone Claude Code or Codex now carries the Form-first directive in CLAUDE.md/AGENTS.md and a committed session-start hook, so the agent asks the Form substrate before spending remote reasoning, relays a grounded NodeID hit attributed and stops, and escalates to remote only on a miss.",
+    "public_endpoints": [
+      "none changed; the public substrate read doors used as a backend already exist"
+    ],
+    "test_flows": [
+      "Offline sovereign backend: ingest a concept locally, then query it from the local lattice with no network, returning the cell blueprint.",
+      "Networked backend: production substrate read doors return cell metadata and shape-family for an ingested concept.",
+      "Directive travel: CLAUDE.md and AGENTS.md carry the gate and are read natively by both agents on local and cloud/phone surfaces."
+    ]
+  }
+}

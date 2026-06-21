@@ -1,0 +1,28 @@
+; preludes: form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/speech-organ.fk
+;
+; speech-organ-band — the speech BODY: VAD gate, pitch grouping, the receipt, three-way.
+;
+; The carrier only records + measures (sox rms/freq) + transcribes (whisper oracle); every
+; decision is proven here. Speaker grouping is honest acoustic clustering keyed on a rounded
+; pitch cell — same voice → same cell, distinct pitch → new cell — never verified identity.
+;
+; Verdict 255 when every claim lands (numeric decisions only — labels are carrier-side):
+;   1   silence gates to 0          (rms 4000 ppm < floor → not speech)
+;   2   audible-no-text gates to 1  (rms 50000, no transcript → sound, not transcript)
+;   4   voiced+text gates to 2      (rms 50000 + transcript → trusted transcript)
+;   8   pitch jitter collapses      (round 690 == round 705 → one voice cell)
+;   16  distinct pitch separates    (round 450 ≠ round 690 → two voice cells)
+;   32  same voice clears the floor  (705 vs enrolled 690 → ns-strength ≥ floor → re-match)
+;   64  distinct pitch below floor   (450 vs enrolled 690 → ns-strength < floor → enroll new)
+;   128 receipt carries the reading  (so-rec-freq reads back 690)
+(do
+    (let c0 (if (eq (so-vad-gate 4000 0) 0) 1 0))
+    (let c1 (if (eq (so-vad-gate 50000 0) 1) 2 0))
+    (let c2 (if (eq (so-vad-gate 50000 1) 2) 4 0))
+    (let c3 (if (eq (so-freq-round 690) (so-freq-round 705)) 8 0))
+    (let c4 (if (eq (so-freq-round 450) (so-freq-round 690)) 0 16))
+    (let s1 (so-enroll (empty) "voice-1" (so-feature 690)))
+    (let c5 (if (ge (ns-strength (so-feature 705) s1) (so-speaker-floor)) 32 0))
+    (let c6 (if (lt (ns-strength (so-feature 450) s1) (so-speaker-floor)) 64 0))
+    (let c7 (if (eq (so-rec-freq (so-receipt 2 690 55 "voice-1")) 690) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

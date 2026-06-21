@@ -103,6 +103,19 @@ EOF
         )
         if [[ "$is_windows" == "1" ]]; then
             clang_args+=(-lws2_32 -llegacy_stdio_definitions)
+            # Windows default thread stack is 1 MiB — too small for the universal
+            # walker's recursive descent on grammar-engine recipes (bmf-grammar,
+            # form.bml cursor). The emitted main() keeps the main-thread entry on
+            # Windows, so reserve 64 MiB for it so the cursor lane crosses the
+            # fourth arm on Windows too, not only on Linux/macOS CI (8 MiB
+            # default). Reserve is address space, committed lazily — no runtime cost.
+            clang_args+=(-Xlinker /STACK:67108864)
+        else
+            # POSIX: the emitted main() runs fk_walk on a pthread sized to
+            # FORM_KERNEL_STACK_MB (the stack-depth floor its siblings already
+            # stand on) — link the pthread carrier so it resolves across CI libc
+            # versions. macOS folds it into libSystem; the flag is harmless there.
+            clang_args+=(-pthread)
         fi
         if [[ -s "$d/uni.c" ]] && clang "${clang_args[@]}" 2>"$d/clang.err"; then
             mv -f "$tmp" "$out"

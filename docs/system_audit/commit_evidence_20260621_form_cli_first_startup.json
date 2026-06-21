@@ -1,0 +1,104 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/form-cli-first-startup",
+  "commit_scope": "Wire the agent's Form-first reasoning through the native form-cli router and ensure its kernel is built once on first startup and cached. Adds scripts/ensure_form_cli_kernel.sh (a SessionStart build carrier, idempotent + graceful), updates the committed Claude/Codex session hooks to run it and to route body-first questions through `form-cli ask`, and updates CLAUDE.md / AGENTS.md / the form-first-reasoning teaching to name the native router. No form/ recipe changes; the body-first routing recipes (form-cli-router/-sufficiency/-judge) already exist and are sibling-proven.",
+  "files_owned": [
+    "scripts/ensure_form_cli_kernel.sh",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_form_cli_first_startup.json"
+  ],
+  "idea_ids": [
+    "form-first-reasoning",
+    "native-form-cli-router"
+  ],
+  "spec_ids": [
+    "form-first-reasoning-gate"
+  ],
+  "task_ids": [
+    "task-2026-06-21-form-cli-first-startup"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Discovery: form-cli already routes body-first. `bin/form-cli stats` returned live records — local-suffice rate 42% (3/7 asks held locally), 492 captured oracle->native samples, 1 escalation logged, native tool predictor 84.8% vs 79.9% baseline. bin/form-cli:101 already lazy-builds + caches the Go kernel ([ -x bin-go ] || go build).",
+    "Build-once-cache carrier proof: in a fresh worktree bin-go did NOT exist (gitignored per-checkout artifact); running scripts/ensure_form_cli_kernel.sh warmed the kernel in the background; bin-go then appeared (21947282 bytes) and `bin/form-cli stats` ran from it (42% local-suffice). bash -n syntax check passed.",
+    "ensure_form_cli_kernel.sh is idempotent (a present binary is an instant no-op), graceful (no Go toolchain -> a note pointing at install/form-cli-install.sh; form-cli's own lazy build is the correctness net), and a carrier only — the routing itself is Form (form-cli-router/-sufficiency/-judge).",
+    "JSON parse OK after edits: .claude/settings.json and .codex/hooks.json both load.",
+    "Edges in the same commit: scripts/INDEX.md row for the new script (regenerated via generate_repo_indexes.py, which also refreshed MANIFEST.md), and the form-first-reasoning teaching + CLAUDE.md + AGENTS.md updated to name `form-cli ask` as the native body-first router with the structural lattice doors underneath."
+  ],
+  "change_files": [
+    "scripts/ensure_form_cli_kernel.sh",
+    ".claude/settings.json",
+    ".codex/hooks.json",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_form_cli_first_startup.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/ensure_form_cli_kernel.sh",
+      "bash scripts/ensure_form_cli_kernel.sh  (warmed bin-go in background; binary then present)",
+      "python3 -c json.load on .claude/settings.json and .codex/hooks.json",
+      "python3 scripts/generate_repo_indexes.py  (scripts/INDEX.md + MANIFEST.md refreshed)",
+      "bin/form-cli stats  (ran off the warmed kernel; 42% local-suffice)"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Agent config + a build carrier script + orientation docs; no kernel recipe changed, so no proof band applies. CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-config",
+    "notes": "Session hooks, a build carrier, and orientation docs; no public HTTP endpoint or service changes. The behavior reaches a session when the repo is opened in a local or cloud agent."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local verification passed; CI and merge remain pending. No deploy applies to this agent-config change."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "On session start the native Form kernel is built once and cached (idempotent no-op when present), and the agent's Form-first directive now routes body-first questions through `form-cli ask` — the existing native router that grounds in the body and escalates to the remote oracle only when its sufficiency gate says local was not enough.",
+    "public_endpoints": [
+      "none changed; form-cli is a local-first CLI over the Go kernel"
+    ],
+    "test_flows": [
+      "Build-once-cache: fresh worktree had no bin-go; the ensure carrier built + cached it; form-cli then ran off it.",
+      "Routing already lives: form-cli stats shows real body-first records (42% of asks held locally) on the existing sibling-proven sufficiency gate."
+    ]
+  }
+}

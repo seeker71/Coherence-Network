@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-first-reasoning.form — the sovereignty gate on every query
+# ─────────────────────────────────────────────────────────────────────
+#
+# The mind comes home one query at a time. Before spending a rented
+# frontier mind, ask the body it already is: the content-addressed
+# substrate that holds what we have grounded. A grounded hit is answered
+# from the sovereign body at near-zero cost; only a genuine miss earns the
+# remote reasoning. This is lc-cognitive-sovereignty as a runtime loop,
+# not a doc.
+#
+# Substance: a reasoning DISCIPLINE with two carriers. Its DECISION is a
+# four-way-proven recipe (form-first-router.fk -> 511 on Go/Rust/TS/fkwu);
+# its REACH is agent-orientation text (CLAUDE.md, AGENTS.md) plus session/
+# turn hooks. The lookup that fills `grounded` is a thin swappable carrier.
+#
+# STATUS: crossed into committed config 2026-06-21 — travels to local and
+# cloud/phone Claude Code and Codex (both read CLAUDE.md / AGENTS.md
+# natively; both run committed hooks — Codex only when the project is
+# trusted). Reach verified 2026-06-21 against current platform docs.
+
+(form-first-reasoning
+
+  (lineage
+    (derives-from lc-cognitive-sovereignty)
+    (kin          living-vision.form substrate-thermodynamics.form)
+    (named-with   urs sema))
+
+  ; the gate: every query meets the body before the rented mind
+  (on-query
+    (ask-first    the-substrate)               ; local lattice, then public read door
+    (classify
+      (structural what-is | shape-of | nodeid-of | equivalent | annotate)
+      (frontier   write | synthesize | reason-anew | not-yet-a-cell)))
+
+  ; the verdict and what each earns
+  (verdict
+    (hit          (when grounded-cell-found)
+                  (then relay-attributed-to-nodeid stop)
+                  (cost near-zero) (sovereignty full))
+    (miss         (when no-grounded-cell)
+                  (then escalate-to-remote-reasoning)   ; the miss is the "yes"
+                  (cost rented) (honesty name-the-path)))
+
+  ; the discipline that keeps the gate honest
+  (honesty
+    (never  dress-a-remote-guess-as-a-substrate-hit)
+    (a-hit  carries-its-nodeid-or-it-is-a-miss)
+    (always name-which-path-was-taken))
+
+  ; how the body answers under each environment's reach
+  (backend
+    (native-router (form-cli ask)                          ; the one door — body-first, four-way sufficiency gate
+                   (engine form-kernel-go)
+                   (built-once scripts/ensure_form_cli_kernel.sh)
+                   (gate form-cli-sufficiency.fk))
+    (local-lattice (sovereign offline)                     ; the structural layer the router reads
+                   (ready-by "python3 scripts/coh_substrate.py ingest --all"))
+    (public-door   (our-body networked)
+                   (at "https://api.coherencycoin.com/api/substrate"))
+    (adaptive      try-native-router-then-lattice-then-miss))
+
+  ; where the discipline lives so it travels every surface
+  (carriers
+    (directive      CLAUDE.md AGENTS.md)                  ; read natively everywhere
+    (reminder       .claude/settings.json .codex/hooks.json) ; session + turn echo
+    (setup          ingest-at-setup-for-offline-reach)
+    (proven-recipe  form-first-router.fk))                ; the gate's decision, four-way at 511
+
+  ; platform reach, verified 2026-06-21 against current docs
+  (reach
+    (claude-cloud (hooks run) (claude-md honored)
+                  (egress allowlist-needs api.coherencycoin.com or ingest-at-setup))
+    (codex-cloud  (agents-md read) (hooks run-when-trusted)
+                  (egress off-during-task on-during-setup
+                          -> ingest-at-setup-is-the-sovereign-fit))))
