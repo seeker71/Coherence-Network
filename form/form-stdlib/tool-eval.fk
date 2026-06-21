@@ -1,0 +1,34 @@
+; tool-eval.fk — the agent-tool model's HELD-OUT EVAL, as a Form recipe instead of a Swift hand-roll.
+; scripts/agent_tooluse_train.sh's runner.swift RE-IMPLEMENTS the multi-label metrics (micro-accuracy,
+; exact-set match, covers-used, per-tool) in Swift — duplicate logic that computes the very held-out numbers
+; we trust. This cell is that verdict in the body: pure counting, the multi-label generalization of
+; active-inference's hit-count (ai-hit?/ai-hit-count over a run). The carrier shrinks to: run the forward on
+; the GPU (the device driver) → hand (prediction, target) bit-vectors here; the body computes the verdict.
+;
+; A prediction p and target t are tool bit-vectors (8 tools: Bash Read Edit Write StructuredOutput Agent
+; ToolSearch WebSearch). A held example is (list p t). The metrics are integer numerators (the rate is the
+; numerator over n·outd or n — kept integer so the verdict is exact and four-way, no division).
+; Proven by tests/tool-eval-band.fk (four-way). Integer-exact — registered `fkc`.
+(do
+    (defn te-p (e) (head e))                     ; the model's predicted bit-vector for an example
+    (defn te-t (e) (head (tail e)))              ; the true tool bit-vector
+
+    ; micro hit-count: matching tool bits in one example (the multi-label ai-hit-count).
+    (defn te-bit-hits (p t)
+        (if (eq (len p) 0) 0
+            (add (if (eq (head p) (head t)) 1 0) (te-bit-hits (tail p) (tail t)))))
+    ; exact-set match: every bit agrees.
+    (defn te-exact? (p t) (if (eq (te-bit-hits p t) (len p)) 1 0))
+    ; covers-used: every USED tool (t_i=1) was predicted (p_i=1) — the recall floor (a miss = uncovered).
+    (defn te-covers? (p t)
+        (if (eq (len t) 0) 1
+            (if (and (eq (head t) 1) (eq (head p) 0)) 0 (te-covers? (tail p) (tail t)))))
+
+    ; fold the three verdicts over a held set (list of (p t) examples) — the numerators the carrier reports.
+    (defn te-hits-sum (ex)
+        (if (eq (len ex) 0) 0 (add (te-bit-hits (te-p (head ex)) (te-t (head ex))) (te-hits-sum (tail ex)))))
+    (defn te-exact-sum (ex)
+        (if (eq (len ex) 0) 0 (add (te-exact? (te-p (head ex)) (te-t (head ex))) (te-exact-sum (tail ex)))))
+    (defn te-cover-sum (ex)
+        (if (eq (len ex) 0) 0 (add (te-covers? (te-p (head ex)) (te-t (head ex))) (te-cover-sum (tail ex)))))
+    0)

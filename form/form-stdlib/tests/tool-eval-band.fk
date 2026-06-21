@@ -1,0 +1,30 @@
+; preludes: form-stdlib/tool-eval.fk
+;
+; tool-eval-band — the held-out eval as a Form recipe, four-way: the same multi-label verdict (micro-acc,
+; exact-set, covers-used) that runner.swift hand-rolls, now in the body. Strange-minimal held set of 3 turns
+; over the 8 tools, mirroring the real structure: the majority baseline predicts [Bash,Read] (the only tools
+; with base-rate ≥ 0.5) on every turn; the model predicts each turn's true tool set. The verdict reproduces
+; the real run's direction — the model beats the majority baseline on all three metrics.
+;
+; Verdict 63 when every claim lands:
+;   1   micro hit-count counts matching bits — the baseline misses Edit on turn 1 (7/8 bits)
+;   2   exact-set match — the model's exact prediction scores 1, the baseline's 0
+;   4   covers-used — the model covers every used tool; the baseline (no Edit) does not
+;   8   MICRO: the model beats the baseline on total matching bits (24 vs 20)
+;   16  EXACT-SET: the model beats the baseline (3 vs 0)
+;   32  COVERS-USED: the model beats the baseline (3 vs 0)
+(do
+    (let t1 (list 1 1 1 0 0 0 0 0))   ; turn 1 used Bash,Read,Edit
+    (let t2 (list 1 0 0 1 0 0 0 0))   ; turn 2 used Bash,Write
+    (let t3 (list 1 1 0 0 1 0 0 0))   ; turn 3 used Bash,Read,StructuredOutput
+    (let bp (list 1 1 0 0 0 0 0 0))   ; majority baseline: Bash+Read, every turn
+    (let model (list (list t1 t1) (list t2 t2) (list t3 t3)))   ; the model predicts each turn's true set
+    (let base  (list (list bp t1) (list bp t2) (list bp t3)))   ; the baseline always guesses the majority
+
+    (let c0 (if (eq (te-bit-hits bp t1) 7) 1 0))
+    (let c1 (if (and (eq (te-exact? t1 t1) 1) (eq (te-exact? bp t1) 0)) 2 0))
+    (let c2 (if (and (eq (te-covers? t1 t1) 1) (eq (te-covers? bp t1) 0)) 4 0))
+    (let c3 (if (gt (te-hits-sum model) (te-hits-sum base)) 8 0))
+    (let c4 (if (gt (te-exact-sum model) (te-exact-sum base)) 16 0))
+    (let c5 (if (gt (te-cover-sum model) (te-cover-sum base)) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
