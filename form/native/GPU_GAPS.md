@@ -12,14 +12,14 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 |---|---|---|---|---|
 | matvec / matmul | ✅ | ✅ f32/f16/bf16 | ✅ f32/f16/bf16 | ✅ f32 **bit-exact on RTX Vulkan, Form-emitted, Android-portable** |
 | affine SGD train | ✅ | ✅ | ✅ f32 | ⬜ |
-| gelu (Taylor) | ✅ | ✅ (in FFN) | ✅ f32 *(verdict 127)* | ⬜ |
+| gelu (Taylor) | ✅ | ✅ (in FFN) | ✅ f32 *(verdict 127)* | ✅ f32 *(GLSL, RoundingModeRTE)* |
 | exp / softmax | ✅ | ✅ (in attn) | ✅ softmax f32 *(verdict 511, Taylor exp)* | ⬜ |
 | FFN/MLP fwd | ✅ | ✅ | ✅ f32 *(verdict 255, bar.sync)* | ⬜ |
 | FFN/MLP backprop | ✅ | ✅ | ⬜ | ⬜ |
 | attention (single-head SDPA) | ✅ | ✅ f32 *(verdict 1023, fused dot·scale→softmax→·V)* | ⬜ | ⬜ |
 | attention (MHA/causal/KV) | ✅ | ✅ f32 **causal multi-head** (per-head slice, masked [0..i]); KV-cache next | ⬜ | ⬜ |
-| layernorm / rmsnorm | ✅ | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ⬜ | ⬜ |
-| residual (vec-add) | ✅ | ✅ f32 *(verdict 8191)* | ⬜ | ⬜ |
+| layernorm / rmsnorm | ✅ | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ⬜ | ✅ layernorm f32 *(GLSL)* |
+| residual (vec-add) | ✅ | ✅ f32 *(verdict 8191)* | ⬜ | ✅ f32 *(GLSL)* |
 | transformer block fwd | ✅ | ✅ **EXACT tb-block** (QKVO proj + gamma/beta), bit-exact, 19-launch graph; also model-forward + autoregressive generation | ⬜ | ⬜ |
 | llama block (fwd/causal/decode) | ✅ | ✅ | ⬜ | ⬜ |
 | conv2d / groupnorm (diffusion) | ✅ recipe *(verdict 15, 3-way)* | ⬜ | ⬜ | ⬜ |
@@ -45,7 +45,7 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 
 ## E. Backend infra
 - ✅ **PTX (RTX)**: `form-ptx.fk` lane, driver-JIT -O0, gcc driver-only hosts. Four-way (verdict 127).
-- ✅ **Vulkan (Android+desktop)**: matvec **bit-exact on RTX Vulkan ICD** (`native/vulkan/matvec_vk.c`, driver-only `dlopen(vulkan-1.dll)`); Form-emitted (`form-glsl.fk` → glslang `.spv`, **verdict 7 three-way**); `precise`→NoContraction keeps it unfused (do NOT run spirv-opt). Same `.spv` runs on Adreno/Mali (NDK arm64 + `libvulkan.so`; risks: FMA re-fusion, RelaxedPrecision, subnormal FTZ — all controlled). **arm64-android build PROVEN**: the exact carrier cross-compiles with NDK r27c → `matvec_vk_android` = `ELF aarch64, /system/bin/linker64, Android 24`, NEEDED libdl/libc (bionic), references `libvulkan.so` (not vulkan-1.dll). **Remaining gap: on-device RUN** — needs an actual Android device/emulator (none on this host; if connected via adb: install platform-tools, push `matvec_vk_android`+`.spv` to /data/local/tmp, run). Next: f16/bf16 GLSL, the bigger layers as compute shaders.
+- ✅ **Vulkan (Android+desktop)**: matvec **bit-exact on RTX Vulkan ICD** (`native/vulkan/matvec_vk.c`, driver-only `dlopen(vulkan-1.dll)`); Form-emitted (`form-glsl.fk` → glslang `.spv`, **verdict 7 three-way**); `precise`→NoContraction keeps it unfused (do NOT run spirv-opt). Same `.spv` runs on Adreno/Mali (NDK arm64 + `libvulkan.so`; risks: FMA re-fusion, RelaxedPrecision, subnormal FTZ — all controlled). **arm64-android build PROVEN**: the exact carrier cross-compiles with NDK r27c → `matvec_vk_android` = `ELF aarch64, /system/bin/linker64, Android 24`, NEEDED libdl/libc (bionic), references `libvulkan.so` (not vulkan-1.dll). **Remaining gap: on-device RUN** — needs an actual Android device/emulator (none on this host; if connected via adb: install platform-tools, push `matvec_vk_android`+`.spv` to /data/local/tmp, run). Vulkan kernels now: matvec, residual, layernorm, gelu (`*.comp` + `kernel_vk.c` parameterized carrier). **KEY:** NVIDIA Vulkan `OpFDiv` ≠ PTX `div.rn.f32` (off 1 ULP) — kernels that divide need `RoundingModeRTE 32` via `SPV_KHR_float_controls` (`GL_EXT_spirv_intrinsics`, SPIR-V 1.3 / vulkan1.1; core in VK1.1, advertised Adreno/Mali). residual/matvec don't divide so don't need it. Next: softmax/FFN/attention shaders; Form-emit them via form-glsl.fk (like matvec) for the four-way wrap.
 - ✅ **Metal (Mac)**: most complete (matvec, affine, mlp, attn, block, llama) — but Mac-only proof (off-Mac the audits SKIP).
 - ⬜ **gcc-clean fkwu** on Windows (emitter emits socket shims before def → gcc rejects; clang-built today). Upstream `hati-os-kernel-emit.fk` fix.
 - ⬜ `hati-os-targets.fk` rows for `windows-x64-cuda` and `android-vulkan` (each needs the targets-band extension: count + verdict bit + artifact row).

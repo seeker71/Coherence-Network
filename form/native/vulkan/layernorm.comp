@@ -1,0 +1,69 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32; this pins it. Needs SPIR-V >= 1.3
+// (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1, advertised on Adreno/Mali).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native layernorm compute shader (Android/Vulkan lane, prototyped on RTX).
+// One invocation per ROW. Mirrors template_layernorm.ptx (tn-layernorm) op-for-op:
+//   flen = (float)cols
+//   sum  = forward sum over the row           (s = s + x_j)
+//   mean = sum / flen
+//   var  = forward sum of (x_j - mean)^2 / flen
+//   sd   = var + eps
+//   g    = sqrt(sd) via Newton-50:  g0 = sd; g = 0.5*(g + sd/g)  x50
+//   inv  = 1.0 / g
+//   y_j  = (x_j - mean) * inv
+// Every float op is `precise` -> SPIR-V NoContraction so the driver cannot fuse mul+add into
+// FMA and cannot reassociate -> bit-exact to the CPU oracle and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer X { float x[]; };   // rows*cols
+layout(std430, binding = 1) writeonly buffer Y { float y[]; };   // rows*cols
+
+layout(push_constant) uniform Push { uint rows; uint cols; float eps; } pc;
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= pc.rows) return;
+
+    uint rowbase = row * pc.cols;
+    precise float flen = float(pc.cols);
+
+    // sum (forward)
+    precise float s = 0.0;
+    for (uint j = 0u; j < pc.cols; ++j) {
+        s = s + x[rowbase + j];
+    }
+    precise float mean = s / flen;
+
+    // var (forward): sum (x-mean)^2
+    precise float v = 0.0;
+    for (uint j = 0u; j < pc.cols; ++j) {
+        precise float d = x[rowbase + j] - mean;
+        precise float dd = d * d;
+        v = v + dd;
+    }
+    precise float var = v / flen;
+    precise float sd = var + pc.eps;
+
+    // Newton sqrt(sd) 50 iters: g0 = sd; g = 0.5*(g + sd/g)
+    precise float g = sd;
+    for (uint it = 0u; it < 50u; ++it) {
+        precise float q = sd / g;
+        precise float gpq = g + q;
+        g = 0.5 * gpq;
+    }
+    precise float inv = 1.0 / g;
+
+    // y_j = (x_j - mean) * inv
+    for (uint j = 0u; j < pc.cols; ++j) {
+        precise float d = x[rowbase + j] - mean;
+        precise float yj = d * inv;
+        y[rowbase + j] = yj;
+    }
+}

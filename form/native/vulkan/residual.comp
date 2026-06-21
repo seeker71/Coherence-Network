@@ -1,0 +1,21 @@
+#version 450
+
+// form-native residual compute shader (Android/Vulkan lane, prototyped on RTX).
+// y[i] = a[i] + b[i] (tb-vec-add), one invocation per element. Mirrors template_residual.ptx
+// op-for-op: ld a, ld b, add.f32, st. `precise` -> NoContraction so a single add cannot be
+// fused with anything by the driver -> bit-exact to the CPU oracle and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer A { float a[]; };   // n
+layout(std430, binding = 1) readonly  buffer B { float b[]; };   // n
+layout(std430, binding = 2) writeonly buffer Y { float y[]; };   // n
+
+layout(push_constant) uniform Push { uint n; uint pad; } pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.n) return;
+    precise float r = a[i] + b[i];
+    y[i] = r;
+}
