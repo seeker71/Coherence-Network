@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 311
+**Total files**: 312
 
 | File | Purpose |
 |---|---|
@@ -17,6 +17,7 @@
 | [agent_tooluse_train.sh](agent_tooluse_train.sh) | agent_tooluse_train.sh — a REAL model on REAL data at full scale, natively. |
 | [android_core_axiom_apk_receipt.sh](android_core_axiom_apk_receipt.sh) | Build a native arm64 core-axiom receipt library into the Android APK and |
 | [android_mac_core_axiom_receipt.sh](android_mac_core_axiom_receipt.sh) | Build and run a native Mac + Android core-axiom receipt pair. |
+| [android_matvec_vk_run.sh](android_matvec_vk_run.sh) | android_matvec_vk_run.sh — prove the Form-minted matvec.spv on a REAL Android phone GPU. |
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
 | [asm_pl_human_demo.sh](asm_pl_human_demo.sh) | asm_pl_human_demo.sh — an assembly -> programming language -> human language |
