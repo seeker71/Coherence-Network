@@ -1,0 +1,43 @@
+; speaker-proj.fk — Challenger 2-full ("Proj"): a learned FULL linear projection, SGD-trained.
+;
+; C2-diagonal (speaker-lin) only rescaled axes and lost — speaker identity that lives in a
+; COMBINATION of bands needs a rotation, not per-axis gain. This learns a full matrix W
+; (K rows × N) by squared-loss SGD toward speaker target codes — the i-vector→LDA projection,
+; the affine-train loop lifted to multi-output. W·x rotates the supervector into a space where
+; speakers separate; cosine (speaker-embed se-dot) scores there.
+;
+; Fixed-point scale 1000 (like affine-train): weights ×1000, a product folds back with /1000.
+; Builds on speaker-embed (se-dot). Proven by form-stdlib/tests/speaker-proj-band.fk.
+
+(do
+    ; --- forward: y_j = (W_j · x) / 1000 for each row ---
+    (defn sp-matvec (W x)
+        (if (eq (len W) 0) (empty)
+            (cons (div (se-dot (head W) x) 1000) (sp-matvec (tail W) x))))
+    (defn sp-project (W x) (sp-matvec W x))
+
+    ; --- errors e = y − t ---
+    (defn sp-err (y t)
+        (if (eq (len y) 0) (empty) (cons (sub (head y) (head t)) (sp-err (tail y) (tail t)))))
+    (defn sp-sqsum (e) (if (eq (len e) 0) 0 (add (mul (head e) (head e)) (sp-sqsum (tail e)))))
+    (defn sp-loss (W x t) (sp-sqsum (sp-err (sp-matvec W x) t)))
+
+    ; --- SGD: one row's update given its scalar error e_j (squared loss, lr fixed-point ×1000) ---
+    ;   w_i <- w_i − lr · 2 · e_j · x_i           (each ·x_i and ·lr folds back /1000)
+    (defn sp-row-step (w x ej lr)
+        (if (eq (len w) 0) (empty)
+            (cons (sub (head w) (div (mul lr (div (mul (mul 2 ej) (head x)) 1000)) 1000))
+                  (sp-row-step (tail w) (tail x) ej lr))))
+    (defn sp-step-rows (W x e lr)
+        (if (eq (len W) 0) (empty)
+            (cons (sp-row-step (head W) x (head e) lr) (sp-step-rows (tail W) x (tail e) lr))))
+    (defn sp-step (W x t lr) (sp-step-rows W x (sp-err (sp-matvec W x) t) lr))
+
+    ; --- fold over the corpus (list of (x t)) for N epochs ---
+    (defn sp-x (s) (nth s 0))
+    (defn sp-t (s) (nth s 1))
+    (defn sp-epoch (W corpus lr)
+        (if (eq (len corpus) 0) W
+            (sp-epoch (sp-step W (sp-x (head corpus)) (sp-t (head corpus)) lr) (tail corpus) lr)))
+    (defn sp-train (W corpus lr epochs)
+        (if (eq epochs 0) W (sp-train (sp-epoch W corpus lr) corpus lr (sub epochs 1)))))
