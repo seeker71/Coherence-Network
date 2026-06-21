@@ -43,14 +43,15 @@ export function middleware(req: NextRequest) {
   // instead. Runs before any page code, so no error-boundary interference.
   const { pathname } = req.nextUrl;
 
-  // Host-based landing pages: hati.earth, sense.hati.earth, and suci.hati.earth resolve to
-  // this same web service; serve their download/landing pages by rewriting the
-  // root to /sense and /suci. (Assets — _next, api, files — are excluded by the
-  // matcher below, so they keep loading normally under the subdomain.)
+  // Host-based landing pages: sense.hati.earth and suci.hati.earth resolve to
+  // this same web service; serve their landing pages by rewriting the root to
+  // /sense and /suci. (Assets — _next, api, files — are excluded by the matcher
+  // below, so they keep loading normally under the subdomain.)
+  //
+  // hati.earth itself serves the normal Coherence homepage — its native-asset
+  // download table is no longer the root, it lives at /hati-os as its own
+  // download link, kept reachable without hijacking the home door.
   const host = (req.headers.get("host") || "").toLowerCase();
-  if ((host === "hati.earth" || host.startsWith("hati.")) && pathname === "/") {
-    return NextResponse.rewrite(new URL("/hati-os", req.url));
-  }
   if (host.startsWith("sense.") && !pathname.startsWith("/sense")) {
     return NextResponse.rewrite(new URL("/sense", req.url));
   }
