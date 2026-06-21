@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 306
+**Total files**: 307
 
 | File | Purpose |
 |---|---|
@@ -190,6 +190,7 @@
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_decode_audit.sh](metal_llama_block_decode_audit.sh) | metal_llama_block_decode_audit.sh — the KV-CACHED DECODE STEP running on Metal (M4 Max GPU witness): the |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
+| [metal_multi_layer_stack_audit.sh](metal_multi_layer_stack_audit.sh) | metal_multi_layer_stack_audit.sh — the MULTI-LAYER causal llama DECODE STACK running on Metal (M4 Max GPU |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
 | [minimal_kernel_census.sh](minimal_kernel_census.sh) | minimal_kernel_census.sh — count the Go kernel's registered natives by the four |
