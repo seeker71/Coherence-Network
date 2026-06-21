@@ -113,7 +113,13 @@
             (if (str_eq cls "alpha") (is-alpha-cp cp)
                 (if (str_eq cls "alnum") (is-ident-cont-cp cp)
                     (if (str_eq cls "ws") (is-ws-cp cp)
-                        false)))))
+                        ;; form.bml identifiers also admit - ? ! (nil?, cons-flip,
+                        ;; cell-undo) — additive superset; no other grammar uses it,
+                        ;; so every prior parse is byte-unchanged. Lives here (not an
+                        ;; override) so the flattener binds gm-run to it on fkwu too.
+                        (if (str_eq cls "bmlname")
+                            (or (is-ident-cont-cp cp) (or (eq cp 45) (or (eq cp 63) (eq cp 33))))
+                            false))))))
 
     ;; Whitespace-aware matching — the thesis's "whitespace-aware literals":
     ;; the dispatcher skips leading whitespace before every match, so grammars

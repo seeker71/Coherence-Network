@@ -103,6 +103,12 @@ EOF
         )
         if [[ "$is_windows" == "1" ]]; then
             clang_args+=(-lws2_32 -llegacy_stdio_definitions)
+            # Windows default thread stack is 1 MiB — too small for the universal
+            # walker's recursive descent on grammar-engine recipes (bmf-grammar,
+            # form.bml cursor). Reserve 64 MiB so the cursor lane crosses the
+            # fourth arm on Windows too, not only on Linux/macOS CI (8 MiB
+            # default). Reserve is address space, committed lazily — no runtime cost.
+            clang_args+=(-Xlinker /STACK:67108864)
         fi
         if [[ -s "$d/uni.c" ]] && clang "${clang_args[@]}" 2>"$d/clang.err"; then
             mv -f "$tmp" "$out"
