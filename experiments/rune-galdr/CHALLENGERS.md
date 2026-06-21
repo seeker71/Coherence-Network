@@ -156,3 +156,17 @@ our asm lane** (the "model architecture AND weights are recipe data" path).
 The order is now unambiguous and externally corroborated: **(1) AAM-softmax loss → (2) augmentation →
 (3) EER harness → (4) attentive pooling + per-utt CMVN**, then the TDNN + native lane. C2-full/C3 are
 the right model classes waiting on the right objective and data.
+
+## Walk: #1 shipped — AAM-Softmax head (four-way)
+
+The consensus #1 is no longer a recommendation — it's in the body. `form-stdlib/speaker-aam.fk`
+(`speaker-aam` band, **PASS-4WAY, verdict 63**) is the AAM-Softmax / ArcFace objective that replaces the
+MSE-to-speaker-codes regression which collapsed C3: L2-normalized cosine logits, an additive **angular
+margin** on the target class (`cos(θ+m) = cosθ·cosm − √(1−cos²θ)·sinm`), scaled, fed to `loss.fk`'s
+existing softmax cross-entropy (whose backward is `softmax − onehot` — so the trainer needs no new
+gradient node, only the chain through this cosine geometry). The band proves the geometry four-way:
+margin **reduces** the target cosine and **raises** the loss (the defining angular penalty), and
+margin-off is the plain-softmax identity. The objective is now the right one; the next rung is the AAM
+**trainer** (chain the margin gradient into W + embedding updates) on augmented data. Integrated into
+the body's floor/north-star: `docs/coherence-substrate/form-native-models.form` (FLOOR — SPEAKER
+IDENTITY + gap 9).
