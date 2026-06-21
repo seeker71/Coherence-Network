@@ -121,7 +121,10 @@ defn nl_to_form = pipeline_shape { encode: @encode(nl), pivot: @pivot(meaning), 
 # equality) wired onto the pivot; the model-council (nl-to-form-satsang.form)
 # proposing parses the circle agrees on; and the two OTHER stages going native —
 # STT end-to-end (Form whisper is four-way-proven but not yet real-.wav->transcript)
-# and Form-native TTS (unbuilt, the long pole) — to drop the last two oracles.
+# and TTS native. These are NOT a boundary: whisper-cli / say / sox / process-exec
+# are CURRENT third-party carriers, internalized when we CHOOSE — host-kernel.form
+# names using a host driver as carrier-not-debt (using the host carrier IS having
+# the resource). What remains is sequence, not permission.
 #
 # LINEAGE
 #   kin: universal-translator.form (pivot = Blueprint), encoder-decoder-as-recipe.form
