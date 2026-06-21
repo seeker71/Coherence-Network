@@ -33,14 +33,28 @@ cosine. No weights — the floor that pre-neural GMM/supervector systems stood o
 C1 separates clearly-different voices but **collapses on the hard same-gender pair** (margin 0.08).
 That collapse is precisely the value learning must add.
 
-## Challenger 2 — "Lin" (learned linear discriminant) — DESIGNED
+## Challenger 2 — "Lin" (learned linear discriminant) — BUILT & MEASURED (honest negative)
 
-C1's 40-d supervector → a trained linear projection `W` (40→32) that maximises between-speaker /
-within-speaker separation — the i-vector+LDA/PLDA backend that took classic systems to ~3–5% EER.
-Train by contrastive/triplet SGD (pull same-speaker supervectors together, push different apart)
-using `affine-train.fk` / `form-train-step.fk` / `autodiff-gradient.fk` (Form-native SGD, already
-four-way). Cheap to train, no audio model — just learns which supervector directions carry speaker
-identity. Expectation: cracks the hard pair that C1 collapses, well short of ECAPA.
+`speaker-lin.fk` (PASS-4WAY, verdict 1023): a diagonal LDA over C1's supervector. The training is
+Form — `sl-fisher` computes the per-dimension Fisher ratio (between-speaker / within-speaker
+variance) from a grouped corpus; `sl-fisher-clamped` tames an explosive near-zero-within dimension;
+`sl-center` signs the positive band features before scoring. Trained on 7 speakers × 3 windows.
+
+**Measured — it does NOT beat C1:**
+
+| pair | C1 | C2 (center + Fisher) |
+|---|---|---|
+| ubbe·brigitte | 0.512 | 0.875 |
+| ubbe·angelia | 0.619 | 0.998 |
+| brigitte·angelia (hard) | 0.768 | 0.885 |
+
+The honest finding: a *diagonal* reweighting of hand-crafted band energies can't separate voices
+whose identity isn't axis-aligned, and 7-speaker variance estimates are too noisy to trust — C2
+moved the cosines the wrong way. This is the real lesson of the race: the value ECAPA holds is not
+reweighting fixed features but **learned features + a full (rotating, nonlinear) embedder + data
+scale**. A *full* projection `W` (rotation, not just per-axis scale) trained by SGD over real data
+is the salvage path for a linear C2; the decisive jump is C3. Recipe + machinery are proven and
+reusable; the negative result is named, not hidden.
 
 ## Challenger 3 — "Net" (small neural embedder, the real ECAPA shape) — DESIGNED
 
