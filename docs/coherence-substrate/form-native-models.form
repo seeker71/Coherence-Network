@@ -39,10 +39,20 @@
 ;     "The sun rises in the"->" east", "Water is made of hydrogen and"->" oxygen"). The two real deltas the
 ;     toy block lacked are closed: GQA also runs bit-exact on the GPU (template_attention_gqa.ptx, 24/8/hd128
 ;     = 18432/18432). This CPU forward IS the oracle the GPU kernels mirror.
-;   REMAINING GAP: (4) port the full forward to the proven GPU kernels at real width (GQA in, rope_base
-;     param, weights resident on-device); (5) KV-cache + a real BPE tokenizer carrier (current is exact
-;     whole-token vocab match); (6) the on-device phone RUN of the block-graphs (matvec already proven on
-;     Adreno 740). Then: a real public model thinking on the phone, on the Form recipes alone.
+;   (4) DONE — THE REAL llama3.2:3b RUNS ON THE FORM-EMITTED GPU KERNELS at real width
+;     (cuda/form_cuda_ptx_llama_real.c): real GGUF weights streamed per-layer onto resident device
+;     buffers (12 GB f32 fits the RTX 4070 by L->L+1 reuse), the full 28-block forward on the form-ptx
+;     kernels (RMSNorm, matvec, RoPE base=500000 via template_rope_llama.ptx, GQA attn 24q/8kv hd128,
+;     SwiGLU, residual). PROOF: block-0 bit-exact 18432/18432, AND the full 28-block residual stream
+;     bit-exact 18432/18432 (uint32-identical at depth 28, NOT named-epsilon) -> predicts " Paris"
+;     (id 12366, logit 17.3856), matching the CPU oracle AND ollama. Driver-only (nvcuda.dll); no
+;     go/rust/clang/nvcc/nvrtc. The model thinks on the Form kernel's own emitted GPU code. (Block-internal
+;     ops all on GPU PTX; the final tied LM-head matvec is the same recipe matvec, currently on CPU off the
+;     bit-exact stream -> trivially GPU-able.)
+;   REMAINING GAP: (5) KV-cache + a real BPE tokenizer carrier (current is exact whole-token vocab match);
+;     (6) the on-device phone RUN of the block-graphs (matvec already proven on Adreno 740); (7) the host
+;     harness (file-read + cuLaunchKernel) is still bootstrap C -> form-pe-coff/host self-emit composts it.
+;     Then: a real public model thinking on the phone, on the Form recipes alone.
 ;
 ; ── FLOOR / NORTH STAR / GAPS — whisper-tiny in Form (updated 2026-06-19; extends the 2026-06-14 review below) ──
 ;   FLOOR (proven this arc — every piece bit-checked against the numpy/fp64 reference through the kernel):
