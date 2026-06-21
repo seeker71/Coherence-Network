@@ -216,6 +216,8 @@ oracle-distill-corpus fks 255
 metabolic-learning fks 4095
 diffusion-q-learning fks 255
 diffusion-q-cc fks 63
+diffusion-q-mesh fks 31
+preference-learning fks 31
 form-cli-loop fks 31
 form-cli-router fks 31
 form-cli-membrane fks 1023

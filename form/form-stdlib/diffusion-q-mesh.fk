@@ -1,0 +1,28 @@
+; diffusion-q-mesh.fk — the mesh: federated Q-critics consolidated by slice-merge (QAM's GAP-Q3).
+; Each cell trains its OWN critic and offers it as a slice (weight, delta) — the critic's value
+; coefficients as a task-vector. slice-merge (TIES sign-election + trust-weighted FedAvg) consolidates
+; them DETERMINISTICALLY: every cell reaches the SAME merged critic, which float-averaging cannot
+; promise. The merged critic holds value no single cell held; dql-improve then ascends the policy
+; against it. QAM inside mesh-active-inference: each cell's runtime error trains its short-term critic,
+; only settled critic slices are shared, the merge is the consolidated long-term value.
+;
+; Composes slice-merge.fk (sm-num/sm-den/sm-merge-coord) + diffusion-q-learning.fk (dql-q, dql-grad-a,
+; dql-improve). Proven by tests/diffusion-q-mesh-band.fk (four-way). Registered `fks` (float literals).
+
+(do
+    ; --- the merged critic's coefficient at action-coordinate j: num/den from the slices, the
+    ;     deferred division applied (float). den 0 ⇒ no cell holds this coordinate ⇒ 0. ---
+    (defn dqm-coef (slices j)
+        (if (eq (sm-den slices j) 0) 0.0
+            (div (mul (sm-num slices j) 1.0) (sm-den slices j))))
+
+    ; --- the consolidated critic edges over a 2-action space: one (0 j coef) value-gather edge
+    ;     per coordinate — the same shape dql-q reads. The mesh's long-term critic. ---
+    (defn dqm-critic2 (slices)
+        (list (list 0 0 (dqm-coef slices 0)) (list 0 1 (dqm-coef slices 1))))
+
+    ; --- the mesh step: improve a policy against the CONSOLIDATED critic (not any single cell's).
+    ;     The critic's action-gradient is the adjoint of the merged edges; dql-improve ascends it. ---
+    (defn dqm-improve (slices policy x focus)
+        (dql-improve policy x (dql-grad-a (dqm-critic2 slices) (list 1.0 0.0)) focus -1.0))
+    0)

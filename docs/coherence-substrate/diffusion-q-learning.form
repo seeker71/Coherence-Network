@@ -98,17 +98,24 @@
   # Registered `fkc` (pool-free), the literals collapse to one value and ordering
   # diverges — a REGISTRATION error, never a kernel bug. This cell's bands are `fks`.
 
-  # ── 6. The gaps (the next stones, named — not built ahead of need) ──
+  # ── 6. The stones, and what remains ─────────────────────────────────
+  (closed
+    (Q2-preference-row [RUNS: preference-learning.fk + band → 31] the q-tilt is a first-class preference
+             row (id "qam", transform "q-adjoint", beta = the λ aperture) in the DATA catalog beside
+             IPO/KTO; one combinator runs them; pl-qam-apply IS dql-improve (not a parallel path); the
+             auto-research value fitness selects it. Also opens GAP-P1 — preference-learning.fk now exists)
+    (Q3-mesh           [RUNS: diffusion-q-mesh.fk + band → 31] federated critics consolidated by slice-merge
+             (TIES sign-election + trust-weighted FedAvg, integer-exact): three cells hold partial critics,
+             the merge yields the full critic no single cell held, dql-improve ascends the policy against
+             the consolidated value. QAM inside mesh-active-inference))
   (gaps
-    (GAP-Q1  [INFER] form/form-stdlib/diffusion-q-learning.fk carries the seam recipes (dql-q, dql-grad-a,
-             dql-improve, dql-actor, dql-td-target, dql-backstep). The next stone is mtb-settle-style
-             ITERATION: a critic trained by repeated gl-bellman backups to a fixed point, the policy
-             improved to convergence, the whole loop one band)
-    (GAP-Q2  [INFER] the q-tilt as a first-class preference-learning row (reference:"critic", transform:
-             "q-adjoint"), so auto-research can evolve it alongside the DPO/KTO family it extends)
-    (GAP-Q3  [INFER] the mesh: federated critics over slice-merge, each cell's runtime error feeding its
-             short-term plasticity, only settled long-term value shared — QAM inside mesh-active-inference))
-  # (the offline→online champion-challenger loop landed — see §1b, diffusion-q-cc.fk + band → 31)
+    (GAP-Q1  [INFER] the next stone is mtb-settle-style ITERATION: a critic trained by repeated gl-bellman
+             backups to a fixed point, the policy improved to convergence, the whole loop one band)
+    (GAP-Q4  [INFER] the full auto-research GENOME coordinate: autoresearch-runtime evolving (pool, core,
+             pref-loss) end-to-end with the qam row as a mutable gene — the seam is named (pl-fitness), the
+             loop-level integration in autoresearch-runtime.form is the remaining stone))
+  # (the offline→online champion-challenger loop landed value-native — §1b, diffusion-q-cc.fk + band → 63;
+  #  Q2 the preference row and Q3 the mesh landed too — see §6 closed.)
 
   (invariant
     (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
