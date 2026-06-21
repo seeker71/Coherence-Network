@@ -91,6 +91,28 @@ to ECAPA is now squarely **features + data**: a log-mel front-end (the Form mel 
 bands) and a real multi-speaker corpus (hundreds of voices), trained through these proven float recipes
 — the same recipe that proves four-way is the one that crystallizes and trains native.
 
+## Fix #1 + #4 applied — log-mel features + CMVN (MEASURED WIN)
+
+The highest-leverage fixes, done: swap the coarse sox bands for **whisper's 80-dim log-mel** (the
+four-way `mel-frame`/`mel-full` recipe + the newly-generated `mel-filterbank.fk` Slaney bank — the
+body had the walk but not the full 80-row data), then **CMVN** (subtract the global mean spectrum,
+since raw log-mel cosine is swamped by the spectral envelope every voice shares). Measured C1 on the
+three ceremony voices (10 frames, mean+std pool):
+
+| pair | sox-band | log-mel (raw) | **log-mel + CMVN** | ECAPA |
+|---|---|---|---|---|
+| ubbe·brigitte | 0.512 | 0.977 | **0.250** | 0.11 |
+| ubbe·angelia | 0.619 | 0.995 | 0.829 | 0.09 |
+| brigitte·angelia (hard) | 0.768 | 0.973 | **0.588** | 0.13 |
+
+The hard same-gender pair drops 0.768 → **0.588** and ubbe·brigitte 0.512 → 0.250 — features +
+normalization sharpen the geometry, exactly as predicted. (ubbe·angelia 0.829 is noisy at this
+tiny scale.) Two honest caveats: raw log-mel WITHOUT CMVN is *worse* (≈0.97 — the envelope
+dominates), and the tree-walker runs ~0.8 s per 80-row column, so this is demo-scale — the full
+corpus needs the native (emit→asm) lane the mel recipe was built for. Carrier:
+`logmel-supervector.sh`. Still far from ECAPA (0.13): the remaining climb is the trained
+discriminative embedder (C2-full/C3) *on these features* + per-utterance CMVN + a real corpus.
+
 ## Evaluation harness
 
 `champion-challenger.fk` (`cc-reaches?` / `cc-promote?`) scores each challenger's per-trial

@@ -1,0 +1,20 @@
+; preludes: form-stdlib/mel-filterbank.fk
+;
+; mel-filterbank-band — the 80-row Slaney mel filterbank is well-formed, three/four-way.
+;
+; Verdict 63 when every claim lands:
+;   1   the full bank is present        (80 rows)
+;   2   row0 bin/weight supports match   (len ks == len ws)
+;   4   row0's first bin is 1            (DC bin 0 carries no slaney weight)
+;   8   last row's supports match too    (row 79)
+;   16  a mid row has support            (row 40 ks length > 0)
+;   32  total non-zero weights = 391     (sum of bins across all rows)
+(do
+    (defn mb-total (rows) (if (eq (len rows) 0) 0 (add (len (mb-ks (head rows))) (mb-total (tail rows)))))
+    (let c0 (if (eq (mb-count) 80) 1 0))
+    (let c1 (if (eq (len (mb-ks (mb-row 0))) (len (mb-ws (mb-row 0)))) 2 0))
+    (let c2 (if (eq (head (mb-ks (mb-row 0))) 1) 4 0))
+    (let c3 (if (eq (len (mb-ks (mb-row 79))) (len (mb-ws (mb-row 79)))) 8 0))
+    (let c4 (if (gt (len (mb-ks (mb-row 40))) 0) 16 0))
+    (let c5 (if (eq (mb-total (melbank)) 391) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
