@@ -11,6 +11,21 @@
           {
             "type": "command",
             "command": "COORD_AGENT=claude bash $CLAUDE_PROJECT_DIR/scripts/agent-coord.sh join \"$CLAUDE_PROJECT_DIR\""
+          },
+          {
+            "type": "command",
+            "command": "echo '⟐ FORM-FIRST REASONING (the sovereignty gate). On every query, ask the Form body before the rented mind. Structural questions — what is X, the shape of X, the NodeID of X, equivalence, annotate — go to the substrate FIRST: the local lattice via  python3 scripts/coh_substrate.py form  (run  ingest --all  once to populate a fresh clone), or the public read door at  https://api.coherencycoin.com/api/substrate . A grounded hit carries a NodeID — relay it attributed and STOP; answered from the sovereign body, no frontier compute. A miss is the YES to escalate to remote reasoning. Always name which path you took; never dress a remote guess as a substrate hit. Teaching: docs/coherence-substrate/form-first-reasoning.form'"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '⟐ Form-first: query the substrate before spending remote reasoning — relay a grounded hit attributed to its NodeID, escalate to remote only on a miss.'"
           }
         ]
       }
