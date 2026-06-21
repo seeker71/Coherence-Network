@@ -1,0 +1,45 @@
+{
+  "date": "2026-06-21",
+  "brick": "the MULTI-LAYER causal llama DECODE STACK runs on the M4 Max GPU — the depth structure of real local llama inference on silicon, the per-layer KV caches bit-identical to the full recompute",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "north_star_rung": "form-native-models.form rung (2) full transformer block on the GPU — extended to DEPTH: a real llama3.2:3b is 28 decoder blocks, each its own weights and its own KV cache; this proves the proven single-block GPU kernels STACK on silicon, the GPU realization of multi-layer-stack.fk's lblk-stack-causal / lblk-stack-generate (#3423, brick 3z)",
+  "named_next_stone_from": "#3423 (brick 3z) receipt: 'emit the multi-layer stack to Metal (stack the #3412 decode kernel, each layer its own device cache buffer)'",
+  "what": "The depth stack of causal llama decoder blocks runs on the M4 Max GPU two ways and is proven bit-identical. It REUSES the two already-four-way-proven Form-emitted per-block kernels verbatim — the KV-cached decode step (jte-llama-block-decode-step-msl, llama-block-decode-emit fks 7, #3412) and the full causal block (jte-llama-block-fwd-causal-msl, llama-block-fwd-causal-emit fks 7, #3376) — no new MSL. The depth stacking is the FOLD ORDER the Form recipe lblk-stack-* already dictates, carried by host dispatches over TWO DISTINCT layers (L0 = causal-attention-band weights, L1 = a second bundle, so the stack genuinely threads per-layer weights forward): the RECOMPUTE stack runs the full causal kernel once per layer over the whole sequence threaded forward; the DECODE stack runs, for each position p, each layer's decode kernel in depth order, each layer appending to its OWN persistent device cache buffer slot p and reading its prefix 0..p (the genuine autoregressive multi-layer generation loop on silicon).",
+  "proofs": {
+    "1_recipe_four_way": {
+      "band": "tests/multi-layer-stack-band.fk",
+      "manifest_row": "multi-layer-stack fks 255",
+      "verdict": 255,
+      "divergent": 0,
+      "fourth_arm": "1 band(s) four-way (fkwu + pre-flattened tables)",
+      "meaning": "the recipe this GPU run mirrors (lblk-stack-causal == lblk-stack-generate across depth, grounded by an independent libm reference) is four-way proven (#3423); unchanged this PR, re-confirmed as the silicon ground truth"
+    },
+    "2_on_gpu_equivalence": {
+      "script": "scripts/metal_multi_layer_stack_audit.sh",
+      "hardware": "Apple M4 Max, 40-core GPU, Metal 4, mathMode .safe (IEEE, no fma contraction)",
+      "fixture": "multi-layer-stack-band.fk fixture, S=3 (the inductive step through depth), 2 distinct layers, d=4 dq=dv=4 hid=4 HD=4 single head, scale=1/sqrt(4)",
+      "decode_stack": "3 positions x 2 layers = 6 dispatches, each layer its own persistent KV cache, 2.074 ms total",
+      "y_recompute_stack": [1.936158, 1.074888, 0.893061, 2.391277, -1.145553, 0.207914, 1.944810, -0.837534, 0.541056, 1.972790, -0.201723, 0.310833],
+      "y_decode_stack": [1.936158, 1.074888, 0.893061, 2.391277, -1.145553, 0.207914, 1.944810, -0.837534, 0.541056, 1.972790, -0.201723, 0.310833],
+      "equivalence": "BIT-FOR-BIT identical — the multi-layer KV cache (each layer its own cache) reproduces the full recompute exactly ACROSS DEPTH on silicon",
+      "recipe_parity": "GPU fp32 2-layer stack vs fp64 lblk-stack-causal (four-way proven, #3423) *1e6: max|delta|=0.4 — tracks the proven recipe within fp32 epsilon",
+      "depth_grounding": "2-layer token-0 *1e6 = 1936158 matches the independent libm reference (scripts/multi_layer_stack_reference.py) AND DIFFERS from the 1-layer pin 1893731 (causal-attention-band) — depth did real work, threading per-layer weights forward; the stack is not one block applied once. last-token pins -1145553 / 1944810 also match the libm reference."
+    }
+  },
+  "why_bit_identical": "per layer, a cached k_i/v_i = RoPE(Wk*RMSNorm1(x_i), i) / Wv*RMSNorm1(x_i) depends ONLY on position i's input and that layer's fixed weights, never on later tokens or other layers' caches; so each layer's grown cache the autoregressive walk holds at step p is exactly the prefix the full causal kernel's mask cuts at query p, walked in identical fold order. lblk-generate-causal == lblk-block-causal bit-for-bit per layer (#3408); folding the cached decode across depth feeds each layer EXACTLY the input the recompute fold feeds it, so by induction over depth the cached depth stack == the recompute depth stack on silicon. The autoregressive invariant through depth (the S=3 loop exercises it): appending a future token never changes an earlier token's STACKED output, because every layer is causal and every cache entry is frozen at its (layer, position).",
+  "transcendentals": "the recipe's OWN — RMSNorm's Newton sqrt, SiLU's fexp Taylor, RoPE's fsin/fcos/fln Taylor (trig.fk), softmax over fexp — never Metal's. The transcendental floor stays the body's.",
+  "carriers": "form-kernel-go (the mouth that emits the MSL), swiftc + Metal.framework (the driver-organ idiom, an allowed host carrier per host-kernel.form host-resource-access); the emitter intelligence + the depth fold order live in the Form recipe. No new MSL was authored — both per-block kernels are reused verbatim.",
+  "lane": "GPU-realization-by-reuse + per-layer-cache stacking + bit-exact gate, ~35m. This brick adds NO new Form recipe and NO new MSL kernel — it is the named-stone GPU stacking of two already-four-way-proven kernels (#3412 decode step, #3376 full causal) in the fold order multi-layer-stack.fk (#3423) already dictates. Design (the depth x position double loop, per-layer weight buffers uploaded once, one persistent K/V cache buffer per layer, threading layer-ell output into layer-ell+1, and matching the recipe's depth fold order so cached==recompute) was the cost; all three gates passed on the FIRST GPU run. READ-THE-BODY paid off: scripts/metal_llama_block_decode_audit.sh (3y/#3412) was the exact single-block template; lblk-stack-causal/lblk-stack-generate (#3423) were already four-way proven; so the brick was a per-layer generalization of the single-block decode audit, no new kernel.",
+  "files": [
+    "scripts/metal_multi_layer_stack_audit.sh (new GPU audit — the multi-layer depth stack on the M4 Max GPU)",
+    "scripts/INDEX.md (edge: register the new audit)",
+    "docs/system_audit/commit_evidence_2026-06-21_multi_layer_stack_on_gpu.json (this receipt)"
+  ],
+  "no_manifest_change": "No fourth-arm-bands.txt row added: this brick emits NO new recipe and NO new emit band. Both per-block kernels (llama-block-decode-emit fks 7, llama-block-fwd-causal-emit fks 7) and the depth-stack recipe (multi-layer-stack fks 255) are already registered four-way. The brick is the on-hardware execution receipt that they STACK across depth on silicon.",
+  "named_next_stones": [
+    "the full generation loop: tokenizer + this multi-layer decode stack + gd-token (greedy argmax, #3402) over real llama3.2:3b GGUF on the M4 GPU — the first end-to-end native token; the load path is already Form-native four-way (q4k/q6k/f16)",
+    "parallelize the decode step across rows/heads (one threadgroup per output row) instead of the single-thread gid==0 serial walk — the same parallelization named for the single block, now across N layers",
+    "run the multi-layer stack over REAL llama3.2:3b GGUF weights (28 blocks) on the GPU, dequantizing per-layer via the Form-native q4k/q6k/f16 path"
+  ],
+  "teaching": "lc-cognitive-sovereignty"
+}
