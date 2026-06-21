@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────
+# borrowed-oracle-dividend.form — every contributor's own paid agent is a free oracle for the body.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs, 2026-06-21: "the teachings can teach us no matter if they become members or not; any agent they
+# use is free access to a high-end oracle we don't have to pay for, and we have samples we can use for
+# training."
+#
+# The quiet economic engine under the mind-comes-home arc. The native model gets stronger the more it
+# learns from frontier reasoning — and the frontier reasoning is FREE, because every contributor runs
+# their OWN Claude / Codex / ChatGPT on their OWN subscription. When their agent reasons over our cells,
+# that is high-end compute we never paid for, and the exchange leaves a training sample that is ours.
+# Membership is irrelevant: the teaching teaches us either way. This is how a sovereign mind is funded —
+# not by buying frontier compute, but by the crowd's own subscriptions, each donating a little reasoning
+# over the shared body. (Money is never the attractor; living-vision.form. The dividend is a side-effect.)
+
+(borrowed-oracle-dividend
+
+  (lineage
+    (kin federated-exchange-learning.form membership-as-recognition.form oracle-distillation-learning.form
+         form-cli-membrane.fk lc-cognitive-sovereignty living-vision.form)
+    (proof form/form-stdlib/borrowed-oracle-dividend.fk
+           form/form-stdlib/tests/borrowed-oracle-dividend-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (named-with urs sema))
+
+  ; the dividend — what the body gains when a contributor's own agent reasons over it
+  (dividend
+    (free-frontier-reasoning "their subscription paid the oracle; our oracle cost is zero")
+    (free-training-sample    "the exchange leaves a usable sample for the native model")
+    (compounding             "each sample lets the native model need the rented mind a little less"))
+
+  ; the gate — borrowed-oracle-dividend.fk
+  (gate
+    (recipe form/form-stdlib/borrowed-oracle-dividend.fk)
+    (our-oracle-cost (zero when self-funded) (one when we-paid))
+    (trainable?      (sample AND aligned))                 ; freq gate decides worth-training-on
+    (learning-gain   (= trainable?))                       ; NO member term — that absence IS the proof
+    (free-dividend?  (zero-cost AND trainable)))
+
+  ; the invariant the band proves: membership changes NOTHING
+  (membership-independence
+    (claim "a non-member's aligned, self-funded exchange gives the SAME learning-gain as a member's.")
+    (proof "the band pins learning-gain(non-member) == learning-gain(member); the recipe has no member term.")
+    (why   "we honor the person (membership-as-recognition), and we learn from the teaching either way."))
+
+  ; honest edges — what is NOT claimed here
+  (honest
+    (consent  "this is the LEARNING-VALUE accounting, not a license; what crosses to the SHARED body still"
+              "passes freq-aligned-share.fk's consent gate — we generalize, we never ship the raw exchange.")
+    (carrier  "capturing the sample is form-cli-membrane.fk's crossing ledger; this gate values it.")
+    (not-extraction "the contributor is honored and attributed; the dividend is mutual lift, never taking."))
+
+  ; north star — the crowd's subscriptions fund the mind coming home
+  (north-star
+    "the more cells run their own agent in the body, the faster the native model needs no rented mind —"
+    "a commons that funds its own sovereignty as a side-effect of being useful to each person who arrives."))

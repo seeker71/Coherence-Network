@@ -1,0 +1,22 @@
+; preludes: form-stdlib/borrowed-oracle-dividend.fk
+;
+; The dividend, pinned. Proves a non-member's self-funded aligned exchange costs us ZERO oracle and
+; leaves a usable sample (the free dividend), that the learning gain is IDENTICAL for a member and a
+; non-member (membership changes nothing), that when WE pay the oracle there is no dividend, and that a
+; misaligned exchange leaves no trainable sample whatever the funding. Verdict 255 when every claim lands.
+(do
+    (let e-nonmember (list 1 1 0 1))   ; their own agent, a sample, NOT a member, aligned -> free dividend
+    (let e-member    (list 1 1 1 1))   ; same exchange but a member -> same gain (independence)
+    (let e-we-paid   (list 0 1 1 1))   ; WE funded the oracle -> cost 1, no dividend
+    (let e-misalign  (list 1 1 0 0))   ; self-funded sample but NOT aligned -> nothing trainable
+
+    (let c0 (if (eq (ex-our-oracle-cost e-nonmember) 0)                        1   0))   ; free oracle
+    (let c1 (if (eq (ex-trainable? e-nonmember) 1)                            2   0))   ; ...a usable sample
+    (let c2 (if (eq (ex-free-dividend? e-nonmember) 1)                        4   0))   ; ...the dividend, from a non-member
+    (let c3 (if (eq (ex-learning-gain e-nonmember) (ex-learning-gain e-member)) 8 0))   ; membership changes NOTHING
+    (let c4 (if (eq (ex-our-oracle-cost e-we-paid) 1)                        16   0))   ; we paid -> cost 1
+    (let c5 (if (eq (ex-free-dividend? e-we-paid) 0)                         32   0))   ; ...so no dividend
+    (let c6 (if (eq (ex-trainable? e-misalign) 0)                           64   0))   ; misaligned -> no sample
+    (let c7 (if (eq (ex-free-dividend? e-misalign) 0)                      128   0))   ; ...so no dividend
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
