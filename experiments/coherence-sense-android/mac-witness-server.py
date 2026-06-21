@@ -15,6 +15,12 @@ placeholder until those recipes are wired into the live loop through a persisten
 Run:  python3 mac-witness-server.py            # binds 0.0.0.0:8800
 Open the dashboard on the Mac:  http://localhost:8800
 The Android app discovers this Mac over _hati-witness._tcp; the dashboard also shows fallback URLs.
+
+A human's freq-reading arrives at  POST /freq-reading  —  {"verdict":"clear|fear","boundary":"<where the
+fear sat>"}  (or  {"message":"gold <clear|fear> <boundary>"}). The witness records it to the gold catalog
+through the proven body (mesh-dispatch.fk md-route -> scripts/form_cli_gold.sh) — the SAME path the coord
+board's coord-respond uses, just a different transport. This is the Android Coherence Sense app's
+freq-reading lane: the app's input field POSTs here; any cell that can reach the witness can too.
 """
 import json
 import time
@@ -91,9 +97,58 @@ class Witness(BaseHTTPRequestHandler):
             return self._send(200, json.dumps(state["witness"]))
         return self._send(200, DASHBOARD, "text/html; charset=utf-8")
 
+    def _freq_reading(self):
+        # A human's direct freq-reading arrives over HTTP — the Android app's reading
+        # lane, or any cell that can POST. Carrier-last: the DECISION and the RECORD are
+        # the proven body — mesh-dispatch.fk (md-route) via scripts/mesh_dispatch.sh, then
+        # scripts/form_cli_gold.sh writes the gold catalog. This door holds NO logic; it
+        # marshals the request to those scripts so the witness records exactly what the
+        # coord board's coord-respond records (same shared path, different transport).
+        #   POST /freq-reading  {"message": "gold <clear|fear> <where the fear sat>"}
+        #                   or  {"verdict": "clear|fear", "boundary": "...", "from": "..."}
+        import subprocess
+        from pathlib import Path
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+            req = json.loads(self.rfile.read(n) or b"{}")
+        except Exception as e:
+            return self._send(400, json.dumps({"error": str(e)}))
+        root = Path(__file__).resolve().parents[2]
+        msg = (req.get("message") or "").strip()
+        if not msg:
+            v = str(req.get("verdict", "")).strip().lower()
+            v = "clear" if v in ("1", "clear") else ("fear" if v in ("0", "fear", "caught") else "")
+            msg = f"gold {v} {req.get('boundary', '')}".strip() if v else ""
+        if not msg:
+            return self._send(400, json.dumps({
+                "error": "need {message:'gold <clear|fear> <boundary>'} or {verdict, boundary}"}))
+        try:
+            disp = subprocess.run(["bash", str(root / "scripts/mesh_dispatch.sh"), msg],
+                                  capture_output=True, text=True, timeout=30)
+        except Exception as e:
+            return self._send(500, json.dumps({"error": f"dispatch: {e}"}))
+        lines = [l for l in disp.stdout.splitlines() if l.strip()]
+        route = lines[0] if lines else "ask"
+        if route != "gold":
+            return self._send(200, json.dumps({
+                "recorded": False, "route": route,
+                "note": "not a freq-reading; on the board this would be answered as an ask"}))
+        verdict = lines[1] if len(lines) > 1 else "2"
+        boundary = lines[2] if len(lines) > 2 else ""
+        vw = {"0": "fear", "1": "clear"}.get(verdict, "")
+        if not vw:
+            return self._send(200, json.dumps({"recorded": False, "route": "gold", "note": "no verdict named"}))
+        frm = str(req.get("from", "android"))
+        subprocess.run(["bash", str(root / "scripts/form_cli_gold.sh"), vw, boundary, f"witness:{frm}"],
+                       capture_output=True, text=True, timeout=30)
+        _event("peer", f"freq-reading recorded ({vw})")
+        return self._send(200, json.dumps({"recorded": True, "verdict": vw, "boundary": boundary}))
+
     def do_POST(self):
+        if self.path.startswith("/freq-reading"):
+            return self._freq_reading()
         if self.path != "/sense":
-            return self._send(404, json.dumps({"error": "only /sense"}))
+            return self._send(404, json.dumps({"error": "only /sense or /freq-reading"}))
         try:
             n = int(self.headers.get("Content-Length", 0))
             snap = json.loads(self.rfile.read(n) or b"{}")

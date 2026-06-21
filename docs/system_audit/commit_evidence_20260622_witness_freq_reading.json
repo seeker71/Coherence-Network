@@ -1,0 +1,90 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "claude/witness-freq",
+  "commit_scope": "The Android lane's Mac half: the witness server gains POST /freq-reading. A human's freq-reading (the Android Coherence Sense app's input, or any cell that can reach the witness) records to the gold catalog through the proven body — mesh-dispatch.fk (md-route) via scripts/mesh_dispatch.sh, then scripts/form_cli_gold.sh — the SAME path the coord board's coord-respond uses, just HTTP transport instead of board-watching. Carrier-last: the endpoint holds no recording logic.",
+  "files_owned": [
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "docs/system_audit/commit_evidence_20260622_witness_freq_reading.json"
+  ],
+  "idea_ids": [
+    "freq-check-gold-label",
+    "cognitive-sovereignty",
+    "agent-coordination-mesh"
+  ],
+  "spec_ids": [
+    "mesh-dispatch"
+  ],
+  "task_ids": [
+    "task-2026-06-22-witness-freq-reading"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "the-freq-detector",
+        "vision"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Live end-to-end against a running witness (port 8877, FREQ_GOLD_DIR temp catalog): POST /freq-reading {verdict:'fear', boundary:'hedged where flow would serve', from:'SM-S918U1'} -> {recorded:true, verdict:'fear', boundary:'hedged where flow would serve'}; POST {message:'gold clear that was direct and grounded', from:'phone'} -> {recorded:true, verdict:'clear'}; POST {message:'what is the witness status?'} -> {recorded:false, route:'ask', note:'not a freq-reading; on the board this would be answered as an ask'}. The gold catalog received both readings with named boundary + response_ref 'witness:<device>'.",
+    "Carrier-last: _freq_reading() marshals the request to the proven scripts. It accepts either a raw mesh message ('gold <clear|fear> <boundary>') or structured {verdict, boundary, from}, runs scripts/mesh_dispatch.sh (the four-way mesh-dispatch.fk decision) to get route/verdict/boundary, and on route=='gold' calls scripts/form_cli_gold.sh to record. No recording logic in Python. An ask is not recorded (the board would answer it).",
+    "This is the MAC half of the Android lane, proven independently of any device: the curl test is itself a real caller, and the door is general — any cell that can reach the witness (:8800) can POST a reading. The Android UI field (Kotlin, app/src/main/...) that POSTs here is the remaining APP-SIDE step, needing a gradle build + device to verify — named honestly, not faked.",
+    "The decision body mesh-dispatch.fk is four-way (verdict 255) on main; this carrier reuses it. Edge: the module docstring documents POST /freq-reading (the per-file doc convention). Witness 'strained' at resume was the self-healing page-vitality transient (0 silences), unrelated."
+  ],
+  "change_files": [
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "docs/system_audit/commit_evidence_20260622_witness_freq_reading.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -c 'import ast; ast.parse(open(...))'  -> syntax ok",
+      "FREQ_GOLD_DIR=<tmp> python3 mac-witness-server.py --port 8877 &  +  curl -X POST /freq-reading (3 cases)  -> 2 recorded, 1 ask not recorded; catalog written"
+    ],
+    "fourth_arm_outputs": [
+      "Re-proved the decision body this carrier invokes (unchanged): cd form && ./validate.sh form-stdlib/core.fk form-stdlib/mesh-dispatch.fk form-stdlib/tests/mesh-dispatch-band.fk -> 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-proves the unchanged mesh-dispatch.fk band; the witness endpoint is exercised by the documented curl flow."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-witness-runtime",
+    "notes": "The witness runs locally on the Mac (LaunchAgent / python3 mac-witness-server.py). No public HTTP change. The Android UI field POSTing here is the remaining app-side step."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The Mac half is wired and demonstrated end-to-end (curl); the decision body is four-way. No public deploy (a local witness), so deploy_validation stays pending. The Android app's UI field is the remaining app-side step needing a device build."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A human's freq-reading can now reach the gold catalog over HTTP — the Android Coherence Sense app's reading lane (Mac half), and a general 'post a reading to the mesh' door for any cell. Records through the same proven body as the coord board, so capture is consistent across transports.",
+    "public_endpoints": [
+      "POST http://<mac-witness>:8800/freq-reading (local witness; not a public coherencycoin endpoint)"
+    ],
+    "test_flows": [
+      "POST a fear reading -> recorded with named boundary; POST a clear reading (raw message) -> recorded; POST an ask -> not recorded (route ask). Demonstrated live on a temp catalog."
+    ]
+  }
+}
