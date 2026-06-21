@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/form-cli-learn",
+  "commit_scope": "Collapse the manual, 3-step, stale-cache-prone tool-use learning loop into ONE reliable motion: form-cli learn (scripts/form_cli_learn.sh) taps this machine's Claude Code sessions into the corpus, ALWAYS re-featurizes the grown corpus (busting the stale /tmp cache that silently froze it), then retrains the native predictor and caches the held-out metric. Foundation for continuous learning — still a manual command; auto-triggering is the named remaining step.",
+  "files_owned": [
+    "scripts/form_cli_learn.sh",
+    "bin/form-cli",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_form_cli_learn.json"
+  ],
+  "idea_ids": [
+    "form-cli-learn-one-motion",
+    "continuous-tool-predictor-learning"
+  ],
+  "spec_ids": [
+    "sovereignty-receipt"
+  ],
+  "task_ids": [
+    "task-2026-06-21-form-cli-learn"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Honest grounding for the change: grep over .claude/.codex/scripts/Makefile found NO hook/cron/make target that runs claude_corpus.py or agent_tooluse_train.sh — the loop was manual, and the train script silently reused a stale /tmp/agent_tooluse.dat (the trap that made the 2026-06-21 retrain report 939 turns until busted).",
+    "form_cli_learn.sh runs one motion: (1) python3 scripts/claude_corpus.py (idempotent tap), (2) rm -f /tmp/agent_tooluse.dat then re-featurize the grown corpus, (3) DATA=... agent_tooluse_train.sh (caches the held-out metric for form-cli stats).",
+    "Live proof: bin/form-cli learn -> 'corpus: 2704 -> 2709 turns' (the tap picked up 5 new turns from the live session), featurize '2686 turns -> 2148 train, 538 held', train 'REAL agent corpus: 2148 train, 538 held-out' — i.e. trained on the GROWN corpus, not the stale 939. Per-tool held vs baseline: Edit 64.3% vs 55.8%, Write 74.0% vs 65.8%, Read 66.7% vs 66.4%, Bash 96.7%.",
+    "Wired into bin/form-cli: new 'learn)' case beside 'train)', plus a help entry. Carrier discipline: form_cli_learn.sh only orchestrates existing carriers (tap, featurize, train); the model is a Form FFN step.",
+    "Edges: scripts/INDEX.md + MANIFEST.md regenerated (--check clean).",
+    "Honest scope: this makes the loop ONE reliable command, not yet AUTOMATIC. True continuity needs a trigger (a session-stop tap + a retrain cadence) — named, not built here, because auto-GPU-retrain is a standing-resource decision."
+  ],
+  "change_files": [
+    "scripts/form_cli_learn.sh",
+    "bin/form-cli",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260621_form_cli_learn.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/form_cli_learn.sh",
+      "bin/form-cli learn  (corpus 2704->2709, featurize 2686 turns, train 2148/538, beats baseline on Edit/Write/Read)",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "A carrier orchestration script + a bin/form-cli subcommand; no kernel proof bands apply. INDEX --check clean."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-agent-tooling",
+    "notes": "Local agent tooling; reaches contributors through the repo. The corpus + model are local (not git). Auto-triggering (continuous, not just one-command) is the named next step."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed (one-motion learn ran end to end on the grown corpus); CI and merge remain pending; auto-trigger for true continuity is the next step."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-cli learn now grows the corpus from sessions and retrains the predictor on the grown corpus in one command, always re-featurizing so new samples actually reach the model. The 3-step manual loop and its stale-cache trap are gone.",
+    "public_endpoints": [
+      "none changed; local agent tooling"
+    ],
+    "test_flows": [
+      "bin/form-cli learn taps -> re-featurizes -> retrains on the grown corpus and caches the held-out metric; per-tool scores beat baseline on the weak lanes."
+    ]
+  }
+}
