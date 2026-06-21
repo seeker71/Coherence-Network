@@ -1,0 +1,75 @@
+; nl-translate-band.fk — Form-native NL -> NL translation through the language-
+; neutral pivot. The north-star rung: real translation (parse meaning, re-render
+; in another tongue), NOT a phrase lookup. English and Indonesian share ONE pivot
+; — the universal recipe node — so cross-tongue equality falls out of content-
+; addressing (cjk-channel: one cell, many tongues). Adding a tongue is adding a
+; (grammar, lexicon-direction, decoder); the pivot and the engine never change.
+;
+; Pipeline, both directions, all four-way (Go / Rust / TS / fkwu):
+;   surface --g-parse(tongue grammar)--> raw node --normalize(lexicon)--> PIVOT
+;   PIVOT --decode(target tongue)--> target surface
+; The lexicon canonicalizes content words to a neutral concept (here the English
+; lemma; a neutral concept-id is the later refinement). The pivot holds the
+; concept, so "the source is native" and "sumber adalah asli" intern to the SAME
+; node. Bitmask witness; all five → 31.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk
+
+(do
+    (defn s (x) (intern_trivial_string x))
+    (defn kidv (n i) (node_value (nth (node_children n) i)))
+    (defn sp (a b) (str_concat a (str_concat " " b)))
+
+    ;; --- the two tongue grammars (same engine, different rows of data) ---
+    ;; English property: "the SUBJ is ADJ"
+    (let nl-en (grammar "s" (list
+        (rule3 "s" (p-cap "v" (p-ref "prop")) (t-splice "v"))
+        (rule3 "prop"
+            (list "seq" (p-lit "the") (p-cap "s" (p-run "alpha")) (p-lit "is") (p-cap "a" (p-run "alpha")))
+            (t-emit "property" (list (t-splice "s") (t-splice "a")))))))
+    ;; Indonesian property: "SUBJ adalah ADJ" (no article)
+    (let nl-id (grammar "s" (list
+        (rule3 "s" (p-cap "v" (p-ref "prop")) (t-splice "v"))
+        (rule3 "prop"
+            (list "seq" (p-cap "s" (p-run "alpha")) (p-lit "adalah") (p-cap "a" (p-run "alpha")))
+            (t-emit "property" (list (t-splice "s") (t-splice "a")))))))
+
+    ;; --- the lexicon: content words <-> neutral concept (English lemma here) ---
+    ;; content-addressed: both tongues' words map onto ONE concept token.
+    (defn en->c (w) w)   ;; English surface IS the canonical concept
+    (defn c->en (w) w)
+    (defn id->c (w)
+        (if (str_eq w "sumber") "source"
+        (if (str_eq w "asli")   "native"
+        (if (str_eq w "inti")   "kernel" w))))
+    (defn c->id (w)
+        (if (str_eq w "source") "sumber"
+        (if (str_eq w "native") "asli"
+        (if (str_eq w "kernel") "inti" w))))
+
+    ;; --- normalize raw parse -> PIVOT (subject + adjective through the lexicon) ---
+    (defn norm-en (n) (intern_node (bp "property") (list (s (en->c (kidv n 0))) (s (en->c (kidv n 1))))))
+    (defn norm-id (n) (intern_node (bp "property") (list (s (id->c (kidv n 0))) (s (id->c (kidv n 1))))))
+    ;; --- decode PIVOT -> a tongue's surface ---
+    (defn dec-en (p) (sp "the" (sp (c->en (kidv p 0)) (sp "is" (c->en (kidv p 1))))))
+    (defn dec-id (p) (sp (c->id (kidv p 0)) (sp "adalah" (c->id (kidv p 1)))))
+    ;; --- the translators: encode one tongue -> pivot -> decode the other ---
+    (defn tr-en-id (x) (dec-id (norm-en (g-parse nl-en x))))
+    (defn tr-id-en (x) (dec-en (norm-id (g-parse nl-id x))))
+
+    (defn chk (got exp bit) (if (node_eq got exp) bit 0))
+    (defn total (xs) (if (nil? xs) 0 (add (head xs) (total (tail xs)))))
+
+    ;; one witness — all five → 31
+    (total (list
+        ;; 1. cross-tongue PIVOT equality: en and id surfaces intern to ONE node
+        (chk (norm-en (g-parse nl-en "the source is native"))
+             (norm-id (g-parse nl-id "sumber adalah asli")) 1)
+        ;; 2. translate en -> id
+        (if (str_eq (tr-en-id "the source is native") "sumber adalah asli") 2 0)
+        ;; 3. translate id -> en
+        (if (str_eq (tr-id-en "sumber adalah asli") "the source is native") 4 0)
+        ;; 4. a second content pair (not hard-coded): kernel <-> inti
+        (if (str_eq (tr-en-id "the kernel is native") "inti adalah asli") 8 0)
+        ;; 5. full round-trip through the pivot, both directions, stays stable
+        (if (str_eq (tr-en-id (tr-id-en "inti adalah asli")) "inti adalah asli") 16 0))))
