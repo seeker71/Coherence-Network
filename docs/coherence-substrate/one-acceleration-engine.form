@@ -82,7 +82,11 @@
 ;       encoding has one true answer). form-lower-sim.fk (fsim) lifts it: a 32-register arm64 FP
 ;       machine in Form EXECUTES a lowered sequence and validates allocation by execution-
 ;       equivalence with the source, keeping byte-identity only per-instruction. form-lower-sim
-;       → 15 FOUR-WAY. The FP register stack now lands on semantic parity, no clang allocation rented.
+;       → 15 FOUR-WAY. LANDED 2026-06-21: lo-ftree (form-lower.fk) — the abstract float lowering with the
+;       two non-ARG subtree register stack (caller-saved d16+), correctness by fsim execution, byte-
+;       consistent with lo-fnode on the single-arg overlap. form-lower-fp-stack → 31 FOUR-WAY — the first
+;       op-coverage growth on the no-clang float lane past single-arg, no clang allocation rented. REMAINING
+;       for M0: unify lo-fnode onto lo-ftree (one lowering), then wire the self-JIT heat-flip through bytes.
 ;   M1  Host hot-paths dispatch to the in-process fkwu self-JIT instead of emitGoExpr→
 ;       go-build / the Rust cdylib emitter. TestFkwuOffloadBridge is the proven seed; the
 ;       open work is a Go/Rust kernel INTEGRATION task (fast in-process invocation), not

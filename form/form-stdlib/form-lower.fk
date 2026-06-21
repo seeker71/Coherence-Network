@@ -270,6 +270,59 @@
     (defn lo-fcompile (prog root) (lo-app (lo-fnode prog root 1) (fa-ret)))
     (defn lo-fcompile-fn (prog root) (lo-app (fa-fmov 1 0) (lo-fcompile prog root)))
 
+    ; ── the FP register stack — float lowering as ABSTRACT instrs, validated by fsim semantic parity ──
+    ; lo-ftree mirrors lo-fnode's ARG-folding AND adds the TWO non-ARG subtree case (the frontier
+    ; lo-fnode left as (list)): bank the left result to a caller-saved FP temp d<16+depth>, lower the
+    ; right one depth deeper (registers strictly above the parent's save — nesting never clobbers), then
+    ; the op against the bank. Order is preserved (left = Rn, right = d0), so FSUB/FDIV stay correct. The
+    ; allocation is checked by EXECUTION (form-lower-sim.fk's fsim), never by clang byte-match; each instr
+    ; still encodes byte-for-byte through fa-fencode. d16..d31 = 16 levels of caller-saved FP temps.
+    ; An abstract instr is (op rd rn rm): op 0 = fmov(rd<-rn); 3/4/5/8 = f{add,sub,mul,div} rd = rn OP rm.
+    (defn lo-fi (op rd rn rm) (cons (list op rd rn rm) (list)))
+    (defn fa-fencode (ins)
+        (if (eq (nth ins 0) 0) (fa-fmov (nth ins 1) (nth ins 2))
+        (if (eq (nth ins 0) 3) (fa-fadd (nth ins 1) (nth ins 2) (nth ins 3))
+        (if (eq (nth ins 0) 4) (fa-fsub (nth ins 1) (nth ins 2) (nth ins 3))
+        (if (eq (nth ins 0) 5) (fa-fmul (nth ins 1) (nth ins 2) (nth ins 3))
+        (if (eq (nth ins 0) 8) (fa-fdiv (nth ins 1) (nth ins 2) (nth ins 3))
+            (list)))))))
+    (defn lo-fencode-prog (instrs)
+        (if (eq (len instrs) 0) (list)
+            (lo-app (fa-fencode (head instrs)) (lo-fencode-prog (tail instrs)))))
+    (defn lo-ft2 (prog i argr depth op)
+        (lo-app (lo-app (lo-app
+            (lo-ftree prog (lo-c1 prog i) argr depth)
+            (lo-fi 0 (add 16 depth) 0 0))
+            (lo-ftree prog (lo-c2 prog i) argr (add depth 1)))
+            (lo-fi op 0 (add 16 depth) 0)))
+    (defn lo-ftadd (prog i argr depth)
+        (if (if (lo-arg? prog (lo-c1 prog i)) (lo-arg? prog (lo-c2 prog i)) 0) (lo-fi 3 0 argr argr)
+        (if (lo-arg? prog (lo-c2 prog i)) (lo-app (lo-ftree prog (lo-c1 prog i) argr depth) (lo-fi 3 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i)) (lo-app (lo-ftree prog (lo-c2 prog i) argr depth) (lo-fi 3 0 0 argr))
+            (lo-ft2 prog i argr depth 3)))))
+    (defn lo-ftmul (prog i argr depth)
+        (if (if (lo-arg? prog (lo-c1 prog i)) (lo-arg? prog (lo-c2 prog i)) 0) (lo-fi 5 0 argr argr)
+        (if (lo-arg? prog (lo-c2 prog i)) (lo-app (lo-ftree prog (lo-c1 prog i) argr depth) (lo-fi 5 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i)) (lo-app (lo-ftree prog (lo-c2 prog i) argr depth) (lo-fi 5 0 0 argr))
+            (lo-ft2 prog i argr depth 5)))))
+    (defn lo-ftsub (prog i argr depth)
+        (if (lo-arg? prog (lo-c2 prog i)) (lo-app (lo-ftree prog (lo-c1 prog i) argr depth) (lo-fi 4 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i)) (lo-app (lo-ftree prog (lo-c2 prog i) argr depth) (lo-fi 4 0 argr 0))
+            (lo-ft2 prog i argr depth 4))))
+    (defn lo-ftdiv (prog i argr depth)
+        (if (lo-arg? prog (lo-c2 prog i)) (lo-app (lo-ftree prog (lo-c1 prog i) argr depth) (lo-fi 8 0 0 argr))
+        (if (lo-arg? prog (lo-c1 prog i)) (lo-app (lo-ftree prog (lo-c2 prog i) argr depth) (lo-fi 8 0 argr 0))
+            (lo-ft2 prog i argr depth 8))))
+    (defn lo-ftree (prog i argr depth)
+        (if (lo-arg? prog i) (lo-fi 0 0 argr 0)
+        (if (eq (lo-tag prog i) 3) (lo-ftadd prog i argr depth)
+        (if (eq (lo-tag prog i) 4) (lo-ftsub prog i argr depth)
+        (if (eq (lo-tag prog i) 5) (lo-ftmul prog i argr depth)
+        (if (eq (lo-tag prog i) 8) (lo-ftdiv prog i argr depth)
+            (list)))))))
+    ; the abstract program for a one-float-arg function: bank d0->d1, then the body's abstract instrs.
+    (defn lo-fcompile-abstract (prog root) (cons (list 0 1 0 0) (lo-ftree prog root 1 0)))
+
     ; ── the SOURCE MAP: one owning node per instruction ──────────────────
     ; lo-map mirrors lo-node's emission order exactly, emitting the source-node
     ; index that owns each instruction — so a native binary gets a full
