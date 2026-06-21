@@ -242,6 +242,8 @@ llm-feature-channel-floor fks 131071
 android-mesh-learning fks 131071
 witness-state-receipt fks 67108863
 gpu-mesh-sense fks 511
+gpu-mesh-grow fks 255
+organ-reading fks 255
 model-executor-proof-ledger fks 4095
 model-vitality fks 4095
 field-model-form-runtime fks 63

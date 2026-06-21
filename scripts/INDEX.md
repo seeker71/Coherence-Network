@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 316
+**Total files**: 317
 
 | File | Purpose |
 |---|---|
@@ -159,6 +159,7 @@
 | [gpu_mesh_sense_emit.sh](gpu_mesh_sense_emit.sh) | gpu_mesh_sense_emit.sh — the GPU sensing organ reports live into the mesh. |
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [grounded_cost_endpoint_probe.py](grounded_cost_endpoint_probe.py) | Focused end-to-end probe for /api/utils/grounded_cost. |
+| [grow_nl_lexicon.sh](grow_nl_lexicon.sh) | grow_nl_lexicon.sh — grow the translation pivot's neutral-symbol lexicon from the |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
 | [hati_os_kernel_audit.sh](hati_os_kernel_audit.sh) | hati_os_kernel_audit.sh — M1 carrier for docs/coherence-substrate/hati-os.form: |
 | [hati_os_physical_lanes_probe.sh](hati_os_physical_lanes_probe.sh) | Emit, compile, and run local Hati-OS native binaries against real host lanes. |
