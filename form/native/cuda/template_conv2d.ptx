@@ -1,0 +1,152 @@
+//
+// form-ptx conv2d f32: 2D convolution matching cv2d-conv exactly. One thread per output element
+// (oc, oy, ox). Triple right-fold: ky from kh-1 down, kx from kw-1 down (cv2d-window-dot / cv-window-dot),
+// ic from IC-1 down (tb-dot), nested accumulators (td per pixel, wd per kernel-row, acc total), + bias.
+// Zero-padding: an out-of-bounds patch pixel is a zero vector -> its tb-dot is 0 -> wd += 0 (skip, bit-id).
+//   out[oy][ox][oc] = bias[oc] + SUM_ky( SUM_kx( tb-dot(W[oc][ky][kx], in[iy][ix]) ) )
+//   iy = oy*stride + ky - pad ; ix = ox*stride + kx - pad
+// layout: in[(y*Wd+x)*IC+ic], W[((oc*kh+ky)*kw+kx)*IC+ic], out[(oy*outW+ox)*OC+oc].
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_conv2d_f32(
+    .param .u64 p_w,
+    .param .u64 p_b,
+    .param .u64 p_in,
+    .param .u64 p_out,
+    .param .u32 p_ic,
+    .param .u32 p_h,
+    .param .u32 p_wd,
+    .param .u32 p_oc,
+    .param .u32 p_kh,
+    .param .u32 p_kw,
+    .param .u32 p_pad,
+    .param .u32 p_stride
+)
+{
+    .reg .pred  %p<4>;
+    .reg .f32   %f<8>;
+    .reg .b32   %r<40>;
+    .reg .b64   %rd<14>;
+
+    ld.param.u64    %rd1, [p_w];
+    ld.param.u64    %rd2, [p_b];
+    ld.param.u64    %rd3, [p_in];
+    ld.param.u64    %rd4, [p_out];
+    ld.param.u32    %r1, [p_ic];
+    ld.param.u32    %r2, [p_h];
+    ld.param.u32    %r3, [p_wd];
+    ld.param.u32    %r4, [p_oc];
+    ld.param.u32    %r5, [p_kh];
+    ld.param.u32    %r6, [p_kw];
+    ld.param.u32    %r7, [p_pad];
+    ld.param.u32    %r8, [p_stride];
+
+    // outW = (Wd + 2*pad - kw)/stride + 1 ; outH = (H + 2*pad - kh)/stride + 1
+    shl.b32         %r9, %r7, 1;             // 2*pad
+    add.s32         %r10, %r3, %r9;
+    sub.s32         %r10, %r10, %r6;
+    div.u32         %r10, %r10, %r8;
+    add.s32         %r10, %r10, 1;           // outW
+    add.s32         %r11, %r2, %r9;
+    sub.s32         %r11, %r11, %r5;
+    div.u32         %r11, %r11, %r8;
+    add.s32         %r11, %r11, 1;           // outH
+
+    mov.u32         %r12, %ctaid.x;
+    mov.u32         %r13, %ntid.x;
+    mov.u32         %r14, %tid.x;
+    mad.lo.s32      %r15, %r12, %r13, %r14;  // tid
+    mul.lo.s32      %r16, %r11, %r10;        // outH*outW
+    mul.lo.s32      %r17, %r4, %r16;         // total = OC*outH*outW
+    setp.ge.u32     %p1, %r15, %r17;
+    @%p1 bra        DONE;
+    div.u32         %r18, %r15, %r16;        // oc = tid/(outH*outW)
+    rem.u32         %r19, %r15, %r16;        // rem
+    div.u32         %r20, %r19, %r10;        // oy = rem/outW
+    rem.u32         %r21, %r19, %r10;        // ox = rem%outW
+
+    // W base for oc = oc*kh*kw*IC
+    mul.lo.s32      %r22, %r5, %r6;          // kh*kw
+    mul.lo.s32      %r22, %r22, %r1;         // kh*kw*IC
+    mul.lo.s32      %r23, %r18, %r22;        // wbase_oc
+    mul.lo.s32      %r24, %r20, %r8;         // oy*stride
+    mul.lo.s32      %r25, %r21, %r8;         // ox*stride
+
+    mov.f32         %f1, 0f00000000;         // acc
+    mov.u32         %r26, %r5;               // ky = kh
+KYLOOP:
+    setp.eq.u32     %p1, %r26, 0;
+    @%p1 bra        ENDKY;
+    sub.u32         %r26, %r26, 1;           // ky--
+    // iy = oy*stride + ky - pad
+    add.s32         %r27, %r24, %r26;
+    sub.s32         %r27, %r27, %r7;         // iy (may be negative)
+    mov.f32         %f2, 0f00000000;         // wd
+    mov.u32         %r28, %r6;               // kx = kw
+KXLOOP:
+    setp.eq.u32     %p1, %r28, 0;
+    @%p1 bra        ENDKX;
+    sub.u32         %r28, %r28, 1;           // kx--
+    add.s32         %r29, %r25, %r28;
+    sub.s32         %r29, %r29, %r7;         // ix
+    mov.f32         %f3, 0f00000000;         // td
+    // bounds: 0<=iy<H && 0<=ix<Wd  (signed compares)
+    setp.lt.s32     %p2, %r27, 0;
+    setp.ge.s32     %p3, %r27, %r2;
+    or.pred         %p2, %p2, %p3;
+    setp.lt.s32     %p3, %r29, 0;
+    or.pred         %p2, %p2, %p3;
+    setp.ge.s32     %p3, %r29, %r3;
+    or.pred         %p2, %p2, %p3;
+    @%p2 bra        ENDIC;                   // out of bounds -> td stays 0
+    // W ptr base for (oc,ky,kx) = wbase_oc + ((ky*kw)+kx)*IC
+    mul.lo.s32      %r30, %r26, %r6;
+    add.s32         %r30, %r30, %r28;
+    mul.lo.s32      %r30, %r30, %r1;
+    add.s32         %r30, %r30, %r23;        // W elem base
+    // in ptr base for (iy,ix) = (iy*Wd+ix)*IC
+    mul.lo.s32      %r31, %r27, %r3;
+    add.s32         %r31, %r31, %r29;
+    mul.lo.s32      %r31, %r31, %r1;         // in elem base
+    mov.u32         %r32, %r1;               // ic = IC
+ICLOOP:
+    setp.eq.u32     %p1, %r32, 0;
+    @%p1 bra        ENDIC;
+    sub.u32         %r32, %r32, 1;           // ic--
+    add.s32         %r33, %r30, %r32;
+    mul.wide.u32    %rd5, %r33, 4;
+    add.s64         %rd6, %rd1, %rd5;
+    ld.global.f32   %f4, [%rd6];             // W
+    add.s32         %r34, %r31, %r32;
+    mul.wide.u32    %rd7, %r34, 4;
+    add.s64         %rd8, %rd3, %rd7;
+    ld.global.f32   %f5, [%rd8];             // in
+    mul.f32         %f6, %f4, %f5;
+    add.f32         %f3, %f6, %f3;           // td = W*in + td
+    bra             ICLOOP;
+ENDIC:
+    add.f32         %f2, %f3, %f2;           // wd = td + wd
+    bra             KXLOOP;
+ENDKX:
+    add.f32         %f1, %f2, %f1;           // acc = wd + acc
+    bra             KYLOOP;
+ENDKY:
+    // out = acc + bias[oc]
+    mul.wide.u32    %rd9, %r18, 4;
+    add.s64         %rd10, %rd2, %rd9;
+    ld.global.f32   %f7, [%rd10];            // bias[oc]
+    add.f32         %f1, %f1, %f7;
+    // out idx = (oy*outW+ox)*OC + oc
+    mul.lo.s32      %r35, %r20, %r10;
+    add.s32         %r35, %r35, %r21;
+    mul.lo.s32      %r35, %r35, %r4;
+    add.s32         %r35, %r35, %r18;
+    mul.wide.u32    %rd11, %r35, 4;
+    add.s64         %rd12, %rd4, %rd11;
+    st.global.f32   [%rd12], %f1;
+DONE:
+    ret;
+}

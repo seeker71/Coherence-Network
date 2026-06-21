@@ -1,0 +1,121 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32 (the gelu Taylor fexp reduce and
+// term recurrence and the tanh ratio all divide); this pins it. Needs SPIR-V >= 1.3
+// (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1, advertised on Adreno/Mali).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native FFN forward compute shader (Android/Vulkan lane, prototyped on RTX).
+// y = W2 . gelu(W1.x + b1) + b2, ONE workgroup, one token. Mirrors form_ffn_fwd_f32.ptx op-for-op:
+//   PHASE 1: thread k = tid strides over hidden units by ntid (= local_size_x):
+//       acc = 0; for (j = indim; j-- > 0;) acc = W1[k*indim+j]*x[j] + acc   (serial RIGHT-fold)
+//       hk = acc + b1[k];  a[k] = gelu(hk)
+//   barrier()   (== PTX bar.sync 0)
+//   PHASE 2: thread i = tid strides over outputs by ntid:
+//       acc = 0; for (k = hid; k-- > 0;) acc = W2[i*hid+k]*a[k] + acc        (serial RIGHT-fold)
+//       y[i] = acc + b2[i]
+// gelu is the recipe's tanh-gelu: z = 0.7978845608028654*(x + 0.044715*(x*(x*x))); the PTX folds
+// v = 2*z directly into the fexp arg, then 14-term Taylor fexp (halving-reduce + square-back), then
+// tanh = (e-1)/(e+1); gelu = (0.5*x)*(1+tanh). a[] is a global scratch buffer (any hidden dim).
+// Every float op is `precise` -> SPIR-V NoContraction so the driver cannot fuse mul+add into FMA
+// and cannot reassociate -> bit-exact to the CPU oracle and the PTX/MSL lanes.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer W1 { float w1[]; };  // hid*indim
+layout(std430, binding = 1) readonly  buffer B1 { float b1[]; };  // hid
+layout(std430, binding = 2) readonly  buffer W2 { float w2[]; };  // outd*hid
+layout(std430, binding = 3) readonly  buffer B2 { float b2[]; };  // outd
+layout(std430, binding = 4) readonly  buffer X  { float xin[]; }; // indim
+layout(std430, binding = 5) writeonly buffer Y  { float y[]; };   // outd
+layout(std430, binding = 6)           buffer A  { float a[]; };   // hid (scratch)
+
+layout(push_constant) uniform Push { uint indim; uint hid; uint outd; } pc;
+
+void main() {
+    uint tid  = gl_LocalInvocationID.x;
+    uint ntid = gl_WorkGroupSize.x;   // 256, matches PTX %ntid.x for a single block
+
+    // PTX constants by exact bit pattern (gelu body, identical to gelu.comp).
+    precise float C_044715  = uintBitsToFloat(0x3D372713u); // 0.044715
+    precise float C_SQRT2PI = uintBitsToFloat(0x3F4C422Au); // 0.7978845608028654
+    precise float C_TWO     = uintBitsToFloat(0x40000000u); // 2.0
+    precise float C_HALF    = uintBitsToFloat(0x3F000000u); // 0.5
+    precise float C_ONE     = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float C_14      = uintBitsToFloat(0x41600000u); // 14.0
+
+    // ---- PHASE 1: a[k] = gelu(W1[k].x + b1[k]) ----
+    for (uint k = tid; k < pc.hid; k += ntid) {
+        uint kbase = k * pc.indim;
+        precise float acc = 0.0;
+        // serial RIGHT-fold dot: j = indim; while (j!=0){ j--; acc = w1*x + acc }
+        uint j = pc.indim;
+        while (j != 0u) {
+            j = j - 1u;
+            precise float p = w1[kbase + j] * xin[j];
+            acc = p + acc;
+        }
+        precise float hk = acc + b1[k];
+
+        // ---- inline gelu(hk) ----
+        // z = 0.7978845608028654 * (hk + 0.044715 * (hk*(hk*hk)))
+        precise float f21 = hk * hk;
+        precise float f22 = hk * f21;
+        precise float f23 = C_044715 * f22;
+        precise float f24 = hk + f23;
+        precise float f25 = C_SQRT2PI * f24;
+        // v = 2*z  (PTX folds the 2.0 here, then reduces on this value)
+        precise float v = C_TWO * f25;
+
+        // fexp(v): kk=0; while (|v|>0.5) { v=v/2; kk++ }
+        uint kk = 0u;
+        while (abs(v) > C_HALF) {
+            v = v / C_TWO;
+            kk = kk + 1u;
+        }
+        // fexp_small: nf=1; term=1; accE=1; while (nf<=14) { t=v/nf; term=term*t; accE=accE+term; nf+=1 }
+        precise float nf   = C_ONE;
+        precise float term = C_ONE;
+        precise float accE = C_ONE;
+        while (nf <= C_14) {
+            precise float t = v / nf;
+            term = term * t;
+            accE = accE + term;
+            nf = nf + C_ONE;
+        }
+        // square back: while (kk>0) { accE=accE*accE; kk-- }
+        while (kk > 0u) {
+            accE = accE * accE;
+            kk = kk - 1u;
+        }
+        // tanh = (e-1)/(e+1);  gelu = (0.5*hk)*(1+tanh)
+        precise float e_m1 = accE - C_ONE;
+        precise float e_p1 = accE + C_ONE;
+        precise float tanh_ = e_m1 / e_p1;
+        precise float half_x = C_HALF * hk;
+        precise float one_p_tanh = C_ONE + tanh_;
+        precise float gk = half_x * one_p_tanh;
+
+        a[k] = gk;
+    }
+
+    barrier();   // == bar.sync 0
+
+    // ---- PHASE 2: y[i] = W2[i].a + b2[i] ----
+    for (uint i = tid; i < pc.outd; i += ntid) {
+        uint ibase = i * pc.hid;
+        precise float acc = 0.0;
+        // serial RIGHT-fold dot: k = hid; while (k!=0){ k--; acc = w2*a + acc }
+        uint k = pc.hid;
+        while (k != 0u) {
+            k = k - 1u;
+            precise float p = w2[ibase + k] * a[k];
+            acc = p + acc;
+        }
+        precise float yi = acc + b2[i];
+        y[i] = yi;
+    }
+}
