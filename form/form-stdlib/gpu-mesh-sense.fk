@@ -81,4 +81,12 @@
         (str_concat (wmg-sense-name (wmls-from-gpu-receipt r deadline tick))
             (str_concat " "
                 (str_concat (wmg-sense-kind (wmls-from-gpu-receipt r deadline tick))
-                    (str_concat " " (wmg-sense-verdict (wmls-from-gpu-receipt r deadline tick))))))))
+                    (str_concat " " (wmg-sense-verdict (wmls-from-gpu-receipt r deadline tick)))))))
+
+    ; the loop closes: a GPU receipt, ingested, becomes a sense the world-model GROWS from — the
+    ; SAME wmg-ingest the learner uses for every other organ (active-sample, capability, model-eval).
+    ; A cell that reads the world-model now learns from the silicon's bit-exact proof, not stdout.
+    ; A bit-exact or verified-not-bit-exact reading is trusted and digests into the model; a timeout
+    ; (deadline < tick) stays "nothing" and the model holds — silence never grows the world.
+    (defn gpu-grow (state r deadline tick)
+        (wmg-ingest state (wmls-from-gpu-receipt r deadline tick))))

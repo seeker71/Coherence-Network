@@ -1,0 +1,46 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk
+;
+; gpu-mesh-grow-band — the loop closes: a cell LEARNS from the GPU organ. This session's GPU
+; bit-exact proofs, ingested as wmg-sense rows, GROW a world-model state — exactly the wmg-ingest
+; path the learner uses for every other organ (active-sample, capability, model-eval). The model
+; trusts the verified readings and holds on silence. "all sensing organs report into the mesh SO
+; WE LEARN FROM EACH OTHER" — proven for the GPU organ at the ingest+trust floor.
+;
+; Digest/embody (a trusted sense crystallizing into named model parts) is INHERITED, not re-proven
+; here: a GPU sense IS an ordinary wmg-sense, and world-model-live-sense-band already proves
+; wmg-senses digest, embody, and grow into the world (verdict 524287). This band proves the
+; GPU-specific half — a GPU bit-exact verdict becomes a trusted sense the world-model grows from.
+;
+; Verdict 255 when every claim lands:
+;   1    ingesting a bit-exact GPU proof moves the growth state to "ingested"
+;   2    growth records WHAT the silicon proved — reason "observed"
+;   4    two GPU readings (Metal/Apple + Vulkan/Adreno) both ingest — the state holds 2 senses
+;   8    both verified bit-exact readings are TRUSTED senses the model can grow from
+;   16   a verified-not-bit-exact reading (short parity) is STILL trusted — a real negative the model learns
+;   32   a timeout (deadline < tick) is "nothing" — NOT trusted; silence stays silence
+;   64   proof THEN verified-negative: the model keeps BOTH — 2 trusted senses
+;   128  proof THEN silence: the model keeps the proof, silence adds nothing — 1 trusted sense
+(do
+    (let model (wmm-identity "gpu-mesh:self" 10 12 10 5 (list (ov-reading 1 1 5) (ov-reading 1 1 6))))
+
+    ; this session's real GPU organ readings, as receipts
+    (let metal-conv2d  (gpu-receipt "metal"  "Apple M4 Max"    "conv2d" 75 75 0))
+    (let adreno-matvec (gpu-receipt "vulkan" "Adreno (TM) 740" "matvec" 1280 1280 0))
+    (let short-matvec  (gpu-receipt "vulkan" "RTX 4070"        "matvec" 11 13 0))   ; verified-not-bit-exact
+
+    (let s0 (wmg-empty "gpu-mesh" model))
+    (let s1 (gpu-grow s0 metal-conv2d 10 5))            ; ingest a bit-exact proof
+    (let s2 (gpu-grow s1 adreno-matvec 10 5))           ; ingest a second (cross-vendor)
+    (let s-proof-neg (gpu-grow s1 short-matvec 10 5))   ; proof then a verified negative
+    (let s-proof-silent (gpu-grow s1 metal-conv2d 3 5)) ; proof then a timeout (deadline 3 < tick 5)
+
+    (let c0 (if (str_eq (wmg-state-status s1) "ingested") 1 0))
+    (let c1 (if (str_eq (wmg-state-reason s1) "observed") 2 0))
+    (let c2 (if (eq (len (wmg-state-senses s2)) 2) 4 0))
+    (let c3 (if (eq (len (wmg-trusted-senses (wmg-state-senses s2))) 2) 8 0))
+    (let c4 (if (eq (len (wmg-trusted-senses (list (wmls-from-gpu-receipt short-matvec 10 5)))) 1) 16 0))
+    (let c5 (if (eq (len (wmg-trusted-senses (list (wmls-from-gpu-receipt metal-conv2d 3 5)))) 0) 32 0))
+    (let c6 (if (eq (len (wmg-trusted-senses (wmg-state-senses s-proof-neg))) 2) 64 0))
+    (let c7 (if (eq (len (wmg-trusted-senses (wmg-state-senses s-proof-silent))) 1) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
