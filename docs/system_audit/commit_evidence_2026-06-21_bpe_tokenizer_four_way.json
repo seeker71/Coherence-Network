@@ -1,0 +1,32 @@
+{
+  "date": "2026-06-21",
+  "brick": "bpe-tokenizer (BPE merge core) crosses three-way -> four-way",
+  "author": "Sema (Opus 4.8) — sema-native-ml-walk autonomous run",
+  "claim": "The byte-pair-encoding merge core (bpe-encode) — the TOKENIZER, the one named-missing piece of the autoregressive generation loop — is lifted from three-way (Go/Rust/TS) to the four-kernel floor (+ fkwu). The recipe is UNCHANGED; the band is strengthened from a single real-anchor claim to five strange-minimal BPE laws, and the band is registered in form/fourth-arm-bands.txt.",
+  "north_star": "A model whose weights AND tokenizer are recipe data, running on a Form-native kernel. The decode math is four-way and on the M4 GPU (multi-layer stack #3423/#3424, KV-cached decode #3412, greedy argmax #3402); the tokenizer turns text into the token ids that loop consumes. Lifting bpe-encode to four-way puts the text->ids front-end on the same proven floor as the decode loop, one stone toward the first end-to-end native token.",
+  "recipe": "form/form-stdlib/bpe-tokenizer.fk (unchanged) — bpe-rank / bpe-merged / bpe-min-rank / bpe-merge-at / bpe-encode. Pure list/int recursion; merge table is DATA (rows: left-id right-id merged-id rank). Finds the minimum-rank adjacent pair, merges its first occurrence, repeats to fixpoint — converges to GPT-2's merge-all-occurrences encoding.",
+  "band": "form/form-stdlib/tests/bpe-tokenizer-band.fk — verdict 31 (5 claims):",
+  "claims": {
+    "bit_1_real_anchor": "byte-mapped ' tokenizer' against the actual openai/whisper-tiny tokenizer (50258 vocab, 50000 merges) -> token ids [14862, 6545], bit-for-bit the reference tokenizer.",
+    "bit_2_base_case": "a single symbol [42] is its own encoding (len<2, no adjacent pair).",
+    "bit_4_no_merge": "[5 6 7] with no matching table row passes through unchanged — the engine never invents a merge.",
+    "bit_8_lowest_rank_first": "with (10,11)@rank5 and (11,12)@rank2 both mergeable, rank2 merges FIRST -> [10,21], NOT rank5-first -> [20,12]. Order matters: the determinism law that keeps two correct kernels tokenizing identical text to identical ids.",
+    "bit_16_full_collapse": "(1,2)@0 then (4,3)@1 iterate to a SINGLE token [5] — fixpoint, not one pass."
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tests/bpe-tokenizer-band.fk",
+    "result": "core.fk+bpe-tokenizer.fk+bpe-tokenizer-band.fk -> 31",
+    "fourth_arm": "1 band(s) four-way (fkwu + pre-flattened tables)",
+    "divergence": "1 ok, 0 divergent — kernels agree on every sample",
+    "manifest_row": "bpe-tokenizer fks 31 added to form/fourth-arm-bands.txt"
+  },
+  "fourth_arm_subset": "Pure list/int recursion (eq/and/lt/cons/head/tail/nth/len), no host I/O, no floats (so no scientific-notation literal risk), small tables — well within fkwu's covered subset; far below the table-capacity wall that segfaults the assembled-block bands.",
+  "lane": "Cheapest-brick lane (matches 3i/3j/3k/3n): recipe + reference-pinned band already existed three-way; the work was strengthening the characterization (5 strange-minimal BPE laws) + one manifest row + confirming fkwu carries the op families. Design was the cost; the four-way proof was seconds.",
+  "read_the_body": "Found bpe-tokenizer.fk already existed (the whisper BPE merge core proven against the REAL tokenizer) but was NOT registered for the fourth arm — a real three-way gap, not a re-impl. Same pattern as the llama numerics / RoPE / KV-cache before they were lifted.",
+  "named_next_stones": [
+    "wire the full generation loop: bpe-encode (prompt -> ids) + multi-layer decode stack (#3423/#3424) + greedy argmax (#3402) -> the first end-to-end native token over real llama3.2:3b GGUF.",
+    "the byte->symbol mapping + GPT-2 regex pre-tokenization (word splitting) as Form recipes (currently carrier DATA) — the rest of the tokenizer front-end.",
+    "llama's tokenizer is SentencePiece-BPE (score-ranked, not merge-rank) — confirm bpe-encode's rank model covers it or lift the score-ranked variant."
+  ],
+  "witness_note": "Witness read overall:'strained', silences:0 at run start. The persistently-dark 'endpoint_ideas' organ was probed directly this run: GET https://api.coherencycoin.com/api/ideas returns 200 with real idea data — so the witness's endpoint_ideas darkness is its OWN probe path, NOT a real ideas outage. No deploy taken (pure Form band, host-independent; deploy is outside the autonomous guardrails)."
+}
