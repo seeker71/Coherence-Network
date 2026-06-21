@@ -130,10 +130,31 @@
   (invariant
     (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
                   promise is re-earned on our kernel by the two-layer adjoint claim)
-    (one-engine   no second native path — the recipe that proves four-way is the recipe that crystallises
-                  to native asm; the critic and the policy are both the one gl/mtb gather over edge data)
+    (one-engine   no second native path — the recipe that proves four-way IS the recipe that would
+                  crystallise to native asm (one engine, never a hand-written fast-path beside it); the
+                  critic and the policy are both the one gl/mtb gather over edge data)
     (scale-honest the band is strange-minimal (2 actions, one-hot context); real width + the iterated loop
                   are [INFER] stones, taken when an ask needs them, never built ahead of need)))
+
+  # ── 7. The native-execution floor (honest: sovereign in logic, walked in execution) ──
+  # An audit (2026-06-20) of "is all of this on the 4th kernel native — no Go/Rust/Python/clang/toolchain?":
+  # SOVEREIGN already — the LOGIC and the PROOF. Every recipe here is pure Form; no Go/Rust/Python/TS
+  #   carries the body. The bands cross FOUR-WAY: Go = Rust = TS = fkwu, byte-identical. fkwu IS the 4th kernel.
+  # NOT YET — no-clang NATIVE EXECUTION. The bands are EXECUTED by the fkwu WALKER (a tree-walker over the
+  #   flattened node-table), and the fkwu binary is emitted-C compiled by CLANG. So "runs on fkwu" today =
+  #   interpreted by a clang-built C program, NOT machine code from the body's own compiler.
+  # THE LANE IS REAL. The no-clang Form→asm lane (jit-lower → form-lower → form-asm → form-macho →
+  #   recipe-dylib → codesign → dylib_call) compiles Form to native arm64 BYTES with zero clang — proven
+  #   four-way, and it runs whole Unix tools native (echo/head/rot13/tr/wc/syscall; form-asm fks 31). The
+  #   arm64 FLOAT encoders exist (fa-fadd/fa-fmul).
+  # THE FRONTIER. That lane targets a FLAT byte/int/syscall value model. These recipes live on the walker's
+  #   TAGGED-VALUE model: cons-cell LISTS of BOXED fp64 floats, traversed by nth/head/tail (tags 18-23), with
+  #   float ops. Lowering THAT runtime onto Form→asm — the cons/float value model, end-to-end — is the
+  #   standing "op coverage is what grows" frontier (JIT_GAP_LEDGER #11 is float; list-traversal is beyond).
+  #   It is deep kernel work, named here as the next ground — never faked with a hand-written asm fast-path
+  #   (forbidden: native is what a proven recipe BECOMES, not a parallel hand-lowering).
+  # GAP-Q7 [INFER]: lower the gl/mtb cons-list + boxed-fp64 runtime onto the Form→asm native lane so a
+  #   diffusion-Q band runs as no-clang native machine code, matching its walked verdict byte-for-byte.
 
 # ─────────────────────────────────────────────────────────────────────
 # How to run / how to query
