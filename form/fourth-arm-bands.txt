@@ -730,6 +730,7 @@ transformer-decoder fks 1
 transformer-generate fks 1
 whisper-mh-block-real fks 1
 mel-full fks 1
+mel-filterbank fks 63
 transformer-real-train fks 31
 form-cli-sufficiency fks 255
 form-cli-stats fks 255
