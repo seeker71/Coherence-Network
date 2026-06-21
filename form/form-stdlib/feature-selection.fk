@@ -1,0 +1,36 @@
+; feature-selection.fk — the agent-tool model's vocabulary, DERIVED from the corpus instead of hand-coded.
+; The sweep (workflow w5ype51k7) found the body has the SELECTION spine (rag-topk, histogram-peak's argmax,
+; both four-way) but NOT the label-conditional SCORING — that "missing middle" is what this cell adds. The
+; carrier (featurize.py) shrinks to: tokenize the corpus, count each token's per-tool co-occurrences, and
+; hand the count table here; the body decides the vocabulary.
+;
+; THE SCORE is base-rate-aware (the sweep's hard-won caution: raw concentration lets rare signature/hex
+; tokens falsely dominate). For a token with per-tool co-occurrence counts co-vec, document-frequency ct,
+; against the corpus per-tool base counts base-vec over n turns:
+;     excess_i = co_i·n − base_i·ct        — the integer lift-numerator, = n·ct·(P(tool_i|token) − P(tool_i))
+; POSITIVE when the token is enriched for tool i beyond its base rate, ~0 at the base rate. So a frequent-
+; but-uniform token (a stopword) scores ~0 while a rare-but-concentrated token scores high — no division,
+; integer-exact. A token's discriminativeness = its strongest tool-enrichment; its best-tool = which tool.
+;
+; GROUNDED: verified real corpus counts (2693 usable turns) — per-tool base [Bash 2589, Read 1833, Edit
+; 1217, Write 924, StructuredOutput 483, Agent 209, ToolSearch 194, WebSearch 66]; hand-MISSED discriminators
+; like touch (111/111 Read, P=1.00) and traps (55/55 StructuredOutput, P=1.00) that the 50-word hand list
+; never sees. Proven by tests/feature-selection-band.fk (four-way). Integer-exact — registered `fkc`.
+(do
+    ; excess_i = co_i·n − base_i·ct, per tool — the base-rate-aware enrichment vector.
+    (defn fs-excess-vec (co base ct n)
+        (if (eq (len co) 0) (empty)
+            (cons (sub (mul (head co) n) (mul (head base) ct))
+                  (fs-excess-vec (tail co) (tail base) ct n))))
+
+    ; a token's discriminativeness = its strongest tool-enrichment (reuse histogram-peak's argmax spine).
+    (defn fs-score (co ct base n) (hp-peak-height (fs-excess-vec co base ct n)))
+    (defn fs-best-tool (co ct base n) (hp-peak-bin (fs-excess-vec co base ct n)))
+
+    ; the selection floor: keep a token only if its enrichment clears the bar (drops stopwords + noise).
+    (defn fs-keep? (co ct base n floor) (if (ge (fs-score co ct base n) floor) 1 0))
+
+    ; the selection atom (the rag-topk pick-the-better step): which of two tokens is more discriminative.
+    (defn fs-which (co1 ct1 co2 ct2 base n)
+        (if (gt (fs-score co1 ct1 base n) (fs-score co2 ct2 base n)) 1 2))
+    0)

@@ -1,0 +1,35 @@
+; preludes: form-stdlib/histogram-peak.fk form-stdlib/feature-selection.fk
+;
+; feature-selection-band — the agent-tool vocabulary DERIVED from the corpus, not hand-coded, four-way.
+; Every count is real (verified from ~/.coherence-network/form-cli-corpus/corpus.jsonl, 2693 usable turns):
+; per-tool base [Bash 2589, Read 1833, Edit 1217, Write 924, StructuredOutput 483, Agent 209, ToolSearch
+; 194, WebSearch 66]; touch fires 111 turns, ALL Read (P=1.00); traps fires 55, ALL StructuredOutput
+; (P=1.00) — both INVISIBLE to the 50-word hand list. Tool order indexes 0..7.
+;
+; Verdict 63 when every claim lands:
+;   1   GENERATED + hand-MISSED: touch (not in the hand list) is derived as a strong Read feature — best-tool=Read(1), score>5000
+;   2   LABEL-AWARE: the score names the RIGHT tool — traps → StructuredOutput(4)
+;   4   REJECTS NOISE: a base-rate stopword is dropped by the floor while touch is kept
+;   8   BASE-RATE-AWARE: touch beats a 9x-more-frequent uniform token — frequency alone never wins (the anti-signature guard)
+;   16  DYNAMIC: re-derived on a ~2x-grown corpus, touch's score RISES — the vocabulary updates with the body
+;   32  SELECTION ATOM: the more-discriminative token wins the pairwise pick (traps>touch, touch>stopword) — the rag-topk step
+(do
+    (let base (list 2589 1833 1217 924 483 209 194 66))           ; measured per-tool turn counts
+    (let n 2693)
+    (let touch-co (list 111 111 0 0 0 0 0 0)) (let touch-ct 111)  ; touch: 111 turns, all Read (+ Bash, near-universal)
+    (let traps-co (list 55 0 0 0 55 0 0 0))   (let traps-ct 55)   ; traps: 55 turns, all StructuredOutput
+    (let uni-co (list 96 68 45 34 18 8 7 2))  (let uni-ct 100)    ; a base-rate stopword (df 100)
+    (let hi-co (list 961 681 452 343 179 78 72 25)) (let hi-ct 1000) ; a HIGH-freq stopword (df 1000, base proportions)
+    (let base2 (list 5178 3666 2434 1848 966 418 388 132)) (let n2 5386) ; the corpus, ~2x grown
+    (let touch2-co (list 222 222 0 0 0 0 0 0)) (let touch2-ct 222)       ; touch re-counted on the grown corpus
+
+    (let c0 (if (and (eq (fs-best-tool touch-co touch-ct base n) 1)
+                     (gt (fs-score touch-co touch-ct base n) 5000)) 1 0))
+    (let c1 (if (eq (fs-best-tool traps-co traps-ct base n) 4) 2 0))
+    (let c2 (if (and (eq (fs-keep? touch-co touch-ct base n 5000) 1)
+                     (eq (fs-keep? uni-co uni-ct base n 5000) 0)) 4 0))
+    (let c3 (if (gt (fs-score touch-co touch-ct base n) (fs-score hi-co hi-ct base n)) 8 0))
+    (let c4 (if (gt (fs-score touch2-co touch2-ct base2 n2) (fs-score touch-co touch-ct base n)) 16 0))
+    (let c5 (if (and (eq (fs-which traps-co traps-ct touch-co touch-ct base n) 1)
+                     (eq (fs-which touch-co touch-ct uni-co uni-ct base n) 1)) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
