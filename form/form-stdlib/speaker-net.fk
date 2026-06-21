@@ -1,0 +1,34 @@
+; speaker-net.fk — Challenger 3 ("Net"): a NONLINEAR neural embedder, SGD-trained.
+;
+; C2 (linear, diagonal and full) can only carve speakers apart with hyperplanes. C3 adds the
+; one thing ECAPA's power rests on — a NONLINEARITY. The minimal x-vector: emb = relu(W·x),
+; trained by squared loss to speaker target codes with relu-GATED backprop (gradient flows only
+; through active units). One nonlinear layer here; stacking more (the deep TDNN) is the same
+; recipe repeated — this proves the loop. Reuses speaker-proj's matvec + row-SGD.
+;
+; Fixed-point scale 1000. Builds on speaker-embed (se-dot) + speaker-proj (sp-*). Proven by
+; form-stdlib/tests/speaker-net-band.fk.
+
+(do
+    ; --- forward: emb = relu(W·x) ---
+    (defn sn-relu-vec (v)
+        (if (eq (len v) 0) (empty)
+            (cons (if (lt (head v) 0) 0 (head v)) (sn-relu-vec (tail v)))))
+    (defn sn-forward (W x) (sn-relu-vec (sp-matvec W x)))
+
+    ; --- relu-gated error: dL/dz_j = (relu(z)_j − t_j) if z_j>0 else 0 (dead units pass no gradient) ---
+    (defn sn-gated-err (z t)
+        (if (eq (len z) 0) (empty)
+            (cons (if (gt (head z) 0) (sub (head z) (head t)) 0)
+                  (sn-gated-err (tail z) (tail t)))))
+
+    ; --- one SGD step: update each row by its gated error (sp-row-step is the squared-loss rule) ---
+    (defn sn-step (W x t lr) (sp-step-rows W x (sn-gated-err (sp-matvec W x) t) lr))
+    (defn sn-epoch (W corpus lr)
+        (if (eq (len corpus) 0) W
+            (sn-epoch (sn-step W (sp-x (head corpus)) (sp-t (head corpus)) lr) (tail corpus) lr)))
+    (defn sn-train (W corpus lr epochs)
+        (if (eq epochs 0) W (sn-train (sn-epoch W corpus lr) corpus lr (sub epochs 1))))
+
+    ; --- loss on the post-relu embedding ---
+    (defn sn-loss (W x t) (sp-sqsum (sp-err (sn-forward W x) t))))
