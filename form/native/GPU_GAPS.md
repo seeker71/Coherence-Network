@@ -15,9 +15,9 @@ iPhone note: iOS GPU = Metal, identical MSL to Apple-Silicon Mac — the `jte-*-
 | gelu (Taylor) | ✅ | ✅ (in FFN) | ✅ f32 *(verdict 127)* | ✅ f32 *(GLSL, RoundingModeRTE)* |
 | exp / softmax | ✅ | ✅ (in attn) | ✅ f32 *(verdict 511, Taylor exp)* | ✅ f32 *(GLSL, RoundingModeRTE)* |
 | FFN/MLP fwd | ✅ | ✅ | ✅ f32 *(verdict 255, bar.sync)* | ✅ f32 *(GLSL, barrier()+scratch)* |
-| FFN/MLP backprop | ✅ | ✅ | ✅ f32 **5-phase SGD step** (fwd-cache→gy→dh1 via gelu'→W2/W1 update), bit-exact 268/268 | ⬜ |
+| FFN/MLP backprop | ✅ | ✅ | ✅ f32 **5-phase SGD step** (fwd-cache→gy→dh1 via gelu'→W2/W1 update), bit-exact 268/268 | ✅ f32 *(GLSL, barrier; 15648/15648 hid=300)* |
 | attention (single-head SDPA) | ✅ | ✅ | ✅ f32 *(verdict 1023, fused dot·scale→softmax→·V)* | ✅ f32 *(GLSL, RoundingModeRTE)* |
-| attention (MHA/causal/KV) | ✅ | 🟡 (single-head; MHA next) | ✅ f32 **causal multi-head** (per-head slice, masked [0..i]); KV-cache next | ⬜ |
+| attention (MHA/causal/KV) | ✅ | 🟡 (single-head; MHA next) | ✅ f32 **causal multi-head** (per-head slice, masked [0..i]); KV-cache next | ✅ f32 *(GLSL, causal multi-head)* |
 | layernorm / rmsnorm | ✅ | ✅ (in block) | ✅ f32 *(verdict 8191, Newton-50 sqrt)* | ✅ layernorm f32 *(GLSL)* |
 | residual (vec-add) | ✅ | ✅ (in block) | ✅ f32 *(verdict 8191)* | ✅ f32 *(GLSL)* |
 | transformer block fwd | ✅ | ✅ block fwd | ✅ **EXACT tb-block** (QKVO+γβ) + model→logits + autoregressive generation, bit-exact (19-launch graph) | ⬜ |

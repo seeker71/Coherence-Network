@@ -1,0 +1,129 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32; causal-MHA divides in the softmax
+// Taylor fexp reduce/recurrence and in r = 1.0/s. Needs SPIR-V >= 1.3 (--target-env vulkan1.1) +
+// SPV_KHR_float_controls (core in Vulkan 1.1, advertised on Adreno/Mali).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native CAUSAL MULTI-HEAD scaled dot-product attention compute shader (Android/Vulkan lane,
+// prototyped on RTX). One invocation per (QUERY i, HEAD h), flattened tid = i*nheads + h. Mirrors
+// form_attention_mhc_f32.ptx (tb-mh + tb-attn-causal-i) op-for-op:
+//   hd = d/nheads;  hoff = h*hd;  qbase = i*d + hoff;  sbase = tid*nk;  nkeys = i+1 (CAUSAL)
+//   pass A: scores[sbase+j] = dot(Q[i] head-slice, K[j] head-slice) * scale, j=0..i
+//           (DOWNWARD right-fold over the hd-slice: l=hd..1, acc = Q*K + acc, then * scale)
+//   pass B: softmax over scores[sbase .. sbase+i] (i+1 elems) in place
+//           (forward max, Taylor fexp, FORWARD sum, r = 1/s, normalize)
+//   pass C: out[i][hoff+m] = sum_{j=0..i} (FORWARD) alpha_j * V[j][hoff+m], m=0..hd-1
+// scores[] is a per-(i,h) scratch row in a [nq*nheads x nk] buffer; sbase = tid*nk owns its slice.
+// fexp = the recipe's 14-term Taylor (halving-reduce + square-back), NOT any hw exp; same body as
+// softmax.comp/attention.comp. Every float op is `precise` -> SPIR-V NoContraction so the driver
+// cannot fuse mul+add into FMA and cannot reassociate -> bit-exact to the CPU oracle and PTX/MSL.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0) readonly  buffer Q  { float q[]; };       // nq*d
+layout(std430, binding = 1) readonly  buffer K  { float k[]; };       // nk*d
+layout(std430, binding = 2) readonly  buffer V  { float v[]; };       // nk*d
+layout(std430, binding = 3) writeonly buffer Out{ float o[]; };       // nq*d
+layout(std430, binding = 4)           buffer Sc { float sc[]; };      // nq*nheads*nk (scratch)
+
+layout(push_constant) uniform Push { uint nq; uint nk; uint d; uint nheads; uint scale_bits; } pc;
+
+void main() {
+    uint tid = gl_GlobalInvocationID.x;        // flattened (query i, head h)
+    uint total = pc.nq * pc.nheads;            // total = nq*nheads
+    if (tid >= total) return;
+
+    uint i    = tid / pc.nheads;               // query i  = tid/nheads
+    uint h    = tid % pc.nheads;               // head  h  = tid%nheads
+    uint hd   = pc.d / pc.nheads;              // hd = d/nheads
+    uint hoff = h * hd;                        // hoff = h*hd
+    uint qbase = i * pc.d + hoff;              // qbase = i*d + hoff
+    uint sbase = tid * pc.nk;                  // sbase = tid*nk
+    uint nkeys = i + 1u;                       // CAUSAL: keys j in [0..i]
+
+    precise float scale = uintBitsToFloat(pc.scale_bits);
+
+    // PTX constants by exact bit pattern (shared fexp body, same as softmax.comp).
+    precise float C_HALF = uintBitsToFloat(0x3F000000u); // 0.5
+    precise float C_TWO  = uintBitsToFloat(0x40000000u); // 2.0
+    precise float C_ONE  = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float C_14   = uintBitsToFloat(0x41600000u); // 14.0
+
+    // ---- pass A: scores[j] = dot(Qhead, Khead) * scale, j=0..i ----
+    // DOWNWARD right-fold dot over the hd-slice: l = hd; while (l!=0){ l--; acc = Q*K + acc }
+    for (uint j = 0u; j < nkeys; ++j) {
+        uint kbase = j * pc.d + hoff;          // kbase = j*d + hoff
+        precise float acc = 0.0;
+        uint l = hd;
+        while (l != 0u) {
+            l = l - 1u;
+            precise float p = q[qbase + l] * k[kbase + l];
+            acc = p + acc;
+        }
+        precise float s = acc * scale;          // * scale
+        sc[sbase + j] = s;
+    }
+
+    // ---- pass B: softmax over scores[sbase .. sbase+i] (i+1 elems) in place ----
+    // forward max: m = sc[sbase]; for j=1..i: if sc[j]>m m=sc[j]
+    precise float m = sc[sbase + 0u];
+    for (uint j = 1u; j < nkeys; ++j) {
+        precise float vj = sc[sbase + j];
+        if (vj > m) m = vj;
+    }
+    // s=0; e_j = fexp(score_j - m); sc[j] = e_j; s += e_j  (FORWARD)
+    precise float ssum = 0.0;
+    for (uint j = 0u; j < nkeys; ++j) {
+        precise float arg = sc[sbase + j] - m;
+
+        // inline fexp(arg): kk=0; while (|arg|>0.5) { arg=arg/2; kk++ }
+        uint kk = 0u;
+        while (abs(arg) > C_HALF) {
+            arg = arg / C_TWO;
+            kk = kk + 1u;
+        }
+        // fexp_small: nf=1; term=1; acc=1; while (nf<=14) { t=arg/nf; term=term*t; acc=acc+term; nf+=1 }
+        precise float nf   = C_ONE;
+        precise float term = C_ONE;
+        precise float acc  = C_ONE;
+        while (nf <= C_14) {
+            precise float t = arg / nf;
+            term = term * t;
+            acc = acc + term;
+            nf = nf + C_ONE;
+        }
+        // square back: while (kk>0) { acc=acc*acc; kk-- }
+        while (kk > 0u) {
+            acc = acc * acc;
+            kk = kk - 1u;
+        }
+
+        precise float e = acc;
+        sc[sbase + j] = e;
+        ssum = ssum + e;
+    }
+    // r = 1.0 / s
+    precise float r = C_ONE / ssum;
+    // normalize: sc[j] = sc[j] * r
+    for (uint j = 0u; j < nkeys; ++j) {
+        precise float sj = sc[sbase + j];
+        precise float sn = sj * r;
+        sc[sbase + j] = sn;
+    }
+
+    // ---- pass C: out[i][hoff+m] = sum_{j=0..i} (FORWARD) alpha_j * V[j][hoff+m] ----
+    for (uint mm = 0u; mm < hd; ++mm) {
+        precise float acc = 0.0;
+        for (uint j = 0u; j < nkeys; ++j) {
+            precise float alpha = sc[sbase + j];            // alpha_j
+            precise float vv    = v[j * pc.d + hoff + mm];  // V[j][hoff+m]
+            precise float p     = vv * alpha;               // V[j][hoff+m] * alpha_j
+            acc = acc + p;                                  // acc += (forward)
+        }
+        o[qbase + mm] = acc;                                // out idx = qbase + m = i*d+hoff+m
+    }
+}
