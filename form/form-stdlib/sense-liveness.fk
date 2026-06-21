@@ -1,0 +1,53 @@
+; sense-liveness.fk — is each sense actually ALIVE, or just shipped? The tri-state.
+;
+; "Shipped" and "actively used" are different things, and the body should MEASURE the
+; difference each window instead of asserting it. A sense is:
+;   ACTIVE    — fresh data arrived AND was recognized this window (truly used)
+;   RECEIVING — fresh data arrived but nothing interpreted it (shipped, raw, the honest middle)
+;   DARK      — no recent data (built but unfed, or the feed died)
+; Awakeness is the share of senses that are ACTIVE — never the share merely shipped.
+; This is the wellness + internal-trust lift: liveness is read from the body, on a
+; clock, carrying its own number, so no green checkmark stands in for a living sense.
+;
+; A sense reading = (name age recognized): age is seconds since the last datum (large
+; = stale), recognized is 1 when something interpreted it this window, else 0.
+;
+; Proven by: form-stdlib/tests/sense-liveness-band.fk
+
+(do
+    (defn sl-sense (name age recognized) (list name age recognized))
+    (defn sl-name (s) (nth s 0))
+    (defn sl-age (s) (nth s 1))
+    (defn sl-recognized (s) (nth s 2))
+
+    ;; classify one sense against the freshness window (seconds).
+    (defn sl-status (s window)
+        (if (gt (sl-age s) window) "dark"
+            (if (eq (sl-recognized s) 1) "active" "receiving")))
+
+    ;; a liveness reading the surface renders: (name status age)
+    (defn sl-read (s window)
+        (list (sl-name s) (sl-status s window) (sl-age s)))
+
+    ;; count senses in a given status across the whole inventory.
+    (defn sl-count-loop (senses window target)
+        (if (eq (len senses) 0) 0
+            (add (if (str_eq (sl-status (head senses) window) target) 1 0)
+                 (sl-count-loop (tail senses) window target))))
+    (defn sl-active (senses window) (sl-count-loop senses window "active"))
+    (defn sl-receiving (senses window) (sl-count-loop senses window "receiving"))
+    (defn sl-dark (senses window) (sl-count-loop senses window "dark"))
+
+    ;; awakeness: the body is awake to the degree its senses are ACTIVE, not shipped.
+    ;; integer percent = active / total * 100.
+    (defn sl-awake-pct (senses window)
+        (if (eq (len senses) 0) 0
+            (div (mul (sl-active senses window) 100) (len senses))))
+
+    (defn sl-floor ()
+        (list
+            "a sense is ACTIVE only when fresh data is recognized; shipped is not used"
+            "RECEIVING names raw data that flows but nothing interprets — the honest middle"
+            "DARK names a sense built but unfed, or whose feed died"
+            "awakeness is active senses over total, measured each window, never assumed"))
+)
