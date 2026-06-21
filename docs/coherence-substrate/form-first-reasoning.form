@@ -50,11 +50,15 @@
 
   ; how the body answers under each environment's reach
   (backend
-    (local-lattice (sovereign offline)
+    (native-router (form-cli ask)                          ; the one door — body-first, four-way sufficiency gate
+                   (engine form-kernel-go)
+                   (built-once scripts/ensure_form_cli_kernel.sh)
+                   (gate form-cli-sufficiency.fk))
+    (local-lattice (sovereign offline)                     ; the structural layer the router reads
                    (ready-by "python3 scripts/coh_substrate.py ingest --all"))
     (public-door   (our-body networked)
                    (at "https://api.coherencycoin.com/api/substrate"))
-    (adaptive      try-local-then-public-then-miss))
+    (adaptive      try-native-router-then-lattice-then-miss))
 
   ; where the discipline lives so it travels every surface
   (carriers
