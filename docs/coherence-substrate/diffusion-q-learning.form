@@ -166,8 +166,14 @@
   #         32-register arm64 FP machine in Form (fsim) that EXECUTES a lowered float sequence and reproduces
   #         the function (f(3)=12, f(5)=30) — register allocation validated by execution-equivalence, NOT by
   #         clang byte-match; byte-identity kept only per-instruction (fa-fmul = 1e610820). Proven four-way:
-  #         tests/form-lower-sim-band.fk → 15. The ceiling is lifted; the FP register-stack (two non-ARG
-  #         subtrees on d16+, validated by fsim instead of clang) is the next breath on this oracle.
+  #         tests/form-lower-sim-band.fk → 15. FP REGISTER STACK LANDED (2026-06-21): lo-ftree in
+  #         form-lower.fk is the abstract float lowering — mirrors lo-fnode's ARG-folding AND adds the two
+  #         non-ARG subtree case (bank the left to caller-saved d16+, lower the right a depth deeper, op
+  #         against the bank; FSUB/FDIV order kept). Correctness by fsim execution (g(x)=(x*x)-(x+x): g(3)=3,
+  #         g(4)=8; h(x)=(x+x)-(x*x): h(3)=-3), and a FAITHFUL generalization — encodes byte-for-byte to
+  #         lo-fcompile-fn on the single-arg overlap. Proven four-way: tests/form-lower-fp-stack-band.fk → 31.
+  #         The first op-coverage growth on the no-clang float lane past single-arg, no clang allocation rented.
+  #         Q7a remaining: unify lo-fnode onto lo-ftree (one lowering), wire the self-JIT heat-flip (M0).
   #   (Q7b) LIST-TRAVERSAL native — the real diffusion-Q blocker, ABSENT entirely. gl-step/mtb walk cons
   #         cells (nth/head/tail, tags 18-23); the native lane has no cons value model. Needs the value-model
   #         BRIDGE: native code reading the walker's node-table heap (a heap-pointer convention) OR a flat
