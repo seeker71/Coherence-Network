@@ -1,0 +1,24 @@
+; const-recipe-band.fk — proof that numbers self-build from the core basis {0,1}.
+;
+; verdict = 511, but ONLY if every number below round-trips (build -> resolve == n)
+; AND the basis is content-addressed (shared node identity), AND 511 itself is
+; reconstructed from structure by the resolver. 1300 is MS-PAIR's instance number
+; and 31415 a NodeID-ish constant — both carried as shape, never as a literal.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/const-recipe.fk
+
+(do
+    (defn chk (n) (if (eq (cr-resolve (cr-build n)) n) 1 0))
+    (let r0    (chk 0))
+    (let r1    (chk 1))
+    (let r2    (chk 2))
+    (let r7    (chk 7))
+    (let r255  (chk 255))
+    (let r1300 (chk 1300))
+    (let r31415 (chk 31415))
+    ;; the basis is shared (intern_node is content-addressed): identical recipes
+    ;; for zero / two are the SAME node, so a corpus reuses one basis.
+    (let shared (if (node_eq (cr-zero) (cr-zero))
+                    (if (node_eq (cr-two) (cr-two)) 1 0) 0))
+    (let allok (mul r0 (mul r1 (mul r2 (mul r7 (mul r255 (mul r1300 (mul r31415 shared))))))))
+    (if (eq allok 1) (cr-resolve (cr-build 511)) 0))

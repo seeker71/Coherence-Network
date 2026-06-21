@@ -785,3 +785,7 @@ q-actor-critic-fixpoint fks 255
 diffusion-q-autoresearch fks 63
 form-lower-sim fks 15
 form-lower-fp-stack fks 31
+shell-parse fks 31
+shell-exec fks 63
+shell-cell fks 15
+const-recipe fks 511
