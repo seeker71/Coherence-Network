@@ -1,0 +1,17 @@
+; preludes: form-stdlib/trust-row.fk
+;
+; The trust-row renderer, pinned. Proves the observed? verdict, the three verdict words (OBSERVED /
+; native-partial / rented), the path name, the score, and the FULL rendered line for a rented step.
+; Verdict 255 when every claim lands.
+(do
+    (let c0 (if (eq     (tr-observed? 1 1 1 1) 1)                                                    1   0))
+    (let c1 (if (str_eq (tr-verdict 1 1 1 1) "OBSERVED")                                            2   0))
+    (let c2 (if (str_eq (tr-verdict 0 0 0 0) "rented")                                              4   0))
+    (let c3 (if (str_eq (tr-verdict 1 0 1 0) "native-partial")                                      8   0))
+    (let c4 (if (str_eq (tr-path-name 1) "native")                                                 16   0))
+    (let c5 (if (str_eq (tr-path-name 0) "rented")                                                 32   0))
+    (let c6 (if (eq     (tr-score 1 1 0 0) 2)                                                      64   0))
+    (let c7 (if (str_eq (tr-row 0 0 0 0)
+                        "trust  path:rented  grounded:no  freq:no  suffic:no  -> rented")         128   0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

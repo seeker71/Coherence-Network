@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/trust-row",
+  "commit_scope": "The next breath of the trust matrix: ship trust-row.fk, the four-way-proven canonical renderer that turns the four trust signals (path/grounded/freq/suffic) into one human-readable line — the 'field' the per-step trust rows need, replacing the hand-drawn table with a proven format. The band verifies the exact rendered string across all four kernels.",
+  "files_owned": [
+    "form/form-stdlib/trust-row.fk",
+    "form/form-stdlib/tests/trust-row-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/trust-matrix.form",
+    "docs/system_audit/commit_evidence_20260621_trust_row.json"
+  ],
+  "idea_ids": [
+    "trust-row-renderer",
+    "per-step-trust-field"
+  ],
+  "spec_ids": [
+    "trust-matrix"
+  ],
+  "task_ids": [
+    "task-2026-06-21-trust-row"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trust-row.fk form-stdlib/tests/trust-row-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'trust-row fks 255' beside its kin trust-matrix.",
+    "The band proves the renderer end to end: tr-observed?(1,1,1,1)=1; the three verdict words OBSERVED / native-partial / rented; tr-path-name native/rented; tr-score; and the FULL rendered line for a rented step str_eq 'trust  path:rented  grounded:no  freq:no  suffic:no  -> rented' (so the exact field format is verified four-way, not just asserted). Verdict 255.",
+    "Honest scope finding that shaped this breath: the form-cli ask flow is multi-path (ask->RAG, ask+->fca-ask, do->agent loop) with version skew (form_cli_ask.sh calls a 6-arg fca-ask; form-cli-ask.fk on main defines a 1-arg one), and the simple fca-ask only calls the local oracle — it does not compute grounded/freq/sufficiency. Auto-emitting a FULL live trust matrix inside that flow is a real multi-file integration, not a clean one-breath rewrite; doing it blind would risk the core ask path. So this breath ships the proven renderer (the field) and names the flow auto-emission as the continuing integration.",
+    "The raw-kernel render demo (bin-go on core.fk + recipe) failed to parse because the bare kernel entry needs the validate.sh harness for core.fk's BML dialect — not a recipe error; the band's str_eq check is the authoritative proof the field renders correctly.",
+    "Edges: docs/coherence-substrate/trust-matrix.form now names tr-row as the canonical render. Primitive discipline: only core.fk primitives (eq, if, add, str_concat, str_eq); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/trust-row.fk",
+    "form/form-stdlib/tests/trust-row-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/trust-matrix.form",
+    "docs/system_audit/commit_evidence_20260621_trust_row.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trust-row.fk form-stdlib/tests/trust-row-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "trust-row: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib renderer + proof band + a teaching reference; no public HTTP endpoint change. Next: plumb grounded/freq/sufficiency signals through the form-cli ask flow and call tr-row so each routed query auto-prints its row + a running freq-attuned/observed ratio."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent); CI and merge remain pending. Auto-emission in the live ask flow is the named continuing integration."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The per-step trust rows (AGENTS.md instruction) now have a single four-way-proven canonical format, (tr-row p g f s), whose exact output string is verified by the band — so rows are consistent and trustworthy instead of hand-drawn.",
+    "public_endpoints": [
+      "none changed; the renderer is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the band runs on Go, Rust, TypeScript, and fkwu to verdict 255 with 0 divergent, including an exact str_eq on the rendered line."
+    ]
+  }
+}

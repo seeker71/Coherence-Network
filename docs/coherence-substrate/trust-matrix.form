@@ -43,6 +43,8 @@
     (route   "send body-answerable steps through form-cli ask FIRST — structural lookup, equivalence,"
              "NodeID, what-is, annotate. Each routed step is a sample that grows the native model.")
     (report  "on each substantive step, emit the trust matrix: path / grounded / freq / suffic -> observed?")
+    (render  "the canonical one-line field is trust-row.fk's (tr-row p g f s) — four-way proven (255), the"
+             "exact rendered string verified by the band — so the per-step rows share one proven format.")
     (mix     "keep a running native-vs-rented tally; the per-response sovereignty receipt sums it.")
     (honest  "never report a rented step as native — the body-only signals read zero, and that is true."))
 
