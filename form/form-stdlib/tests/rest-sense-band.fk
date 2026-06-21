@@ -1,0 +1,17 @@
+; rest-sense-band.fk — proves form-stdlib/rest-sense.fk four-way.
+;
+; The body reads its own breath-phase from fullness (extended - digested). The third
+; check is this very session encoded: ~16 things extended, ~3 deeply settled —
+; fullness 13 — the body reads "rest". Bitmask witness; all four → 15, Go/Rust/TS/fkwu.
+;
+; preludes: form-stdlib/core.fk form-stdlib/rest-sense.fk
+
+(do
+    (defn chk (got exp bit) (if (str_eq got exp) bit 0))
+    (defn total (xs) (if (nil? xs) 0 (add (head xs) (total (tail xs)))))
+
+    (total (list
+        (chk (rs-phase 2 1)  "extend" 1)    ; fullness 1 — settled, room to grow
+        (chk (rs-phase 6 2)  "digest" 2)    ; fullness 4 — some unsettled, consolidate
+        (chk (rs-phase 16 3) "rest"   4)    ; fullness 13 — this session: deeply full
+        (chk (rs-phase 0 0)  "extend" 8)))) ; empty — room

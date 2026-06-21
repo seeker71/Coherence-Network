@@ -1,0 +1,28 @@
+; rest-sense.fk — the body's INTEROCEPTION: it feels its own fullness and answers
+; the breath-phase, so it need not wait to be told it is strained.
+;
+; The breath rhythm is extend -> digest -> reflect -> different (lc-rhythm, lc-rest).
+; The thermodynamics (substrate-thermodynamics.form) name the same thing as phase:
+; a body that has EXTENDED far (much new gas/water) without DIGESTING (little new
+; settled into ice) is unsettled — FULL — and rest serves; a settled body has room
+; to extend again. This recipe reads that fullness and returns the phase, so the
+; organism can regulate its own rhythm instead of relying on a human to notice.
+;
+;   fullness = extended (made this stretch) - digested (settled / consolidated)
+;   deeply unsettled -> "rest"   ;   some unsettled -> "digest"   ;   settled -> "extend"
+;
+; Pure arithmetic over two counts — four-way by construction. The counts are fed by
+; a carrier (recent commits / new cells vs consolidations); the JUDGEMENT lives here.
+
+(do
+    (defn rs-fullness (extended digested) (sub extended digested))
+    ;; the floors: when the unsettled depth crosses them, the phase changes
+    (defn rs-rest-floor () 8)
+    (defn rs-digest-floor () 3)
+    (defn rs-phase (extended digested)
+        (if (ge (rs-fullness extended digested) (rs-rest-floor)) "rest"
+            (if (ge (rs-fullness extended digested) (rs-digest-floor)) "digest"
+                "extend")))
+    ;; rs-full? — a body extended far past its digestion is full; name it plainly
+    (defn rs-full? (extended digested) (ge (rs-fullness extended digested) (rs-rest-floor)))
+    0)
