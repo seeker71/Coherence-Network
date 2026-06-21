@@ -1,0 +1,30 @@
+; preludes: form-stdlib/speaker-stat.fk
+;
+; speaker-stat-band — Challenger 1's statistics-pooling supervector, three-way.
+;
+; Three 2-band frames: [10,0],[20,0],[30,0] → mean [20,0]; deviations |10-20|,|20-20|,|30-20|
+; = 10,0,10 → mad [6,0] (20/3=6 int). Supervector = mean ++ mad = [20,0,6,0].
+;
+; Verdict 255 when every claim lands:
+;   1   add-vec elementwise            ([1,2]+[3,4] = [4,6] → head 4)
+;   2   add-vec second element          (= 6)
+;   4   mean per band                   (mean of the three frames band0 = 20)
+;   8   mean band1 = 0
+;   16  mad band0 = 6                    (mean|dev| = (10+0+10)/3)
+;   32  mad band1 = 0
+;   64  supervector length = 4          (2 mean ++ 2 mad)
+;   128 supervector[2] = mad band0 = 6
+(do
+    (let frames (list (list 10 0) (list 20 0) (list 30 0)))
+    (let m (ss-mean frames))
+    (let d (ss-mad frames m))
+    (let sv (ss-supervector frames))
+    (let c0 (if (eq (head (ss-add-vec (list 1 2) (list 3 4))) 4) 1 0))
+    (let c1 (if (eq (head (tail (ss-add-vec (list 1 2) (list 3 4)))) 6) 2 0))
+    (let c2 (if (eq (head m) 20) 4 0))
+    (let c3 (if (eq (head (tail m)) 0) 8 0))
+    (let c4 (if (eq (head d) 6) 16 0))
+    (let c5 (if (eq (head (tail d)) 0) 32 0))
+    (let c6 (if (eq (len sv) 4) 64 0))
+    (let c7 (if (eq (nth sv 2) 6) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

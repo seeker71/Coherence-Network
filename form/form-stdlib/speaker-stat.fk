@@ -1,0 +1,43 @@
+; speaker-stat.fk — Challenger 1 ("Stat") in the race to ECAPA-TDNN, Form-native.
+;
+; The zero-training baseline: pool a clip's mel frames into a fixed speaker SUPERVECTOR —
+; per-band MEAN (timbre) ++ per-band MEAN-ABSOLUTE-DEVIATION (dynamics) — and recognize by
+; cosine (speaker-embed.fk se-dot). This is the classic GMM/MFCC-supervector floor before
+; neural embedders; it answers "how far does pure statistics get?". The carrier extracts the
+; mel frames (sox/mel-frame); the pooling MODEL is here. No weights, no training — just the
+; honest statistics, so its gap to ECAPA is the value that learning (Challengers 2 & 3) adds.
+;
+; Builtins + sub/add/div only (mad avoids sqrt). Proven by
+; form-stdlib/tests/speaker-stat-band.fk.
+
+(do
+    (defn ss-abs (n) (if (lt n 0) (sub 0 n) n))
+    (defn ss-append (a b) (if (eq (len a) 0) b (cons (head a) (ss-append (tail a) b))))
+
+    ; elementwise add of two equal-length band vectors
+    (defn ss-add-vec (a b)
+        (if (eq (len a) 0) (empty)
+            (cons (add (head a) (head b)) (ss-add-vec (tail a) (tail b)))))
+    (defn ss-scale-vec (v k)
+        (if (eq (len v) 0) (empty) (cons (div (head v) k) (ss-scale-vec (tail v) k))))
+
+    ; per-band MEAN across frames (frames = list of equal-length band vectors)
+    (defn ss-sum-frames (frames)
+        (if (eq (len frames) 1) (head frames)
+            (ss-add-vec (head frames) (ss-sum-frames (tail frames)))))
+    (defn ss-mean (frames) (ss-scale-vec (ss-sum-frames frames) (len frames)))
+
+    ; per-band MEAN-ABSOLUTE-DEVIATION from the mean (spread, no sqrt)
+    (defn ss-dev-vec (v m)
+        (if (eq (len v) 0) (empty)
+            (cons (ss-abs (sub (head v) (head m))) (ss-dev-vec (tail v) (tail m)))))
+    (defn ss-mad-sum (frames m)
+        (if (eq (len frames) 1) (ss-dev-vec (head frames) m)
+            (ss-add-vec (ss-dev-vec (head frames) m) (ss-mad-sum (tail frames) m))))
+    (defn ss-mad (frames m) (ss-scale-vec (ss-mad-sum frames m) (len frames)))
+
+    ; the supervector = mean ++ mad  (the C1 speaker embedding)
+    (defn ss-supervector (frames)
+        (do
+            (let m (ss-mean frames))
+            (ss-append m (ss-mad frames m)))))
