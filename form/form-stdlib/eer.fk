@@ -1,0 +1,44 @@
+; eer.fk — Equal Error Rate over a verification trial matrix, the speaker faculty's FITNESS function.
+;
+; preludes: form-stdlib/transformer-numerics.fk
+;
+; A single hard-pair cosine misleads (both external oracles flagged it #3): the real metric is EER over a
+; TRIAL MATRIX. A trial is (score, label): score = cosine similarity of two utterances, label = 1.0 for a
+; GENUINE pair (same speaker) or 0.0 for an IMPOSTOR pair (different speakers). At a decision threshold θ:
+;   FAR(θ) = impostors accepted (score ≥ θ) / impostors      — false-accept rate
+;   FRR(θ) = genuines rejected (score < θ) / genuines        — false-reject rate
+; FAR falls and FRR rises as θ climbs; the EER is where they cross (FAR = FRR). We sweep θ over the trial
+; scores themselves (the only thresholds where the rates change) and return the rate at the θ minimizing
+; |FAR − FRR| — one comparable number per design, the fitness the model-search ratchet (tooluse-model-search)
+; can optimize. Lower is better; 0.0 = perfect separation, 0.5 = chance. All fp64; reuses tn-abs.
+
+(do
+    (defn eer-score (t) (nth t 0))
+    (defn eer-label (t) (nth t 1))                                        ; 1.0 genuine, 0.0 impostor
+
+    ; --- per-trial indicators: 1.0 when this trial is an error at threshold th, else 0.0 ---
+    (defn eer-fa1 (t th) (if (lt (eer-label t) 0.5) (if (ge (eer-score t) th) 1.0 0.0) 0.0))  ; impostor accepted
+    (defn eer-fr1 (t th) (if (gt (eer-label t) 0.5) (if (lt (eer-score t) th) 1.0 0.0) 0.0))  ; genuine rejected
+
+    ; --- folds over the trial list: error counts and class sizes ---
+    (defn eer-sum-fa (ts th) (if (eq (len ts) 0) 0.0 (add (eer-fa1 (head ts) th) (eer-sum-fa (tail ts) th))))
+    (defn eer-sum-fr (ts th) (if (eq (len ts) 0) 0.0 (add (eer-fr1 (head ts) th) (eer-sum-fr (tail ts) th))))
+    (defn eer-n-imp (ts) (if (eq (len ts) 0) 0.0 (add (if (lt (eer-label (head ts)) 0.5) 1.0 0.0) (eer-n-imp (tail ts)))))
+    (defn eer-n-gen (ts) (if (eq (len ts) 0) 0.0 (add (if (gt (eer-label (head ts)) 0.5) 1.0 0.0) (eer-n-gen (tail ts)))))
+
+    ; --- the two rates at a threshold ---
+    (defn eer-far (ts th) (div (eer-sum-fa ts th) (eer-n-imp ts)))
+    (defn eer-frr (ts th) (div (eer-sum-fr ts th) (eer-n-gen ts)))
+
+    ; --- sweep θ over the trial scores; keep the rate where |FAR − FRR| is smallest (the crossover) ---
+    (defn eer-scores (ts) (if (eq (len ts) 0) (empty) (cons (eer-score (head ts)) (eer-scores (tail ts)))))
+    (defn eer-sweep (ts cands bestdiff besteer)
+        (if (eq (len cands) 0) besteer
+            (do (let th (head cands))
+                (let fa (eer-far ts th))
+                (let fr (eer-frr ts th))
+                (let d  (tn-abs (sub fa fr)))
+                (if (lt d bestdiff)
+                    (eer-sweep ts (tail cands) d (mul 0.5 (add fa fr)))
+                    (eer-sweep ts (tail cands) bestdiff besteer)))))
+    (defn eer (ts) (eer-sweep ts (eer-scores ts) 1000000.0 1.0)))
