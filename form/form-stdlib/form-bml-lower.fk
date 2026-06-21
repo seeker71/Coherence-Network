@@ -56,4 +56,29 @@
             ;; literal leaves (trivial int / string / bool) are already
             ;; content-identical to the line compiler's — pass through.
             n)))))))
+
+    ;; --- routing flip: form.bml compiles through the cursor, self-verified -----
+    ;; Loaded LAST in validate.sh's compiler_chain, this late-bind-redefines the
+    ;; section dispatch so form.bml lowers via the BMF cursor (form-bml-section-
+    ;; grammar -> fbl-lower). The hand line compiler still runs as a VERIFIER: the
+    ;; cursor recipe is used only when it is node_eq to the line recipe, so the
+    ;; compiled output is PROVABLY unchanged, and any form.bml file the cursor
+    ;; can't fully parse (e.g. compiler.fk's class/template) falls back to the line
+    ;; compiler. source-compiler.fk is untouched; this override exists only where
+    ;; form-bml-lower.fk is loaded (the compile chain), so fkwu bands that flatten
+    ;; source-compiler.fk without the cursor see the original dispatch.
+    (defn fsc-form-bml-section-recipe-cursor (body)
+        (do
+            (let line-recipe (fsc-compile-form-bml-section-recipe body))
+            (let cursor-recipe (fbl-lower (g-parse (form-bml-section-grammar) body)))
+            (if (node_eq cursor-recipe line-recipe) cursor-recipe line-recipe)))
+
+    (defn fsc-compile-section-recipe (dialect-name body)
+        (if (str_eq dialect-name "form.route")
+            (fsc-compile-form-route-section-recipe body)
+        (if (str_eq dialect-name "form.bml")
+            (fsc-form-bml-section-recipe-cursor body)
+        (if (fsc-high-level-form-dialect? dialect-name)
+            (g-parse (bml-grammar) body)
+            (fsc-bmf-section-recipe dialect-name body)))))
 )

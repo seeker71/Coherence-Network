@@ -135,7 +135,7 @@ trap cleanup EXIT
 SOURCE_CACHE_DIR="form-stdlib/.cache/source-compiled"
 mkdir -p "$SOURCE_CACHE_DIR"
 compiler_stamp=""
-compiler_chain=("form-stdlib/form-ontology-loader.fk" "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" "form-stdlib/bml-source.fk" "form-stdlib/source-compiler.fk")
+compiler_chain=("form-stdlib/form-ontology-loader.fk" "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" "form-stdlib/bml-source.fk" "form-stdlib/source-compiler.fk" "form-stdlib/grammars/form-bml.fk" "form-stdlib/form-bml-lower.fk")
 compiler_stamp="$(form_hash16 "${compiler_chain[@]}" "$GO_BIN")"
 
 prepared_args=()
