@@ -1,34 +1,27 @@
-; preludes: form-stdlib/speaker-embed.fk form-stdlib/speaker-proj.fk
+; preludes: form-stdlib/speaker-proj.fk
 ;
-; speaker-proj-band — Challenger 2-full's SGD-trained linear projection, three-way.
+; speaker-proj-band — Challenger 2-full's FLOAT-SGD linear projection, three-way.
 ;
-; Identity W=[[1000,0],[0,1000]], sample x=[3000,1000], target t=[1000,1000] (fixed-point ×1000).
-; Forward y = x = [3000,1000]; err=[2000,0]; loss=2000²=4,000,000. One SGD step (lr=10 → 0.01)
-; pulls row0 down its gradient: w00 1000→880, w01 0→−40; loss falls to 1600²=2,560,000.
+; Identity W, x=[2,1], t=[1,1] (all f64-exact). y=[2,1]; err=[1,0]; loss=1. One step lr=0.125
+; descends: w00 1→0.5, w01 0→−0.25, loss 1→0.0625. Pure float — gradients no longer round away.
 ;
-; Verdict 255 when every claim lands — the training loop genuinely descends:
-;   1   forward row0           (y0 = 3000)
-;   2   forward row1           (y1 = 1000)
-;   4   error                  (e0 = 2000)
-;   8   loss before            (= 4,000,000)
-;   16  loss strictly falls    (after-step loss < before)
-;   32  gradient update w00     (1000 → 880)
-;   64  signed update w01       (0 → −40 — the off-axis weight moved negative)
-;   128 loss after exact        (= 2,560,000)
+; Verdict 255:
+;   1 y0=2.0   2 y1=1.0   4 err0=1.0   8 loss-before=1.0   16 loss strictly falls
+;   32 w00=0.5   64 w01=−0.25   128 loss-after=0.0625
 (do
-    (let W (list (list 1000 0) (list 0 1000)))
-    (let x (list 3000 1000))
-    (let t (list 1000 1000))
+    (let W (list (list 1.0 0.0) (list 0.0 1.0)))
+    (let x (list 2.0 1.0))
+    (let t (list 1.0 1.0))
     (let y (sp-matvec W x))
     (let before (sp-loss W x t))
-    (let W2 (sp-step W x t 10))
+    (let W2 (sp-step W x t 0.125))
     (let after (sp-loss W2 x t))
-    (let c0 (if (eq (head y) 3000) 1 0))
-    (let c1 (if (eq (head (tail y)) 1000) 2 0))
-    (let c2 (if (eq (head (sp-err y t)) 2000) 4 0))
-    (let c3 (if (eq before 4000000) 8 0))
+    (let c0 (if (eq (head y) 2.0) 1 0))
+    (let c1 (if (eq (head (tail y)) 1.0) 2 0))
+    (let c2 (if (eq (head (sp-err y t)) 1.0) 4 0))
+    (let c3 (if (eq before 1.0) 8 0))
     (let c4 (if (lt after before) 16 0))
-    (let c5 (if (eq (head (head W2)) 880) 32 0))
-    (let c6 (if (eq (head (tail (head W2))) -40) 64 0))
-    (let c7 (if (eq after 2560000) 128 0))
+    (let c5 (if (eq (head (head W2)) 0.5) 32 0))
+    (let c6 (if (eq (head (tail (head W2))) -0.25) 64 0))
+    (let c7 (if (eq after 0.0625) 128 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
