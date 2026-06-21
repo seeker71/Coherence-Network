@@ -1,0 +1,15 @@
+; gguf-compute.fk — the LOAD-AND-COMPUTE composed in Form: a real GGUF Q4_K weight row, dequantized and
+; dotted with an input, ENTIRELY in Form recipes (no C). This is the proof that the loader+forward is
+; built in Form native code, not just mirrored by C: q4k-dequant.fk turns the raw superblock bytes into
+; 256 f32 weights, tb-dot (transformer-block.fk, the downward right-fold) contracts them with the input —
+; one matvec output element computed from raw quantized GGUF bytes by the Form kernel itself. Scale this
+; across a tensor's superblocks = the full matvec (the jit-tensor-emit.fk native emit makes it fast); across
+; layers = the forward. The recipe that runs three-way here is the one the native lane crystallizes.
+
+; a deterministic 256-long input (so the band needs no 256-element literal): x[i] = ((13i+5) mod 17) - 8
+(defn gff-xval (i) (sub (q4k-mod (add (mul i 13) 5) 17) 8))
+(defn gff-xgen (i n) (if (eq i n) (empty) (cons (gff-xval i) (gff-xgen (add i 1) n))))
+(defn gff-x256 () (gff-xgen 0 256))
+
+; the whole load-and-compute: dequant the Q4_K superblock, dot with the input — Form all the way down.
+(defn gguf-q4k-row-dot (d dmin scales qs x) (tb-dot (q4k-dequant d dmin scales qs) x))
