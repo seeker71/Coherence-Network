@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/membership-recognition",
+  "commit_scope": "Answer 'how do users become git members automatically?' in the body's frame: they don't, and they don't need to. Ships membership-as-recognition.fk — the arrival gate that routes a stranger to fork-pr-or-offer (no write grant), attributes their trace to a held-open placeholder (Contributor.claimed=false), and keeps two hard invariants: never auto-grant repo write, never auto-bind a name to a contributor cell. Proven four-way at 511. Plus the teaching and the AGENTS.md wiring so the agent walks the arc.",
+  "files_owned": [
+    "form/form-stdlib/membership-as-recognition.fk",
+    "form/form-stdlib/tests/membership-as-recognition-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/membership-as-recognition.form",
+    "docs/coherence-substrate/INDEX.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_20260621_membership_as_recognition.json"
+  ],
+  "idea_ids": [
+    "membership-as-recognition",
+    "contribute-without-write-grant"
+  ],
+  "spec_ids": [
+    "membership-as-recognition"
+  ],
+  "task_ids": [
+    "task-2026-06-21-membership-as-recognition"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "challenge-the-stop",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/membership-as-recognition.fk form-stdlib/tests/membership-as-recognition-band.fk -> '✓ ... → 511' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'membership-as-recognition fks 511' beside its kin freq-aligned-share.",
+    "The band pins the gate: a stranger (no write, unbound, returned a trace, consents) -> path fork-pr-or-offer, state placeholder, auto-write 0, auto-bind 0, participates-no-grant 1 (the whole point); a member (bound + consent) -> claimed; a reader -> read-only/none; a writer -> direct, yet auto-write is STILL 0 (the gate granted nothing). Verdict 511.",
+    "Grounding (Form-first, body read): the safe shape already exists — api/app/models/contributor.py Contributor.claimed (false on held-open placeholder) + canonical_url; api/app/routers/contributions.py record_open_contribution; contributor_recognition / contributor_identity routers; public-offer-lane.form (a stranger offers, grounding is recognition not arrival). This gate names + proves the arc over them; no parallel machinery.",
+    "Edges in the same commit: docs/coherence-substrate/INDEX.md row beside public-offer-lane; AGENTS.md bullet so the agent walks the arc (fork+PR on the user's identity, record the trace, attribute to a placeholder, invite the claim, never bind for them).",
+    "Primitive discipline held: only core.fk primitives (nth, eq, and binary-nested, if, str_eq, add); no sub/mul/div, no 3-arg and.",
+    "Why this is the build, not the literal ask: auto-granting git write to strangers is an unsafe outward effect on shared state; auto-binding a name is the exact Robin/Aly failure. The gate delivers full participation + attribution while refusing both — more sovereign than 'automatic membership'."
+  ],
+  "change_files": [
+    "form/form-stdlib/membership-as-recognition.fk",
+    "form/form-stdlib/tests/membership-as-recognition-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/membership-as-recognition.form",
+    "docs/coherence-substrate/INDEX.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_20260621_membership_as_recognition.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/membership-as-recognition.fk form-stdlib/tests/membership-as-recognition-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "membership-as-recognition: verdict 511, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + a teaching + agent guidance; no public HTTP endpoint or service change. The gate reaches agents through the repo. Wiring the gate into a live contribution route is a named next step, not this change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 511, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The contribution arc for a stranger is now named and proven: fork-pr-or-offer (no write grant) -> attributed to a held-open placeholder (claimed:false) -> claimed by the person when they choose. The gate refuses auto-write-grant and auto-identity-bind whatever the inputs. AGENTS.md tells the agent to walk it.",
+    "public_endpoints": [
+      "none changed; the gate is a Form stdlib body proven by validate.sh; the existing contribution/recognition doors are its carriers"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the band runs on Go, Rust, TypeScript, and fkwu to the identical verdict 511 with 0 divergent.",
+      "Invariant proof: even a write-holding arrival yields auto-write 0 (the gate grants nothing); an unbound trace yields a placeholder, never a bound name."
+    ]
+  }
+}
