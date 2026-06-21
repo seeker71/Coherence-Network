@@ -1,0 +1,76 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/multi-layer-stack.fk
+;
+; multi-layer-stack-band — the DEPTH stack of causal llama decoder blocks lifted to the four-kernel
+; floor. A real model is N blocks, each layer its OWN weights and OWN KV cache: x¹=block₀(x⁰),
+; x²=block₁(x¹). The single block runs on the M4 GPU forward (#3355/#3376) and steps via the KV
+; cache (lblk-generate-causal, #3408); this proves they STACK — the depth structure under a real
+; local llama. The proof is that the KV-cached depth stack is BIT-IDENTICAL to the full-recompute
+; depth stack (each layer's cached decode == its full causal recompute, #3408; lblk-block-causal is
+; four-way #3365), with the magnitudes grounded by an independent libm fp64 reference
+; (scripts/multi_layer_stack_reference.py, self-checked to reproduce causal-attention-band's pins).
+;
+; Two distinct layers (L0 = the causal-attention-band weights; L1 = a second, different bundle) so the
+; stack genuinely threads per-layer weights forward — not one block applied twice. The relationships:
+;
+;   the 1-layer stack reproduces causal-attention-band's libm pins (base case == the proven block).
+;   the 2-layer recompute stack matches the independent libm reference (1936158, 1944810).
+;   the EQUIVALENCE LAW (the heart): the KV-cached depth stack == the full-recompute depth stack,
+;     element-for-element, at S=2 AND S=3 (the S=3 fixture proves the cache threads correctly past the
+;     sequence boundary THROUGH the depth — the inductive step).
+;   depth is NOT a no-op: the 2-layer output differs from the 1-layer output.
+;   the AR INVARIANT survives depth: appending a future token never changes an earlier token's STACKED
+;     output (stack-gen3[token i] == stack-gen2[token i]) — why a multi-layer KV cache is reusable.
+;
+; Verdict 255 when the multi-layer causal llama stack lands four-way:
+;   1     scn1[0][0]  → 1893731   (1-layer stack base case, libm-pinned == causal-attention-band)
+;   2     scn2[0][0]  → 1936158   (2-layer recompute stack, independent libm pin)
+;   4     scn2[1][2]  → 1944810   (2-layer recompute stack, last token, libm pin)
+;   8     sgn2 == scn2  (S=2: the KV-cached depth stack EXACTLY equals the recompute stack, bit-for-bit)
+;   16    sgn3 == scn3  (S=3: the cache threads past the boundary through the depth — the inductive step)
+;   32    scn2[0][0] ≠ scn1[0][0]  (depth does work — the 2-layer stack is not the 1-layer stack)
+;   64    sgn3[0][0]  → 1936158   (cached stack token 0 unchanged by appending token 2 — AR invariant)
+;   128   sgn3[1][0]  → -1145553  (cached stack token 1 unchanged by appending token 2 — AR invariant)
+(do
+    ; --- layer 0: the causal-attention-band / llama-block-band fixture (d=4, HD=4, scale=1/√4) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    ; --- layer 1: a SECOND, distinct weight bundle (same architecture, different weights) ---
+    (let g1b (list 1.0 0.9 1.05 1.1))  (let g2b (list 0.95 1.1 0.9 1.0))
+    (let wqb (list (list 0.1 0.3 -0.2 0.4) (list -0.3 0.2 0.5 -0.1) (list 0.4 -0.1 0.2 0.3) (list 0.0 0.25 -0.35 0.15)))
+    (let wkb (list (list 0.3 -0.2 0.4 0.1) (list 0.15 0.5 -0.1 0.2) (list -0.05 0.3 0.25 -0.15) (list 0.4 -0.25 0.1 0.35)))
+    (let wvb (list (list 0.2 0.4 -0.15 0.3) (list 0.5 -0.1 0.2 0.45) (list -0.2 0.35 0.1 -0.05) (list 0.25 0.15 -0.3 0.2)))
+    (let wob (list (list 0.4 -0.3 0.2 0.5) (list 0.1 0.45 -0.15 0.2) (list -0.25 0.3 0.4 0.05) (list 0.35 -0.1 0.25 -0.2)))
+    (let wgb (list (list 0.3 0.2 -0.4 0.1) (list 0.5 -0.3 0.15 0.25) (list -0.1 0.4 0.3 -0.2) (list 0.2 0.05 -0.25 0.45)))
+    (let wub (list (list 0.15 0.35 -0.2 0.1) (list 0.4 -0.15 0.25 0.3) (list -0.25 0.2 0.35 -0.1) (list 0.3 0.1 -0.05 0.4)))
+    (let wdb (list (list 0.35 -0.15 0.25 0.2) (list 0.2 0.4 -0.3 0.1) (list -0.2 0.15 0.5 -0.25) (list 0.1 -0.05 0.3 0.45)))
+    (let eps 0.00001)
+    (let HD 4)
+    (let scale (div 1.0 (tn-sqrt 4.0)))
+    ; --- layer bundles + the depth stacks ---
+    (let L0 (list g1 wq wk wv wo g2 wg wu wd))
+    (let L1 (list g1b wqb wkb wvb wob g2b wgb wub wdb))
+    (let layers1 (list L0))
+    (let layers2 (list L0 L1))
+    (let scn1 (lblk-stack-causal   x  layers1 eps scale HD))
+    (let scn2 (lblk-stack-causal   x  layers2 eps scale HD))
+    (let sgn2 (lblk-stack-generate x  layers2 eps scale HD))
+    ; --- a 3-token fixture: the inductive step (cache threads past the boundary through depth) + AR invariant ---
+    (let x3 (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75) (list 0.5 1.0 -0.5 0.25)))
+    (let scn3 (lblk-stack-causal   x3 layers2 eps scale HD))
+    (let sgn3 (lblk-stack-generate x3 layers2 eps scale HD))
+    (let c0 (if (eq (round (mul (nth (nth scn1 0) 0) 1000000.0)) 1893731) 1 0))
+    (let c1 (if (eq (round (mul (nth (nth scn2 0) 0) 1000000.0)) 1936158) 2 0))
+    (let c2 (if (eq (round (mul (nth (nth scn2 1) 2) 1000000.0)) 1944810) 4 0))
+    (let c3 (if (eq (kv-lol-eq sgn2 scn2) 1) 8 0))
+    (let c4 (if (eq (kv-lol-eq sgn3 scn3) 1) 16 0))
+    (let c5 (if (eq (round (mul (nth (nth scn2 0) 0) 1000000.0)) (round (mul (nth (nth scn1 0) 0) 1000000.0))) 0 32))
+    (let c6 (if (eq (round (mul (nth (nth sgn3 0) 0) 1000000.0)) 1936158) 64 0))
+    (let c7 (if (eq (round (mul (nth (nth sgn3 1) 0) 1000000.0)) -1145553) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

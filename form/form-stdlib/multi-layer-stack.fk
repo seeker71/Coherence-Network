@@ -1,0 +1,68 @@
+; multi-layer-stack.fk — the DEPTH stack of causal llama decoder blocks: a real llama3.2:3b is 28
+; decoder blocks, each layer with its OWN weights and its OWN KV cache. The single block runs on the
+; M4 GPU forward (#3355/#3376) and steps incrementally via the KV cache (lblk-generate-causal,
+; kv-llama-block.fk, four-way #3408). This file is the next named stone after #3412 (the KV-cached
+; decode step on the GPU): "multi-layer decode — stack the kernel, each its own cache."
+;
+; A model is depth. Layer 0 reads the embeddings; each later layer reads the previous layer's output
+; sequence: x¹ = block₀(x⁰); x² = block₁(x¹); …; x^N = block_{N-1}(x^{N-1}). The weights are recipe
+; DATA all the way down — a layer is a SEQUENCE element, the stack a fold, mutable at runtime (the
+; dynamic-recipe advantage llama-block.fk names). Each layer keeps its OWN KV cache: a cached k_i/v_i
+; in layer ℓ is RoPE(Wk_ℓ·RMSNorm1_ℓ(x_i^ℓ), i) — frozen at (layer ℓ, position i), independent of
+; later tokens and of other layers' caches.
+;
+; The load-bearing claim, composing what is already four-way: the KV-cached depth stack is
+; BIT-IDENTICAL to the full-recompute depth stack. lblk-generate-causal == lblk-block-causal
+; bit-for-bit per layer (#3408), so folding the cached decode across layers feeds each layer exactly
+; the input the recompute fold feeds it — by induction over depth, lblk-stack-generate ==
+; lblk-stack-causal. The stack is the efficient realization of the same N four-way-proven causal llama
+; blocks; no numeric change, nothing re-derived — it composes lblk-block-causal and lblk-generate-causal
+; verbatim. lblk-block-causal is itself four-way #3365; so the recompute stack is a fold of a proven
+; recipe and the cached stack equals it.
+;
+; The autoregressive INVARIANT survives depth: appending a future token never changes an earlier
+; token's STACKED output — because every layer is causal and every cache entry is frozen at its
+; (layer, position). That invariant THROUGH the depth is exactly why a multi-layer KV cache can be
+; reused across generation steps; the band proves stack-gen3[earlier token] == stack-gen2[earlier token].
+;
+; Lives at the reusable decoder-engine altitude (like tb-attn-seq-causal, kv-generate, lblk-generate-
+; causal before it): any list of causal blocks stacks the same way; this instance is the real llama
+; block. eps/scale/HD are model-wide architecture constants; a layer bundle carries the per-layer
+; weights. fp64 lane; the GPU emit (stack the decode-step kernel #3412, each layer its own device
+; cache buffer) is the named follow-up. Proven four-way against the full-recompute stack and an
+; independent libm fp64 reference (scripts/multi_layer_stack_reference.py) by tests/multi-layer-stack-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- a layer bundle is (list g1 wq wk wv wo g2 wg wu wd); eps/scale/HD are model-wide ---
+(defn lyr-g1 (L) (nth L 0))
+(defn lyr-wq (L) (nth L 1))
+(defn lyr-wk (L) (nth L 2))
+(defn lyr-wv (L) (nth L 3))
+(defn lyr-wo (L) (nth L 4))
+(defn lyr-g2 (L) (nth L 5))
+(defn lyr-wg (L) (nth L 6))
+(defn lyr-wu (L) (nth L 7))
+(defn lyr-wd (L) (nth L 8))
+
+; --- one layer, full causal recompute (the whole sequence at once) ---
+(defn lblk-layer-causal (xs L eps scale HD)
+  (lblk-block-causal xs (lyr-g1 L) eps (lyr-wq L) (lyr-wk L) (lyr-wv L) (lyr-wo L)
+                     scale HD (lyr-g2 L) (lyr-wg L) (lyr-wu L) (lyr-wd L)))
+
+; --- one layer, KV-cached incremental decode (its OWN cache, grown fresh from empty inside) ---
+(defn lblk-layer-generate (xs L eps scale HD)
+  (lblk-generate-causal xs (lyr-g1 L) eps (lyr-wq L) (lyr-wk L) (lyr-wv L) (lyr-wo L)
+                        scale HD (lyr-g2 L) (lyr-wg L) (lyr-wu L) (lyr-wd L)))
+
+; --- fold the full causal block across depth: the recompute stack (a fold of the four-way #3365 block) ---
+(defn lblk-stack-causal (xs layers eps scale HD)
+  (if (eq (len layers) 0) xs
+      (lblk-stack-causal (lblk-layer-causal xs (head layers) eps scale HD)
+                         (tail layers) eps scale HD)))
+
+; --- fold the KV-cached decode across depth, each layer its own cache: the real generation stack.
+;     == lblk-stack-causal bit-for-bit (the equivalence the band proves). ---
+(defn lblk-stack-generate (xs layers eps scale HD)
+  (if (eq (len layers) 0) xs
+      (lblk-stack-generate (lblk-layer-generate xs (head layers) eps scale HD)
+                           (tail layers) eps scale HD)))
