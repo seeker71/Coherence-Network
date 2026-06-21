@@ -59,6 +59,12 @@
 ;     whisper's 80-d log-mel (mel-frame/mel-full + the new 80-row Slaney bank mel-filterbank.fk, four-way 63)
 ;     + CMVN dropped the HARD same-gender pair 0.768 → 0.588 (ECAPA 0.13) — features + normalization sharpen
 ;     the geometry as predicted; raw log-mel WITHOUT CMVN is worse (~0.97, the shared envelope dominates).
+;     EER REALITY-CHECK (eer.fk, the new four-way metric, on 15 real same/different-speaker trials — the
+;     instrument's FIRST lesson): raw log-mel EER 0.33, but global IN-SAMPLE CMVN EER 0.67 — WORSE than
+;     chance. It collapses same-speaker similarity (genuine cosines fall to 0.21/0.37, below several impostor
+;     pairs). The hard-pair-cosine "CMVN win" did NOT generalize to verification — #3's "one cosine misleads"
+;     proven on our own data. The lesson the metric forced: per-utterance CMVN (NOT global in-sample) + a
+;     TRAINED embedder are required, not optional; both front-ends are near/under chance untrained.
 ;     OBJECTIVE WIN: the consensus #1 fix is SHIPPED — speaker-aam.fk (AAM-Softmax / ArcFace head, four-way,
 ;     verdict 63) replaces the MSE-to-speaker-codes objective that collapsed C3: L2-normalized cosine logits +
 ;     additive angular margin on the target (cos(θ+m) = cosθ·cosm − √(1−cos²θ)·sinm) + loss.fk's softmax-CE.
