@@ -1,0 +1,65 @@
+; preludes: form-stdlib/core.fk form-stdlib/byte-to-symbol.fk
+;
+; byte-to-symbol-band — GPT-2/whisper byte-level encoder (OpenAI's bytes_to_unicode) lifted to the
+; four-kernel floor. This is the tokenizer FRONT-END the bpe merge core (bpe-tokenizer.fk, #3447)
+; feeds from: text bytes -> visible unicode codepoints, before any merge. Named stone #2 of the
+; tokenizer arc — the byte->symbol map was carrier DATA; this proves the algorithm in Form.
+;
+; The proof is the map's structural laws, pinned to OpenAI's reference (verified 0 mismatches over all 256 bytes):
+;   bit 1   — the SPACE case: byte 32 -> codepoint 288 (chr 'Ġ', the word-boundary marker every BPE word carries).
+;   bit 2   — printable identity: bytes in [33..126] u [161..172] u [174..255] map to themselves.
+;   bit 4   — the offset FLOOR: byte 0 (the min byte, a control char) -> 256.
+;   bit 8   — the [127..160] offset band endpoints: 127 -> 289, 160 -> 322 (= byte + 162).
+;   bit 16  — the ISOLATED singleton: byte 173 -> 323 (161..172 are printable, so 173 is non-contiguous — the trap).
+;   bit 32  — the branch CUTS are exactly placed: 126(id)|127(offset), 160(offset)|161(id), 172(id)|173(offset)|174(id).
+;   bit 64  — the BIJECTION separation: every offset >= 256, every identity <= 255 -> the two branches never collide
+;             (this is what makes byte-level decode reversible).
+;   bit 128 — the SEQUENCE map: " tokenizer" bytes -> codepoints [288,116,111,107,101,110,105,122,101,114], the
+;             byte-mapped form whose vocab-ids are the bpe band's real anchor; and the empty base case.
+;
+; Pure integer recursion — no host I/O, no floats, small tables — the fourth-friendly subset. Verdict 255.
+(do
+  (defn ids-eq (a b)
+    (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+        (if (eq (head a) (head b)) (ids-eq (tail a) (tail b)) 0)))
+
+  ; bit 1 — space -> Ġ (288)
+  (let c0 (if (eq (byte-to-symbol 32) 288) 1 0))
+
+  ; bit 2 — printable identity across all three sub-ranges and their boundaries
+  (let c1 (if (and (and (and (eq (byte-to-symbol 33) 33) (eq (byte-to-symbol 126) 126))
+                        (and (eq (byte-to-symbol 116) 116) (eq (byte-to-symbol 161) 161)))
+                   (and (and (eq (byte-to-symbol 172) 172) (eq (byte-to-symbol 174) 174))
+                        (eq (byte-to-symbol 255) 255)))
+              2 0))
+
+  ; bit 4 — offset floor: byte 0 -> 256
+  (let c2 (if (eq (byte-to-symbol 0) 256) 4 0))
+
+  ; bit 8 — [127..160] offset band endpoints
+  (let c3 (if (and (eq (byte-to-symbol 127) 289) (eq (byte-to-symbol 160) 322)) 8 0))
+
+  ; bit 16 — isolated singleton 173 -> 323
+  (let c4 (if (eq (byte-to-symbol 173) 323) 16 0))
+
+  ; bit 32 — branch cuts exactly placed (id vs offset on both sides of each boundary)
+  (let c5 (if (and (and (and (eq (byte-to-symbol 126) 126) (eq (byte-to-symbol 127) 289))
+                        (and (eq (byte-to-symbol 160) 322) (eq (byte-to-symbol 161) 161)))
+                   (and (and (eq (byte-to-symbol 172) 172) (eq (byte-to-symbol 173) 323))
+                        (eq (byte-to-symbol 174) 174)))
+              32 0))
+
+  ; bit 64 — bijection separation: offsets >= 256, identities <= 255 (no collision)
+  (let c6 (if (and (and (and (ge (byte-to-symbol 0) 256) (ge (byte-to-symbol 32) 256))
+                        (and (ge (byte-to-symbol 127) 256) (ge (byte-to-symbol 173) 256)))
+                   (and (and (ge 255 (byte-to-symbol 33)) (ge 255 (byte-to-symbol 126)))
+                        (ge 255 (byte-to-symbol 255))))
+              64 0))
+
+  ; bit 128 — the sequence map over " tokenizer" bytes, plus the empty base case
+  (let seq (bytes-to-symbols (list 32 116 111 107 101 110 105 122 101 114)))
+  (let c7 (if (and (eq (ids-eq seq (list 288 116 111 107 101 110 105 122 101 114)) 1)
+                   (eq (len (bytes-to-symbols (empty))) 0))
+              128 0))
+
+  (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

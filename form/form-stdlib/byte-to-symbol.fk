@@ -1,0 +1,37 @@
+; byte-to-symbol.fk — GPT-2/whisper byte-level encoder: byte (0..255) -> unicode codepoint.
+;
+; preludes: (none beyond the kernel — pure int recipe)
+;
+; whisper/GPT-2 tokenizes at the BYTE level: every input byte 0..255 maps to a single visible
+; unicode codepoint BEFORE merge, so the merge core (bpe-tokenizer.fk) and the round-trip decode
+; both work over a printable alphabet with no control or whitespace bytes. The map (OpenAI's
+; bytes_to_unicode) keeps the "printable" byte ranges as themselves and lifts the rest above 255:
+;   printable = [33..126] u [161..172] u [174..255]              -> codepoint = byte (identity)
+;   the other 68 bytes ({0..32} u {127..160} u {173}), ascending, map to 256,257,...,323:
+;     b in [0..32]     -> 256 + b              (ranks 0..32)
+;     b in [127..160]  -> 256 + 33 + (b-127)  = b + 162   (ranks 33..66)
+;     b == 173         -> 256 + 67            = 323        (rank 67; isolated — 161..172 are printable)
+; The map is a bijection 0..255 -> 256 distinct codepoints (every offset >= 256, every identity <= 255,
+; so the two branches never collide) — which is what makes byte-level decode reversible. This is the
+; algorithmic FRONT-END the bpe merge core feeds from; the codepoint->vocab-id lookup is table DATA.
+; All integer arithmetic: no floats (no e-notation risk), no host I/O, small — the fourth-friendly subset.
+
+(do
+  ; is byte b in a printable range that maps to itself?
+  (defn b2s-printable? (b)
+    (if (if (ge b 33) (ge 126 b) 0) 1
+        (if (if (ge b 161) (ge 172 b) 0) 1
+            (if (if (ge b 174) (ge 255 b) 0) 1 0))))
+
+  ; one byte -> its unicode codepoint
+  (defn byte-to-symbol (b)
+    (if (eq (b2s-printable? b) 1) b
+        (if (ge 32 b) (add 256 b)
+            (if (ge 160 b) (add b 162)
+                323))))
+
+  ; map a byte list to its codepoint list (the front-end over a word's bytes)
+  (defn bytes-to-symbols (bs)
+    (if (eq (len bs) 0) (empty)
+        (cons (byte-to-symbol (head bs)) (bytes-to-symbols (tail bs)))))
+  0)
