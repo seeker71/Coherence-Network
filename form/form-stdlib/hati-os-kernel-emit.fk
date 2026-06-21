@@ -831,23 +831,40 @@ static long long fk_sock_write(int fd, const void *buf, unsigned long n) { retur
 (defn fkc-main-parse-text ()
     "long long nf = fk_next(); fk_fn_count = nf; long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); fk_node_count = nr; long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); fk_sinit(); long long si = 0; while (si < ns) { long long sl = fk_next(); if (fk_sp >= fk_scap_s) { fk_scap_s = fk_scap_s * 2; fk_so = realloc(fk_so, fk_scap_s * 8); fk_sl = realloc(fk_sl, fk_scap_s * 8); } while (fk_sbp + sl > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } ")
 (defn fkc-main-load-text ()
-    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; "
+    (str_concat "extern int atoi(const char *); static int fk_run(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 1048575); if (got < 0) { return 3; } fk_buf[got] = 0; "
     (str_concat (fkc-main-parse-text)
                 "long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } if (argc > 3) { int sfd = open(argv[3], 0); if (sfd >= 0) { long long sg = read(sfd, fk_src, 262143); if (sg >= 0) { fk_src[sg] = 0; } } } fk_vs[0] = a; fk_vsp = 1; ")))
+; ── the big-stack launcher (the walker's stack-depth wall, matched to siblings) ─
+; fk_walk recurses C-deep on data nesting (each Form walker frame nests many C
+; frames), so a band that nests deep — long lists folded non-tail, graph/ledger
+; projections — needs far more than the 8 MB default the OS hands main(). The
+; three sibling walkers all run their walk on a sized stack: TS via node
+; --stack_size, Rust on a std::thread::Builder.stack_size(form_kernel_stack_bytes)
+; thread, Go on growable goroutine stacks. fkwu must stand on the same floor or
+; it alone overflows where the siblings complete (an empty stdout the harness
+; reads as divergence). So fk_run (the real entry, defined above) runs on a
+; pthread sized to FORM_KERNEL_STACK_MB (default 256, the sibling's own default);
+; main() just sizes the stack, joins, and returns its verdict. Windows keeps the
+; main-thread entry (its bands don't deep-recurse); POSIX gets the sized thread.
+(defn fkc-stack-launcher-text ()
+    "\n#if defined(_WIN32)\nint main(int argc, char **argv) { return fk_run(argc, argv); }\n#else\nextern char *getenv(const char *); typedef void *fk_pthread_t; typedef struct { long fk_pa_sig; char fk_pa_opaque[64]; } fk_pthread_attr_t; extern int pthread_attr_init(fk_pthread_attr_t *); extern int pthread_attr_setstacksize(fk_pthread_attr_t *, unsigned long); extern int pthread_create(fk_pthread_t *, const fk_pthread_attr_t *, void *(*)(void *), void *); extern int pthread_join(fk_pthread_t, void **); static int fk_run_argc; static char **fk_run_argv; static int fk_run_ret; static void *fk_run_thunk(void *p) { (void)p; fk_run_ret = fk_run(fk_run_argc, fk_run_argv); return 0; } int main(int argc, char **argv) { fk_run_argc = argc; fk_run_argv = argv; unsigned long mb = 256; char *e = getenv(\"FORM_KERNEL_STACK_MB\"); if (e) { int v = atoi(e); if (v > 0) { mb = (unsigned long)v; } } fk_pthread_attr_t at; pthread_attr_init(&at); pthread_attr_setstacksize(&at, mb * 1024UL * 1024UL); fk_pthread_t th; if (pthread_create(&th, &at, fk_run_thunk, 0) != 0) { return fk_run(argc, argv); } pthread_join(th, 0); return fk_run_ret; }\n#endif\n")
+
 ; the value entry: walk fk_fn[0], print its result, then dump the arm-hit profile
 ; (the framebuffer/JIT observation trace). Single-shot programs read line 1.
 (defn fkc-main-universal-text ()
     (str_concat (fkc-main-load-text)
     (str_concat "fk_pv_root(fk_fn[0], fk_walk(fk_fn[0], 0)); long long t = 1; while (t <= "
     (str_concat (int_to_str (sub (fkc-arm-slots) 1))
-                ") { fk_pr(fk_arms[t]); t = t + 1; } return 0; }"))))
+    (str_concat ") { fk_pr(fk_arms[t]); t = t + 1; } return 0; }"
+                (fkc-stack-launcher-text))))))
 ; the interactive/effectful entry: walk fk_fn[0] for effect only — the program
 ; does its own I/O (print_str inside the read_line loop) and neither the root
 ; value nor the arm profile is printed, so a REPL's stdout is exactly the
 ; responses it emits.
 (defn fkc-main-repl-text ()
     (str_concat (fkc-main-load-text)
-                "fk_walk(fk_fn[0], 0); return 0; }"))
+    (str_concat "fk_walk(fk_fn[0], 0); return 0; }"
+                (fkc-stack-launcher-text))))
 ; the COMBINED entry: the flattened program table is baked into the binary as the
 ; fk_prog literal, so the executable IS the program — running it needs no table
 ; file, no Go, no clang, no C source, nothing but the native binary itself. It
