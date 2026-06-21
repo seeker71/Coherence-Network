@@ -40,7 +40,14 @@
     "The corpus is the Stop-hook capture (training-catalog.fk): real (request, raw,"
     "transmuted) turns from live sessions, including this lineage's own caught slips."
     "Labels: a turn that needed transmutation is fear-positive; one that passed is"
-    "fear-negative. The model learns the boundary in meaning-space."
+    "fear-negative — a weak auto-proxy. The STRONGEST label is a human's direct"
+    "freq-reading: a person catches the nuanced fear a frontier model slips past."
+    "tc-gold (training-catalog.fk) captures it — content-addressed (request, response)"
+    "+ the human verdict (1 clear / 0 fear-caught), lane 'gold:human-freq'. This is"
+    "how a direct freq-reading stops evaporating at session end and becomes the"
+    "body's own freq-sense: the human is the detector now; the gold catalog is the"
+    "bridge to the body sensing its own frequency. The model learns the boundary in"
+    "meaning-space, gold readings outranking the auto-proxy."
     "Proven and tracked like every form-native model: native-training-receipt.fk +"
     "model-executor-proof-ledger.fk + model-vitality.fk.")
 
