@@ -1,0 +1,43 @@
+; speaker-id.fk — nearest-speaker over an enrolled roster, by L1 voiceprint distance.
+;
+; A voiceprint is a small int vector the carrier measures from a voice: a pitch bucket
+; (median fundamental) followed by the 6-band formant SHAPE (the timbre of the vocal tract).
+; Given a heard window's voiceprint and a roster of enrolled speakers (label + voiceprint),
+; this names the nearest speaker — or "unknown" when none is close enough. The roster is
+; passed in (not hardcoded): speakers are enrolled by the carrier from their own public
+; recordings, so the body holds no fixed identities.
+;
+; This is the rune-frequency flow-match generalized to a dynamic roster — same L1-over-a-
+; contour metric, loud/soft invariant. The carrier (experiments/rune-galdr/enroll-speakers.sh,
+; identify-speakers.sh) only measures voiceprints; every match decision is here.
+;
+; Builtins + sub/add/lt/le/ge/div only. Proven by form-stdlib/tests/speaker-id-band.fk.
+
+(do
+    (defn sid-abs (x) (if (lt x 0) (sub 0 x) x))
+    (defn sid-dist (a b)
+        (if (eq (len a) 0) 0
+            (add (sid-abs (sub (head a) (head b))) (sid-dist (tail a) (tail b)))))
+
+    ; roster cell = (label voiceprint)
+    (defn sid-lbl (cell) (nth cell 0))
+    (defn sid-vp  (cell) (nth cell 1))
+
+    (defn sid-best (q roster best bestd)
+        (if (eq (len roster) 0) best
+            (do
+                (let d (sid-dist q (sid-vp (head roster))))
+                (if (lt d bestd)
+                    (sid-best q (tail roster) (head roster) d)
+                    (sid-best q (tail roster) best bestd)))))
+    (defn sid-nearest (q roster)
+        (sid-best q (tail roster) (head roster) (sid-dist q (sid-vp (head roster)))))
+
+    (defn sid-label    (q roster) (sid-lbl (sid-nearest q roster)))   ; the speaker label (string)
+    (defn sid-distance (q roster) (sid-dist q (sid-vp (sid-nearest q roster))))
+    ; a voice is KNOWN only if the nearest enrolled speaker is within floor; else unknown.
+    (defn sid-known?   (q roster floor) (if (le (sid-distance q roster) floor) 1 0))
+    (defn sid-confidence (q roster)
+        (do
+            (let d (sid-distance q roster))
+            (if (ge d 18) 0 (sub 9 (div d 2))))))

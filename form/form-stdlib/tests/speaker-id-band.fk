@@ -1,0 +1,29 @@
+; preludes: form-stdlib/speaker-id.fk
+;
+; speaker-id-band — nearest-speaker over an enrolled roster, three-way.
+; Roster of three voiceprints (pitch bucket + 6 formant bands): a low-pitched voice and
+; two higher-pitched voices with different timbre contours.
+;
+; Verdict 255 when every claim lands (numeric decisions only):
+;   1   |−5| = 5                              (sid-abs)
+;   2   identical voiceprints → distance 0     (sid-dist self)
+;   4   speaker A's own print resolves exact    (sid-distance A = 0)
+;   8   speaker B's own print resolves exact    (sid-distance B = 0)
+;   16  speaker C's own print resolves exact    (sid-distance C = 0)
+;   32  an enrolled voice is KNOWN within floor  (sid-known? A floor 2 = 1)
+;   64  a far voice is UNKNOWN beyond floor       (sid-known? (0…) floor 5 = 0)
+;   128 exact match is full confidence            (sid-confidence A = 9)
+(do
+    (let A  (list 3 9 3 2 2 1))
+    (let B  (list 7 8 4 3 2 1))
+    (let C  (list 8 6 5 3 2 1))
+    (let RO (list (list "a" A) (list "b" B) (list "c" C)))
+    (let c0 (if (eq (sid-abs (sub 0 5)) 5) 1 0))
+    (let c1 (if (eq (sid-dist A A) 0) 2 0))
+    (let c2 (if (eq (sid-distance A RO) 0) 4 0))
+    (let c3 (if (eq (sid-distance B RO) 0) 8 0))
+    (let c4 (if (eq (sid-distance C RO) 0) 16 0))
+    (let c5 (if (eq (sid-known? A RO 2) 1) 32 0))
+    (let c6 (if (eq (sid-known? (list 0 0 0 0 0 0) RO 5) 0) 64 0))
+    (let c7 (if (eq (sid-confidence A RO) 9) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
