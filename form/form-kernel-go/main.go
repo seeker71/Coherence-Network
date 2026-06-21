@@ -2938,6 +2938,20 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VNodeID, Nid: root}
 	})
+	// form_compile source-string → recipe NodeID. Parses Form source into a
+	//   content-addressed recipe in RAM and returns its root NodeID — the
+	//   shareable handle. The "generate into RAM" leg of the gen conductor.
+	//   (Plain Form recipe surface; section/class source rides the compile
+	//   chain, the named follow-on.)
+	k.registerNative("form_compile", catWitness(), func(k *Kernel, args []Value) Value {
+		return Value{Kind: VNodeID, Nid: readRootFromSource(k, args[0].Str)}
+	})
+	// form_walk recipe-NodeID → value. Executes a recipe in RAM on a fresh
+	//   frame — the "run" leg. Pairs with form_compile (run what you generated)
+	//   and bytes_to_recipe (run what a peer shared over a byte channel).
+	k.registerNative("form_walk", catWitness(), func(k *Kernel, args []Value) Value {
+		return k.walk(args[0].AsNid(), NewFrame(nil))
+	})
 	// jit_compile form-name-str → 1 if a host-JIT compile succeeded,
 	//   0 if the compile fell back (toolchain missing, body uses ops the
 	//   emitter can't lower, plugin.Open failed), -1 if the name isn't
