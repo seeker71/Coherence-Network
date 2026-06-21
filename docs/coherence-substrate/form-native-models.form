@@ -39,7 +39,14 @@
 ;     "The sun rises in the"->" east", "Water is made of hydrogen and"->" oxygen"). The two real deltas the
 ;     toy block lacked are closed: GQA also runs bit-exact on the GPU (template_attention_gqa.ptx, 24/8/hd128
 ;     = 18432/18432). This CPU forward IS the oracle the GPU kernels mirror.
-;   (4) DONE — THE REAL llama3.2:3b RUNS ON THE FORM-EMITTED GPU KERNELS at real width
+;   (4) DONE — THE REAL llama3.2:3b RUNS *AND GENERATES* ON THE FORM-EMITTED GPU KERNELS at real width.
+;     cuda/form_cuda_ptx_llama_gen.c runs the WHOLE forward incl. the tied LM head on the GPU PTX kernels
+;     (token_embd resident, head matvec on form_matvec_f32) and generates autoregressively: prompt "The
+;     capital of France is" -> "Paris. The capital of Italy is Rome" — a real 3B public model writing
+;     coherent, factually-correct text on Form-emitted GPU code alone (~19s/token, no KV-cache yet).
+;     ollama greedy matches token-for-token through " Paris.", " The"; position 4 is an honest near-tie
+;     logit race (our recipe-exact fp32-dequant vs ollama's quantized kernels, ~0.8 logit apart) — both
+;     coherent. The bit-exact forward proof is cuda/form_cuda_ptx_llama_real.c:
 ;     (cuda/form_cuda_ptx_llama_real.c): real GGUF weights streamed per-layer onto resident device
 ;     buffers (12 GB f32 fits the RTX 4070 by L->L+1 reuse), the full 28-block forward on the form-ptx
 ;     kernels (RMSNorm, matvec, RoPE base=500000 via template_rope_llama.ptx, GQA attn 24q/8kv hd128,
