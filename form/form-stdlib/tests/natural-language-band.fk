@@ -8,8 +8,15 @@
 ; so the parse crosses four-way (Go / Rust / TS / fkwu) where the section-DSL
 ; front end (source-compiler + file IO) reaches only three.
 ;
-; The witness is a bitmask: each sentence class owns one bit, so the total names
-; exactly which classes parse. All eight here → 255.
+; This band proves BOTH arms of the codec, the way the body names it
+; (encoder-decoder-as-recipe.form: encoder and decoder are two arms of one
+; Blueprint). The pivot — the "generic meaning" — is the universal recipe node,
+; shared: the ENCODER (g-parse) maps many surfaces onto one pivot, and two
+; DECODERS read the SAME pivot to two targets — back to an NL surface (so
+; NL -> meaning -> NL round-trips) and to a Form s-expr surface (meaning -> Form).
+; Encoder and decoder are separate cells composing through the pivot, so each
+; can improve independently. The witness is a bitmask: each check owns one bit,
+; so the total names exactly which pass. All eighteen → 262143.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk
 
@@ -60,11 +67,30 @@
             (list "seq" (p-cap "s" (p-run "alpha")) (p-lit "means") (p-cap "m" (p-run "alpha")))
             (t-emit "meaning" (list (t-splice "s") (t-splice "m")))))))
 
+    ;; --- the DECODER arm: pivot meaning node -> surface, the dual of the parser.
+    ;; Same pivot, two target surfaces. encoder (g-parse) and decoder are separate
+    ;; cells composing through ONE pivot — the two independently-improvable
+    ;; components of the translation pipeline. Templates are data, like the grammar.
+    (defn kidv (n i) (node_value (nth (node_children n) i)))
+    (defn sp (a b) (str_concat a (str_concat " " b)))
+    ;; decoder #1 — pivot -> NL surface
+    (defn decode-fact-nl (n) (sp "the" (sp (kidv n 0) (sp "is" (kidv n 1)))))
+    (defn decode-prop-nl (n) (sp "the" (sp (kidv n 0) (sp "is" (kidv n 1)))))
+    (defn decode-isa-nl  (n) (sp "a" (sp (kidv n 0) (sp "is" (sp "a" (kidv n 1))))))
+    (defn decode-rel-nl  (n) (sp (kidv n 0) (sp (kidv n 1) (kidv n 2))))
+    (defn decode-ques-nl (n) (sp "what" (sp "is" (kidv n 0))))
+    (defn decode-mean-nl (n) (sp (kidv n 0) (sp "means" (kidv n 1))))
+    ;; decoder #2 — the SAME pivot -> a Form s-expr surface (a different target)
+    (defn wrap (op body) (str_concat "(" (str_concat op (str_concat " " (str_concat body ")")))))
+    (defn decode-fact-form (n) (wrap "fact" (sp (kidv n 0) (kidv n 1))))
+    (defn decode-rel-form  (n) (wrap "relation" (sp (kidv n 0) (sp (kidv n 1) (kidv n 2)))))
+
     (defn chk (got exp bit) (if (node_eq got exp) bit 0))
     (defn total (xs) (if (nil? xs) 0 (add (head xs) (total (tail xs)))))
 
-    ;; one witness — a flat bitmask fold (each class owns one bit; all ten → 1023)
+    ;; one witness — a flat bitmask fold (each check owns one bit; all eighteen → 262143)
     (total (list
+        ;; ENCODER: surface -> pivot (bits 0..9)
         (chk (g-parse nl "the count is 13")            (fact2 "count" "13")                       1)
         (chk (g-parse nl "count is 13")                (fact2 "count" "13")                       2)
         (chk (g-parse nl "the kernel is native")       (prop2 "kernel" "native")                  4)
@@ -74,4 +100,14 @@
         (chk (g-parse nl "what is count")              (ques1 "count")                           64)
         (chk (g-parse nl "form means object")          (mean2 "form" "object")                  128)
         (chk (g-parse nl "kernel has source")          (rel3 "kernel" "has" "source")           256)
-        (chk (g-parse nl "agent reads spec")           (rel3 "agent" "reads" "spec")            512))))
+        (chk (g-parse nl "agent reads spec")           (rel3 "agent" "reads" "spec")            512)
+        ;; DECODER #1 round-trip: pivot -> NL surface -> pivot (bits 10..15)
+        (chk (g-parse nl (decode-fact-nl (fact2 "count" "13")))               (fact2 "count" "13")                  1024)
+        (chk (g-parse nl (decode-prop-nl (prop2 "kernel" "native")))         (prop2 "kernel" "native")             2048)
+        (chk (g-parse nl (decode-isa-nl  (isa2 "cell" "organism")))          (isa2 "cell" "organism")              4096)
+        (chk (g-parse nl (decode-rel-nl  (rel3 "source" "supports" "binary"))) (rel3 "source" "supports" "binary") 8192)
+        (chk (g-parse nl (decode-ques-nl (ques1 "count")))                   (ques1 "count")                      16384)
+        (chk (g-parse nl (decode-mean-nl (mean2 "form" "object")))           (mean2 "form" "object")              32768)
+        ;; DECODER #2: the SAME pivot -> a Form s-expr surface (bits 16..17)
+        (if (str_eq (decode-fact-form (fact2 "count" "13")) "(fact count 13)") 65536 0)
+        (if (str_eq (decode-rel-form (rel3 "source" "supports" "binary")) "(relation source supports binary)") 131072 0))))
