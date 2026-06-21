@@ -3,6 +3,14 @@
 Learn all 24 Elder Futhark runes, give each one's **galdr** (sung rune) a measurable
 **vibration**, and match a heard sound back to its rune — both directions.
 
+**Lineage.** The ceremony this work learned its shape from is the rune-healing practice of
+[Anchor the Light](../../docs/presences/anchor-the-light.md) — the Ceremony held by
+[Ubbe MacLean](../../docs/presences/ubbe-maclean.md) (Ásatrú rune-worker, author of *Healing
+From the Tree: Using Runes for Emotional, Physical & Soul Healing*) and
+[Angelia LaRue](../../docs/presences/angelia-larue.md), with [Brigitte Mars](../../docs/presences/brigitte-mars.md)
+as elder presence. The body learns from and credits this living lineage; the reference
+signatures here are trained on public galdr (SOURCES.md), not on their private ceremony.
+
 The **body is Form**, proven four-way (Go/Rust/TS/fkwu):
 
 - [`form-stdlib/nordic-runes.fk`](../../form/form-stdlib/nordic-runes.fk) — the 24 runes
