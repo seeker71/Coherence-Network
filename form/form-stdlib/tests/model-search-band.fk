@@ -1,0 +1,24 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/model-search.fk
+;
+; model-search-band — the tournament ratchet (GAP-Q6 closed), four-way: try the top candidates, measure,
+; improve the WORST from the findings, repeat, stop only when the worst can no longer be improved. The
+; loop finds the best model PER USAGE — no free lunch. Candidates are model genes (the qam beta); the
+; measured score is ms-value, the fitness is closeness to the usage's target (an interior optimum).
+;
+; Verdict 31 when every claim lands:
+;   1   USAGE A (target 2.5): the loop converges to the best model [0.5 0.5 0.5] (the optimum gene)
+;   2   USAGE B (target 1.25): a DIFFERENT usage converges to a DIFFERENT best model [0.25 0.25 0.25] — no free lunch
+;   4   the PROPOSER improves the worst from findings: a below-target gene is raised (0.125→0.25), an above-target lowered (0.875→0.75)
+;   8   the HALT is exact: at the optimum the worst can't improve (=0); before it, it can (=1)
+;   16  MONOTONE progress: each round's new candidate strictly beats the worst it replaces
+(do
+    (let start (list 0.0 0.375 1.0))                       ; the 3 starting candidates ("top 3 ways")
+
+    (let c0 (if (eq (gl-veq6 (ms-search 2.5 start 100) (list 0.5 0.5 0.5)) 1) 1 0))
+    (let c1 (if (eq (gl-veq6 (ms-search 1.25 start 100) (list 0.25 0.25 0.25)) 1) 2 0))
+    (let c2 (if (and (eq (gl-veq6 (list (ms-improve 2.5 0.125)) (list 0.25)) 1)
+                     (eq (gl-veq6 (list (ms-improve 2.5 0.875)) (list 0.75)) 1)) 4 0))
+    (let c3 (if (and (eq (ms-improvable? 2.5 0.5) 0)
+                     (eq (ms-improvable? 2.5 0.125) 1)) 8 0))
+    (let c4 (if (gt (ms-fitness 2.5 (ms-improve 2.5 0.0)) (ms-fitness 2.5 0.0)) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))
