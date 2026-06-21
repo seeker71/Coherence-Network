@@ -688,7 +688,7 @@ natural-language fks 262143
 # NodeID, no tongue privileged; self-authored-symbol-space MDL refines it minimal),
 # each symbol carrying an ice/water/gas phase (substrate-thermodynamics).
 # 2047 = all eleven checks.
-nl-translate fks 2047
+nl-translate fks 16383
 # form.bml lifted onto the cursor: the form.bml grammar PARSES `def ..=expr;` on
 # the fourth arm too (cursor-only; rides bmf-core/bmf-grammar's op families). The
 # recipe-shape parity vs the hand line compiler is the three-way band
