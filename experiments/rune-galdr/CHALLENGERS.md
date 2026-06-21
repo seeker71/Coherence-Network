@@ -120,3 +120,39 @@ correctness against ECAPA's; the gate promotes a challenger only when it reaches
 held-out set. Trials = same/different-speaker pairs from public clips (`challenger-supervector.sh`
 for C1; ECAPA via `ecapa_embed.py`). Data + roster stay private; only recipes and the measured
 margins ship.
+
+## External review — Grok + Cursor (2026-06-21)
+
+Consulted two frontier agents headless (`grok -p`, `cursor-agent -p -f`) for an outside read on the
+challengers. (Gemini's CLI auth and Codex's config were broken at the time — grok/cursor answered.)
+They converged hard, and on the same things my self-review named — which is the signal worth keeping:
+
+**Consensus, highest-leverage first:**
+1. **Metric-learning loss, not MSE-to-codes** — AAM-Softmax / ArcFace / GE2E / triplet on
+   L2-normalized embeddings + cosine margin. Both call MSE-to-speaker-codes "the bug" behind C3's
+   collapse and "the single biggest architectural omission." Keep the classifier head as training
+   scaffold; export the embedding layer for scoring.
+2. **Data + augmentation** — 26 voices × ~1 recording is "unusable" for learned embeddings. VAD-cut
+   2–4 s chunks + MUSAN noise/music/babble + RIR + speed/pitch → hundreds of intra-speaker segments.
+   "Moves cosine gaps more than classifier tweaks."
+3. **Verification eval now: EER / minDCF + score-norm (z/t/s-norm)** — a single hard-pair cosine is
+   too sparse and can mislead; build a genuine target/impostor trial matrix, optimize to it.
+4. **Attentive statistics pooling + per-UTTERANCE CMVN + voiced-frame masking** — C1's global
+   mean+std is "too lossy"; weighted (attention) mean+std over frame features, and per-utterance CMVN
+   (not the global CMVN I used in the demo).
+5. **Shallow dilated TDNN before pooling** — 3–4 dilated frame layers; "most of ECAPA's gain is
+   temporal context + learned filterbank, not the 20M-param monster."
+6. **Hard-negative mining + centroid enrollment** — N speakers × M segments batches, semi-hard mining
+   on same-gender confusions; multi-segment centroid enrollment "often drops same-gender pairs
+   0.15–0.25."
+7. **Native asm training lane** — the tree-walker (0.8 s/log-mel column) blocks real optimization;
+   fuse forward+backward for conv1d/affine/pool/cosine-margin so epochs run in minutes.
+
+**Honest expectation (Grok):** with the loss + augmentation + pooling + native lane, expect to beat C1
+materially and pull same-gender pairs toward ~0.25–0.35 cosine; reaching ECAPA's ~0.13 from scratch on
+26 voices is unrealistic without **VoxCeleb-scale pretrain, or distilling/porting ECAPA's weights into
+our asm lane** (the "model architecture AND weights are recipe data" path).
+
+The order is now unambiguous and externally corroborated: **(1) AAM-softmax loss → (2) augmentation →
+(3) EER harness → (4) attentive pooling + per-utt CMVN**, then the TDNN + native lane. C2-full/C3 are
+the right model classes waiting on the right objective and data.
