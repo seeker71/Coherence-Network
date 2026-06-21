@@ -1,0 +1,68 @@
+#version 450
+
+// form-native affine-train (one SGD step) compute shader (Android/Vulkan lane, prototyped on RTX).
+// One invocation per OUTPUT ROW of y = W.x + b. Mirrors form_affine_train_f32.ptx
+// (fptx-affine-train) op-for-op:
+//   forward dot: DOWNWARD right-fold  acc = 0; for (j=cols; j-- >0;) acc = W[i*cols+j]*x[j] + acc
+//   y      = acc + b[i]
+//   d      = y - t[i]
+//   loss[i]= d * d
+//   g      = 2.0 * d                          (%f12)
+//   lrg    = lr * g                           (%f13)   -- precomputed ONCE, used for every update
+//   update: for (k=cols; k-- >0;) W[i*cols+k] = W[i*cols+k] - (lrg * x[k])
+//   b[i]   = b[i] - lrg                        (uses the ORIGINAL b[i] loaded before the dot)
+// W, b are updated IN PLACE; loss is written. There is NO division anywhere -> no RoundingModeRTE
+// needed (like residual.comp). Every float op is `precise` -> SPIR-V NoContraction so the driver
+// cannot fuse mul+add into FMA and cannot reassociate -> bit-exact to the CPU oracle and PTX/MSL.
+// Do NOT call fma(); do NOT run spirv-opt. The same .spv runs on Adreno/Mali.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0)           buffer W  { float w[]; };    // rows*cols (updated in place)
+layout(std430, binding = 1)           buffer B  { float b[]; };    // rows      (updated in place)
+layout(std430, binding = 2) readonly  buffer X  { float x[]; };    // cols
+layout(std430, binding = 3) readonly  buffer T  { float t[]; };    // rows
+layout(std430, binding = 4) writeonly buffer L  { float loss[]; }; // rows
+
+layout(push_constant) uniform Push { uint rows; uint cols; uint lr_bits; } pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;          // output row i
+    if (i >= pc.rows) return;
+
+    precise float lr = uintBitsToFloat(pc.lr_bits);
+    precise float C_TWO = uintBitsToFloat(0x40000000u); // 2.0
+
+    uint rowbase = i * pc.cols;                // wbase = i*cols
+
+    // forward dot: DOWNWARD right-fold  l = cols; while (l!=0){ l--; acc = W*x + acc }
+    precise float acc = 0.0;
+    uint l = pc.cols;
+    while (l != 0u) {
+        l = l - 1u;
+        precise float p = w[rowbase + l] * x[l];
+        acc = p + acc;
+    }
+
+    precise float bi = b[i];                    // %f6: original b[i], loaded before update
+    precise float y  = acc + bi;                // y = acc + b[i]
+    precise float d  = y - t[i];                // d = y - t[i]
+    precise float ll = d * d;                   // loss = d*d
+    loss[i] = ll;
+
+    precise float g   = C_TWO * d;              // g = 2*d         (%f12)
+    precise float lrg = lr * g;                 // lrg = lr*g      (%f13)
+
+    // update W row: DOWNWARD  k = cols; while (k!=0){ k--; W[k] = W[k] - lrg*x[k] }
+    uint k = pc.cols;
+    while (k != 0u) {
+        k = k - 1u;
+        precise float wk  = w[rowbase + k];
+        precise float upd = lrg * x[k];         // %f16 = lrg * x[k]
+        precise float wn  = wk - upd;           // %f17 = W - upd
+        w[rowbase + k] = wn;
+    }
+
+    // b[i] = b[i] - lrg  (from the ORIGINAL b[i] in %f6, op-for-op with the PTX)
+    precise float bn = bi - lrg;                // %f18 = %f6 - %f13
+    b[i] = bn;
+}

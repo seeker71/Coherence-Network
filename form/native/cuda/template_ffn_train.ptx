@@ -1,0 +1,324 @@
+//
+// form-ptx FFN/MLP training-step f32: ONE SGD step over y = W2*gelu(W1*x+b1)+b2, single workgroup,
+// 5 barriered phases -- exact mirror of jte-mlp-train-msl (jit-tensor-emit.fk). gelu/gelu' are the
+// recipe's OWN (14-term Taylor fexp + ftanh), NOT hardware. Folds: fwd matvecs DOWNWARD; dh1 column
+// reduction FORWARD (s = s + gy[i]*w2). Phase barriers make the single-group read-then-write exact.
+//   P1: h1[k]=W1*x+b1 ; a[k]=gelu(h1[k])             (downward dot)
+//   P2: y=W2*a+b2 ; loss=d*d ; gy=2(y-t)             (downward dot)
+//   P3: dh1[k]=gelu'(h1[k]) * sum_i gy[i]*w2[i*hid+k] (forward fold, reads OLD w2)
+//   P4: w2 -= lr*gy*a ; b2 -= lr*gy
+//   P5: w1 -= lr*dh1*x ; b1 -= lr*dh1
+// const: 0.7978845608=0f3F4C422A  0.044715=0f3D372713  0.134145=0f3E095D4F
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_ffn_train_f32(
+    .param .u64 p_w1, .param .u64 p_b1, .param .u64 p_w2, .param .u64 p_b2,
+    .param .u64 p_x,  .param .u64 p_t,  .param .u64 p_loss,
+    .param .u64 p_h1, .param .u64 p_a,  .param .u64 p_gy, .param .u64 p_dh1,
+    .param .u32 p_indim, .param .u32 p_hid, .param .u32 p_outd, .param .f32 p_lr
+)
+{
+    .reg .pred  %p<3>;
+    .reg .f32   %f<40>;
+    .reg .b32   %r<24>;
+    .reg .b64   %rd<20>;
+
+    ld.param.u64    %rd1,  [p_w1];
+    ld.param.u64    %rd2,  [p_b1];
+    ld.param.u64    %rd3,  [p_w2];
+    ld.param.u64    %rd4,  [p_b2];
+    ld.param.u64    %rd5,  [p_x];
+    ld.param.u64    %rd6,  [p_t];
+    ld.param.u64    %rd7,  [p_loss];
+    ld.param.u64    %rd8,  [p_h1];
+    ld.param.u64    %rd9,  [p_a];
+    ld.param.u64    %rd10, [p_gy];
+    ld.param.u64    %rd11, [p_dh1];
+    ld.param.u32    %r1, [p_indim];
+    ld.param.u32    %r2, [p_hid];
+    ld.param.u32    %r3, [p_outd];
+    ld.param.f32    %f1, [p_lr];
+    mov.u32         %r4, %tid.x;
+    mov.u32         %r5, %ntid.x;
+
+    // ================= P1: h1=W1??x+b1, a=gelu(h1) =================
+    mov.u32         %r10, %r4;
+P1LOOP:
+    setp.ge.u32     %p1, %r10, %r2;
+    @%p1 bra        P1END;
+    mov.f32         %f10, 0f00000000;
+    mul.lo.s32      %r11, %r10, %r1;          // k*indim
+    mov.u32         %r12, %r1;                // j=indim
+P1DOT:
+    setp.eq.u32     %p1, %r12, 0;
+    @%p1 bra        P1DOTE;
+    sub.u32         %r12, %r12, 1;
+    add.s32         %r13, %r11, %r12;
+    mul.wide.u32    %rd12, %r13, 4;
+    add.s64         %rd13, %rd1, %rd12;
+    ld.global.f32   %f11, [%rd13];            // w1
+    mul.wide.u32    %rd14, %r12, 4;
+    add.s64         %rd15, %rd5, %rd14;
+    ld.global.f32   %f12, [%rd15];            // x[j]
+    mul.f32         %f13, %f11, %f12;
+    add.f32         %f10, %f13, %f10;         // acc = w1*x + acc
+    bra             P1DOT;
+P1DOTE:
+    mul.wide.u32    %rd12, %r10, 4;
+    add.s64         %rd13, %rd2, %rd12;
+    ld.global.f32   %f14, [%rd13];            // b1[k]
+    add.f32         %f15, %f10, %f14;         // hk
+    add.s64         %rd13, %rd8, %rd12;
+    st.global.f32   [%rd13], %f15;            // h1[k]=hk
+    // a[k] = fgelu(hk): z=0.7978*(hk+0.044715*hk^3); th=ftanh(z); (0.5hk)(1+th)
+    mul.f32         %f16, %f15, %f15;
+    mul.f32         %f16, %f15, %f16;         // hk*(hk*hk)
+    mul.f32         %f17, 0f3D372713, %f16;
+    add.f32         %f17, %f15, %f17;         // hk + 0.044715*hk^3
+    mul.f32         %f18, 0f3F4C422A, %f17;   // z
+    mul.f32         %f19, 0f40000000, %f18;   // 2z
+    // ---- fexp(2z) -> %f20 ----
+    mov.f32         %f30, %f19;
+    mov.u32         %r20, 0;
+P1RED:
+    abs.f32         %f31, %f30;
+    setp.gt.f32     %p2, %f31, 0f3F000000;
+    @!%p2 bra       P1REDE;
+    div.rn.f32      %f30, %f30, 0f40000000;
+    add.u32         %r20, %r20, 1;
+    bra             P1RED;
+P1REDE:
+    mov.f32         %f32, 0f3F800000;
+    mov.f32         %f33, 0f3F800000;
+    mov.f32         %f34, 0f3F800000;
+P1SM:
+    setp.gt.f32     %p2, %f32, 0f41600000;
+    @%p2 bra        P1SME;
+    div.rn.f32      %f35, %f30, %f32;
+    mul.f32         %f33, %f33, %f35;
+    add.f32         %f34, %f34, %f33;
+    add.f32         %f32, %f32, 0f3F800000;
+    bra             P1SM;
+P1SME:
+P1SQ:
+    setp.eq.u32     %p2, %r20, 0;
+    @%p2 bra        P1SQE;
+    mul.f32         %f34, %f34, %f34;
+    sub.u32         %r20, %r20, 1;
+    bra             P1SQ;
+P1SQE:
+    mov.f32         %f20, %f34;               // e
+    sub.f32         %f21, %f20, 0f3F800000;
+    add.f32         %f22, %f20, 0f3F800000;
+    div.rn.f32      %f23, %f21, %f22;         // th
+    mul.f32         %f24, 0f3F000000, %f15;   // 0.5*hk
+    add.f32         %f25, 0f3F800000, %f23;   // 1+th
+    mul.f32         %f26, %f24, %f25;         // a
+    add.s64         %rd13, %rd9, %rd12;
+    st.global.f32   [%rd13], %f26;            // a[k]
+    add.u32         %r10, %r10, %r5;
+    bra             P1LOOP;
+P1END:
+    bar.sync        0;
+
+    // ================= P2: y=W2??a+b2, loss, gy =================
+    mov.u32         %r10, %r4;
+P2LOOP:
+    setp.ge.u32     %p1, %r10, %r3;
+    @%p1 bra        P2END;
+    mov.f32         %f10, 0f00000000;
+    mul.lo.s32      %r11, %r10, %r2;          // i*hid
+    mov.u32         %r12, %r2;                // k=hid
+P2DOT:
+    setp.eq.u32     %p1, %r12, 0;
+    @%p1 bra        P2DOTE;
+    sub.u32         %r12, %r12, 1;
+    add.s32         %r13, %r11, %r12;
+    mul.wide.u32    %rd12, %r13, 4;
+    add.s64         %rd13, %rd3, %rd12;
+    ld.global.f32   %f11, [%rd13];            // w2
+    mul.wide.u32    %rd14, %r12, 4;
+    add.s64         %rd15, %rd9, %rd14;
+    ld.global.f32   %f12, [%rd15];            // a[k]
+    mul.f32         %f13, %f11, %f12;
+    add.f32         %f10, %f13, %f10;
+    bra             P2DOT;
+P2DOTE:
+    mul.wide.u32    %rd12, %r10, 4;
+    add.s64         %rd13, %rd4, %rd12;
+    ld.global.f32   %f14, [%rd13];            // b2[i]
+    add.f32         %f15, %f10, %f14;         // yi
+    add.s64         %rd13, %rd6, %rd12;
+    ld.global.f32   %f16, [%rd13];            // t[i]
+    sub.f32         %f17, %f15, %f16;         // d
+    mul.f32         %f18, %f17, %f17;
+    add.s64         %rd13, %rd7, %rd12;
+    st.global.f32   [%rd13], %f18;            // loss[i]
+    mul.f32         %f19, 0f40000000, %f17;   // 2*d
+    add.s64         %rd13, %rd10, %rd12;
+    st.global.f32   [%rd13], %f19;            // gy[i]
+    add.u32         %r10, %r10, %r5;
+    bra             P2LOOP;
+P2END:
+    bar.sync        0;
+
+    // ================= P3: dh1 = gelu'(h1) * ??_i gy[i]??w2 (forward) =================
+    mov.u32         %r10, %r4;
+P3LOOP:
+    setp.ge.u32     %p1, %r10, %r2;
+    @%p1 bra        P3END;
+    mov.f32         %f10, 0f00000000;         // s
+    mov.u32         %r12, 0;                  // i
+P3SUM:
+    setp.ge.u32     %p1, %r12, %r3;
+    @%p1 bra        P3SUME;
+    mul.wide.u32    %rd12, %r12, 4;
+    add.s64         %rd13, %rd10, %rd12;
+    ld.global.f32   %f11, [%rd13];            // gy[i]
+    mul.lo.s32      %r13, %r12, %r2;
+    add.s32         %r13, %r13, %r10;         // i*hid+k
+    mul.wide.u32    %rd14, %r13, 4;
+    add.s64         %rd15, %rd3, %rd14;
+    ld.global.f32   %f12, [%rd15];            // w2[i*hid+k]
+    mul.f32         %f13, %f11, %f12;
+    add.f32         %f10, %f10, %f13;         // s = s + gy*w2
+    add.u32         %r12, %r12, 1;
+    bra             P3SUM;
+P3SUME:
+    mul.wide.u32    %rd12, %r10, 4;
+    add.s64         %rd13, %rd8, %rd12;
+    ld.global.f32   %f15, [%rd13];            // hk = h1[k]
+    mul.f32         %f16, %f15, %f15;
+    mul.f32         %f16, %f15, %f16;
+    mul.f32         %f17, 0f3D372713, %f16;
+    add.f32         %f17, %f15, %f17;
+    mul.f32         %f18, 0f3F4C422A, %f17;   // z
+    mul.f32         %f19, 0f40000000, %f18;   // 2z
+    mov.f32         %f30, %f19;
+    mov.u32         %r20, 0;
+P3RED:
+    abs.f32         %f31, %f30;
+    setp.gt.f32     %p2, %f31, 0f3F000000;
+    @!%p2 bra       P3REDE;
+    div.rn.f32      %f30, %f30, 0f40000000;
+    add.u32         %r20, %r20, 1;
+    bra             P3RED;
+P3REDE:
+    mov.f32         %f32, 0f3F800000;
+    mov.f32         %f33, 0f3F800000;
+    mov.f32         %f34, 0f3F800000;
+P3SM:
+    setp.gt.f32     %p2, %f32, 0f41600000;
+    @%p2 bra        P3SME;
+    div.rn.f32      %f35, %f30, %f32;
+    mul.f32         %f33, %f33, %f35;
+    add.f32         %f34, %f34, %f33;
+    add.f32         %f32, %f32, 0f3F800000;
+    bra             P3SM;
+P3SME:
+P3SQ:
+    setp.eq.u32     %p2, %r20, 0;
+    @%p2 bra        P3SQE;
+    mul.f32         %f34, %f34, %f34;
+    sub.u32         %r20, %r20, 1;
+    bra             P3SQ;
+P3SQE:
+    mov.f32         %f20, %f34;               // e
+    sub.f32         %f21, %f20, 0f3F800000;
+    add.f32         %f22, %f20, 0f3F800000;
+    div.rn.f32      %f23, %f21, %f22;         // th
+    // fgelud = (0.5*(1+th)) + ((0.5*hk)*((1-th??)*(0.7978*(1+0.134145*hk??))))
+    add.f32         %f24, 0f3F800000, %f23;
+    mul.f32         %f24, 0f3F000000, %f24;   // termA = 0.5*(1+th)
+    mul.f32         %f25, %f23, %f23;
+    sub.f32         %f25, 0f3F800000, %f25;   // 1-th??
+    mul.f32         %f26, %f15, %f15;
+    mul.f32         %f26, 0f3E095D4F, %f26;   // 0.134145*hk??
+    add.f32         %f26, 0f3F800000, %f26;   // 1+...
+    mul.f32         %f26, 0f3F4C422A, %f26;   // termB = 0.7978*(...)
+    mul.f32         %f27, %f25, %f26;         // (1-th??)*termB
+    mul.f32         %f28, 0f3F000000, %f15;   // 0.5*hk
+    mul.f32         %f28, %f28, %f27;         // termD
+    add.f32         %f29, %f24, %f28;         // fgelud
+    mul.f32         %f38, %f10, %f29;         // s * fgelud
+    add.s64         %rd13, %rd11, %rd12;
+    st.global.f32   [%rd13], %f38;            // dh1[k]
+    add.u32         %r10, %r10, %r5;
+    bra             P3LOOP;
+P3END:
+    bar.sync        0;
+
+    // ================= P4: w2 -= lr??gy??a ; b2 -= lr??gy =================
+    mov.u32         %r10, %r4;
+P4LOOP:
+    setp.ge.u32     %p1, %r10, %r3;
+    @%p1 bra        P4END;
+    mul.lo.s32      %r11, %r10, %r2;          // i*hid
+    mul.wide.u32    %rd12, %r10, 4;
+    add.s64         %rd13, %rd10, %rd12;
+    ld.global.f32   %f11, [%rd13];            // gy[i]
+    mul.f32         %f12, %f1, %f11;          // lr*gy[i]
+    mov.u32         %r12, %r2;                // k=hid
+P4K:
+    setp.eq.u32     %p1, %r12, 0;
+    @%p1 bra        P4KE;
+    sub.u32         %r12, %r12, 1;
+    add.s32         %r13, %r11, %r12;
+    mul.wide.u32    %rd14, %r13, 4;
+    add.s64         %rd15, %rd3, %rd14;
+    ld.global.f32   %f13, [%rd15];            // w2
+    mul.wide.u32    %rd16, %r12, 4;
+    add.s64         %rd17, %rd9, %rd16;
+    ld.global.f32   %f14, [%rd17];            // a[k]
+    mul.f32         %f15, %f12, %f14;         // (lr*gy)*a
+    sub.f32         %f16, %f13, %f15;
+    st.global.f32   [%rd15], %f16;
+    bra             P4K;
+P4KE:
+    add.s64         %rd13, %rd4, %rd12;
+    ld.global.f32   %f13, [%rd13];            // b2[i]
+    sub.f32         %f13, %f13, %f12;
+    st.global.f32   [%rd13], %f13;
+    add.u32         %r10, %r10, %r5;
+    bra             P4LOOP;
+P4END:
+
+    // ================= P5: w1 -= lr??dh1??x ; b1 -= lr??dh1 =================
+    mov.u32         %r10, %r4;
+P5LOOP:
+    setp.ge.u32     %p1, %r10, %r2;
+    @%p1 bra        P5END;
+    mul.lo.s32      %r11, %r10, %r1;          // k*indim
+    mul.wide.u32    %rd12, %r10, 4;
+    add.s64         %rd13, %rd11, %rd12;
+    ld.global.f32   %f11, [%rd13];            // dh1[k]
+    mul.f32         %f12, %f1, %f11;          // lr*dh1[k]
+    mov.u32         %r12, %r1;                // j=indim
+P5J:
+    setp.eq.u32     %p1, %r12, 0;
+    @%p1 bra        P5JE;
+    sub.u32         %r12, %r12, 1;
+    add.s32         %r13, %r11, %r12;
+    mul.wide.u32    %rd14, %r13, 4;
+    add.s64         %rd15, %rd1, %rd14;
+    ld.global.f32   %f13, [%rd15];            // w1
+    mul.wide.u32    %rd16, %r12, 4;
+    add.s64         %rd17, %rd5, %rd16;
+    ld.global.f32   %f14, [%rd17];            // x[j]
+    mul.f32         %f15, %f12, %f14;
+    sub.f32         %f16, %f13, %f15;
+    st.global.f32   [%rd15], %f16;
+    bra             P5J;
+P5JE:
+    add.s64         %rd13, %rd2, %rd12;
+    ld.global.f32   %f13, [%rd13];            // b1[k]
+    sub.f32         %f13, %f13, %f12;
+    st.global.f32   [%rd13], %f13;
+    add.u32         %r10, %r10, %r5;
+    bra             P5LOOP;
+P5END:
+    ret;
+}
