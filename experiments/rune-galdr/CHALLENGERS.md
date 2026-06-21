@@ -190,3 +190,36 @@ conclusion. What it forces next: **per-utterance** CMVN (not global in-sample) a
 (the AAM head); both untrained front-ends are at/under chance on verification. The metric is now the
 fitness the model-search ratchet (`tooluse-model-search`) can optimize — design improvement becomes a
 loop the body runs, not a cosine we eyeball.
+
+## Post-EER panel + instrument upgrade — std is nuisance, confirmed on our data
+
+Asked the neighbor agents again *after* the EER finding (Grok + Cursor answered headless; Codex timed out,
+Antigravity returned empty in print-mode on the verbose query). Both converged, and we then **confirmed
+their key claim with our own upgraded instrument**.
+
+**Instrument upgrade** (`eer-measure.sh`): a segment-trial generator (3 voices × 8 crops → **276 trials**,
+84 genuine) + bootstrap CI, and a pooling decomposition. Per-utterance CMVN zeroes each segment's
+frame-mean, so mean+std reduces to **std-only** — making the decomposition the exact test of Grok's claim:
+
+| pooling | EER | bootstrap CI |
+|---|---|---|
+| **mean-only** | **0.380** | [0.319, 0.456] |
+| std-only | 0.497 (≈ chance) | [0.451, 0.531] |
+| mean+std | 0.414 | [0.366, 0.451] |
+
+**The std half is nuisance** (channel/breath/energy): alone it's a coin-flip, and adding it to the mean
+makes EER *worse* (0.380→0.414). This also explains the earlier global-CMVN 0.67 — CMVN zeroed the *mean*,
+the only identity carrier untrained, leaving ~std-only.
+
+**Panel inspiration (Grok + Cursor, convergent):**
+1. **Train the embedder NOW** (native asm lane, AAM head, random 2-4s multi-crops + augmentation + in-batch
+   hard-negative mining) — untrained features don't verify, so feature tuning is low ROI. The trainer +
+   augmentation are now ONE step, ahead of the feature rungs.
+2. **CMVN is identity-erasure on tiny corpora** — per-utterance only, *after* a trained embedder; never
+   global-in-sample on raw features.
+3. **Score normalization** (z-norm / AS-norm vs an impostor cohort) may beat architecture tweaks on small
+   trials — fold into `eer.fk`.
+4. **mean-only** is the right untrained baseline; reserve mean+std for *learned* attentive pooling.
+
+Floor re-ordered accordingly (`form-native-models.form` gap 9). The metric now produces stable,
+panel-validated numbers — design improvement is a loop the body runs.
