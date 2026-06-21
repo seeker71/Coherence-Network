@@ -465,6 +465,7 @@ trust-weighted-colearning fks 127
 freq-aligned-share fks 255
 membership-as-recognition fks 511
 borrowed-oracle-dividend fks 255
+sovereignty-receipt fks 255
 tree-diff fks 13
 turn-taking fks 127
 ulid fks 4
