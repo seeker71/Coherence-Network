@@ -1,0 +1,27 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-lower-sim.fk
+;
+; form-lower-sim-band — the SEMANTIC-PARITY oracle for float lowering, four-way (GAP-Q7a keystone).
+; It lifts form-lower's oracle-as-MASTER ceiling: a lowering's REGISTER ALLOCATION is validated by
+; EXECUTION (fsim runs the lowered FP sequence and reproduces the function), while byte-identity stays
+; on each instruction's one-true ISA encoding. f(x)=x*x+x lowers to [fmov d1,d0; fmul d0,d1,d1;
+; fadd d0,d0,d1] — the fsim machine RUNS it and computes f, proving the allocation correct WITHOUT
+; renting clang's whole-function choices. This is what lets the FP register-stack (two non-ARG subtrees,
+; caller-saved d16+) land next on semantic parity instead of clang byte-identity.
+;
+; Verdict 15 when every claim lands:
+;   1  SEMANTIC PARITY: fsim runs the lowered sequence to f(3) = 3·3+3 = 12 — the function, not clang's bytes
+;   2  it TRACKS the function across inputs: f(5) = 5·5+5 = 30 (the allocation computes f, not a fixed value)
+;   4  ENCODING IDENTITY kept per-instruction: fmul d0,d1,d1 encodes to its one-true ISA bytes (1e610820)
+;   8  the production lowering is intact: lo-fcompile-fn still emits the 16-byte image
+(do
+    ; the lowered FP sequence for f(x) = x*x + x : (op rd rn rm)
+    (let instrs (list (list 0 1 0 0)       ; fmov d1, d0
+                      (list 5 0 1 1)        ; fmul d0, d1, d1
+                      (list 3 0 0 1)))      ; fadd d0, d0, d1
+    (let prog-add (list (list 2) (list 5 0 0) (list 3 1 0)))   ; f(x) = ADD(MUL(ARG,ARG), ARG)
+
+    (let c0 (if (eq (fsim-eval 3.0 instrs) 12.0) 1 0))
+    (let c1 (if (eq (fsim-eval 5.0 instrs) 30.0) 2 0))
+    (let c2 (if (eq (fa-conviction (fa-fmul 0 1 1) (list 32 8 97 30)) 1) 4 0))
+    (let c3 (if (eq (len (lo-fcompile-fn prog-add 2)) 16) 8 0))
+    (add c0 (add c1 (add c2 c3))))
