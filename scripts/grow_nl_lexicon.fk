@@ -1,0 +1,16 @@
+; grow_nl_lexicon.fk — the Form-native RUNNER for the lexicon projector.
+;
+; All logic is Form: form-stdlib/nl-lexicon-grow.fk (the projection, four-way proven)
+; over read_file / write_file_text (host builtins reached from Form — carrier-not-debt,
+; host-kernel.form). Run from the repo root:
+;   form-kernel-go/bin-go form-stdlib/json.fk form-stdlib/string-case.fk \
+;       form-stdlib/nl-lexicon-grow.fk ../scripts/grow_nl_lexicon.fk
+; or via the thin launcher scripts/grow_nl_lexicon.sh.
+
+(do
+    (let en-text (read_file "web/messages/en.json"))
+    (let id-text (read_file "web/messages/id.json"))
+    (write_file_text "form/form-stdlib/nl-lexicon-data.fk"
+        (jlg-emit-cell (grow-rows en-text id-text 40)))
+    (print "grew form/form-stdlib/nl-lexicon-data.fk from web/messages/{en,id}.json")
+    0)

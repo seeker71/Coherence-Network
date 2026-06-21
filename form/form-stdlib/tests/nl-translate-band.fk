@@ -6,10 +6,11 @@
 ; pair (not hard-coded), a full round-trip held stable, three words added as lexicon
 ; DATA ROWS (vocabulary is data), AND the PIVOT speaking the body's own NEUTRAL symbol
 ; (n0 — not any tongue's lemma, no language privileged) with ice/water/gas phase tags.
-; Plus three words GROWN from the real parallel corpus (web/messages/*). Bitmask
+; Plus three words GROWN from the real parallel corpus by the Form-native projector
+; (nl-lexicon-grow.fk: read_file -> json-parse -> string-case -> write, all Form). Bitmask
 ; witness; all fifteen → 32767 (+ surface-robust encoding owned by the Form encoder), across Go / Rust / TS / fkwu.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/string-case.fk form-stdlib/nl-translate.fk
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/string-case.fk form-stdlib/nl-lexicon-data.fk form-stdlib/nl-translate.fk
 
 (do
     (defn chk (got exp bit) (if (node_eq got exp) bit 0))
@@ -38,9 +39,10 @@
         (if (str_eq (nlt-phase "n6") "gas") 1024 0)
         ;; 12-14. GROWN FROM THE CORPUS: real word pairs projected from web/messages/* by
         ;; scripts/grow_nl_lexicon.sh translate four-way — vocabulary grows from data, no code change
-        (if (str_eq (tr-en-id "the company is home")  "perusahaan adalah rumah") 2048 0)
-        (if (str_eq (tr-en-id "the research is open")  "riset adalah buka")      4096 0)
-        (if (str_eq (tr-id-en "tempat adalah riset")   "the place is research")  8192 0)
+        ;; words GROWN by the Form-native projector (nl-lexicon-grow.fk) from web/messages/*
+        (if (str_eq (tr-en-id "the thesis is course")  "tesis adalah kursus")    2048 0)
+        (if (str_eq (tr-en-id "the workshop is book")  "lokakarya adalah buku")  4096 0)
+        (if (str_eq (tr-id-en "kursus adalah tesis")   "the course is thesis")   8192 0)
         ;; 15. SURFACE-ROBUST: the Form encoder (str-normalize) canonicalizes noisy STT-shaped
         ;; input — capitals + punctuation — with no shell carrier cleaning
         (if (str_eq (tr-en-id "The Source Is Native.") "sumber adalah asli")    16384 0))))

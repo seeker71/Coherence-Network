@@ -1,0 +1,21 @@
+; nl-lexicon-grow-band.fk — proves the Form-native projector form-stdlib/nl-lexicon-grow.fk.
+;
+; grow-rows parses two parallel json texts, walks them together (nested objects
+; recursed, single-char keys filtered), lowercases, and emits neutral-symbol rows —
+; all in Form. Expected output is built from the cell's OWN jlg-row emitter, so the
+; band proves the walk + filter + assignment, not a hand-typed string. Bitmask
+; witness; all two → 3, across Go / Rust / TS / fkwu.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/string-case.fk form-stdlib/nl-lexicon-grow.fk
+
+(do
+    (defn chk (got exp bit) (if (str_eq got exp) bit 0))
+    (let en "{\"a\":\"Company\",\"x\":{\"c\":\"Home\"},\"n\":\"a\"}")
+    (let id "{\"a\":\"perusahaan\",\"x\":{\"c\":\"rumah\"},\"n\":\"b\"}")
+
+    (add
+        ;; full walk: nested "Home"/"rumah" + top "Company"/"perusahaan"; "a"/"b" too short, dropped
+        (chk (grow-rows en id 10)
+             (str_concat (jlg-row 0 "home" "rumah") (jlg-row 1 "company" "perusahaan")) 1)
+        ;; the cap holds: only the first kept pair
+        (chk (grow-rows en id 1) (jlg-row 0 "home" "rumah") 2)))
