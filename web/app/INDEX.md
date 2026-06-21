@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 165
+**Total files**: 166
 
 | Route | File | Purpose |
 |---|---|---|
@@ -127,6 +127,7 @@
 | `/runtime` | [page.tsx](runtime/page.tsx) | _no top-of-file purpose_ |
 | `/search` | [page.tsx](search/page.tsx) | _no top-of-file purpose_ |
 | `/sense` | [page.tsx](sense/page.tsx) | sense.hati.earth — the download door for Coherence Sense. Detects the visitor's |
+| `/sense/surface` | [page.tsx](sense/surface/page.tsx) | /sense/surface — the node's live world-perception surface. Shows what the node |
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
 | `/settings/wallet` | [page.tsx](settings/wallet/page.tsx) | web/app/settings/wallet/page.tsx |

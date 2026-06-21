@@ -120,6 +120,7 @@
     "/runtime": "web/app/runtime/page.tsx",
     "/search": "web/app/search/page.tsx",
     "/sense": "web/app/sense/page.tsx",
+    "/sense/surface": "web/app/sense/surface/page.tsx",
     "/settings": "web/app/settings/page.tsx",
     "/settings/translations": "web/app/settings/translations/page.tsx",
     "/settings/wallet": "web/app/settings/wallet/page.tsx",
