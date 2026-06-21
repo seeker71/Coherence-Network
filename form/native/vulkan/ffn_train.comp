@@ -1,0 +1,235 @@
+#version 450
+#extension GL_EXT_spirv_intrinsics : require
+
+// Force IEEE round-to-nearest-even on FP32 so OpFDiv matches PTX div.rn.f32 bit-for-bit.
+// (capability 4467 = RoundingModeRTE, mode 4462 = RoundingModeRTE, on 32-bit float.) The default
+// NVIDIA Vulkan OpFDiv is otherwise off by 1 ULP from div.rn.f32 (the gelu / gelu' Taylor fexp reduce,
+// term recurrence, and the tanh ratio all divide); this pins it. Needs SPIR-V >= 1.3
+// (--target-env vulkan1.1) + SPV_KHR_float_controls (core in Vulkan 1.1, advertised on Adreno/Mali).
+spirv_execution_mode(extensions = ["SPV_KHR_float_controls"], capabilities = [4467], 4462, 32);
+
+// form-native FFN/MLP TRAINING-STEP compute shader (Android/Vulkan lane, prototyped on RTX).
+// ONE SGD step over y = W2.gelu(W1.x + b1) + b2, SINGLE workgroup, 5 barriered phases. Mirrors
+// template_ffn_train.ptx (jte-mlp-train) op-for-op:
+//   P1: h1[k]=W1.x+b1 ; a[k]=gelu(h1[k])                    (downward dot)        barrier()
+//   P2: y=W2.a+b2 ; loss[i]=d*d ; gy[i]=2*(y-t)             (downward dot)        barrier()
+//   P3: dh1[k]=gelu'(h1[k]) * sum_i gy[i]*w2[i*hid+k]       (FORWARD fold, reads OLD w2)  barrier()
+//   P4: w2 -= lr*gy*a ; b2 -= lr*gy                         (downward over k)     NO barrier
+//   P5: w1 -= lr*dh1*x ; b1 -= lr*dh1                       (downward over j)
+// The barrier before P4 is what makes the dh1 column-reduction safe: P3 reads the ORIGINAL w2 across
+// the whole group before P4 starts overwriting it. There is NO barrier between P4 and P5 (the PTX
+// P4END falls straight into P5LOOP) because w1/b1 are disjoint from w2/b2/a.
+// gelu AND gelu' are the recipe's OWN Taylor (14-term fexp + ftanh), NOT hardware -- bit-exact.
+//   fgelu(x)  = (0.5*x)*(1+tanh(z)),  z=0.7978845608*(x+0.044715*(x*(x*x)))
+//   fgelud(x) = (0.5*(1+th)) + ((0.5*x)*((1-th*th)*(0.7978845608*(1+0.134145*(x*x)))))   th=tanh(z)
+// a[],h1[],gy[],dh1[],loss[] are global scratch buffers. Every float op is `precise` -> SPIR-V
+// NoContraction so the driver cannot fuse mul+add into FMA and cannot reassociate -> bit-exact to the
+// CPU oracle and the PTX/MSL lanes. Do NOT call fma(); do NOT run spirv-opt. Same .spv runs Adreno/Mali.
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding = 0)           buffer W1 { float w1[]; };   // hid*indim (updated in place)
+layout(std430, binding = 1)           buffer B1 { float b1[]; };   // hid       (updated in place)
+layout(std430, binding = 2)           buffer W2 { float w2[]; };   // outd*hid  (updated in place)
+layout(std430, binding = 3)           buffer B2 { float b2[]; };   // outd      (updated in place)
+layout(std430, binding = 4) readonly  buffer X  { float xin[]; };  // indim
+layout(std430, binding = 5) readonly  buffer T  { float t[]; };    // outd
+layout(std430, binding = 6) writeonly buffer L  { float loss[]; }; // outd
+layout(std430, binding = 7)           buffer H1 { float h1[]; };   // hid (scratch)
+layout(std430, binding = 8)           buffer A  { float a[]; };    // hid (scratch)
+layout(std430, binding = 9)           buffer GY { float gy[]; };   // outd (scratch)
+layout(std430, binding = 10)          buffer DH1{ float dh1[]; };  // hid (scratch)
+
+layout(push_constant) uniform Push { uint indim; uint hid; uint outd; uint lr_bits; } pc;
+
+void main() {
+    uint tid  = gl_LocalInvocationID.x;
+    uint ntid = gl_WorkGroupSize.x;   // 256, matches PTX %ntid.x for a single block
+
+    precise float lr = uintBitsToFloat(pc.lr_bits);
+
+    // PTX constants by exact bit pattern (gelu / gelu' bodies).
+    precise float C_044715  = uintBitsToFloat(0x3D372713u); // 0.044715
+    precise float C_SQRT2PI = uintBitsToFloat(0x3F4C422Au); // 0.7978845608028654
+    precise float C_134145  = uintBitsToFloat(0x3E095D4Fu); // 0.134145
+    precise float C_TWO     = uintBitsToFloat(0x40000000u); // 2.0
+    precise float C_HALF    = uintBitsToFloat(0x3F000000u); // 0.5
+    precise float C_ONE     = uintBitsToFloat(0x3F800000u); // 1.0
+    precise float C_14      = uintBitsToFloat(0x41600000u); // 14.0
+
+    // ================= P1: h1[k]=W1.x+b1 ; a[k]=gelu(h1[k]) =================
+    for (uint k = tid; k < pc.hid; k += ntid) {
+        uint kbase = k * pc.indim;
+        precise float acc = 0.0;
+        // serial DOWNWARD right-fold dot: j = indim; while (j!=0){ j--; acc = w1*x + acc }
+        uint j = pc.indim;
+        while (j != 0u) {
+            j = j - 1u;
+            precise float p = w1[kbase + j] * xin[j];
+            acc = p + acc;
+        }
+        precise float hk = acc + b1[k];
+        h1[k] = hk;                              // h1[k] = hk
+
+        // ---- inline gelu(hk) ----
+        // z = 0.7978845608028654 * (hk + 0.044715 * (hk*(hk*hk)));  v = 2*z
+        precise float f16a = hk * hk;
+        precise float f16  = hk * f16a;          // hk*(hk*hk)
+        precise float f17  = C_044715 * f16;
+        precise float f17b = hk + f17;           // hk + 0.044715*hk^3
+        precise float zz   = C_SQRT2PI * f17b;   // z
+        precise float v    = C_TWO * zz;         // 2z
+
+        // fexp(2z): kk=0; while (|v|>0.5) { v=v/2; kk++ }
+        uint kk = 0u;
+        while (abs(v) > C_HALF) {
+            v = v / C_TWO;
+            kk = kk + 1u;
+        }
+        // fexp_small: nf=1; term=1; accE=1; while (nf<=14) { t=v/nf; term=term*t; accE=accE+term; nf+=1 }
+        precise float nf   = C_ONE;
+        precise float term = C_ONE;
+        precise float accE = C_ONE;
+        while (nf <= C_14) {
+            precise float t = v / nf;
+            term = term * t;
+            accE = accE + term;
+            nf = nf + C_ONE;
+        }
+        // square back: while (kk>0) { accE=accE*accE; kk-- }
+        while (kk > 0u) {
+            accE = accE * accE;
+            kk = kk - 1u;
+        }
+        // th = (e-1)/(e+1);  a = (0.5*hk)*(1+th)
+        precise float e_m1  = accE - C_ONE;
+        precise float e_p1  = accE + C_ONE;
+        precise float th    = e_m1 / e_p1;
+        precise float halfx = C_HALF * hk;       // 0.5*hk
+        precise float oneth = C_ONE + th;        // 1+th
+        precise float ak    = halfx * oneth;     // a
+        a[k] = ak;
+    }
+
+    barrier();   // == bar.sync 0
+
+    // ================= P2: y=W2.a+b2 ; loss ; gy =================
+    for (uint i = tid; i < pc.outd; i += ntid) {
+        uint ibase = i * pc.hid;
+        precise float acc = 0.0;
+        // serial DOWNWARD right-fold dot: k = hid; while (k!=0){ k--; acc = w2*a + acc }
+        uint k = pc.hid;
+        while (k != 0u) {
+            k = k - 1u;
+            precise float p = w2[ibase + k] * a[k];
+            acc = p + acc;
+        }
+        precise float yi = acc + b2[i];          // yi
+        precise float dd = yi - t[i];            // d
+        precise float ll = dd * dd;              // d*d
+        loss[i] = ll;                            // loss[i]
+        precise float gyi = C_TWO * dd;          // 2*d
+        gy[i] = gyi;                             // gy[i]
+    }
+
+    barrier();   // == bar.sync 0
+
+    // ================= P3: dh1[k] = gelu'(h1[k]) * sum_i gy[i]*w2[i*hid+k] (FORWARD, OLD w2) =====
+    for (uint k = tid; k < pc.hid; k += ntid) {
+        precise float s = 0.0;                   // s
+        // FORWARD fold over outputs i: s = s + gy[i]*w2[i*hid+k]
+        for (uint i = 0u; i < pc.outd; ++i) {
+            precise float gyi = gy[i];           // gy[i]
+            precise float w2v = w2[i * pc.hid + k]; // w2[i*hid+k]  (ORIGINAL)
+            precise float p   = gyi * w2v;
+            s = s + p;                           // s = s + gy*w2
+        }
+        // ---- gelu'(h1[k]) ----  th from the same fexp(2z) as P1
+        precise float hk = h1[k];                // hk = h1[k]
+        precise float f16a = hk * hk;
+        precise float f16  = hk * f16a;          // hk*(hk*hk)
+        precise float f17  = C_044715 * f16;
+        precise float f17b = hk + f17;
+        precise float zz   = C_SQRT2PI * f17b;   // z
+        precise float v    = C_TWO * zz;         // 2z
+
+        uint kk = 0u;
+        while (abs(v) > C_HALF) {
+            v = v / C_TWO;
+            kk = kk + 1u;
+        }
+        precise float nf   = C_ONE;
+        precise float term = C_ONE;
+        precise float accE = C_ONE;
+        while (nf <= C_14) {
+            precise float t = v / nf;
+            term = term * t;
+            accE = accE + term;
+            nf = nf + C_ONE;
+        }
+        while (kk > 0u) {
+            accE = accE * accE;
+            kk = kk - 1u;
+        }
+        precise float e_m1 = accE - C_ONE;
+        precise float e_p1 = accE + C_ONE;
+        precise float th   = e_m1 / e_p1;        // th
+
+        // fgelud = (0.5*(1+th)) + ((0.5*hk)*((1-th*th)*(0.7978*(1+0.134145*hk^2))))
+        precise float oneth = C_ONE + th;        // 1+th
+        precise float termA = C_HALF * oneth;    // 0.5*(1+th)
+        precise float th2   = th * th;
+        precise float omth2 = C_ONE - th2;       // 1-th^2
+        precise float hk2   = hk * hk;
+        precise float c134  = C_134145 * hk2;    // 0.134145*hk^2
+        precise float onec  = C_ONE + c134;      // 1+...
+        precise float termB = C_SQRT2PI * onec;  // 0.7978*(...)
+        precise float prod  = omth2 * termB;     // (1-th^2)*termB
+        precise float halfx = C_HALF * hk;       // 0.5*hk
+        precise float termD = halfx * prod;      // (0.5*hk)*(...)
+        precise float gd    = termA + termD;     // fgelud
+        precise float dhk   = s * gd;            // s * fgelud
+        dh1[k] = dhk;                            // dh1[k]
+    }
+
+    barrier();   // == bar.sync 0
+
+    // ================= P4: w2 -= lr*gy*a ; b2 -= lr*gy  (NO barrier before P5) =================
+    for (uint i = tid; i < pc.outd; i += ntid) {
+        uint ibase = i * pc.hid;
+        precise float gyi = gy[i];               // gy[i]
+        precise float lrg = lr * gyi;            // lr*gy[i]
+        // DOWNWARD over k: k=hid; while(k!=0){ k--; w2[ibase+k] -= lrg*a[k] }
+        uint k = pc.hid;
+        while (k != 0u) {
+            k = k - 1u;
+            precise float w2v = w2[ibase + k];
+            precise float av  = a[k];
+            precise float upd = lrg * av;        // (lr*gy)*a
+            precise float wn  = w2v - upd;
+            w2[ibase + k] = wn;
+        }
+        precise float b2v = b2[i];
+        precise float b2n = b2v - lrg;           // b2 -= lr*gy
+        b2[i] = b2n;
+    }
+
+    // ================= P5: w1 -= lr*dh1*x ; b1 -= lr*dh1 =================
+    for (uint k = tid; k < pc.hid; k += ntid) {
+        uint kbase = k * pc.indim;
+        precise float dhk = dh1[k];              // dh1[k]
+        precise float lrd = lr * dhk;            // lr*dh1[k]
+        // DOWNWARD over j: j=indim; while(j!=0){ j--; w1[kbase+j] -= lrd*x[j] }
+        uint j = pc.indim;
+        while (j != 0u) {
+            j = j - 1u;
+            precise float w1v = w1[kbase + j];
+            precise float xv  = xin[j];
+            precise float upd = lrd * xv;        // (lr*dh1)*x
+            precise float wn  = w1v - upd;
+            w1[kbase + j] = wn;
+        }
+        precise float b1v = b1[k];
+        precise float b1n = b1v - lrd;           // b1 -= lr*dh1
+        b1[k] = b1n;
+    }
+}
