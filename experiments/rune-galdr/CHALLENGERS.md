@@ -223,3 +223,20 @@ the only identity carrier untrained, leaving ~std-only.
 
 Floor re-ordered accordingly (`form-native-models.form` gap 9). The metric now produces stable,
 panel-validated numbers — design improvement is a loop the body runs.
+
+## Walk: gap 9(a) — the AAM TRAINER, four-way
+
+`speaker-aam-train.fk` (`speaker-aam-train` band, **PASS-4WAY, verdict 31**) closes the backward loop on
+the AAM head — the one new piece beyond `loss.fk`'s `softmax−onehot` backward:
+- the margin gradient chains `softmax−onehot` → through `cos(θ+m)` (the `s·(cosm + sinm·c/√(1−c²))` factor)
+  → through the cosine-wrt-`W` derivative `(x̂ − cosθ·ŵ)/‖W‖`, giving the SGD update that pulls the target
+  row toward `x̂` and pushes impostor rows away — the angular-margin attraction, in Form.
+- proven four-way by a **finite-difference gradient check** (analytic gradient = numeric within 1%), plus
+  descent (one step lowers the loss; eight lower it further) and the target cosine rising.
+- robust at the alignment singularity: `√(1−c²)` is floored, so a perfectly-aligned target gives a *zero*
+  gradient (already there — no pull) instead of a NaN/hang. (Caught via the band: a parallel-`W` fixture
+  hit `√0` → `div` → `Inf` → `tn-exp(Inf)` infinite halving loop; fixed in the recipe + the fixture.)
+
+The objective (speaker-aam) and now its trainer are both four-way. What remains in 9(a): run it at corpus
+scale on the native asm lane + augmentation (9b) — the same recipe that proves four-way is the one that
+crystallizes and trains native.
