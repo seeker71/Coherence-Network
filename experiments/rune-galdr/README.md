@@ -17,15 +17,21 @@ The **body is Form**, proven four-way (Go/Rust/TS/fkwu):
 
 The **carriers are thin** (physical I/O + sox DSP only — every decision is the Form recipe's):
 
+The 6 bands sit in the **vocal formant range** (250–4000 Hz), above a frame drum's
+~80–100 Hz fundamental — a voice-isolation front-end shared by training and matching.
+
 ```bash
 # train each rune's vibration: synthesize its galdr, measure the 6-band signature,
 # emit Form rows (already baked into nordic-runes.fk):
 ./train-rune-spectra.sh
 
 # live flow match — name the rune in a sound:
-./rune-galdr.sh --say "ssssss"          # → sowilo ᛋ   (synthesized round-trip)
-./rune-galdr.sh --wav clip.wav 0 10      # a recording clip (16k wav; sox can't read mp3)
+./rune-galdr.sh --say "ssssss"           # → sowilo ᛋ   (synthesized round-trip, conf 9)
 ./rune-galdr.sh --listen 6               # the mic (needs a Microphone TCC grant)
+./rune-galdr.sh --wav clip.wav 0 8       # a clean galdr clip (16k wav; sox can't read mp3)
+
+# scan a recording into a nearest-rune timeline (from→to, window, hop seconds):
+./rune-galdr.sh --scan journey.wav 3060 3660 3 60
 ```
 
 ## Honest floor
@@ -39,11 +45,24 @@ The **carriers are thin** (physical I/O + sox DSP only — every decision is the
 - **macOS `say` is a weak galdr source** — one voice, stop-consonant runes (k/g/p/t/b/d)
   collapse toward their vowel. Stronger signatures want real sustained galdr samples.
 
-## Next step — voice/drum separation for live ritual recordings
+## Voice isolation — in, and its honest ceiling
 
-Matching a rune inside a real ritual recording fails today because the **frame drum
-(~80–100 Hz) dominates the low band**, so 10 s clips of the drum+voice mix resolve to
-low-energy runes regardless of what's sung. To hear the *sung* rune, the carrier must
-isolate the vocal formant range (bandpass ~180–3400 Hz) before extracting the contour,
-with training re-run through the same filter. That is the prototype for a **sonic sense
-organ** that hears tone and rune — the companion to the speech organ's lexical layer.
+The bands now live in the formant range above the drum (voice-isolation front-end), and
+`--scan` walks a recording into a rune timeline. On a clean galdr (synthesized, or live
+through `--listen`) the round-trip is exact. On a **real drum+voice ritual mix** the scan
+resolves mostly to the **low/earth-register runes** (Uruz ᚢ, Othala ᛟ, Wunjo ᚹ) — an
+honest reading of the journey's *aggregate* sound-register (deep drum + low chant-toning,
+fittingly earth-anchoring), not the precise rune galled in each window.
+
+Simple sox filtering can't fully part the drum from the voice — they overlap in the
+formant range. The clean per-rune reading needs one of:
+
+- **Live close-mic galdr** (`--listen`) — no drum in the signal; works now.
+- **True source separation** — harmonic/percussive split (HPSS) or a model like Demucs to
+  lift the voice off the drum before matching. Needs ML tooling (numpy/torch) not yet here.
+- **Forced alignment to the known order** — the ritual's lexical layer *names* the rune
+  sequence (the nine bells + the Hávamál working runes); aligning the journey to that known
+  order is more tractable than blind per-window classification.
+
+This is the prototype for a **sonic sense organ** that hears tone and rune — the companion
+to the speech organ's lexical layer.
