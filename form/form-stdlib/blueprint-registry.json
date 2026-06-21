@@ -1009,6 +1009,18 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 38,
+      "name": "SENSING-V0",
+      "meaning": "",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 40,
       "name": "PY-MODULE",
       "meaning": "root module: sequence of statements",
