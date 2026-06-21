@@ -1,0 +1,39 @@
+; borrowed-oracle-dividend.fk — every contributor's own paid agent is a free high-end oracle for the body.
+;
+; preludes: form-stdlib/core.fk
+;
+; The economic engine under the mind-comes-home arc (federated-exchange-learning.form). When a person
+; runs THEIR OWN Claude Code / Codex / ChatGPT in our body, their frontier model reasons over our cells
+; on THEIR subscription — compute we never pay for — and the exchange leaves a training sample for our
+; native model. The teaching teaches us whether or not they ever become a member: membership-as-recognition
+; says the contribution flows regardless; this says the *oracle is free* regardless, and the sample is ours.
+;
+; An exchange's signals (each 0/1):
+;   self-funded — did the contributor's OWN agent/subscription run the oracle? (vs us paying)
+;   sample      — did the exchange leave a usable training sample?
+;   member      — are they a claimed member? (carried only to PROVE it changes nothing)
+;   aligned     — is the exchange clear/aligned (freq gate, the worth-training-on signal)?
+;
+; Proven by: form-stdlib/tests/borrowed-oracle-dividend-band.fk (four-way at validate.sh)
+
+(do
+    (defn ex-self-funded (e) (nth e 0))
+    (defn ex-sample      (e) (nth e 1))
+    (defn ex-member      (e) (nth e 2))
+    (defn ex-aligned     (e) (nth e 3))
+
+    ; what the oracle cost US: zero when the contributor's own agent ran it — the dividend
+    (defn ex-our-oracle-cost (e) (if (eq (ex-self-funded e) 1) 0 1))
+
+    ; a usable training sample? produced AND aligned — membership plays NO part by construction
+    (defn ex-trainable? (e)
+        (if (and (eq (ex-sample e) 1) (eq (ex-aligned e) 1)) 1 0))
+
+    ; the body's learning gain — note: no member term. That absence IS the membership-independence.
+    (defn ex-learning-gain (e) (ex-trainable? e))
+
+    ; the dividend: free frontier reasoning AND a free training sample (often from a non-member)
+    (defn ex-free-dividend? (e)
+        (if (and (eq (ex-our-oracle-cost e) 0) (eq (ex-trainable? e) 1)) 1 0))
+
+    0)

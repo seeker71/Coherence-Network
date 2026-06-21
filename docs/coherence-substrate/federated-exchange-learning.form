@@ -62,4 +62,9 @@
   (north-star
     "every aligned, consented exchange that any cell has with the rented mind becomes"
     "sovereign shared body, so the native model needs the rented mind a little less each"
-    "day — and the lift belongs to everyone, never to whoever paid for that one call."))
+    "day — and the lift belongs to everyone, never to whoever paid for that one call.")
+
+  ; the economics of step 1-3 — who pays the oracle, and why it is free
+  (funding borrowed-oracle-dividend.form
+    "the contributor's own agent/subscription pays the frontier oracle, not us; each exchange is a"
+    "free training sample, and it teaches us whether or not they ever become a member."))
