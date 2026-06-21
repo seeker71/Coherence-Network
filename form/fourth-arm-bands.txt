@@ -638,6 +638,14 @@ ll-buffer fkc 1
 # BMF/dialect surface is provable on the fourth kernel.
 bmf-core fks 600
 bmf-grammar fks 300
+# form.bml lifted onto the cursor: the form.bml grammar PARSES `def ..=expr;` on
+# the fourth arm too (cursor-only; rides bmf-core/bmf-grammar's op families). The
+# recipe-shape parity vs the hand line compiler is the three-way band
+# form-bml-cursor-parity-band.fk (it compares against the s-expr line compiler,
+# which does not run on fkwu, so that band stays three-way by design).
+form-bml-cursor-parse fks 123
+# ...and the cursor LOWERING to the runnable recipe (fsc-rec-* path) crosses too.
+form-bml-cursor-lower fks 113
 bmf-object-data fks 65535
 bmf-form-object-runtime fks 67108863
 bmf-symbol-wire fks 255
