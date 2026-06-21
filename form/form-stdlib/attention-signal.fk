@@ -1,0 +1,42 @@
+; attention-signal.fk — turn the MEASURED sovereignty receipt into a ranked "pay attention here".
+;
+; preludes: form-stdlib/core.fk
+;
+; Urs, 2026-06-21: "a measured report will give us signal to where we need to pay attention." The
+; sovereignty receipt (sovereignty-receipt.fk) and form-cli stats already MEASURE per-lane native
+; readiness (held-out scores) and volume. This recipe ranks those measured numbers so attention lands
+; where closing the native gap matters most: a lane that is used a lot AND is far from native-ready.
+; A lane already near-native (Bash 97%, StructuredOutput 99%) is the last mile; a high-volume weak lane
+; (Read 64%, Edit 67%, Write 68%) is where the next training breath should go.
+;
+; A lane (each value an integer; scores 0..100):
+;   score   — the native contender's measured held-out score for this lane
+;   volume  — how often this lane is exercised in the real corpus
+;   target  — the level to reach (the oracle/baseline, usually ~100)
+;
+; Proven by: form-stdlib/tests/attention-signal-band.fk (four-way at validate.sh)
+
+(do
+    (defn at-score  (l) (nth l 0))
+    (defn at-volume (l) (nth l 1))
+    (defn at-target (l) (nth l 2))
+
+    ; does this lane carry enough volume to matter? (rare lanes can wait)
+    (defn at-matters? (l) (if (ge (at-volume l) 100) 1 0))
+
+    ; near-native already? (within 10 of target — the last mile, low attention)
+    (defn at-near-native? (l) (if (ge (at-score l) 90) 1 0))
+
+    ; the attention tier:
+    ;   2 = ATTEND now   — high volume AND not near-native (close this gap next)
+    ;   1 = last mile    — high volume but already near-native (finish it)
+    ;   0 = rest         — low volume (let it wait)
+    (defn at-tier (l)
+        (if (eq (at-matters? l) 1)
+            (if (eq (at-near-native? l) 0) 2 1)
+            0))
+
+    ; pairwise: which of two lanes more needs attention right now?
+    (defn at-prefer (a b) (if (ge (at-tier a) (at-tier b)) a b))
+
+    0)
