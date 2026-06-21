@@ -49,18 +49,19 @@
     (deep-adjoint     a TWO-layer policy gradient = the reference, by reversed gathers — the chain rule
                       with NO unrolled autograd tape: QAM's "no backprop through the chain", on our kernel))
 
-  # ── 1b. Wired into a live loop — the offline→online promotion [RUNS: band → 31] ──
+  # ── 1b. Wired into a live loop — the offline→online promotion, VALUE-NATIVE [RUNS: band → 63] ──
   # No longer an island: diffusion-q-cc.fk grafts dql-improve onto champion-challenger.
-  # A served champion policy already reaches the target value (Q=2.5); a raw challenger
-  # (Q=0) earns authority ONLY by the Q-tilt. dql-improve is the move that flips its trials
-  # from losing to winning; cc-promote? is the gate. The coin stays gl-veq6 equality
-  # (round-vs-round, fourth-arm safe) and the competition is champion-challenger's integer counts.
+  # A served champion policy reaches value Q=2.5; a raw challenger (Q=0) earns authority ONLY by the
+  # Q-tilt. The competition compares REAL FLOAT VALUE (summed Q over the window) with real float
+  # ordering (cc-val-reaches? / cc-val-exceeds?, ge/gt) — not a binary count. dql-improve raises the
+  # value; cc-val-promote? is the gate.
   (consumed-by-loop
-    (raw-stays-behind   the un-improved challenger (Q=0) loses every trial → the champion keeps authority)
-    (tilt-earns-it      a sufficient Q-tilt (focus 1/2, Q→2.5) reaches the champion → PROMOTED, authority flips)
-    (trusted-window     a winning challenger on a SHORT window (< min-samples) is NOT promoted — earned, not lucky)
-    (insufficient-tilt  a partial tilt (focus 1/8, Q→0.625) has not reached → still behind, not promoted)
-    (kernel-earned-it   dql-improve raised the challenger's value 0 → 2.5, the champion's level, by the adjoint))
+    (raw-stays-behind   the un-improved challenger (Q=0) is behind on value → the champion keeps authority)
+    (tilt-earns-it      a sufficient Q-tilt (focus 1/2, Q→2.5) reaches the champion's value → PROMOTED)
+    (trusted-window     reaching value on a SHORT window (< min-samples) is NOT promoted — earned, not lucky)
+    (insufficient-tilt  a partial tilt (focus 1/8, Q→0.625) has not reached the value → still behind)
+    (strict-beat        an overshoot (focus 3/4, Q→3.75) cc-val-exceeds by float gt; a tie does not)
+    (real-margin        the slack is a real float — the weak challenger reaches with margin 18.75, not with 0))
 
   # ── 2. The mapping — every QAM piece is a cell already here ──────────
   (mapping
@@ -87,13 +88,15 @@
     (federated-critics each cell runs its own QAM loop; slice-merge reaches the SAME numbers, which float-averaging can't)
     (traceable-adjoint every Q-update is a content-addressed delta with Blueprint provenance — cheap AND attributable))
 
-  # ── 5. The fourth-arm float idiom (a lesson this graft re-proved) ───
-  # The band's first cut diverged on fkwu (185 vs 255). Root cause: raw float
-  # gt/lt and round-vs-raw-large-int-literal box differently on the fourth
-  # kernel than on the three walkers. The fix is the body's standing discipline,
-  # held here too: compare floats ONLY through the verdict lens gl-veq6
-  # (round-vs-round). Never a raw gt/lt and never (eq (gl-r6 x) <large-int>) at
-  # the verdict level — both pass three-way and hide a fourth-arm divergence.
+  # ── 5. The fourth-arm float registration rule (the real lesson) ─────
+  # The band's first cut "diverged" on fkwu (185 vs 255), and an earlier note here
+  # blamed fkwu's float ordering. That was WRONG — a misdiagnosis. fkwu computes
+  # gt/lt/le/ge/eq on floats correctly, four-way (tests/float-compare-band.fk → 4095).
+  # The real cause: a band carrying float LITERALS must be registered `fks` in
+  # fourth-arm-bands.txt, because a float literal lowers to fk-f64 → tag 50 (strtod of
+  # a string slot) and the `fks` table carries that source text in the string pool.
+  # Registered `fkc` (pool-free), the literals collapse to one value and ordering
+  # diverges — a REGISTRATION error, never a kernel bug. This cell's bands are `fks`.
 
   # ── 6. The gaps (the next stones, named — not built ahead of need) ──
   (gaps
