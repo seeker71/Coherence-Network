@@ -1,0 +1,44 @@
+; bml-import-ref-resolution-band.fk — a `ref` target resolves at COMPILE time
+; against the section's classes and its declared imports; the resolved refs are
+; usable abstractions at runtime, four-way.
+;
+; import NAME;        declares an external abstraction available to refs
+; ref X = Target();   must resolve to a same-section class OR a declared import,
+;                     else the source-compiler errors at the ref site (proven
+;                     separately by a direct compile that fails).
+;
+; Widget refs Num (allowed because `import Num;` is declared) and Seed (a
+; same-section class). The feature this band proves is COMPILE-TIME resolution:
+; both refs compile (an undeclared one is a compile error — proven separately),
+; and the descriptor records both. The same-section ref is also read back at
+; runtime as the Seed abstraction. (The imported target's runtime VALUE is NOT
+; asserted: whether `Num` actually exists on every runtime — e.g. the fourth
+; arm's shim — is the cross-prelude resolver's job, the next step; `import`
+; here is the honest declaration that satisfies the ref at compile time.)
+; Computed inside the one section form so it reads identically on every kernel.
+;
+; preludes: form-stdlib/core.fk
+
+section [form.bml] {
+    import Num;
+
+    class Seed<T> {
+        field val = 41;
+    }
+
+    class Widget<E> {
+        ref base = Num();
+        ref seed = Seed();
+        field k = 7;
+    }
+
+    ; the descriptor records both refs in declaration order (index 5 = refs)
+    let refs = nth(Widget(), 5);
+    let nrefs = len(refs);
+    let r0 = if str_eq(nth(refs, 0), "base") then 1 else 0;
+    let r1 = if str_eq(nth(refs, 1), "seed") then 1 else 0;
+    ; the same-section ref is usable at runtime as the Seed abstraction
+    let ns = if str_eq(nth(seed(), 1), "Seed") then 1 else 0;
+    ; 1 + 1*10 + 1*100 + 2*1000 = 2111
+    add(ns, add(mul(r0, 10), add(mul(r1, 100), mul(nrefs, 1000))));
+}
