@@ -56,16 +56,39 @@ scale**. A *full* projection `W` (rotation, not just per-axis scale) trained by 
 is the salvage path for a linear C2; the decisive jump is C3. Recipe + machinery are proven and
 reusable; the negative result is named, not hidden.
 
-## Challenger 3 — "Net" (small neural embedder, the real ECAPA shape) — DESIGNED
+## Challenger 2-full — "Proj" (full linear projection, SGD) — BUILT & FOUR-WAY
 
-A scaled-down x-vector/ECAPA: mel frames → 2–3 time-delay (conv) layers with frame context →
-statistics pooling (mean+std over time) → 1–2 dense layers → 128-d embedding, trained with
-AAM-softmax (or triplet) over many speakers. This is the architecture that *is* ECAPA minus the
-Res2Net/SE depth and the data scale. Built from the proven transformer-training tissue
-(`transformer-corpus-train.fk`, `transformer-block.fk`, `softmax-ln.fk`, `form-train-step.fk`) —
-the same recipes that train the Form whisper block four-way; native speed via the emit→asm lane.
-Expectation: the closest to ECAPA — single-digit EER reachable with enough public speaker data;
-the residual to <1% is the VoxCeleb-scale data wall.
+`speaker-proj.fk` (PASS-4WAY, 255): the diagonal's salvage — a full matrix `W` (K×N) trained by
+squared-loss SGD toward speaker codes (the affine-train loop lifted to multi-output). Unlike the
+diagonal it can *rotate*. The band proves the loop genuinely descends: one step drops the fixture
+loss 4,000,000 → 2,560,000 and moves an off-axis weight, four-way.
+
+## Challenger 3 — "Net" (nonlinear neural embedder, SGD) — BUILT & FOUR-WAY
+
+`speaker-net.fk` (PASS-4WAY, 255): `emb = relu(W·x)` with relu-GATED backprop — the one thing
+C1/C2 lack, a nonlinearity. The band proves a dead unit passes zero gradient while the active
+unit's gradient reaches its off-axis weight, and the step descends 5,000,000 → 3,190,400, four-way.
+One layer here; stacking is the same recipe repeated (the deep TDNN).
+
+## Race result — the moat is features + precision + data, not the model
+
+C2-full and C3 are built and four-way proven (their training loops descend on clean fixtures). But
+**training them on the real corpus collapses** — measured, named, not hidden:
+
+- **Features.** The hand-crafted sox 20-band supervector rounds to small ints (0–99); coarse 0/1-ish
+  patterns carry enough for C1's cosine but almost no gradient signal for a learned embedder.
+- **Precision.** Integer fixed-point SGD rounds the small per-step weight updates toward zero — the
+  gradient that the clean-fixture band shows descending vanishes on real-scale features.
+- **Data.** 26 voices × 2 training windows is far below what discriminative training needs; held-out
+  generalization has almost nothing to learn from.
+
+So the decisive lesson of the whole race: C1 (stats) ≈ usable on easy pairs; C2-diagonal lost;
+C2-full and C3 are the right model classes but can't be *trained* to beat C1 on this footing. **ECAPA's
+power is not the model class — it is the learned log-mel front-end, float training, and VoxCeleb-scale
+data.** Approaching it means meeting it on those: (1) a learned/log-mel feature front-end (the Form mel
+recipes, not coarse bands); (2) the native float training lane (emit→asm), not the tree-walker's integer
+fixed-point; (3) a real multi-speaker corpus. The recipes are the proven, reusable bodies waiting for
+that footing — the same recipe that proves four-way is the one that will crystallize and train native.
 
 ## Evaluation harness
 
