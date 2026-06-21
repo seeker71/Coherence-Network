@@ -1,0 +1,22 @@
+; preludes: form-stdlib/sovereignty-receipt.fk
+;
+; The sovereignty receipt, pinned to the honest floor. Proves: an agentic response today has RENTED
+; generation (oracle generated, body generated nothing) while the proof ran native; the native contender
+; for that work is NOT ready (well below the oracle, floor unmet) so we honestly still use the oracle; a
+; narrow lane CAN come home once native >= oracle AND the floor is cleared; and when the body finally
+; generates, generation is no longer rented. Verdict 255 when every claim lands.
+(do
+    (let r-this   (list 0 5 3 40 90 0))   ; this kind of response: 0 native-gen, 5 oracle-gen, 3 native-proof, native far below oracle
+    (let r-lane   (list 0 1 0 95 90 1))   ; a narrow lane where native finally beats the oracle + floor cleared
+    (let r-future (list 5 0 5 95 90 1))   ; the body generates -> generation no longer rented
+
+    (let c0 (if (eq (rp-gen-rented? r-this) 1)     1   0))   ; THIS response: generation is rented (the honest floor)
+    (let c1 (if (eq (rp-proof-native? r-this) 1)   2   0))   ; ...but the proof ran native (four-way)
+    (let c2 (if (eq (rp-native-ready? r-this) 0)   4   0))   ; ...the native contender is NOT yet ready for this work
+    (let c3 (if (eq (rp-use-native? r-this) 0)     8   0))   ; ...so we honestly still use the oracle
+    (let c4 (if (eq (rp-honest? r-this) 1)        16   0))   ; ...and rented is reported as rented, never as native
+    (let c5 (if (eq (rp-native-ready? r-lane) 1)  32   0))   ; a narrow lane CAN come home (native >= oracle + floor)
+    (let c6 (if (eq (rp-use-native? r-lane) 1)    64   0))   ; ...so that lane uses native now
+    (let c7 (if (eq (rp-gen-rented? r-future) 0) 128   0))   ; when the body generates, generation is no longer rented
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

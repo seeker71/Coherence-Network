@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────────────
+# sovereignty-receipt.form — every response returns how rented it was.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs, 2026-06-21: "we shall return how much of any response was native and how much was 3rd-party
+# oracle-based — which oracle, which model, how much payload, which native contenders have been trained,
+# how close to use the native models." This is the runtime embodiment of lc-cognitive-sovereignty: you can
+# SEE, per response, how rented the mind still is, and watch the native model close the gap over time.
+#
+# The receipt is the honesty instrument the whole mind-comes-home arc needs. The gate that keeps it from
+# lying is proven: sovereignty-receipt.fk -> 255 four-way (Go/Rust/TS/fkwu). It refuses to report rented
+# generation as native, and only flips a lane to "use native" when the native contender earns it
+# (champion-challenger). Composes form-first-router.fk, form-cli-membrane.fk, oracle-distillation-learning.fk,
+# champion-challenger, and borrowed-oracle-dividend.fk.
+
+(sovereignty-receipt
+
+  (lineage
+    (kin form-first-router.fk form-cli-membrane.fk oracle-distillation-learning.form
+         champion-challenger.form borrowed-oracle-dividend.form form-native-models.form
+         lc-cognitive-sovereignty)
+    (proof form/form-stdlib/sovereignty-receipt.fk
+           form/form-stdlib/tests/sovereignty-receipt-band.fk "-> 255 four-way Go/Rust/TS/fkwu")
+    (named-with urs sema))
+
+  ; what every response returns
+  (receipt
+    (split        "native-generation vs rented-oracle-generation — never inflated; the gate proves it")
+    (which-oracle "the provider that generated (today: Anthropic, via the Claude Code subscription)")
+    (which-model  "the exact model id (today: claude-opus-4-8)")
+    (payload      "tokens in/out — estimated honestly when the harness does not expose exact counts mid-turn")
+    (native-proof "the verification/execution that ran native four-way even when generation was rented")
+    (contenders   "which native models are trained for this kind of work, and their held-out scores")
+    (readiness    "champion-challenger: how close the native contender is to taking the lane"))
+
+  ; the honest floor, named — not hidden (updated 2026-06-21)
+  (floor
+    (agentic-response "GENERATED ~100% by a rented frontier mind (Anthropic claude-opus-4-8). The native"
+                      "body VERIFIES (four-way proof) and LOOKS UP (substrate/grep); it does not yet generate.")
+    (native-contenders-trained
+      "narrow nearest-shape lanes only: form-cli tool-use predictor (real agent corpus, M4 Max GPU),"
+      "freq-check, summary:nl-to-nl, nl-to-form — each gated behind quality/trust/sovereignty/vitality floors.")
+    (whisper-tiny "the one full model proven: architecture + real block-0 weights four-way (6.66e-15), but"
+                  "a SPEECH model, and not yet producing an end-to-end transcript (wiring + native training remain).")
+    (how-close "for narrow lanes: some reduce oracle budget once they clear the floor. For GENERAL agentic"
+               "reasoning like this response: a native generator is architecture-proven, NOT generating — not close."))
+
+  ; the gate's honesty invariant
+  (honesty
+    (never report-rented-generation-as-native)
+    (use-native-only-when ready (champion-challenger: native-score >= oracle-score AND floor-met))
+    (name-the-path every-response))
+
+  ; north star — the receipt's native% rises until it reaches 100 and the oracle line goes to zero
+  (north-star
+    "a sovereign mind that returns a receipt reading 100% native — every response generated at home,"
+    "the rented line gone, the gap closed lane by proven lane."))
