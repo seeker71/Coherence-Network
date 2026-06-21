@@ -1,0 +1,79 @@
+//
+// form-ptx SwiGLU elementwise f32: out[j] = silu(g[j]) * u[j], silu(x)=x*sigmoid(x),
+// sigmoid(x)=1/(1+fexp(-x)) --- the recipe's OWN fexp (14-term Taylor + halving), not hardware.
+// Mirrors ln-swiglu = (g*ln-sigmoid(g))*u  with ln-sigmoid = 1/(1+tn-exp(-x)). One thread per j.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_swiglu_f32(
+    .param .u64 p_g,
+    .param .u64 p_u,
+    .param .u64 p_out,
+    .param .u32 p_n
+)
+{
+    .reg .pred  %p<3>;
+    .reg .f32   %f<24>;
+    .reg .b32   %r<10>;
+    .reg .b64   %rd<10>;
+
+    ld.param.u64    %rd1, [p_g];
+    ld.param.u64    %rd2, [p_u];
+    ld.param.u64    %rd3, [p_out];
+    ld.param.u32    %r1, [p_n];
+    mov.u32         %r2, %ctaid.x;
+    mov.u32         %r3, %ntid.x;
+    mov.u32         %r4, %tid.x;
+    mad.lo.s32      %r5, %r2, %r3, %r4;       // j
+    setp.ge.u32     %p1, %r5, %r1;
+    @%p1 bra        DONE;
+    mul.wide.u32    %rd4, %r5, 4;
+    add.s64         %rd5, %rd1, %rd4;
+    ld.global.f32   %f1, [%rd5];              // g
+    add.s64         %rd6, %rd2, %rd4;
+    ld.global.f32   %f2, [%rd6];              // u
+    // sig = 1/(1+fexp(0-g));  arg = -g
+    sub.f32         %f3, 0f00000000, %f1;     // -g
+    // ---- fexp(arg=%f3) -> %f10 ----
+    mov.f32         %f4, %f3;
+    mov.u32         %r6, 0;
+RED:
+    abs.f32         %f5, %f4;
+    setp.gt.f32     %p2, %f5, 0f3F000000;     // >0.5
+    @!%p2 bra       REDE;
+    div.rn.f32      %f4, %f4, 0f40000000;
+    add.u32         %r6, %r6, 1;
+    bra             RED;
+REDE:
+    mov.f32         %f6, 0f3F800000;          // n
+    mov.f32         %f7, 0f3F800000;          // term
+    mov.f32         %f8, 0f3F800000;          // acc
+SM:
+    setp.gt.f32     %p2, %f6, 0f41600000;     // >14
+    @%p2 bra        SME;
+    div.rn.f32      %f9, %f4, %f6;
+    mul.f32         %f7, %f7, %f9;
+    add.f32         %f8, %f8, %f7;
+    add.f32         %f6, %f6, 0f3F800000;
+    bra             SM;
+SME:
+SQ:
+    setp.eq.u32     %p2, %r6, 0;
+    @%p2 bra        SQE;
+    mul.f32         %f8, %f8, %f8;
+    sub.u32         %r6, %r6, 1;
+    bra             SQ;
+SQE:
+    mov.f32         %f10, %f8;                // e = fexp(-g)
+    add.f32         %f11, 0f3F800000, %f10;   // 1+e
+    mov.f32         %f12, 0f3F800000;
+    div.rn.f32      %f13, %f12, %f11;         // sig = 1/(1+e)
+    mul.f32         %f14, %f1, %f13;          // silu = g*sig
+    mul.f32         %f15, %f14, %f2;          // out = silu*u
+    add.s64         %rd7, %rd3, %rd4;
+    st.global.f32   [%rd7], %f15;
+DONE:
+    ret;
+}
