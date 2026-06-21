@@ -6,6 +6,7 @@
 ;   form_compile   source -> recipe NodeID (RAM, content-addressed) — the handle
 ;   form_walk      recipe NodeID -> value                            — run it
 ;   recipe_to_bytes / bytes_to_recipe   recipe <-> bytes             — the channel
+;   write_file_bytes / read_file_bytes  recipe bytes <-> a .fkb file — the disk sink
 ;   node_eq        two NodeIDs equal?                                — integrity
 ;
 ; Content-addressing is the channel: a recipe one cell generates and one a peer
@@ -23,6 +24,10 @@
 ;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; [3, @0.2.12.48]
 ;   printf '(gen-share-roundtrip "(add (mul 6 7) 1)")\n' > /tmp/g.fk
 ;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; [43, 43, 1]
+;   printf '(gen-to-file "(add (mul 6 7) 1)" "/tmp/a.fkb")\n' > /tmp/g.fk
+;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; writes /tmp/a.fkb
+;   printf '(gen-run-file "/tmp/a.fkb")\n' > /tmp/g.fk
+;   form/form-kernel-go/bin-go form/form-stdlib/form-gen.fk /tmp/g.fk     ; 43 (loaded from disk)
 ;
 ; preludes: (none — uses only kernel primitives)
 
@@ -52,6 +57,34 @@
             (let v (form_walk r))
             (let wire (recipe_to_bytes r))
             (let r2 (bytes_to_recipe wire))
+            (let v2 (form_walk r2))
+            (list v v2 (node_eq r r2))))
+
+    ; --- disk sink: a generated recipe as a durable .fkb artifact -----------
+    ; The same recipe↔bytes channel, landed on disk instead of a wire — a peer
+    ; (or a later run) loads the file and runs the SAME content-addressed recipe.
+
+    ; gen to disk: compile, serialize the recipe to a .fkb file -> the handle
+    (defn gen-to-file (src path)
+        (do
+            (let r (form_compile src))
+            (write_file_bytes path (recipe_to_bytes r))
+            r))
+
+    ; load a recipe back from a .fkb file (re-interns to the same NodeID)
+    (defn gen-load-file (path) (bytes_to_recipe (read_file_bytes path)))
+
+    ; load + run a recipe from disk
+    (defn gen-run-file (path) (form_walk (gen-load-file path)))
+
+    ; the disk round-trip: gen to disk here, load + run there
+    ; -> (value-here value-there same-node?)
+    (defn gen-file-roundtrip (src path)
+        (do
+            (let r (form_compile src))
+            (let v (form_walk r))
+            (write_file_bytes path (recipe_to_bytes r))
+            (let r2 (bytes_to_recipe (read_file_bytes path)))
             (let v2 (form_walk r2))
             (list v v2 (node_eq r r2))))
 
