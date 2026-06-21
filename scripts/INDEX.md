@@ -92,7 +92,7 @@
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_agent.sh](form_cli_agent.sh) | form_cli_agent.sh — thin WITNESS: the kernel runs the TIERED agent loop (form-native-run.fk). |
-| [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS: the kernel runs form-cli-ask.fk (the body is Form, not this shell). |
+| [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS for `form-cli ask+`. The body is Form: the kernel |
 | [form_cli_ask_smart.py](form_cli_ask_smart.py) | form_cli_ask_smart.py — thin REPL CARRIER. The form-cli interactive shell. |
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |

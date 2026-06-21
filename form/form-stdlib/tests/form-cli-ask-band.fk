@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/form-cli-ask-gate.fk
+;
+; form-cli-ask-band — the ask verb's posterior accept / retry / escalate decision, proven
+; four-way. Eight strange-minimal cases walk the boundary at the trust=60 prior: a usable,
+; substantive local answer STANDS (native); a weak one ESCALATES for the real answer; an
+; unusable answer RETRIES while a re-try remains then ESCALATES when exhausted; a strong
+; answer from an UNTRUSTED lane still escalates; and the path label reads native on accept,
+; rented on escalate. The gate adds nothing to fsuf's math — it only adapts the ask lane's
+; four signals onto it — so these cases pin that the adapter routes each shape correctly.
+;
+; Verdict 4095 when every claim lands — the full default decision path, read-to-route:
+;   1     usable + strong content   -> ACCEPT      (v=0)
+;   2     usable + weak content      -> ESCALATE    (v=2) reason weak (3)
+;   4     unusable + a re-try left    -> RETRY       (v=1)
+;   8     unusable + exhausted        -> ESCALATE    (v=2) reason empty (1)
+;   16    strong but low-trust lane    -> ESCALATE    (v=2) reason low-conf (4)
+;   32    accept -> path native         (1)
+;   64    escalate -> path rented        (0)
+;   128   borderline content 60          -> ACCEPT    (v=0)
+;   256   empty answer is NOT usable      (okp 0)
+;   512   the "[ask: .." error marker is NOT usable (okp 0)
+;   1024  a real answer IS usable         (okp 1)
+;   2048  intrinsic content: usable -> 70, unusable -> 0  (the sovereignty-first read)
+(do
+    (let c0  (if (eq  (fca-ask-verdict 1 80 60 1) 0)                                       1    0))
+    (let c1  (if (and (eq (fca-ask-verdict 1 40 60 1) 2) (eq (fca-ask-reason 1 40 60 1) 3))  2  0))
+    (let c2  (if (eq  (fca-ask-verdict 0 0 60 1) 1)                                        4    0))
+    (let c3  (if (and (eq (fca-ask-verdict 0 0 60 0) 2) (eq (fca-ask-reason 0 0 60 0) 1))    8  0))
+    (let c4  (if (and (eq (fca-ask-verdict 1 80 10 1) 2) (eq (fca-ask-reason 1 80 10 1) 4))  16 0))
+    (let c5  (if (eq  (fca-ask-path 0) 1)                                                  32   0))
+    (let c6  (if (eq  (fca-ask-path 2) 0)                                                  64   0))
+    (let c7  (if (eq  (fca-ask-verdict 1 60 60 1) 0)                                       128  0))
+    (let c8  (if (eq  (fca-usable? "") 0)                                                  256  0))
+    (let c9  (if (eq  (fca-usable? "[ask: no answer from the local oracle]") 0)            512  0))
+    (let c10 (if (eq  (fca-usable? "Four.") 1)                                             1024 0))
+    (let c11 (if (and (eq (fca-content-intrinsic "Four.") 70) (eq (fca-content-intrinsic "") 0)) 2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+        (add c8 (add c9 (add c10 c11))))))))))))
