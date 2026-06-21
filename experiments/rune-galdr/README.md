@@ -84,3 +84,31 @@ collapsed to a single low-register rune. The sonic organ hears the voice, not th
 
 This is the **sonic sense organ** that hears tone and rune — the companion to the speech
 organ's lexical layer, and the bridge to reading a ritual's frequency-journey bell by bell.
+
+## Clear speaker recognition — best local oracle + Form recognizer
+
+The crude formant voiceprint (`speaker-id.fk`) can't part two similar voices. The clear
+recognizer pairs the best **local** speaker oracle with a Form decision:
+
+- **Oracle** — `ecapa_embed.py` runs **ECAPA-TDNN** (SpeechBrain `spkrec-ecapa-voxceleb`,
+  CPU, in the torch venv): a voice → 192-d L2-normalized embedding, quantized to ints.
+- **Body** — [`form-stdlib/speaker-embed.fk`](../../form/form-stdlib/speaker-embed.fk):
+  cosine = integer dot of the embeddings; nearest speaker = max dot; a **floor + runner-up
+  margin** returns `unknown` instead of forcing a guess. PASS-4WAY (verdict 255).
+- **Carriers** — `enroll-embed.sh` (public clip → Demucs → ECAPA → private roster) and
+  `identify-embed.sh` (slide a separated voice → who-spoke-when).
+
+```bash
+enroll-embed.sh ubbe=ubbe.wav brigitte=brigitte.wav angelia=angelia.wav   # private roster
+identify-embed.sh recording.vocals.16k.wav 0 4 30 20                       # private timeline
+```
+
+ECAPA separates voices the formant print can't: enrolled from public clips, the three
+ceremony speakers sit at cross-cosine ~0.09–0.13 (self 1.0) — the hard same-gender pair now
+clearly distinct. Recognition over the separated teaching layer reads the lead speaker
+through his teaching and detects a second enrolled speaker entering, with honest `unknown`
+in the low-confidence windows.
+
+**Sovereignty:** voiceprints come only from public channels; the roster (biometric) and the
+who-spoke-when timeline are **private** (`~/.coherence-network/`), never committed. Only the
+recognition *capability* ships.

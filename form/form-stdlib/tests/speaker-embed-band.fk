@@ -1,0 +1,33 @@
+; preludes: form-stdlib/speaker-embed.fk
+;
+; speaker-embed-band — clear speaker recognition over neural voice embeddings, three-way.
+;
+; A roster of three quantized unit-ish voiceprints; cosine = dot (vectors pre-normalized
+; by the oracle). Nearest = max dot; a floor + runner-up margin returns "unknown" honestly.
+;
+; Verdict 255 when every claim lands (numeric — the name string is carrier-read):
+;   1   identical voiceprints align fully   (dot = 100)
+;   2   orthogonal voiceprints don't        (dot = 0)
+;   4   query near A resolves to A           (top sim 90)
+;   8   query near B resolves to B           (top sim 90)
+;   16  ambiguous query resolves to C        (top sim 70 — the most-aligned)
+;   32  runner-up sim is reported            (second to A's win = 70)
+;   64  a clear win is confident             (top 90, margin 20 ≥ 10 → 1)
+;   128 a thin margin is "unknown"           (top 70 but margin 20 < 25 → 0)
+(do
+    (let A (list "a" (list 10 0 0 0)))
+    (let B (list "b" (list 0 10 0 0)))
+    (let C (list "c" (list 7 7 0 0)))
+    (let roster (list A B C))
+    (let qA (list 9 1 0 0))
+    (let qB (list 1 9 0 0))
+    (let qAmb (list 5 5 0 0))
+    (let c0 (if (eq (se-dot (list 10 0 0 0) (list 10 0 0 0)) 100) 1 0))
+    (let c1 (if (eq (se-dot (list 10 0 0 0) (list 0 10 0 0)) 0) 2 0))
+    (let c2 (if (eq (se-sim qA roster) 90) 4 0))
+    (let c3 (if (eq (se-sim qB roster) 90) 8 0))
+    (let c4 (if (eq (se-sim qAmb roster) 70) 16 0))
+    (let c5 (if (eq (se-second qA roster) 70) 32 0))
+    (let c6 (if (eq (se-confident? qA roster 50 10) 1) 64 0))
+    (let c7 (if (eq (se-confident? qAmb roster 50 25) 0) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

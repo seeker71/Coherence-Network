@@ -1,0 +1,56 @@
+; speaker-embed.fk — the clear speaker recognizer over NEURAL voice embeddings (the body).
+;
+; The crude formant voiceprint (speaker-id.fk) can't part two similar voices. This is the
+; best recognizer we can build: it matches over the embedding of the best LOCAL oracle —
+; an ECAPA-TDNN speaker model (SpeechBrain) that maps a voice to a 192-d vector where same-
+; speaker vectors point the same way and different speakers point apart. The carrier
+; (experiments/rune-galdr/embed-voice.sh) runs that oracle and L2-normalizes + quantizes the
+; embedding to ints; EVERY recognition decision is HERE.
+;
+; Metric: cosine similarity. Because the carrier L2-normalizes both vectors, cosine is just
+; their dot product — nearest speaker = the roster vector with the MAX dot. A floor on that
+; max returns "unknown" rather than forcing every window onto someone.
+;
+; Builtins only (mul/add/gt/ge/nth/head/tail/len). Proven by
+; form-stdlib/tests/speaker-embed-band.fk.
+
+(do
+    (defn sp-name (s) (nth s 0))      ; roster cell = (name embedding-vector)
+    (defn sp-vec  (s) (nth s 1))
+
+    ; integer dot product over two equal-length quantized unit vectors = cosine·scale²
+    (defn se-dot (a b)
+        (if (eq (len a) 0) 0
+            (add (mul (head a) (head b)) (se-dot (tail a) (tail b)))))
+
+    ; nearest speaker cell by MAX dot (most-aligned voice)
+    (defn se-best (q roster best bestsim)
+        (if (eq (len roster) 0) best
+            (do
+                (let s (se-dot q (sp-vec (head roster))))
+                (if (gt s bestsim)
+                    (se-best q (tail roster) (head roster) s)
+                    (se-best q (tail roster) best bestsim)))))
+    (defn se-nearest (q roster)
+        (se-best q (tail roster) (head roster) (se-dot q (sp-vec (head roster)))))
+
+    ; the similarity behind the call (cosine·scale²) and the margin over the runner-up
+    (defn se-sim (q roster) (se-dot q (sp-vec (se-nearest q roster))))
+    ; max dot EXCLUDING the winner — the FIXED top is threaded down so the skip is stable
+    (defn se-second-loop (q roster top)
+        (if (eq (len roster) 0) 0
+            (do
+                (let s (se-dot q (sp-vec (head roster))))
+                (if (eq s top)
+                    (se-second-loop q (tail roster) top)           ; skip the winner
+                    (if (gt s (se-second-loop q (tail roster) top)) s (se-second-loop q (tail roster) top))))))
+    (defn se-second (q roster) (se-second-loop q roster (se-sim q roster)))
+
+    ; the call: nearest speaker's name, but only if it clears the floor AND beats the
+    ; runner-up by a margin — else "unknown" (honest no-match instead of a forced guess)
+    (defn se-name (q roster) (sp-name (se-nearest q roster)))
+    (defn se-confident? (q roster floor margin)
+        (do
+            (let top (se-sim q roster))
+            (let snd (se-second q roster))
+            (if (ge top floor) (if (ge (sub top snd) margin) 1 0) 0))))
