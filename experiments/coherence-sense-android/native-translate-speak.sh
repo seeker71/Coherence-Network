@@ -21,7 +21,7 @@ STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
 [[ -x "$GO" ]] || { echo "FAIL no Form kernel (bin-go) — build: (cd $ROOT/form/form-kernel-go && go build -o bin-go .)"; exit 1; }
 # core.fk is the only source-compiled prelude; nl-translate's deps are all builtins
 # + already-low-level cells, so the native translate runs without it.
-PRELUDE=(json cache form-ontology-loader line-grammar bmf-core bmf-grammar string-case nl-translate)
+PRELUDE=(json cache form-ontology-loader line-grammar bmf-core bmf-grammar string-case nl-lexicon-data nl-translate)
 SRCS=(); for p in "${PRELUDE[@]}"; do SRCS+=("$STD/$p.fk"); done
 
 # native translate: ONE kernel call, all logic is Form. dir = en-id | id-en
