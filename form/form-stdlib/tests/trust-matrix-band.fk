@@ -1,0 +1,22 @@
+; preludes: form-stdlib/trust-matrix.fk
+;
+; The per-step trust matrix, pinned. Proves a fully-native step is trust-matrix-observed (score 4, the
+; thing only form-cli can return), an oracle step is honestly rented with ZERO body-only signal (the
+; asymmetry that makes native obvious), a rented step can still be freq-attuned, a partial-native step is
+; NOT full trust, and a fully-native step asserts the body-only signals a raw oracle cannot. Verdict 255.
+(do
+    (let s-full   (list 1 1 1 1))   ; native, grounded, freq-attuned, sufficient -> full trust observed
+    (let s-rented (list 0 0 0 0))   ; rented oracle, no body signals
+    (let s-attn   (list 0 0 1 0))   ; rented but the oracle answer passed the freq check
+    (let s-part   (list 1 0 1 0))   ; native + freq-attuned but not grounded/sufficient -> partial
+
+    (let c0 (if (eq (ts-observed? s-full) 1)        1   0))   ; full native trust — form-cli-only
+    (let c1 (if (eq (ts-score s-full) 4)            2   0))   ; ...all four signals
+    (let c2 (if (eq (ts-rented? s-rented) 1)        4   0))   ; an oracle step is honestly rented
+    (let c3 (if (eq (ts-observed? s-rented) 0)      8   0))   ; ...never trust-observed
+    (let c4 (if (eq (ts-body-only s-rented) 0)     16   0))   ; ...with ZERO body-only signal (the tell)
+    (let c5 (if (eq (ts-freq-attuned? s-attn) 1)   32   0))   ; even a rented step can be freq-attuned
+    (let c6 (if (eq (ts-observed? s-part) 0)       64   0))   ; partial native is not full trust
+    (let c7 (if (eq (ts-body-only s-full) 2)      128   0))   ; native asserts grounded+sufficient (oracle can't)
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
