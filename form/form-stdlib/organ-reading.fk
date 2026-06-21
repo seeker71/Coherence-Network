@@ -1,0 +1,49 @@
+; organ-reading.fk — the one shape every sensing organ speaks; ONE engine, organs drop in as DATA.
+;
+; The wmls-from-* converters — wmls-from-active-sample, wmls-from-capability-receipt,
+; wmls-from-model-eval (world-model-live-sense.fk), wmls-from-gpu-receipt (gpu-mesh-sense.fk) — were
+; parallel machinery: each a hand-written <typed-receipt> -> wmg-sense. They are all the SAME shape —
+; extract a name, a kind, an answered/ok/when reading, a deadline, and an inspectable payload, then
+; build a wmg-sense. This lifts that to ONE generic converter over a uniform organ-reading. Each
+; organ becomes a small ADAPTER that fills the reading; adding an organ to the mesh is a data row,
+; never a new converter. The north star's "every verdict-emitting organ joins the same stream via a
+; small converter, no parallel machinery" — this is that converter.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk
+;
+; Proven by: form-stdlib/tests/organ-reading-band.fk
+
+(do
+    ; a uniform sensing-organ reading — what EVERY organ produces, GPU/wellness/pulse/framebuffer alike:
+    ;   name      the sense name ("metal:conv2d", "wellness:chain", "pulse:neo4j", ...)
+    ;   kind      the sense kind ("gpu-bit-exact", "wellness", "capability", ...)
+    ;   answered  1 if the organ produced a reading (0 = it could not sense -> "nothing")
+    ;   ok        1 if the reading is the positive/observed truth (0 = a verified negative -> "absent")
+    ;   when      the tick the reading was taken
+    ;   deadline  the freshness bound (obs-verify holds "nothing" past it)
+    ;   payload   the inspectable metadata list (no hidden state)
+    (defn organ-reading (name kind answered ok when deadline payload)
+        (list "organ-reading" name kind answered ok when deadline payload))
+    (defn or-name     (rd) (nth rd 1))
+    (defn or-kind     (rd) (nth rd 2))
+    (defn or-answered (rd) (nth rd 3))
+    (defn or-ok       (rd) (nth rd 4))
+    (defn or-when     (rd) (nth rd 5))
+    (defn or-deadline (rd) (nth rd 6))
+    (defn or-payload  (rd) (nth rd 7))
+
+    ; THE ENGINE: one converter, every organ. organ-reading -> wmg-sense (the learner's shape). The
+    ; old per-organ wmls-from-* converters become one-line adapters over this (see gpu-reading below).
+    (defn wmls-from-reading (rd)
+        (wmg-sense
+            (or-name rd)
+            (or-kind rd)
+            (ov-reading (or-answered rd) (or-ok rd) (or-when rd))
+            (or-deadline rd)
+            (or-payload rd)))
+
+    ; trust + grow ride the engine too, for ANY organ — no per-organ trust/grow code either.
+    (defn organ-sense-trusted? (rd)
+        (obs-trusted? (wmg-sense-verdict (wmls-from-reading rd))))
+    (defn organ-grow (state rd)
+        (wmg-ingest state (wmls-from-reading rd))))

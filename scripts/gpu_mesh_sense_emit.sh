@@ -26,7 +26,8 @@ ORGAN="${COORD_AGENT:-gpu-organ}"
 CHAIN=(
   form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk
   form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk
-  form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk
+  form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk
+  form-stdlib/organ-reading.fk form-stdlib/gpu-mesh-sense.fk
 )
 
 # this session's real GPU organ readings:  backend|device|kernel|parity-num|parity-den|max-abs-ulp

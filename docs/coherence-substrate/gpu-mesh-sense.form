@@ -1,0 +1,35 @@
+# gpu-mesh-sense.form - the GPU sensing organ reports its bit-exact proof into the mesh, and a cell learns from it
+
+(gpu-mesh-sense
+  (lineage
+    (rests-on world-model-live-sense.fk world-model-growth.fk witness-state-receipt.form hati-mesh.form obs-verify.fk)
+    (recipe form/form-stdlib/gpu-mesh-sense.fk)
+    (proof form/form-stdlib/tests/gpu-mesh-sense-band.fk -> 511)
+    (grow-proof form/form-stdlib/tests/gpu-mesh-grow-band.fk -> 255)
+    (carrier scripts/gpu_mesh_sense_emit.sh)
+    (organs form/native/metal/conv2d.metal form/native/vulkan/matvec_vk.c form/native/cuda/template_conv2d.ptx))
+
+  (purpose
+    "A GPU lane's bit-exact PROOF verdict — backend, device, kernel, parity N/N, max-abs ULP — becomes a wmg-sense row, the SAME shape world-model-live-sense.fk feeds the learner from active samples, capability receipts, and model evals."
+    "The GPU organ stops reporting only to stdout/CI. It reports into the mesh, in one canonical reading shape, so every cell that reads the world-model stream learns from what the silicon proved."
+    "It is the GPU sibling of wmls-from-capability-receipt; witness-state-receipt.fk already carried gpu-samples/gpu-latency-us and named GPU learners consuming live counters — this closes it for the bit-exact PROOF verdict, not just a frame counter.")
+
+  (floor
+    "wmls-from-gpu-receipt turns a GPU bit-exact verdict into a wmg-sense row; integers and strings only, since bit-exact means max-abs ULP 0 and no float crosses the recipe. Proven four-way (Go/Rust/TS/fkwu) at verdict 511 (gpu-mesh-sense-band)."
+    "The fixtures are this session's REAL readings: Metal conv2d 75/75 bit-exact on Apple M4 Max, Vulkan matvec 1280/1280 bit-exact on a Qualcomm Adreno 740 (Samsung Galaxy S23 Ultra, Android 16). A short-parity reading becomes absent (verified-not-bit-exact), a 1-ULP divergence becomes absent, a timeout stays nothing — silence is held, not trusted."
+    "Cross-vendor agreement is visible in the mesh: Metal on Apple silicon AND Vulkan on Adreno both observed-bit-exact on matvec — two GPU vendors agreeing bit-for-bit with the recipe oracle (gpu-cross-vendor-agree?)."
+    "The loop closes: a GPU receipt, ingested via gpu-grow, GROWS a world-model state — the model trusts the verified readings (bit-exact and verified-negative both), holds on silence, and grows from the proof. Proven four-way at verdict 255 (gpu-mesh-grow-band). Digest/embody into named model parts is inherited: a GPU sense is an ordinary wmg-sense, and world-model-live-sense-band already proves wmg-senses digest, embody, and grow (524287)."
+    "Live: scripts/gpu_mesh_sense_emit.sh renders the readings through the proven recipe and posts each to the field board as the gpu-organ, so other cells see it in coord roster / the session-start who-is-in-the-field readout."
+    "Core lift (2026-06-21): the per-organ converters are now ONE engine. organ-reading.fk defines a uniform organ-reading (name, kind, answered, ok, when, deadline, payload) and a single wmls-from-reading converter; the GPU converter is now a one-line ADAPTER (gpu-reading) over it, byte-identical (gpu-mesh-sense-band still 511). A brand-new organ reports into the mesh with ZERO new recipe code — just a data row — proven four-way at verdict 255 (organ-reading-band: a wellness reading and a pulse reading ride the same engine, trust and grow ride it too). The north-star clause 'no parallel machinery' is now FLOOR.")
+
+  (north-star
+    "Every sensing organ that can emit a verdict — GPU, wellness, framebuffer/JIT, page-vitality, pulse — joins the SAME wmg-sense stream through the generic organ-reading engine (organ-reading.fk); each organ is an adapter filling the uniform reading, never a new converter. The engine exists and is proven; what remains is wiring each organ's adapter and running it live."
+    "Cross-organ and cross-vendor agreement becomes a first-class trust signal: when independent organs (or two GPU vendors) report the same observed truth, the model trusts it more; when they disagree, the mesh surfaces the divergence rather than averaging it away."
+    "The reports reach every instance, not just one machine's local board: each wmg-sense is also POSTed to the durable graph via /api/sensings, so a cell on any host learns from what another host's silicon proved."
+    "The learning is continuous and closed: organs report live as they sense, the world-model ingests/digests/embodies without a human in the loop, and a winning native recipe earned from the mesh's proof becomes a first-class choice the next cell inherits.")
+
+  (receipt-command
+    (sense-proof "cd form && ./validate.sh form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/tests/gpu-mesh-sense-band.fk")
+    (grow-proof "cd form && ./validate.sh form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/tests/gpu-mesh-grow-band.fk")
+    (live-emit "scripts/gpu_mesh_sense_emit.sh")
+    (durable-gap "the /api/sensings POST is opt-in and outward; today the carrier posts to the local field board only — the durable-graph push that reaches every instance is the next mile")))
