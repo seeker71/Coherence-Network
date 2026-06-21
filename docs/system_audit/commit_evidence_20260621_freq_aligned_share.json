@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/freq-aligned-share",
+  "commit_scope": "Name the federated-exchange-learning loop as one teaching and ship its one new gate: freq-aligned-share.fk decides what a learned exchange becomes (local gas / circulating water / shared ice), with frequency-alignment as the first driver and consent as a hard boundary. Proven four-way at 255. Most of the loop (membrane, oracle-distillation, phase, learning-arc, federation) already runs as cells; this adds the freq-align gate and the unifying teaching.",
+  "files_owned": [
+    "form/form-stdlib/freq-aligned-share.fk",
+    "form/form-stdlib/tests/freq-aligned-share-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/federated-exchange-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_20260621_freq_aligned_share.json"
+  ],
+  "idea_ids": [
+    "federated-exchange-learning",
+    "freq-aligned-share-gate"
+  ],
+  "spec_ids": [
+    "federated-exchange-learning"
+  ],
+  "task_ids": [
+    "task-2026-06-21-freq-aligned-share"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/freq-aligned-share.fk form-stdlib/tests/freq-aligned-share-band.fk -> '✓ ... → 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "Manifest row added: 'freq-aligned-share fks 255' beside its federation kin trust-weighted-colearning.",
+    "The band pins the gate at its boundaries: aligned+share-worthy+consented -> ice and crosses to shared (c0-c1); same signals with consent withheld -> water, no cross, consent-capped flag set (c2-c4, the sovereignty boundary); aligned-but-weak -> water (c5); FEAR-framed with high quality+consent STILL -> gas and does not share (c6-c7, the strange edge proving frequency is the first gate). Verdict 255 only when every claim lands.",
+    "Grounding: most of the loop already exists — form-cli-membrane.fk (the crossing to the remote mind), oracle-distillation-learning.fk (the answer becomes native training data, proven 4095 four-way, with freq-check already a lane), substrate-phase.fk (gas/water/ice), learning-arc / trust-weighted-colearning / federation-addressing (share to all). form-freq-check.fk is the body's existing fear-vs-clear frequency head this gate's `freq` signal reads.",
+    "Edges in the same commit: docs/coherence-substrate/INDEX.md row beside the federation cluster; the federated-exchange-learning teaching names the whole loop, the new gate, and the consent boundary, and marks step 6 (durable cross to the SHARED substrate) as a consent-gated carrier not yet wired end-to-end.",
+    "Primitive discipline held: only core.fk primitives (nth, ge, eq, and (binary-nested), if, add, str_eq, recursion-free); no sub/mul/div, no 3-arg and."
+  ],
+  "change_files": [
+    "form/form-stdlib/freq-aligned-share.fk",
+    "form/form-stdlib/tests/freq-aligned-share-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/federated-exchange-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_20260621_freq_aligned_share.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/freq-aligned-share.fk form-stdlib/tests/freq-aligned-share-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "freq-aligned-share: verdict 255, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the suite for the new recipe + band + manifest row."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "A Form stdlib recipe + proof band + a teaching; no public HTTP endpoint or service changes. The gate reaches agents through the repo. Step 6 (actual durable cross to the shared substrate) is intentionally not wired here — it is a consent boundary held for design."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 255, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A learned exchange now has a proven destination decision: freq-aligned-share.fk returns gas/water/ice driven first by frequency-alignment (a fear-framed exchange stays local no matter its other signals) and hard-gated on consent (no consent -> never crosses to the shared substrate). The whole federated-learning loop is named in one teaching.",
+    "public_endpoints": [
+      "none changed; the gate is a Form stdlib body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: the band runs on Go, Rust, TypeScript, and fkwu to the identical verdict 255 with 0 divergent.",
+      "Boundary proof: positive (aligned+consented crosses to shared ice) and the sovereignty negatives (consent withheld caps at water; fear-framed stays gas despite high quality)."
+    ]
+  }
+}

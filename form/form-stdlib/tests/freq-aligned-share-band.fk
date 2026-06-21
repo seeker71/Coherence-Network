@@ -1,0 +1,22 @@
+; preludes: form-stdlib/freq-aligned-share.fk
+;
+; The federated-learning gate, pinned at its boundaries. Proves frequency-alignment is the FIRST gate
+; (a fear-framed exchange stays local gas no matter how high its other signals), that only an aligned +
+; share-worthy + CONSENTED exchange crosses to shared ice, and that consent withheld caps a share-worthy
+; cell at water by sovereignty — not by quality. Verdict 255 when every claim lands.
+(do
+    (let e-ice    (list 90 90 80 80 1))   ; clear, substantive, confident, trusted, consented -> ICE (shared)
+    (let e-capped (list 90 90 80 80 0))   ; same signals, consent WITHHELD -> water (sovereignty boundary)
+    (let e-weak   (list 70 50 50 50 1))   ; aligned but not share-worthy -> water (local candidate)
+    (let e-fear   (list 30 90 90 90 1))   ; fear-framed, yet high quality + consent -> still GAS (freq first)
+
+    (let c0 (if (str_eq (fx-destination e-ice) "ice")        1   0))   ; aligned+worthy+consent -> ice
+    (let c1 (if (eq     (fx-shares? e-ice) 1)                 2   0))   ; ...and it crosses to the shared body
+    (let c2 (if (str_eq (fx-destination e-capped) "water")   4   0))   ; consent withheld -> capped at water
+    (let c3 (if (eq     (fx-shares? e-capped) 0)             8   0))   ; ...so it does NOT cross
+    (let c4 (if (eq     (fx-consent-capped? e-capped) 1)    16   0))   ; ...held by sovereignty, named
+    (let c5 (if (str_eq (fx-destination e-weak) "water")    32   0))   ; aligned but weak -> circulate, not freeze
+    (let c6 (if (str_eq (fx-destination e-fear) "gas")      64   0))   ; FEAR stays gas despite quality+consent
+    (let c7 (if (eq     (fx-shares? e-fear) 0)             128   0))   ; ...the strange edge: freq is the first gate
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -1,0 +1,61 @@
+; freq-aligned-share.fk — what a learned exchange becomes: kept local, circulated, or shared.
+;
+; preludes: form-stdlib/core.fk
+;
+; The federated-learning gate (docs/coherence-substrate/federated-exchange-learning.form). When the
+; Form-first router escalates to the remote mind (form-cli-membrane.fk's crossing) and the native lane
+; learns from the answer (oracle-distillation-learning.fk), the generalized cell needs a DESTINATION
+; phase. This recipe decides it — and frequency-alignment is the FIRST gate, exactly as the practice
+; asks: a fear-framed exchange stays local potential no matter how high its other signals read, because
+; what we freeze into the shared body is what we want every cell to breathe.
+;
+; An exchange's signals (each 0..100 unless noted), the same floor oracle-distillation already names
+; (quality / confidence / sovereignty / trust / vitality) with frequency-alignment added as its head:
+;   freq     — clear-vs-fear alignment of the FULL exchange (form-freq-check.fk's head; high = clear)
+;   quality  — content coverage / substance of the answer
+;   confidence — the lane's accumulated pass-rate this turn
+;   trust    — trust-weight of the source (trust-weighted-colearning.fk)
+;   consent  — 0/1, a HARD gate: may this generalization cross into the shared body at all?
+;
+; Destination phase (substrate-phase.fk's gas/water/ice):
+;   "gas"   — keep as local potential; not aligned enough to circulate (fear-framed or incoherent)
+;   "water" — circulate locally as a candidate (aligned; or share-worthy but consent withheld)
+;   "ice"   — freeze AND cross to the shared persistent substrate, so every cell benefits
+;
+; Consent is sovereignty in the recipe itself: without it, ice is impossible — the cell maxes at water,
+; held local. We generalize, we never ship the raw exchange; private stays private by construction.
+;
+; Proven by: form-stdlib/tests/freq-aligned-share-band.fk (four-way at validate.sh)
+
+(do
+    (defn fx-freq    (x) (nth x 0))
+    (defn fx-quality (x) (nth x 1))
+    (defn fx-conf    (x) (nth x 2))
+    (defn fx-trust   (x) (nth x 3))
+    (defn fx-consent (x) (nth x 4))
+
+    ; --- ALIGNED?: clear (not fear) enough to circulate at all. The first gate. ---
+    (defn fx-aligned? (x) (if (ge (fx-freq x) 60) 1 0))
+
+    ; --- SHARE-WORTHY?: high on every floor — clear, substantive, confident, trusted. ---
+    (defn fx-share-worthy? (x)
+        (if (and (and (ge (fx-freq x) 80) (ge (fx-quality x) 80))
+                 (and (ge (fx-conf x) 70) (ge (fx-trust x) 70)))
+            1 0))
+
+    ; --- DESTINATION: the phase the generalized cell crosses to. Consent hard-gates ice. ---
+    (defn fx-destination (x)
+        (if (eq (fx-aligned? x) 0)
+            "gas"
+            (if (and (eq (fx-share-worthy? x) 1) (eq (fx-consent x) 1))
+                "ice"
+                "water")))
+
+    ; --- SHARES?: does this generalization cross to the shared persistent substrate? (ice only) ---
+    (defn fx-shares? (x) (if (str_eq (fx-destination x) "ice") 1 0))
+
+    ; --- CONSENT-CAPPED?: share-worthy but consent withheld — held at water by sovereignty, not quality. ---
+    (defn fx-consent-capped? (x)
+        (if (and (eq (fx-share-worthy? x) 1) (eq (fx-consent x) 0)) 1 0))
+
+    0)
