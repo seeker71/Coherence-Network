@@ -182,9 +182,10 @@
 ;        primitive whose absence kept forcing text work into bash — band → 31 four-way) is now called by the
 ;        nl-translate ENCODER, so "The Source Is Native." canonicalizes INSIDE Form (no shell cleaning); the
 ;        carrier dropped its `tr` step (nl-translate-band → 32767). Remaining (b): contractions / unicode
-;        case. NOTE — the same primitive unblocks the Form-native PROJECTOR: scripts/grow_nl_lexicon.sh's
-;        bash+python should become a Form recipe over read_file + json-parse + string-case + write_file_text
-;        (fsh / shell-grammar.fk is the form-native shell for the host-exec shims). (c) the round-trip
+;        case. The PROJECTOR is now Form-native (DONE): nl-lexicon-grow.fk does read_file -> parse-json ->
+;        parallel object walk -> string-case filter -> neutral-symbol rows -> write_file_text, ALL in Form
+;        (band nl-lexicon-grow → 3 four-way); grow_nl_lexicon.fk is the runner, grow_nl_lexicon.sh a 12-line
+;        launcher with NO logic. The bash+python projection is gone — the lexicon grows in Form. (c) the round-trip
 ;        QUALITY gate (translation-quality.fk essence/vitality/trust) on the pivot. (d) STT and (e) TTS
 ;        native — and these are NOT a boundary. whisper-cli / say / sox / even process-exec are CURRENT
 ;        third-party carriers, not walls: host-kernel.form names using a host driver as carrier-not-debt
