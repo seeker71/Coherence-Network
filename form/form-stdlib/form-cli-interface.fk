@@ -1,0 +1,51 @@
+; form-cli-interface.fk — automatic interface routing over form-cli: every request
+; routed to form-cli is classified into one of the five cross-cell interfaces
+; (sense / ask / share / learn / build) by its leading verb and dispatched; and as
+; it flows, learning + building + sharing happen automatically — the request enters
+; the shared commons content-addressed (world-build), so the body grows from every
+; exchange. `ask` is the ground interface: the default when no other verb leads.
+;
+; This is the capstone of the five-interface set. The trigger ("sema <request>")
+; routes here through a thin UserPromptSubmit carrier; this recipe picks the
+; interface and folds the request into the commons. Each interface already gates on
+; channel-interface, so consent stays the law underneath; the offered mode a
+; request crosses through is fixed by its interface.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/world-build.fk form-stdlib/form-cli.fk
+
+(do
+    ; classify a request into the interface its leading verb names; ask is ground
+    (defn fci-interface (request)
+        (do
+            (let v (fc-verb request))
+            (if (str_eq v "sense") "sense"
+            (if (str_eq v "share") "share"
+            (if (str_eq v "learn") "learn"
+            (if (str_eq v "build") "build"
+                "ask"))))))
+
+    ; the offered mode a request crosses through, fixed by its interface:
+    ; sense -> witness, share -> offer, learn -> reflect, build -> invite,
+    ; ask -> ask-how (the ground interface).
+    (defn fci-mode (interface)
+        (if (str_eq interface "sense") (m-witness)
+        (if (str_eq interface "share") (m-offer)
+        (if (str_eq interface "learn") (m-reflect)
+        (if (str_eq interface "build") (m-invite)
+            (m-ask-how)))))) ; ask
+
+    ; ROUTE one request: classify, then fold it into the commons through its
+    ; interface's mode (auto learn / build / share — content-addressed, so the same
+    ; request grows the world exactly once). Returns the commons-after; the spoken
+    ; response is the dispatched interface's own job.
+    (defn fci-route (commons accepting request)
+        (world-offer commons (fci-mode (fci-interface request)) accepting request))
+
+    ; route a whole stream of requests through the body — each auto-entered, the
+    ; commons growing from the exchange with dedup for free.
+    (defn fci-route-stream (commons accepting requests)
+        (if (nil? requests) commons
+            (fci-route-stream
+                (fci-route commons accepting (head requests))
+                accepting (tail requests))))
+    0)

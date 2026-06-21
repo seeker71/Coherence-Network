@@ -191,6 +191,7 @@ branch-choice-order fks 511
 channel-interface fks 127
 organ-sense fks 11230
 world-build fks 132
+form-cli-interface fks 11106
 channel-flow fks 8388607
 channel-loopback fks 255
 guidance-channel fks 1111111

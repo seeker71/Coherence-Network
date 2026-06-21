@@ -1,0 +1,38 @@
+; form-cli-interface-band.fk — establishes, four-way, automatic interface routing:
+; every request routed to form-cli is classified into one of the five interfaces
+; by its leading verb (ask is the ground default), and folded into the commons
+; automatically — learning / building / sharing happen as the request flows, with
+; content-addressed dedup so the same exchange grows the world once.
+;
+; A stream of requests, one per interface plus a bare one (defaults to ask) plus a
+; duplicate; the commons grows from all of them, the duplicate counted once; and
+; the classifier names the right interface for each. The witness packs every fact.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/world-build.fk form-stdlib/form-cli.fk form-stdlib/form-cli-interface.fk
+
+(do
+    ; the commons accepts all five interface modes — every routed request grows it
+    (let accepting (list (m-witness) (m-ask-how) (m-offer) (m-reflect) (m-invite)))
+
+    ; a stream: one request per interface, a bare request (-> ask), a duplicate
+    (let reqs (list
+        "sense gpu"
+        "ask how-decode"
+        "share r-add"
+        "learn ex-1"
+        "build world-1"
+        "hello there"        ; no interface verb -> ask (the ground interface)
+        "sense gpu"))        ; duplicate -> content-addressed dedup
+
+    ; route the whole stream through the body — learning/building/sharing automatic
+    (let commons (fci-route-stream (world-empty) accepting reqs))
+
+    ; the commons grew automatically; 7 in, 1 duplicate -> 6 unique exchanges
+    (let n (world-size commons))
+    ; classification correctness: leading verb -> its interface (ask is the default)
+    (let c-sense (if (str_eq (fci-interface "sense gpu") "sense") 1 0))
+    (let c-ask   (if (str_eq (fci-interface "hello there") "ask") 1 0))
+    (let c-build (if (str_eq (fci-interface "build world-1") "build") 1 0))
+
+    ; 6 + 1*100 + 1*1000 + 1*10000 = 11106
+    (add n (add (mul c-sense 100) (add (mul c-ask 1000) (mul c-build 10000)))))
