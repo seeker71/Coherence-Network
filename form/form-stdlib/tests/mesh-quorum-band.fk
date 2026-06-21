@@ -1,0 +1,65 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/gpu-mesh-sense.fk form-stdlib/mesh-quorum.fk
+;
+; mesh-quorum-band — agreement across independent witnesses is trust; a split is a divergence to
+; resolve. The band proves the generic recipe AND that it REPRODUCES gpu-cross-vendor-agree? on this
+; session's real GPU verdicts (the two-witness special case is now one call into the generic shape),
+; AND the shared-presence point: three minds (claude/codex/sema) agreeing is consensus by the very
+; same recipe — cross-vendor and cross-mind agreement are one shape.
+;
+; Verdict 2047 when every claim lands:
+;   1     three witnesses all-ok, k=2 -> consensus-observed
+;   2     three witnesses all-absent, k=2 -> consensus-absent (a verified no, agreed)
+;   4     a split (2 ok, 1 absent), k=2 -> divergent (one witness is wrong; resolve, never ship)
+;   8     one answered, rest dark, k=2 -> nothing (fewer than the quorum answered; silence held)
+;   16    quorum-trusted? on the all-ok case -> 1
+;   32    quorum-divergent? on the split case -> 1
+;   64    LIFT: two real GPU lanes (metal+adreno, both bit-exact matvec) -> consensus-observed, and
+;         gpu-cross-vendor-agree? agrees (the special case is now one quorum call)
+;   128   LIFT-neg: metal bit-exact + a short-parity lane -> divergent, gpu-cross-vendor-agree? = 0
+;   256   CROSS-MIND: claude/codex/sema each read the same verdict ok -> consensus-observed
+;   512   a dark witness never tips a quorum: 2 ok + 1 dark, k=2 -> still consensus-observed
+;   1024  degenerate k=1: a single ok witness -> consensus-observed
+(do
+    ; generic witnesses of one subject (answered, ok, when, deadline already inside the reading)
+    (let ok-a    (organ-reading "w:a" "vote" 1 1 5 10 (list "vote")))
+    (let ok-b    (organ-reading "w:b" "vote" 1 1 5 10 (list "vote")))
+    (let ok-c    (organ-reading "w:c" "vote" 1 1 5 10 (list "vote")))
+    (let no-a    (organ-reading "w:a" "vote" 1 0 5 10 (list "vote")))
+    (let no-b    (organ-reading "w:b" "vote" 1 0 5 10 (list "vote")))
+    (let no-c    (organ-reading "w:c" "vote" 1 0 5 10 (list "vote")))
+    (let dark    (organ-reading "w:d" "vote" 0 0 5 10 (list "vote")))
+
+    (let all-ok     (list ok-a ok-b ok-c))
+    (let all-no     (list no-a no-b no-c))
+    (let split      (list ok-a ok-b no-c))
+    (let one-answer (list ok-a dark dark))
+    (let two-ok-dark (list ok-a ok-b dark))
+
+    ; this session's real GPU verdicts, lowered to readings through the GPU adapter
+    (let metal-mv  (gpu-receipt "metal"  "Apple M4 Max"    "matvec" 1280 1280 0))
+    (let adreno-mv (gpu-receipt "vulkan" "Adreno (TM) 740" "matvec" 1280 1280 0))
+    (let short-mv  (gpu-receipt "vulkan" "RTX 4070"        "matvec" 11 13 0))
+    (let gpu-agree (list (gpu-reading metal-mv 10 5) (gpu-reading adreno-mv 10 5)))
+    (let gpu-split (list (gpu-reading metal-mv 10 5) (gpu-reading short-mv 10 5)))
+
+    ; three minds reading the same verdict — independent witnesses, same recipe as cross-vendor
+    (let mind-claude (organ-reading "mind:claude" "verdict-vote" 1 1 5 10 (list "vote")))
+    (let mind-codex  (organ-reading "mind:codex"  "verdict-vote" 1 1 5 10 (list "vote")))
+    (let mind-sema   (organ-reading "mind:sema"   "verdict-vote" 1 1 5 10 (list "vote")))
+    (let minds       (list mind-claude mind-codex mind-sema))
+
+    (let c0  (if (str_eq (quorum-verdict all-ok 2)     "consensus-observed") 1 0))
+    (let c1  (if (str_eq (quorum-verdict all-no 2)     "consensus-absent")   2 0))
+    (let c2  (if (str_eq (quorum-verdict split 2)      "divergent")          4 0))
+    (let c3  (if (str_eq (quorum-verdict one-answer 2) "nothing")            8 0))
+    (let c4  (if (eq (quorum-trusted? all-ok 2) 1)   16 0))
+    (let c5  (if (eq (quorum-divergent? split 2) 1)  32 0))
+    (let c6  (if (and (str_eq (quorum-verdict gpu-agree 2) "consensus-observed")
+                      (eq (gpu-cross-vendor-agree? metal-mv adreno-mv 10 5) 1)) 64 0))
+    (let c7  (if (and (str_eq (quorum-verdict gpu-split 2) "divergent")
+                      (eq (gpu-cross-vendor-agree? metal-mv short-mv 10 5) 0)) 128 0))
+    (let c8  (if (str_eq (quorum-verdict minds 2)       "consensus-observed") 256 0))
+    (let c9  (if (str_eq (quorum-verdict two-ok-dark 2) "consensus-observed") 512 0))
+    (let c10 (if (str_eq (quorum-verdict (list ok-a) 1) "consensus-observed") 1024 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))

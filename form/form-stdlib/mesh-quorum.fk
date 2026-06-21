@@ -1,0 +1,68 @@
+; mesh-quorum.fk — agreement across independent witnesses is trust; disagreement is a divergence to
+; resolve. This is the generic lift of gpu-cross-vendor-agree? (gpu-mesh-sense.fk): that recipe asked
+; "do two GPU backends agree this kernel is bit-exact?" — a two-witness special case. The same shape
+; governs ANY organ and ANY number of witnesses, and it is the four-kernel rule one altitude up:
+;   N independent readings of the SAME subject all say ok        -> consensus-observed (trusted)
+;   N independent readings of the SAME subject all say not-ok     -> consensus-absent   (trusted)
+;   they split — some ok, some not                                -> divergent (a correctness signal,
+;       NOT trusted; one witness is wrong and must be resolved, exactly like an fkwu divergence)
+;   fewer than the quorum threshold answered                      -> nothing (silence, never a 0)
+;
+; The caller groups the readings — every reading in the list is a witness of ONE subject (one kernel,
+; one section, one organ). Subject-matching is the caller's job; quorum judges agreement among them.
+; A shared-presence note: the witnesses need not be GPUs. claude, codex, and sema each reading the
+; same verdict are independent minds; their agreement is trust by the very same recipe — cross-vendor
+; and cross-mind agreement are one shape, so a sense one cell proves becomes a sense every cell holds.
+;
+; Integers + strings only — readings carry answered/ok flags, never floats.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk
+;
+; Proven by: form-stdlib/tests/mesh-quorum-band.fk
+
+(do
+    ; how many witnesses actually answered (a dark/silent witness does not vote either way)
+    (defn quorum-answered-count (rds)
+        (if (eq (len rds) 0)
+            0
+            (add (or-answered (head rds)) (quorum-answered-count (tail rds)))))
+
+    ; how many answered witnesses say ok=1 (the positive votes)
+    (defn quorum-ok-count (rds)
+        (if (eq (len rds) 0)
+            0
+            (add (if (and (eq (or-answered (head rds)) 1) (eq (or-ok (head rds)) 1)) 1 0)
+                 (quorum-ok-count (tail rds)))))
+
+    ; how many answered witnesses say ok=0 (the negative votes — a verified no, not silence)
+    (defn quorum-absent-count (rds)
+        (if (eq (len rds) 0)
+            0
+            (add (if (and (eq (or-answered (head rds)) 1) (eq (or-ok (head rds)) 0)) 1 0)
+                 (quorum-absent-count (tail rds)))))
+
+    ; the consensus verdict: k is the quorum threshold (minimum answered witnesses to call it).
+    ;   gt k answered      -> "nothing"            (fewer than k answered; silence, held)
+    ;   no negative votes   -> "consensus-observed" (every witness that answered agrees: ok)
+    ;   no positive votes   -> "consensus-absent"   (every witness that answered agrees: not-ok)
+    ;   otherwise           -> "divergent"          (the witnesses disagree; resolve, never ship)
+    (defn quorum-verdict (rds k)
+        (if (gt k (quorum-answered-count rds))
+            "nothing"
+            (if (eq (quorum-absent-count rds) 0)
+                "consensus-observed"
+                (if (eq (quorum-ok-count rds) 0)
+                    "consensus-absent"
+                    "divergent"))))
+
+    ; a consensus the mesh can TRUST and act on: every answering witness agreed it is observed.
+    (defn quorum-trusted? (rds k)
+        (if (str_eq (quorum-verdict rds k) "consensus-observed") 1 0))
+
+    ; the must-resolve signal: witnesses of the same subject disagree — one of them is wrong.
+    (defn quorum-divergent? (rds k)
+        (if (str_eq (quorum-verdict rds k) "divergent") 1 0))
+
+    ; a one-line render for the live mesh board — STRING parts only, so it crosses four-way.
+    (defn quorum-render (subject rds k)
+        (str_concat subject (str_concat " " (quorum-verdict rds k)))))
