@@ -47,6 +47,28 @@
 ;   among models is treated like a kernel divergence — owned and resolved, not buried — but at the
 ;   model layer the resolver is a higher oracle or human attunement, not a recipe fix.
 ;
+; THE TEACHING FLOOR — two layers, and the lower one is already proven (Urs, 2026-06-21):
+;   The council teaches in the moment; the CORPUS is what it has already taught. Two layers:
+;   - THE FLOOR (curated curriculum, clean + small + attributed): the body's idea->spec->code
+;     chains ARE (NL-intent -> Form/BML-recipe) pairs — form-native-llm.form:147 already names this.
+;     The spec frontmatter source: map aligns intent to symbols; the chain idea->spec->code->test
+;     IS the alignment; each cell carries a Blueprint, so every pair is content-addressed and
+;     attributed. This layer is the base model teaching floor — it sets the SHAPE.
+;   - ON TOP (apprenticeship, already proven): the Codex + Claude session turns. form-cli-predict.fk
+;     learned a NATIVE tool predictor from 939 captured agent turns -> 53 features -> 8 tool labels,
+;     held-out 84.8% vs 79.9% baseline (form-native-models.form). Vast, in-the-wild NL -> reasoning
+;     -> tool-call -> code -> verify. This layer is volume and reach the floor cannot give.
+;   - THE RECORDED SATSANG: those sessions ARE a satsang of models already held — Codex (GPT) and
+;     Claude working one body in parallel worktrees, witnessed in the signals ledger. The LIVE
+;     council (satsang-oracle.fk, proposing now) and the RECORDED council (the transcripts) are ONE
+;     corpus in two tenses; the corpus is a satsang that already happened, replayable.
+;   - THE DISCIPLINE: the floor is clean and small (it sets the shape); the sessions are vast and
+;     noisy (dead ends, reverts, wrong turns). Filter by OUTCOME — learn the turns that reached
+;     proof (merged, witness-confirmed, chain-complete), keep abandoned branches as NEGATIVE
+;     examples, never as truth. corpus-license-gate.fk already holds the boundary: our own chains
+;     and sessions enter; copyrighted references stay quarantined as the held oracle (the copyright
+;     booth of native-translation-loopback.form, one gate serving both arcs).
+;
 ; THE CLOSING RECIPES (named as parts that run, composed toward a band — never debts):
 ;   - satsang-oracle.fk  (THE KEYSTONE)  — turn satsang.fk toward a council of N models. Each model
 ;       proposes a Form recipe tree for one NL input; fold the proposals node-by-node into
@@ -81,7 +103,11 @@
 ;        council registers next), lc-cognitive-sovereignty (why: a council of rented minds teaches
 ;        the native faculty and is then retired — the mind coming home), lc-grammar-is-the-universal-
 ;        recipe + lc-universal-translator-via-keys (the NL->Form north star), kernels/UNIVERSAL_
-;        TRANSLATOR_AUDIT.md (which already names the NL-grammar leaf as the thinnest in the tree).
+;        TRANSLATOR_AUDIT.md (which already names the NL-grammar leaf as the thinnest in the tree),
+;        form-native-llm.form (idea->spec->code as (intent->Form) pairs — the floor, already named),
+;        form-cli-predict.fk + form-native-models.form (the 939-turn agent-corpus proof, 84.8%),
+;        training-catalog.fk + corpus-license-gate.fk (the corpus registry and its boundary gate),
+;        spec-as-playable-recipe.form + code-tool-learning.form (the chain as a playable transform).
 ;   source: Urs 2026-06-21, deepening idea 2bd655d7 (the sovereign translator) from NL->NL to
 ;           NL->Form taught by a witnessed model council with self-update crystallization. Sibling
 ;           idea recorded in the idea DB when endpoint_ideas breathes (the native-mutation write
