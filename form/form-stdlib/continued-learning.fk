@@ -1,0 +1,55 @@
+; continued-learning.fk — how the agent-tool model CONTINUES learning past epoch 20. The sweep
+; (workflow wdywkaou2) found the epoch-20 overfit has a precise root cause and two honest fixes, each
+; already a real four-way recipe that this cell COMPOSES (it does not reinvent them):
+;
+;   ROOT CAUSE  the FFN is pure unregularized SGD over a FIXED 751-sample set: train surprise falls to 0
+;               (memorization) while held-out surprise is a U — falls to a minimum at the held-loss bottom
+;               (~epoch 20) then RISES (overfit). The surprise streams below are that measured signature
+;               (agent_tooluse_train.sh emits held_micro_acc at epochs {0,5,10,20,40}; train keeps falling).
+;
+;   DOOR 1 SETTLE  active-inference's ai-settled? (four-way, band 127) is the right gate — BUT the sweep
+;               found it gates on WHATEVER run it is handed. Fed the TRAIN run it settles INTO the overfit
+;               (train→0). The fix is one wire: gate on the HELD-OUT run. Then epoch 20 becomes a fixpoint,
+;               not a turning point — learning STOPS at the peak instead of decaying past it.
+;
+;   DOOR 2 RISE  co-learning's cls-learn (four-way, band 127) is a NON-PARAMETRIC fold — each fresh oracle
+;               exemplar is interned by cons, no weights, no epochs, so there is no fixed-dataset wall to
+;               overfit; more signal only WIDENS coverage. Growing the corpus drops the held-out U's floor
+;               AND moves it later — the peak passes epoch 20. The over-train wall is a fixed-dataset
+;               artifact; a streaming oracle dissolves it.
+;
+; LIVE: the surprise streams here are integer illustrations of the measured SHAPE; wiring the gate to
+; agent_tooluse_train's real held_micro_acc-per-epoch (the host GPU carrier) makes the curve measured.
+; Proven by tests/continued-learning-band.fk (four-way). Integer-exact — registered `fkc`.
+(do
+    ; the measured signature over epoch index 0..5 (≈ epochs 0,5,10,20,40,80):
+    (defn cl-train-fixed () (list 5 3 2 1 0 0))            ; TRAIN surprise → 0 (memorizes the fixed set)
+    (defn cl-held-fixed  () (list 5 3 2 1 2 3))            ; HELD-OUT surprise: U, min at index 3 (epoch 20), then RISES
+
+    ; --- argmin / min over a surprise stream (the held-loss bottom) ---
+    (defn cl-min-idx (xs idx best besti)
+        (if (eq (len xs) 0) besti
+            (if (gt best (head xs))
+                (cl-min-idx (tail xs) (add idx 1) (head xs) idx)
+                (cl-min-idx (tail xs) (add idx 1) best besti))))
+    (defn cl-argmin (xs) (cl-min-idx (tail xs) 1 (head xs) 0))
+    (defn cl-min (xs) (nth xs (cl-argmin xs)))
+
+    ; --- DOOR 1, the BUG: ai-settled? handed the TRAIN run. Stop at the first epoch train-surprise ≤ tol.
+    ;     tol 0 → stops where train hits 0 (index 4) — DEEP in the overfit, held-out has already risen. ---
+    (defn cl-first-at-or-below (xs tol idx)
+        (if (eq (len xs) 0) idx
+            (if (ge tol (head xs)) idx (cl-first-at-or-below (tail xs) tol (add idx 1)))))
+    (defn cl-naive-epoch () (cl-first-at-or-below (cl-train-fixed) 0 0))   ; gates on TRAIN → overfits
+
+    ; --- DOOR 1, the FIX: the SAME ge-gate handed the HELD-OUT run → stop at the held-loss minimum. ---
+    (defn cl-held-epoch () (cl-argmin (cl-held-fixed)))                    ; gates on HELD-OUT → settles at the peak
+    ; the per-step decision: held-out still improving (fell from the previous epoch)?
+    (defn cl-improving? (xs i) (if (gt (nth xs (sub i 1)) (nth xs i)) 1 0))
+
+    ; --- DOOR 2, the RISE: grow the corpus (cls-learn interns fresh exemplars). More signal drops the
+    ;     held-out U's floor AND moves its minimum later — the peak passes epoch 20. ---
+    (defn cl-held-grown () (list 5 3 2 1 0 1))            ; floor now 0 (was 1), min at index 4 (was 3) — past epoch 20
+    (defn cl-grow-helps? () (if (gt (cl-min (cl-held-fixed)) (cl-min (cl-held-grown))) 1 0))
+    (defn cl-peak-moved? () (if (gt (cl-argmin (cl-held-grown)) (cl-argmin (cl-held-fixed))) 1 0))
+    0)

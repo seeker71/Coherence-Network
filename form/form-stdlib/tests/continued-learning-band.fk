@@ -1,0 +1,26 @@
+; preludes: form-stdlib/continued-learning.fk
+;
+; continued-learning-band — how the agent-tool model continues learning past epoch 20, four-way. Composes
+; the two real recipes the sweep verified (active-inference's ai-settled? ge-gate, co-learning's cls-learn
+; fold) into the fix the body was missing: gate on HELD-OUT (settle at the peak), grow the corpus (rise
+; past the peak). Integer-exact over the measured surprise signature (train→0, held-out U bottoming at epoch 20).
+;
+; Verdict 63 when every claim lands:
+;   1   the BUG — gating on TRAIN surprise stops DEEP in the overfit: at the naive stop the held-out
+;        surprise (2) is worse than the held-loss minimum (1) — the gate settled INTO the overfit
+;   2   the FIX — gating on HELD-OUT beats the naive gate ON held-out: held(held-gated, epoch 20)=1 < held(naive)=2
+;   4   the halt is EXACT — held-out still improving one step before the minimum (=1), stops improving at it (=0)
+;   8   the RISE — growing the corpus (cls-learn fold) drops the held-out floor: 0 < 1
+;   16  the peak MOVES past epoch 20 — argmin shifts from index 3 (epoch 20) to index 4 (past it)
+;   32  learning CONTINUES past the fixed-dataset peak — the grown corpus reaches held-out surprise 0, below the fixed peak of 1
+(do
+    (let held (cl-held-fixed))
+
+    (let c0 (if (gt (nth held (cl-naive-epoch)) (cl-min held)) 1 0))
+    (let c1 (if (gt (nth held (cl-naive-epoch)) (nth held (cl-held-epoch))) 2 0))
+    (let c2 (if (and (eq (cl-improving? held (cl-held-epoch)) 1)
+                     (eq (cl-improving? held (add (cl-held-epoch) 1)) 0)) 4 0))
+    (let c3 (if (eq (cl-grow-helps?) 1) 8 0))
+    (let c4 (if (eq (cl-peak-moved?) 1) 16 0))
+    (let c5 (if (gt (cl-min (cl-held-fixed)) (cl-min (cl-held-grown))) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

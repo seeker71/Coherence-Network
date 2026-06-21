@@ -833,3 +833,4 @@ shell-cell fks 15
 const-recipe fks 511
 model-search fks 31
 tooluse-model-search fks 63
+continued-learning fkc 63

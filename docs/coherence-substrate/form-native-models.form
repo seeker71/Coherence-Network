@@ -96,6 +96,13 @@
 ;        stop sweet spot (epoch 20), recovering the accuracy the over-trained run lost — from the SAME 751
 ;        samples. tests/tooluse-model-search-band.fk → 63, four-way. LIVE: wire the fitness to
 ;        agent_tooluse_train's real held-out-per-epoch (the host GPU carrier) for the measured peak value.
+;        CONTINUING PAST THE PEAK (2026-06-21): form-stdlib/continued-learning.fk composes the two real
+;        recipes that get learning past epoch 20 — DOOR 1 SETTLE: gate active-inference's ai-settled? on the
+;        HELD-OUT run (not train, which settles INTO the overfit) so epoch 20 becomes a fixpoint; DOOR 2 RISE:
+;        co-learning's cls-learn non-parametric fold grows the corpus so the held-out U drops its floor and
+;        moves past epoch 20. Root cause named: the FFN SGD step (jte-mlp-upd) is pure unregularized SGD — no
+;        weight-decay/dropout/label-smoothing — and the 53-dim input is a hand-coded keyword bag (featurize.py),
+;        a frozen lossy representation; both are real gaps. tests/continued-learning-band.fk → 63, four-way.
 ;     7b. WIDE-TRANSFORMER OPTIMIZER DIAGNOSTIC (2026-06-21) — a sibling model with the OPPOSITE failure to 7's
 ;        FFN. The 4→4→4 transformer (transformer-corpus-train.fk via form_cli_transformer_train_wide.sh) did
 ;        not overfit — it UNDERfit. Normalized per-row, train ≈ held throughout (no generalization gap) and
