@@ -1,0 +1,23 @@
+; preludes: form-stdlib/nordic-runes.fk form-stdlib/rune-frequency.fk
+;
+; rune-frequency-band — the symbol <-> frequency-spectrum flow-match, three-way.
+;
+; Verdict 255 when every claim lands (numeric decisions only):
+;   1   |−5| = 5                            (rf-abs)
+;   2   identical contours → distance 0     (rf-dist self)
+;   4   opposite contours → distance 18     (rf-dist (9 9)(0 0))
+;   8   a rune's own spectrum matches exact  (rf-distance fehu = 0)
+;   16  exact match resolves the right ætt   (rf-aett fehu spectrum = 1)
+;   32  a different rune resolves too         (rf-aett sowilo spectrum = 2)
+;   64  exact match is full confidence        (rf-confidence fehu = 9)
+;   128 a drifted contour still finds fehu    (rf-aett perturbed fehu = 1)
+(do
+    (let c0 (if (eq (rf-abs (sub 0 5)) 5) 1 0))
+    (let c1 (if (eq (rf-dist (list 5 8 9 5 6 0) (list 5 8 9 5 6 0)) 0) 2 0))
+    (let c2 (if (eq (rf-dist (list 9 9) (list 0 0)) 18) 4 0))
+    (let c3 (if (eq (rf-distance (list 5 8 9 5 6 0)) 0) 8 0))
+    (let c4 (if (eq (rf-aett (list 5 8 9 5 6 0)) 1) 16 0))
+    (let c5 (if (eq (rf-aett (list 7 9 7 4 6 4)) 2) 32 0))
+    (let c6 (if (eq (rf-confidence (list 5 8 9 5 6 0)) 9) 64 0))
+    (let c7 (if (eq (rf-aett (list 5 8 8 5 6 1)) 1) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

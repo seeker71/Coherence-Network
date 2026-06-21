@@ -1,0 +1,50 @@
+; rune-frequency.fk — the symbol <-> frequency-spectrum FLOW MATCH (the body).
+;
+; Given a heard galdr's 6-band spectral SHAPE (0..9 per band), find the nearest
+; Elder Futhark rune by L1 distance over the band profile; and, given a rune index,
+; read its spectrum back. The carrier (experiments/rune-galdr/rune-galdr.sh) only
+; records + measures the bands with sox; every match decision is HERE.
+;
+; L1 over a peak-normalized shape is the honest metric: it compares the spectral
+; CONTOUR, not loudness, so the same rune sung louder/softer still matches. Nasal
+; siblings (nauthiz/mannaz) share a contour and will tie — named, not hidden.
+;
+; Composes nordic-runes.fk. Builtins + sub/add/lt only. Proven by
+; form-stdlib/tests/rune-frequency-band.fk.
+
+(do
+    (defn rf-abs (x) (if (lt x 0) (sub 0 x) x))
+
+    ; L1 distance between two equal-length band profiles
+    (defn rf-dist (a b)
+        (if (eq (len a) 0) 0
+            (add (rf-abs (sub (head a) (head b))) (rf-dist (tail a) (tail b)))))
+
+    ; nearest rune (the cell) to a query spectrum — min L1 over the table
+    (defn rf-best (query runes best bestd)
+        (if (eq (len runes) 0) best
+            (do
+                (let d (rf-dist query (rune-spectrum (head runes))))
+                (if (lt d bestd)
+                    (rf-best query (tail runes) (head runes) d)
+                    (rf-best query (tail runes) best bestd)))))
+    (defn rf-nearest (query)
+        (rf-best query
+                 (tail (nordic-runes))
+                 (head (nordic-runes))
+                 (rf-dist query (rune-spectrum (head (nordic-runes))))))
+
+    ; symbol <- frequency: a heard spectrum names its rune
+    (defn rf-match  (query) (rune-name  (rf-nearest query)))   ; -> "fehu"
+    (defn rf-glyph  (query) (rune-glyph (rf-nearest query)))   ; -> "ᚠ"
+    (defn rf-aett   (query) (rune-aett  (rf-nearest query)))   ; -> 1..3
+    ; how sure: L1 to the chosen rune (0 = exact; lower = surer)
+    (defn rf-distance (query) (rf-dist query (rune-spectrum (rf-nearest query))))
+    ; a 0..9 confidence: 9 when exact, falling as the contour drifts (cap at dist 18)
+    (defn rf-confidence (query)
+        (do
+            (let d (rf-distance query))
+            (if (ge d 18) 0 (sub 9 (div d 2)))))
+
+    ; frequency <- symbol: a rune index gives its trained spectrum
+    (defn rf-spectrum-at (i) (rune-spectrum (rune-at i))))
