@@ -1,0 +1,60 @@
+; grammar-loader.fk — load any grammar, parse any source into a Form AST.
+;
+; The BMF engine (bmf-grammar.fk) already makes a GRAMMAR pure data and parses a
+; source string with g-parse. This adds the missing top: a named REGISTRY so a
+; caller selects a grammar by name ("shell", "arith", "bash", ...) and parses any
+; source through it. This is the "grammar loader" the form-native shell stands on.
+;
+;   register a grammar (data)  ──▶  gl-register
+;   parse any source           ──▶  gl-parse / gl-parse-with  ──▶  Form AST node
+;
+; Grammars are values, so the registry is an immutable alist; registering returns
+; a NEW registry (newest shadows older). "Support any grammar" = gl-register;
+; "support any source" = the src string. The AST a grammar produces can be lowered
+; to a recipe/blueprint/cell (shell-lower.fk) and JIT-lowered to native downstream
+; — the loader's only job is source text -> AST.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk
+
+(do
+    ;; a registry is an alist of (name grammar); newest first.
+    (defn gl-empty () (empty))
+    (defn gl-entry (name g) (list name g))
+    (defn gl-ent-name (e) (head e))
+    (defn gl-ent-grammar (e) (head (tail e)))
+
+    ;; register returns a NEW registry with (name -> g) in front (shadows older).
+    (defn gl-register (reg name g) (cons (gl-entry name g) reg))
+
+    ;; the grammar registered under name, or (empty) when absent.
+    (defn gl-find (reg name)
+        (if (nil? reg) (empty)
+            (if (str_eq (gl-ent-name (head reg)) name) (gl-ent-grammar (head reg))
+                (gl-find (tail reg) name))))
+
+    (defn gl-has? (reg name)
+        (if (nil? reg) false
+            (if (str_eq (gl-ent-name (head reg)) name) true
+                (gl-has? (tail reg) name))))
+
+    (defn gl-count (reg) (len reg))
+
+    (defn gl-names (reg)
+        (if (nil? reg) (empty)
+            (cons (gl-ent-name (head reg)) (gl-names (tail reg)))))
+
+    ;; parse SRC with an explicit grammar value — the any-grammar/any-source door.
+    (defn gl-parse-with (g src) (g-parse g src))
+
+    ;; parse SRC with the grammar registered under NAME.
+    (defn gl-parse (reg name src)
+        (do (let g (gl-find reg name))
+            (if (nil? g) (intern_trivial_string "NO-SUCH-GRAMMAR")
+                (g-parse g src))))
+
+    ;; did a parse succeed? g-parse / gl-parse return a string-leaf sentinel on
+    ;; failure ("PARSE-FAIL" / "NO-SUCH-GRAMMAR"); every real AST is a node.
+    (defn gl-ok? (node)
+        (not (or (node_eq node (intern_trivial_string "PARSE-FAIL"))
+                 (node_eq node (intern_trivial_string "NO-SUCH-GRAMMAR")))))
+)

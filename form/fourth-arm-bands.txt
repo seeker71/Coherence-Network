@@ -782,3 +782,6 @@ float-compare fks 4095
 q-actor-critic-fixpoint fks 255
 diffusion-q-autoresearch fks 63
 form-lower-sim fks 15
+shell-parse fks 31
+shell-exec fks 63
+shell-cell fks 15

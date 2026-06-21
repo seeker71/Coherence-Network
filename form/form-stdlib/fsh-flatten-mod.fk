@@ -1,0 +1,48 @@
+; fsh-flatten-mod.fk — the self-hosting flattener's helpers, as a MODULE.
+;
+; CRITICAL: these MUST live in a module, NOT in the band. The flatten's band-
+; defined-function path (flt-items-s/flt-defn-s) mis-indexes a band-defined
+; function's call when modules precede it (the call resolves to the wrong fk_fn
+; slot — a band fn `(f 5)` targets index M+B+2 instead of its real slot, so it
+; reads garbage / 0). Module functions index correctly. So the self-hosting
+; flattener carries str_byte_at / ffd-read / ffd-flatten here, and the band is
+; just the verdict `(print_str (ffd-flatten))` — no defn, no let in the band.
+;
+;   str_byte_at — the Go-native byte accessor the pool serializer needs, shimmed
+;                 as ord(char_at) (ASCII-exact) so it runs on the walker's ops.
+;   ffd-read    — read the staged recipe from fk_src byte-by-byte (input_byte 17).
+;   ffd-flatten — read the recipe and flatten it (empty mods; a native-only or
+;                 self-contained recipe needs none) -> the node-table string.
+
+(do
+    (defn str_byte_at (s i) (ord (char_at s i)))
+    (defn ffd-read (i acc)
+        (do (let b (input_byte i))
+            (if (eq b 0) acc
+                (ffd-read (add i 1) (str_concat acc (byte_to_str b))))))
+    (defn ffd-flatten ()
+        (do (let src (ffd-read 0 ""))
+            (fks-table-file
+                (flt-band-sources-fns (list) src)
+                (flt-band-sources-pool (list) src))))
+
+    ;; the SHELL preludes, read from disk at flatten time via read_file (walker
+    ;; tag 63 — already in the emitted walker). fourth-shim replaces core (the
+    ;; flatten's core mirror); the rest are the fsh stack. A staged shell band is
+    ;; a single (do (defn ..) .. assertions) — its outer do rides flt-top-pos, so
+    ;; its band defns index correctly (unlike top-level-defns + a nested do).
+    (defn ffd-shell-mods ()
+        (list (read_file "form-stdlib/fourth-shim.fk")
+              (read_file "form-stdlib/form-ontology-loader.fk")
+              (read_file "form-stdlib/line-grammar.fk")
+              (read_file "form-stdlib/bmf-core.fk")
+              (read_file "form-stdlib/bmf-grammar.fk")
+              (read_file "form-stdlib/grammar-loader.fk")
+              (read_file "form-stdlib/shell-grammar.fk")))
+    (defn ffd-flatten-shell ()
+        (do (let src (ffd-read 0 ""))
+            (let mods (ffd-shell-mods))
+            (fks-table-file
+                (flt-band-sources-fns mods src)
+                (flt-band-sources-pool mods src))))
+    0)
