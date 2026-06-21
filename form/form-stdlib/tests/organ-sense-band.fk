@@ -1,0 +1,37 @@
+; organ-sense-band.fk — establishes, four-way: all organs can be used to sense
+; other organs of other cells, gated by consent.
+;
+; Organs across three cells, each offering its own sense-interface. One observer
+; senses across cells in two modes (witness, see); a SECOND observer senses the
+; same organ (the sensor side is universal — any organ may be used to sense); an
+; organ that offers only silence withholds its reading (the consent gate holds);
+; the cross-cell reach rides the same recipe (no special case). The witness packs
+; all four facts so every kernel agrees on the same number.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/organ-sense.fk
+
+(do
+    ; organs on three cells, each with a reading and an offered sense-interface
+    (let phone-gpu  (organ "phone"  "gpu"    "compute"   90 (list (m-witness))))
+    (let phone-mic  (organ "phone"  "mic"    "audio"      7 (list (m-silence))))   ; offers only silence
+    (let mac-screen (organ "mac"    "screen" "display"   50 (list (m-witness) (m-see))))
+    (let claude-eye (organ "claude" "eye"    "attention"  0 (list (m-witness))))
+    (let mac-eye    (organ "mac"    "eye"    "attention"  0 (list (m-witness))))
+
+    ; claude's eye senses the phone's gpu — cross-cell, witness offered -> 90
+    (let s-gpu  (organ-sense claude-eye (m-witness) phone-gpu))
+    ; claude's eye reaches for the phone's mic — witness NOT offered -> withheld (silence)
+    (let s-mic  (organ-sense claude-eye (m-witness) phone-mic))
+    ; claude's eye senses the mac's screen via `see` — offered -> 50
+    (let s-scr  (organ-sense claude-eye (m-see) mac-screen))
+    ; a DIFFERENT observer (mac's eye) senses the same phone gpu -> 90
+    ; (the sensor side is universal: any organ can be USED to sense)
+    (let s-gpu2 (organ-sense mac-eye (m-witness) phone-gpu))
+
+    ; the consent gate held: the mic withheld its reading -> silence (0)
+    (let withheld (if (eq s-mic 0) 1 0))
+    ; the cross-cell reach is the same law, no special case
+    (let xcell (if (organ-cross-cell? claude-eye phone-gpu) 1 0))
+
+    ; 90 + 50 + 90 + 1*1000 + 1*10000 = 11230
+    (add s-gpu (add s-scr (add s-gpu2 (add (mul withheld 1000) (mul xcell 10000))))))
