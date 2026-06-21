@@ -1,0 +1,60 @@
+; mesh-sensings-store-band — the DURABLE shared-presence store, end to end on disk: three presences
+; persist readings to a shared .fkb, and the consensus map read BACK from the file matches what the
+; in-memory contract computes. This is the durability the mesh needs — claude, codex, and sema on one
+; machine write into one body that survives the session; a re-report is last-write-wins, not a double
+; vote; a new presence reporting moves the count and can resolve a consensus.
+;
+; HOST-IO: write_form_binary / read_form_binary are the fourth-arm "host io family" wall, so this
+; carrier is 3-kernel (Go/Rust/TS agree). The consensus LOGIC it feeds is four-way (mesh-sensings).
+; The witness uses temp_dir so repeated runs leave no sediment; the store is recreated each run.
+;
+; Verdict 255 when every claim lands:
+;   1    creating the durable store writes bytes to disk
+;   2    six readings from three presences load back as six readings (distinct witnesses survive)
+;   4    a subject all three presences persisted as ok -> consensus-observed, read from disk
+;   8    a subject they split on -> divergent, read from disk
+;   16   the durable consensus map carries one pair per subject (2)
+;   32   a presence re-persisting its own subject is last-write-wins (load count stays 6, no double vote)
+;   64   a new presence persisting an existing subject becomes a 7th witness, consensus still observed
+;   128  decode fidelity: a reading read back from disk carries the ok flag it was persisted with
+(do
+    (let path (str_concat (temp_dir) "/coh-mesh-sensings-store-band.fkb"))
+
+    ; the readings three presences will persist
+    (let claude-gpu (organ-reading "gpu:matvec" "gpu-bit-exact" 1 1 5 10 (list "live")))
+    (let codex-gpu  (organ-reading "gpu:matvec" "gpu-bit-exact" 1 1 5 10 (list "live")))
+    (let sema-gpu   (organ-reading "gpu:matvec" "gpu-bit-exact" 1 1 5 10 (list "live")))
+    (let claude-foo (organ-reading "claim:foo"  "verdict-vote"  1 1 5 10 (list "live")))
+    (let codex-foo  (organ-reading "claim:foo"  "verdict-vote"  1 1 5 10 (list "live")))
+    (let sema-foo   (organ-reading "claim:foo"  "verdict-vote"  1 0 5 10 (list "live")))
+
+    (let bytes (sensings-store-create path))
+    (let p1 (sensings-persist path "claude" claude-gpu))
+    (let p2 (sensings-persist path "codex"  codex-gpu))
+    (let p3 (sensings-persist path "sema"   sema-gpu))
+    (let p4 (sensings-persist path "claude" claude-foo))
+    (let p5 (sensings-persist path "codex"  codex-foo))
+    (let p6 (sensings-persist path "sema"   sema-foo))
+
+    (let loaded (sensings-load path))
+
+    (let c0 (if (gt bytes 0) 1 0))
+    (let c1 (if (eq (len loaded) 6) 2 0))
+    (let c2 (if (str_eq (sensings-durable-consensus path "gpu:matvec" 2) "consensus-observed") 4 0))
+    (let c3 (if (str_eq (sensings-durable-consensus path "claim:foo"  2) "divergent") 8 0))
+    (let c4 (if (eq (len (sensings-durable-map path 2)) 2) 16 0))
+
+    ; claude re-reports gpu:matvec — last-write-wins, no new witness
+    (let r7 (sensings-persist path "claude" claude-gpu))
+    (let c5 (if (eq (len (sensings-load path)) 6) 32 0))
+
+    ; the witness, a new presence, reports gpu:matvec — a 7th distinct witness
+    (let r8 (sensings-persist path "witness" (organ-reading "gpu:matvec" "gpu-bit-exact" 1 1 6 10 (list "live"))))
+    (let c6 (if (and (eq (len (sensings-load path)) 7)
+                     (str_eq (sensings-durable-consensus path "gpu:matvec" 2) "consensus-observed")) 64 0))
+
+    ; decode fidelity — the split subject's sema reading kept ok=0 across the disk round-trip,
+    ; which is why claim:foo reads divergent and not consensus-observed
+    (let c7 (if (str_eq (sensings-durable-consensus path "claim:foo" 2) "divergent") 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -599,6 +599,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "SCHEMA-TUPLE": [1, 2, 99, 1783],
   "SECTION": [1, 2, 99, 1922],
   "SECTION-LIST": [1, 2, 99, 1921],
+  "SENSING-V0": [1, 2, 99, 38],
   "SESSION": [1, 2, 99, 1860],
   "SESSION-NOT-FOUND": [1, 2, 99, 1862],
   "SESSION-TABLE": [1, 2, 99, 1861],

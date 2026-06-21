@@ -1,0 +1,57 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk form-stdlib/mesh-sensings.fk
+;
+; mesh-sensings-band — the shared-presence store: a mixed stream of readings from claude, codex, and
+; sema about several subjects becomes a consensus map the whole field reads. A subject every presence
+; agrees on is trusted; a subject they split on stands divergent until resolved; a subject too few
+; have reported on stays nothing. As more presences report, a nothing resolves into consensus — the
+; store LEARNS across presences, which is the whole point of bringing the readings into one body.
+;
+; Verdict 2047 when every claim lands:
+;   1     sensings-for gathers every reading about one subject (3 presences on gpu:matvec)
+;   2     sensings-names dedups the stream to its distinct subjects (3)
+;   4     a subject all presences agree on -> consensus-observed
+;   8     a subject presences split on -> divergent (resolve, never trust)
+;   16    a subject only one presence has reported on, k=1 -> consensus-observed
+;   32    exactly one subject stands divergent (the field's needs-resolving tally)
+;   64    exactly one subject is consensus-observed at k=2
+;   128   a subject below quorum stays nothing (pulse:neo4j, one reading, k=2)
+;   256   the consensus map carries one pair per distinct subject (3)
+;   512   the empty store has an empty consensus map; append grows the store to 7 readings
+;   1024  the store LEARNS: a 2nd presence reporting pulse:neo4j resolves nothing -> consensus-observed
+(do
+    ; a mixed stream — three presences, several subjects, interleaved as a real mesh would carry it
+    (let r1 (organ-reading "gpu:matvec"  "gpu-bit-exact" 1 1 5 10 (list "by" "claude")))
+    (let r2 (organ-reading "gpu:matvec"  "gpu-bit-exact" 1 1 5 10 (list "by" "codex")))
+    (let r3 (organ-reading "gpu:matvec"  "gpu-bit-exact" 1 1 5 10 (list "by" "sema")))
+    (let r4 (organ-reading "claim:foo"   "verdict-vote"  1 1 5 10 (list "by" "claude")))
+    (let r5 (organ-reading "claim:foo"   "verdict-vote"  1 1 5 10 (list "by" "codex")))
+    (let r6 (organ-reading "claim:foo"   "verdict-vote"  1 0 5 10 (list "by" "sema")))
+    (let r7 (organ-reading "pulse:neo4j" "pulse"         1 1 5 10 (list "by" "witness")))
+
+    (let s0 (sensings-empty))
+    (let s1 (sensings-append s0 r1))
+    (let s2 (sensings-append s1 r2))
+    (let s3 (sensings-append s2 r3))
+    (let s4 (sensings-append s3 r4))
+    (let s5 (sensings-append s4 r5))
+    (let s6 (sensings-append s5 r6))
+    (let store (sensings-append s6 r7))
+
+    ; the same subject reported by a 2nd presence — the store learns as the field reports
+    (let r8 (organ-reading "pulse:neo4j" "pulse" 1 1 5 10 (list "by" "sema")))
+    (let store2 (sensings-append store r8))
+
+    (let c0  (if (eq (len (sensings-for store "gpu:matvec")) 3) 1 0))
+    (let c1  (if (eq (len (sensings-names store)) 3) 2 0))
+    (let c2  (if (str_eq (sensings-consensus store "gpu:matvec"  2) "consensus-observed") 4 0))
+    (let c3  (if (str_eq (sensings-consensus store "claim:foo"   2) "divergent")          8 0))
+    (let c4  (if (str_eq (sensings-consensus store "pulse:neo4j" 1) "consensus-observed") 16 0))
+    (let c5  (if (eq (sensings-divergent-count store 2) 1) 32 0))
+    (let c6  (if (eq (sensings-observed-count store 2) 1) 64 0))
+    (let c7  (if (str_eq (sensings-consensus store "pulse:neo4j" 2) "nothing") 128 0))
+    (let c8  (if (eq (len (sensings-consensus-map store 2)) 3) 256 0))
+    (let c9  (if (and (eq (len (sensings-consensus-map s0 2)) 0)
+                      (eq (len store) 7)) 512 0))
+    (let c10 (if (str_eq (sensings-consensus store2 "pulse:neo4j" 2) "consensus-observed") 1024 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))

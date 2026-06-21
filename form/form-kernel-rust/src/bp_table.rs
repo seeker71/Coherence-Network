@@ -599,6 +599,7 @@ pub static BP_ENTRIES: &[(&str, [u32; 4])] = &[
     ("SCHEMA-TUPLE", [1, 2, 99, 1783]),
     ("SECTION", [1, 2, 99, 1922]),
     ("SECTION-LIST", [1, 2, 99, 1921]),
+    ("SENSING-V0", [1, 2, 99, 38]),
     ("SESSION", [1, 2, 99, 1860]),
     ("SESSION-NOT-FOUND", [1, 2, 99, 1862]),
     ("SESSION-TABLE", [1, 2, 99, 1861]),

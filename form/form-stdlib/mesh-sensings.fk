@@ -1,0 +1,75 @@
+; mesh-sensings.fk — the shared-presence store: many cells append readings about many subjects;
+; reading back, every subject carries the CONSENSUS across every presence that reported on it.
+;
+; quorum (mesh-quorum.fk) judges agreement among witnesses of ONE subject. A real mesh carries a
+; mixed stream — claude's wellness, codex's GPU proof, sema's interior sense, all interleaved, about
+; different subjects. This recipe is the layer that makes that stream a shared body: group by subject,
+; quorum each group, and the store answers "what does the whole field currently hold about X?" A
+; subject every reporting presence agrees on is consensus the mesh can trust; a subject they split on
+; stands in divergence until resolved — the four-kernel rule, now across presences instead of kernels.
+;
+; This is the CONTRACT of the durable store, in pure Form (four-way). The backend is swappable beneath
+; it — an in-memory list here, a .fkb file (persistence.fk) for the presences sharing one machine, a
+; route to Postgres for cross-machine sharing later — with no change to this logic. That separation is
+; persistence.fk's own teaching: the store is the contract; the backend is carried last.
+;
+; Integers + strings only — readings carry names and answered/ok flags, never floats.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk
+;
+; Proven by: form-stdlib/tests/mesh-sensings-band.fk
+
+(do
+    ; the shared store is a list of organ-readings — any presence appends, any presence reads back.
+    (defn sensings-empty () (empty))
+    (defn sensings-append (store rd) (cons rd store))
+
+    ; every reading in the store about one subject (matched by name)
+    (defn sensings-for (store name)
+        (if (eq (len store) 0)
+            (empty)
+            (if (str_eq (or-name (head store)) name)
+                (cons (head store) (sensings-for (tail store) name))
+                (sensings-for (tail store) name))))
+
+    ; the distinct subjects currently in the store (dedup by name)
+    (defn sensings-has-name? (names name)
+        (if (eq (len names) 0)
+            0
+            (if (str_eq (head names) name) 1 (sensings-has-name? (tail names) name))))
+    (defn sensings-names-acc (store acc)
+        (if (eq (len store) 0)
+            acc
+            (sensings-names-acc (tail store)
+                (if (eq (sensings-has-name? acc (or-name (head store))) 1)
+                    acc
+                    (cons (or-name (head store)) acc)))))
+    (defn sensings-names (store) (sensings-names-acc store (empty)))
+
+    ; the consensus across every presence that reported on a subject (k = quorum threshold)
+    (defn sensings-consensus (store name k)
+        (quorum-verdict (sensings-for store name) k))
+
+    ; the consensus map: one (subject, consensus) pair per distinct subject — the shared readout the
+    ; whole field reads. A cell sees what every other cell proved, without re-running any of it.
+    (defn sensings-map-acc (store names k acc)
+        (if (eq (len names) 0)
+            acc
+            (sensings-map-acc store (tail names) k
+                (cons (list (head names) (sensings-consensus store (head names) k)) acc))))
+    (defn sensings-consensus-map (store k)
+        (sensings-map-acc store (sensings-names store) k (empty)))
+
+    ; how many subjects currently carry a given consensus — the field's standing tallies. The
+    ; divergent count is the mesh's "needs resolving" list size; the observed count is what it trusts.
+    (defn sensings-vcount-acc (names store k v acc)
+        (if (eq (len names) 0)
+            acc
+            (sensings-vcount-acc (tail names) store k v
+                (add acc (if (str_eq (sensings-consensus store (head names) k) v) 1 0)))))
+    (defn sensings-consensus-count (store k v)
+        (sensings-vcount-acc (sensings-names store) store k v 0))
+    (defn sensings-divergent-count (store k)
+        (sensings-consensus-count store k "divergent"))
+    (defn sensings-observed-count (store k)
+        (sensings-consensus-count store k "consensus-observed")))

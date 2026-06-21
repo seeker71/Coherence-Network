@@ -250,6 +250,7 @@ gpu-mesh-grow fks 255
 organ-reading fks 255
 mesh-organ-senses fks 2047
 mesh-quorum fks 2047
+mesh-sensings fks 2047
 model-executor-proof-ledger fks 4095
 model-vitality fks 4095
 field-model-form-runtime fks 63
