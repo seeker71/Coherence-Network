@@ -55,3 +55,23 @@
 (defn tc-model-raw () "model:raw-reasoning")
 (defn tc-model-transmute () "model:transmutation")
 (defn tc-model-reasoning () "model:vitality-reasoning")
+
+; ── the GOLD lane: a human's direct freq-reading, the strongest label ──────────
+; freq-check-model.form's catalog is auto-labeled (a turn that NEEDED transmute is
+; fear-positive, one that PASSED is clear) — a weak proxy. The strongest label is a
+; human's direct freq-reading: a person catches the nuanced fear a frontier model
+; still slips past. tc-gold content-addresses the (request, response) and pins the
+; human's verdict: 1 = clear, 0 = fear-caught. This is how a direct freq-reading
+; stops evaporating at session end and becomes the body's own freq-sense — the
+; bridge from "the human is the detector now" to "the body senses its own frequency".
+(defn tc-gold (request-bytes response-bytes freq-verdict)
+    (list (sha256 request-bytes) (sha256 response-bytes) freq-verdict "gold:human-freq"))
+(defn tcg-request (g) (nth g 0))
+(defn tcg-response (g) (nth g 1))
+(defn tcg-verdict (g) (nth g 2))         ; 1 = clear, 0 = fear-caught
+(defn tcg-clear? (g) (tcg-verdict g))
+(defn tcg-lane (g) (nth g 3))
+; gold outranks auto: a human freq-reading is the highest-trust label in the catalog.
+(defn tcg-gold? (g) (if (str_eq (tcg-lane g) "gold:human-freq") 1 0))
+; the gold training pair the freq-check model learns: response -> human freq-verdict.
+(defn tcg-pair (g) (list (tcg-response g) (tcg-verdict g)))
