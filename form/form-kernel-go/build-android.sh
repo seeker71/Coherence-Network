@@ -9,13 +9,17 @@
 # the fkwu C arm cross-compiles too but cannot compile (no form_compile). This
 # is the missing Go arm.
 #
-# Default target: linux/arm64, CGO_ENABLED=0 — a STATICALLY LINKED ARM aarch64
-# ELF, runnable on a device via Termux / adb. No NDK, no cgo: the gen conductor
-# is pure interpreter, and the cgo dylib-JIT degrades to jit_inram_other on this
-# build (the conductor never needs it). For a bionic / linker64 system-linked
-# binary (app-embeddable), the GOOS=android path needs: brew install android-ndk
-# + CC=<ndk-clang> CGO_ENABLED=1 GOOS=android GOARCH=arm64.
+# Two targets, best-first:
+#   BIONIC  (NDK present)  GOOS=android GOARCH=arm64 CGO_ENABLED=1 CC=<ndk clang>
+#           → "ELF ... ARM aarch64 ... interpreter /system/bin/linker64", the
+#             genuine Android binary (runs on a device and natively in Termux),
+#             same class the Rust kernel build produces.
+#   STATIC  (no NDK)       GOOS=linux GOARCH=arm64 CGO_ENABLED=0
+#           → a statically linked ARM aarch64 ELF, runnable via Termux / adb and
+#             under qemu-aarch64. No NDK, no cgo (the cgo dylib-JIT degrades to
+#             jit_inram_other, which the interpreter never needs).
 #
+# Install the NDK for the bionic target: brew install android-ndk.
 # See docs/coherence-substrate/kernel-on-android.form for the on-device wiring.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -23,13 +27,31 @@ cd "$(dirname "$0")"
 OUT="bin-go-android"
 FORMGEN="../form-stdlib/form-gen.fk"
 
-echo "→ cross-compiling the Go kernel for android/arm64 (linux/arm64, CGO_ENABLED=0) ..."
-GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o "$OUT" .
+# Resolve the NDK the way the Rust sibling does: env first, then the brew Cask,
+# then the SDK ndk dir. Find an aarch64 android clang inside it (prebuilt host
+# dir is darwin-x86_64 on a Mac — runs under Rosetta — or linux-x86_64 on CI).
+NDK="${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}"
+[ -n "$NDK" ] || NDK="$(ls -d /opt/homebrew/Caskroom/android-ndk/*/AndroidNDK*/Contents/NDK 2>/dev/null | head -1 || true)"
+[ -n "$NDK" ] || NDK="$(ls -d "$HOME"/Library/Android/sdk/ndk/* 2>/dev/null | sort -V | tail -1 || true)"
+CC=""
+[ -n "$NDK" ] && CC="$(ls "$NDK"/toolchains/llvm/prebuilt/*/bin/aarch64-linux-android21-clang 2>/dev/null | head -1 || true)"
+
+if [ -n "$CC" ]; then
+  echo "→ NDK found ($NDK)"
+  echo "→ bionic build: GOOS=android GOARCH=arm64 CGO_ENABLED=1 (NDK clang) ..."
+  GOOS=android GOARCH=arm64 CGO_ENABLED=1 CC="$CC" go build -o "$OUT" .
+  VARIANT="bionic (linker64)"
+else
+  echo "→ no NDK (set ANDROID_NDK_HOME or: brew install android-ndk) — static fallback"
+  echo "→ static build: GOOS=linux GOARCH=arm64 CGO_ENABLED=0 ..."
+  GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o "$OUT" .
+  VARIANT="static (Termux/qemu)"
+fi
 
 echo
 file "$OUT"
 case "$(file "$OUT")" in
-  *"ARM aarch64"*) echo "✓ Android ARM64 Go kernel binary at $OUT" ;;
+  *"ARM aarch64"*) echo "✓ Android ARM64 Go kernel binary [$VARIANT] at $OUT" ;;
   *) echo "✗ not an ARM aarch64 ELF — investigate"; exit 1 ;;
 esac
 
@@ -47,25 +69,31 @@ done
 rm -f "$syms"
 [ "$miss" = 0 ] || { echo "✗ a conductor primitive is missing — investigate"; exit 1; }
 
-# Execution proof where the tooling exists. Linux CI ships qemu-aarch64 (see
-# scripts/cross_isa_assembly_audit.sh); a macOS host does not ship qemu-user, so
-# there the ELF type + carries-conductor IS the proof (same bar the Rust android
-# build is proven at). On a device: adb push + run, or Termux.
+# Execution. Best is a real device over adb (works for the bionic binary). Else
+# a static binary under qemu-aarch64 (Linux CI ships it; a macOS host does not).
+# Else the ELF type + carries-conductor IS the proof here (the bar the Rust
+# android build is proven at), and on-device is one adb push away.
 echo
-if command -v qemu-aarch64 >/dev/null 2>&1; then
-  echo "→ qemu-aarch64 present — running the gen conductor on the ARM64 binary:"
-  printf '(fg-dispatch "gen (add (mul 6 7) 1)")\n' > /tmp/gen-android-cmd.fk
+DEV="$(command -v adb >/dev/null 2>&1 && adb get-state 2>/dev/null || true)"
+printf '(fg-dispatch "gen (add (mul 6 7) 1)")\n' > /tmp/gen-android-cmd.fk
+if [ "$DEV" = "device" ]; then
+  echo "→ device attached — running the gen conductor on Android via adb:"
+  adb push "$OUT" /data/local/tmp/bin-go-android >/dev/null
+  adb push ../form-stdlib /data/local/tmp/ >/dev/null
+  adb push /tmp/gen-android-cmd.fk /data/local/tmp/ >/dev/null
+  val="$(adb shell 'cd /data/local/tmp && ./bin-go-android form-stdlib/form-gen.fk gen-android-cmd.fk' 2>&1 | tail -1)"
+  echo "  gen \"(add (mul 6 7) 1)\" -> $val"
+  case "$val" in *43*) echo "✓ the gen conductor EXECUTES ON ANDROID (device)";; *) echo "✗ unexpected — investigate"; exit 1;; esac
+elif [ "$VARIANT" = "static (Termux/qemu)" ] && command -v qemu-aarch64 >/dev/null 2>&1; then
+  echo "→ qemu-aarch64 present — running the static binary (emulated ARM64):"
   val="$(qemu-aarch64 "$OUT" "$FORMGEN" /tmp/gen-android-cmd.fk 2>&1 | tail -1)"
   echo "  gen \"(add (mul 6 7) 1)\" -> $val"
-  case "$val" in
-    *43*) echo "✓ the gen conductor EXECUTES on ARM64 (emulated)" ;;
-    *) echo "✗ unexpected result — investigate"; exit 1 ;;
-  esac
+  case "$val" in *43*) echo "✓ the gen conductor EXECUTES on ARM64 (emulated)";; *) echo "✗ unexpected — investigate"; exit 1;; esac
 else
-  echo "  qemu-aarch64 absent on this host — ELF + carries-conductor is the proof here."
+  echo "  no device/qemu on this host — ELF + carries-conductor is the proof here."
   echo "  on a device:  adb push $OUT /data/local/tmp/  &&  adb push ../form-stdlib /data/local/tmp/"
   echo "                adb shell /data/local/tmp/$OUT form-stdlib/form-gen.fk cmd.fk   (or Termux)"
 fi
 
 echo
-echo "✓ the gen conductor cross-compiles to a genuine Android ARM64 binary."
+echo "✓ the gen conductor cross-compiles to a genuine Android ARM64 binary [$VARIANT]."
