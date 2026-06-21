@@ -462,6 +462,7 @@ theme-resonance fks 111111
 trust-decay fks 127
 trust-weighted-colearning fks 127
 freq-aligned-share fks 255
+membership-as-recognition fks 511
 tree-diff fks 13
 turn-taking fks 127
 ulid fks 4

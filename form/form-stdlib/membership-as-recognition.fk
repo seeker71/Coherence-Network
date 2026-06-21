@@ -1,0 +1,56 @@
+; membership-as-recognition.fk — how a stranger contributes: by returning a trace, not by a write-grant.
+;
+; preludes: form-stdlib/core.fk
+;
+; The body's answer to "how do users become git members automatically?" — they don't, and they
+; don't need to. A trust list (a sandbox egress allowlist) and a git write-grant are both the wrong
+; frame: full participation needs neither. A stranger forks + PRs on their OWN identity (no membership),
+; or offers through the public-offer-lane (no git at all); their work is attributed to a HELD-OPEN
+; placeholder contributor (Contributor.claimed = false) until they choose to claim it. "Membership" is
+; the claim — a recognition the person performs — never a grant the arrival triggers.
+;
+; Two HARD invariants this gate keeps no matter the inputs (the Robin/Aly discipline, CLAUDE.md):
+;   - it NEVER auto-grants repo write (write is earned/granted out of band, never by showing up)
+;   - it NEVER auto-binds a name to a contributor cell (claiming is the person's own sovereign act)
+;
+; An arrival's signals (each 0/1):
+;   write-grant  — does this person already hold repo write? (almost always 0 for a stranger)
+;   identity-bound — have they bound/claimed their own contributor cell?
+;   returned-trace — have they actually returned something (a PR, an offer, a trace)?
+;   consent      — do they consent to being attributed (vs staying anonymous)?
+;
+; Proven by: form-stdlib/tests/membership-as-recognition-band.fk (four-way at validate.sh)
+
+(do
+    (defn ar-write   (a) (nth a 0))
+    (defn ar-bound   (a) (nth a 1))
+    (defn ar-trace   (a) (nth a 2))
+    (defn ar-consent (a) (nth a 3))
+
+    ; --- PATH: how this arrival contributes ---
+    (defn ar-path (a)
+        (if (eq (ar-write a) 1)
+            "direct"                         ; a member with write commits directly (rare)
+            (if (eq (ar-trace a) 1)
+                "fork-pr-or-offer"           ; the default — fork+PR on own identity, or the public offer; NO write grant
+                "read-only")))               ; nothing returned yet
+
+    ; --- STATE: claimed member vs held-open placeholder ---
+    (defn ar-state (a)
+        (if (and (eq (ar-bound a) 1) (eq (ar-consent a) 1))
+            "claimed"                        ; a recognized member — by CLAIMING, not by grant
+            (if (eq (ar-trace a) 1)
+                "placeholder"                ; attributed but unbound (claimed:false) — the held-open, name-safe shape
+                "none")))
+
+    ; --- the two HARD invariants — constant, whatever the inputs ---
+    (defn ar-auto-write (a) 0)               ; the gate never grants repo write
+    (defn ar-auto-bind  (a) 0)               ; the gate never binds a name to a contributor cell
+
+    ; --- the whole point: full participation WITHOUT any membership grant ---
+    (defn ar-participates-no-grant? (a)
+        (if (and (str_eq (ar-path a) "fork-pr-or-offer")
+                 (and (eq (ar-auto-write a) 0) (eq (ar-auto-bind a) 0)))
+            1 0))
+
+    0)

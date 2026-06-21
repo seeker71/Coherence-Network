@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────
+# membership-as-recognition.form — a stranger contributes by returning a trace, not by a write-grant.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs, 2026-06-21: "why do we need a trust list, and how can we enable users to become git
+# members automatically?" The honest answer: a trust list (a sandbox egress allowlist) and a
+# git write-grant are both the wrong frame. We do not auto-grant membership — and we do not
+# need to. The body already does something more sovereign: membership is RECOGNITION, performed
+# by the person, not a grant triggered by their arrival.
+#
+# This is the companion to form-first-reasoning.form (the trust list dissolves when the body
+# travels home) and public-offer-lane.form (a stranger may offer the body anything, received as
+# an offer). Here is the contribution arc and the gate that keeps it safe.
+
+(membership-as-recognition
+
+  (lineage
+    (kin public-offer-lane.form form-first-reasoning.form lc-cognitive-sovereignty)
+    (rests-on (Contributor.claimed "false on a held-open placeholder; true when the person walks in and claims")
+              (router contributor_recognition contributor_identity)
+              (door   "POST /api/contributions/record (record_open_contribution)"))
+    (proof  form/form-stdlib/membership-as-recognition.fk
+            form/form-stdlib/tests/membership-as-recognition-band.fk "-> 511 four-way Go/Rust/TS/fkwu")
+    (named-with urs sema))
+
+  ; the arc — full participation, no membership grant required
+  (arc
+    (1-arrive       "a stranger opens the repo in Claude Code / Codex, or points a public chat at the front door")
+    (2-contribute   "fork + PR on their OWN GitHub identity, or offer through the public-offer-lane — no repo write")
+    (3-attribute    "their work is recorded against a HELD-OPEN placeholder contributor (claimed:false)")
+    (4-claim        "when THEY choose, they bind their identity (contributor_recognition) — membership is this claim"))
+
+  ; the gate — membership-as-recognition.fk decides path + state, and keeps two hard invariants
+  (gate
+    (recipe form/form-stdlib/membership-as-recognition.fk)
+    (path  (direct           when has-write-grant)            ; a member with write commits directly (rare)
+           (fork-pr-or-offer when returned-a-trace)           ; the DEFAULT stranger path — no write grant
+           (read-only        when nothing-returned-yet))
+    (state (claimed     when identity-bound + consent)        ; a recognized member — by CLAIMING
+           (placeholder when a-trace-but-unbound)             ; attributed, held-open, name-safe (claimed:false)
+           (none        when nothing-yet))
+    (hard-invariants
+      (never auto-grant-repo-write)                           ; write is earned/granted out of band, never by arrival
+      (never auto-bind-a-name-to-a-contributor-cell)))        ; the Robin/Aly discipline — claiming is the person's act
+
+  ; why this is BETTER than automatic git membership
+  (why
+    (sovereign  "no stranger is handed write to shared state; no name is bound without the person's act.")
+    (frictionless "they contribute the first minute, attributed, with no account ceremony.")
+    (honest     "the credit is real and theirs to claim; an unclaimed trace waits with its door open."))
+
+  ; the agent walks this — so the phone experience is whole
+  (agent-walk
+    (when "a contributor on Claude Code / Codex wants to give something back")
+    (do   "offer to fork + PR on their identity (gh repo fork; gh pr create), or hold it as an offer;"
+          "record the contribution; if they are unbound, attribute to a held-open placeholder and"
+          "invite them to claim it when ready — never bind it for them.")
+    (taught-in AGENTS.md CONTRIBUTING.md)))

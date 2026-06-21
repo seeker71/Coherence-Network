@@ -1,0 +1,23 @@
+; preludes: form-stdlib/membership-as-recognition.fk
+;
+; The arrival gate, pinned. Proves a stranger participates fully without a write-grant (fork-pr-or-offer,
+; held-open placeholder), that the gate NEVER auto-grants write or auto-binds identity (even for someone
+; who already holds write), that membership is the claim (identity-bound + consent -> "claimed"), and that
+; a pure reader is attributed nothing yet. Verdict 511 when every claim lands.
+(do
+    (let a-stranger (list 0 0 1 1))   ; no write, unbound, returned a trace, consents -> participates as placeholder
+    (let a-member   (list 0 1 1 1))   ; no write but bound + consent -> claimed (membership = the claim, not write)
+    (let a-reader   (list 0 0 0 0))   ; nothing returned -> read-only, no contributor
+    (let a-writer   (list 1 1 1 1))   ; already holds write -> direct, yet the gate still granted nothing
+
+    (let c0 (if (str_eq (ar-path a-stranger) "fork-pr-or-offer")  1   0))   ; stranger path needs no membership
+    (let c1 (if (str_eq (ar-state a-stranger) "placeholder")      2   0))   ; ...attributed to a held-open cell
+    (let c2 (if (eq     (ar-auto-write a-stranger) 0)             4   0))   ; ...the gate granted no write
+    (let c3 (if (eq     (ar-auto-bind a-stranger) 0)             8   0))   ; ...and bound no name
+    (let c4 (if (eq     (ar-participates-no-grant? a-stranger) 1) 16  0))   ; the whole point: full part, zero grant
+    (let c5 (if (str_eq (ar-state a-member) "claimed")          32   0))   ; membership IS the claim
+    (let c6 (if (str_eq (ar-path a-reader) "read-only")         64   0))   ; a reader is attributed nothing yet
+    (let c7 (if (str_eq (ar-path a-writer) "direct")          128   0))   ; a writer commits directly
+    (let c8 (if (eq     (ar-auto-write a-writer) 0)           256   0))   ; ...but the gate still auto-granted nothing
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
