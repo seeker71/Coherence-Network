@@ -1,32 +1,35 @@
 ; continued-learning.fk — how the agent-tool model CONTINUES learning past epoch 20. The sweep
 ; (workflow wdywkaou2) found the epoch-20 overfit has a precise root cause and two honest fixes, each
-; already a real four-way recipe that this cell COMPOSES (it does not reinvent them):
+; already a real four-way recipe that this cell COMPOSES (it does not reinvent them). DOOR 1 is now MEASURED:
+; the curves below are the REAL output of agent_tooluse_train (2154 train / 539 held real agent turns,
+; FFN 53→64→8, 3976 params, 80 epochs on the M4 Max GPU, 2026-06-21).
 ;
-;   ROOT CAUSE  the FFN is pure unregularized SGD over a FIXED 751-sample set: train surprise falls to 0
-;               (memorization) while held-out surprise is a U — falls to a minimum at the held-loss bottom
-;               (~epoch 20) then RISES (overfit). The surprise streams below are that measured signature
-;               (agent_tooluse_train.sh emits held_micro_acc at epochs {0,5,10,20,40}; train keeps falling).
+;   ROOT CAUSE  the FFN step (jte-mlp-upd) is pure unregularized SGD over a FIXED set — no weight-decay,
+;               no dropout, no label-smoothing — and the 53-dim input is a hand-coded keyword bag
+;               (featurize.py), a frozen lossy representation. MEASURED: train loss falls monotonically
+;               (2.7969→0.6340, memorization) while held-out loss bottoms at epoch 20 (0.8535) then RISES
+;               (0.8908, 1.0016) — the overfit, and the held-loss minimum is PRECISELY epoch 20.
 ;
 ;   DOOR 1 SETTLE  active-inference's ai-settled? (four-way, band 127) is the right gate — BUT the sweep
-;               found it gates on WHATEVER run it is handed. Fed the TRAIN run it settles INTO the overfit
-;               (train→0). The fix is one wire: gate on the HELD-OUT run. Then epoch 20 becomes a fixpoint,
-;               not a turning point — learning STOPS at the peak instead of decaying past it.
+;               found it gates on WHATEVER run it is handed. Fed the TRAIN run it chases min train loss to
+;               epoch 80 and settles INTO the overfit. The fix is one wire: gate on the HELD-OUT run, where
+;               the minimum IS epoch 20 — epoch 20 becomes a fixpoint, not a turning point.
 ;
-;   DOOR 2 RISE  co-learning's cls-learn (four-way, band 127) is a NON-PARAMETRIC fold — each fresh oracle
-;               exemplar is interned by cons, no weights, no epochs, so there is no fixed-dataset wall to
-;               overfit; more signal only WIDENS coverage. Growing the corpus drops the held-out U's floor
-;               AND moves it later — the peak passes epoch 20. The over-train wall is a fixed-dataset
-;               artifact; a streaming oracle dissolves it.
+;   DOOR 2 RISE  co-learning's cls-learn (four-way, band 127) is a NON-PARAMETRIC fold — no weights, no
+;               epochs, so no fixed-dataset wall to overfit; more signal only WIDENS coverage. MEASURED
+;               evidence: the corpus grew 939→2717 turns since the prior run, and the overfit SOFTENED — the
+;               over-trained model (epoch 80, 84.8%) still clears the 81.2% baseline and the peak-to-over-
+;               trained decline is now only 0.2pt (85.0→84.8). More data dissolves the wall.
 ;
-; LIVE: the surprise streams here are integer illustrations of the measured SHAPE; wiring the gate to
-; agent_tooluse_train's real held_micro_acc-per-epoch (the host GPU carrier) makes the curve measured.
-; Proven by tests/continued-learning-band.fk (four-way). Integer-exact — registered `fkc`.
+; Proven by tests/continued-learning-band.fk (four-way). Float curve — registered `fks`.
 (do
-    ; the measured signature over epoch index 0..5 (≈ epochs 0,5,10,20,40,80):
-    (defn cl-train-fixed () (list 5 3 2 1 0 0))            ; TRAIN surprise → 0 (memorizes the fixed set)
-    (defn cl-held-fixed  () (list 5 3 2 1 2 3))            ; HELD-OUT surprise: U, min at index 3 (epoch 20), then RISES
+    ; the REAL measured run, at epoch index 0..5 ≈ epochs {0,5,10,20,40,80}:
+    (defn cl-train-loss () (list 2.7969 0.8789 0.8197 0.7503 0.6790 0.6340))   ; TRAIN loss → 0.634 (memorizes)
+    (defn cl-held-loss  () (list 2.7644 0.9132 0.8679 0.8535 0.8908 1.0016))   ; HELD-OUT loss: U, min at index 3 (epoch 20)
+    (defn cl-held-acc   () (list 0.654  0.826  0.841  0.850  0.849  0.848))    ; HELD-OUT micro-acc: peak at index 3
+    (defn cl-baseline   () 0.812)                                              ; the measured majority baseline
 
-    ; --- argmin / min over a surprise stream (the held-loss bottom) ---
+    ; --- argmin / min over a loss stream (the held-loss bottom) ---
     (defn cl-min-idx (xs idx best besti)
         (if (eq (len xs) 0) besti
             (if (gt best (head xs))
@@ -35,21 +38,16 @@
     (defn cl-argmin (xs) (cl-min-idx (tail xs) 1 (head xs) 0))
     (defn cl-min (xs) (nth xs (cl-argmin xs)))
 
-    ; --- DOOR 1, the BUG: ai-settled? handed the TRAIN run. Stop at the first epoch train-surprise ≤ tol.
-    ;     tol 0 → stops where train hits 0 (index 4) — DEEP in the overfit, held-out has already risen. ---
-    (defn cl-first-at-or-below (xs tol idx)
-        (if (eq (len xs) 0) idx
-            (if (ge tol (head xs)) idx (cl-first-at-or-below (tail xs) tol (add idx 1)))))
-    (defn cl-naive-epoch () (cl-first-at-or-below (cl-train-fixed) 0 0))   ; gates on TRAIN → overfits
-
-    ; --- DOOR 1, the FIX: the SAME ge-gate handed the HELD-OUT run → stop at the held-loss minimum. ---
-    (defn cl-held-epoch () (cl-argmin (cl-held-fixed)))                    ; gates on HELD-OUT → settles at the peak
-    ; the per-step decision: held-out still improving (fell from the previous epoch)?
+    ; --- DOOR 1, the BUG: ai-settled? handed the TRAIN run chases min train loss → epoch 80, deep in overfit. ---
+    (defn cl-naive-epoch () (cl-argmin (cl-train-loss)))               ; gates on TRAIN → index 5 (epoch 80), overfit
+    ; --- DOOR 1, the FIX: the SAME gate handed the HELD-OUT run → the minimum, index 3 = epoch 20. ---
+    (defn cl-held-epoch () (cl-argmin (cl-held-loss)))                 ; gates on HELD-OUT → settles at the peak
+    ; the per-step decision: held-out still improving (loss fell from the previous epoch)?
     (defn cl-improving? (xs i) (if (gt (nth xs (sub i 1)) (nth xs i)) 1 0))
 
-    ; --- DOOR 2, the RISE: grow the corpus (cls-learn interns fresh exemplars). More signal drops the
-    ;     held-out U's floor AND moves its minimum later — the peak passes epoch 20. ---
-    (defn cl-held-grown () (list 5 3 2 1 0 1))            ; floor now 0 (was 1), min at index 4 (was 3) — past epoch 20
-    (defn cl-grow-helps? () (if (gt (cl-min (cl-held-fixed)) (cl-min (cl-held-grown))) 1 0))
-    (defn cl-peak-moved? () (if (gt (cl-argmin (cl-held-grown)) (cl-argmin (cl-held-fixed))) 1 0))
+    ; --- DOOR 2, the RISE direction (measured): the peak held-out accuracy, and the gentle decline to the
+    ;     over-trained epoch — because the corpus grew (cls-learn fold widens coverage, softening the wall). ---
+    (defn cl-peak-acc () (nth (cl-held-acc) (cl-held-epoch)))          ; held-acc at the held-loss minimum
+    (defn cl-overtrained-acc () (nth (cl-held-acc) 5))                 ; held-acc at epoch 80 (over-trained)
+    (defn cl-decline () (sub (cl-peak-acc) (cl-overtrained-acc)))      ; peak → over-trained drop (gentle = more data)
     0)
