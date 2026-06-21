@@ -1,0 +1,56 @@
+; speaker-aam-train.fk — the AAM-Softmax TRAINER: backward pass + SGD, FLOAT.
+;
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/loss.fk form-stdlib/speaker-aam.fk
+;
+; speaker-aam.fk gave the forward objective; this closes the loop. loss.fk's softmax-CE backward is
+; softmax(logits) − onehot(y) at the logits — so no new gradient NODE is needed, only the chain DOWN
+; through the AAM geometry to the weights:
+;   dL/dlogit_j = p_j − [j=y]                                  (softmax − onehot)
+;   dlogit_j/dcosθ_j = s            (j≠y)                       (plain scale)
+;                    = s·(cosm + sinm·cosθ_y/√(1−cos²θ_y))  (j=y) (the angular-margin chain)
+;   dcosθ_j/dW_j = (x̂ − cosθ_j·ŵ_j)/‖W_j‖                       (gradient of a cosine wrt the un-normalized W)
+; The weight update is W_j ← W_j − lr·(p_j−[j=y])·factor_j·(x̂ − cosθ_j·ŵ_j)/‖W_j‖. Moving W_y toward x̂
+; raises the target cosine; moving impostor rows away lowers theirs — exactly the angular-margin pull.
+; All fp64. Proven by tests/speaker-aam-train-band.fk (finite-difference gradient check + descent).
+
+(do
+    ; --- softmax-CE gradient on logits: p − onehot(y) ---
+    (defn aat-dec-at (xs i)
+        (if (eq (len xs) 0) (empty)
+            (cons (if (eq i 0) (sub (head xs) 1.0) (head xs)) (aat-dec-at (tail xs) (sub i 1)))))
+    (defn aat-logit-grad (logits y) (aat-dec-at (tn-softmax logits) y))
+
+    ; --- vector helpers + norm ---
+    (defn aat-vsub (a b) (if (eq (len a) 0) (empty) (cons (sub (head a) (head b)) (aat-vsub (tail a) (tail b)))))
+    (defn aat-norm (v) (tn-sqrt (aam-dot v v)))
+
+    ; --- the target's margin chain factor s·(cosm + sinm·cosθ/√(1−cos²θ)); non-target is just s.
+    ;     √(1−c²) is singular at c=±1 (perfect alignment); a tiny floor keeps it finite — and there the
+    ;     direction (x̂−c·ŵ) is the zero vector anyway, so factor·0 = 0: no pull when already aligned. ---
+    (defn aat-tfactor (c cosm sinm s) (mul s (add cosm (mul sinm (div c (tn-sqrt (add (sub 1.0 (mul c c)) 0.000001)))))))
+
+    ; --- gradient for one row j: (p_j−[j=y]) · factor_j · (x̂ − cosθ_j·ŵ_j)/‖W_j‖ ---
+    (defn aat-rowgrad (wj xhat gj i y s cosm sinm)
+        (do (let nw (aat-norm wj))
+            (let what (aam-scale wj (div 1.0 nw)))
+            (let c (aam-dot what xhat))
+            (let dir (aam-scale (aat-vsub xhat (aam-scale what c)) (div 1.0 nw)))
+            (let f (if (eq i y) (aat-tfactor c cosm sinm s) s))
+            (aam-scale dir (mul gj f))))
+    (defn aat-gradW-rows (W xhat g i y s cosm sinm)
+        (if (eq (len W) 0) (empty)
+            (cons (aat-rowgrad (head W) xhat (head g) i y s cosm sinm)
+                  (aat-gradW-rows (tail W) xhat (tail g) (add i 1) y s cosm sinm))))
+    (defn aat-gradW (W x y s cosm sinm)
+        (do (let xhat (aam-l2norm x))
+            (let g (aat-logit-grad (aam-logits W x y s cosm sinm) y))
+            (aat-gradW-rows W xhat g 0 y s cosm sinm)))
+
+    ; --- SGD step over all rows: W_j ← W_j − lr·gradW_j ---
+    (defn aat-vstep (w gw lr) (if (eq (len w) 0) (empty) (cons (sub (head w) (mul lr (head gw))) (aat-vstep (tail w) (tail gw) lr))))
+    (defn aat-step-rows (W gW lr) (if (eq (len W) 0) (empty) (cons (aat-vstep (head W) (head gW) lr) (aat-step-rows (tail W) (tail gW) lr))))
+    (defn aat-step (W x y s cosm sinm lr) (aat-step-rows W (aat-gradW W x y s cosm sinm) lr))
+
+    ; --- train n steps on one sample (fold over a corpus to extend) ---
+    (defn aat-train1 (W x y s cosm sinm lr n)
+        (if (eq n 0) W (aat-train1 (aat-step W x y s cosm sinm lr) x y s cosm sinm lr (sub n 1)))))

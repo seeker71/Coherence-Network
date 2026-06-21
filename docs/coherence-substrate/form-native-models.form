@@ -206,11 +206,14 @@
 ;        with the segment-trial generator + bootstrap CI in eer-measure.sh). The post-EER panel (Grok+Cursor,
 ;        2026-06-21) RE-ORDERED the rungs against the measured floor: untrained features don't verify (best
 ;        EER .380, mean-only), so feature tuning is low ROI — the unlock is the TRAINED embedder, now. Ordered:
-;        (a) the AAM TRAINER on the native asm lane (gap 1's emit→compile→exec) — chain the margin gradient
-;        (softmax−onehot through cos(θ+m)) into W + embedding updates (the one new piece beyond loss.fk's
-;        backward), trained WITH (b) augmentation from day one (random 2-4s multi-crops per recording +
-;        MUSAN/RIR/speed + in-batch hard-negative mining — turns 26×1 into many samples/speaker); these two
-;        are now ONE step, ahead of feature work. (c) score normalization (z-norm / AS-norm vs an impostor
+;        (a) the AAM TRAINER — the gradient + SGD recipe is SHIPPED four-way (speaker-aam-train, verdict 31):
+;        the margin gradient (softmax−onehot chained through cos(θ+m) and the cosine-wrt-W derivative) into W
+;        updates, proven by a finite-difference gradient check (analytic = numeric < 1%) + descent + the
+;        target cosine rising, and robust at the alignment singularity (√(1−c²) floored: aligned → zero
+;        gradient, no NaN). The one new piece beyond loss.fk's backward, done. What REMAINS in (a): run it on
+;        the native asm lane (gap 1's emit→compile→exec) for corpus-scale speed; trained WITH (b) augmentation
+;        from day one (random 2-4s multi-crops per recording + MUSAN/RIR/speed + in-batch hard-negative mining
+;        — turns 26×1 into many samples/speaker); these two are now ONE step, ahead of feature work. (c) score normalization (z-norm / AS-norm vs an impostor
 ;        cohort) folded into eer.fk — may beat architecture tweaks on small trials, and it's what production
 ;        verification uses. (d) attentive stats pooling (LEARNED mean+std weights) + per-utterance CMVN feeding
 ;        the AAM head — NOT raw mean+std (std is nuisance untrained) and NOT global CMVN. (e) shallow dilated
