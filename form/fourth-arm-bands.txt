@@ -476,6 +476,7 @@ nordic-runes fks 255
 rune-frequency fks 255
 speaker-id fks 255
 speaker-embed fks 255
+speaker-stat fks 255
 wav-sense fks 63
 witness-theorem fks 31
 witness-to-co-regulate fks 127
