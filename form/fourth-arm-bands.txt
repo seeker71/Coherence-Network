@@ -189,6 +189,7 @@ indirect-call-runtime-probe fks 7
 higher-order-fn-arg fks 1111
 branch-choice-order fks 511
 channel-interface fks 127
+organ-sense fks 11230
 channel-flow fks 8388607
 channel-loopback fks 255
 guidance-channel fks 1111111
@@ -204,7 +205,8 @@ choice-outcome-learning fks 32767
 code-tool-learning fks 1048575
 tool-embodiment fks 127
 io-match fks 127
-training-catalog fks 127
+training-catalog fks 1023
+mesh-dispatch fks 255
 form-train-step fks 31
 affine-train fks 31
 affine-corpus-fit fks 31
@@ -302,6 +304,7 @@ online-accuracy fks 63
 predictor-train fks 63
 prototype-merge fks 127
 provisioning fks 127
+recognition fks 63
 recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
@@ -846,3 +849,5 @@ tooluse-model-search fks 63
 continued-learning fks 63
 feature-selection fkc 63
 string-case fks 31
+nl-lexicon-grow fks 3
+tool-eval fkc 63

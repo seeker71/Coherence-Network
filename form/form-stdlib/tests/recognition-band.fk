@@ -1,0 +1,56 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/recognition.fk
+;
+; recognition-band — one recipe recognizes place, room, who, and what; only the
+; library changes. The lift made visible: four senses, four libraries, one engine.
+;
+; Verdict 63:
+;   1   floor and north-star are present
+;   2   WiFi fingerprint -> which PLACE  (home)
+;   4   echo bounce-times -> which ROOM  (kitchen)
+;   8   face/voice embedding -> WHO      (aria)
+;   16  sound/vision spectrum -> WHAT    (dog)
+;   32  an exact fingerprint hit carries full confidence (agreeing bins == reading length)
+(do
+    ;; place library — wifi access-point strength bins
+    (defn rec-place-lib ()
+        (list (list "home" (list 5 5 5 5))
+              (list "cafe" (list 1 8 1 8))
+              (list "office" (list 9 1 9 1))))
+    ;; room library — echo bounce-time bins (the room's acoustic signature)
+    (defn rec-room-lib ()
+        (list (list "kitchen" (list 2 7 2 7))
+              (list "hall" (list 9 9 1 1))))
+    ;; who library — face / voice embedding bins
+    (defn rec-who-lib ()
+        (list (list "aria" (list 3 1 4 1))
+              (list "kai" (list 8 8 8 8))))
+    ;; what library — sound / vision spectrum bins
+    (defn rec-what-lib ()
+        (list (list "dog" (list 6 2 6 2))
+              (list "cat" (list 1 1 9 9))
+              (list "bird" (list 7 7 7 1))))
+
+    (defn rec-q-place () (list 5 5 5 5))
+    (defn rec-q-room () (list 2 7 2 7))
+    (defn rec-q-who () (list 3 1 4 1))
+    (defn rec-q-what () (list 6 2 6 2))
+
+    (defn rec-b1 ()
+        (if (gt (len (rec-floor)) 0) (if (gt (len (rec-north-star)) 0) 1 0) 0))
+    (defn rec-b2 ()
+        (if (str_eq (rec-label (recognize "place" (rec-q-place) (rec-place-lib) "wifi")) "home") 2 0))
+    (defn rec-b4 ()
+        (if (str_eq (rec-label (recognize "room" (rec-q-room) (rec-room-lib) "echo")) "kitchen") 4 0))
+    (defn rec-b8 ()
+        (if (str_eq (rec-label (recognize "who" (rec-q-who) (rec-who-lib) "face")) "aria") 8 0))
+    (defn rec-b16 ()
+        (if (str_eq (rec-label (recognize "what" (rec-q-what) (rec-what-lib) "sound")) "dog") 16 0))
+    (defn rec-b32 ()
+        (if (rec-full? (recognize "place" (rec-q-place) (rec-place-lib) "wifi") (rec-q-place)) 32 0))
+
+    (add (rec-b1)
+        (add (rec-b2)
+            (add (rec-b4)
+                (add (rec-b8)
+                    (add (rec-b16) (rec-b32))))))
+)

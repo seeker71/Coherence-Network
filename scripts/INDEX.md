@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 317
+**Total files**: 318
 
 | File | Purpose |
 |---|---|
@@ -102,6 +102,7 @@
 | [form_cli_distill_receipt.sh](form_cli_distill_receipt.sh) | form_cli_distill_receipt.sh — run the oracle->native distillation on the real |
 | [form_cli_ensure.sh](form_cli_ensure.sh) | form_cli_ensure.sh — ensure the form-cli's oracles are present, DECIDED by Form. |
 | [form_cli_gaps.sh](form_cli_gaps.sh) | form_cli_gaps.sh — the catalog of what is OPEN, walked from the live body. |
+| [form_cli_gold.sh](form_cli_gold.sh) | form_cli_gold.sh — record a human's direct freq-reading into the local GOLD catalog. |
 | [form_cli_guided.sh](form_cli_guided.sh) | form_cli_guided.sh — the trained native model makes the live model better. |
 | [form_cli_judge.sh](form_cli_judge.sh) | form_cli_judge.sh — measure the REASONING lane: how well a native model's answer |
 | [form_cli_learn.sh](form_cli_learn.sh) | form_cli_learn.sh — the continuous-learning loop's body, in ONE motion: grow the tool-use corpus |

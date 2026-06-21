@@ -1979,7 +1979,15 @@ func (k *Kernel) registerNatives() {
 	// not part of the four-way output-identity floor. The kernel already shells out (JIT
 	// go-build, plugin load), so this exposes an existing capability, not a new class.
 	k.registerNative("host-exec", catMethod(), func(_ *Kernel, args []Value) Value {
-		out, _ := exec.Command("sh", "-c", args[0].Str).CombinedOutput()
+		cmd := exec.Command("sh", "-c", args[0].Str)
+		// Optional second arg = the process's stdin, piped in-memory: no temp file,
+		// no writable filesystem. The bytes go kernel -> subprocess directly, so a
+		// question never spills to disk and a host with no writable /tmp (Android)
+		// still escalates. One-arg callers are unchanged.
+		if len(args) > 1 {
+			cmd.Stdin = strings.NewReader(args[1].Str)
+		}
+		out, _ := cmd.CombinedOutput()
 		return Value{Kind: VStr, Str: string(out)}
 	})
 	k.registerNative("host-read", catMethod(), func(_ *Kernel, args []Value) Value {
