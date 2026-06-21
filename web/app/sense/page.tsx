@@ -3,6 +3,7 @@
 // or the macOS kernel + launcher (the Mac that recognizes through the Form kernel).
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const APK =
@@ -86,6 +87,18 @@ export default function SensePage() {
           On a phone? Open this on Android to install. On a Mac? Grab the kernel + launcher above.
         </p>
       )}
+
+      <Link
+        href="/sense/surface"
+        className="mt-6 inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm text-emerald-200 transition-colors hover:border-emerald-400/60 hover:bg-emerald-500/10"
+      >
+        See what a node perceives — the live surface
+        <span className="text-emerald-400/60">→</span>
+      </Link>
+      <p className="mt-2 text-xs text-neutral-600">
+        Heard text + translation, who-can-hear-whom, the room&apos;s echo, place, what&apos;s
+        playing — computed from the four-way-proven world-perception recipe, no install needed.
+      </p>
 
       <div className="mt-10 border-t border-white/10 pt-6 text-sm text-neutral-500">
         <p>
