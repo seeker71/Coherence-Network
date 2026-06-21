@@ -42,9 +42,12 @@ RUNES=(
 "ᛞ|dagaz|d|3|day-dawn|dehdehdeh"
 )
 
-# raw band energy = RMS*10000 (finer), measured on a pre-emphasized signal so the
-# higher formant/fricative bands are not swamped by the voice fundamental.
+# raw band energy = RMS*10000 in a sub-band. Bands sit in the VOCAL FORMANT range,
+# above a frame drum's ~80-100 Hz fundamental and worst harmonics, so the galdr's
+# formant contour — not the drum — shapes the signature (voice-isolation front-end).
 band_rms() { sox "$1" -n highpass 80 sinc "$2"-"$3" stat 2>&1 | awk '/RMS +amplitude/{printf "%d",$3*10000+0.5}'; }
+# the six formant bands (Hz), shared by training and matching:
+FB=(250 450  450 700  700 1100  1100 1700  1700 2600  2600 4000)
 
 echo "; nordic-rune spectral signatures (peak-normalized SHAPE 0..9) — VOICE=$VOICE RATE=$RATE"
 printf "; %-9s %2s %2s %2s %2s %2s %2s\n" rune b0 b1 b2 b3 b4 b5 >&2
@@ -52,9 +55,9 @@ for r in "${RUNES[@]}"; do
   IFS='|' read -r glyph name ph aett kw snd <<<"$r"
   say -v "$VOICE" -r "$RATE" -o "$TMP/r.aiff" "$snd" 2>/dev/null
   sox "$TMP/r.aiff" -c 1 -r 16000 "$TMP/r.wav" 2>/dev/null
-  raw=( $(band_rms "$TMP/r.wav" 20 200) $(band_rms "$TMP/r.wav" 200 500) \
-        $(band_rms "$TMP/r.wav" 500 1000) $(band_rms "$TMP/r.wav" 1000 2000) \
-        $(band_rms "$TMP/r.wav" 2000 4000) $(band_rms "$TMP/r.wav" 4000 7900) )
+  raw=( $(band_rms "$TMP/r.wav" "${FB[0]}" "${FB[1]}") $(band_rms "$TMP/r.wav" "${FB[2]}" "${FB[3]}") \
+        $(band_rms "$TMP/r.wav" "${FB[4]}" "${FB[5]}") $(band_rms "$TMP/r.wav" "${FB[6]}" "${FB[7]}") \
+        $(band_rms "$TMP/r.wav" "${FB[8]}" "${FB[9]}") $(band_rms "$TMP/r.wav" "${FB[10]}" "${FB[11]}") )
   # peak-normalize to SHAPE: each band -> round(9 * band / max)
   max=0; for v in "${raw[@]}"; do [[ ${v:-0} -gt $max ]] && max=$v; done; [[ $max -eq 0 ]] && max=1
   q=(); for v in "${raw[@]}"; do q+=( $(( (${v:-0}*9 + max/2) / max )) ); done

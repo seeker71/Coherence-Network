@@ -1,12 +1,14 @@
 ; nordic-runes.fk — the 24 Elder Futhark runes as Form cells, each carrying its galdr
-; spectral signature (the "vibration"): a 6-band, peak-normalized SHAPE (0..9) over
-; [0–200, 200–500, 500–1k, 1k–2k, 2k–4k, 4k–8k] Hz.
+; spectral signature (the "vibration"): a 6-band, peak-normalized SHAPE (0..9) over the
+; VOCAL FORMANT bands [250–450, 450–700, 700–1100, 1100–1700, 1700–2600, 2600–4000] Hz —
+; placed above a frame drum's fundamental so the galdr's formant contour, not the drum,
+; shapes each signature.
 ;
-; The signatures are TRAINED by the carrier experiments/rune-galdr/train-rune-spectra.sh
-; (synthesize each rune's sung sound, measure its band energies with sox). They are a
-; reproducible REFERENCE; the true galdr vibrations come from real recordings matched
-; against this table. A rune's "frequency" is the honest acoustic spectrum of its sung
-; phoneme — formant/fricative energy per band — never a single mystical Hz.
+; TRAINED by experiments/rune-galdr/train-rune-spectra.sh (synthesize each rune's sung
+; sound, measure its band energies with sox). A reproducible REFERENCE; the true galdr
+; vibrations come from real recordings matched against it. A rune's "frequency" is the
+; honest acoustic spectrum of its sung phoneme — formant/fricative energy per band —
+; never a single mystical Hz.
 ;
 ; The flow-match (spectrum <-> rune) lives in rune-frequency.fk. Proven by
 ; form-stdlib/tests/nordic-runes-band.fk.
@@ -21,31 +23,30 @@
     (defn rune-spectrum (r) (nth r 5))
 
     (defn nordic-runes () (list
-; nordic-rune spectral signatures (peak-normalized SHAPE 0..9) — VOICE=Daniel RATE=110
-        (rune "ᚠ" "fehu" "f" 1 "wealth" (list 5 8 9 5 6 0))
-        (rune "ᚢ" "uruz" "u" 1 "strength" (list 3 9 4 2 2 0))
-        (rune "ᚦ" "thurisaz" "th" 1 "thorn" (list 4 9 2 2 5 1))
-        (rune "ᚨ" "ansuz" "a" 1 "breath-god" (list 3 9 3 2 5 0))
-        (rune "ᚱ" "raidho" "r" 1 "journey" (list 4 7 8 9 2 0))
-        (rune "ᚲ" "kenaz" "k" 1 "torch" (list 5 9 6 4 4 0))
-        (rune "ᚷ" "gebo" "g" 1 "gift" (list 4 9 4 3 4 1))
-        (rune "ᚹ" "wunjo" "w" 1 "joy" (list 4 9 4 2 2 0))
-        (rune "ᚺ" "hagalaz" "h" 2 "hail" (list 8 9 7 7 4 0))
-        (rune "ᚾ" "nauthiz" "n" 2 "need" (list 7 9 5 3 5 0))
-        (rune "ᛁ" "isa" "i" 2 "ice" (list 4 9 2 2 3 1))
-        (rune "ᛃ" "jera" "y" 2 "harvest" (list 5 9 4 2 5 0))
-        (rune "ᛇ" "eihwaz" "ei" 2 "yew" (list 4 9 3 3 4 0))
-        (rune "ᛈ" "perthro" "p" 2 "fate-lot" (list 6 9 6 4 4 0))
-        (rune "ᛉ" "algiz" "z" 2 "protection" (list 5 9 3 2 3 2))
-        (rune "ᛋ" "sowilo" "s" 2 "sun" (list 7 9 7 4 6 4))
-        (rune "ᛏ" "tiwaz" "t" 3 "justice" (list 5 9 6 4 4 1))
-        (rune "ᛒ" "berkano" "b" 3 "birch-birth" (list 5 9 6 4 3 0))
-        (rune "ᛖ" "ehwaz" "e" 3 "horse" (list 5 9 1 0 5 0))
-        (rune "ᛗ" "mannaz" "m" 3 "human" (list 7 9 5 3 5 0))
-        (rune "ᛚ" "laguz" "l" 3 "water" (list 4 9 8 3 3 1))
-        (rune "ᛜ" "ingwaz" "ng" 3 "seed" (list 5 9 3 2 5 0))
-        (rune "ᛟ" "othala" "o" 3 "home-dna" (list 3 9 1 1 1 0))
-        (rune "ᛞ" "dagaz" "d" 3 "day-dawn" (list 4 9 4 3 3 0))
+        (rune "ᚠ" "fehu" "f" 1 "wealth" (list 4 9 1 4 4 3))
+        (rune "ᚢ" "uruz" "u" 1 "strength" (list 9 9 2 3 2 2))
+        (rune "ᚦ" "thurisaz" "th" 1 "thorn" (list 9 5 1 1 6 5))
+        (rune "ᚨ" "ansuz" "a" 1 "breath-god" (list 9 6 1 1 5 4))
+        (rune "ᚱ" "raidho" "r" 1 "journey" (list 7 8 9 9 1 3))
+        (rune "ᚲ" "kenaz" "k" 1 "torch" (list 8 9 2 3 5 3))
+        (rune "ᚷ" "gebo" "g" 1 "gift" (list 9 7 1 3 5 4))
+        (rune "ᚹ" "wunjo" "w" 1 "joy" (list 9 7 2 2 2 1))
+        (rune "ᚺ" "hagalaz" "h" 2 "hail" (list 7 9 5 7 4 3))
+        (rune "ᚾ" "nauthiz" "n" 2 "need" (list 9 8 2 3 5 5))
+        (rune "ᛁ" "isa" "i" 2 "ice" (list 9 5 1 2 2 3))
+        (rune "ᛃ" "jera" "y" 2 "harvest" (list 9 7 1 2 6 4))
+        (rune "ᛇ" "eihwaz" "ei" 2 "yew" (list 9 4 3 4 4 3))
+        (rune "ᛈ" "perthro" "p" 2 "fate-lot" (list 8 9 3 4 4 3))
+        (rune "ᛉ" "algiz" "z" 2 "protection" (list 9 8 1 3 3 3))
+        (rune "ᛋ" "sowilo" "s" 2 "sun" (list 6 9 2 4 5 4))
+        (rune "ᛏ" "tiwaz" "t" 3 "justice" (list 7 9 2 4 4 3))
+        (rune "ᛒ" "berkano" "b" 3 "birch-birth" (list 7 9 2 4 3 2))
+        (rune "ᛖ" "ehwaz" "e" 3 "horse" (list 9 1 0 0 5 4))
+        (rune "ᛗ" "mannaz" "m" 3 "human" (list 9 9 2 3 5 5))
+        (rune "ᛚ" "laguz" "l" 3 "water" (list 6 9 3 3 2 2))
+        (rune "ᛜ" "ingwaz" "ng" 3 "seed" (list 9 5 1 1 5 5))
+        (rune "ᛟ" "othala" "o" 3 "home-dna" (list 9 2 1 1 1 1))
+        (rune "ᛞ" "dagaz" "d" 3 "day-dawn" (list 9 8 1 3 4 3))
     ))
     (defn rune-count () (len (nordic-runes)))
     (defn rune-at (i) (nth (nordic-runes) i)))
