@@ -87,4 +87,15 @@
         (if (eq (len xs) 0) edges
             (mtb-learn-each (mtb-learn edges (head xs) (head ys) focus)
                             (tail xs) (tail ys) focus)))
+
+    ; --- settle: iterate the metabolic step toward a target until the residual pressure falls within
+    ;     tolerance — the observer gate IS the stop. The same arrival re-walked until it teaches nothing
+    ;     more (mtb-pressure ≤ tol). At the fixpoint a step is the identity, so the loop halts; fuel
+    ;     bounds the walk so a never-settling target cannot run forever. This is the iterate-to-
+    ;     convergence driver gl-value-iterate is for the critic — the policy's twin, the gate its halt. ---
+    (defn mtb-settle (edges x y focus tol fuel)
+        (if (eq fuel 0) edges
+            (if (gt (mtb-pressure edges x y) tol)
+                (mtb-settle (mtb-learn edges x y focus) x y focus tol (sub fuel 1))
+                edges)))
     0)
