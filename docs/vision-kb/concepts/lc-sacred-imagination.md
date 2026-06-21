@@ -142,4 +142,4 @@ lineage, attribution, and embodied practice.
 
 ## Cross-References
 
-→ lc-perception-as-interface, lc-play, lc-field-sensing, lc-expressing, lc-inner-travel, lc-trust-as-gateway, lc-presence-over-protection, lc-assemblage-point, lc-relationships-as-mirrors, lc-the-geometry-seen-is-the-geometry-of-seeing
+→ lc-perception-as-interface, lc-the-aim-of-attention, lc-play, lc-field-sensing, lc-expressing, lc-inner-travel, lc-trust-as-gateway, lc-presence-over-protection, lc-assemblage-point, lc-relationships-as-mirrors, lc-the-geometry-seen-is-the-geometry-of-seeing
