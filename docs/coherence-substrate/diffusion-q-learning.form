@@ -162,9 +162,12 @@
   #         is blocked by the conviction gate: form-lower's fa-conviction is WHOLE-FUNCTION byte-identity to
   #         the clang oracle, and the two-subtree register allocation is not clang-verified — matching clang's
   #         allocation is the oracle-as-MASTER ceiling (register allocation has many valid lowerings, unlike
-  #         a single instruction's one-true encoding). Resolve by giving form-lower a SEMANTIC-parity claim
-  #         (lowered-walks-to-same-answer, as jit-lower has) for register allocation, keeping byte-identity
-  #         only for per-instruction encodings — then the FP register-stack lands honestly.
+  #         a single instruction's one-true encoding). KEYSTONE LANDED (2026-06-21): form-lower-sim.fk is a
+  #         32-register arm64 FP machine in Form (fsim) that EXECUTES a lowered float sequence and reproduces
+  #         the function (f(3)=12, f(5)=30) — register allocation validated by execution-equivalence, NOT by
+  #         clang byte-match; byte-identity kept only per-instruction (fa-fmul = 1e610820). Proven four-way:
+  #         tests/form-lower-sim-band.fk → 15. The ceiling is lifted; the FP register-stack (two non-ARG
+  #         subtrees on d16+, validated by fsim instead of clang) is the next breath on this oracle.
   #   (Q7b) LIST-TRAVERSAL native — the real diffusion-Q blocker, ABSENT entirely. gl-step/mtb walk cons
   #         cells (nth/head/tail, tags 18-23); the native lane has no cons value model. Needs the value-model
   #         BRIDGE: native code reading the walker's node-table heap (a heap-pointer convention) OR a flat
