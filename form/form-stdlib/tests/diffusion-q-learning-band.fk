@@ -6,9 +6,9 @@
 ; fp64 — eight claims, zero rounding. The policy is improved against a linear Q-critic with NO
 ; backprop through any chain: the chain rule is mtb-reverse, a forward reversed-edge gather.
 ;
-; Every float check rides the verdict lens gl-veq6 (round-vs-round) — the same discipline
-; metabolic/geometric hold: never raw gt/lt and never round-vs-raw-large-int at the verdict
-; level, both of which the fourth kernel (fkwu) boxes differently than the three walkers.
+; Float checks ride the verdict lens gl-veq6 (round-vs-round) as metabolic/geometric do — a clean
+; exact-equality idiom. (fkwu's float ORDERING is also correct four-way — see float-compare-band;
+; this band is registered `fks` because it carries float literals, which need the string pool.)
 ;
 ; Verdict 255 when every claim lands:
 ;   1     free backtrace: the ADJOINT recovers the critic's action-gradient ∇_aQ = [2 1]

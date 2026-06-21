@@ -73,6 +73,14 @@ defn pl_orpo  = pref_loss_shape { id:"orpo",  reference:"none",     pairing:"pai
 defn pl_simpo = pref_loss_shape { id:"simpo", reference:"none",     pairing:"paired",   transform:"logistic",   normalize:"length", aux:"none", beta:2.0, margin:1.0 };
 defn pl_rdpo  = pref_loss_shape { id:"rdpo",  reference:"champion", pairing:"paired",   transform:"logistic",   normalize:"length", aux:"none", beta:0.1, margin:0.0 };
 
+# QAM (the diffusion-Q tilt) appends as the value-cousin of KTO: same transform:"value" family, but
+# the reference is a LEARNED CRITIC, not a fixed point — the pull is the adjoint-matched ∇Q. beta is
+# the q-focus / λ aperture. SHIPPED: form/form-stdlib/preference-learning.fk (pl-qam) +
+# tests/preference-learning-band.fk → 31, four-way; pl-qam-apply IS dql-improve. See diffusion-q-learning.form.
+# The qam row's beta is an evolvable GENE: diffusion-q-autoresearch.fk runs the autoresearch keep-or-
+# rollback loop over it (propose→measure pl-fitness→keep), converging to the best beta (band → 63, four-way).
+defn pl_qam   = pref_loss_shape { id:"qam",   reference:"critic",   pairing:"unpaired", transform:"q-adjoint",  normalize:"none",   aux:"none", beta:0.5, margin:0.0 };
+
 # ─────────────────────────────────────────────────────────────────────
 # Part 2 — The one combinator (the engine holds still)
 # ─────────────────────────────────────────────────────────────────────
@@ -277,12 +285,14 @@ form pref_signal_shape = {
 # Part 7 — Gaps (the next breaths — none need kernel change)
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-P1: form/form-stdlib/preference-learning.fk + a four-way band are
-#         not yet authored. First to ship: pl_kto over a tiny unpaired
-#         good/bad stream, the pull computed and the two-angle mtb-step
-#         fired, verdict checking that a good signal raises its features'
-#         score above z_ref and a bad signal lowers it. Then pl_ipo on a
-#         pair, reusing mtb-pressure-of for the squared transform.
+# GAP-P1: OPENED. form/form-stdlib/preference-learning.fk now exists with the row
+#         accessors, the pull combinator (squared/value dispatched on the row's
+#         transform), and the pl-qam (q-tilt) apply — proven four-way by
+#         tests/preference-learning-band.fk → 31. Remaining: pl_kto over a tiny
+#         unpaired good/bad stream (the two-angle mtb-step verdict that a good
+#         signal raises its features' score above z_ref, a bad signal lowers it),
+#         pl_ipo on a pair reusing mtb-pressure-of, and the logistic transform's
+#         σ via the round-lens for exact four-way.
 #
 # GAP-P2: the length-normalize pool (SimPO) and the odds-ratio transform
 #         (ORPO) are named here as transform values; their numeric bodies

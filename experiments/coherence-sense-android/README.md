@@ -137,6 +137,48 @@ Useful commands:
 Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
 `~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
+### The Mac as a sensing organ too — `mac-sense-organ.py`
+
+The witness *receives* the phone's senses. `mac-sense-organ.py` is its twin: the Mac
+senses **its own** organs and self-registers on the cloud Hati mesh as a `host-kernel`
+organ, exactly as the phone registers as `android-phone`. Now the world is sensed from
+**two angles at once** — `GET /api/hati/mesh/organs` shows both streaming.
+
+It is a carrier-last host-glue daemon (Python stdlib only). The body — recognition,
+world-growth, voice-traits, perception — stays in the Form recipes
+(`form/form-stdlib/world-model-live-sense.fk`, `perception-pipeline.fk`, `voice-traits.fk`);
+this script only reads the host and feeds them. Same privacy floor as the phone:
+**summaries only** — mic → RMS amplitude, camera/screen → mean luma. No raw audio, frames,
+or screenshots are stored or transmitted.
+
+Senses each tick: cpu load, ram, disk usage, network rx/tx rates, GPU identity +
+best-effort utilization, thermal pressure, battery, uptime — plus mic RMS, camera luma,
+and screen luma when the macOS permission is granted. It writes a full local receipt to
+`~/.coherence-network/hati/mac-sense-latest.json` and announces + heartbeats to the mesh.
+
+```bash
+cd experiments/coherence-sense-android
+chmod +x macos-sense-organ-service.sh
+./macos-sense-organ-service.sh install            # all senses
+./macos-sense-organ-service.sh install --no-media  # host vitals only
+./macos-sense-organ-service.sh status | restart | tail | uninstall
+```
+
+That writes `~/Library/LaunchAgents/earth.hati.coherence-sense.mac-sense-organ.plist`,
+starts now, restarts on crash, and starts again at login. Logs:
+`~/Library/Logs/CoherenceSense/mac-sense-organ.{out,err}.log`.
+
+**Permissions (TCC):** host vitals need none and stream immediately. `mic`, `camera`, and
+`screen` each need a one-time grant to the running interpreter under **System Settings →
+Privacy & Security → Microphone / Camera / Screen Recording**. Until granted, those lanes
+report `denied?` and the organ keeps streaming everything else — honest degradation, not
+failure. The mesh announce uses a non-default `User-Agent` (Cloudflare 1010-blocks the
+stock `Python-urllib` agent).
+
+One engine, two carriers: the *same* Form world-model recipes recognize the phone's frames
+and the Mac's frames. Windows is the next twin (`form/form-stdlib/hati-os-targets.fk`:
+WASAPI + Windows.Graphics.Capture + CIM), once a host is reachable.
+
 ### Keep the Android + Mac learning receipt proven
 
 From the repository root, prove the connected phone and Mac witness shape as

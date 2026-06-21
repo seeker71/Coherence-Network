@@ -222,6 +222,67 @@ def _stable_node_id() -> str:
 _NODE_ID = _stable_node_id()
 
 
+# --- Death recorder: a worker that vanishes should leave its last words ---
+# The worker has been disappearing with no traceback — killed by SIGTERM at
+# session teardown or by the OS under memory pressure. Python swallows those
+# silently. These handlers write one structured line naming the cause so the
+# next eye on the logs knows WHY the body went away. SIGKILL / OOM-kill can't
+# be caught here (the process is gone before any handler runs); the external
+# worker_supervisor records those from the outside.
+_PROCESS_START = time.time()
+_DEATH_LOG = _LOG_DIR / "worker_death.log"
+_DEATH_RECORDED = [False]
+
+
+def _record_death(cause: str) -> None:
+    if _DEATH_RECORDED[0]:
+        return
+    _DEATH_RECORDED[0] = True
+    uptime = time.time() - _PROCESS_START
+    line = (
+        f"{datetime.now(timezone.utc).isoformat()} WORKER EXIT "
+        f"cause={cause} pid={os.getpid()} node={_NODE_NAME} uptime={uptime:.0f}s"
+    )
+    try:
+        with open(_DEATH_LOG, "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception:
+        pass
+    try:
+        log.warning(line)
+    except Exception:
+        pass
+
+
+def _install_death_recorder() -> None:
+    import atexit
+    import signal as _signal
+
+    atexit.register(lambda: _record_death("atexit"))
+
+    def _handler(signum, _frame):
+        try:
+            name = _signal.Signals(signum).name
+        except Exception:
+            name = str(signum)
+        _record_death(f"signal:{name}")
+        # Restore default disposition and re-raise so the exit status still
+        # reflects the signal (the supervisor reads that to confirm the cause).
+        try:
+            _signal.signal(signum, _signal.SIG_DFL)
+            os.kill(os.getpid(), signum)
+        except Exception:
+            os._exit(128 + (signum if isinstance(signum, int) else 15))
+
+    for _name in ("SIGTERM", "SIGINT", "SIGBREAK"):
+        _sig = getattr(_signal, _name, None)
+        if _sig is not None:
+            try:
+                _signal.signal(_sig, _handler)
+            except (ValueError, OSError):
+                pass
+
+
 def _completed_process_text(value: object) -> str:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="ignore")
@@ -7031,6 +7092,7 @@ def _check_for_updates_and_restart() -> bool:
 
 
 def main():
+    _install_death_recorder()
     parser = argparse.ArgumentParser(description="Task runner — data-driven provider selection")
     parser.add_argument("--task", help="Run a specific task ID")
     parser.add_argument("--provider", help="Force a specific provider (overrides Thompson Sampling)")

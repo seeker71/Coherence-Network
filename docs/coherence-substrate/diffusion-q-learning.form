@@ -49,18 +49,19 @@
     (deep-adjoint     a TWO-layer policy gradient = the reference, by reversed gathers — the chain rule
                       with NO unrolled autograd tape: QAM's "no backprop through the chain", on our kernel))
 
-  # ── 1b. Wired into a live loop — the offline→online promotion [RUNS: band → 31] ──
+  # ── 1b. Wired into a live loop — the offline→online promotion, VALUE-NATIVE [RUNS: band → 63] ──
   # No longer an island: diffusion-q-cc.fk grafts dql-improve onto champion-challenger.
-  # A served champion policy already reaches the target value (Q=2.5); a raw challenger
-  # (Q=0) earns authority ONLY by the Q-tilt. dql-improve is the move that flips its trials
-  # from losing to winning; cc-promote? is the gate. The coin stays gl-veq6 equality
-  # (round-vs-round, fourth-arm safe) and the competition is champion-challenger's integer counts.
+  # A served champion policy reaches value Q=2.5; a raw challenger (Q=0) earns authority ONLY by the
+  # Q-tilt. The competition compares REAL FLOAT VALUE (summed Q over the window) with real float
+  # ordering (cc-val-reaches? / cc-val-exceeds?, ge/gt) — not a binary count. dql-improve raises the
+  # value; cc-val-promote? is the gate.
   (consumed-by-loop
-    (raw-stays-behind   the un-improved challenger (Q=0) loses every trial → the champion keeps authority)
-    (tilt-earns-it      a sufficient Q-tilt (focus 1/2, Q→2.5) reaches the champion → PROMOTED, authority flips)
-    (trusted-window     a winning challenger on a SHORT window (< min-samples) is NOT promoted — earned, not lucky)
-    (insufficient-tilt  a partial tilt (focus 1/8, Q→0.625) has not reached → still behind, not promoted)
-    (kernel-earned-it   dql-improve raised the challenger's value 0 → 2.5, the champion's level, by the adjoint))
+    (raw-stays-behind   the un-improved challenger (Q=0) is behind on value → the champion keeps authority)
+    (tilt-earns-it      a sufficient Q-tilt (focus 1/2, Q→2.5) reaches the champion's value → PROMOTED)
+    (trusted-window     reaching value on a SHORT window (< min-samples) is NOT promoted — earned, not lucky)
+    (insufficient-tilt  a partial tilt (focus 1/8, Q→0.625) has not reached the value → still behind)
+    (strict-beat        an overshoot (focus 3/4, Q→3.75) cc-val-exceeds by float gt; a tie does not)
+    (real-margin        the slack is a real float — the weak challenger reaches with margin 18.75, not with 0))
 
   # ── 2. The mapping — every QAM piece is a cell already here ──────────
   (mapping
@@ -87,33 +88,73 @@
     (federated-critics each cell runs its own QAM loop; slice-merge reaches the SAME numbers, which float-averaging can't)
     (traceable-adjoint every Q-update is a content-addressed delta with Blueprint provenance — cheap AND attributable))
 
-  # ── 5. The fourth-arm float idiom (a lesson this graft re-proved) ───
-  # The band's first cut diverged on fkwu (185 vs 255). Root cause: raw float
-  # gt/lt and round-vs-raw-large-int-literal box differently on the fourth
-  # kernel than on the three walkers. The fix is the body's standing discipline,
-  # held here too: compare floats ONLY through the verdict lens gl-veq6
-  # (round-vs-round). Never a raw gt/lt and never (eq (gl-r6 x) <large-int>) at
-  # the verdict level — both pass three-way and hide a fourth-arm divergence.
+  # ── 5. The fourth-arm float registration rule (the real lesson) ─────
+  # The band's first cut "diverged" on fkwu (185 vs 255), and an earlier note here
+  # blamed fkwu's float ordering. That was WRONG — a misdiagnosis. fkwu computes
+  # gt/lt/le/ge/eq on floats correctly, four-way (tests/float-compare-band.fk → 4095).
+  # The real cause: a band carrying float LITERALS must be registered `fks` in
+  # fourth-arm-bands.txt, because a float literal lowers to fk-f64 → tag 50 (strtod of
+  # a string slot) and the `fks` table carries that source text in the string pool.
+  # Registered `fkc` (pool-free), the literals collapse to one value and ordering
+  # diverges — a REGISTRATION error, never a kernel bug. This cell's bands are `fks`.
 
-  # ── 6. The gaps (the next stones, named — not built ahead of need) ──
+  # ── 6. The stones, and what remains ─────────────────────────────────
+  (closed
+    (Q2-preference-row [RUNS: preference-learning.fk + band → 31] the q-tilt is a first-class preference
+             row (id "qam", transform "q-adjoint", beta = the λ aperture) in the DATA catalog beside
+             IPO/KTO; one combinator runs them; pl-qam-apply IS dql-improve (not a parallel path); the
+             auto-research value fitness selects it. Also opens GAP-P1 — preference-learning.fk now exists)
+    (Q3-mesh           [RUNS: diffusion-q-mesh.fk + band → 31] federated critics consolidated by slice-merge
+             (TIES sign-election + trust-weighted FedAvg, integer-exact): three cells hold partial critics,
+             the merge yields the full critic no single cell held, dql-improve ascends the policy against
+             the consolidated value. QAM inside mesh-active-inference)
+    (Q1-fixpoint       [RUNS: q-actor-critic-fixpoint-band → 255] the actor-critic's two convergence loops in
+             one band: the CRITIC value-iterates to the Bellman fixpoint V* (gl-value-iterate, gl-bellman(V*)=V*),
+             the POLICY genuinely improves against its Q-critic (dql-actor: the Q-tilt raises value above the BC
+             anchor) and rests at its BC+Q equilibrium, with mtb-settle — newly lifted into metabolic-learning.fk
+             — descending an under-relaxed residual over multiple steps and halting at the observer gate)
+    (Q4-autoresearch   [RUNS: diffusion-q-autoresearch.fk + band → 63] the autoresearch keep-or-rollback loop
+             evolves the q-tilt GENE (a pl_qam row whose mutable beta is the pref-loss coordinate): propose →
+             measure pl-fitness → keep-or-rollback, the fold converging to the best gene; the loop TRACKS the
+             target (a different target selects a different gene) and rediscovers the catalog gene under a
+             derived target. dqa-step/dqa-search are one_iteration's keep-or-rollback core, made runnable))
   (gaps
-    (GAP-Q1  [INFER] form/form-stdlib/diffusion-q-learning.fk carries the seam recipes (dql-q, dql-grad-a,
-             dql-improve, dql-actor, dql-td-target, dql-backstep). The next stone is mtb-settle-style
-             ITERATION: a critic trained by repeated gl-bellman backups to a fixed point, the policy
-             improved to convergence, the whole loop one band)
-    (GAP-Q2  [INFER] the q-tilt as a first-class preference-learning row (reference:"critic", transform:
-             "q-adjoint"), so auto-research can evolve it alongside the DPO/KTO family it extends)
-    (GAP-Q3  [INFER] the mesh: federated critics over slice-merge, each cell's runtime error feeding its
-             short-term plasticity, only settled long-term value shared — QAM inside mesh-active-inference))
-  # (the offline→online champion-challenger loop landed — see §1b, diffusion-q-cc.fk + band → 31)
+    (GAP-Q5  [INFER] full state→action COUPLING: feed the critic's value-iterated V* into the policy's
+             improvement target so the two convergence loops are data-linked, not parallel demonstrations)
+    (GAP-Q6  [INFER] the FULL genome triple: the autoresearch loop over (pool, core, pref-loss) end-to-end
+             with a real proposer (agent_propose) + governance + experiment-history — the pref-loss coordinate
+             is now a selectable gene (Q4); the style-space genome and the proposer are the remaining wiring))
+  # (the offline→online champion-challenger loop landed value-native — §1b, diffusion-q-cc.fk + band → 63;
+  #  Q2 preference row, Q3 mesh, Q1 actor-critic fixpoint, Q4 autoresearch gene all landed — see §6 closed.)
 
   (invariant
     (graft-runs   the math graft is PROVEN four-way (255), not asserted; QAM's no-backprop-through-chain
                   promise is re-earned on our kernel by the two-layer adjoint claim)
-    (one-engine   no second native path — the recipe that proves four-way is the recipe that crystallises
-                  to native asm; the critic and the policy are both the one gl/mtb gather over edge data)
+    (one-engine   no second native path — the recipe that proves four-way IS the recipe that would
+                  crystallise to native asm (one engine, never a hand-written fast-path beside it); the
+                  critic and the policy are both the one gl/mtb gather over edge data)
     (scale-honest the band is strange-minimal (2 actions, one-hot context); real width + the iterated loop
                   are [INFER] stones, taken when an ask needs them, never built ahead of need)))
+
+  # ── 7. The native-execution floor (honest: sovereign in logic, walked in execution) ──
+  # An audit (2026-06-20) of "is all of this on the 4th kernel native — no Go/Rust/Python/clang/toolchain?":
+  # SOVEREIGN already — the LOGIC and the PROOF. Every recipe here is pure Form; no Go/Rust/Python/TS
+  #   carries the body. The bands cross FOUR-WAY: Go = Rust = TS = fkwu, byte-identical. fkwu IS the 4th kernel.
+  # NOT YET — no-clang NATIVE EXECUTION. The bands are EXECUTED by the fkwu WALKER (a tree-walker over the
+  #   flattened node-table), and the fkwu binary is emitted-C compiled by CLANG. So "runs on fkwu" today =
+  #   interpreted by a clang-built C program, NOT machine code from the body's own compiler.
+  # THE LANE IS REAL. The no-clang Form→asm lane (jit-lower → form-lower → form-asm → form-macho →
+  #   recipe-dylib → codesign → dylib_call) compiles Form to native arm64 BYTES with zero clang — proven
+  #   four-way, and it runs whole Unix tools native (echo/head/rot13/tr/wc/syscall; form-asm fks 31). The
+  #   arm64 FLOAT encoders exist (fa-fadd/fa-fmul).
+  # THE FRONTIER. That lane targets a FLAT byte/int/syscall value model. These recipes live on the walker's
+  #   TAGGED-VALUE model: cons-cell LISTS of BOXED fp64 floats, traversed by nth/head/tail (tags 18-23), with
+  #   float ops. Lowering THAT runtime onto Form→asm — the cons/float value model, end-to-end — is the
+  #   standing "op coverage is what grows" frontier (JIT_GAP_LEDGER #11 is float; list-traversal is beyond).
+  #   It is deep kernel work, named here as the next ground — never faked with a hand-written asm fast-path
+  #   (forbidden: native is what a proven recipe BECOMES, not a parallel hand-lowering).
+  # GAP-Q7 [INFER]: lower the gl/mtb cons-list + boxed-fp64 runtime onto the Form→asm native lane so a
+  #   diffusion-Q band runs as no-clang native machine code, matching its walked verdict byte-for-byte.
 
 # ─────────────────────────────────────────────────────────────────────
 # How to run / how to query
