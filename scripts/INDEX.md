@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 304
+**Total files**: 306
 
 | File | Purpose |
 |---|---|
@@ -188,6 +188,7 @@
 | [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
 | [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
+| [metal_llama_block_decode_audit.sh](metal_llama_block_decode_audit.sh) | metal_llama_block_decode_audit.sh — the KV-CACHED DECODE STEP running on Metal (M4 Max GPU witness): the |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
@@ -196,6 +197,7 @@
 | [model_vitality_native_http_capture_probe.sh](model_vitality_native_http_capture_probe.sh) | model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get. |
 | [model_vitality_production_ingest_probe.sh](model_vitality_production_ingest_probe.sh) | model_vitality_production_ingest_probe.sh — capture live production pulse/runtime slices for Form model vitality rows. |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
+| [multi_layer_stack_reference.py](multi_layer_stack_reference.py) | multi_layer_stack_reference.py — independent pure-libm fp64 reference for the |
 | [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
