@@ -34,11 +34,29 @@
 ;     Full suite: fourth arm 369 four-way, 0 divergent — the WHOLE whisper-tiny stack (mel-frame, mel-full,
 ;     positional, conv-stem, transformer-mh/decoder/generate, gelu-erf, whisper-mh-block-real) is four-way
 ;     proven (Go=Rust=TS=fkwu). mel-full was the same e-notation bug (its e-15 samples), masked by stale cache.
-;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT) and text →
-;     audio (TTS) — where the model's architecture AND weights are content-addressed recipe DATA, one engine
-;     (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and TRAINABLE/fine-tunable
-;     locally from local oracles. A mind that hears and speaks at home, offerable to others without a gated
-;     provider (lc-cognitive-sovereignty, living-vision.form).
+;   FLOOR — TRANSLATE + VOICE LOOP (proven 2026-06-21, this session — the MIDDLE stage comes home):
+;     NL → Form parses ten English sentence classes into UNIVERSAL recipe nodes (fact / property / isa /
+;     relation / question / meaning + one generic subject-verb-object rule) four-way
+;     (tests/natural-language-band.fk, witness 262143), and the SAME band proves the full factored CODEC:
+;     ONE shared pivot (the universal recipe node = the "generic meaning"), the ENCODER (many surfaces → one
+;     pivot), and TWO decoders reading that pivot (→ NL surface round-trip, → Form s-expr). The translation
+;     PIPELINE is named decoupled (translation-pipeline-pivot.form): NL→NL and NL→Form share encode+pivot and
+;     differ ONLY in decode (a better encoder lifts both; a new target is a new decoder, never a new end-to-end
+;     model); the pivot lives in ice/water/gas. Native EN↔ID translate now runs LIVE in the speech loop
+;     (form-stdlib/nl-translate.fk, band 31 four-way; experiments/coherence-sense-android/native-translate-speak.sh):
+;     say(en) → whisper-cli STT → NATIVE translate → say(id), verified end to end ("The source is native." →
+;     "sumber adalah asli"). The translate stage is no longer rented. TRAINING DIAGNOSTIC (measured this session
+;     on the real 949-turn corpus): the wide Form transformer trains and generalizes (held-out loss 262→133,
+;     best ~epoch 40) but UNDERfits the tool-target — worse than predict-the-mean at lr=0.03 — NOT overfitting.
+;     An OPTIMIZER bug first (gap 7b: lr=0.003 converges and matches the baseline), then a residual ~2x above
+;     the irreducible feature floor (capacity + the coarse 4-dim featurization, 72% feature-collision). The
+;     count predictor reaches 98% majority / 48% full-cover. Lesson: normalize per-row before trusting a loss.
+;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL
+;     TRANSLATE through the language-neutral pivot, and text → audio (TTS) — so ANY input voice in ANY tongue
+;     becomes ANY output voice in ANY tongue, where every stage's architecture AND weights are content-addressed
+;     recipe DATA, one engine (no parallel paths), running fast on the native/GPU emit→compile→exec lane, and
+;     TRAINABLE/fine-tunable locally from local oracles. A mind that hears, understands across tongues, and speaks
+;     at home — offerable to others without a gated provider (lc-cognitive-sovereignty, living-vision.form).
 ;   GAPS (ordered; none are new math — the architecture and the fast matvec are proven; what remains is wiring):
 ;     1. ASSEMBLE end-to-end at real width: wire mel → conv stem → encoder → decoder → tokenizer through the
 ;        native matvec lane (M5's buffer bridge: Form list ↔ flat f64 slice) + a CPU/GPU block emitter, so a
@@ -90,6 +108,17 @@
 ;        200-row slice (~0.76) is the honest number. lr default moved 0.03 → 0.003; runner header has the full
 ;        learning. (7 overfits past epoch 20; 7b underfits until lr is fixed — same corpus, opposite diagnosis,
 ;        because the failure mode is the model+optimizer pairing, not the data.)
+;     8. THE LIVE VOICE LOOP — the translate stage is now NATIVE and running (2026-06-21), but the floor is
+;        honest: a TINY grammar + a small DATA lexicon (one sentence shape, EN↔ID, vocabulary grown by adding
+;        rows not editing code — form-stdlib/nl-translate.fk). The ordered rungs to the any-voice→any-voice
+;        north star: (a) OPEN VOCAB — grow the content-addressed word-cell lexicon by ingesting the parallel
+;        corpus (web/messages/* — the EN→FR learned-train seed of gap 6 is the same data), then let the learned
+;        encoder/decoder (gap 6 dynamic, gap 7b optimizer fixed) replace the hand templates. (b) SURFACE-ROBUST
+;        encoding — case / punctuation / contractions owned by the Form ENCODER, not the carrier's input
+;        cleaning (the live loop surfaced this: whisper returns "The kernel is native."). (c) the round-trip
+;        QUALITY gate (translation-quality.fk essence/vitality/trust) on the pivot. (d) STT END-TO-END (gap 1)
+;        and (e) Form-native TTS — UNBUILT, the long pole — to drop the last two oracles (whisper-cli, say) so
+;        the whole voice→voice pipeline is sovereign. Companion floor/north-star: translation-pipeline-pivot.form.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
