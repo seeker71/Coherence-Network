@@ -1,0 +1,38 @@
+; world-build-band.fk — establishes, four-way, the world-building interface:
+; cells offer cells into a shared commons; content-addressing holds each shape
+; once; the offer law gates entry; the commons is the union of what cells offer.
+;
+; The world accepts invitations and offers. One cell offers a recipe, then the
+; same content again (dedup), then a new one; a cell reaches with a mode the world
+; does NOT accept (held out); a second cell's world is merged into the commons
+; (a shape offered by both is counted once). The witness packs every fact.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/world-build.fk
+
+(do
+    ; the world's accepting interface — it honors invitations and offers
+    (let accepting (list (m-invite) (m-offer)))
+
+    ; cell A offers recipe "r-add" -> enters
+    (let w1 (world-offer (world-empty) (m-offer) accepting "r-add"))
+    ; cell B offers the SAME content "r-add" -> content-addressed dedup, size stays 1
+    (let w2 (world-offer w1 (m-offer) accepting "r-add"))
+    ; cell B offers a new recipe "r-mul" -> enters, size 2
+    (let w3 (world-offer w2 (m-offer) accepting "r-mul"))
+    ; cell C reaches to push "r-leak" through m-project, which the world does NOT
+    ; accept -> held out (the commons never takes the un-offered)
+    (let w4 (world-offer w3 (m-project) accepting "r-leak"))
+
+    ; a second cell's world, offered independently, then MERGED into the commons
+    (let other (world-offer (world-offer (world-empty) (m-offer) accepting "r-mul")
+                            (m-offer) accepting "r-sub"))
+    (let commons (world-merge w4 other))
+
+    ; w4 = {r-add, r-mul} -> 2 (dedup held, leak held out)
+    (let s-w4 (world-size w4))
+    ; commons = {r-add, r-mul, r-sub} -> 3 (r-mul offered by both, counted once)
+    (let s-commons (world-size commons))
+    ; the leak was held out of the commons
+    (let held (if (world-has? w4 "r-leak") 0 1))
+    ; 2 + 3*10 + 1*100 = 132
+    (add s-w4 (add (mul s-commons 10) (mul held 100))))

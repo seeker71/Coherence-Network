@@ -1,0 +1,43 @@
+; world-build.fk — the world-building interface: cells offer cells/recipes into a
+; shared commons; content-addressing holds each shape once; the offer/consent law
+; gates entry. The last of the five cross-cell interfaces — sense / ask / share /
+; learn / BUILD — and the generalization of co-learning's cl-merge from exemplars
+; to ANY content-addressed cell: the shared world IS the content-addressed union
+; of what cells offer, each shape held once, honored or held.
+;
+; A contribution is named by its content-address (its content-hash id); two cells
+; offering the same content carry the same id, so the union dedups for free — same
+; law as recipe sharing (form-gen.fk: same source -> same NodeID) and federated
+; learning (co-learning.fk: same exemplar -> one merkle NodeID).
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk
+
+(do
+    (defn world-empty () (empty))
+
+    ; content-addressed membership: is this content (by its address) already here?
+    (defn world-has? (w id)
+        (if (nil? w) false
+            (if (str_eq (head w) id) true (world-has? (tail w) id))))
+
+    ; OFFER content into the world through the offer/consent law: it enters iff the
+    ; contributor's mode is honored by the world's accepting interface; honored +
+    ; new -> added; honored + already present -> unchanged (content-addressed
+    ; dedup); not honored -> unchanged (the commons never takes the un-offered).
+    (defn world-offer (w action accepting id)
+        (if (ci-honors? action accepting)
+            (if (world-has? w id) w (cons id w))
+            w))
+
+    ; MERGE two worlds into their content-addressed union (dedup for free).
+    ; cl-merge generalized from exemplars to any cell: the commons is the union of
+    ; what every cell has offered, each shape counted once.
+    (defn world-merge-into (acc b)
+        (if (nil? b) acc
+            (world-merge-into
+                (if (world-has? acc (head b)) acc (cons (head b) acc))
+                (tail b))))
+    (defn world-merge (a b) (world-merge-into a b))
+
+    (defn world-size (w) (len w))
+    0)
