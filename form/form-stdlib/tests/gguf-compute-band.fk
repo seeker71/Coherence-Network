@@ -1,0 +1,17 @@
+; preludes: form-stdlib/core.fk form-stdlib/q4k-dequant.fk form-stdlib/transformer-block.fk form-stdlib/gguf-compute.fk
+;
+; gguf-compute-band -- one REAL matvec output computed ENTIRELY in Form from raw GGUF Q4_K bytes: the
+; same real llama3.2:3b superblock (blk.0.ffn_gate.weight) the q4k band dequants, dotted with a
+; deterministic 256-input by tb-dot. The verdict IS the computed dot (x1000, rounded); Go=Rust=TS must
+; agree -- the load+matvec runs as Form code, executed by the kernels, on real model weights (no C).
+(do
+    (let d    0.00010609626770019531)
+    (let dmin 0.0009484291076660156)
+    (let SCALES (list 229 178 240 255 160 107 239 191 26 174 22 179))
+    (let QS (list 135 151 157 85 141 119 132 25 148 67 236 75 75 167 115 128 174 96 117 181 88 109 101 142
+                  159 152 85 156 10 167 235 213 146 203 140 191 96 14 137 172 203 135 167 205 186 152 140 104
+                  105 206 186 155 173 116 185 249 234 213 153 236 74 153 105 231 185 130 215 82 135 196 38 164
+                  99 99 85 43 227 52 4 143 40 178 50 41 40 68 35 182 104 119 144 218 54 134 1 70 58 118 95 195
+                  183 37 121 198 151 151 119 118 105 149 136 0 246 133 186 151 162 154 150 168 180 87 25 135
+                  119 107 201 187))
+    (round (mul (gguf-q4k-row-dot d dmin SCALES QS (gff-x256)) 1000.0)))
