@@ -1,0 +1,61 @@
+; speaker-lin.fk — Challenger 2 ("Lin"): a learned LINEAR DISCRIMINANT over the C1 supervector.
+;
+; C1 (speaker-stat) weights every supervector dimension equally, so noisy dimensions drown the
+; discriminative ones and same-gender voices collapse together. C2 LEARNS a per-dimension weight
+; — Fisher's ratio, between-speaker variance / within-speaker variance — that lifts the dimensions
+; carrying speaker identity and damps the rest, then scores by weighted cosine (sl-apply ++
+; speaker-embed se-dot). This is the diagonal-LDA / i-vector-backend idea: the training is the
+; variance statistics; the model is the weight vector.
+;
+; The weights are LEARNED from a labeled corpus by sl-fisher (here, in Form — proven). They are
+; data; sl-apply is the inference op. Builds on speaker-stat (ss-mean/ss-add-vec/ss-scale-vec).
+;
+; preludes carry speaker-stat.fk. Proven by form-stdlib/tests/speaker-lin-band.fk.
+
+(do
+    ; --- inference: transform a supervector by the learned weights (fixed-point /1000) ---
+    (defn sl-apply (w x)
+        (if (eq (len w) 0) (empty)
+            (cons (div (mul (head w) (head x)) 1000) (sl-apply (tail w) (tail x)))))
+
+    ; --- training: Fisher weights from a GROUPED corpus ---
+    ; groups = list of speakers; each speaker = list of sample supervectors (the carrier groups by label).
+    (defn sl-sqdev-vec (v m)
+        (if (eq (len v) 0) (empty)
+            (cons (mul (sub (head v) (head m)) (sub (head v) (head m))) (sl-sqdev-vec (tail v) (tail m)))))
+    (defn sl-var-sum (samples m)
+        (if (eq (len samples) 1) (sl-sqdev-vec (head samples) m)
+            (ss-add-vec (sl-sqdev-vec (head samples) m) (sl-var-sum (tail samples) m))))
+    (defn sl-spk-var (samples)            ; per-dim variance within one speaker's samples
+        (do (let m (ss-mean samples)) (ss-scale-vec (sl-var-sum samples m) (len samples))))
+
+    (defn sl-within-sum (groups)
+        (if (eq (len groups) 1) (sl-spk-var (head groups))
+            (ss-add-vec (sl-spk-var (head groups)) (sl-within-sum (tail groups)))))
+    (defn sl-within (groups) (ss-scale-vec (sl-within-sum groups) (len groups)))   ; mean within-speaker var
+
+    (defn sl-spk-means (groups)
+        (if (eq (len groups) 0) (empty)
+            (cons (ss-mean (head groups)) (sl-spk-means (tail groups)))))
+    (defn sl-between (groups) (sl-spk-var (sl-spk-means groups)))                   ; variance of the speaker means
+
+    ; weight[i] = between[i] * scale / (within[i] + eps)  — Fisher's ratio, fixed-point
+    (defn sl-ratio-vec (b w)
+        (if (eq (len b) 0) (empty)
+            (cons (div (mul (head b) 1000) (add (head w) 1)) (sl-ratio-vec (tail b) (tail w)))))
+    (defn sl-fisher (groups) (sl-ratio-vec (sl-between groups) (sl-within groups)))
+
+    ; A dimension with near-zero within-speaker variance gets an explosive ratio and would
+    ; dominate the cosine, collapsing every pair to 1.0. Clamp each weight to [lo,hi] so the
+    ; reweighting stays a re-balancing, not a takeover — the diagonal-LDA regularizer.
+    (defn sl-clamp1 (v lo hi) (if (lt v lo) lo (if (gt v hi) hi v)))
+    (defn sl-clamp-vec (xs lo hi)
+        (if (eq (len xs) 0) (empty)
+            (cons (sl-clamp1 (head xs) lo hi) (sl-clamp-vec (tail xs) lo hi))))
+    (defn sl-fisher-clamped (groups lo hi) (sl-clamp-vec (sl-fisher groups) lo hi))
+
+    ; Band energies are all POSITIVE, so raw supervectors sit in one orthant and cosine is
+    ; inflated. Centering each supervector by the global mean turns it into a SIGNED deviation —
+    ; the move that makes a linear discriminant separate (LDA centers before it projects).
+    (defn sl-center (x m)
+        (if (eq (len x) 0) (empty) (cons (sub (head x) (head m)) (sl-center (tail x) (tail m))))))
