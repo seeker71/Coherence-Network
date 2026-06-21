@@ -1,0 +1,84 @@
+{
+  "date": "2026-06-21",
+  "thread_branch": "claude/workflow-ref-cd-fix",
+  "commit_scope": "Heal a pre-existing false-positive in the workflow-reference guard: it resolved relative `./script.sh` references from the repo root and from api/, but never accounted for a step's `cd <dir>`. windows-host.yml does `cd form` then `./build-form-cli.sh` — the script exists at form/build-form-cli.sh, but the validator flagged it missing, failing local_preflight on every PR. The fix tracks the cd working directory within each run block and resolves relative references against it too.",
+  "files_owned": [
+    "scripts/validate_workflow_references.py",
+    "docs/system_audit/commit_evidence_20260621_workflow_ref_cd.json"
+  ],
+  "idea_ids": [
+    "workflow-reference-cd-resolution"
+  ],
+  "spec_ids": [
+    "workflow-reference-cd-resolution"
+  ],
+  "task_ids": [
+    "task-2026-06-21-workflow-ref-cd"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Before: python3 scripts/validate_workflow_references.py reported missing_count=1 -> .github/workflows/windows-host.yml line 97 './build-form-cli.sh' (kind exec_script), failing scripts/worktree_pr_guard.py local_preflight on every branch.",
+    "Root cause: _collect_missing resolved relative tokens only against ROOT and ROOT/api; windows-host.yml does 'cd form' then './build-form-cli.sh', and form/build-form-cli.sh exists (git show origin/main:form/build-form-cli.sh present).",
+    "Fix: track cwd from `cd <dir>` lines within a run block (reset at step / run: boundaries) and add ROOT/cwd/token as a candidate path. The change only ADDS a candidate — it can never make a currently-passing reference fail, so no regression is possible.",
+    "After: python3 scripts/validate_workflow_references.py -> checked 31, missing 0, exit 0. The guard's workflow-reference step now passes.",
+    "Carrier note: this is CI tooling (a YAML-workflow reference validator), not body logic — Python is the appropriate carrier; no new body recipe is implied."
+  ],
+  "change_files": [
+    "scripts/validate_workflow_references.py",
+    "docs/system_audit/commit_evidence_20260621_workflow_ref_cd.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py  (before: missing 1; after: checked 31, missing 0, exit 0)",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI runs the same validator; it now reports 0 missing."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-ci-tooling",
+    "notes": "A CI validator fix; no public HTTP endpoint or service change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed (validator now reports 0 missing; guard green); CI and merge remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The workflow-reference guard no longer false-flags cd-relative script references; local_preflight passes for branches that were blocked only by this false-positive.",
+    "public_endpoints": [
+      "none changed"
+    ],
+    "test_flows": [
+      "Validator run before the fix flags windows-host.yml:97; after the fix reports 0 missing across 31 checked references."
+    ]
+  }
+}
