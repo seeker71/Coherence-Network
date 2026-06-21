@@ -1,0 +1,242 @@
+//
+// form-ptx rope f32: rotary position embedding, one thread per adjacent PAIR t (n/2 threads).
+// Bit-exact to form-stdlib/rope.fk composed over form-stdlib/trig.fk, op-for-op in fp32:
+//   i  = 2*t ; hd = i mod HD
+//   e  = (-1.0*hd) / (HD*1.0)
+//   lb = fln(10000.0)                       [frexp-style split + 14-term atanh series + LN2]
+//   freq = fexp(e*lb)                        [recipe math_exp stood in by the 14-term Taylor]
+//   a  = (pos*1.0) * freq
+//   c  = fcos(a) = fsin(a + HALF_PI) ; s = fsin(a)
+//   out[i]   = q0*c - q1*s ; out[i+1] = q0*s + q1*c   (a planar rotation)
+// fln / fsin / fcos / fexp are the recipe's own series, NOT sin.approx/ex2.approx/lg2.approx.
+// All mul+add stay TWO roundings (explicit mul.f32 then add.f32); div.rn.f32 for divides; JIT -O0.
+// Constants (f32): LN2=0f3F317218 TAU=0f40C90FDB HALF_PI=0f3FC90FDB base=0f461C4000 (10000.0).
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_rope_f32(
+    .param .u64 p_q,
+    .param .u64 p_out,
+    .param .u32 p_pos,
+    .param .u32 p_HD,
+    .param .u32 p_n
+)
+{
+    .reg .pred  %p<4>;
+    .reg .f32   %f<80>;
+    .reg .b32   %r<40>;
+    .reg .b64   %rd<12>;
+
+    ld.param.u64    %rd1, [p_q];
+    ld.param.u64    %rd2, [p_out];
+    ld.param.u32    %r1, [p_pos];
+    ld.param.u32    %r2, [p_HD];
+    ld.param.u32    %r3, [p_n];
+
+    // t = global pair index; n/2 pairs total
+    mov.u32         %r4, %ctaid.x;
+    mov.u32         %r5, %ntid.x;
+    mov.u32         %r6, %tid.x;
+    mad.lo.s32      %r7, %r4, %r5, %r6;      // t
+    shr.u32         %r8, %r3, 1;            // npairs = n/2
+    setp.ge.u32     %p1, %r7, %r8;
+    @%p1 bra        DONE;
+
+    // i = 2*t ; hd = i mod HD
+    shl.b32         %r9, %r7, 1;            // i = 2*t
+    rem.u32         %r10, %r9, %r2;         // hd = i mod HD
+
+    // load q0 = q[i], q1 = q[i+1]
+    mul.wide.u32    %rd3, %r9, 4;
+    add.s64         %rd4, %rd1, %rd3;
+    ld.global.f32   %f1, [%rd4];           // q0
+    add.s32         %r11, %r9, 1;
+    mul.wide.u32    %rd5, %r11, 4;
+    add.s64         %rd6, %rd1, %rd5;
+    ld.global.f32   %f2, [%rd6];           // q1
+
+    // e = (-1.0*hd) / (HD*1.0)
+    cvt.rn.f32.u32  %f3, %r10;             // (float)hd
+    mul.f32         %f4, 0fBF800000, %f3;  // -1.0 * hd
+    cvt.rn.f32.u32  %f5, %r2;              // (float)HD
+    mul.f32         %f6, %f5, 0f3F800000;  // HD * 1.0
+    div.rn.f32      %f7, %f4, %f6;         // e
+
+    // ---- lb = fln(10000.0) ----
+    // base = 10000.0 (>=1): ln-exponent up, ln-mantissa to [1,2), ln-m atanh series, + e*LN2
+    // exponent: a=base; e2=0; while(a>=2){a*=0.5;e2++}
+    mov.f32         %f8, 0f461C4000;       // a = 10000.0
+    mov.u32         %r12, 0;               // e2
+LN_EXP:
+    setp.ge.f32     %p2, %f8, 0f40000000;  // a >= 2.0
+    @!%p2 bra       LN_EXP_END;
+    mul.f32         %f8, %f8, 0f3F000000;  // a *= 0.5
+    add.u32         %r12, %r12, 1;
+    bra             LN_EXP;
+LN_EXP_END:
+    // mantissa: m=base; while(m>=2)m*=0.5; while(m<1)m*=2
+    mov.f32         %f9, 0f461C4000;       // m = 10000.0
+LN_M_HI:
+    setp.ge.f32     %p2, %f9, 0f40000000;
+    @!%p2 bra       LN_M_HI_END;
+    mul.f32         %f9, %f9, 0f3F000000;
+    bra             LN_M_HI;
+LN_M_HI_END:
+LN_M_LO:
+    setp.lt.f32     %p2, %f9, 0f3F800000;  // m < 1.0
+    @!%p2 bra       LN_M_LO_END;
+    mul.f32         %f9, %f9, 0f40000000;  // m *= 2.0
+    bra             LN_M_LO;
+LN_M_LO_END:
+    // z = (m-1)/(m+1) ; z2 = z*z
+    sub.f32         %f10, %f9, 0f3F800000;
+    add.f32         %f11, %f9, 0f3F800000;
+    div.rn.f32      %f12, %f10, %f11;      // z
+    mul.f32         %f13, %f12, %f12;      // z2
+    // ln-ser: zpow=z; acc=0; j=0..13: acc += (zpow*z2)/(2*(j+1)+1); zpow*=z2
+    mov.f32         %f14, %f12;            // zpow = z
+    mov.f32         %f15, 0f00000000;      // acc = 0.0
+    mov.u32         %r13, 0;               // j
+LN_SER:
+    setp.ge.u32     %p2, %r13, 14;
+    @%p2 bra        LN_SER_END;
+    mul.f32         %f16, %f14, %f13;      // num = zpow*z2
+    add.u32         %r14, %r13, 1;         // j+1
+    shl.b32         %r15, %r14, 1;         // 2*(j+1)
+    add.s32         %r16, %r15, 1;         // 2*(j+1)+1
+    cvt.rn.f32.u32  %f17, %r16;            // denom (float)
+    div.rn.f32      %f18, %f16, %f17;      // term
+    add.f32         %f15, %f15, %f18;      // acc += term
+    mov.f32         %f14, %f16;            // zpow = zpow*z2
+    add.u32         %r13, %r13, 1;
+    bra             LN_SER;
+LN_SER_END:
+    // ln-m = 2*(z + acc)
+    add.f32         %f19, %f12, %f15;      // z + acc
+    mul.f32         %f20, 0f40000000, %f19;// 2*(...)
+    // fln = e2*LN2 + ln-m
+    cvt.rn.f32.u32  %f21, %r12;            // (float)e2
+    mul.f32         %f22, %f21, 0f3F317218;// e2*LN2
+    add.f32         %f23, %f22, %f20;      // lb = fln(10000.0)
+
+    // ---- freq = fexp(e * lb) ----
+    mul.f32         %f24, %f7, %f23;       // v = e*lb
+    // fexp(v): k=0; while(|v|>0.5){v/=2;k++}; small Taylor(14); square back k times
+    mov.u32         %r17, 0;               // k
+FREDUCE:
+    abs.f32         %f25, %f24;
+    setp.gt.f32     %p2, %f25, 0f3F000000; // > 0.5
+    @!%p2 bra       FREDUCE_END;
+    div.rn.f32      %f24, %f24, 0f40000000;// v /= 2
+    add.u32         %r17, %r17, 1;
+    bra             FREDUCE;
+FREDUCE_END:
+    // small: nn=1; term=1; acc=1; while(nn<=14){t=v/nn; term*=t; acc+=term; nn++}
+    mov.f32         %f26, 0f3F800000;      // nn = 1.0
+    mov.f32         %f27, 0f3F800000;      // term = 1.0
+    mov.f32         %f28, 0f3F800000;      // acc = 1.0
+FSMALL:
+    setp.gt.f32     %p2, %f26, 0f41600000; // nn > 14.0
+    @%p2 bra        FSMALL_END;
+    div.rn.f32      %f29, %f24, %f26;      // t = v/nn
+    mul.f32         %f27, %f27, %f29;      // term *= t
+    add.f32         %f28, %f28, %f27;      // acc += term
+    add.f32         %f26, %f26, 0f3F800000;// nn += 1
+    bra             FSMALL;
+FSMALL_END:
+FSQUARE:
+    setp.eq.u32     %p2, %r17, 0;
+    @%p2 bra        FSQUARE_END;
+    mul.f32         %f28, %f28, %f28;      // acc = acc*acc
+    sub.u32         %r17, %r17, 1;
+    bra             FSQUARE;
+FSQUARE_END:
+    // freq = %f28
+    // a = (pos*1.0) * freq
+    cvt.rn.f32.u32  %f30, %r1;             // (float)pos
+    mul.f32         %f31, %f30, 0f3F800000;// pos*1.0
+    mul.f32         %f32, %f31, %f28;      // a = pos * freq
+
+    // ---- s = fsin(a) ----   (input angle in %f32, result in %f50)
+    // range-reduce: q=a/TAU; rnd = trunc(q + copysign(0.5,q)); r = a - TAU*rnd
+    div.rn.f32      %f33, %f32, 0f40C90FDB;// q = a/TAU
+    mov.f32         %f34, 0f3F000000;      // 0.5
+    setp.lt.f32     %p2, %f33, 0f00000000;
+    @%p2 neg.f32    %f34, %f34;            // copysign(0.5, q)
+    add.f32         %f35, %f33, %f34;      // q + half
+    cvt.rzi.f32.f32 %f36, %f35;            // trunc toward zero -> rnd
+    mul.f32         %f37, 0f40C90FDB, %f36;// TAU*rnd
+    sub.f32         %f38, %f32, %f37;      // r
+    // sin-acc: x2=r*r; term=r; acc=0; k=0..9: acc+=term; term = (term*-1.0*x2)/((2(k+1))*(2(k+1)+1))
+    mul.f32         %f39, %f38, %f38;      // x2
+    mov.f32         %f40, %f38;            // term = r
+    mov.f32         %f41, 0f00000000;      // acc = 0
+    mov.u32         %r18, 0;               // k
+SIN1:
+    setp.ge.u32     %p2, %r18, 10;
+    @%p2 bra        SIN1_END;
+    add.f32         %f41, %f41, %f40;      // acc += term
+    mul.f32         %f42, %f40, 0fBF800000;// term*-1.0
+    mul.f32         %f43, %f42, %f39;      // *x2
+    add.u32         %r19, %r18, 1;         // k+1
+    shl.b32         %r20, %r19, 1;         // 2(k+1)
+    add.s32         %r21, %r20, 1;         // 2(k+1)+1
+    mul.lo.s32      %r22, %r20, %r21;      // (2(k+1))*(2(k+1)+1)
+    cvt.rn.f32.u32  %f44, %r22;            // denom (float)
+    div.rn.f32      %f40, %f43, %f44;      // new term
+    add.u32         %r18, %r18, 1;
+    bra             SIN1;
+SIN1_END:
+    mov.f32         %f50, %f41;            // s = fsin(a)
+
+    // ---- c = fcos(a) = fsin(a + HALF_PI) ----  (result in %f51)
+    add.f32         %f52, %f32, 0f3FC90FDB;// a + HALF_PI  (a = mul x 1.0 already done)
+    div.rn.f32      %f53, %f52, 0f40C90FDB;// q
+    mov.f32         %f54, 0f3F000000;
+    setp.lt.f32     %p2, %f53, 0f00000000;
+    @%p2 neg.f32    %f54, %f54;
+    add.f32         %f55, %f53, %f54;
+    cvt.rzi.f32.f32 %f56, %f55;
+    mul.f32         %f57, 0f40C90FDB, %f56;
+    sub.f32         %f58, %f52, %f57;      // r
+    mul.f32         %f59, %f58, %f58;      // x2
+    mov.f32         %f60, %f58;            // term
+    mov.f32         %f61, 0f00000000;      // acc
+    mov.u32         %r23, 0;
+SIN2:
+    setp.ge.u32     %p2, %r23, 10;
+    @%p2 bra        SIN2_END;
+    add.f32         %f61, %f61, %f60;
+    mul.f32         %f62, %f60, 0fBF800000;
+    mul.f32         %f63, %f62, %f59;
+    add.u32         %r24, %r23, 1;
+    shl.b32         %r25, %r24, 1;
+    add.s32         %r26, %r25, 1;
+    mul.lo.s32      %r27, %r25, %r26;
+    cvt.rn.f32.u32  %f64, %r27;
+    div.rn.f32      %f60, %f63, %f64;
+    add.u32         %r23, %r23, 1;
+    bra             SIN2;
+SIN2_END:
+    mov.f32         %f51, %f61;            // c = fcos(a)
+
+    // ---- rotate: out[i]=q0*c - q1*s ; out[i+1]=q0*s + q1*c ----
+    mul.f32         %f70, %f1, %f51;       // q0*c
+    mul.f32         %f71, %f2, %f50;       // q1*s
+    sub.f32         %f72, %f70, %f71;      // out0
+    mul.f32         %f73, %f1, %f50;       // q0*s
+    mul.f32         %f74, %f2, %f51;       // q1*c
+    add.f32         %f75, %f73, %f74;      // out1
+
+    mul.wide.u32    %rd7, %r9, 4;
+    add.s64         %rd8, %rd2, %rd7;
+    st.global.f32   [%rd8], %f72;
+    mul.wide.u32    %rd9, %r11, 4;
+    add.s64         %rd10, %rd2, %rd9;
+    st.global.f32   [%rd10], %f75;
+
+DONE:
+    ret;
+}
