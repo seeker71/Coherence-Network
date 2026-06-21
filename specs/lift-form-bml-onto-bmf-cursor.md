@@ -1,8 +1,8 @@
 ---
 id: lift-form-bml-onto-bmf-cursor
 idea_id: bmf-bml-compiler-self-host
-status: draft
-decision: needs-decision
+status: active
+decision: approved-2026-06-20-proceed
 source:
   - file: form/form-stdlib/source-compiler.fk
     symbols: [fsc-compile-section-recipe, fsc-compile-form-bml-section-recipe, fsc-compile-form-bml-def-recipe, fsc-rec-fndef, fsc-rec-form-call]
@@ -102,14 +102,20 @@ python3 scripts/validate_spec_quality.py --file specs/lift-form-bml-onto-bmf-cur
 - **Recipe-shape parity is exact-match-sensitive**: `node_eq` requires the lowerer to reproduce the line compiler's interned tree precisely. Mitigated by reusing the line compiler's own `fsc-rec-*` constructors, so content-addressing guarantees equality (proven: 255 three-way).
 - **Flattener binds names at flatten time, not late**: a redefinition of `cp-in-class?` in a later prelude is honored by the tree-walkers but NOT by the fkwu flattener (it binds `gm-run`'s reference to the first definition). That is why `bmlname` lives in `bmf-core.fk`, not as an override. Confirmed empirically (override → fkwu 8 vs 123; in bmf-core → PASS-4WAY).
 - **fkwu stack on Windows**: confirmed `0xC00000FD` stack overflow on `bmf-grammar` at 1 MiB; the 64 MiB reserve fixes it. Reserve is address space, committed lazily — no runtime cost. CI (8 MiB) was never affected.
-- This is a bootstrap-architecture change and carries `decision: needs-decision`.
+- This is a bootstrap-architecture change; approved 2026-06-20 (proceed). Breath 1 + whole-file core.fk cursor parity landed; the live default-flip remains gated as the self-hosting arc (below).
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up task: register this idea via `POST /api/ideas` per the project idea-tracking guardrail (the north star exists in `BMF_BML_COMPILER_PICTURE.md`; the new unit is the per-breath cursor-lift sequencing).
-- Follow-up task: cross the recipe *lowering* on the fourth arm — either by getting the line compiler's `fsc-rec-*`/`FORM-PRIMITIVE-TABLE` path to cross fkwu, or by a cursor-native lowerer that does not depend on it, so the full source→recipe path (not just the parse) is four-way.
-- Follow-up task: breath 2 — `let` and top-level `==` body constructs in the form.bml cursor grammar + lowerer, same parity gate.
-- Follow-up task: breath 3 — multi-line `{ … }` method-body bodies (the `cell-undo` / `task-step` shapes in core.fk).
-- Follow-up task: breath N — flip `form.bml` routing onto the cursor behind a flag once all of core.fk's constructs round-trip, then promote via the `.fkb` ratchet and run the floor audit before composting the released scanner tissue.
-- Follow-up task: repeat the arc for `source-compiler.fk` after core.fk fully lifts.
-- Follow-up task: the separable kernel-ABI lift (Recipe/`.fkb` binary load path on all four arms) to retire the s-expr text wire.
+**Done in this arc:**
+- DONE: idea registered via `POST /api/ideas` (`lift-form-bml-onto-bmf-cursor`, `manifestation_status: partial`).
+- DONE: the recipe *lowering* crosses the fourth arm (`form-bml-cursor-lower` → 113, PASS-4WAY) — the full form.bml source→recipe path (parse 123 + lower 113) is four-way.
+- DONE: whole-file core.fk coverage — `let`, multi-line `{ … }` block defs (`cell-undo`/`task-step`), trailing `0;` — proven `node_eq` to the line compiler over the entire file (`form-bml-core-parity-band.fk` → 1, three-way). The cursor is a verified drop-in compiler for core.fk.
+
+**The live default-flip — the self-hosting arc (the one real remaining blocker):**
+Routing `form.bml` through the cursor *by default in the build* is NOT done, and must not be slammed: it would break the build today. Concrete prerequisites, in order:
+- The cursor must cover the OTHER form.bml files the build compiles — notably `compiler.fk`, which uses `class`/`template`/`route` the cursor grammar does not yet parse. A global flip needs that coverage OR a per-file try-cursor-else-line route. (Breaths 4+.)
+- The core.fk bootstrap cycle must be broken: the cursor depends on core.fk's functions, and core.fk is itself a form.bml file — so core.fk cannot compile *itself* through the cursor without a prior image. This is exactly the `.fkb` bootstrap-image ratchet (`BMF_BML_COMPILER_PICTURE.md`): line-compile core.fk → image → cursor re-compiles + verifies against it.
+- A self-verifying route in `validate.sh` `prepare_sources` (compile via cursor, verify `node_eq` against the line compiler, fall back on mismatch) so the flip can never regress. NOT wired into the shared `fsc-compile-section-recipe` (that would risk every fkwu band that flattens source-compiler.fk).
+- Then promote via the `.fkb` ratchet + floor audit before composting the released hand-scanner tissue.
+
+**After core.fk:** repeat the arc for `source-compiler.fk`; and the separable kernel-ABI lift (Recipe/`.fkb` binary load path on all four arms) to retire the s-expr text wire.
