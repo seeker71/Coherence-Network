@@ -1,0 +1,37 @@
+; preludes: form-stdlib/speaker-stat.fk form-stdlib/speaker-lin.fk
+;
+; speaker-lin-band — Challenger 2's learned linear discriminant (Fisher weights), three-way.
+;
+; Two speakers, two samples each, two dims. dim0 separates them (means 10 vs 40, stable);
+; dim1 is noise (both ~50, jittering ±1). Fisher must lift dim0 and damp dim1.
+;
+; Verdict 1023 when every claim lands:
+;   1   sl-apply scales elementwise        (w=[2000,500] x=[10,20] → [20,10], head 20)
+;   2   sl-apply second element            (= 10)
+;   4   within-speaker var dim0 = 0         (each speaker's dim0 is constant)
+;   8   within-speaker var dim1 = 1         (±1 jitter)
+;   16  between-speaker var dim0 = 225      (means 10,40)
+;   32  between-speaker var dim1 = 1        (means 51,49)
+;   64  Fisher weight dim0 = 225000         (huge — discriminative)
+;   128 Fisher weight dim1 = 500            (small — noise)
+;   256 clamp tames the explosive weight    (clamp 225000 to [1000,5000] = 5000)
+;   512 centering signs the feature          (center [10,20] by [3,5] → head 7)
+(do
+    (let groups (list (list (list 10 50) (list 10 52)) (list (list 40 50) (list 40 48))))
+    (let wi (sl-within groups))
+    (let bt (sl-between groups))
+    (let fi (sl-fisher groups))
+    (let fc (sl-fisher-clamped groups 1000 5000))
+    (let ap (sl-apply (list 2000 500) (list 10 20)))
+    (let ce (sl-center (list 10 20) (list 3 5)))
+    (let c0 (if (eq (head ap) 20) 1 0))
+    (let c1 (if (eq (head (tail ap)) 10) 2 0))
+    (let c2 (if (eq (head wi) 0) 4 0))
+    (let c3 (if (eq (head (tail wi)) 1) 8 0))
+    (let c4 (if (eq (head bt) 225) 16 0))
+    (let c5 (if (eq (head (tail bt)) 1) 32 0))
+    (let c6 (if (eq (head fi) 225000) 64 0))
+    (let c7 (if (eq (head (tail fi)) 500) 128 0))
+    (let c8 (if (eq (head fc) 5000) 256 0))
+    (let c9 (if (eq (head ce) 7) 512 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
