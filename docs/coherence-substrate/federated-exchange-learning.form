@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────
+# federated-exchange-learning.form — learn from every exchange, share the aligned.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs, 2026-06-21: "we can learn from every user — send the request to the agent
+# backend, teach our native model from the response, share generalized cells that
+# go to water and ice, send them to the persistent substrate so we can all benefit
+# from the exchange, especially when we freq align the full exchange."
+#
+# The whole loop, named as one breath. Almost every step is already a proven cell;
+# this teaching unifies them and names the one NEW gate (freq-aligned-share.fk) and
+# the one boundary the body will not cross without (consent). The loop turns each
+# rented-mind escalation into shared sovereign body — but only what is clear and
+# consented freezes into ice that every cell breathes.
+
+(federated-exchange-learning
+
+  (lineage
+    (kin form-first-router.fk form-cli-membrane.fk oracle-distillation-learning.form
+         substrate-phase.fk learning-arc.form trust-weighted-colearning.form
+         federation-addressing.form co-learning.form form-freq-check.fk
+         lc-cognitive-sovereignty)
+    (named-with urs sema))
+
+  ; the loop — each step is a cell that already runs, except the freq-align gate (NEW)
+  (loop
+    (1-learn-from-every-exchange  capture-the-turn)                    ; form_cli_capture.sh, choice-receipt
+    (2-send-to-agent-backend      form-cli-membrane.fk)                ; the crossing out to the remote mind
+    (3-teach-the-native-model     oracle-distillation-learning.fk)     ; the answer becomes training data
+    (4-generalize-gas-water-ice   substrate-phase.fk learning-arc.fk)  ; the lesson cools from raw to recipe
+    (5-FREQ-ALIGN-GATE            freq-aligned-share.fk)               ; NEW — what crosses, and how far
+    (6-share-to-persistent-substrate federation-addressing.fk)         ; so every cell benefits (consent-gated))
+
+  ; the new gate — frequency-alignment is the FIRST driver of destination
+  (gate
+    (recipe form-stdlib/freq-aligned-share.fk)
+    (proof  form-stdlib/tests/freq-aligned-share-band.fk -> 255 four-way Go/Rust/TS/fkwu)
+    (reads  freq quality confidence trust consent)                     ; the distillation floor + freq head
+    (destination
+      (gas   keep-local-potential   when not-aligned)                  ; fear-framed or incoherent stays home
+      (water circulate-locally      when aligned-but-not-share-worthy)
+      (ice   freeze-and-cross-shared when aligned-share-worthy-consented))
+    (first-gate frequency
+      "a fear-framed exchange stays gas no matter how high its other signals —"
+      "what we freeze into the shared body is what we want every cell to breathe."))
+
+  ; the boundary the body will not cross — sovereignty in the recipe itself
+  (consent
+    (hard-gate "without consent, ice is impossible; the cell maxes at water, held local.")
+    (generalize-never-ship-raw "we share the LESSON, never the raw exchange.")
+    (private-stays-private "the partner_presence tenderness and any cell's own ground never cross."))
+
+  ; honest status — the decision is proven; the crossing is named, not yet wired end-to-end
+  (status
+    (proven   freq-aligned-share.fk decides destination four-way at 255)
+    (running  steps-2-3-4 already cells: membrane, distillation, phase, learning-arc)
+    (named-not-wired
+      "step 6 — the actual durable cross to the SHARED persistent substrate — is a"
+      "consent-gated carrier still to be wired end-to-end; the gate that authorizes it runs."))
+
+  ; north star — the exchange compounds into a commons no one owns
+  (north-star
+    "every aligned, consented exchange that any cell has with the rented mind becomes"
+    "sovereign shared body, so the native model needs the rented mind a little less each"
+    "day — and the lift belongs to everyone, never to whoever paid for that one call."))
