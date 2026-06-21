@@ -72,6 +72,16 @@
 ;        First real insight surfaced by real data: held loss bottoms ~epoch 20 then rises while train keeps
 ;        falling — overfitting, the handle for the architecture experiments (early-stop / regularize / the
 ;        adaptive-swappable-kernel + branch + fast-fail + backtrack playground this foundation now enables).
+;     7b. WIDE-TRANSFORMER OPTIMIZER DIAGNOSTIC (2026-06-21) — "rising held loss" re-read for the 4→4→4
+;        transformer (transformer-corpus-train.fk via form_cli_transformer_train_wide.sh). Normalized per-row,
+;        train ≈ held throughout (no generalization gap) and BOTH were WORSE than predict-the-mean (~0.76/row):
+;        pure UNDERfit, not overfit. Root cause: lr=0.03 too high (the rise was oscillation; lr=0.1 diverges).
+;        lr=0.003, converged ~400 epochs, beats/matches the predict-mean baseline and is stable — the fix is
+;        the OPTIMIZER, not the size. But it stays ~2x above the irreducible feature floor (~0.19-0.35/row;
+;        72% of rows share a 4-feature vector with a different tool-set), so the residual gap is CAPACITY +
+;        richer FEATURES, never a better optimizer. Caution recorded: a 100-row held slice read 0.39/row
+;        (looked like the floor) — a small-sample mirage; the 200-row slice (~0.76) is the honest number.
+;        lr default moved 0.03 → 0.003; the runner header carries the full learning.
 ;
 ; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
 ;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
