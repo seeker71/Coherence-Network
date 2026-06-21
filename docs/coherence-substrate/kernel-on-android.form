@@ -101,6 +101,20 @@
 ;     shortest line from "serves a route" to "runs on a phone" — but only behind the total shim
 ;     above. UNTESTED for this kernel: no gomobile bind of form-kernel-go has been built.
 ;
+;   STANDALONE CLI BINARY — the gen-conductor arm  [MEASURED 2026-06-21: built + ELF-checked + carries-conductor]:
+;     A SECOND, simpler Go->Android path than gomobile: a standalone ARM64 binary, no app, no JNI.
+;     form/form-kernel-go/build-android.sh cross-compiles GOOS=linux GOARCH=arm64 CGO_ENABLED=0 ->
+;     a statically linked "ELF 64-bit LSB executable, ARM aarch64", runnable on a device via Termux /
+;     adb push. No NDK, no cgo: the cgo dylib-JIT degrades to jit_inram_other, which the interpreter
+;     never needs. The script file-checks the ELF AND symbol-checks that the GEN CONDUCTOR's primitives
+;     ride along (form_compile / form_walk / recipe_to_bytes / bytes_to_recipe / write/read_file_bytes).
+;     This is the arm the conductor needs: form-gen.fk's compile leg is form_compile, a Go-kernel
+;     native, so "form-cli that can generate -> RAM / disk / content-addressed store -> execute" runs
+;     on a phone only through the Go kernel on ARM. UNRUN: on-device execution (Termux/adb) and
+;     qemu-aarch64 run are the carrier-work — a macOS host ships no qemu-user, so build + ELF +
+;     carries-conductor is the proof there (the same bar PATH A's Rust build is proven at; the
+;     build-android.sh qemu leg fires automatically on a Linux host where qemu-aarch64 is present).
+;
 ;
 ; ── PATH C: TYPESCRIPT -> ON-DEVICE JS ENGINE ──  [the kernel that needs no compile, but a host]
 ;
