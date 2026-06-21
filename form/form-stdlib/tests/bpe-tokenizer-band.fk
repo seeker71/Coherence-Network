@@ -1,16 +1,52 @@
-; preludes: form-stdlib/bpe-tokenizer.fk
+; preludes: form-stdlib/core.fk form-stdlib/bpe-tokenizer.fk
 ;
-; bpe-tokenizer-band — the byte-pair-encoding merge core proven against the REAL openai/whisper-tiny
-; tokenizer (BPE, 50258 vocab, 50000 merges). Encoding the byte-mapped word " tokenizer" (initial symbol
-; ids → merges) yields token ids [14862, 6545], identical to the reference tokenizer. The merge ENGINE is
-; the recipe; byte-mapping + regex word-splitting + the full merge table load as carrier DATA.
-; Verdict 1 when the Form merge output equals the reference token ids exactly.
-
+; bpe-tokenizer-band — the byte-pair-encoding merge core (bpe-encode) lifted to the four-kernel floor.
+; This is the TOKENIZER — the one named-missing piece of the autoregressive generation loop
+; (multi-layer decode stack #3423/#3424 + greedy argmax #3402 are proven; the tokenizer turns text
+; into the token ids the decode loop consumes). The merge ENGINE is the recipe; byte→symbol mapping,
+; GPT-2 regex word-splitting, and the full 50000-merge table load as carrier DATA.
+;
+; The proof is the merge ALGORITHM's laws — not one magnitude, but the relationships the engine forces:
+;
+;   the REAL anchor (bit 1): the byte-mapped word " tokenizer" against the actual openai/whisper-tiny
+;     tokenizer (50258 vocab, 50000 merges) encodes to token ids [14862, 6545] — bit-for-bit the
+;     reference tokenizer's output. This is the engine proven on a real merge chain, not a toy.
+;   the BASE case (bit 2): a single symbol has no adjacent pair, so it is its own encoding — the len<2
+;     terminator, the floor every recursion rests on.
+;   NO mergeable pair (bit 4): when no adjacent pair is in the table, the symbols pass through unchanged
+;     — min-rank stays `big`, the loop stops; the engine never invents a merge.
+;   LOWEST-RANK-FIRST determinism (bit 8): the load-bearing law. With pairs (10,11)@rank5 and
+;     (11,12)@rank2 both mergeable, the engine merges rank2 FIRST → [10,21], NOT rank5-first → [20,12].
+;     Order matters: a decoder that broke this would let two correct kernels tokenize the same text into
+;     different ids. This is GPT-2's "merge the minimal-rank bigram until consumed" rule.
+;   FULL collapse (bit 16): a chain (1,2)@0 then (4,3)@1 merges all the way down to a SINGLE token [5]
+;     — the engine iterates to the fixpoint, not one pass.
+;
+; The recipe is UNCHANGED from the three-way band; this strengthens the characterization and registers
+; the fourth arm. Pure list/int recursion — no host I/O, no floats, small tables — the fourth-friendly
+; subset. Verdict 31 when the merge core lands four-way.
 (do
   (defn ids-eq (a b)
     (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
         (if (eq (head a) (head b)) (ids-eq (tail a) (tail b)) 0)))
-  (let syms (list 220 83 78 74 68 77 72 89 68 81))
+
+  ; bit 1 — the REAL openai/whisper-tiny anchor: byte-mapped " tokenizer" -> [14862, 6545]
+  (let syms  (list 220 83 78 74 68 77 72 89 68 81))
   (let table (list (list 220 83 256 0) (list 68 81 260 4) (list 68 77 268 12) (list 256 78 281 25) (list 72 89 590 334) (list 74 268 2653 2397) (list 590 260 6545 6289) (list 281 2653 14862 14606)))
-  (let expected (list 14862 6545))
-  (ids-eq (bpe-encode syms table) expected))
+  (let c0 (if (eq (ids-eq (bpe-encode syms table) (list 14862 6545)) 1) 1 0))
+
+  ; bit 2 — base case: a single symbol is its own encoding (len < 2, no pair)
+  (let c1 (if (eq (ids-eq (bpe-encode (list 42) table) (list 42)) 1) 2 0))
+
+  ; bit 4 — no mergeable pair: symbols absent from the table pass through unchanged
+  (let c2 (if (eq (ids-eq (bpe-encode (list 5 6 7) (list (list 1 2 9 0))) (list 5 6 7)) 1) 4 0))
+
+  ; bit 8 — lowest-rank-first determinism: (11,12)@rank2 merges before (10,11)@rank5 -> [10,21]
+  (let t8 (list (list 10 11 20 5) (list 11 12 21 2)))
+  (let c3 (if (eq (ids-eq (bpe-encode (list 10 11 12) t8) (list 10 21)) 1) 8 0))
+
+  ; bit 16 — full collapse: (1,2)@0 then (4,3)@1 iterate to a single token [5]
+  (let t16 (list (list 1 2 4 0) (list 4 3 5 1)))
+  (let c4 (if (eq (ids-eq (bpe-encode (list 1 2 3) t16) (list 5)) 1) 16 0))
+
+  (add c0 (add c1 (add c2 (add c3 c4)))))
