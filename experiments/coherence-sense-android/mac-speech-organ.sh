@@ -107,18 +107,32 @@ if [[ "${1:-}" == "--self-test" ]]; then
 fi
 
 echo "[speech] organ=$ORGAN_ID host=$HOST kernel=$(basename "$KERNEL") voices_known=$(jq 'length' "$SPEAKERS")"
-curl -s -m 8 -X POST "$MESH/hati/mesh/organs/announce" -H "Content-Type: application/json" -H "User-Agent: $UA" \
-    -d "{\"organ_id\":\"$ORGAN_ID\",\"organ_kind\":\"microphone\",\"app\":\"coherence-speech-mac\",\"app_version\":\"0.2\",\"target\":\"macos-arm64\",\"display_name\":\"$HOST speech\",\"discovery_state\":\"streaming\",\"trust_score_ppm\":800000,\"capabilities\":[\"cap.audio.sample\",\"cap.stt.transcribe\",\"cap.speaker.group\"],\"lanes\":[\"mic\",\"speech\",\"speaker\"]}" >/dev/null
-
+announce() {
+    curl -s -m 8 -X POST "$MESH/hati/mesh/organs/announce" -H "Content-Type: application/json" -H "User-Agent: $UA" \
+        -d "{\"organ_id\":\"$ORGAN_ID\",\"organ_kind\":\"microphone\",\"app\":\"coherence-speech-mac\",\"app_version\":\"0.2\",\"target\":\"macos-arm64\",\"display_name\":\"$HOST speech\",\"discovery_state\":\"streaming\",\"trust_score_ppm\":800000,\"capabilities\":[\"cap.audio.sample\",\"cap.stt.transcribe\",\"cap.speaker.group\"],\"lanes\":[\"mic\",\"speech\",\"speaker\"]}" >/dev/null
+}
+# heartbeat EVERY window so the organ stays present in the field, speaking or silent.
+beat() {  # $1 listening(true|false)
+    curl -s -m 8 -X POST "$MESH/hati/mesh/organs/heartbeat" -H "Content-Type: application/json" -H "User-Agent: $UA" \
+        -d "{\"organ_id\":\"$ORGAN_ID\",\"listening\":${1:-true},\"active_channels\":[\"speech\",\"speaker\"],\"sample_rate_hz\":16000.0,\"discovery_state\":\"streaming\",\"trust_score_ppm\":800000}" >/dev/null
+}
+announce
+hb_tick=0
 while true; do
+    hb_tick=$(( hb_tick + 1 )); [[ $(( hb_tick % 24 )) -eq 0 ]] && announce   # re-announce periodically
     wav="/tmp/speech-win-$$.wav"
-    rec -q -c 1 -r 16000 "$wav" trim 0 "$WINDOW" >/dev/null 2>&1 || { sleep 1; continue; }
+    # bound rec: under launchd a TCC-blocked mic makes rec HANG, not fail. perl alarm caps it.
+    if ! perl -e 'alarm($ARGV[0]+5); shift; exec @ARGV' "$WINDOW" rec -q -c 1 -r 16000 "$wav" trim 0 "$WINDOW" >/dev/null 2>&1 || [[ ! -s "$wav" ]]; then
+        # mic unreachable (e.g. TCC not granted to this launchd process) — stay present, surface it
+        jq -n --arg oid "$ORGAN_ID" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{organ_id:$oid,kind:"mic-unavailable",detail:"rec produced no audio (grant Microphone to this process in System Settings)",ts:$ts}' > "$RECEIPT"
+        beat true; rm -f "$wav"; sleep "$WINDOW"; continue
+    fi
     read -r rms freq < <(measure "$wav")
     # pre-VAD in Form (rms only): skip whisper on silence
     pre="$(form_decide "(do (print (so-vad-gate $rms 0)))" | head -1)"
     if [[ "${pre:-0}" == "0" ]]; then
         jq -n --arg oid "$ORGAN_ID" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{organ_id:$oid,kind:"silence",ts:$ts}' > "$RECEIPT"
-        rm -f "$wav"; continue
+        beat true; rm -f "$wav"; continue
     fi
     heard="$(transcribe "$wav")"
     read -r gate band sp f rmsx < <(process "$wav" "$heard")
@@ -127,6 +141,5 @@ while true; do
         --arg text "$heard" --arg sp "$sp" --argjson gate "${gate:-0}" --argjson band "${band:-0}" --argjson freq "${f:-0}" \
         '{organ_id:$oid,host:$host,ts:$ts,kind:"utterance",transcript:$text,speaker:$sp,voiced_gate:$gate,speaker_band:$band,freq_hz:$freq,body:"form-stdlib/speech-organ.fk"}' > "$RECEIPT"
     echo "[speech] «$sp» band=$band ${f}Hz: ${heard:-(no text)}"
-    curl -s -m 8 -X POST "$MESH/hati/mesh/organs/heartbeat" -H "Content-Type: application/json" -H "User-Agent: $UA" \
-        -d "{\"organ_id\":\"$ORGAN_ID\",\"listening\":true,\"active_channels\":[\"speech\",\"speaker\"],\"sample_rate_hz\":16000.0,\"discovery_state\":\"streaming\",\"trust_score_ppm\":800000}" >/dev/null
+    beat true
 done
