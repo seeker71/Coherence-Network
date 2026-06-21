@@ -1,7 +1,7 @@
 ; form-cli-ask-plus.fk — the `ask+` daily-driver: local-first, then the four-way
 ; sufficiency gate escalates to the subscription oracle when local is not enough.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/form-cli-ask-gate.fk
+; preludes: form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/trust-row.fk form-stdlib/form-cli-ask-gate.fk
 ;
 ; form-cli-ask.fk's `fca-ask` is the PURE local verb (the native binary's `ask`:
 ; one socket call to the local oracle, no host-exec). This is its escalating
@@ -78,25 +78,33 @@ section [form.bml] {
         host-exec(str_concat(remote, " < /tmp/fca_plus_prompt.txt 2>/dev/null"));
     }
 
-    ; ── one ask turn: local -> gate -> accept / retry-once / escalate ────────
+    ; ── pack THIS turn's outcome: the live trust row (from the four-way-proven
+    ;    fca-ask-trace-row in the gate) on line 1, the answer below it ──────────
+    def fcap-traced(verdict, answer) {
+        str_concat(fca-ask-trace-row(verdict), str_concat("\n", answer));
+    }
+
+    ; ── one ask turn, traced: local -> gate -> accept / retry-once / escalate ──
+    ; each terminal carries its verdict so the trust row reads the real path/suffic.
     def fcap-decide(local, question, model, judge, remote, trust, retries, usejudge) {
-        let okp = fca-usable?(local);
-        let verdict = fca-ask-verdict(okp, fcap-content(usejudge, judge, question, local), trust, retries);
-        if eq(verdict, 0) then local else
+        let verdict = fca-ask-verdict(fca-usable?(local), fcap-content(usejudge, judge, question, local), trust, retries);
+        if eq(verdict, 0) then fcap-traced(0, local) else
         if eq(verdict, 1) then fcap-retry(question, model, judge, remote, trust, usejudge)
-        else fcap-escalate(remote, question);
+        else fcap-traced(2, fcap-escalate(remote, question));
     }
     ; retry re-runs the local lane once with no re-tries left: accept it or escalate.
     def fcap-retry(question, model, judge, remote, trust, usejudge) {
         let local = fca-ask-model(model, question);
-        let okp = fca-usable?(local);
-        let verdict = fca-ask-verdict(okp, fcap-content(usejudge, judge, question, local), trust, 0);
-        if eq(verdict, 0) then local else fcap-escalate(remote, question);
+        let verdict = fca-ask-verdict(fca-usable?(local), fcap-content(usejudge, judge, question, local), trust, 0);
+        if eq(verdict, 0) then fcap-traced(0, local) else fcap-traced(2, fcap-escalate(remote, question));
     }
 
-    def fca-ask-plus(question, model, judge, remote, trust, retries, usejudge) {
+    ; the traced verb the carrier runs: returns "trust-row\nanswer". The carrier
+    ; shows the row (the live field) and the answer on separate streams — answer-only
+    ; is the answer stream alone.
+    def fca-ask-plus-traced(question, model, judge, remote, trust, retries, usejudge) {
         if eq(str_len(question), 0) then
-            "ask+: usage - ask+ <question>   (local-first; the sufficiency gate escalates to the oracle when local is not enough)"
+            fcap-traced(2, "ask+: usage - ask+ <question>   (local-first; the sufficiency gate escalates to the oracle when local is not enough)")
         else
             fcap-decide(fca-ask-model(model, question), question, model, judge, remote, trust, retries, usejudge);
     }
