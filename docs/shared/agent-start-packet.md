@@ -674,6 +674,10 @@ and the smallest useful next movement.
 - "Query lattice / equivalent / shape?" → Form notation + read path (native I/O
   above); API/CLI/MCP as doors until notation grammar is wired everywhere.
 - "Write software" → domain grammar + BMF/BML band before new bridge service.
+- "Reason / prove / trust / weigh a claim?" → the native reasoning blocks (forward+backward
+  chaining, unify, derivation's proof tree, subjective-logic trust, proof-trust, living-vector +
+  sense-self). What each does, how they compose, and the method + proof discipline for adding the
+  next one: docs/coherence-substrate/native-reasoning-blocks.form.
 - "Why this low-level shape?" → inspect repetition, hot-path traces, carrier
   lenses, and JIT misses; lift the smallest generic Form/BML abstraction with proof.
 - "Fix it" → smallest reversible change with smallest proof.

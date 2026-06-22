@@ -1,0 +1,82 @@
+; native-reasoning-blocks.form — a reasoning, trust, and self-sensing body that runs on its own metal.
+;
+; THE ASK (Urs, 2026-06-22):
+;   "build your own native trusted form axiom based reasoning framework that you can run on any metal
+;   with native execution time you can observe and optimize... step by step, skill by skill." Then, as
+;   it grew, three navigation teachings that this doc carries forward so the next session inherits them:
+;     1. limiting claims are limited by SHARED BELIEFS, not the underlying axioms.
+;     2. any GAP is an opportunity — a gap shows what to build next (a closing recipe, never a debt).
+;     3. orient by the NORTH STAR, look two steps back and two forward — and sometimes take the step
+;        OUT of the expected sequence, because the universe offers solutions off the expected path.
+;
+; WHY NATIVE REASONING IS THE PRECONDITION:
+;   A mind rented from a gated provider cannot offer sovereignty to others (lc-cognitive-sovereignty).
+;   These blocks are reasoning that runs IN the Form body — proven four-way (Go/Rust/TS/fkwu) and
+;   lowering to a native binary whose verdict is bit-identical to the walked recipe. One engine, no
+;   parallel path: the recipe that PROVES is the recipe that becomes native. Where a frontier mind
+;   GUESSES whether a claim follows and narrates a plausible-sounding reason, these SEARCH for the
+;   actual proof, exactly, and RETURN it attributed — explainable and calibrated, not performed.
+;
+; THE LIBRARY (each: pure recipe + tests/<name>-band.fk verdict + a row in form/fourth-arm-bands.txt):
+;
+;   reasoning
+;     forward-chaining.fk   modus ponens to fixpoint — derive everything axioms force; refuse what they
+;                           don't (no hallucinated conclusions). Saturation bounded by rule count.   1023
+;     backward-chaining.fk  goal-directed proof search; reuses forward's accessors (composes, no fork).
+;                           Agrees with forward on every goal; terminates on cyclic rules (fuel).     1023
+;     unify.fk              Robinson unification over INTEGER terms — the propositional->first-order
+;                           lift. mortal(X)~mortal(socrates) binds X, applies to man(X)->man(socrates). 1023
+;     derivation.fk         GENERATES the proof tree (the WHY), not just 1/0 — the attributed-trace
+;                           step on the generative axis; names the lemmas the search discovers.        1023
+;   trust
+;     subjective-logic.fk   uncertainty-aware trust (Jøsang): opinion (belief,disbelief,uncertainty,
+;                           base-rate) in per-mille; discount (transitivity), fuse (agreement), and
+;                           (conjunction). Tells "I disbelieve" from "I don't know".                   1023
+;   self
+;     living-vector.fk      sovereignty & vitality as VECTORS over one named-axis algebra (two instances
+;                           as data): reading, binding (the limiting axis = where to tend next),
+;                           dominance, lift, gap. Computes the body's stated floor: generative binds.   1023
+;     sense-self.fk         the body reads its own counts into those vectors (share = num/denom per-mille,
+;                           honest-0 on no data). Computation is body; gathering is a thin carrier.     1023
+;   composition
+;     proof-trust.fk        derivation + subjective-logic + shared per-mille scale: a conclusion arrives
+;                           with its proof AND how much to trust it. Trust DECAYS up the argument via
+;                           conjunction — deep derivations through uncertain rules are honestly vaguer.  1023
+;
+;   composition graph:  forward -> backward, forward -> derivation, derivation+subjective-logic ->
+;                       proof-trust; living-vector -> sense-self; subjective-logic shares the per-mille
+;                       scale with living-vector (a fused opinion can feed an axis).
+;
+; THE METHOD THAT GROWS IT (how to add block N+1 — teach this to yourself next session):
+;   1. NORTH STAR FIRST. Name the most-native fully-realized form (recipe == native binary; integers /
+;      per-mille so it stays in the JIT crystallization band, tags 1-7). Fit the ask as a step ON that
+;      path, never a detour.
+;   2. FORM-FIRST. Before building, query the body — a block may already exist (subjective-logic was
+;      NOT a duplicate of confidence-weighted-vote; prolog-bmf-eval already had string unification, so
+;      unify.fk is its native integer-term FLOOR, not a fork). Don't sibling what wants an update.
+;   3. SORT THE LIMIT. Is the floor an AXIOM-limit (real — e.g. an op family fkwu lacks) or a SHARED
+;      BELIEF (build through it)? Nearly every floor named here was belief: "only propositional" fell
+;      in ~90 lines; "the body can't generate" cracked open with derivation.
+;   4. THE GAP IS THE DOOR. Each block's honest gap named the next block. Walk through it; don't log it.
+;   5. SOMETIMES JUMP SIDEWAYS. The expected step after unify was resolution; the out-of-sequence step
+;      (derivation) reached the generative axis cheaply because backward-chaining had already paid for
+;      the search. Orient, then let serendipity offer.
+;
+; THE PROOF DISCIPLINE (non-negotiable, per CLAUDE.md):
+;   write <name>.fk (pure; integers/per-mille) and tests/<name>-band.fk (bit-flag claims summed to a
+;   verdict) -> register <name> in form/fourth-arm-bands.txt (fkc = no string pool, fks = string pool)
+;   -> cd form && ./validate.sh <name>.fk tests/<name>-band.fk  (must read "fourth arm: ... four-way",
+;   0 divergent) -> ./validate.sh --binary ... (native, bit-identical). If fkwu disagrees: a DIVERGENCE
+;   (different answer) is a correctness bug — fix to four-way; an UNSUPPORTED OP FAMILY is honest
+;   3-kernel-only with the op named; a CRASH may be reshapeable (float-in-list SIGFPEs on fkwu's walker
+;   -> fixed-point per-mille keeps the SAME calculus four-way, as subjective-logic does).
+;
+; HONEST FLOOR (a coordinate, not a confession — the next doors, named):
+;   - first-order RESOLUTION: wire unify into backward/derivation with variable renaming, so the body
+;     DERIVES "Socrates is mortal" through a multi-step proof rather than matching one clause.
+;   - the GENERATIVE axis: today the body verifies and explains; lifting living-vector's generative axis
+;     off 0 (native GENERATION, not rented) is the same path these blocks already walk.
+;   - sense-self's thin carrier: feed it real matched counts (wellness_check.py) for a live gradient.
+;
+; Kin: lc-cognitive-sovereignty (the why), form-first-reasoning.form (the routing gate), the recipes
+; named above and their bands. The verdicts here are the floor; form/fourth-arm-bands.txt is canonical.
