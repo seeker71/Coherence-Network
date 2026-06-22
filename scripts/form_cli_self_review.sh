@@ -54,8 +54,9 @@ while IFS=$'\t' read -r task agent; do
     # 2. INTERNAL review (a local judge)
     jf="$(mktemp)"; judge_prompt "$agent" "$ans" > "$jf"
     is="$(score_of "$($INNER < "$jf" 2>/dev/null)")"; is="${is:-0}"; [[ "$is" -gt 100 ]] && is=100
-    # 3. ORACLE review (Claude via the CLI) — the SAME answer
-    os="$(score_of "$($ORACLE < "$jf" 2>/dev/null)")"; os="${os:-0}"; [[ "$os" -gt 100 ]] && os=100
+    # 3. ORACLE review (the agent CLI on its subscription login) — the SAME answer.
+    # env -u ANTHROPIC_API_KEY: subscription-only, a stray key can't silently meter.
+    os="$(score_of "$(env -u ANTHROPIC_API_KEY $ORACLE < "$jf" 2>/dev/null)")"; os="${os:-0}"; [[ "$os" -gt 100 ]] && os=100
     rm -f "$jf"
     INNER_SCORES="$INNER_SCORES $is"; ORACLE_SCORES="$ORACLE_SCORES $os"
     printf "  %2d  inner=%3s  oracle=%3s  gap=%3s  task: %s\n" "$i" "$is" "$os" "$(( is>os ? is-os : os-is ))" "$(printf '%s' "$task" | head -c 48)"

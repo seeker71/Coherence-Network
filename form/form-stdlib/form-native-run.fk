@@ -32,11 +32,15 @@
 (defn fnr-sys ()
     "You are form-cli, a coding agent. Tools (reply with ONE line of JSON to use one): {\"name\":\"bash\",\"arguments\":{\"cmd\":\"...\"}} | {\"name\":\"read_file\",\"arguments\":{\"path\":\"...\"}} | {\"name\":\"write_file\",\"arguments\":{\"path\":\"...\",\"content\":\"...\"}} | {\"name\":\"edit\",\"arguments\":{\"path\":\"...\",\"find\":\"...\",\"replace\":\"...\"}} | {\"name\":\"search\",\"arguments\":{\"pattern\":\"...\"}} | {\"name\":\"glob\",\"arguments\":{\"pattern\":\"*.fk\"}}. After each tool you receive an OBSERVATION. When the task is done, reply with your final answer as plain text (no JSON).\n\n")
 
-; ── call the oracle: write the prompt to a file, exec `oracle < file` ──
+; ── call the oracle: pipe the prompt to its stdin, AGENT-CLI-ONLY ──
+; The prompt goes to the oracle's stdin in memory (host-exec's 2nd arg) — no temp
+; file, no writable /tmp, so this runs unchanged on Android too. The oracle runs with
+; ANTHROPIC_API_KEY stripped (env -u): the remote is an agent CLI on its flat-rate
+; subscription login, NEVER a metered API key — a stray key in the environment can't
+; silently bill per-token. (env -u UNSETS it; ANTHROPIC_API_KEY= would leave an empty
+; key that still wins precedence and fails auth.) Same law as ask+'s fcap-escalate.
 (defn fnr-oracle (oracle prompt)
-    (do
-        (host-write "/tmp/fnr_prompt.txt" prompt)
-        (host-exec (str_concat oracle " < /tmp/fnr_prompt.txt 2>/dev/null"))))
+    (host-exec (str_concat "env -u ANTHROPIC_API_KEY " (str_concat oracle " 2>/dev/null")) prompt))
 
 ; ── structured edit: replace the FIRST occurrence of `find` with `repl` in s (pure Form, four-way) ──
 (defn fnr-replace (s find repl)
