@@ -131,8 +131,9 @@
 (defn fnr-recent ()
     (host-exec "tail -c 1500 $HOME/.coherence-network/form-cli-sessions.log 2>/dev/null"))
 (defn fnr-persist (transcript)
-    (do (host-write "/tmp/fnr_session.txt" transcript)
-        (host-exec "cat /tmp/fnr_session.txt >> $HOME/.coherence-network/form-cli-sessions.log; printf '\\n=== /turn ===\\n' >> $HOME/.coherence-network/form-cli-sessions.log")))
+    ; pipe the transcript to the appending shell via stdin (host-exec's 2nd arg) —
+    ; no /tmp hop, so this persists on Android too, where /tmp does not exist.
+    (host-exec "cat >> $HOME/.coherence-network/form-cli-sessions.log; printf '\\n=== /turn ===\\n' >> $HOME/.coherence-network/form-cli-sessions.log" transcript))
 
 ; tiered entry WITH memory: prepend recent session context, run local-first+escalating, persist the run
 ; (the persisted transcript is both cross-turn memory AND a training corpus of real agent work).
