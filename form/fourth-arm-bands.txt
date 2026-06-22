@@ -325,6 +325,7 @@ rational fkc 1023
 float-ops fks 255
 nl-reason fks 255
 resolution fkc 4095
+host-diagnostic fkc 1023
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
 # resource cells, application graph SQL strings, and auth/header/hash wrappers.
