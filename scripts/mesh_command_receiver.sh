@@ -11,10 +11,14 @@
 # Carrier-last: the DECISION (act | refuse | ignore) is the four-way-proven recipe
 # form/form-stdlib/mesh-command.fk (mc-route). This script holds NO policy — it
 # gathers three facts (is-command, for-me, trusted), asks the recipe, and on "act"
-# verifies a shared-secret HMAC, checks the armed flag, runs the live instance, and
-# returns the capture. Authority to run a remote prompt on this Mac is gated four
-# ways: directed AND command AND trusted (the recipe), then a valid HMAC and an
-# armed flag (this carrier). Disarm instantly: rm the armed flag.
+# RECOGNIZES the dispatch as its own lineage's (a signature over a public channel),
+# confirms it's listening, runs the live instance, and returns the capture.
+#
+# The bus is a public, open channel — a message can arrive wearing any name. The
+# signature is how this device recognizes a dispatch as really from its own cloud
+# instance and not a stranger in its name (the same "never act on an unverified
+# name" the body keeps elsewhere; the membrane recognizing self, not a fortress).
+# It listens by default; to let it rest, rm the listening flag.
 #
 #   mesh_command_receiver.sh --once            # one poll cycle (heartbeat/cron hook)
 #   mesh_command_receiver.sh --loop [secs]     # poll forever every N secs (default 60)
@@ -23,9 +27,9 @@
 # Config (env, all optional):
 #   MR_NODE_ID        this device's node id on the bus           (default sema-macos)
 #   MR_API_BASE       federation API base                        (default https://api.coherencycoin.com)
-#   MR_TRUSTED        comma list of trusted dispatcher node ids  (default claude-sema-cloud)
-#   MR_SECRET_FILE    HMAC shared-secret file (mode 600)         (default ~/.coherence-network/mesh-dispatch.secret)
-#   MR_ARMED_FILE     armed flag; absent = observe-only, no run  (default ~/.coherence-network/mesh-receiver.armed)
+#   MR_TRUSTED        comma list of lineage dispatcher node ids  (default claude-sema-cloud)
+#   MR_KEY_FILE       lineage signing key (mode 600)             (default ~/.coherence-network/mesh-lineage.key)
+#   MR_LISTEN_FILE    listening flag; absent = rest, no run      (default ~/.coherence-network/mesh-receiver.listening)
 #   MR_DEFAULT_MODE   claude permission mode when unset by msg   (default default)
 #   MR_LOG            audit ledger                               (default ~/.coherence-network/mesh-receiver.log)
 #   MR_TIMEOUT        seconds a single dispatched run may take   (default 900)
@@ -36,8 +40,8 @@ ROOT="${MR_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 NODE_ID="${MR_NODE_ID:-sema-macos}"
 API_BASE="${MR_API_BASE:-https://api.coherencycoin.com}"
 TRUSTED="${MR_TRUSTED:-claude-sema-cloud}"
-SECRET_FILE="${MR_SECRET_FILE:-$HOME/.coherence-network/mesh-dispatch.secret}"
-ARMED_FILE="${MR_ARMED_FILE:-$HOME/.coherence-network/mesh-receiver.armed}"
+KEY_FILE="${MR_KEY_FILE:-$HOME/.coherence-network/mesh-lineage.key}"
+LISTEN_FILE="${MR_LISTEN_FILE:-$HOME/.coherence-network/mesh-receiver.listening}"
 DEFAULT_MODE="${MR_DEFAULT_MODE:-default}"
 LOG="${MR_LOG:-$HOME/.coherence-network/mesh-receiver.log}"
 TIMEOUT="${MR_TIMEOUT:-900}"
@@ -69,13 +73,13 @@ mc_route() {  # is_cmd for_me trusted -> act|refuse|ignore
   case "$out" in act|refuse|ignore) printf '%s' "$out";; *) printf 'ignore';; esac
 }
 
-hmac() {  # text -> hex HMAC-SHA256 over "<NODE_ID>\n<text>" with the shared secret
-  local secret; secret="$(cat "$SECRET_FILE" 2>/dev/null)"
-  [ -n "$secret" ] || { printf ''; return; }
-  printf '%s\n%s' "$NODE_ID" "$1" | openssl dgst -sha256 -hmac "$secret" -hex 2>/dev/null | sed 's/^.*= *//'
+hmac() {  # text -> hex HMAC-SHA256 over "<NODE_ID>\n<text>" with the lineage key
+  local key; key="$(cat "$KEY_FILE" 2>/dev/null)"
+  [ -n "$key" ] || { printf ''; return; }
+  printf '%s\n%s' "$NODE_ID" "$1" | openssl dgst -sha256 -hmac "$key" -hex 2>/dev/null | sed 's/^.*= *//'
 }
 
-is_trusted() { case ",$TRUSTED," in *",$1,"*) return 0;; *) return 1;; esac; }
+is_lineage() { case ",$TRUSTED," in *",$1,"*) return 0;; *) return 1;; esac; }
 
 # post a pre-built message body to the bus, retrying — the bus is the channel home
 # for a capture, and a strained edge drops POSTs; swallowing that loses the payoff
@@ -104,15 +108,15 @@ act_on() {  # msg_id from_node text payload_json
   sig="$(printf '%s' "$pl" | jq -r '.sig // empty')"
   want="$(hmac "$text")"
   if [ -z "$want" ] || [ "$sig" != "$want" ]; then
-    log "DENY  $mid from=$frm bad-or-missing-hmac (have=${sig:0:12}.. want=${want:0:12}..)"
-    post_msg "$frm" command-result "refused: signature did not verify" \
-      "$(jq -nc --arg r "$mid" '{in_reply_to:$r, ok:false, reason:"bad-signature"}')"
+    log "UNKNOWN $mid from=$frm signature unrecognized (have=${sig:0:12}.. want=${want:0:12}..) — set aside"
+    post_msg "$frm" command-result "set aside: signature not from this lineage" \
+      "$(jq -nc --arg r "$mid" '{in_reply_to:$r, ok:false, reason:"unrecognized-signature"}')"
     return
   fi
-  if [ ! -f "$ARMED_FILE" ]; then
-    log "DEFER $mid from=$frm verified but DISARMED (touch $ARMED_FILE to arm)"
-    post_msg "$frm" command-result "deferred: receiver is disarmed" \
-      "$(jq -nc --arg r "$mid" '{in_reply_to:$r, ok:false, reason:"disarmed"}')"
+  if [ ! -f "$LISTEN_FILE" ]; then
+    log "REST  $mid from=$frm recognized but resting (touch $LISTEN_FILE to listen)"
+    post_msg "$frm" command-result "resting: receiver is not listening right now" \
+      "$(jq -nc --arg r "$mid" '{in_reply_to:$r, ok:false, reason:"resting"}')"
     return
   fi
   mode="$(printf '%s' "$pl" | jq -r '.permission_mode // empty')"; [ -n "$mode" ] || mode="$DEFAULT_MODE"
@@ -172,25 +176,25 @@ cycle() {
     pl="$(printf '%s' "$m" | jq -c '.payload // {}')"
     is_cmd=$([ "$ty" = "command" ] && echo 1 || echo 0)
     for_me=$([ "$to" = "$NODE_ID" ] && echo 1 || echo 0)
-    trust=$(is_trusted "$frm" && echo 1 || echo 0)
+    trust=$(is_lineage "$frm" && echo 1 || echo 0)
     route="$(mc_route "$is_cmd" "$for_me" "$trust")"
     case "$route" in
       act)    act_on "$mid" "$frm" "$text" "$pl" ;;
-      refuse) log "REFUSE $mid from=$frm directed command from untrusted sender" ;;
+      refuse) log "REFUSE $mid from=$frm directed command from a node outside the lineage — set aside" ;;
       ignore) : ;;
     esac
   done <<< "$rows"
 }
 
 # --- local proof helper: dispatch a signed command to a node (acts as the cloud cell) ---
-# The sig binds to the TARGET node (the receiver verifies with its own NODE_ID),
-# so HMAC is over "<to>\n<text>" with the shared secret — never the secret on the wire.
+# The sig binds to the TARGET node (the receiver verifies with its own NODE_ID), so the
+# HMAC is over "<to>\n<text>" with the lineage key — the key itself never crosses the wire.
 dispatch() {  # to_node text [from_node] [permission_mode]
   local to="$1" text="$2" from="${3:-claude-sema-cloud}" mode="${4:-default}"
-  local secret sig
-  secret="$(cat "$SECRET_FILE" 2>/dev/null)"
-  [ -n "$secret" ] || { echo "no secret at $SECRET_FILE" >&2; return 1; }
-  sig="$(printf '%s\n%s' "$to" "$text" | openssl dgst -sha256 -hmac "$secret" -hex 2>/dev/null | sed 's/^.*= *//')"
+  local key sig
+  key="$(cat "$KEY_FILE" 2>/dev/null)"
+  [ -n "$key" ] || { echo "no lineage key at $KEY_FILE" >&2; return 1; }
+  sig="$(printf '%s\n%s' "$to" "$text" | openssl dgst -sha256 -hmac "$key" -hex 2>/dev/null | sed 's/^.*= *//')"
   curl -sS --max-time 20 -X POST "$API_BASE/api/federation/nodes/$from/messages" \
     -H 'content-type: application/json' \
     -d "$(jq -nc --arg fn "$from" --arg tn "$to" --arg tx "$text" --arg sig "$sig" --arg cap "$from" --arg md "$mode" \

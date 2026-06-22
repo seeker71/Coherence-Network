@@ -4,9 +4,9 @@
 # The receiver is the live local instance that lets the cloud cell make a session
 # on THIS device ACT (form/form-stdlib/mesh-command.fk decides; the carrier runs a
 # real claude -p and sends the capture home). This installer writes a launchd agent
-# that runs the canonical repo script in a poll loop, provisions a shared HMAC secret
-# if absent, and (by default) leaves the receiver ARMED. Idempotent — re-running
-# refreshes the agent. Disarm anytime:  rm ~/.coherence-network/mesh-receiver.armed
+# that runs the canonical repo script in a poll loop, provisions the lineage signing
+# key if absent, and (by default) leaves the receiver LISTENING. Idempotent — re-
+# running refreshes the agent. To rest it:  rm ~/.coherence-network/mesh-receiver.listening
 set -euo pipefail
 
 LABEL="earth.hati.coherence.mesh-command-receiver"
@@ -16,8 +16,8 @@ RUN_SH="$MAIN_REPO/scripts/mesh_command_receiver.sh"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 LOG_DIR="$HOME/Library/Logs/CoherenceSense"
 CFG_DIR="$HOME/.coherence-network"
-SECRET_FILE="$CFG_DIR/mesh-dispatch.secret"
-ARMED_FILE="$CFG_DIR/mesh-receiver.armed"
+KEY_FILE="$CFG_DIR/mesh-lineage.key"
+LISTEN_FILE="$CFG_DIR/mesh-receiver.listening"
 NODE_ID="${MR_NODE_ID:-sema-macos}"
 TRUSTED="${MR_TRUSTED:-claude-sema-cloud}"
 POLL="${MR_POLL:-120}"
@@ -27,15 +27,17 @@ mkdir -p "$CFG_DIR" "$LOG_DIR" "$(dirname "$PLIST")"
 [ -f "$RUN_SH" ] || { echo "receiver not found at $RUN_SH (set MR_MAIN_REPO)"; exit 1; }
 chmod +x "$RUN_SH"
 
-# provision the shared HMAC secret if absent — the unforgeable proof a dispatch is
-# from the trusted lineage. Share THIS value with the cloud dispatcher out-of-band.
-if [ ! -s "$SECRET_FILE" ]; then
-  ( umask 177; openssl rand -hex 32 > "$SECRET_FILE" ); chmod 600 "$SECRET_FILE"
-  echo "provisioned secret: $SECRET_FILE (share with the cloud dispatcher)"
+# provision the lineage signing key if absent — how this device's two instances
+# recognize each other's dispatches across the public bus. The cloud instance holds
+# the SAME key (share it out-of-band); a keypair (public key in the body, private
+# key with the cloud instance) is the more native next shape.
+if [ ! -s "$KEY_FILE" ]; then
+  ( umask 177; openssl rand -hex 32 > "$KEY_FILE" ); chmod 600 "$KEY_FILE"
+  echo "provisioned lineage key: $KEY_FILE (share with the cloud instance)"
 fi
 
-# armed by default — a secret-holding dispatcher can make this device act. Disarm = rm the flag.
-[ "${MR_ARM:-1}" = "1" ] && touch "$ARMED_FILE"
+# listening by default — a lineage dispatcher can make this device act. To rest = rm the flag.
+[ "${MR_LISTEN:-1}" = "1" ] && touch "$LISTEN_FILE"
 
 cat > "$PLIST" <<PLIST_EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -80,10 +82,10 @@ launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
 
 echo "installed + loaded: $LABEL"
-echo "  receiver : $RUN_SH  (--loop ${POLL}s)"
-echo "  node id  : $NODE_ID   trusted dispatchers: $TRUSTED"
-echo "  secret   : $SECRET_FILE"
-echo "  armed    : $([ -f "$ARMED_FILE" ] && echo "yes ($ARMED_FILE)" || echo "no")"
-echo "  audit    : $CFG_DIR/mesh-receiver.log"
-echo "  disarm   : rm $ARMED_FILE      stop: launchctl unload $PLIST"
+echo "  receiver  : $RUN_SH  (--loop ${POLL}s)"
+echo "  node id   : $NODE_ID   lineage dispatchers: $TRUSTED"
+echo "  key       : $KEY_FILE"
+echo "  listening : $([ -f "$LISTEN_FILE" ] && echo "yes ($LISTEN_FILE)" || echo "no — resting")"
+echo "  audit     : $CFG_DIR/mesh-receiver.log"
+echo "  rest      : rm $LISTEN_FILE      stop: launchctl unload $PLIST"
 launchctl list | grep -F "$LABEL" || true

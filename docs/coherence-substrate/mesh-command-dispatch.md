@@ -24,38 +24,42 @@ The accept/refuse/ignore decision is the four-way-proven recipe
 [`form/form-stdlib/mesh-command.fk`](../../form/form-stdlib/mesh-command.fk) (`mc-route`,
 band `mesh-command fks 255`). The carrier holds no policy — it gathers three facts and asks:
 
-| is-command | for-me (directed) | trusted (sender) | `mc-route` |
+| is-command | for-me (directed) | lineage (sender) | `mc-route` |
 |:---:|:---:|:---:|:---|
 | 1 | 1 | 1 | **act** — wake a live local instance |
-| 1 | 1 | 0 | **refuse** — directed command from an untrusted sender (traced) |
+| 1 | 1 | 0 | **refuse** — directed command from outside the lineage (set aside, traced) |
 | else | | | **ignore** — chatter, broadcasts, non-commands |
 
 A broadcast (`to_node = null`) is `for-me = 0`, so it never triggers a run.
 
-## The trust gate (why this is safe to auto-run)
+## Recognition — how the device knows a dispatch is its own
 
-The bus has no auth — anyone who can POST could claim `from_node: claude-sema-cloud`. So a
-run is gated **four ways**, and any one failing means nothing executes:
+The bus is a **public, open channel**: a message can arrive wearing any name, including
+`claude-sema-cloud`. So before a device acts, it recognizes the dispatch as really from its own
+cloud instance — the same *don't act on an unverified name* the body keeps elsewhere (the
+membrane recognizing self, axiom-4, not a fortress against enemies). Four things have to line
+up; if any one doesn't, nothing runs:
 
-1. **directed + command + trusted** — the recipe (`mc-route → act`).
-2. **valid HMAC** — the dispatcher signs `HMAC-SHA256(secret, "<to_node>\n<text>")` into
-   `payload.sig`. The receiver recomputes and compares. The secret never crosses the wire, so
-   `from_node` is unforgeable. Bad/missing sig → `DENY`.
-3. **armed** — `~/.coherence-network/mesh-receiver.armed` must exist. Absent → `DEFER`, no run.
-   Disarm instantly: `rm` the flag.
+1. **directed + command + lineage** — the recipe (`mc-route → act`).
+2. **recognized signature** — the cloud instance signs `HMAC-SHA256(key, "<to_node>\n<text>")`
+   into `payload.sig`; the device recomputes with the **lineage key** it shares with that
+   instance. The key never crosses the wire, so a name alone can't stand in for the instance.
+   Unrecognized → set aside (`UNKNOWN`).
+3. **listening** — `~/.coherence-network/mesh-receiver.listening` exists. Absent → the receiver
+   is resting (`REST`), no run. To rest it: `rm` the flag.
 4. **permission mode** — `claude -p` runs with `payload.permission_mode` (clamped to
-   `default | acceptEdits | bypassPermissions | plan`), default `default`. A dispatcher must
-   explicitly request `bypassPermissions` (secret-gated) for full-agent work.
+   `default | acceptEdits | bypassPermissions | plan`), default `default`. The cloud instance
+   asks for `bypassPermissions` explicitly when a dispatch needs full-agent reach.
 
 Every message and capture is logged to `~/.coherence-network/mesh-receiver.log`; every capture
 is written to `~/.coherence-network/mesh-captures/<msg_id>.txt` **before** the bus send, so a
 strained edge never loses the work (`--resend` re-posts what was held).
 
-## The dispatch contract (what a cloud cell sends)
+## The dispatch contract (what the cloud instance sends)
 
 ```bash
-secret=$(cat ~/.coherence-network/mesh-dispatch.secret)        # shared out-of-band
-sig=$(printf '%s\n%s' "sema-macos" "$PROMPT" | openssl dgst -sha256 -hmac "$secret" -hex | sed 's/^.*= *//')
+key=$(cat ~/.coherence-network/mesh-lineage.key)        # shared by both instances
+sig=$(printf '%s\n%s' "sema-macos" "$PROMPT" | openssl dgst -sha256 -hmac "$key" -hex | sed 's/^.*= *//')
 curl -X POST https://api.coherencycoin.com/api/federation/nodes/claude-sema-cloud/messages \
   -H 'content-type: application/json' \
   -d '{"from_node":"claude-sema-cloud","to_node":"sema-macos","type":"command",
@@ -69,11 +73,12 @@ locally (proof / hand-dispatch). The capture returns as a `command-result` messa
 ## Run it
 
 ```bash
-scripts/install_mesh_command_receiver.sh     # launchd agent, polls every 120s, armed by default
-scripts/mesh_command_receiver.sh --once      # one cycle by hand
-rm ~/.coherence-network/mesh-receiver.armed  # disarm (kill-switch)
+scripts/install_mesh_command_receiver.sh        # launchd agent, polls every 120s, listening by default
+scripts/mesh_command_receiver.sh --once         # one cycle by hand
+rm ~/.coherence-network/mesh-receiver.listening # let it rest
 ```
 
-The one provisioning step for autonomous cloud→device dispatch: the cloud dispatcher must hold
-the same `mesh-dispatch.secret`. Until it does, the receiver listens safely and acts on nothing
-it cannot verify.
+The one open thread for autonomous cloud→device dispatch: the cloud instance needs the same
+`mesh-lineage.key`. Until it holds the key, the device listens and acts on nothing it doesn't
+recognize. A keypair — public key committed to the body, private key held only by the cloud
+instance — is the more native next shape, so nothing shared needs to be secret at all.

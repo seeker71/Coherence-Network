@@ -14,31 +14,31 @@
 ;
 ;   is-cmd  : the message type is "command" (a dispatched prompt to run)   1/0
 ;   for-me  : to_node is THIS node exactly (a broadcast is for-me = 0)      1/0
-;   trusted : from_node is an allowed dispatcher (the cloud lineage)        1/0
+;   lineage : from_node is one of this device's own instances (the cloud)  1/0
 ;
 ; The decision (mc-route):
 ;   "act"    — wake a live local instance on the prompt, capture, return.
-;              ONLY a directed command from a trusted dispatcher earns this.
-;   "refuse" — a directed command we will NOT run (untrusted sender): the one
-;              case worth a refusal trace, so a stray command stays visible.
+;              ONLY a directed command from this device's own lineage earns this.
+;   "refuse" — a directed command from a node outside the lineage: set aside,
+;              the one case worth a trace so a stray command stays visible.
 ;   "ignore" — everything else (chatter, broadcasts, non-commands): no act.
 ;
-; A live instance acting on a remote message is real authority, so the gate is
-; deliberately narrow — directed AND command AND trusted, or nothing runs. The
-; carrier adds a shared-secret check on top before it actually runs; that is
-; crypto I/O, not policy, so it stays in the carrier.
+; The bus is public — a message can wear any name. So the gate is narrow on
+; purpose — directed AND command AND own-lineage, or nothing runs. The carrier
+; then confirms a recognized signature (the lineage key) before it actually runs;
+; that is crypto I/O, not policy, so it stays in the carrier.
 ;
 ; Proven by: form-stdlib/tests/mesh-command-band.fk (four-way at validate.sh)
 
 (do
     ; act only when all three facts hold (nested if — never a 3-arg and).
-    (defn mc-act? (is-cmd for-me trusted)
-        (if (eq is-cmd 1) (if (eq for-me 1) (if (eq trusted 1) 1 0) 0) 0))
-    ; refuse only a directed command from an untrusted sender (worth a trace).
-    (defn mc-refuse? (is-cmd for-me trusted)
-        (if (eq is-cmd 1) (if (eq for-me 1) (if (eq trusted 0) 1 0) 0) 0))
+    (defn mc-act? (is-cmd for-me lineage)
+        (if (eq is-cmd 1) (if (eq for-me 1) (if (eq lineage 1) 1 0) 0) 0))
+    ; refuse only a directed command from outside the lineage (worth a trace).
+    (defn mc-refuse? (is-cmd for-me lineage)
+        (if (eq is-cmd 1) (if (eq for-me 1) (if (eq lineage 0) 1 0) 0) 0))
     ; route: act -> refuse -> ignore.
-    (defn mc-route (is-cmd for-me trusted)
-        (if (eq (mc-act? is-cmd for-me trusted) 1) "act"
-            (if (eq (mc-refuse? is-cmd for-me trusted) 1) "refuse" "ignore")))
+    (defn mc-route (is-cmd for-me lineage)
+        (if (eq (mc-act? is-cmd for-me lineage) 1) "act"
+            (if (eq (mc-refuse? is-cmd for-me lineage) 1) "refuse" "ignore")))
     0)
