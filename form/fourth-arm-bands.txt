@@ -234,6 +234,8 @@ form-cli-guide fks 31
 text-tokenize fks 31
 bpe-tokenizer fks 31
 byte-to-symbol fks 255
+pretokenize fks 255
+tokenize fks 31
 form-cli-judge fks 127
 obs-verify fks 31
 world-module-model fks 1023

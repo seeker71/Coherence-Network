@@ -1,0 +1,58 @@
+; tokenize.fk — the whole text→token-ids tokenizer as ONE composed Form recipe (whisper/GPT-2 BPE).
+;
+; preludes: form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk
+;
+; The three algorithmic stages of byte-level BPE are each four-way proven standalone — pre-tokenization
+; (pretokenize.fk #3542), byte→symbol mapping (byte-to-symbol.fk #3503), and the merge core
+; (bpe-tokenizer.fk #3447). This cell WIRES them into one callable `tokenize : text → ids` so the
+; autoregressive generation loop (multi-layer decode stack #3423/#3424 + greedy argmax #3402) has a single
+; front-end recipe to call. The pipeline, per byte-level BPE:
+;
+;   text --pretokenize--> word/number/punct/whitespace chunks
+;        --per chunk: chars→bytes (ord) → byte-to-symbol → vocab-id lookup → bpe-encode (merge core)
+;        --flatten chunk id-lists in order--> token ids
+;
+; The load-bearing law this composition ENFORCES (and proves): byte-level BPE never merges across a
+; pre-token boundary — each chunk is byte-mapped and merged INDEPENDENTLY, then the per-chunk id lists are
+; concatenated. A pair that would merge within a chunk fires; the same pair straddling two chunks does not.
+;
+; Carrier-last note: the byte→symbol VOCAB table (codepoint→single-symbol vocab id) and the full
+; 50000-merge table are carrier DATA passed in — loaded from whisper's tokenizer files; this recipe is the
+; whole algorithm wiring them, proven end-to-end from raw text against the real openai/whisper-tiny tokenizer.
+; Over the ASCII byte domain the merge core works in, `ord` of a char IS its byte; multibyte UTF-8 byte
+; decomposition (the one remaining front-end carrier) sits before `tok-str-bytes` for non-ASCII text.
+; Pure string/int/list recursion — no host I/O, no floats — the fourth-friendly subset.
+
+(do
+  ; chars of s[i..n) -> their byte values (ASCII: ord c == byte)
+  (defn tok-str-bytes (s i n)
+    (if (ge i n) (list)
+        (cons (ord (char_at s i)) (tok-str-bytes s (add i 1) n))))
+
+  ; one codepoint -> its vocab id via the (codepoint id) table, or -1 if absent
+  (defn tok-vocab-id (cp vocab)
+    (if (eq (len vocab) 0) -1
+        (do (let row (head vocab))
+            (if (eq (nth row 0) cp) (nth row 1) (tok-vocab-id cp (tail vocab))))))
+  (defn tok-vocab-ids (cps vocab)
+    (if (eq (len cps) 0) (list)
+        (cons (tok-vocab-id (head cps) vocab) (tok-vocab-ids (tail cps) vocab))))
+
+  ; list append (flatten per-chunk id lists in order)
+  (defn tok-append (a b)
+    (if (eq (len a) 0) b (cons (head a) (tok-append (tail a) b))))
+
+  ; one pre-token chunk -> its token ids: chars→bytes→symbols→vocab-ids→merge core
+  (defn tok-chunk-ids (chunk vocab table)
+    (bpe-encode (tok-vocab-ids (bytes-to-symbols (tok-str-bytes chunk 0 (str_len chunk)) ) vocab) table))
+
+  ; encode each chunk independently, concatenate in order (the no-cross-boundary-merge law)
+  (defn tok-chunks (chunks vocab table)
+    (if (eq (len chunks) 0) (list)
+        (tok-append (tok-chunk-ids (head chunks) vocab table)
+                    (tok-chunks (tail chunks) vocab table))))
+
+  ; the entry: raw text -> token ids
+  (defn tokenize (text vocab table)
+    (tok-chunks (pretokenize text) vocab table))
+  0)
