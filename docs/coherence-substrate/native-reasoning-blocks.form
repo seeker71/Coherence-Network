@@ -51,8 +51,11 @@
 ;     host-diagnostic.fk    the diagnostic lane every native host runs to MEASURE itself: a tri-state
 ;                           capability profile (absent/degraded/present) + divergence ATTRIBUTION
 ;                           (carrier absent here -> environmental; present + still divergent -> REAL bug).
-;                           Body is four-way + native; thin per-host carrier (scripts/host_diagnostic_
-;                           probe.sh) does the physical probe. Turns "6 divergent" into measured verdicts. 1023
+;                           Body is four-way + native.                                                  1023
+;     host-probe.fk         the NATIVE all-hosts carrier (no shell): a Form recipe over kernel builtins
+;                           http_get/read_file/file_mtime that MEASURES this host's profile. Portable
+;                           because the KERNEL is per-host compiled (ran live on Go AND Rust kernels;
+;                           caught a real Go-vs-Rust http_get difference). Carrier, not a band (live I/O).
 ;     living-vector.fk      sovereignty & vitality as VECTORS over one named-axis algebra (two instances
 ;                           as data): reading, binding (the limiting axis = where to tend next),
 ;                           dominance, lift, gap. Computes the body's stated floor: generative binds.   1023
