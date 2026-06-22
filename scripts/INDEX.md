@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 327
+**Total files**: 328
 
 | File | Purpose |
 |---|---|
@@ -221,6 +221,7 @@
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
+| [pg_wire_fkwu_witness.sh](pg_wire_fkwu_witness.sh) | pg_wire_fkwu_witness.sh — prove the 4th kernel (fkwu) reads from live Postgres via Form pg-wire. |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
 | [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | Detect, summarize, and optionally auto-rerun failing PR checks. |
