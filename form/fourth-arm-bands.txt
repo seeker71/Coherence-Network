@@ -324,7 +324,7 @@ proof-trust fkc 1023
 rational fkc 1023
 float-ops fks 255
 nl-reason fks 255
-resolution fkc 4095
+resolution fkc 8191
 host-diagnostic fkc 1023
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
