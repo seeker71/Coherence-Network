@@ -1,0 +1,37 @@
+; host-probe.fk — the native, all-hosts capability probe: NO shell, only kernel I/O builtins.
+;
+; preludes: form-stdlib/host-diagnostic.fk
+;
+; A bash carrier is NOT all-hosts — Windows has no bash, Android is no clean bash host, mac's is
+; incidental. The body's actual portability layer is the KERNEL: each kernel (Go/Rust/TS) is COMPILED
+; for its host, and the emitted native binary IS the host's asm, so the kernel's I/O builtins —
+; http_get, read_file, file_mtime — run on every host because the kernel does. (http_get even crosses
+; the fourth arm: fkwu owns DNS/TCP/socket/read/write + TLS itself.) So the probe is a Form RECIPE over
+; those builtins, not a per-platform script. One recipe, every host. The decision logic stays in
+; host-diagnostic.fk (four-way + native); this is the thin native door that fills the profile by
+; MEASURING — every status read from a live builtin, never assumed.
+;
+; This recipe does live I/O, so it is a CARRIER, not a four-way verdict band (you cannot bit-compare a
+; live socket across kernels). The proven part is host-diagnostic.fk; this runs wherever the kernel runs.
+;
+; Kin: host-diagnostic.fk (the decision body it feeds), model-vitality.fk (native http_get capture),
+; cache.fk / cell-log-store.fk (native read_file/file_mtime users). Carrier — no band.
+
+(do
+    ; net / service reachable: native http_get, read status_code from the result dict. 200 => present.
+    (defn hp-reachable (url)
+        (if (eq (_get (http_get url (list) 3000) "status_code") 200) (hd-present) (hd-absent)))
+    ; filesystem readable: native file_mtime on a known path (>0 => present).
+    (defn hp-file (path) (if (gt (file_mtime path) 0) (hd-present) (hd-absent)))
+
+    ; THIS host's measured capability profile — native builtins only, runs on every kernel/host.
+    ;   1 postgres (via the DB-backed /api/ideas route) · 4 net (/api/health) · 5 filesystem
+    (defn hp-profile ()
+        (list (hd-probe 1 (hp-reachable "https://api.coherencycoin.com/api/ideas"))
+              (hd-probe 4 (hp-reachable "https://api.coherencycoin.com/api/health"))
+              (hd-probe 5 (hp-file "form-stdlib/core.fk"))))
+
+    ; the host's readiness, measured natively (per-mille share present) — composes with living-vector.
+    (defn hp-readiness () (hd-awakeness (hp-profile)))
+
+    0)
