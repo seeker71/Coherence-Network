@@ -1,0 +1,76 @@
+; sleep-classify.fk — name WHAT a night-window's sound is, in Form, by composing the body's own classifier.
+;
+; sleep-sense.fk decides one bit (snore? = loud AND periodic). This is the next altitude: the same envelope,
+; classified into the coarse acoustic categories a bedside cell actually wants to tell apart — and an honest
+; gate that says when the envelope alone CANNOT tell, so a local oracle is asked instead of guessed.
+;
+; It invents nothing. It composes four recipes already proven four-way:
+;   feature-vector.fk  (fv-bin)        — quantize a scalar into a coarse band by ascending thresholds
+;   sleep-sense.fk     (ss-mean)       — the window's loudness
+;   signal-derivative  (sd-activity)   — the window's oscillation (periodicity)
+;   nearest-shape.fk   (ns-label/strength) — content-addressed recognition: nearest interned prototype wins
+;
+; THE FEATURE. An 8-level envelope becomes a 3-bin fingerprint [loud osc peak], each 0..2:
+;   loud = band of ss-mean      (0 silent / 1 soft / 2 loud)
+;   osc  = band of sd-activity  (0 flat   / 1 some / 2 very-periodic)
+;   peak = band of the max level(0 low    / 1 mid  / 2 high — catches a spike a low mean would hide)
+;
+; THE PROTOTYPES. Five interned shapes span the bedside space (label, [loud osc peak]):
+;   silent       [0 0 0]  restful near-silence
+;   quiet-breath [1 1 1]  soft, gently oscillating breath
+;   snore        [2 2 2]  loud AND periodic — the ss-snore? case, now named
+;   steady-noise [2 0 2]  loud but FLAT — a fan/AC, correctly NOT a snore
+;   loud-event   [0 1 2]  mostly quiet with one loud spike — a cough/door/movement
+; ns-label is the nearest by agreeing bins; ns-strength (0..3) is EARNED confidence, never asserted.
+;
+; THE HONEST GATE (where the local oracle earns its keep). The envelope cannot separate a snore from loud
+; rhythmic SPEECH (sleep-talk) — both read [2 2 2]. So sc-needs-oracle? flags exactly the classes whose
+; ACOUSTIC IDENTITY the envelope can't settle (snore, loud-event); the carrier escalates only those windows
+; to a LOCAL oracle (whisper: coherent words -> speech/sleep-talk, else the Form label stands). Every other
+; class is trusted from the body — most of the night never touches the oracle (cheap, private, sovereign).
+; This is llm-feature-channel-floor.fk's `classify` channel (label+confidence, oracle as TEACHER not master)
+; and its `abstain-uncertainty` channel (the body choosing to ask rather than guess), composed for sleep.
+;
+; HONEST LANE: this names envelope SHAPE, not verified identity — "this window looks like a snore", earned
+; against prototypes, with the one identity the body can't settle (snore vs speech) handed to the oracle.
+; The self-grounding loop (self-grounding-classifier.fk) is the next rung: the oracle's labels are ground
+; truth, the Form classifier earns authority by proven agreement, and the oracle retires when it has.
+;
+; Proven by: form-stdlib/tests/sleep-classify-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    ; --- peak: the loudest level in the envelope (accumulator walk; levels are >=0 so 0 is a safe floor). ---
+    (defn sc-maxacc (xs m)
+        (if (ge (len xs) 1)
+            (sc-maxacc (tail xs) (if (ge (head xs) m) (head xs) m))
+            m))
+    (defn sc-max (xs) (sc-maxacc xs 0))
+
+    ; --- the 3-bin fingerprint [loud osc peak] of a window's envelope. ---
+    (defn sc-features (env)
+        (list (fv-bin (ss-mean env)     (list 2 5))
+              (fv-bin (sd-activity env) (list 2 5))
+              (fv-bin (sc-max env)      (list 3 7))))
+
+    ; --- the interned prototype shapes the bedside space is recognized against. ---
+    (defn sc-protos ()
+        (list (list "silent"       (list 0 0 0))
+              (list "quiet-breath" (list 1 1 1))
+              (list "snore"        (list 2 2 2))
+              (list "steady-noise" (list 2 0 2))
+              (list "loud-event"   (list 0 1 2))))
+
+    ; --- recognition: the nearest prototype's label, and the earned strength (0..3 agreeing bins) behind it.
+    (defn sc-classify (env) (ns-label    (sc-features env) (sc-protos)))
+    (defn sc-strength (env) (ns-strength (sc-features env) (sc-protos)))
+
+    ; --- sure?: 1 when the recognition cleared the agreement floor, else 0 (no prototype is a strong match).
+    (defn sc-sure? (env floor) (if (ge (sc-strength env) floor) 1 0))
+
+    ; --- needs-oracle?: 1 for the classes whose acoustic IDENTITY the envelope can't settle (snore vs
+    ;     speech; an event vs a word) — exactly those the carrier escalates to the local oracle. ---
+    (defn sc-needs-oracle? (env)
+        (if (str_eq (sc-classify env) "snore") 1
+            (if (str_eq (sc-classify env) "loud-event") 1 0)))
+
+    0)

@@ -1,0 +1,33 @@
+; preludes: form-stdlib/signal-derivative.fk form-stdlib/sleep-sense.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/sleep-classify.fk
+;
+; sleep-classify-band — naming a night-window's sound, made falsifiable.
+;
+; Five envelope shapes pin the categories the bedside cell must tell apart, and the honest gate that hands
+; the one identity the envelope can't settle (snore vs speech) to a local oracle:
+;   silent    (0 0 0 0 0 0 0 0)  -> "silent"        restful near-silence
+;   fan       (9 9 9 9 9 9 9 9)  -> "steady-noise"  loud but FLAT — the key claim: NOT a snore
+;   breath    (9 0 9 0 9 0 9 0)  -> "snore"         loud AND periodic
+;   spike     (0 0 9 0 0 0 0 0)  -> "loud-event"    mostly quiet, one loud burst
+;   ns-strength on silent == 3 (earned confidence), and the oracle is asked for snore but NOT for the fan.
+;
+; Verdict 127 when every claim lands:
+;   1    a silent window is named "silent"
+;   2    a loud FLAT window is "steady-noise", never a snore (the periodicity discriminator, now named)
+;   4    a loud oscillating window is "snore"
+;   8    a quiet window with one spike is "loud-event"
+;   16   sc-needs-oracle? fires on a snore (identity the envelope can't settle -> ask whisper)
+;   32   sc-needs-oracle? stays 0 on the fan (a steady noise never wastes the oracle)
+;   64   sc-strength reads earned confidence: a clean silent window scores the full 3
+(do
+    (let silent (list 0 0 0 0 0 0 0 0))
+    (let fan    (list 9 9 9 9 9 9 9 9))
+    (let breath (list 9 0 9 0 9 0 9 0))
+    (let spike  (list 0 0 9 0 0 0 0 0))
+    (let c0 (if (str_eq (sc-classify silent) "silent")       1 0))
+    (let c1 (if (str_eq (sc-classify fan)    "steady-noise") 2 0))
+    (let c2 (if (str_eq (sc-classify breath) "snore")        4 0))
+    (let c3 (if (str_eq (sc-classify spike)  "loud-event")   8 0))
+    (let c4 (if (eq (sc-needs-oracle? breath) 1) 16 0))
+    (let c5 (if (eq (sc-needs-oracle? fan)    0) 32 0))
+    (let c6 (if (eq (sc-strength silent) 3) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
