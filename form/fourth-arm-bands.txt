@@ -322,6 +322,7 @@ unify fkc 1023
 derivation fkc 1023
 proof-trust fkc 1023
 rational fkc 1023
+float-ops fks 255
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
 # resource cells, application graph SQL strings, and auth/header/hash wrappers.

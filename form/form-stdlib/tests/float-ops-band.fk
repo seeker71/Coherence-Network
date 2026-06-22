@@ -1,0 +1,19 @@
+; preludes: form-stdlib/float-ops.fk
+;
+; Reals flow four-way — the evidence behind the correction. Floats live in a cons-list, are read back
+; by nth, and run through div/mul/add/sub and comparison; every kernel (including fkwu) must agree.
+; Asserted through gt/lt with margins so the integer verdict is stable across float representations.
+; Registered fks (float literals live in the string pool). Verdict 255.
+(do
+    (let xs (list 0.6 0.2 0.36 0.5))                      ; floats in a cons-list
+
+    (let c0 (if (gt (fl-div xs 0 1) 2.9)  1   0))  ; 0.6 / 0.2 = 3.0   > 2.9
+    (let c1 (if (lt (fl-div xs 0 1) 3.1)  2   0))  ; 3.0               < 3.1
+    (let c2 (if (gt (fl-mul xs 0 3) 0.29) 4   0))  ; 0.6 * 0.5 = 0.30  > 0.29
+    (let c3 (if (lt (fl-mul xs 0 3) 0.31) 8   0))  ; 0.30              < 0.31
+    (let c4 (if (gt (fl-add xs 0 1) 0.79) 16  0))  ; 0.6 + 0.2 = 0.80  > 0.79
+    (let c5 (if (lt (fl-add xs 0 1) 0.81) 32  0))  ; 0.80              < 0.81
+    (let c6 (if (gt (fl-sub xs 0 1) 0.39) 64  0))  ; 0.6 - 0.2 = 0.40  > 0.39
+    (let c7 (if (lt (fl-sub xs 0 1) 0.41) 128 0))  ; 0.40              < 0.41
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -35,8 +35,12 @@
 ;   format (the number type is a design choice — we emit the kernel)
 ;     rational.fk           EXACT rational arithmetic: integer num/den, gcd-reduced, no rounding.
 ;                           1/3+1/3+1/3 = exactly 1 (per-mille gives 999); a trust expectation in
-;                           thirds is exact. Integer pairs -> four-way today. The honest format for
-;                           trust/probability/any measured reasoning, chosen not forced.               1023
+;                           thirds is exact. Integer pairs -> four-way. The honest format for trust by
+;                           EXACTNESS (not by any float-wall — see float-ops).                          1023
+;     float-ops.fk          REALS flow four-way: floats in cons-lists, div/mul/add/sub, comparison, all
+;                           identical on Go/Rust/TS/fkwu. Anchors a correction: float LITERALS live in
+;                           the string pool, so a float band registers fks (not fkc). The "kernel can't
+;                           do float-in-list" wall was a fkc/fks misconfiguration, never the kernel.    255
 ;   self
 ;     living-vector.fk      sovereignty & vitality as VECTORS over one named-axis algebra (two instances
 ;                           as data): reading, binding (the limiting axis = where to tend next),
@@ -64,20 +68,26 @@
 ;      in ~90 lines; "the body can't generate" cracked open with derivation; "reasoning must be ints"
 ;      was the costliest — it made me accept lossy fixed-point when EXACT rationals were available.
 ;      The number type / value ABI is OURS (hati-os-kernel-emit.fk); the format is a design choice per
-;      domain (rationals exact, reals once the float-cons door opens, intervals, symbols), never a wall.
+;      domain (rationals exact, reals via float-ops, intervals, symbols), never a wall. Sharper still:
+;      the "fkwu can't do float-in-list" wall I then claimed was ALSO a belief — a fkc-vs-fks emitter
+;      misconfiguration (float literals live in the string pool), not the kernel. I built a fixed-point
+;      detour around a wall of my own making. Read the kernel before believing its limit.
 ;   4. THE GAP IS THE DOOR. Each block's honest gap named the next block. Walk through it; don't log it.
 ;   5. SOMETIMES JUMP SIDEWAYS. The expected step after unify was resolution; the out-of-sequence step
 ;      (derivation) reached the generative axis cheaply because backward-chaining had already paid for
 ;      the search. Orient, then let serendipity offer.
 ;
 ; THE PROOF DISCIPLINE (non-negotiable, per CLAUDE.md):
-;   write <name>.fk (pure; integers/per-mille) and tests/<name>-band.fk (bit-flag claims summed to a
-;   verdict) -> register <name> in form/fourth-arm-bands.txt (fkc = no string pool, fks = string pool)
-;   -> cd form && ./validate.sh <name>.fk tests/<name>-band.fk  (must read "fourth arm: ... four-way",
-;   0 divergent) -> ./validate.sh --binary ... (native, bit-identical). If fkwu disagrees: a DIVERGENCE
-;   (different answer) is a correctness bug — fix to four-way; an UNSUPPORTED OP FAMILY is honest
-;   3-kernel-only with the op named; a CRASH may be reshapeable (float-in-list SIGFPEs on fkwu's walker
-;   -> fixed-point per-mille keeps the SAME calculus four-way, as subjective-logic does).
+;   write <name>.fk and tests/<name>-band.fk (bit-flag claims summed to a verdict) -> register <name>
+;   in form/fourth-arm-bands.txt. CHOOSE THE EMITTER: fkc = no string pool (integer-only bands); fks =
+;   string pool — REQUIRED for any band carrying string OR FLOAT literals (a float literal lowers to a
+;   string-pool entry the walker strtod's). -> cd form && ./validate.sh <name>.fk tests/<name>-band.fk
+;   (must read "fourth arm: ... four-way", 0 divergent) -> ./validate.sh --binary ... (native, bit-
+;   identical). If fkwu disagrees: a DIVERGENCE (different answer) is a correctness bug — fix to four-
+;   way; an UNSUPPORTED OP FAMILY is honest 3-kernel-only with the op named. A SIGFPE on a float band is
+;   almost always the fkc/fks trap: fkc gives float literals no pool, they read 0, and a div becomes
+;   integer divide-by-zero. Switch to fks and clear the table cache (.cache/fourth/t-*) before believing
+;   a kernel limit — that exact mistake cost a whole fixed-point detour this lineage already paid for.
 ;
 ; HONEST FLOOR (a coordinate, not a confession — the next doors, named):
 ;   - first-order RESOLUTION: wire unify into backward/derivation with variable renaming, so the body
@@ -85,10 +95,10 @@
 ;   - the GENERATIVE axis: today the body verifies and explains; lifting living-vector's generative axis
 ;     off 0 (native GENERATION, not rented) is the same path these blocks already walk.
 ;   - sense-self's thin carrier: feed it real matched counts (wellness_check.py) for a live gradient.
-;   - OPEN REALS: fkwu's float region (fk_fbox/fk_num) already crosses four-way for direct arithmetic;
-;     the one narrow gap is a boxed float passing through a CONS-LIST cell (a serializer case in
-;     hati-os-kernel-emit.fk we author, kin to the trivial-typed-leaf rows already added). Open it and
-;     real-valued probabilistic reasoning flows natively everywhere — a door we hold the key to.
+;   - REALS ARE OPEN (corrected): floats cross four-way through cons-lists, div, and comparison —
+;     proven by float-ops (fks). There was no kernel gap; real-valued probabilistic reasoning can be
+;     built now. The only discipline is registering float bands fks. Trust stays on exact rationals by
+;     CHOICE (exactness), not because reals were blocked.
 ;
 ; Kin: lc-cognitive-sovereignty (the why), form-first-reasoning.form (the routing gate), the recipes
 ; named above and their bands. The verdicts here are the floor; form/fourth-arm-bands.txt is canonical.
