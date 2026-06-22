@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 319
+**Total files**: 321
 
 | File | Purpose |
 |---|---|
@@ -103,7 +103,6 @@
 | [form_cli_ensure.sh](form_cli_ensure.sh) | form_cli_ensure.sh — ensure the form-cli's oracles are present, DECIDED by Form. |
 | [form_cli_gaps.sh](form_cli_gaps.sh) | form_cli_gaps.sh — the catalog of what is OPEN, walked from the live body. |
 | [form_cli_gold.sh](form_cli_gold.sh) | form_cli_gold.sh — record a human's direct freq-reading into the local GOLD catalog. |
-| [mesh_dispatch.sh](mesh_dispatch.sh) | mesh_dispatch.sh — marshal a mesh message BODY to the kernel and print the body's decision (route/verdict/boundary) from mesh-dispatch.fk (four-way). Carrier-last; coord-respond.sh uses it to record a `gold …` reading vs answer an ask. |
 | [form_cli_guided.sh](form_cli_guided.sh) | form_cli_guided.sh — the trained native model makes the live model better. |
 | [form_cli_judge.sh](form_cli_judge.sh) | form_cli_judge.sh — measure the REASONING lane: how well a native model's answer |
 | [form_cli_learn.sh](form_cli_learn.sh) | form_cli_learn.sh — the continuous-learning loop's body, in ONE motion: grow the tool-use corpus |
@@ -192,6 +191,7 @@
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
 | [meeting_companion.sh](meeting_companion.sh) | meeting_companion.sh — a meeting companion that LISTENS (STT), DECIDES whether |
+| [mesh_dispatch.sh](mesh_dispatch.sh) | mesh_dispatch.sh — run the body's mesh-dispatch decision on a message BODY. |
 | [metal_arch_search_audit.sh](metal_arch_search_audit.sh) | metal_arch_search_audit.sh — the ARCHITECT'S CAPACITY SEARCH on Metal (M4 Max GPU witness). |
 | [metal_attn_audit.sh](metal_attn_audit.sh) | metal_attn_audit.sh — the ARCHITECT'S ATTENTION layer learning on Metal (M4 Max GPU witness). |
 | [metal_backprop_audit.sh](metal_backprop_audit.sh) | metal_backprop_audit.sh — the LEARNING KERNEL on Metal (M4 Max GPU witness). |
@@ -229,6 +229,7 @@
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
 | [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |
+| [rest_sense.sh](rest_sense.sh) | rest_sense.sh — the body reads its own breath-phase. A thin carrier: it counts the |
 | [restart_hostinger_vps.sh](restart_hostinger_vps.sh) | _no top-of-file purpose_ |
 | [restore_postgres.sh](restore_postgres.sh) | Restore the Coherence Network Postgres from a backup dump. |
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |

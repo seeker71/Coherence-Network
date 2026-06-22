@@ -1,35 +1,39 @@
 ; preludes: form-stdlib/core.fk form-stdlib/sense-liveness.fk
 ;
-; sense-liveness-band — the tri-state that measures shipped vs actively used.
+; sense-liveness-band — the four states that separate shipped / capable / receiving / used.
+; The CAPABLE state is the honest one a naive readout misses: an organ heartbeating
+; "I can sense" while streaming zero samples is present, not active.
 ;
-; Verdict 63:
+; A reading is (name sample-age recognized hb-age). window = 60.
+; Verdict 127:
 ;   1   floor is present
-;   2   fresh + recognized -> ACTIVE          (the sense is truly used)
-;   4   fresh + unrecognized -> RECEIVING     (data flows, nothing interprets it)
-;   8   stale -> DARK                          (built but unfed, or the feed died)
-;   16  the active count across a mixed inventory is right (only 1 of 5 is active)
-;   32  awakeness is active/total percent (1 of 5 active -> 20% awake)
+;   2   fresh samples + recognized -> ACTIVE
+;   4   fresh samples + unrecognized -> RECEIVING
+;   8   no samples but a fresh heartbeat -> CAPABLE   (the phone announces presence, idle)
+;   16  no samples and no heartbeat -> DARK
+;   32  the active count across a mixed inventory is right (1 of 4)
+;   64  awakeness counts only ACTIVE (1 of 4 -> 25%), never capable
 (do
-    ;; a mixed inventory mirroring the honest current floor: one sense recognized
-    ;; live, two receiving raw data, two dark. window = 60s.
+    ;; a mixed inventory exercising every state. window 60.
     (defn sl-inv ()
         (list
-            (sl-sense "motion" 3 1)          ;; recognized live -> active
-            (sl-sense "mic" 4 0)             ;; fresh raw, not interpreted -> receiving
-            (sl-sense "light" 6 0)           ;; fresh raw, not interpreted -> receiving
-            (sl-sense "audibility" 999 0)    ;; no recent data -> dark
-            (sl-sense "recognition" 999 0))) ;; built, unfed -> dark
+            (sl-sense "a-active" 3 1 1)      ;; samples fresh + recognized -> active
+            (sl-sense "b-receiving" 3 0 1)   ;; samples fresh, not interpreted -> receiving
+            (sl-sense "c-capable" 999 0 2)   ;; no samples, heartbeat fresh -> capable
+            (sl-sense "d-dark" 999 0 999)))  ;; no samples, no heartbeat -> dark
 
     (defn sl-b1 () (if (gt (len (sl-floor)) 0) 1 0))
-    (defn sl-b2 () (if (str_eq (sl-status (sl-sense "motion" 3 1) 60) "active") 2 0))
-    (defn sl-b4 () (if (str_eq (sl-status (sl-sense "mic" 4 0) 60) "receiving") 4 0))
-    (defn sl-b8 () (if (str_eq (sl-status (sl-sense "audibility" 999 0) 60) "dark") 8 0))
-    (defn sl-b16 () (if (eq (sl-active (sl-inv) 60) 1) 16 0))
-    (defn sl-b32 () (if (eq (sl-awake-pct (sl-inv) 60) 20) 32 0))
+    (defn sl-b2 () (if (str_eq (sl-status (sl-sense "x" 3 1 1) 60) "active") 2 0))
+    (defn sl-b4 () (if (str_eq (sl-status (sl-sense "x" 3 0 1) 60) "receiving") 4 0))
+    (defn sl-b8 () (if (str_eq (sl-status (sl-sense "x" 999 0 2) 60) "capable") 8 0))
+    (defn sl-b16 () (if (str_eq (sl-status (sl-sense "x" 999 0 999) 60) "dark") 16 0))
+    (defn sl-b32 () (if (eq (sl-active (sl-inv) 60) 1) 32 0))
+    (defn sl-b64 () (if (eq (sl-awake-pct (sl-inv) 60) 25) 64 0))
 
     (add (sl-b1)
         (add (sl-b2)
             (add (sl-b4)
                 (add (sl-b8)
-                    (add (sl-b16) (sl-b32))))))
+                    (add (sl-b16)
+                        (add (sl-b32) (sl-b64)))))))
 )
