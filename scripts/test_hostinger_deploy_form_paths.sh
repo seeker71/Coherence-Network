@@ -172,8 +172,14 @@ grep -Fq "BML front-door promoted read routes" "$DEPLOY_SCRIPT" \
 grep -Fq 'printf '\''%s'\'' '\''$kernel_image_payload'\'' >/tmp/kernel-image.request.json' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not write the kernel image proposal payload as a request file"
 
+grep -Fq '&& curl -fsS --max-time 30 -D /tmp/kernel-image.headers' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not allow the cold kernel image proposal route enough time"
+
 grep -Fq -- '--data-binary @/tmp/kernel-image.request.json' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not post the kernel image proposal payload from a request file"
+
+grep -Fq "kernel-image body:" "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not print kernel image proposal diagnostics on failure"
 
 grep -Fq 'X-Form-Handler: \${handler}' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not require promoted BML handler proof"

@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/kernel-image-canary-timeout",
+  "commit_scope": "Heal the Hostinger BML kernel-image canary timeout observed after deploying organ-offer. The public native route is healthy but cold probes can exceed the old 10 second local canary timeout, so the deploy canary now allows 30 seconds per request, keeps retrying for up to 360 seconds, and prints the last kernel-image headers/body when it still fails.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_kernel_image_canary_timeout.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_kernel_image_canary_timeout.json",
+      "POST https://api.coherencycoin.com/api/substrate/kernel-image/proposals with ASCII request file"
+    ],
+    "notes": "The failed deploy run 27963689545 showed repeated curl max-time 10 timeouts before failing the BML kernel-image proposal canary. A public file-backed POST immediately after the failure returned X-Form-Router native-kernel, handler api_substrate_kernel_image_proposals, python_authority false, and proposal_status accepted-preview."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI and Hostinger Auto Deploy will run after this follow-up PR merges."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger native kernel-router canary",
+    "notes": "The current public API has deployed_sha 4361121f131121305a99e0b4c1ad0bc09e93f2f9. BML native routes are live; /api/attention/kernel-runtime is still HTTP 404 until a successful kernel-router overlay deploy reapplies the production-manifest ingress labels."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local deploy-path proof passed; a merged deploy rerun and public native probe verification remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "deploy-canary-stability"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-kernel-image-canary-timeout"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27963689545 failed in Roll forward VPS after repeated curl max-time 10 timeouts on the BML kernel-image proposal canary.",
+    "A public POST to /api/substrate/kernel-image/proposals using an ASCII request file after the failed deploy returned proposal_status accepted-preview with X-Form-Router native-kernel and python_authority false.",
+    "The deploy canary now posts from /tmp/kernel-image.request.json, uses curl --max-time 30, retries for 360 seconds, and prints /tmp/kernel-image.headers plus /tmp/kernel-image.body diagnostics when still failing."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_kernel_image_canary_timeout.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger deploy should not fail the BML kernel-image route solely because a cold native proposal proof takes longer than 10 seconds.",
+    "public_endpoints": [
+      "POST /api/substrate/kernel-image/proposals",
+      "GET /api/attention/kernel-runtime"
+    ],
+    "test_flows": [
+      "local deploy-path check pins the 30 second kernel-image canary timeout and failure diagnostics.",
+      "post-merge deploy rerun should complete Roll forward VPS and then public verification should observe /api/attention/kernel-runtime as native-kernel."
+    ]
+  }
+}
