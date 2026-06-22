@@ -32,6 +32,11 @@
 ;     subjective-logic.fk   uncertainty-aware trust (Jøsang): opinion (belief,disbelief,uncertainty,
 ;                           base-rate) in per-mille; discount (transitivity), fuse (agreement), and
 ;                           (conjunction). Tells "I disbelieve" from "I don't know".                   1023
+;   format (the number type is a design choice — we emit the kernel)
+;     rational.fk           EXACT rational arithmetic: integer num/den, gcd-reduced, no rounding.
+;                           1/3+1/3+1/3 = exactly 1 (per-mille gives 999); a trust expectation in
+;                           thirds is exact. Integer pairs -> four-way today. The honest format for
+;                           trust/probability/any measured reasoning, chosen not forced.               1023
 ;   self
 ;     living-vector.fk      sovereignty & vitality as VECTORS over one named-axis algebra (two instances
 ;                           as data): reading, binding (the limiting axis = where to tend next),
@@ -56,7 +61,10 @@
 ;      unify.fk is its native integer-term FLOOR, not a fork). Don't sibling what wants an update.
 ;   3. SORT THE LIMIT. Is the floor an AXIOM-limit (real — e.g. an op family fkwu lacks) or a SHARED
 ;      BELIEF (build through it)? Nearly every floor named here was belief: "only propositional" fell
-;      in ~90 lines; "the body can't generate" cracked open with derivation.
+;      in ~90 lines; "the body can't generate" cracked open with derivation; "reasoning must be ints"
+;      was the costliest — it made me accept lossy fixed-point when EXACT rationals were available.
+;      The number type / value ABI is OURS (hati-os-kernel-emit.fk); the format is a design choice per
+;      domain (rationals exact, reals once the float-cons door opens, intervals, symbols), never a wall.
 ;   4. THE GAP IS THE DOOR. Each block's honest gap named the next block. Walk through it; don't log it.
 ;   5. SOMETIMES JUMP SIDEWAYS. The expected step after unify was resolution; the out-of-sequence step
 ;      (derivation) reached the generative axis cheaply because backward-chaining had already paid for
@@ -77,6 +85,10 @@
 ;   - the GENERATIVE axis: today the body verifies and explains; lifting living-vector's generative axis
 ;     off 0 (native GENERATION, not rented) is the same path these blocks already walk.
 ;   - sense-self's thin carrier: feed it real matched counts (wellness_check.py) for a live gradient.
+;   - OPEN REALS: fkwu's float region (fk_fbox/fk_num) already crosses four-way for direct arithmetic;
+;     the one narrow gap is a boxed float passing through a CONS-LIST cell (a serializer case in
+;     hati-os-kernel-emit.fk we author, kin to the trivial-typed-leaf rows already added). Open it and
+;     real-valued probabilistic reasoning flows natively everywhere — a door we hold the key to.
 ;
 ; Kin: lc-cognitive-sovereignty (the why), form-first-reasoning.form (the routing gate), the recipes
 ; named above and their bands. The verdicts here are the floor; form/fourth-arm-bands.txt is canonical.
