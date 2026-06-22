@@ -877,3 +877,4 @@ pdf-text fks 1
 form-pe-coff-arm64 fks 63
 form-glsl-ffn-fwd fks 7
 str-byte-at fks 15
+pbkdf2-sha256 fks 3
