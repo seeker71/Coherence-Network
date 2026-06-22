@@ -1,0 +1,73 @@
+; native-thought-receipt.fk — the native-thought-execution receipt, host effects via the kernel's host-io.
+;
+; preludes: form-stdlib/sovereignty-receipt.fk
+;
+; The native-thought-execution skill routes a thought through the body before the rented mind. This
+; recipe is the MEASURED half — and the LOGIC is Form, not shell: it decides the receipt's honesty with
+; the proven gate (sovereignty-receipt.fk -> 255 four-way), assembles the row, and appends it to the
+; ledger through the kernel's own host-io (file_append_bytes — atomic O_APPEND). The carrier that calls
+; this is a thin door (escape args, hand to the kernel); no bash holds any logic. "The carrier is a thin
+; door, not a script" — host AND tool access come home to Form.
+;
+; record:  (ntr-record ledger ts commit path kind nodeid query) -> "ok:<path>" | "refused"
+;   path = "body-hit" (native lookup, nothing rented) | "escalated" (generation rented, gate ran native)
+;   the receipt vector (native-gen oracle-gen native-proof native-score oracle-score floor-met) is read by
+;   the proven gate; native-gen is 0 for BOTH today — the body looks up and verifies, it does not generate.
+;   the one refusal: a row that fails rp-honest? is NEVER written (the gate caught a lie).
+; tally:   (ntr-tally ledger) -> "<n> <hit> <esc>"  — read the ledger (host-read) and count, in Form.
+
+(do
+    ; ── outcome -> the receipt vector the proven gate reads ──
+    (defn ntr-vec (pathk)
+        (if (str_eq pathk "body-hit") (list 0 0 1 0 0 0) (list 0 1 1 0 0 0)))
+    (defn ntr-d (b) (if (eq b 1) "1" "0"))
+
+    ; ── string -> bytes-list: prepend from the tail so no emptiness test is needed ──
+    (defn ntr-bytes-walk (s i acc)
+        (if (lt i 0) acc (ntr-bytes-walk s (sub i 1) (cons (ord (char_at s i)) acc))))
+    (defn ntr-str-bytes (s) (ntr-bytes-walk s (sub (str_len s) 1) (empty)))
+
+    ; ── the JSON row, assembled in Form (the carrier passes JSON-escaped strings) ──
+    (defn ntr-json (ts commit pathk kind nodeid query gr pn)
+        (str_concat "{\"ts\":\"" (str_concat ts
+        (str_concat "\",\"commit\":\"" (str_concat commit
+        (str_concat "\",\"path\":\"" (str_concat pathk
+        (str_concat "\",\"kind\":\"" (str_concat kind
+        (str_concat "\",\"nodeid\":\"" (str_concat nodeid
+        (str_concat "\",\"query\":\"" (str_concat query
+        (str_concat "\",\"gen_rented\":" (str_concat (ntr-d gr)
+        (str_concat ",\"proof_native\":" (str_concat (ntr-d pn)
+                    ",\"honest\":1}\n")))))))))))))))))
+
+    ; ── record one routing decision: gate decides honesty, host-io appends ──
+    (defn ntr-record (ledger ts commit pathk kind nodeid query)
+        (do
+            (let r (ntr-vec pathk))
+            (if (eq (rp-honest? r) 0)
+                "refused"
+                (do
+                    (let line (ntr-json ts commit pathk kind nodeid query
+                                        (rp-gen-rented? r) (rp-proof-native? r)))
+                    (let n (file_append_bytes ledger (ntr-str-bytes line)))
+                    (str_concat "ok:" pathk)))))
+
+    ; ── tally the ledger (host-read + count, in Form) for the sovereignty report ──
+    (defn ntr-count (s needle from acc)
+        (do
+            (let i (str_find s needle from))
+            (if (lt i 0) acc (ntr-count s needle (add i (str_len needle)) (add acc 1)))))
+    (defn ntr-tally (ledger)
+        (do
+            (let s (host-read ledger))
+            (let hit (ntr-count s "\"path\":\"body-hit\"" 0 0))
+            (let esc (ntr-count s "\"path\":\"escalated\"" 0 0))
+            (str_concat (cls-int-str-ntr (add hit esc))
+            (str_concat " " (str_concat (cls-int-str-ntr hit)
+            (str_concat " " (cls-int-str-ntr esc)))))))
+    ; decimal int -> string (local; core.fk is BML, not raw-loadable)
+    (defn cls-int-str-ntr (n)
+        (if (lt n 10) (substring "0123456789" n (add n 1))
+            (str_concat (cls-int-str-ntr (div n 10))
+                        (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
+
+    0)

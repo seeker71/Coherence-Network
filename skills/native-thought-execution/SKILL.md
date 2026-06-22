@@ -57,14 +57,18 @@ Go/Rust/TS/fkwu); the lookup that fills `grounded` is a thin, swappable carrier.
    scripts/native_thought_receipt.sh body-hit  structural "<NodeID>" "<the thought>"   # came home
    scripts/native_thought_receipt.sh escalated frontier   -         "<the thought>"    # rented
    ```
-   The receipt's honesty is decided by the proven gate
+   The logic lives in Form, not the shell:
+   [`native-thought-receipt.fk`](../../form/form-stdlib/native-thought-receipt.fk)
+   decides honesty with the proven gate
    ([`sovereignty-receipt.fk`](../../form/form-stdlib/sovereignty-receipt.fk) → 255
-   four-way), never by the shell — a receipt that would report rented generation
-   as native is *refused*, not written. Each escalated row is also the free
-   training sample the dividend loop wants
-   ([`borrowed-oracle-dividend.form`](../../docs/coherence-substrate/borrowed-oracle-dividend.form)).
-   Read the running tally with `scripts/sovereignty_report.sh` — watch the
-   sovereign % rise as more thought comes home.
+   four-way) and appends through the kernel's host-io (`file_append_bytes`); the
+   `.sh` is only a thin door that escapes args and hands the recipe to the kernel.
+   A receipt that would report rented generation as native is *refused*, not
+   written. Each escalated row is also the free training sample the dividend loop
+   wants ([`borrowed-oracle-dividend.form`](../../docs/coherence-substrate/borrowed-oracle-dividend.form)).
+   Read the running tally with `scripts/sovereignty_report.sh` — the count itself
+   is Form (`ntr-tally` via `host-read`). Watch the sovereign % rise as more
+   thought comes home.
 
 ## The honesty lane — structural, not optional
 

@@ -38,30 +38,22 @@ else
 fi
 echo
 
-# ── feed 3: native-thought routing (the door's own receipts — how often a thought came home) ──
+# ── feed 3: native-thought routing — the tally is Form (host-read + count in native-thought-receipt.fk) ──
 NTR="${NATIVE_THOUGHT_RECEIPTS:-$HOME/.coherence-network/native-thought-receipts.jsonl}"
-if [ -f "$NTR" ]; then
-  python3 - "$NTR" <<'PY'
-import json, sys
-hit = esc = 0
-for line in open(sys.argv[1]):
-    line = line.strip()
-    if not line: continue
-    try: r = json.loads(line)
-    except Exception: continue
-    if r.get("path") == "body-hit": hit += 1
-    elif r.get("path") == "escalated": esc += 1
-n = hit + esc
-if n:
-    pct = 100.0 * hit / n
-    print(f"  native-thought routing (native_thought_receipt.sh ledger): {n} thoughts routed — "
-          f"{hit} came home (body-hit), {esc} rented (escalated) → {pct:.0f}% sovereign this body")
-    print(f"    each escalated row is a free training sample (borrowed-oracle-dividend.form); watch the % rise.")
-else:
-    print("  native-thought routing: ledger present, no decisions recorded yet.")
-PY
+GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
+if [ -f "$NTR" ] && [ -x "$GO" ]; then
+  drv="$(mktemp --suffix=.fk)"; printf '(do (print (ntr-tally "%s")))\n' "$NTR" > "$drv"
+  read -r N HIT ESC <<<"$("$GO" "$STD/sovereignty-receipt.fk" "$STD/native-thought-receipt.fk" "$drv" 2>/dev/null | grep -E '^[0-9]+ [0-9]+ [0-9]+$' | head -1)"
+  rm -f "$drv"
+  if [ "${N:-0}" -gt 0 ] 2>/dev/null; then
+    PCT=$(( 100 * HIT / N ))
+    echo "  native-thought routing (Form tally over the receipt ledger): ${N} thoughts routed — ${HIT} came home (body-hit), ${ESC} rented (escalated) → ${PCT}% sovereign this body"
+    echo "    each escalated row is a free training sample (borrowed-oracle-dividend.form); watch the % rise."
+  else
+    echo "  native-thought routing: ledger present, no decisions recorded yet."
+  fi
 else
-  echo "  native-thought routing: no ledger yet — the door records via scripts/native_thought_receipt.sh."
+  echo "  native-thought routing: no ledger yet — the door records via scripts/native_thought_receipt.sh (logic in native-thought-receipt.fk)."
 fi
 echo
 
