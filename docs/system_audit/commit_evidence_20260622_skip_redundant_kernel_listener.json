@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/skip-redundant-kernel-listener",
+  "commit_scope": "Remove the redundant local docker-exec listener curl for the production-manifest kernel-router deploy canary. Docker health and the public mutation probes prove that sibling; the BML sibling keeps its local kernel_status listener proof.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_skip_redundant_kernel_listener.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_skip_redundant_kernel_listener.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "git diff --check"
+    ],
+    "notes": "Hostinger Auto Deploy run 27975448408 deployed ae34c1da but failed on the local kernel-router /api/health listener curl. Manual public kernel canary passed after the same deployment settled, proving the production-manifest route through public Traefik."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production deploy workflow",
+    "notes": "After deploy, Hostinger Auto Deploy should reach Verify kernel public canary and pass."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks, deploy, and public kernel canary proof remain pending."
+  },
+  "idea_ids": [
+    "deploy-canary-stability",
+    "native-kernel-front-door"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-skip-redundant-kernel-listener"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27975448408 failed in roll-forward at ensure_kernel_router_canary: kernel-router listener did not accept local HTTP at /api/health within 90 seconds.",
+    "The same run deployed ae34c1dac491c8ab0b8270173cef70166a591f43 and public health reported that SHA.",
+    "Manual bash scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com passed after deployment settled, including public-gate, no-header default, BML runtime attention, and explicit fallback.",
+    "The BML front-door sibling keeps a local /api/utils/kernel_status listener probe before public verification."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_skip_redundant_kernel_listener.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger roll-forward should no longer fail on a redundant local listener curl for the production-manifest kernel-router; Docker health plus public mutation probes remain the proof for that sibling.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "GET /api/attention/kernel-runtime",
+      "GET /api/health"
+    ],
+    "test_flows": [
+      "deploy script shell syntax validates locally.",
+      "Hostinger Auto Deploy passes roll-forward.",
+      "public kernel canary passes after deploy."
+    ]
+  }
+}

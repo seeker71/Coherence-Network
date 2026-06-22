@@ -998,21 +998,19 @@ ensure_kernel_router_canary() {
   done
 
   for service in "${canary_services[@]}"; do
-    local listener_probe_path="/api/health"
-    local listener_wait_seconds=90
-    local listener_curl_timeout_seconds=5
-    # Contract marker: $service listener did not accept local HTTP within 90s.
-    # The public /api/attention/kernel-runtime route is now promoted through
-    # the BML front-door service and proven below with api_attention_kernel_runtime.
-    # Keep the older production-manifest service on the same lightweight
-    # /api/health listener used by its Docker healthcheck; repeated local
-    # attention or kernel_status probes can saturate its worker pool and make
-    # the otherwise-running sibling appear unhealthy during deploy.
-    if [[ "$service" == "kernel-router-bml-front-door" ]]; then
-      listener_probe_path="/api/utils/kernel_status"
-      listener_wait_seconds=360
-      listener_curl_timeout_seconds=10
+    # The production-manifest kernel-router has already passed compose/Docker
+    # health above, and the public-gate/default mutation probes below prove its
+    # real routed behavior through Traefik. A second local docker-exec curl has
+    # repeatedly false-failed while the public canary succeeded after routing
+    # settled, so only the BML sibling keeps a local listener probe here.
+    if [[ "$service" == "kernel-router" ]]; then
+      log "kernel-router canary: ${service} listener covered by Docker health and public mutation probes"
+      continue
     fi
+    local listener_probe_path="/api/utils/kernel_status"
+    local listener_wait_seconds=360
+    local listener_curl_timeout_seconds=10
+    # Contract marker: $service listener did not accept local HTTP within 360s.
     log "kernel-router canary: waiting for ${service} listener at ${listener_probe_path} (${listener_wait_seconds}s budget)"
     deadline=$(( $(date +%s) + listener_wait_seconds ))
     listener_ready=0
