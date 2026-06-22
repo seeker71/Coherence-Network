@@ -13,10 +13,16 @@
 #   scripts/fourth_warm.sh --all                        # warm every manifest band, serial + bounded
 #   cd form && ./validate.sh <preludes> tests/<stem>-band.fk   # now reuses the warm table, four-way
 #
-# This is the bridge to the north star the flatten itself points at: the flt-* flatten is a Form recipe,
-# so fkwu's self-JIT (jit-lower / champion-challenger) crystallizing it to native is what makes the
-# table-gen fast enough to not need warming at all — the body growing its own proof speed. Until then,
-# this router is the container-safe door to the sovereign kernel.
+# MEASURED, so the next session does not re-try a dead lever: the JIT is NOT what speeds the flatten.
+# The Go kernel's self-JIT (FORM_JIT_HOT) crystallizes hot NUMERIC closures (tags 1-7,12); the flt-*
+# flatten is string/list/parse work, the wrong op family. Tuning FORM_JIT_HOT over the cursor-parse
+# flatten only moved 54s (default 2000) / 59s (off) / 73s (HOT=20, build overhead with no payoff), all
+# byte-identical — no win. The real lever is REDUCING WORK: reachability-prune the flatten so a heavy
+# band serializes only the source-compiler functions it actually reaches, not the whole module (a
+# focused, output-preserving flatten change — the table shrinks, the band's verdict is unchanged).
+# A truly native flatten would need the form-asm/JIT op coverage extended to string/list ops (the
+# grow-form-asm-coverage effort), not the numeric self-JIT. Until either lands, this router is the
+# container-safe door: warm the heavy table ONCE (serial, bounded), then every proof reuses it.
 set -uo pipefail
 cd "$(dirname "$0")/../form" || exit 1
 
