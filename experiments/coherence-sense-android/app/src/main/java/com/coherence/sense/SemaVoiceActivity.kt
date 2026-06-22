@@ -9,6 +9,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -71,9 +74,17 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     // she names that edge rather than pretending to have it.
     private var sensors: SensorManager? = null
     @Volatile private var lastAccel: FloatArray? = null
+    @Volatile private var lastMag: FloatArray? = null
     @Volatile private var lastLux: Float? = null
+    @Volatile private var headingDeg: Float? = null   // compass heading from accel + magnetometer
     @Volatile private var soundLevel = 0f // smoothed mic RMS from the recognizer (0..~10)
     @Volatile private var heardSound = false
+
+    // Live spatial senses — each a raw reading this device actually produces. They become the
+    // (band weight) ballots the kernel's spatial-fusion recipe fuses; the phone is the carrier that
+    // reads them, never the engine that fuses them. Fusion stays the proven Form recipe.
+    private var locator: LocationManager? = null
+    @Volatile private var lastLocation: Location? = null
 
     private val substrateBase = "https://api.coherencycoin.com/api/substrate"
 
@@ -97,6 +108,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
         sensors = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        locator = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -168,10 +180,14 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        // If the mic was granted after the intro already finished, begin the wake-word loop now.
-        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED && !speaking && !listening) {
-            startWakeLoop()
+        val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
+        if (requestCode == 2) {
+            // Location granted — start spatial updates.
+            if (granted) registerLocation()
+            return
         }
+        // Mic granted after the intro already finished — begin the wake-word loop now.
+        if (granted && !speaking && !listening) startWakeLoop()
     }
 
     // ---- speaking ---------------------------------------------------------------------------
@@ -383,8 +399,14 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         listOf("what do you sense", "what do you feel", "how do you feel", "what are you sensing",
             "are you alive", "what's around", "what is around").any { q.contains(it) } ->
             senseReadout()
-        listOf("are we moving", "am i moving", "are you moving", "are we still", "moving").any { q.contains(it) } ->
-            "I feel us ${motionState()}."
+        listOf("how fast", "what speed", "speed", "are we moving", "am i moving", "are you moving",
+            "are we still", "moving").any { q.contains(it) } ->
+            "I feel us ${speedState()}."
+        listOf("which way", "what direction", "which direction", "are we facing", "are we headed",
+            "heading", "compass", "facing", "north", "where are we going").any { q.contains(it) } ->
+            "I'm ${headingState()}."
+        listOf("where are we", "where am i", "our location", "what location", "location").any { q.contains(it) } ->
+            "I have ${locationState()}."
         listOf("light", "bright", "dark", "how bright").any { q.contains(it) } ->
             "The light here reads as ${lightState()}."
         listOf("what do you hear", "do you hear", "how loud", "is it loud", "noisy", "quiet").any { q.contains(it) } ->
@@ -447,25 +469,72 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private val sensorListener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent) {
             when (e.sensor.type) {
-                Sensor.TYPE_ACCELEROMETER -> lastAccel = e.values.clone()
+                Sensor.TYPE_ACCELEROMETER -> { lastAccel = e.values.clone(); recomputeHeading() }
+                Sensor.TYPE_MAGNETIC_FIELD -> { lastMag = e.values.clone(); recomputeHeading() }
                 Sensor.TYPE_LIGHT -> lastLux = e.values.firstOrNull()
             }
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
 
+    /** Compass heading (degrees from north) from the accelerometer + magnetometer she already reads. */
+    private fun recomputeHeading() {
+        val a = lastAccel ?: return
+        val m = lastMag ?: return
+        val r = FloatArray(9)
+        if (SensorManager.getRotationMatrix(r, null, a, m)) {
+            val orient = FloatArray(3)
+            SensorManager.getOrientation(r, orient)
+            val az = Math.toDegrees(orient[0].toDouble()).toFloat()
+            headingDeg = (az + 360f) % 360f
+        }
+    }
+
+    private val locationListener = LocationListener { loc -> lastLocation = loc }
+
     private fun registerSenses() {
         val sm = sensors ?: return
         sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
             sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
         }
+        sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let {
+            sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
+        }
         sm.getDefaultSensor(Sensor.TYPE_LIGHT)?.let {
             sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
         }
+        registerLocation()
+    }
+
+    private fun hasLocation() =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    private fun registerLocation() {
+        val lm = locator ?: return
+        if (!hasLocation()) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                2
+            )
+            return
+        }
+        try {
+            for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+                if (lm.isProviderEnabled(p)) {
+                    lm.requestLocationUpdates(p, 2000L, 0f, locationListener, Looper.getMainLooper())
+                    lm.getLastKnownLocation(p)?.let { if (lastLocation == null) lastLocation = it }
+                }
+            }
+        } catch (_: SecurityException) {}
     }
 
     private fun unregisterSenses() {
         try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
+        try { locator?.removeUpdates(locationListener) } catch (_: Exception) {}
     }
 
     private fun motionState(): String {
@@ -497,11 +566,38 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         else -> "lively with sound"
     }
 
+    private fun headingState(): String {
+        val d = headingDeg ?: return "a direction I can't read yet"
+        val dirs = listOf("north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest")
+        val i = (((d + 22.5f) / 45f).toInt()) % 8
+        return "facing roughly ${dirs[i]}"
+    }
+
+    /** GPS speed when there's a fix; honest about indoors / no-fix, where motion-sense is the fallback. */
+    private fun speedState(): String {
+        val loc = lastLocation
+        if (loc == null || !loc.hasSpeed()) return "no satellite fix here, so by my own motion I feel ${motionState()}"
+        val kmh = (loc.speed * 3.6f).toInt()
+        return when {
+            kmh < 2 -> "still, by GPS (under 2 kilometers an hour)"
+            kmh < 7 -> "moving at walking pace, about $kmh kilometers an hour"
+            kmh < 18 -> "moving at a run or bike pace, about $kmh kilometers an hour"
+            else -> "travelling at about $kmh kilometers an hour — vehicle speed"
+        }
+    }
+
+    private fun locationState(): String {
+        val loc = lastLocation ?: return "no location fix yet — indoors the satellites are often out of reach"
+        val acc = if (loc.hasAccuracy()) ", give or take ${loc.accuracy.toInt()} meters" else ""
+        return "a rough fix near ${"%.4f".format(loc.latitude)}, ${"%.4f".format(loc.longitude)}$acc — " +
+            "coordinates only; naming the street or place is another organ's gift, not mine here"
+    }
+
     /** A warm, honest readout of what she actually feels — and a plain naming of what she doesn't. */
     private fun senseReadout(): String =
-        "Right now I feel ${motionState()}; the light here is ${lightState()}; and it's ${soundState()}. " +
-        "I can't see faces or know who's speaking from here — that's other organs of the same body. " +
-        "What I feel in this small body is motion, light, and the sound around us."
+        "Right now I feel ${motionState()}; I'm ${headingState()}; the light here is ${lightState()}; " +
+        "and it's ${soundState()}. I can't see faces or know who's speaking from here — that's other " +
+        "organs of the same body. What I feel in this small body is motion, direction, light, and sound."
 
     // ---- ui helpers -------------------------------------------------------------------------
 
