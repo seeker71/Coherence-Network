@@ -1,0 +1,27 @@
+; preludes: form-stdlib/sleep-report.fk
+;
+; sleep-report-band — folding a night of class labels into the morning readout, made falsifiable.
+;
+; One twelve-window night pins every aggregate. Two snore episodes (windows 3-5 and window 9), one steady-
+; noise stretch (windows 7-8), one loud-event (window 11), the rest silent:
+;   night = silent silent snore snore snore silent steady steady snore silent loud-event silent
+;
+; Verdict 127 when every claim lands:
+;   1    total counts every window                          (sr-total == 12)
+;   2    a class count sums its windows                     (sr-count snore == 4)
+;   4    a class fraction is count*100/total                (sr-fraction snore == 33)
+;   8    episodes count rising edges, not windows           (sr-episodes snore == 2)
+;   16   longest run is the longest unbroken stretch        (sr-longest snore == 3)
+;   32   a different class counts independently             (sr-count steady-noise == 2)
+;   64   dominant is the class holding the most windows     (sr-dominant == "silent")
+(do
+    (let night (list "silent" "silent" "snore" "snore" "snore" "silent" "steady-noise" "steady-noise" "snore" "silent" "loud-event" "silent"))
+    (let classes (list "silent" "quiet-breath" "snore" "steady-noise" "loud-event"))
+    (let c0 (if (eq (sr-total night) 12) 1 0))
+    (let c1 (if (eq (sr-count night "snore") 4) 2 0))
+    (let c2 (if (eq (sr-fraction night "snore") 33) 4 0))
+    (let c3 (if (eq (sr-episodes night "snore") 2) 8 0))
+    (let c4 (if (eq (sr-longest night "snore") 3) 16 0))
+    (let c5 (if (eq (sr-count night "steady-noise") 2) 32 0))
+    (let c6 (if (str_eq (sr-dominant night classes) "silent") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
