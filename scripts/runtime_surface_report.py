@@ -366,11 +366,20 @@ def probe_kernel_front_door() -> dict:
         with urllib.request.urlopen(req, timeout=4) as resp:
             body = resp.read(256).decode("utf-8", errors="replace")
             router = resp.headers.get("X-Form-Router", "")
+            handler = resp.headers.get("X-Form-Handler", "")
+            authority = resp.headers.get("X-Form-Python-Authority", "")
             return {
                 "url": url,
                 "reachable": True,
                 "status": resp.status,
                 "x_form_router": router,
+                "x_form_handler": handler,
+                "x_form_python_authority": authority,
+                "front_door_catalog": (
+                    "bml-front-door"
+                    if handler == "api_attention_kernel_runtime"
+                    else "production-manifest"
+                ),
                 "kernel_front_door": router == "native-kernel",
                 "reported_native_route_count": _reported_native_route_count(body),
                 "body_preview": body,
@@ -378,11 +387,20 @@ def probe_kernel_front_door() -> dict:
     except urllib.error.HTTPError as exc:
         body = exc.read(256).decode("utf-8", errors="replace")
         router = exc.headers.get("X-Form-Router", "")
+        handler = exc.headers.get("X-Form-Handler", "")
+        authority = exc.headers.get("X-Form-Python-Authority", "")
         return {
             "url": url,
             "reachable": True,
             "status": exc.code,
             "x_form_router": router,
+            "x_form_handler": handler,
+            "x_form_python_authority": authority,
+            "front_door_catalog": (
+                "bml-front-door"
+                if handler == "api_attention_kernel_runtime"
+                else "production-manifest"
+            ),
             "kernel_front_door": router == "native-kernel",
             "reported_native_route_count": _reported_native_route_count(body),
             "body_preview": body,
@@ -393,6 +411,9 @@ def probe_kernel_front_door() -> dict:
             "reachable": False,
             "status": None,
             "x_form_router": "",
+            "x_form_handler": "",
+            "x_form_python_authority": "",
+            "front_door_catalog": "",
             "kernel_front_door": False,
             "error": str(exc),
         }
@@ -593,11 +614,14 @@ def build_report() -> dict:
     )
     manifest_served = 0
     if front_door.get("kernel_front_door"):
-        manifest_served = (
-            reported_native_route_count
-            if isinstance(reported_native_route_count, int)
-            else len(manifest_capable)
-        )
+        if front_door.get("front_door_catalog") == "bml-front-door":
+            manifest_served = 0
+        else:
+            manifest_served = (
+                reported_native_route_count
+                if isinstance(reported_native_route_count, int)
+                else len(manifest_capable)
+            )
     bml_read_served = len(bml_read_routes) if bml_front_door.get("bml_read_front_door") else 0
     n_front_door_served = min(n_capable, manifest_served + bml_read_served)
 

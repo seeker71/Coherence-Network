@@ -1228,6 +1228,7 @@ ensure_kernel_router_canary() {
         'spec-registry|/api/spec-registry?limit=2|api_spec_registry' \
         'spec-registry-detail|/api/spec-registry/web-ideas-specs-usage-pages|api_spec_registry_detail' \
         'idea-specs|/api/ideas/user-surfaces/specs|api_idea_specs' \
+        'runtime-attention|/api/attention/kernel-runtime|api_attention_kernel_runtime' \
         'lenses|/api/lenses|api_lenses' \
         'sensings|/api/sensings?limit=2|api_sensings' \
         'translations-page-flow|/api/translations/page/flow|api_translations_entity'; do \
