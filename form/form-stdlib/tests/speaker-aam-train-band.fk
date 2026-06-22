@@ -5,12 +5,13 @@
 ; Fixture: x=[3,4]; W_0=[1,4] (target, cosθ_0≈0.92 — NOT aligned, so the target cosine has room to rise
 ; and the cosine-gradient is non-singular), W_1=[4,−3] (cosθ_1=0.0); y=0, s=4, margin (0.95, 0.3122).
 ;
-; Verdict 31 when every claim lands:
+; Verdict 63 when every claim lands:
 ;   1   the logit gradient sums to 0          (Σ(softmax − onehot) = 0 — a probability simplex move)
 ;   2   one SGD step REDUCES the loss          (descent)
 ;   4   the step raises the TARGET cosine      (W_0 pulled toward x̂ — the angular-margin attraction)
 ;   8   more steps reduce the loss further     (loss after 8 steps < after 1)
 ;   16  analytic grad MATCHES finite-difference (the gold gradient check on W_0[0]: rel err < 1%)
+;   32  corpus training CLASSIFIES — 2 classes from an identical init learn to label held-out samples right
 (do
     (defn at-i (x) (round (mul x 1000000.0)))
     (let x (list 3.0 4.0))
@@ -31,9 +32,16 @@
     (let numg (div (sub (aam-loss Wp x 0 s cm sm) (aam-loss Wm x 0 s cm sm)) (mul 2.0 eps)))
     (let anag (head (head (aat-gradW W x 0 s cm sm))))
     (let rel  (div (tn-abs (sub numg anag)) (add (tn-abs anag) 0.0001)))
+    ; corpus training + classification: two classes from an AMBIGUOUS identical init ([1,1],[1,1]) must
+    ; learn to separate (the label drives each row apart) and then correctly classify held-out samples.
+    (let corpus (list (list (list 1.0 0.0) 0) (list (list 0.0 1.0) 1) (list (list 0.9 0.1) 0) (list (list 0.1 0.9) 1)))
+    (let Wt (aat-train (list (list 1.0 1.0) (list 1.0 1.0)) corpus s cm sm 0.5 30))
+    (let p0 (aat-classify Wt (list 0.85 0.15)))
+    (let p1 (aat-classify Wt (list 0.15 0.85)))
     (let k0 (mul 1  (if (eq (at-i (tn-sum lg)) 0) 1 0)))
     (let k1 (mul 2  (if (gt l0 l1) 1 0)))
     (let k2 (mul 4  (if (gt c1 c0) 1 0)))
     (let k3 (mul 8  (if (gt l1 l8) 1 0)))
     (let k4 (mul 16 (if (lt rel 0.01) 1 0)))
-    (add k0 (add k1 (add k2 (add k3 k4)))))
+    (let k5 (mul 32 (if (eq p0 0) (if (eq p1 1) 1 0) 0)))
+    (add k0 (add k1 (add k2 (add k3 (add k4 k5))))))

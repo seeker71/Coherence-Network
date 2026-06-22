@@ -53,4 +53,22 @@
 
     ; --- train n steps on one sample (fold over a corpus to extend) ---
     (defn aat-train1 (W x y s cosm sinm lr n)
-        (if (eq n 0) W (aat-train1 (aat-step W x y s cosm sinm lr) x y s cosm sinm lr (sub n 1)))))
+        (if (eq n 0) W (aat-train1 (aat-step W x y s cosm sinm lr) x y s cosm sinm lr (sub n 1))))
+
+    ; --- corpus training: one epoch folds aat-step over a list of (x y) samples; aat-train repeats epochs ---
+    (defn aat-xof (sample) (nth sample 0))
+    (defn aat-yof (sample) (nth sample 1))
+    (defn aat-epoch (W corpus s cosm sinm lr)
+        (if (eq (len corpus) 0) W
+            (aat-epoch (aat-step W (aat-xof (head corpus)) (aat-yof (head corpus)) s cosm sinm lr)
+                       (tail corpus) s cosm sinm lr)))
+    (defn aat-train (W corpus s cosm sinm lr epochs)
+        (if (eq epochs 0) W (aat-train (aat-epoch W corpus s cosm sinm lr) corpus s cosm sinm lr (sub epochs 1))))
+
+    ; --- classify: predicted class = argmax_j cosθ_j (the trained AAM head as a recognizer) ---
+    (defn aat-argmax-h (xs i bi bv)
+        (if (eq (len xs) 0) bi
+            (if (gt (head xs) bv) (aat-argmax-h (tail xs) (add i 1) i (head xs))
+                                  (aat-argmax-h (tail xs) (add i 1) bi bv))))
+    (defn aat-argmax (xs) (aat-argmax-h (tail xs) 1 0 (head xs)))
+    (defn aat-classify (W x) (aat-argmax (aam-cosines W (aam-l2norm x)))))

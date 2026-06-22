@@ -240,3 +240,27 @@ the AAM head — the one new piece beyond `loss.fk`'s `softmax−onehot` backwar
 The objective (speaker-aam) and now its trainer are both four-way. What remains in 9(a): run it at corpus
 scale on the native asm lane + augmentation (9b) — the same recipe that proves four-way is the one that
 crystallizes and trains native.
+
+## End-to-end: trained AAM head vs untrained centroid on the ceremony voices
+
+`train-aam-identify.sh` runs the four-way trainer (`aat-train` corpus fold + `aat-classify`, now in
+`speaker-aam-train`, verdict 63) end to end: 3 voices × 6 mean-only log-mel supervectors, 4 train + 2 held
+per speaker, closed-set identification of the 6 held-out segments.
+
+| recognizer | held-out accuracy | note |
+|---|---|---|
+| chance | 33% | 3 classes |
+| **untrained nearest-centroid** | **100% (6/6)** | zero parameters — just average the train crops |
+| trained AAM head (s=8, m=0.2, lr=.05) | 50% (3/6) | overfits 240 weights on 12 samples |
+| trained AAM head (gentler lr) | 33% (3/6) | collapses to one class |
+
+Two honest truths. **(1)** The *actual* ceremony task — recognize the 3 known speakers — is **solved without
+training**: nearest-centroid on mean log-mel is 100%. A zero-parameter generative baseline is enough for 3
+known voices. **(2)** The *trained* head **loses** at this scale: 12 samples × 240 weights either overfits
+(50%) or collapses (33%). The trainer is correct (four-way, learns the synthetic 2-class band perfectly) —
+the failure is **data, not the recipe**, the same wall the EER decomposition and both external panels named.
+
+The conclusion that ties the arc together: the trained embedder is for the **hard regime** — open-set
+verification at *scale* (the EER 0.380 world, hard same-gender pairs, many speakers) — where centroids stop
+being enough. On 3 known voices, use the centroid. The trained embedder earns its keep only with
+augmentation + regularization + many speakers (gap 9b) — which is exactly the next rung, now thrice-confirmed.
