@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/attention-no-accept-native",
+  "commit_scope": "Route no-Accept /api/attention/kernel-runtime requests to the same BML native front door as ordinary JSON clients. The legacy production-manifest attention router now targets coherence-api-kernel-bml-front-door, so clients without an Accept header do not fall through to Python 404.",
+  "files_owned": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_attention_no_accept_native.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_attention_no_accept_native.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "git diff --check"
+    ],
+    "notes": "Public probes after 0e87ec90 showed 40/40 curl requests and the public kernel canary returning native BML attention, but Python urllib requests without an Accept header consistently returned fanout-python 404. Retargeting the lower-priority legacy attention router to the BML service should make both request shapes land on api_attention_kernel_runtime."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production Traefik native front door",
+    "notes": "After deploy, verify GET /api/attention/kernel-runtime with no Accept header and with Accept: application/json both return X-Form-Handler api_attention_kernel_runtime."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks, deploy, and no-Accept public proof remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "deploy-canary-stability"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-attention-no-accept-native"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Public health reported deployed_sha 0e87ec906bc4c85eb36898fec4449c3f8f898960.",
+    "bash scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com passed and observed api_attention_kernel_runtime for ordinary attention traffic.",
+    "A 40-request curl batch with normal Accept behavior returned 40/40 status 200 with X-Form-Router native-kernel and X-Form-Handler api_attention_kernel_runtime.",
+    "Python urllib and curl with an explicitly blank Accept header returned fanout-python 404 on the same path, proving the lower-priority legacy router still needed to point to the BML service."
+  ],
+  "change_files": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_attention_no_accept_native.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "All public GET /api/attention/kernel-runtime request shapes should route to the BML native handler api_attention_kernel_runtime, including clients that send no Accept header.",
+    "public_endpoints": [
+      "GET /api/attention/kernel-runtime",
+      "GET /api/health",
+      "GET /api/ready"
+    ],
+    "test_flows": [
+      "static Hostinger deploy path check requires both attention routers to target the BML front door.",
+      "post-deploy curl with Accept: application/json returns api_attention_kernel_runtime.",
+      "post-deploy Python urllib without Accept returns api_attention_kernel_runtime."
+    ]
+  }
+}

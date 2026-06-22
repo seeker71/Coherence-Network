@@ -39,8 +39,8 @@ grep -Fq 'coherence-api-kernel-native-first.priority: "1160"' "$ROOT_DIR/deploy/
 grep -Fq 'coherence-api-kernel-runtime-attention.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/attention/kernel-runtime`)"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the production-manifest attention probe"
 
-grep -Fq 'coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
-  || fail "kernel-router attention probe ingress does not target the production manifest service"
+grep -Fq 'coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-bml-front-door"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router attention fallback ingress does not target the stable BML front door"
 
 grep -Fq 'coherence-api-bml-runtime-attention.service: "coherence-api-kernel-bml-front-door"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router BML attention ingress does not target the stable BML front door"
