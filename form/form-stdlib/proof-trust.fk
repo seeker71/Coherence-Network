@@ -1,0 +1,47 @@
+; proof-trust.fk — a conclusion arrives with BOTH its proof and how much to trust it.
+;
+; preludes: form-stdlib/forward-chaining.fk form-stdlib/derivation.fk form-stdlib/subjective-logic.fk
+;
+; This is the composition the serendipitous step pointed at: derivation.fk generates the proof tree
+; (the WHY), subjective-logic.fk carries trust as an uncertainty-aware opinion (the HOW-SURE), and
+; they share the per-mille scale, so trust flows UP the proof. Each axiom leaf carries its source's
+; trust; each rule step is the rule's own trust AND the conjunction of its premises' trusts. Because
+; conjunction (sl-and) never believes more than either input, trust DECAYS as the argument lengthens
+; through uncertain steps — a three-deep derivation through merely-trusted rules is honestly less
+; certain than the facts it rests on. No logic engine the body had did this: crisp engines lose the
+; trust, trust calculi lose the reasoning. Here the body reasons, explains, AND weighs — in one walk.
+;
+; ptr-trust (proof, source-opinion, rule-opinion) -> the opinion on the proof's conclusion:
+;   axiom leaf  -> source-opinion (trust of the fact's source)
+;   rule node   -> rule-opinion AND (AND-fold of every subproof's trust)
+;   fail        -> full disbelief (an unprovable goal earns no belief)
+; The AND-fold's identity is full belief (1000,0,0,1000), so a rule with no premises is just its own
+; trust. This is evidential reasoning over the SAME proof the verifier checked — explainable AND
+; calibrated, the pair a rented mind cannot honestly give (its confidence is not its derivation).
+;
+; Kin: derivation.fk (the proof spine), subjective-logic.fk (the trust calculus + sl-and),
+; form-cli-sufficiency.fk (a conclusion's fused trust could feed the trust axis).
+; Proven by: form-stdlib/tests/proof-trust-band.fk
+
+(do
+    ; the AND-fold identity: full belief with full base rate (x AND this = x) ---
+    (defn ptr-certain () (sl-opinion 1000 0 0 1000))
+    ; a failed proof carries full disbelief — no belief is earned by a goal with no derivation ---
+    (defn ptr-none () (sl-opinion 0 1000 0 500))
+
+    ; --- trust of a whole proof tree: leaves take source trust, rule nodes AND their parts. ---
+    (defn ptr-trust (p src rule-op)
+        (if (eq (pf-status p) 1) src
+            (if (eq (pf-status p) 2)
+                (sl-and rule-op (ptr-and-subs (pf-subs p) src rule-op))
+                (ptr-none))))
+    ; conjunction-fold over a subproof list (every premise must hold -> AND of their trusts) ---
+    (defn ptr-and-subs (proofs src rule-op)
+        (if (eq (len proofs) 0) (ptr-certain)
+            (sl-and (ptr-trust (head proofs) src rule-op)
+                    (ptr-and-subs (tail proofs) src rule-op))))
+
+    ; --- the single scalar to act on: how much to trust this derived conclusion (projected prob). ---
+    (defn ptr-confidence (p src rule-op) (sl-expectation (ptr-trust p src rule-op)))
+
+    0)
