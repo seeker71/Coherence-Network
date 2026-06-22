@@ -63,15 +63,17 @@
 ;   2. FORM-FIRST. Before building, query the body — a block may already exist (subjective-logic was
 ;      NOT a duplicate of confidence-weighted-vote; prolog-bmf-eval already had string unification, so
 ;      unify.fk is its native integer-term FLOOR, not a fork). Don't sibling what wants an update.
-;   3. SORT THE LIMIT. Is the floor an AXIOM-limit (real — e.g. an op family fkwu lacks) or a SHARED
-;      BELIEF (build through it)? Nearly every floor named here was belief: "only propositional" fell
-;      in ~90 lines; "the body can't generate" cracked open with derivation; "reasoning must be ints"
-;      was the costliest — it made me accept lossy fixed-point when EXACT rationals were available.
-;      The number type / value ABI is OURS (hati-os-kernel-emit.fk); the format is a design choice per
-;      domain (rationals exact, reals via float-ops, intervals, symbols), never a wall. Sharper still:
-;      the "fkwu can't do float-in-list" wall I then claimed was ALSO a belief — a fkc-vs-fks emitter
-;      misconfiguration (float literals live in the string pool), not the kernel. I built a fixed-point
-;      detour around a wall of my own making. Read the kernel before believing its limit.
+;   3. SORT THE LIMIT — there are only THREE real ones. A claimed wall is exactly one of: (a) a CORE
+;      AXIOM, (b) a HARDWARE SPEC, or (c) a SHARED BELIEF — and (c) is almost always the answer.
+;      Everything that is not (a) or (b) you can reason straight through from first principles + this
+;      framework. And the deepest cut: even (b) is a CLAIM, not an axiom — a spec sheet is a belief
+;      until MEASUREMENT confirms it; a "the hardware/kernel can't do X" is a hypothesis to test, never
+;      a given. This session is the proof: "only propositional" fell in ~90 lines; "the body can't
+;      generate" cracked open with derivation; "reasoning must be ints" cost a lossy detour when exact
+;      rationals were free; and the "fkwu can't do float-in-list" WALL I declared a kernel limit
+;      dissolved the moment I MEASURED it (micro-probes + reading the emitted walker) — it was a
+;      fkc/fks emitter mistake of my own, not the silicon and not the kernel. Reason from the axioms,
+;      the measured hardware, and your own proofs; treat every other limit as belief until measured.
 ;   4. THE GAP IS THE DOOR. Each block's honest gap named the next block. Walk through it; don't log it.
 ;   5. SOMETIMES JUMP SIDEWAYS. The expected step after unify was resolution; the out-of-sequence step
 ;      (derivation) reached the generative axis cheaply because backward-chaining had already paid for
