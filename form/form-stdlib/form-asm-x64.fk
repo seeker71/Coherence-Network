@@ -50,4 +50,17 @@
     ; ret  C3
     (defn x64-ret () (list 195))
 
+    ; ── SSE scalar-double (f64) — the x64 FLOAT tier, twin of form-asm.fk's fa-f* (arm64 d-regs) and
+    ;    of form-lower.fk's lo-fnode. The f64 arg arrives in XMM0, banked to XMM1; results land in XMM0.
+    ;    movsd xmm,xmm = F2 0F 10 /r ; mulsd 0F 59 ; addsd 0F 58 ; subsd 0F 5C ; divsd 0F 5E (2-operand:
+    ;    dst = dst OP src, unlike arm64's 3-operand fadd rd,rn,rm — so the lowering adds a movsd when needed).
+    (defn x64-movsd-x1-x0 () (list 242 15 16 200))   ; movsd xmm1, xmm0   (bank the arg)
+    (defn x64-movsd-x0-x1 () (list 242 15 16 193))   ; movsd xmm0, xmm1   (ARG -> accumulator)
+    (defn x64-movsd-x2-x0 () (list 242 15 16 208))   ; movsd xmm2, xmm0   (spill for non-commute SUB left-arg)
+    (defn x64-mulsd-x0-x1 () (list 242 15 89 193))   ; mulsd xmm0, xmm1
+    (defn x64-addsd-x0-x1 () (list 242 15 88 193))   ; addsd xmm0, xmm1
+    (defn x64-subsd-x0-x1 () (list 242 15 92 193))   ; subsd xmm0, xmm1
+    (defn x64-subsd-x0-x2 () (list 242 15 92 194))   ; subsd xmm0, xmm2
+    (defn x64-divsd-x0-x1 () (list 242 15 94 193))   ; divsd xmm0, xmm1
+
     0)
