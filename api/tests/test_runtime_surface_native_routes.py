@@ -113,7 +113,7 @@ def test_absent_manifest_degrades_to_empty(monkeypatch, tmp_path):
 
 
 def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure(monkeypatch):
-    """The real instrument: 0 served kernel-first at the front door, and the
+    """The real instrument: 0 served kernel-first without live public probes, and the
     production manifest's native routes are all CAPABLE. Pins the SERVED/CAPABLE
     split the runtime-share journey tracks, including native Form source/structure
     source-portfolio, graph-projection, and specs source routes that do not have
@@ -132,9 +132,23 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
             "error": "test-no-public-probe",
         },
     )
+    monkeypatch.setattr(
+        mod,
+        "probe_bml_read_front_door",
+        lambda: {
+            "url": "https://api.example/api/ready",
+            "reachable": False,
+            "status": None,
+            "x_form_router": "",
+            "x_form_handler": "",
+            "x_form_python_authority": "",
+            "bml_read_front_door": False,
+            "error": "test-no-public-probe",
+        },
+    )
     report = mod.build_report()
 
-    assert report["kernel_first_served_routes"] == 0  # no live front-door probe in this unit test
+    assert report["kernel_first_served_routes"] == 0  # no live public probe in this unit test
     capable = report["kernel_first_capable_route_names"]
     capable_paths = {r.split(" ", 1)[1] if " " in r else r for r in capable}
     assert report["kernel_first_capable_routes"] == len(capable)
@@ -176,6 +190,49 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert len(capable) == len(set(capable)), f"duplicates: {capable}"
     # back-compat alias stays pinned to SERVED (0 at the front door)
     assert report["kernel_first_routes"] == report["kernel_first_served_routes"]
+
+
+def test_bml_read_front_door_counts_when_manifest_probe_is_unread(monkeypatch):
+    """The sibling BML read entrance stays observable even if the older
+    production-manifest attention probe is not currently routed publicly."""
+    mod = _load_report()
+    monkeypatch.setattr(
+        mod,
+        "probe_kernel_front_door",
+        lambda: {
+            "url": "https://api.example/api/attention/kernel-runtime",
+            "reachable": True,
+            "status": 404,
+            "x_form_router": "",
+            "kernel_front_door": False,
+            "reported_native_route_count": None,
+            "body_preview": '{"detail":"Not Found"}',
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "probe_bml_read_front_door",
+        lambda: {
+            "url": "https://api.example/api/ready",
+            "reachable": True,
+            "status": 200,
+            "x_form_router": "native-kernel",
+            "x_form_handler": "api_ready",
+            "x_form_python_authority": "false",
+            "bml_read_front_door": True,
+            "body_preview": "{}",
+        },
+    )
+
+    report = mod.build_report()
+
+    assert report["kernel_first_manifest_served_routes"] == 0
+    assert (
+        report["bml_front_door_read_served_routes"]
+        == report["bml_front_door_read_capable_routes"]
+    )
+    assert report["kernel_first_served_routes"] == report["bml_front_door_read_capable_routes"]
+    assert report["kernel_first_served_routes"] > 0
 
 
 def test_bml_read_front_door_probe_counts_grouped_read_batch(monkeypatch):

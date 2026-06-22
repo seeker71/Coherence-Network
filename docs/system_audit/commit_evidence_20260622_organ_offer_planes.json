@@ -1,0 +1,129 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/organ-offer-planes",
+  "commit_scope": "Add the plane-aware organ-offer membrane and heal native-instance observation. Organs declare which observation planes they offer through which channels, to which audiences, with ask-first questions, disclosure, receipts, refusal modes, and honored channel-interface modes. Hati mesh channel offers can lower into the same membrane, and the selector consumes only actual organ/offer responses. The native deploy path now routes the production-manifest attention probe explicitly, keeps the broad Host router above the base API and below BML-specific rows, posts the BML kernel-image canary from a request file, and counts BML and production-manifest front doors independently.",
+  "files_owned": [
+    "form/form-stdlib/organ-offer.fk",
+    "form/form-stdlib/tests/organ-offer-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/organ-offer.form",
+    "docs/coherence-substrate/INDEX.md",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/commit_evidence_20260622_organ_offer_planes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git diff --check",
+      "focused fkwu native run: flatten organ-offer-band with cached local bin-go carrier, then run cached fkwu fourth kernel against the table",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "bash -n scripts/verify_kernel_canary_public_gate.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 -m py_compile scripts/runtime_surface_report.py",
+      "api/.venv/Scripts/python.exe -m pytest -q tests/test_runtime_surface_native_routes.py",
+      "api/.venv/Scripts/python.exe -m ruff check tests/test_runtime_surface_native_routes.py ../scripts/runtime_surface_report.py",
+      "python3 scripts/runtime_surface_report.py --json",
+      "curl https://api.coherencycoin.com/api/attention/kernel-runtime",
+      "curl https://api.coherencycoin.com/api/utils/kernel_status",
+      "POST https://api.coherencycoin.com/api/substrate/kernel-image/proposals with ASCII request file"
+    ],
+    "fourth_arm_outputs": [
+      "organ-offer: fkwu first output 63 from form/form-stdlib/tests/organ-offer-band.fk; manifest row added: organ-offer fks 63"
+    ],
+    "notes": "The organ-offer proof used the fourth-kernel fkwu runtime directly against a pre-flattened table. The deploy/observer proof used shell syntax checks, the Hostinger deploy-path contract, the runtime-surface unit tests, public native header probes, and runtime_surface_report.py. The local API venv was created from declared dependencies because the host Python lacked pywebpush."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after push/PR. This is a new Form stdlib recipe, proof band, teaching, index row, fourth-arm manifest row, native deploy ingress fix, canary hardening, and runtime observer correction."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "public native instances",
+    "notes": "Pre-push public observation on 2026-06-22: production is at origin/main 5db4ffed4ce34c2dec3b7eb9e9b57c555bf86476. The BML native front door is live: /api/ready and /api/utils/kernel_status return X-Form-Router native-kernel, and POST /api/substrate/kernel-image/proposals returns accepted-preview with handler api_substrate_kernel_image_proposals and python_authority false. The production-manifest attention probe /api/attention/kernel-runtime still returns HTTP 404 without X-Form-Router until this branch deploys. After this observer fix, scripts/runtime_surface_report.py --json reports 61 BML read routes served, 34 production-manifest capable routes, and 0 production-manifest served routes pre-deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local fkwu proof, deploy-path proof, observer proof, and public pre-deploy observation passed; CI, merge, deploy settlement, and public post-deploy verification remain pending."
+  },
+  "idea_ids": [
+    "plane-aware-organ-offers",
+    "sovereign-organ-membrane"
+  ],
+  "spec_ids": [
+    "organ-offer-planes"
+  ],
+  "task_ids": [
+    "task-2026-06-22-organ-offer-planes"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/organ-offer-band.fk proves six claims: audience-specific offer, withholding, ask-first, interface withholding, selector discipline, and Hati mesh lowering.",
+    "Focused fkwu native proof returned first output 63 for organ-offer after table emission; form/fourth-arm-bands.txt registers organ-offer fks 63.",
+    "bash scripts/test_hostinger_deploy_form_paths.sh passed, proving the Hostinger deploy path includes form stdlib and BML catalog changes, the native-first Host router priority 1160, explicit /api/attention/kernel-runtime ingress, and file-backed BML proposal canary payload.",
+    "api/.venv/Scripts/python.exe -m pytest -q tests/test_runtime_surface_native_routes.py passed 5 tests, proving BML served routes are counted independently when the production-manifest attention probe is unread.",
+    "api/.venv/Scripts/python.exe -m ruff check tests/test_runtime_surface_native_routes.py ../scripts/runtime_surface_report.py passed.",
+    "Pre-deploy runtime_surface_report.py --json observed 61 served BML read routes, 104 capable kernel-first routes, /api/ready native, /api/attention/kernel-runtime 404 without router header, and 0 served production-manifest routes.",
+    "Public pre-deploy probes confirmed /api/utils/kernel_status and /api/substrate/kernel-image/proposals are native-kernel; /api/attention/kernel-runtime remains the route to heal through this deploy."
+  ],
+  "change_files": [
+    "form/form-stdlib/organ-offer.fk",
+    "form/form-stdlib/tests/organ-offer-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/organ-offer.form",
+    "docs/coherence-substrate/INDEX.md",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/commit_evidence_20260622_organ_offer_planes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Organs can now publish a sovereign capability envelope by plane, audience, channel, question gate, disclosure, receipt, refusal, and interface. Callers receive organ/offer, organ/ask-first, or organ/withheld, and selectors can only consume organ/offer rows.",
+    "public_endpoints": [
+      "none added; this branch heals existing native deploy ingress and observation"
+    ],
+    "test_flows": [
+      "fkwu proof flow: organ-offer-band returns 63 on the fourth kernel from a pre-flattened table.",
+      "mesh lowering flow: a Hati sensor channel with offer:observe-sensor-field lowers into an organ offer that honors witness and returns organ/offer.",
+      "native observation flow: runtime_surface_report.py now reports BML read-front-door served routes even while /api/attention/kernel-runtime is still a public 404 pre-deploy.",
+      "deploy healing flow: the next Hostinger deploy will expose /api/attention/kernel-runtime through the kernel-router production-manifest service and keep the broad native-first Host router above the base API router."
+    ]
+  }
+}

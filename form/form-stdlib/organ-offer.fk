@@ -1,0 +1,113 @@
+; organ-offer.fk - plane-aware organ offers over the consent interface.
+;
+; This composes channel-interface.fk with the mesh/organ spine: an organ may
+; declare which planes a channel can offer, to which audiences, what question it
+; asks before disclosure, and what receipt a true offer returns. The selector
+; never treats ask-first or withheld responses as readings.
+; Proven by: form-stdlib/tests/organ-offer-band.fk -> 63 on the fkwu manifest.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/hati-mesh.fk
+
+(do
+    (defn oo-any-audience () "*")
+
+    (defn oo-offer (organ channel planes audiences ask-first disclosure receipt refusal iface)
+        (list "organ-offer" organ channel planes audiences ask-first disclosure receipt refusal iface))
+    (defn oo-tag        (o) (nth o 0))
+    (defn oo-organ      (o) (nth o 1))
+    (defn oo-channel    (o) (nth o 2))
+    (defn oo-planes     (o) (nth o 3))
+    (defn oo-audiences  (o) (nth o 4))
+    (defn oo-ask-first  (o) (nth o 5))
+    (defn oo-disclosure (o) (nth o 6))
+    (defn oo-receipt    (o) (nth o 7))
+    (defn oo-refusal    (o) (nth o 8))
+    (defn oo-interface  (o) (nth o 9))
+
+    (defn oo-str-member? (needle rows)
+        (if (eq (len rows) 0)
+            0
+            (if (str_eq needle (head rows)) 1 (oo-str-member? needle (tail rows)))))
+
+    (defn oo-plane-fits? (offer plane)
+        (oo-str-member? plane (oo-planes offer)))
+
+    (defn oo-audience-fits? (offer audience)
+        (if (eq (oo-str-member? audience (oo-audiences offer)) 1)
+            1
+            (oo-str-member? (oo-any-audience) (oo-audiences offer))))
+
+    (defn oo-action-honored? (offer action)
+        (if (ci-honors? action (oo-interface offer)) 1 0))
+
+    (defn oo-ready? (offer plane audience action)
+        (if (eq (oo-plane-fits? offer plane) 1)
+            (if (eq (oo-audience-fits? offer audience) 1)
+                (oo-action-honored? offer action)
+                0)
+            0))
+
+    (defn oo-has-question? (offer)
+        (if (gt (len (oo-ask-first offer)) 0) 1 0))
+
+    (defn oo-first-question (offer)
+        (if (eq (oo-has-question? offer) 1) (head (oo-ask-first offer)) ""))
+
+    (defn oo-response (status organ channel plane receipt question disclosure refusal)
+        (list status organ channel plane receipt question disclosure refusal))
+    (defn oo-response-status     (r) (nth r 0))
+    (defn oo-response-organ      (r) (nth r 1))
+    (defn oo-response-channel    (r) (nth r 2))
+    (defn oo-response-plane      (r) (nth r 3))
+    (defn oo-response-receipt    (r) (nth r 4))
+    (defn oo-response-question   (r) (nth r 5))
+    (defn oo-response-disclosure (r) (nth r 6))
+    (defn oo-response-refusal    (r) (nth r 7))
+
+    (defn oo-none ()
+        (oo-response "organ/none" "" "" "" "" "" "" "no-offer"))
+
+    (defn oo-invite (offer plane audience action)
+        (if (eq (oo-ready? offer plane audience action) 1)
+            (if (eq (oo-has-question? offer) 1)
+                (oo-response "organ/ask-first" (oo-organ offer) (oo-channel offer) plane "" (oo-first-question offer) (oo-disclosure offer) (oo-refusal offer))
+                (oo-response "organ/offer" (oo-organ offer) (oo-channel offer) plane (oo-receipt offer) "" (oo-disclosure offer) (oo-refusal offer)))
+            (oo-response "organ/withheld" (oo-organ offer) (oo-channel offer) plane "" "" "" (oo-refusal offer))))
+
+    (defn oo-offered? (response)
+        (if (str_eq (oo-response-status response) "organ/offer") 1 0))
+
+    (defn oo-select-offer (offers plane audience action)
+        (if (eq (len offers) 0)
+            (oo-none)
+            (if (eq (oo-offered? (oo-invite (head offers) plane audience action)) 1)
+                (oo-invite (head offers) plane audience action)
+                (oo-select-offer (tail offers) plane audience action))))
+
+    ; Hati mesh channels carry an interface label. This adapter makes that label
+    ; executable as the same channel-interface mode list the organ-offer selector
+    ; already honors.
+    (defn oo-interface-from-hm-label (label)
+        (if (str_eq label "offer:observe-sensor-field")
+            (list (m-offer) (m-witness))
+            (if (str_eq label "offer:listen-speak")
+                (list (m-offer) (m-ask-how))
+                (if (str_eq label "offer:see-be-seen")
+                    (list (m-offer) (m-see) (m-be-seen))
+                    (if (str_eq label "offer:show-channel-state")
+                        (list (m-witness) (m-see))
+                        (list (m-silence)))))))
+
+    (defn oo-from-hm-channel (channel planes audiences ask-first disclosure receipt refusal)
+        (oo-offer
+            (hm-channel-from channel)
+            (hm-channel-protocol channel)
+            planes
+            audiences
+            ask-first
+            disclosure
+            receipt
+            refusal
+            (oo-interface-from-hm-label (hm-channel-interface channel))))
+
+    0)

@@ -1,0 +1,47 @@
+# organ-offer.form - plane-aware organ offers across a sovereign membrane
+
+(organ-offer
+
+  (lineage
+    (rests-on channel-interface-consent.form organ-sense.fk organ-reading.fk hati-mesh.fk)
+    (recipe form/form-stdlib/organ-offer.fk)
+    (proof form/form-stdlib/tests/organ-offer-band.fk -> 63 fkwu-manifest-row))
+
+  (purpose
+    "Let an organ declare what planes it can offer through a channel, to which audience, with what question gate, disclosure level, receipt type, and refusal mode."
+    "Keep organs as participants with membranes, not passive tools whose full interior can be queried by any caller.")
+
+  (floor
+    "An offer is data: organ, channel, planes, audiences, ask-first questions, disclosure, receipt, refusal, and offered interface."
+    "An invitation returns one of three states: organ/offer, organ/ask-first, or organ/withheld."
+    "The selector consumes only organ/offer responses; ask-first and withheld responses are honored but not treated as readings."
+    "Hati mesh channel rows can lower into organ-offer rows by mapping their offered interface labels onto channel-interface modes.")
+
+  (north-star
+    "Every mesh organ, model organ, repo organ, human-facing organ, and hardware sense organ can publish a capability envelope while keeping its live readings sovereign."
+    "Questions route through plane fit, audience fit, consent interface, and receipts-before-trust before any organ reading crosses.")
+
+  (planes
+    (reasoning "relation, implication, contradiction, code/design synthesis")
+    (observation "events, logs, traces, tests, sensor samples")
+    (being "self-state and presence, offered by the cell itself")
+    (doing "actions, tool calls, route invocations, commits")
+    (planning "possible futures and task sequencing")
+    (reacting "pressure, urgency, defensive movement")
+    (flowing "time-series, continuity, rhythm, adaptation")
+    (sensing "pre-verbal body/field signal")
+    (electromagnetic "instrumented field samples when measured; otherwise not claimed")
+    (memory "what has shaped the organism over time")
+    (knowledge "stabilized memory-patterns that can guide"))
+
+  (proof-claims
+    (audience-specific-offer "one organ can offer a plane to public while withholding the same plane from trusted-circle")
+    (ask-first "an organ can return a question instead of a reading")
+    (interface-withholding "reaching beyond the offered interface withholds")
+    (selector-discipline "the chooser skips ask-first and withheld rows and uses only actual offers")
+    (receipt-preserved "a true offer carries its declared receipt")
+    (mesh-channel-lowering "a Hati mesh sensor channel becomes a plane-aware organ offer"))
+
+  (next-steps
+    (wire-to-organ-reading "turn organ/offer receipts into uniform organ-reading rows only after disclosure")
+    (chooser-plan "compose primary, witness, and regulator planes for a question")))
