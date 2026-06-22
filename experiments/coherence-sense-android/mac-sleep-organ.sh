@@ -96,7 +96,8 @@ record_window() {  # $1 out.wav  $2 secs  $3 mic_index → 0 ok / nonzero on fai
 
 # fold windows.csv into a plain-words readout. Gaps (verdict x) are excluded, never counted as quiet.
 build_readout() {  # $1 dir
-    local dir="$1" csv="$dir/windows.csv" out="$dir/readout.txt"
+    local dir="$1"                                    # assign first; a same-line csv="$dir/..." would
+    local csv="$dir/windows.csv" out="$dir/readout.txt"  # expand $dir before local sets it (set -u trap)
     [[ -f "$csv" ]] || { echo "no windows.csv in $dir"; return 1; }
     ensure_kernel
     # 0/1 stream (verdict column 3), excluding gaps; + gap count + first/last timestamps
