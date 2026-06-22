@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 328
+**Total files**: 329
 
 | File | Purpose |
 |---|---|
@@ -40,6 +40,7 @@
 | [build_form_llama.sh](build_form_llama.sh) | build_form_llama.sh — train + fuse + serve the Form-knowledge local oracle. |
 | [build_hati_os_public_assets.sh](build_hati_os_public_assets.sh) | build_hati_os_public_assets.sh - build public Hati-OS native release assets. |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
+| [capabilities.sh](capabilities.sh) | capabilities.sh — the runtime capability readout. Run this when you're about to reach for a |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
 | [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
 | [check_generated_vision_assets.py](check_generated_vision_assets.py) | Validate generated vision assets referenced by concepts and web pages. |
