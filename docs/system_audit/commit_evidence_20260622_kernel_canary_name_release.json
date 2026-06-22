@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/kernel-canary-name-release",
+  "commit_scope": "Heal the kernel-router canary overlay after Docker kept canonical and hash-prefixed kernel-router container names reserved during fallback recreate. The deploy script now waits for those names to release before recreating the kernel-router and kernel-router-bml-front-door services.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_kernel_canary_name_release.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_kernel_canary_name_release.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "git diff --check"
+    ],
+    "notes": "Hostinger Auto Deploy run 27971485029 passed the API/web/pulse recreate guard and field-doc sync, then failed inside ensure_kernel_router_canary when Docker reported canonical and hash-prefixed container name conflicts for kernel-router and kernel-router-bml-front-door during fallback recreate."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production deploy workflow",
+    "notes": "A new Hostinger deploy must pass after merge, then public native probes must confirm the BML runtime attention route and kernel-status route are stable."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks, Hostinger deploy, and repeated public probes remain pending."
+  },
+  "idea_ids": [
+    "deploy-canary-stability",
+    "native-kernel-front-door"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-kernel-canary-name-release"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27971485029 failed in ensure_kernel_router_canary after the base service recreate and field-doc sync completed.",
+    "The failed log showed conflicts for /coherence-network-kernel-router-bml-front-door-1, /801076bfffdf_coherence-network-kernel-router-bml-front-door-1, and /coherence-network-kernel-router-1 during the kernel canary fallback path.",
+    "The base API/web/pulse path already used a bounded wait for Docker recreate orphan release; this commit applies the same principle to the kernel-router overlay and canonical service names."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_kernel_canary_name_release.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Kernel-router canary fallback should wait for Docker to release canonical and hash-prefixed service names before recreating the kernel-router services, allowing Hostinger roll-forward to complete instead of wedging on name conflicts.",
+    "public_endpoints": [
+      "GET /api/health",
+      "GET /api/attention/kernel-runtime",
+      "GET /api/utils/kernel_status"
+    ],
+    "test_flows": [
+      "deploy script shell syntax validates locally.",
+      "Hostinger static deploy path check still passes.",
+      "post-merge Hostinger deploy passes and public native probes remain stable."
+    ]
+  }
+}
