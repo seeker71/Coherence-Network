@@ -1,0 +1,59 @@
+; sleep-sense.fk — sense SNORING from a night's acoustic energy envelope, IN FORM.
+;
+; The body already reads an energy envelope from raw audio (wav-sense.fk: read_file_bytes -> per-window
+; mean |amplitude|, level 0..9) and the rate-of-change of any scalar stream (signal-derivative.fk:
+; sd-activity = how many adjacent pairs rose or fell = the oscillation count). Snoring is exactly the
+; shape those two cheap features make legible together, so snore-sense belongs in the BODY — the bedside
+; carrier only produces the envelope (mic -> wav -> wav-envelope), the recipe decides "was that a snore".
+;
+; WHAT A SNORE LOOKS LIKE IN THE ENVELOPE. A breath-window of energy levels is a snore when it is BOTH
+;   (1) loud enough  — mean level >= an energy floor (quiet sleep sits near the floor and fails this), AND
+;   (2) oscillating  — sd-activity >= an oscillation floor: the slow up (rattle) / down (pause) of breath
+;                      makes the level climb and fall repeatedly. A steady loud sound (a fan, an AC) is
+;                      loud but FLAT — sd-activity ~0 — so the oscillation gate rejects it. That second
+;                      gate is the whole discriminator: loudness alone is not a snore; periodic loudness is.
+;
+; THE WALK: ss-sum folds the window's levels (add + recurse, guarded at len>=1 so nth 0 never reads an
+; empty list); ss-mean divides that sum by the count (integer div, 0 on an empty window); ss-snore? gates
+; the mean against the energy floor AND the activity against the oscillation floor — two SEPARATE binary
+; predicates nested as (if loud? (if periodic? 1 0) 0), never a three-arg `and`, so there is no compound-
+; and divergence surface across the four kernels. Integers only: no sub, no mul, no floats.
+;
+; HONEST LANE: this reads "loud AND periodic", the signature of breathing-shaped sound. At night, in a
+; bedroom, the dominant loud-periodic source IS snoring/heavy breathing, so this is the right readout for
+; "did a snore happen in this window / how much of the night". It does NOT yet separate a snore from any
+; other loud periodic sound, and it reads the COUNT of oscillation, not its pitch or spectral signature —
+; finer snore-vs-other discrimination (the low-frequency rattle band) is the next layer, composing
+; voice-traits.fk's pitch read over the same windows. The night-level aggregation (episodes, longest
+; stretch, the morning report) builds ON this proven per-window atom.
+;
+; Proven by: form-stdlib/tests/sleep-sense-band.fk (four-way at validate.sh). Composes signal-derivative.fk.
+
+(do
+    ; --- ss-sum: total energy across a window (list of 0..9 levels). add + recurse; 0 on an empty window.
+    ; The len>=1 guard is load-bearing: below it (nth w 0) would read head(empty) and panic in every kernel.
+    (defn ss-sum (w)
+        (if (ge (len w) 1)
+            (add (nth w 0) (ss-sum (tail w)))
+            0))
+
+    ; --- ss-mean: the window's average level = sum / count. Integer div; 0 on an empty window (no division
+    ; by zero — the guard returns 0 first). Quiet sleep means a low ss-mean; a loud window a high one.
+    (defn ss-mean (w)
+        (if (ge (len w) 1)
+            (div (ss-sum w) (len w))
+            0))
+
+    ; --- ss-snore?: 1 when the window is loud enough AND oscillating, else 0.
+    ;   loud?      = (ge (ss-mean w) efloor)              — quiet sleep fails here
+    ;   periodic?  = (ge (sd-activity w) afloor)          — a flat loud sound (fan/AC) fails here
+    ; Two separate binary gates, nested — never a three-arg and — so the four kernels never diverge on it.
+    (defn ss-snore? (w efloor afloor)
+        (if (ge (ss-mean w) efloor)
+            (if (ge (sd-activity w) afloor) 1 0)
+            0))
+
+    ; --- ss-quiet?: 1 when the window sits at or below the energy floor (restful, near-silent), else 0.
+    ; The complement signal the morning report reads as "settled" time.
+    (defn ss-quiet? (w efloor)
+        (if (ge (ss-mean w) efloor) 0 1)))
