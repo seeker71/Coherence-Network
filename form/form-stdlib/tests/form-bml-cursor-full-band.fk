@@ -1,0 +1,32 @@
+; form-bml-cursor-full-band.fk — the FULL form.bml surface lowered by the cursor, four-way.
+;
+; This is the four-way replacement for the line-compiler parity gate (form-bml-core-parity, retired):
+; the body no longer needs the cursor to MATCH a line compiler — it needs the cursor to lower the WHOLE
+; surface CONSISTENTLY on all four kernels (Go/Rust/TS/fkwu). Where form-bml-cursor-lower proved the
+; single-expr def + if + call + recursion path, this adds the constructs core.fk uses that the line
+; compiler used to be the oracle for: multi-line { let …; expr } block defs (cell-undo / task-step shape)
+; and string literals. Cursor-only — g-parse + fbl-lower, no line compiler — so it rides the
+; bmf-core/bmf-grammar op families already four-way, and crosses fkwu where the s-expr line compiler
+; (source-scan-bound) never could. Verdict = summed lowered-recipe node count; structure-sensitive, so a
+; wrong or short lowering on any construct changes the total and a kernel that diverges is caught.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammars/form-bml.fk form-stdlib/form-bml-lower.fk
+(do
+    (defn ffc-count-list (xs)
+        (if (nil? xs) 0 (add (ffc-count (head xs)) (ffc-count-list (tail xs)))))
+    (defn ffc-count (n) (add 1 (ffc-count-list (node_children n))))
+
+    (let g (form-bml-grammar))
+    (defn ffc-sig (deftext) (ffc-count (fbl-lower (g-parse g deftext))))
+
+    ; the full surface: single-expr, if/then/else, nested calls, recursion (the cursor-lower set) ...
+    (add (ffc-sig "def identity(x) = x;")
+    (add (ffc-sig "def abs(n) = if negative?(n) then sub(0, n) else n;")
+    (add (ffc-sig "def map(f, xs) = if nil?(xs) then empty else cons(f(head(xs)), map(f, tail(xs)));")
+    ; ... PLUS the constructs core-parity used the line compiler to oracle:
+    ; multi-line { let …; expr } block defs (cell-undo / task-step shape) ...
+    (add (ffc-sig "def step1(x) = { let y = add(x, 1); mul(y, 2) };")
+    (add (ffc-sig "def step2(a, b) = { let s = add(a, b); let d = sub(a, b); mul(s, d) };")
+    ; ... and a string literal def
+         (ffc-sig "def greet() = concat(\"hello\", \"world\");"))))))
+)

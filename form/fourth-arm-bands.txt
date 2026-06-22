@@ -725,6 +725,7 @@ nl-translate fks 32767
 form-bml-cursor-parse fks 123
 # ...and the cursor LOWERING to the runnable recipe (fsc-rec-* path) crosses too.
 form-bml-cursor-lower fks 113
+form-bml-cursor-full fks 67
 bmf-object-data fks 65535
 bmf-form-object-runtime fks 67108863
 bmf-symbol-wire fks 255
