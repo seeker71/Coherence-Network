@@ -1,0 +1,30 @@
+; preludes: form-stdlib/sleep-night.fk
+;
+; sleep-night-band — fold a night of snore verdicts into the morning readout, made falsifiable.
+;
+; A night arrives as a 0/1 stream (1 = that breath-window was a snore). One worked night pins the readout,
+; plus two edge nights pin the boundaries:
+;   night (0 0 1 1 1 0 0 1 0 1 1 0 0 0 1 1 1 1 0 0)  -> 20 windows, 10 snores, longest run 4, 4 episodes, 50%
+;   quiet (0 0 0)                                     -> no run at all (longest 0)
+;   solid (1 1 1)                                     -> one continuous episode, longest run 3
+;
+; Verdict 127 when every claim lands:
+;   1    total counts every window                         (sn-total night == 20)
+;   2    snores sum the 0/1 stream                         (sn-snores night == 10)
+;   4    longest finds the longest unbroken run            (sn-longest night == 4)
+;   8    episodes count separate snore runs                (sn-episodes night == 4)
+;   16   fraction is percent of the night snored           (sn-fraction night == 50)
+;   32   a quiet night has no run                          (sn-longest quiet == 0)
+;   64   a solid run is one episode of full length         (sn-episodes solid == 1, sn-longest solid == 3)
+(do
+    (let night (list 0 0 1 1 1 0 0 1 0 1 1 0 0 0 1 1 1 1 0 0))
+    (let quiet (list 0 0 0))
+    (let solid (list 1 1 1))
+    (let c0 (if (eq (sn-total night) 20) 1 0))
+    (let c1 (if (eq (sn-snores night) 10) 2 0))
+    (let c2 (if (eq (sn-longest night) 4) 4 0))
+    (let c3 (if (eq (sn-episodes night) 4) 8 0))
+    (let c4 (if (eq (sn-fraction night) 50) 16 0))
+    (let c5 (if (eq (sn-longest quiet) 0) 32 0))
+    (let c6 (if (and (eq (sn-episodes solid) 1) (eq (sn-longest solid) 3)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
