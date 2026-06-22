@@ -26,11 +26,17 @@
 #
 # SHARPER MEASUREMENT (the real root cause): the flatten is SUPER-LINEAR in chain size.
 # cursor-parse (6 light srcs) flattens in 54s; cursor-full adds ~6300 lines (source-compiler 2712 +
-# engine 2495 + compiler 1110) and exceeds 30+ MINUTES — ~2-3x the source, >33x the time. That is an
-# O(n^2) (or worse) in flt-*, so even warm-once is impractical for the heaviest bands here. The genuine
-# fix is to profile flt-* (the Go kernel's -prof flag) and DE-QUADRATIC it — and that fix is
-# OUTPUT-PRESERVING (identical table bytes, just faster), so it is far lower-risk than reachability-
-# pruning and re-validates by byte-identity against the existing cached tables. THAT is the next pass.
+# engine 2495 + compiler 1110) and exceeds 30+ MINUTES — ~2-3x the source, >33x the time. O(n^2) in flt-*.
+#
+# LOCALIZED (by inspection + measurement): the dominant quadratic is the STRING-POOL DEDUP. flt-sidx
+# (form-flatten.fk) does a LINEAR SCAN of the pool per string literal to find/dedup its index =
+# O(literals x pool); source-compiler has a huge pool, so it explodes. A secondary O(n) factor —
+# (eq (len X) 0) emptiness checks computing ListLength (O(n)) per recursion step — was removed
+# (-> nil?, byte-identical, verified on 2 bands), but it is NOT the dominant cost: the heavy chain still
+# timed out after the nil? fix. The REAL de-quadratic is an O(1) pool lookup (hash/sorted index instead
+# of flt-sidx's linear scan) — output-preserving (same indices, same table bytes; re-validate by
+# byte-identity against the cached tables), a focused form-flatten.fk change. THAT is the next pass.
+# JIT (go OR form-native) is ruled out: the flatten is string/list work, neither JIT's op family.
 set -uo pipefail
 cd "$(dirname "$0")/../form" || exit 1
 
