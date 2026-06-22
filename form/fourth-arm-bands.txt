@@ -858,3 +858,4 @@ string-case fks 31
 nl-lexicon-grow fks 3
 tool-eval fkc 63
 rest-sense fks 15
+tooluse-featurize fkc 63

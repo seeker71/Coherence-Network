@@ -1,0 +1,28 @@
+; tooluse-featurize.fk — the agent-tool featurizer's LOGIC, as a Form recipe instead of Python.
+; scripts/agent_tooluse_featurize.py holds the per-tool count fold, the majority baseline, and the
+; deterministic train/held split IN PYTHON — pure logic the body cannot sense, prove, or learn from. This
+; cell carries that logic: counting, the base-rate decision, and the split, four-way. What stays in the
+; carrier is only the file read (already a Form host-io carrier — hostio-roundtrip / the storage port) and
+; the line decode; the script shrinks to a line-reader handing tool bit-vectors to the body.
+;
+; A turn is its tool bit-vector (one bit per tool). A corpus is a list of turns. The base rate of tool i is
+; (count i) / n; the majority baseline guesses tool i iff that rate ≥ 1/2 — the same no-learning baseline
+; tool-eval scores the model against. Integer-exact — registered `fkc`. Proven by tests/tooluse-featurize-band.fk.
+(do
+    ; per-tool count: how many turns used tool i (the base-rate numerator) — the contingency fold.
+    (defn tf-count (turns i)
+        (if (eq (len turns) 0) 0 (add (nth (head turns) i) (tf-count (tail turns) i))))
+    ; majority baseline: guess tool i iff its base-rate ≥ 1/2, i.e. count·2 ≥ n (no division).
+    (defn tf-majority? (turns i) (if (ge (mul (tf-count turns i) 2) (len turns)) 1 0))
+
+    ; index modulo 5 (the split key), without a host op — the body's own arithmetic.
+    (defn tf-mod5 (n) (if (ge n 5) (tf-mod5 (sub n 5)) n))
+    ; deterministic split: held = every 5th turn (index mod 5 = 0), train = the rest. keep=0 held, keep=1 train.
+    (defn tf-take (turns keep idx)
+        (if (eq (len turns) 0) (empty)
+            (if (eq (eq (tf-mod5 idx) 0) (eq keep 0))
+                (cons (head turns) (tf-take (tail turns) keep (add idx 1)))
+                (tf-take (tail turns) keep (add idx 1)))))
+    (defn tf-held (turns) (tf-take turns 0 0))
+    (defn tf-train (turns) (tf-take turns 1 0))
+    0)

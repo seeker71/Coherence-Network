@@ -1,0 +1,25 @@
+; preludes: form-stdlib/tooluse-featurize.fk
+;
+; tooluse-featurize-band — the featurizer's data-prep LOGIC as a Form recipe, four-way: the per-tool count
+; fold, the majority baseline, and the deterministic every-5th split that scripts/agent_tooluse_featurize.py
+; holds in Python, now in the body where the substrate can sense and prove them. Strange-minimal corpus of 6
+; turns over 4 tools [Bash Read Edit Write]; the fold reproduces the real shape — Bash+Read clear the
+; base-rate ≥ 1/2 bar (the [1,1,0,0] majority baseline), Edit+Write do not.
+;
+; Verdict 63 when every claim lands:
+;   1   the count fold counts tool use — Bash appears in all 6 turns
+;   2   per-tool counts are exact — Read 4, Write 1
+;   4   the majority baseline is computed by the body — Bash guessed (rate ≥ 1/2), Edit not
+;   8   the split partitions — held = every-5th (2 turns), train = the rest (4 turns)
+;   16  no turn is lost — |train| + |held| = |corpus|
+;   32  the baseline vector matches tool-eval's [Bash,Read] majority — Read in, Write out
+(do
+    (let c (list (list 1 1 0 0) (list 1 1 1 0) (list 1 0 0 1) (list 1 1 0 0) (list 1 0 1 0) (list 1 1 0 0)))
+
+    (let c0 (if (eq (tf-count c 0) 6) 1 0))
+    (let c1 (if (and (eq (tf-count c 1) 4) (eq (tf-count c 3) 1)) 2 0))
+    (let c2 (if (and (eq (tf-majority? c 0) 1) (eq (tf-majority? c 2) 0)) 4 0))
+    (let c3 (if (and (eq (len (tf-held c)) 2) (eq (len (tf-train c)) 4)) 8 0))
+    (let c4 (if (eq (add (len (tf-train c)) (len (tf-held c))) (len c)) 16 0))
+    (let c5 (if (and (eq (tf-majority? c 1) 1) (eq (tf-majority? c 3) 0)) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
