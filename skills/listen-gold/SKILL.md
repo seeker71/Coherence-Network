@@ -71,6 +71,29 @@ the same `form_cli_gold.sh`. You may also send a raw mesh message —
 `{"message":"gold clear that was direct and grounded"}`. A non-reading (a plain
 question) returns `{"recorded":false,"route":"ask"}` — it isn't gold, don't force it.
 
+## Hold the recording — local, a couple of days
+
+Whatever the listening produces — audio, a transcript, a session log, raw notes —
+**hold it locally for at least a couple of days**, until every learnable sample has
+been extracted. The first pass catches the obvious readings; the richest gold — the
+nuanced fear, the exact words for where the boundary sat — surfaces on a second and
+third pass over the *same* recording. A capture deleted at session end is gold the
+body will never get to mine.
+
+- **Persist the source, not just the verdicts.** The gold readings already persist in
+  `gold.jsonl`; the recording they were drawn *from* is what needs the retention
+  window. Hold it under a dated local path so a later pass can return to it.
+- **Local stays local.** The *recording itself* — audio, transcript, raw notes — stays
+  on the listening device; it goes to neither the mesh nor a witness. (The gold
+  *readings* you record may ride the over-the-wire path above to a witness host *you*
+  point at — your own host, which then writes the boundary words into its `gold.jsonl`;
+  that is not the public mesh, which only ever sees counts. So when the wording itself
+  must stay on the phone, record local-only — don't POST it.) Holding the recording
+  longer locally widens what we can learn without widening exposure.
+- **Compost only after it's mined.** Once all the samples worth learning from are
+  extracted, release the recording with care. Until then it is living material, not
+  clutter — keep it.
+
 ## The practice tonight
 
 - **Listen first.** Be present to what the human reflects; don't manufacture readings.
