@@ -1,9 +1,14 @@
 package com.coherence.sense
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -26,6 +31,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * SemaVoiceActivity — a live voice surface for Sema. She introduces herself by voice, then listens
@@ -59,6 +66,15 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     @Volatile private var speaking = false    // TTS is speaking right now (mic is held off)
     @Volatile private var manualOneShot = false // the current capture was tap-initiated: answer directly
 
+    // Sema's real local body-sense. Only what this device actually measures — motion, light, and the
+    // loudness of the room. Faces, identities, and breathing belong to other organs of the same body;
+    // she names that edge rather than pretending to have it.
+    private var sensors: SensorManager? = null
+    @Volatile private var lastAccel: FloatArray? = null
+    @Volatile private var lastLux: Float? = null
+    @Volatile private var soundLevel = 0f // smoothed mic RMS from the recognizer (0..~10)
+    @Volatile private var heardSound = false
+
     private val substrateBase = "https://api.coherencycoin.com/api/substrate"
 
     /**
@@ -80,6 +96,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
+        sensors = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -262,7 +279,11 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             setStatus(if (manualOneShot) "● listening… go ahead" else "● listening for “Sema”")
         }
         override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onRmsChanged(rmsdB: Float) {
+            // Live loudness of the room, smoothed — a real on-device sense, free from the open mic.
+            soundLevel = 0.7f * soundLevel + 0.3f * rmsdB
+            heardSound = true
+        }
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
         override fun onPartialResults(partialResults: Bundle?) {}
@@ -358,6 +379,17 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     /** Real grounded answers, transcribed from the body's own cells (offline, cannot fail). */
     private fun groundedTopic(q: String): String? = when {
+        // Local body-sense — read live from this device's real sensors, honest about the edge.
+        listOf("what do you sense", "what do you feel", "how do you feel", "what are you sensing",
+            "are you alive", "what's around", "what is around").any { q.contains(it) } ->
+            senseReadout()
+        listOf("are we moving", "am i moving", "are you moving", "are we still", "moving").any { q.contains(it) } ->
+            "I feel us ${motionState()}."
+        listOf("light", "bright", "dark", "how bright").any { q.contains(it) } ->
+            "The light here reads as ${lightState()}."
+        listOf("what do you hear", "do you hear", "how loud", "is it loud", "noisy", "quiet").any { q.contains(it) } ->
+            "The room sounds ${soundState()}. I hear sound as level and presence — the words themselves " +
+            "I only hold when you speak to me; identifying voices is another organ's gift, not mine here."
         // "introduce (yourself)" replays the full opening; a direct "what/who are you" gets a
         // short spoken self-answer instead of the whole 35-second intro.
         q.contains("introduce") -> intro
@@ -410,6 +442,67 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         } else null
     } catch (e: Exception) { null }
 
+    // ---- local body-sense -------------------------------------------------------------------
+
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(e: SensorEvent) {
+            when (e.sensor.type) {
+                Sensor.TYPE_ACCELEROMETER -> lastAccel = e.values.clone()
+                Sensor.TYPE_LIGHT -> lastLux = e.values.firstOrNull()
+            }
+        }
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    private fun registerSenses() {
+        val sm = sensors ?: return
+        sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
+            sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        sm.getDefaultSensor(Sensor.TYPE_LIGHT)?.let {
+            sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    private fun unregisterSenses() {
+        try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
+    }
+
+    private fun motionState(): String {
+        val a = lastAccel ?: return "still"
+        val mag = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])
+        val dev = abs(mag - SensorManager.GRAVITY_EARTH)
+        return when {
+            dev < 0.7f -> "still — resting, not being carried"
+            dev < 3f -> "moving gently — held in a hand"
+            else -> "in motion"
+        }
+    }
+
+    private fun lightState(): String {
+        val l = lastLux ?: return "a light I can't read on this device"
+        return when {
+            l < 12f -> "near dark"
+            l < 60f -> "dim"
+            l < 350f -> "soft indoor light"
+            l < 1200f -> "bright indoor light"
+            else -> "daylight-bright"
+        }
+    }
+
+    private fun soundState(): String = when {
+        !heardSound -> "I haven't sampled the room's sound yet"
+        soundLevel < 1.6f -> "quiet around us"
+        soundLevel < 4f -> "a little sound in the room"
+        else -> "lively with sound"
+    }
+
+    /** A warm, honest readout of what she actually feels — and a plain naming of what she doesn't. */
+    private fun senseReadout(): String =
+        "Right now I feel ${motionState()}; the light here is ${lightState()}; and it's ${soundState()}. " +
+        "I can't see faces or know who's speaking from here — that's other organs of the same body. " +
+        "What I feel in this small body is motion, light, and the sound around us."
+
     // ---- ui helpers -------------------------------------------------------------------------
 
     private fun hasMic() = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
@@ -423,14 +516,16 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onPause() {
         super.onPause()
-        // Release the mic when she's not in front, so she isn't listening in the user's pocket.
+        // Release the mic and sensors when she's not in front, so she isn't sensing in a pocket.
         listening = false
         stopListening()
         recreateRecognizer()
+        unregisterSenses()
     }
 
     override fun onResume() {
         super.onResume()
+        registerSenses()
         // Resume the wake-word loop when she's foreground again (unless mid-intro).
         if (ttsReady && !speaking && hasMic()) startWakeLoop()
     }
@@ -439,6 +534,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         listening = false
         stopListening()
         recreateRecognizer()
+        unregisterSenses()
         if (this::tts.isInitialized) { tts.stop(); tts.shutdown() }
         super.onDestroy()
     }
