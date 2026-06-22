@@ -970,12 +970,16 @@ ensure_kernel_router_canary() {
   done
 
   for service in "${canary_services[@]}"; do
-    local listener_probe_path="/api/attention/kernel-runtime"
+    local listener_probe_path="/api/utils/kernel_status"
     local listener_wait_seconds=90
     local listener_curl_timeout_seconds=5
     # Contract marker: $service listener did not accept local HTTP within 90s.
+    # The public /api/attention/kernel-runtime route is now promoted through
+    # the BML front-door service and proven below with api_attention_kernel_runtime.
+    # Keep the older production-manifest service on a lightweight listener probe;
+    # repeated local attention probes can saturate its worker pool and make the
+    # otherwise-running sibling appear unhealthy during deploy.
     if [[ "$service" == "kernel-router-bml-front-door" ]]; then
-      listener_probe_path="/api/utils/kernel_status"
       listener_wait_seconds=360
       listener_curl_timeout_seconds=10
     fi
