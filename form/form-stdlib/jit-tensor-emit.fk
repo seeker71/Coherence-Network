@@ -252,6 +252,23 @@
 
 (defn jte-mlp-train-msl (fname) (jte-mlp-train-msl-fmt fname "f32"))
 
+; ── forward-only kernel: y = W2·gelu(W1·x + b1) + b2 (no loss/grad/update) — the SAME forward as the
+; training step (jte-mlp-fwd1 + the recipe's own fgelu), emitted standalone so the held-out EVAL runs
+; through recipe-authored bytes, not a hand-rolled host copy. Buffers w1,b1,w2,b2,x -> y, scratch h1,a. ──
+(defn jte-mlp-fwd-sig (fname el ac)
+  (str_concat "kernel void " (str_concat fname (str_concat "(device " (str_concat el (str_concat "* w1 [[buffer(0)]], device " (str_concat el (str_concat "* b1 [[buffer(1)]], device " (str_concat el (str_concat "* w2 [[buffer(2)]], device " (str_concat el (str_concat "* b2 [[buffer(3)]], device const " (str_concat el (str_concat "* x [[buffer(4)]], device " (str_concat el (str_concat "* y [[buffer(5)]], device " (str_concat ac (str_concat "* h1 [[buffer(6)]], device " (str_concat ac "* a [[buffer(7)]], constant uint& indim [[buffer(8)]], constant uint& hid [[buffer(9)]], constant uint& outd [[buffer(10)]], uint tid [[thread_position_in_threadgroup]], uint tgs [[threads_per_threadgroup]]) { ")))))))))))))))))))
+
+(defn jte-mlp-fwd-out (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint k = hid; while (k > 0) { k -= 1; acc = " (str_concat ac (str_concat "(w2[i * hid + k]) * a[k] + acc; } y[i] = " (str_concat el (str_concat "(acc + " (str_concat ac "(b2[i])); } }")))))))))
+
+(defn jte-mlp-fwd-msl-spine (fname el ac)
+  (str_concat (jte-mlp-helpers ac)
+  (str_concat (jte-mlp-fwd-sig fname el ac)
+  (str_concat (jte-mlp-fwd1 el ac) (jte-mlp-fwd-out el ac)))))
+
+(defn jte-mlp-fwd-msl-fmt (fname fmt) (jte-mlp-fwd-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+(defn jte-mlp-fwd-msl (fname) (jte-mlp-fwd-msl-fmt fname "f32"))
+
 ; --- FFN-RESIDUAL (one pre-LN layer) TRAINING-STEP kernel, emitted as a Form recipe — the architect's ACTUAL
 ; layer on Metal. tbp-stk-step over one "ffn" layer is the algorithm (fp64, proven three-way): the residual
 ; block y = h + (W2*gelu(W1*LN(h) + b1) + b2), exactly what ac-ffn-layer builds and ac-train trains. This is
