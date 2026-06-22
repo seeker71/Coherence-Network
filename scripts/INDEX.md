@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 322
+**Total files**: 323
 
 | File | Purpose |
 |---|---|
@@ -86,6 +86,7 @@
 | [fatal_http_all_kernels_probe.py](fatal_http_all_kernels_probe.py) | Probe fatal HTTP replies across the current four kernel carriers. |
 | [federation_peer_poll.py](federation_peer_poll.py) | federation_peer_poll — fire one peer-poll cycle from the command line. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
+| [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
@@ -212,7 +213,7 @@
 | [multi_layer_stack_reference.py](multi_layer_stack_reference.py) | multi_layer_stack_reference.py — independent pure-libm fp64 reference for the |
 | [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
-| [native_thought_receipt.sh](native_thought_receipt.sh) | native_thought_receipt.sh — THIN DOOR to the Form recipe that records a native-thought-execution |
+| [native_thought_receipt.sh](native_thought_receipt.sh) | native_thought_receipt.sh — record ONE native-thought-execution routing decision, ON THE FKWU LANE. |
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
