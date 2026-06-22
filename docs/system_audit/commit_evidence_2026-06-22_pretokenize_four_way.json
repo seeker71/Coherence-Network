@@ -1,0 +1,29 @@
+{
+  "date": "2026-06-22",
+  "brick": "pretokenize (GPT-2/whisper regex pre-tokenization, word splitting) crosses four-way",
+  "author": "Sema (Opus 4.8) — sema-native-ml-walk autonomous run",
+  "claim": "The GPT-2 regex pre-tokenization — the LAST algorithmic piece of the tokenizer FRONT-END still carrier DATA — is authored as a Form recipe and proven on the four-kernel floor (Go/Rust/TS/fkwu). Byte-level BPE never merges across a word boundary: text is first split into word/number/punctuation/whitespace pre-tokens, THEN each chunk is byte→symbol mapped (byte-to-symbol.fk #3503, four-way) and merged (bpe-tokenizer.fk #3447, four-way). pretokenize.fk is that splitter — GPT-2's fixed pattern, which whisper inherits.",
+  "north_star": "A model whose weights AND tokenizer are recipe data, running on a Form-native kernel. The decode math is four-way and on the M4 GPU (multi-layer stack #3423/#3424, KV-cached decode #3412, greedy argmax #3402); the tokenizer turns text into the token ids that loop consumes. With pre-tokenization (splitter) + byte→symbol (front-end) + BPE merge (core) all four-way, the WHOLE algorithmic tokenizer front-end is on the proven floor — only the byte→symbol table and the 50000-merge table remain carrier DATA. One stone toward the first end-to-end native token.",
+  "recipe": "form/form-stdlib/pretokenize.fk — pt-ws?/pt-letter?/pt-digit?/pt-other? (char classes by ord), pt-run (generic maximal-run finder taking a predicate — higher-order, four-way per geometric-learning #3290), pt-contract-len ('s/'t/'re/'ve/'m/'ll/'d), pt-end (the regex alternation as a left-to-right scan), pt-sub (substring by char accumulation), pt-list/pretokenize (the scan). Pure string/int/list recursion; no host I/O, no floats (no e-notation risk), small tables — the fourth-friendly subset.",
+  "pattern": "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+  (GPT-2; whisper inherits). Over ASCII (the byte domain the merge core works in) \\p{L}->[A-Za-z], \\p{N}->[0-9], and this is bit-identical to the real openai/whisper-tiny tokenizer's pre-tokenization.",
+  "reference": "Python `re` with the ASCII-reduced GPT-2 pattern (stdlib re supports the (?!\\S) lookahead and greedy backtracking). The procedural model and the regex pattern were cross-checked AGREE on all 20 fixtures BEFORE authoring (including 'a   b'->['a','  ',' b'], 'don't'->['don',\"'t\"], \"'re won't\"->[\"'re\",' won',\"'t\"], ' tokenizer'->[' tokenizer']). Two independent references agreeing double-grounds the recipe.",
+  "band": "form/form-stdlib/tests/pretokenize-band.fk — verdict 255 (8 strange-minimal GPT-2 splitting laws):",
+  "claims": {
+    "bit_1_base": "'hello' -> ['hello'] — a lone word is one pre-token (scan terminator)",
+    "bit_2_leading_space": "'hello world' -> ['hello',' world'] — a word after a space KEEPS the space (` ?\\p{L}+` absorbs it); the reason ' tokenizer' is one chunk",
+    "bit_4_internal_ws": "'a  b' -> ['a',' ',' b'] — two internal spaces split as a LONE-space token + a leading-space word (\\s+(?!\\S) leaves the last ws to lead the word)",
+    "bit_8_trailing_ws": "'a  ' -> ['a','  '] — a run with nothing non-space after it is emitted WHOLE; bit4 vs bit8 together ARE the (?!\\S) lookahead, the subtlest law",
+    "bit_16_contraction": "'don't' -> ['don',\"'t\"] — 's/'t/'re/'ve/'m/'ll/'d split off the preceding word",
+    "bit_32_class_boundary": "'abc123' -> ['abc','123'] — \\p{L}+ stops at a digit; a run never crosses class",
+    "bit_64_other_run": "'a, b' -> ['a',',',' b'] — a punctuation run is its own chunk, and the space after it leads the next word",
+    "bit_128_real_anchor": "' tokenizer' -> [' tokenizer'] — ONE pre-token, the exact string the bpe-tokenizer band byte-maps to [14862,6545] against the actual openai/whisper-tiny tokenizer; the front-end's output IS the merge core's input, tying them on one floor"
+  },
+  "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/tests/pretokenize-band.fk  ->  '✓ ... -> 255', 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', '1 ok, 0 divergent'. Registered form/fourth-arm-bands.txt: 'pretokenize fks 255'.",
+  "lane": "NEW-recipe brick (like 3p/3q/3zc): design (the regex-as-scan model + the dual reference cross-check + the strange-minimal fixtures) was the cost; the four-way proof was seconds. Caught the fourth-arm gate honestly — a bare scoped validate needs the manifest row before fkwu runs. One paren-imbalance bug (one extra `)` in pt-end, Go/Rust silently tolerated a trailing rparen, TS errored, fkwu computed 0) — found by a depth-trace, not by guessing.",
+  "next_stones": [
+    "wire the full generation loop (pretokenize prompt -> byte-to-symbol -> bpe-encode #3447 -> vocab-id lookup -> multi-layer decode stack #3423/#3424 -> greedy argmax #3402 over real llama3.2:3b GGUF) — the first end-to-end native token",
+    "the byte->symbol VOCAB table and 50000-merge table are the last carrier DATA in the tokenizer; intern them as Form data",
+    "confirm/extend for llama's SentencePiece-BPE pre-tokenization regex (llama3 uses a different pat_str than GPT-2)"
+  ],
+  "receipt_of": "form/form-stdlib/pretokenize.fk + form/form-stdlib/tests/pretokenize-band.fk + form/fourth-arm-bands.txt (pretokenize fks 255)"
+}
