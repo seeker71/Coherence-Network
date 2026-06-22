@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 321
+**Total files**: 323
 
 | File | Purpose |
 |---|---|
@@ -176,6 +176,7 @@
 | [influence_teaching_translator.py](influence_teaching_translator.py) | Print influence teaching translator shards for a field story. |
 | [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | Lay every Audible book as a first-class asset with full source trace. |
 | [ingest_audible_history.py](ingest_audible_history.py) | Flow Audible listening history into the graph. |
+| [install_kernel_memory_witness.sh](install_kernel_memory_witness.sh) | install_kernel_memory_witness.sh — bring the kernel memory witness home. |
 | [integrate_one_branch.sh](integrate_one_branch.sh) | Integrate one remote branch into main: rebase, add evidence, push, create PR, merge. |
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
@@ -184,6 +185,7 @@
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
+| [kernel_memory_witness.sh](kernel_memory_witness.sh) | kernel_memory_witness.sh — a host guardian (carrier tissue, not Form logic). |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
 | [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
 | [live_speech_loop_receipt.sh](live_speech_loop_receipt.sh) | live_speech_loop_receipt.sh - known text played over speaker, heard by live mics. |
