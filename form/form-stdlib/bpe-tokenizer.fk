@@ -10,9 +10,11 @@
 ; converges to the same final encoding as GPT-2's merge-all-occurrences pass (the chosen bigram
 ; stays minimal until all its occurrences are consumed). Final symbol-ids ARE the token ids.
 ;
-; Carrier-last note: byte→symbol mapping and the GPT-2 regex pre-tokenization (word splitting),
-; plus the full 50000-merge table, load as DATA from whisper's tokenizer files; this recipe is
-; the merge engine proven against the real tokenizer on real merges.
+; Carrier-last note: the tokenizer's two upstream ALGORITHMS are now Form recipes — the GPT-2 regex
+; pre-tokenization / word splitting (pretokenize.fk, four-way) and byte→symbol mapping (byte-to-symbol.fk,
+; four-way) — so text → pre-tokens → byte-mapped symbols → this merge engine is all proven Form. Only the
+; byte→symbol VOCAB table and the full 50000-merge table remain carrier DATA loaded from whisper's
+; tokenizer files; this recipe is the merge engine proven against the real tokenizer on real merges.
 
 (defn bpe-big () 999999999)
 
