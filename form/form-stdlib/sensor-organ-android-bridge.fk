@@ -1,0 +1,84 @@
+; sensor-organ-android-bridge.fk — Android active samples enter the generic sensor organ channel.
+;
+; android-mesh-learning.fk already proves the physical receipt floor for mic RMS,
+; camera luma, and GPU readback summaries. sensor-organ-channel.fk gives every
+; physical sample the same confidence/freshness/privacy/provenance contract.
+; This bridge joins them without changing the already-four-way Android band:
+; active summary-only rows lower into generic sensor samples, then compose into
+; a derived active-media observation.
+;
+; Raw values stay carrier-local. The bridge carries summary metrics only.
+;
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk
+;
+; Proven by: form-stdlib/tests/sensor-organ-android-bridge-band.fk
+
+(do
+    (defn soab-trust-ppm (trust) (mul trust 10000))
+    (defn soab-freshness (sample)
+        (if (eq (aml-sample-active? sample) 1) (aml-sample-count sample) 0))
+    (defn soab-privacy (sample)
+        (if (str_eq (aml-sample-privacy sample) "")
+            (sensor-privacy-raw-private)
+            (sensor-privacy-derived)))
+
+    (defn soab-kind (sample)
+        (if (str_eq (aml-sample-lane sample) "mic")
+            "sound-level"
+            (if (str_eq (aml-sample-lane sample) "camera")
+                "light-level"
+                (if (str_eq (aml-sample-lane sample) "gpu")
+                    "compute-latency"
+                    "sensor-metric"))))
+    (defn soab-unit (sample)
+        (if (str_eq (aml-sample-lane sample) "mic")
+            "rms"
+            (if (str_eq (aml-sample-lane sample) "camera")
+                "luma"
+                (if (str_eq (aml-sample-lane sample) "gpu")
+                    "ms"
+                    "metric"))))
+    (defn soab-source (sample) (str_concat "android:" (aml-sample-lane sample)))
+
+    (defn soab-active-sample-to-sensor (sample)
+        (sensor-sample
+            (soab-source sample)
+            (soab-kind sample)
+            (aml-sample-metric sample)
+            (soab-unit sample)
+            (aml-sample-protocol sample)
+            (soab-trust-ppm (aml-sample-trust sample))
+            (soab-freshness sample)
+            (soab-privacy sample)
+            (list "android-mesh-learning" (aml-sample-codec sample) (aml-sample-privacy sample))))
+
+    (defn soab-active-sample-reading (sample min-confidence deadline tick)
+        (sensor-sample-reading (soab-active-sample-to-sensor sample) min-confidence deadline tick))
+
+    (defn soab-usable-count (samples min-confidence)
+        (if (eq (len samples) 0)
+            0
+            (add
+                (sensor-usable? (soab-active-sample-to-sensor (head samples)) min-confidence)
+                (soab-usable-count (tail samples) min-confidence))))
+
+    (defn soab-media-claim (samples min-confidence)
+        (if (and
+                (eq (aml-active-media-floor? samples) 1)
+                (eq (soab-usable-count samples min-confidence) 3))
+            "media-floor"
+            "media-incomplete"))
+
+    (defn soab-media-confidence (samples min-confidence)
+        (div (mul (soab-usable-count samples min-confidence) 1000000) 3))
+
+    (defn soab-media-observation (samples min-confidence)
+        (composite-observation
+            "android-active-media"
+            (soab-media-claim samples min-confidence)
+            (soab-media-confidence samples min-confidence)
+            (sensor-privacy-derived)
+            (soab-usable-count samples min-confidence)
+            (if (str_eq (soab-media-claim samples min-confidence) "media-floor") 0 1)
+            "summary-only"
+            (list "mic" "camera" "gpu"))))
