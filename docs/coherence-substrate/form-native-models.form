@@ -168,10 +168,14 @@
 ;        Second lift landed (2026-06-21): form-stdlib/tooluse-featurize.fk carries featurize.py's count fold,
 ;        majority baseline, and every-5th split (tests/tooluse-featurize-band.fk → 63, four-way) — the corpus
 ;        read stays a Form host-io carrier (hostio-roundtrip / storage port), the script shrinks to a line-
-;        reader. Remaining compost: the Swift fgelu (= transformer-gelu-erf, four-way) and forward (= jte fwd)
-;        should dylib-call the recipe, not copy it; the per-token tokenize step lifts to the WORD-domain fold +
-;        fs-score. The carrier earns its host lines only as a syscall-thin device door (ports-interface-and-
-;        structure.md §"The carrier is a thin door, not a script").
+;        reader. Third lift landed (2026-06-22): the Swift fgelu/forward TWIN is DELETED — runner.swift's
+;        held-out eval now dispatches the recipe-emitted form_mlp_fwd_f32 kernel (jit-tensor-emit.fk's
+;        jte-mlp-fwd-msl, the SAME jte-mlp-fwd1 + recipe fgelu the training step uses), proven four-way by
+;        tests/mlp-fwd-emit-band.fk → 7. The held-out 84.0% is now computed by recipe-authored bytes, not an
+;        unprovable Swift copy — the number we trust most became the number we can prove (live M4 Max run:
+;        recipe-kernel held-out = the prior Swift-twin held-out, per-tool identical). Remaining compost: the
+;        per-token tokenize step lifts to the WORD-domain fold + fs-score. The carrier earns its host lines
+;        only as a syscall-thin device door (ports-interface-and-structure.md §"The carrier is a thin door").
 ;        MEASURED (2026-06-21): a real GPU run (2154 train / 539 held, corpus now 2717 turns) confirms the
 ;        diagnosis — train loss falls 2.7969→0.6340 while held-out loss bottoms at epoch 20 (0.8535) then
 ;        rises (0.8908, 1.0016); the held-out gate's minimum IS epoch 20. The band now carries that measured

@@ -1,0 +1,24 @@
+; preludes: form-stdlib/jit-tensor-emit.fk
+;
+; mlp-fwd-emit-band — the FFN FORWARD-only kernel emitter as recipe, proven four-way. jte-mlp-fwd-msl
+; authors the Metal kernel for y = W2*gelu(W1*x + b1) + b2 — the SAME forward as the training step
+; (jte-mlp-fwd1 + the recipe's OWN fgelu, composed from fexp/ftanh; never a hardware tanh), emitted
+; standalone so the held-out EVAL in scripts/agent_tooluse_train.sh runs through recipe-authored bytes
+; instead of a hand-rolled Swift copy. The emitted source is byte-identical across all four kernels
+; (Go/Rust/TS/fkwu vs the canonical text), the name parameterizes cleanly, and the emission is
+; deterministic — so the held-out number is computed by the same bytes the four-way proof covers.
+;
+; Verdict 7 when the emission lands:
+;   1   the full emitted f32 forward MSL for form_mlp_fwd_f32 equals the canonical text
+;   2   a different name lands in the same frame (emission is a function of the name, not a constant)
+;   4   two emissions of the same name are str_eq (deterministic text — same emission, same cell)
+(do
+    (let pre "float fexp_small(float x){ float n = 1.0f; float term = 1.0f; float acc = 1.0f; while (n <= 14.0f) { term = term * (x / n); acc = acc + term; n = n + 1.0f; } return acc; } float fexp(float x){ int k = 0; while ((x < 0.0f ? -x : x) > 0.5f) { x = x / 2.0f; k = k + 1; } float v = fexp_small(x); while (k > 0) { v = v * v; k = k - 1; } return v; } float ftanh(float x){ float e = fexp(2.0f * x); return (e - 1.0f) / (e + 1.0f); } float fgelu(float x){ float z = 0.7978845608028654f * (x + 0.044715f * (x * (x * x))); return (0.5f * x) * (1.0f + ftanh(z)); } float fgelud(float x){ float z = 0.7978845608028654f * (x + 0.044715f * (x * (x * x))); float th = ftanh(z); return (0.5f * (1.0f + th)) + ((0.5f * x) * ((1.0f - (th * th)) * (0.7978845608028654f * (1.0f + (0.134145f * (x * x)))))); } kernel void ")
+    (let post "(device float* w1 [[buffer(0)]], device float* b1 [[buffer(1)]], device float* w2 [[buffer(2)]], device float* b2 [[buffer(3)]], device const float* x [[buffer(4)]], device float* y [[buffer(5)]], device float* h1 [[buffer(6)]], device float* a [[buffer(7)]], constant uint& indim [[buffer(8)]], constant uint& hid [[buffer(9)]], constant uint& outd [[buffer(10)]], uint tid [[thread_position_in_threadgroup]], uint tgs [[threads_per_threadgroup]]) { for (uint k = tid; k < hid; k += tgs) { float acc = 0.0f; uint j = indim; while (j > 0) { j -= 1; acc = float(w1[k * indim + j]) * float(x[j]) + acc; } float hk = acc + float(b1[k]); h1[k] = hk; a[k] = fgelu(hk); } threadgroup_barrier(mem_flags::mem_device); for (uint i = tid; i < outd; i += tgs) { float acc = 0.0f; uint k = hid; while (k > 0) { k -= 1; acc = float(w2[i * hid + k]) * a[k] + acc; } y[i] = float(acc + float(b2[i])); } }")
+    (let want (str_concat pre (str_concat "form_mlp_fwd_f32" post)))
+    (let got (jte-mlp-fwd-msl "form_mlp_fwd_f32"))
+    (let other (jte-mlp-fwd-msl "m2"))
+    (let c0 (if (str_eq got want) 1 0))
+    (let c1 (if (str_eq other (str_concat pre (str_concat "m2" post))) 2 0))
+    (let c2 (if (str_eq (jte-mlp-fwd-msl "form_mlp_fwd_f32") got) 4 0))
+    (add c0 (add c1 c2)))

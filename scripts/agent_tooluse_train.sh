@@ -25,13 +25,16 @@ fi
 [[ -f "$DATA" ]] || python3 "$ROOT/scripts/agent_tooluse_featurize.py" "$DATA"
 work="$(mktemp -d "${TMPDIR:-/tmp}/fktool.XXXXXX")"; trap 'rm -rf "$work"' EXIT
 
-# ── 1. Form emits the FFN training-step MSL (identical recipe metal_ffn_audit proves bit-parity for) ──
+# ── 1. Form emits BOTH the FFN training-step kernel AND the forward-only eval kernel (metal_ffn_audit
+#      bit-parity-proves the training step; mlp-fwd-emit-band proves the forward emitter four-way) ──
 cat "$FORMDIR/form-stdlib/jit-tensor-emit.fk" > "$work/driver.fk"
-printf '\n(print "==MSL==")\n(print (jte-mlp-train-msl "form_mlp_train_f32"))\n(print "==END==")\n' >> "$work/driver.fk"
+printf '\n(print "==MSL==")\n(print (jte-mlp-train-msl "form_mlp_train_f32"))\n(print "==END==")\n(print "==FWD==")\n(print (jte-mlp-fwd-msl "form_mlp_fwd_f32"))\n(print "==FEND==")\n' >> "$work/driver.fk"
 (cd "$FORMDIR" && "$GO_BIN" "$work/driver.fk" 2>/dev/null) > "$work/emit.out"
 sed -n '/^==MSL==$/,/^==END==$/p' "$work/emit.out" | sed -e '1d' -e '$d' > "$work/train.metal"
-grep -q 'kernel void form_mlp_train_f32' "$work/train.metal" || { echo "FAIL emission produced no kernel"; cat "$work/emit.out"; exit 1; }
-echo "emitted FFN training-step MSL: $(wc -c < "$work/train.metal" | tr -d ' ') bytes, authored by the Form recipe"
+sed -n '/^==FWD==$/,/^==FEND==$/p' "$work/emit.out" | sed -e '1d' -e '$d' > "$work/fwd.metal"
+grep -q 'kernel void form_mlp_train_f32' "$work/train.metal" || { echo "FAIL emission produced no train kernel"; cat "$work/emit.out"; exit 1; }
+grep -q 'kernel void form_mlp_fwd_f32' "$work/fwd.metal" || { echo "FAIL emission produced no fwd kernel"; cat "$work/emit.out"; exit 1; }
+echo "emitted FFN train-step ($(wc -c < "$work/train.metal" | tr -d ' ') B) + forward eval kernel ($(wc -c < "$work/fwd.metal" | tr -d ' ') B), both authored by the Form recipe"
 
 # ── 2. Swift carrier: load real data, loop the Form step over the corpus on the GPU, eval held-out ──
 cat > "$work/runner.swift" <<'SWIFT'
@@ -40,9 +43,9 @@ import Foundation
 
 setvbuf(stdout, nil, _IONBF, 0)
 let args = CommandLine.arguments
-let dataPath = args[1], mslPath = args[2]
-let hid = Int(args[3])!, epochs = Int(args[4])!
-let lr = Float(args[5])!
+let dataPath = args[1], mslPath = args[2], fwdPath = args[3]
+let hid = Int(args[4])!, epochs = Int(args[5])!
+let lr = Float(args[6])!
 
 // ── parse the real dataset: "n_train n_held indim outd" / tool-names / rows "x.. | t.." ──
 let lines = (try String(contentsOfFile: dataPath, encoding: .utf8)).split(separator: "\n").map(String.init)
@@ -61,16 +64,16 @@ let Xhe = slice(X,nTrain,nTrain+nHeld), The = slice(T,nTrain,nTrain+nHeld)
 
 guard let dev = MTLCreateSystemDefaultDevice() else { print("SKIP no Metal device"); exit(2) }
 let src = try String(contentsOfFile: mslPath, encoding: .utf8)
+let fwdSrc = try String(contentsOfFile: fwdPath, encoding: .utf8)
 let opts = MTLCompileOptions(); opts.fastMathEnabled = false
 let lib = try dev.makeLibrary(source: "#include <metal_stdlib>\nusing namespace metal;\n" + src, options: opts)
+let libFwd = try dev.makeLibrary(source: "#include <metal_stdlib>\nusing namespace metal;\n" + fwdSrc, options: opts)
 let pso = try dev.makeComputePipelineState(function: lib.makeFunction(name: "form_mlp_train_f32")!)
+let psoFwd = try dev.makeComputePipelineState(function: libFwd.makeFunction(name: "form_mlp_fwd_f32")!)
 let q = dev.makeCommandQueue()!
 
-// ── the recipe's own exp/tanh/gelu in fp32 (for CPU-side held-out eval; matches the kernel's fgelu) ──
-func fexp_small(_ x: Float) -> Float { var n: Float = 1, term: Float = 1, acc: Float = 1; while n <= 14.0 { term = term*(x/n); acc += term; n += 1 }; return acc }
-func fexp(_ x0: Float) -> Float { var x = x0; var k = 0; while abs(x) > 0.5 { x /= 2; k += 1 }; var v = fexp_small(x); while k > 0 { v = v*v; k -= 1 }; return v }
-func ftanh(_ x: Float) -> Float { let e = fexp(2*x); return (e-1)/(e+1) }
-func fgelu(_ x: Float) -> Float { let z = Float(0.7978845608028654)*(x+Float(0.044715)*(x*(x*x))); return (0.5*x)*(1+ftanh(z)) }
+// ── the held-out forward runs through the recipe-emitted form_mlp_fwd_f32 kernel — the SAME bytes the
+//    four-way proof (mlp-fwd-emit-band) covers, the SAME fgelu the training kernel uses. No Swift twin. ──
 
 // ── deterministic small init; weights EMERGE from here ──
 func z(_ n: Int) -> [Float] { [Float](repeating: 0, count: n) }
@@ -101,12 +104,18 @@ func pull() { w1 = Array(UnsafeBufferPointer(start: bw1.contents().bindMemory(to
               w2 = Array(UnsafeBufferPointer(start: bw2.contents().bindMemory(to: Float.self, capacity: outd*hid), count: outd*hid))
               b1 = Array(UnsafeBufferPointer(start: bb1.contents().bindMemory(to: Float.self, capacity: hid), count: hid))
               b2 = Array(UnsafeBufferPointer(start: bb2.contents().bindMemory(to: Float.self, capacity: outd), count: outd)) }
+// the held-out forward = the recipe-emitted GPU kernel over the trained GPU weight buffers; nothing in Swift.
+let byF = newBuf(z(indim)), byY = newBuf(z(outd)), byH1f = newBuf(z(hid)), byAf = newBuf(z(hid))
 func forward(_ x: [Float]) -> [Float] {
-    var a = z(hid)
-    for k in 0..<hid { var acc: Float = 0; for j in 0..<indim { acc += w1[k*indim+j]*x[j] }; a[k] = fgelu(acc+b1[k]) }
-    var y = z(outd)
-    for i in 0..<outd { var acc: Float = 0; for k in 0..<hid { acc += w2[i*hid+k]*a[k] }; y[i] = acc+b2[i] }
-    return y
+    byF.contents().copyMemory(from: x, byteCount: indim*4)
+    let cb = q.makeCommandBuffer()!; let enc = cb.makeComputeCommandEncoder()!
+    enc.setComputePipelineState(psoFwd)
+    let bufs = [bw1,bb1,bw2,bb2,byF,byY,byH1f,byAf]
+    for (i,b) in bufs.enumerated() { enc.setBuffer(b, offset: 0, index: i) }
+    enc.setBytes(&u_in, length: 4, index: 8); enc.setBytes(&u_hid, length: 4, index: 9); enc.setBytes(&u_out, length: 4, index: 10)
+    enc.dispatchThreadgroups(MTLSize(width:1,height:1,depth:1), threadsPerThreadgroup: MTLSize(width:tgs,height:1,depth:1))
+    enc.endEncoding(); cb.commit(); cb.waitUntilCompleted()
+    return Array(UnsafeBufferPointer(start: byY.contents().bindMemory(to: Float.self, capacity: outd), count: outd))
 }
 func setLoss(_ Xs: [[Float]], _ Ts: [[Float]]) -> Double {
     var s = 0.0; for n in 0..<Xs.count { let y = forward(Xs[n]); for i in 0..<outd { let d = Double(y[i]-Ts[n][i]); s += d*d } }
@@ -167,7 +176,7 @@ swiftc -O -framework Metal "$work/runner.swift" -o "$work/runner" 2>&1 | grep -v
 [[ -x "$work/runner" ]] || { echo "FAIL swiftc did not build the runner"; exit 1; }
 
 echo "── training the tool-use model on the M4 Max GPU (real agent corpus) ──"
-"$work/runner" "$DATA" "$work/train.metal" "$HID" "$EPOCHS" "$LR" | tee "$work/out.txt"
+"$work/runner" "$DATA" "$work/train.metal" "$work/fwd.metal" "$HID" "$EPOCHS" "$LR" | tee "$work/out.txt"
 # cache the held-out metric so `form-cli stats` can read the native tool-predictor's real numbers
 python3 - "$work/out.txt" <<'PY'
 import sys, re, json, os
