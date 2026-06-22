@@ -1,0 +1,61 @@
+; preludes: form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk
+;
+; tokenize-band — the WHOLE text→token-ids tokenizer, composed into one recipe, on the four-kernel floor.
+; The three algorithmic stages are each four-way standalone (pretokenize #3542, byte-to-symbol #3503,
+; bpe-tokenizer #3447); this proves they WIRE into one `tokenize : text → ids` end-to-end from RAW TEXT
+; against the real openai/whisper-tiny tokenizer — the single front-end recipe the generation loop calls
+; (multi-layer decode #3423/#3424 + greedy argmax #3402 consume exactly these ids).
+;
+; The proof is the composition's LAWS — not one magnitude, but the relationships the wiring forces:
+;
+;   bit 1  — the REAL anchor, END-TO-END from raw text: tokenize(" tokenizer") with the real whisper-tiny
+;            vocab subset + merge rows -> [14862, 6545], bit-for-bit the actual tokenizer. The bpe band
+;            (#3447) proves bpe-encode on the PRE-MAPPED syms [220 83 78 74 68 77 72 89 68 81]; this proves
+;            the front-end (pretokenize→bytes→byte-to-symbol→vocab-lookup) PRODUCES exactly those syms from
+;            the string " tokenizer" and the merge core finishes the job — the whole pipeline on one floor.
+;   bit 2  — EMPTY: tokenize("") -> []. pretokenize gives no chunks, the flatten of nothing is nothing — the
+;            base case the per-chunk fold rests on.
+;   bit 4  — CROSS-CHUNK FLATTEN (order): "a b" pre-tokenizes to ["a"," b"] (leading-space law); each chunk
+;            byte-maps and looks up independently, the per-chunk id lists concatenate IN ORDER -> [500,501,502].
+;            This is the new behaviour the composition adds beyond the three standalone pieces.
+;   bit 8  — NO MERGE ACROSS A PRE-TOKEN BOUNDARY — the load-bearing byte-level-BPE law. "1a" splits to
+;            ["1","a"] (class boundary); with a merge row (600,601)->700 present, the pair straddles the chunk
+;            boundary so it does NOT fire -> [600,601], NOT [700]. Each chunk is encoded alone.
+;   bit 16 — WITHIN-CHUNK MERGE STILL FIRES — the contrast that makes bit 8 meaningful. "11" is ONE digit-run
+;            chunk; with (600,600)->800 the pair is inside the chunk so it merges -> [800]. bit 8 + bit 16
+;            together ARE the boundary law: same pair, merges inside a chunk, refuses across chunks.
+;
+; Every value cross-checked against an independent Python reference (re-based pretokenize oracle + the closed
+; byte-to-symbol form + the merge core) before authoring — all 5 laws hold. Pure string/int/list recursion —
+; no host I/O, no floats — the fourth-friendly subset. Verdict 31 when the composed tokenizer lands four-way.
+(do
+  (defn ids-eq (a b)
+    (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+        (if (eq (len b) 0) 0
+            (if (eq (head a) (head b)) (ids-eq (tail a) (tail b)) 0))))
+
+  ; bit 1 — REAL openai/whisper-tiny anchor, end-to-end from the raw string " tokenizer"
+  (let v-real (list (list 288 220) (list 116 83) (list 111 78) (list 107 74) (list 101 68)
+                    (list 110 77) (list 105 72) (list 122 89) (list 114 81)))
+  (let t-real (list (list 220 83 256 0) (list 68 81 260 4) (list 68 77 268 12) (list 256 78 281 25)
+                    (list 72 89 590 334) (list 74 268 2653 2397) (list 590 260 6545 6289) (list 281 2653 14862 14606)))
+  (let c0 (if (eq (ids-eq (tokenize " tokenizer" v-real t-real) (list 14862 6545)) 1) 1 0))
+
+  ; bit 2 — empty text encodes to no ids
+  (let c1 (if (eq (ids-eq (tokenize "" v-real t-real) (list)) 1) 2 0))
+
+  ; bit 4 — cross-chunk flatten in order: "a b" -> ["a"," b"] -> [500,501,502]
+  (let v-syn (list (list 97 500) (list 288 501) (list 98 502)))
+  (let c2 (if (eq (ids-eq (tokenize "a b" v-syn (list)) (list 500 501 502)) 1) 4 0))
+
+  ; bit 8 — NO merge across a pre-token boundary: "1a" -> ["1","a"], (600,601)->700 does NOT fire
+  (let v-b (list (list 49 600) (list 97 601)))
+  (let t-b (list (list 600 601 700 0)))
+  (let c3 (if (eq (ids-eq (tokenize "1a" v-b t-b) (list 600 601)) 1) 8 0))
+
+  ; bit 16 — within-chunk merge still fires: "11" -> ["11"], (600,600)->800 merges
+  (let v-c (list (list 49 600)))
+  (let t-c (list (list 600 600 800 0)))
+  (let c4 (if (eq (ids-eq (tokenize "11" v-c t-c) (list 800)) 1) 16 0))
+
+  (add c0 (add c1 (add c2 (add c3 c4)))))
