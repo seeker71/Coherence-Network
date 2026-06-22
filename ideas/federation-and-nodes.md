@@ -8,6 +8,7 @@ specs:
   - [federation-network-layer](../specs/federation-network-layer.md)
   - [federation-aggregated-visibility](../specs/federation-aggregated-visibility.md)
   - [federation-instance-exchange](../specs/federation-instance-exchange.md)
+  - [field-relay-always-open-connection](../specs/field-relay-always-open-connection.md)
 ---
 
 # Federation and Nodes
