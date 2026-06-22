@@ -1,0 +1,27 @@
+; preludes: form-stdlib/breath-rhythm.fk
+;
+; breath-rhythm-band — recovering a breathing rate by autocorrelation, made falsifiable.
+;
+; A clean period-4 envelope (one breath every 4 samples) and a flat one pin both the rate and the gate:
+;   p4   = 9 5 1 5  repeated  -> period 4 samples; at 0.5s/sample (spm 120) that is 30 br/min, at spm 60, 15
+;   flat = 5 5 5 ...          -> no modulation -> no period -> rate 0, the honest "no rhythm here"
+;
+; Verdict 127 when every claim lands:
+;   1    mean is the envelope's DC level                         (br-mean p4 == 5)
+;   2    the autocorrelation peak lag IS the period              (br-peak-lag p4 2 8 == 4)
+;   4    rate = samples-per-minute / period                      (br-rate p4 2 8 60 == 15)
+;   8    autocovariance is positive in-phase (at the period)     (br-acf p4 4 > 0)
+;   16   autocovariance is negative anti-phase (half a period)   (br-acf p4 2 < 0)
+;   32   a clean period scores high confidence                   (br-confidence p4 2 8 >= 50)
+;   64   a flat signal finds NO period — rate-0, the trust gate  (br-peak-lag flat 2 8 == 0)
+(do
+    (let p4   (list 9 5 1 5 9 5 1 5 9 5 1 5 9 5 1 5 9 5 1 5))
+    (let flat (list 5 5 5 5 5 5 5 5 5 5))
+    (let c0 (if (eq (br-mean p4) 5) 1 0))
+    (let c1 (if (eq (br-peak-lag p4 2 8) 4) 2 0))
+    (let c2 (if (eq (br-rate p4 2 8 60) 15) 4 0))
+    (let c3 (if (gt (br-acf p4 4) 0) 8 0))
+    (let c4 (if (gt 0 (br-acf p4 2)) 16 0))
+    (let c5 (if (ge (br-confidence p4 2 8) 50) 32 0))
+    (let c6 (if (eq (br-peak-lag flat 2 8) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

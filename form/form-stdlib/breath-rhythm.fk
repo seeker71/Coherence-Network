@@ -1,0 +1,64 @@
+; breath-rhythm.fk — recover the BREATHING RATE from a fine energy envelope, in Form, by autocorrelation.
+;
+; sleep-sense.fk asks "is this window loud + periodic" (snore, one bit). This asks the far more useful
+; health question: at WHAT RATE is the body breathing. Breathing modulates the acoustic energy envelope
+; slowly — one inhale/exhale every ~3-5s (12-20 breaths/min). Sampled finely enough (sub-second windows),
+; that modulation is a periodic wave in the envelope; its PERIOD is the breath interval, and 60/period is
+; breaths per minute. The period is found the standard way, expressed in integer Form: AUTOCORRELATION —
+; the lag at which the mean-subtracted envelope most agrees with a shifted copy of itself is its period.
+;
+; THE WALK. br-acf shifts the envelope by `lag` and sums the products of mean-subtracted samples (the
+; autocovariance at that lag). br-peak-lag scans lags across the plausible breathing band [lo,hi] and keeps
+; the lag of greatest agreement — that lag IS the breath period in samples. br-rate divides samples-per-
+; minute by that period to get breaths/min. br-confidence reports the peak's strength relative to the
+; signal's own variance (autocovariance at lag 0), 0..100 — EARNED, not asserted: a clean breathing wave
+; scores high, noise scores near zero, so the rate comes with an honest "how sure".
+;
+; Integer-only: mean is integer div (a small bias that does not move the argmax); products and sums are
+; integers (sub and mul are builtins); the period is an integer lag; the rate and confidence are integer
+; divisions. No floats, no FFT — autocorrelation is a fold, and a fold is Form's native shape.
+;
+; HONEST LANE: this finds the dominant low-frequency period in the envelope. It reads a real breathing rate
+; ONLY when breathing actually modulates the envelope above the noise floor — i.e. when the mic is close
+; enough (on the body/pillow) or the breathing is audible. From a quiet-room laptop mic across a room, calm
+; nasal breathing sits below the floor and br-confidence stays low — the recipe then honestly reports a weak,
+; untrustworthy peak rather than a fake rate. Confidence is the gate; a low score means "no rhythm here",
+; not "no breathing". Pair it with a closer mic or a motion modality (chest movement) for real respiration.
+;
+; Proven by: form-stdlib/tests/breath-rhythm-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    ; --- mean of the envelope (integer; the DC level autocorrelation subtracts off). ---
+    (defn br-sum (xs) (if (ge (len xs) 1) (add (nth xs 0) (br-sum (tail xs))) 0))
+    (defn br-mean (xs) (if (ge (len xs) 1) (div (br-sum xs) (len xs)) 0))
+
+    ; --- autocovariance at one lag: sum over i of (xs[i]-mean)*(xs[i+lag]-mean), while i+lag is in range.
+    (defn br-acc (xs mean lag i n acc)
+        (if (gt n (add i lag))
+            (br-acc xs mean lag (add i 1) n
+                (add acc (mul (sub (nth xs i) mean) (sub (nth xs (add i lag)) mean))))
+            acc))
+    (defn br-acf (xs lag) (br-acc xs (br-mean xs) lag 0 (len xs) 0))
+
+    ; --- peak lag in the breathing band [lo,hi]: the lag of greatest agreement = the period (in samples).
+    ;     bestlag starts 0 / bestval 0, so a band with NO positive agreement returns 0 = "no rhythm found".
+    (defn br-peak-loop (xs lo hi lag bestlag bestval)
+        (if (le lag hi)
+            (if (gt (br-acf xs lag) bestval)
+                (br-peak-loop xs lo hi (add lag 1) lag (br-acf xs lag))
+                (br-peak-loop xs lo hi (add lag 1) bestlag bestval))
+            bestlag))
+    (defn br-peak-lag (xs lo hi) (br-peak-loop xs lo hi lo 0 0))
+
+    ; --- rate: breaths per minute = samples-per-minute / period. 0 when no period was found. ---
+    ;     spm = 60 / sample_seconds (e.g. 0.5s samples -> spm 120; 0.2s -> spm 300).
+    (defn br-rate (xs lo hi spm)
+        (if (ge (br-peak-lag xs lo hi) 1) (div spm (br-peak-lag xs lo hi)) 0))
+
+    ; --- confidence 0..100: the peak's autocovariance relative to lag-0 variance. The gate on trust. ---
+    (defn br-confidence (xs lo hi)
+        (if (ge (br-acf xs 0) 1)
+            (div (mul (br-acf xs (br-peak-lag xs lo hi)) 100) (br-acf xs 0))
+            0))
+
+    0)
