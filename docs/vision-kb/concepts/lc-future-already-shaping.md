@@ -164,7 +164,7 @@ validation-seeking) is not. The body knows the difference.
 
 ## Cross-References
 
-→ lc-coherence-over-control, lc-the-aim-of-attention, lc-perception-as-interface, lc-frequency-routes-reception, lc-global-workspace, lc-pulse, lc-rhythm, lc-spec-breath, lc-rest, lc-attunement
+→ lc-coherence-over-control, lc-perception-as-interface, lc-frequency-routes-reception, lc-global-workspace, lc-pulse, lc-rhythm, lc-spec-breath, lc-rest, lc-attunement
 
 ## Sources to walk further
 
