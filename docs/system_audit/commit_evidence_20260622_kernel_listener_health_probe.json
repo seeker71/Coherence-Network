@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/kernel-listener-health-probe",
+  "commit_scope": "Use /api/health as the local listener probe for the production-manifest kernel-router canary. The public gate and BML attention route were healthy after a83ebf6e, but the deploy workflow failed because the local production-manifest listener check polled /api/utils/kernel_status until timeout.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_kernel_listener_health_probe.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_kernel_listener_health_probe.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "git diff --check"
+    ],
+    "notes": "Hostinger Auto Deploy run 27974561601 deployed a83ebf6e and public kernel canary passed when run manually afterward. The workflow failed earlier in roll-forward because ensure_kernel_router_canary waited for local kernel-router /api/utils/kernel_status, while Docker health had already proven /api/health healthy."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production deploy workflow",
+    "notes": "After deploy, Hostinger Auto Deploy should pass roll-forward and public kernel canary without changing the public route ownership."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks, deploy, and public kernel canary proof remain pending."
+  },
+  "idea_ids": [
+    "deploy-canary-stability",
+    "native-kernel-front-door"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-kernel-listener-health-probe"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27974561601 failed in roll-forward at ensure_kernel_router_canary: kernel-router listener did not accept local HTTP at /api/utils/kernel_status within 90 seconds.",
+    "The same log showed kernel-router reached Docker healthy before the local listener timeout, and Dockerfile.kernel-router health uses /api/health.",
+    "Public health reported deployed_sha a83ebf6e370444bf1a3c8806e3cca2298e698e1b after that run.",
+    "Manual bash scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com passed after public routing settled, including public-gate, no-header default, BML runtime attention, and explicit fallback."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_kernel_listener_health_probe.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The production-manifest kernel-router local listener proof should use the same /api/health path as its Docker healthcheck, while the BML sibling continues to prove /api/utils/kernel_status and public canary proves runtime attention.",
+    "public_endpoints": [
+      "GET /api/health",
+      "POST /api/ideas",
+      "GET /api/attention/kernel-runtime"
+    ],
+    "test_flows": [
+      "deploy script shell syntax validates locally.",
+      "Hostinger Auto Deploy passes roll-forward.",
+      "public kernel canary passes after deploy."
+    ]
+  }
+}
