@@ -43,7 +43,7 @@ cat > "$d/band.fk" <<EOF
   (pw-first-value r))
 EOF
 cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
-mod=" (read_file \"$FOURTH_SHIM\") (read_file \"form-stdlib/pg-wire.fk\")"
+mod=" (read_file \"$FOURTH_SHIM\") (read_file \"form-stdlib/str-byte-at.fk\") (read_file \"form-stdlib/pg-wire.fk\")"
 printf '(print (fks-table-file (flt-band-sources-fns (list%s) (read_file "%s/band.fk")) (flt-band-sources-pool (list%s) (read_file "%s/band.fk"))))\n' \
   "$mod" "$d" "$mod" "$d" >> "$d/driver.fk"
 "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$d/t.tbl"

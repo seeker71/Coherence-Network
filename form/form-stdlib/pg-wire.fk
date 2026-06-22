@@ -1,6 +1,6 @@
 ; pg-wire.fk — the Postgres wire protocol (v3) spoken in FORM, over fkwu's own TCP sockets.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/str-byte-at.fk
 ;
 ; This retires the standing wall. The DB carrier floor was Rust-only — pg_connect / pg_exec / pg_query
 ; bound libpq, named in mesh-sensings-store-pg.fk as "host-io ... 3-kernel" and in storage-port-db.fk as
@@ -29,13 +29,8 @@
         (str_concat (pw-b (mod (div n 65536) 256))
         (str_concat (pw-b (mod (div n 256) 256))
                     (pw-b (mod n 256))))))
-    (defn pw-rd32 (s i)                              ; decode big-endian int32 at byte offset i
-        (add (mul (ord (char_at s i)) 16777216)
-        (add (mul (ord (char_at s (add i 1))) 65536)
-        (add (mul (ord (char_at s (add i 2))) 256)
-             (ord (char_at s (add i 3)))))))
-    (defn pw-rd16 (s i)                              ; decode big-endian int16 at byte offset i
-        (add (mul (ord (char_at s i)) 256) (ord (char_at s (add i 1)))))
+    ;; reads: str-byte-at / str-be32 (form-stdlib/str-byte-at.fk) — the shared raw-byte accessor,
+    ;; four-way incl. fkwu (NOT the kernel-native str_byte_at, which returns 0 on fkwu).
 
     ;; ---- protocol messages ----------------------------------------------
     ;; StartupMessage: len + proto(196608=3.0) + "user\0<u>\0database\0<d>\0\0"
@@ -54,15 +49,15 @@
     ;; ---- response parse: walk typed messages, find the first DataRow 'D' (68) ----
     (defn pw-find-msg (s i ty)                       ; offset of first message of type `ty`, or -1
         (if (ge (add i 5) (str_len s)) -1
-            (if (eq (ord (char_at s i)) ty) i
-                (pw-find-msg s (add i (add 1 (pw-rd32 s (add i 1)))) ty))))
+            (if (eq (str-byte-at s i) ty) i
+                (pw-find-msg s (add i (add 1 (str-be32 s (add i 1)))) ty))))
     ;; first DataRow's first field value (raw text bytes). "" if no row.
     ;; D = [68][int32 len][int16 nfields][int32 col0len][col0 bytes]...
     ;; d+1..4 msg len, d+5..6 nfields, d+7..10 col0 len, value at d+11. (pw-find-msg returns -1
     ;; on no row; callers query keys they expect to exist — a flat read keeps this four-way-clean.)
     (defn pw-first-value (s)
         (do (let d (pw-find-msg s 0 68))
-            (substring s (add d 11) (add (add d 11) (pw-rd32 s (add d 7))))))
+            (substring s (add d 11) (add (add d 11) (str-be32 s (add d 7))))))
 
     ;; ---- the door: compose the blocks INLINE in the band (proven on fkwu) ----
     ;; A SELECT against trust-auth Postgres, returning the first row's first field:
