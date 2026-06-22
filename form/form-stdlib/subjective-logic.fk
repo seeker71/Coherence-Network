@@ -81,4 +81,16 @@
             (sl-fuse-dog x y)
             (sl-fuse-nondog x y)))
 
+    ; --- CONJUNCTION (x AND y): "both claims hold". Jøsang's binomial multiplication. ---
+    ; belief that BOTH hold is the product; the result never believes more than either source — so
+    ; ANDing a chain of claims (a proof's premises) WEAKENS belief and grows uncertainty with length.
+    ; identity is full belief (1000,0,0,*): x AND certain = x, so it folds cleanly over a premise list.
+    (defn sl-and (x y)
+        (sl-opinion (div (mul (sl-b x) (sl-b y)) (sl-scale))
+                    (sub (add (sl-d x) (sl-d y)) (div (mul (sl-d x) (sl-d y)) (sl-scale)))
+                    (add (add (div (mul (sl-b x) (sl-u y)) (sl-scale))
+                              (div (mul (sl-u x) (sl-b y)) (sl-scale)))
+                         (div (mul (sl-u x) (sl-u y)) (sl-scale)))
+                    (div (mul (sl-a x) (sl-a y)) (sl-scale))))
+
     0)
