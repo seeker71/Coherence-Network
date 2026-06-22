@@ -99,6 +99,36 @@ section [form.bml] {
 
     def pe-recipe-object(code) = pe-coff-object-sym(code, pe-x64-recipe-symbol());
 
+    ; ── Windows-arm64 twin: the SAME COFF container with one field flipped — the machine
+    ; constant 0x8664 (AMD64) -> 0xAA64 (ARM64). Everything else (section, symbol, string
+    ; table) is the x64 path's, reused verbatim; the payload is real arm64 recipe bytes.
+    ; This closes form-pe-coff-arm64-pending (the .o object door); turning the object into a
+    ; loadable arm64 DLL still needs a host linker carrier (form-pe-arm64-exec-pending).
+    def pe-arm64-coff-header(clen) {
+        pe-cat(list(
+            pe-u16(43620),
+            pe-u16(1),
+            pe-u32(0),
+            pe-u32(pe-sym-off(clen)),
+            pe-u32(1),
+            pe-u16(0),
+            pe-u16(0)));
+    }
+
+    def pe-arm64-coff-object-sym(code, name) {
+        pe-cat(list(
+            pe-arm64-coff-header(len(code)),
+            pe-section-text(len(code)),
+            code,
+            pe-symbol-external-function(name),
+            pe-empty-string-table()));
+    }
+
+    ; a real arm64 leaf: mov w0, #42 (0x52800540) ; ret (0xd65f03c0), little-endian bytes.
+    def pe-arm64-recipe-ret42-code() = list(64, 5, 128, 82, 192, 3, 95, 214);
+
+    def pe-arm64-recipe-object(code) = pe-arm64-coff-object-sym(code, pe-x64-recipe-symbol());
+
     template NativeObjectEmitter<TCode, TObject> {
         member target: HostTarget;
         member abi: CallingConvention;
