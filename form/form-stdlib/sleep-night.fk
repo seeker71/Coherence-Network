@@ -1,0 +1,39 @@
+; sleep-night.fk — fold a night of per-window snore verdicts (0/1) into the morning readout, IN FORM.
+;
+; The bedside carrier classifies each breath-window with ss-snore? (sleep-sense.fk) into a 0/1 stream
+; across the night. This recipe turns that stream into what a person reads in the morning: how many
+; windows, how many snored, the longest unbroken snore run, how many separate episodes, and the percent
+; of the night spent snoring. Integers only; the input is a 0/1 verdict list — no audio, no words.
+;
+; Proven by: form-stdlib/tests/sleep-night-band.fk (four-way at validate.sh). Builds on the sleep-sense atom.
+
+(do
+    ; total windows in the night
+    (defn sn-total (xs) (len xs))
+
+    ; snore windows = sum of the 0/1 stream (guard at len>=1 so nth 0 never reads empty)
+    (defn sn-snores (xs)
+        (if (ge (len xs) 1) (add (nth xs 0) (sn-snores (tail xs))) 0))
+
+    ; longest unbroken run of snore-windows. Walk carrying (cur run length, best so far).
+    ; On a 1 the current run grows and best rises to meet it; on a 0 the current run resets.
+    (defn sn-run (xs cur best)
+        (if (ge (len xs) 1)
+            (if (eq (nth xs 0) 1)
+                (sn-run (tail xs) (add cur 1) (if (ge (add cur 1) best) (add cur 1) best))
+                (sn-run (tail xs) 0 best))
+            best))
+    (defn sn-longest (xs) (sn-run xs 0 0))
+
+    ; episode count = rising edges: a 1 whose predecessor was 0 (or the night's start).
+    ; Walk carrying prev; count when prev=0 and cur=1.
+    (defn sn-eps (xs prev acc)
+        (if (ge (len xs) 1)
+            (sn-eps (tail xs) (nth xs 0)
+                (if (eq (nth xs 0) 1) (if (eq prev 0) (add acc 1) acc) acc))
+            acc))
+    (defn sn-episodes (xs) (sn-eps xs 0 0))
+
+    ; percent of the night spent snoring = snores*100/total (0 on an empty night, no divide-by-zero)
+    (defn sn-fraction (xs)
+        (if (ge (len xs) 1) (div (mul (sn-snores xs) 100) (len xs)) 0)))
