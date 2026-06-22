@@ -1,0 +1,31 @@
+; preludes: form-stdlib/forward-chaining.fk form-stdlib/backward-chaining.fk
+;
+; Goal-directed proof search, pinned at its edges, and bridged to forward-chaining. Same world:
+;   axioms = {A, B} ;  rules = { A & B -> C ,  C -> D ,  D & E -> F }
+; Backward search must PROVE C (one rule), PROVE D (chaining back through C), and FAIL to prove F
+; (premise E is unprovable) and E (no rule, not an axiom). The bridge claims pin the deep property:
+; backward and forward agree on every goal — two engines, one truth. The cyclic claims pin
+; termination: rules { X->Y, Y->X } neither hang nor invent — an unreachable goal returns 0, a
+; reachable one returns 1. Verdict 511 when every claim lands.
+(do
+    (let A 1) (let B 2) (let C 3) (let D 4) (let E 5) (let F 6)
+    (let facts (list A B))
+    (let rules (list (list (list A B) C) (list (list C) D) (list (list D E) F)))
+
+    (let c0 (if (eq (bwd-prove? C facts rules) 1) 1   0))  ; C proven by one rule
+    (let c1 (if (eq (bwd-prove? D facts rules) 1) 2   0))  ; D proven by chaining back through C
+    (let c2 (if (eq (bwd-prove? F facts rules) 0) 4   0))  ; F unprovable — premise E has no proof
+    (let c3 (if (eq (bwd-prove? E facts rules) 0) 8   0))  ; E unprovable — no rule, not an axiom
+    (let c4 (if (eq (bwd-prove? A facts rules) 1) 16  0))  ; an axiom proves itself
+
+    ; --- the soundness<->completeness bridge: backward agrees with forward on every goal ---
+    (let c5 (if (eq (bwd-prove? D facts rules) (fwd-entails? facts rules D)) 32  0))  ; both prove D
+    (let c6 (if (eq (bwd-prove? F facts rules) (fwd-entails? facts rules F)) 64  0))  ; both reject F
+    (let c7 (if (eq (bwd-prove? C facts rules) (fwd-entails? facts rules C)) 128 0))  ; both prove C
+
+    ; --- cyclic rules: { 7->8, 8->7 }, fact {7}. must terminate, must not invent. ---
+    (let cyc (list (list (list 7) 8) (list (list 8) 7)))
+    (let c8 (if (eq (bwd-prove? 9 (list 7) cyc) 0) 256 0))  ; 9 unreachable -> 0, no hang on the cycle
+    (let c9 (if (eq (bwd-prove? 8 (list 7) cyc) 1) 512 0))  ; 8 reachable (7 is fact, 7->8) -> proven
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

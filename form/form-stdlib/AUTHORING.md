@@ -60,6 +60,10 @@ A **band** `form/form-stdlib/tests/<name>-band.fk` — proves it, returning a **
 
 Keep the band **self-contained** — prelude only your own recipe (+ `core.fk`). If your recipe
 composes others, list each in the prelude header and in the validate command, in dependency order.
+(`core.fk` is the right prelude for a *band*, because `validate.sh` loads `source-compiler` to lower it.
+A recipe meant for a **raw-eval / Layer-1 context** — a carrier, the flatten, `build-form-cli` — must not
+lean on `core.fk`'s helpers there; prelude `core-native.fk` instead. See the `unbound function` note in
+Troubleshooting for the full two-layer picture.)
 
 ## The primitive set — these and no others
 
@@ -134,7 +138,14 @@ named top-level recipe as a value and calling it — the semiring-generic dispat
 carries that higher-order shape. A very large composed table can still overflow the walker, which is a
 capacity wall, not an op-family wall — see `transformer-block-assembly`.)
 
-- `unbound function` → a misspelled name, or a primitive that isn't in `core.fk`.
+- `unbound function` → a misspelled name, a primitive that isn't in `core.fk` — **or the two-layer
+  trap.** `core.fk`'s helpers (`nil? map filter foldl reverse range take drop any? all? …`) live in the
+  `section [form.bml]` dialect that only exists *after* `source-compiler.fk` lowers it. A band run with
+  `validate.sh form-stdlib/core.fk …` gets them (the validate chain loads source-compiler). But a
+  **raw-eval / Layer-1 context** — a carrier, the flatten, `build-form-cli`, any `(do …)` cat'd straight
+  onto a kernel — runs before that lowering, so `nil?` is unbound *even though it is in core.fk*. There,
+  prelude `form-stdlib/core-native.fk` (the walker-side raw twin) — for the fkwu/fourth arm the raw base
+  is `form-stdlib/fourth-shim.fk`. Same helper set, three carriers, one proven shape.
 - `N divergent` (kernels print different numbers) → almost always a 3-arg `and`/`or`; nest it.
   A second cause: a **scientific-notation float literal** (`1.16e-05`). The three walkers parse it,
   but the fourth arm's pre-flattened table does not — write floats as plain decimals

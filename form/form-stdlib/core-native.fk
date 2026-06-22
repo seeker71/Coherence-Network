@@ -1,18 +1,38 @@
-; core-native.fk — core.fk's helpers in the native (Lisp) dialect, for recipes
-; evaluated DIRECTLY on the kernel rather than through validate.sh's BML-compiled
-; core.fk.
+; core-native.fk — THE single raw-Lisp (native-dialect) home for core.fk's helpers.
 ;
-; core.fk is the `section [form.bml]` maintenance dialect; it cannot be raw-cat'd
-; into a Lisp program, so a carrier that evals a stdlib recipe using a core helper
-; (e.g. choice-receipt's nil?) hits "unbound function nil?". Carriers were each
-; hand-shimming the same `(defn nil? ...)` before catting the membrane stack —
-; repeated carrier friction. This is the single native-dialect source for those
-; helpers: a carrier preludes ONE file instead of re-shimming.
+; WHY THIS EXISTS (the easy answer to "do I need the whole core.fk?"): NO. core.fk is the
+; `section [form.bml]` maintenance dialect — it must be lowered by source-compiler before its defs
+; exist, so a raw-eval / Layer-1 context (a carrier, the flatten, build-form-cli, any (do ...) program
+; cat'd straight onto the kernel) CANNOT use it and hits "unbound function nil?" / map / foldl / ...
+; The fix is NOT to pull in full core.fk + source-compiler, and NOT to hand-shim the helper inline
+; (the repeated friction that has plagued us). Prelude THIS one small file: it mirrors core.fk's List
+; helpers in the native dialect, no source-compiler, ~one screen. This is the walker-side twin of
+; fourth-shim.fk (which carries the same set as fkwu's base).
 ;
-; Mirrors core.fk's contract for the raw-eval context; grows only as a raw-eval
-; recipe needs another helper.
+; ALWAYS AVAILABLE WITHOUT ANY PRELUDE (bare kernel builtins) — use these directly, never shim them:
+;   eq len head tail cons list nth empty  add sub mul div mod  and or not gt lt ge le  if let do defn
+;   str_eq str_concat node_eq node_children ...  (nth is a builtin; for the fkwu-safe NONE use node_eq).
+; So: bare builtins for the primitives, core-native.fk for the non-builtin List helpers below.
+;
+; nil? is the "nothing" state of the core axioms (states 0/1/nothing); the JIT special-cases nil? by
+; name -> native O(1) when hot. Grows only as a raw-eval recipe needs another helper. Kin: core.fk
+; (the BML home, Layer 2), fourth-shim.fk (fkwu's raw base, same set). The proven raw forms here mirror
+; fourth-shim's, which cross four-way as fkwu's foundation.
 
-; nil? — the empty-list predicate (core.fk defines it as eq(len(xs), 0)).
 (defn nil? (xs) (eq (len xs) 0))
+(defn map (f xs) (if (nil? xs) (empty) (cons (f (head xs)) (map f (tail xs)))))
+(defn filter (pred xs)
+    (if (nil? xs) (empty)
+        (if (pred (head xs)) (cons (head xs) (filter pred (tail xs))) (filter pred (tail xs)))))
+(defn foldl (f init xs) (if (nil? xs) init (foldl f (f init (head xs)) (tail xs))))
+(defn foldr (f init xs) (if (nil? xs) init (f (head xs) (foldr f init (tail xs)))))
+(defn append (xs ys) (if (nil? xs) ys (cons (head xs) (append (tail xs) ys))))
+(defn cons-flip (acc x) (cons x acc))
+(defn reverse (xs) (foldl cons-flip (empty) xs))
+(defn range (start end) (if (ge start end) (empty) (cons start (range (add start 1) end))))
+(defn take (n xs) (if (or (le n 0) (nil? xs)) (empty) (cons (head xs) (take (sub n 1) (tail xs)))))
+(defn drop (n xs) (if (le n 0) xs (if (nil? xs) (empty) (drop (sub n 1) (tail xs)))))
+(defn any? (pred xs) (if (nil? xs) false (if (pred (head xs)) true (any? pred (tail xs)))))
+(defn all? (pred xs) (if (nil? xs) true (if (pred (head xs)) (all? pred (tail xs)) false)))
 
 0

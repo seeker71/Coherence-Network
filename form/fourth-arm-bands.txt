@@ -321,6 +321,19 @@ recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
 form-first-router fks 511
+forward-chaining fkc 1023
+backward-chaining fkc 1023
+subjective-logic fkc 1023
+living-vector fkc 1023
+sense-self fkc 1023
+unify fkc 1023
+derivation fkc 1023
+proof-trust fkc 1023
+rational fkc 1023
+float-ops fks 255
+nl-reason fks 255
+resolution fkc 8191
+host-diagnostic fkc 1023
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
 # resource cells, application graph SQL strings, and auth/header/hash wrappers.
@@ -727,6 +740,7 @@ nl-translate fks 32767
 form-bml-cursor-parse fks 123
 # ...and the cursor LOWERING to the runnable recipe (fsc-rec-* path) crosses too.
 form-bml-cursor-lower fks 113
+form-bml-cursor-full fks 67
 bmf-object-data fks 65535
 bmf-form-object-runtime fks 67108863
 bmf-symbol-wire fks 255

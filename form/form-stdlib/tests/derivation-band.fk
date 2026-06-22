@@ -1,0 +1,31 @@
+; preludes: form-stdlib/forward-chaining.fk form-stdlib/backward-chaining.fk form-stdlib/derivation.fk
+;
+; The body generating its proof, pinned at every edge. Same world:
+;   axioms = {A, B} ;  rules = { A & B -> C ,  C -> D ,  D & E -> F }
+; Proving D must return a RULE proof (status 2 — derived, not given), goal D, depth 3 (D <- C <- {A,B}),
+; size 4 (four steps), and its first subproof must name C — the intermediate LEMMA the body discovered
+; on its own. An axiom returns a leaf (status 1, depth 1). F returns FAIL (no proof exists). And the
+; generated proof must AGREE with backward-chaining's 1/0 on every goal — same search, this one keeps
+; the why. Verdict 1023 when every claim lands.
+(do
+    (let A 1) (let B 2) (let C 3) (let D 4) (let E 5) (let F 6)
+    (let facts (list A B))
+    (let rules (list (list (list A B) C) (list (list C) D) (list (list D E) F)))
+
+    (let dA (pf-derive A facts rules))            ; an axiom
+    (let dD (pf-derive D facts rules))            ; the transitive derivation
+    (let dF (pf-derive F facts rules))            ; unprovable
+
+    (let c0 (if (eq (pf-proven? dA) 1)                              1   0))  ; A is proven
+    (let c1 (if (eq (pf-status dA) 1)                               2   0))  ; ...as an AXIOM leaf
+    (let c2 (if (eq (pf-proven? dD) 1)                              4   0))  ; D is proven
+    (let c3 (if (eq (pf-status dD) 2)                               8   0))  ; ...by a RULE (derived, not given)
+    (let c4 (if (eq (pf-goal dD) D)                                 16  0))  ; the proof's goal is D
+    (let c5 (if (eq (pf-depth dD) 3)                                32  0))  ; argument runs 3 deep: D<-C<-{A,B}
+    (let c6 (if (eq (pf-size dD) 4)                                 64  0))  ; four steps in the argument
+    (let c7 (if (eq (pf-goal (head (pf-subs dD))) C)                128 0))  ; the body NAMES the lemma C it found
+    (let c8 (if (eq (pf-proven? dF) 0)                              256 0))  ; F has no proof
+    (let c9 (if (and (eq (pf-proven? dD) (bwd-prove? D facts rules))
+                     (eq (pf-proven? dF) (bwd-prove? F facts rules))) 512 0)) ; agrees with the 1/0 sibling
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
