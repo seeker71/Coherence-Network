@@ -1382,42 +1382,20 @@
       (attention_clamp01 (div (add numerator 0.0) denominator))
       0.0))
 
-(defn route_attention_fanout_path_count_json (row)
-  (str_concat
-    (str_concat
-      (str_concat
-        (str_concat "{\"path\":" (json_string (_dict_get row "path")))
-        (str_concat ",\"count\":" (value_str (_dict_get row "count"))))
-      (str_concat ",\"source\":" (json_string (_dict_get row "source"))))
-    "}"))
-
-(defn route_attention_fanout_path_counts_elems_json (rows)
-  (if (eq (len rows) 0)
-      ""
-      (if (eq (len rows) 1)
-          (route_attention_fanout_path_count_json (head rows))
-          (str_concat
-            (str_concat (route_attention_fanout_path_count_json (head rows)) ",")
-            (route_attention_fanout_path_counts_elems_json (tail rows))))))
-
-(defn route_attention_fanout_path_counts_json (rows)
-  (str_concat
-    (str_concat "[" (route_attention_fanout_path_counts_elems_json rows))
-    "]"))
-
 (defn route_attention_measurements_json
-  (native_route_count observed_native_route_count observed_path_count total_requests native_requests fanout_requests choice_attempts choice_successes choice_failures fanout_path_counts)
+  (native_route_count observed_native_route_count observed_path_count observed_fanout_path_count total_requests native_requests fanout_requests choice_attempts choice_successes choice_failures)
   (str_concat_all (list
     "{\"native_route_count\":" (value_str native_route_count)
     ",\"observed_native_route_count\":" (value_str observed_native_route_count)
     ",\"observed_path_count\":" (value_str observed_path_count)
+    ",\"observed_fanout_path_count\":" (value_str observed_fanout_path_count)
     ",\"total_requests\":" (value_str total_requests)
     ",\"native_requests\":" (value_str native_requests)
     ",\"fanout_requests\":" (value_str fanout_requests)
     ",\"choice_attempts\":" (value_str choice_attempts)
     ",\"choice_successes\":" (value_str choice_successes)
     ",\"choice_failures\":" (value_str choice_failures)
-    ",\"fanout_path_counts\":" (route_attention_fanout_path_counts_json fanout_path_counts)
+    ",\"fanout_path_counts\":[]"
     "}")))
 
 (defn route_attention_matrix_json
@@ -1451,6 +1429,8 @@
         (str_to_int (assoc "__router_observed_native_route_count__" q)))
   (do (let observed_path_count
         (str_to_int (assoc "__router_observed_path_count__" q)))
+  (do (let observed_fanout_path_count
+        (str_to_int (assoc "__router_observed_fanout_path_count__" q)))
   (do (let total_requests
         (str_to_int (assoc "__router_total_requests__" q)))
   (do (let native_requests
@@ -1463,10 +1443,6 @@
         (str_to_int (assoc "__router_choice_successes__" q)))
   (do (let choice_failures
         (str_to_int (assoc "__router_choice_failures__" q)))
-  (do (let router_observation
-        (assoc "__router_observation__" q))
-  (do (let fanout_path_counts
-        (_dict_get router_observation "fanout_path_counts"))
   (do (let candidate_path
         (assoc "__router_next_bml_candidate_path__" q))
   (do (let candidate_requests
@@ -1490,13 +1466,13 @@
                         native_route_count
                         observed_native_route_count
                         observed_path_count
+                        observed_fanout_path_count
                         total_requests
                         native_requests
                         fanout_requests
                         choice_attempts
                         choice_successes
-                        choice_failures
-                        fanout_path_counts))
+                        choice_failures))
           (str_concat
             ",\"matrix\":"
             (route_attention_matrix_json
@@ -1512,7 +1488,7 @@
               candidate_requests
               candidate_source
               candidate_pressure)
-            "}")))))))))))))))))))))))
+            "}"))))))))))))))))))))))
 
 ; ===========================================================================
 ; /api/utils/kernel_status

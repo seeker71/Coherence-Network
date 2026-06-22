@@ -42,6 +42,16 @@ grep -Fq 'coherence-api-kernel-runtime-attention.rule: "Host(`api.coherencycoin.
 grep -Fq 'coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router attention probe ingress does not target the production manifest service"
 
+grep -Fq 'observed_fanout_path_count' "$ROOT_DIR/deploy/kernel-router/production-routes.fk" \
+  || fail "kernel-runtime attention route no longer reports the bounded fanout path count"
+
+grep -Fq 'fanout_path_counts\":[]' "$ROOT_DIR/deploy/kernel-router/production-routes.fk" \
+  || fail "kernel-runtime attention route no longer bounds fanout_path_counts"
+
+if grep -Fq 'choice_successes choice_failures fanout_path_counts)' "$ROOT_DIR/deploy/kernel-router/production-routes.fk"; then
+  fail "kernel-runtime attention measurements reintroduced unbounded fanout_path_counts expansion"
+fi
+
 grep -Fq 'PathRegexp(`^/api/views/stats/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the views-stats BML template route"
 
