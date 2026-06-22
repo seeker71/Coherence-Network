@@ -86,7 +86,7 @@ section [form.bml] {
     ; about a clean environment. (env -u UNSETS it — ANTHROPIC_API_KEY= would leave an
     ; empty key that still wins precedence and fails auth.)
     def fcap-escalate(remote, question) {
-        host-exec(str_concat("env -u ANTHROPIC_API_KEY ", remote), question);
+        host-exec(str_concat("env -u ANTHROPIC_API_KEY ", str_concat(remote, " 2>/dev/null")), question);
     }
 
     ; ── pack THIS turn's outcome: the live trust row (from the four-way-proven
