@@ -1,0 +1,102 @@
+; pdf-text.fk — extract visible text from a PDF, as a Form recipe.
+;
+; LiteParse v2.1, the text-extraction arc (M2–M4 collapsed into the pragmatic
+; content-stream-scan path): read the PDF bytes, find every `stream…endstream`
+; segment, inflate the FlateDecode ones (auto-detected by the zlib magic), and
+; pull the text out of the content-stream string operators — the bytes inside
+; `( … )` that feed Tj / TJ. For standard-encoded fonts (WinAnsi/Standard) those
+; bytes ARE the text, so this recovers a real transcript without a full xref
+; walk. The LOGIC is pure Form; only read_file_bytes is a host carrier (so this
+; lane is Go/Rust/TS — fkwu has no host I/O). inflate is proven four-way on its
+; own band; here it is exercised on real streams.
+;
+; preludes: form-stdlib/core.fk form-stdlib/inflate.fk
+;
+; Named gaps (the robust M2/M4 still to come): cross-reference / object streams,
+; octal + control escapes in strings, and /ToUnicode CMap glyph remapping for
+; non-standard font encodings. This path handles the common digital PDF.
+
+(do
+    ; ---- list helpers ------------------------------------------------------
+    (defn rev-onto (xs acc) (if (eq (len xs) 0) acc (rev-onto (tail xs) (cons (head xs) acc))))
+    (defn rev (xs) (rev-onto xs (list)))
+    (defn append-list (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (append-list (tail xs) ys))))
+    (defn drop-n (xs n) (if (eq n 0) xs (if (eq (len xs) 0) xs (drop-n (tail xs) (sub n 1)))))
+    (defn list-eq (a b)
+        (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0) 0
+                (if (eq (head a) (head b)) (list-eq (tail a) (tail b)) 0))))
+
+    ; ---- byte-sequence search ----------------------------------------------
+    (defn starts-with (hay needle)
+        (if (eq (len needle) 0) 1
+            (if (eq (len hay) 0) 0
+                (if (eq (head hay) (head needle)) (starts-with (tail hay) (tail needle)) 0))))
+    ; suffix immediately AFTER the first occurrence of needle (empty if absent)
+    (defn after-sub (hay needle)
+        (if (eq (len hay) 0) (list)
+            (if (starts-with hay needle) (drop-n hay (len needle))
+                (after-sub (tail hay) needle))))
+    ; (list collected-reversed rest-at-needle) — collect bytes until needle
+    (defn take-until (hay needle acc)
+        (if (eq (len hay) 0) (list acc hay)
+            (if (starts-with hay needle) (list acc hay)
+                (take-until (tail hay) needle (cons (head hay) acc)))))
+
+    ; ---- ASCII markers (byte lists) ----------------------------------------
+    (defn kw-stream () (list 115 116 114 101 97 109))                  ; "stream"
+    (defn kw-endstream () (list 101 110 100 115 116 114 101 97 109))   ; "endstream"
+
+    ; skip one CR then one LF after the `stream` keyword
+    (defn skip-eol (xs)
+        (do (let a (if (eq (len xs) 0) xs (if (eq (head xs) 13) (tail xs) xs)))
+            (if (eq (len a) 0) a (if (eq (head a) 10) (tail a) a))))
+
+    ; ---- FlateDecode auto-detect via the zlib header (RFC 1950) ------------
+    ;   CMF low nibble = 8 (deflate); (CMF*256 + FLG) divisible by 31.
+    (defn zlib? (data)
+        (if (ge (len data) 2)
+            (if (eq (band (head data) 15) 8)
+                (eq (mod (add (mul (head data) 256) (head (tail data))) 31) 0)
+                0)
+            0))
+    (defn maybe-inflate (data) (if (zlib? data) (zlib-inflate data) data))
+
+    ; ---- walk every stream, accumulate decompressed content ----------------
+    (defn collect-content (bytes acc)
+        (do (let after (after-sub bytes (kw-stream)))
+            (if (eq (len after) 0) acc
+                (do (let tu (take-until (skip-eol after) (kw-endstream) (list)))
+                    (let sdata (rev (nth tu 0)))
+                    (let rest (drop-n (nth tu 1) 9))
+                    (collect-content rest (append-list acc (maybe-inflate sdata)))))))
+
+    ; ---- pull text from `( … )` string literals (Tj / TJ operands) ---------
+    ; xs begins after the opening '('; returns (list strbytes-reversed rest).
+    ; Handles \( \) \\ escapes and balanced nested parens (PDF string grammar).
+    (defn read-paren (xs depth acc)
+        (if (eq (len xs) 0) (list acc xs)
+            (do (let c (head xs))
+                (if (eq c 92)
+                    (read-paren (drop-n xs 2) depth (cons (head (tail xs)) acc))
+                    (if (eq c 41)
+                        (if (eq depth 0) (list acc (tail xs))
+                            (read-paren (tail xs) (sub depth 1) (cons c acc)))
+                        (if (eq c 40)
+                            (read-paren (tail xs) (add depth 1) (cons c acc))
+                            (read-paren (tail xs) depth (cons c acc))))))))
+    (defn extract-text (content out)
+        (if (eq (len content) 0) out
+            (if (eq (head content) 40)
+                (do (let r (read-paren (tail content) 0 (list)))
+                    (extract-text (nth r 1) (append-list out (rev (nth r 0)))))
+                (extract-text (tail content) out))))
+
+    ; ---- THE ENTRY POINT: path -> extracted text as a byte list ------------
+    (defn pdf-text-file (path)
+        (extract-text (collect-content (read_file_bytes path) (list)) (list)))
+    ; bytes -> text (for in-recipe fixtures, no host I/O)
+    (defn pdf-text-bytes (bytes)
+        (extract-text (collect-content bytes (list)) (list)))
+
+    0)

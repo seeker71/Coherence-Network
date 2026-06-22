@@ -338,6 +338,7 @@ transition-detect fks 127
 warm-start fks 127
 adler32 fks 5
 crc32 fks 4
+inflate fks 31
 slice-merge fks 127
 rle fks 12
 base64 fks 12
@@ -867,3 +868,4 @@ tool-eval fkc 63
 rest-sense fks 15
 tooluse-featurize fkc 63
 mlp-fwd-emit fks 7
+pdf-text fks 1
