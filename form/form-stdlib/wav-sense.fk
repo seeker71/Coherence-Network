@@ -29,9 +29,13 @@
           (do (let mean (div (div (wav-abs-sum bs start end step 0) (div span step)) 800))
               (if (ge mean 9) 9 mean)))))
 
-; window i of 8 across the PCM body [44, n)
+; window i of 8 across the PCM body [44, n). The width w is forced EVEN — a whole number of 16-bit
+; samples — so every window START (44 + i*w) lands on a sample's LOW byte. A 16-bit sample is two
+; bytes; if w were odd, odd-indexed windows would start on a HIGH byte and wav-sample would read
+; (high-byte, next-low-byte) as one bogus huge value, so a quiet room reads level 9 on alternate
+; windows. Even width keeps every read on the sample grid; step must stay even for the same reason.
 (defn wav-window-i (bs n i step)
-  (do (let w (div (sub n 44) 8))
+  (do (let w (mul (div (div (sub n 44) 8) 2) 2))
       (wav-window-level bs (add 44 (mul i w)) (add 44 (mul (add i 1) w)) step)))
 
 ; the 8-window envelope (the cheap feature)
