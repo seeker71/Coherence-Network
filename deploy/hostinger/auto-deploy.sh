@@ -535,6 +535,11 @@ recreate_orphans_for_service() {
   docker ps -a --format '{{.Names}}' | grep -E "^[0-9a-f]{6,}_coherence-network-${service}-1$" || true
 }
 
+containers_for_service() {
+  local service="$1"
+  docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true
+}
+
 wait_for_recreate_orphans_gone() {
   local service="$1"
   local timeout_seconds="${2:-60}"
@@ -553,6 +558,27 @@ wait_for_recreate_orphans_gone() {
   if [[ -n "$orphans" ]]; then
     log "clearing recreate orphans still present for ${service}: $(echo "$orphans" | tr '\n' ' ')"
     echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
+  fi
+}
+
+wait_for_service_container_names_gone() {
+  local service="$1"
+  local timeout_seconds="${2:-60}"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local names
+  while (( $(date +%s) < deadline )); do
+    names="$(containers_for_service "$service")"
+    if [[ -z "$names" ]]; then
+      return 0
+    fi
+    log "waiting for container name release for ${service}: $(echo "$names" | tr '\n' ' ')"
+    sleep 2
+  done
+
+  names="$(containers_for_service "$service")"
+  if [[ -n "$names" ]]; then
+    log "clearing container names still present for ${service}: $(echo "$names" | tr '\n' ' ')"
+    echo "$names" | xargs -r docker rm -f >/dev/null 2>&1 || true
   fi
 }
 
@@ -928,10 +954,11 @@ ensure_kernel_router_canary() {
 
   local service stale
   for service in "${canary_services[@]}"; do
-    stale="$(docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true)"
+    stale="$(containers_for_service "$service")"
     if [[ -n "$stale" ]]; then
       log "kernel-router canary: clearing stale containers for ${service}: $(echo "$stale" | tr '\n' ' ')"
       echo "$stale" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      wait_for_service_container_names_gone "$service"
     fi
   done
 
@@ -946,7 +973,8 @@ ensure_kernel_router_canary() {
       log "kernel-router canary: force-recreate still conflicted; stop+remove then clean up -d"
       docker compose "${compose_args[@]}" rm -fsv "${canary_services[@]}" 2>&1 | tee -a "$LOG_FILE" || true
       for service in "${canary_services[@]}"; do
-        docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+        containers_for_service "$service" | xargs -r docker rm -f >/dev/null 2>&1 || true
+        wait_for_service_container_names_gone "$service"
       done
       docker compose "${compose_args[@]}" up -d --build --no-deps "${canary_services[@]}" 2>&1 | tee -a "$LOG_FILE"
     fi
