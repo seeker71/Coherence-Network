@@ -191,6 +191,7 @@ active-inference fks 127
 indirect-call-runtime-probe fks 7
 higher-order-fn-arg fks 1111
 branch-choice-order fks 511
+backtrack-search fkc 31
 channel-interface fks 127
 organ-sense fks 11230
 organ-offer fks 63
