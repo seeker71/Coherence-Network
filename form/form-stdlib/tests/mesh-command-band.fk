@@ -1,0 +1,17 @@
+; preludes: form-stdlib/mesh-command.fk
+;
+; The receiver decision, pinned. A directed command recognized as the device's own
+; lineage is the ONLY shape that wakes a live local instance ("act"); a directed
+; command from outside the lineage is set aside ("refuse", traced); all other
+; traffic is ignored. This is what lets the cloud cell make a session on the device
+; ACT, recognized as its own. Verdict 255.
+(do
+    (let c0 (if (str_eq (mc-route 1 1 1) "act")     1   0))  ; own-lineage directed command -> act
+    (let c1 (if (str_eq (mc-route 1 1 0) "refuse")  2   0))  ; outside-lineage directed command -> refuse
+    (let c2 (if (str_eq (mc-route 1 0 1) "ignore")  4   0))  ; a broadcast command is not for-me -> ignore
+    (let c3 (if (str_eq (mc-route 0 1 1) "ignore")  8   0))  ; an own-lineage directed non-command -> ignore
+    (let c4 (if (eq (mc-act? 1 1 1) 1)             16   0))  ; act gate true only when all three hold
+    (let c5 (if (eq (mc-act? 1 1 0) 0)             32   0))  ; ...outside the lineage never acts
+    (let c6 (if (eq (mc-refuse? 1 0 1) 0)          64   0))  ; a non-directed command is ignored, not refused
+    (let c7 (if (eq (mc-act? 0 1 1) 0)            128   0))  ; a non-command never acts
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

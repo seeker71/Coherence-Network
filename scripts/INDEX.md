@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 323
+**Total files**: 327
 
 | File | Purpose |
 |---|---|
@@ -178,6 +178,7 @@
 | [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | Lay every Audible book as a first-class asset with full source trace. |
 | [ingest_audible_history.py](ingest_audible_history.py) | Flow Audible listening history into the graph. |
 | [install_kernel_memory_witness.sh](install_kernel_memory_witness.sh) | install_kernel_memory_witness.sh — bring the kernel memory witness home. |
+| [install_mesh_command_receiver.sh](install_mesh_command_receiver.sh) | install_mesh_command_receiver.sh — bring the device-side dispatch receiver online. |
 | [integrate_one_branch.sh](integrate_one_branch.sh) | Integrate one remote branch into main: rebase, add evidence, push, create PR, merge. |
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
@@ -194,6 +195,7 @@
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
 | [meeting_companion.sh](meeting_companion.sh) | meeting_companion.sh — a meeting companion that LISTENS (STT), DECIDES whether |
+| [mesh_command_receiver.sh](mesh_command_receiver.sh) | mesh_command_receiver.sh — the DEVICE side of cloud->device dispatch. |
 | [mesh_dispatch.sh](mesh_dispatch.sh) | mesh_dispatch.sh — run the body's mesh-dispatch decision on a message BODY. |
 | [metal_arch_search_audit.sh](metal_arch_search_audit.sh) | metal_arch_search_audit.sh — the ARCHITECT'S CAPACITY SEARCH on Metal (M4 Max GPU witness). |
 | [metal_attn_audit.sh](metal_attn_audit.sh) | metal_attn_audit.sh — the ARCHITECT'S ATTENTION layer learning on Metal (M4 Max GPU witness). |

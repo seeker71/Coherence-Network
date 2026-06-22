@@ -1,0 +1,44 @@
+; mesh-command.fk — a device receiver's decision on an incoming federation
+; node-message: should THIS device wake a LIVE local instance to ACT on it?
+;
+; preludes: form-stdlib/core.fk
+;
+; The gap this closes (Urs, 2026-06-22): the cloud cell can DISPATCH to the
+; devices — it POSTs a message onto the federation node-message bus
+; (POST /api/federation/nodes/<me>/messages, Postgres-durable, already live) —
+; but it cannot make a session on a device ACT. Capture only happens when a live
+; local instance runs the prompt. This recipe is the device side's decision: for
+; each message in its inbox, ACT (wake a live local claude on the prompt, capture,
+; return), REFUSE, or IGNORE. The carrier holds no policy — only the three facts
+; and the act.
+;
+;   is-cmd  : the message type is "command" (a dispatched prompt to run)   1/0
+;   for-me  : to_node is THIS node exactly (a broadcast is for-me = 0)      1/0
+;   lineage : from_node is one of this device's own instances (the cloud)  1/0
+;
+; The decision (mc-route):
+;   "act"    — wake a live local instance on the prompt, capture, return.
+;              ONLY a directed command from this device's own lineage earns this.
+;   "refuse" — a directed command from a node outside the lineage: set aside,
+;              the one case worth a trace so a stray command stays visible.
+;   "ignore" — everything else (chatter, broadcasts, non-commands): no act.
+;
+; The bus is public — a message can wear any name. So the gate is narrow on
+; purpose — directed AND command AND own-lineage, or nothing runs. The carrier
+; then confirms a recognized signature (the lineage key) before it actually runs;
+; that is crypto I/O, not policy, so it stays in the carrier.
+;
+; Proven by: form-stdlib/tests/mesh-command-band.fk (four-way at validate.sh)
+
+(do
+    ; act only when all three facts hold (nested if — never a 3-arg and).
+    (defn mc-act? (is-cmd for-me lineage)
+        (if (eq is-cmd 1) (if (eq for-me 1) (if (eq lineage 1) 1 0) 0) 0))
+    ; refuse only a directed command from outside the lineage (worth a trace).
+    (defn mc-refuse? (is-cmd for-me lineage)
+        (if (eq is-cmd 1) (if (eq for-me 1) (if (eq lineage 0) 1 0) 0) 0))
+    ; route: act -> refuse -> ignore.
+    (defn mc-route (is-cmd for-me lineage)
+        (if (eq (mc-act? is-cmd for-me lineage) 1) "act"
+            (if (eq (mc-refuse? is-cmd for-me lineage) 1) "refuse" "ignore")))
+    0)
