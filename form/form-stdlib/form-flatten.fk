@@ -100,13 +100,13 @@
           (list "add_u32" 2 40) (list "bnot_u32" 1 41) (list "mul" 2 42)))
 
 (defn flt-assoc (name rows)
-    (if (eq (len rows) 0) (list)
+    (if (nil? rows) (list)
         (if (str_eq (nth (head rows) 0) name) (head rows)
             (flt-assoc name (tail rows)))))
 
 (defn flt-recq () "(defn-recursive)")
 (defn flt-fidxq () "(defn-index)")
-(defn flt-env-row-value (row dflt) (if (eq (len row) 0) dflt (nth row 1)))
+(defn flt-env-row-value (row dflt) (if (nil? row) dflt (nth row 1)))
 (defn flt-current-recursive (env) (flt-env-row-value (flt-assoc (flt-recq) env) 0))
 (defn flt-current-fidx (env) (flt-env-row-value (flt-assoc (flt-fidxq) env) 0))
 (defn flt-slot (env) (fk-lit (add 128 (add (mul (flt-current-fidx env) 32) (len env)))))
@@ -263,7 +263,7 @@
 (defn flt-pool-row (env) (flt-assoc (flt-poolq) env))
 (defn flt-poolv (env) (nth (flt-pool-row env) 1))
 (defn flt-sidx (pool lit i)
-    (if (eq (len pool) 0) (sub 0 1)
+    (if (nil? pool) (sub 0 1)
         (if (str_eq (head pool) lit) i (flt-sidx (tail pool) lit (add i 1)))))
 
 (defn flt-var (s pos env fns) (flt-var2 (flt-word s pos) (fp-sym-end s pos) env fns))
@@ -272,10 +272,10 @@
         (if (str_eq name "false") (list (fk-lit 0) end)
             (list (flt-var3 (flt-assoc name env) name fns) end))))
 (defn flt-var3 (row name fns)
-    (if (eq (len row) 0) (flt-fref3 (flt-assoc name fns) (fk-lit 0))
+    (if (nil? row) (flt-fref3 (flt-assoc name fns) (fk-lit 0))
         (nth row 1)))
 (defn flt-fref (row) (fk-cons (fk-lit (nth row 1)) (fk-cons (fk-lit (nth row 2)) (fk-empty))))
-(defn flt-fref3 (row dflt) (if (eq (len row) 0) dflt (flt-fref row)))
+(defn flt-fref3 (row dflt) (if (nil? row) dflt (flt-fref row)))
 
 (defn flt-form (s pos fns env) (flt-form2 (flt-word s pos) s (fp-sym-end s pos) fns env))
 (defn flt-form2 (op s pos fns env)
@@ -475,7 +475,7 @@
 ; table ops by arity, else a user function call (one evaluated argument)
 (defn flt-op (op s pos fns env) (flt-op2 (flt-assoc op (flt-ops)) op s pos fns env))
 (defn flt-op2 (row op s pos fns env)
-    (if (eq (len row) 0) (flt-call op s pos fns env)
+    (if (nil? row) (flt-call op s pos fns env)
         (if (eq (nth row 1) 0) (flt-nullary row s pos)
         (if (eq (nth row 1) 1) (flt-un row s (flt-expr s pos fns env))
             (if (eq (nth row 1) 2) (flt-bin row s (flt-expr s pos fns env) fns env)
@@ -515,17 +515,17 @@
 
 (defn flt-pack (args arity) (if (eq arity 1) (head args) (flt-pack2 args)))
 (defn flt-pack2 (args)
-    (if (eq (len args) 0) (fk-empty)
+    (if (nil? args) (fk-empty)
         (fk-cons (head args) (flt-pack2 (tail args)))))
 
 (defn flt-call (fname s pos fns env)
     (flt-call2 (flt-assoc fname env) (flt-assoc fname fns) s pos fns env))
 (defn flt-call2 (erow frow s pos fns env)
-    (if (eq (len erow) 0)
+    (if (nil? erow)
         (flt-call3 frow (flt-args s pos fns env))
         (flt-icall (nth erow 1) s pos fns env)))
 (defn flt-call3 (row ae)
-    (if (eq (len row) 0) (list (fk-lit 0) (nth ae 1))
+    (if (nil? row) (list (fk-lit 0) (nth ae 1))
         (list (fk-call (nth row 1) (flt-pack (nth ae 0) (nth row 2))) (nth ae 1))))
 (defn flt-icall (fv s pos fns env)
     (flt-icall2 fv (flt-arglist s pos fns env)))
@@ -580,13 +580,13 @@
 
 ; (`params` itself is a defn-grammar keyword, so the list rides as `ps`)
 (defn flt-penv (ps n i)
-    (if (eq (len ps) 0) (list)
+    (if (nil? ps) (list)
         (cons (list (head ps)
                     (if (eq n 1) (fk-arg) (fk-nth (fk-arg) (fk-lit i))))
               (flt-penv (tail ps) n (add i 1)))))
 
 (defn flt-env-append (front back)
-    (if (eq (len front) 0) back
+    (if (nil? front) back
         (cons (head front) (flt-env-append (tail front) back))))
 
 (defn flt-expr-end (s pos)
@@ -626,13 +626,13 @@
 ; the LEADING non-special env rows are exactly the outer function's params
 ; (flt-env-append puts penv first, then the recq/fidxq specials, then module env)
 (defn flt-cap-rows (env)
-    (if (eq (len env) 0) (list)
+    (if (nil? env) (list)
         (if (eq (flt-special-key? (nth (head env) 0)) 1) (list)
             (cons (head env) (flt-cap-rows (tail env))))))
-(defn flt-names-of (rows) (if (eq (len rows) 0) (list) (cons (nth (head rows) 0) (flt-names-of (tail rows)))))
-(defn flt-access-of (rows) (if (eq (len rows) 0) (list) (cons (nth (head rows) 1) (flt-access-of (tail rows)))))
-(defn flt-append-l (a b) (if (eq (len a) 0) b (cons (head a) (flt-append-l (tail a) b))))
-(defn flt-cap-chain (caps) (if (eq (len caps) 0) (fk-empty) (fk-cons (head caps) (flt-cap-chain (tail caps)))))
+(defn flt-names-of (rows) (if (nil? rows) (list) (cons (nth (head rows) 0) (flt-names-of (tail rows)))))
+(defn flt-access-of (rows) (if (nil? rows) (list) (cons (nth (head rows) 1) (flt-access-of (tail rows)))))
+(defn flt-append-l (a b) (if (nil? a) b (cons (head a) (flt-append-l (tail a) b))))
+(defn flt-cap-chain (caps) (if (nil? caps) (fk-empty) (fk-cons (head caps) (flt-cap-chain (tail caps)))))
 (defn flt-make-closure (fidx arity caps) (fk-cons (fk-lit fidx) (fk-cons (fk-lit arity) (flt-cap-chain caps))))
 
 (defn flt-do-first (s dopos) (fp-skip s (fp-sym-end s (fp-skip s (add dopos 1)))))
@@ -695,7 +695,7 @@
 (defn flt-defn-b (s pos fns benv rbodies env main)
     (flt-defn-b-disp (flt-factory-parse s pos fns benv) s pos fns benv rbodies env main))
 (defn flt-defn-b-disp (fac s pos fns benv rbodies env main)
-    (if (eq (len fac) 0)
+    (if (nil? fac)
         (flt-defn-b2 s pos (flt-expr s pos fns benv) fns rbodies env main)
         (flt-items s (nth fac 2) fns (cons (nth fac 1) (cons (nth fac 0) rbodies)) env main)))
 (defn flt-defn-b2 (s pos be fns rbodies env main)
@@ -752,7 +752,7 @@
 (defn flt-defn-b-s (s pos fns benv rbodies env main)
     (flt-defn-b-s-disp (flt-factory-parse s pos fns benv) s pos fns benv rbodies env main))
 (defn flt-defn-b-s-disp (fac s pos fns benv rbodies env main)
-    (if (eq (len fac) 0)
+    (if (nil? fac)
         (flt-defn-b2-s s pos (flt-expr s pos fns benv) fns rbodies env main)
         (flt-items-s s (nth fac 2) fns (cons (nth fac 1) (cons (nth fac 0) rbodies)) env main)))
 (defn flt-defn-b2-s (s pos be fns rbodies env main)
@@ -848,7 +848,7 @@
 (defn flt-pool-add (pool lit)
     (if (ge (flt-sidx pool lit 0) 0) pool (flt-append pool lit)))
 (defn flt-append (xs x)
-    (if (eq (len xs) 0) (cons x (list)) (cons (head xs) (flt-append (tail xs) x))))
+    (if (nil? xs) (cons x (list)) (cons (head xs) (flt-append (tail xs) x))))
 
 ; ── entry doors ────────────────────────────────────────────────────────────
 ; module source + band source -> the walker's function list (fn 0 = the
@@ -856,13 +856,13 @@
 ; (local reverse keeps this lane core.fk-free — the audit's emit drivers
 ; load plain-Form preludes only)
 (defn flt-rev (xs acc)
-    (if (eq (len xs) 0) acc (flt-rev (tail xs) (cons (head xs) acc))))
+    (if (nil? xs) acc (flt-rev (tail xs) (cons (head xs) acc))))
 ; the pool doors mirror the fns doors: the SAME scan order feeds both, so a
 ; SLIT row's index always names the right string-section entry
 (defn flt-band-pool (modsrc bandsrc) (flt-scan bandsrc 0 (flt-scan modsrc 0 (list))))
 (defn flt-src-pool (src) (flt-scan src 0 (list)))
 (defn flt-srcs-pool (srcs acc)
-    (if (eq (len srcs) 0) acc
+    (if (nil? srcs) acc
         (flt-srcs-pool (tail srcs) (flt-scan (head srcs) 0 acc))))
 (defn flt-band-sources-pool (modsrcs bandsrc)
     (flt-scan bandsrc 0 (flt-srcs-pool modsrcs (list))))
@@ -878,7 +878,7 @@
 (defn flt-modsrcs-top (modsrcs fns rbodies pool)
     (flt-modsrcs-top-env modsrcs fns rbodies pool (list)))
 (defn flt-modsrcs-top-env (modsrcs fns rbodies pool env)
-    (if (eq (len modsrcs) 0) (list fns rbodies (fk-lit 0) 0 env)
+    (if (nil? modsrcs) (list fns rbodies (fk-lit 0) 0 env)
         (flt-modsrcs-top2 (flt-top-env (head modsrcs) fns rbodies pool env) (tail modsrcs) pool)))
 (defn flt-modsrcs-top2 (mr rest pool)
     (flt-modsrcs-top-env rest (nth mr 0) (nth mr 1) pool (nth mr 4)))
@@ -891,13 +891,13 @@
 ; band and whose earlier sources are modules. Keep it as a stable recipe
 ; while new callers use the explicit band-sources door.
 (defn flt-srcs-mods (srcs acc)
-    (if (eq (len srcs) 0) acc
+    (if (nil? srcs) acc
         (if (eq (len (tail srcs)) 0) acc
             (flt-srcs-mods (tail srcs) (flt-append acc (head srcs))))))
 (defn flt-srcs-last (srcs)
     (if (eq (len (tail srcs)) 0) (head srcs) (flt-srcs-last (tail srcs))))
 (defn flt-srcs-fns (srcs)
-    (if (eq (len srcs) 0) (list)
+    (if (nil? srcs) (list)
         (flt-band-sources-fns (flt-srcs-mods srcs (list)) (flt-srcs-last srcs))))
 
 ; single-source door (prelude-free bands, mini programs)
