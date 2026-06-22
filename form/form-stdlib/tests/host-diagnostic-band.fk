@@ -1,0 +1,31 @@
+; preludes: form-stdlib/host-diagnostic.fk
+;
+; The diagnostic lane, pinned — modeling THIS container facing the consolidation's divergences.
+; cap-ids: postgres=1, shell=2, gpu=3, net=4, filesystem=5. Status 0 absent / 1 degraded / 2 present.
+; This host MEASURED: postgres absent, shell present, gpu absent, net present, filesystem present.
+; Three divergent bands carry their required carrier; attribution must call the ones whose carrier is
+; absent ENVIRONMENTAL and the one whose carrier is present REAL. Verdict 1023 when every claim lands.
+(do
+    (let P 1) (let S 2) (let G 3) (let N 4) (let F 5)
+    (let profile (list (hd-probe P (hd-absent))    ; postgres NOT here (the mesh-store's carrier)
+                       (hd-probe S (hd-present))   ; shell present
+                       (hd-probe G (hd-absent))    ; no GPU
+                       (hd-probe N (hd-present))   ; network present
+                       (hd-probe F (hd-present)))) ; filesystem present
+    ; three divergent bands, each (band-id required-cap)
+    (let dlist (list (list 100 P)    ; a band needing postgres -> absent here -> environmental
+                     (list 101 G)    ; a band needing gpu      -> absent here -> environmental
+                     (list 102 N)))  ; a band needing net      -> present here -> REAL (investigate)
+
+    (let c0 (if (eq (hd-status-of profile P) (hd-absent)) 1 0))    ; postgres measured absent
+    (let c1 (if (eq (hd-status-of profile S) (hd-present)) 2 0))   ; shell measured present
+    (let c2 (if (eq (hd-status-of profile 99) (hd-absent)) 4 0))   ; an unprobed cap defaults absent
+    (let c3 (if (eq (hd-present? profile N) 1) 8 0))               ; net is present
+    (let c4 (if (eq (hd-attribute profile P) (hd-env)) 16 0))      ; postgres absent -> environmental
+    (let c5 (if (eq (hd-attribute profile N) (hd-real)) 32 0))     ; net present + divergent -> REAL bug
+    (let c6 (if (eq (hd-count-real profile dlist) 1) 64 0))        ; exactly one real divergence
+    (let c7 (if (eq (hd-count-env profile dlist) 2) 128 0))        ; two environmental
+    (let c8 (if (eq (hd-present-count profile) 3) 256 0))          ; 3 of 5 capabilities present (S,N,F)
+    (let c9 (if (eq (hd-awakeness profile) 600) 512 0))           ; host readiness 600 per-mille (3/5)
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

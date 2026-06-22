@@ -48,6 +48,11 @@
 ;                           the string pool, so a float band registers fks (not fkc). The "kernel can't
 ;                           do float-in-list" wall was a fkc/fks misconfiguration, never the kernel.    255
 ;   self
+;     host-diagnostic.fk    the diagnostic lane every native host runs to MEASURE itself: a tri-state
+;                           capability profile (absent/degraded/present) + divergence ATTRIBUTION
+;                           (carrier absent here -> environmental; present + still divergent -> REAL bug).
+;                           Body is four-way + native; thin per-host carrier (scripts/host_diagnostic_
+;                           probe.sh) does the physical probe. Turns "6 divergent" into measured verdicts. 1023
 ;     living-vector.fk      sovereignty & vitality as VECTORS over one named-axis algebra (two instances
 ;                           as data): reading, binding (the limiting axis = where to tend next),
 ;                           dominance, lift, gap. Computes the body's stated floor: generative binds.   1023
