@@ -86,9 +86,9 @@
                     (add (sub c 97) 10)
                     (sub 0 1)))))
 
-    ;; Read the i-th byte of string s as an int code.
-    (defn hex-byte-at (s i)
-        (ord (substring s i (add i 1))))
+    ;; Read the i-th byte of string s — the shared accessor (form-stdlib/str-byte-at.fk),
+    ;; one source instead of this private copy (lc-one-engine).
+    (defn hex-byte-at (s i) (str-byte-at s i))
 
     ;; --- hex-valid? scan --------------------------------------------
     ;; Walks the string left-to-right; returns 1 only if every char is
