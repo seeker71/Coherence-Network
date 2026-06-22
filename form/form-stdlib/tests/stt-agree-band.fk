@@ -1,0 +1,30 @@
+; preludes: form-stdlib/stt-agree.fk
+;
+; stt-agree-band — scoring a transcript against ground truth, made falsifiable.
+;
+; truth = "we are the iris"; an identical read, a one-word-off read, and a hallucinated run pin the metric:
+;   same  (we are the iris)            -> 100  perfect agreement
+;   near  (we are an iris)             ->  75  three of four words land
+;   halluc(gunshot gunshot gunshot ...) ->   0  invented words match nothing — scored DOWN, not up
+;
+; Verdict 127 when every claim lands:
+;   1    an identical read scores 100                         (sa-accuracy same truth == 100)
+;   2    a one-word-off read scores 75                        (sa-accuracy near truth == 75)
+;   4    a hallucination scores 0                             (sa-accuracy halluc truth == 0)
+;   8    sa-matched counts words found in truth               (sa-matched near truth == 3)
+;   16   sa-has finds a present word                          (sa-has "we" truth == 1)
+;   32   sa-has rejects an absent word                        (sa-has "x" truth == 0)
+;   64   sa-agree? fires above the floor                      (sa-agree? same truth 80 == 1)
+(do
+    (let truth  (list "we" "are" "the" "iris"))
+    (let same   (list "we" "are" "the" "iris"))
+    (let near   (list "we" "are" "an" "iris"))
+    (let halluc (list "gunshot" "gunshot" "gunshot" "gunshot"))
+    (let c0 (if (eq (sa-accuracy same truth) 100) 1 0))
+    (let c1 (if (eq (sa-accuracy near truth) 75) 2 0))
+    (let c2 (if (eq (sa-accuracy halluc truth) 0) 4 0))
+    (let c3 (if (eq (sa-matched near truth) 3) 8 0))
+    (let c4 (if (eq (sa-has "we" truth) 1) 16 0))
+    (let c5 (if (eq (sa-has "x" truth) 0) 32 0))
+    (let c6 (if (eq (sa-agree? same truth 80) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

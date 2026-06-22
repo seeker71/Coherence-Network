@@ -1,0 +1,46 @@
+; stt-agree.fk — word agreement between two transcripts, in Form, so a native STT can be scored vs ground truth.
+;
+; When a trusted transcript (a human/authoritative one) exists for the same audio, our STT earns trust the
+; honest way: by AGREEING with it, segment after segment. This recipe is the agreement atom — how many of our
+; words land in the truth, as an accuracy 0..100 — which self-grounding-classifier.fk then folds into a
+; promotion gate (credit our perception only as far as it proves against what we already trust). Whisper is
+; today's candidate; the native STT is scored the same way and earns the route when it clears the gate.
+;
+; THE METRIC: word-overlap accuracy = (our words found in truth) / max(our length, truth length) * 100. The
+; max-length denominator penalizes BOTH directions — dropped words (truth longer) and invented words (ours
+; longer), so a hallucinated run (whisper inventing "gunshot gunshot gunshot" over a sound bath) is scored
+; down, not up. Comparison is str_eq, the same content-addressed equality the four kernels agree on.
+;
+; HONEST LANE: this is a SET-overlap accuracy, not a sequence-aligned WER — it does not yet penalize word
+; ORDER or fully discount repeated words (a true Levenshtein word-WER is the next recipe, a sequence-aligned
+; refinement). It is the right first agreement signal for "did our words match the truth's words"; order and
+; exact error-rate compose on top. Integers only; str_eq + counting; no floats.
+;
+; Proven by: form-stdlib/tests/stt-agree-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    ; --- does word w appear anywhere in the word list lst? ---
+    (defn sa-has (w lst)
+        (if (ge (len lst) 1)
+            (if (str_eq w (nth lst 0)) 1 (sa-has w (tail lst)))
+            0))
+
+    ; --- how many of a's words are found in b (token overlap) ---
+    (defn sa-matched (a b)
+        (if (ge (len a) 1)
+            (add (sa-has (nth a 0) b) (sa-matched (tail a) b))
+            0))
+
+    ; --- the larger of two counts (the accuracy denominator) ---
+    (defn sa-bigger (x y) (if (ge x y) x y))
+
+    ; --- word accuracy 0..100 = matched / max(len a, len b) * 100; 0 when both empty. ---
+    (defn sa-accuracy (a b)
+        (if (ge (sa-bigger (len a) (len b)) 1)
+            (div (mul (sa-matched a b) 100) (sa-bigger (len a) (len b)))
+            0))
+
+    ; --- agree?: 1 when accuracy clears a floor (the segment counts as a self-grounding agreement). ---
+    (defn sa-agree? (a b floor) (if (ge (sa-accuracy a b) floor) 1 0))
+
+    0)
