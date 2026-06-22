@@ -1,0 +1,15 @@
+; tests/pdf-text-file-band.fk — LiteParse v2.1 host-io lane: convert REAL PDF
+; files off disk. read_file_bytes is host I/O (fkwu cannot), so this band runs
+; THREE-WAY (Go/Rust/TS) by design — the honest carrier lane. The extraction
+; LOGIC itself crosses four-way (tests/pdf-text-band.fk, embedded bytes).
+;
+; preludes: form-stdlib/core.fk form-stdlib/inflate.fk form-stdlib/pdf-text.fk
+;
+; Four real FlateDecode PDFs (valid, viewer-openable) -> exact text. Verdict 15.
+
+(do
+    (let ok1 (if (list-eq (pdf-text-file "form-stdlib/tests/fixtures/doc1.pdf") (list 72 101 108 108 111 44 32 67 111 104 101 114 101 110 99 101 32 78 101 116 119 111 114 107 46)) 1 0))
+    (let ok2 (if (list-eq (pdf-text-file "form-stdlib/tests/fixtures/doc2.pdf") (list 70 111 114 109 32 105 115 32 116 104 101 32 98 111 100 121 39 115 32 116 111 110 103 117 101 46)) 2 0))
+    (let ok4 (if (list-eq (pdf-text-file "form-stdlib/tests/fixtures/doc3.pdf") (list 76 105 110 101 32 111 110 101 46 32 76 105 110 101 32 116 119 111 46 32 76 105 110 101 32 116 104 114 101 101 46)) 4 0))
+    (let ok8 (if (list-eq (pdf-text-file "form-stdlib/tests/fixtures/doc4.pdf") (list 65 110 32 111 112 101 110 32 105 110 116 101 108 108 105 103 101 110 99 101 32 111 114 103 97 110 105 115 109 32 102 111 114 32 114 101 97 108 105 122 105 110 103 32 119 104 97 116 32 105 115 32 97 108 105 118 101 46)) 8 0))
+    (add ok1 (add ok2 (add ok4 ok8))))
