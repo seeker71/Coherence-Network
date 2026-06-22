@@ -1,0 +1,33 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "claude/native-reasoning-framework-a1s2ee",
+  "commit_scope": "Receipt: the form-native nil? plague root-caused — it is a TWO-LAYER reality, not a missing primitive. Embodied a core.fk addition, observed it was wrong-layer + redundant, validated the two-layer cause, reverted.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-22_nil_two_layer.json"
+  ],
+  "finding": {
+    "claim": "nil? is ALREADY canonical in core.fk — class List<T>, `def nil?(xs) = eq(len(xs), 0);` (line 39). It is not a missing primitive.",
+    "two_layers": {
+      "layer_2_bml_compiled": "core.fk's nil? is a BML def, lowered by source-compiler. Available to any code loaded WITH source-compiler. Validated: nilcore band (uses nil?) with core + ... + source-compiler preludes -> verdict 3, FOUR-WAY (Go/Rust/TS/fkwu), 0 divergent.",
+      "layer_1_raw_lisp": "Modules loaded BEFORE source-compiler (the flatten / build-form-cli path) run raw Lisp; core's BML nil? is not yet lowered there, so they need a raw (defn nil? ...). That is why nil? is hand-shimmed in 5 modules: core-native, form-asm, fourth-shim (the fkwu base), line-grammar, sha256."
+    },
+    "the_plague": "Unbound nil? happens when a LAYER-1 raw module uses nil? without a raw shim in scope. Concretely: a prior change made form-flatten.fk use nil?; build-form-cli's raw flatten had no nil? shim -> windows-floor CI failed `unbound function nil?` at form-flatten.fk:865. Reverted form-flatten to bare `(eq (len X) 0)` (commit 206ce63); CI green.",
+    "discipline": "Layer-1 raw modules (anything loaded before source-compiler: the flatten, raw drivers) must use BARE builtins (eq/len/head/tail/cons/list/nth are native) or carry the raw nil? shim. Do NOT depend on core's BML nil? in Layer-1 code, and do NOT 'add nil? to core' to fix a Layer-1 unbound — core already has it (Layer 2); the fix is the layering, not a new def."
+  },
+  "kernel_native_answers": {
+    "nil_q": "Already Form-native (core List<T> for Layer 2; raw shims for Layer 1). The Go JIT special-cases nil? by name (jit.go:1379) -> crystallizes to native O(1) when hot. NO Go/Rust builtin needed.",
+    "nth": "Already a bare kernel builtin (registerNative, Go/Rust/TS) AND JIT-special-cased. Nothing to resolve.",
+    "fkwu_safety": "list-nil? rides the cons-list region (an empty cons-list is structurally len-0) -> four-way-safe. The substrate NONE world is where fkwu's scalar region collapses int/string/empty; there the four-way primitive is node_eq against the canonical nothing-node (manifest 'host value-null' precedent), never nil?/len.",
+    "axiom_ground": "nil? is the 'nothing' state of the core axioms (states 0/1/nothing)."
+  },
+  "local_validation": {
+    "status": "pass",
+    "results": {
+      "nilcore_with_source_compiler": "verdict 3, four-way, 0 divergent (nil? resolves from core's List<T> when source-compiler is loaded)",
+      "nilcore_core_only": "unbound nil? on all three walkers (confirms Layer-1 needs a raw shim; core's BML nil? is Layer-2-only)",
+      "forward_chaining_after_revert": "1023 four-way (no breakage; core.fk back to its committed state)"
+    }
+  },
+  "no_code_change": "core.fk reverted (its nil? was already present; my addition was redundant + wrong-layer + would have churned all 552 cached tables). The genuine fix to the plague was the earlier form-flatten revert (already shipped). This receipt records the two-layer truth so the layering discipline is durable.",
+  "next_if_wanted": "A single raw-Lisp foundation module (like fourth-shim is for fkwu) loaded FIRST in every walker Layer-1 path, defining nil? once, would let the 5 scattered shims compost. Requires mapping every Layer-1 entry (validate, build-form-cli, fourth-arm driver) to confirm universal first-load. A focused pass, not a rush."
+}
