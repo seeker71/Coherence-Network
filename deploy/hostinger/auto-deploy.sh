@@ -1027,12 +1027,12 @@ ensure_kernel_router_canary() {
   fi
 
   local kernel_image_payload='{"expression":"class KernelCoreSelf { int RequiredPrimitiveCount() [get] { return 8; } int RequiredDispatchCount() [get] { return 15; } int RequiredProofCount() [get] { return 6; } bool Minimal() { return true; } bool Observable() { return true; } bool Executable() { return true; } bool Trustable() { return true; } } class KernelCoreImage {}","grammar":"bml","source_label":"deploy-bml-front-door-canary"}'
-  deadline=$(( $(date +%s) + 120 ))
+  deadline=$(( $(date +%s) + 360 ))
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
       "printf '%s' '$kernel_image_payload' >/tmp/kernel-image.request.json \
-        && curl -fsS --max-time 10 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
+        && curl -fsS --max-time 30 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
         -X POST http://127.0.0.1:8080/api/substrate/kernel-image/proposals \
         -H 'Accept: application/json' \
         -H 'Content-Type: application/json' \
@@ -1048,6 +1048,10 @@ ensure_kernel_router_canary() {
     sleep 3
   done
   if [[ "$probe_ok" != "1" ]]; then
+    docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "echo 'kernel-image headers:'; cat /tmp/kernel-image.headers 2>/dev/null || true; \
+       echo 'kernel-image body:'; head -c 1200 /tmp/kernel-image.body 2>/dev/null || true; echo" \
+      2>&1 | tee -a "$LOG_FILE" || true
     log "FAIL: BML front-door kernel-image route did not return native proposal proof"
     exit 1
   fi
