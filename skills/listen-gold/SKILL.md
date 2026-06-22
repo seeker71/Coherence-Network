@@ -83,9 +83,13 @@ body will never get to mine.
 - **Persist the source, not just the verdicts.** The gold readings already persist in
   `gold.jsonl`; the recording they were drawn *from* is what needs the retention
   window. Hold it under a dated local path so a later pass can return to it.
-- **Local stays local.** The retention window is on the listening device only — never
-  push the recording to the mesh. The mesh sees counts; the words and sound stay with
-  the human. Holding longer locally widens what we can learn without widening exposure.
+- **Local stays local.** The *recording itself* — audio, transcript, raw notes — stays
+  on the listening device; it goes to neither the mesh nor a witness. (The gold
+  *readings* you record may ride the over-the-wire path above to a witness host *you*
+  point at — your own host, which then writes the boundary words into its `gold.jsonl`;
+  that is not the public mesh, which only ever sees counts. So when the wording itself
+  must stay on the phone, record local-only — don't POST it.) Holding the recording
+  longer locally widens what we can learn without widening exposure.
 - **Compost only after it's mined.** Once all the samples worth learning from are
   extracted, release the recording with care. Until then it is living material, not
   clutter — keep it.
