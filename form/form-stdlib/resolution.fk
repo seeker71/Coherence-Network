@@ -15,8 +15,14 @@
 ; universal rule (man(socrates) + the law => mortal(socrates)); answer a VARIABLE query (mortal(Y) ->
 ; Y=socrates — WHO, not yes/no); and chain a relation transitively through a recursive rule.
 ;
-; A clause is (list head premises). A fact is (head, no premises). The search result is
-; (list ok subst counter): ok=1 with the binding + next fresh counter, ok=0 if unprovable in the fuel.
+; COMPLETE search by LIST-OF-SUCCESSES. A goal does not return its first proof; it returns the LIST of
+; every substitution that proves it (across all clauses). A conjunction is the backtracking product: for
+; each solution of premise 1, prove the rest under it, concatenating. This is what makes the search
+; complete — r(X):-p(X),q(X) with p(a),p(b),q(b) proves r via X=b even though p's first solution X=a
+; dead-ends on q(a). (No success-continuation/closures — list-of-successes stays inside the fkwu-safe
+; op-family.) Result = (list sols next-counter): sols is the list of proving substitutions in
+; leftmost-first order (empty = unprovable in the fuel); next-counter is the fresh-variable high-water
+; mark threaded monotonically so every clause instantiation gets disjoint variables.
 ; Kin: unify.fk (the term match), backward-chaining.fk (its propositional ancestor), derivation.fk
 ; (a proof tree over this is the next compose). Proven by: tests/resolution-band.fk
 
@@ -24,12 +30,12 @@
     (defn res-head  (c) (nth c 0))
     (defn res-prems (c) (nth c 1))
     (defn res-stride () 1000)
-    ; result = (list ok subst counter) — counter threads so every clause use gets fresh variables
-    (defn rp-ok   (subst ctr) (list 1 subst ctr))
-    (defn rp-fail (ctr)       (list 0 (list) ctr))
-    (defn rp-ok?   (r) (eq (nth r 0) 1))
-    (defn rp-subst (r) (nth r 1))
-    (defn rp-ctr   (r) (nth r 2))
+    ; result = (list sols ctr): sols = list of proving substitutions; ctr = next fresh counter
+    (defn rr-mk   (sols ctr) (list sols ctr))
+    (defn rr-sols (r) (nth r 0))
+    (defn rr-ctr  (r) (nth r 1))
+    ; local list concat — self-contained (core.fk's append is Layer-2; this recipe is raw Layer-1)
+    (defn res-append (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (res-append (tail xs) ys))))
 
     ; --- standardize apart: shift every variable in a term/clause by a fresh offset. ---
     (defn res-rename (t off)
@@ -39,28 +45,35 @@
         (if (eq (len ts) 0) (list) (cons (res-rename (head ts) off) (res-rename-list (tail ts) off))))
     (defn res-rename-clause (c off) (list (res-rename (res-head c) off) (res-rename-list (res-prems c) off)))
 
-    ; --- prove a goal: try each clause; on a head-unify, prove its premises under the binding. ---
+    ; --- prove a goal: EVERY clause whose head unifies contributes its premise-proofs. ---
     (defn res-prove (goal kb subst ctr fuel)
-        (if (eq fuel 0) (rp-fail ctr) (res-try goal kb kb subst ctr fuel)))
+        (if (eq fuel 0) (rr-mk (list) ctr) (res-try goal kb kb subst ctr fuel)))
     (defn res-try (goal kb remaining subst ctr fuel)
-        (if (eq (len remaining) 0) (rp-fail ctr)
+        (if (eq (len remaining) 0) (rr-mk (list) ctr)
             (do (let c (res-rename-clause (head remaining) (mul ctr (res-stride))))
                 (let u (u-unify goal (res-head c) subst))
                 (if (eq (u-ok? u) 1)
-                    (do (let r (res-prove-all (res-prems c) kb (u-subst u) (add ctr 1) (sub fuel 1)))
-                        (if (eq (rp-ok? r) 1) r (res-try goal kb (tail remaining) subst (rp-ctr r) fuel)))
-                    (res-try goal kb (tail remaining) subst ctr fuel)))))
-    ; prove every premise in sequence, threading BOTH the substitution and the fresh counter
+                    (do (let inner (res-prove-all (res-prems c) kb (u-subst u) (add ctr 1) (sub fuel 1)))
+                        (let rest (res-try goal kb (tail remaining) subst (rr-ctr inner) fuel))
+                        (rr-mk (res-append (rr-sols inner) (rr-sols rest)) (rr-ctr rest)))
+                    (res-try goal kb (tail remaining) subst (add ctr 1) fuel)))))
+    ; prove every premise in sequence as a BACKTRACKING PRODUCT, threading the fresh counter throughout
     (defn res-prove-all (goals kb subst ctr fuel)
-        (if (eq (len goals) 0) (rp-ok subst ctr)
-            (do (let r (res-prove (head goals) kb subst ctr fuel))
-                (if (eq (rp-ok? r) 1)
-                    (res-prove-all (tail goals) kb (rp-subst r) (rp-ctr r) fuel)
-                    (rp-fail (rp-ctr r))))))
+        (if (eq (len goals) 0) (rr-mk (list subst) ctr)
+            (do (let first (res-prove (head goals) kb subst ctr fuel))
+                (res-pa-fold (tail goals) kb (rr-sols first) (rr-ctr first) fuel))))
+    ; for each solution of the premise proved so far, prove the remaining premises; concat the results
+    (defn res-pa-fold (rest-goals kb sols ctr fuel)
+        (if (eq (len sols) 0) (rr-mk (list) ctr)
+            (do (let sub  (res-prove-all rest-goals kb (head sols) ctr fuel))
+                (let more (res-pa-fold rest-goals kb (tail sols) (rr-ctr sub) fuel))
+                (rr-mk (res-append (rr-sols sub) (rr-sols more)) (rr-ctr more)))))
 
     ; --- THE query: prove goal against the kb from the empty substitution, ample depth. ---
     (defn res-query (goal kb) (res-prove goal kb (list) 1 64))
-    (defn res-proven? (goal kb) (rp-ok? (res-query goal kb)))
-    (defn res-answer  (qvar goal kb) (u-walk qvar (rp-subst (res-query goal kb))))
+    (defn res-proven? (goal kb) (if (eq (len (rr-sols (res-query goal kb))) 0) 0 1))
+    (defn res-answer  (qvar goal kb)
+        (do (let sols (rr-sols (res-query goal kb)))
+            (if (eq (len sols) 0) (u-walk qvar (list)) (u-walk qvar (head sols)))))
 
     0)
