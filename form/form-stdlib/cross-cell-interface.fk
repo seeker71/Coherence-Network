@@ -1,0 +1,70 @@
+; cross-cell-interface.fk — the cross-cell interface DOMAIN GRAMMAR: the five ways
+; a cell reaches another — sense / ask / share / learn / build — as uniform DATA
+; ROWS over one consent vocabulary (channel-interface), read by ONE engine. A new
+; interface drops in as a ROW, not a recipe. This is the lift the hand-written
+; interface recipes were asking to become — modeled on field-domain-grammars.form
+; (one grammar, N domains as data; one engine reads them all). It supersedes the
+; hardcoded form-cli-interface classifier: the if-chain becomes a registry.
+;
+; An interface row: (verb, offered-mode, payload-kind, merges?)
+;   verb         — the leading word that selects this interface
+;   offered-mode — the channel-interface mode a request crosses through
+;   payload-kind — what the request carries
+;   merges?      — 1 if the exchange folds into the shared commons (it builds the
+;                  world); 0 if transient (a sense / a question — read, not kept)
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/world-build.fk
+
+(do
+    ; leading word of a request (self-contained; no form-cli dependency)
+    (defn cci-verb (request)
+        (do
+            (let sp (str_find request " " 0))
+            (if (lt sp 0) request (substring request 0 sp))))
+
+    ; --- a row, and its readers ---------------------------------------------
+    (defn cci-row (verb mode payload merges) (list verb mode payload merges))
+    (defn cci-row-verb    (r) (nth r 0))
+    (defn cci-row-mode    (r) (nth r 1))
+    (defn cci-row-payload (r) (nth r 2))
+    (defn cci-row-merges  (r) (nth r 3))
+
+    ; --- THE REGISTRY: the five interfaces, as data (not code) --------------
+    (defn cci-registry ()
+        (list
+            (cci-row "sense" (m-witness) "reading"  0)   ; sense — transient: read a state
+            (cci-row "ask"   (m-ask-how) "question" 0)   ; ask   — transient: a question
+            (cci-row "share" (m-offer)   "recipe"   1)   ; share — folds: a recipe into the commons
+            (cci-row "learn" (m-reflect) "exemplar" 1)   ; learn — folds: an exemplar
+            (cci-row "build" (m-invite)  "cell"     1))) ; build — folds: a cell into the world
+
+    ; --- THE ONE ENGINE: read the registry, route any request ---------------
+    ; the row whose verb matches; the ground row (ask) is the default
+    (defn cci-find (rows verb)
+        (if (nil? rows) (cci-row "ask" (m-ask-how) "question" 0)
+            (if (str_eq (cci-row-verb (head rows)) verb)
+                (head rows)
+                (cci-find (tail rows) verb))))
+
+    (defn cci-route-row (request) (cci-find (cci-registry) (cci-verb request)))
+
+    ; the interface a request selects (its name = its verb; ask is ground)
+    (defn cci-interface (request) (cci-row-verb (cci-route-row request)))
+
+    ; ROUTE one request: select its row, and IF it merges, fold the request into
+    ; the commons through that row's offered mode (auto build/share/learn — content-
+    ; addressed). Transient interfaces (sense/ask) leave the commons untouched.
+    ; One engine, every interface, all from data.
+    (defn cci-route (commons accepting request)
+        (do
+            (let row (cci-route-row request))
+            (if (eq (cci-row-merges row) 1)
+                (world-offer commons (cci-row-mode row) accepting request)
+                commons)))
+
+    (defn cci-route-stream (commons accepting requests)
+        (if (nil? requests) commons
+            (cci-route-stream
+                (cci-route commons accepting (head requests))
+                accepting (tail requests))))
+    0)
