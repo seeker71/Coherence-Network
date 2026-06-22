@@ -1,0 +1,77 @@
+; derivation.fk — the body GENERATES its proof, not just a verdict. The attributed-trace step.
+;
+; preludes: form-stdlib/forward-chaining.fk
+;
+; backward-chaining.fk answers does-this-follow with 1/0 — it FINDS the derivation internally and
+; then throws it away. This block returns the derivation itself: a PROOF TREE naming exactly which
+; axioms and rules force the goal, and in what shape. That is a step on the GENERATIVE axis, not the
+; reasoning-power one — the body producing new structure (an explanation), not collapsing to a scalar.
+; It is also the organism's own discipline made literal: "return an attributed trace." A rented
+; frontier mind narrates a plausible-SOUNDING reason that may not match how it actually answered; a
+; proof tree IS the reasoning, exactly, and re-checkable — real explainability instead of performed.
+;
+; A proof is a tagged list (all integers but the goal atom -> pure-numeric, four-way, native):
+;   (list 1 goal)            AXIOM  — goal held as a fact, a leaf of the argument
+;   (list 2 goal subproofs)  RULE   — goal forced by a rule; subproofs prove that rule's premises
+;   (list 0)                 FAIL   — no proof exists within the depth bound
+; The same fuel bound as backward-chaining (rule count) bounds proof depth, so cyclic rules cannot
+; spin an infinite tree. pf-proven? agrees with backward-chaining's bwd-prove? on every goal — same
+; search, one returns the WHY.
+;
+; Kin: backward-chaining.fk (the 1/0 sibling this enriches), forward-chaining.fk (the fact base),
+; sovereignty-receipt.fk (an attributed trace is what makes a claim native-honest).
+; Proven by: form-stdlib/tests/derivation-band.fk
+
+(do
+    ; --- proof accessors ---
+    (defn pf-status (p) (nth p 0))               ; 0 fail | 1 axiom | 2 rule
+    (defn pf-proven? (p) (if (gt (pf-status p) 0) 1 0))
+    (defn pf-goal (p) (nth p 1))                 ; valid on a proven proof
+    (defn pf-subs (p) (nth p 2))                 ; valid on a rule proof
+
+    ; --- every proof in a list is proven (a rule fires only if all premises proved) ---
+    (defn pf-all-proven? (proofs)
+        (if (eq (len proofs) 0) 1
+            (if (eq (pf-proven? (head proofs)) 1) (pf-all-proven? (tail proofs)) 0)))
+
+    ; --- PROVE-WITH-PROOF: an axiom is a leaf; else find a rule for the goal and prove its premises. ---
+    (defn pf-prove (goal facts rules fuel)
+        (if (eq (fwd-member? goal facts) 1)
+            (list 1 goal)
+            (if (eq fuel 0) (list 0)
+                (pf-try-rules goal facts rules rules (sub fuel 1)))))
+    (defn pf-try-rules (goal facts rules remaining fuel)
+        (if (eq (len remaining) 0) (list 0)
+            (if (eq (fwd-concl (head remaining)) goal)
+                (do (let subs (pf-prove-all (fwd-prems (head remaining)) facts rules fuel))
+                    (if (eq (pf-all-proven? subs) 1)
+                        (list 2 goal subs)
+                        (pf-try-rules goal facts rules (tail remaining) fuel)))
+                (pf-try-rules goal facts rules (tail remaining) fuel))))
+    (defn pf-prove-all (prems facts rules fuel)
+        (if (eq (len prems) 0) (list)
+            (cons (pf-prove (head prems) facts rules fuel)
+                  (pf-prove-all (tail prems) facts rules fuel))))
+
+    ; --- THE query, depth bound baked in ---
+    (defn pf-derive (goal facts rules) (pf-prove goal facts rules (len rules)))
+
+    ; --- read the generated proof: how deep the argument runs (axiom leaf = 1) ---
+    (defn pf-depth (p)
+        (if (eq (pf-status p) 1) 1
+            (if (eq (pf-status p) 2) (add 1 (pf-max-depth (pf-subs p))) 0)))
+    (defn pf-max-depth (proofs)
+        (if (eq (len proofs) 0) 0
+            (do (let dh (pf-depth (head proofs)))
+                (let dt (pf-max-depth (tail proofs)))
+                (if (gt dh dt) dh dt))))
+
+    ; --- count the steps in the argument (every node: each axiom + each rule application) ---
+    (defn pf-size (p)
+        (if (eq (pf-status p) 1) 1
+            (if (eq (pf-status p) 2) (add 1 (pf-sum-size (pf-subs p))) 0)))
+    (defn pf-sum-size (proofs)
+        (if (eq (len proofs) 0) 0
+            (add (pf-size (head proofs)) (pf-sum-size (tail proofs)))))
+
+    0)

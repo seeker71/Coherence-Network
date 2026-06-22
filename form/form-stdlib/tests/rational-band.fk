@@ -1,0 +1,20 @@
+; preludes: form-stdlib/rational.fk
+;
+; Exact rational arithmetic, pinned where exactness is the whole point. The headline: 1/3 + 1/3 + 1/3
+; is EXACTLY 1 (per-mille gives 999). Products and quotients reduce; sign normalizes to the numerator;
+; order is decided by cross-multiply. And the trust bridge: a subjective-logic expectation b + a*u with
+; thirds and a half comes out EXACTLY 1/2, where the fixed-point version rounded to 499/1000. Verdict 1023.
+(do
+    (let c0 (if (eq (rat-eq (rat-add (rat-add (rat 1 3) (rat 1 3)) (rat 1 3)) (rat 1 1)) 1) 1   0)) ; 1/3*3 = 1 exactly
+    (let c1 (if (eq (rat-lt (rat 1 3) (rat 1 2)) 1)                                        2   0)) ; 1/3 < 1/2
+    (let c2 (if (eq (rat-eq (rat-mul (rat 2 3) (rat 3 4)) (rat 1 2)) 1)                     4   0)) ; 6/12 reduces to 1/2
+    (let c3 (if (eq (rat-eq (rat-div (rat 1 2) (rat 1 3)) (rat 3 2)) 1)                     8   0)) ; (1/2)/(1/3) = 3/2
+    (let c4 (if (eq (rat-eq (rat-sub (rat 1 2) (rat 1 3)) (rat 1 6)) 1)                     16  0)) ; 1/2 - 1/3 = 1/6
+    (let c5 (if (eq (rat-eq (rat 1 -2) (rat -1 2)) 1)                                       32  0)) ; sign moves to numerator
+    (let c6 (if (eq (rat-le (rat 1 3) (rat 1 3)) 1)                                         64  0)) ; equal -> le holds
+    (let c7 (if (eq (rat-lt (rat 1 2) (rat 1 3)) 0)                                         128 0)) ; 1/2 < 1/3 is false
+    ; the trust bridge: E = b + a*u  with b=1/3, a=1/2, u=1/3  ->  exactly 1/2 (per-mille rounded to 499)
+    (let c8 (if (eq (rat-eq (rat-expectation (rat 1 3) (rat 1 2) (rat 1 3)) (rat 1 2)) 1)   256 0))
+    (let c9 (if (eq (rat-eq (rat-mul (rat 1 3) (rat 3 1)) (rat 1 1)) 1)                     512 0)) ; 1/3 * 3 = 1 exactly
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

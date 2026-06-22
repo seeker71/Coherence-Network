@@ -1,0 +1,24 @@
+; float-ops.fk — reals flow four-way: floats through lists, arithmetic, and comparison on every kernel.
+;
+; This band exists to anchor a CORRECTION. I once concluded fkwu "loses a float's box through a
+; cons-list cell" and built a fixed-point detour around a kernel wall that did not exist. The real
+; cause was mine: a float LITERAL lowers to a string-pool entry (the walker reads its text and strtod's
+; it), so a band carrying float literals must be registered with the STRING-POOL emitter (fks), not
+; fkc. Registered correctly, floats in lists, nth, div, and comparison all cross Go/Rust/TS/fkwu
+; identically. The format was never the limit; the emitter choice was — a shared belief, dissolved by
+; reading the kernel we author. Reals are open; this proves it so the next session inherits the truth.
+;
+; The exact format (rational.fk) is still the honest choice for trust — exactness, not a float-wall —
+; but probabilistic and measured reasoning that genuinely wants reals now has a proven floor here.
+;
+; Kin: rational.fk (the exact sibling), subjective-logic.fk (per-mille by choice now, not necessity).
+; Proven by: form-stdlib/tests/float-ops-band.fk  (registered fks — float literals need the pool).
+
+(do
+    (defn fl-nth (xs i) (nth xs i))
+    ; the four arithmetic ops, read straight back from a list of float literals
+    (defn fl-div (xs a b) (div (nth xs a) (nth xs b)))
+    (defn fl-mul (xs a b) (mul (nth xs a) (nth xs b)))
+    (defn fl-add (xs a b) (add (nth xs a) (nth xs b)))
+    (defn fl-sub (xs a b) (sub (nth xs a) (nth xs b)))
+    0)

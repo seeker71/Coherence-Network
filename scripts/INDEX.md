@@ -91,6 +91,7 @@
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
+| [fourth_warm.sh](fourth_warm.sh) | fourth_warm.sh — container-safe router to the fkwu kernel: warm fourth-arm tables into the persistent cache serially (bounded memory) so heavy bands prove four-way without the cold-cache OOM/timeout. |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_agent.sh](form_cli_agent.sh) | form_cli_agent.sh — thin WITNESS: the kernel runs the TIERED agent loop (form-native-run.fk). |
 | [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS for `form-cli ask+`. The body is Form: the kernel |
