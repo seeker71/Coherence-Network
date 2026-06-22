@@ -1,0 +1,9 @@
+; native-thought-receipt-main.fk — the fixed staged-input entry, flattened to an fkwu table.
+;
+; preludes: form-stdlib/sovereignty-receipt.fk form-stdlib/native-thought-receipt.fk
+;
+; This band is COMMITTED and constant — it interpolates nothing. The carrier stages the 7 raw fields
+; (ledger ts commit path kind nodeid query) into the input_byte channel and runs this on fkwu (the 4th
+; kernel, bootstrapped from C); ntr-staged-record reads the bundle, the proven gate decides honesty,
+; host-io appends. PROVEN: this records a valid receipt natively on fkwu — no Go in the runtime path.
+(ntr-staged-record)
