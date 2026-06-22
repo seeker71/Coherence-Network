@@ -1,0 +1,133 @@
+; sensor-organ-channel.fk — physical sensor samples become mesh-safe organ readings.
+;
+; Raw device access stays in a carrier. The body-level contract lives here:
+; samples name their source, unit, frame, confidence, freshness, privacy, and trace;
+; composite observations name the claim, supporting organs, disagreement, and raw-data policy.
+; Higher organs compose from lower organ streams without a new engine: they emit the same
+; organ-reading shape the mesh already understands.
+;
+; Integers + strings only. Values that would be floats ride scaled units in the carrier
+; (ppm, cm/s, mg, etc.) so the contract can cross kernels deterministically.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk
+;
+; Proven by: form-stdlib/tests/sensor-organ-channel-band.fk
+
+(do
+    ; privacy is monotonic: raw-private never enters the mesh; derived/summarized claims may.
+    (defn sensor-privacy-public () 0)
+    (defn sensor-privacy-derived () 1)
+    (defn sensor-privacy-sensitive () 2)
+    (defn sensor-privacy-raw-private () 3)
+    (defn sensor-mesh-safe? (privacy) (lt privacy (sensor-privacy-raw-private)))
+
+    ; one physical sensor sample, already measured by a carrier.
+    ; source examples: gps, imu, magnetometer, barometer, light, mic-level, wifi-ble.
+    ; kind examples: location, speed, acceleration, heading, altitude, sound-level.
+    (defn sensor-sample (source kind value unit frame confidence freshness privacy trace)
+        (list "sensor-sample" source kind value unit frame confidence freshness privacy trace))
+    (defn ss-source     (s) (nth s 1))
+    (defn ss-kind       (s) (nth s 2))
+    (defn ss-value      (s) (nth s 3))
+    (defn ss-unit       (s) (nth s 4))
+    (defn ss-frame      (s) (nth s 5))
+    (defn ss-confidence (s) (nth s 6))
+    (defn ss-freshness  (s) (nth s 7))
+    (defn ss-privacy    (s) (nth s 8))
+    (defn ss-trace      (s) (nth s 9))
+
+    (defn sensor-answered? (s)
+        (if (and (gt (ss-confidence s) 0) (gt (ss-freshness s) 0)) 1 0))
+    (defn sensor-usable? (s min-confidence)
+        (if (and (ge (ss-confidence s) min-confidence)
+                 (and (gt (ss-freshness s) 0) (sensor-mesh-safe? (ss-privacy s)))) 1 0))
+
+    (defn sensor-sample-payload (s)
+        (list "sensor-sample"
+              "source" (ss-source s)
+              "kind" (ss-kind s)
+              "value" (ss-value s)
+              "unit" (ss-unit s)
+              "frame" (ss-frame s)
+              "confidence" (ss-confidence s)
+              "freshness" (ss-freshness s)
+              "privacy" (ss-privacy s)
+              "trace" (ss-trace s)))
+
+    ; Raw samples enter the existing organ-reading stream as a reading about sample usability.
+    ; The raw value itself is payload metadata; carriers decide how much payload is allowed.
+    (defn sensor-sample-reading (s min-confidence deadline tick)
+        (organ-reading
+            (str_concat "sensor:" (str_concat (ss-source s) (str_concat ":" (ss-kind s))))
+            "sensor-sample"
+            (sensor-answered? s)
+            (sensor-usable? s min-confidence)
+            tick
+            deadline
+            (sensor-sample-payload s)))
+
+    ; a composite observation made from several organ streams.
+    (defn composite-observation (name claim confidence privacy supporting disagreeing raw-policy trace)
+        (list "composite-observation" name claim confidence privacy supporting disagreeing raw-policy trace))
+    (defn co-name       (o) (nth o 1))
+    (defn co-claim      (o) (nth o 2))
+    (defn co-confidence (o) (nth o 3))
+    (defn co-privacy    (o) (nth o 4))
+    (defn co-supporting (o) (nth o 5))
+    (defn co-disagree   (o) (nth o 6))
+    (defn co-raw-policy (o) (nth o 7))
+    (defn co-trace      (o) (nth o 8))
+
+    (defn composite-safe? (o min-confidence)
+        (if (and (ge (co-confidence o) min-confidence)
+                 (and (sensor-mesh-safe? (co-privacy o)) (eq (co-disagree o) 0))) 1 0))
+    (defn composite-payload (o)
+        (list "composite-observation"
+              "claim" (co-claim o)
+              "confidence" (co-confidence o)
+              "supporting" (co-supporting o)
+              "disagreeing" (co-disagree o)
+              "raw-policy" (co-raw-policy o)
+              "trace" (co-trace o)))
+    (defn composite-reading (o min-confidence deadline tick)
+        (organ-reading
+            (co-name o)
+            "composite-observation"
+            1
+            (composite-safe? o min-confidence)
+            tick
+            deadline
+            (composite-payload o)))
+
+    ; first higher organ: motion mode from kinematic streams.
+    ; speed is cm/s, cadence steps/min, vertical speed cm/s, acceleration mg.
+    (defn motion-mode (speed-cms cadence-spm vertical-cms accel-mg)
+        (if (lt speed-cms 20)
+            "still"
+            (if (and (gt vertical-cms 300) (gt speed-cms 1000))
+                "flying"
+                (if (and (gt cadence-spm 0) (lt speed-cms 500))
+                    (if (or (gt cadence-spm 150) (gt accel-mg 1800)) "running" "walking")
+                    (if (lt speed-cms 900) "biking" "driving")))))
+
+    (defn confidence-vote (confidence min-confidence)
+        (if (ge confidence min-confidence) 1 0))
+    (defn support-count4 (a b c d min-confidence)
+        (add (confidence-vote a min-confidence)
+             (add (confidence-vote b min-confidence)
+                  (add (confidence-vote c min-confidence)
+                       (confidence-vote d min-confidence)))))
+    (defn confidence-mean4 (a b c d) (div (add a (add b (add c d))) 4))
+
+    ; gps/imu/barometer/magnetometer confidences fuse into one derived claim.
+    (defn motion-mode-observation
+        (speed-cms cadence-spm vertical-cms accel-mg gps-conf imu-conf baro-conf mag-conf disagree privacy)
+        (composite-observation
+            "motion-mode"
+            (motion-mode speed-cms cadence-spm vertical-cms accel-mg)
+            (confidence-mean4 gps-conf imu-conf baro-conf mag-conf)
+            privacy
+            (support-count4 gps-conf imu-conf baro-conf mag-conf 500000)
+            disagree
+            "derived-only"
+            (list "gps" "imu" "barometer" "magnetometer"))))
