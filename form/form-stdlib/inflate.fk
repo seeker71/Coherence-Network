@@ -1,0 +1,188 @@
+; inflate.fk — RFC 1951 DEFLATE decompression, as a pure Form recipe.
+;
+; Canonical truth: this recipe MEANS inflate. A kernel with the bit primitives
+; (band, bor, shl_u32, shr_u32) and integer arithmetic can decompress any
+; DEFLATE stream from this definition alone — no host zlib. It is the companion
+; to adler32.fk: adler32 is the CHECKSUM on a zlib stream's tail; inflate is the
+; BODY. Together they read FlateDecode (PDF), PNG IDAT, HTTP "deflate", and the
+; .zip 0x08 envelope. The recipe stays sovereign across Go, Rust, TS, and fkwu.
+;
+; The codec is integer by its own nature (Huffman code lengths, bit reads, byte
+; copies) — NOT because Form avoids floats; the body proves fp64 four-way too.
+;
+; preludes: form-stdlib/core.fk
+;
+; --- shapes -----------------------------------------------------------------
+; bit reader  : (list bitbuf bitcnt bytes)   LSB-first, whole-byte buffered
+; huff table  : (list counts symbols)         puff-style canonical decode
+;   counts[l] = number of codes of bit-length l (l in 0..15; counts[0] unused)
+;   symbols   = symbols ordered by (length, symbol) — the canonical assignment
+; output      : a REVERSED int list (head = most-recent byte) so an LZ77
+;               back-reference of distance d reads index d-1 from the head and
+;               overlapping copies (d < length) fall out for free.
+
+(do
+    ; ---- small list helpers (no reverse/append builtins) -------------------
+    (defn rev-onto (xs acc) (if (eq (len xs) 0) acc (rev-onto (tail xs) (cons (head xs) acc))))
+    (defn rev (xs) (rev-onto xs (list)))
+    (defn append-list (xs ys) (if (eq (len xs) 0) ys (cons (head xs) (append-list (tail xs) ys))))
+    (defn rep (v n) (if (eq n 0) (list) (cons v (rep v (sub n 1)))))
+    (defn rep-onto (v n out) (if (eq n 0) out (rep-onto v (sub n 1) (cons v out))))
+    (defn take-n (xs n) (if (eq n 0) (list) (cons (head xs) (take-n (tail xs) (sub n 1)))))
+    (defn drop-n (xs n) (if (eq n 0) xs (drop-n (tail xs) (sub n 1))))
+    (defn list-eq (a b)
+        (if (eq (len a) 0)
+            (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0) 0
+                (if (eq (head a) (head b)) (list-eq (tail a) (tail b)) 0))))
+    (defn idx-in (xs v i)
+        (if (eq (len xs) 0) (sub 0 1)
+            (if (eq (head xs) v) i (idx-in (tail xs) v (add i 1)))))
+
+    ; ---- bit reader --------------------------------------------------------
+    (defn br-bitbuf (st) (nth st 0))
+    (defn br-bitcnt (st) (nth st 1))
+    (defn br-bytes  (st) (nth st 2))
+    ; ensure >= k bits buffered (pulls whole bytes; valid streams never over-read)
+    (defn br-need (st k)
+        (if (ge (br-bitcnt st) k) st
+            (br-need
+                (list (bor (br-bitbuf st) (shl_u32 (head (br-bytes st)) (br-bitcnt st)))
+                      (add (br-bitcnt st) 8)
+                      (tail (br-bytes st)))
+                k)))
+    ; read k bits LSB-first -> (list value newstate)
+    (defn br-bits (st k)
+        (do (let s (br-need st k))
+            (let v (band (br-bitbuf s) (sub (shl_u32 1 k) 1)))
+            (list v (list (shr_u32 (br-bitbuf s) k) (sub (br-bitcnt s) k) (br-bytes s)))))
+    ; discard partial bits so the buffer sits on a byte boundary (for stored blocks)
+    (defn br-align (st) (nth (br-bits st (mod (br-bitcnt st) 8)) 1))
+
+    ; ---- canonical Huffman -------------------------------------------------
+    (defn count-eq (xs v) (if (eq (len xs) 0) 0 (add (if (eq (head xs) v) 1 0) (count-eq (tail xs) v))))
+    (defn build-counts (lengths l maxl)
+        (if (gt l maxl) (list) (cons (count-eq lengths l) (build-counts lengths (add l 1) maxl))))
+    (defn syms-of-len (lengths l idx n)
+        (if (ge idx n) (list)
+            (if (eq (nth lengths idx) l)
+                (cons idx (syms-of-len lengths l (add idx 1) n))
+                (syms-of-len lengths l (add idx 1) n))))
+    (defn build-symbols (lengths l maxl n)
+        (if (gt l maxl) (list)
+            (append-list (syms-of-len lengths l 0 n) (build-symbols lengths (add l 1) maxl n))))
+    (defn huff-build (lengths)
+        (list (build-counts lengths 0 15) (build-symbols lengths 1 15 (len lengths))))
+    (defn huff-counts (h) (nth h 0))
+    (defn huff-symbols (h) (nth h 1))
+    ; puff decode: read 1 bit at a time, walk lengths -> (list symbol newstate)
+    (defn huff-decode (st h len code first index)
+        (do (let r (br-bits st 1))
+            (let st2 (nth r 1))
+            (let code1 (bor code (nth r 0)))
+            (let count (nth (huff-counts h) len))
+            (if (lt (sub code1 count) first)
+                (list (nth (huff-symbols h) (add index (sub code1 first))) st2)
+                (huff-decode st2 h (add len 1) (shl_u32 code1 1)
+                             (shl_u32 (add first count) 1) (add index count)))))
+
+    ; ---- fixed Huffman tables (RFC 3.2.6) ----------------------------------
+    (defn fixed-litlen-lengths ()
+        (append-list (rep 8 144) (append-list (rep 9 112) (append-list (rep 7 24) (rep 8 8)))))   ; 288
+    (defn fixed-dist-lengths () (rep 5 30))
+
+    ; ---- length / distance base + extra-bit tables (RFC 3.2.5) -------------
+    (defn length-base () (list 3 4 5 6 7 8 9 10 11 13 15 17 19 23 27 31 35 43 51 59 67 83 99 115 131 163 195 227 258))
+    (defn length-extra () (list 0 0 0 0 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5 5 5 0))
+    (defn dist-base () (list 1 2 3 4 5 7 9 13 17 25 33 49 65 97 129 193 257 385 513 769 1025 1537 2049 3073 4097 6145 8193 12289 16385 24577))
+    (defn dist-extra () (list 0 0 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10 10 11 11 12 12 13 13))
+
+    ; ---- LZ77 copy over the reversed output --------------------------------
+    (defn lz-copy (out distance length)
+        (if (eq length 0) out
+            (lz-copy (cons (nth out (sub distance 1)) out) distance (sub length 1))))
+
+    ; ---- decode literals/length-distance until end-of-block (sym 256) ------
+    (defn inflate-syms (st litlen dist out)
+        (do (let r (huff-decode st litlen 1 0 0 0))
+            (let sym (nth r 0))
+            (let st2 (nth r 1))
+            (if (eq sym 256)
+                (list st2 out)
+                (if (lt sym 256)
+                    (inflate-syms st2 litlen dist (cons sym out))
+                    (do (let li (sub sym 257))
+                        (let lr (br-bits st2 (nth (length-extra) li)))
+                        (let length (add (nth (length-base) li) (nth lr 0)))
+                        (let dr (huff-decode (nth lr 1) dist 1 0 0 0))
+                        (let dsym (nth dr 0))
+                        (let der (br-bits (nth dr 1) (nth (dist-extra) dsym)))
+                        (let distance (add (nth (dist-base) dsym) (nth der 0)))
+                        (inflate-syms (nth der 1) litlen dist (lz-copy out distance length)))))))
+
+    ; ---- stored block (BTYPE 00) -------------------------------------------
+    (defn read-bytes-n (st n out)
+        (if (eq n 0) (list st out)
+            (do (let r (br-bits st 8)) (read-bytes-n (nth r 1) (sub n 1) (cons (nth r 0) out)))))
+    (defn inflate-stored (st out)
+        (do (let sta (br-align st))
+            (let l0 (br-bits sta 8)) (let l1 (br-bits (nth l0 1) 8))
+            (let len (bor (nth l0 0) (shl_u32 (nth l1 0) 8)))
+            (let n0 (br-bits (nth l1 1) 8)) (let n1 (br-bits (nth n0 1) 8))   ; NLEN (ones-complement), skipped
+            (read-bytes-n (nth n1 1) len out)))
+
+    ; ---- dynamic block (BTYPE 10) ------------------------------------------
+    (defn cl-order () (list 16 17 18 0 8 7 9 6 10 5 11 4 12 3 13 2 14 1 15))
+    (defn read-vals (st n out)
+        (if (eq n 0) (list st out)
+            (do (let r (br-bits st 3)) (read-vals (nth r 1) (sub n 1) (cons (nth r 0) out)))))
+    (defn build-cl (order valsf hclen j)
+        (if (eq j 19) (list)
+            (do (let p (idx-in order j 0))
+                (let v (if (and (ge p 0) (lt p hclen)) (nth valsf p) 0))
+                (cons v (build-cl order valsf hclen (add j 1))))))
+    ; decode hlit+hdist code lengths (with repeat codes 16/17/18) -> flat length list
+    (defn read-codelens (st clh total prev out)
+        (if (ge (len out) total) (list st (rev out))
+            (do (let r (huff-decode st clh 1 0 0 0))
+                (let sym (nth r 0)) (let st2 (nth r 1))
+                (if (lt sym 16)
+                    (read-codelens st2 clh total sym (cons sym out))
+                    (if (eq sym 16)
+                        (do (let e (br-bits st2 2)) (read-codelens (nth e 1) clh total prev (rep-onto prev (add 3 (nth e 0)) out)))
+                        (if (eq sym 17)
+                            (do (let e (br-bits st2 3)) (read-codelens (nth e 1) clh total 0 (rep-onto 0 (add 3 (nth e 0)) out)))
+                            (do (let e (br-bits st2 7)) (read-codelens (nth e 1) clh total 0 (rep-onto 0 (add 11 (nth e 0)) out)))))))))
+    (defn inflate-dynamic (st out)
+        (do (let r1 (br-bits st 5)) (let hlit (add (nth r1 0) 257))
+            (let r2 (br-bits (nth r1 1) 5)) (let hdist (add (nth r2 0) 1))
+            (let r3 (br-bits (nth r2 1) 4)) (let hclen (add (nth r3 0) 4))
+            (let rv (read-vals (nth r3 1) hclen (list)))
+            (let valsf (rev (nth rv 1)))
+            (let clh (huff-build (build-cl (cl-order) valsf hclen 0)))
+            (let rc (read-codelens (nth rv 0) clh (add hlit hdist) 0 (list)))
+            (let lens (nth rc 1))
+            (let litlen (huff-build (take-n lens hlit)))
+            (let dist (huff-build (take-n (drop-n lens hlit) hdist)))
+            (inflate-syms (nth rc 0) litlen dist out)))
+
+    ; ---- block loop --------------------------------------------------------
+    (defn inflate-block (st out)
+        (do (let bf (br-bits st 1)) (let bfinal (nth bf 0))
+            (let bt (br-bits (nth bf 1) 2)) (let btype (nth bt 0))
+            (let res
+                (if (eq btype 0) (inflate-stored (nth bt 1) out)
+                    (if (eq btype 1) (inflate-syms (nth bt 1) (huff-build (fixed-litlen-lengths)) (huff-build (fixed-dist-lengths)) out)
+                        (if (eq btype 2) (inflate-dynamic (nth bt 1) out)
+                            (list (nth bt 1) out)))))
+            (if (eq bfinal 1) (nth res 1) (inflate-block (nth res 0) (nth res 1)))))
+
+    ; ---- THE ENTRY POINT: raw DEFLATE byte list -> inflated byte list -------
+    (defn inflate (deflate-bytes) (rev (inflate-block (list 0 0 deflate-bytes) (list))))
+
+    ; ---- zlib wrapper (RFC 1950): skip 2-byte header, inflate body ----------
+    ; PDF /FlateDecode streams are zlib-wrapped. The trailing 4-byte adler32 is
+    ; ignored here (decode stops at the final block); callers may cross-check it.
+    (defn zlib-inflate (zbytes) (inflate (tail (tail zbytes))))
+
+    0)

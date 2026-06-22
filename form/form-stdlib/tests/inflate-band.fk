@@ -1,0 +1,46 @@
+; tests/inflate-band.fk — RFC 1951 DEFLATE inflate sibling-witness band.
+;
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/inflate.fk
+;
+; No inflate native exists; the recipe in inflate.fk IS the sole implementation.
+; Four-way sibling parity (Go, Rust, TS, fkwu) attests that each kernel can
+; decompress DEFLATE from primitives alone (band/bor/shl_u32/shr_u32 + ints +
+; lists). Every fixture is a REAL stream emitted by zlib (python zlib oracle),
+; carried in-recipe — no host I/O — so the fourth arm sees the whole algorithm.
+;
+; Coverage (the simplest strange-minimal set that exercises every path):
+;   bit1  stored block (BTYPE 00)                 "Hi"
+;   bit2  fixed-Huffman block + LZ77 back-ref      "abcabcabcabc"
+;   bit4  dynamic-Huffman block (code-length tree) the mission statement
+;   bit8  OVERLAPPING back-ref (distance 1 run)    "aaaaaaaaaa"  ← the classic edge
+;   bit16 zlib wrapper (RFC 1950) ⋈ adler32 trailer the mission statement
+;         — zlib-inflate strips the 2-byte header; adler32 of the result must
+;           equal the stream's trailer value, tying inflate to the checksum recipe.
+;
+; Band verdict: 31 when all five cross. (2^5 - 1.)
+
+(do
+    ;; bit1 — stored
+    (let stored-d (list 1 2 0 253 255 72 105))
+    (let stored-e (list 72 105))
+    ;; bit2 — fixed + back-reference
+    (let fixed-d (list 75 76 74 78 132 33 0))
+    (let fixed-e (list 97 98 99 97 98 99 97 98 99 97 98 99))
+    ;; bit4 — dynamic Huffman
+    (let dyn-d (list 13 199 193 9 128 64 12 4 192 86 182 2 123 176 148 32 107 92 136 137 228 14 5 171 215 249 205 154 168 139 9 229 100 132 156 185 17 213 110 169 113 98 175 70 211 66 175 210 241 28 54 161 129 255 55 151 15))
+    (let dyn-e (list 65 110 32 111 112 101 110 32 105 110 116 101 108 108 105 103 101 110 99 101 32 111 114 103 97 110 105 115 109 32 102 111 114 32 114 101 97 108 105 122 105 110 103 32 119 104 97 116 32 105 115 32 97 108 105 118 101 46))
+    ;; bit8 — overlapping back-ref (distance-1 run-length fill)
+    (let ov-d (list 75 76 132 1 0))
+    (let ov-e (list 97 97 97 97 97 97 97 97 97 97))
+    ;; bit16 — zlib wrapper ⋈ adler32 trailer
+    (let z-d (list 120 218 13 199 193 9 128 64 12 4 192 86 182 2 123 176 148 32 107 92 136 137 228 14 5 171 215 249 205 154 168 139 9 229 100 132 156 185 17 213 110 169 113 98 175 70 211 66 175 210 241 28 54 161 129 255 55 151 15 127 155 21 144))
+    (let z-e (list 65 110 32 111 112 101 110 32 105 110 116 101 108 108 105 103 101 110 99 101 32 111 114 103 97 110 105 115 109 32 102 111 114 32 114 101 97 108 105 122 105 110 103 32 119 104 97 116 32 105 115 32 97 108 105 118 101 46))
+
+    (let ok1  (if (list-eq (inflate stored-d) stored-e) 1 0))
+    (let ok2  (if (list-eq (inflate fixed-d) fixed-e) 2 0))
+    (let ok4  (if (list-eq (inflate dyn-d) dyn-e) 4 0))
+    (let ok8  (if (list-eq (inflate ov-d) ov-e) 8 0))
+    (let zout (zlib-inflate z-d))
+    (let ok16 (if (and (list-eq zout z-e) (eq (adler32 zout) 2140870032)) 16 0))
+
+    (add ok1 (add ok2 (add ok4 (add ok8 ok16)))))
