@@ -1,0 +1,59 @@
+; sleep-report.fk — fold a night of per-window CLASS labels into the morning readout, in Form.
+;
+; sleep-night.fk folds a 0/1 snore stream; this is its multi-class sibling, the reporting end of the
+; sleep-classify.fk chain. The carrier classifies each window (silent / quiet-breath / snore / steady-noise
+; / loud-event, with a local oracle settling the snore-vs-speech ones), giving a stream of LABELS across the
+; night. This recipe answers, per class, what a person reads in the morning: how many windows, what share of
+; the night, how many separate episodes, the longest unbroken stretch, and which class held the night.
+;
+; Labels are strings; matching is str_eq (the same content-addressed equality the four kernels agree on).
+; Integers only beyond that: counts add, fractions are count*100/total (0 on an empty night, no div-by-zero).
+;
+; Proven by: form-stdlib/tests/sleep-report-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    ; total windows in the night
+    (defn sr-total (labels) (len labels))
+
+    ; how many windows carried a given class
+    (defn sr-count (labels target)
+        (if (ge (len labels) 1)
+            (add (if (str_eq (head labels) target) 1 0) (sr-count (tail labels) target))
+            0))
+
+    ; share of the night spent in a class = count*100/total
+    (defn sr-fraction (labels target)
+        (if (ge (len labels) 1) (div (mul (sr-count labels target) 100) (len labels)) 0))
+
+    ; episodes = rising edges: a window of `target` whose predecessor was not `target` (or the night start).
+    ; walk carrying the previous label; "" never equals a real class, so the first window can open an episode.
+    (defn sr-eps (labels target prev acc)
+        (if (ge (len labels) 1)
+            (sr-eps (tail labels) target (head labels)
+                (if (str_eq (head labels) target)
+                    (if (str_eq prev target) acc (add acc 1))
+                    acc))
+            acc))
+    (defn sr-episodes (labels target) (sr-eps labels target "" 0))
+
+    ; longest unbroken run of a class. carry (cur run, best so far); a match grows cur and lifts best,
+    ; a miss resets cur — the same walk as sn-run, keyed on str_eq instead of (eq x 1).
+    (defn sr-run (labels target cur best)
+        (if (ge (len labels) 1)
+            (if (str_eq (head labels) target)
+                (sr-run (tail labels) target (add cur 1) (if (ge (add cur 1) best) (add cur 1) best))
+                (sr-run (tail labels) target 0 best))
+            best))
+    (defn sr-longest (labels target) (sr-run labels target 0 0))
+
+    ; dominant class = the one holding the most windows, walked over a known class list (ties keep the
+    ; FIRST class — same oldest-wins stability as nearest-shape). "" if the night is empty.
+    (defn sr-dom-loop (labels classes best bestn)
+        (if (ge (len classes) 1)
+            (if (gt (sr-count labels (head classes)) bestn)
+                (sr-dom-loop labels (tail classes) (head classes) (sr-count labels (head classes)))
+                (sr-dom-loop labels (tail classes) best bestn))
+            best))
+    (defn sr-dominant (labels classes) (sr-dom-loop labels classes "" 0))
+
+    0)

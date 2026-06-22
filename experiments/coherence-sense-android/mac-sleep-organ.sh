@@ -25,7 +25,9 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-FORM="$ROOT/form"
+# FORM is the dir the kernel loads recipes from (expects form-stdlib/*.fk under it). Override with
+# SLEEP_FORM to point at a durable copy — so a morning re-analysis survives the worktree being cleaned.
+FORM="${SLEEP_FORM:-$ROOT/form}"
 MESH="${HATI_MESH:-https://api.coherencycoin.com/api}"
 UA="coherence-sleep-mac/0.1"
 
@@ -46,6 +48,12 @@ MIC_NAME="${SLEEP_MIC_NAME:-MacBook Pro Microphone}"
 KERNEL="${SLEEP_KERNEL:-$DIR/kernel-go}"
 PRELUDES=(form-stdlib/signal-derivative.fk form-stdlib/sleep-sense.fk form-stdlib/wav-sense.fk)
 NIGHT_PRELUDE=(form-stdlib/sleep-night.fk)
+# Form-native classifier chain (analysis -> features -> nearest-shape recognition), all four-way proven
+CLASSIFY_PRELUDES=(form-stdlib/signal-derivative.fk form-stdlib/sleep-sense.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/sleep-classify.fk form-stdlib/wav-sense.fk)
+REPORT_PRELUDE=(form-stdlib/sleep-report.fk)
+SLEEP_CLASSES='"silent" "quiet-breath" "snore" "steady-noise" "loud-event" "sleep-talk"'
+# the LOCAL oracle: whisper settles the one identity the envelope can't (snore vs speech). local-only.
+WHISPER_MODEL="${SLEEP_WHISPER_MODEL:-$HOME/whisper-models/ggml-large-v3-turbo.bin}"
 
 mkdir -p "$WAVDIR"
 
@@ -151,9 +159,124 @@ EOF
     echo "$out"
 }
 
+# classify one wav through the Form-native classifier -> echo "label strength needs_oracle"
+classify_wav() {  # $1 wav
+    local drv; drv="$(mktemp /tmp/sleepc-XXXXXX.fk)"
+    cat > "$drv" <<EOF
+(do (let e (wav-envelope-file "$1" $STEP))
+    (print (sc-classify e)) (print (sc-strength e)) (print (sc-needs-oracle? e)))
+EOF
+    local out; out="$( cd "$FORM" && "$KERNEL" "${CLASSIFY_PRELUDES[@]}" "$drv" 2>/dev/null )"
+    rm -f "$drv"
+    echo "$(sed -n '1p' <<<"$out") $(sed -n '2p' <<<"$out") $(sed -n '3p' <<<"$out")"
+}
+
+# the LOCAL oracle: does this window carry coherent SPEECH? whisper-cli, transcript stays local.
+# returns the transcript on stdout when it reads as speech, empty otherwise. honest lane: whisper can
+# hallucinate on non-speech, so this is "whisper heard words here", the ground-truth lane the Form
+# classifier learns from (self-grounding-classifier.fk), not a final verdict.
+oracle_speech() {  # $1 wav -> transcript (only if it reads as speech)
+    [[ -x "$(command -v whisper-cli)" && -f "$WHISPER_MODEL" ]] || { echo ""; return; }
+    local of; of="$(mktemp /tmp/sleepw-XXXXXX)"
+    whisper-cli -m "$WHISPER_MODEL" -f "$1" -nt -oj -of "$of" -t 4 -l auto >/dev/null 2>&1
+    local txt=""
+    [[ -f "$of.json" ]] && txt="$(jq -r '[.transcription[].text] | join(" ")' "$of.json" 2>/dev/null | tr 'A-Z' 'a-z')"
+    rm -f "$of.json" "$of"
+    # strip whisper's non-speech markers + punctuation; speech = at least two word-runs survive
+    local clean; clean="$(echo "$txt" | sed -E 's/\[[^]]*\]//g; s/\([^)]*\)//g; s/[^a-z ]//g' | tr -s ' ')"
+    local words; words="$(echo "$clean" | wc -w | tr -d ' ')"
+    if [[ "${words:-0}" -ge 2 ]]; then echo "$(echo "$clean" | tr -s ' ')"; else echo ""; fi
+}
+
+# fold classified.csv into a Form-native per-class readout (sleep-report)
+build_classified_readout() {  # $1 dir
+    local dir="$1"
+    local ccsv="$dir/classified.csv" out="$dir/readout-classified.txt"
+    [[ -f "$ccsv" ]] || { echo "no classified.csv in $dir"; return 1; }
+    ensure_kernel
+    # label stream (col 3), quoted, for the Form report
+    local labels; labels="$(awk -F, 'NR>1{printf "\"%s\" ",$3}' "$ccsv")"
+    local oracle_used; oracle_used="$(awk -F, 'NR>1 && $5=="yes"{n++} END{print n+0}' "$ccsv")"
+    local first last; first="$(awk -F, 'NR==2{print $2}' "$ccsv")"; last="$(awk -F, 'END{print $2}' "$ccsv")"
+    local drv; drv="$(mktemp /tmp/sleepr-XXXXXX.fk)"
+    cat > "$drv" <<EOF
+(do (let xs (list ${labels:-}))
+    (let classes (list $SLEEP_CLASSES))
+    (print (sr-total xs))
+    (print (sr-dominant xs classes))
+    (print (sr-count xs "silent")) (print (sr-count xs "quiet-breath"))
+    (print (sr-count xs "snore"))  (print (sr-count xs "steady-noise"))
+    (print (sr-count xs "loud-event")) (print (sr-count xs "sleep-talk"))
+    (print (sr-episodes xs "snore")) (print (sr-longest xs "snore")) (print (sr-fraction xs "snore")))
+EOF
+    local r; r="$( cd "$FORM" && "$KERNEL" "${REPORT_PRELUDE[@]}" "$drv" 2>/dev/null )"; rm -f "$drv"
+    local tot dom n_sil n_qb n_sn n_st n_le n_tk sn_ep sn_lg sn_pc
+    tot="$(sed -n '1p' <<<"$r")"; dom="$(sed -n '2p' <<<"$r")"
+    n_sil="$(sed -n '3p' <<<"$r")"; n_qb="$(sed -n '4p' <<<"$r")"; n_sn="$(sed -n '5p' <<<"$r")"
+    n_st="$(sed -n '6p' <<<"$r")"; n_le="$(sed -n '7p' <<<"$r")"; n_tk="$(sed -n '8p' <<<"$r")"
+    sn_ep="$(sed -n '9p' <<<"$r")"; sn_lg="$(sed -n '10p' <<<"$r")"; sn_pc="$(sed -n '11p' <<<"$r")"
+    {
+        echo "Sleep sensing — night of $DATE  (Form-native classification)"
+        echo "================================================================"
+        echo
+        echo "Captured $first  →  $last  ·  ${tot:-0} windows of ${WINDOW}s"
+        echo "The night was mostly: ${dom:-—}"
+        echo
+        echo "What each window's sound looked like (named in Form, four-way proven):"
+        printf "   %-14s %s\n" "silent"       "${n_sil:-0}"
+        printf "   %-14s %s\n" "quiet-breath" "${n_qb:-0}"
+        printf "   %-14s %s   (loud + periodic)\n" "snore" "${n_sn:-0}"
+        printf "   %-14s %s   (loud but flat — a fan/AC, not a snore)\n" "steady-noise" "${n_st:-0}"
+        printf "   %-14s %s   (a brief loud spike)\n" "loud-event" "${n_le:-0}"
+        printf "   %-14s %s   (whisper heard words — likely speech, not a snore)\n" "sleep-talk" "${n_tk:-0}"
+        echo
+        echo "Snore detail: ${n_sn:-0} windows · ${sn_pc:-0}% of the night · ${sn_ep:-0} episode(s) · longest run ${sn_lg:-0} window(s)"
+        echo
+        echo "How this was decided"
+        echo "--------------------"
+        echo "• Each window's energy envelope → a 3-bin fingerprint [loud osc peak] → nearest interned"
+        echo "  prototype (Form recipe sleep-classify, proven four-way on Go/Rust/TS/fkwu). Earned"
+        echo "  confidence, not asserted — the body's own recognition."
+        echo "• The ONE thing the envelope can't settle — snore vs speech, both 'loud + periodic' — was"
+        echo "  handed to the LOCAL oracle (whisper, on-device): ${oracle_used:-0} window(s) escalated;"
+        echo "  where it heard coherent words the window became 'sleep-talk', else the Form label stood."
+        echo "• Honest lane: this names envelope SHAPE, not verified identity; whisper can hallucinate on"
+        echo "  non-speech. Nothing left this Mac — no audio, no transcript, no per-window data."
+        echo
+        echo "(body: sleep-classify.fk + sleep-report.fk, composing feature-vector + nearest-shape; oracle: local whisper)"
+    } > "$out"
+    echo "$out"
+}
+
 # ---- modes -------------------------------------------------------------------
 if [[ "${1:-}" == "--readout" ]]; then
     build_readout "${2:-$DIR}"; exit 0
+fi
+
+# --classify DIR : re-read the kept WAVs through the Form-native classifier; escalate only the windows
+# whose acoustic identity the envelope can't settle (snore/loud-event) to the LOCAL whisper oracle.
+if [[ "${1:-}" == "--classify" ]]; then
+    cdir="${2:-$DIR}"; ensure_kernel
+    ccsv="$cdir/classified.csv"
+    echo "idx,ts,label,strength,oracle_used,wav" > "$ccsv"
+    i=0; esc=0
+    for w in "$cdir"/wav/win-*.wav; do
+        [[ -f "$w" ]] || continue
+        i=$((i+1))
+        read -r label strength needs < <(classify_wav "$w")
+        used="no"
+        if [[ "${needs:-0}" == "1" ]]; then
+            esc=$((esc+1)); used="yes"
+            heard="$(oracle_speech "$w")"
+            [[ -n "$heard" ]] && label="sleep-talk"
+        fi
+        ts="$(stat -f '%Sm' -t '%Y-%m-%dT%H:%M:%S' "$w" 2>/dev/null)"
+        echo "$i,$ts,${label:-unknown},${strength:-0},$used,$(basename "$w")" >> "$ccsv"
+        printf "\r[sleep] classified %d windows (%d escalated to oracle)   " "$i" "$esc" >&2
+    done
+    echo >&2
+    build_classified_readout "$cdir"
+    exit 0
 fi
 
 ensure_kernel
