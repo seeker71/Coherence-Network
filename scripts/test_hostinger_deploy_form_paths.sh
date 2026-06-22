@@ -33,6 +33,15 @@ grep -Fq 'coherence-api-kernel-native-first.rule: "Host(`api.coherencycoin.com`)
 grep -Fq 'coherence-api-kernel-native-first.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router native-first ingress does not target the production manifest service"
 
+grep -Fq 'coherence-api-kernel-native-first.priority: "1160"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router native-first ingress no longer sits above the base API router and below BML-specific routes"
+
+grep -Fq 'coherence-api-kernel-runtime-attention.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/attention/kernel-runtime`)"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the production-manifest attention probe"
+
+grep -Fq 'coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router attention probe ingress does not target the production manifest service"
+
 grep -Fq 'PathRegexp(`^/api/views/stats/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the views-stats BML template route"
 
@@ -159,6 +168,12 @@ fi
 
 grep -Fq "BML front-door promoted read routes" "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the promoted BML read routes"
+
+grep -Fq 'printf '\''%s'\'' '\''$kernel_image_payload'\'' >/tmp/kernel-image.request.json' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not write the kernel image proposal payload as a request file"
+
+grep -Fq -- '--data-binary @/tmp/kernel-image.request.json' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not post the kernel image proposal payload from a request file"
 
 grep -Fq 'X-Form-Handler: \${handler}' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not require promoted BML handler proof"
