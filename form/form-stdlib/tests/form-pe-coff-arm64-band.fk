@@ -1,0 +1,30 @@
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk
+;
+; form-pe-coff-arm64-band — the Windows-arm64 native OBJECT door, four-way. The arm64 COFF object is the
+; x64 path's container with exactly ONE field flipped: the machine constant 0x8664 (AMD64) -> 0xAA64 (ARM64).
+; The arm64 instruction BYTES already exist (form-asm); this wraps them in PE-COFF so a host linker (lld-link)
+; can turn the .o into a Windows-arm64 DLL. Closes form-pe-coff-arm64-pending (the object door); the
+; .o -> .exe link stays a host carrier (form-pe-arm64-exec-pending). Layout: 20-byte header + 40-byte
+; .text section + code + 18-byte symbol + 4-byte string table.
+;
+; Verdict 63 when every claim lands:
+;   1   the machine field is ARM64 — bytes [0x64,0xAA] = [100,170] at offset 0
+;   2   the x64 door genuinely DIFFERS at the discriminating byte (offset 1 = 0x86 = 134), not the same object
+;   4   container integrity — the arm64 object for the 8-byte leaf is exactly 20+40+8+18+4 = 90 bytes
+;   8   the .text section name lands right after the 20-byte header (offset 20 = '.' = 46)
+;   16  the arm64 code lands at pe-code-off = 60 (first byte of mov w0,#42 = 0x40 = 64)
+;   32  the external symbol 'recipe' lands after header+section+code (offset 68 = 'r' = 114)
+(do
+    (defn at (xs i) (if (eq i 0) (head xs) (at (tail xs) (sub i 1))))
+
+    (let code (pe-arm64-recipe-ret42-code))
+    (let obj (pe-arm64-recipe-object code))
+    (let xobj (pe-recipe-object (pe-x64-recipe-mul3-add7-code)))
+
+    (let c0 (if (and (eq (at obj 0) 100) (eq (at obj 1) 170)) 1 0))
+    (let c1 (if (eq (at xobj 1) 134) 2 0))
+    (let c2 (if (eq (len obj) 90) 4 0))
+    (let c3 (if (eq (at obj 20) 46) 8 0))
+    (let c4 (if (eq (at obj 60) 64) 16 0))
+    (let c5 (if (eq (at obj 68) 114) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

@@ -4,10 +4,13 @@
 # SELF-JIT (fkc-nat-expr / fkc-emit-jit2) that crystallizes hot pure functions
 # (tags 1-7,12) to NATIVE and melts them on cool, champion-challenger re-earned
 # (jit-lower 15, full-jit-lower 63, champion-challenger 127). The native target
-# is Form -> asm BYTES, not clang: form-asm 31 / form-lower 31 / form-macho 31 /
-# form-pe-coff 16383 / bootstrap-host 4095 / form-elf 31 -> recipe-dylib 787349 -> codesign 632490, every stage a four-way
-# Form recipe; clang is dropped by form-asm's byte-identity conviction gate,
-# kept only as oracle. One row per band:
+# is Form -> asm BYTES, not clang: form-asm 31 / form-lower 31 / form-macho 31 (mac) /
+# form-pe-coff 16383 + form-pe-coff-arm64 63 (windows x64+arm64 object) / bootstrap-host 4095 /
+# form-elf 31 (linux/android) -> recipe-dylib 787349 -> codesign 632490, every stage a four-way
+# Form recipe; clang is dropped by form-asm's byte-identity conviction gate, kept only as
+# oracle. The GPU forward y=W2·gelu(W1·x+b1)+b2 emits to all three GPU doors from one recipe
+# family: jte-mlp-fwd-msl (metal/mac) / fptx-ffn-fwd 8191 (cuda/nvidia) / form-glsl-ffn-fwd 7
+# (vulkan/android). One row per band:
 #
 #   <band-stem> <table-emitter> <expected-verdict>
 #
@@ -870,3 +873,5 @@ rest-sense fks 15
 tooluse-featurize fkc 63
 mlp-fwd-emit fks 7
 pdf-text fks 1
+form-pe-coff-arm64 fks 63
+form-glsl-ffn-fwd fks 7
