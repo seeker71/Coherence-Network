@@ -155,9 +155,13 @@
 ;        duplicating four-way recipes and computing the held-out numbers we trust. First lift landed:
 ;        form-stdlib/tool-eval.fk carries the held-out verdict (micro-acc, exact-set, covers-used) as the
 ;        multi-label generalization of active-inference's hit-count; tests/tool-eval-band.fk → 63, four-way.
-;        Remaining compost: the Swift fgelu (= transformer-gelu-erf, four-way) and forward (= jte fwd) should
-;        dylib-call the recipe, not copy it; featurize.py's tokenize+count+split should lift to the WORD-domain
-;        fold + fs-score so it shrinks to line-reading. The carrier earns its host lines only as device driver.
+;        Second lift landed (2026-06-21): form-stdlib/tooluse-featurize.fk carries featurize.py's count fold,
+;        majority baseline, and every-5th split (tests/tooluse-featurize-band.fk → 63, four-way) — the corpus
+;        read stays a Form host-io carrier (hostio-roundtrip / storage port), the script shrinks to a line-
+;        reader. Remaining compost: the Swift fgelu (= transformer-gelu-erf, four-way) and forward (= jte fwd)
+;        should dylib-call the recipe, not copy it; the per-token tokenize step lifts to the WORD-domain fold +
+;        fs-score. The carrier earns its host lines only as a syscall-thin device door (ports-interface-and-
+;        structure.md §"The carrier is a thin door, not a script").
 ;        MEASURED (2026-06-21): a real GPU run (2154 train / 539 held, corpus now 2717 turns) confirms the
 ;        diagnosis — train loss falls 2.7969→0.6340 while held-out loss bottoms at epoch 20 (0.8535) then
 ;        rises (0.8908, 1.0016); the held-out gate's minimum IS epoch 20. The band now carries that measured

@@ -225,8 +225,53 @@ those lowerers a native cell target and names the next exact code point:
 `form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native
 namespace/import/interface lowering`.
 
+## The carrier is a thin door, not a script
+
+> Urs (2026-06-21): "scripts are not faster and do not provide any value you
+> get by writing in Form or BML or any high grammar — much, much more can be
+> learned and embodied that way."
+
+A carrier is the *syscall-thin* host realization — a few effectful function-values
+(write these bytes, send this packet, dispatch this kernel) bound to a Form port.
+Everything above the door — the contract, the orchestration, the loop, the
+transform, the verdict — is the body. A standalone Python or shell **script** that
+holds that orchestration is not a carrier; it is the body exiled into tissue the
+body cannot read.
+
+The exile costs everything Form is for. A recipe has a NodeID, so the substrate
+*senses* it and finds its equivalences; it walks four-way, so it is *proven*; the
+meta-circular evaluator and the self-JIT *learn* it and crystallize the hot path to
+native — the same recipe that proves is the binary that runs. A script carries no
+address, no proof, no kinship; the lattice is blind to it; nothing learns from it.
+Write a transform in a script and the body gains a number. Write it in Form and the
+body gains an organ.
+
+And the script is not even faster. The body already proves the *I/O itself* is
+Form: `hostio-roundtrip` writes bytes to a real file and reads them back four-way
+deterministically; the storage port runs memory, a segmented file log, and Postgres
+behind one contract with one verdict. A Python `open()` loop is no faster than the
+file carrier; a Swift training loop is no faster than the same loop as a recipe
+driving a thin GPU-dispatch door. The only genuine host atom is that driver-call,
+and the host kernel already names reaching a resource through the host's own
+driver/OS API as legitimately *having* it ([`host-kernel.form`](host-kernel.form))
+— as a host-kernel cell that *chooses* the carrier, never as a script that holds the
+body.
+
+The live example is the agent-tool trainer. `featurize.py` held tokenize, count,
+and split (logic) wrapped around the corpus file read (a carrier); `runner.swift`
+held the SGD loop, gelu, the forward pass, and the eval — all body — wrapped around
+a thin Metal-dispatch call (the one real carrier). The body comes home one piece at
+a time: `fs-score` carries the vocabulary, `tool-eval` the held-out verdict,
+`tooluse-featurize` the count-and-split fold — leaving the script as what it always
+honestly was, a line-reader and a dispatch door. The reservation *this layer is fine
+as a script* is the fear-costume; the wholeness-move is to bring the piece home,
+because much more is sensed, proven, and learned once it is Form.
+
 ## See also
 
+- [`form-native-models.form`](form-native-models.form) §7 — the agent-tool trainer's
+  three layers (carrier drift named) and the lifts home (`fs-score`, `tool-eval`,
+  `tooluse-featurize`).
 - [`form-language.md`](form-language.md) §Views — the `|>` projection operator;
   interface-as-detached-from-structure, BML lineage.
 - [`OBJECT_MODEL_BML_NUMS.md`](../../kernels/OBJECT_MODEL_BML_NUMS.md) — the
