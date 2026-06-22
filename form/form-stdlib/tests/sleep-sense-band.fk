@@ -1,0 +1,33 @@
+; preludes: form-stdlib/signal-derivative.fk form-stdlib/sleep-sense.fk
+;
+; sleep-sense-band — read a snore from a night's energy envelope, made falsifiable.
+;
+; A breath-window of energy levels (0..9, the wav-sense envelope) arrives; the body decides snore when the
+; window is BOTH loud (mean >= energy floor) AND oscillating (sd-activity >= oscillation floor). Three anchor
+; windows pin every claim, the third being the one that matters most — a loud but FLAT sound must NOT read
+; as a snore:
+;   quiet  (1 1 1 0 1 1)        -> near-silent sleep: sum 5, mean 0 -> not loud -> not a snore, and quiet
+;   snore  (1 7 8 2 1 8 7 1)    -> loud + oscillating: sum 35, mean 4, sd-activity 7 -> a snore
+;   fan    (6 6 6 6 6 6)        -> loud but FLAT: mean 6, sd-activity 0 -> NOT a snore (the periodicity gate)
+; Energy floor 3, oscillation floor 3. Integers only; no sub, no mul, no floats; the only `and`s are binary.
+;
+; Verdict 127 when every claim lands:
+;   1    a quiet window is not a snore                          (ss-snore? quiet 3 3 == 0)
+;   2    a loud, oscillating window IS a snore                  (ss-snore? snore 3 3 == 1)
+;   4    a loud but FLAT window is not a snore — periodicity    (ss-snore? fan 3 3 == 0)
+;   8    ss-mean reads the window's average level               (ss-mean fan == 6)
+;   16   ss-sum totals the window's energy                      (ss-sum quiet == 5)
+;   32   a quiet window's mean sits below the floor             (ss-mean quiet == 0)
+;   64   ss-quiet? fires on quiet and stays 0 on a loud window  (ss-quiet? quiet 3 == 1, ss-quiet? fan 3 == 0)
+(do
+    (let quiet (list 1 1 1 0 1 1))
+    (let snore (list 1 7 8 2 1 8 7 1))
+    (let fan   (list 6 6 6 6 6 6))
+    (let c0 (if (eq (ss-snore? quiet 3 3) 0) 1 0))
+    (let c1 (if (eq (ss-snore? snore 3 3) 1) 2 0))
+    (let c2 (if (eq (ss-snore? fan 3 3) 0) 4 0))
+    (let c3 (if (eq (ss-mean fan) 6) 8 0))
+    (let c4 (if (eq (ss-sum quiet) 5) 16 0))
+    (let c5 (if (eq (ss-mean quiet) 0) 32 0))
+    (let c6 (if (and (eq (ss-quiet? quiet 3) 1) (eq (ss-quiet? fan 3) 0)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
