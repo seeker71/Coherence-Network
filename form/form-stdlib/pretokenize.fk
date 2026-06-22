@@ -1,0 +1,85 @@
+; pretokenize.fk — GPT-2 / whisper regex pre-tokenization (word splitting), as a Form recipe.
+;
+; preludes: (none beyond the kernel — pure string/int/list recursion)
+;
+; Byte-level BPE never merges across a "pre-token" boundary: text is first split into word/number/
+; punctuation/whitespace chunks, THEN each chunk is byte→symbol mapped (byte-to-symbol.fk) and merged
+; (bpe-tokenizer.fk). The splitter is a fixed regex — GPT-2's, which whisper inherits:
+;
+;   's|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+
+;
+; A regex IS a recipe (a character-class state machine), so it is Form. Over ASCII (the byte domain the
+; merge core works in) \p{L}→[A-Za-z], \p{N}→[0-9], and this pattern is bit-identical to the real
+; openai/whisper-tiny tokenizer's pre-tokenization. The alternation, tried left-to-right at each
+; position, becomes a left-to-right scan: at i, take the FIRST matching alternative, emit that
+; substring, continue from its end. The two whitespace alternatives encode GPT-2's load-bearing law —
+; `\s+(?!\S)` leaves the LAST whitespace of an internal run to lead the next word (" ?\p{L}+"), while a
+; trailing run (nothing non-space follows) is emitted whole. This is the algorithmic FRONT-END that
+; feeds byte-to-symbol.fk → bpe-tokenizer.fk; the byte→symbol table and merge table are carrier DATA,
+; this recipe is the splitter. All char_at/ord/str_concat/str_len — the four-way string subset; the
+; class scan is a generic run-finder taking a predicate (higher-order, four-way per geometric-learning).
+
+(do
+  ; --- character classes by ord ---
+  (defn pt-ws? (c)
+    (do (let o (ord c))
+        (if (if (eq o 32) 1 (if (eq o 9) 1 (if (eq o 10) 1 (if (eq o 11) 1 (if (eq o 12) 1 (if (eq o 13) 1 0)))))) 1 0)))
+  (defn pt-letter? (c)
+    (do (let o (ord c))
+        (if (if (ge o 65) (le o 90) 0) 1 (if (if (ge o 97) (le o 122) 0) 1 0))))
+  (defn pt-digit? (c)
+    (do (let o (ord c)) (if (if (ge o 48) (le o 57) 0) 1 0)))
+  (defn pt-other? (c)
+    (if (eq (pt-ws? c) 1) 0 (if (eq (pt-letter? c) 1) 0 (if (eq (pt-digit? c) 1) 0 1))))
+
+  ; first index >= k where the class predicate fails (or n) — the maximal run end.
+  (defn pt-run (s n k pred)
+    (if (ge k n) n
+        (if (eq (pred (char_at s k)) 1) (pt-run s n (add k 1) pred) k)))
+
+  ; s[i]=="'" → contraction length INCLUDING the quote (2 for 's/'t/'m/'d, 3 for 're/'ve/'ll), else 0.
+  (defn pt-contract-len (s n i)
+    (if (ge (add i 1) n) 0
+        (do (let a (ord (char_at s (add i 1))))
+            (if (if (eq a 115) 1 (if (eq a 116) 1 (if (eq a 109) 1 (if (eq a 100) 1 0)))) 2
+                (if (ge (add i 2) n) 0
+                    (do (let b (ord (char_at s (add i 2))))
+                        (if (if (and (eq a 114) (eq b 101)) 1
+                                (if (and (eq a 118) (eq b 101)) 1
+                                    (if (and (eq a 108) (eq b 108)) 1 0)))
+                            3 0)))))))
+
+  ; end index (exclusive) of the pre-token starting at i — the alternation, in order.
+  (defn pt-end (s n i)
+    (do (let c (char_at s i)) (let o (ord c))
+        (let cl (if (eq o 39) (pt-contract-len s n i) 0))
+        (if (gt cl 0) (add i cl)
+            ; ` ?\p{L}+`
+            (if (eq (pt-letter? c) 1) (pt-run s n (add i 1) pt-letter?)
+                (if (if (eq o 32) (if (lt (add i 1) n) (pt-letter? (char_at s (add i 1))) 0) 0)
+                    (pt-run s n (add i 2) pt-letter?)
+                    ; ` ?\p{N}+`
+                    (if (eq (pt-digit? c) 1) (pt-run s n (add i 1) pt-digit?)
+                        (if (if (eq o 32) (if (lt (add i 1) n) (pt-digit? (char_at s (add i 1))) 0) 0)
+                            (pt-run s n (add i 2) pt-digit?)
+                            ; ` ?[^\s\p{L}\p{N}]+`
+                            (if (eq (pt-other? c) 1) (pt-run s n (add i 1) pt-other?)
+                                (if (if (eq o 32) (if (lt (add i 1) n) (pt-other? (char_at s (add i 1))) 0) 0)
+                                    (pt-run s n (add i 2) pt-other?)
+                                    ; whitespace: c is space, next is space-or-end.
+                                    ; `\s+(?!\S)` leaves the last ws of an internal run; a trailing run is whole.
+                                    (do (let j (pt-run s n i pt-ws?))
+                                        (if (ge j n) j (sub j 1))))))))))))
+
+  ; substring s[i..e) by char accumulation (char_at returns a one-char string).
+  (defn pt-sub (s i e)
+    (if (ge i e) "" (str_concat (char_at s i) (pt-sub s (add i 1) e))))
+
+  ; scan: emit the pre-token at i, continue from its end.
+  (defn pt-list (s n i)
+    (if (ge i n) (list)
+        (do (let e (pt-end s n i)) (cons (pt-sub s i e) (pt-list s n e)))))
+
+  ; the entry: text -> list of GPT-2 pre-token substrings (in order).
+  (defn pretokenize (s) (pt-list s (str_len s) 0))
+  0)

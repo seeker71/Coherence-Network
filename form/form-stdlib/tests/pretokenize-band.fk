@@ -1,0 +1,45 @@
+; preludes: form-stdlib/core.fk form-stdlib/pretokenize.fk
+;
+; pretokenize-band — GPT-2 / whisper regex pre-tokenization (word splitting) on the four-kernel floor.
+; This is the LAST algorithmic piece of the tokenizer FRONT-END still carrier DATA: byte→symbol mapping
+; crossed four-way (byte-to-symbol.fk #3503), the merge core crossed four-way (bpe-tokenizer.fk #3447);
+; pre-tokenization is the splitter that runs BEFORE both — text → word/number/punct/whitespace chunks,
+; so the merge core never merges across a word boundary. The recipe implements GPT-2's fixed pattern
+; (which whisper inherits); over ASCII it is bit-identical to the real openai/whisper-tiny tokenizer's
+; pre-tokenization, confirmed against Python `re` on every fixture before authoring.
+;
+; The proof is the splitting LAWS — the relationships the alternation forces, not one magnitude:
+;
+;   bit 1  — BASE: a lone word is one pre-token. "hello" -> ["hello"]. No boundary, the scan terminator.
+;   bit 2  — LEADING-SPACE law: a word after a space KEEPS the space. "hello world" -> ["hello"," world"]
+;            (` ?\p{L}+` absorbs the single space). The reason " tokenizer" is one chunk, not " "+"tokenizer".
+;   bit 4  — INTERNAL whitespace `\s+(?!\S)`: two spaces between words split as a LONE-space token plus a
+;            leading-space word. "a  b" -> ["a"," "," b"] — the last ws of an internal run leads the word.
+;   bit 8  — TRAILING whitespace: a run with nothing non-space after it is emitted WHOLE, not split.
+;            "a  " -> ["a","  "]. bit 4 vs bit 8 together ARE the `(?!\S)` lookahead — the subtlest law.
+;   bit 16 — CONTRACTION: 's/'t/'re/'ve/'m/'ll/'d split off the preceding word. "don't" -> ["don","'t"].
+;   bit 32 — CLASS boundary: `\p{L}+` stops at a digit; a run never crosses class. "abc123" -> ["abc","123"].
+;   bit 64 — OTHER (punct) run is its own chunk, and the space after it leads the next word.
+;            "a, b" -> ["a",","," b"].
+;   bit 128 — the REAL anchor: " tokenizer" -> [" tokenizer"] — ONE pre-token, the exact string the
+;            bpe-tokenizer band byte-maps to [14862, 6545] against the actual openai/whisper-tiny
+;            tokenizer. The front-end's output IS the merge core's input; this ties them on one floor.
+;
+; Pure string/int/list recursion — no host I/O, no floats (no e-notation risk), small — the
+; fourth-friendly subset. Verdict 255 when the splitter lands four-way.
+(do
+  (defn strs-eq (a b)
+    (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+        (if (eq (len b) 0) 0
+            (if (str_eq (head a) (head b)) (strs-eq (tail a) (tail b)) 0))))
+
+  (let c0 (if (eq (strs-eq (pretokenize "hello") (list "hello")) 1) 1 0))
+  (let c1 (if (eq (strs-eq (pretokenize "hello world") (list "hello" " world")) 1) 2 0))
+  (let c2 (if (eq (strs-eq (pretokenize "a  b") (list "a" " " " b")) 1) 4 0))
+  (let c3 (if (eq (strs-eq (pretokenize "a  ") (list "a" "  ")) 1) 8 0))
+  (let c4 (if (eq (strs-eq (pretokenize "don't") (list "don" "'t")) 1) 16 0))
+  (let c5 (if (eq (strs-eq (pretokenize "abc123") (list "abc" "123")) 1) 32 0))
+  (let c6 (if (eq (strs-eq (pretokenize "a, b") (list "a" "," " b")) 1) 64 0))
+  (let c7 (if (eq (strs-eq (pretokenize " tokenizer") (list " tokenizer")) 1) 128 0))
+
+  (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
