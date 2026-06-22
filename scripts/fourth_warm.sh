@@ -33,9 +33,14 @@
 # O(literals x pool); source-compiler has a huge pool, so it explodes. A secondary O(n) factor —
 # (eq (len X) 0) emptiness checks computing ListLength (O(n)) per recursion step — was removed
 # (-> nil?, byte-identical, verified on 2 bands), but it is NOT the dominant cost: the heavy chain still
-# timed out after the nil? fix. The REAL de-quadratic is an O(1) pool lookup (hash/sorted index instead
-# of flt-sidx's linear scan) — output-preserving (same indices, same table bytes; re-validate by
-# byte-identity against the cached tables), a focused form-flatten.fk change. THAT is the next pass.
+# timed out after the nil? fix. The REAL de-quadratic is an O(1) pool lookup replacing flt-sidx's scan.
+# CRUCIAL: this is NOT a recipe change. Pure Form cannot build an O(1) map — Form lists are cons-cells
+# with no O(1) random access — and the kernel's _dict_* is itself linear (_dict_get scans, _dict_set
+# copies the whole list: O(n)/O(n^2)). So the fix is a NATIVE O(1) HASH-MAP PRIMITIVE added to the three
+# source-walker kernels (Go map / Rust HashMap / TS Map) — fkwu is NOT needed, table-gen runs on
+# Go/Rust/TS — then flt-sidx's pool dedup uses it, keyed in first-occurrence order so index assignments
+# (table bytes / verdicts) stay identical; validate by verdict-preservation on a diverse sample + CI's
+# full gate. A focused MULTI-KERNEL native pass, not a quick recipe edit.
 # JIT (go OR form-native) is ruled out: the flatten is string/list work, neither JIT's op family.
 set -uo pipefail
 cd "$(dirname "$0")/../form" || exit 1
