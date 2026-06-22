@@ -1,0 +1,88 @@
+; spatial-fusion.fk — fuse several sensors' CALIBRATED BUCKETS of one spatial quantity (a coarse
+; location cell, a speed band, a heading octant) into a single ROUGH estimate, weighted by each
+; sensor's confidence. The integer-bucket sibling of confidence-weighted-vote.fk: that recipe fuses
+; STRING labels (model votes) by summed trust; this fuses INTEGER bands (sensor readings) the same
+; way, because a spatial reading is naturally a bucket on a scale, not a name. cc-bucket (from
+; confidence-calibrate.fk) is what makes the bands comparable across unlike sensors first — GPS speed,
+; accelerometer motion, and Wi-Fi access-point transition rate all calibrate to the SAME 0..k speed
+; band before they are allowed to vote, so "band 2" means the same thing whoever read it.
+;
+; THE GOAL (Urs): a rough estimate of location, speed, and direction from MORE THAN ONE sensor, so
+; that each can be trained separately, the sensors learn from each other, and the estimate still holds
+; when one sensor is less accurate than another. This recipe is the fusion brick of that goal:
+;
+;   - FUSE: each sensor casts a ballot (band weight) — the band it read, weighted by its current
+;     confidence. sf-consensus returns the band carrying the greatest summed confidence (weighted
+;     plurality, the same max-select spine as cw-winner). A trusted GPS fix outweighs a drifty accel
+;     integration; many small trusted reads accumulate. This is the rough estimate.
+;
+;   - LEARN FROM EACH OTHER: sf-residual is how far one sensor's band sits from the fused consensus —
+;     the training signal. A sensor that chronically lands far from consensus has its confidence
+;     lowered next round (feed the residual to confidence-calibrate / trust-decay); one that tracks
+;     consensus earns weight. The sensors co-calibrate against the body's own agreement, not an oracle.
+;
+;   - WORK WHEN ONE IS INACCURATE: a sensor with no current reading simply casts no ballot (or weight
+;     0, a present-but-silent vote that sums to nothing), so the consensus forms from whoever remains.
+;     Drop GPS in a tunnel and accel + Wi-Fi still fuse to an estimate — graceful degradation, never a
+;     gap. sf-agree counts how many sensors read the consensus band: more agreement = more redundancy
+;     = more trust in the rough estimate, the same agreement-as-grounding the four kernels live by.
+;
+; A ballot is a two-element list (band weight): (nth b 0) the integer band, (nth b 1) the integer
+; confidence weight. Integers only — bands and weights and residuals are counts on a scale, never
+; floats; the estimate is deliberately ROUGH (a band, not a precise coordinate), which is the honest
+; shape a fusion of noisy sensors can carry without a division it cannot prove.
+;
+; Kin: confidence-weighted-vote.fk (the string-label sibling this mirrors), confidence-calibrate.fk
+; (cc-bucket calibrates each sensor's raw reading to a band before it votes), trust-weighted-colearning.fk
+; (admits a peer's learning by trust — the federation gate above this fusion), mesh-organ-senses.fk
+; (the observed / absent / nothing degradation a silent sensor takes). The carriers (phone GPS, accel,
+; magnetometer, Wi-Fi; Mac organs) only produce the (band weight) ballots; the fusion is Form,
+; kernel-executable, four-way-identical — the Mac and the phone fuse the same ballots to the same band.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/spatial-fusion-band.fk (four-way at validate.sh)
+
+(do
+    ; --- SUMMED CONFIDENCE behind a band: walk the ballots; when a ballot's band eq the target, ADD
+    ;     its weight (nth b 1) into the running sum; else skip. A SUM of confidence, not a tally of
+    ;     hands — the integer-band counterpart of cw-weight-for's str_eq walk. ---
+    (defn sf-weight-for (ballots band)
+        (if (eq (len ballots) 0) 0
+            (if (eq (nth (head ballots) 0) band)
+                (add (nth (head ballots) 1) (sf-weight-for (tail ballots) band))
+                (sf-weight-for (tail ballots) band))))
+
+    ; --- MAX-SELECT over the candidate bands: the band with the greatest summed confidence (weighted
+    ;     plurality). Carry the best band + its best summed weight; a STRICTLY-greater sum replaces it,
+    ;     so the FIRST candidate offered keeps a tie. Seed band 0 / score 0 — any band whose summed
+    ;     confidence is >= 1 takes the lead off the seed; all-silent ballots fall through to band 0. ---
+    (defn sf-winner-loop (ballots candidates best best-score)
+        (if (eq (len candidates) 0) (list best best-score)
+            (if (gt (sf-weight-for ballots (head candidates)) best-score)
+                (sf-winner-loop ballots (tail candidates)
+                    (head candidates) (sf-weight-for ballots (head candidates)))
+                (sf-winner-loop ballots (tail candidates) best best-score))))
+
+    ; the fused rough estimate: the band carrying the greatest summed confidence.
+    (defn sf-consensus (ballots candidates)
+        (nth (sf-winner-loop ballots candidates 0 0) 0))
+
+    ; confidence in that estimate = the winning summed confidence (how much trust stood behind it).
+    (defn sf-confidence (ballots candidates)
+        (nth (sf-winner-loop ballots candidates 0 0) 1))
+
+    ; --- AGREEMENT: how many sensors read the consensus band. More agreeing sensors = more redundancy
+    ;     = more trust in the estimate (agreement-as-grounding). A count of hands here, on purpose. ---
+    (defn sf-agree (ballots consensus)
+        (if (eq (len ballots) 0) 0
+            (if (eq (nth (head ballots) 0) consensus)
+                (add 1 (sf-agree (tail ballots) consensus))
+                (sf-agree (tail ballots) consensus))))
+
+    ; --- RESIDUAL: how far one sensor's band sits from the consensus — the train-from-each-other
+    ;     signal. |band - consensus| via core's abs; a sensor with a large residual has read the world
+    ;     differently than the body agreed it is, and earns lower confidence on the next round. ---
+    (defn sf-residual (sensor-band consensus) (abs (sub sensor-band consensus)))
+
+    0)
