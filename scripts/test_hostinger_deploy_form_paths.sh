@@ -42,6 +42,12 @@ grep -Fq 'coherence-api-kernel-runtime-attention.rule: "Host(`api.coherencycoin.
 grep -Fq 'coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router attention probe ingress does not target the production manifest service"
 
+grep -Fq 'coherence-api-bml-runtime-attention.service: "coherence-api-kernel-bml-front-door"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router BML attention ingress does not target the stable BML front door"
+
+grep -Fq 'coherence-api-bml-runtime-attention.priority: "1186"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router BML attention ingress does not sit above the production-manifest attention route"
+
 grep -Fq 'observed_fanout_path_count' "$ROOT_DIR/deploy/kernel-router/production-routes.fk" \
   || fail "kernel-runtime attention route no longer reports the bounded fanout path count"
 
@@ -233,6 +239,9 @@ grep -Fq 'api_spec_registry_detail' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_idea_specs' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the idea specs BML handler"
 
+grep -Fq 'api_attention_kernel_runtime' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the BML runtime attention handler"
+
 grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the translations entity BML handler"
 
@@ -281,6 +290,9 @@ grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/deploy/front-doo
 grep -Fq 'api-native-ok-json("api_agent_task_log"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "agent task log handler does not emit native proof headers"
 
+grep -Fq 'api-native-ok-json("api_attention_kernel_runtime"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "runtime attention handler does not emit native proof headers"
+
 grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "agent task log route class is not exported in the BML routes list"
 
@@ -301,6 +313,9 @@ grep -Fq 'language-route-class-kernel-route(IdeaQuestionCreateRoute)' "$ROOT_DIR
 
 grep -Fq 'language-route-class-kernel-route(IdeaQuestionAnswerRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "idea question answer route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(KernelRuntimeAttentionRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "runtime attention route class is not exported in the BML routes list"
 
 grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "graph node edges route class is not exported in the BML routes list"
