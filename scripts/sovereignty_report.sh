@@ -38,6 +38,25 @@ else
 fi
 echo
 
+# ── feed 3: native-thought routing — the tally is Form (host-read + count in native-thought-receipt.fk) ──
+NTR="${NATIVE_THOUGHT_RECEIPTS:-$HOME/.coherence-network/native-thought-receipts.jsonl}"
+GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
+if [ -f "$NTR" ] && [ -x "$GO" ]; then
+  drv="$(mktemp --suffix=.fk)"; printf '(do (print (ntr-tally "%s")))\n' "$NTR" > "$drv"
+  read -r N HIT ESC <<<"$("$GO" "$STD/sovereignty-receipt.fk" "$STD/native-thought-receipt.fk" "$drv" 2>/dev/null | grep -E '^[0-9]+ [0-9]+ [0-9]+$' | head -1)"
+  rm -f "$drv"
+  if [ "${N:-0}" -gt 0 ] 2>/dev/null; then
+    PCT=$(( 100 * HIT / N ))
+    echo "  native-thought routing (Form tally over the receipt ledger): ${N} thoughts routed — ${HIT} came home (body-hit), ${ESC} rented (escalated) → ${PCT}% sovereign this body"
+    echo "    each escalated row is a free training sample (borrowed-oracle-dividend.form); watch the % rise."
+  else
+    echo "  native-thought routing: ledger present, no decisions recorded yet."
+  fi
+else
+  echo "  native-thought routing: no ledger yet — the door records via scripts/native_thought_receipt.sh (logic in native-thought-receipt.fk)."
+fi
+echo
+
 # ── where to pay attention (attention-signal.fk tiering over the measured per-lane scores) ──
 echo "  → attention (attention-signal.fk, four-way): rank lanes by measured gap × volume."
 echo "    ATTEND  — high volume, far from native: Read/Edit/Write tool-prediction (~65%)."
