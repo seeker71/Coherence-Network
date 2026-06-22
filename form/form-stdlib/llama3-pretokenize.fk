@@ -1,0 +1,128 @@
+; llama3-pretokenize.fk — Llama 3 (tiktoken-style) regex pre-tokenization (word splitting), as a Form recipe.
+;
+; preludes: (none beyond the kernel — pure string/int/list recursion)
+;
+; The whisper/GPT-2 tokenizer front-end is four-way (pretokenize.fk #3542, byte-to-symbol.fk #3503,
+; bpe-tokenizer.fk #3447, tokenize.fk #3550). But the GPU decode stack the body now runs on the M4
+; (#3424/#3412 multi-layer KV-cached llama decode) is LLAMA — and llama3's tokenizer differs from
+; whisper's in exactly ONE algorithmic piece: the pre-tokenization `pat_str`. The byte→symbol map is the
+; SAME byte-level bytes_to_unicode (#3503), and the merge core is the SAME lowest-rank-first BPE (#3447;
+; tiktoken's _byte_pair_merge is lowest-rank-first too) — only the rank TABLE (DATA) and this splitter
+; differ. So this recipe is the one algorithmic gap between the proven GPU llama decode and the first
+; end-to-end native LLAMA token.
+;
+; Llama 3's fixed pattern (Meta tokenizer.py), `\p{L}`→[A-Za-z], `\p{N}`→[0-9] over the ASCII byte domain:
+;
+;   (?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\nA-Za-z0-9]?[A-Za-z]+|[0-9]{1,3}| ?[^\sA-Za-z0-9]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+
+;
+; Four differences from GPT-2's ` 's|'t|...| ?\p{L}+| ?\p{N}+| ?[^\s...]+|\s+(?!\S)|\s+` — each a real law:
+;   (1) CASE-INSENSITIVE contractions `(?i:)` — "DON'T" splits 'T too, not just lowercase 't.
+;   (2) DIGITS group 1-3 `[0-9]{1,3}` (not ` ?\p{N}+`) — "1234" → "123","4", and NO leading space on digits.
+;   (3) WORD leading char `[^\r\nA-Za-z0-9]?\p{L}+` (not ` ?\p{L}+`) — ANY non-newline non-alnum char (not
+;       only a space) is absorbed before a word: "_word" → ["_word"], "@home" → ["@home"], " tok" → [" tok"].
+;   (4) NEWLINES `\s*[\r\n]+` and other-run `[^\s...]+[\r\n]*` get explicit handling — a ws run that ends in
+;       a newline is cut after the LAST newline; a punct run absorbs trailing newlines.
+;
+; A regex IS a recipe (a char-class state machine): the alternation, tried left-to-right at each position,
+; becomes a left-to-right scan — at i take the FIRST matching alternative, emit that substring, continue
+; from its end. Confirmed bit-identical to Python `re` (ASCII-reduced pattern) on every fixture before
+; authoring. All char_at/ord/str_concat/str_len — the four-way string subset; no floats (no e-notation
+; risk), no host I/O, small tables. Feeds byte-to-symbol.fk → bpe-tokenizer.fk for the llama text→ids path.
+
+(do
+  ; --- character classes by ord ---
+  (defn l3-ws? (c)
+    (do (let o (ord c))
+        (if (if (eq o 32) 1 (if (eq o 9) 1 (if (eq o 10) 1 (if (eq o 11) 1 (if (eq o 12) 1 (if (eq o 13) 1 0)))))) 1 0)))
+  (defn l3-letter? (c)
+    (do (let o (ord c))
+        (if (if (ge o 65) (le o 90) 0) 1 (if (if (ge o 97) (le o 122) 0) 1 0))))
+  (defn l3-digit? (c)
+    (do (let o (ord c)) (if (if (ge o 48) (le o 57) 0) 1 0)))
+  (defn l3-crlf? (c)
+    (do (let o (ord c)) (if (if (eq o 10) 1 (if (eq o 13) 1 0)) 1 0)))
+  ; `[^\r\nA-Za-z0-9]` — the optional leading char of a word: NOT cr/lf, NOT letter, NOT digit (space ok).
+  (defn l3-lead? (c)
+    (if (eq (l3-crlf? c) 1) 0 (if (eq (l3-letter? c) 1) 0 (if (eq (l3-digit? c) 1) 0 1))))
+  ; `[^\sA-Za-z0-9]` — the "other" (punct/symbol) class: NOT whitespace, NOT letter, NOT digit.
+  (defn l3-other? (c)
+    (if (eq (l3-ws? c) 1) 0 (if (eq (l3-letter? c) 1) 0 (if (eq (l3-digit? c) 1) 0 1))))
+
+  ; first index >= k where the class predicate fails (or n) — the maximal run end.
+  (defn l3-run (s n k pred)
+    (if (ge k n) n
+        (if (eq (pred (char_at s k)) 1) (l3-run s n (add k 1) pred) k)))
+
+  ; `[0-9]{1,3}` — take up to 3 digits from k (c = count so far). Greedy, max 3.
+  (defn l3-dig3 (s n k c)
+    (if (ge c 3) k
+        (if (ge k n) k
+            (if (eq (l3-digit? (char_at s k)) 1) (l3-dig3 s n (add k 1) (add c 1)) k))))
+
+  ; case-insensitive ord equality against a lowercase/uppercase pair.
+  (defn l3-eqi (o lo hi) (if (eq o lo) 1 (if (eq o hi) 1 0)))
+
+  ; s[i]=="'" → contraction length INCLUDING the quote (2 for 's/'t/'m/'d, 3 for 're/'ve/'ll), case-
+  ; insensitive (the (?i:) flag — llama3 splits 'T/'RE/'LL too), else 0.
+  (defn l3-contract-len (s n i)
+    (if (ge (add i 1) n) 0
+        (do (let a (ord (char_at s (add i 1))))
+            (if (if (l3-eqi a 115 83) 1 (if (l3-eqi a 116 84) 1 (if (l3-eqi a 109 77) 1 (if (l3-eqi a 100 68) 1 0)))) 2
+                (if (ge (add i 2) n) 0
+                    (do (let b (ord (char_at s (add i 2))))
+                        (if (if (and (l3-eqi a 114 82) (l3-eqi b 101 69)) 1
+                                (if (and (l3-eqi a 118 86) (l3-eqi b 101 69)) 1
+                                    (if (and (l3-eqi a 108 76) (l3-eqi b 108 76)) 1 0)))
+                            3 0)))))))
+
+  ; ` ?[^\sA-Za-z0-9]+[\r\n]*` body from p — the "other" run then a trailing run of newlines.
+  (defn l3-other-end (s n p)
+    (do (let e (l3-run s n p l3-other?)) (l3-run s n e l3-crlf?)))
+
+  ; last index of a \r\n char in [i,j), or (sub i 1) sentinel when none.
+  (defn l3-lastnl (s k j acc)
+    (if (ge k j) acc
+        (do (let o (ord (char_at s k)))
+            (l3-lastnl s (add k 1) j (if (if (eq o 10) 1 (if (eq o 13) 1 0)) k acc)))))
+
+  ; whitespace at i: rule (e) `\s*[\r\n]+` cuts a ws run after its LAST newline; otherwise rule
+  ; (f) `\s+(?!\S)` leaves the last ws of an internal run (len>=2), rule (g) `\s+` emits a single
+  ; ws or a trailing run whole. (GPT-2 never hits the run==1 case — its ` ?` absorbs leading spaces;
+  ; llama3 digits do NOT, so " 42" reaches here with one space and must emit it, not collapse to empty.)
+  (defn l3-ws-end (s n i)
+    (do (let j (l3-run s n i l3-ws?))
+        (let lastnl (l3-lastnl s i j (sub i 1)))
+        (if (ge lastnl i) (add lastnl 1)
+            (if (ge j n) j
+                (if (ge (sub j i) 2) (sub j 1) j)))))
+
+  ; end index (exclusive) of the pre-token starting at i — the alternation, in order.
+  (defn l3-end (s n i)
+    (do (let c (char_at s i)) (let o (ord c))
+        (let cl (if (eq o 39) (l3-contract-len s n i) 0))
+        (if (gt cl 0) (add i cl)
+            ; `[^\r\nA-Za-z0-9]?\p{L}+` — bare word, or one leading non-alnum char then letters.
+            (if (eq (l3-letter? c) 1) (l3-run s n (add i 1) l3-letter?)
+                (if (if (eq (l3-lead? c) 1) (if (lt (add i 1) n) (l3-letter? (char_at s (add i 1))) 0) 0)
+                    (l3-run s n (add i 2) l3-letter?)
+                    ; `[0-9]{1,3}` — NO leading space on digits.
+                    (if (eq (l3-digit? c) 1) (l3-dig3 s n i 0)
+                        ; ` ?[^\sA-Za-z0-9]+[\r\n]*` — other run (optionally one leading space) + trailing newlines.
+                        (if (eq (l3-other? c) 1) (l3-other-end s n i)
+                            (if (if (eq o 32) (if (lt (add i 1) n) (l3-other? (char_at s (add i 1))) 0) 0)
+                                (l3-other-end s n (add i 1))
+                                ; `\s*[\r\n]+ | \s+(?!\S) | \s+`
+                                (l3-ws-end s n i)))))))))
+
+  ; substring s[i..e) by char accumulation (char_at returns a one-char string).
+  (defn l3-sub (s i e)
+    (if (ge i e) "" (str_concat (char_at s i) (l3-sub s (add i 1) e))))
+
+  ; scan: emit the pre-token at i, continue from its end.
+  (defn l3-plist (s n i)
+    (if (ge i n) (list)
+        (do (let e (l3-end s n i)) (cons (l3-sub s i e) (l3-plist s n e)))))
+
+  ; the entry: text -> list of llama3 pre-token substrings (in order).
+  (defn llama3-pretokenize (s) (l3-plist s (str_len s) 0))
+  0)
