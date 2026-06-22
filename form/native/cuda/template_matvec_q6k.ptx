@@ -1,0 +1,147 @@
+//
+// form-ptx in-kernel-dequant matvec, Q6_K weights: one thread per output row o.
+//   y[o] = sum_{i=in-1..0} dequant_q6k(W,o,i) * x[i]   (downward right-fold, two roundings)
+//
+// W is the RAW Q6_K superblock bytes resident on the GPU, laid out exactly as GGUF stores them:
+//   row-major over output rows; each row holds nsb=(in/256) superblocks of 210 bytes:
+//     ql[128] qh[64] scales[16](int8) d(f16,2).
+// The per-weight formula mirrors q6k-dequant.fk / gguf_dequant.c deq_q6k() OP-FOR-OP and BIT-FOR-BIT:
+//   h=local/128, wi=local%128, l=wi%32, g=wi/32, is=l/16
+//   qlidx=h*64 + l + (g%2)*32
+//   nib=(g/2==0)?(ql[qlidx]&0xF):(ql[qlidx]>>4)
+//   hi=(qh[h*32+l] >> (2*g)) & 3
+//   q=(nib | (hi<<4)) - 32
+//   scale=scales[h*8 + is + 2*g]   (SIGNED int8)
+//   w=d*scale*q                    (== (d*scale)*q, left-assoc)
+// d decoded f16->f32 via cvt.f32.f16; scale sign-extended from int8 via ld.global.s8.
+// Downward i-walk + (mul.f32 then add.f32) matches template_matvec.ptx so the result is
+// uint32-identical to dequant-to-f32-then-template_matvec.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_matvec_q6k_f32(
+    .param .u64 p_w,        // raw Q6_K superblock bytes [out * nsb * 210]
+    .param .u64 p_x,        // input vector [in]
+    .param .u64 p_y,        // output vector [out]
+    .param .u32 p_out,      // number of output rows
+    .param .u32 p_in        // input dim (multiple of 256)
+)
+{
+    .reg .pred  %p<4>;
+    .reg .f32   %f<16>;
+    .reg .b32   %r<48>;
+    .reg .b64   %rd<24>;
+    .reg .b16   %h<2>;
+
+    ld.param.u64    %rd1, [p_w];
+    ld.param.u64    %rd2, [p_x];
+    ld.param.u64    %rd3, [p_y];
+    ld.param.u32    %r1, [p_out];
+    ld.param.u32    %r2, [p_in];
+
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;   // o = row index
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+
+    // nsb = in/256 ; row byte base = (o*nsb)*210
+    shr.u32         %r7, %r2, 8;          // nsb
+    mul.lo.s32      %r8, %r6, %r7;        // o*nsb
+    mul.lo.s32      %r9, %r8, 210;
+    cvt.u64.u32     %rd4, %r9;
+    add.s64         %rd5, %rd1, %rd4;     // &W[row start]
+
+    mov.f32         %f1, 0f00000000;      // acc
+    mov.u32         %r10, %r2;            // i counter = in
+
+LOOP:
+    setp.eq.u32     %p1, %r10, 0;
+    @%p1 bra        ENDLOOP;
+    sub.u32         %r10, %r10, 1;        // i = i-1
+
+    // superblock for column i
+    shr.u32         %r11, %r10, 8;        // sb_local = i/256
+    and.b32         %r12, %r10, 255;      // local = i%256
+    mul.lo.s32      %r13, %r11, 210;
+    cvt.u64.u32     %rd6, %r13;
+    add.s64         %rd7, %rd5, %rd6;     // &superblock
+    // section bases
+    // ql = &sb (+0) ; qh = &sb+128 ; scales = &sb+192 ; d(f16) = &sb+208
+    add.s64         %rd8, %rd7, 128;      // qh base
+    add.s64         %rd9, %rd7, 192;      // scales base
+
+    // d (f16 at +208)
+    ld.global.u16   %h0, [%rd7+208];
+    cvt.f32.f16  %f2, %h0;             // d
+
+    // index decomposition
+    shr.u32         %r14, %r12, 7;        // h = local/128
+    and.b32         %r15, %r12, 127;      // wi = local%128
+    and.b32         %r16, %r15, 31;       // l = wi%32
+    shr.u32         %r17, %r15, 5;        // g = wi/32
+    shr.u32         %r18, %r16, 4;        // is = l/16
+
+    // qlidx = h*64 + l + (g%2)*32
+    mul.lo.s32      %r19, %r14, 64;       // h*64
+    add.s32         %r20, %r19, %r16;     // + l
+    and.b32         %r21, %r17, 1;        // g%2
+    shl.b32         %r22, %r21, 5;        // (g%2)*32
+    add.s32         %r23, %r20, %r22;     // qlidx
+    // nib = (g/2==0)? (ql[qlidx]&0xF) : (ql[qlidx]>>4)
+    cvt.u64.u32     %rd10, %r23;
+    add.s64         %rd11, %rd7, %rd10;   // &ql[qlidx]  (ql base == &sb)
+    ld.global.u8    %r24, [%rd11];        // ql byte
+    shr.u32         %r25, %r17, 1;        // g/2
+    setp.eq.u32     %p2, %r25, 0;
+    and.b32         %r26, %r24, 15;
+    shr.u32         %r27, %r24, 4;
+    selp.b32        %r28, %r26, %r27, %p2; // nib
+
+    // hi = (qh[h*32+l] >> (2*g)) & 3
+    mul.lo.s32      %r29, %r14, 32;       // h*32
+    add.s32         %r30, %r29, %r16;     // + l
+    cvt.u64.u32     %rd12, %r30;
+    add.s64         %rd13, %rd8, %rd12;   // &qh[h*32+l]
+    ld.global.u8    %r31, [%rd13];        // qh byte
+    shl.b32         %r32, %r17, 1;        // 2*g
+    shr.u32         %r33, %r31, %r32;     // qh >> (2*g)
+    and.b32         %r34, %r33, 3;        // hi
+
+    // q = (nib | (hi<<4)) - 32
+    shl.b32         %r35, %r34, 4;        // hi<<4
+    or.b32          %r36, %r28, %r35;     // nib | (hi<<4)
+    sub.s32         %r37, %r36, 32;       // q  (signed)
+
+    // scale = scales[h*8 + is + 2*g]   (signed int8)
+    mul.lo.s32      %r38, %r14, 8;        // h*8
+    add.s32         %r39, %r38, %r18;     // + is
+    add.s32         %r40, %r39, %r32;     // + 2*g  (r32 == 2*g)
+    cvt.u64.u32     %rd14, %r40;
+    add.s64         %rd15, %rd9, %rd14;   // &scales[idx]
+    ld.global.s8    %r41, [%rd15];        // signed int8 scale -> sign-extended s32
+
+    // w = d * scale * q  == (d*scale)*q
+    cvt.rn.f32.s32  %f3, %r41;            // (float)scale  (signed)
+    cvt.rn.f32.s32  %f4, %r37;            // (float)q      (signed)
+    mul.f32         %f5, %f2, %f3;        // d*scale
+    mul.f32         %f6, %f5, %f4;        // (d*scale)*q  = w
+
+    // acc = w * x[i] + acc
+    mul.wide.u32    %rd16, %r10, 4;
+    add.s64         %rd17, %rd2, %rd16;
+    ld.global.f32   %f7, [%rd17];         // x[i]
+    mul.f32         %f8, %f6, %f7;        // w * x[i]
+    add.f32         %f1, %f8, %f1;        // acc = w*x + acc
+    bra             LOOP;
+
+ENDLOOP:
+    mul.wide.u32    %rd18, %r6, 4;
+    add.s64         %rd19, %rd3, %rd18;
+    st.global.f32   [%rd19], %f1;
+DONE:
+    ret;
+}

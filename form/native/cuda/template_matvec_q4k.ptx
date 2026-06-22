@@ -1,0 +1,168 @@
+//
+// form-ptx in-kernel-dequant matvec, Q4_K weights: one thread per output row o.
+//   y[o] = sum_{i=in-1..0} dequant_q4k(W,o,i) * x[i]   (downward right-fold, two roundings)
+//
+// W is the RAW Q4_K superblock bytes resident on the GPU, laid out exactly as GGUF stores them:
+//   row-major over output rows; each row holds nsb=(in/256) superblocks of 144 bytes:
+//     d(f16,2) dmin(f16,2) scales[12] qs[128].
+// The per-weight formula mirrors q4k-dequant.fk / gguf_dequant.c deq_q4k() OP-FOR-OP and BIT-FOR-BIT:
+//   c=local/64, within=local%64, half=within/32, l=within%32, j=2*c+half
+//   if j<4: sc=scales[j]&63;            mn=scales[j+4]&63
+//   else:   sc=(scales[j+4]&0xF)|((scales[j-4]>>6)<<4)
+//           mn=(scales[j+4]>>4)|((scales[j]>>6)<<4)
+//   qb=qs[c*32+l]; nib=(half==0)?(qb&0xF):(qb>>4)
+//   w=(d*sc)*nib-(dmin*mn)
+// d/dmin decoded f16->f32 via cvt.f32.f16 (IEEE-754, bit-exact to the C decoder on finite scales).
+// The downward i-walk + (mul.f32 then add.f32) accumulation matches template_matvec.ptx exactly so the
+// in-kernel result is uint32-identical to dequant-to-f32-then-template_matvec.
+//
+.version 8.3
+.target sm_89
+.address_size 64
+
+.visible .entry form_matvec_q4k_f32(
+    .param .u64 p_w,        // raw Q4_K superblock bytes [out * nsb * 144]
+    .param .u64 p_x,        // input vector [in]
+    .param .u64 p_y,        // output vector [out]
+    .param .u32 p_out,      // number of output rows
+    .param .u32 p_in        // input dim (multiple of 256)
+)
+{
+    .reg .pred  %p<4>;
+    .reg .f32   %f<16>;
+    .reg .b32   %r<48>;
+    .reg .b64   %rd<24>;
+    .reg .b16   %h<2>;
+
+    ld.param.u64    %rd1, [p_w];     // W base
+    ld.param.u64    %rd2, [p_x];     // x base
+    ld.param.u64    %rd3, [p_y];     // y base
+    ld.param.u32    %r1, [p_out];    // out
+    ld.param.u32    %r2, [p_in];     // in
+
+    mov.u32         %r3, %ctaid.x;
+    mov.u32         %r4, %ntid.x;
+    mov.u32         %r5, %tid.x;
+    mad.lo.s32      %r6, %r3, %r4, %r5;   // o = row index
+    setp.ge.u32     %p1, %r6, %r1;
+    @%p1 bra        DONE;
+
+    // nsb = in / 256 ; row byte base = (o * nsb) * 144
+    shr.u32         %r7, %r2, 8;          // nsb = in/256
+    mul.lo.s32      %r8, %r6, %r7;        // o*nsb  (first superblock index of this row)
+    mul.lo.s32      %r9, %r8, 144;        // row byte offset
+    cvt.u64.u32     %rd4, %r9;
+    add.s64         %rd5, %rd1, %rd4;     // %rd5 = &W[row start]  (constant within this row)
+
+    mov.f32         %f1, 0f00000000;      // acc
+    mov.u32         %r10, %r2;            // i counter starts at in
+
+LOOP:
+    setp.eq.u32     %p1, %r10, 0;
+    @%p1 bra        ENDLOOP;
+    sub.u32         %r10, %r10, 1;        // i = i-1  (downward, in-1..0)
+
+    // ---- locate superblock for column i: sb_local = i/256, local = i%256 ----
+    shr.u32         %r11, %r10, 8;        // sb_local = i>>8
+    and.b32         %r12, %r10, 255;      // local = i & 255
+    // superblock byte base = &row + sb_local*144
+    mul.lo.s32      %r13, %r11, 144;
+    cvt.u64.u32     %rd6, %r13;
+    add.s64         %rd7, %rd5, %rd6;     // %rd7 = &superblock
+
+    // ---- decode d, dmin (f16 at +0, +2) ----
+    ld.global.u16   %h0, [%rd7];
+    cvt.f32.f16  %f2, %h0;             // d
+    ld.global.u16   %h0, [%rd7+2];
+    cvt.f32.f16  %f3, %h0;             // dmin
+
+    // ---- index decomposition (all integer, mirrors deq_q4k) ----
+    // c=local/64; within=local%64; half=within/32; l=within%32; j=2*c+half
+    shr.u32         %r14, %r12, 6;        // c = local/64
+    and.b32         %r15, %r12, 63;       // within = local%64
+    shr.u32         %r16, %r15, 5;        // half = within/32
+    and.b32         %r17, %r15, 31;       // l = within%32
+    shl.b32         %r18, %r14, 1;        // 2*c
+    add.s32         %r19, %r18, %r16;     // j = 2*c+half
+
+    // scales base = &superblock + 4
+    add.s64         %rd8, %rd7, 4;
+
+    // ---- sc, mn via get_scale_min_k4 ----
+    setp.lt.u32     %p2, %r19, 4;
+    @!%p2 bra       JGE4;
+    // j<4: sc = scales[j] & 63 ; mn = scales[j+4] & 63
+    cvt.u64.u32     %rd9, %r19;
+    add.s64         %rd10, %rd8, %rd9;
+    ld.global.u8    %r20, [%rd10];
+    and.b32         %r21, %r20, 63;       // sc
+    add.s32         %r22, %r19, 4;
+    cvt.u64.u32     %rd11, %r22;
+    add.s64         %rd12, %rd8, %rd11;
+    ld.global.u8    %r23, [%rd12];
+    and.b32         %r24, %r23, 63;       // mn
+    bra             SCDONE;
+JGE4:
+    // j>=4:
+    //   sc = (scales[j+4] & 0xF) | ((scales[j-4] >> 6) << 4)
+    //   mn = (scales[j+4] >> 4) | ((scales[j]   >> 6) << 4)
+    add.s32         %r25, %r19, 4;        // j+4
+    cvt.u64.u32     %rd9, %r25;
+    add.s64         %rd10, %rd8, %rd9;
+    ld.global.u8    %r26, [%rd10];        // scales[j+4]
+    sub.s32         %r27, %r19, 4;        // j-4
+    cvt.u64.u32     %rd11, %r27;
+    add.s64         %rd12, %rd8, %rd11;
+    ld.global.u8    %r28, [%rd12];        // scales[j-4]
+    cvt.u64.u32     %rd13, %r19;
+    add.s64         %rd14, %rd8, %rd13;
+    ld.global.u8    %r29, [%rd14];        // scales[j]
+    // sc = (scales[j+4] & 0xF) | ((scales[j-4] >> 6) << 4)
+    and.b32         %r30, %r26, 15;
+    shr.u32         %r31, %r28, 6;
+    shl.b32         %r32, %r31, 4;
+    or.b32          %r21, %r30, %r32;     // sc
+    // mn = (scales[j+4] >> 4) | ((scales[j] >> 6) << 4)
+    shr.u32         %r33, %r26, 4;
+    shr.u32         %r34, %r29, 6;
+    shl.b32         %r35, %r34, 4;
+    or.b32          %r24, %r33, %r35;     // mn
+SCDONE:
+
+    // ---- qb = qs[c*32+l]; nib = (half==0)? (qb&0xF) : (qb>>4) ----
+    // qs base = &superblock + 16
+    add.s64         %rd15, %rd7, 16;
+    shl.b32         %r36, %r14, 5;        // c*32
+    add.s32         %r37, %r36, %r17;     // c*32 + l
+    cvt.u64.u32     %rd16, %r37;
+    add.s64         %rd17, %rd15, %rd16;
+    ld.global.u8    %r38, [%rd17];        // qb
+    setp.eq.u32     %p3, %r16, 0;         // half==0 ?
+    and.b32         %r39, %r38, 15;       // low nibble
+    shr.u32         %r40, %r38, 4;        // high nibble
+    selp.b32        %r41, %r39, %r40, %p3;// nib
+
+    // ---- w = (d*sc)*nib - (dmin*mn) ----  (exact order from deq_q4k)
+    cvt.rn.f32.u32  %f4, %r21;            // (float)sc
+    cvt.rn.f32.u32  %f5, %r24;            // (float)mn
+    cvt.rn.f32.u32  %f6, %r41;            // (float)nib
+    mul.f32         %f7, %f2, %f4;        // d*sc
+    mul.f32         %f8, %f7, %f6;        // (d*sc)*nib
+    mul.f32         %f9, %f3, %f5;        // dmin*mn
+    sub.f32         %f10, %f8, %f9;       // w
+
+    // ---- acc = w * x[i] + acc  (same mul.f32 then add.f32 as template_matvec) ----
+    mul.wide.u32    %rd18, %r10, 4;
+    add.s64         %rd19, %rd2, %rd18;
+    ld.global.f32   %f11, [%rd19];        // x[i]
+    mul.f32         %f12, %f10, %f11;     // w * x[i]
+    add.f32         %f1, %f12, %f1;       // acc = w*x + acc
+    bra             LOOP;
+
+ENDLOOP:
+    mul.wide.u32    %rd20, %r6, 4;
+    add.s64         %rd21, %rd3, %rd20;
+    st.global.f32   [%rd21], %f1;
+DONE:
+    ret;
+}
