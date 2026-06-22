@@ -47,6 +47,11 @@
 ;                           dominance, lift, gap. Computes the body's stated floor: generative binds.   1023
 ;     sense-self.fk         the body reads its own counts into those vectors (share = num/denom per-mille,
 ;                           honest-0 on no data). Computation is body; gathering is a thin carrier.     1023
+;   keystone (natural language in, reasoning, natural language out)
+;     nl-reason.fk          the join: nl-translate parses an English sentence to a Form node, its pivot
+;                           symbol n<k> IS atom k, the reasoning blocks derive over it, the proof names
+;                           WHY, and the conclusion decodes back to English. "the body is cell" + rule
+;                           cell->recipe  =>  "the body is recipe", proof depth 2 — four-way (fks).      255
 ;   composition
 ;     proof-trust.fk        derivation + subjective-logic + shared per-mille scale: a conclusion arrives
 ;                           with its proof AND how much to trust it. Trust DECAYS up the argument via
