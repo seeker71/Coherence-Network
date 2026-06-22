@@ -1,0 +1,37 @@
+; preludes: form-stdlib/unify.fk form-stdlib/resolution.fk
+;
+; First-order resolution, pinned. ids — vars X=0, Y=1; consts socrates=10, plato=11, zeus=12;
+; functors man=20, mortal=21, thinker=22. Knowledge base of UNIVERSAL laws + facts:
+;
+;   mortal(X)  :- man(X)        "all men are mortal"
+;   thinker(X) :- mortal(X)     "all mortals are thinkers"   (a two-step chain)
+;   man(socrates).   man(plato).
+;
+; Proves the first-order powers: derive a specific conclusion from a universal rule; chain two rules;
+; answer a VARIABLE query (who is mortal? -> socrates); apply the SAME law to a new individual (plato);
+; and refuse what no fact supports (zeus). Verdict 255 when every claim lands.
+(do
+    (let X (u-mkvar 0)) (let Y (u-mkvar 1))
+    (let socrates (u-mkconst 10)) (let plato (u-mkconst 11)) (let zeus (u-mkconst 12))
+    (defn manT (a)     (u-mkcompound 20 (list a)))
+    (defn mortalT (a)  (u-mkcompound 21 (list a)))
+    (defn thinkerT (a) (u-mkcompound 22 (list a)))
+
+    (let kb (list
+        (list (mortalT X)  (list (manT X)))        ; mortal(X) :- man(X)
+        (list (thinkerT X) (list (mortalT X)))     ; thinker(X) :- mortal(X)
+        (list (manT socrates) (list))              ; man(socrates).
+        (list (manT plato)    (list))))            ; man(plato).
+
+    (let c0 (if (eq (res-proven? (mortalT socrates) kb) 1) 1 0))  ; derive mortal(socrates) from the law
+    (let c1 (if (eq (res-proven? (mortalT zeus) kb) 0)     2 0))  ; zeus: no man fact -> not proven
+    (let c2 (if (eq (res-proven? (manT socrates) kb) 1)    4 0))  ; man(socrates): a fact
+    (let c3 (if (and (eq (res-proven? (mortalT Y) kb) 1)
+                     (eq (u-eq? (res-answer Y (mortalT Y) kb) socrates) 1)) 8 0))  ; WHO is mortal? -> socrates
+    (let c4 (if (eq (res-proven? (thinkerT socrates) kb) 1) 16 0)) ; two-step: thinker <- mortal <- man
+    (let c5 (if (eq (res-proven? (thinkerT zeus) kb) 0)     32 0)) ; zeus still not a thinker
+    (let c6 (if (and (eq (res-proven? (thinkerT Y) kb) 1)
+                     (eq (u-eq? (res-answer Y (thinkerT Y) kb) socrates) 1)) 64 0)) ; who thinks? -> socrates (2-step)
+    (let c7 (if (eq (res-proven? (mortalT plato) kb) 1)   128 0)) ; SAME law, new individual: plato is mortal
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

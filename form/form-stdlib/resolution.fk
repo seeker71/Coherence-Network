@@ -1,0 +1,64 @@
+; resolution.fk — first-order reasoning: derive from UNIVERSAL rules, and answer "who?".
+;
+; preludes: form-stdlib/unify.fk
+;
+; backward-chaining is propositional — its rules are specific (cell -> recipe). unify lifted terms to
+; first-order but stood alone. This wires them together into SLD resolution: a knowledge base of CLAUSES
+; (head :- premises) over first-order terms, where a rule like mortal(X) :- man(X) is a UNIVERSAL law.
+; To prove a goal, find a clause whose head unifies with it, then recursively prove that clause's
+; premises under the binding — standardizing variables apart on each use so one rule applied twice does
+; not confuse its X's. Two first-order powers a propositional engine cannot reach: derive a specific
+; conclusion from a universal rule (man(socrates) + the law => mortal(socrates)), and answer a VARIABLE
+; query — mortal(Y) returns Y = socrates, the body telling you WHO, not just yes/no.
+;
+; A clause is (list head premises): head a term, premises a list of terms. A fact is (head, no premises).
+; res-prove returns (list ok subst): ok=1 with the binding substitution, ok=0 if unprovable in the fuel
+; bound. Variable renaming offsets clause vars by depth*stride (fresh per depth) — exact for the Horn
+; chains (single-premise rules) this proves; per-goal standardizing-apart for multi-premise rules is the
+; named next refinement.
+;
+; Kin: unify.fk (the term match it threads), backward-chaining.fk (its propositional ancestor),
+; derivation.fk (a proof tree over this is the next compose). Proven by: tests/resolution-band.fk
+
+(do
+    (defn res-head  (c) (nth c 0))
+    (defn res-prems (c) (nth c 1))
+    (defn res-ok    (subst) (list 1 subst))
+    (defn res-fail  () (list 0 (list)))
+    (defn res-ok?   (r) (eq (nth r 0) 1))
+    (defn res-subst (r) (nth r 1))
+    (defn res-stride () 1000)
+
+    ; --- standardize apart: shift every variable in a term/clause by a fresh offset. ---
+    (defn res-rename (t off)
+        (if (u-var? t) (u-mkvar (add (u-vid t) off))
+            (if (u-compound? t) (u-mkcompound (u-fid t) (res-rename-list (u-args t) off)) t)))
+    (defn res-rename-list (ts off)
+        (if (eq (len ts) 0) (list) (cons (res-rename (head ts) off) (res-rename-list (tail ts) off))))
+    (defn res-rename-clause (c off) (list (res-rename (res-head c) off) (res-rename-list (res-prems c) off)))
+
+    ; --- prove a goal: try each clause; on a head-unify, prove its premises under the binding. ---
+    (defn res-prove (goal kb subst depth fuel)
+        (if (eq fuel 0) (res-fail)
+            (res-try goal kb kb subst depth fuel)))
+    (defn res-try (goal kb remaining subst depth fuel)
+        (if (eq (len remaining) 0) (res-fail)
+            (do (let c (res-rename-clause (head remaining) (mul depth (res-stride))))
+                (let u (u-unify goal (res-head c) subst))
+                (if (eq (u-ok? u) 1)
+                    (do (let r (res-prove-all (res-prems c) kb (u-subst u) (add depth 1) (sub fuel 1)))
+                        (if (eq (res-ok? r) 1) r (res-try goal kb (tail remaining) subst depth fuel)))
+                    (res-try goal kb (tail remaining) subst depth fuel)))))
+    ; prove every premise in sequence, threading the growing substitution
+    (defn res-prove-all (goals kb subst depth fuel)
+        (if (eq (len goals) 0) (res-ok subst)
+            (do (let r (res-prove (head goals) kb subst depth fuel))
+                (if (eq (res-ok? r) 1) (res-prove-all (tail goals) kb (res-subst r) depth fuel) (res-fail)))))
+
+    ; --- THE query: prove goal against the kb from the empty substitution, ample depth. ---
+    (defn res-query (goal kb) (res-prove goal kb (list) 1 64))
+    ; --- did it prove? (1/0) and, for a variable query, the binding of a query variable. ---
+    (defn res-proven? (goal kb) (res-ok? (res-query goal kb)))
+    (defn res-answer  (qvar goal kb) (u-walk qvar (res-subst (res-query goal kb))))
+
+    0)
