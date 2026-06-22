@@ -1,0 +1,84 @@
+; subjective-logic.fk — trust as an opinion that carries its own UNCERTAINTY, with the two
+; operators that make trust a network: discounting (transitivity) and cumulative fusion (agreement).
+;
+; The body already weighs votes by trust (confidence-weighted-vote.fk) and observes per-step trust
+; as 0/1 signals (trust-matrix.fk). Neither can say the one thing a real trust calculus must: the
+; difference between "I DISBELIEVE X" and "I DON'T KNOW about X". Jøsang's Subjective Logic (A Logic
+; for Uncertain Probabilities, 2001; Subjective Logic, Springer 2016) makes uncertainty a first-class
+; axis, so a claim through a long trust chain grows honestly vaguer, and two witnesses who agree make
+; the body more certain than either alone. Research enters as the OPERATORS; the engine is one Form
+; recipe.
+;
+; FIXED-POINT, not float, and that is the honest-AND-native choice. A trust value never needs more
+; than 0.1% resolution (no one's belief is 0.6000000 exactly), and integers keep the whole engine in
+; the JIT's pure-numeric crystallization band (tags 1-7) AND cross all FOUR kernels — fkwu's universal
+; walker loses a float's box through cons-list storage (float-in-list reads back as int -> a div SIGFPEs),
+; so a float opinion-object would be 3-kernel-only. Per-mille integers make the SAME calculus proven
+; four-way and faster to native. Everything is scaled by SL-SCALE = 1000 (1.000 -> 1000, per-mille).
+;
+; A binomial opinion is (list b d u a), each a per-mille integer in [0,1000]:
+;   b  belief        evidence FOR the claim                 b + d + u = 1000
+;   d  disbelief     evidence AGAINST
+;   u  uncertainty   absence of evidence either way
+;   a  base rate     the prior used when uncertain
+; Projected (expected) probability E = b + a*u/1000 : at u=1000 (know nothing) it is exactly the
+; prior a; as evidence arrives, b and d pull E off the prior.
+;
+; Kin: confidence-weighted-vote.fk (integer weighted plurality — this is its uncertainty-aware peer),
+; trust-matrix.fk (0/1 trust signals — this is the continuous calculus), form-cli-sufficiency.fk
+; (the trust axis a fused opinion could feed). Proven by: form-stdlib/tests/subjective-logic-band.fk
+
+(do
+    (defn sl-scale () 1000)
+
+    ; --- opinion constructor + accessors ---
+    (defn sl-opinion (b d u a) (list b d u a))
+    (defn sl-b (w) (nth w 0))
+    (defn sl-d (w) (nth w 1))
+    (defn sl-u (w) (nth w 2))
+    (defn sl-a (w) (nth w 3))
+
+    (defn sl-abs (x) (if (lt x 0) (sub 0 x) x))
+
+    ; --- projected probability: the single scalar "how much to trust this" (prior shows through u) ---
+    (defn sl-expectation (w) (add (sl-b w) (div (mul (sl-a w) (sl-u w)) (sl-scale))))
+
+    ; --- valid opinion: b + d + u sums to 1000 within a small rounding tolerance (integer div rounds) ---
+    (defn sl-valid? (w tol)
+        (if (le (sl-abs (sub (add (add (sl-b w) (sl-d w)) (sl-u w)) (sl-scale))) tol) 1 0))
+
+    ; --- DISCOUNT (trust transitivity): A's opinion of B, applied to B's opinion of X. ---
+    ;   b = b_AB * b_BX            (belief survives only as far as A trusts B)
+    ;   d = b_AB * d_BX
+    ;   u = d_AB + u_AB + b_AB*u_BX  (A's distrust/ignorance of B becomes uncertainty about X)
+    ; products of two per-mille values are rescaled by /1000 to stay per-mille.
+    (defn sl-discount (ab bx)
+        (sl-opinion (div (mul (sl-b ab) (sl-b bx)) (sl-scale))
+                    (div (mul (sl-b ab) (sl-d bx)) (sl-scale))
+                    (add (add (sl-d ab) (sl-u ab)) (div (mul (sl-b ab) (sl-u bx)) (sl-scale)))
+                    (sl-a bx)))
+
+    ; --- CUMULATIVE FUSION (independent agreement). kappa = u_A + u_B - u_A*u_B/1000. ---
+    ; non-dogmatic (kappa > 0): evidence-weighted blend; uncertainty drops below either source.
+    ; the numerators are 10^6-scaled (per-mille * per-mille) and kappa is 10^3-scaled, so the
+    ; quotient lands back in per-mille — no extra rescale needed.
+    (defn sl-kappa (x y) (sub (add (sl-u x) (sl-u y)) (div (mul (sl-u x) (sl-u y)) (sl-scale))))
+    (defn sl-fuse-nondog (x y)
+        (do (let k (sl-kappa x y))
+            (sl-opinion (div (add (mul (sl-b x) (sl-u y)) (mul (sl-b y) (sl-u x))) k)
+                        (div (add (mul (sl-d x) (sl-u y)) (mul (sl-d y) (sl-u x))) k)
+                        (div (mul (sl-u x) (sl-u y)) k)
+                        (sl-a x))))
+    ; dogmatic edge (both u=0): kappa=0, no evidence weight to apply — the documented equal-weight
+    ; limit (average), named not hidden. guarded so the divisor is never zero.
+    (defn sl-fuse-dog (x y)
+        (sl-opinion (div (add (sl-b x) (sl-b y)) 2)
+                    (div (add (sl-d x) (sl-d y)) 2)
+                    0
+                    (sl-a x)))
+    (defn sl-fuse (x y)
+        (if (and (eq (sl-u x) 0) (eq (sl-u y) 0))
+            (sl-fuse-dog x y)
+            (sl-fuse-nondog x y)))
+
+    0)
