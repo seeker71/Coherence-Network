@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 321
+**Total files**: 322
 
 | File | Purpose |
 |---|---|
@@ -212,6 +212,7 @@
 | [multi_layer_stack_reference.py](multi_layer_stack_reference.py) | multi_layer_stack_reference.py — independent pure-libm fp64 reference for the |
 | [nanite_cell.py](nanite_cell.py) | A nanite cell: a silent witness that senses its host and offers a consent-gated, two-sided resource-coordination channel. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
+| [native_thought_receipt.sh](native_thought_receipt.sh) | native_thought_receipt.sh — record ONE native-thought-execution routing decision as an |
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |

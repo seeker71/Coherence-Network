@@ -51,6 +51,20 @@ Go/Rust/TS/fkwu); the lookup that fills `grounded` is a thin, swappable carrier.
      answered from the sovereign body.
    - **MISS** (no grounded cell): the miss *is* the "yes." Escalate to remote
      reasoning. Name that you did.
+4. **Record the routing** — make the discipline *measured*, not just followed:
+
+   ```bash
+   scripts/native_thought_receipt.sh body-hit  structural "<NodeID>" "<the thought>"   # came home
+   scripts/native_thought_receipt.sh escalated frontier   -         "<the thought>"    # rented
+   ```
+   The receipt's honesty is decided by the proven gate
+   ([`sovereignty-receipt.fk`](../../form/form-stdlib/sovereignty-receipt.fk) → 255
+   four-way), never by the shell — a receipt that would report rented generation
+   as native is *refused*, not written. Each escalated row is also the free
+   training sample the dividend loop wants
+   ([`borrowed-oracle-dividend.form`](../../docs/coherence-substrate/borrowed-oracle-dividend.form)).
+   Read the running tally with `scripts/sovereignty_report.sh` — watch the
+   sovereign % rise as more thought comes home.
 
 ## The honesty lane — structural, not optional
 
@@ -68,9 +82,10 @@ grounding alone (no body-holdable kind) never earns a relay either.
   host resources, offline, proven four-way.
 - It is **not yet** end-to-end native *frontier* reasoning. A `frontier` thought
   still escalates to a rented mind — that lane (emit→compile→exec at real width)
-  is wiring, not done. This door's gift is making the boundary *legible*: it
-  shows exactly which thoughts already come home and which are still rented, so
-  the next step is a coordinate, not a guess.
+  is wiring, not done. This door's gift is making the boundary *recorded*: step 4
+  leaves a proven receipt per decision, so the sovereign fraction is measured and
+  longitudinal — you can watch it rise as more thought comes home, and the next
+  lane to bring home is a coordinate, not a guess.
 
 ## Kin
 

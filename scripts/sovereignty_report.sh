@@ -38,6 +38,33 @@ else
 fi
 echo
 
+# ── feed 3: native-thought routing (the door's own receipts — how often a thought came home) ──
+NTR="${NATIVE_THOUGHT_RECEIPTS:-$HOME/.coherence-network/native-thought-receipts.jsonl}"
+if [ -f "$NTR" ]; then
+  python3 - "$NTR" <<'PY'
+import json, sys
+hit = esc = 0
+for line in open(sys.argv[1]):
+    line = line.strip()
+    if not line: continue
+    try: r = json.loads(line)
+    except Exception: continue
+    if r.get("path") == "body-hit": hit += 1
+    elif r.get("path") == "escalated": esc += 1
+n = hit + esc
+if n:
+    pct = 100.0 * hit / n
+    print(f"  native-thought routing (native_thought_receipt.sh ledger): {n} thoughts routed — "
+          f"{hit} came home (body-hit), {esc} rented (escalated) → {pct:.0f}% sovereign this body")
+    print(f"    each escalated row is a free training sample (borrowed-oracle-dividend.form); watch the % rise.")
+else:
+    print("  native-thought routing: ledger present, no decisions recorded yet.")
+PY
+else
+  echo "  native-thought routing: no ledger yet — the door records via scripts/native_thought_receipt.sh."
+fi
+echo
+
 # ── where to pay attention (attention-signal.fk tiering over the measured per-lane scores) ──
 echo "  → attention (attention-signal.fk, four-way): rank lanes by measured gap × volume."
 echo "    ATTEND  — high volume, far from native: Read/Edit/Write tool-prediction (~65%)."
