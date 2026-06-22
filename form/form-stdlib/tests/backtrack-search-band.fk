@@ -1,0 +1,22 @@
+; preludes: form-stdlib/core.fk form-stdlib/backtrack-search.fk
+;
+; backtrack-search-band — the generic choice / fail / stop / backtrack kernel, four-way, on the
+; smallest subset-sum witnesses that each force ONE primitive to carry the result.
+;
+; Verdict 31 when every claim lands:
+;   1   BACKTRACK: {3,2,4} target 6 -> 1. The greedy include-3 path dead-ends (3+2+4=9, 3+4=7, 3+2=5);
+;       only excluding 3 and taking {2,4}=6 succeeds — the answer lives past deep backtracking.
+;   2   EXHAUST: {3,2,4} target 8 -> 0. No subset sums to 8; the whole tree is walked and the honest
+;       answer is "no" (reachable sums are 0,2,3,4,5,6,7,9).
+;   4   PRUNE: {5,5} target 3 -> 0 (every include overshoots and is pruned) AND target 10 -> 1 (prune
+;       does not false-negative the real solution 5+5).
+;   8   STOP base case: {} target 0 -> 1 (the empty subset sums to 0) AND {} target 7 -> 0.
+;   16  single hit through prune: {3,2,4} target 4 -> 1 (just {4}; the 3- and 2-first paths overshoot
+;       and prune).
+(do
+    (let c1  (if (eq (bts-find? (list 3 2 4) 6) 1) 1 0))
+    (let c2  (if (eq (bts-find? (list 3 2 4) 8) 0) 2 0))
+    (let c4  (if (and (eq (bts-find? (list 5 5) 3) 0) (eq (bts-find? (list 5 5) 10) 1)) 4 0))
+    (let c8  (if (and (eq (bts-find? (empty) 0) 1) (eq (bts-find? (empty) 7) 0)) 8 0))
+    (let c16 (if (eq (bts-find? (list 3 2 4) 4) 1) 16 0))
+    (add c1 (add c2 (add c4 (add c8 c16)))))
