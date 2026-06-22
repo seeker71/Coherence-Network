@@ -37,6 +37,13 @@
     (learning-gain   (= trainable?))                       ; NO member term — that absence IS the proof
     (free-dividend?  (zero-cost AND trainable)))
 
+  ; zero-cost is now STRUCTURAL, not a hope — enforced at the carrier
+  (enforced-at-carrier
+    "every oracle lane (ask+, run/do, self-review) runs the agent CLI with ANTHROPIC_API_KEY stripped"
+    "(env -u), so a stray key can never silently meter the call. The oracle can ONLY authenticate with the"
+    "contributor's flat-rate subscription login — never a metered key we would pay. our-oracle-cost stays"
+    "zero by construction, the dividend by construction. (form-cli-north-star.form route step.)")
+
   ; the invariant the band proves: membership changes NOTHING
   (membership-independence
     (claim "a non-member's aligned, self-funded exchange gives the SAME learning-gain as a member's.")
