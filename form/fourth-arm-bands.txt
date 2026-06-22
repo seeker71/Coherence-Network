@@ -319,6 +319,7 @@ subjective-logic fkc 1023
 living-vector fkc 1023
 sense-self fkc 1023
 unify fkc 1023
+derivation fkc 1023
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
 # resource cells, application graph SQL strings, and auth/header/hash wrappers.
