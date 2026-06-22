@@ -57,4 +57,46 @@
     ; compile a recipe(i64)->i64: lower the root, then ret.
     (defn lx-compile-fn (prog root) (x64-app (lx-node prog root) (x64-ret)))
 
+    ; ── the FLOAT (f64) lowering twin — the x64/SSE port of form-lower.fk's lo-fnode (proven on arm64).
+    ; SAME op-tagged tree, SAME ARG-folding discipline; XMM0 = accumulator+return, XMM1 = banked arg.
+    ; Tags 3/4/5/8 = fadd/fsub/fmul/fdiv. SSE is 2-operand (dst=dst OP src), so where arm64 folds
+    ; (fadd 0 argr argr) we emit movsd xmm0,xmm1 then the op. Two-non-ARG subtrees = the frontier
+    ; lo-fnode also leaves empty (the fp-register-stack lands it next); never a wrong answer, just (list).
+    (defn lxf-node (prog i)
+        (if (lx-arg? prog i) (x64-movsd-x0-x1)
+        (if (eq (lx-tag prog i) 3) (lxf-add prog i)
+        (if (eq (lx-tag prog i) 4) (lxf-sub prog i)
+        (if (eq (lx-tag prog i) 5) (lxf-mul prog i)
+        (if (eq (lx-tag prog i) 8) (lxf-div prog i)
+            (list)))))))
+    ; FMUL/FADD commute: ARG both sides -> movsd then op; ARG one side -> lower the other, then op vs xmm1.
+    (defn lxf-mul (prog i)
+        (if (if (lx-arg? prog (lx-c1 prog i)) (lx-arg? prog (lx-c2 prog i)) 0)
+            (x64-app (x64-movsd-x0-x1) (x64-mulsd-x0-x1))
+        (if (lx-arg? prog (lx-c2 prog i)) (x64-app (lxf-node prog (lx-c1 prog i)) (x64-mulsd-x0-x1))
+        (if (lx-arg? prog (lx-c1 prog i)) (x64-app (lxf-node prog (lx-c2 prog i)) (x64-mulsd-x0-x1))
+            (list)))))
+    (defn lxf-add (prog i)
+        (if (if (lx-arg? prog (lx-c1 prog i)) (lx-arg? prog (lx-c2 prog i)) 0)
+            (x64-app (x64-movsd-x0-x1) (x64-addsd-x0-x1))
+        (if (lx-arg? prog (lx-c2 prog i)) (x64-app (lxf-node prog (lx-c1 prog i)) (x64-addsd-x0-x1))
+        (if (lx-arg? prog (lx-c1 prog i)) (x64-app (lxf-node prog (lx-c2 prog i)) (x64-addsd-x0-x1))
+            (list)))))
+    ; FSUB/FDIV do NOT commute (d0 = left OP right). (x,ARG): lower x->xmm0, op vs xmm1. (ARG,x): lower
+    ; x->xmm0, save to xmm2, movsd xmm0,xmm1 (=arg), op vs xmm2 -> xmm0 = arg OP x.
+    (defn lxf-sub (prog i)
+        (if (lx-arg? prog (lx-c2 prog i)) (x64-app (lxf-node prog (lx-c1 prog i)) (x64-subsd-x0-x1))
+        (if (lx-arg? prog (lx-c1 prog i))
+            (x64-cat (list (lxf-node prog (lx-c2 prog i)) (x64-movsd-x2-x0) (x64-movsd-x0-x1) (x64-subsd-x0-x2)))
+            (list))))
+    (defn lxf-div (prog i)
+        (if (lx-arg? prog (lx-c2 prog i)) (x64-app (lxf-node prog (lx-c1 prog i)) (x64-divsd-x0-x1))
+            (list)))
+    ; compile a float function OF one f64 arg: bank xmm0 -> xmm1, lower the body, ret. (Windows + SysV
+    ; both pass the 1st f64 arg in XMM0 and return in XMM0, so this entrypoint is cross-ABI.)
+    (defn lxf-compile-fn (prog root) (x64-cat (list (x64-movsd-x1-x0) (lxf-node prog root) (x64-ret))))
+
+    ; order-sensitive byte checksum for the bands (a permutation would change it).
+    (defn lx-bsumw (xs i) (if (eq (len xs) 0) 0 (add (mul (head xs) i) (lx-bsumw (tail xs) (add i 1)))))
+
     0)

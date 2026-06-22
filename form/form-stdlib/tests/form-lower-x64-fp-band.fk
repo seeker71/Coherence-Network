@@ -1,0 +1,18 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm-x64.fk form-stdlib/form-lower-x64.fk
+;
+; form-lower-x64-fp-band — the x64/SSE FLOAT lowering (the port of form-lower.fk's proven arm64 lo-fnode
+; to Intel SSE scalar-double). Lowers float-op trees to x64 bytes; the verdict is an order-sensitive byte
+; checksum (lx-bsumw) so Go=Rust=TS must agree on the EXACT instruction bytes, not just their multiset.
+;   a*a   -> movsd xmm1,xmm0 ; movsd xmm0,xmm1 ; mulsd xmm0,xmm1 ; ret   (13 bytes, lx-bsumw=12234)
+;   a*a+a -> ... ; addsd xmm0,xmm1 ; ret                                  (17 bytes, lx-bsumw=20778)
+;   a-a   -> ... ; subsd xmm0,xmm1 ; ret   (FSUB, non-commute, ARG-right) (13 bytes, lx-bsumw=12267)
+; Verdict 7 when all three lower to their exact SSE byte sequences. (Closes the "x64 asm lane is int-only"
+; gap: the GPU form-ptx lane and the arm64 form-lower already do floats; this is the Intel/x64 twin.)
+(do
+    (let aa  (lxf-compile-fn (list (list 5 1 1) (list 2 0 0)) 0))               ; a * a
+    (let aaa (lxf-compile-fn (list (list 3 1 2) (list 5 2 2) (list 2 0 0)) 0))  ; (a * a) + a
+    (let ama (lxf-compile-fn (list (list 4 1 1) (list 2 0 0)) 0))               ; a - a
+    (let c0 (if (eq (lx-bsumw aa 1)  12234) 1 0))
+    (let c1 (if (eq (lx-bsumw aaa 1) 20778) 2 0))
+    (let c2 (if (eq (lx-bsumw ama 1) 12267) 4 0))
+    (add c0 (add c1 c2)))
