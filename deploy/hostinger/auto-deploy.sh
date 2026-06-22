@@ -1031,11 +1031,12 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS --max-time 10 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
+      "printf '%s' '$kernel_image_payload' >/tmp/kernel-image.request.json \
+        && curl -fsS --max-time 10 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
         -X POST http://127.0.0.1:8080/api/substrate/kernel-image/proposals \
         -H 'Accept: application/json' \
         -H 'Content-Type: application/json' \
-        --data '$kernel_image_payload' \
+        --data-binary @/tmp/kernel-image.request.json \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-image.headers \
         && grep -q '\"proposal_status\":\"accepted-preview\"' /tmp/kernel-image.body \
         && grep -q '\"handler\":\"api_substrate_kernel_image_proposals\"' /tmp/kernel-image.body \

@@ -15,9 +15,9 @@
 # native mutation handler reads the same production config-file carrier as the
 # API and performs pg_exec inside Form when the mounted config includes
 # database.url. The native-first Host router below is intentionally broad:
-# bounded no-header mutation paths match this with specific method/path routers
-# at priority 900, leaving ordinary traffic to the broad native-first fan-out.
-# Unlisted ordinary requests keep matching api:8000 through kernel-router fan-out.
+# bounded no-header mutation paths match the kernel-router service directly;
+# ordinary traffic enters through the broad native-first fan-out. Unlisted
+# requests keep matching api:8000 through kernel-router fan-out.
 # website/API smoke and tool flows are the gate. Native rows answer; unmatched
 # paths transparently fan out through Python with X-Form-Router evidence.
 #
@@ -80,7 +80,7 @@ services:
     # TRAEFIK LABELS — ACTIVE NATIVE-FIRST API FRONT DOOR. The live VPS runs
     # Traefik 3.x, so these use the v3 `Header` matcher. Specific native/BML
     # routers keep higher priorities. The broad Host router sits above the base
-    # API router and below explicit native rows, making the kernel-router the
+    # API router and below explicit BML rows, making the kernel-router the
     # ordinary API entrance while preserving fan-out for the Python tail.
     # ----------------------------------------------------------------------
     labels:
@@ -98,8 +98,13 @@ services:
       traefik.http.routers.coherence-api-kernel-native-first.rule: "Host(`api.coherencycoin.com`)"
       traefik.http.routers.coherence-api-kernel-native-first.entrypoints: "websecure"
       traefik.http.routers.coherence-api-kernel-native-first.tls.certresolver: "letsencrypt"
-      traefik.http.routers.coherence-api-kernel-native-first.priority: "700"
+      traefik.http.routers.coherence-api-kernel-native-first.priority: "1160"
       traefik.http.routers.coherence-api-kernel-native-first.service: "coherence-api-kernel-canary"
+      traefik.http.routers.coherence-api-kernel-runtime-attention.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/attention/kernel-runtime`)"
+      traefik.http.routers.coherence-api-kernel-runtime-attention.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-kernel-runtime-attention.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-kernel-runtime-attention.priority: "1174"
+      traefik.http.routers.coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-canary"
       traefik.http.routers.coherence-api-kernel-ideas-create-native-default.rule: "Host(`api.coherencycoin.com`) && Method(`POST`) && Path(`/api/ideas`)"
       traefik.http.routers.coherence-api-kernel-ideas-create-native-default.entrypoints: "websecure"
       traefik.http.routers.coherence-api-kernel-ideas-create-native-default.tls.certresolver: "letsencrypt"
