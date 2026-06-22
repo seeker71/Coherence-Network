@@ -26,6 +26,10 @@
 ;                           Agrees with forward on every goal; terminates on cyclic rules (fuel).     1023
 ;     unify.fk              Robinson unification over INTEGER terms — the propositional->first-order
 ;                           lift. mortal(X)~mortal(socrates) binds X, applies to man(X)->man(socrates). 1023
+;     resolution.fk         FIRST-ORDER SLD resolution: unify wired into proof search over a clause KB
+;                           with variable renaming. Derives from UNIVERSAL laws (man(socrates) + the law
+;                           mortal(X):-man(X) => mortal(socrates)), chains rules, and answers WHO-queries
+;                           (mortal(Y) -> Y=socrates). Facts become laws.                                255
 ;     derivation.fk         GENERATES the proof tree (the WHY), not just 1/0 — the attributed-trace
 ;                           step on the generative axis; names the lemmas the search discovers.        1023
 ;   trust
@@ -97,8 +101,9 @@
 ;   a kernel limit — that exact mistake cost a whole fixed-point detour this lineage already paid for.
 ;
 ; HONEST FLOOR (a coordinate, not a confession — the next doors, named):
-;   - first-order RESOLUTION: wire unify into backward/derivation with variable renaming, so the body
-;     DERIVES "Socrates is mortal" through a multi-step proof rather than matching one clause.
+;   - first-order RESOLUTION: DONE — resolution.fk derives from universal laws + answers who-queries,
+;     four-way + native. Next on this thread: a PROOF TREE over resolution (resolution + derivation),
+;     and FIRST-ORDER nl-reason (nl-translate rules with variables -> resolution -> decoded answer).
 ;   - the GENERATIVE axis: today the body verifies and explains; lifting living-vector's generative axis
 ;     off 0 (native GENERATION, not rented) is the same path these blocks already walk.
 ;   - sense-self's thin carrier: feed it real matched counts (wellness_check.py) for a live gradient.
