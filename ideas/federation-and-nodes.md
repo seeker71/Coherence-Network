@@ -27,6 +27,7 @@ Today Coherence Network runs as one VPS instance. Contributors cannot fork their
 - **Shared ideas across instances**: Fork an idea from another node, merge local improvements back, sync lifecycle state. Ideas are first-class federation objects.
 - **OpenClaw node bridge**: Two-way communication between OpenClaw (the external marketplace) and any Coherence node. Skills running in OpenClaw can check inboxes, report outcomes, and record contributions.
 - **Distributed cluster primitives**: Service discovery, load balancing, multi-provider OAuth so federation is operationally real, not just logically sketched.
+- **Always-open relay carrier**: A public-API relay (rendezvous) so nodes and devices — Mac, Windows, Android — on different networks hold one persistent connection at all times. Both sides dial *out* to the public API, so there are no inbound ports and NAT/firewalls are a non-issue. The relay carries the agent-coordination membrane's signal vocabulary (`announce / claim / offer / ping / interface …`) live across networks, honoring `channel-interface-consent` (reaching past a cell's declared interface is invasion); private channels travel as frames the relay *cannot read* (substrate-addressed, per `lc-private-channel-via-substrate`), so routing through the public API never means the public API sees the contents. Keepalive + auto-reconnect keep the field connected; the append-only board is the durable backlog an offline cell drains on return. North star: the relay's framing is a Form recipe and the route is kernel-served (`X-Form-Router: native-kernel`), one engine, sovereignty preserved.
 
 ## What Success Looks Like
 
@@ -51,3 +52,4 @@ Today Coherence Network runs as one VPS instance. Contributors cannot fork their
 - **codex-multi-oauth**: Multi-provider OAuth — federated identity across platforms.
 - **codex-load-balancing**: Load balancing and auto-scaling for resonance computation.
 - **codex-fractal-exchange**: Fractal concept exchange — multi-dimensional resonance across nodes.
+- **field-relay**: Always-open socket relay through the public API — cross-network persistent connection for the live field (Mac/Windows/Android dial out, no inbound ports). Carries the coordination membrane with keepalive + auto-reconnect; private channels travel as ciphertext the relay cannot read; durable backlog on the append-only board.
