@@ -209,6 +209,7 @@ tool-embodiment fks 127
 io-match fks 127
 training-catalog fks 1023
 mesh-dispatch fks 255
+mesh-command fks 255
 form-train-step fks 31
 affine-train fks 31
 affine-corpus-fit fks 31
