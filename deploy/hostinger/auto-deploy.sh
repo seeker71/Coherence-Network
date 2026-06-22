@@ -510,6 +510,59 @@ services_to_rebuild() {
   echo "${out[*]}"
 }
 
+compose_service_state() {
+  local service="$1"
+  docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s {print $2; exit}'
+}
+
+wait_for_compose_service_running() {
+  local service="$1"
+  local timeout_seconds="${2:-180}"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local state
+  while (( $(date +%s) < deadline )); do
+    state="$(compose_service_state "$service")"
+    if [[ "$state" == "running" ]]; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
+}
+
+recreate_orphans_for_service() {
+  local service="$1"
+  docker ps -a --format '{{.Names}}' | grep -E "^[0-9a-f]{6,}_coherence-network-${service}-1$" || true
+}
+
+wait_for_recreate_orphans_gone() {
+  local service="$1"
+  local timeout_seconds="${2:-60}"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local orphans
+  while (( $(date +%s) < deadline )); do
+    orphans="$(recreate_orphans_for_service "$service")"
+    if [[ -z "$orphans" ]]; then
+      return 0
+    fi
+    log "waiting for recreate orphan removal for ${service}: $(echo "$orphans" | tr '\n' ' ')"
+    sleep 2
+  done
+
+  orphans="$(recreate_orphans_for_service "$service")"
+  if [[ -n "$orphans" ]]; then
+    log "clearing recreate orphans still present for ${service}: $(echo "$orphans" | tr '\n' ' ')"
+    echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
+  fi
+}
+
+wait_for_rebuild_recreate_orphans_gone() {
+  local service
+  for service in "$@"; do
+    wait_for_recreate_orphans_gone "$service"
+  done
+}
+
 # Pick the comparison base: prefer what's ACTUALLY RUNNING in the api
 # container over what the repo claims is its HEAD. The repo's OLD_SHA
 # gets advanced by `git reset --hard` on every deploy, but if a prior
@@ -587,6 +640,11 @@ else
     log "clearing recreate orphans: $(echo "$orphans" | tr '\n' ' ')"
     echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
   fi
+  # Docker may report async removal-in-progress for the hash-prefixed
+  # recreate container. Wait until names are actually released before asking
+  # compose to start the same service again.
+  # shellcheck disable=SC2086 -- intentional word-splitting on service list
+  wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
   log "docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES}"
   # shellcheck disable=SC2086 -- intentional word-splitting on service list
   if ! docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
@@ -600,6 +658,8 @@ else
       log "force-recreate still conflicted; stop+remove then clean up -d"
       # shellcheck disable=SC2086
       docker compose rm -fsv ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE" || true
+      # shellcheck disable=SC2086 -- intentional word-splitting on service list
+      wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
       # shellcheck disable=SC2086
       docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
     fi
@@ -620,6 +680,7 @@ else
     if ! docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
       log "post-deploy: ${svc} is NOT running — clearing orphans and forcing a clean recreate"
       docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${svc}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      wait_for_recreate_orphans_gone "$svc"
       docker compose up -d "${svc}" 2>&1 | tee -a "$LOG_FILE" || true
       sleep 3
       if docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
@@ -636,6 +697,11 @@ sync_field_docs() {
   if [[ ! -d "$REPO_DIR/docs/field" ]]; then
     log "field docs: no docs/field directory found (skipped)"
     return 0
+  fi
+
+  if ! wait_for_compose_service_running api 180; then
+    log "FATAL field docs: api container did not reach running before docs sync"
+    return 1
   fi
 
   # The api container may still be settling right after a force-recreate (exec races the fresh
@@ -845,16 +911,7 @@ run_substrate_ingest() {
 # happened not to be present inside the api container image.
 wait_for_running() {
   local service="$1"
-  local deadline=$(( $(date +%s) + 180 ))
-  while (( $(date +%s) < deadline )); do
-    local state
-    state="$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s {print $2}')"
-    if [[ "$state" == "running" ]]; then
-      return 0
-    fi
-    sleep 3
-  done
-  return 1
+  wait_for_compose_service_running "$service" 180
 }
 
 ensure_kernel_router_canary() {
