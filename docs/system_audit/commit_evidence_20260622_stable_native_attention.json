@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/stable-native-attention",
+  "commit_scope": "Heal native runtime observation after the deployed /api/attention/kernel-runtime route still flapped between native-kernel and Python 404. The stable BML front-door now serves the runtime attention route at higher Traefik priority, while typed BML RouteCell requests receive router-owned live metrics so the response remains an actual native observation.",
+  "files_owned": [
+    "form/form-kernel-rust/src/main.rs",
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "docs/system_audit/commit_evidence_20260622_stable_native_attention.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cargo test --release --bin form-kernel-rust router_context_tests",
+      "cargo build --release --bin form-kernel-rust",
+      "direct local form-kernel-rust.exe serve --routes deploy/front-door/api.bml probe for GET /api/attention/kernel-runtime",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_kernel_canary_public_gate.sh deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_stable_native_attention.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/runtime_surface_report.py --json"
+    ],
+    "notes": "The local BML front-door probe returned HTTP 200 with X-Form-Router native-kernel, X-Form-Handler api_attention_kernel_runtime, native_route_count 72, total_requests 1, native_requests 1, and python_authority false on the cold first request. The pre-deploy public runtime_surface_report still sees /api/attention/kernel-runtime as 404, which is the live production gap this branch changes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger native kernel-router BML front door",
+    "notes": "Before this repair, production was deployed at f58855eac40a6b07c5ab494fc7ad061a6612f0fe but repeated public probes of /api/attention/kernel-runtime alternated between native-kernel, 404, and occasional timeout. BML native read routes such as /api/ready and /api/utils/kernel_status stayed stable, so this change moves ordinary runtime attention observation to that stable native front door and keeps the older production-manifest attention route available underneath."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local native proof passed; merge, Hostinger deploy, and repeated public probes remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "kernel-runtime-attention",
+    "deploy-canary-stability"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-stable-native-attention"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Wellness on 2026-06-22 reported deploy aligned at f58855ea but kernel-native API runtime-share was strained because the public front-door probe returned status 404 with no router header.",
+    "Manual repeated probes showed /api/attention/kernel-runtime flipping between native-kernel, 404, and occasional timeout, while /api/ready and /api/utils/kernel_status stayed native-kernel through the BML front door.",
+    "The Rust router now prepends router-owned metrics into typed KernelHTTPRequest query fields and passes an in-flight snapshot to native handlers so a cold first BML attention response has nonzero total/native request counts.",
+    "The BML front door now owns api_attention_kernel_runtime, Traefik routes it at priority 1186 to coherence-api-kernel-bml-front-door, and the deploy canary probes the handler before rollout proceeds."
+  ],
+  "change_files": [
+    "form/form-kernel-rust/src/main.rs",
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "docs/system_audit/commit_evidence_20260622_stable_native_attention.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The public /api/attention/kernel-runtime observation route should be served consistently by the stable BML native front door with native proof headers and live router metrics, while the production-manifest native default and explicit fallback canaries continue to prove the sibling native instance.",
+    "public_endpoints": [
+      "GET /api/attention/kernel-runtime",
+      "GET /api/ready",
+      "GET /api/utils/kernel_status",
+      "POST /api/ideas",
+      "POST /api/substrate/kernel-image/proposals"
+    ],
+    "test_flows": [
+      "local release kernel serves the BML attention route with native proof headers and nonzero cold metrics.",
+      "static deploy-path check pins the higher-priority BML attention ingress, native proof handler, and deploy canary probe.",
+      "post-merge deploy should pass verify_kernel_canary_public_gate.sh, including handler api_attention_kernel_runtime on the public attention route."
+    ]
+  }
+}
