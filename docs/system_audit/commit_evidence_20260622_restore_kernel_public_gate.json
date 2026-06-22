@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/restore-kernel-public-gate",
+  "commit_scope": "Restore the kernel-router public-gate service binding after retargeting the legacy attention router to the BML service caused public native mutation gate traffic to fall through to Python. The production-manifest attention router points back to coherence-api-kernel-canary.",
+  "files_owned": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_restore_kernel_public_gate.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_restore_kernel_public_gate.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "git diff --check"
+    ],
+    "notes": "Hostinger Auto Deploy run 27973645678 deployed 99d29c10 but failed Verify kernel public canary. The canary showed X-Form-Native-Public-Gate POST /api/ideas returning Python/Pydantic 422 with no X-Form-Router, proving the cross-service retarget disturbed the kernel public-gate routing."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production Traefik native front door",
+    "notes": "After deploy, the public kernel canary must pass again. The no-Accept attention edge remains a separate observed gap and must not be healed by breaking the public mutation gate."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks, deploy, and public kernel canary proof remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "deploy-canary-stability"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-restore-kernel-public-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27973645678 passed Sync tracked deploy script, Roll forward VPS, and Verify public deployment, then failed Verify kernel public canary.",
+    "The failed public canary showed repeated status=422 router=none for X-Form-Native-Public-Gate POST /api/ideas, with a Python validation body requiring potential_value and estimated_cost.",
+    "Public health after the failed canary reported deployed_sha 99d29c102885e65449a22180fe675bd832e12f80, so the bad router target was live and needed a restore commit.",
+    "Accept-bearing /api/attention/kernel-runtime still returned api_attention_kernel_runtime, so this restore preserves BML attention while recovering the public mutation gate."
+  ],
+  "change_files": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_restore_kernel_public_gate.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public X-Form-Native-Public-Gate and no-header native default mutation canaries should return native-kernel receipts again after the production-manifest attention router points back to coherence-api-kernel-canary.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "GET /api/attention/kernel-runtime",
+      "GET /api/health"
+    ],
+    "test_flows": [
+      "static Hostinger deploy path check requires the production-manifest attention router to target coherence-api-kernel-canary.",
+      "post-deploy public kernel canary passes.",
+      "ordinary Accept-bearing attention requests continue to return api_attention_kernel_runtime."
+    ]
+  }
+}

@@ -104,7 +104,7 @@ services:
       traefik.http.routers.coherence-api-kernel-runtime-attention.entrypoints: "websecure"
       traefik.http.routers.coherence-api-kernel-runtime-attention.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-kernel-runtime-attention.priority: "1174"
-      traefik.http.routers.coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-kernel-runtime-attention.service: "coherence-api-kernel-canary"
       traefik.http.routers.coherence-api-kernel-ideas-create-native-default.rule: "Host(`api.coherencycoin.com`) && Method(`POST`) && Path(`/api/ideas`)"
       traefik.http.routers.coherence-api-kernel-ideas-create-native-default.entrypoints: "websecure"
       traefik.http.routers.coherence-api-kernel-ideas-create-native-default.tls.certresolver: "letsencrypt"
