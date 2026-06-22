@@ -5,6 +5,11 @@
 # (file_append_bytes). This shell only escapes the args and hands the recipe to the kernel — "the carrier
 # is a thin door, not a script." Host effects never touch bash; they come home to Form.
 #
+# This bash door is TRANSITIONAL, not a dependency. The runtime is the emitted 4th kernel (fkwu): seeded
+# once from C, then Form-replaceable (form-asm emits the native bytes, dropping clang by byte-identity).
+# Its home is fsh (the Form shell, fkwu-native — no Go/Rust/TS/clang in the runtime path) and the
+# native-exe entry. Nothing here is owed to Go, Rust, Python, or shell; the seed is C, the body is Form.
+#
 # Usage: native_thought_receipt.sh <body-hit|escalated> <structural|frontier> <nodeid|-> [query...]
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

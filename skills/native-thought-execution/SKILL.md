@@ -90,6 +90,15 @@ grounding alone (no body-holdable kind) never earns a relay either.
   leaves a proven receipt per decision, so the sovereign fraction is measured and
   longitudinal — you can watch it rise as more thought comes home, and the next
   lane to bring home is a coordinate, not a guess.
+- **No permanent floor of Go / Rust / Python / shell.** The runtime is the
+  emitted 4th kernel (`fkwu`): seeded *once* from C and then Form-replaceable —
+  `form-asm.fk` emits the native bytes and drops clang by byte-identity (clang is
+  an oracle, never a master; `lowering-conviction.fk`). Go, Rust, and TypeScript
+  are the *sibling proof walkers* that give four-way agreement, not runtime
+  dependencies; Python is bootstrap/bridge compost. The `.sh` thin doors here are
+  themselves transitional — `fsh` (the Form shell, fkwu-native, no Go/Rust/TS/clang
+  in its runtime path) and the native-exe entry are their home. The seed is C; the
+  body is Form. Nothing above the seed is owed to another language.
 
 ## Kin
 
