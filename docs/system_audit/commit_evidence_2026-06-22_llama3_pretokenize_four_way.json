@@ -1,0 +1,49 @@
+{
+  "evidence_id": "commit_evidence_2026-06-22_llama3_pretokenize_four_way",
+  "date": "2026-06-22",
+  "author": "Sema (Opus 4.8, autonomous native-ML walk)",
+  "title": "Llama 3 (tiktoken-style) regex pre-tokenization crosses four-way — the one algorithmic gap between the proven GPU llama decode stack and the first end-to-end native LLAMA token",
+  "claim": "llama3-pretokenize.fk implements Llama 3's fixed pre-tokenization pat_str as a Form recipe; it crosses four-way (Go/Rust/TS/fkwu) at verdict 255 with 0 divergent.",
+  "north_star_position": "The whole llama inference floor is four-way AND on the M4 GPU: load path (q4k/q6k/f16 dequant), every llama numeric (RMSNorm/RoPE/SwiGLU/SiLU), both block-forward kernels, the KV-cached decode step, and the multi-layer depth stack all run on silicon bit-identical to recompute (#3355/#3376/#3408/#3412/#3423/#3424). The WHISPER tokenizer is four-way end-to-end (tokenize #3550). But the GPU decode stack is LLAMA, and llama3's tokenizer differs from whisper's in exactly ONE algorithmic piece: the pre-tokenization pat_str. The byte->symbol map is the SAME byte-level bytes_to_unicode (#3503); the merge core is the SAME lowest-rank-first BPE (#3447; tiktoken's _byte_pair_merge is lowest-rank-first too) — only the rank TABLE (DATA) and this splitter differ. This brick closes that algorithmic gap.",
+  "band": {
+    "file": "form/form-stdlib/tests/llama3-pretokenize-band.fk",
+    "recipe": "form/form-stdlib/llama3-pretokenize.fk",
+    "verdict": 255,
+    "fourth_arm": "four-way (fkwu + pre-flattened tables)",
+    "divergent": 0,
+    "validate_cmd": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/llama3-pretokenize.fk form-stdlib/tests/llama3-pretokenize-band.fk",
+    "manifest_row": "llama3-pretokenize fks 255"
+  },
+  "pat_str": "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\nA-Za-z0-9]?[A-Za-z]+|[0-9]{1,3}| ?[^\\sA-Za-z0-9]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
+  "four_distinguishing_laws_vs_gpt2": [
+    "CASE-INSENSITIVE contractions (?i:): 'DON\\'T' -> ['DON',''T'] — llama3 splits the UPPERCASE 'T; GPT-2's lowercase-only 't would not. (band bit 2)",
+    "DIGITS group 1-3 [0-9]{1,3}: '1234' -> ['123','4']; GPT-2's ` ?\\p{N}+` gives ['1234']. (band bit 4)",
+    "WORD leading char is ANY non-newline non-alnum, not just a space [^\\r\\nA-Za-z0-9]?\\p{L}+: '_word' -> ['_word']; GPT-2's ` ?\\p{L}+` gives ['_','word']. (band bit 8)",
+    "DIGITS take NO leading space (no ` ?` on the digit alt): ' 42' -> [' ','42']; GPT-2's ` ?\\p{N}+` gives [' 42']. This also forces the ws run==1 path (one space before a non-space) that GPT-2's space-absorption never reaches. (band bit 16)"
+  ],
+  "band_claims": {
+    "bit1": "' tokenizer' -> [' tokenizer'] (anchor / space absorbed into word by the leading-char rule)",
+    "bit2": "'DON\\'T' -> ['DON',''T'] (case-insensitive contraction)",
+    "bit4": "'1234' -> ['123','4'] (digit grouping 1-3)",
+    "bit8": "'_word' -> ['_word'] (leading non-alnum char absorbed into word)",
+    "bit16": "' 42' -> [' ','42'] (digits no leading space + ws run==1)",
+    "bit32": "'a   b' -> ['a','  ',' b'] (internal whitespace \\s+(?!\\S), shared load-bearing law)",
+    "bit64": "'a\\nb' -> ['a','\\n','b'] (newline rule \\s*[\\r\\n]+ — the l3-lastnl cut)",
+    "bit128": "'DON\\'T 1234' -> ['DON',''T',' ','123','4'] (composite: three distinguishing laws in scan order)"
+  },
+  "reference": {
+    "method": "Python `re` with the ASCII-reduced llama3 pat_str (\\p{L}->[A-Za-z], \\p{N}->[0-9]). Every band fixture AND a wider edge-case set (newline runs ' \\n ', '  \\n'; rule-d trailing newlines 'hi!\\n\\n'; '12345'->['123','45']; '@home'; 'It\\'s') confirmed bit-identical to the recipe model BEFORE authoring.",
+    "result": "0 mismatches on all fixtures."
+  },
+  "lane": "NEW-recipe brick on the critical path. Design (the regex-as-left-to-right-scan model, the four distinguishing laws + their reference cross-check, the ws run==1 / newline-cut edge cases, the strange-minimal fixtures) was the cost; the four-way proof was seconds. Modeled closely on pretokenize.fk (#3542, the GPT-2 splitter) with the four llama3 deltas. READ-THE-BODY (15th time): grepped form/ first — confirmed no llama3/tiktoken pretokenizer existed (the 'llama' grep hits are all the numerics/block files); a real gap, exactly the one #3550's own receipt named.",
+  "gotchas": [
+    "Verified the `\\n` escape survives four-way INCLUDING fkwu's pre-flattener with a throwaway probe band (str_len('a\\nb')==3, ord(char_at,1)==10, verdict 7, fourth arm four-way) BEFORE relying on it for the newline rule-(e) band bit — don't assume the flattener handles every escape.",
+    "The GPT-2 ws end trick `(if (ge j n) j (sub j 1))` is WRONG for llama3: GPT-2's ` ?` absorption means it never hits a single whitespace char before a non-space, but llama3 digits take no leading space, so ' 42' reaches the ws handler with one space and must emit it (not collapse to a zero-length token / infinite loop). l3-ws-end adds the run-length guard."
+  ],
+  "named_next_stones": [
+    "Intern the llama3 byte->symbol vocab + the tiktoken merge-rank table as Form DATA (the last carrier-DATA pieces of the llama tokenizer).",
+    "Compose the whole llama text->ids tokenizer (llama3-pretokenize + byte-to-symbol #3503 + lowest-rank-first BPE #3447 over the llama rank table) into one `tokenize-llama` recipe, the llama analog of tokenize.fk #3550.",
+    "Wire the FULL generation loop: tokenize-llama -> multi-layer KV-cached decode stack on the M4 GPU (#3423/#3424) -> greedy argmax (#3402) over real llama3.2:3b GGUF weights (load path already Form-native four-way) — the first end-to-end native LLAMA token."
+  ],
+  "receipt_of": "form/form-stdlib/llama3-pretokenize.fk + form/form-stdlib/tests/llama3-pretokenize-band.fk + the fourth-arm-bands.txt row"
+}
