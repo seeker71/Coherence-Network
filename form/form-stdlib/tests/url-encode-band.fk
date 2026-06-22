@@ -1,6 +1,6 @@
 ; tests/url-encode-band.fk — RFC 3986 percent-encoding sibling-witness band.
 ;
-; preludes: form-stdlib/url-encode.fk
+; preludes: form-stdlib/str-byte-at.fk form-stdlib/url-encode.fk
 ;
 ; Validates that the Form-recipe url-encode (in form-stdlib/url-encode.fk)
 ; produces RFC-3986-correct outputs on every kernel that carries the

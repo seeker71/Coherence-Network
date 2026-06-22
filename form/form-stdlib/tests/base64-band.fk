@@ -1,6 +1,6 @@
 ; tests/base64-band.fk — RFC 4648 §4 sibling-witness band for Base64.
 ;
-; preludes: form-stdlib/base64.fk
+; preludes: form-stdlib/str-byte-at.fk form-stdlib/base64.fk
 ;
 ; Validates that the Form-recipe Base64 (in form-stdlib/base64.fk)
 ; produces RFC-4648-correct outputs on every kernel that carries the
