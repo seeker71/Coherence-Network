@@ -479,7 +479,9 @@
     (if (str_eq name "EXTERNAL-URI")    (flt-nodeid4 1 2 99 1716)
     (if (str_eq name "QUERY-PARSE-ERROR")(flt-nodeid4 1 2 99 1717)
     (if (str_eq name "SCHEMA-LIST-CAT") (flt-nodeid4 1 1 14 0)
-        (flt-bp-fallback name env))))))))))))))))))))))))))))))))))))))))))))
+    (if (str_eq name "SHAMBALLA-RAISED")(flt-nodeid4 1 3 99 1718)
+    (if (str_eq name "SHAMBALLA-CRYSTAL")(flt-nodeid4 1 2 99 1719)
+        (flt-bp-fallback name env))))))))))))))))))))))))))))))))))))))))))))))
 
 ; table ops by arity, else a user function call (one evaluated argument)
 (defn flt-op (op s pos fns env) (flt-op2 (flt-assoc op (flt-ops)) op s pos fns env))
