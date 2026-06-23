@@ -77,7 +77,7 @@ building ahead of need.
 - [x] **R3 — four-way proof.** `form/form-stdlib/tests/field-relay-band.fk` proves the decision across
   Go/Rust/TS/fkwu (registered in `fourth-arm-bands.txt`), including the body-blindness cell (two
   envelopes equal in metadata, different in body, route identically).
-- [ ] **R4 — dial-out relay transport.** A minimal WS endpoint (`api/app/routers/field_relay.py`, bootstrap
+- [x] **R4 — dial-out relay transport.** A minimal WS endpoint (`api/app/routers/field_relay.py`, bootstrap
   carrier) accepts any outbound connection that speaks the protocol (open join, no auth gate),
   identified by the NodeID it presents, applies `fr-route`, forwards
   `deliver` envelopes to the connected recipient, and keepalive-pings to hold the connection open.

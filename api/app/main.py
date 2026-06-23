@@ -84,6 +84,7 @@ from app.routers import meta as meta_router
 from app.routers import verification as verification_router
 from app.routers import onboarding as onboarding_router
 from app.routers import openclaw_node_bridge
+from app.routers import field_relay as field_relay_router
 from app.routers import pipeline
 from app.routers import pipeline_policies
 from app.routers import push as push_router
@@ -752,6 +753,7 @@ app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(federation.router, prefix="/api", tags=["federation"])
 app.include_router(field_stories.router, prefix="/api", tags=["field-stories"])
 app.include_router(openclaw_node_bridge.router, prefix="/api", tags=["federation"])
+app.include_router(field_relay_router.router, prefix="/api", tags=["field-relay"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
