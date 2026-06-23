@@ -1,0 +1,61 @@
+; preludes: form-stdlib/core.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk
+;
+; native-host-instance-band — the one always-on native host lifecycle for Mac,
+; Windows, and Android. The band proves that all three platforms are the same
+; body shape and that decisions are made from Form readings: listening,
+; sharing, transcribing, surprise salience, learning, and mesh route.
+;
+; Verdict 4095:
+;   1     macOS host is known and listening
+;   2     Windows host is known and listening
+;   4     Android host is known and listening
+;   8     unsupported host is refused
+;   16    voiced speech transcribes
+;   32    audible-without-text does not transcribe
+;   64    salient surprise chooses learn-from-surprise
+;   128   ask message chooses answer when no surprise outranks it
+;   256   stream samples are learned
+;   512   gold message routes to gold sharing lane
+;   1024  host receipt remains streaming
+;   2048  Android cycle carries listen/share/transcribe/surprise/learn together
+
+(do
+    (let host (hso-receipt 420000 700000 10000 27000 800000 1 1 1))
+    (let speech (so-receipt 2 690 55 "voice-1"))
+    (let audible (so-receipt 1 690 55 "voice-1"))
+    (let surprises (list (list "unexpected-voice-shape" 72)))
+    (let quiet (empty))
+    (let samples (list (list "speech" (list 5 0 0))))
+    (let mac (nhi-cycle "macos" host speech quiet samples ""))
+    (let win (nhi-cycle "windows" host speech quiet samples ""))
+    (let android (nhi-cycle "android" host speech surprises samples "gold clear live host learned"))
+    (let unknown (nhi-cycle "haiku" host speech quiet samples ""))
+    (let ask (nhi-cycle "macos" host audible quiet samples "what changed?"))
+    (let gold (nhi-cycle "windows" host audible quiet samples "gold clear native host cell"))
+
+    (let c0 (if (and (eq (nhi-rec-native? mac) 1)
+                     (eq (nhi-rec-listening? mac) 1)) 1 0))
+    (let c1 (if (and (eq (nhi-rec-native? win) 1)
+                     (eq (nhi-rec-listening? win) 1)) 2 0))
+    (let c2 (if (and (eq (nhi-rec-native? android) 1)
+                     (eq (nhi-rec-listening? android) 1)) 4 0))
+    (let c3 (if (and (eq (nhi-rec-native? unknown) 0)
+                     (str_eq (nhi-rec-decision unknown) "refuse-unsupported-host")) 8 0))
+    (let c4 (if (eq (nhi-transcribing? speech) 1) 16 0))
+    (let c5 (if (eq (nhi-transcribing? audible) 0) 32 0))
+    (let c6 (if (str_eq (nhi-rec-decision android) "learn-from-surprise") 64 0))
+    (let c7 (if (str_eq (nhi-rec-decision ask) "answer") 128 0))
+    (let c8 (if (eq (nhi-rec-learned mac) 1) 256 0))
+    (let c9 (if (str_eq (nhi-rec-share-route gold) "gold") 512 0))
+    (let c10 (if (str_eq (hso-rec-state host) "streaming") 1024 0))
+    (let c11
+        (if (and (eq (nhi-rec-listening? android) 1)
+                 (and (eq (nhi-rec-sharing? android) 1)
+                      (and (eq (nhi-rec-transcribe? android) 1)
+                           (and (gt (nhi-rec-surprises android) 0)
+                                (eq (nhi-rec-learned android) 1)))))
+            2048
+            0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))

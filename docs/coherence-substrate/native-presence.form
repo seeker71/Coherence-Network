@@ -11,7 +11,7 @@
     (live-proof scripts/presence_cycle.ps1 -> status pass))
 
   (purpose
-    "A presence is a minimal native binary you run on Windows, macOS, or Android. By default it just IS and OBSERVES; when it chooses, it converses with sibling presences."
+    "A presence is a minimal native binary you run on Windows, macOS, or Android. By default it just IS and OBSERVES; when it chooses, it converses with sibling presences. FORM_PRESENCE_TICKS=0 keeps it always-on until the explicit stop sentinel appears."
     "New capability never arrives as a new build of the entry executable. It arrives as a Form recipe node that anyone -- a presence or a running agent -- mints. Every presence notices, lowers the node to a native library, hot-loads it behind the one swap ABI, and exposes it as a callable native recipe WHILE STILL RUNNING."
     "A local gap is resolved by asking a sibling, who answers with the form node, which integrates live. The entry executable is the only fixed surface; it never restarts.")
 
