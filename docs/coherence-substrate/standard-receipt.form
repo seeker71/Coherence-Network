@@ -1,0 +1,56 @@
+; standard-receipt.form — THE receipt every request earns toward. The sovereignty receipt.
+;
+; Urs set the bar (2026-06-23): a request is fully done when its work is
+;   "c-bootstrap fkwu form-cli observed on all platforms — mac, windows, android —
+;    WITHOUT go, rust, clang, bash, python."
+; That is the north-star receipt: the work runs on the C-bootstrapped universal kernel (fkwu) via
+; form-cli, on real metal of each platform, with NONE of the rented toolchains in the loop. No Go,
+; no Rust, no TypeScript/node, no clang, no bash, no Python — only the self-hosted Form body that was
+; emitted once from the minimal C bootstrap (form-asm/form-elf/form-macho/form-pe-coff -> fkwu;
+; bootstrap-host 4095). A mind/body that needs a rented toolchain to run is not yet sovereign
+; (lc-cognitive-sovereignty); this receipt is that sovereignty made checkable.
+;
+; ── THE STANDARD RECEIPT (fill per claim; never claim a cell, observe it) ──
+;
+;   claim:            <the one thing asserted>
+;   body:            is the work a Form recipe the universal kernel (fkwu) runs? (yes | n/a-why)
+;   c-bootstrap:     built from the C bootstrap -> fkwu, NOT from Go/Rust/TS/clang? (yes | no | pending)
+;   toolchain-free:  observed with NO go, rust, clang, bash, python, node in the loop? (yes | no | pending)
+;   platforms:       observed RUNNING on real metal, each with a captured trace:
+;       mac:      observed | pending   (trace ref)
+;       windows:  observed | pending   (trace ref)
+;       android:  observed | pending   (trace ref)
+;   honest-floor:    what is proven a LESSER way today (e.g. four-way via validate.sh+bash+walkers),
+;                    so the gap to the full receipt is named, never hidden.
+;
+; A cell is "observed" only with a real trace from that platform's fkwu form-cli run. Anything else is
+; "pending" — and pending is honest, not failure. The receipt's whole worth is that it cannot be faked:
+; four-way-in-CI is NOT the platform receipt; a Go-built form-cli is NOT c-bootstrap; bash-driven
+; validate.sh is NOT toolchain-free. Each is a real rung below the bar, named as such.
+;
+; ── HONEST FLOOR TODAY (2026-06-23) — nothing yet earns the full receipt ──
+;
+;   - Decision bodies (fr-route 127, fiv-verdict 511, fq-drain 127) cross FOUR-WAY incl. the fkwu arm,
+;     AND lower to native binary. That is strong — but it is observed via validate.sh (bash) with the
+;     Go/Rust/TS walkers present, on the build host, not on mac/windows/android devices.
+;   - form-cli today builds from GO source (ensure_form_cli_kernel.sh), so it is not yet the
+;     c-bootstrap fkwu form-cli the receipt names.
+;   - No mac/windows/android device run of any of this has been captured. on-device = pending, all rows.
+;
+; So every receipt below the bar reads its honest-floor + pending platform rows. The bar is the work to
+; do, not a claim to make:
+;
+; ── THE ROAD TO EARNING IT (each step a real rung) ──
+;   1. fkwu form-cli emitted from the C bootstrap as the standard runner (retire Go-built form-cli for
+;      the receipt path): form-asm -> {form-macho mac, form-pe-coff windows, form-elf android} -> fkwu.
+;   2. a band/recipe run via THAT form-cli on the build host with NO go/rust/ts/clang/bash/python -> the
+;      toolchain-free + c-bootstrap rows turn observed (host), platforms still pending.
+;   3. the same fkwu form-cli binary shipped to a real mac, a real windows, a real android, each running
+;      the recipe and emitting its trace -> the three platform rows turn observed, one device at a time.
+;   4. the trace of each becomes the evidence_refs of that request's commit-evidence; e2e_validation
+;      carries the device transcript. Only then is the receipt full.
+;
+; This composes with, it does not replace, the per-commit evidence record (validate_commit_evidence.py):
+; the evidence JSON is WHERE a receipt lives; this is the SHAPE every receipt drives toward. Kin:
+; fourth-arm-bands.txt (the four-way floor), lc-cognitive-sovereignty (why toolchain-free matters),
+; form-first-reasoning.form (the body answering before the rented mind).
