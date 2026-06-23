@@ -1,0 +1,52 @@
+; journey.fk — read a rough JOURNEY from a track of timestamped speed-band fixes: how long it lasted,
+; how it was travelled (transport mode), and how much of it was moving. This turns the data lake's
+; stored fixes into knowledge — "where did I go / how / how long" answered from RECORDED sense, never
+; invented. It is the temporal sibling of spatial-fusion: where spatial-fusion fuses many SENSORS at one
+; moment, journey fuses many MOMENTS of one sensor — each fix votes its speed band, and the journey's
+; transport mode is the consensus band over the whole track (sf-consensus, reused). Duration is an
+; integer time-delta. Rough by design — bands and deltas, no haversine or sqrt the kernel set cannot
+; prove; the honest shape a journey of noisy fixes can carry. Distance (great-circle) waits for a real
+; float lane; until then the journey is when / how-fast-band / how-much-moving, which is already true.
+;
+; A fix is (t band): (nth f 0) a timestamp in any integer unit (relative seconds keep the band test off
+; huge epoch literals; the carrier may pass ms), (nth f 1) the speed band 0..k from confidence-calibrate
+; / spatial-fusion (0 still · 1 walk · 2 run/cycle · 3 vehicle). The track is a time-ordered list of
+; fixes, exactly what the field-log appends.
+;
+; Kin: spatial-fusion.fk (sf-consensus — the journey's transport mode is its temporal fusion),
+; spatial-colearn.fk (the sensors that produced these bands learned their trust over rounds),
+; confidence-calibrate.fk (banded each raw speed before it became a fix). Carrier-last: the phone
+; writes the track; the journey is Form, kernel-executable, the same on the Mac and the phone.
+;
+; preludes: form-stdlib/spatial-fusion.fk
+;
+; Proven by: form-stdlib/tests/journey-band.fk (four-way at validate.sh)
+
+(do
+    ; --- endpoints of the track (assumes time-ordered, as the field-log appends). ---
+    (defn jr-first-t (fixes) (nth (head fixes) 0))
+    (defn jr-last-t (fixes)
+        (if (eq (len fixes) 1) (nth (head fixes) 0) (jr-last-t (tail fixes))))
+
+    ; --- DURATION: last timestamp minus first; 0 for an empty or single-fix track (no span yet). ---
+    (defn jr-duration (fixes)
+        (if (eq (len fixes) 0) 0
+            (if (eq (len fixes) 1) 0 (sub (jr-last-t fixes) (jr-first-t fixes)))))
+
+    ; --- BALLOTS: each moment votes its speed band with weight 1 — one moment, one vote. ---
+    (defn jr-ballots (fixes)
+        (if (eq (len fixes) 0) (empty)
+            (cons (list (nth (head fixes) 1) 1) (jr-ballots (tail fixes)))))
+
+    ; --- TRANSPORT MODE: the consensus speed band over the whole track — the journey's dominant way of
+    ;     moving, fused across time by the same plurality spine spatial-fusion uses across sensors. ---
+    (defn jr-transport (fixes bands) (sf-consensus (jr-ballots fixes) bands))
+
+    ; --- MOVING COUNT: how many fixes were above still (band > 0) — how much of the track was motion. ---
+    (defn jr-moving (fixes)
+        (if (eq (len fixes) 0) 0
+            (if (gt (nth (head fixes) 1) 0)
+                (add 1 (jr-moving (tail fixes)))
+                (jr-moving (tail fixes)))))
+
+    0)
