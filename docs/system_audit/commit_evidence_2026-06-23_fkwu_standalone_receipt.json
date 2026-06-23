@@ -1,0 +1,40 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/fkwu-standalone-receipt",
+  "commit_scope": "First standard-receipt row flipped pending->observed: the fiv-verdict recipe (field-identity, 511) executed on the fkwu universal-kernel BINARY directly (./fkwu <table> 0 -> 511), no go/rust/ts/python/clang in the run loop, no validate.sh orchestration; the ELF links only libc.so.6 + ld-linux. Records the observation per docs/coherence-substrate/standard-receipt.form, honestly scoped: BODY + toolchain-free-RUNTIME observed on linux/elf (Android's arch+object family); c-bootstrap pending (binary clang-bootstrapped, table Go-flattened); mac/windows/android-device pending (no devices/network in this sandbox).",
+  "files_owned": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_standalone_receipt.json"],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk",
+      "FKWU=form/form-stdlib/.cache/fourth/fkwu-* ; ./$FKWU <field-identity-table> 0"
+    ],
+    "fourth_arm": "field-identity four-way (Go/Rust/TS/fkwu) verdict 511, 0 divergent.",
+    "native_binary": "validate.sh --binary 511; AND the fkwu ELF run directly on the pre-flattened table -> 511.",
+    "notes": "ldd of the fkwu binary: linux-vdso, libc.so.6, ld-linux only -- no toolchain runtime. The RUN of the recipe is toolchain-free; the BUILD of the binary used clang (emit C -> clang) and the table used the Go flattener, so this is the runtime rung, not yet the c-bootstrap clang-free form-asm lane."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation record; the four-way gate runs in CI on the underlying band."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a runtime-observation receipt."},
+  "phase_gate": {
+    "phase": "standard-receipt-first-observed-row",
+    "gate": "Earn, in this sandbox, the rungs of the standard receipt that are actually earnable: BODY (fkwu runs the recipe) + toolchain-free RUNTIME on linux/elf, directly observed. The clang-free c-bootstrap form-asm lane and real mac/windows/android device runs remain pending (need the form-asm runnable form-cli + devices + network, none available here).",
+    "state": "runtime-rung-observed-linux-elf",
+    "can_move_next_phase": false
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-identity-verdict"],
+  "task_ids": ["fkwu-standalone-receipt"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "standard-setting", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["observation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/tests/field-identity-band.fk",
+    "form/scripts/fourth-arm.sh"
+  ],
+  "change_files": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_standalone_receipt.json"],
+  "change_intent": "docs_only"
+}
