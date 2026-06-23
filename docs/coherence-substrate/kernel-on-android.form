@@ -81,12 +81,24 @@
 ;       (adb logcat -s FormKernel), and a live tick recognizes accel still-vs-moving through the same
 ;       recipe. The phone recognizes WITHOUT the Mac. (Coherence Sense; both build scripts now invoke
 ;       build-android.sh before gradle so the published/CI APK ships the kernel.)
+;   NATIVE Form->asm .so ON ARM  [MEASURED 2026-06-23 — loaded + run on a Galaxy S23 Ultra]:
+;     - The form-elf -> loadable .so -> dlopen lane (the Android twin of the Mac form-asm ->
+;       form-macho -> recipe-dylib -> codesign path, minus codesign) IS built. form-elf-so.fk emits a
+;       loadable aarch64 ET_DYN shared object from Form-native arm64 bytes — program headers
+;       (PT_LOAD + PT_DYNAMIC), a dynamic section, dynsym, SysV hash, AND the full section header table
+;       (NULL/.hash/.dynsym/.dynstr/.dynamic/.shstrtab) bionic cross-checks. Proven four-way by
+;       tests/form-elf-so-band.fk (127). scripts/form_elf_so_android_receipt.sh emits a .so exporting
+;       form_native(), pushes it + a dlopen harness to the device, and the bionic linker dlopen's it and
+;       runs the native function (RESULT 42) — ZERO clang for the .so (Form is compiler+assembler+linker;
+;       NDK clang builds only the test harness). The bionic gauntlet surfaced + pinned: e_shentsize 0x40,
+;       a real .shstrtab at e_shstrndx, and a SHT_DYNAMIC section header matching PT_DYNAMIC.
 ;   WHAT IS STILL UNTESTED FOR THIS KERNEL  [carrier-work — not done]:
 ;     - On-device THREE-way (the Go .aar AND a TS-on-JS-engine alongside the Rust .so, all agreeing on
 ;       one phone) still UNRUN — only the Rust arm runs on-device so far.
-;     - The native Form->asm JIT crystallization on ARM (the form-elf -> loadable .so -> dlopen lane,
-;       the Android twin of the Mac recipe-dylib+codesign path) is NOT built: the on-device kernel runs
-;       as the tree-walker, not crystallized native.
+;     - The native .so floor runs a leaf body (movz+ret); wiring REAL recipe bodies (form-asm output for
+;       arbitrary functions) into elf-so + the kernel-driven champion-challenger hot-swap (crystallize a
+;       hot recipe on the phone, melt on cool) is the layer above this proven floor — the interpreter
+;       kernel (FormKernel) and the native .so lane both run on-device; uniting them is the next step.
 ;     - A separate core-axiom receipt .so was packaged into an APK and entry-hash-verified earlier; it
 ;       is superseded as the live path by FormKernel above (which IS JNI-wired and runs from the app).
 ;

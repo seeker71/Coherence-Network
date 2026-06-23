@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-elf-so.fk
+;
+; form-elf-so-band — the Android/aarch64 LOADABLE SHARED OBJECT floor. A Form recipe
+; emits a minimal ELF64 ET_DYN image the dynamic linker can dlopen, exporting one
+; function ("form_native") over Form-native arm64 bytes — no clang as compiler,
+; assembler, or linker. This is the native-JIT-on-ARM carrier: form-asm bytes ->
+; a loadable .so -> dlopen, the Android twin of the Mac recipe-dylib lane. The local
+; floor proves the LOADABLE shape (program headers, dynamic section, dynamic symbol
+; table, SysV hash) and byte placement; on-device dlopen is a physical receipt when
+; a device runner is present (the form-elf-exec pattern).
+;
+; The body is a leaf: movz x0,#42 ; ret (returns 42, no relocations). The image is
+; 512 bytes: ELF header 64 + 2 program headers 112 + code 8 + dynsym 48 + dynstr 13
+; + (pad) + .hash 20 + (pad) + .dynamic 96 + .shstrtab 11 + (pad) + 2 section
+; headers 128. The .shstrtab + section header table (and e_shentsize 0x40, e_shnum 2,
+; e_shstrndx 1) are what Android's bionic loader requires even for a
+; load-by-program-headers .so — pinned here so the dlopen the on-device receipt
+; (scripts/form_elf_so_android_receipt.sh) needs can't regress.
+;
+; Verdict 127:
+;   1   MAGIC — ELF64 little-endian header starts 0x7f 'E' 'L' 'F'
+;   2   TARGET — ET_DYN (loadable shared object) + EM_AARCH64
+;   4   PROGRAM HEADER TABLE — e_phoff 64, e_phentsize 56, e_phnum 2
+;   8   SEGMENTS + BIONIC FIELDS — PT_LOAD (R+X) at 64, PT_DYNAMIC (R) at 120,
+;        e_shentsize 0x40 + e_shnum 2 (bionic requires them), total image 512 bytes
+;   16  TEXT — code at 176: movz x0,#42 (40 05 80 d2) then ret (c0 03 5f d6)
+;   32  EXPORT — .dynsym[1] form_native: st_name 1, st_info 0x12 (GLOBAL|FUNC), st_value 176 (the code)
+;   64  RESOLUTION — dynstr 'f' at 233, .hash nbucket 1 at 248, DT_HASH (tag 4) -> 248 in .dynamic
+(do
+    (let img (elf-so (elf-so-leaf-const 42)))
+
+    (let c0 (if (eq (nth img 0) 127) (if (eq (nth img 1) 69)
+            (if (eq (nth img 2) 76) (if (eq (nth img 3) 70) 1 0) 0) 0) 0))
+    (let c1 (if (eq (nth img 16) 3) (if (eq (nth img 18) 183) 2 0) 0))
+    (let c2 (if (eq (nth img 32) 64) (if (eq (nth img 54) 56)
+            (if (eq (nth img 56) 2) 4 0) 0) 0))
+    (let c3 (if (eq (nth img 64) 1) (if (eq (nth img 68) 5)
+            (if (eq (nth img 120) 2) (if (eq (nth img 124) 4)
+            (if (eq (nth img 58) 64) (if (eq (nth img 60) 6)
+            (if (eq (len img) 800) 8 0) 0) 0) 0) 0) 0) 0))
+    (let c4 (if (eq (nth img 176) 64) (if (eq (nth img 179) 210)
+            (if (eq (nth img 180) 192) (if (eq (nth img 183) 214) 16 0) 0) 0) 0))
+    (let c5 (if (eq (nth img 208) 1) (if (eq (nth img 212) 18)
+            (if (eq (nth img 216) 176) 32 0) 0) 0))
+    (let c6 (if (eq (nth img 233) 102) (if (eq (nth img 248) 1)
+            (if (eq (nth img 272) 4) (if (eq (nth img 280) 248) 64 0) 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

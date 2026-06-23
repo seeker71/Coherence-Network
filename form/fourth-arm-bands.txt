@@ -401,6 +401,7 @@ form-pe-coff-affine fks 127
 bootstrap-host fks 4095
 form-elf fks 31
 form-elf-exec fks 63
+form-elf-so fks 127
 form-mut fks 31
 form-spy fks 31
 gematria fks 11111
