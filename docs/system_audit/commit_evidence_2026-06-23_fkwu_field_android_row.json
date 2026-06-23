@@ -1,0 +1,56 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/amazing-gagarin-b118a6",
+  "commit_scope": "Standard-receipt ANDROID platform row earned for the three FIELD decision bodies. The live on-device fkwu universal kernel (aarch64, static-musl ELF) ran all three field decision-body tables STANDALONE on a real Galaxy S23 Ultra (SM-S918U1, arm64-v8a, Android 16/sdk36): fiv-verdict (field-identity) -> 511, fr-route (field-relay) -> 127, fq-drain (field-queue) -> 127. Tables were flattened on the mac (Go = build-host flattener), pushed to /data/local/tmp, and read by the device fkwu via `./fkwu <table> 0 | head -1` -- validate.sh's exact native invocation. The device carries NO toolchain at all (clang/gcc/cc/go/rustc/node/python/python3/bash all absent), so the run is toolchain-free not merely by exclusion-from-loop but by absence-from-platform. The fkwu binary on the device is the documented zig-cc -target aarch64-linux-musl -static build from commit 13a0e8b45 (no Android NDK, no clang-on-device); 1592096 bytes, sha256 4814845220ddf4f59d75039d2cc050077c198d2be429506c95b0adfb5ef728d2. That commit's android-live lane covered other bands (room-address/vision-percept/speak-turn/ambient-surprise/spatial-fusion/journey/place-sense); THIS record extends the android receipt to the field-relay arc's decision bodies, verified against the four-way-canonical verdicts.",
+  "files_owned": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_field_android_row.json"],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk   # 511 four-way (mac host)",
+      "adb -s 192.168.1.223:5555 push form/form-stdlib/.cache/fourth/t-field-identity-*.txt /data/local/tmp/recv-field-identity.txt",
+      "adb -s 192.168.1.223:5555 shell 'cd /data/local/tmp && ./fkwu recv-field-identity.txt 0 | head -1'   # -> 511",
+      "(same for field-relay -> 127, field-queue -> 127)"
+    ],
+    "fourth_arm": "field-identity 511, field-relay 127, field-queue 127 -- four-way (Go/Rust/TS/fkwu) on the mac host (0 divergent); the device fkwu (aarch64) independently returns the SAME verdict on the pushed tables.",
+    "native_binary": "Device fkwu (static-musl aarch64 ELF) run directly on the pushed pre-flattened tables -> 511 / 127 / 127. Different verdicts per body (511 vs 127) prove fkwu genuinely computes each on-device, not echoing.",
+    "notes": "Device: Samsung SM-S918U1 (Galaxy S23 Ultra), Android 16 (sdk 36), arm64-v8a/aarch64. Device fkwu sha256 4814845220ddf4f59d75039d2cc050077c198d2be429506c95b0adfb5ef728d2 (1592096 bytes), provenance commit 13a0e8b45 (zig cc -target aarch64-linux-musl -static; build-host Go flatten; NO NDK/clang on device). Device toolchain probe: clang/gcc/cc/go/rustc/node/python/python3/bash ALL absent. The RUN is toolchain-free on android metal; the BUILD used zig cc (a C compiler) + Go flatten, so this is the android RUNTIME rung, NOT yet the c-bootstrap clang-free form-asm/form-elf lane. The device fkwu lane (verify_fkwu_android_no_go.sh) currently lives on the unmerged sibling branch claude/native-thought-execution-5vgm0y; adding the field bodies to that durable verifier should follow once it lands on main."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation record; the four-way gate runs in CI on the underlying bands. The android device run is not a CI door (no hosted android runner)."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a runtime-observation receipt for the android platform row."},
+  "phase_gate": {
+    "phase": "standard-receipt-android-platform-row-observed-field-bodies",
+    "gate": "Earn the android platform row of the standard receipt for the field decision bodies on real aarch64 metal: BODY (fkwu runs the recipes) + toolchain-free RUNTIME on android (device carries no toolchain), directly observed for fiv-verdict/fr-route/fq-drain. The clang-free c-bootstrap form-elf lane remains pending.",
+    "state": "android-runtime-rung-observed-aarch64-static-musl",
+    "can_move_next_phase": false
+  },
+  "standard_receipt": {
+    "template": "docs/coherence-substrate/standard-receipt.form",
+    "claim": "The field decision bodies (fiv-verdict/fr-route/fq-drain) run on the fkwu universal kernel, toolchain-free at runtime, on a real aarch64 Android phone.",
+    "body": "yes -- fkwu (universal Form walker) executes the recipes; verdicts 511/127/127.",
+    "c_bootstrap": "pending -- device fkwu built via zig cc (C compiler) from emitted C; tables Go-flattened. The form-asm/form-elf clang-free lane is the next rung.",
+    "toolchain_free": "observed (runtime) -- the android device carries NO clang/gcc/cc/go/rustc/node/python/bash; the run is `./fkwu <table> 0`, only the binary + bionic/static-musl in the loop.",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "commit_evidence_2026-06-23_fkwu_mac_platform_row.json -- Apple M4 Max, macOS 26.3.1, Mach-O arm64 fkwu standalone -> 511/127/127"},
+      "windows": {"status": "pending", "trace": "windows-host.yml extended to run the field bodies on windows-latest (PR open); trace captured once that CI run is green"},
+      "android": {"status": "observed", "trace": "this record -- Samsung SM-S918U1 (Galaxy S23 Ultra), Android 16, arm64-v8a; static-musl aarch64 fkwu standalone -> 511/127/127; device carries no toolchain"}
+    },
+    "honest_floor": "mac + android rows observed on real metal (runtime + body); linux/elf row observed (prior record); windows row pending (CI door in flight); c-bootstrap clang-free lane pending on every platform. The bar -- c-bootstrap fkwu form-cli on mac+windows+android, toolchain-free -- is not yet met; mac + android are two real rungs toward it."
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-identity-verdict", "field-relay-always-open-connection", "field-queue-drain"],
+  "task_ids": ["fkwu-field-android-row"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "standard-setting", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["observation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "docs/system_audit/commit_evidence_2026-06-23_fkwu_mac_platform_row.json",
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/field-relay.fk",
+    "form/form-stdlib/field-queue.fk"
+  ],
+  "change_files": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_field_android_row.json"],
+  "change_intent": "docs_only"
+}
