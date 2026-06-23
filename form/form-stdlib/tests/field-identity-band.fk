@@ -1,0 +1,32 @@
+; preludes: form-stdlib/field-identity.fk
+;
+; The identity verdict, pinned. inputs (nodeid_match, sig_ok, deleg_ok, pin_state); pin_state 0/1/2.
+; The six verdicts + the three act-on helpers. Verdict 511 when every claim lands.
+(do
+    ; TRUSTED — signed, NodeID-consistent, delegated, pin matches
+    (let c0 (if (eq (fiv-verdict 1 1 1 1) 1) 1 0))
+    ; FIRST_USE_PIN — same but first contact
+    (let c1 (if (eq (fiv-verdict 1 1 1 0) 2) 2 0))
+    ; UNVERIFIED — no signature (routed but unauthenticated)
+    (let c2 (if (eq (fiv-verdict 1 0 1 1) 3) 4 0))
+    ; REJECT_PIN_CONFLICT — pinned key changed (impersonation)
+    (let c3 (if (eq (fiv-verdict 1 1 1 2) 4) 8 0))
+    ; REJECT_NODEID_MISMATCH — claimed NodeID not the hash of the key
+    (let c4 (if (eq (fiv-verdict 0 1 1 1) 5) 16 0))
+    ; REJECT_DELEGATION — signed by an undelegated key
+    (let c5 (if (eq (fiv-verdict 1 1 0 1) 6) 32 0))
+
+    ; accept? — trusted + first-use yes; unverified no
+    (let c6 (if (and (and (eq (fiv-accept? (fiv-verdict 1 1 1 1)) 1)
+                          (eq (fiv-accept? (fiv-verdict 1 1 1 0)) 1))
+                     (eq (fiv-accept? (fiv-verdict 1 0 1 1)) 0)) 64 0))
+    ; should-pin? — only first-use
+    (let c7 (if (and (eq (fiv-should-pin? (fiv-verdict 1 1 1 0)) 1)
+                     (eq (fiv-should-pin? (fiv-verdict 1 1 1 1)) 0)) 128 0))
+    ; impersonation? — conflict/mismatch/bad-delegation yes; trusted no
+    (let c8 (if (and (and (and (eq (fiv-impersonation? (fiv-verdict 1 1 1 2)) 1)
+                               (eq (fiv-impersonation? (fiv-verdict 0 1 1 1)) 1))
+                          (eq (fiv-impersonation? (fiv-verdict 1 1 0 1)) 1))
+                     (eq (fiv-impersonation? (fiv-verdict 1 1 1 1)) 0)) 256 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
