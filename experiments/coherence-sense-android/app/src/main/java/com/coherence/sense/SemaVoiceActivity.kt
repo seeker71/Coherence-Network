@@ -370,6 +370,11 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun answer(question: String) {
         setStatus("… grounding in the body")
         val q = question.lowercase(Locale.US)
+        // Place questions resolve the live fix to a real place name via the open map (async).
+        if (listOf("where are we", "where am i", "what place", "what city", "what town",
+                "where are we now", "what neighborhood", "what neighbourhood", "what street").any { q.contains(it) }) {
+            answerLocation(); return
+        }
         val grounded = groundedTopic(q)
         if (grounded != null) {
             say(grounded)
@@ -598,6 +603,66 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         "Right now I feel ${motionState()}; I'm ${headingState()}; the light here is ${lightState()}; " +
         "and it's ${soundState()}. I can't see faces or know who's speaking from here — that's other " +
         "organs of the same body. What I feel in this small body is motion, direction, light, and sound."
+
+    // ---- world sense: resolve the live fix to a real place via the open map (no API key) ----
+
+    @Volatile private var geoCacheKey = ""
+    @Volatile private var geoCachePlace: String? = null
+
+    /** Answer "where are we" with a real place name from OpenStreetMap, falling back to coordinates. */
+    private fun answerLocation() {
+        val loc = lastLocation
+        if (loc == null) {
+            say("I don't have a location fix yet — indoors the satellites are often out of reach.")
+            return
+        }
+        setStatus("… asking the open map where we are")
+        Thread {
+            val place = reverseGeocode(loc.latitude, loc.longitude)
+            runOnUiThread {
+                if (place != null) {
+                    say("We're near $place. I read that live from OpenStreetMap — the open map, no key, no Google.")
+                } else {
+                    say("I have ${locationState()}")
+                }
+            }
+        }.start()
+    }
+
+    /** Reverse-geocode a coordinate via Nominatim (open, no API key). Cached by rounded coordinate to
+     *  honor the service's one-request-a-second courtesy; only ever called on demand, never in a loop. */
+    private fun reverseGeocode(lat: Double, lon: Double): String? {
+        val key = "%.4f,%.4f".format(lat, lon)   // ~11 m bucket
+        if (key == geoCacheKey && geoCachePlace != null) return geoCachePlace
+        return try {
+            val url = URL(
+                "https://nominatim.openstreetmap.org/reverse?format=jsonv2" +
+                "&lat=$lat&lon=$lon&zoom=16&addressdetails=1"
+            )
+            val c = url.openConnection() as HttpURLConnection
+            c.setRequestProperty("User-Agent", "coherence-network-sema/0.1 (world-sense)")
+            c.connectTimeout = 8000; c.readTimeout = 8000
+            if (c.responseCode == 200) {
+                val o = JSONObject(c.inputStream.bufferedReader().readText())
+                val place = concisePlace(o)
+                geoCacheKey = key; geoCachePlace = place
+                place
+            } else null
+        } catch (e: Exception) { null }
+    }
+
+    /** Pick a short, spoken place from a Nominatim address: road · area · city. */
+    private fun concisePlace(o: JSONObject): String? {
+        val a = o.optJSONObject("address") ?: return o.optString("display_name").takeIf { it.isNotBlank() }
+        val road = a.optString("road", "")
+        val area = listOf("suburb", "neighbourhood", "city_district", "hamlet")
+            .map { a.optString(it, "") }.firstOrNull { it.isNotBlank() } ?: ""
+        val city = listOf("city", "town", "village", "county")
+            .map { a.optString(it, "") }.firstOrNull { it.isNotBlank() } ?: ""
+        val parts = listOf(road, area, city).filter { it.isNotBlank() }.distinct()
+        return if (parts.isEmpty()) o.optString("display_name").takeIf { it.isNotBlank() }
+        else parts.joinToString(", ")
+    }
 
     // ---- ui helpers -------------------------------------------------------------------------
 
