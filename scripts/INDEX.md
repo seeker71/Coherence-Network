@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 327
+**Total files**: 328
 
 | File | Purpose |
 |---|---|
@@ -91,7 +91,6 @@
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
-| [fourth_warm.sh](fourth_warm.sh) | fourth_warm.sh — container-safe router to the fkwu kernel: warm fourth-arm tables into the persistent cache serially (bounded memory) so heavy bands prove four-way without the cold-cache OOM/timeout. |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_agent.sh](form_cli_agent.sh) | form_cli_agent.sh — thin WITNESS: the kernel runs the TIERED agent loop (form-native-run.fk). |
 | [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS for `form-cli ask+`. The body is Form: the kernel |
@@ -145,6 +144,7 @@
 | [form_union_demo.sh](form_union_demo.sh) | form_union_demo.sh — the m4e3/m4e4 union, witnessed: ONE self-contained binary |
 | [form_validate_shards.py](form_validate_shards.py) | Run Form validation workloads as parallel shards. |
 | [form_wc_demo.sh](form_wc_demo.sh) | form_wc_demo.sh — `wc -l`, built with ZERO clang and direct Form -> asm. It closes |
+| [fourth_warm.sh](fourth_warm.sh) | fourth_warm.sh — container-safe router to the fkwu (fourth) kernel. |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
 | [gen_bp_table.py](gen_bp_table.py) | Generate the kernel-resident bp lookup table for all three Form kernels. |
