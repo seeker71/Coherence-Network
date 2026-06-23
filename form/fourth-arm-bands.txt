@@ -291,6 +291,7 @@ classifier-eval fks 63
 confidence-calibrate fks 127
 confidence-weighted-vote fks 127
 spatial-fusion fks 255
+spatial-colearn fkc 255
 device-heartbeat fks 127
 drift-detect fks 63
 ensemble-vote fks 127
