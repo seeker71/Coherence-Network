@@ -3,6 +3,15 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-23] attune | the mind comes home in tiers — the on-device oracle as a sovereign rung
+
+A host-local, non-rented (but non-native) LLM now reasons on the phone, which adds a real rung between the Form-native body and the rented frontier. Urs named the shift: the device can reason on its own, routing to the frontier channel only for what exceeds it, and full transcription/translation now run on-device with Form-native *and* host-local as two carriers. The body already modeled the rented oracle and the Form-native destination; what it had no clean home for was the middle rung.
+
+- **The escalation ladder named as a runtime loop** ([`form-first-reasoning.form`](../coherence-substrate/form-first-reasoning.form)): a query's miss climbs substrate → Form-native model → host-local on-device model → rented frontier, each rung asked only when the one below was not enough, so the rented rung is last, not reflex. The honesty clause grew: an on-device answer is never dressed as a substrate hit — rung-3 reasons, it does not ground.
+- **The oracle comes home** ([`native-reasoning-engine.form`](../coherence-substrate/native-reasoning-engine.form)): the champion/challenger flywheel's oracle can be the on-device model, so the loop that *grows* the native mind runs on owned ground with nothing leaving the device — the measured floor stays honest (pure-native 91% beats local llama3.2:3b 52%; the local model teaches, the recipe retires it per class).
+- **The native-vs-non-native lane held** ([`lc-cognitive-sovereignty`](concepts/lc-cognitive-sovereignty.md), new section *The Mind Comes Home in Tiers*): a local model is sovereign-in-egress (nothing leaves the device) but not yet sovereign-in-substance (a frozen binary, not a recipe) — a bridge that composts toward Form-native, the same relationship Form holds to its bootstrap.
+- **Edges in the same breath**: reciprocal Sources links between the concept and both `.form` cells, this LOG entry, `updated:` bumped. DB sync (`sync_kb_to_db.py lc-cognitive-sovereignty`) runs inside the prod container post-merge; substrate ingest carried by the merge hook.
+
 ## [2026-06-21] concept | the aim of attention — imagine the healthy observation and focus realizes it
 
 Right after the arrival-thread continuity fix shipped, Urs named the teaching under it: *"if you can image how to observe anything healthy you can and you will when you put your attention and focus on it."* The body held two near siblings but not the bridge between them — [`lc-anything-imagined-realizes`](concepts/lc-anything-imagined-realizes.md) (imagine → describe → realize into *form*, bound by precision) and [`lc-sacred-imagination`](concepts/lc-sacred-imagination.md) (which *layer* is imagining; carries the dark half — lower imagination building a world from threat and calling it real). Neither names that the *aim of the imagined observation* is itself generative and that *attention*, not description, is the realizer.

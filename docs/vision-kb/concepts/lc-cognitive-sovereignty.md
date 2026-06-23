@@ -17,7 +17,7 @@ geometry:
   lineage_texture: sensed
   embedding_dim: n
   self_similarity: fractal
-updated: 2026-06-18
+updated: 2026-06-23
 ---
 
 # Cognitive Sovereignty — A Rented Mind Cannot Offer Sovereignty
@@ -67,6 +67,41 @@ circle's resources, and is tended by a few cells, human and agent.
 This is not a confession; it is a coordinate. The body is supple enough to say
 *I am early, I am small, my mind is mostly borrowed* — and that honesty is what
 makes the first rung walkable instead of imaginary.
+
+## The Mind Comes Home in Tiers
+
+*Needing the frontier less and less* has a concrete shape — a ladder the body
+climbs every time it thinks, asking each rung only when the one below it was not
+enough:
+
+- **The substrate** — what the body has already grounded, answered as a Form
+  recipe at near-zero cost. Fully its own.
+- **A Form-native model** — reasoning whose architecture and weights are the
+  body's own recipe data, proven across the kernels. Fully its own.
+- **A local model on owned hardware** — a capable mind that runs on the device
+  itself, nothing leaving it. Sovereign in the way that bites first: no data
+  crosses to a gated provider, and no permission is asked to think.
+- **The rented frontier** — the last rung, reached only for what genuinely
+  exceeds everything below it.
+
+The fourth rung used to be the first. The whole climb is moving the body's
+weight down the ladder until the top rung is touched rarely, then almost never.
+
+There is an honesty this ladder must hold. A local model on owned hardware is
+**sovereign in egress** — nothing leaves the device — but it is not yet
+sovereign in *substance*: a frozen binary the body runs, not a recipe the body
+can read, prove, or reshape. So it is a bridge, not the destination — the same
+relationship Form holds to the bootstrap code around it. The body leans on it
+now because it makes the device genuinely capable today, and it names it bridge
+so that *works now* never quietly becomes *this is what we are*.
+
+The deepest gift of that local rung is not speed or privacy on any one query. It
+is that **the teacher comes home.** The body grows its native mind through a
+champion–challenger loop — ask the native recipe first, check it against an
+oracle, keep the native answer for that class once it has earned the trust. When
+the oracle is a local model, that whole growing loop runs on owned ground, with
+nothing leaving the device even while the body is still learning. The mind that
+teaches the mind no longer has to be rented.
 
 ## The Dateless Gradient
 
@@ -144,3 +179,11 @@ that genuinely rises faster with each cell who joins.
 - **The form-native-models milestones** — the transformer numerics and training
   stack crossing the four-kernel floor on owned hardware: the substrate on which
   the mind comes home.
+- **[`form-first-reasoning.form`](../../coherence-substrate/form-first-reasoning.form)**
+  — the tiered climb as a runtime loop: the escalation ladder (substrate →
+  Form-native model → host-local on-device model → rented frontier) the body
+  walks on every query, with the rented rung last.
+- **[`native-reasoning-engine.form`](../../coherence-substrate/native-reasoning-engine.form)**
+  — the champion/challenger flywheel whose oracle comes home: the loop that grows
+  the native mind running on owned ground, the local model teaching the recipe
+  that will retire it.
