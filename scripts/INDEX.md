@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 329
+**Total files**: 330
 
 | File | Purpose |
 |---|---|
@@ -318,6 +318,7 @@
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
+| [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |
