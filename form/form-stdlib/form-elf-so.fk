@@ -11,6 +11,11 @@
 ; LOADABLE shape: program headers (PT_LOAD + PT_DYNAMIC), a dynamic section, a
 ; dynamic symbol table, a SysV hash table — everything dlopen/dlsym resolve a
 ; symbol through, with no relocations (a position-independent leaf body needs none).
+; The exported body is arbitrary arm64 bytes: elf-so-leaf-const wraps a constant
+; leaf; elf-so-body wraps a REAL lowered recipe (form-lower's bytes, e.g.
+; (add (mul a b) c) over w0,w1,w2), so a hot Form recipe crystallizes to a .so the
+; phone dlopens and calls with concrete integer args — the form-lower -> elf-so-body
+; -> dlopen native-JIT-on-ARM lane, twin of the Mac recipe-dylib path.
 ;
 ; Layout (file offset == vaddr; one PT_LOAD mapped at base 0, the loader rebases):
 ;   0    ELF header (64)            64   2 program headers (2*56=112)
@@ -163,5 +168,16 @@
               210))
     (defn so-ret () (list 192 3 95 214))    ; 0xd65f03c0
     (defn elf-so-leaf-const (imm) (so-cat (list (so-movz-x0 imm) (so-ret))))
+
+    ; ── elf-so-body: wrap an ARBITRARY lowered recipe body into the loadable .so ──
+    ; The body is the byte image form-lower produces for a real recipe (already
+    ; ret-terminated by lo-compile / lo-compile-fn-n), taking its integer args in
+    ; w0,w1,w2,... and returning in w0 — the AAPCS64 leaf convention dlopen+dlsym
+    ; resolve form_native through. This is the named door the native-JIT-on-ARM lane
+    ; crystallizes a hot recipe through: form-lower bytes -> elf-so-body -> dlopen.
+    ; elf-so-leaf-const is just the constant case of the same wrap; elf-so is the
+    ; lower-level image assembler both ride. No relocations: a position-independent
+    ; arithmetic leaf needs none (the integer arg registers are caller-provided).
+    (defn elf-so-body (code) (elf-so code))
 
     0)
