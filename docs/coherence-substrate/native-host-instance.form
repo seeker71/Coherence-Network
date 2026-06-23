@@ -5,10 +5,26 @@ Android. A shell script, launchd plist, PowerShell wrapper, Android service,
 ffmpeg process, Whisper process, driver, or OS API may carry resource access,
 but none of those is the decision-maker.
 
-The decision-maker is `form/form-stdlib/native-host-instance.fk`. The native
-presence body in `form/native/presence/form_presence_host.c` supplies the
-always-on process shell: `FORM_PRESENCE_TICKS=0` means the host keeps ticking
-until the explicit `stop` sentinel appears.
+The decision-maker is `form/form-stdlib/native-host-instance.fk`, now reachable
+through the self-contained native `form-cli` command:
+
+```text
+native-host <platform> <mic> <camera> <screen> <speech_gate> <freq>
+            <surprises> <samples> [message]
+```
+
+The result is a compact carrier row:
+
+```text
+native-host-instance|platform|native|listening|sharing|transcribing|
+surprise-count|learned-count|decision|share-route
+```
+
+The native presence body in `form/native/presence/form_presence_host.c` supplies
+an always-on tick (`FORM_PRESENCE_TICKS=0`) for hosts that need a persistent C
+process, while Android packages the same C-bootstrapped `form-cli` as
+`libform_cli_exec.so` and executes it from `nativeLibraryDir`. Those processes
+measure and carry; `native-host-instance.fk` decides.
 
 One instance breath composes the existing proven organs:
 
@@ -30,10 +46,13 @@ The receipt is:
 The same recipe names `macos`, `windows`, and `android` as supported native host
 platforms. Unsupported platforms are refused by the body, not by a wrapper.
 
-North star: Mac, Windows, and Android launch persistent native host processes
-that tick this cell continuously, share typed receipts on the mesh, learn from
-their own streams, and choose actions from Form readings. Shell remains a
-development shim and hardware access remains an honest host-resource carrier.
+Mac, Windows, and Android launch persistent native host processes that tick this
+cell continuously, share typed receipts on the mesh, learn from their own
+streams, and choose actions from Form readings. Shell/PowerShell/launchd and OS
+services remain carriers for process supervision and hardware access; they are
+not the decision boundary.
 
 Proof: `form/form-stdlib/tests/native-host-instance-band.fk` returns `4095` and
 is registered in `form/fourth-arm-bands.txt` for fkwu four-way validation.
+`form/form-stdlib/tests/form-cli-band.fk` returns `1023`, proving the native-host
+verb and dispatch row across Go/Rust/TS/fkwu before it is packaged for a host.
