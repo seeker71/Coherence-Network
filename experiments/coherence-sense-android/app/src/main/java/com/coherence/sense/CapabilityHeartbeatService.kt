@@ -51,9 +51,20 @@ class CapabilityHeartbeatService : Service() {
     private var accelWriter: Writer? = null
     private var fieldWriter: Writer? = null
     private var audioWriter: Writer? = null
+    private var heardWriter: Writer? = null
     private var audioRecord: AudioRecord? = null
     private var audioThread: Thread? = null
     @Volatile private var audioRunning = false
+
+    // Room-ear understanding lane: tap the same PCM the energy logger reads, gather a rolling clip, and
+    // when there's been speech-likely sound, POST it to the Mac relay (whisper -> body-first agent) and
+    // log {transcript, answer}. The phone is a pure audio carrier; transcription + reasoning live where
+    // they work (the relay / the rented mind), sidestepping the dead on-device recognizer.
+    private val relayUrl = System.getenv("ROOM_RELAY_URL") ?: "http://192.168.1.225:8910/hear"
+    private val clipWindows = ArrayList<ShortArray>()   // last ~6s of 0.5s PCM windows
+    @Volatile private var lastClipMs = 0L
+    @Volatile private var recentPeakBand = 0
+    @Volatile private var uploadInFlight = false
     @Volatile private var logged = 0L
     private val wallFmt = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
 
@@ -117,6 +128,7 @@ class CapabilityHeartbeatService : Service() {
             val af = File(File(filesDir, "sleep-$date").apply { mkdirs() }, "audio.csv")
             if (!af.exists() || af.length() == 0L) af.writeText("t_ms,wall,rms,band\n")
             audioWriter = java.io.FileWriter(af, true).buffered()
+            heardWriter = java.io.FileWriter(File(File(filesDir, "sleep-$date").apply { mkdirs() }, "room-heard.ndjson"), true).buffered()
             val sr = 16000
             val minBuf = AudioRecord.getMinBufferSize(sr, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             val rec = AudioRecord(
@@ -139,6 +151,18 @@ class CapabilityHeartbeatService : Service() {
                     val band = min(9, max(0, (ln(rms + 1.0) / ln(2.0)).toInt()))  // log2 energy band 0..9
                     val nowMs = System.currentTimeMillis()
                     try { audioWriter?.append("$nowMs,${wallFmt.format(Date(nowMs))},${rms.toInt()},$band\n") } catch (_: Exception) {}
+                    // gather a rolling ~6s clip; track recent loudness for the speech-likely trigger
+                    synchronized(clipWindows) {
+                        clipWindows.add(win.copyOf(n))
+                        while (clipWindows.size > 12) clipWindows.removeAt(0)
+                    }
+                    if (band > recentPeakBand) recentPeakBand = band
+                    // every ~25s, if there was speech-likely sound, send a clip to the room-ear relay
+                    if (nowMs - lastClipMs > 25_000) {
+                        lastClipMs = nowMs
+                        val peak = recentPeakBand; recentPeakBand = 0
+                        if (peak >= 4 && !uploadInFlight) uploadClip()
+                    }
                 }
             }.also { it.isDaemon = true; it.start() }
         } catch (_: Exception) { audioRunning = false }
@@ -152,9 +176,53 @@ class CapabilityHeartbeatService : Service() {
         try { audioWriter?.flush(); audioWriter?.close() } catch (_: Exception) {}
     }
 
+    private fun uploadClip() {
+        val pcm: ShortArray = synchronized(clipWindows) {
+            val total = clipWindows.sumOf { it.size }
+            val out = ShortArray(total); var i = 0
+            for (w in clipWindows) { System.arraycopy(w, 0, out, i, w.size); i += w.size }
+            out
+        }
+        if (pcm.isEmpty()) { uploadInFlight = false; return }
+        Thread {
+            try {
+                val wav = buildWav(pcm, 16000)
+                val conn = (URL(relayUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"; doOutput = true
+                    connectTimeout = 5000; readTimeout = 120000
+                    setRequestProperty("Content-Type", "audio/wav")
+                }
+                conn.outputStream.use { it.write(wav) }
+                if (conn.responseCode in 200..299) {
+                    val o = JSONObject(conn.inputStream.bufferedReader().readText())
+                    val rec = JSONObject()
+                        .put("t_ms", System.currentTimeMillis())
+                        .put("transcript", o.optString("transcript"))
+                        .put("answer", o.optString("answer"))
+                    try { heardWriter?.append(rec.toString())?.append("\n"); heardWriter?.flush() } catch (_: Exception) {}
+                }
+                conn.disconnect()
+            } catch (_: Exception) {} finally { uploadInFlight = false }
+        }.start()
+    }
+
+    private fun buildWav(pcm: ShortArray, sampleRate: Int): ByteArray {
+        val dataLen = pcm.size * 2
+        val out = java.io.ByteArrayOutputStream(44 + dataLen)
+        fun le32(v: Int) { out.write(v and 0xff); out.write((v shr 8) and 0xff); out.write((v shr 16) and 0xff); out.write((v shr 24) and 0xff) }
+        fun le16(v: Int) { out.write(v and 0xff); out.write((v shr 8) and 0xff) }
+        out.write("RIFF".toByteArray()); le32(36 + dataLen); out.write("WAVE".toByteArray())
+        out.write("fmt ".toByteArray()); le32(16); le16(1); le16(1)
+        le32(sampleRate); le32(sampleRate * 2); le16(2); le16(16)
+        out.write("data".toByteArray()); le32(dataLen)
+        for (s in pcm) { out.write(s.toInt() and 0xff); out.write((s.toInt() shr 8) and 0xff) }
+        return out.toByteArray()
+    }
+
     private fun stopLogging() {
         try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
         stopAudioLogging()
+        try { heardWriter?.flush(); heardWriter?.close() } catch (_: Exception) {}
         try { accelWriter?.flush(); accelWriter?.close() } catch (_: Exception) {}
         try { fieldWriter?.flush(); fieldWriter?.close() } catch (_: Exception) {}
     }
