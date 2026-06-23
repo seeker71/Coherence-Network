@@ -49,10 +49,17 @@ if [[ "$need_install" == 1 ]]; then
 fi
 
 # Optional: build the form kernels so validate.sh can re-prove the decision bands locally.
+# All THREE walker kernels must be prepared in the (networked) setup phase — the later agent phase has
+# no network, so a missing TS bundle/node_modules would make validate.sh try `npx` and stall.
 if [[ "${FIELD_RELAY_BUILD_KERNELS:-0}" == 1 ]]; then
   echo "⟐ FIELD_RELAY_BUILD_KERNELS=1 — building Go/Rust/TS kernels for form/validate.sh (best-effort)…"
   ( cd form/form-kernel-go && go build -o bin-go . ) >/dev/null 2>&1 && echo "  go kernel built" || echo "  go kernel build skipped/failed"
   ( cd form/form-kernel-rust && cargo build --release ) >/dev/null 2>&1 && echo "  rust kernel built" || echo "  rust kernel build skipped/failed"
+  # TS: install deps + pre-bundle dist/main.mjs so the agent phase runs `node dist/main.mjs` with NO network
+  ( cd form/form-kernel-ts \
+      && { npm ci --no-audit --no-fund >/dev/null 2>&1 || npm install --no-audit --no-fund >/dev/null 2>&1; } \
+      && npx --yes esbuild src/main.ts --bundle --platform=node --format=esm --outfile=dist/main.mjs ) >/dev/null 2>&1 \
+    && [[ -s form/form-kernel-ts/dist/main.mjs ]] && echo "  ts kernel bundled (dist/main.mjs)" || echo "  ts kernel build skipped/failed"
 fi
 
 if [[ "$ok" == 1 ]]; then
