@@ -6,6 +6,10 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -13,9 +17,14 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.OutputStreamWriter
+import java.io.Writer
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class CapabilityHeartbeatService : Service() {
     private val channelId = "coherence_sense_capability"
@@ -26,6 +35,70 @@ class CapabilityHeartbeatService : Service() {
     private var organId = ""
     private var beat = 0L
     private var running = false
+
+    // Continuous overnight logging — runs in the FOREGROUND SERVICE so it survives screen-off, the
+    // single requirement for capturing a night of breathing/motion. Two files on the phone:
+    //   sleep-<date>/accel.csv  — linear_acceleration in the exact format breath-rhythm.fk reads
+    //   sense-log-<date>.ndjson — every sensor event (motion, light, magnetic), for training tomorrow.
+    private var sensors: SensorManager? = null
+    private var accelWriter: Writer? = null
+    private var fieldWriter: Writer? = null
+    @Volatile private var logged = 0L
+    private val wallFmt = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
+
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(e: SensorEvent) {
+            try {
+                val nowMs = System.currentTimeMillis()
+                val tSec = e.timestamp / 1_000_000_000.0   // device monotonic seconds
+                if (e.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION && e.values.size >= 3) {
+                    accelWriter?.append(
+                        "%.6f,%s,%.5f,%.5f,%.5f\n".format(
+                            tSec, wallFmt.format(Date(nowMs)), e.values[0], e.values[1], e.values[2])
+                    )
+                }
+                val o = JSONObject().put("t_ms", nowMs).put("ts", tSec).put("type", e.sensor.type)
+                val arr = JSONArray(); for (v in e.values) arr.put(v.toDouble())
+                fieldWriter?.append(o.put("v", arr).toString())?.append("\n")
+                logged++
+            } catch (_: Exception) {}
+        }
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    private val flushLoop = object : Runnable {
+        override fun run() {
+            try { accelWriter?.flush(); fieldWriter?.flush() } catch (_: Exception) {}
+            workerHandler?.postDelayed(this, 5000)
+        }
+    }
+
+    private fun startLogging() {
+        val sm = (getSystemService(Context.SENSOR_SERVICE) as? SensorManager) ?: return
+        sensors = sm
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val dir = File(filesDir, "sleep-$date").apply { mkdirs() }
+            val accelFile = File(dir, "accel.csv")
+            if (!accelFile.exists() || accelFile.length() == 0L) accelFile.writeText("ts,wall,x,y,z\n")
+            accelWriter = java.io.FileWriter(accelFile, true).buffered()   // append
+            fieldWriter = java.io.FileWriter(File(filesDir, "sense-log-$date.ndjson"), true).buffered()
+        } catch (_: Exception) { return }
+        val h = workerHandler
+        // 5Hz linear-accel (what breath-rhythm.fk expects) + motion at ~10Hz + ambient at normal.
+        sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)?.let { sm.registerListener(sensorListener, it, 200_000, h) }
+        sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sm.registerListener(sensorListener, it, 100_000, h) }
+        sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let { sm.registerListener(sensorListener, it, 100_000, h) }
+        sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
+        sm.getDefaultSensor(Sensor.TYPE_LIGHT)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
+        h?.postDelayed(flushLoop, 5000)
+    }
+
+    private fun stopLogging() {
+        try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
+        try { accelWriter?.flush(); accelWriter?.close() } catch (_: Exception) {}
+        try { fieldWriter?.flush(); fieldWriter?.close() } catch (_: Exception) {}
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -41,6 +114,7 @@ class CapabilityHeartbeatService : Service() {
         )
         worker = HandlerThread("coherence-capability-heartbeat").also { it.start() }
         workerHandler = Handler(worker!!.looper)
+        workerHandler?.post { startLogging() }   // begin sensor logging immediately, witness or not
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -52,8 +126,9 @@ class CapabilityHeartbeatService : Service() {
             ?: prefs.getString(KEY_WITNESS_BASE, "")
             ?: "").trim().removeSuffix("/")
         if (witnessBase.isBlank()) {
-            stopSelf()
-            return START_NOT_STICKY
+            // No witness to share with, but keep the service ALIVE — logging runs regardless (started
+            // in onCreate). The night of data lands on the phone whether or not a witness is reachable.
+            return START_STICKY
         }
         prefs.edit()
             .putString(KEY_ORGAN_ID, organId)
@@ -69,6 +144,7 @@ class CapabilityHeartbeatService : Service() {
 
     override fun onDestroy() {
         running = false
+        stopLogging()
         workerHandler?.removeCallbacksAndMessages(null)
         worker?.quitSafely()
         worker = null
