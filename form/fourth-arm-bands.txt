@@ -430,6 +430,7 @@ llama-block-fwd-emit fks 7
 llama-block-fwd-causal-emit fks 7
 llama-block-decode-emit fks 7
 gqa-attn-emit fks 7
+llama-gqa-block-fwd-causal-emit fks 7
 float-conversions fks 31
 trig fks 127
 trig-atan fks 1111111

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 329
+**Total files**: 331
 
 | File | Purpose |
 |---|---|
@@ -126,6 +126,7 @@
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
 | [form_echo_demo.sh](form_echo_demo.sh) | form_echo_demo.sh — `echo $1`, built with ZERO clang and direct Form -> asm, and |
+| [form_elf_so_android_receipt.sh](form_elf_so_android_receipt.sh) | form_elf_so_android_receipt.sh — the physical on-device receipt for form-elf-so.fk: |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
 | [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the body home so Form-first answers OFFLINE. |
 | [form_headn_demo.sh](form_headn_demo.sh) | form_headn_demo.sh — `head N`, the REAL head, built with ZERO clang and direct |
@@ -204,6 +205,7 @@
 | [metal_block_audit.sh](metal_block_audit.sh) | metal_block_audit.sh — the WHOLE TRANSFORMER BLOCK running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_ffn_audit.sh](metal_ffn_audit.sh) | metal_ffn_audit.sh — the ARCHITECT'S LAYER learning on Metal (M4 Max GPU witness). |
 | [metal_gqa_attn_audit.sh](metal_gqa_attn_audit.sh) | metal_gqa_attn_audit.sh — GROUPED-QUERY ATTENTION (GQA) running on Metal (M4 Max GPU witness). |
+| [metal_gqa_llama_block_audit.sh](metal_gqa_llama_block_audit.sh) | metal_gqa_llama_block_audit.sh — the WHOLE GQA CAUSAL LLAMA BLOCK forward running on Metal (M4 Max GPU witness). |
 | [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_decode_audit.sh](metal_llama_block_decode_audit.sh) | metal_llama_block_decode_audit.sh — the KV-CACHED DECODE STEP running on Metal (M4 Max GPU witness): the |
