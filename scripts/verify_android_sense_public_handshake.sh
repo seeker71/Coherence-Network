@@ -72,6 +72,12 @@ WITNESS_URL="http://127.0.0.1:$WITNESS_PORT"
 
 mkdir -p "$OUT"
 
+echo "== cross-compile + bundle the Form kernel (.so + recipes) into the app =="
+# The phone-native kernel (libform_kernel_rust.so) is gitignored, so the APK build
+# depends on this running first: it drops the .so into jniLibs and refreshes the
+# bundled recipe assets so the app recognizes on-device (FormKernel.kt).
+"$ROOT/form/form-kernel-rust/build-android.sh"
+
 echo "== build Android APK =="
 (cd "$ANDROID_DIR" && JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}" ./gradlew :app:assembleDebug)
 [[ -f "$APK" ]] || { echo "FAIL APK not found at $APK" >&2; exit 1; }
