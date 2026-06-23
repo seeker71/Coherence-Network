@@ -1,18 +1,34 @@
 package com.coherence.sense
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import androidx.core.content.ContextCompat
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.graphics.ImageFormat
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
 import android.media.AudioFormat
 import android.media.AudioRecord
+import android.media.ImageReader
 import android.media.MediaRecorder
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
+import java.util.concurrent.atomic.AtomicInteger
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -65,6 +81,24 @@ class CapabilityHeartbeatService : Service() {
     @Volatile private var lastClipMs = 0L
     @Volatile private var recentPeakBand = 0
     @Volatile private var uploadInFlight = false
+
+    // The eye: an always-on camera (camera2, no preview) labels objects/animals/scene and counts faces
+    // on throttled frames, on-device (ML Kit). Each detection is a (kind value confidence source) channel
+    // — the SAME shape the ear and sensors use — logged for the proven Form world-perception body.
+    private var camDevice: CameraDevice? = null
+    private var camSession: CameraCaptureSession? = null
+    private var visionReader: ImageReader? = null
+    private var visionThread: HandlerThread? = null
+    private var visionHandler: Handler? = null
+    private var seenWriter: Writer? = null
+    @Volatile private var lastVisionMs = 0L
+    private val labeler by lazy {
+        ImageLabeling.getClient(ImageLabelerOptions.Builder().setConfidenceThreshold(0.55f).build())
+    }
+    private val faceDetector by lazy {
+        FaceDetection.getClient(FaceDetectorOptions.Builder()
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST).build())
+    }
     @Volatile private var logged = 0L
     private val wallFmt = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
 
@@ -115,6 +149,7 @@ class CapabilityHeartbeatService : Service() {
         sm.getDefaultSensor(Sensor.TYPE_LIGHT)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
         h?.postDelayed(flushLoop, 5000)
         startAudioLogging()
+        startVision()
     }
 
     // The always-on ear: one continuous AudioRecord owns the mic and logs the ENERGY ENVELOPE per
@@ -166,6 +201,74 @@ class CapabilityHeartbeatService : Service() {
                 }
             }.also { it.isDaemon = true; it.start() }
         } catch (_: Exception) { audioRunning = false }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startVision() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
+        val cm = (getSystemService(Context.CAMERA_SERVICE) as? CameraManager) ?: return
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            seenWriter = java.io.FileWriter(File(File(filesDir, "sleep-$date").apply { mkdirs() }, "room-seen.ndjson"), true).buffered()
+            visionThread = HandlerThread("coherence-vision").also { it.start() }
+            visionHandler = Handler(visionThread!!.looper)
+            val camId = cm.cameraIdList.firstOrNull {
+                cm.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+            } ?: cm.cameraIdList.firstOrNull() ?: return
+            val reader = ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 2)
+            visionReader = reader
+            reader.setOnImageAvailableListener({ r -> onVisionFrame(r) }, visionHandler)
+            cm.openCamera(camId, object : CameraDevice.StateCallback() {
+                override fun onOpened(device: CameraDevice) {
+                    camDevice = device
+                    try {
+                        val req = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply { addTarget(reader.surface) }
+                        device.createCaptureSession(listOf(reader.surface), object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(session: CameraCaptureSession) {
+                                camSession = session
+                                try { session.setRepeatingRequest(req.build(), null, visionHandler) } catch (_: Exception) {}
+                            }
+                            override fun onConfigureFailed(session: CameraCaptureSession) {}
+                        }, visionHandler)
+                    } catch (_: Exception) {}
+                }
+                override fun onDisconnected(device: CameraDevice) { device.close() }
+                override fun onError(device: CameraDevice, error: Int) { device.close() }
+            }, visionHandler)
+        } catch (_: Exception) {}
+    }
+
+    private fun onVisionFrame(reader: ImageReader) {
+        val image = try { reader.acquireLatestImage() } catch (_: Exception) { null } ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastVisionMs < 2500) { image.close(); return }   // ~1 frame / 2.5s — the eye glances, doesn't stare
+        lastVisionMs = now
+        val input = try { InputImage.fromMediaImage(image, 90) } catch (_: Exception) { image.close(); return }
+        val pending = AtomicInteger(2)
+        val closeWhenDone = { if (pending.decrementAndGet() == 0) try { image.close() } catch (_: Exception) {} }
+        labeler.process(input).addOnSuccessListener { labels ->
+            labels.sortedByDescending { it.confidence }.take(3).forEach { logSeen("object", it.text, (it.confidence * 100).toInt()) }
+        }.addOnCompleteListener { closeWhenDone() }
+        faceDetector.process(input).addOnSuccessListener { faces ->
+            if (faces.isNotEmpty()) logSeen("face", "${faces.size} face(s)", 90)
+        }.addOnCompleteListener { closeWhenDone() }
+    }
+
+    private fun logSeen(kind: String, value: String, conf: Int) {
+        try {
+            val o = JSONObject().put("t_ms", System.currentTimeMillis())
+                .put("kind", kind).put("value", value).put("conf", conf).put("source", "camera")
+            seenWriter?.append(o.toString())?.append("\n"); seenWriter?.flush()
+        } catch (_: Exception) {}
+    }
+
+    private fun stopVision() {
+        try { camSession?.close() } catch (_: Exception) {}
+        try { camDevice?.close() } catch (_: Exception) {}
+        try { visionReader?.close() } catch (_: Exception) {}
+        try { visionThread?.quitSafely() } catch (_: Exception) {}
+        try { seenWriter?.flush(); seenWriter?.close() } catch (_: Exception) {}
+        camSession = null; camDevice = null; visionReader = null
     }
 
     private fun stopAudioLogging() {
@@ -222,6 +325,7 @@ class CapabilityHeartbeatService : Service() {
     private fun stopLogging() {
         try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
         stopAudioLogging()
+        stopVision()
         try { heardWriter?.flush(); heardWriter?.close() } catch (_: Exception) {}
         try { accelWriter?.flush(); accelWriter?.close() } catch (_: Exception) {}
         try { fieldWriter?.flush(); fieldWriter?.close() } catch (_: Exception) {}
@@ -241,7 +345,8 @@ class CapabilityHeartbeatService : Service() {
             startForeground(
                 notificationId, notif,
                 android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA,
             )
         } else {
             startForeground(notificationId, notif)

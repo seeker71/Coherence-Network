@@ -34,9 +34,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -251,7 +254,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // Request ONLY the mic up front — it is the voice essential. A combined location request used
         // to pop a dialog on every launch (when location was denied) that paused Sema and killed the
         // wake loop. Location is requested lazily, after the loop is running (see onResume).
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA), 1)
     }
 
     override fun onInit(status: Int) {
@@ -722,7 +725,56 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     // ---- live sense panel — the whole field made visible, refreshed ~1s, honest "—" for not-yet ----
 
     private val panelTick = object : Runnable {
-        override fun run() { renderSenses(); maybeGeocodePanel(); main.postDelayed(this, 1200) }
+        override fun run() { renderSenses(); maybeGeocodePanel(); pollHeard(); pollSeen(); main.postDelayed(this, 1500) }
+    }
+
+    // What the eye sees, on device: tail room-seen.ndjson (the camera carrier's detections) and keep the
+    // latest few for the panel — objects/animals/scene + faces, the vision channels of the world model.
+    @Volatile private var lastSeenTs = 0L
+    @Volatile private var seenLine = "—"
+    private val seenRecent = ArrayList<String>()
+    private fun pollSeen() {
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val f = File(filesDir, "sleep-$date/room-seen.ndjson")
+            if (!f.exists()) return
+            f.forEachLine { line ->
+                if (line.isBlank()) return@forEachLine
+                val o = try { JSONObject(line) } catch (_: Exception) { return@forEachLine }
+                val ts = o.optLong("t_ms")
+                if (ts <= lastSeenTs) return@forEachLine
+                lastSeenTs = ts
+                val v = o.optString("value").trim()
+                if (v.isEmpty()) return@forEachLine
+                seenRecent.remove(v); seenRecent.add(v)
+                while (seenRecent.size > 5) seenRecent.removeAt(0)
+            }
+            if (seenRecent.isNotEmpty()) seenLine = seenRecent.joinToString(" · ")
+        } catch (_: Exception) {}
+    }
+
+    // Show the room-ear's live transcription on device: tail the file the ear-service writes (transcript
+    // + answer per clip, from the multilingual relay) and surface each new line as it arrives.
+    @Volatile private var lastHeardTs = 0L
+    private fun pollHeard() {
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val f = File(filesDir, "sleep-$date/room-heard.ndjson")
+            if (!f.exists()) return
+            f.forEachLine { line ->
+                if (line.isBlank()) return@forEachLine
+                val o = try { JSONObject(line) } catch (_: Exception) { return@forEachLine }
+                val ts = o.optLong("t_ms")
+                if (ts <= lastHeardTs) return@forEachLine
+                lastHeardTs = ts
+                val t = o.optString("transcript").trim()
+                val a = o.optString("answer").trim()
+                if (t.isNotEmpty()) {
+                    addBubble("🗣  $t", fromSema = false)            // what the room said
+                    if (a.isNotEmpty()) addBubble(a.take(400), fromSema = true)  // the agent's reply
+                }
+            }
+        } catch (_: Exception) {}
     }
     private fun startPanel() { main.removeCallbacks(panelTick); main.post(panelTick) }
     private fun stopPanel() { main.removeCallbacks(panelTick) }
@@ -773,7 +825,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         } ?: "—"
         val lightWord = lastLux?.let { if (it < 12f) "dark" else if (it < 60f) "dim" else if (it < 350f) "indoors" else "bright" } ?: "—"
         val soundWord = if (heardSound) (if (soundLevel < 1.6f) "quiet" else if (soundLevel < 4f) "some sound" else "lively") else "—"
-        sensePanel.text = "🧭 $dirShort   ·   🚶 $spd   ·   💡 $lightWord   ·   🔊 $soundWord"
+        sensePanel.text = "🧭 $dirShort   ·   🚶 $spd   ·   💡 $lightWord   ·   🔊 $soundWord\n👁 $seenLine"
     }
 
     // ---- world sense: resolve the live fix to a real place via the open map (no API key) ----
