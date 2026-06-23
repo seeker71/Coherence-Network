@@ -820,6 +820,7 @@ nanite-mem-parse fks 15
 kv-cache fks 255
 greedy-decode fks 255
 kv-llama-block fks 255
+kv-gqa-llama-block fks 255
 multi-layer-stack fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
