@@ -176,6 +176,7 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert "/api/views/archive" in capable_paths
     assert "/api/automation/usage/readiness" in capable_paths
     assert "/api/graph/nodes/{node_id}/edges" in capable_paths
+    assert "/api/agent/tasks/{task_id}" in capable_paths
     assert "/api/agent/tasks/{task_id}/log" in capable_paths
     assert "/api/workspaces" in capable_paths
     assert "POST /api/ideas" in capable
