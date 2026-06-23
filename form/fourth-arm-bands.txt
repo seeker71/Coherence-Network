@@ -911,3 +911,4 @@ fk-opt fks 84
 minimal-surface fks 31
 name-check fks 511
 reachability fks 31
+channel-query fks 5
