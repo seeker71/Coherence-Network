@@ -118,7 +118,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     // Short spoken greeting on open, so she is LISTENING within seconds (the wake word can't fire while
     // she speaks). The full intro lives in the overflow menu.
-    private val greeting = "Hi, I'm Sema. Tap the mic and speak, or just say my name."
+    private val greeting = "Hi, I'm Sema. I'm listening to the room. Tap to give me a turn to speak."
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -206,7 +206,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         // ── the speak button (your voice in) + intro ─────────────────────
         listenBtn = Button(this).apply {
-            text = "🎙  Tap and speak"
+            text = "🎙  Sema, take a turn"
             textSize = 17f
             setTextColor(Color.WHITE)
             typeface = Typeface.DEFAULT_BOLD
@@ -267,7 +267,10 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             })
             ttsReady = true
             // Speak the SHORT greeting, then start listening within seconds (full intro is on the button).
-            say(greeting, thenListen = true)
+            // The ear (the always-on service) does the listening now — Sema does NOT hold the mic with a
+            // SpeechRecognizer wake loop (it would fight the ear for the single mic). She speaks by turn.
+            say(greeting)
+            setStatus("listening to the room")
         }
     }
 
@@ -277,8 +280,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         // Location updates start once granted (no dialog mid-loop now — all requested up front).
         if (hasLocation()) registerLocation()
-        // Begin the wake-word loop once the mic is granted (if not already running / mid-speech).
-        if (hasMic() && !speaking && !listening) startWakeLoop()
+        // Mic grant feeds the always-on ear (the service); Sema does not run a wake loop here.
     }
 
     // ---- speaking ---------------------------------------------------------------------------
@@ -304,7 +306,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun resumeAfterSpeech() = main.post {
         if (pendingStartAfterSpeech) { pendingStartAfterSpeech = false; startWakeLoop(); return@post }
         if (listening) rearmSoon()
-        else setStatus("tap “Let Sema reply”, or reopen to hear me")
+        else setStatus("listening to the room")   // the ear is always on; she's done speaking her turn
     }
 
     // ---- continuous wake-word listening -----------------------------------------------------
@@ -462,35 +464,18 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         return tokens.drop(idx + 1).joinToString(" ").trim()
     }
 
-    // ---- tap: let Sema take a turn without being named --------------------------------------
+    // ---- tap: grant Sema a TURN TO SPEAK (her ear is always on; this gives her the voice) ----------
 
     private fun tapToReply() {
-        if (!hasMic()) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
-            return
-        }
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            say("Voice recognition isn't available on this device. You can still hear my introduction.")
-            return
-        }
-        if (ttsReady) tts.stop()
-        speaking = false
-        // Hand the mic to a deliberate, patient one-shot. Tear the wake recognizer DOWN with destroy()
-        // (which fires no error callback) instead of cancel() — a cancel's onError used to consume the
-        // manual flag the instant it was set, which is the whole reason the button only ever said
-        // "I didn't catch that." listening stays true, so the wake loop resumes after the answer.
-        main.removeCallbacks(armRunnable)
-        try { recognizer?.destroy() } catch (_: Exception) {}
-        recognizer = null
-        manualOneShot = true
-        triggeredThisListen = false
-        setStatus("listening… go ahead, I'm here")
-        recognizer = SpeechRecognizer.createSpeechRecognizer(this).also { it.setRecognitionListener(loopListener) }
-        try { recognizer?.startListening(manualIntent()) } catch (_: Exception) { recreateRecognizer() }
+        // Tap while she's speaking = let her stop (yield the turn back).
+        if (speaking) { if (ttsReady) tts.stop(); speaking = false; setStatus("listening to the room"); return }
+        // A granted turn: she speaks. Until she learns her turns from the heard field (and the agent
+        // gives her the room's words), an honest turn is what she senses of the room right now — a real,
+        // grounded contribution, not a canned line. The 24/7 ear keeps listening; this is output only.
+        say(senseReadout())
     }
 
-    /** A patient listen for a deliberate tap-to-speak: wait for the speaker to begin and to finish,
-     *  and use the best recognizer available (not forced offline) for free-form asking / contributing. */
+    /** Retained for the future agent-driven listen path; unused now that the ear owns the mic. */
     private fun manualIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
@@ -909,8 +894,8 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         super.onResume()
         registerSenses()
         startPanel()
-        // Resume the wake-word loop when she's foreground again (unless mid-intro).
-        if (ttsReady && !speaking && hasMic()) startWakeLoop()
+        // No wake loop — the always-on ear (service) listens; Sema speaks by turn (the button grants one).
+        if (!speaking) setStatus("listening to the room")
         // Lazily ask for location AFTER the mic path is up, once per process, so its dialog never
         // disrupts startup listening.
         if (!askedLocation && hasMic() && !hasLocation()) {

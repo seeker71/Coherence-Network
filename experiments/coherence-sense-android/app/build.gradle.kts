@@ -20,8 +20,8 @@ android {
         applicationId = "com.coherence.sense"
         minSdk = 26
         targetSdk = 34
-        versionCode = 17
-        versionName = "0.17"
+        versionCode = 19
+        versionName = "0.19"
     }
     signingConfigs {
         if (hasReleaseSigning) {
