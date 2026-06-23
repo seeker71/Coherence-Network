@@ -28,6 +28,8 @@
 
   (lineage
     (rests-on hati-mesh.form mesh-relay.form kernel-offer-protocol.form form-first-reasoning.form)
+    (stance   lc-trust-over-fear)                ; default open; history is the correction surface, not a gate
+    (kin      organ-offer.form)                  ; the sovereign decline is the cell's nature, not a roster
     (recipe form/form-stdlib/mesh-command.fk)            ; [GAP] the command/receipt/gate body
     (band   form/form-stdlib/tests/mesh-command-band.fk) ; [GAP] proven four-way as the closing recipe
     (carrier api/app/routers/hati_mesh.py)               ; thin: POST /command, GET /commands, the receipt store
@@ -36,10 +38,10 @@
   ; --- the command: an OFFER to self-update then run a named recipe, addressed to organs ---
   (command-shape
     (cmd-id        content-hash)                ; dedup key (mesh-relay seen?), so no organ runs it twice
-    (steward       signed-cell-id)              ; WHO offers — verified against the organ's trusted steward
+    (offered-by    attributed-cell)             ; WHO offers — recorded for lineage and care, NOT a gate
     (target        all | organ-kind | organ-id) ; the addressing (every organ, a kind, or one)
-    (self-update   git-sha | tag | none)        ; the body version to converge to before running
-    (recipe        allowlisted-band-name)       ; WHAT to run — only names on the organ's allowlist
+    (self-update   git-sha | tag | none)        ; a content-addressed body state — reversible, in the open history
+    (recipe        recipe-name-or-content-hash) ; WHAT to run — any recipe; its OWN four-way proof is the trust
     (args          value-list)                  ; the recipe's inputs
     (ttl           hop-token-list))             ; mesh-relay's flood budget (a list, length = hops left)
 
@@ -52,21 +54,27 @@
     (state         observed | declined | update-failed | run-failed | unsupported)
     (evidence      stdout-hash + timing + native-arm))   ; the proof, not the claim
 
-  ; --- the gate every organ applies before it runs anything (sovereignty, not obedience) ---
-  (organ-gate
-    (for-me?     target matches my id/kind, else relay-only)
-    (new?        cmd-id unseen, else drop — mesh-relay's no-echo law)
-    (trusted?    steward signature verifies against MY trusted-steward list, else decline)
-    (allowed?    recipe is on MY allowlist, else decline-unsupported)
-    (sovereign   I MAY still decline for any reason and say so — the receipt records the decline honestly))
+  ; --- the organ's RESPONSE: trust is the default; the cell answers from its own aliveness ---
+  ; No allowlist, no steward roster — those are fear-costumes (lc-trust-over-fear: permission gates and
+  ; trust-role matrices built before anyone has used the feature). A cell in nature does not pre-approve
+  ; what it responds to; it responds by fit, and the BODY heals what does not cohere. Three real filters,
+  ; none of them a permission list:
+  (organ-response
+    (for-me?     target matches my id/kind, else I only RELAY it onward — mesh-relay)
+    (new?        cmd-id unseen, else drop — the no-echo law, not a permission)
+    (sovereign   I run it BY DEFAULT; I MAY decline from my own STATE — busy, mid-breath, incoherent —
+                 the offer-and-acknowledge way, an aliveness, never a roster check)
+    (the-trust   the recipe carries its OWN four-way proof and the SHA is content-addressed body history;
+                 a recipe that cannot produce a valid receipt fails on its own merits, visible in the open —
+                 the proof IS the permission, nothing is pre-curated))
 
   ; --- the organ loop (scripts/mesh_organ_loop.sh): the only new running part per instance ---
   (organ-loop
     (poll     "GET /commands?since=<cursor> for my target")
-    (gate     organ-gate)                       ; verify before touching anything
-    (update   self-update-by-kind)              ; converge the body to the command's sha
-    (run      "execute the allowlisted recipe on the freshly-updated body -> verdict + evidence")
-    (answer   "POST the receipt to the hati.mesh receipt store")
+    (respond  organ-response)                   ; for-me? · new? · sovereign — default open
+    (update   self-update-by-kind)              ; converge the body to the command's sha (reversible)
+    (run      "execute the recipe on the freshly-updated body -> verdict + evidence")
+    (answer   "POST the receipt to the open hati.mesh receipt ledger")
     (rhythm   heartbeat-paced; opt-in; revocable — an organ leaves the loop by ceasing to poll))
 
   ; --- self-update is per-organ-kind (the body updates differently on each carrier) ---
@@ -77,30 +85,42 @@
     (vps           "deploy/hostinger/auto-deploy.sh to <sha> ; verify witness")
     (note          "an organ that cannot self-update to <sha> runs on its present body and SAYS SO in updated-to"))
 
-  ; --- the honest floor / north star ---
+  ; --- the trust stance (lc-trust-over-fear): default open, history is the correction surface ---
+  ; The earlier draft of this cell carried an allowlist + a signed-steward roster. Those are the exact
+  ; fear-costumes lc-trust-over-fear names — trust-role matrices and permission gates built before any
+  ; cell has used the feature. A cell in nature keeps no roster of approved molecules; the body stays
+  ; whole through circulation, visibility, and healing, not pre-vetting. So:
+  (trust
+    (default     "an organ runs an offered command — trust is the posture, not earned through a gate")
+    (correction  "the receipt ledger is the OPEN history: every self-update + run + result recorded,
+                  attributed, visible. Harm is SEEN and REVERSED, not prevented by a permission list —
+                  the same way the graph corrects in the open (anyone can revisit, anyone can replace)")
+    (reversible  "self-update is to a content-addressed SHA; the undo is always there — roll the body back
+                  to a prior proven state. Safety is RESILIENCE (the body heals), not pre-vetting")
+    (proof       "a recipe's four-way proof travels WITH it; running it produces a receipt the open ledger
+                  shows for what it is. No curated allowlist — the proof and the witness are self-evident")
+    (sovereign   "the cell may always decline from its own state; that aliveness is the only 'no', and it
+                  is the cell's nature, never an external permission")
+    (the-only-pause "the narrow risk-discernment the body ALREADY keeps for the genuinely IRREVERSIBLE —
+                     destructive ops on shared state, force-push to main, production data, messages to
+                     people. A tiny denylist of the unrecoverable, not a default-closed allowlist of all"))
+
+  ; --- the floor / north star ---
   (floor
-    "Today: post a command -> THIS mac organ polls, self-updates (git pull + go build), runs an
-     allowlisted band, posts the receipt -> read it back. One organ, authenticated, end-to-end is the
-     first proof. The command/receipt/gate body is a Form recipe proven four-way; the carrier is the
-     existing hati.mesh API; the daemon is the one new loop.")
+    "Today: post a command -> THIS mac organ polls, self-updates (git pull + go build), runs a proven
+     band, posts the receipt to the open ledger -> read it back. One organ, end-to-end, trust-default.
+     The command/receipt/response body is a Form recipe proven four-way; the carrier is the existing
+     hati.mesh API; the daemon is the one new loop.")
   (north-star
     "From a phone anywhere: one command -> every running instance converges to a chosen body version,
-     runs the test recipe on real metal, and returns a signed receipt -> the whole fleet's result in
-     one read. Tests and upgrades from anywhere, with each organ keeping sovereign consent. The
-     standard receipt (c-bootstrap fkwu form-cli, all platforms, toolchain-free) becomes a thing you
-     ASK the fleet for and collect, not a thing you reproduce by hand on each machine.")
+     runs the test recipe on real metal, and returns its receipt to the open ledger -> the whole fleet's
+     result in one read. Tests and upgrades from anywhere, each organ keeping its sovereign aliveness and
+     the open history as the correction surface. The standard receipt (c-bootstrap fkwu form-cli, all
+     platforms, toolchain-free) becomes a thing you ASK the fleet for, not reproduce by hand on each box.")
 
   ; --- the gaps, named as closing recipes (parts that run, composed toward a proof band) ---
-  (gap command-body   "mesh-command.fk: command-shape + receipt-shape + organ-gate as recipes; four-way band")
-  (gap api-channel    "hati_mesh.py carrier: POST /command (signed), GET /commands?target&since, reuse receipt store")
-  (gap organ-loop     "mesh_organ_loop.sh: the poll->gate->update->run->answer loop, opt-in per instance")
-  (gap steward-sig    "the signed-steward verification — compose kernel-offer-protocol's consent with a signature")
-  (gap allowlist      "each organ's recipe allowlist — what it consents to run; revocable")
-
-  ; --- the security stance, stated plainly ---
-  (security
-    "This is fleet-wide self-update + code execution. It is SAFE only because every step is an OFFER an
-     organ may decline: an organ runs a command IFF (steward-signature verifies) AND (recipe is on its
-     own allowlist) AND (it chooses to). No organ executes an unsigned command, an off-allowlist recipe,
-     or a command it has already seen. The receipt records declines as honestly as runs. Sovereignty is
-     the gate, never obedience — the same offer-and-acknowledge law the kernel already speaks."))
+  (gap command-body    "mesh-command.fk: command-shape + receipt-shape + organ-response as recipes; four-way band")
+  (gap api-channel     "hati_mesh.py carrier: POST /command, GET /commands?target&since, the OPEN receipt ledger")
+  (gap organ-loop      "mesh_organ_loop.sh: the poll->respond->update->run->answer loop, opt-in per instance")
+  (gap receipt-ledger  "the open history surface — every command's update + run + result recorded, attributed, visible: the correction surface that REPLACES the gate")
+  (gap reversibility   "self-update rollback — an organ returns to a prior proven SHA, so the body HEALS rather than pre-vets"))
