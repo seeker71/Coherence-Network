@@ -1,0 +1,54 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/rope.fk
+;
+; llama3-rope-band — llama3 RoPE frequency scaling + rope_theta as a Form recipe,
+; lifted to the four-kernel floor. A real llama3.2:3b block uses rope_theta=500000
+; (not 10000) and rope_scaling type "llama3" (factor 32, low_freq_factor 1,
+; high_freq_factor 4, original_max_position_embeddings 8192): each default inv_freq
+; f = base^(−hd/HD) is reshaped by where its wavelength 2π/f sits — low-freq ÷ factor,
+; high-freq untouched, medium interpolated. Until now this lived ONLY inside
+; transformer-kernel.fk's tk-emit-llama as emitted C (powf(10000.0,...), three-way,
+; NO scaling at all). This proves the standalone recipe (rope.fk: rope-l3-scale /
+; rope-freq-theta / rope-scaled) — base θ + the scaling factors are recipe DATA.
+;
+; The scaling-branch claims feed hand-picked inv_freq f so the math is pure
+; arithmetic (bit-exact across kernels, no transcendental); the end-to-end rotation
+; and theta-base claims are libm fp64 references (fpow/fsin/fcos) at 1e-6, the same
+; conformance rope-band pins. Reference: HF transformers _compute_llama3_parameters.
+;
+; Verdict 255 when every claim lands:
+;   1     high-freq (wavelen 628 < 2048) → f UNCHANGED (f=0.01 returns 0.01 exactly)
+;   2     low-freq  (wavelen 62831 > 8192) → f ÷ factor (f=1e-4 returns f/32 exactly)
+;   4     medium joins LOW continuously: at wavelen = orig/low-f, s=0 ⇒ f/32 (bit-exact)
+;   8     medium joins HIGH continuously: at wavelen = orig/high-f, s=1 ⇒ f (bit-exact)
+;   16    medium INTERIOR real value: f=0.0011 (wavelen 5712) → 0.000188598… (×1e9 = 188598)
+;   32    rope_theta is DATA: base 500000, hd=2, HD=4 → inv_freq 0.0014142… (×1e6 = 1414, ≠ 10000's 0.01)
+;   64    end-to-end rotation: base 500000, HD=4, pos=1, the hd=2 (MEDIUM-scaled) pair → 999570 (×1e6)
+;   128   generalization: rope-scaled with the (base 10000, no-scaling) cfg == the default `rope`, bit-for-bit
+(do
+    ; --- bit-exact equality of two equal-length float vectors (for the generalization law) ---
+    (defn r3-veq (a b)
+      (if (eq (len a) 0) 1
+          (if (eq (head a) (head b)) (r3-veq (tail a) (tail b)) 0)))
+
+    ; --- scaling branches (pure arithmetic on a hand-picked inv_freq f → bit-exact) ---
+    (let c0 (if (eq (rope-l3-scale 0.01   32.0 1.0 4.0 8192.0) 0.01) 1 0))
+    (let c1 (if (eq (rope-l3-scale 0.0001 32.0 1.0 4.0 8192.0) (div 0.0001 32.0)) 2 0))
+    (let c2 (if (eq (rope-l3-scale (div (TAU) 8192.0) 32.0 1.0 4.0 8192.0)
+                    (div (div (TAU) 8192.0) 32.0)) 4 0))
+    (let c3 (if (eq (rope-l3-scale (div (TAU) 2048.0) 32.0 1.0 4.0 8192.0)
+                    (div (TAU) 2048.0)) 8 0))
+    (let c4 (if (eq (round (mul (rope-l3-scale 0.0011 32.0 1.0 4.0 8192.0) 1000000000.0)) 188598) 16 0))
+
+    ; --- rope_theta as data, and the full scaled rotation end-to-end (libm pins, 1e-6) ---
+    (let c5 (if (eq (round (mul (rope-freq-theta 500000.0 2 4) 1000000.0)) 1414) 32 0))
+    (let rl3 (rope-scaled (list 1.0 0.0 1.0 1.0) 1 4 (rope-cfg-llama3)))
+    (let c6 (if (eq (round (mul (nth rl3 2) 1000000.0)) 999570) 64 0))
+
+    ; --- generalization: the default `rope` IS rope-scaled at (base 10000, no-scaling) ---
+    ; at HD=4 every pair is high-frequency, so the scaling is inert and the cfg path
+    ; reproduces `rope` bit-for-bit — the default is the special case, not a parallel path.
+    (let v (list 1.0 0.0 1.0 1.0))
+    (let g10 (rope-cfg 10000.0 32.0 1.0 4.0 8192.0))
+    (let c7 (if (eq (r3-veq (rope-scaled v 2 4 g10) (rope v 2 4)) 1) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
