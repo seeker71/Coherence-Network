@@ -1,0 +1,88 @@
+; native-host-instance.fk — one always-on host cell for Mac, Windows, and Android.
+;
+; This is the body shape the launchers point at: a native host instance listens,
+; shares, transcribes when speech is present, detects salient surprises, learns
+; from the stream, and chooses the next action from those readings. Shell,
+; PowerShell, launchd, Android services, ffmpeg, Whisper, and OS drivers are
+; host resource carriers only. The lifecycle decision is this Form recipe.
+;
+; Composes existing proven tissue:
+;   host-sense-organ.fk       host resource/organ receipt
+;   speech-organ.fk           VAD/transcription trust receipt
+;   surprise-salience.fk      surprise ranking/counting
+;   co-learning-stream.fk     online learning fold
+;   mesh-dispatch.fk          share/ask/gold route decision
+;
+; Proven by: form-stdlib/tests/native-host-instance-band.fk
+
+(do
+    (defn nhi-platform-known? (platform)
+        (if (or (str_eq platform "macos")
+                (or (str_eq platform "windows") (str_eq platform "android")))
+            1
+            0))
+
+    (defn nhi-listening? (host-rec)
+        (if (ge (len (hso-rec-organs host-rec)) 8) 1 0))
+
+    (defn nhi-sharing? (msg)
+        (if (gt (str_len msg) 0) 1 0))
+
+    (defn nhi-share-route (msg)
+        (if (eq (nhi-sharing? msg) 1) (md-route msg) "quiet"))
+
+    (defn nhi-transcribing? (speech-rec)
+        (if (ge (so-rec-gate speech-rec) 2) 1 0))
+
+    (defn nhi-surprise-count (surprises)
+        (ss-count-salient surprises 50))
+
+    (defn nhi-surprised? (surprises)
+        (if (gt (nhi-surprise-count surprises) 0) 1 0))
+
+    (defn nhi-learning-count (samples)
+        (len (cls-device samples)))
+
+    (defn nhi-learning? (samples)
+        (if (gt (nhi-learning-count samples) 0) 1 0))
+
+    (defn nhi-decision (platform host-rec speech-rec surprises samples msg)
+        (if (eq (nhi-platform-known? platform) 0)
+            "refuse-unsupported-host"
+            (if (eq (nhi-surprised? surprises) 1)
+                "learn-from-surprise"
+                (if (str_eq (nhi-share-route msg) "ask")
+                    "answer"
+                    (if (eq (nhi-transcribing? speech-rec) 1)
+                        "append-transcript"
+                        (if (eq (nhi-listening? host-rec) 1)
+                            "listen"
+                            "open-listener"))))))
+
+    ; Receipt layout:
+    ; (native-host-instance platform native? listening? sharing? transcribing?
+    ;  surprise-count learned-count decision share-route)
+    (defn nhi-cycle (platform host-rec speech-rec surprises samples msg)
+        (list "native-host-instance"
+              platform
+              (nhi-platform-known? platform)
+              (nhi-listening? host-rec)
+              (nhi-sharing? msg)
+              (nhi-transcribing? speech-rec)
+              (nhi-surprise-count surprises)
+              (nhi-learning-count samples)
+              (nhi-decision platform host-rec speech-rec surprises samples msg)
+              (nhi-share-route msg)))
+
+    (defn nhi-rec-kind       (r) (nth r 0))
+    (defn nhi-rec-platform   (r) (nth r 1))
+    (defn nhi-rec-native?    (r) (nth r 2))
+    (defn nhi-rec-listening? (r) (nth r 3))
+    (defn nhi-rec-sharing?   (r) (nth r 4))
+    (defn nhi-rec-transcribe? (r) (nth r 5))
+    (defn nhi-rec-surprises  (r) (nth r 6))
+    (defn nhi-rec-learned    (r) (nth r 7))
+    (defn nhi-rec-decision   (r) (nth r 8))
+    (defn nhi-rec-share-route (r) (nth r 9))
+
+    0)

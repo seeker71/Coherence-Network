@@ -19,7 +19,7 @@
 //   <dir>/stop               sentinel: when it appears, the presence rests (exit 0)
 //
 // Env (all optional): FORM_PRESENCE_DIR, FORM_PRESENCE_TICKS (max ticks before
-// idle-exit, default 600), FORM_PRESENCE_POLL_MS (default 50),
+// idle-exit, default 600; <=0 means always-on until stop), FORM_PRESENCE_POLL_MS (default 50),
 // FORM_PRESENCE_HEARTBEAT (observe every N idle ticks, default 20).
 
 #include <stdint.h>
@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
     snprintf(line, sizeof(line), "tick=0 event=awake dir=%s loader=%s", dir, form_loader_name());
     log_line(dir, line);
 
-    for (long tick = 1; tick <= max_ticks; tick++) {
+    for (long tick = 1; max_ticks <= 0 || tick <= max_ticks; tick++) {
         if (file_exists(stoppath)) {
             snprintf(line, sizeof(line), "tick=%ld event=rest", tick);
             log_line(dir, line);
