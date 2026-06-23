@@ -23,12 +23,16 @@ the senses are held until then.
   is a weak **non-parametric memorizer** (~81% vs ~96% SOTA; "model" = the whole dataset). The "small model
   matches SOTA" prize needs a *parametric* model (integer `mul` + quantized inference) — see the benchmark.
   The carrier only marshals integers in and reads the label out; the recognition is Form, via the kernel.
-- **v1 — phone-native kernel (cdylib BUILT):** *autonomy.* The kernel itself runs **on the phone**.
-  `form/form-kernel-rust/build-android.sh` now emits `libform_kernel_rust.so` — an ARM aarch64 shared
-  object exporting `form_eval` (the same `run_source` evaluator, behind the `cabi` feature), verified
-  via `ctypes` to recognize across the C boundary. What remains is a thin Kotlin JNI shim
-  (`external fun formEval(src): String`), the `.so` in `jniLibs/arm64-v8a`, and the recipes bundled
-  as assets — then the phone recognizes **without the Mac**.
+- **v1 — phone-native kernel (LIVE, verified on-device):** *autonomy.* The kernel runs **on the phone**,
+  no Mac. `form/form-kernel-rust/build-android.sh` emits `libform_kernel_rust.so` (ARM aarch64) with
+  `--features cabi` — the same `run_source` evaluator the CLI runs, exporting both the C-ABI `form_eval`
+  AND the JNI-named `Java_com_coherence_sense_FormKernel_eval`. `FormKernel.kt` binds it via
+  `System.loadLibrary` + `external fun eval(src)`; `build-android.sh` drops the `.so` into
+  `jniLibs/arm64-v8a` and refreshes the bundled recipe assets. On launch the app runs the proven
+  `signal-derivative` recipe in-process — a self-test reproduces the four-way band verdict **127**
+  (Go=Rust=TS=fkwu) **on the phone**, and a live tick recognizes still-vs-moving from the accelerometer
+  through the same recipe. Verified on a Galaxy S23 Ultra (`adb logcat -s FormKernel`). The phone
+  recognizes **without the Mac**.
 
 So every verb you'd want is live today: senses, share, sync, AND recognition/prediction/learning-signal —
 through the kernel, not in Python.
