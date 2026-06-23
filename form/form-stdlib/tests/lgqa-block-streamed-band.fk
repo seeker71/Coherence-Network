@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk
+;
+; lgqa-block-streamed-band — the STREAMED composition equals the monolithic lgqa-block-causal recipe,
+; bit-for-bit. The real-weight carrier (scripts/llama_block0_form_native.sh) runs the block at full
+; d=3072 by composing the SAME sub-recipes (lblk-rms-seq, lblk-proj-seq, lgqa-rope-seq,
+; tb-gqa-attn-causal, tb-add-seq, lblk-swiglu-map) with each weight loaded INLINE so the GC releases it
+; after its projection — peak live set = one matrix, not all nine (the monolithic call holds every
+; weight as an argument and trips the 16 GB kernel-memory-witness cap at real width). This band proves
+; that streamed restructure is the same arithmetic: on tiny synthetic weights where both forms fit, the
+; streamed sequence-projection FFN + inlined attention is bit-identical to (lgqa-block-causal ...). So
+; the full-width streamed run IS the four-way-proven recipe — the split is a memory accommodation, not a
+; different computation. Four-way (no host-io; pure recipe arithmetic).
+;
+; Verdict 3:
+;   1   streamed output == monolithic lgqa-block-causal, max abs diff 0 (at 1e-9)
+;   2   the block actually transformed the input (output L1 != 0 — not a degenerate all-zero match)
+(do
+    (defn sgs (gs us) (if (eq (len gs) 0) (empty)
+        (cons (lblk-swiglu-map (head gs) (head us)) (sgs (tail gs) (tail us)))))
+    (defn strm (x g1 e wq wk wv wo s nq nkv hd c g2 wg wu wd)
+        (do (let n1 (lblk-rms-seq x g1 e))
+            (let q (lgqa-rope-seq (lblk-proj-seq wq n1) hd c))
+            (let k (lgqa-rope-seq (lblk-proj-seq wk n1) hd c))
+            (let v (lblk-proj-seq wv n1))
+            (let h1 (tb-add-seq x (lblk-proj-seq wo (tb-gqa-attn-causal q k v nq nkv hd s))))
+            (let n2 (lblk-rms-seq h1 g2 e))
+            (tb-add-seq h1 (lblk-proj-seq wd (sgs (lblk-proj-seq wg n2) (lblk-proj-seq wu n2))))))
+    (defn absf (z) (if (lt z 0.0) (sub 0.0 z) z))
+    (defn vdiff (a b) (if (eq (len a) 0) 0.0 (add (absf (sub (head a) (head b))) (vdiff (tail a) (tail b)))))
+    (defn sdiff (a b) (if (eq (len a) 0) 0.0 (add (vdiff (head a) (head b)) (sdiff (tail a) (tail b)))))
+    (defn vl1 (xs) (if (eq (len xs) 0) 0.0 (add (absf (head xs)) (vl1 (tail xs)))))
+    (defn sl1 (rows) (if (eq (len rows) 0) 0.0 (add (vl1 (head rows)) (sl1 (tail rows)))))
+    (let x (list (list 0.1 -0.2 0.3 0.4) (list -0.1 0.25 -0.3 0.15)))
+    (let g1 (list 0.9 1.1 1.0 0.95)) (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25)))
+    (let wd (list (list 0.4 -0.2 0.3) (list 0.15 0.5 -0.25) (list -0.3 0.1 0.45) (list 0.2 -0.1 0.35)))
+    (let c (rope-cfg 500000.0 32.0 1.0 4.0 8192.0))
+    (let s (div 1.0 (tn-sqrt 2.0)))
+    (let ym (lgqa-block-causal x g1 0.00001 wq wk wv wo s 2 1 2 c g2 wg wu wd))
+    (let ys (strm x g1 0.00001 wq wk wv wo s 2 1 2 c g2 wg wu wd))
+    (let c1 (if (eq (round (mul (sdiff ym ys) 1000000000.0)) 0) 1 0))
+    (let c2 (if (gt (round (mul (sl1 ys) 1000000.0)) 0) 2 0))
+    (add c1 c2))

@@ -77,6 +77,7 @@
           (list "fs_rmdir" 1 55) (list "fs_mkdir" 1 56) (list "fs_exists" 1 57)
           (list "fs_remove" 1 58) (list "fs_rename" 2 59) (list "file_size" 1 60)
           (list "file_append_bytes" 2 61) (list "read_file_slice" 3 62)
+          (list "read_file_slice_bytes" 3 127)
           (list "read_file" 1 63) (list "temp_dir" 0 101)
           (list "write_file_text" 2 104)
           (list "http_get" 3 105)
@@ -340,11 +341,12 @@
     (if (str_eq op "fs_rmdir") 1
     (if (str_eq op "read_file") 1
     (if (str_eq op "read_file_slice") 1
+    (if (str_eq op "read_file_slice_bytes") 1
     (if (str_eq op "file_size") 1
     (if (str_eq op "file_mtime") 1
     (if (str_eq op "file_byte_at") 1
     (if (str_eq op "scan_run") 1
-    (if (str_eq op "http_get") 1 0))))))))))))))))
+    (if (str_eq op "http_get") 1 0)))))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
     (if (eq (flt-do-let-store-op op fns env) 1)
         (flt-do-let-frame name s ve fns env val (add (flt-current-letdepth env) 1))

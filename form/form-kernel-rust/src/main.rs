@@ -5158,6 +5158,35 @@ impl Kernel {
             }
         });
 
+        // read_file_slice_bytes(path, offset, length) -> List of Int (raw bytes
+        // 0..255). The BINARY-SAFE sibling of read_file_slice: that returns a
+        // UTF-8 string (from_utf8_lossy above), which corrupts any byte >= 0x80 —
+        // unusable for binary weight files. This returns the bytes as a list so a
+        // Form recipe can decode them (fd-f16, q4k-dequant) without a lossy round-
+        // trip, reading only [offset, offset+length) so a multi-GB safetensors is
+        // read one tensor at a time. The buffer-bridge primitive. Sibling: Go/Rust/TS.
+        self.register_native("read_file_slice_bytes", cat_call(), |_, _, args| {
+            let offset = args[1].as_int();
+            let length = args[2].as_int();
+            if offset < 0 || length <= 0 {
+                return Value::List(Arc::new(vec![]));
+            }
+            let mut file = match fs::File::open(args[0].as_str()) {
+                Ok(file) => file,
+                Err(_) => return Value::List(Arc::new(vec![])),
+            };
+            if file.seek(SeekFrom::Start(offset as u64)).is_err() {
+                return Value::List(Arc::new(vec![]));
+            }
+            let mut buf = vec![0u8; length as usize];
+            match file.read(&mut buf) {
+                Ok(n) => Value::List(Arc::new(
+                    buf[..n].iter().map(|b| Value::Int(*b as i64)).collect(),
+                )),
+                Err(_) => Value::List(Arc::new(vec![])),
+            }
+        });
+
         // --- Filesystem CRUD natives — real directories + files --------
         // Sibling parity across Go/Rust/TS. Predicates return 1/0;
         // mutations return 0 on success, -1 on error; fs_list returns a

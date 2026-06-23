@@ -1,0 +1,35 @@
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk
+;
+; read-file-slice-bytes-band — the BINARY-SAFE ranged file read, proven FOUR-WAY (incl fkwu, opcode 127).
+; read_file_slice returns a UTF-8 string that corrupts any byte >= 0x80; read_file_slice_bytes returns
+; the raw bytes as a LIST so a Form recipe can decode real weight bytes losslessly. This proves the WHOLE
+; buffer bridge on the emitted walker itself: write the real q_proj block-0 F16 bytes
+; (224,165, 232,37, 108,44 — the high bytes 224/165/232 are >= 0x80, exactly what a UTF-8 string mangles)
+; with file_append_bytes, read them back binary-exact with read_file_slice_bytes, and fd-f16 decode to
+; the real trained weights. The host-io rung that lets safetensors.fk's loader run on fkwu, not only the
+; host kernels — so the buffer bridge is sovereign (the emitted walker, no Go/Rust runtime).
+;
+; Verdict 7:
+;   1   read_file_slice_bytes round-trips the six bytes binary-exact (incl the >= 0x80 high bytes)
+;   2   fd-f16 of the read bytes = the real q_proj weights (-229492, 230713, 690918 at 1e7)
+;   4   offset+length parameterized: read [2,2) returns (232, 37)
+(do
+    (let path (str_concat (temp_dir) "/rfsb-band.bin"))
+    (fs_remove path)
+    (let _ (file_append_bytes path (list 224 165 232 37 108 44)))
+    (let rb (read_file_slice_bytes path 0 6))
+    (let m0 (if (eq (nth rb 0) 224) 1 0)) (let m1 (if (eq (nth rb 1) 165) 1 0))
+    (let m2 (if (eq (nth rb 2) 232) 1 0)) (let m3 (if (eq (nth rb 3) 37) 1 0))
+    (let m4 (if (eq (nth rb 4) 108) 1 0)) (let m5 (if (eq (nth rb 5) 44) 1 0))
+    (let c1 (if (eq (add m0 (add m1 (add m2 (add m3 (add m4 m5))))) 6) 1 0))
+    (let v0 (fd-f16 (add (nth rb 0) (mul 256 (nth rb 1)))))
+    (let v1 (fd-f16 (add (nth rb 2) (mul 256 (nth rb 3)))))
+    (let v2 (fd-f16 (add (nth rb 4) (mul 256 (nth rb 5)))))
+    (let d0 (if (eq (round (mul v0 10000000.0)) -229492) 1 0))
+    (let d1 (if (eq (round (mul v1 10000000.0)) 230713) 1 0))
+    (let d2 (if (eq (round (mul v2 10000000.0)) 690918) 1 0))
+    (let c2 (if (eq (add d0 (add d1 d2)) 3) 2 0))
+    (let sub (read_file_slice_bytes path 2 2))
+    (let c4 (if (eq (nth sub 0) 232) (if (eq (nth sub 1) 37) 4 0) 0))
+    (fs_remove path)
+    (add c1 (add c2 c4)))

@@ -2817,6 +2817,34 @@ export class Kernel {
       }
     });
 
+    // read_file_slice_bytes(path, offset, length) -> list of int (raw bytes
+    // 0..255). The BINARY-SAFE sibling of read_file_slice: that one returns a
+    // UTF-8 string (toString("utf8") above), which corrupts any byte >= 0x80 —
+    // unusable for binary weight files. This returns the bytes as a list so a
+    // Form recipe can decode them (fd-f16, q4k-dequant) without a lossy round-
+    // trip, reading only [offset, offset+length) so a multi-GB safetensors is
+    // read one tensor at a time. The buffer-bridge primitive. Sibling: Go/Rust/TS.
+    this.registerNative("read_file_slice_bytes", catCall(), (_k, args) => {
+      const offset = argInt(args, 1);
+      const length = argInt(args, 2);
+      if (offset < 0 || length <= 0) return { kind: "list", list: [] };
+      let fd: number | undefined;
+      try {
+        fd = openSync(argStr(args, 0), "r");
+        const buf = Buffer.allocUnsafe(length);
+        const n = readSync(fd, buf, 0, length, offset);
+        const out: Value[] = new Array(n);
+        for (let i = 0; i < n; i++) {
+          out[i] = { kind: "int", int: buf[i]! };
+        }
+        return { kind: "list", list: out };
+      } catch {
+        return { kind: "list", list: [] };
+      } finally {
+        if (fd !== undefined) closeSync(fd);
+      }
+    });
+
     // --- Filesystem CRUD natives — real directories + files ----------
     // Sibling parity across Go/Rust/TS. Predicates return 1/0; mutations
     // return 0 on success, -1 on error; fs_list returns a name-string list

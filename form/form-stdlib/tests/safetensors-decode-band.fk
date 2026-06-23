@@ -1,0 +1,27 @@
+; preludes: form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/safetensors-decode.fk
+;
+; safetensors-decode-band — the safetensors loader's pure-arithmetic core proven FOUR-WAY on byte-list
+; LITERALS (no host-io): st-uint-le (little-endian length decode) and st-f16-row (LE F16-pair decode +
+; row reshape). The binary-safe ranged read read_file_slice_bytes is a host-io primitive (3-kernel where
+; the native exists); the DECODE that turns its raw bytes into real weights is arithmetic and crosses all
+; four arms. The real-file read on the actual Llama-3.2-3B checkpoint is the physical receipt
+; (scripts/llama_block0_form_native.sh). The bytes here are q_proj block-0's real first six bytes
+; [224,165, 232,37, 108,44] — so the band decodes the SAME values the real load produces.
+;
+; Verdict 15:
+;   1   st-uint-le 8-byte LE [205,91,0,0,0,0,0,0] -> 23501 (the real header length)
+;   2   st-f16-row decodes the 3 real q_proj f16 (x1e7, rounded): -229492, 230713, 690918
+;   4   st-uint-le is width-parameterized: the same value lands reading 3 bytes
+;   8   st-f16-row reshape arity = #pairs (6 bytes -> 3 values)
+(do
+    (let hbytes (list 205 91 0 0 0 0 0 0))
+    (let qbytes (list 224 165 232 37 108 44))
+    (let row (st-f16-row qbytes 0 6))
+    (let m0 (if (eq (round (mul (nth row 0) 10000000.0)) -229492) 1 0))
+    (let m1 (if (eq (round (mul (nth row 1) 10000000.0)) 230713) 1 0))
+    (let m2 (if (eq (round (mul (nth row 2) 10000000.0)) 690918) 1 0))
+    (let c1 (if (eq (st-uint-le hbytes 0 8) 23501) 1 0))
+    (let c2 (if (eq (add m0 (add m1 m2)) 3) 2 0))
+    (let c3 (if (eq (st-uint-le hbytes 0 3) 23501) 4 0))
+    (let c4 (if (eq (len row) 3) 8 0))
+    (add c1 (add c2 (add c3 c4))))
