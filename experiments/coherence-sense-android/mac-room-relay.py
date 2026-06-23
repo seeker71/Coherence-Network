@@ -14,17 +14,40 @@ import json, os, subprocess, sys, tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-MODEL = os.environ.get("ROOM_EAR_MODEL", os.path.expanduser("~/.coherence-whisper/ggml-base.en.bin"))
+# Multilingual model by default — handles any whisper language (Brazilian Portuguese, etc.), auto-detected.
+_mm = os.path.expanduser("~/.coherence-whisper/ggml-base.bin")
+_en = os.path.expanduser("~/.coherence-whisper/ggml-base.en.bin")
+MODEL = os.environ.get("ROOM_EAR_MODEL", _mm if os.path.exists(_mm) else _en)
 WHISPER = os.environ.get("ROOM_EAR_WHISPER", "whisper-cli")
 ASK = os.path.join(ROOT, "scripts", "form_cli_ask.sh")
 PORT = int(os.environ.get("ROOM_RELAY_PORT", "8910"))
+DEFAULT_LANG = os.environ.get("ROOM_EAR_LANG", "auto")  # auto-detect; or force e.g. "pt" for Brazilian
 
 
-def transcribe(wav_path):
+def _is_noise(t):
+    # whisper hallucinates on near-silence: blank markers, bracketed annotations, repeated tokens,
+    # mostly-symbol strings. Drop those so the device shows REAL speech only.
+    t = t.strip()
+    if not t:
+        return True
+    if t[0] in "[(" or "BLANK_AUDIO" in t.upper():
+        return True
+    toks = t.split()
+    if len(toks) >= 4 and len(set(w.strip(".,%/ ").lower() for w in toks)) <= 2:
+        return True
+    alpha = sum(c.isalpha() for c in t)
+    if alpha < max(3, int(len(t) * 0.4)):
+        return True
+    return False
+
+
+def transcribe(wav_path, lang="auto"):
+    # -l auto detects the spoken language (English, Portuguese, ...); a forced lang sharpens accuracy.
     try:
-        out = subprocess.run([WHISPER, "-m", MODEL, "-f", wav_path, "-nt", "-l", "en"],
-                             capture_output=True, text=True, timeout=60).stdout
-        return " ".join(out.split()).strip()
+        out = subprocess.run([WHISPER, "-m", MODEL, "-f", wav_path, "-nt", "-l", lang or "auto"],
+                             capture_output=True, text=True, timeout=90).stdout
+        text = " ".join(out.split()).strip()
+        return "" if _is_noise(text) else text
     except Exception as e:
         return ""
 
@@ -57,8 +80,15 @@ class Relay(BaseHTTPRequestHandler):
         return self._send(404, {"error": "POST /hear or GET /health"})
 
     def do_POST(self):
-        if self.path != "/hear":
-            return self._send(404, {"error": "POST /hear with a wav body"})
+        path = self.path.split("?", 1)[0]
+        if path != "/hear":
+            return self._send(404, {"error": "POST /hear[?lang=auto|pt|en|...] with a wav body"})
+        # language: ?lang=pt (Brazilian), ?lang=en, or auto-detect (default)
+        lang = DEFAULT_LANG
+        if "?" in self.path:
+            for kv in self.path.split("?", 1)[1].split("&"):
+                if kv.startswith("lang="):
+                    lang = kv.split("=", 1)[1] or DEFAULT_LANG
         n = int(self.headers.get("Content-Length", 0) or 0)
         data = self.rfile.read(n) if n else b""
         if not data:
@@ -67,9 +97,9 @@ class Relay(BaseHTTPRequestHandler):
         try:
             with open(wav, "wb") as f:
                 f.write(data)
-            text = transcribe(wav)
+            text = transcribe(wav, lang)
             ans = answer(text)
-            return self._send(200, {"transcript": text, "answer": ans})
+            return self._send(200, {"transcript": text, "answer": ans, "lang": lang})
         finally:
             try: os.remove(wav)
             except Exception: pass
