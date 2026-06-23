@@ -143,13 +143,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var cachedSpeakerState = "unknown"
     private var cachedCameraState = "unknown"
 
-    // On-device recognition (v1 phone-native kernel): the Form body runs IN the
-    // app via libform_kernel_rust.so — no Mac. accelWindow holds recent accel
-    // magnitudes as coarse integers (quantization suppresses sensor jitter); the
-    // proven signal-derivative recipe reads still-vs-moving from them in-process.
+    // On-device native host tick: Android executes the packaged C-bootstrapped
+    // form-cli and asks native-host-instance.fk for lifecycle decisions. Host APIs
+    // measure; Form decides.
     private val accelWindow = ArrayDeque<Int>()
-    private var onDeviceSelfTest = "on-device kernel: warming"
-    private var onDeviceLive = "on-device recognition: gathering motion"
+    private var onDeviceSelfTest = "native form-cli: warming"
+    private var onDeviceLive = "native host: gathering local readings"
 
     private lateinit var feed: TextView
     private lateinit var status: TextView
@@ -614,9 +613,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             snap.put("gpu_latency_ms", gpuLatencyMs)
             snap.put("gpu_samples", gpuSamples)
         }
+        val body = bodyStateJson()
         snap.put("organs_active", JSONArray(activeOrgans()))
         snap.put("channels_offered", JSONArray(offeredTransports()))
-        snap.put("body_state", bodyStateJson())
+        snap.put("body_state", body)
+        snap.put("native_host_instance", nativeHostInstance(body))
         snap.put("tick", tick++)
         innerCellsCreated += 1
 
@@ -634,10 +635,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 sentBytes += encoded.toByteArray().size.toLong()
                 sentSamples += 1
                 val code = conn.responseCode
-                val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                val responseBody = (if (code in 200..299) conn.inputStream else conn.errorStream)
                     ?.bufferedReader()?.readText() ?: ""
                 conn.disconnect()
-                runOnUiThread { onReply(code, body, snap) }
+                runOnUiThread { onReply(code, responseBody, snap) }
             } catch (e: Exception) {
                 runOnUiThread {
                     lastMacState = "offline — ${e.message}"
@@ -658,9 +659,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    // The phone-native recognition tick — entirely on-device, independent of the
-    // Mac. Each pass folds the latest accel magnitude into a coarse-int window and
-    // runs the proven signal-derivative recipe through the in-process kernel.
+    // The phone-native lifecycle tick is entirely on-device and independent of
+    // the Mac. Each pass returns a Form native-host receipt through form-cli.
     private val onDeviceLoop = object : Runnable {
         override fun run() {
             latest[Sensor.TYPE_ACCELEROMETER]?.let { a ->
@@ -668,36 +668,33 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 accelWindow.addLast(mag.toInt())
                 while (accelWindow.size > 8) accelWindow.removeFirst()
             }
-            if (accelWindow.size >= 4 && FormKernel.available) {
-                val window = accelWindow.toList()
-                Thread {
-                    val moving = try { FormKernel.moving(this@MainActivity, window, 2) } catch (_: Exception) { false }
-                    runOnUiThread {
-                        onDeviceLive = "on-device recognition: ${if (moving) "MOVING" else "still"}  (signal-derivative on ${window.size} accel samples, no Mac)"
-                        requestDashboardRender()
-                    }
-                }.start()
-            }
-            handler.postDelayed(this, 800)
+            val body = bodyStateJson()
+            Thread {
+                val nativeHost = nativeHostInstance(body)
+                runOnUiThread {
+                    onDeviceLive = nativeHostStatus(nativeHost)
+                    requestDashboardRender()
+                }
+            }.start()
+            handler.postDelayed(this, 2000)
         }
     }
 
-    // Start on-device recognition: register accel independently of Mac sharing, run
-    // the live tick, and prove the body runs on the phone by reproducing the proven
-    // signal-derivative band verdict (127, four-way) in-process.
+    // Start on-device native Form decisioning independently of Mac sharing.
     private fun startOnDeviceRecognition() {
         registerSensor(Sensor.TYPE_ACCELEROMETER)
         handler.removeCallbacks(onDeviceLoop)
         handler.postDelayed(onDeviceLoop, 800)
         Thread {
-            val verdict = if (FormKernel.available) FormKernel.selfTestVerdict(this) else "so-missing"
-            Log.i("FormKernel", "on-device signal-derivative band verdict = $verdict (expected 127); kernel available=${FormKernel.available} err=${FormKernel.error}")
+            val nativeHost = nativeHostInstance(bodyStateJson())
+            Log.i("NativeFormCli", "native host receipt = ${nativeHost.optString("raw", nativeHost.toString())}; available=${NativeFormCli.available(this)}")
             runOnUiThread {
-                onDeviceSelfTest = if (verdict == "127") {
-                    "on-device kernel: LIVE — signal-derivative band = 127 ✓ (Go=Rust=TS=fkwu, now on this phone)"
+                onDeviceSelfTest = if (nativeHost.optBoolean("native", false)) {
+                    "native form-cli: LIVE - ${nativeHost.optString("kind")} decision=${nativeHost.optString("decision")}"
                 } else {
-                    "on-device kernel: self-test = $verdict (expected 127) ${FormKernel.error ?: ""}"
+                    "native form-cli: ${nativeHost.optString("decision", "unavailable")} ${nativeHost.optString("error")}"
                 }
+                onDeviceLive = nativeHostStatus(nativeHost)
                 requestDashboardRender()
             }
         }.start()
@@ -1209,6 +1206,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("sample_count", sentSamples + micSamples + cameraSamples + gpuSamples)
     }
 
+    private fun nativeHostInstance(body: JSONObject, message: String = ""): JSONObject =
+        NativeFormCli.nativeHostJson(
+            this,
+            platform = "android",
+            mic = packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE),
+            camera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
+            screen = true,
+            speechGate = if (micSamples > 0 && micRms > 0.025) 2 else 0,
+            freq = 0,
+            surprises = body.optLong("surprise_count", 0L),
+            samples = body.optLong("sample_count", 0L),
+            message = message,
+        )
+
+    private fun nativeHostStatus(nativeHost: JSONObject): String =
+        "native host: decision=${nativeHost.optString("decision", "unknown")} route=${nativeHost.optString("share_route", "quiet")} listening=${nativeHost.optBoolean("listening", false)} transcribing=${nativeHost.optBoolean("transcribing", false)} learned=${nativeHost.optLong("learned_count", 0L)}"
+
     private fun jsonArrayHas(array: JSONArray?, value: String): Boolean {
         if (array == null) return false
         for (i in 0 until array.length()) {
@@ -1599,6 +1613,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun sendHeartbeat(base: String) {
         val (samplesPerSecond, bytesPerSecond) = flowRates()
+        val body = bodyStateJson()
         val payload = JSONObject()
             .put("organ_id", organId)
             .put("listening", true)
@@ -1606,7 +1621,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("organs_active", JSONArray(activeOrgans()))
             .put("channels_offered", JSONArray(offeredTransports()))
             .put("heartbeat", heartbeatJson())
-            .put("body_state", bodyStateJson())
+            .put("body_state", body)
+            .put("native_host_instance", nativeHostInstance(body))
             .put("sample_rate_hz", samplesPerSecond)
             .put("bytes_per_second", bytesPerSecond)
         val conn = (URL("$base/hati/mesh/organs/heartbeat").openConnection() as HttpURLConnection).apply {

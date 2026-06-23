@@ -810,7 +810,7 @@ json-meaning-ingestion fks 1000
 form-cli fks 31
 json-emitter fks 31
 json-promoted-types fks 115
-form-cli-band fks 511
+form-cli-band fks 1023
 http-client-render fks 2047
 socket-loopback fks 111111
 http-client-socket-verbs fks 127

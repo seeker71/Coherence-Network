@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/native-host-carrier-bindings-20260623",
+  "commit_scope": "Lift the native host carrier boundary to C-bootstrapped form-cli: add a four-way-proven native-host verb, package it for Android ARM64, and thread its native-host-instance receipt through Android, Mac host, and Mac speech carriers without making Rust JNI the Android default.",
+  "files_owned": [
+    "docs/coherence-substrate/native-host-instance.form",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/CapabilityHeartbeatService.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/FormKernel.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/NativeFormCli.kt",
+    "experiments/coherence-sense-android/build_signed_release.sh",
+    "experiments/coherence-sense-android/mac-sense-organ.sh",
+    "experiments/coherence-sense-android/mac-speech-organ.sh",
+    "form/build-android-form-cli.sh",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_native_host_form_cli_carriers.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"native host carrier bindings mac windows android\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/tests/native-host-instance-band.fk",
+      "cd form && ./build-form-cli.sh .cache/form-cli-native-host && printf 'native-host android 1 1 1 2 690 1 7 gold\\nquit\\n' | .cache/form-cli-native-host",
+      "form/build-android-form-cli.sh",
+      "cd experiments/coherence-sense-android && JAVA_HOME=\"${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}\" ./gradlew :app:assembleDebug",
+      "cd experiments/coherence-sense-android && unzip -l app/build/outputs/apk/debug/app-debug.apk | rg \"libform_cli_exec|libform_kernel_rust\"",
+      "bash -n experiments/coherence-sense-android/mac-sense-organ.sh && bash -n experiments/coherence-sense-android/mac-speech-organ.sh && bash -n form/build-android-form-cli.sh && bash -n form/build-form-cli.sh && bash -n experiments/coherence-sense-android/build_signed_release.sh && bash -n scripts/verify_android_sense_public_handshake.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_native_host_form_cli_carriers.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "fourth_arm_outputs": [
+      "form-cli-band: validate.sh returned 1023 with 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent -- kernels agree on every sample.'",
+      "native-host-instance-band: validate.sh returned 4095 with 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent -- kernels agree on every sample.'"
+    ],
+    "notes": "The first Gradle attempt failed before Kotlin because the worktree lacked Android SDK configuration; a gitignored local.properties was added with sdk.dir=/opt/homebrew/share/android-commandlinetools and the focused Android build then passed. The Android ARM64 artifact is gitignored and was proven by file/APK inspection, not committed. The command run from repo root with ./gradlew failed after the native C build because gradlew lives in experiments/coherence-sense-android; rerunning only Gradle from that directory passed. worktree_pr_guard.py reported ready_for_push=True and check_pr_followthrough.py reported stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after push/PR. Local proof covers the pure Form four-way bands, native form-cli build, Android ARM64 cross-compile, debug APK packaging, and shell syntax checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "no public deploy yet",
+    "notes": "This branch changes Form stdlib, Android packaging, carrier scripts, and substrate documentation. Public release asset publishing is intentionally left to the repository PR/deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; PR CI, release signing, merge, and public asset publish remain pending."
+  },
+  "idea_ids": [
+    "native-host-instance",
+    "form-cli-native-carrier",
+    "c-bootstrapped-android-host"
+  ],
+  "spec_ids": [
+    "native-host-instance-mac-windows-android",
+    "form-cli-native-host-carrier"
+  ],
+  "task_ids": [
+    "task-2026-06-23-native-host-form-cli-carriers"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-correction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form-cli.fk now exposes native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples> [message] and returns native-host-instance|... rows from native-host-instance.fk.",
+    "form-cli-band.fk proves the new native-host dispatch row four-way at verdict 1023 including fkwu.",
+    "build-form-cli.sh now bakes native-host-instance dependencies into self-contained form-cli and honors CC so the same emitted C can be compiled by host clang or Android NDK clang.",
+    "build-android-form-cli.sh cross-compiles that C-bootstrapped form-cli for Android ARM64 as libform_cli_exec.so; file proof reported ELF 64-bit ARM aarch64 PIE with /system/bin/linker64.",
+    "Android NativeFormCli.kt executes libform_cli_exec.so from nativeLibraryDir, sends native-host over stdin, parses the returned row, and the app uses legacy JNI extraction so the executable is present on disk.",
+    "Android CapabilityHeartbeatService and MainActivity include native_host_instance in /sense and mesh heartbeat payloads. MainActivity dashboard now reports the native form-cli host receipt instead of advertising the Rust JNI lane.",
+    "Android build scripts now call form/build-android-form-cli.sh; the debug APK contains lib/arm64-v8a/libform_cli_exec.so and no libform_kernel_rust.so line appeared in the APK inspection.",
+    "Mac host and speech carriers now add native_host_instance_raw receipts from native form-cli while remaining I/O/measurement carriers."
+  ],
+  "change_files": [
+    "docs/coherence-substrate/native-host-instance.form",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/CapabilityHeartbeatService.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/FormKernel.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/NativeFormCli.kt",
+    "experiments/coherence-sense-android/build_signed_release.sh",
+    "experiments/coherence-sense-android/mac-sense-organ.sh",
+    "experiments/coherence-sense-android/mac-speech-organ.sh",
+    "form/build-android-form-cli.sh",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_native_host_form_cli_carriers.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Android, Mac host, and Mac speech carriers can now surface the same Form-native lifecycle row from a self-contained C-bootstrapped form-cli. Android packages and executes native form-cli by default; Rust JNI remains only a legacy optional comparison adapter.",
+    "public_endpoints": [
+      "no new public endpoints; existing /sense and /api/hati/mesh/organs/heartbeat payloads gain native_host_instance/native_host_instance_raw fields"
+    ],
+    "test_flows": [
+      "pure Form flow: form-cli native-host dispatch and native-host-instance lifecycle rows agree across Go/Rust/TypeScript/fkwu.",
+      "native host flow: local emitted form-cli returns native-host-instance|android|1|1|1|1|1|1|learn-from-surprise|gold for the gold surprise sample.",
+      "Android flow: NDK clang builds libform_cli_exec.so as ARM aarch64; Gradle packages it with legacy JNI extraction; debug APK inspection shows libform_cli_exec.so.",
+      "carrier flow: Android service/Activity payloads carry parsed native_host_instance JSON; Mac host/speech receipts carry native_host_instance_raw."
+    ]
+  }
+}

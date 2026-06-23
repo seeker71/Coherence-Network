@@ -2,13 +2,11 @@ package com.coherence.sense
 
 import android.content.Context
 
-// FormKernel — the phone-native door to the Form body. The SAME `run_source`
-// evaluator the Mac kernel runs, now IN-PROCESS via libform_kernel_rust.so
-// (built by form/form-kernel-rust/build-android.sh with --features cabi; the .so
-// exports the JNI-named `Java_com_coherence_sense_FormKernel_eval` over the same
-// evaluator the C-ABI form_eval runs). The phone recognizes / predicts / learns
-// through proven Form recipes WITHOUT the Mac — v1 of the README's "phone-native
-// kernel" lane: shim + .so in jniLibs/arm64-v8a + recipes bundled as assets.
+// Legacy optional JNI adapter for the old Android Rust-kernel experiment. The
+// default Android native path is NativeFormCli: the APK packages the
+// C-bootstrapped form-cli executable and calls native-host-instance.fk through
+// stdin/stdout. Keep this file only for historical signal-derivative comparison
+// when libform_kernel_rust.so is explicitly bundled.
 object FormKernel {
     @Volatile private var loaded = false
     private var loadError: String? = null
@@ -50,10 +48,7 @@ object FormKernel {
         return evalOrErr(src)
     }
 
-    // The on-device self-test: reproduce signal-derivative-band's proven verdict
-    // (127 — four-way Go=Rust=TS=fkwu) ON THE PHONE. signal-derivative.fk is
-    // self-contained on kernel builtins, so no core.fk is concatenated (adding it
-    // collides). A "127" result is the body recognizing without the Mac.
+    // Legacy self-test for the optional signal-derivative lane.
     fun selfTestVerdict(ctx: Context): String =
         run(ctx, listOf("signal-derivative.fk", "signal-derivative-band.fk"), "").trim()
 
