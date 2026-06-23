@@ -107,6 +107,35 @@ mod cabi {
             unsafe { drop(CString::from_raw(p)) };
         }
     }
+
+    /// JNI door — the SAME evaluator the C-ABI `form_eval` runs, named so the
+    /// Android app binds it directly via `System.loadLibrary("form_kernel_rust")`
+    /// + `external fun eval(src: String): String` on `com.coherence.sense.FormKernel`.
+    /// No separate C shim, no second .so: the phone-native kernel is this one .so.
+    /// jni owns the jstring↔String marshalling; a panic or bad input returns an
+    /// "ERR:" string (never a crash across the boundary), mirroring form_eval.
+    #[cfg(feature = "cabi")]
+    #[no_mangle]
+    pub extern "system" fn Java_com_coherence_sense_FormKernel_eval<'local>(
+        mut env: jni::JNIEnv<'local>,
+        _class: jni::objects::JClass<'local>,
+        src: jni::objects::JString<'local>,
+    ) -> jni::sys::jstring {
+        let input: String = match env.get_string(&src) {
+            Ok(s) => s.into(),
+            Err(_) => {
+                return env
+                    .new_string("ERR: source not valid UTF-8")
+                    .map(|s| s.into_raw())
+                    .unwrap_or(std::ptr::null_mut());
+            }
+        };
+        let out = catch_unwind(AssertUnwindSafe(|| kernel::run_source(&input).display()))
+            .unwrap_or_else(|_| "ERR: kernel panic".to_string());
+        env.new_string(out)
+            .map(|s| s.into_raw())
+            .unwrap_or(std::ptr::null_mut())
+    }
 }
 
 #[cfg(feature = "pyo3")]

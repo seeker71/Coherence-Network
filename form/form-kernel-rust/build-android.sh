@@ -58,9 +58,26 @@ case "$(file "$SO")" in
   *) echo "✗ cdylib is not an ARM aarch64 shared object — investigate"; exit 1 ;;
 esac
 
-# The .so drops into the app at app/src/main/jniLibs/arm64-v8a/libform_kernel_rust.so.
-# NEXT (carrier, not engine): a tiny JNI shim (FormKernel.kt: external fun formEval(src): String)
-# + a per-frame recognize() that builds the recipe+driver text and calls formEval — the phone then
-# recognizes WITHOUT the Mac. The engine work is done; this is wiring. Verify on an emulator with
-# `emulator -avd <arm64-avd>` + adb install, or on a physical device. See
-# docs/coherence-substrate/kernel-on-android.form.
+# 5. Drop the .so into the app so the gradle build packages it. The .so is
+#    gitignored (a 4 MB build artifact), so the APK build depends on THIS step
+#    having run — both build scripts (build_signed_release.sh,
+#    verify_android_sense_public_handshake.sh) invoke build-android.sh first.
+APP="$(cd "$(dirname "$0")/../../experiments/coherence-sense-android" && pwd)"
+JNILIBS="$APP/app/src/main/jniLibs/arm64-v8a"
+RECIPES="$APP/app/src/main/assets/recipes"
+STDLIB="$(cd "$(dirname "$0")/../form-stdlib" && pwd)"
+mkdir -p "$JNILIBS" "$RECIPES"
+cp "$SO" "$JNILIBS/libform_kernel_rust.so"
+echo "✓ .so → $JNILIBS/libform_kernel_rust.so"
+# Refresh the bundled recipe assets from the single source of truth (form-stdlib)
+# so the on-device kernel runs the SAME proven recipes (no drift). The phone-native
+# recognition (FormKernel.kt) loads these from assets/recipes/ at runtime.
+for fk in signal-derivative.fk; do cp "$STDLIB/$fk" "$RECIPES/$fk"; done
+cp "$STDLIB/tests/signal-derivative-band.fk" "$RECIPES/signal-derivative-band.fk"
+echo "✓ recipe assets refreshed → $RECIPES"
+
+# DONE (2026-06-23): the JNI shim is live. FormKernel.kt binds
+# Java_com_coherence_sense_FormKernel_eval (this .so, built with --features cabi);
+# MainActivity runs the proven signal-derivative recipe in-process — the phone
+# recognizes WITHOUT the Mac (self-test reproduces the four-way band verdict 127,
+# verified on a Galaxy S23 Ultra). See docs/coherence-substrate/kernel-on-android.form.

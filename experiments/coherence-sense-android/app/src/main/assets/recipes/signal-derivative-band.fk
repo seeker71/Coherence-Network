@@ -1,0 +1,37 @@
+; preludes: form-stdlib/signal-derivative.fk
+;
+; signal-derivative-band — read the rate of change of a sample window, made falsifiable.
+;
+; A window of ordered scalars arrives; the body counts how many adjacent pairs ROSE and FELL, sums them
+; into an activity (the derivative-magnitude), and gates that against a floor to call motion. Two anchor
+; windows pin every claim:
+;   (1 1 1 1)  -> a flat, still window: 0 rises, 0 falls, activity 0, NOT moving at floor 1
+;   (1 5 2 8)  -> a moved window, pairs (1,5) up, (5,2) down, (2,8) up: 2 rises, 1 fall, activity 3
+; plus two edge windows that pin the boundaries:
+;   (7)        -> a single sample: no adjacent pair exists, activity 0 (the length>=2 guard, the strangest
+;                 edge — without the guard (nth s 1) is head(empty) and the kernel panics)
+;   (1 2 3)    -> a strictly rising window: 2 rises, 0 falls (rises and falls separate direction cleanly;
+;                 falls must stay 0 on pure ascent)
+; No sub, no floats, no compound and anywhere — every count is add + recursion, the gate is one binary ge.
+;
+; Verdict 127 when every claim lands:
+;   1   a flat window has zero activity — stillness is the floor   (sd-activity (1 1 1 1) == 0)
+;   2   rises counts only the up-steps                             (sd-rises (1 5 2 8) == 2)
+;   4   falls counts only the down-steps                          (sd-falls (1 5 2 8) == 1)
+;   8   activity is rises + falls, the total change               (sd-activity (1 5 2 8) == 3)
+;   16  the gate fires above the floor AND stays 0 below it        (sd-moving? (1 5 2 8) 2 == 1, and (1 1 1 1) 1 == 0)
+;   32  a single sample has no pair — the guard holds, no panic    (sd-activity (7) == 0)
+;   64  a pure-rising window is all rises, zero falls             (sd-rises (1 2 3) == 2, and sd-falls (1 2 3) == 0)
+(do
+    (let still   (list 1 1 1 1))
+    (let moved   (list 1 5 2 8))
+    (let one     (list 7))
+    (let ascent  (list 1 2 3))
+    (let c0 (if (eq (sd-activity still) 0) 1 0))
+    (let c1 (if (eq (sd-rises moved) 2) 2 0))
+    (let c2 (if (eq (sd-falls moved) 1) 4 0))
+    (let c3 (if (eq (sd-activity moved) 3) 8 0))
+    (let c4 (if (and (eq (sd-moving? moved 2) 1) (eq (sd-moving? still 1) 0)) 16 0))
+    (let c5 (if (eq (sd-activity one) 0) 32 0))
+    (let c6 (if (and (eq (sd-rises ascent) 2) (eq (sd-falls ascent) 0)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -100,6 +100,10 @@ repair_generated_pkcs12_config() {
 write_config_if_missing
 repair_generated_pkcs12_config
 
+# The phone-native kernel (.so) is gitignored; cross-compile + drop it into jniLibs
+# and refresh the bundled recipe assets so the signed APK ships the on-device kernel.
+"$ROOT/form/form-kernel-rust/build-android.sh"
+
 JAVA_HOME="$JAVA_HOME" "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" :app:assembleRelease
 [[ -f "$APK" ]] || { echo "FAIL signed release APK missing: $APK" >&2; exit 1; }
 

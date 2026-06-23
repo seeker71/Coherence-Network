@@ -1,0 +1,68 @@
+; signal-derivative.fk — the RATE OF CHANGE of a sensor signal across a window, so motion/onset can be seen.
+;
+; A still phone reads ~0 derivative; a moved one spikes. The window is a list of samples (accelerometer
+; magnitude, light level, a counter — any ordered scalar stream). The "derivative" here is not a numeric
+; slope: Form has no sub, so "the difference between two adjacent samples" cannot be a number. What CAN be
+; read without subtraction is the DIRECTION of each adjacent step plus a COUNT of how many steps went each
+; way. So the rate of change becomes: how many adjacent pairs ROSE, how many FELL, and the TOTAL number of
+; changes (rises + falls). Stillness is the floor — a flat window (1 1 1 1) has zero rises, zero falls, zero
+; activity. The more the signal jitters, the higher the activity count climbs. That count IS the derivative-
+; magnitude the body can act on: gate it against a floor and you have a motion/onset detector.
+;
+; THE WALK: recurse over the window, at each step comparing the SECOND sample (nth s 1) against the FIRST
+; (nth s 0) — the adjacent pair at the head — then recurse on (tail s), which slides the window forward by
+; one so the next call's head/second are the next adjacent pair. A pair exists only when the window still
+; holds at least two samples, so every walk GUARDS with (ge (len s) 2) and returns 0 below it: a one-sample
+; or empty window has no pairs, no direction, no change. This guard is load-bearing, not defensive — without
+; it (nth s 1) on a single-element list is head(tail(s)) = head(empty), which panics in every kernel. The
+; guard is the honest statement that a derivative needs two points.
+;
+; NO sub, NO floats, NO three-arg and: every count is an integer accumulated with add + recursion; the gate
+; is a single binary (ge activity floor); direction is one binary comparison (gt) per pair. The recipe never
+; nests a compound and at all — each predicate is one comparison — so there is no third-argument divergence
+; surface to begin with (Go/Rust drop a third and-arg, TS folds it; this body simply never writes one).
+;
+; HONEST LANE: this reads the COUNT of direction changes, not their SIZE. A window that ticks 1->2->1->2
+; (activity 3) and a window that slams 1->1000->1->1000 (also activity 3) are indistinguishable here — both
+; moved three times. That is the correct readout for "did it move / how busy was the window", and the wrong
+; readout for "how hard did it move"; magnitude lives in a different recipe. Flat-but-noisy and violent-but-
+; rare can collide; the floor (sd-moving?) only asks "did the window change at least k times", never "by how
+; much". Equal adjacent samples (a plateau, 5 5) count as NEITHER a rise nor a fall — held, not moving — so a
+; staircase that pauses reads its pauses as stillness, which is honest: no change is no change.
+;
+; Proven by: form-stdlib/tests/signal-derivative-band.fk (three-way at validate.sh)
+
+(do
+    ; --- RISES: count adjacent pairs where the LATER sample is greater (the signal stepped up). ---
+    ; Walk the window; a pair exists only at length >= 2. At each step compare the second sample against
+    ; the first (the adjacent pair at the head): if it rose, add 1, then slide forward by tail and recurse.
+    ; Below two samples there is no pair, so the count is 0 — the base case that also stops (nth s 1) from
+    ; ever reaching head(empty).
+    (defn sd-rises (s)
+        (if (ge (len s) 2)
+            (if (gt (nth s 1) (nth s 0))
+                (add 1 (sd-rises (tail s)))
+                (sd-rises (tail s)))
+            0))
+
+    ; --- FALLS: count adjacent pairs where the LATER sample is smaller (the signal stepped down). ---
+    ; Mirror of sd-rises with the comparison flipped: (gt (nth s 0) (nth s 1)) reads "the first is greater
+    ; than the second", i.e. the later sample fell. Same length>=2 guard, same tail-slide recursion.
+    (defn sd-falls (s)
+        (if (ge (len s) 2)
+            (if (gt (nth s 0) (nth s 1))
+                (add 1 (sd-falls (tail s)))
+                (sd-falls (tail s)))
+            0))
+
+    ; --- ACTIVITY: total adjacent changes = rises + falls. Stillness (no step in either direction) is 0. ---
+    ; This is the derivative-magnitude the body acts on: a flat window is 0, a busy one climbs with every
+    ; step that actually moved. Plateaus (equal adjacent samples) are counted by neither half, so they add 0.
+    (defn sd-activity (s) (add (sd-rises s) (sd-falls s)))
+
+    ; --- MOVING?: 1 when the window changed at least `floor` times, else 0 — the motion/onset gate. ---
+    ; One binary comparison: does the activity count clear the floor? Below it the window is treated as still
+    ; (settled or merely jittering under the threshold); at or above it the body calls the window in motion.
+    (defn sd-moving? (s floor) (if (ge (sd-activity s) floor) 1 0))
+
+    0)
