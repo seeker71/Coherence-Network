@@ -18,8 +18,8 @@
 ; The headline: the OCTAVE (2:1) and water's H:O stoichiometry (2:1) and a 2:1 rectangle
 ; are ONE cell; the perfect FIFTH (3:2) and a 3:2 atom ratio are one cell. Reciprocals
 ; stay distinct — 1:2 (C:O in CO2) is not the octave. Four-way: the cell is an integer-
-; reduced string, no node op, so it crosses the fourth arm (unlike synesthesia's node
-; content-addressing, which proves the same fact in the 3-kernel substrate lane).
+; reduced string, so it crosses the fourth arm via integer ops alone; synesthesia proves the
+; same fact through node content-addressing (intern_node/node_eq) and crosses four-way too.
 ;
 ; Held in lane: the small-integer ratios (octave, fifth) are exact and attested (just
 ; intonation); stoichiometric ratios are empirical; the claim is that they share a
