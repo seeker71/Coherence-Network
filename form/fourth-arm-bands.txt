@@ -36,19 +36,31 @@
 # the work ships; if the fix is a deeper walker-emitter change, the divergence
 # is still owned and tracked to that fix, never buried by omission here.
 #
-# The standing walls (what keeps a band out today, by blocked-band count):
-#   remaining node/substrate family — generated bp table parity beyond the
-#     current literal registry floor, the symbol wire sibling constructor,
-#     field constructors, the float-NodeID read-back (float_value / make_float64),
-#     and deeper content-addressed lattice surfaces beyond the explicit
-#     make_nodeid, the trivial typed leaves (int/bool/float),
-#     category/pkg/level/type/inst projection, and generic/doc/concept/dns/session
-#     floor
-#   host io family        — broader source-scan recipes.
-#     Full floor/north-star for this arc:
-#     docs/coherence-substrate/fourth-arm-substrate-carriers.form
-#   multi-line output     — bands that print mid-walk (the walker answers
-#     one value through fk_pr)
+# The standing walls (what keeps a band out today). The node content-addressing CORE
+# (intern_node, make_nodeid, node_children, node_eq, bp, intern_trivial_int) is NOT a wall —
+# it crosses four-way; a 2026-06-23 sweep moved 24 such bands from 3-kernel-only to four-way
+# (they were merely unregistered). The genuine remaining walls, small and named:
+#   bp-table parity      — flt-bp-node (form-flatten.fk) is a HAND-CODED literal floor; a bp name
+#     it lacks folds to the tag-45 string fallback → malformed nodes. Add the name with its EXACT
+#     bp_table.go tuple to fold it (done for the QUERY/SUBSTRATE-REF/SHAMBALLA families). NORTH STAR:
+#     make flt-bp-node read the full generated bp_table instead of the hand-coded subset.
+#   symbol-wire ctor     — recipe_to_bytes / bytes_to_recipe (.fkb wire round-trip). ~2 bands
+#     (symbols, source-corpus-roundtrip).
+#   float-NodeID read-back — make_float64 / float_value (live-float construct + decode; the trivial
+#     float LEAF already crosses). ~3 bands (float-natives, ml-flow, bml-thesis-float-literals).
+#   field constructors   — field_* native family; best re-expressed over make_nodeid+intern_node.
+#     ~1 raw-native band (production field work already crosses via the BML DSL).
+#   host io family       — broader source-scan + .fkb codec (read/write_form_binary) + corpus reads
+#     (read_with_cache / i18n-load) + json codec (json_parse_body/json_response_body). Bands:
+#     channel, cell-registry, persistence, concept-corpus, self-witness, channel-query-json.
+#     Full floor/north-star: docs/coherence-substrate/fourth-arm-substrate-carriers.form
+#   walk_recipe / image  — walk_recipe(_here) + interned-node projection + form-binary image.
+#     Bands: kernel-satsang, prolog-bmf-eval.
+#   multi-line output    — bands that print mid-walk (fkwu answers one value through fk_pr); the fix
+#     is to reshape the band to return a single integer verdict (done for name-check, reachability).
+#   fs-semantics DIVERGENCE (a hard gate, not a wall) — cell-log-store: fkwu's fs_rmdir (non-recursive),
+#     fs_mkdir (inverted return), fs_rename-on-dir diverge from the siblings in the compact path. Must
+#     be root-caused to four-way, never registered as 3-kernel-only.
 #
 # Crossed walls (kept here as named precedent, not standing blockers):
 #   float-pool capacity   — the assembled transformer TRAINING bands
