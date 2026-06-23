@@ -886,3 +886,6 @@ form-pe-coff-arm64 fks 63
 form-glsl-ffn-fwd fks 7
 str-byte-at fks 15
 pbkdf2-sha256 fks 3
+synesthesia fks 4
+codon fks 910
+chakra-column fks 127
