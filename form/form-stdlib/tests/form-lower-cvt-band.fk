@@ -1,0 +1,43 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-cvt-band — the int↔float BOUNDARY lowers to native arm64 BYTES, no clang.
+; Every real-model recipe crosses this lane: weights arrive as integer bit-fields (the q4k
+; unpack, the f16 mantissa/exponent of f16-decode.fk) and rebuild as f64 (fd-frac's
+; (mul 1.0 (fd-mant ...))), and the verdict casts back to int (round). form-asm.fk already
+; byte-proves the two arm64 conversion instructions against the clang/LLVM oracle; lo-i2f /
+; lo-f2i wire them into the lowerer, so a recipe that crosses the lane lowers with no clang.
+; This is the keystone the standing native-lowering gap names: the float lowerer reached
+; pure-FP functions (form-lower-float), but a model block mixes integer field-extraction with
+; float reconstruction — without the conversion node it could never lower as one binary.
+;
+; Three functions, each lowered and byte-verified against the clang oracle (otool -tvVj):
+;   to_f64(x:int)     = float(x)          -> scvtf d0,x0 ; ret
+;   round_trip(x:int) = trunc(float(x))   -> scvtf d0,x0 ; fcvtzs x0,d0 ; ret   (the full int->f64->int crossing)
+;   sq_trunc(d:f64)   = trunc(d * d)      -> fmov d1,d0 ; fmul d0,d1,d1 ; fcvtzs x0,d0 ; ret  (F2I atop a proven FP subtree)
+; oracle words: scvtf d0,x0=9e620000  fcvtzs x0,d0=9e780000  fmov d1,d0=1e604001
+;               fmul d0,d1,d1=1e610820  ret=d65f03c0
+;
+; Verdict 15 when every claim lands:
+;   1  to_f64 lowers to the exact 8-byte image — scvtf reads x0 directly, no redundant mov
+;   2  round_trip lowers byte-identical — int->float->int composes (the boundary both ways)
+;   4  sq_trunc lowers byte-identical — F2I (fcvtzs) caps a register-form FP subtree (fmul d0,d1,d1)
+;   8  the round_trip image is exactly 3 instructions (12 bytes) — one conversion each way, no junk
+(do
+    (let prog-i2f (list (list 2 0 0 0) (list 12 0 0 0)))                    ; to_f64(x) = I2F(ARG)
+    (let prog-rt  (list (list 2 0 0 0) (list 12 0 0 0) (list 13 1 0 0)))    ; round_trip(x) = F2I(I2F(ARG))
+    (let prog-sqt (list (list 2) (list 5 0 0) (list 13 1 0)))              ; sq_trunc(d) = F2I(MUL(ARG,ARG))
+
+    (let want-i2f (list 0 0 98 158  192 3 95 214))
+    (let want-rt  (list 0 0 98 158  0 0 120 158  192 3 95 214))
+    (let want-sqt (list 1 64 96 30  32 8 97 30  0 0 120 158  192 3 95 214))
+
+    (let img-i2f (lo-fcompile prog-i2f 1))      ; int arg in w0 — no float preamble
+    (let img-rt  (lo-fcompile prog-rt 2))       ; int arg in w0 — no float preamble
+    (let img-sqt (lo-fcompile-fn prog-sqt 2))   ; float arg in d0, banked to d1
+
+    (let c0 (if (eq (fa-conviction img-i2f want-i2f) 1) 1 0))
+    (let c1 (if (eq (fa-conviction img-rt  want-rt)  1) 2 0))
+    (let c2 (if (eq (fa-conviction img-sqt want-sqt) 1) 4 0))
+    (let c3 (if (eq (len img-rt) 12) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
