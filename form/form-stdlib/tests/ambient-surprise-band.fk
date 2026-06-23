@@ -1,0 +1,27 @@
+; preludes: form-stdlib/ambient-surprise.fk
+;
+; ambient-surprise-band — notice surprise against a learned baseline, and refine it, made falsifiable.
+; Baseline (expected ambient level) = 5, tolerance band = 3.
+;
+; - A reading of 15 sits 10 from expectation → surprise, salience 10 (this is the pressure speak-turn weighs).
+; - A reading of 7 sits 2 from expectation, within the band → no surprise.
+; - Refine steps the baseline ONE toward each reading: 9 → 6, 2 → 4, 5 → 5 (hold). The room's normal
+;   is learned a step at a time.
+;
+; Verdict 127 when every claim lands:
+;   1    a far reading is a surprise            (as-surprise? 15 5 3 == 1)
+;   2    an in-band reading is not              (as-surprise? 7 5 3 == 0)
+;   4    salience is the deviation              (as-salience 15 5 == 10)
+;   8    salience is unsigned (abs)             (as-salience 2 5 == 3)
+;   16   refine steps UP toward a higher read   (as-refine 5 9 == 6)
+;   32   refine steps DOWN toward a lower read  (as-refine 5 2 == 4)
+;   64   refine HOLDS when read == baseline     (as-refine 5 5 == 5)
+(do
+    (let c0 (if (eq (as-surprise? 15 5 3) 1)   1 0))
+    (let c1 (if (eq (as-surprise? 7 5 3) 0)    2 0))
+    (let c2 (if (eq (as-salience 15 5) 10)     4 0))
+    (let c3 (if (eq (as-salience 2 5) 3)       8 0))
+    (let c4 (if (eq (as-refine 5 9) 6)        16 0))
+    (let c5 (if (eq (as-refine 5 2) 4)        32 0))
+    (let c6 (if (eq (as-refine 5 5) 5)        64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
