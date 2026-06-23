@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var tick = 0
     private var sentBytes = 0L
     private var sentSamples = 0L
+    private var capturedSamples = 0L   // snapshots persisted to the local field-log (the data lake)
     private var innerCellsCreated = 0L
     private var innerCellsUpdated = 0L
     private var innerCellsFreed = 0L
@@ -577,17 +578,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun arr(v: FloatArray): JSONArray = JSONArray().apply { put(v[0].toDouble()); put(v[1].toDouble()); put(v[2].toDouble()) }
 
     private fun sendSnapshot() {
-        if (snapshotInFlight) return
-        val base = effectiveWitnessBase()
-        if (base.isBlank()) {
-            pendingStartAfterDiscovery = true
-            discoveryState = "looking for nearby Mac witness"
-            status.text = "Looking for nearby Mac witness before sending samples."
-            startWitnessDiscovery()
-            requestDashboardRender()
-            return
-        }
-        snapshotInFlight = true
+        // Build + persist the snapshot ALWAYS — capture is decoupled from sharing, so the data lake
+        // keeps filling even with no witness in reach (offline, on the move). Sharing happens after.
         val snap = JSONObject()
         snap.put("organ_id", organId)
         latest[Sensor.TYPE_ACCELEROMETER]?.let { snap.put("accel", arr(it)) }
@@ -610,6 +602,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         snap.put("tick", tick++)
         innerCellsCreated += 1
 
+        // The data lake's first pour: persist EVERY snapshot locally, durably — so the proven
+        // world-model recipes (feature-vector -> world-model-growth -> signal-metabolism -> co-learning)
+        // have real field data to train on, live and after the fact. Pure physical field readings
+        // (motion, light, magnetic, sound-level, camera-luma, gpu) — no identifiable content; raw
+        // audio/images and identifying others stay behind the consent gate (organ-sense.fk).
+        persistSnapshot(snap)
+
+        // Share to a witness only when one is reachable and no POST is already in flight; offline never
+        // stops the capture — it just keeps filling the local lake and keeps looking for a witness.
+        if (snapshotInFlight) return
+        val base = effectiveWitnessBase()
+        if (base.isBlank()) {
+            pendingStartAfterDiscovery = true
+            discoveryState = "looking for nearby Mac witness"
+            status.text = "Capturing locally. Looking for a nearby Mac witness to share with."
+            startWitnessDiscovery()
+            requestDashboardRender()
+            return
+        }
+        snapshotInFlight = true
         Thread {
             try {
                 val conn = (URL("$base/sense").openConnection() as HttpURLConnection).apply {
@@ -638,6 +650,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 snapshotInFlight = false
             }
         }.start()
+    }
+
+    // Append one timestamped snapshot to the local field-log (NDJSON, one record per line). This is
+    // the durable memory the senses were missing: reading is liquid, this is body. Wall-clock t_ms makes
+    // every record trainable and a journey reconstructable. Local-only and owner's-own-device by design;
+    // sharing outward to other cells flows through the consent interface (organ-sense.fk), never raw.
+    private fun persistSnapshot(snap: JSONObject) {
+        try {
+            snap.put("t_ms", System.currentTimeMillis())
+            val log = File(filesDir, "field-log.ndjson")
+            FileOutputStream(log, true).bufferedWriter().use { w ->
+                w.append(snap.toString()); w.append("\n")
+            }
+            capturedSamples += 1
+        } catch (_: Exception) {}
     }
 
     private val meshLoop = object : Runnable {
