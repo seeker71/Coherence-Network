@@ -1,0 +1,33 @@
+; preludes: form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/novelty.fk form-stdlib/vision-percept.fk
+;
+; vision-percept-band — the eye recognizes learned shapes from pixels, calls the unknown novel, and
+; LEARNS new ones, made falsifiable. Frames are 4-pixel luma windows; thresholds [2 4 6] -> 4 bins;
+; recognition floor = 4 matching bars (an exact-feature match).
+;
+; Two learned shapes: "bright" (pixels 7 7 6 7 -> all in the top bin, [0,0,0,4]) and "dark" (0 1 0 1 ->
+; bottom bin, [4,0,0,0]). A bright frame is recognized "bright"; a dark frame "dark"; a mid frame
+; (3 3 3 3 -> [0,4,0,0]) matches neither well -> NOVEL. Then the eye LEARNS "plant" (5 5 5 5 ->
+; [0,0,4,0]) and afterwards recognizes it — vocabulary grown from what it saw.
+;
+; Verdict 127 when every claim lands:
+;   1    a bright frame is recognized "bright"        (vp-label bright -> "bright")
+;   2    its verdict is "known"                        (vp-verdict bright -> "known")
+;   4    an unknown mid frame is "novel"               (vp-verdict mid -> "novel")
+;   8    a dark frame is recognized "dark"             (vp-label dark -> "dark")
+;   16   a new shape, once LEARNED, is recognized      (after vp-learn "plant", vp-label -> "plant")
+;   32   that shape was novel BEFORE learning          (vp-verdict plant-frame vs base -> "novel")
+;   64   the feature width is preserved                (fv-width == 4)
+(do
+    (let thr (list 2 4 6))
+    (let nb 4)
+    (let protos (list (list "bright" (vp-feature (list 7 7 6 7) thr nb))
+                      (list "dark"   (vp-feature (list 0 1 0 1) thr nb))))
+    (let learned (vp-learn protos "plant" (list 5 5 5 5) thr nb))
+    (let c0 (if (str_eq (vp-label   (list 7 7 6 7) thr nb protos 4) "bright")  1 0))
+    (let c1 (if (str_eq (vp-verdict (list 7 7 6 7) thr nb protos 4) "known")   2 0))
+    (let c2 (if (str_eq (vp-verdict (list 3 3 3 3) thr nb protos 4) "novel")   4 0))
+    (let c3 (if (str_eq (vp-label   (list 0 1 0 1) thr nb protos 4) "dark")    8 0))
+    (let c4 (if (str_eq (vp-label   (list 5 5 5 5) thr nb learned 4) "plant") 16 0))
+    (let c5 (if (str_eq (vp-verdict (list 5 5 5 5) thr nb protos 4) "novel")  32 0))
+    (let c6 (if (eq (fv-width (vp-feature (list 7 7 6 7) thr nb)) 4)          64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
