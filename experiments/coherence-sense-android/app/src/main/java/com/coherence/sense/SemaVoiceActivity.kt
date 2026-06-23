@@ -129,6 +129,12 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
         )
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Begin the always-on sensor logging service (foreground) so the night of breathing/motion data
+        // is captured even when the screen is off — for training the on-device models.
+        try {
+            val svc = Intent(this, CapabilityHeartbeatService::class.java)
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(svc) else startService(svc)
+        } catch (_: Exception) {}
         tts = TextToSpeech(this, this)
         sensors = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         locator = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
