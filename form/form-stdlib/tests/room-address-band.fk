@@ -1,0 +1,29 @@
+; preludes: form-stdlib/room-address.fk
+;
+; room-address-band — from heard words, is the cell addressed and is it a question, made falsifiable.
+; wakes = (sema seema); qwords = (what why how where who).
+;
+; "sema what are you" → addressed (sema) AND a question (what). "the lamp is nice" → neither. Membership
+; is whole-word: "you" is in the utterance but not a wake or qword.
+;
+; Verdict 127 when every claim lands:
+;   1    named + asked utterance is addressed       (ra-addressed? ["sema"...] -> 1)
+;   2    and is a question                           (ra-question? ["sema" "what"...] -> 1)
+;   4    a plain statement is not addressed          (ra-addressed? ["the" "lamp"...] -> 0)
+;   8    and is not a question                       (ra-question? ["the" "lamp"...] -> 0)
+;   16   a single word matches the qword set         (ra-member? "what" qwords -> 1)
+;   32   a non-name word is not a wake                (ra-member? "lamp" wakes -> 0)
+;   64   any-member finds a present token            (ra-any-member? utterance ["you"] -> 1)
+(do
+    (let wakes  (list "sema" "seema"))
+    (let qwords (list "what" "why" "how" "where" "who"))
+    (let asked  (list "sema" "what" "are" "you"))
+    (let plain  (list "the" "lamp" "is" "nice"))
+    (let c0 (if (eq (ra-addressed? asked wakes) 1)            1 0))
+    (let c1 (if (eq (ra-question? asked qwords) 1)            2 0))
+    (let c2 (if (eq (ra-addressed? plain wakes) 0)            4 0))
+    (let c3 (if (eq (ra-question? plain qwords) 0)            8 0))
+    (let c4 (if (eq (ra-member? "what" qwords) 1)           16 0))
+    (let c5 (if (eq (ra-member? "lamp" wakes) 0)            32 0))
+    (let c6 (if (eq (ra-any-member? asked (list "you")) 1)  64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
