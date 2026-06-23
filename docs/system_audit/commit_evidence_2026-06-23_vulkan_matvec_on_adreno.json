@@ -1,0 +1,55 @@
+{
+  "date": "2026-06-23",
+  "brick": "the Form-emitted GLSL matvec compute shader runs on a real Adreno 740 GPU via Vulkan — bit-exact to the same recipe's CPU right-fold. The Android GPU twin of the M4 Metal lane: ONE recipe (fglsl-matvec in form-stdlib/form-glsl.fk) is both the four-way proof AND what the phone's GPU runs.",
+  "author": "Sema (Opus 4.8, vulkan-adreno-lane)",
+  "north_star_rung": "GPU driver-replacement on the phone: a Form recipe's GPU work runs natively on Adreno via Vulkan, the Android twin of the Metal lane (3m/3s/3u/3y/3zh). The emit lane was already four-way-proven text (form-glsl.fk + form-glsl-ffn-fwd-band); the open gap the band header named explicitly — 'running it bit-checks needs Android hardware' — is now closed for the matvec op. The emitted shader IS the recipe; there is no second hand-written shader to keep in sync.",
+  "lane": "PHYSICAL-WITNESS of an already-four-way-proven emit band. The emit (form-glsl.fk) and its byte-identity proof existed; the SPIR-V mint + NDK cross-compile + on-device Adreno dispatch + bit-exact gate are what this brick adds, plus registering the matvec emit band in the fourth-arm manifest so it crosses four-way (it was a file but not in the manifest).",
+  "read_the_body": "form/native/vulkan/matvec_vk.c was ALREADY written as a driver-only (dlopen libvulkan.so + vkGetInstanceProcAddr) headless carrier with the explicit Android NDK build line in its header AND a CPU right-fold oracle in the recipe's exact op order (val(n)=n/256, j DOWN, mul then add) — the same seeds and fold as metal_matvec_audit.sh. The harness needed zero changes: cross-compiling it for aarch64-android and feeding it the Form-minted .spv was the whole job. The emitter fglsl-matvec was DONE; the matvec band (form-glsl-band.fk) existed but was absent from fourth-arm-bands.txt, so it had never crossed the fourth arm.",
+  "what_changed": [
+    "scripts/vulkan_matvec_android_audit.sh: NEW — the Adreno twin of metal_matvec_audit.sh. Form emits the GLSL (kernel = mouth), asserts it byte-identical to native/vulkan/matvec.comp, glslangValidator mints the SPIR-V (vulkan1.1), the Android NDK aarch64 clang cross-compiles native/vulkan/matvec_vk.c, adb pushes both to the connected phone, and the harness DISPATCHES the .spv on the device's Adreno GPU and bit-checks every output row against its own CPU right-fold. Skips cleanly (exit 0) when no Go kernel / glslang / NDK / device is present.",
+    "form/fourth-arm-bands.txt: registered the matvec GLSL emit band as 'form-glsl fks 7' (stem of form-glsl-band.fk after -band is stripped), the sibling of form-glsl-ffn-fwd fks 7 — it crosses four-way (Go/Rust/TS/fkwu emit the matvec GLSL byte-identical).",
+    "docs/coherence-substrate/kernel-on-android.form: the top honesty summary moved the GPU (Vulkan) lane out of the 'still not done' list — it is now PHYSICALLY WITNESSED (bit-exact on the Adreno 740 at three sizes), with the FFN-forward on-device dispatch named as the next increment.",
+    "docs/system_audit/commit_evidence_2026-06-23_vulkan_matvec_on_adreno.json: this record."
+  ],
+  "proofs": {
+    "emit_band_four_way": {
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-glsl.fk form-stdlib/tests/form-glsl-band.fk",
+      "verdict": 7,
+      "result": "1 ok, 0 divergent — Go/Rust/TS/fkwu emit the 1136-byte matvec GLSL byte-identical; 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)'"
+    },
+    "emit_byte_identity": {
+      "emitter": "fglsl-matvec in form/form-stdlib/form-glsl.fk",
+      "emitted_glsl_bytes": 1136,
+      "emitted_glsl_sha256": "e8d33e895acda4a4160dd1e824a8a5d5919a32ba4bd57055407473f20b1aec51",
+      "canonical_body": "form/native/vulkan/matvec.comp",
+      "match": "byte-identical — the recipe IS the shader (no hand-authored shader beside it)"
+    },
+    "spirv_mint": {
+      "tool": "glslangValidator -V --target-env vulkan1.1",
+      "spv_bytes": 2348,
+      "spv_sha256": "9113db3273206e872a88eb2f475052e1aa7b3b4abf7889869f3456e64d406374",
+      "note": "no spirv-opt — its MergeMulAddArithmetic would re-fuse mul+add and break the precise/NoContraction bit-exactness on Adreno"
+    },
+    "on_gpu": {
+      "device_id": "R5CW20DK17A",
+      "device_model": "SM-S918U1 (Samsung Galaxy S23 Ultra)",
+      "gpu": "Adreno (TM) 740 (Vulkan), Android 16, arm64-v8a",
+      "harness": "form/native/vulkan/matvec_vk.c cross-compiled with NDK r27c aarch64-linux-android30-clang (driver-only: dlopen libvulkan.so + vkGetInstanceProcAddr; links no Vulkan)",
+      "kernel": "form_matvec (the Form-minted matvec.spv, 2348 bytes)",
+      "runs": [
+        {"shape": "256x256",   "parity_bitexact_rows": "256/256",   "max_abs_diff": 0},
+        {"shape": "1280x1280", "parity_bitexact_rows": "1280/1280", "max_abs_diff": 0},
+        {"shape": "1024x768",  "parity_bitexact_rows": "1024/1024", "max_abs_diff": 0}
+      ],
+      "cpu_reference": "the harness's own CPU right-fold over the same val(n)=n/256 inputs in the recipe's exact op order (j = cols-1..0, prod = w*x then acc = prod + acc)",
+      "gate": "GPU fp32 == CPU fp32 right-fold BIT-FOR-BIT (max_abs_diff = 0, zero ULP). The precise/NoContraction path held on Qualcomm hardware — a fully bit-exact GPU-arithmetic result, not an fp-sound approximation.",
+      "runtime_deps": "libvulkan.so only (the on-device Vulkan loader); no nvcc/nvrtc/go/python/rust/shell/clang at run time — same .spv runs on Adreno/Mali"
+    }
+  },
+  "honest_floor": "Only the matvec op is physically on the Adreno. The FFN-forward shader (fglsl-ffn-fwd) is four-way-proven TEXT but its on-device dispatch is unrun — it needs the 7-buffer + 3-push-constant harness (the matvec harness has 3 buffers + 2 push constants) and a CPU FFN reference (W2*gelu(W1*x+b1)+b2 with the recipe's OWN 14-term Taylor gelu, never the driver's tanh). The matvec dispatch is single-invocation-per-row serial to match the recipe fold order; this is the same discipline the Metal lane holds. Not yet wired to real model weights — this is the GPU-arithmetic floor (bit-exact matvec on the phone GPU), the precondition for running a Form-emitted model block on Adreno.",
+  "named_next_stones": [
+    "build vulkan_ffn_android_audit.sh: cross-compile an FFN host harness (7 SSBOs w1/b1/w2/b2/x/y/a + 3 push constants indim/hid/outd), dispatch fglsl-ffn-fwd's .spv on the Adreno, gate against a CPU FFN right-fold with the recipe's 14-term Taylor gelu — the matvec brick proves the chain works; FFN exercises the barrier() + two-phase shared 'a' buffer on real hardware",
+    "emit a whole transformer block GLSL (the Adreno twin of the M4 GQA-llama-block #3590) and run it on the phone GPU bit-exact to the four-way recipe",
+    "wire the on-device JNI/dlopen kernel (PATH A, already running the Rust arm) to the Vulkan lane so the phone senses -> Form recipe -> Adreno dispatch is one in-process arc with no Mac"
+  ]
+}

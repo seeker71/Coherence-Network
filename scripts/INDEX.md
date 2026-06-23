@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 331
+**Total files**: 332
 
 | File | Purpose |
 |---|---|
@@ -332,6 +332,7 @@
 | [video_recipe_proof.py](video_recipe_proof.py) | video_recipe_proof.py — ONE video source carries MANY parallel Recipe |
 | [view_recipe_library.py](view_recipe_library.py) | view_recipe_library.py — read a .recipelib bundle and render any tongue. |
 | [viewport_audit.py](viewport_audit.py) | Audit a list of URLs at desktop (1440x900) and mobile (390x844) widths. |
+| [vulkan_matvec_android_audit.sh](vulkan_matvec_android_audit.sh) | vulkan_matvec_android_audit.sh — Adreno GPU witness for the Form GLSL matvec emitter |
 | [wander.py](wander.py) | Launch a wandering sense into the field. |
 | [wellness_check.py](wellness_check.py) | Wellness check — a gentle sensing of the body. |
 | [whisper_block0_carrier.py](whisper_block0_carrier.py) | scripts/whisper_block0_carrier.py — M6 carrier: load safetensors, slice, quantize, and run reference forward pass. |
