@@ -10,6 +10,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -25,6 +28,10 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.ln
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 
 class CapabilityHeartbeatService : Service() {
     private val channelId = "coherence_sense_capability"
@@ -43,6 +50,10 @@ class CapabilityHeartbeatService : Service() {
     private var sensors: SensorManager? = null
     private var accelWriter: Writer? = null
     private var fieldWriter: Writer? = null
+    private var audioWriter: Writer? = null
+    private var audioRecord: AudioRecord? = null
+    private var audioThread: Thread? = null
+    @Volatile private var audioRunning = false
     @Volatile private var logged = 0L
     private val wallFmt = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
 
@@ -68,7 +79,7 @@ class CapabilityHeartbeatService : Service() {
 
     private val flushLoop = object : Runnable {
         override fun run() {
-            try { accelWriter?.flush(); fieldWriter?.flush() } catch (_: Exception) {}
+            try { accelWriter?.flush(); fieldWriter?.flush(); audioWriter?.flush() } catch (_: Exception) {}
             workerHandler?.postDelayed(this, 5000)
         }
     }
@@ -92,10 +103,58 @@ class CapabilityHeartbeatService : Service() {
         sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
         sm.getDefaultSensor(Sensor.TYPE_LIGHT)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
         h?.postDelayed(flushLoop, 5000)
+        startAudioLogging()
+    }
+
+    // The always-on ear: one continuous AudioRecord owns the mic and logs the ENERGY ENVELOPE per
+    // ~0.5s window (RMS + a 0..9 band) — enough for snoring, surprises, room liveness, and the world
+    // model, while raw speech stays OUT of the log. Transcription / music-id come from routing audio to
+    // the agent later; on-device they'd need their own mic, which this capture already holds.
+    private fun startAudioLogging() {
+        if (audioRunning) return
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val af = File(File(filesDir, "sleep-$date").apply { mkdirs() }, "audio.csv")
+            if (!af.exists() || af.length() == 0L) af.writeText("t_ms,wall,rms,band\n")
+            audioWriter = java.io.FileWriter(af, true).buffered()
+            val sr = 16000
+            val minBuf = AudioRecord.getMinBufferSize(sr, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            val rec = AudioRecord(
+                MediaRecorder.AudioSource.MIC, sr,
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                max(minBuf, sr) // ~1s
+            )
+            if (rec.state != AudioRecord.STATE_INITIALIZED) { rec.release(); return }
+            audioRecord = rec
+            audioRunning = true
+            rec.startRecording()
+            audioThread = Thread {
+                val win = ShortArray(sr / 2)   // 0.5s windows
+                while (audioRunning) {
+                    val n = rec.read(win, 0, win.size)
+                    if (n <= 0) continue
+                    var sumSq = 0.0
+                    for (i in 0 until n) { val s = win[i].toDouble(); sumSq += s * s }
+                    val rms = sqrt(sumSq / n)
+                    val band = min(9, max(0, (ln(rms + 1.0) / ln(2.0)).toInt()))  // log2 energy band 0..9
+                    val nowMs = System.currentTimeMillis()
+                    try { audioWriter?.append("$nowMs,${wallFmt.format(Date(nowMs))},${rms.toInt()},$band\n") } catch (_: Exception) {}
+                }
+            }.also { it.isDaemon = true; it.start() }
+        } catch (_: Exception) { audioRunning = false }
+    }
+
+    private fun stopAudioLogging() {
+        audioRunning = false
+        try { audioThread?.join(800) } catch (_: Exception) {}
+        try { audioRecord?.stop(); audioRecord?.release() } catch (_: Exception) {}
+        audioRecord = null
+        try { audioWriter?.flush(); audioWriter?.close() } catch (_: Exception) {}
     }
 
     private fun stopLogging() {
         try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
+        stopAudioLogging()
         try { accelWriter?.flush(); accelWriter?.close() } catch (_: Exception) {}
         try { fieldWriter?.flush(); fieldWriter?.close() } catch (_: Exception) {}
     }
@@ -103,15 +162,22 @@ class CapabilityHeartbeatService : Service() {
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        startForeground(
-            notificationId,
-            NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(android.R.drawable.stat_notify_sync)
-                .setContentTitle("Coherence Sense")
-                .setContentText("Capability heartbeat is live")
-                .setOngoing(true)
-                .build(),
-        )
+        val notif = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setContentTitle("Coherence Sense")
+            .setContentText("Sensing the field — motion, light, sound")
+            .setOngoing(true)
+            .build()
+        // Android 10+ wants the FGS type at start time; microphone type is required to capture audio.
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(
+                notificationId, notif,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE,
+            )
+        } else {
+            startForeground(notificationId, notif)
+        }
         worker = HandlerThread("coherence-capability-heartbeat").also { it.start() }
         workerHandler = Handler(worker!!.looper)
         workerHandler?.post { startLogging() }   // begin sensor logging immediately, witness or not
