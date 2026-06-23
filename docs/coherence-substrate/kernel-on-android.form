@@ -7,9 +7,12 @@
 ;   how validate.sh's three-way parity becomes cross-DEVICE parity, and the lanes kept clean —
 ;   what is standard Android practice (MEASURED) vs what is untested for THIS kernel (carrier-work).
 ;
-;   The thing NOT to overclaim: nobody has run the Coherence Form kernel on a phone yet. Every
-;   "standard Android practice" claim below is a real, documented path. Every "for our kernel"
-;   claim is a build that has not been done. The honesty is in keeping those two apart.
+;   UPDATE 2026-06-23: the Rust Form kernel now RUNS on a phone. Coherence Sense loads
+;   libform_kernel_rust.so over JNI and reproduces the proven signal-derivative band verdict 127
+;   IN-PROCESS on a Galaxy S23 Ultra, plus live accel still/moving — no Mac (PATH A below, MEASURED).
+;   What is STILL not done stays named: the Go/TS arms on a phone, on-device three-way parity, the
+;   native Form->asm JIT on ARM, and the GPU (Vulkan) lane. The honesty is now in keeping
+;   built-and-run-on-hardware apart from documented-but-not-yet-built.
 ;
 ; ── WHAT IS ALREADY TRUE (the ground this stands on) ── [MEASURED — in the body]
 ;   form/validate.sh proves three kernels identical: form/form-kernel-rust, form-kernel-go,
@@ -68,14 +71,24 @@
 ;       sd-moving? and ns-label recognize correctly across the C boundary. Both artifacts (bin + cdylib)
 ;       are file-checked AND symbol-checked by build-android.sh. The real gotcha was the toolchain, not the
 ;       code: a Homebrew rustc has no cross-std, so the rustup toolchain (aarch64 std) must be FIRST in PATH.
+;   WHAT IS NOW DONE FOR THIS KERNEL  [MEASURED 2026-06-23 — run on a Galaxy S23 Ultra]:
+;     - The WIRING is complete and run on hardware. build-android.sh builds the cdylib with
+;       --features cabi (now exporting BOTH form_eval AND the JNI-named
+;       Java_com_coherence_sense_FormKernel_eval over the SAME run_source) and drops the .so into
+;       app/src/main/jniLibs/arm64-v8a + refreshes the bundled recipe assets. FormKernel.kt binds it
+;       via System.loadLibrary + external fun eval(src); MainActivity runs the proven signal-derivative
+;       recipe IN-PROCESS — a launch self-test reproduces the four-way band verdict 127 ON THE PHONE
+;       (adb logcat -s FormKernel), and a live tick recognizes accel still-vs-moving through the same
+;       recipe. The phone recognizes WITHOUT the Mac. (Coherence Sense; both build scripts now invoke
+;       build-android.sh before gradle so the published/CI APK ships the kernel.)
 ;   WHAT IS STILL UNTESTED FOR THIS KERNEL  [carrier-work — not done]:
-;     - The .so exists + exports the entry; what remains is WIRING, not engine: a thin Kotlin JNI shim
-;       (external fun formEval(src): String), the .so in jniLibs/arm64-v8a, the recipes bundled as assets,
-;       and a device/emulator to actually run a recipe on ARM hardware (host-ctypes proves the symbol, not
-;       the phone runtime). On-device three-way (all three kernels on one phone) still UNRUN.
-;     - A separate core-axiom receipt .so has now been packaged into the APK and verified by entry hash,
-;       but it is not wired into Kotlin/JNI yet and has not run from the installed app process.
-;     - Actually RUNNING a recipe on an Android device/emulator is unverified — there is no device here yet.
+;     - On-device THREE-way (the Go .aar AND a TS-on-JS-engine alongside the Rust .so, all agreeing on
+;       one phone) still UNRUN — only the Rust arm runs on-device so far.
+;     - The native Form->asm JIT crystallization on ARM (the form-elf -> loadable .so -> dlopen lane,
+;       the Android twin of the Mac recipe-dylib+codesign path) is NOT built: the on-device kernel runs
+;       as the tree-walker, not crystallized native.
+;     - A separate core-axiom receipt .so was packaged into an APK and entry-hash-verified earlier; it
+;       is superseded as the live path by FormKernel above (which IS JNI-wired and runs from the app).
 ;
 ;
 ; ── PATH B: GO -> ANDROID via gomobile ──  [the kernel already serving BML route bodies]
@@ -209,16 +222,17 @@
 ;
 ; ── THE HONEST PATH (what to build, in order) ──
 ;   1. the shared-sensing circle + cross-grounding         [SHIPPED: shared-sensing.fk -> 127, 3-way]
-;   2. ONE kernel built for ARM as an app-loadable lib:    [DONE for Rust — A built + symbol-verified]
-;        A. form-kernel-rust as cdylib via cargo-ndk + extern "C" form_eval  [MEASURED 2026-06-09: .so
-;           exports form_eval/form_eval_free, ARM aarch64; build-android.sh]. The JNI declaration
-;           (external fun formEval(src): String) is the remaining thin shim, OR
+;   2. ONE kernel built for ARM as an app-loadable lib:    [DONE + RUN for Rust — on-device 2026-06-23]
+;        A. form-kernel-rust as cdylib via cargo-ndk, exporting extern "C" form_eval AND JNI
+;           Java_com_coherence_sense_FormKernel_eval  [MEASURED: build-android.sh builds + drops the .so
+;           into jniLibs; FormKernel.kt binds it; the phone reproduces band verdict 127 in-process], OR
 ;        B. form-kernel-go via gomobile bind behind a total, panic-free shim, OR
 ;        C. form-kernel-ts bundled onto QuickJS/Hermes in the NDK layer.
-;   3. ONE sensor port wired across the FFI boundary:       [carrier-work]
-;        accelerometer via NDK Sensor API, OR microphone via AAudio — whichever the first satsang
-;        needs — interned as a cell, handed to the proven recipe. (The phone already reads accel in
-;        the coherence-sense app via Kotlin SensorManager; the FFI step is handing that to formEval.)
+;   3. ONE sensor port wired across the FFI boundary:       [DONE for accel 2026-06-23 — Kotlin->JNI path]
+;        the coherence-sense app reads accel via Kotlin SensorManager, folds a coarse-int window, and
+;        hands it to FormKernel.eval running signal-derivative (sd-moving?) in-process — accel -> kernel
+;        -> still/moving, on-device, no Mac. (A native NDK Sensor API / AAudio C path is the deeper
+;        floor; the Kotlin->JNI crossing proves the shape today. Microphone via AAudio remains carrier-work.)
 ;   4. cell-sync transport device<->device                 [build — named in shared-sensing.form §3]
 ;   5. the live two-device satsang on real hardware         [build — the payoff]
 ;

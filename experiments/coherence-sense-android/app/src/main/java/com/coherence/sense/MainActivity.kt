@@ -48,6 +48,7 @@ import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
 import android.opengl.GLES20
 import android.provider.Settings
+import android.util.Log
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -141,6 +142,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var cachedBluetoothState = "unknown"
     private var cachedSpeakerState = "unknown"
     private var cachedCameraState = "unknown"
+
+    // On-device recognition (v1 phone-native kernel): the Form body runs IN the
+    // app via libform_kernel_rust.so — no Mac. accelWindow holds recent accel
+    // magnitudes as coarse integers (quantization suppresses sensor jitter); the
+    // proven signal-derivative recipe reads still-vs-moving from them in-process.
+    private val accelWindow = ArrayDeque<Int>()
+    private var onDeviceSelfTest = "on-device kernel: warming"
+    private var onDeviceLive = "on-device recognition: gathering motion"
 
     private lateinit var feed: TextView
     private lateinit var status: TextView
@@ -241,6 +250,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
         handler.postDelayed({ checkForAppUpdate(false) }, 1600)
+        startOnDeviceRecognition()
     }
 
     private fun renderFirstFrame() {
@@ -646,6 +656,51 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             refreshMesh()
             handler.postDelayed(this, 5000)
         }
+    }
+
+    // The phone-native recognition tick — entirely on-device, independent of the
+    // Mac. Each pass folds the latest accel magnitude into a coarse-int window and
+    // runs the proven signal-derivative recipe through the in-process kernel.
+    private val onDeviceLoop = object : Runnable {
+        override fun run() {
+            latest[Sensor.TYPE_ACCELEROMETER]?.let { a ->
+                val mag = sqrt((a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).toDouble())
+                accelWindow.addLast(mag.toInt())
+                while (accelWindow.size > 8) accelWindow.removeFirst()
+            }
+            if (accelWindow.size >= 4 && FormKernel.available) {
+                val window = accelWindow.toList()
+                Thread {
+                    val moving = try { FormKernel.moving(this@MainActivity, window, 2) } catch (_: Exception) { false }
+                    runOnUiThread {
+                        onDeviceLive = "on-device recognition: ${if (moving) "MOVING" else "still"}  (signal-derivative on ${window.size} accel samples, no Mac)"
+                        requestDashboardRender()
+                    }
+                }.start()
+            }
+            handler.postDelayed(this, 800)
+        }
+    }
+
+    // Start on-device recognition: register accel independently of Mac sharing, run
+    // the live tick, and prove the body runs on the phone by reproducing the proven
+    // signal-derivative band verdict (127, four-way) in-process.
+    private fun startOnDeviceRecognition() {
+        registerSensor(Sensor.TYPE_ACCELEROMETER)
+        handler.removeCallbacks(onDeviceLoop)
+        handler.postDelayed(onDeviceLoop, 800)
+        Thread {
+            val verdict = if (FormKernel.available) FormKernel.selfTestVerdict(this) else "so-missing"
+            Log.i("FormKernel", "on-device signal-derivative band verdict = $verdict (expected 127); kernel available=${FormKernel.available} err=${FormKernel.error}")
+            runOnUiThread {
+                onDeviceSelfTest = if (verdict == "127") {
+                    "on-device kernel: LIVE — signal-derivative band = 127 ✓ (Go=Rust=TS=fkwu, now on this phone)"
+                } else {
+                    "on-device kernel: self-test = $verdict (expected 127) ${FormKernel.error ?: ""}"
+                }
+                requestDashboardRender()
+            }
+        }.start()
     }
 
     private fun announcePresence() {
@@ -1522,6 +1577,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "gpu $gpuSamples latency=${"%.2f".format(Locale.US, gpuLatencyMs)}ms",
         ).joinToString("\n")
         dashboard.text = listOf(
+            onDeviceSelfTest,
+            onDeviceLive,
             "floor: active samples, silence, unavailable hardware, and not-granted lanes are visible signals",
             "north-star: signed organs negotiate wifi, bluetooth, audio, video, screen, sensor, and network channels by heartbeat, then measure fidelity, confidence, and density",
             "learned from sister work: signals are information, not verdicts; silence is evidence",
@@ -1699,6 +1756,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sm.unregisterListener(this)
         handler.removeCallbacks(loop)
         handler.removeCallbacks(meshLoop)
+        handler.removeCallbacks(onDeviceLoop)
         stopMicSampling()
         stopCameraSampling()
         stopGpuSampling()
@@ -1706,6 +1764,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
+        // On-device recognition runs whether or not we are sharing with a Mac.
+        registerSensor(Sensor.TYPE_ACCELEROMETER)
+        handler.removeCallbacks(onDeviceLoop)
+        handler.postDelayed(onDeviceLoop, 800)
         if (connected) {
             registerSensor(Sensor.TYPE_ACCELEROMETER)
             registerSensor(Sensor.TYPE_GYROSCOPE)
