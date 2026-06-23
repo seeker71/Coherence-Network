@@ -78,6 +78,8 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     @Volatile private var speaking = false    // TTS is speaking right now (mic is held off)
     @Volatile private var manualOneShot = false // the current capture was tap-initiated: answer directly
     @Volatile private var triggeredThisListen = false // a wake already fired this listen — ignore the final
+    @Volatile private var sttState = "—"   // live recognizer state, shown on the panel so STT is debuggable
+    @Volatile private var askedLocation = false
 
     // Sema's real local body-sense. Only what this device actually measures — motion, light, and the
     // loudness of the room. Faces, identities, and breathing belong to other organs of the same body;
@@ -242,12 +244,10 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         setContentView(root)
         addBubble("Say “Sema” and your question — or tap and speak. I'm listening.", fromSema = true)
 
-        // Request mic + location together, up front, so a permission dialog never pauses the wake loop.
-        ActivityCompat.requestPermissions(this, arrayOf(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ), 1)
+        // Request ONLY the mic up front — it is the voice essential. A combined location request used
+        // to pop a dialog on every launch (when location was denied) that paused Sema and killed the
+        // wake loop. Location is requested lazily, after the loop is running (see onResume).
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
     }
 
     override fun onInit(status: Int) {
@@ -353,7 +353,8 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun recognizerIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
-        putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+        // No PREFER_OFFLINE — let the system use the best recognizer (online when available); the
+        // forced-offline Soda model was returning NO_SPEECH for real speech on this device.
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
@@ -365,12 +366,20 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val text = results
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 ?.firstOrNull().orEmpty().trim()
-            if (text.isNotBlank()) lastHeard = text   // visible on the panel — wake word is debuggable
+            if (text.isNotBlank()) { lastHeard = text; sttState = "✓ heard" }   // visible on the panel
             if (triggeredThisListen) { triggeredThisListen = false; return }  // already handled on a partial
             handleHeard(text)
         }
         override fun onError(error: Int) {
             if (speaking) return
+            sttState = when (error) {
+                SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "silence — heard no speech"
+                SpeechRecognizer.ERROR_AUDIO -> "mic error (audio)"
+                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "mic permission denied"
+                SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "recognizer busy"
+                SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network err (try offline)"
+                else -> "err $error"
+            }
             if (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                 recreateRecognizer()
             }
@@ -383,16 +392,17 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         }
         override fun onReadyForSpeech(params: Bundle?) {
+            sttState = "listening"
             setStatus(if (manualOneShot) "listening… go ahead" else "listening for “Sema”")
         }
-        override fun onBeginningOfSpeech() {}
+        override fun onBeginningOfSpeech() { sttState = "✓ hearing you" }
+        override fun onEndOfSpeech() { sttState = "processing…" }
         override fun onRmsChanged(rmsdB: Float) {
             // Live loudness of the room, smoothed — a real on-device sense, free from the open mic.
             soundLevel = 0.7f * soundLevel + 0.3f * rmsdB
             heardSound = true
         }
         override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() {}
         override fun onPartialResults(partialResults: Bundle?) {
             // Show partials live so the panel reveals what she's hearing AS it forms, and catch the wake
             // word early (a partial that names her triggers the answer without waiting for the endpoint).
@@ -770,6 +780,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val heard = if (lastHeard.isBlank()) "(nothing yet)" else "“$lastHeard”"
         addressLine.text = "📍  " + (panelPlace ?: if (loc != null) "near $locStr" else "finding where we are…")
         sensePanel.text =
+            "🎤  mic         $sttState\n" +
             "🧭  direction   $dir\n" +
             "🏃  speed       $spd\n" +
             "💡  light       $lgt\n" +
@@ -901,6 +912,15 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         startPanel()
         // Resume the wake-word loop when she's foreground again (unless mid-intro).
         if (ttsReady && !speaking && hasMic()) startWakeLoop()
+        // Lazily ask for location AFTER the mic path is up, once per process, so its dialog never
+        // disrupts startup listening.
+        if (!askedLocation && hasMic() && !hasLocation()) {
+            askedLocation = true
+            main.postDelayed({
+                ActivityCompat.requestPermissions(this, arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 2)
+            }, 1500)
+        }
     }
 
     override fun onDestroy() {
