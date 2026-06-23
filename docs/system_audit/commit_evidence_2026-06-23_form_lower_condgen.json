@@ -1,0 +1,87 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/form-lower-condgen",
+  "commit_scope": "Generalize COND in the Form→asm lowerer along two axes, both as DATA: the compare op and the result lane. lo-cond carried only LE over an integer-w0 result; a real model block (f16-decode's fd-mag/fd-value) branches on EQ-against-0/1 and the branches produce FLOATS. lo-cond2 became the lane-agnostic lo-cond-frame; the branch that SKIPS the then-block is the NEGATION of the compare via the data table lo-cmp-skip (LE→GT, EQ→NE, LT→GE, GE→LT, GT→LE, NE→EQ); lo-fcond (tag 6 under lo-fnode) reuses the same frame with lo-fnode-lowered d0 branches. Closes two of the four named-next gaps for lowering fd-f16/GQA as one native binary (EQ-cond + float-result COND); general inter-function CALL and float recursion remain.",
+  "files_owned": [
+    "form/form-stdlib/form-lower.fk",
+    "form/form-stdlib/tests/form-lower-condgen-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-06-23_form_lower_condgen.json"
+  ],
+  "idea_ids": [
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "form-lower-cond-generalization"
+  ],
+  "task_ids": [
+    "task-2026-06-23-form-lower-condgen"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "acceptance-criteria"]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "validation", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-condgen-band.fk -> '✓ → 15' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent'.",
+    "clang/LLVM ORACLE (otool -tvVj of clang -c -arch arm64): eqsel = mov w1,w0(2a0003e1) ; cmp w1,#0(7100003f) ; b.ne +3(54000061) ; movz w0,#1(52800020) ; b +2(14000002) ; movz w0,#0(52800000) ; ret(d65f03c0). fsel = cmp w0,#0(7100001f) ; b.ne +4(54000081) ; movz w0,#0(52800000) ; scvtf d0,x0(9e620000) ; b +2(14000002) ; scvtf d0,x0(9e620000) ; ret(d65f03c0). clang confirms, never in the native path.",
+    "Verdict bits: 1 eqsel byte-identical (EQ wired into the integer-result COND — b.ne, not b.gt); 2 fsel byte-identical (float-result COND — same frame, branches produce d0 via lo-fnode); 4 lo-cmp-skip is data both ways (EQ tag14→NE cond1, LE tag5→GT cond12); 8 the existing LE program re-lowers byte-identical to the clang oracle (fa-bcond 12 == old fa-bgt).",
+    "Manifest row added: 'form-lower-condgen fkc 15' next to its kin form-lower-cvt / form-lower-cond.",
+    "No regression: form-lower (31), form-lower-cond (31), form-lower-rec (31) all re-cross four-way through the generalized frame — the LE path is byte-for-byte unchanged because fa-bcond 12 over a positive offset equals the prior fa-bgt encoding."
+  ],
+  "change_files": [
+    "form/form-stdlib/form-lower.fk",
+    "form/form-stdlib/tests/form-lower-condgen-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-06-23_form_lower_condgen.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-condgen-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "form-lower-condgen: verdict 15, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI has not run yet for this branch. The change generalizes a Form lowering recipe + adds a proof band + a fourth-arm manifest row; CI re-runs validate.sh across the suite."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "Form stdlib lowerer recipe + proof band + ledger update; no public HTTP endpoint or service change. The recipe reaches the kernels through the repo, not a deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 15, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib lowerer recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-lower's COND now lowers an EQ (and any compare, as data) and produces FLOAT branches, not only LE over an integer result — the two control-flow shapes a real model block (fd-mag/fd-value) needs. Go/Rust/TS/fkwu agree on verdict 15, each lowered image byte-identical to clang, and the existing LE bands are byte-for-byte unchanged.",
+    "public_endpoints": [
+      "none changed; the recipe is a Form stdlib lowerer body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: validate.sh runs form-lower-condgen-band on Go, Rust, TypeScript, and fkwu to the identical verdict 15 with 0 divergent.",
+      "Oracle byte-conviction: eqsel (integer EQ-cond) and fsel (float-result EQ-cond) each lower byte-for-byte to the clang -c sequence; lo-cmp-skip negates each compare to its skip-branch.",
+      "No regression: form-lower / form-lower-cond / form-lower-rec re-cross four-way at 31 — the LE path is byte-identical through the generalized frame."
+    ]
+  }
+}

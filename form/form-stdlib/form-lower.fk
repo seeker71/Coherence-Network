@@ -133,18 +133,43 @@
         (if (lo-lit? prog i) (fa-movz 0 (lo-val prog i))
         (if (lo-arg? prog i) (fa-mov 0 (lo-argr prog i argr))
             (lo-tree-bin prog i argr depth (add 9 depth)))))
-    ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
+    ; COND(CMP(ARG, LIT i), then, else) — the control-flow scheme with computed
     ; branch offsets (in instructions = bytes/4):
-    ;   cmp w<argr>,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
-    (defn lo-cond (prog i argr)
-        (lo-cond2 prog i argr (lo-node prog (lo-c2 prog i) argr) (lo-node prog (lo-c3 prog i) argr)))
-    (defn lo-cond2 (prog i argr tcode ecode)
+    ;   cmp w<argr>,#i ; b.<skip> +(len(then)+2) ; then ; b +(len(else)+1) ; else
+    ; The condition node's TAG is the compare op, as DATA; the branch that SKIPS the
+    ; then-block is its NEGATION (lo-cmp-skip). One frame, every compare drops in —
+    ; LE was the only one wired before, but EQ is what fd-mag/fd-value test against 0/1.
+    ; lo-cmp-skip: compare tag -> the arm64 condition code that jumps OVER the then-block
+    ;   LE(5)->GT(12)  EQ(14)->NE(1)  LT(15)->GE(10)  GE(16)->LT(11)  GT(17)->LE(13)  NE(18)->EQ(0)
+    ; (the condition-tag space is read ONLY here, never by lo-node, so it is its own vocabulary.)
+    (defn lo-cmp-skip (tag)
+        (if (eq tag 5) 12
+        (if (eq tag 14) 1
+        (if (eq tag 15) 10
+        (if (eq tag 16) 11
+        (if (eq tag 17) 13
+        (if (eq tag 18) 0
+            12)))))))
+    ; lo-cond-frame — the lane-agnostic scaffold: the cmp on the integer arg (cargr is the
+    ; int arg's register), the negated skip-branch, then the PRE-LOWERED branch blocks. The
+    ; branches are lowered by the caller's lane (lo-node -> w0, lo-fnode -> d0), so the same
+    ; frame serves an integer-result COND and a float-result COND. fa-bcond with the LE-skip
+    ; (12) and a positive offset is byte-identical to the old fa-bgt — the LE bands re-cross.
+    (defn lo-cond-frame (prog i cargr tcode ecode)
         (lo-cat (list
-            (fa-cmp (lo-argr prog (lo-c1 prog (lo-c1 prog i)) argr) (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; cmp w<arg>,#LIT (LE's ARG, LIT)
-            (fa-bgt (add (div (len tcode) 4) 2))
+            (fa-cmp (lo-argr prog (lo-c1 prog (lo-c1 prog i)) cargr) (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; cmp w<arg>,#LIT
+            (fa-bcond (lo-cmp-skip (lo-tag prog (lo-c1 prog i))) (add (div (len tcode) 4) 2))
             tcode
             (fa-b (add (div (len ecode) 4) 1))
             ecode)))
+    ; integer-result COND: both arg-compare and branches share argr (the w-register lane).
+    (defn lo-cond (prog i argr)
+        (lo-cond-frame prog i argr (lo-node prog (lo-c2 prog i) argr) (lo-node prog (lo-c3 prog i) argr)))
+    ; float-result COND (fd-mag's shape): the compare is on an INTEGER arg (cmp w<int>,#imm —
+    ; e.g. (eq (fd-exp ...) 0)) while the branches produce d0 via lo-fnode. The single int arg
+    ; rides w0 (cargr 0), the lo-i2f convention; multi-int-arg banking is the named next.
+    (defn lo-fcond (prog i argr)
+        (lo-cond-frame prog i 0 (lo-fnode prog (lo-c2 prog i) argr) (lo-fnode prog (lo-c3 prog i) argr)))
     (defn lo-cat (xss) (if (eq (len xss) 1) (head xss) (lo-app (head xss) (lo-cat (tail xss)))))
 
     ; STR_EQ(a, b) — the byte-compare LOOP, the ll-streq rung (roadmap.fk). Strings
@@ -262,7 +287,8 @@
         (if (eq (lo-tag prog i) 8) (lo-fdiv prog i argr)
         (if (eq (lo-tag prog i) 12) (lo-i2f prog i)             ; I2F: int->f64 (scvtf) — the int->float boundary
         (if (eq (lo-tag prog i) 13) (lo-f2i prog i argr)        ; F2I: f64->int trunc (fcvtzs) — the float->int boundary
-            (list)))))))))
+        (if (eq (lo-tag prog i) 6) (lo-fcond prog i argr)       ; COND with float-producing branches (fd-mag's shape)
+            (list))))))))))
     ; FADD/FMUL commute: ARG on both sides folds to one register-form instruction; ARG on
     ; one side lowers the other subtree into d0, then the op against the banked arg.
     (defn lo-fadd (prog i argr)

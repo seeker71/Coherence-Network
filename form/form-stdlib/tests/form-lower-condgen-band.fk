@@ -1,0 +1,61 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-condgen-band — COND generalized: the compare op is DATA, and the result lane
+; (integer w0 / float d0) is the other axis. lo-cond carried only LE over an integer result;
+; a real model block (f16-decode's fd-mag/fd-value) branches on EQ-against-0/1 and the branches
+; produce FLOATS. This band proves both new axes lower to native arm64 BYTES, no clang, AND that
+; the generalization left the existing LE path byte-identical.
+;
+; The lane-agnostic frame (lo-cond-frame) emits cmp ; b.<skip> ; then ; b ; else, where the skip
+; branch is the NEGATION of the compare (lo-cmp-skip): LE->GT, EQ->NE. Branches arrive pre-lowered
+; by the caller's lane — lo-node (w0) for an integer result, lo-fnode (d0) for a float result.
+;
+; Three functions, each byte-verified against the clang oracle (otool -tvVj):
+;   eqsel(x:int) = if (eq x 0) then 1 else 0   -> mov w1,w0 ; cmp w1,#0 ; b.ne +3 ; movz w0,#1 ; b +2 ; movz w0,#0 ; ret
+;   fsel(x:int)  = if (eq x 0) then 0.0 else float(x)
+;                                              -> cmp w0,#0 ; b.ne +4 ; movz w0,#0 ; scvtf d0,x0 ; b +2 ; scvtf d0,x0 ; ret
+;   le(x:int)    = if (x<=1) then 1 else x+(x-1)   (the existing form-lower-cond program, re-lowered through the generic frame)
+;
+; Verdict 15 when every claim lands:
+;   1  eqsel lowers byte-identical — EQ wired into the integer-result COND (b.ne, not b.gt)
+;   2  fsel  lowers byte-identical — float-result COND: the same frame, branches produce d0
+;   4  lo-cmp-skip is data — EQ(14)->NE(1) and LE(5)->GT(12): the compare op negates to its skip-branch
+;   8  the LE program re-lowers byte-identical to the clang oracle — the generalization preserved the old path
+(do
+    (let prog-eq (list
+        (list 1 1 0 0)     ; 0 LIT 1   (then result)
+        (list 2 0 0 0)     ; 1 ARG (x)
+        (list 14 1 3 0)    ; 2 EQ(x, LIT@3)
+        (list 1 0 0 0)     ; 3 LIT 0   (compare imm + else result)
+        (list 6 2 0 3)))   ; 4 COND(eq, then=1, else=0) = root
+
+    (let prog-f (list
+        (list 2 0 0 0)     ; 0 ARG (x:int)
+        (list 1 0 0 0)     ; 1 LIT 0
+        (list 14 0 1 0)    ; 2 EQ(x, LIT@1)
+        (list 12 1 0 0)    ; 3 I2F(LIT 0) = 0.0   (then)
+        (list 12 0 0 0)    ; 4 I2F(x)    = float(x) (else)
+        (list 6 2 3 4)))   ; 5 COND(eq, then, else) = root
+
+    (let prog-le (list
+        (list 1 1 0 0)     ; 0 LIT 1
+        (list 2 0 0 0)     ; 1 ARG (n)
+        (list 5 1 0 0)     ; 2 LE(n, 1)
+        (list 4 1 0 0)     ; 3 SUB(n, 1)
+        (list 3 1 3 0)     ; 4 ADD(n, n-1)
+        (list 6 2 0 4)))   ; 5 COND(le, 1, add) = root
+
+    (let want-eq (list 225 3 0 42  63 0 0 113  97 0 0 84  32 0 128 82  2 0 0 20  0 0 128 82  192 3 95 214))
+    (let want-f  (list 31 0 0 113  129 0 0 84  0 0 128 82  0 0 98 158  2 0 0 20  0 0 98 158  192 3 95 214))
+    (let ref-le  (list 225 3 0 42  63 4 0 113  108 0 0 84  32 0 128 82  3 0 0 20  32 4 0 81  32 0 0 11  192 3 95 214))
+
+    (let img-eq (lo-compile-fn prog-eq 4))
+    (let img-f  (lo-fcompile   prog-f  5))
+    (let img-le (lo-compile-fn prog-le 5))
+
+    (let c0 (if (eq (fa-conviction img-eq want-eq) 1) 1 0))
+    (let c1 (if (eq (fa-conviction img-f  want-f)  1) 2 0))
+    (let c2 (if (eq (lo-cmp-skip 14) 1) (if (eq (lo-cmp-skip 5) 12) 4 0) 0))
+    (let c3 (if (eq (fa-conviction img-le ref-le) 1) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
