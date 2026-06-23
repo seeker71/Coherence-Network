@@ -28,6 +28,8 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.net.TrafficStats
 import android.net.Uri
@@ -92,6 +94,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var sentBytes = 0L
     private var sentSamples = 0L
     private var capturedSamples = 0L   // snapshots persisted to the local field-log (the data lake)
+    private var locCapture: LocationManager? = null
+    @Volatile private var lastLoc: Location? = null   // live fix, captured into the lake for journeys
+    private val locCaptureListener = LocationListener { loc -> lastLoc = loc }
     private var innerCellsCreated = 0L
     private var innerCellsUpdated = 0L
     private var innerCellsFreed = 0L
@@ -337,6 +342,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         registerSensor(Sensor.TYPE_GYROSCOPE)
         registerSensor(Sensor.TYPE_LIGHT)
         registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        startLocationCapture()
         requestOptionalPermissions()
         startMicSamplingIfAllowed()
         startCameraSamplingIfAllowed()
@@ -361,6 +367,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         stopMicSampling()
         stopCameraSampling()
         stopGpuSampling()
+        stopLocationCapture()
         connectBtn.text = "Start sharing"
         lastMacState = "paused"
         status.text = message
@@ -596,6 +603,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             snap.put("gpu_latency_ms", gpuLatencyMs)
             snap.put("gpu_samples", gpuSamples)
         }
+        lastLoc?.let { loc ->
+            val l = JSONObject()
+            l.put("lat", loc.latitude); l.put("lon", loc.longitude)
+            if (loc.hasSpeed()) l.put("speed", loc.speed.toDouble())       // m/s
+            if (loc.hasBearing()) l.put("bearing", loc.bearing.toDouble()) // degrees
+            if (loc.hasAccuracy()) l.put("acc", loc.accuracy.toDouble())   // meters
+            snap.put("loc", l)
+        }
         snap.put("organs_active", JSONArray(activeOrgans()))
         snap.put("channels_offered", JSONArray(offeredTransports()))
         snap.put("body_state", bodyStateJson())
@@ -650,6 +665,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 snapshotInFlight = false
             }
         }.start()
+    }
+
+    // Live location into the lake — lat/lon/speed/bearing per fix, so a journey (journey.fk) is
+    // reconstructable from the recorded track. Only physical position; identifying a place by name or
+    // who is there stays behind the consent gate.
+    private fun startLocationCapture() {
+        val hasLoc = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!hasLoc) return
+        val lm = (locCapture ?: (getSystemService(LOCATION_SERVICE) as LocationManager)).also { locCapture = it }
+        try {
+            for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+                if (lm.isProviderEnabled(p)) {
+                    lm.requestLocationUpdates(p, 1000L, 0f, locCaptureListener, Looper.getMainLooper())
+                    lm.getLastKnownLocation(p)?.let { if (lastLoc == null) lastLoc = it }
+                }
+            }
+        } catch (_: SecurityException) {}
+    }
+
+    private fun stopLocationCapture() {
+        try { locCapture?.removeUpdates(locCaptureListener) } catch (_: Exception) {}
     }
 
     // Append one timestamped snapshot to the local field-log (NDJSON, one record per line). This is
