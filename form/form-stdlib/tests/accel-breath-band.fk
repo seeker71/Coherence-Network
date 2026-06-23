@@ -1,0 +1,29 @@
+; preludes: form-stdlib/breath-rhythm.fk form-stdlib/accel-breath.fk
+;
+; accel-breath-band — reading breath from 3-axis motion, made falsifiable. The Y axis carries a period-20
+; square oscillation (10 up, 10 down, ×3 = 60 samples) — at 5Hz that is one breath every 4s = 15/min; X and
+; Z are flat. The recipe must pick Y, measure its motion, and recover 15 breaths/min — and a perfectly
+; still phone (all axes zero) must read motion 0, the honest floor that says "no breath here."
+;   1   the breathing axis is found (Y, index 1)          (ab-dominant == 1)
+;   2   its motion energy is the wave's variance          (ab-var Y == 100)
+;   4   a flat axis has zero motion                        (ab-var X == 0)
+;   8   the respiratory rate is recovered                  (ab-rate == 15)
+;   16  the rhythm carries real confidence                 (ab-confidence == 66)
+;   32  overall motion = the dominant axis's variance      (ab-motion == 100)
+;   64  a still phone reads no breath                       (ab-motion of all-zero == 0)
+(do
+    (defn abb-rep (v n) (if (eq n 0) (list) (cons v (abb-rep v (sub n 1)))))
+    (defn abb-cat (a b) (if (eq (len a) 0) b (cons (head a) (abb-cat (tail a) b))))
+    (let wave (abb-cat (abb-rep 10 10) (abb-rep -10 10)))
+    (let ay (abb-cat wave (abb-cat wave wave)))
+    (let ax (abb-rep 1 60))
+    (let az (abb-rep -2 60))
+    (let zero (abb-rep 0 60))
+    (let c0 (if (eq (ab-dominant ax ay az) 1) 1 0))
+    (let c1 (if (eq (ab-var ay) 100) 2 0))
+    (let c2 (if (eq (ab-var ax) 0) 4 0))
+    (let c3 (if (eq (ab-rate ax ay az 10 30 300) 15) 8 0))
+    (let c4 (if (eq (ab-confidence ax ay az 10 30) 66) 16 0))
+    (let c5 (if (eq (ab-motion ax ay az) 100) 32 0))
+    (let c6 (if (eq (ab-motion zero zero zero) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
