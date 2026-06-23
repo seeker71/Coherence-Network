@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/fsh-loops-live-room-20260623",
+  "commit_scope": "Add Form-shell for/while loop parsing and pure executor semantics, prove the loop surface across Go/Rust/TypeScript/fkwu, and introduce a live-room Form-shell cell so the Android bedside carrier can express the per-turn decision path as Form-native shell: native test gate, native vd-route diarization, passthrough translation, and append redirect.",
+  "files_owned": [
+    "form/form-stdlib/shell-grammar.fk",
+    "form/form-stdlib/shell-exec.fk",
+    "form/form-stdlib/live-room-shell.fk",
+    "form/form-stdlib/tests/shell-parse-band.fk",
+    "form/form-stdlib/tests/shell-exec-band.fk",
+    "form/form-stdlib/tests/shell-v2-band.fk",
+    "form/form-stdlib/tests/shell-cell-band.fk",
+    "form/form-stdlib/tests/live-room-shell-band.fk",
+    "form/fourth-arm-bands.txt",
+    "experiments/coherence-sense-android/live-room.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_fsh_loops_live_room.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "git rebase origin/main after PR merge-state DIRTY, resolving only docs/system_audit/model_executor_runs.jsonl by preserving both append-only proof rows",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/tests/shell-parse-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/tests/shell-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/tests/shell-v2-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk form-stdlib/tests/shell-cell-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk form-stdlib/live-room-shell.fk form-stdlib/tests/live-room-shell-band.fk",
+      "bash -n experiments/coherence-sense-android/live-room.sh",
+      "LIVE_DIR=$(mktemp -d /tmp/live-room-cell.XXXXXX) experiments/coherence-sense-android/live-room.sh --cell",
+      "LIVE_DIR=$(mktemp -d /tmp/live-room-probe.XXXXXX) experiments/coherence-sense-android/live-room.sh --probe-form",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_fsh_loops_live_room.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "fourth_arm_outputs": [
+      "shell-parse-band: validate.sh returned 255 with 'fourth arm: 1 band(s) four-way', '1 ok, 0 divergent', including for-loop AST, while-loop AST, and echo-for reserved-word edge.",
+      "shell-exec-band: validate.sh returned 511 with 'fourth arm: 1 band(s) four-way', '1 ok, 0 divergent', including for output a/b/c, terminating while fixed point, and empty-body for edge.",
+      "shell-cell-band: validate.sh returned 15 with 'fourth arm: 1 band(s) four-way', '1 ok, 0 divergent'.",
+      "live-room-shell-band: validate.sh returned 63 with 'fourth arm: 1 band(s) four-way', '1 ok, 0 divergent', proving native test, native vd-route, ollama passthrough, and append redirect in the live-room cell."
+    ],
+    "notes": "make wellness completed with existing non-blocking drift in registry/source-map readings. The loop recipes are pure list/integer Form semantics and crossed fkwu; no fkwu divergence was omitted. The live-room bash carrier remains the host pump for recording, whisper, ollama, and file append. The live capture silence gate now calls Form-shell sh-exit over native test, and the diarization path calls voice-diarize.fk vd-route through a source-compiled core prelude."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after push/PR. Local proof covers focused Form bands, fourth-arm fkwu agreement, and live-room carrier shell syntax."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "no deploy requested before merge",
+    "notes": "This branch changes Form stdlib and an Android experiment carrier. Public deployment proof is pending PR merge and normal repository CI/deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and fourth-arm proof passed; PR CI, merge, and any public deploy settlement remain pending."
+  },
+  "idea_ids": [
+    "form-shell-loop-core-lift",
+    "live-room-form-shell-cell"
+  ],
+  "spec_ids": [
+    "form-shell-for-while-loops",
+    "live-room-carrier-rewrite"
+  ],
+  "task_ids": [
+    "task-2026-06-23-fsh-loops-live-room"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria",
+        "carrier-boundary"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "shell-grammar.fk documents loop AST layout and parses compound statements before command words so 'echo for' remains an argument case.",
+    "shell-exec.fk dispatches __while__ to a capped pure loop and __for__ to an env-threading iterator, both following sh-eval-seq's out/env/exit pattern.",
+    "shell-exec-band.fk proves for, while, and empty-body loop semantics with fkwu fourth-arm agreement.",
+    "live-room-shell.fk and live-room-shell-band.fk prove the live-room fsh cell carries native test and vd-route decisions, passthrough ollama translation, and append redirect.",
+    "experiments/coherence-sense-android/live-room.sh exposes --cell and --probe-form, routes the silence gate through Form-shell native test, and routes diarization through voice-diarize.fk's vd-route instead of Bash pitch bucketing.",
+    "form/fourth-arm-bands.txt registers updated shell-parse, shell-exec, and live-room-shell four-way rows.",
+    "worktree_pr_guard.py --mode local passed with ready_for_push=True and local_preflight=pass; check_pr_followthrough.py reported stale_codex_prs=0.",
+    "After PR creation, origin/main advanced and GitHub reported mergeStateStatus DIRTY. The final rebase conflict was limited to docs/system_audit/model_executor_runs.jsonl; resolution preserved origin/main's new proof row and this task's proof row."
+  ],
+  "change_files": [
+    "form/form-stdlib/shell-grammar.fk",
+    "form/form-stdlib/shell-exec.fk",
+    "form/form-stdlib/live-room-shell.fk",
+    "form/form-stdlib/tests/shell-parse-band.fk",
+    "form/form-stdlib/tests/shell-exec-band.fk",
+    "form/form-stdlib/tests/shell-v2-band.fk",
+    "form/form-stdlib/tests/shell-cell-band.fk",
+    "form/form-stdlib/tests/live-room-shell-band.fk",
+    "form/fourth-arm-bands.txt",
+    "experiments/coherence-sense-android/live-room.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_fsh_loops_live_room.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-shell can now parse and execute for/while loops as pure Form AST nodes across all four kernels, and the live-room Android carrier has a Form-shell cell for its per-turn decision path instead of Bash-only orchestration.",
+    "public_endpoints": [
+      "none added; local Form stdlib and Android experiment carrier only"
+    ],
+    "test_flows": [
+      "for-loop flow: sh-out of 'for w in a b c ; do echo $w ; done' returns 'a\\nb\\nc\\n' on Go/Rust/TypeScript/fkwu.",
+      "while-loop flow: sh-out of 'i=1 ; while test $i -le 3 ; do echo $i ; i=4 ; done' returns '1\\n' and terminates before the loop guard.",
+      "empty body edge: sh-out of 'for x in a ; do ; done' returns an empty string on Go/Rust/TypeScript/fkwu.",
+      "live-room cell flow: the fsh cell plan contains native test, native vd-route, passthrough ollama-translate, and __append__ redirect.",
+      "live-room carrier flow: --probe-form returns voiced, silent, and Voz 1 for synthetic native gate and vd-route checks without touching mic, adb, phone, or sleep capture paths."
+    ]
+  }
+}

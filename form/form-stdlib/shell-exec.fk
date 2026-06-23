@@ -10,7 +10,7 @@
 ; stored back in env as $? so `&&`/`||`/test compose. Pure, so a band asserts the
 ; exact stdout/exit and crosses to the 4th kernel.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk
 
 (do
     ;; ── node helpers (the AST is all fncall(TAG, kids...); leaves are literals) ──
@@ -150,6 +150,25 @@
             (list (sh-tr-str stdin (if (ge (len ops) 1) (nth ops 0) "") (if (ge (len ops) 2) (nth ops 1) "")) 0)))
     (defn sh-bi-nl (args stdin) (list (sh-join-nl (sh-nl-lines (sh-lines stdin) 1)) 0))
 
+    ;; Form-native speaker route for live-room carriers. Args:
+    ;;   vd-route F0 W1 W2 W3 W4 FLOOR NEWLABEL
+    ;; The roster fixture mirrors voice-diarize-band's shipped decision floor.
+    (defn sh-int-arg (args idx fallback)
+        (if (ge (len args) (add idx 1)) (str_to_int (nth args idx)) fallback))
+    (defn sh-str-arg (args idx fallback)
+        (if (ge (len args) (add idx 1)) (nth args idx) fallback))
+    (defn sh-vd-default-roster ()
+        (list (list "Voz1" (vd-features 120 (list 2 2 3 2)))
+              (list "Voz2" (vd-features 220 (list 1 5 2 7)))))
+    (defn sh-bi-vd-route (args stdin)
+        (do (let f0 (sh-int-arg args 0 150))
+            (let windows (list (sh-int-arg args 1 2) (sh-int-arg args 2 2)
+                               (sh-int-arg args 3 2) (sh-int-arg args 4 2)))
+            (let floor (sh-int-arg args 5 3))
+            (let newlabel (sh-str-arg args 6 "Voz3"))
+            (let route (vd-route (sh-vd-default-roster) f0 windows floor newlabel))
+            (list (str_concat (vd-spoke-of route) "\n") 0)))
+
     ;; test / [ : structural comparisons -> exit code
     (defn sh-test-strip (args)
         (if (nil? args) args
@@ -180,7 +199,8 @@
         (or (str_eq name "seq") (or (str_eq name "rev") (or (str_eq name "sort")
         (or (str_eq name "uniq") (or (str_eq name "tr") (or (str_eq name "nl")
         (or (str_eq name "test") (or (str_eq name "[")
-        (or (str_eq name "true") (str_eq name "false")))))))))))))))))
+        (or (str_eq name "vd-route")
+        (or (str_eq name "true") (str_eq name "false"))))))))))))))))))
     (defn sh-run-builtin (name args stdin)
         (if (str_eq name "echo") (sh-bi-echo args stdin)
         (if (str_eq name "cat") (sh-bi-cat args stdin)
@@ -196,9 +216,10 @@
         (if (str_eq name "nl") (sh-bi-nl args stdin)
         (if (str_eq name "test") (sh-bi-test args stdin)
         (if (str_eq name "[") (sh-bi-test args stdin)
+        (if (str_eq name "vd-route") (sh-bi-vd-route args stdin)
         (if (str_eq name "true") (list "" 0)
         (if (str_eq name "false") (list "" 1)
-        (list "" 0))))))))))))))))))
+        (list "" 0)))))))))))))))))))
 
     ;; ── assignment NAME=value (a lone word whose head is alpha/_) ────────
     (defn sh-assign? (name)
@@ -236,15 +257,23 @@
     (defn sh-quote-args (args) (if (nil? args) (empty) (cons (sh-quote-arg (head args)) (sh-quote-args (tail args)))))
     (defn sh-cmdline (name args)
         (if (nil? args) name (str_concat name (str_concat " " (sh-join (sh-quote-args args) " ")))))
+    (defn sh-last (xs)
+        (if (nil? (tail xs)) (head xs) (sh-last (tail xs))))
+    (defn sh-butlast (xs)
+        (if (nil? xs) (empty)
+            (if (nil? (tail xs)) (empty)
+                (cons (head xs) (sh-butlast (tail xs))))))
 
     ;; ── evaluate: (node env) -> (list stdout env exit) ──────────────────
     (defn sh-eval (node env) (sh-eval-in node env ""))
     (defn sh-eval-in (node env stdin)
         (do (let t (sh-tag node))
             (if (str_eq t "__seq__") (sh-eval-seq (sh-rest node) env "" 0)
+            (if (str_eq t "__while__") (sh-eval-while (sh-rest node) env)
+            (if (str_eq t "__for__") (sh-eval-for (sh-rest node) env)
             (if (str_eq t "__andor__") (sh-eval-andor (sh-rest node) env stdin)
             (if (str_eq t "__pipe__") (sh-eval-pipe (sh-rest node) env stdin)
-            (sh-eval-command node env stdin))))))
+            (sh-eval-command node env stdin))))))))
     (defn sh-eval-seq (stmts env acc lastexit)
         (if (nil? stmts) (list acc env lastexit)
             (do (let r (sh-eval-in (head stmts) env ""))
@@ -263,6 +292,30 @@
         (if (nil? cmds) (list stdin env 0)
             (do (let r (sh-eval-in (head cmds) env stdin))
                 (if (nil? (tail cmds)) r (sh-eval-pipe (tail cmds) (r-env r) (r-out r))))))
+    (defn sh-loop-limit () 100000)
+    (defn sh-eval-while (rest env)
+        (sh-eval-while-loop (nth rest 0) (nth rest 1) env "" 0))
+    (defn sh-eval-while-loop (cond body env acc iter)
+        (if (ge iter (sh-loop-limit))
+            (list acc (sh-env-set env "?" "124") 124)
+            (do (let cr (sh-eval-in cond env ""))
+                (let acc2 (str_concat acc (r-out cr)))
+                (if (eq (r-exit cr) 0)
+                    (do (let br (sh-eval-in body (r-env cr) ""))
+                        (sh-eval-while-loop cond body (r-env br)
+                            (str_concat acc2 (r-out br)) (add iter 1)))
+                    (list acc2 (r-env cr) (r-exit cr))))))
+    (defn sh-eval-for (rest env)
+        (do (let var (node_value (head rest)))
+            (let tailrest (tail rest))
+            (sh-eval-for-items var (sh-butlast tailrest) (sh-last tailrest) env "")))
+    (defn sh-eval-for-items (var items body env acc)
+        (if (nil? items)
+            (list acc (sh-env-set env "?" "0") 0)
+            (do (let item (sh-arg-val (head items) env))
+                (let env2 (sh-env-set env var item))
+                (let r (sh-eval-in body env2 ""))
+                (sh-eval-for-items var (tail items) body (r-env r) (str_concat acc (r-out r))))))
     (defn sh-eval-command (node env stdin)
         (do (let name (sh-tag node))
             (if (sh-assign? name)
@@ -281,10 +334,14 @@
     (defn sh-plan (node) (sh-plan-node node))
     (defn sh-plan-node (node)
         (do (let t (sh-tag node))
+            (if (str_eq t "__while__")
+                (append (sh-plan-node (nth (sh-rest node) 0)) (sh-plan-node (nth (sh-rest node) 1)))
+            (if (str_eq t "__for__")
+                (sh-plan-node (sh-last (sh-rest node)))
             (if (or (str_eq t "__seq__") (or (str_eq t "__pipe__") (or (str_eq t "__andor__")
                 (or (str_eq t "__&&__") (str_eq t "__||__")))))
                 (sh-plan-list (sh-rest node))
-                (sh-plan-command node))))
+                (sh-plan-command node))))))
     (defn sh-plan-list (xs)
         (if (nil? xs) (empty) (append (sh-plan-node (head xs)) (sh-plan-list (tail xs)))))
     (defn sh-plan-command (node)
