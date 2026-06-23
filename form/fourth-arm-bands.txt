@@ -886,6 +886,26 @@ form-pe-coff-arm64 fks 63
 form-glsl-ffn-fwd fks 7
 str-byte-at fks 15
 pbkdf2-sha256 fks 3
+# node/substrate content-addressing bands — proven four-way crossers registered 2026-06-23 (the
+# 'node family' wall was largely a registration gap: intern_node/make_nodeid/node_children/node_eq/bp
+# /intern_trivial_int already cross fkwu; these bands simply were not yet listed).
 synesthesia fks 4
 codon fks 910
 chakra-column fks 127
+gematria-channel fks 1111111
+sanskrit-channel fks 1111111
+shamballa-light-channel fks 11111111
+triangulate fks 1700
+pareto fks 1050
+auto-fitness fks 1900
+autoresearch-loop fks 530
+ping fks 5
+sovereign-boundary-protocol fks 16383
+verb-router fks 3
+midi-bmf fks 1500
+afferent-priority fks 1023
+bmf-mini fks 15
+bmf-to-fk fks 3426
+bml fks 268435455
+fk-opt fks 84
+minimal-surface fks 31
