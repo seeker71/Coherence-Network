@@ -1,0 +1,51 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/field-relay-identity-breath3",
+  "commit_scope": "Sharpen the field-relay spec's breath 3 into a concrete identity model (person-root keypair -> NodeID derived from root pubkey; per-device subkeys delegated by the root so one person spans Mac/Windows/Android; identify = sign; peers verify + TOFU-pin; social attribution via the 37-provider TOFU layered on top). Correct over-stated identity language to unbuilt design; re-number breaths (identity = 3, device carriers + E2E = 4). Docs/spec-only change.",
+  "files_owned": [
+    "specs/field-relay-always-open-connection.md",
+    "docs/system_audit/commit_evidence_2026-06-23_field_relay_identity_model.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/field-relay-always-open-connection.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "notes": "Spec-quality gate passes; indexes already up to date. Design/spec change only -- no recipe or runtime change. The fr-route recipe + field-relay-band remain four-way (Go/Rust/TS/fkwu, verdict 127) and native-binary identical as already proven and merged to main; this commit does not touch them."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR #3593 is spec-only; validate-thread-process and GitGuardian green; windows-floor running at evidence-write time. The commit-evidence gate (thread-gates.yml) is non-blocking."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "docs-only -- no runtime deploy applies; the live relay endpoint and decision recipe are unchanged by this spec edit."
+  },
+  "phase_gate": {
+    "phase": "field-relay-identity-design",
+    "gate": "Capture the breath-3 identity model as durable design and correct unbuilt-vs-built language. Building the identity crypto (keypair gen, NodeID derivation, subkey delegation+revocation, signing, recipient verification + TOFU pinning) is a future contract, specced when that breath is taken.",
+    "state": "design-captured",
+    "can_move_next_phase": false
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-relay-always-open-connection"],
+  "task_ids": ["field-relay-identity-breath3"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["design", "authoring", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "specs/field-relay-always-open-connection.md",
+    "form/form-stdlib/field-relay.fk",
+    "form/form-stdlib/tests/field-relay-band.fk",
+    "docs/coherence-substrate/channel-interface-consent.form",
+    "docs/vision-kb/concepts/lc-private-channel-via-substrate.md"
+  ],
+  "change_files": [
+    "specs/field-relay-always-open-connection.md",
+    "docs/system_audit/commit_evidence_2026-06-23_field_relay_identity_model.json"
+  ],
+  "change_intent": "docs_only"
+}
