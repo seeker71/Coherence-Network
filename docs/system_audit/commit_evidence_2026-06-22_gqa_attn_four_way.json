@@ -1,0 +1,19 @@
+{
+  "date": "2026-06-22",
+  "brick": "Grouped-query attention (GQA) crosses four-way — the attention real llama3.2:3b uses (24 query heads sharing 8 KV heads), lifted from emitted C to a standalone four-kernel recipe",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "pr": null,
+  "files": {
+    "recipe": "form/form-stdlib/gqa-attn.fk",
+    "band": "form/form-stdlib/tests/gqa-attn-band.fk",
+    "manifest": "form/fourth-arm-bands.txt (gqa-attn fks 7)"
+  },
+  "verdict": 7,
+  "proof": "scoped ./validate.sh form-stdlib/core.fk trig.fk transformer-numerics.fk transformer-block.fk transformer-mh.fk gqa-attn.fk tests/gqa-attn-band.fk -> 7, 1 ok, 0 divergent. All four kernels (Go, Rust, TypeScript, fkwu) built and agree on every sample. Fourth arm crossed.",
+  "gap_closed": "GQA's query-head -> kv-head sharing mapping (kvh = h / group, group = n_head / n_kv_head) lived ONLY inside transformer-kernel.fk's tk-emit-llama as emitted C (three-way, projecting to a C unit). transformer-mh.fk (four-way) is plain MHA — every head slices q AND k/v at (mul h hd), i.e. n_kv_head == n_head. Real llama3.2:3b (and 3.1/3.3, qwen, most modern decoders) project k/v to the SMALLER n_kv_head*hd width and share each kv head across group query heads. That sharing was never a standalone four-way recipe. Now it is.",
+  "design": "Reference computed FIRST (softmax(scale*q.k).v in fp64, stdlib math), three strange-minimal claims pinned at 1e-6: (bit1) GQA n=2 nkv=1 group=2 — k/v HALF the q width (KVD=2 < D=4); head 0 reproduces MHA's head 0 (same q, same kv0), head 1 reads kv0 too (differs from MHA's head1 -> sharing does real work); a query-head-indexed k/v slice would walk off the shorter k/v vector, only (div h grp) stays in bounds (the off-end catch). (bit2) GQA n=2 nkv=2 group=1 EQUALS transformer-mh's tb-mh-attn bit-for-bit (maxdiff 0.0) — GQA generalizes MHA, MHA is the n_kv_head=n_head case, core-abstraction-first no parallel path. (bit4) GQA n=4 nkv=2 group=2 — heads 0,1 -> kv0 ; heads 2,3 -> kv1, the same (h / group) grouping arithmetic llama3.2 runs at 24 -> 8.",
+  "recipe_shape": "tb-gqa-attn composes transformer-mh's OWN proven primitives (tb-seq-headslice, tb-attn-seq, tb-seq-cat) verbatim; the ONLY new arithmetic vs MHA is the kv-head index (div h grp). No new transcendental, no new fold — bit-deterministic across kernels exactly as MHA.",
+  "lane": "lifted three-way emitted-C numeric -> standalone four-way recipe, same lane as RMSNorm/SwiGLU/SiLU (#3308), RoPE (#3319), causal mask (#3376), KV cache (#3382). Design (the GQA reference + the three distinguishing laws) was the cost; the four-way proof was seconds.",
+  "north_star_position": "the last attention-shape gap between the proven GPU llama decode stack (which runs single-head/MHA-shaped blocks) and REAL llama3.2:3b weights — real GQA weights cannot run on an MHA-only block. Next: emit GQA to Metal next to the MHA/llama block kernels and run on the M4 GPU (the 3m/3s/3u lane), then GQA over real llama3.2:3b GGUF (n_head=24, n_kv_head=8, head_dim=128) toward the first end-to-end native llama token.",
+  "read_the_body": "grepped form/ — GQA/kv_head/grouped-query appears ONLY in transformer-kernel.fk (emitted C). transformer-mh.fk confirmed plain MHA (q and k/v both sliced at mul-h-hd). A real gap, not a re-impl — same lesson the scoreboard has logged ~15 times."
+}

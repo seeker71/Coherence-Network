@@ -779,6 +779,7 @@ transformer-gelu-erf fks 255
 conv-stem fks 1
 positional fks 1
 transformer-mh fks 1
+gqa-attn fks 7
 transformer-decoder fks 1
 transformer-generate fks 1
 whisper-mh-block-real fks 1
