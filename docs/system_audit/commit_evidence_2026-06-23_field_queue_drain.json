@@ -1,0 +1,74 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/field-queue-drain",
+  "commit_scope": "Breath-2 decision body: the durable-backlog DRAIN selection (fq-drain/fq-count/fq-cursor) — on reconnect, select exactly the backlog entries a cell missed (addressed to it, seq > last_seen, consent-ok kind in its interface), preserving board order, with a high-water cursor so it never re-drains. Content-blind (reads seq/to/kind, never the body); decision is Form (four-way + native), board I/O is a carrier.",
+  "files_owned": [
+    "form/form-stdlib/field-queue.fk",
+    "form/form-stdlib/tests/field-queue-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/field-queue-drain.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-23_field_queue_drain.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/field-queue-drain.md"
+    ],
+    "fourth_arm": "field-queue band crosses four-way (Go/Rust/TS/fkwu) at verdict 127, 0 divergent; registered as 'field-queue fkc 127'.",
+    "native_binary": "validate.sh --binary -> 127, 0 divergent.",
+    "notes": "Pure structural selection over list metadata; no host-io/node/multi-line ops -- four-way friendly."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR pending at evidence-write time; four-way + native proof is the local gate."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy for a stdlib recipe + band; load-bearing once the board carrier (R3) and client reconnect integration (R4, breath 4) land."
+  },
+  "phase_gate": {
+    "phase": "field-queue-drain-decision",
+    "gate": "Deliver the reconnect drain selection as a four-way + native decision body so a returning cell replays exactly its missed, consent-ok backlog in order. Board I/O carrier (R3) and client reconnect integration (R4) are named follow-ups.",
+    "state": "decision-body-proven",
+    "can_move_next_phase": false
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-queue-drain"],
+  "task_ids": ["field-queue-drain"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["design", "implementation", "validation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "form/form-stdlib/field-queue.fk",
+    "form/form-stdlib/tests/field-queue-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/field-queue-drain.md",
+    "specs/field-relay-always-open-connection.md"
+  ],
+  "change_files": [
+    "form/form-stdlib/field-queue.fk",
+    "form/form-stdlib/tests/field-queue-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/field-queue-drain.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-23_field_queue_drain.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A reconnecting cell can compute exactly the backlog it missed (recipient-matched, unseen, consent-ok, ordered) and a new cursor. Decision body only; observable end-to-end once the board carrier (R3) and client reconnect integration (R4, breath 4) land.",
+    "public_endpoints": [
+      "form-local: ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk -> 127 four-way",
+      "form-local: ./validate.sh --binary (same) -> 127 native binary, 0 divergent"
+    ],
+    "test_flows": [
+      "field-queue-band.fk: drain count, order preservation, high-water cursor, consent exclusion of an un-offered kind, per-recipient match, last_seen-beyond-all yields zero -> 127 four-way + native."
+    ],
+    "summary": "Decision body proven (127 four-way + native). True reconnect-replay e2e pends its board carrier + client; status pending, honestly scoped."
+  }
+}
