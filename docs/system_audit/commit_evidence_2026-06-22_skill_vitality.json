@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/skill-vitality",
+  "commit_scope": "Add a Form-native skill vitality floor for teaching, carrier execution, vitality measurement, auto-research candidates, and earned upgrades.",
+  "files_owned": [
+    "form/form-stdlib/skill-vitality.fk",
+    "form/form-stdlib/tests/skill-vitality-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/skill-vitality.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/skill-vitality-floor-20260622.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/skill-vitality.fk form-stdlib/tests/skill-vitality-band.fk"
+    ],
+    "result": "Focused Form validation passed with verdict 65535 and fourth-arm proof: 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' plus '1 ok, 0 divergent'. Wellness was run before edits; the remaining unrelated attention item was str_byte_at missing from primitive registry."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "result": "Not run yet in this local branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "result": "Not deployed; this is a Form stdlib and substrate documentation floor."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused proof is green; remote CI/deploy gates have not been run."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "agent-pipeline",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "field-model-form-v0",
+    "coherence-network-agent-pipeline",
+    "kernel-router-fanout-native-invitation"
+  ],
+  "task_ids": [
+    "skill-vitality-form-floor-2026-06-22"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex@ffad",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt: skill-vitality fks 65535",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/skill-vitality.fk form-stdlib/tests/skill-vitality-band.fk -> 65535; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "docs/coherence-substrate/skill-vitality.form",
+    "docs/system_audit/model_executor_run_ledger/skill-vitality-floor-20260622.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/skill-vitality.fk",
+    "form/form-stdlib/tests/skill-vitality-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/skill-vitality.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/skill-vitality-floor-20260622.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Form runtime gains a generic skill-vitality recipe and fourth-arm proof band for skill teaching, carrier readiness, metal support lookup, vitality focus routing, auto-research candidate validation, and earned upgrade promotion.",
+    "public_endpoints": [
+      "not-applicable: Form stdlib proof surface"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/skill-vitality.fk form-stdlib/tests/skill-vitality-band.fk"
+    ]
+  }
+}
