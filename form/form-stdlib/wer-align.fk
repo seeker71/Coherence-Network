@@ -1,0 +1,56 @@
+; wer-align.fk — word-sequence-aligned WER by rolling-row Levenshtein: the ORDER-AWARE refinement of
+; stt-agree.fk's set-overlap. stt-agree scores word OVERLAP — "we the are iris" scores a perfect 100
+; against "we are the iris" because every word is present and a set cannot see order. WER does see it:
+; aligning the two sequences costs 2 edits = 50%. This recipe is that alignment — the true word-level
+; Levenshtein the stt-agree header named as "the next recipe."
+;
+; THE METRIC. Unit-cost edit distance over two word lists, compared by str_eq (the content-addressed
+; equality the four kernels agree on) = S + D + I. WER100 = dist*100 / len(ref), an integer (0 on an
+; empty reference). Lower is better — the inverse polarity of sa-accuracy, by design: WER is an ERROR rate.
+;
+; THE DP. A two-row rolling Levenshtein (only the previous row and the row being built are ever live, so
+; memory is O(len ref), tractable for long transcripts). Each cell D[i][j] = min of three moves:
+;   up   = D[i-1][j]   + 1   (delete the hyp word)
+;   left = D[i][j-1]   + 1   (insert the ref word)
+;   diag = D[i-1][j-1] + cost(hyp_i, ref_j)   (match if equal, else substitute)
+; The previous row is walked so its head = D[i-1][j-1] (diag) and head(tail) = D[i-1][j] (up); the new
+; row is built reversed with cheap cons and closed by wa-rev. Integers only; no floats; min via gt.
+;
+; HONEST LANE. This is the exact edit distance and its WER percent; it does not yet split S/D/I (that is a
+; tuple-carrying variant) — the number is what the STT/translation eval gates on. Compared to set-overlap
+; (stt-agree): WER catches reordering and repetition that overlap is blind to; overlap catches presence WER
+; over-penalizes. Use both — agreement for "are the words there", WER for "in the right order".
+;
+; Proven by: form-stdlib/tests/wer-align-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    (defn wa-mn2 (a b) (if (gt b a) a b))                 ; min of two (a<b via b>a; no lt dependency)
+    (defn wa-mn3 (a b c) (wa-mn2 a (wa-mn2 b c)))
+    (defn wa-cost (h r) (if (str_eq h r) 0 1))            ; 0 on a matching word, 1 on a substitution
+    (defn wa-rev (xs acc) (if (eq (len xs) 0) acc (wa-rev (tail xs) (cons (head xs) acc))))
+    (defn wa-iota (k n) (if (gt k n) (list) (cons k (wa-iota (add k 1) n))))  ; row 0 = (0 1 .. m)
+    (defn wa-last (xs) (if (eq (len xs) 1) (head xs) (wa-last (tail xs))))    ; D[n][m] = last cell
+
+    ; --- build one DP row across the ref columns. prev-rest head = D[i-1][j-1] (diag), head(tail) = up;
+    ;     left = D[i][j-1] carried; acc the row built in reverse. ---
+    (defn wa-row-loop (h ref-rest prev-rest left acc)
+        (if (eq (len ref-rest) 0)
+            acc
+            (do (let diag (head prev-rest))
+                (let up (head (tail prev-rest)))
+                (let cell (wa-mn3 (add up 1) (add left 1) (add diag (wa-cost h (head ref-rest)))))
+                (wa-row-loop h (tail ref-rest) (tail prev-rest) cell (cons cell acc)))))
+    (defn wa-row (h ref i prev-row)
+        (wa-rev (wa-row-loop h ref prev-row i (cons i (list))) (list)))   ; D[i][0] = i (i deletions)
+
+    (defn wa-rows (hyp ref prev-row i)
+        (if (eq (len hyp) 0) prev-row
+            (wa-rows (tail hyp) ref (wa-row (head hyp) ref i prev-row) (add i 1))))
+
+    ; --- edit distance (S+D+I) between hyp and ref word lists ---
+    (defn wa-distance (hyp ref) (wa-last (wa-rows hyp ref (wa-iota 0 (len ref)) 1)))
+
+    ; --- WER as an integer percent: dist*100 / len(ref); 0 when the reference is empty ---
+    (defn wa-wer100 (hyp ref)
+        (if (ge (len ref) 1) (div (mul (wa-distance hyp ref) 100) (len ref)) 0))
+    0)

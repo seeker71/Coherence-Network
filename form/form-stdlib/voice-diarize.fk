@@ -1,0 +1,46 @@
+; preludes: form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk
+;
+; voice-diarize.fk — the diarization DECISION as a content-addressed nearest-shape classifier, lifted out
+; of bash. live-room.sh's diarize() bucketed pitch in shell ("if f0 < 150 then Voz1 elif ..."): an opaque,
+; non-shareable ladder of magic numbers. This is that decision as Form — a speaker ROSTER (a list of
+; (label, feature-vector) prototype cells), nearest-shape to pick who is speaking, and enrollment when the
+; nearest match is too weak to trust. The roster is a NodeID-bearing cell: a speaker model the phone can
+; receive, not a private speakers.tsv.
+;
+; THE FEATURE. A speaker's voice-print here is three coordinates the body already proves:
+;   speaker-band(f0)            voice-traits.fk : 0 low / 1 mid / 2 high pitch register
+;   fv-bin(f0, 110 150 190 230) feature-vector.fk : finer pitch bin 0..4 (within-register detail)
+;   fv-bin(arousal(windows),..) feature-vector.fk : delivery dynamics bin 0..2 (calm vs animated)
+; Pitch dominates (two coordinates) because it separates speakers most; arousal adds within-speaker spread
+; so a calm and an animated turn from the same voice still land nearest their own prototype.
+;
+; THE DECISION. vd-route is the whole of diarize() in one recipe:
+;   known (nearest prototype's similarity >= floor)  -> keep the roster, return its label
+;   new   (nearest too weak)                          -> intern a fresh prototype, return the new label
+; It returns (roster', label) so the caller threads the (possibly grown) roster to the next turn — the
+; enrollment is part of the same content-addressed structure, never a side-effect in bash.
+;
+; Proven by: form-stdlib/tests/voice-diarize-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    ; --- a voice-print: (register, pitch-bin, arousal-bin) over the existing proven traits ---
+    (defn vd-features (f0 windows)
+        (list (speaker-band f0)
+              (fv-bin f0 (list 110 150 190 230))
+              (fv-bin (arousal windows) (list 2 5))))
+
+    ; --- who is this, and how sure, against the roster ---
+    (defn vd-label    (roster f0 windows) (ns-label    (vd-features f0 windows) roster))
+    (defn vd-strength (roster f0 windows) (ns-strength (vd-features f0 windows) roster))
+    (defn vd-known?   (roster f0 windows floor) (ge (vd-strength roster f0 windows) floor))
+
+    ; --- the diarization route: keep + label a known voice, or enroll a new one. Returns (roster', label). ---
+    (defn vd-route (roster f0 windows floor newlabel)
+        (if (vd-known? roster f0 windows floor)
+            (list roster (vd-label roster f0 windows))
+            (list (ns-intern roster newlabel (vd-features f0 windows)) newlabel)))
+
+    ; --- conveniences for the carrier: pull the threaded roster / chosen label back out of a route ---
+    (defn vd-roster-of (route) (nth route 0))
+    (defn vd-spoke-of  (route) (nth route 1))
+    0)
