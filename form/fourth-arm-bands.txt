@@ -450,6 +450,7 @@ neural-lm fks 31
 neural-lm-real fks 7
 llama-numerics fks 4095
 rope fks 4095
+llama3-rope fks 255
 llama-block fks 4095
 causal-attention fks 511
 geometric-learning fks 8388607
@@ -784,6 +785,8 @@ conv-stem fks 1
 positional fks 1
 transformer-mh fks 1
 gqa-attn fks 7
+llama-gqa-block fks 31
+llama-gqa-block-causal fks 15
 transformer-decoder fks 1
 transformer-generate fks 1
 whisper-mh-block-real fks 1

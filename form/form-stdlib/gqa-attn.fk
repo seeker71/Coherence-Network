@@ -35,3 +35,22 @@
 ; group = n / nkv. group=1 (nkv=n) reduces exactly to transformer-mh's tb-mh-attn.
 (defn tb-gqa-attn (qs ks vs n nkv hd scale)
   (tb-gqa-loop qs ks vs 0 n (div n nkv) hd scale))
+
+; --- causal GQA: the autoregressive decoder mask, per head. Query position i in
+;     head h attends only to keys/values 0..i of its shared KV head (tb-attn-seq-causal,
+;     transformer-block.fk, four-way 511). Identical to tb-gqa-attn but each head's
+;     attention is masked — the only change is tb-attn-seq → tb-attn-seq-causal, no new
+;     arithmetic. At the last position the prefix is the whole sequence, so the last
+;     token is bit-identical to non-causal GQA; earlier tokens differ (they no longer
+;     see the future). This is the block the generation loop steps. ---
+(defn tb-gqa-head-causal (qs ks vs h kvh hd scale)
+  (tb-attn-seq-causal (tb-seq-headslice qs h hd)
+                      (tb-seq-headslice ks kvh hd)
+                      (tb-seq-headslice vs kvh hd) scale))
+(defn tb-gqa-loop-causal (qs ks vs h n grp hd scale)
+  (if (eq h (sub n 1))
+      (tb-gqa-head-causal qs ks vs h (div h grp) hd scale)
+      (tb-seq-cat (tb-gqa-head-causal qs ks vs h (div h grp) hd scale)
+                  (tb-gqa-loop-causal qs ks vs (add h 1) n grp hd scale))))
+(defn tb-gqa-attn-causal (qs ks vs n nkv hd scale)
+  (tb-gqa-loop-causal qs ks vs 0 n (div n nkv) hd scale))

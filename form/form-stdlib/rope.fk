@@ -15,7 +15,8 @@
 ; the recipe DEFINES the reduction order so every kernel computes the same bits. Conformance
 ; pinned to libm cos/sin/pow at 1e-6 in the band.
 
-; --- base θ frequency: base^(−hd/HD), base = 10000 (the llama rope_theta) ---
+; --- base θ frequency: base^(−hd/HD), base = 10000 (the default / llama-2
+;     rope_theta; a real llama3 block uses rope_theta 500000 + scaling, below) ---
 (defn rope-base () 10000.0)
 (defn rope-freq (hd HD) (fpow (rope-base) (div (mul -1.0 hd) (mul HD 1.0))))
 ; per-pair rotation angle at position pos for head-dim offset hd
@@ -38,3 +39,78 @@
                 (cons (head (tail r))
                       (rope-walk (tail (tail xs)) (add i 2) pos HD))))))
 (defn rope (xs pos HD) (rope-walk xs 0 pos HD))
+
+; ============================================================================
+; llama3 RoPE — rope_theta base + piecewise-wavelength frequency scaling.
+; ============================================================================
+; The `rope` above is base 10000 with NO scaling: the short-context whisper /
+; llama-2 shape. A REAL llama3.2/3.1/3.3 block uses rope_theta = 500000 (a much
+; larger base, so frequencies are far slower) AND rope_scaling type "llama3":
+; each default inv_freq f = base^(−hd/HD) is reshaped by where its wavelength
+; 2π/f sits relative to the original training context window —
+;   long-wavelength (low-freq)  components are divided by `factor` so one
+;     rotation spans a longer context (NTK-by-parts extension);
+;   short-wavelength (high-freq) components are left untouched;
+;   medium components interpolate smoothly between the two.
+; base θ, the scaling `factor`, the low/high frequency factors and the original
+; context length are recipe DATA (a cfg list) — never smuggled constants. This
+; is the LAST piece (with GQA, gqa-attn.fk) separating the proven llama block
+; from the fused hati-translator (Llama-3.2-3B: rope_theta 500000, factor 32,
+; low 1, high 4, orig_ctx 8192). `rope` is the (base 10000, no-scaling) special
+; case of `rope-scaled` — the SAME rotation kernel (rope-rot-pair), only the
+; frequency derivation differs. Reference: HF transformers
+; _compute_llama3_parameters. Proven four-way against a libm fp64 reference by
+; tests/llama3-rope-band.fk.
+
+; default inv_freq for head-dim offset hd at an arbitrary base θ (rope_theta)
+(defn rope-freq-theta (base hd HD) (fpow (mul base 1.0) (div (mul -1.0 hd) (mul HD 1.0))))
+
+; smooth interpolation factor s for a medium-frequency f (orig context, low/high factors).
+;   s = (orig/wavelen − low-f) / (high-f − low-f),  wavelen = 2π/f
+; s = 0 at wavelen = orig/low-f (the low boundary), s = 1 at wavelen = orig/high-f (high).
+(defn rope-l3-smooth (f orig low-f high-f)
+  (div (sub (div (mul orig 1.0) (div (TAU) f)) (mul low-f 1.0))
+       (sub (mul high-f 1.0) (mul low-f 1.0))))
+
+; piecewise llama3 scaling of one default inv_freq f → the scaled inv_freq.
+;   wavelen >  orig/low-f   → f / factor          (low freq: stretch over longer ctx)
+;   wavelen <  orig/high-f  → f                    (high freq: untouched)
+;   else (medium)           → f·((1−s)/factor + s)
+; The medium branch joins continuously: at wavelen = orig/low-f, s = 0 ⇒ f/factor;
+; at wavelen = orig/high-f, s = 1 ⇒ f. (Bit-exact at both boundaries since
+; 1/factor·f and f are exact when factor divides cleanly.)
+(defn rope-l3-scale (f factor low-f high-f orig)
+  (do (let wavelen (div (TAU) f))
+      (if (gt wavelen (div (mul orig 1.0) (mul low-f 1.0))) (div f (mul factor 1.0))
+      (if (lt wavelen (div (mul orig 1.0) (mul high-f 1.0))) f
+          (do (let s (rope-l3-smooth f orig low-f high-f))
+              (mul f (add (div (sub 1.0 s) (mul factor 1.0)) s)))))))
+
+; --- a rope cfg bundles the scaling DATA: (base factor low-f high-f orig) ---
+(defn rope-cfg (base factor low-f high-f orig) (list base factor low-f high-f orig))
+(defn rope-cfg-base   (c) (nth c 0))
+(defn rope-cfg-factor (c) (nth c 1))
+(defn rope-cfg-lowf   (c) (nth c 2))
+(defn rope-cfg-highf  (c) (nth c 3))
+(defn rope-cfg-orig   (c) (nth c 4))
+; the real llama3 default — rope_theta 500000, factor 32, low 1, high 4, orig_ctx 8192
+(defn rope-cfg-llama3 () (rope-cfg 500000.0 32.0 1.0 4.0 8192.0))
+
+; llama3-scaled inv_freq for head-dim offset hd under cfg c
+(defn rope-freq-cfg (c hd HD)
+  (rope-l3-scale (rope-freq-theta (rope-cfg-base c) hd HD)
+                 (rope-cfg-factor c) (rope-cfg-lowf c) (rope-cfg-highf c) (rope-cfg-orig c)))
+
+; per-pair rotation angle at position pos for head-dim offset hd under cfg c
+(defn rope-angle-cfg (pos hd HD c) (mul (mul pos 1.0) (rope-freq-cfg c hd HD)))
+
+; walk a vector pairwise applying the cfg-scaled rotation (shares rope-rot-pair with `rope`)
+(defn rope-walk-cfg (xs i pos HD c)
+  (if (eq (len xs) 0) (empty)
+      (do (let q0 (head xs))
+          (let q1 (head (tail xs)))
+          (let r (rope-rot-pair q0 q1 (rope-angle-cfg pos (mod i HD) HD c)))
+          (cons (head r)
+                (cons (head (tail r))
+                      (rope-walk-cfg (tail (tail xs)) (add i 2) pos HD c))))))
+(defn rope-scaled (xs pos HD c) (rope-walk-cfg xs 0 pos HD c))
