@@ -173,6 +173,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        findViewById<android.widget.TextView>(R.id.backToSema).setOnClickListener { finish() }
         feed = findViewById(R.id.feedView)
         status = findViewById(R.id.statusView)
         identity = findViewById(R.id.identityView)

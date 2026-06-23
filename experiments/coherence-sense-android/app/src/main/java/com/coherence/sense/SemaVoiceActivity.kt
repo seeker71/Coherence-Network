@@ -116,10 +116,9 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         "Ask what I am, what cognitive sovereignty means, how the kernel works, or what one engine means. " +
         "If I cannot ground an answer in the body, I will tell you so honestly."
 
-    // Short spoken greeting on open, so she is LISTENING within seconds instead of after a 30-second
-    // monologue (the wake word can't fire while she speaks). The full intro lives on the button.
-    private val greeting =
-        "Hi, I'm Sema, and I'm listening now. Just say my name and your question — or tap to talk."
+    // Short spoken greeting on open, so she is LISTENING within seconds (the wake word can't fire while
+    // she speaks). The full intro lives in the overflow menu.
+    private val greeting = "Hi, I'm Sema. Tap the mic and speak, or just say my name."
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -179,12 +178,12 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             text = "📍  finding where we are…"
             setTextColor(Color.parseColor("#a8ead0")); textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, 0, 0, dp(10))
+            setPadding(0, 0, 0, dp(8))
         }
+        // One compact line of human-readable senses — no engineering detail.
         sensePanel = TextView(this).apply {
             text = "sensing…"
-            setTextColor(Color.parseColor("#c4d6e6")); textSize = 13.5f
-            setLineSpacing(dp(4).toFloat(), 1f)
+            setTextColor(Color.parseColor("#8fa6b8")); textSize = 14f
         }
         senseCard.addView(addressLine); senseCard.addView(sensePanel)
 
@@ -242,7 +241,6 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         root.addView(listenBtn)
         root.addView(footer)
         setContentView(root)
-        addBubble("Say “Sema” and your question — or tap and speak. I'm listening.", fromSema = true)
 
         // Request ONLY the mic up front — it is the voice essential. A combined location request used
         // to pop a dialog on every launch (when location was denied) that paused Sema and killed the
@@ -777,19 +775,14 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val snd = if (heardSound)
             "${if (soundLevel < 1.6f) "quiet" else if (soundLevel < 4f) "some" else "lively"} (${"%.1f".format(soundLevel)})"
         else "—"
-        val heard = if (lastHeard.isBlank()) "(nothing yet)" else "“$lastHeard”"
         addressLine.text = "📍  " + (panelPlace ?: if (loc != null) "near $locStr" else "finding where we are…")
-        sensePanel.text =
-            "🎤  mic         $sttState\n" +
-            "🧭  direction   $dir\n" +
-            "🏃  speed       $spd\n" +
-            "💡  light       $lgt\n" +
-            "🔊  env noise   $snd\n" +
-            "🎵  music       on-device — needs notification access\n" +
-            "🗣  speech       on-device STT + TTS — live\n" +
-            "🌐  translation  on-device — next wire\n" +
-            "🛰  other nodes  — mesh not wired here yet\n" +
-            "👂  heard        $heard"
+        // Compact, human-readable: a person reads this at a glance, no engineering detail.
+        val dirShort = headingDeg?.let {
+            listOf("N","NE","E","SE","S","SW","W","NW")[(((it + 22.5f) / 45f).toInt()) % 8]
+        } ?: "—"
+        val lightWord = lastLux?.let { if (it < 12f) "dark" else if (it < 60f) "dim" else if (it < 350f) "indoors" else "bright" } ?: "—"
+        val soundWord = if (heardSound) (if (soundLevel < 1.6f) "quiet" else if (soundLevel < 4f) "some sound" else "lively") else "—"
+        sensePanel.text = "🧭 $dirShort   ·   🚶 $spd   ·   💡 $lightWord   ·   🔊 $soundWord"
     }
 
     // ---- world sense: resolve the live fix to a real place via the open map (no API key) ----
