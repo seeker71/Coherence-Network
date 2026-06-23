@@ -10,9 +10,19 @@
 ;   UPDATE 2026-06-23: the Rust Form kernel now RUNS on a phone. Coherence Sense loads
 ;   libform_kernel_rust.so over JNI and reproduces the proven signal-derivative band verdict 127
 ;   IN-PROCESS on a Galaxy S23 Ultra, plus live accel still/moving — no Mac (PATH A below, MEASURED).
-;   What is STILL not done stays named: the Go/TS arms on a phone, on-device three-way parity, the
-;   native Form->asm JIT on ARM, and the GPU (Vulkan) lane. The honesty is now in keeping
+;   What is STILL not done stays named: the Go/TS arms on a phone, on-device three-way parity, and the
+;   native Form->asm JIT on ARM. The honesty is now in keeping
 ;   built-and-run-on-hardware apart from documented-but-not-yet-built.
+;
+;   UPDATE 2026-06-23: the GPU (Vulkan) lane is now PHYSICALLY WITNESSED. The Form-emitted GLSL
+;   matvec (fglsl-matvec in form-stdlib/form-glsl.fk — byte-identical to native/vulkan/matvec.comp)
+;   mints to SPIR-V (glslangValidator) and runs on the Galaxy S23 Ultra's Adreno 740 GPU via the
+;   on-device libvulkan.so: BIT-EXACT to the recipe's CPU right-fold (max_abs_diff=0 at 256x256,
+;   1280x1280, 1024x768 — the precise/NoContraction path holds, zero ULP on Qualcomm hardware).
+;   Receipt: scripts/vulkan_matvec_android_audit.sh (the Adreno twin of metal_matvec_audit.sh);
+;   the matvec emit band crosses four-way (fourth-arm-bands.txt: form-glsl fks 7). What is NOT yet
+;   physical on the GPU: the FFN-forward shader (fglsl-ffn-fwd) — its text is four-way-proven but
+;   its on-device dispatch is the next increment.
 ;
 ; ── WHAT IS ALREADY TRUE (the ground this stands on) ── [MEASURED — in the body]
 ;   form/validate.sh proves three kernels identical: form/form-kernel-rust, form-kernel-go,

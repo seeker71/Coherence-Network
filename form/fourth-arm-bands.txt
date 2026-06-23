@@ -905,3 +905,4 @@ mlp-fwd-emit fks 7
 pdf-text fks 1
 form-pe-coff-arm64 fks 63
 form-glsl-ffn-fwd fks 7
+form-glsl fks 7
