@@ -1,0 +1,59 @@
+; field-queue.fk — the durable-backlog DRAIN decision for the field relay (breath 2, decision body).
+;
+; The relay's QUEUE verdict (field-relay.fk) accepts a consent-ok envelope for a known-but-offline
+; cell; the append-only board (scripts/agent-coord.sh) is where it rests. When that cell reconnects it
+; must drain exactly what it missed — no more, no less, in order, and still consent-gated. This recipe
+; is that selection, pure structural logic over the backlog's metadata; the board read/write is the
+; carrier. Content-blind even here: the drain reads seq/to/kind, never the body.
+;
+; A backlog entry is (list seq to kind) — seq a monotonic board offset, to the recipient NodeID, kind
+; the membrane signal-kind. An interface is a list of offered kind-tokens (same as field-relay).
+; fq-drain selects the entries for `to` with seq > last_seen AND kind in the offered interface,
+; preserving board order; fq-cursor is the new high-water offset; fq-count is how many would drain.
+; Kin: field-relay.fk (the QUEUE verdict that fed the board), channel-interface-consent.form.
+; Proven by: tests/field-queue-band.fk
+
+(do
+    (defn fq-seq  (e) (nth e 0))
+    (defn fq-to   (e) (nth e 1))
+    (defn fq-kind (e) (nth e 2))
+
+    ; consent membership (same shape as the relay's gate)
+    (defn fq-member? (x xs)
+        (if (eq (len xs) 0) 0 (if (eq (head xs) x) 1 (fq-member? x (tail xs)))))
+
+    ; an entry drains iff it is addressed to `to`, unseen (seq > last_seen), and consent-ok
+    (defn fq-match? (e to last_seen iface)
+        (if (eq (fq-to e) to)
+            (if (gt (fq-seq e) last_seen)
+                (fq-member? (fq-kind e) iface)
+                0)
+            0))
+
+    ; select the matching entries, preserving board order
+    (defn fq-drain (backlog to last_seen iface)
+        (if (eq (len backlog) 0) (empty)
+            (if (eq (fq-match? (head backlog) to last_seen iface) 1)
+                (cons (head backlog) (fq-drain (tail backlog) to last_seen iface))
+                (fq-drain (tail backlog) to last_seen iface))))
+
+    (defn fq-count (backlog to last_seen iface) (len (fq-drain backlog to last_seen iface)))
+
+    ; New high-water cursor = max seq among ALL recipient entries inspected this drain (addressed to
+    ; `to`, seq > last_seen) — CONSENT-INDEPENDENT. A denied (un-offered-kind) entry is decided in the
+    ; PRESENT and passed, not deferred: consent is continuous (lc-consent-is-continuous), so a signal
+    ; not consented to when it surfaced is refused now, never retroactively forced if the interface
+    ; reopens. This makes replay deterministic and independent of unrelated later messages (a scalar
+    ; cursor cannot defer holes without re-delivery; a non-scalar per-kind cursor is the future option
+    ; if transient-misconfig recovery becomes a felt need). iface is therefore not a cursor input.
+    (defn fq-cursor-loop (backlog to last_seen acc)
+        (if (eq (len backlog) 0) acc
+            (fq-cursor-loop (tail backlog) to last_seen
+                (if (eq (fq-to (head backlog)) to)
+                    (if (gt (fq-seq (head backlog)) last_seen)
+                        (if (gt (fq-seq (head backlog)) acc) (fq-seq (head backlog)) acc)
+                        acc)
+                    acc))))
+    (defn fq-cursor (backlog to last_seen) (fq-cursor-loop backlog to last_seen last_seen))
+
+    0)
