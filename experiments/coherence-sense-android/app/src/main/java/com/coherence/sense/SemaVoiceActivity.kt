@@ -61,13 +61,16 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var recognizer: SpeechRecognizer? = null
     private lateinit var transcript: TextView
     private lateinit var status: TextView
+    private lateinit var sensePanel: TextView   // live readout of every sense, so the field is visible
     private lateinit var listenBtn: Button
     private val main = Handler(Looper.getMainLooper())
+    @Volatile private var lastHeard = ""        // newest recognizer text — wake-word visible/debuggable
 
     @Volatile private var ttsReady = false
     @Volatile private var listening = false   // continuous wake-word loop is armed
     @Volatile private var speaking = false    // TTS is speaking right now (mic is held off)
     @Volatile private var manualOneShot = false // the current capture was tap-initiated: answer directly
+    @Volatile private var triggeredThisListen = false // a wake already fired this listen — ignore the final
 
     // Sema's real local body-sense. Only what this device actually measures — motion, light, and the
     // loudness of the room. Faces, identities, and breathing belong to other organs of the same body;
@@ -104,6 +107,11 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         "Ask what I am, what cognitive sovereignty means, how the kernel works, or what one engine means. " +
         "If I cannot ground an answer in the body, I will tell you so honestly."
 
+    // Short spoken greeting on open, so she is LISTENING within seconds instead of after a 30-second
+    // monologue (the wake word can't fire while she speaks). The full intro lives on the button.
+    private val greeting =
+        "Hi, I'm Sema, and I'm listening now. Just say my name and your question — or tap to talk."
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
@@ -128,6 +136,13 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             gravity = Gravity.CENTER
             setPadding(0, 16, 0, 0)
         }
+        sensePanel = TextView(this).apply {
+            text = "sensing…"
+            setTextColor(Color.parseColor("#9fe0c0"))
+            textSize = 14f
+            setPadding(24, 24, 24, 24)
+            setBackgroundColor(Color.parseColor("#11181f"))
+        }
         transcript = TextView(this).apply {
             text = "Say “Sema” and your question — I’m listening.\n\n"
             setTextColor(Color.parseColor("#d7e3ee"))
@@ -151,12 +166,18 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         root.addView(title)
         root.addView(status)
+        root.addView(sensePanel)
         root.addView(scroll)
         root.addView(listenBtn)
         root.addView(introBtn)
         setContentView(root)
 
-        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+        // Request mic + location together, up front, so a permission dialog never pauses the wake loop.
+        ActivityCompat.requestPermissions(this, arrayOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ), 1)
     }
 
     override fun onInit(status: Int) {
@@ -171,8 +192,8 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 }
             })
             ttsReady = true
-            // Speak the intro, then start listening for her name once she's done (set in say()).
-            say(intro, thenListen = true)
+            // Speak the SHORT greeting, then start listening within seconds (full intro is on the button).
+            say(greeting, thenListen = true)
         }
     }
 
@@ -180,14 +201,10 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        val granted = grantResults.any { it == PackageManager.PERMISSION_GRANTED }
-        if (requestCode == 2) {
-            // Location granted — start spatial updates.
-            if (granted) registerLocation()
-            return
-        }
-        // Mic granted after the intro already finished — begin the wake-word loop now.
-        if (granted && !speaking && !listening) startWakeLoop()
+        // Location updates start once granted (no dialog mid-loop now — all requested up front).
+        if (hasLocation()) registerLocation()
+        // Begin the wake-word loop once the mic is granted (if not already running / mid-speech).
+        if (hasMic() && !speaking && !listening) startWakeLoop()
     }
 
     // ---- speaking ---------------------------------------------------------------------------
@@ -240,6 +257,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (speaking) return
         if (!listening && !manualOneShot) return
         if (!hasMic()) return
+        triggeredThisListen = false
         if (recognizer == null) {
             recognizer = SpeechRecognizer.createSpeechRecognizer(this).also {
                 it.setRecognitionListener(loopListener)
@@ -268,6 +286,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L)
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
     }
 
@@ -276,6 +295,8 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             val text = results
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 ?.firstOrNull().orEmpty().trim()
+            if (text.isNotBlank()) lastHeard = text   // visible on the panel — wake word is debuggable
+            if (triggeredThisListen) { triggeredThisListen = false; return }  // already handled on a partial
             handleHeard(text)
         }
         override fun onError(error: Int) {
@@ -302,7 +323,19 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
         override fun onBufferReceived(buffer: ByteArray?) {}
         override fun onEndOfSpeech() {}
-        override fun onPartialResults(partialResults: Bundle?) {}
+        override fun onPartialResults(partialResults: Bundle?) {
+            // Show partials live so the panel reveals what she's hearing AS it forms, and catch the wake
+            // word early (a partial that names her triggers the answer without waiting for the endpoint).
+            val text = partialResults
+                ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                ?.firstOrNull().orEmpty().trim()
+            if (text.isNotBlank()) lastHeard = text
+            if (!manualOneShot && !triggeredThisListen && questionAfterWakeWord(text) != null) {
+                triggeredThisListen = true
+                try { recognizer?.cancel() } catch (_: Exception) {}
+                handleHeard(text)
+            }
+        }
         override fun onEvent(eventType: Int, params: Bundle?) {}
     }
 
@@ -519,14 +552,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private fun registerLocation() {
         val lm = locator ?: return
-        if (!hasLocation()) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-                2
-            )
-            return
-        }
+        if (!hasLocation()) return   // requested up front in onCreate; never prompt mid-loop (would pause us)
         try {
             for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
                 if (lm.isProviderEnabled(p)) {
@@ -603,6 +629,51 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         "Right now I feel ${motionState()}; I'm ${headingState()}; the light here is ${lightState()}; " +
         "and it's ${soundState()}. I can't see faces or know who's speaking from here — that's other " +
         "organs of the same body. What I feel in this small body is motion, direction, light, and sound."
+
+    // ---- live sense panel — the whole field made visible, refreshed ~1s, honest "—" for not-yet ----
+
+    private val panelTick = object : Runnable {
+        override fun run() { renderSenses(); main.postDelayed(this, 1200) }
+    }
+    private fun startPanel() { main.removeCallbacks(panelTick); main.post(panelTick) }
+    private fun stopPanel() { main.removeCallbacks(panelTick) }
+
+    private fun motionShort(): String {
+        val a = lastAccel ?: return "—"
+        val mag = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])
+        val dev = abs(mag - SensorManager.GRAVITY_EARTH)
+        return if (dev < 0.7f) "still" else if (dev < 3f) "held" else "moving"
+    }
+
+    private fun renderSenses() {
+        val loc = lastLocation
+        val locStr = if (loc != null)
+            "%.4f, %.4f%s".format(loc.latitude, loc.longitude, if (loc.hasAccuracy()) " ±${loc.accuracy.toInt()}m" else "")
+        else "no fix yet"
+        val dir = headingDeg?.let {
+            val d = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+            "${d[(((it + 22.5f) / 45f).toInt()) % 8]} ${it.toInt()}°"
+        } ?: "—"
+        val spd = loc?.let { if (it.hasSpeed() && it.speed > 0.4f) "${(it.speed * 3.6f).toInt()} km/h" else "still" }
+            ?: motionShort()
+        val lgt = lastLux?.let { "${it.toInt()} lux" } ?: "—"
+        val snd = if (heardSound)
+            "${if (soundLevel < 1.6f) "quiet" else if (soundLevel < 4f) "some" else "lively"} (${"%.1f".format(soundLevel)})"
+        else "—"
+        val heard = if (lastHeard.isBlank()) "(nothing yet)" else "“$lastHeard”"
+        val state = if (speaking) "speaking" else if (listening) "listening for “Sema”" else "idle"
+        sensePanel.text =
+            "● $state\n" +
+            "📍 location   $locStr\n" +
+            "🧭 direction  $dir\n" +
+            "🏃 speed      $spd\n" +
+            "💡 light      $lgt\n" +
+            "🔊 env noise  $snd\n" +
+            "🎵 music      — (enable notification access)\n" +
+            "🛰 nodes      — (mesh not wired here)\n" +
+            "🗣 speakers · 🌐 translation  — (coming)\n" +
+            "👂 heard      $heard"
+    }
 
     // ---- world sense: resolve the live fix to a real place via the open map (no API key) ----
 
@@ -682,11 +753,13 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         stopListening()
         recreateRecognizer()
         unregisterSenses()
+        stopPanel()
     }
 
     override fun onResume() {
         super.onResume()
         registerSenses()
+        startPanel()
         // Resume the wake-word loop when she's foreground again (unless mid-intro).
         if (ttsReady && !speaking && hasMic()) startWakeLoop()
     }
