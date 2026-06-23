@@ -78,7 +78,7 @@ class Organ:
 
 UPSTREAM_API_HEALTH = "api_health"     # {API_BASE}/api/health
 UPSTREAM_API_READY = "api_ready"       # {API_BASE}/api/ready
-UPSTREAM_API_IDEAS = "api_ideas"       # {API_BASE}/api/ideas
+UPSTREAM_API_IDEAS = "api_ideas"       # {API_BASE}/api/ideas?limit=1
 UPSTREAM_API_VITALITY = "api_vitality"  # {API_BASE}/api/workspaces/coherence-network/vitality
 UPSTREAM_WEB_ROOT = "web_root"         # {WEB_BASE}/
 UPSTREAM_WEB_PULSE = "web_pulse"       # {WEB_BASE}/pulse
@@ -291,7 +291,7 @@ def extract_web_vitality(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_api_ideas(r: "UpstreamResult") -> OrganVerdict:
-    """/api/ideas returns a dict with an 'ideas' list (the prod shape).
+    """/api/ideas?limit=1 returns a dict with an 'ideas' list.
 
     The carrier-path check (native-kernel vs fanout-python via the
     `x-form-router` header) is applied generically by probe._apply from the
@@ -460,11 +460,11 @@ ORGANS: list[Organ] = [
     Organ(
         name="endpoint_ideas",
         label="Ideas endpoint",
-        description="GET /api/ideas — the primary data surface for the idea pipeline.",
+        description="GET /api/ideas?limit=1 — the primary data surface for the idea pipeline.",
         upstream=UPSTREAM_API_IDEAS,
         extractor=extract_api_ideas,
         latency_threshold_ms=1500,
-        # /api/ideas is a native-promoted route — its body runs in the Go
+        # /api/ideas?limit=1 is a native-promoted route — its body runs in the Go
         # form-kernel and the response carries `x-form-router: native-kernel`.
         # If the kernel-router is unhealthy, Traefik fails over to the Python
         # fan-out (`x-form-router: fanout-python`), which returns 200 and masks
