@@ -1,0 +1,42 @@
+; field-identity.fk — the identity VERDICT for the field relay (breath 3 keystone, decision body).
+;
+; The relay is open and content-blind; identity lives at the EDGES (channel-interface-consent +
+; field-relay.fk routing already proven). This is the recipe a recipient runs to decide whether a
+; presented sender identity is trustworthy. It is pure structural logic over crypto RESULTS — the
+; ed25519 verify and the sha256 NodeID-derivation are computed by the carrier and fed in as booleans;
+; the VERDICT (who is trusted, who is impersonating, what to pin) is Form, four-way provable, exactly
+; the fr-route pattern (decision in Form, I/O in the carrier).
+;
+; Inputs:
+;   nodeid_match  1 if the claimed NodeID equals hash(presented pubkey) — a NodeID IS its key's hash,
+;                 so a cell cannot claim a NodeID that isn't derived from the key it signs with.
+;   sig_ok        1 if the envelope signature verifies against the presented pubkey (carrier: ed25519).
+;   deleg_ok      1 if the signing key is authorized for this person NodeID — trivially 1 for a root
+;                 key signing its own NodeID; for a device subkey, 1 iff a valid root->device delegation
+;                 chain verifies (carrier). 0 = signed, but by a key not delegated for this person.
+;   pin_state     0 no-pin (first contact), 1 pin-match, 2 pin-conflict (key changed for a pinned id).
+;
+; Verdict:
+;   1 TRUSTED              signed, NodeID-consistent, delegated, matches the pinned key.
+;   2 FIRST_USE_PIN        same but first contact — accept and pin (TOFU).
+;   3 UNVERIFIED           no signature — the relay still routes (open), the recipient treats it as
+;                          unauthenticated; not an impersonation, just an unproven claim.
+;   4 REJECT_PIN_CONFLICT  the pinned NodeID now presents a different key — impersonation.
+;   5 REJECT_NODEID_MISMATCH  claimed NodeID is not the hash of the presented key — forged id.
+;   6 REJECT_DELEGATION    signed, but by a key not authorized (no valid root->device delegation).
+; Kin: field-relay.fk (the routing decision), channel-interface-consent.form, identity-and-onboarding
+; (TOFU spirit). Proven by: tests/field-identity-band.fk
+
+(do
+    (defn fiv-verdict (nodeid_match sig_ok deleg_ok pin_state)
+        (if (eq nodeid_match 0) 5                         ; forged NodeID (not hash of key)
+            (if (eq sig_ok 0) 3                           ; unsigned -> unverified (routed, not trusted)
+                (if (eq deleg_ok 0) 6                     ; signed by an undelegated key
+                    (if (eq pin_state 2) 4               ; pinned key changed -> impersonation
+                        (if (eq pin_state 0) 2 1))))))    ; first contact -> pin ; else trusted
+
+    ; act on the verdict
+    (defn fiv-accept?       (v) (if (eq v 1) 1 (if (eq v 2) 1 0)))   ; authentic enough to act on
+    (defn fiv-should-pin?   (v) (if (eq v 2) 1 0))                   ; record the key on first use
+    (defn fiv-impersonation? (v) (if (eq v 4) 1 (if (eq v 5) 1 (if (eq v 6) 1 0)))) ; a forged/changed identity
+    0)
