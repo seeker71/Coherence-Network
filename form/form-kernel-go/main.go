@@ -3268,6 +3268,34 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VStr, Str: string(buf[:n])}
 	})
 
+	// read_file_slice_bytes(path, offset, length) → VList of VInt (raw byte
+	// values 0..255). The BINARY-SAFE sibling of read_file_slice: that one
+	// returns a Go UTF-8 string, which corrupts any byte >= 0x80 — unusable for
+	// binary weight files. This returns the bytes as a list so a Form recipe can
+	// decode them (fd-f16, q4k-dequant) without a lossy string round-trip. Unlike
+	// read_file_bytes it reads only [offset, offset+length), so a multi-GB
+	// safetensors checkpoint is read one tensor at a time. The buffer-bridge
+	// primitive under real-weight model inference. Sibling parity: Go/Rust/TS.
+	k.registerNative("read_file_slice_bytes", catCall(), func(_ *Kernel, args []Value) Value {
+		offset := args[1].AsInt()
+		length := args[2].AsInt()
+		if offset < 0 || length <= 0 {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		f, err := os.Open(resolveKernelHostPath(args[0].Str))
+		if err != nil {
+			return Value{Kind: VList, List: []Value{}}
+		}
+		defer f.Close()
+		buf := make([]byte, length)
+		n, _ := f.ReadAt(buf, offset)
+		out := make([]Value, n)
+		for i := 0; i < n; i++ {
+			out[i] = Value{Kind: VInt, Int: int64(buf[i])}
+		}
+		return Value{Kind: VList, List: out}
+	})
+
 	// --- Filesystem CRUD natives — real directories + files ------------
 	// Sibling parity across Go/Rust/TS. Paths are strings. Convention:
 	// predicates return 1/0; mutations return 0 on success, -1 on error;

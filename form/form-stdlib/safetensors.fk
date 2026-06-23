@@ -1,0 +1,57 @@
+; safetensors.fk — Form-native loader for safetensors checkpoints: real model
+; weights read straight from the file as recipe DATA, no Python buffer bridge.
+;
+; A safetensors file is [8-byte LE u64 header length N][N-byte JSON header][raw tensor bytes].
+; The JSON header maps tensor name -> {dtype, shape, data_offsets:[a,b]}; tensor's bytes are
+; file[8+N+a : 8+N+b]. The header is ASCII JSON (read_file_slice -> string -> parse-json); the
+; tensor DATA is binary (read_file_slice_bytes -> byte list -> fd-f16 decode). read_file_slice's
+; UTF-8 string corrupts bytes >= 0x80, so weight data MUST come through read_file_slice_bytes —
+; the binary-safe ranged read this rung added to the kernels (Go/Rust/TS sibling parity).
+;
+; The decode is the four-way f16-decode.fk recipe (fd-f16); this file only addresses + reshapes.
+; Reads are per-ROW (offset-addressed, cols*2 bytes each) so no multi-million-element list is ever
+; built or nth-indexed — the buffer streams one weight row at a time, bounded memory at any real
+; width. F16 today (the llama3.2 fused checkpoint dtype); fd-bf16 + an f32 assemble are sibling rungs.
+;
+; preludes (S-expr dialect; cat order): form-stdlib/format-arith.fk form-stdlib/f16-decode.fk
+;                                       form-stdlib/safetensors-decode.fk form-stdlib/json.fk form-stdlib/safetensors.fk
+; The pure byte→value decode (st-uint-le, st-f16-row) lives in safetensors-decode.fk (four-way); this
+; file adds the json header parse + binary file reads (host-io / recipe-node → 3-kernel by nature).
+
+; --- structural reads of the file's header ---
+(defn st-header-len (ck) (st-uint-le (read_file_slice_bytes ck 0 8) 0 8))
+(defn st-data-base (ck) (add 8 (st-header-len ck)))          ; first byte of tensor data
+(defn st-header (ck) (parse-json "safetensors" (read_file_slice ck 8 (st-header-len ck))))
+
+; --- a named tensor's entry and its fields ---
+(defn st-entry (hdr name) (json-object-get hdr name))
+(defn st-entry-offa (e) (node_value (head (json-array-elements (json-object-get e "data_offsets")))))
+(defn st-entry-offb (e) (node_value (head (tail (json-array-elements (json-object-get e "data_offsets"))))))
+(defn st-entry-dim (e n) (node_value (nth (json-array-elements (json-object-get e "shape")) n)))
+(defn st-entry-rank (e) (json-array-length (json-object-get e "shape")))
+
+; --- read ONE f16 row of `cols` values at byte `rowbyte` (cols*2 bytes); st-f16-row is the four-way
+;     decode from safetensors-decode.fk, read_file_slice_bytes is the binary-safe ranged read ---
+(defn st-row-at (ck rowbyte cols)
+  (st-f16-row (read_file_slice_bytes ck rowbyte (mul cols 2)) 0 (mul cols 2)))
+
+; --- a 1-D f16 tensor (e.g. an RMSNorm gain): one row of `cols` values ---
+(defn st-vec-f16 (ck base e)
+  (st-row-at ck (add base (st-entry-offa e)) (st-entry-dim e 0)))
+
+; --- a 2-D f16 weight matrix as a list of `rows` rows of `cols`, streamed row by row ---
+(defn st-mat-rows (ck rowbyte r rows cols)
+  (if (ge r rows) (empty)
+      (cons (st-row-at ck rowbyte cols)
+            (st-mat-rows ck (add rowbyte (mul cols 2)) (add r 1) rows cols))))
+(defn st-mat-f16 (ck base e)
+  (st-mat-rows ck (add base (st-entry-offa e)) 0 (st-entry-dim e 0) (st-entry-dim e 1)))
+
+; --- the two public doors: load a named 1-D / 2-D F16 tensor from a checkpoint ---
+;     (the header is read once per call here for clarity; a caller looping many tensors
+;      threads (st-header ck) + (st-data-base ck) itself to read the header only once).
+(defn st-load-vec (ck name) (st-vec-f16 ck (st-data-base ck) (st-entry (st-header ck) name)))
+(defn st-load-mat (ck name) (st-mat-f16 ck (st-data-base ck) (st-entry (st-header ck) name)))
+; threaded variants (header + base already in hand) — load a whole block without re-reading the header
+(defn st-vec (ck hdr base name) (st-vec-f16 ck base (st-entry hdr name)))
+(defn st-mat (ck hdr base name) (st-mat-f16 ck base (st-entry hdr name)))

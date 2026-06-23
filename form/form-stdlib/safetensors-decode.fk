@@ -1,0 +1,18 @@
+; safetensors-decode.fk — the PURE byte→value core of the safetensors loader: little-endian integer
+; decode and LE-F16-pair → f64 row decode. No json, no host-io — only arithmetic over byte lists, so it
+; crosses all four arms (Go/Rust/TS/fkwu). The json header parse and the binary file read live in
+; safetensors.fk (which preludes this file); those are 3-kernel (host-io / recipe-node) by nature. This
+; split keeps the decode that turns raw checkpoint bytes into weights four-way-provable on its own.
+;
+; preludes (S-expr): form-stdlib/format-arith.fk form-stdlib/f16-decode.fk
+
+; --- little-endian unsigned int: k bytes of a byte list starting at i ---
+(defn st-uint-le (bytes i k)
+  (if (eq k 0) 0 (add (nth bytes i) (mul 256 (st-uint-le bytes (add i 1) (sub k 1))))))
+
+; --- decode a byte list of LE f16 pairs into a forward f64 list (depth = #pairs; callers pass one ROW
+;     at a time, so depth stays at `cols`, never the whole tensor) — fd-f16 is the four-way decode ---
+(defn st-f16-row (bytes i n)
+  (if (ge i n) (empty)
+      (cons (fd-f16 (add (nth bytes i) (mul 256 (nth bytes (add i 1)))))
+            (st-f16-row bytes (add i 2) n))))

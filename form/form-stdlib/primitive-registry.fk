@@ -387,6 +387,9 @@
         (prim "read_file_slice" "call" "length bytes from offset as string"
             (defn pv-read-file-slice () (do (write_file_text "/tmp/prim-reg-sl.txt" "satsang")
                 (if (str_eq (read_file_slice "/tmp/prim-reg-sl.txt" 3 4) "sang") 1 0))) 1 1)
+        (prim "read_file_slice_bytes" "call" "length bytes from offset as a raw byte list (binary-safe; reads >=0x80 faithfully)"
+            (defn pv-read-file-slice-bytes () (do (write_file_text "/tmp/prim-reg-slb.txt" "satsang")
+                (nth (read_file_slice_bytes "/tmp/prim-reg-slb.txt" 3 4) 0))) 115 1)
         (prim "fs_exists" "call" "path presence: 1 or 0"
             (defn pv-fs-exists () (do (fs_mkdir "/tmp/prim-reg-dir")
                 (add (fs_exists "/tmp/prim-reg-dir") (fs_exists "/tmp/prim-reg-absent-xyz")))) 1 1)

@@ -1,0 +1,35 @@
+{
+  "date": "2026-06-23",
+  "brick": "The Form-native buffer bridge runs ON THE ANDROID PHONE's fkwu, and the binary-safe ranged file read (read_file_slice_bytes, opcode 127) crosses four-way AND on-device. Observed by implementing the android fkwu lane and adjusting the one missing piece a real on-device run surfaced.",
+  "author": "Sema (Opus 4.8, real-model-e2e worktree)",
+  "what_runs": {
+    "fkwu_on_android": "the Form-emitted universal walker (fkc-emit-universal), NDK-cross-compiled to an aarch64 ELF, pushed to a real Galaxy S23 Ultra and run standalone on a flattened band table — NO Go/Rust/TS/python in the runtime (Go is the build-time flattener only; NDK clang is the c-bootstrap).",
+    "scripts/android_fkwu_band_receipt.sh": "emit fkwu C -> NDK aarch64 compile -> adb push -> run on device -> verdict. The android row of the standard receipt."
+  },
+  "on_device_receipts": {
+    "device": "SM-S918U1 (Galaxy S23 Ultra), Android, arm64-v8a, adb 192.168.1.223:5555",
+    "field-identity": "511 on the phone's fkwu (== four-way verdict)",
+    "safetensors-decode": "15 on the phone's fkwu (the buffer-bridge F16 decode core)",
+    "read-file-slice-bytes": "7 on the phone's fkwu (write via file_append_bytes -> binary-exact read via read_file_slice_bytes opcode 127 -> fd-f16 decode)"
+  },
+  "four_way_mac": {
+    "safetensors-decode": "15 four-way (Go/Rust/TS/fkwu), 0 divergent",
+    "read-file-slice-bytes": "7 four-way (Go/Rust/TS/fkwu), 0 divergent",
+    "command": "cd form && ./validate.sh form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/tests/read-file-slice-bytes-band.fk"
+  },
+  "the_adjust": {
+    "observed": "On the phone, field-identity (511) and safetensors-decode (15) ran, but read-file-slice-bytes FAILED to flatten: 'trivialValue composite'. Isolated to read_file_slice_bytes (opcode 127) alone — file_append_bytes/str_concat/sum all flattened fine.",
+    "root_cause": "read_file_slice_bytes was wired into the native table (form-flatten.fk), the host-io class, and the WALKER C handler (t==127), but NOT the flattener's per-opcode dispatch in fkc-flat. read_file_slice (62) has an explicit (fkc-tri2 62 ...); opcode 127 fell through to the binary path and crashed on the 3-arg composite.",
+    "fix": "added (if (eq (fk-tag n) 127) (fkc-tri2 127 (fkc-flat (ms-child (fk-body n) 0) acc) n) ...) beside the 62 dispatch in hati-os-kernel-emit.fk, balanced the chain. Opcode 127 now flattens, crosses four-way, and runs on android."
+  },
+  "what_changed": [
+    "form-kernel-go/main.go, form-kernel-rust/src/main.rs, form-kernel-ts/src/kernel.ts: read_file_slice_bytes native (binary-safe ranged read: byte LIST, not a UTF-8 string that corrupts bytes >= 0x80)",
+    "form-stdlib/form-flatten.fk: read_file_slice_bytes native-table row (opcode 127) + host-io classification",
+    "form-stdlib/hati-os-kernel-emit.fk: walker C handler (t==127, builds a byte cons-list) + the fkc-flat per-opcode dispatch (the piece the on-device run surfaced)",
+    "form-stdlib/safetensors.fk + safetensors-decode.fk: the Form-native safetensors loader (header parse + fd-f16 decode + per-row binary reads)",
+    "form-stdlib/tests/{safetensors-decode,read-file-slice-bytes,lgqa-block-streamed}-band.fk + fourth-arm-bands.txt rows",
+    "form-stdlib/primitive-registry.fk: read_file_slice_bytes self-test row",
+    "scripts/android_fkwu_band_receipt.sh: the on-device fkwu receipt lane"
+  ],
+  "honest_floor": "Toolchain status on the android lane: c-bootstrap is NDK-clang today (the standard receipt's c-bootstrap row stays pending until form-elf emits the fkwu ELF bytes directly, dropping clang); Go is the build-time flattener (table). RUNTIME on the phone is toolchain-free (the fkwu ELF links bionic only). The buffer-bridge READ at real model scale on android (heap sizing for large tensors) is the next observe-and-adjust."
+}
