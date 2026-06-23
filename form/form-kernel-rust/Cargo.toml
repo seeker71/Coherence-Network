@@ -27,7 +27,10 @@ pyo3 = ["dep:pyo3"]
 # CLI runs, for hosts without Python (Android, embedded). Off by default so the
 # bin build (validate.sh / CI) never compiles main.rs twice; the Android
 # cross-compile turns it on:  cargo ndk ... build --release --features cabi.
-cabi = []
+# Pulls `jni` so the SAME .so also exports the JNI-named entry the Android app
+# binds via System.loadLibrary — no separate C shim. jni is pure Rust and only
+# compiled under this feature, so the bin/pyo3 builds never see it.
+cabi = ["dep:jni"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -50,6 +53,10 @@ libloading = "0.8"
 # extension-module skips linking libpython (the interpreter provides it).
 # abi3-py39 keeps the .so importable across CPython 3.9+ without rebuilds.
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"], optional = true }
+# jni — optional, only pulled by the `cabi` feature (Android cdylib). Pure Rust;
+# gives the SAME .so a JNI-named `Java_..._eval` entry the Kotlin app binds, over
+# the same run_source the C-ABI form_eval runs. No effect on the bin/pyo3 builds.
+jni = { version = "0.21", optional = true }
 
 [profile.release]
 opt-level = 3
