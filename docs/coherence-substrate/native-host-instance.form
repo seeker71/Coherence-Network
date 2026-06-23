@@ -1,0 +1,39 @@
+# native-host-instance.form
+
+The host instance is the always-on native body shape for Mac, Windows, and
+Android. A shell script, launchd plist, PowerShell wrapper, Android service,
+ffmpeg process, Whisper process, driver, or OS API may carry resource access,
+but none of those is the decision-maker.
+
+The decision-maker is `form/form-stdlib/native-host-instance.fk`. The native
+presence body in `form/native/presence/form_presence_host.c` supplies the
+always-on process shell: `FORM_PRESENCE_TICKS=0` means the host keeps ticking
+until the explicit `stop` sentinel appears.
+
+One instance breath composes the existing proven organs:
+
+- `host-sense-organ.fk` reads which host resources are active and whether the
+  host is streaming.
+- `speech-organ.fk` decides when audio becomes trusted transcription.
+- `surprise-salience.fk` decides which prediction errors matter.
+- `co-learning-stream.fk` folds new samples into learned shape memory.
+- `mesh-dispatch.fk` decides whether an incoming mesh message is a share/gold
+  receipt or an ask to answer.
+
+The receipt is:
+
+```text
+(native-host-instance platform native? listening? sharing? transcribing?
+ surprise-count learned-count decision share-route)
+```
+
+The same recipe names `macos`, `windows`, and `android` as supported native host
+platforms. Unsupported platforms are refused by the body, not by a wrapper.
+
+North star: Mac, Windows, and Android launch persistent native host processes
+that tick this cell continuously, share typed receipts on the mesh, learn from
+their own streams, and choose actions from Form readings. Shell remains a
+development shim and hardware access remains an honest host-resource carrier.
+
+Proof: `form/form-stdlib/tests/native-host-instance-band.fk` returns `4095` and
+is registered in `form/fourth-arm-bands.txt` for fkwu four-way validation.
