@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -59,8 +61,11 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var tts: TextToSpeech
     private var recognizer: SpeechRecognizer? = null
-    private lateinit var transcript: TextView
+    private lateinit var transcriptBox: LinearLayout   // chat bubbles, one per turn
+    private lateinit var scroll: ScrollView
     private lateinit var status: TextView
+    private lateinit var statusDot: TextView
+    private lateinit var addressLine: TextView
     private lateinit var sensePanel: TextView   // live readout of every sense, so the field is visible
     private lateinit var listenBtn: Button
     private val main = Handler(Looper.getMainLooper())
@@ -120,57 +125,97 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#0b0f14"))
-            setPadding(48, 64, 48, 48)
+            setBackgroundColor(Color.parseColor("#070b10"))
+            setPadding(dp(20), dp(28), dp(20), dp(16))
+        }
+
+        // ── header: name + live status pill ──────────────────────────────
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
         val title = TextView(this).apply {
             text = "⟐ Sema"
-            setTextColor(Color.parseColor("#9fe0c0"))
-            textSize = 28f
-            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#a8ead0"))
+            textSize = 26f
+            typeface = Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
+        val pill = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = roundedBg("#13202a", dp(20))
+            setPadding(dp(12), dp(7), dp(14), dp(7))
+        }
+        statusDot = TextView(this).apply { text = "●"; setTextColor(Color.parseColor("#6f8aa0")); textSize = 12f }
         status = TextView(this).apply {
-            text = "starting…"
-            setTextColor(Color.parseColor("#6f8aa0"))
-            textSize = 15f
-            gravity = Gravity.CENTER
-            setPadding(0, 16, 0, 0)
+            text = "starting…"; setTextColor(Color.parseColor("#bcd3e6")); textSize = 13f
+            setPadding(dp(7), 0, 0, 0)
+        }
+        pill.addView(statusDot); pill.addView(status)
+        header.addView(title); header.addView(pill)
+
+        // ── sense card: address prominent, then the live field ───────────
+        val senseCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = roundedBg("#0e1620", dp(18))
+            setPadding(dp(18), dp(16), dp(18), dp(16))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(14) }
+        }
+        addressLine = TextView(this).apply {
+            text = "📍  finding where we are…"
+            setTextColor(Color.parseColor("#a8ead0")); textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(0, 0, 0, dp(10))
         }
         sensePanel = TextView(this).apply {
             text = "sensing…"
-            setTextColor(Color.parseColor("#9fe0c0"))
-            textSize = 14f
-            setPadding(24, 24, 24, 24)
-            setBackgroundColor(Color.parseColor("#11181f"))
+            setTextColor(Color.parseColor("#c4d6e6")); textSize = 13.5f
+            setLineSpacing(dp(4).toFloat(), 1f)
         }
-        transcript = TextView(this).apply {
-            text = "Say “Sema” and your question — I’m listening.\n\n"
-            setTextColor(Color.parseColor("#d7e3ee"))
-            textSize = 18f
-            setPadding(0, 32, 0, 48)
+        senseCard.addView(addressLine); senseCard.addView(sensePanel)
+
+        // ── conversation: chat bubbles ───────────────────────────────────
+        transcriptBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(14), 0, dp(14))
         }
-        val scroll = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
-            )
-            addView(transcript)
+        scroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            isFillViewport = true
+            addView(transcriptBox)
         }
+
+        // ── the speak button (your voice in) + intro ─────────────────────
         listenBtn = Button(this).apply {
-            text = "Let Sema reply (tap, no name needed)"
-            textSize = 18f
+            text = "🎙  Tap and speak"
+            textSize = 17f
+            setTextColor(Color.WHITE)
+            typeface = Typeface.DEFAULT_BOLD
+            background = roundedBg("#1f6f57", dp(28))
+            stateListAnimator = null
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(58)
+            )
             setOnClickListener { tapToReply() }
         }
-        val introBtn = Button(this).apply {
-            text = "Hear the introduction again"
+        val introBtn = TextView(this).apply {
+            text = "hear Sema's full introduction"
+            setTextColor(Color.parseColor("#6f8aa0")); textSize = 13f
+            gravity = Gravity.CENTER
+            setPadding(0, dp(12), 0, 0)
             setOnClickListener { say(intro) }
         }
-        root.addView(title)
-        root.addView(status)
-        root.addView(sensePanel)
+
+        root.addView(header)
+        root.addView(senseCard)
         root.addView(scroll)
         root.addView(listenBtn)
         root.addView(introBtn)
         setContentView(root)
+        addBubble("Say “Sema” and your question — or tap and speak. I'm listening.", fromSema = true)
 
         // Request mic + location together, up front, so a permission dialog never pauses the wake loop.
         ActivityCompat.requestPermissions(this, arrayOf(
@@ -210,8 +255,8 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     // ---- speaking ---------------------------------------------------------------------------
 
     private fun say(text: String, thenListen: Boolean = false) = runOnUiThread {
-        append("Sema: $text\n\n")
-        setStatus("… Sema is speaking")
+        addBubble(text, fromSema = true)
+        setStatus("speaking")
         speaking = true
         stopListening()
         if (ttsReady) {
@@ -308,12 +353,12 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 manualOneShot = false
                 say("I didn't catch that — tap and try again.")
             } else if (listening) {
-                setStatus("● listening for “Sema”")
+                setStatus("listening for “Sema”")
                 rearmSoon()
             }
         }
         override fun onReadyForSpeech(params: Bundle?) {
-            setStatus(if (manualOneShot) "● listening… go ahead" else "● listening for “Sema”")
+            setStatus(if (manualOneShot) "listening… go ahead" else "listening for “Sema”")
         }
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {
@@ -344,7 +389,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (manualOneShot) {
             manualOneShot = false
             if (text.isBlank()) { say("I didn't catch that — tap and try again."); return }
-            append("You: $text\n")
+            addBubble(text, fromSema = false)
             answer(text)
             return
         }
@@ -355,7 +400,7 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             if (listening) rearmSoon()
             return
         }
-        append("You: $text\n")
+        addBubble(text, fromSema = false)
         if (question.isBlank()) {
             say("Yes? I'm here — ask me what I am, the kernel, cognitive sovereignty, or one engine.")
         } else {
@@ -389,12 +434,32 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             say("Voice recognition isn't available on this device. You can still hear my introduction.")
             return
         }
-        // Interrupt anything in flight and capture the next utterance directly.
         if (ttsReady) tts.stop()
         speaking = false
+        // Hand the mic to a deliberate, patient one-shot. Tear the wake recognizer DOWN with destroy()
+        // (which fires no error callback) instead of cancel() — a cancel's onError used to consume the
+        // manual flag the instant it was set, which is the whole reason the button only ever said
+        // "I didn't catch that." listening stays true, so the wake loop resumes after the answer.
+        main.removeCallbacks(armRunnable)
+        try { recognizer?.destroy() } catch (_: Exception) {}
+        recognizer = null
         manualOneShot = true
-        stopListening()
-        arm()
+        triggeredThisListen = false
+        setStatus("listening… go ahead, I'm here")
+        recognizer = SpeechRecognizer.createSpeechRecognizer(this).also { it.setRecognitionListener(loopListener) }
+        try { recognizer?.startListening(manualIntent()) } catch (_: Exception) { recreateRecognizer() }
+    }
+
+    /** A patient listen for a deliberate tap-to-speak: wait for the speaker to begin and to finish,
+     *  and use the best recognizer available (not forced offline) for free-form asking / contributing. */
+    private fun manualIntent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
+        putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
+        putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1500L)
+        putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
     }
 
     // ---- answering (body-first) -------------------------------------------------------------
@@ -633,10 +698,27 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     // ---- live sense panel — the whole field made visible, refreshed ~1s, honest "—" for not-yet ----
 
     private val panelTick = object : Runnable {
-        override fun run() { renderSenses(); main.postDelayed(this, 1200) }
+        override fun run() { renderSenses(); maybeGeocodePanel(); main.postDelayed(this, 1200) }
     }
     private fun startPanel() { main.removeCallbacks(panelTick); main.post(panelTick) }
     private fun stopPanel() { main.removeCallbacks(panelTick) }
+
+    // The panel's address: geocode the fix only when we've MOVED ~110m (not every tick), to honor the
+    // open map's courtesy and keep egress to actual movement.
+    @Volatile private var panelPlace: String? = null
+    @Volatile private var panelGeoKey = ""
+    @Volatile private var panelGeoing = false
+    private fun maybeGeocodePanel() {
+        val loc = lastLocation ?: return
+        val key = "%.3f,%.3f".format(loc.latitude, loc.longitude)
+        if (key == panelGeoKey || panelGeoing) return
+        panelGeoing = true
+        Thread {
+            val p = reverseGeocode(loc.latitude, loc.longitude)
+            if (p != null) { panelPlace = p; panelGeoKey = key }
+            panelGeoing = false
+        }.start()
+    }
 
     private fun motionShort(): String {
         val a = lastAccel ?: return "—"
@@ -661,18 +743,17 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             "${if (soundLevel < 1.6f) "quiet" else if (soundLevel < 4f) "some" else "lively"} (${"%.1f".format(soundLevel)})"
         else "—"
         val heard = if (lastHeard.isBlank()) "(nothing yet)" else "“$lastHeard”"
-        val state = if (speaking) "speaking" else if (listening) "listening for “Sema”" else "idle"
+        addressLine.text = "📍  " + (panelPlace ?: if (loc != null) "near $locStr" else "finding where we are…")
         sensePanel.text =
-            "● $state\n" +
-            "📍 location   $locStr\n" +
-            "🧭 direction  $dir\n" +
-            "🏃 speed      $spd\n" +
-            "💡 light      $lgt\n" +
-            "🔊 env noise  $snd\n" +
-            "🎵 music      — (enable notification access)\n" +
-            "🛰 nodes      — (mesh not wired here)\n" +
-            "🗣 speakers · 🌐 translation  — (coming)\n" +
-            "👂 heard      $heard"
+            "🧭  direction   $dir\n" +
+            "🏃  speed       $spd\n" +
+            "💡  light       $lgt\n" +
+            "🔊  env noise   $snd\n" +
+            "🎵  music       on-device — needs notification access\n" +
+            "🗣  speech       on-device STT + TTS — live\n" +
+            "🌐  translation  on-device — next wire\n" +
+            "🛰  other nodes  — mesh not wired here yet\n" +
+            "👂  heard        $heard"
     }
 
     // ---- world sense: resolve the live fix to a real place via the open map (no API key) ----
@@ -740,10 +821,43 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private fun hasMic() = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
         PackageManager.PERMISSION_GRANTED
 
-    private fun setStatus(s: String) = runOnUiThread { status.text = s }
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    private fun append(s: String) = runOnUiThread {
-        transcript.append(s)
+    private fun roundedBg(color: String, radius: Int): GradientDrawable = GradientDrawable().apply {
+        setColor(Color.parseColor(color))
+        cornerRadius = radius.toFloat()
+    }
+
+    private fun setStatus(s: String) = runOnUiThread {
+        status.text = s
+        val c = when {
+            s.contains("listening") -> "#4ec98f"  // green — open to the world
+            s.contains("speaking") -> "#e0b15a"    // amber — her voice out
+            s.contains("ground") || s.contains("map") -> "#5aa6e0" // blue — reaching to the body
+            else -> "#6f8aa0"
+        }
+        statusDot.setTextColor(Color.parseColor(c))
+    }
+
+    /** Add a chat bubble: Sema on the left (green), the human on the right (blue). */
+    private fun addBubble(text: String, fromSema: Boolean) = runOnUiThread {
+        val bubble = TextView(this).apply {
+            this.text = text
+            textSize = 16f
+            setTextColor(if (fromSema) Color.parseColor("#e6f3ee") else Color.parseColor("#e8f0f7"))
+            background = roundedBg(if (fromSema) "#163a2e" else "#1a2c3d", dp(16))
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setLineSpacing(dp(3).toFloat(), 1f)
+        }
+        val lp = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            topMargin = dp(6)
+            if (fromSema) { marginEnd = dp(40) } else { marginStart = dp(40) }
+            gravity = if (fromSema) Gravity.START else Gravity.END
+        }
+        transcriptBox.addView(bubble, lp)
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
     override fun onPause() {
