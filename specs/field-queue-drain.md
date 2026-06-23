@@ -12,12 +12,12 @@ source:
 requirements:
   - "A four-way-proven drain recipe selects, on reconnect, exactly the backlog entries a cell missed: addressed to it, unseen (seq > last_seen), and consent-ok (kind in its offered interface), preserving board order"
   - "It is content-blind: the drain reads seq/to/kind only, never the body — the board holds bodies the relay and the drain never inspect"
-  - "It yields the drained entries, a count, and a new high-water cursor (max drained seq, else last_seen unchanged) so a re-reconnect does not re-deliver"
+  - "It yields the drained entries, a count, and a new high-water cursor that advances over ALL addressed-unseen entries (consent-independent), so replay is deterministic: a denied entry is decided in the present (passed), never left to depend on unrelated later messages"
   - "Consent stays the gate even in the backlog: an entry whose kind is not offered is never drained"
 done_when:
   - "field-queue-band.fk returns 127 on Go, Rust, TS (1 ok, 0 divergent) AND crosses the fourth arm (fkwu) — registered in fourth-arm-bands.txt"
   - "field-queue-band.fk verdict 127 also holds on the native binary lane, bit-identical"
-  - "fq-drain preserves order, fq-cursor is the drained high-water, and an un-offered kind is excluded (the band proves count rises only when the interface includes that kind)"
+  - "fq-drain preserves order; fq-cursor advances over all addressed-unseen entries incl a denied tail entry (the band pins this); an un-offered kind is excluded from the drain (count rises only when the interface admits it)"
 constraints:
   - "Decision only: the recipe performs no I/O; reading/writing the append-only board (scripts/agent-coord.sh / $COHERENCE_COORD) is the carrier"
   - "The board is the memory; do not introduce a new store — the QUEUE verdict (field-relay.fk) already routes offline-consent-ok envelopes to it"
@@ -39,8 +39,9 @@ reconnect handshake).
 ## Requirements
 
 - [x] **R1 — drain selection, four-way + native.** `form/form-stdlib/field-queue.fk` defines `fq-drain`
-  / `fq-count` / `fq-cursor` over (backlog, to, last_seen, iface): select entries to `to`, seq >
-  last_seen, kind in iface, preserving order; cursor = drained high-water. Proven 127 four-way + native.
+  / `fq-count` over (backlog, to, last_seen, iface): select entries to `to`, seq > last_seen, kind in
+  iface, preserving order. `fq-cursor (backlog, to, last_seen)` advances over ALL addressed-unseen
+  entries (consent-independent — see Risks). Proven 127 four-way + native.
 - [x] **R2 — content-blind + consent-gated.** The drain reads seq/to/kind only (never the body), and an
   un-offered kind is never drained — proven in the band (count rises only when the interface admits it).
 - [ ] **R3 — board carrier.** Read the append-only board into the backlog shape and persist the cursor
@@ -75,9 +76,13 @@ python3 scripts/validate_spec_quality.py --file specs/field-queue-drain.md
   recipe treats seq as an opaque monotonic key.
 - **Order depends on board order.** `fq-drain` preserves the backlog's order, so the board must store in
   delivery order. Mitigation: append-only by construction is already in delivery order.
-- **A consent narrowing between queue-time and drain-time.** If a cell stops offering a kind after an
-  envelope was queued, the drain (using the *current* interface) correctly withholds it — consent is
-  evaluated at drain, not frozen at enqueue. This is intended, named here so it is not a surprise.
+- **Denied backlog entries are present-tense, not deferred.** Consent is evaluated at drain against the
+  *current* interface; an un-offered kind is withheld AND the cursor advances over it (consent-
+  independent), so it is decided in the present and not retroactively delivered if the interface
+  reopens — `lc-consent-is-continuous`. This makes replay deterministic (a scalar cursor cannot defer
+  holes without re-delivery). The trade-off: a transient interface mis-config could pass a message that
+  a richer per-kind/deferring cursor would have held — named as a future option if that becomes a felt
+  need, not built now (presence over protection, no pre-emptive machinery).
 
 ## Gaps
 

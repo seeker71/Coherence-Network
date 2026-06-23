@@ -39,12 +39,21 @@
 
     (defn fq-count (backlog to last_seen iface) (len (fq-drain backlog to last_seen iface)))
 
-    ; new high-water cursor = max seq among drained, else last_seen unchanged
-    (defn fq-cursor-loop (drained acc)
-        (if (eq (len drained) 0) acc
-            (fq-cursor-loop (tail drained)
-                (if (gt (fq-seq (head drained)) acc) (fq-seq (head drained)) acc))))
-    (defn fq-cursor (backlog to last_seen iface)
-        (fq-cursor-loop (fq-drain backlog to last_seen iface) last_seen))
+    ; New high-water cursor = max seq among ALL recipient entries inspected this drain (addressed to
+    ; `to`, seq > last_seen) — CONSENT-INDEPENDENT. A denied (un-offered-kind) entry is decided in the
+    ; PRESENT and passed, not deferred: consent is continuous (lc-consent-is-continuous), so a signal
+    ; not consented to when it surfaced is refused now, never retroactively forced if the interface
+    ; reopens. This makes replay deterministic and independent of unrelated later messages (a scalar
+    ; cursor cannot defer holes without re-delivery; a non-scalar per-kind cursor is the future option
+    ; if transient-misconfig recovery becomes a felt need). iface is therefore not a cursor input.
+    (defn fq-cursor-loop (backlog to last_seen acc)
+        (if (eq (len backlog) 0) acc
+            (fq-cursor-loop (tail backlog) to last_seen
+                (if (eq (fq-to (head backlog)) to)
+                    (if (gt (fq-seq (head backlog)) last_seen)
+                        (if (gt (fq-seq (head backlog)) acc) (fq-seq (head backlog)) acc)
+                        acc)
+                    acc))))
+    (defn fq-cursor (backlog to last_seen) (fq-cursor-loop backlog to last_seen last_seen))
 
     0)

@@ -19,7 +19,7 @@
     ],
     "fourth_arm": "field-queue band crosses four-way (Go/Rust/TS/fkwu) at verdict 127, 0 divergent; registered as 'field-queue fkc 127'.",
     "native_binary": "validate.sh --binary -> 127, 0 divergent.",
-    "notes": "Pure structural selection over list metadata; no host-io/node/multi-line ops -- four-way friendly."
+    "notes": "Pure structural selection over list metadata; no host-io/node/multi-line ops -- four-way friendly. Cursor semantics hardened after Codex P2: fq-cursor advances over ALL addressed-unseen entries (consent-independent, present-tense per lc-consent-is-continuous), so a denied entry's replayability no longer depends on unrelated later messages; band pins a denied tail entry. Re-validated 127 four-way + native."
   },
   "ci_validation": {
     "status": "pending",
@@ -35,14 +35,39 @@
     "state": "decision-body-proven",
     "can_move_next_phase": false
   },
-  "idea_ids": ["federation-and-nodes"],
-  "spec_ids": ["field-queue-drain"],
-  "task_ids": ["field-queue-drain"],
-  "contributors": [
-    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "acceptance"]},
-    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["design", "implementation", "validation", "evidence"]}
+  "idea_ids": [
+    "federation-and-nodes"
   ],
-  "agent": {"name": "Claude", "version": "4.x"},
+  "spec_ids": [
+    "field-queue-drain"
+  ],
+  "task_ids": [
+    "field-queue-drain"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "design",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "4.x"
+  },
   "evidence_refs": [
     "form/form-stdlib/field-queue.fk",
     "form/form-stdlib/tests/field-queue-band.fk",
