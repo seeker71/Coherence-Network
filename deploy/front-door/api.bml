@@ -1939,7 +1939,7 @@ section [form.route] {
     class AgentTasksActiveRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-tasks-active", "GET", "/api/agent/tasks/active", 90, "api_agent_tasks_active", "Accept", 25);
     class AgentTasksActivityRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-tasks-activity", "GET", "/api/agent/tasks/activity", 90, "api_agent_tasks_activity", "Accept", 25);
     class AgentTaskLogRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-log", "GET", "/api/agent/tasks/{task_id}/log", 91, "api_agent_task_log", "Accept", 35);
-    class AgentTaskRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-detail", "GET", "/api/agent/tasks/task_*", 88, "api_agent_task", "Accept", 35);
+    class AgentTaskRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-detail", "GET", "/api/agent/tasks/{task_id}", 88, "api_agent_task", "Accept", 35);
     class ContributorsIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("contributors-index", "GET", "/api/contributors", 88, "api_contributors", "Accept", 35);
     class ContributionsIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("contributions-index", "GET", "/api/contributions", 88, "api_contributions", "Accept", 35);
     class LensesIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("lenses-index", "GET", "/api/lenses", 88, "api_lenses", "Accept", 35);
