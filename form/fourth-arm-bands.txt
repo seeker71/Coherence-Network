@@ -46,8 +46,10 @@
 #     make flt-bp-node read the full generated bp_table instead of the hand-coded subset.
 #   symbol-wire ctor     — recipe_to_bytes / bytes_to_recipe (.fkb wire round-trip). ~2 bands
 #     (symbols, source-corpus-roundtrip).
-#   float-NodeID read-back — make_float64 / float_value (live-float construct + decode; the trivial
-#     float LEAF already crosses). ~3 bands (float-natives, ml-flow, bml-thesis-float-literals).
+#   float-NodeID read-back — DONE for the ML lane: make_float64/float_value (fourth-shim) + fk_neq
+#     value-compare on type-6/7 leaves now cross (ml-flow four-way). RESIDUAL: float-natives needs true
+#     f32 NARROWING (the shim does not narrow), IEEE corner exactness (±Inf/subnormals/NaN identity),
+#     and the math natives (sqrt/pow/floor/ceil) over the node ABI.
 #   field constructors   — field_* native family; best re-expressed over make_nodeid+intern_node.
 #     ~1 raw-native band (production field work already crosses via the BML DSL).
 #   host io family       — broader source-scan + .fkb codec (read/write_form_binary) + corpus reads
