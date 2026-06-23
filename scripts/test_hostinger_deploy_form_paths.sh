@@ -145,10 +145,10 @@ def expected_token(path: str) -> str:
         return "(PathRegexp(`^/api/graph/nodes/[^/]+$`) && !Path(`/api/graph/nodes/count`))"
     if path == "/api/ideas/{idea_id}":
         return "(PathRegexp(`^/api/ideas/[^/]+$`) && !Path(`/api/ideas/storage`) && !Path(`/api/ideas/tags`) && !Path(`/api/ideas/cards`) && !Path(`/api/ideas/health`) && !Path(`/api/ideas/right-sizing`) && !Path(`/api/ideas/showcase`) && !Path(`/api/ideas/resonance`) && !Path(`/api/ideas/count`) && !Path(`/api/ideas/progress`) && !Path(`/api/ideas/portfolio-summary`) && !Path(`/api/ideas/breath-overview`))"
+    if path == "/api/agent/tasks/{task_id}":
+        return "(PathRegexp(`^/api/agent/tasks/[^/]+$`) && !Path(`/api/agent/tasks/active`) && !Path(`/api/agent/tasks/activity`) && !Path(`/api/agent/tasks/attention`) && !Path(`/api/agent/tasks/count`))"
     if path == "/api/concepts/lc-*":
         return "PathRegexp(`^/api/concepts/lc-[^/]+$`)"
-    if path == "/api/agent/tasks/task_*":
-        return "PathRegexp(`^/api/agent/tasks/task_[^/]+$`)"
     if path == "/api/presence/*":
         return "PathRegexp(`^/api/presence/[^/]+$`)"
     if path == "/api/field-stories/*":

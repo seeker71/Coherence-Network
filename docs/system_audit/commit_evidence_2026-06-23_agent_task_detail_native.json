@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/python-to-form-native-20260623",
+  "commit_scope": "Release GET /api/agent/tasks/{task_id} from Python fanout into the existing BML native task-detail handler while keeping reserved task collection subroutes outside the detail match.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "agent-pipeline",
+    "native-route-goal",
+    "kernel-native-api"
+  ],
+  "spec_ids": [
+    "agent-orchestration-api",
+    "canonical-route-registry-and-runtime-mapping"
+  ],
+  "task_ids": [
+    "python-to-form-native-20260623"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/native_route_goal_loop.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_2026-06-23_agent_task_detail_native.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/native_route_goal_loop.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_2026-06-23_agent_task_detail_native.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/native_route_goal_loop.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name], strained: [.organs[] | select(.status == \"strained\") | {name,detail,latency_ms,last_sample_at}]}'",
+      "form-cli ask \"For this Coherence Network task, user asks to tend Python code and convert it to Form native. Wellness shows endpoint_ideas fallback strain, 799 Python API routes, and missing primitive registry entries form_compile form_walk str_byte_at. What is the smallest bounded Form-native migration to do now, with files and proof command?\"",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "cd api && python3 -m pytest -q tests/test_runtime_surface_native_routes.py tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/runtime_surface_report.py --json | python3 -c 'import json,sys; d=json.load(sys.stdin); paths=set(r.split(\" \",1)[1] if \" \" in r else r for r in d.get(\"kernel_first_capable_route_names\", [])); print({\"capable_routes\": d.get(\"kernel_first_capable_routes\"), \"has_agent_task_detail\": \"/api/agent/tasks/{task_id}\" in paths, \"has_agent_task_task_star\": \"/api/agent/tasks/task_*\" in paths})'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide passed on the fresh worktree. Wellness reported the known bootstrap/native migration pressure and a live witness strain on endpoint_ideas fallback. form-cli returned no local answer, so route selection used native-route goal evidence. Before the change, GET /api/agent/tasks/{task_id} was the highest observed Python fanout route in the web_api window. After the change, native_route_goal_loop classified GET /api/agent/tasks/{task_id} as kernel-native-high-grammar, and observed high-grammar share rose to 95.60%. Runtime-surface report showed capable_routes=104, has_agent_task_detail=true, and has_agent_task_task_star=false. The route-goal classifier and Hostinger ingress proof now reserve /api/agent/tasks/attention and /api/agent/tasks/count for their existing Python collection handlers until those get dedicated native BML handlers. The Form source route-template band returned 8389697 with 1 ok and 0 divergent. The worktree lacks a prebuilt form-kernel-rust release binary, so the direct Rust route-file check was not used as pass evidence."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy had run when this evidence was written."
+  },
+  "phase_gate": {
+    "phase": "agent-task-detail-native-route-release",
+    "gate": "Observed agent task detail reads should enter the BML native front door for generic task id shapes, not only ids beginning task_, while reserved task collection subroutes stay on their current handlers.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push, open PR, watch CI, merge, deploy, and verify the public task-detail route returns X-Form-Router: native-kernel for a live non-task_ id; verify reserved /attention and /count were not captured by the task-detail handler."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/agent/tasks/{task_id} is now represented as a generic BML RouteCell and the Hostinger Traefik batch routes non-reserved single-segment task ids to the BML front door. The existing api_agent_task handler therefore covers observed non-task_ task ids instead of sending them to Python fanout, while /api/agent/tasks/attention and /api/agent/tasks/count remain outside the detail route.",
+    "public_endpoints": [
+      "local:GET /api/agent/tasks/{task_id}",
+      "local:GET /api/agent/tasks/{task_id}/log",
+      "local:python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400"
+    ],
+    "test_flows": [
+      "Route goal classification sees /api/agent/tasks/agent-anything as kernel-native-high-grammar.",
+      "Runtime-surface capable routes include /api/agent/tasks/{task_id} and no longer include /api/agent/tasks/task_*.",
+      "Hostinger deploy path coverage accepts the generic task-detail PathRegexp."
+    ],
+    "summary": "The local route-release proof passed and removed the observed Python fanout classification for agent task detail reads."
+  }
+}
