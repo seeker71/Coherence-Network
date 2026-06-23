@@ -2,7 +2,7 @@
 ; source lowers to an addressable CELL whose ctor IS the parsed recipe, and the
 ; cell runs to the right output. Verdict = 15, asserted on the 4th kernel.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk
 
 (do
     (let src "seq 3 | grep 2 ; echo done")

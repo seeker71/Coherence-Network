@@ -881,9 +881,10 @@ q-actor-critic-fixpoint fks 255
 diffusion-q-autoresearch fks 63
 form-lower-sim fks 15
 form-lower-fp-stack fks 31
-shell-parse fks 31
-shell-exec fks 63
+shell-parse fks 255
+shell-exec fks 511
 shell-cell fks 15
+live-room-shell fks 63
 const-recipe fks 511
 model-search fks 31
 tooluse-model-search fks 63
