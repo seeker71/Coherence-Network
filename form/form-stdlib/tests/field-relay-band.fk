@@ -1,0 +1,35 @@
+; preludes: form-stdlib/field-relay.fk
+;
+; The content-blind relay decision, pinned. kinds: announce=1, ping=2, block=5.
+; cells: alice=10 (connected, offers announce+ping), bob=11 (offline, offers announce+ping),
+;        carol=12 (connected, offers announce only — NOT block).
+; The four outcomes (DELIVER 1 / QUEUE 2 / DENY 3 / DROP 0), the body-blindness law, and the
+; registry-has probe. Verdict 127 when every claim lands.
+(do
+    (let registry (list
+        (list 10 1 (list 1 2))     ; alice: connected, offers announce+ping
+        (list 11 0 (list 1 2))     ; bob:   offline,   offers announce+ping
+        (list 12 1 (list 1))))     ; carol: connected, offers announce only
+
+    ; DELIVER — ping to alice (connected + offers ping)
+    (let c0 (if (eq (fr-route registry (fr-envelope 11 10 2 (list 7 7))) 1) 1 0))
+    ; QUEUE — ping to bob (offline but offers ping; board holds it)
+    (let c1 (if (eq (fr-route registry (fr-envelope 10 11 2 (list 7 7))) 2) 2 0))
+    ; DENY — block to carol (connected but does NOT offer block) — consent is the gate
+    (let c2 (if (eq (fr-route registry (fr-envelope 10 12 5 (list 7 7))) 3) 4 0))
+    ; DROP — ping to an unknown NodeID (99 not in registry)
+    (let c3 (if (eq (fr-route registry (fr-envelope 10 99 2 (list 7 7))) 0) 8 0))
+
+    ; BODY-BLINDNESS — two envelopes identical in metadata, different bodies, route identically
+    (let env-a (fr-envelope 11 10 2 (list 7 7)))
+    (let env-b (fr-envelope 11 10 2 (list 8 8 8)))
+    (let c4 (if (eq (fr-route registry env-a) (fr-route registry env-b)) 16 0))
+
+    ; registry-has? — alice present, unknown absent
+    (let c5 (if (and (eq (fr-registry-has? registry 10) 1)
+                     (eq (fr-registry-has? registry 99) 0)) 32 0))
+
+    ; consent-positive — announce to carol (carol offers announce) -> DELIVER
+    (let c6 (if (eq (fr-route registry (fr-envelope 10 12 1 (list 7 7))) 1) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
