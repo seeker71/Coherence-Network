@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/amazing-gagarin-b118a6",
+  "commit_scope": "Breath 4 of the field relay — the device CARRIERS — built and proven end-to-end against the LIVE relay (wss://api.coherencycoin.com/api/field/relay). New: scripts/field_relay_client.py (an ed25519 identity carrier where NodeID=sha256(pubkey), sign/verify, a TOFU pin store, and a dial-out WS client) and form/form-stdlib/field-identity-decide.fk (the staged-input entry that lets the carrier feed the four crypto booleans as DATA and read the verdict back from the PROVEN fiv-verdict recipe running on the fkwu universal kernel — the decision stays Form, the carrier never synthesizes source). The e2e flow, run three times with fresh keypairs against the live production relay, passes 6/6: (1) device A signs an envelope to B -> first contact FIRST_USE_PIN, B accepts + pins; (2) A again, now pinned -> TRUSTED; (3) impersonator C claims A's NodeID while signing with C's own key -> REJECT_NODEID_MISMATCH, not accepted, flagged impersonation, A's pin uncorrupted; (4) B offline -> A's sends QUEUE/DENY at the relay (the relay's own content-blind consent gate denies field-block live), and on reconnect fq-drain selects exactly the consent-ok unseen entries (seq1,seq3, not the denied field-block) with the cursor advancing to 3. Every trust verdict was computed by fiv-verdict on the fkwu kernel; the drain selection mirrors the proven fq-drain (field-queue.fk) faithfully in Python exactly as the live relay endpoint mirrors fr-route.",
+  "files_owned": [
+    "scripts/field_relay_client.py",
+    "form/form-stdlib/field-identity-decide.fk",
+    "docs/system_audit/commit_evidence_2026-06-23_field_relay_breath4_e2e.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/field_relay_client.py e2e   # 6/6 PASS against the live relay, x3 fresh keypairs",
+      "bash scripts/fkwu_run.sh <4-digit-bundle> form-stdlib/field-identity.fk form-stdlib/field-identity-decide.fk   # full fiv-verdict truth table on fkwu (1..6)"
+    ],
+    "fourth_arm": "The decision body fiv-verdict (field-identity.fk) is four-way (Go/Rust/TS/fkwu) verdict 511, 0 divergent, and the field-identity-decide.fk staged-input entry runs it on the fkwu binary: the six-verdict truth table (1 TRUSTED · 2 FIRST_USE_PIN · 3 UNVERIFIED · 4 REJECT_PIN_CONFLICT · 5 REJECT_NODEID_MISMATCH · 6 REJECT_DELEGATION) all reproduce on fkwu from staged data input. fq-drain (field-queue.fk) is four-way verdict 127.",
+    "native_binary": "fiv-verdict runs on the fkwu universal kernel (native) via fkwu_run.sh in the e2e loop — the trust verdict for every received envelope was computed by the kernel, not re-implemented in the carrier.",
+    "notes": "field-identity-decide.fk is a staged-input ENTRY (input_byte channel, fkwu argv[3]) in the family of native-thought-receipt-main.fk / form-cli-main.fk — not a four-way witness band (its output depends on runtime staged data); its decision logic IS the four-way-proven fiv-verdict. The carrier is the thin crypto+network shell; the security-critical verdict stays the proven Form recipe on the kernel. The reconnect drain is a faithful Python mirror of fq-drain (the canonical proven body, field-queue.fk), the same bootstrap-carrier pattern the relay endpoint uses for fr-route. Transient HTTP 502 / handshake timeouts at the public edge during the run (the witness showed the web organ 'strained') are absorbed by the protocol's own exponential-backoff reconnect (_connect)."
+  },
+  "ci_validation": {"status": "pending", "notes": "The four-way gate runs in CI on the underlying fiv-verdict/fq-drain bands; the e2e client is a tool exercised against the live relay, not a CI job."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy — the relay endpoint is unchanged; this adds dial-out carriers that connect to the already-live relay."},
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Before: breath 4 device carriers were unbuilt (spec: 'dial-out clients ... are a follow-up; the clients are unbuilt carriers that hold a device subkey and sign'). After: a working dial-out client signs ed25519 envelopes through the live relay, a recipient decides trust via fiv-verdict on fkwu (first-use pin -> trusted; impersonator rejected), and an offline cell drains its consent-ok backlog via fq-drain on reconnect — 6/6 e2e checks against wss://api.coherencycoin.com/api/field/relay.",
+    "summary": "python3 scripts/field_relay_client.py e2e -> 6/6 PASS, run x3 with fresh keypairs. Verdicts: FIRST_USE_PIN(2)->TRUSTED(1)->REJECT_NODEID_MISMATCH(5); drain seqs [1,3], cursor 3."
+  },
+  "phase_gate": {
+    "phase": "field-relay-breath-4-device-carrier-e2e",
+    "gate": "Build the breath-4 device carriers (ed25519 identity + dial-out client) and prove the whole identity flow end-to-end against the live relay, with the trust verdict computed by the proven fiv-verdict on the fkwu kernel and the drain by fq-drain. Remaining breath-4 piece: end-to-end encryption of the opaque body (on these breath-3 keys) and per-platform device builds of the client.",
+    "state": "breath-4-identity-flow-e2e-proven-live",
+    "can_move_next_phase": false
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-relay-always-open-connection", "field-identity-verdict", "field-queue-drain"],
+  "task_ids": ["field-relay-breath4-carriers"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["implementation", "proof", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "scripts/field_relay_client.py",
+    "form/form-stdlib/field-identity-decide.fk",
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/field-queue.fk",
+    "api/app/routers/field_relay.py",
+    "specs/field-relay-always-open-connection.md"
+  ],
+  "change_files": [
+    "scripts/field_relay_client.py",
+    "form/form-stdlib/field-identity-decide.fk",
+    "docs/system_audit/commit_evidence_2026-06-23_field_relay_breath4_e2e.json",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "change_intent": "process_only"
+}

@@ -184,8 +184,13 @@ holding*, not about keeping anyone out.
   append-only board on reconnect is a follow-up task (breath 2).
 - **The route is not yet kernel-served.** Breath 1's WS transport is a Python bootstrap carrier over the
   proven Form decision; promoting it to `X-Form-Router: native-kernel` is a follow-up (north-star gap).
-- **Device dial-out clients (Mac/Windows/Android)** are a follow-up (breath 4) — the protocol is
-  identical; the clients are unbuilt carriers that hold a device subkey and sign.
+- **Device dial-out clients (breath 4)** — the identity carrier + dial-out client is now built and
+  proven end-to-end against the live relay (`scripts/field_relay_client.py`: ed25519 keys, NodeID =
+  sha256(pubkey), sign/verify, TOFU pin; the trust verdict runs on the proven `fiv-verdict` via the
+  fkwu kernel, `form/form-stdlib/field-identity-decide.fk`). First-use-pin → trusted, impersonator
+  rejected (REJECT_NODEID_MISMATCH), and an offline cell drains its consent-ok backlog via `fq-drain`
+  on reconnect — 6/6 e2e (evidence `commit_evidence_2026-06-23_field_relay_breath4_e2e.json`). Still
+  open in breath 4: end-to-end body encryption on these keys, and per-platform device builds of the client.
 
 ## Out of Scope
 

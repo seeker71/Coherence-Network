@@ -1,0 +1,22 @@
+; field-identity-decide.fk — the runtime staged-input entry for the identity VERDICT (breath 4 carrier bridge).
+;
+; preludes: form-stdlib/field-identity.fk
+;
+; field-identity.fk proves the VERDICT logic (fiv-verdict, four-way + native + mac/windows/android rows).
+; This is the thin entry that lets a CARRIER feed the four crypto RESULTS as DATA (never synthesized Form
+; source) and get the verdict back from the proven recipe running on the kernel itself. The ed25519/sha256
+; carrier computes the booleans, stages them, and reads the answer here — the decision stays Form.
+;
+; Staging: the carrier writes FOUR digit chars into the input_byte channel (fkwu argv[3] / --stage),
+; one per input, in order — nodeid_match, sig_ok, deleg_ok, pin_state. Each is a single digit '0'..'2'
+; (byte value 48+v), so the value is (sub byte 48). No NUL appears among the four (they are digits), so
+; the staged bundle is exactly those four bytes. The recipe calls the PROVEN fiv-verdict on them and
+; prints the verdict int — the same six-verdict shape the band proves (1 TRUSTED · 2 FIRST_USE_PIN ·
+; 3 UNVERIFIED · 4 REJECT_PIN_CONFLICT · 5 REJECT_NODEID_MISMATCH · 6 REJECT_DELEGATION).
+; Run via: scripts/fkwu_run.sh <bundle> form-stdlib/field-identity.fk form-stdlib/field-identity-decide.fk
+(do
+    (let nodeid_match (sub (input_byte 0) 48))
+    (let sig_ok       (sub (input_byte 1) 48))
+    (let deleg_ok     (sub (input_byte 2) 48))
+    (let pin_state    (sub (input_byte 3) 48))
+    (fiv-verdict nodeid_match sig_ok deleg_ok pin_state))

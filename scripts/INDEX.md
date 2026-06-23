@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 334
+**Total files**: 335
 
 | File | Purpose |
 |---|---|
@@ -85,6 +85,7 @@
 | [external_proof_demo.py](external_proof_demo.py) | External proof demo — exercises the Coherence Network public API from outside the repo. |
 | [fatal_http_all_kernels_probe.py](fatal_http_all_kernels_probe.py) | Probe fatal HTTP replies across the current four kernel carriers. |
 | [federation_peer_poll.py](federation_peer_poll.py) | federation_peer_poll — fire one peer-poll cycle from the command line. |
+| [field_relay_client.py](field_relay_client.py) | field_relay_client.py — breath-4 carriers + dial-out client for the field relay (the on-device e2e receipt). |
 | [field_relay_dev_setup.sh](field_relay_dev_setup.sh) | field_relay_dev_setup.sh — provision a session to BUILD + PROVE the field relay's breath-4 carriers. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
