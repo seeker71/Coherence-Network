@@ -260,7 +260,9 @@
         (if (eq (lo-tag prog i) 4) (lo-fsub prog i argr)
         (if (eq (lo-tag prog i) 5) (lo-fmul prog i argr)
         (if (eq (lo-tag prog i) 8) (lo-fdiv prog i argr)
-            (list)))))))
+        (if (eq (lo-tag prog i) 12) (lo-i2f prog i)             ; I2F: int->f64 (scvtf) — the int->float boundary
+        (if (eq (lo-tag prog i) 13) (lo-f2i prog i argr)        ; F2I: f64->int trunc (fcvtzs) — the float->int boundary
+            (list)))))))))
     ; FADD/FMUL commute: ARG on both sides folds to one register-form instruction; ARG on
     ; one side lowers the other subtree into d0, then the op against the banked arg.
     (defn lo-fadd (prog i argr)
@@ -294,6 +296,28 @@
         (if (lo-arg? prog (lo-c1 prog i))
             (lo-app (lo-fnode prog (lo-c2 prog i) argr) (fa-fdiv 0 argr 0))
             (list))))
+    ; ── the int↔float BOUNDARY — the lane crossing every real-model recipe makes ──
+    ; A real model's weights enter as integer bit-fields (q4k unpack, f16 mantissa/exponent)
+    ; and rebuild as f64 (fd-frac's (mul 1.0 (fd-mant ...))); the verdict casts back to int
+    ; (round). form-asm.fk already byte-proves the two arm64 conversion instructions against
+    ; the clang oracle — scvtf d<rd>,x<rn> (signed i64 -> f64) and fcvtzs x<rd>,d<rn> (f64 ->
+    ; signed i64, toward zero). These two nodes wire them into the lowerer so a recipe that
+    ; crosses the lane lowers to native bytes with no clang. Round-to-nearest (fcvtns) is the
+    ; adjacent named-next; F2I here is the C-cast truncation.
+    ; I2F (tag 12): lower the INTEGER child (the w-register lane) then scvtf its w0 into d0. An
+    ; ARG-in-w0 child reads x0 directly (oracle-matched, no redundant mov), mirroring lo-add's
+    ; operand-aware discipline; a general int subtree lands in w0 first. The single int arg is
+    ; the w0 convention (argr 0) — multi-int-arg banking into the FP frontend is the named next.
+    (defn lo-i2f (prog i)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (fa-scvtf 0 (lo-argr prog (lo-c1 prog i) 0))
+            (lo-app (lo-node prog (lo-c1 prog i) 0) (fa-scvtf 0 0))))
+    ; F2I (tag 13): lower the FLOAT child (the d-register lane, lo-fnode) into d0, then fcvtzs
+    ; d0 -> x0. The child rides the same float argr as the surrounding FP body, so F2I composes
+    ; on top of any proven FP subtree (e.g. trunc(d*d)).
+    (defn lo-f2i (prog i argr)
+        (lo-app (lo-fnode prog (lo-c1 prog i) argr) (fa-fcvtzs 0 0)))
+
     ; compile a float function OF one float arg: bank d0 -> d1, lower the body, ret.
     (defn lo-fcompile (prog root) (lo-app (lo-fnode prog root 1) (fa-ret)))
     (defn lo-fcompile-fn (prog root) (lo-app (fa-fmov 1 0) (lo-fcompile prog root)))
