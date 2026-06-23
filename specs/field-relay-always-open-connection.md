@@ -29,7 +29,7 @@ constraints:
   - "Consent is the gate, not an afterthought: channel-interface-consent.form governs who may reach whom; the relay enforces the offered-interface, it does not widen it"
   - "The durable backlog is the existing append-only board (scripts/agent-coord.sh / $COHERENCE_COORD), not a new store — the socket is the breath, the board is the memory"
   - "Python/FastAPI is the bootstrap transport carrier only; the routing+consent BODY is the Form recipe (X-Form-Router native-kernel is the north star for the route)"
-  - "Open join, no proof gate: a cell does not authenticate TO the relay. A NodeID is content-addressed (key-derived); authoring AS a NodeID means signing, which is authorship not a permission check — the relay never polices it. A recipient that cares about a sender's authenticity verifies the signature itself (TOFU, presence-over-protection); the relay only routes."
+  - "Open join, no proof gate: a cell never authenticates TO the relay — it routes by the presented NodeID and never polices identity (true today and by design). Verifiable identity is an EDGE concern, not the relay's: per the Identity model (breath 3), a person NodeID derives from a root keypair and authorship is proven by signature that recipients verify + TOFU-pin. Until breath 3 lands, the presented NodeID is an unverified self-asserted string; the relay's openness is unchanged either way."
   - "Consent is the single boundary (channel-interface-consent) — not identity, not an allowlist. No abuse/rate-limit machinery is built pre-emptively; if flooding becomes a felt, evidenced problem it is tended then, never as a cage for ghosts (trust-over-fear)."
 ---
 
@@ -64,8 +64,51 @@ building ahead of need.
   endpoint carries it so two cells dialing out exchange membrane signals end-to-end with keepalive.
 - **Breath 2: durable backlog + presence.** Wire the append-only board as the offline queue an
   reconnecting cell drains; presence/heartbeat as first-class membrane signals.
-- **Breath 3: the device carriers.** Dial-out clients for Mac/Windows/Android; the end-to-end key
-  exchange that fills the ciphertext body the relay already refuses to read.
+- **Breath 3: identity at the edges** — the precondition for more than one person. Today the relay
+  takes a *self-asserted NodeID string, unsigned*: it cannot tell people apart, and the whole field
+  silently assumes one human. Breath 3 closes that. See the Identity model section below; in short: a
+  **person-root keypair** whose public key derives the person's NodeID, **per-device subkeys** the root
+  delegates (one person across Mac/Windows/Android; lose a device → revoke its subkey, root intact),
+  *identify = sign*, peers **verify + TOFU-pin** the root, and social attribution (the existing
+  37-provider TOFU, `identity-and-onboarding`) layers on top binding handles/wallets to the root NodeID.
+  The relay stays open and content-blind throughout — authenticity lives at the edges, never as a gate.
+- **Breath 4: the device carriers.** Dial-out clients for Mac/Windows/Android that hold a device subkey,
+  carry the person NodeID, dial out, and sign their envelopes; plus the end-to-end key exchange (built
+  on the breath-3 identity keys) that fills the ciphertext body the relay already refuses to read.
+
+## Identity model (breath 3 design)
+
+The relay's open-join decision is settled: a cell never authenticates *to* the relay, and consent (the
+offered interface) is the only routing boundary. Identity is therefore an **edge** concern — how cells
+recognize *each other*, not how the relay admits anyone. The model, honoring content-addressing,
+sovereignty, and presence-over-protection:
+
+- **Person-root keypair = sovereign identity.** On first setup a person generates a root keypair. The
+  **person NodeID is derived from the root public key** (content-addressed — your identity *is* your
+  key, not a handle a server assigns). The root private key is the one thing that is truly *you*; it
+  need not live on every device.
+- **Per-device subkeys.** Each device (Mac, Windows, Android) holds its **own subkey, delegated by the
+  root** via a signed delegation. One person spans many devices; a device signs *as the person* without
+  carrying the root secret. Losing or retiring a device **revokes its subkey**, never the root — the
+  person identity survives the device.
+- **Identify = sign.** "Identifying yourself" is signing your envelopes (device subkey, chained to the
+  root delegation). It is authorship, never a permission check. The relay forwards regardless.
+- **Peers verify + TOFU-pin.** The first time a cell sees a person's root pubkey it **pins** it (like
+  SSH `known_hosts`); thereafter a mismatched signature is a caught impersonation. Trust on first use,
+  strengthened over time — exactly the `identity-and-onboarding` spirit, at the key layer.
+- **Social attribution layers on top.** The existing 37-provider TOFU binds *handles/wallets* to the
+  root NodeID ("this key is also @handle / this wallet"), optional and strengthening — the human face
+  over the cryptographic root.
+
+What this answers concretely: **a second person installing** generates their *own* root key → their own
+NodeID → a distinct cell, with **no central registration and no gatekeeper**; others TOFU-pin them on
+first contact. **One person, three devices** is one root with three subkeys. The relay never needs to
+know who anyone is; the field does, by signature.
+
+This is **design, not yet built.** Until breath 3 lands, the `from` field is an unverified self-asserted
+string and the field cannot distinguish people. Breath 3's requirements (keypair gen, NodeID
+derivation, subkey delegation + revocation, envelope signing, recipient verification + TOFU pinning)
+will be specced as their own contract when that breath is taken.
 
 ## Requirements
 
@@ -121,33 +164,40 @@ holding*, not about keeping anyone out.
 - **Consent must actually gate.** The one boundary is the recipient's offered interface; if the relay
   widens it (delivers a kind not offered), reach becomes invasion. Mitigation: `fr-consent-ok?` is the
   single gate, proven four-way.
-- **Authorship authenticity is the recipient's call, not the relay's.** Because identity is
-  content-addressed and the relay routes by the presented NodeID without proof, a cell could present
-  another's NodeID in `from`. This is not a relay concern: a recipient who cares verifies a signature
-  carried in the (relay-opaque) body — TOFU, presence-over-protection. The relay stays a dumb,
-  trusting forwarder; sensing lives in the cells.
+- **Authorship is unverified until breath 3.** Today the `from` field is a self-asserted string with no
+  signature, so any cell can present another's NodeID — the field cannot yet tell people apart, and it
+  silently assumes one human. This is the open hole the Identity model (breath 3) closes: signatures
+  recipients verify + TOFU-pin, authenticity at the edge, never a relay gate. The relay stays a dumb,
+  trusting forwarder by design; the missing piece is the *edge* identity layer, not a relay checkpoint.
 
 ## Gaps
 
+- **Verifiable person identity is not built — the field cannot tell people apart yet.** Today `from` is
+  an unverified self-asserted string and the whole field assumes one human. The Identity model (person
+  root keypair → NodeID, per-device subkeys, sign, TOFU-pin, social attribution) is a follow-up task
+  (breath 3), specced as its own contract when taken. This is the precondition for a second person.
 - **End-to-end key exchange is not in breath 1.** The relay refuses to read the body, but the agreement
   that makes the body ciphertext (rather than plaintext a well-behaved relay simply ignores) is a
-  follow-up (breath 3). Until then, body confidentiality rests on transport TLS + relay good behavior.
+  follow-up (breath 4, built on the breath-3 identity keys). Until then, body confidentiality rests on
+  transport TLS + relay good behavior.
 - **Board-backed offline queue is stubbed in breath 1.** The `queue` decision is proven; draining the
   append-only board on reconnect is a follow-up task (breath 2).
 - **The route is not yet kernel-served.** Breath 1's WS transport is a Python bootstrap carrier over the
   proven Form decision; promoting it to `X-Form-Router: native-kernel` is a follow-up (north-star gap).
-- **Device dial-out clients (Mac/Windows/Android)** are a follow-up (breath 3) — the protocol is
-  identical; the clients are unbuilt carriers.
+- **Device dial-out clients (Mac/Windows/Android)** are a follow-up (breath 4) — the protocol is
+  identical; the clients are unbuilt carriers that hold a device subkey and sign.
 
 ## Out of Scope
 
-- The end-to-end encryption key exchange that fills the opaque body (breath 3) — breath 1 proves the
-  relay *refuses to read* the body; the key agreement that makes it ciphertext is a separable arc.
-- Device dial-out clients for Mac/Windows/Android (breath 3) — the protocol is identical across them;
-  clients are carriers, not new logic.
+- Verifiable person identity — the root-keypair → NodeID → per-device-subkey → sign → TOFU-pin model
+  (breath 3) — is designed in the Identity model section but specced and built as its own contract.
+- The end-to-end encryption key exchange that fills the opaque body (breath 4, on the breath-3 keys) —
+  breath 1 proves the relay *refuses to read* the body; the key agreement that makes it ciphertext is
+  a separable arc.
+- Device dial-out clients for Mac/Windows/Android (breath 4) — the protocol is identical across them;
+  clients are carriers (holding a device subkey), not new routing logic.
 - Full board-backed offline queue + presence semantics (breath 2).
 - Promoting the route to kernel-served (`X-Form-Router: native-kernel`) — the north star; breath 1's
   Python WS endpoint is the bootstrap transport over the proven Form decision.
 - Relay-side rate limiting / abuse controls — not built. Presence over protection: we add tending only
   when a real, evidenced load shows up, never a pre-emptive cage.
-```
