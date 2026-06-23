@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 147
+**Total files**: 148
 
 | File | Purpose |
 |---|---|
@@ -70,6 +70,7 @@
 | [explore.py](explore.py) | Explore queue — serendipitous meetings, one after another. |
 | [fallbacks.py](fallbacks.py) | Fallback visibility — read the witness of silent degradation paths. |
 | [federation.py](federation.py) | Federation API routes for cross-instance data exchange. |
+| [field_relay.py](field_relay.py) | Field relay — one always-open connection across networks (breath 1 transport carrier). |
 | [field_stories.py](field_stories.py) | Field story router — source-backed narrative and frequency artifacts. |
 | [flow_renderer.py](flow_renderer.py) | Flow renderer data — real energy flows for visualization. |
 | [flow_simulator.py](flow_simulator.py) | Flow simulator — visualize how CC moves through the community. |
