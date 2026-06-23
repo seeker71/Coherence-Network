@@ -1,0 +1,44 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/standard-receipt",
+  "commit_scope": "Codify THE standard receipt (Urs, 2026-06-23): a request is fully done when its work is c-bootstrap fkwu form-cli observed on mac+windows+android WITHOUT go/rust/clang/bash/python — the sovereignty receipt. Adds docs/coherence-substrate/standard-receipt.form (the per-claim template: body/c-bootstrap/toolchain-free/platforms/honest-floor) and a CLAUDE.md pointer making it the bar every request earns toward. Names the honest floor: nothing today earns it (proofs are four-way via validate.sh+bash+walkers; form-cli is Go-built; no device run captured) — pending is honest, the gap is the roadmap.",
+  "files_owned": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "CLAUDE.md",
+    "docs/system_audit/commit_evidence_2026-06-23_standard_receipt.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [],
+    "notes": "Documentation/standard only — no runnable artifact. Self-consistency check: this change is docs_only, so by its own standard the platform rows (mac/windows/android) are n/a — a doc does not run on devices. The standard it defines applies to runnable work going forward."
+  },
+  "ci_validation": {"status": "pending", "notes": "Docs/standard; no CI gate beyond lint."},
+  "deploy_validation": {"status": "pending", "summary": "Not deployed; an operating-standard doc + CLAUDE.md convention."},
+  "phase_gate": {
+    "phase": "standard-receipt-codified",
+    "gate": "Make the c-bootstrap-fkwu-form-cli-on-all-platforms-toolchain-free receipt the explicit bar every request earns toward, with an honest-floor row so lesser proofs (four-way-in-CI, Go-built form-cli, bash validate) are named as rungs below the bar, never as the bar.",
+    "state": "standard-codified",
+    "can_move_next_phase": false
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-relay-always-open-connection"],
+  "task_ids": ["standard-receipt"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "standard-setting", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["authoring", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "CLAUDE.md",
+    "form/fourth-arm-bands.txt",
+    "scripts/ensure_form_cli_kernel.sh",
+    "docs/vision-kb/concepts/lc-cognitive-sovereignty.md"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "CLAUDE.md",
+    "docs/system_audit/commit_evidence_2026-06-23_standard_receipt.json"
+  ],
+  "change_intent": "docs_only"
+}

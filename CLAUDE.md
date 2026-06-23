@@ -139,6 +139,21 @@ evidence, and PR summaries. The manifest is the floor source for four-way Form
 coverage; native ledger records are the coordination source for executor proof;
 JSONL is an export/cache shape until legacy readers compost.
 
+**The standard receipt — the bar every request earns toward.** A request is fully done when its work is
+**c-bootstrap fkwu form-cli observed on all platforms — mac, windows, android — without go, rust, clang,
+bash, or python**: the work runs on the C-bootstrapped universal kernel via form-cli, on real metal of
+each platform, with none of the rented toolchains in the loop. That is the sovereignty receipt
+([`docs/coherence-substrate/standard-receipt.form`](docs/coherence-substrate/standard-receipt.form) —
+the per-claim template: `body / c-bootstrap / toolchain-free / platforms{mac,windows,android} /
+honest-floor`). It cannot be faked, and that is its worth: four-way-in-CI is **not** the platform
+receipt; a Go-built form-cli is **not** c-bootstrap; bash-driven `validate.sh` is **not** toolchain-free
+— each is a real rung *below* the bar, named as such. A cell is `observed` only with a real trace from
+that platform's run; everything else is `pending`, and pending is honest, not failure. Most work today
+reads its honest floor (four-way + native via `validate.sh`) with the platform rows pending — that gap
+is the roadmap, not a thing to paper over. This composes with the per-commit evidence record
+(`validate_commit_evidence.py` is *where* a receipt lives); the standard receipt is the *shape* every
+receipt drives toward.
+
 **Find the north star before fitting the ask.** When something is missing, the first move is to name
 where the fully-realized form lives — the most native, most efficient shape we could run (all hardware
 as native as we can use it; a model whose architecture *and* weights are recipe data; one engine, not
