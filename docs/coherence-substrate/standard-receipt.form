@@ -35,15 +35,17 @@
 ;     Go/Rust/TS walkers present, on the build host, not on mac/windows/android devices.
 ;   - form-cli today builds from GO source (ensure_form_cli_kernel.sh), so it is not yet the
 ;     c-bootstrap fkwu form-cli the receipt names.
-;   - The fkwu BINARY now runs these bodies STANDALONE on three real arches: linux/elf (links libc.so.6 +
-;     ld-linux only), mac/mach-o/arm64 (links /usr/lib/libSystem.B.dylib only), and android/aarch64
-;     (static-musl ELF on a Galaxy S23 Ultra that carries NO toolchain at all) — each invoked as
-;     `./fkwu <table> 0` with no walkers in the loop. So BODY + toolchain-free RUNTIME are observed, and
-;     two platform rows are observed on real metal: MAC (Apple M4 Max, macOS 26.3.1 —
-;     commit_evidence_2026-06-23_fkwu_mac_platform_row.json) and ANDROID (Samsung SM-S918U1, Android 16 —
-;     commit_evidence_2026-06-23_fkwu_field_android_row.json); linux/elf in ..._fkwu_standalone_receipt.json.
-;     Still pending: c-bootstrap (binaries zig-cc/clang-built, tables Go-flattened) and the WINDOWS device
-;     row (CI door extended in windows-host.yml; trace captured when that run lands).
+;   - The fkwu BINARY now runs these bodies STANDALONE on all three named platforms (plus linux/elf):
+;     mac/mach-o/arm64 (links /usr/lib/libSystem.B.dylib only), android/aarch64 (static-musl ELF on a
+;     Galaxy S23 Ultra that carries NO toolchain at all), and windows/PE/x86_64 (windows-latest, via the
+;     CI door) — each invoked as `./fkwu <table> 0` with no walkers in the loop. So BODY + toolchain-free
+;     RUNTIME are observed, and ALL THREE platform rows are observed on real metal:
+;       MAC      — Apple M4 Max, macOS 26.3.1   — commit_evidence_2026-06-23_fkwu_mac_platform_row.json
+;       ANDROID  — Samsung SM-S918U1, Android 16 — commit_evidence_2026-06-23_fkwu_field_android_row.json
+;       WINDOWS  — windows-latest, CI run 28054289485 — commit_evidence_2026-06-23_fkwu_windows_row.json
+;     (linux/elf in ..._fkwu_standalone_receipt.json). The ONE rung left to the full bar: c-bootstrap —
+;     every fkwu binary is still clang/zig-cc-built from emitted C and the tables are Go-flattened; the
+;     clang-free form-asm/{form-macho,form-pe-coff,form-elf} lane is what turns c-bootstrap observed.
 ;
 ; So every receipt below the bar reads its honest-floor + pending platform rows. The bar is the work to
 ; do, not a claim to make:
