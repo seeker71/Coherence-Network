@@ -36,17 +36,12 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <!-- ONE app, ONE icon. Sema is the single launcher surface; the raw sense-organ / mesh
+             dashboard (MainActivity) is reachable from inside Sema, not a second icon. -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:exported="true" />
 
-        <!-- Sema voice surface: its own launcher icon ("Sema") so it opens with one tap, no changes
-             to MainActivity. Speaks an introduction on open, then listens + answers body-first. -->
         <activity
             android:name=".SemaVoiceActivity"
             android:label="Sema"
