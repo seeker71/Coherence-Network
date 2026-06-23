@@ -11,6 +11,29 @@
 ; weight 100, group C (nothing) weight 10000, group D (recipe layer +
 ; lifted TS) weight 1000000. Expected: 15 + 900 + 70000 + 7000000 = 7070915.
 ;
+; Fourth arm: 3-kernel only — groups A and B cross (the value-walk casts and
+;           the inst-row laws ride int/string/bool ops the fourth arm carries),
+;           but groups C and D rest on op families fkwu does not carry:
+;           - group C (nothing): the host-null value ABI. The real kernels
+;             carry a VNull value — `(node_value (make_nodeid 1 1 4 0))` — and a
+;             typed `value_kind` ("int"/"string"/"null"/...). fkwu has no
+;             host-null in its value ABI; the shim carries null STRUCTURALLY as
+;             the reserved VALUE-NONE node and approximates value_kind as
+;             null-vs-value (fourth-shim.fk), which the band's host-null nothing
+;             does not equal — so every ic-nothing? reads "value" and group C
+;             answers 0.
+;           - group D (recipe layer + lifted TS): the lifted-TS path
+;             ts-bmf-run-expr-text / ts-lift-expr-text source-compiles and
+;             evaluates a TypeScript expression through the source-compiler +
+;             grammar layers, which the fourth arm does not yet walk; only the
+;             cast-node content-addressing (d1) crosses.
+;           fkwu answers 2000915 (= 15 + 900 + 0 + 2000000) where the three
+;           walkers answer 7070915 — unsupported op families, named here, not a
+;           divergence. It crosses when the host-null/value_kind value-ABI and
+;           the lifted-TS source-compile-eval carriers
+;           (docs/coherence-substrate/fourth-arm-substrate-carriers.form) join
+;           the fourth arm.
+;
 ; spec: specs/form-intrinsic-casting.md
 ; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk
 

@@ -482,6 +482,7 @@ shared-heart fks 31
 shamballa-codes fks 11111
 shamballa-light-codes fks 111111
 shamballa-symbol-packs fks 1023
+shamballa-channel fks 1111111111
 silence-floor fks 31
 slice-update-roundtrip fks 127
 update-ingest fkc 63
