@@ -227,6 +227,91 @@ async def test_all_healthy():
 
 
 @pytest.mark.asyncio
+async def test_docker_local_bases_probe_public_witness_path():
+    """Container-local bases lift to the public witness path."""
+    seen: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        host = request.url.host
+        path = request.url.path
+        seen.append((host, path))
+
+        if host == "api.coherencycoin.com" and path == "/api/health":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_HEALTH),
+                headers={"content-type": "application/json"},
+            )
+        if host == "api.coherencycoin.com" and path == "/api/ready":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_READY),
+                headers={"content-type": "application/json"},
+            )
+        if (
+            host == "api.coherencycoin.com"
+            and str(request.url).endswith(
+                "/api/ideas?limit=1&offset=0&sort=marginal_cc"
+            )
+        ):
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_IDEAS),
+                headers={
+                    "content-type": "application/json",
+                    "x-form-router": "native-kernel",
+                },
+            )
+        if (
+            host == "api.coherencycoin.com"
+            and path == "/api/workspaces/coherence-network/vitality"
+        ):
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_VITALITY),
+                headers={"content-type": "application/json"},
+            )
+        if host == "api.coherencycoin.com" and path == "/api/substrate/page":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_SUBSTRATE_PAGE),
+                headers={"content-type": "application/json"},
+            )
+        if host == "api.coherencycoin.com" and path == "/api/substrate/form":
+            return httpx.Response(
+                200,
+                content=json.dumps(HEALTHY_SUBSTRATE_FORM),
+                headers={"content-type": "application/json"},
+            )
+        if host == "coherencycoin.com" and path == "/":
+            return httpx.Response(200, content=HEALTHY_HOME_HTML)
+        if host == "coherencycoin.com" and path == "/pulse":
+            return httpx.Response(200, content=HEALTHY_PULSE_HTML)
+        if host == "coherencycoin.com" and path == "/vitality":
+            return httpx.Response(200, content=HEALTHY_VITALITY_HTML)
+        return httpx.Response(599, content=f"unexpected {host}{path}")
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        samples = await probe_all(
+            "http://api:8000",
+            "http://web:3000",
+            client=client,
+        )
+
+    by = {s.organ: s for s in samples}
+    assert all(s.ok for s in samples), {name: s.detail for name, s in by.items()}
+    assert ("api.coherencycoin.com", "/api/health") in seen
+    assert ("api.coherencycoin.com", "/api/ready") in seen
+    assert ("api.coherencycoin.com", "/api/ideas") in seen
+    assert ("api.coherencycoin.com", "/api/substrate/form") in seen
+    assert ("coherencycoin.com", "/") in seen
+    assert ("api", "/api/health") not in seen
+    assert ("web", "/") not in seen
+    assert by["endpoint_ideas"].detail is None
+
+
+@pytest.mark.asyncio
 async def test_substrate_badge_flags_silence_when_resolver_returns_no_path():
     """The real production silence: source_path=null with the not-found note.
 
