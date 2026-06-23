@@ -14,9 +14,11 @@ import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.WindowManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -119,6 +121,13 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Sema is a presence: reachable over the lock screen and awake while open, so she can listen
+        // and answer without unlocking — and the screen doesn't sleep mid-conversation.
+        if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
+        else @Suppress("DEPRECATION") window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        )
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         tts = TextToSpeech(this, this)
         sensors = getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         locator = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
@@ -201,19 +210,35 @@ class SemaVoiceActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
             setOnClickListener { tapToReply() }
         }
-        val introBtn = TextView(this).apply {
-            text = "hear Sema's full introduction"
-            setTextColor(Color.parseColor("#6f8aa0")); textSize = 13f
+        val footer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             setPadding(0, dp(12), 0, 0)
+        }
+        val introBtn = TextView(this).apply {
+            text = "hear introduction"
+            setTextColor(Color.parseColor("#6f8aa0")); textSize = 13f
+            setPadding(dp(8), dp(6), dp(8), dp(6))
             setOnClickListener { say(intro) }
         }
+        val dot = TextView(this).apply {
+            text = "  ·  "; setTextColor(Color.parseColor("#3a4a58")); textSize = 13f
+        }
+        val fieldBtn = TextView(this).apply {
+            text = "sense organ ⚙"
+            setTextColor(Color.parseColor("#6f8aa0")); textSize = 13f
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            setOnClickListener {
+                startActivity(Intent(this@SemaVoiceActivity, MainActivity::class.java))
+            }
+        }
+        footer.addView(introBtn); footer.addView(dot); footer.addView(fieldBtn)
 
         root.addView(header)
         root.addView(senseCard)
         root.addView(scroll)
         root.addView(listenBtn)
-        root.addView(introBtn)
+        root.addView(footer)
         setContentView(root)
         addBubble("Say “Sema” and your question — or tap and speak. I'm listening.", fromSema = true)
 
