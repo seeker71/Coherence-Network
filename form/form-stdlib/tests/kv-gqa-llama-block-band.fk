@@ -1,0 +1,86 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk
+;
+; kv-gqa-llama-block-band — the KV-cached causal GQA llama decoder block (lgqa-generate-causal) lifted to
+; the four-kernel floor: the inner step of the autoregressive generation loop for the REAL llama3.2 (n_q
+; query heads sharing n_kv < n_q KV heads). Each token is RMSNorm'd, q/k/v projected, q/k RoPE'd by position
+; (llama3 theta-500000 scaling), the SMALLER n_kv*HD-wide k/v APPENDED to the cache, the query attends
+; head-by-head over the grown prefix (query head h reads KV head h/group), then the Wo/residual/RMSNorm2/
+; SwiGLU/residual tail runs — only the NEW token projected each step.
+;
+; The proof is that the cache is EXACT — lgqa-generate-causal is BIT-IDENTICAL to the full causal GQA llama
+; block (lgqa-block-causal, four-way 15 #3590) — because a cached k_i/v_i depends only on position i, never
+; the future, so the grown cache at step p equals exactly the prefix the causal GQA mask cuts. The proof is
+; the RELATIONSHIPS, grounded against ALREADY-four-way recipes and published libm pins — no new reference:
+;
+;   the cache reproduces causal-attention-band / kv-llama-block-band's libm-pinned base-10000 values —
+;     token-0 [0][0]=1893731 (mask-restricted; at pos 0 RoPE is identity so cfg theta is irrelevant) and
+;     last-token [1][0]=-1069281 — with NO recompute of earlier tokens' attention.
+;   the EQUIVALENCE LAW (the heart): lgqa-generate-causal == lgqa-block-causal element-for-element, at S=2
+;     AND S=3, for BOTH the single-head (cfg10) case AND the REAL GQA sharing (n_q=2, n_kv=1, HD=2) under
+;     the llama3 theta-500000 cfg — the S=3 fixture proves the recursion threads the cache past the boundary
+;     (the inductive step), grounded by equivalence to the already-four-way lgqa-block-causal.
+;   the autoregressive INVARIANT (why a KV cache is reusable across steps): appending a future token never
+;     changes an earlier token's GQA output — gen3_shr[token 0] == gen2_shr[token 0].
+;   the GENERALIZATION: group=1 (n_kv=n_q, HD=4, cfg base 10000) IS the proven MHA KV decode
+;     lblk-generate-causal (kv-llama-block.fk) bit-for-bit — MHA is the GQA special case, not a parallel path.
+;
+; Fixture: the llama-gqa-block-causal-band fixture (S=2, d=4; the same 4x4 weights re-read as 2 heads of
+; width 2 for GQA sharing). With n_kv=1,HD=2 the k/v project to full width 4 but GQA headslices the first 2 —
+; the cache stores the full RoPE'd projection and headslices identically, so cached == recompute exactly.
+;
+; Verdict 255 when the KV-cached causal GQA llama block lands four-way:
+;   1     gen2[0][0] → 1893731   (single-head cfg10: cache reproduces causal token 0, libm-pinned)
+;   2     gen2[1][0] → -1069281  (single-head cfg10: cache reproduces causal last token — no recompute)
+;   4     gen2 == yc2  (S=2, single-head cfg10: cached decode EXACTLY equals the full causal block)
+;   8     gen3 == yc3  (S=3, single-head: the cache threads correctly past the boundary — inductive step)
+;   16    gen2_shr == yc2_shr  (REAL GQA sharing n_q=2 n_kv=1 HD=2 + llama3 theta: cached == recompute — heart)
+;   32    gen3_shr == yc3_shr  (S=3, GQA sharing: the inductive step under grouping + theta-500000)
+;   64    gen3_shr[0] == gen2_shr[0]  (the AR invariant: token 0 unchanged by appending future, under GQA)
+;   128   lgqa-generate-causal(n_q=1 n_kv=1 HD=4 cfg10) == lblk-generate-causal  (MHA is the group=1 case)
+(do
+    ; --- element-wise float vector equality (for the AR-invariant token-vector claim) ---
+    (defn kg-veq (a b)
+      (if (eq (len a) 0) 1
+          (if (eq (head a) (head b)) (kg-veq (tail a) (tail b)) 0)))
+
+    ; --- the llama-gqa-block-causal-band fixture (S=2 tokens, d=4) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    (let eps 0.00001)
+    (let cfg10 (rope-cfg 10000.0 32.0 1.0 4.0 8192.0))
+    (let cfgl3 (rope-cfg-llama3))
+    (let x3 (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75) (list 0.5 1.0 -0.5 0.25)))
+
+    ; --- single-head cfg10 (n_q=1, n_kv=1, HD=4): reproduces the published base-10000 causal pins ---
+    (let sc4 (div 1.0 (tn-sqrt 4.0)))
+    (let gen2 (lgqa-generate-causal x  g1 eps wq wk wv wo sc4 1 1 4 cfg10 g2 wg wu wd))
+    (let yc2  (lgqa-block-causal    x  g1 eps wq wk wv wo sc4 1 1 4 cfg10 g2 wg wu wd))
+    (let gen3 (lgqa-generate-causal x3 g1 eps wq wk wv wo sc4 1 1 4 cfg10 g2 wg wu wd))
+    (let yc3  (lgqa-block-causal    x3 g1 eps wq wk wv wo sc4 1 1 4 cfg10 g2 wg wu wd))
+    (let c0 (if (eq (round (mul (nth (nth gen2 0) 0) 1000000.0)) 1893731) 1 0))
+    (let c1 (if (eq (round (mul (nth (nth gen2 1) 0) 1000000.0)) -1069281) 2 0))
+    (let c2 (if (eq (kv-lol-eq gen2 yc2) 1) 4 0))
+    (let c3 (if (eq (kv-lol-eq gen3 yc3) 1) 8 0))
+
+    ; --- the REAL GQA sharing (n_q=2, n_kv=1, HD=2) under the llama3 theta-500000 cfg ---
+    (let sc2 (div 1.0 (tn-sqrt 2.0)))
+    (let g2s (lgqa-generate-causal x  g1 eps wq wk wv wo sc2 2 1 2 cfgl3 g2 wg wu wd))
+    (let y2s (lgqa-block-causal    x  g1 eps wq wk wv wo sc2 2 1 2 cfgl3 g2 wg wu wd))
+    (let g3s (lgqa-generate-causal x3 g1 eps wq wk wv wo sc2 2 1 2 cfgl3 g2 wg wu wd))
+    (let y3s (lgqa-block-causal    x3 g1 eps wq wk wv wo sc2 2 1 2 cfgl3 g2 wg wu wd))
+    (let c4 (if (eq (kv-lol-eq g2s y2s) 1) 16 0))
+    (let c5 (if (eq (kv-lol-eq g3s y3s) 1) 32 0))
+    (let c6 (if (eq (kg-veq (nth g3s 0) (nth g2s 0)) 1) 64 0))
+
+    ; --- generalization: group=1 cfg10 == the proven MHA KV decode (kv-llama-block.fk), bit-for-bit ---
+    (let mha (lblk-generate-causal x g1 eps wq wk wv wo sc4 4 g2 wg wu wd))
+    (let c7 (if (eq (kv-lol-eq gen2 mha) 1) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
