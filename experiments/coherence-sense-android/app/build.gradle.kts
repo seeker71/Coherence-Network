@@ -20,8 +20,8 @@ android {
         applicationId = "com.coherence.sense"
         minSdk = 26
         targetSdk = 34
-        versionCode = 20
-        versionName = "0.20"
+        versionCode = 22
+        versionName = "0.22"
     }
     signingConfigs {
         if (hasReleaseSigning) {
@@ -51,4 +51,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("com.google.zxing:core:3.5.3")
+    // On-device vision (no key) — the eye's carrier: labels objects/animals/scene + detects faces.
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.mlkit:face-detection:16.1.7")
 }
