@@ -504,6 +504,35 @@
   (str_concat (jte-llama-blk-rms2)
   (str_concat (jte-llama-blk-ffn) "}"))))))))))))
 
+; --- GROUPED-QUERY ATTENTION (GQA) over a sequence on the GPU. The attention real llama3.2:3b runs:
+;     n query heads share nkv < n KV heads; query head h reads KV head (h / group), group = n / nkv,
+;     and k/v are projected to the SMALLER nkv*hd width. This emits tb-gqa-attn (gqa-attn.fk, four-way 7
+;     by tests/gqa-attn-band.fk) as ONE Metal kernel: for each query head h, attention runs INDEPENDENTLY
+;     within head h's hd-wide q-slice against KV head (h/group)'s hd-wide k/v-slice, the per-head context
+;     vectors concatenated position-wise back to n*hd. Every fold matches the recipe so it stays
+;     bit-deterministic across kernels exactly as the single-head block does: each dot is tb-dot's downward
+;     right-fold split through a named temporary (no fma contraction), softmax is tn-softmax's max-subtract
+;     over the recipe's OWN fexp (never Metal's), the value-mix is the forward weighted fold. GQA at group=1
+;     (nkv=n) IS plain MHA — the n_kv_head = n_head case, no parallel path. Inputs are PROJECTED q/k/v
+;     (qs: S*n*hd, ks/vs: S*nkv*hd), so this is the attention core a real llama GQA block calls after the
+;     bias-free q/k/v projections and RoPE. Dims (S, n, nkv, hd) and scale arrive as runtime buffers, so the
+;     emitted source is one static string parameterized only by the kernel name. The single-thread (gid==0)
+;     serial walk matches the recipe fold order; parallelizing across query heads is the named follow-up.
+;     Compiles and runs on the M4 Max GPU (scripts/metal_gqa_attn_audit.sh): GPU fp32 bit-exact vs a CPU
+;     fp32 mirror of the same folds, tracking the proven fp64 recipe within fp32 epsilon. ---
+(defn jte-gqa-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* qs [[buffer(0)]], device const float* ks [[buffer(1)]], device const float* vs [[buffer(2)]], device float* y [[buffer(3)]], device float* sc [[buffer(4)]], constant uint& S [[buffer(5)]], constant uint& n [[buffer(6)]], constant uint& nkv [[buffer(7)]], constant uint& hd [[buffer(8)]], constant float& scale [[buffer(9)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; the head-grouped attention body. N = n*hd (q/out width), KVD = nkv*hd (k/v width), group = n/nkv.
+; scratch sc holds S scores (oSR) then S exp values (oE). Each query head writes its hd-wide slice at qoff=h*hd.
+(defn jte-gqa-body ()
+  "uint N = n * hd; uint KVD = nkv * hd; uint grp = n / nkv; uint oSR = 0; uint oE = oSR + S; uint h = 0; while (h < n) { uint kvh = h / grp; uint qoff = h * hd; uint koff = kvh * hd; uint s = 0; while (s < S) { uint t = 0; while (t < S) { float acc = 0.0f; uint c = hd; while (c > 0) { c -= 1; float p = qs[s * N + qoff + c] * ks[t * KVD + koff + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < S) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < S) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < S) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < hd) { y[s * N + qoff + i] = 0.0f; i += 1; } t = 0; while (t < S) { i = 0; while (i < hd) { float pv = vs[t * KVD + koff + i] * sc[oSR + t]; y[s * N + qoff + i] = y[s * N + qoff + i] + pv; i += 1; } t += 1; } s += 1; } h += 1; } }")
+
+(defn jte-gqa-attn-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-gqa-sig fname) (jte-gqa-body))))
+
 ; --- the KV-CACHED DECODE STEP: the autoregressive generation inner loop on the GPU. One token per dispatch,
 ;     over a PERSISTENT cache the host threads across dispatches. This is the GPU realization of kv-llama-block.fk's
 ;     lblk-generate-causal (#3408, four-way 255), proven there BIT-IDENTICAL to the full causal recompute
