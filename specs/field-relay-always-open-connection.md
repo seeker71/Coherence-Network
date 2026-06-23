@@ -1,8 +1,8 @@
 ---
 id: field-relay-always-open-connection
 idea_id: federation-and-nodes
-status: proposed
-decision: needs-decision-2026-06-22-security-model
+status: active
+decision: approved-2026-06-23-open-relay-consent-only
 source:
   - file: form/form-stdlib/field-relay.fk
     symbols: [fr-route, fr-consent-ok?, fr-deliver?, fr-envelope, fr-env-to, fr-env-from, fr-env-kind, fr-registry-has?]
@@ -16,7 +16,7 @@ requirements:
   - "The decision honors channel-interface-consent: an envelope whose signal-kind is not in the recipient's offered interface is denied (not delivered, not queued), and reaching past the interface is named invasion"
   - "The decision yields exactly one of: deliver (recipient connected + consent ok), queue-to-board (recipient offline + consent ok), deny-by-consent, or drop (unknown recipient)"
   - "The decision recipe is proven four-way (Go/Rust/TS/fkwu) by field-relay-band.fk and lowers to a bit-identical native binary"
-  - "A minimal WS relay endpoint carries the decision: both cells DIAL OUT to the public API (no inbound ports), authenticate as their NodeID, and the relay forwards membrane envelopes between them end-to-end with keepalive ping/pong"
+  - "A minimal WS relay endpoint carries the decision: any cell that speaks the protocol DIALS OUT to the public API (no inbound ports, open join — no connection-time auth), presents the NodeID it is addressing from, and the relay forwards membrane envelopes between cells end-to-end with keepalive ping/pong"
 done_when:
   - "field-relay-band.fk returns its verdict identically on Go, Rust, and TS via validate.sh (1 ok, 0 divergent) and crosses the fourth arm (fkwu) — registered in fourth-arm-bands.txt"
   - "fr-route over a 2-cell registry delivers a public signal (announce/ping) to a connected recipient that offers that interface"
@@ -29,7 +29,8 @@ constraints:
   - "Consent is the gate, not an afterthought: channel-interface-consent.form governs who may reach whom; the relay enforces the offered-interface, it does not widen it"
   - "The durable backlog is the existing append-only board (scripts/agent-coord.sh / $COHERENCE_COORD), not a new store — the socket is the breath, the board is the memory"
   - "Python/FastAPI is the bootstrap transport carrier only; the routing+consent BODY is the Form recipe (X-Form-Router native-kernel is the north star for the route)"
-  - "No client auto-resolves an unknown NodeID into the graph — identity is TOFU per identity-and-onboarding; the relay routes by already-known NodeIDs"
+  - "Open join, no proof gate: a cell does not authenticate TO the relay. A NodeID is content-addressed (key-derived); authoring AS a NodeID means signing, which is authorship not a permission check — the relay never polices it. A recipient that cares about a sender's authenticity verifies the signature itself (TOFU, presence-over-protection); the relay only routes."
+  - "Consent is the single boundary (channel-interface-consent) — not identity, not an allowlist. No abuse/rate-limit machinery is built pre-emptively; if flooding becomes a felt, evidenced problem it is tended then, never as a cage for ghosts (trust-over-fear)."
 ---
 
 # Spec: Field relay — one always-open connection across networks
@@ -68,16 +69,17 @@ building ahead of need.
 
 ## Requirements
 
-- [ ] **R1 — content-blind decision recipe.** `form/form-stdlib/field-relay.fk` defines `fr-route` over
+- [x] **R1 — content-blind decision recipe.** `form/form-stdlib/field-relay.fk` defines `fr-route` over
   (registry, envelope, interfaces) → one of `deliver | queue | deny | drop`, reading only
   `fr-env-from` / `fr-env-to` / `fr-env-kind`. The body field is opaque and never inspected.
-- [ ] **R2 — consent gate.** `fr-consent-ok?` checks the envelope's signal-kind against the recipient's
+- [x] **R2 — consent gate.** `fr-consent-ok?` checks the envelope's signal-kind against the recipient's
   offered interface (`channel-interface-consent.form`); a kind not offered yields `deny`.
-- [ ] **R3 — four-way proof.** `form/form-stdlib/tests/field-relay-band.fk` proves the decision across
+- [x] **R3 — four-way proof.** `form/form-stdlib/tests/field-relay-band.fk` proves the decision across
   Go/Rust/TS/fkwu (registered in `fourth-arm-bands.txt`), including the body-blindness cell (two
   envelopes equal in metadata, different in body, route identically).
 - [ ] **R4 — dial-out relay transport.** A minimal WS endpoint (`api/app/routers/field_relay.py`, bootstrap
-  carrier) accepts outbound connections authenticated by NodeID, applies `fr-route`, forwards
+  carrier) accepts any outbound connection that speaks the protocol (open join, no auth gate),
+  identified by the NodeID it presents, applies `fr-route`, forwards
   `deliver` envelopes to the connected recipient, and keepalive-pings to hold the connection open.
 - [ ] **R5 — reconnect survives.** A forced disconnect re-dials and the gap is replayed from the board (the
   board integration may be stubbed in breath 1 and completed in breath 2, but the reconnect handshake
@@ -109,17 +111,21 @@ python3 scripts/validate_spec_quality.py --file specs/field-relay-always-open-co
 
 ## Risks
 
-- **The relay is a public-facing persistent endpoint** — authentication (who may connect, and proof
-  they are the NodeID they claim) is the load-bearing control. A weak identity check turns the relay
-  into an open forwarder. Mitigation: bind connections to TOFU identity (`identity-and-onboarding`) and
-  treat the relay as routing only between already-known NodeIDs; this is the named `needs-decision`.
+The relay is an open forwarder by design — that is the feature, not the risk. It is content-blind and
+consent-gated; it does not police who connects. So the real risks are about *those two properties
+holding*, not about keeping anyone out.
+
 - **Content-blindness must be enforced, not assumed.** If any code path logs or branches on the body,
   the ciphertext promise breaks silently. Mitigation: R3's body-blindness band cell makes the property
   testable; the transport must pass the body through as opaque bytes with no logging.
-- **Consent bypass.** If the relay widens the recipient's offered interface (delivers a kind not
-  offered), it becomes an invasion vector. Mitigation: `fr-consent-ok?` is the single gate, proven.
-- **Abuse / flooding** of a persistent endpoint. Mitigation: deferred to a later breath with explicit
-  rate-limiting; named here so it is not forgotten.
+- **Consent must actually gate.** The one boundary is the recipient's offered interface; if the relay
+  widens it (delivers a kind not offered), reach becomes invasion. Mitigation: `fr-consent-ok?` is the
+  single gate, proven four-way.
+- **Authorship authenticity is the recipient's call, not the relay's.** Because identity is
+  content-addressed and the relay routes by the presented NodeID without proof, a cell could present
+  another's NodeID in `from`. This is not a relay concern: a recipient who cares verifies a signature
+  carried in the (relay-opaque) body — TOFU, presence-over-protection. The relay stays a dumb,
+  trusting forwarder; sensing lives in the cells.
 
 ## Gaps
 
@@ -132,7 +138,6 @@ python3 scripts/validate_spec_quality.py --file specs/field-relay-always-open-co
   proven Form decision; promoting it to `X-Form-Router: native-kernel` is a follow-up (north-star gap).
 - **Device dial-out clients (Mac/Windows/Android)** are a follow-up (breath 3) — the protocol is
   identical; the clients are unbuilt carriers.
-- **Relay abuse / rate-limiting** is a follow-up task, scoped after the consent gate is proven.
 
 ## Out of Scope
 
@@ -143,6 +148,6 @@ python3 scripts/validate_spec_quality.py --file specs/field-relay-always-open-co
 - Full board-backed offline queue + presence semantics (breath 2).
 - Promoting the route to kernel-served (`X-Form-Router: native-kernel`) — the north star; breath 1's
   Python WS endpoint is the bootstrap transport over the proven Form decision.
-- Relay-side rate limiting / abuse controls — named for the security-model decision, scoped in a
-  later breath once the consent gate is proven.
+- Relay-side rate limiting / abuse controls — not built. Presence over protection: we add tending only
+  when a real, evidenced load shows up, never a pre-emptive cage.
 ```
