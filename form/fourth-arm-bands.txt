@@ -294,6 +294,7 @@ spatial-fusion fks 255
 spatial-colearn fkc 255
 journey fkc 127
 place-sense fks 255
+speak-turn fks 255
 device-heartbeat fks 127
 drift-detect fks 63
 ensemble-vote fks 127
