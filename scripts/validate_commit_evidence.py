@@ -24,6 +24,7 @@ RUNTIME_PATH_PREFIXES = (
     "deploy/front-door/",
     "deploy/kernel-router/",
     "Dockerfile.kernel-router",
+    "pulse/",
 )
 REQUIRED_TOP_LEVEL = {
     "date",

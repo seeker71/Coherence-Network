@@ -92,3 +92,29 @@ async def test_pulse_now_keeps_open_silence_strained_without_reentry_evidence(tm
     assert response.overall == "strained"
     assert len(response.ongoing_silences) == 1
     assert response.ongoing_silences[0].organ == "api"
+
+
+@pytest.mark.asyncio
+async def test_pulse_now_exposes_successful_strain_detail(tmp_path):
+    store = Store(str(tmp_path / "pulse.db"))
+    now = datetime.now(timezone.utc)
+    detail = "slow: 4691ms > 2000ms threshold"
+    store.insert_sample(
+        Sample(
+            ts=iso_utc(now),
+            organ="web",
+            ok=True,
+            latency_ms=4691,
+            detail=detail,
+        )
+    )
+
+    app.state.store = store
+    app.state.started_at = now - timedelta(minutes=10)
+
+    response = await pulse_now()
+
+    web = next(organ for organ in response.organs if organ.name == "web")
+    assert response.overall == "strained"
+    assert web.status == "strained"
+    assert web.detail == detail
