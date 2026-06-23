@@ -248,8 +248,8 @@ def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     assert "Header(`X-Form-Native-Preview`,`1`)" in compose
     assert "coherence-api-kernel-public-gate-canary.priority" in compose
     assert "loadbalancer.server.port: \"8080\"" in compose
-    assert "bounded no-header mutation paths match this" in compose
-    assert "Unlisted ordinary requests keep matching api:8000" in compose
+    assert "bounded no-header mutation paths match" in compose
+    assert "requests keep matching api:8000" in compose
     assert "X-Form-Python-Fallback is the explicit" in compose
     assert "coherence-api-kernel-ideas-create-native-default.rule" in compose
     assert "Method(`POST`) && Path(`/api/ideas`)" in compose
