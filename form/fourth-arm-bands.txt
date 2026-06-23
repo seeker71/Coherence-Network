@@ -395,6 +395,7 @@ form-lower-cond fks 31
 form-lower-map fks 31
 form-lower-rec fks 31
 form-lower-streq fks 31
+form-lower-multiarg fks 127
 form-macho fks 31
 form-pe-coff fks 16383
 form-pe-coff-affine fks 127

@@ -131,6 +131,7 @@
 | [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the body home so Form-first answers OFFLINE. |
 | [form_headn_demo.sh](form_headn_demo.sh) | form_headn_demo.sh — `head N`, the REAL head, built with ZERO clang and direct |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
+| [form_lower_multiarg_receipt.sh](form_lower_multiarg_receipt.sh) | form_lower_multiarg_receipt.sh — the physical on-device receipt for the N-ARG native |
 | [form_macho_demo.sh](form_macho_demo.sh) | form_macho_demo.sh — a RUNNABLE native binary built with ZERO clang. The Form |
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
 | [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
