@@ -50,3 +50,19 @@
 ; --- the whole GQA llama block (FFN sub-block is lblk-ffn-block from llama-block.fk) ---
 (defn lgqa-block (xs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
   (lblk-ffn-block (lgqa-attn-block xs g1 eps wq wk wv wo scale n_q n_kv HD c) g2 eps wg wu wd))
+
+; --- the causal GQA llama block: the REAL autoregressive decoder. Identical to
+;     lgqa-block but each token attends only to itself and the tokens before it
+;     (tb-gqa-attn-causal). At the last token the prefix is the whole sequence, so the
+;     last position is bit-identical to lgqa-block; earlier tokens differ. This is the
+;     block the generation loop steps — and the (n_q=n_kv=1, base-10000) special case is
+;     lblk-block-causal (llama-block.fk, four-way 4095). ---
+(defn lgqa-attn-sub-causal (n1 wq wk wv wo scale n_q n_kv HD c)
+  (lblk-proj-seq wo
+    (tb-gqa-attn-causal (lgqa-rope-seq (lblk-proj-seq wq n1) HD c)
+                        (lgqa-rope-seq (lblk-proj-seq wk n1) HD c)
+                        (lblk-proj-seq wv n1) n_q n_kv HD scale)))
+(defn lgqa-attn-block-causal (xs g1 eps wq wk wv wo scale n_q n_kv HD c)
+  (tb-add-seq xs (lgqa-attn-sub-causal (lblk-rms-seq xs g1 eps) wq wk wv wo scale n_q n_kv HD c)))
+(defn lgqa-block-causal (xs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (lblk-ffn-block (lgqa-attn-block-causal xs g1 eps wq wk wv wo scale n_q n_kv HD c) g2 eps wg wu wd))

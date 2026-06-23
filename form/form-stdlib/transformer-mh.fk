@@ -16,9 +16,11 @@
 ; calls folded over the layer list (tb-enc-stack) — the dynamic-recipe advantage.
 
 ; --- vector slicing (monomorphic, fourth-arm-safe) ---
+; tb-take is transformer-block.fk's (xs n) — preluded above; we DON'T redefine it
+; here (a second (n xs) definition would shadow it and silently break any band that
+; co-preludes transformer-block's causal attention, which calls (tb-take ks i)).
 (defn tb-drop (n xs) (if (eq n 0) xs (tb-drop (sub n 1) (tail xs))))
-(defn tb-take (n xs) (if (eq n 0) (empty) (cons (head xs) (tb-take (sub n 1) (tail xs)))))
-(defn tb-vslice (xs start vlen) (tb-take vlen (tb-drop start xs)))
+(defn tb-vslice (xs start vlen) (tb-take (tb-drop start xs) vlen))
 (defn tb-cat (a b) (if (eq (len a) 0) b (cons (head a) (tb-cat (tail a) b))))
 
 ; extract head h (width hd) from every position-vector of a sequence.

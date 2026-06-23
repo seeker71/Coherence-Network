@@ -1,15 +1,18 @@
 {
   "date": "2026-06-23",
-  "brick": "llama3-rope + llama-gqa-block (2x)",
-  "title": "the REAL llama3.2 block comes home — GQA attention + llama3 RoPE (rope_theta 500000 + piecewise wavelength scaling) cross four-way as standalone Form recipes, composed into a GQA-shaped llama decoder block",
+  "brick": "llama3-rope + llama-gqa-block + llama-gqa-block-causal (3x), + tb-take unification",
+  "title": "the REAL llama3.2 decoder block comes home — GQA attention (non-causal AND causal) + llama3 RoPE (rope_theta 500000 + piecewise wavelength scaling) cross four-way as standalone Form recipes, composed into a GQA-shaped llama decoder block",
   "north_star_track": "real local llama3.2:3b inference natively — the fused hati-translator block (24 query heads / 8 KV heads, head_dim 128, rope_theta 500000, rope_scaling llama3) running as proven recipe DATA, not emitted C",
   "what": "Two numerics separated the proven single-head, base-10000 llama block (lblk-block, #3365, four-way 4095) from the block the real Llama-3.2-3B fused checkpoint runs. GQA was lifted in #3577 (tb-gqa-attn, four-way 7). This arc lifts the SECOND and composes both. (1) llama3 RoPE: rope.fk only ever had base 10000 with no scaling; the real model uses rope_theta=500000 AND rope_scaling type 'llama3' (factor 32, low_freq_factor 1, high_freq_factor 4, original_max_position_embeddings 8192). Each default inv_freq f = base^(-hd/HD) is reshaped by where its wavelength 2pi/f sits — long-wavelength (low-freq) components are divided by factor (one rotation spans a longer context), short-wavelength (high-freq) untouched, medium interpolated smoothly. base theta + the scaling factors are now recipe DATA (a rope-cfg list), never smuggled constants. This lived ONLY inside transformer-kernel.fk's tk-emit-llama as emitted C (powf(10000.0,...), three-way, and it had NO llama3 scaling at all — even the theta was wrong). Lifted to rope-l3-scale / rope-freq-theta / rope-scaled, composing trig.fk's already-four-way fpow/fsin/fcos and sharing rope-rot-pair with the default `rope` — `rope` is now the (base 10000, no-scaling) special case, not a parallel path. (2) llama-gqa-block.fk composes tb-gqa-attn + rope-scaled + llama-block.fk's own RMSNorm/proj/SwiGLU walks into lgqa-block, parameterized by (n_q, n_kv, HD, rope-cfg). lblk-block is the (n_q=n_kv=1, base-10000) special case. No new arithmetic in either file.",
   "files": {
     "rope_recipe": "form/form-stdlib/rope.fk (rope-freq-theta, rope-l3-smooth, rope-l3-scale, rope-cfg/-llama3, rope-freq-cfg, rope-angle-cfg, rope-scaled)",
-    "block_recipe": "form/form-stdlib/llama-gqa-block.fk (lgqa-rope-seq, lgqa-attn-sub, lgqa-attn-block, lgqa-block)",
+    "gqa_recipe": "form/form-stdlib/gqa-attn.fk (tb-gqa-attn-causal, tb-gqa-head-causal, tb-gqa-loop-causal added beside the non-causal tb-gqa-attn from #3577)",
+    "block_recipe": "form/form-stdlib/llama-gqa-block.fk (lgqa-rope-seq, lgqa-attn-sub/-block, lgqa-block, and the causal lgqa-attn-sub-causal/-block-causal, lgqa-block-causal)",
     "rope_band": "form/form-stdlib/tests/llama3-rope-band.fk",
     "block_band": "form/form-stdlib/tests/llama-gqa-block-band.fk",
-    "manifest_rows": ["llama3-rope fks 255", "llama-gqa-block fks 31"]
+    "block_causal_band": "form/form-stdlib/tests/llama-gqa-block-causal-band.fk",
+    "tb_take_unification": "form/form-stdlib/transformer-mh.fk (removed the duplicate (n xs) tb-take; tb-vslice now uses transformer-block.fk's (xs n)) + form/form-stdlib/transformer-decoder.fk (tb-attn-causal-acc call sites switched to the (xs n) order) — one tb-take, no prelude-order shadowing",
+    "manifest_rows": ["llama3-rope fks 255", "llama-gqa-block fks 31", "llama-gqa-block-causal fks 15"]
   },
   "proof": {
     "llama3_rope": {
@@ -24,7 +27,14 @@
       "fourth_arm": "1 band four-way (fkwu + pre-flattened tables)",
       "divergent": 0
     },
-    "kernels": "Go, Rust, TypeScript, fkwu — agree on every sample, both bands"
+    "llama_gqa_block_causal": {
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/tests/llama-gqa-block-causal-band.fk",
+      "verdict": 15,
+      "fourth_arm": "1 band four-way (fkwu + pre-flattened tables)",
+      "divergent": 0
+    },
+    "tb_take_regression_set": "re-proved four-way after the unification (0 divergent each): gqa-attn 7, transformer-mh 1, transformer-decoder 1, transformer-generate 1, transformer-generate-cached 1, whisper-mh-block-real 1, transformer-gelu-erf 255, sampling 2047 — the change is behavior-preserving (same take logic, unified arg order)",
+    "kernels": "Go, Rust, TypeScript, fkwu — agree on every sample, all bands"
   },
   "fixtures": "llama3-rope: hand-picked inv_freq f per claim so each scaling branch is pure arithmetic (bit-exact across kernels); theta-base and end-to-end rotation pinned to libm fp64 (fpow/fsin/fcos) at 1e-6. llama-gqa-block: the llama-block-band fixture (S=2, d=4, HD=4) for the single-head claims; the same 4x4 weights re-read as 2 heads of width 2 (HD=2) for GQA sharing. At HD=4 under base 500000 the hd=2 pair lands in the MEDIUM scaling branch, so the d=4 block genuinely exercises the llama3 scaling.",
   "claims": {
@@ -44,11 +54,17 @@
       "4": "lgqa-block(n_q=1,n_kv=1,HD=4, cfg-llama3) y[1][2] -> 1648171 (last token, post-SwiGLU)",
       "8": "lgqa-block(n_q=2,n_kv=1,HD=2, cfg-llama3) y[0][0] -> 1424802 (GQA: 2 query heads share KV head 0)",
       "16": "lgqa-block(n_q=2,n_kv=2,HD=2, cfg-llama3) y[0][0] -> 1248836 (per-head; != shared ⇒ the (h/group) grouping propagates through the whole block, not just attention)"
+    },
+    "llama-gqa-block-causal (15)": {
+      "1": "lgqa-block-causal(n_q=1,n_kv=1,HD=4, cfg base 10000) == lblk-block-causal (#3365, 4095), bit-for-bit — single-head base-10000 is the special case of the causal block too",
+      "2": "lgqa-block-causal(cfg-llama3) y[0][0] -> 1893731 — the published four-way causal token-0 value (causal-attention-band / kv-llama-block-band). At position 0 RoPE is the identity (angle 0), so theta is irrelevant for token 0; AND 1893731 != non-causal 1116075 ⇒ the causal mask is real",
+      "4": "lgqa-block-causal(cfg-llama3) last token == lgqa-block(cfg-llama3) last token, bit-for-bit — no over-masking (the last query's causal prefix is the whole sequence)",
+      "8": "lgqa-block-causal(n_q=2,n_kv=1,HD=2) last[1][0] != lgqa-block-causal(n_q=2,n_kv=2,HD=2) last[1][0] — GQA grouping is real in the causal block"
     }
   },
   "lesson": "Read-the-body first: the task framed GQA as undone, but #3577 had just lifted it (tb-gqa-attn four-way 7) — the body's own attestation (the manifest row + commit) redirected the work to the genuine gap, llama3 RoPE. The scaling-branch claims are bit-exact (hand-picked inv_freq makes the piecewise pure arithmetic — no transcendental, no 1e-6 fuzz, identical across all four kernels), with continuity at both boundaries proven by exact equality (s=0 ⇒ f/factor, s=1 ⇒ f). The composition claim of strongest worth is the GENERALIZATION law: lgqa-block at (n_q=n_kv=1, base 10000) equals the already-four-way lblk-block bit-for-bit, so the new recipe inherits a KNOWN-correct value rather than only self-consistency — core-abstraction-first made visible, the single-head block is the special case, not a parallel path. A d=4 block exercises the medium scaling because base 500000 pushes the hd=2 pair's wavelength into [2048, 8192] — strange-minimal coverage without a full-width fixture.",
+  "surfaced_and_fixed": "composing GQA + the causal mask was the first band to co-prelude transformer-mh AND use transformer-block's causal attention, which surfaced a LATENT collision: tb-take was defined twice with SWAPPED arg order ((xs n) in transformer-block.fk, (n xs) in transformer-mh.fk), each silently relying on prelude order. The non-causal path never calls tb-take, so it never bit. Fixed at the source — one tb-take (transformer-block's (xs n)); transformer-mh's tb-vslice and transformer-decoder's causal-take switched to it. Behavior-preserving, the whole transformer-mh/decoder/whisper band set re-proved four-way. Pre-existing-is-disease: the band that surfaced it owned the fix rather than working around with a parallel path.",
   "named_next_stones": [
-    "the causal GQA block: tb-gqa-attn-causal (tb-attn-seq-causal is already four-way 511) + lgqa-block-causal — the autoregressive decoder shape, mechanical from here",
     "KV-cached GQA decode: thread lgqa over the kv-cache (kv-llama-block.fk pattern) at GQA shape — k/v cached at the narrower n_kv*HD width",
     "wire the proven pieces at REAL width: lgqa-block stacked across the 28 Llama-3.2-3B blocks (hidden 3072, n_q 24, n_kv 8, HD 128, rope-cfg-llama3) over the GGUF weights already Form-native dequant — the buffer bridge / emit->compile->exec lane, then the end-to-end transcript the whisper stack still lacks",
     "drop tk-emit-llama's hardcoded powf(10000.0,...) RoPE — the emitted-C path now has a four-way recipe (rope-scaled) and a real-theta cfg to mirror"
