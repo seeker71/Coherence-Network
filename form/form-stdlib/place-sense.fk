@@ -1,0 +1,70 @@
+; place-sense.fk — turn a reverse-geocoded coordinate into WORLD SENSE: name where you are, know how
+; specific that knowing is, recognize a place you've been before (presence continuity), and relate
+; places by containment. The carrier reverse-geocodes a coordinate to a hierarchy (OpenStreetMap's
+; Nominatim, no API key needed) — country / state / county / city / suburb / road / house; this recipe
+; is the BODY that makes meaning of that hierarchy. Carrier fetches; Form understands.
+;
+; A place is a list of (rank name) levels ordered COARSE -> FINE: rank is the integer admin depth
+; (0 country, 1 state/region, 2 county, 3 city, 4 suburb, 5 neighbourhood, 6 road, 7 house), name the
+; string at that level. Same named hierarchy => same place on every body — the content-addressed
+; identity the substrate promises, so "I am at the same place as before" comes for free, by shape, not
+; by a hopeful coordinate match. (Coordinates are noisy and never repeat exactly; named places do.)
+;
+; THE SENSES this gives (Urs: location, presence, world):
+;   - LOCATION: pl-name is the most specific name we can give where we are; pl-scale how specific.
+;   - PRESENCE: pl-same? recognizes two reads as the same place; pl-known? recognizes a place among the
+;     ones we remember — "I have been here before", the continuity a presence needs.
+;   - WORLD: pl-within? relates places by scale (this road is within that city) — the nesting that makes
+;     a world model rather than a scatter of points.
+;
+; Integers + strings only; no coordinates, no float, no distance — recognition is by NAMED SHAPE, which
+; is the honest and stable thing a noisy fix can be resolved to. Great-circle distance / nearest-feature
+; (Overpass, also no key) is a later organ; this is the naming-and-recognition core.
+;
+; Kin: journey.fk (the track whose endpoints these name), spatial-fusion.fk (banded the fix that was
+; geocoded), world-model-growth.fk (ingests these place cells into the growing world model), the
+; substrate's content-addressing (same shape -> same NodeID). Carrier-last: the phone/host fetches the
+; geocode; place-sense is Form, four-way-identical.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/place-sense-band.fk (four-way at validate.sh)
+
+(do
+    ; a level is (rank name): (nth lv 0) the integer admin depth, (nth lv 1) the name string.
+
+    ; --- NAME: the most specific (deepest / last) level's name — what to call where we are. ---
+    (defn pl-name (place)
+        (if (eq (len place) 1) (nth (head place) 1) (pl-name (tail place))))
+
+    ; --- SCALE: the deepest level's rank — how specific the knowing is (0 country .. 7 house). ---
+    (defn pl-scale (place)
+        (if (eq (len place) 1) (nth (head place) 0) (pl-scale (tail place))))
+
+    ; --- DEPTH: how many levels are named. ---
+    (defn pl-depth (place) (len place))
+
+    ; --- SAME?: two reads are the same place when they name to the same depth and the same deepest
+    ;     name — recognition by shape, the presence-continuity "still here / here again". ---
+    (defn pl-same? (a b)
+        (if (eq (pl-depth a) (pl-depth b))
+            (if (str_eq (pl-name a) (pl-name b)) 1 0)
+            0))
+
+    ; --- WITHIN?: is `inner` inside `outer` — i.e. outer's whole level-chain is a prefix of inner's
+    ;     (this road within that city). Walk both coarse->fine; every outer level must match. ---
+    (defn pl-within? (inner outer)
+        (if (eq (len outer) 0) 1
+            (if (eq (len inner) 0) 0
+                (if (eq (nth (head inner) 0) (nth (head outer) 0))
+                    (if (str_eq (nth (head inner) 1) (nth (head outer) 1))
+                        (pl-within? (tail inner) (tail outer))
+                        0)
+                    0))))
+
+    ; --- KNOWN?: is this place among the ones we remember — "I have been here before". ---
+    (defn pl-known? (place known)
+        (if (eq (len known) 0) 0
+            (if (eq (pl-same? place (head known)) 1) 1 (pl-known? place (tail known)))))
+
+    0)
