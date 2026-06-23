@@ -1,0 +1,35 @@
+; preludes: form-stdlib/breath-rhythm.fk
+;
+; accel-breath.fk — read a night's breathing from 3-axis phone-accelerometer motion, fully in Form.
+; A phone resting on a sleeping chest sees the breath as a slow oscillation on ONE axis (whichever way
+; the chest lifts under it); the other two carry less of it. This recipe is the WHOLE decision the bash
+; carrier used to make in awk: pick that axis by motion energy (integer variance), then read its
+; respiratory rate via breath-rhythm's autocorrelation. Samples are signed scaled integers (milli-g);
+; a phone flat on a desk has near-zero variance on every axis — no breath to read, and the recipe says so.
+;
+; The division of labor this restores: the carrier only READS the csv columns and scales to int (thin
+; I/O); every judgment — which axis is breathing, how much motion, what rate — is a Form recipe, four-way.
+
+(do
+    ; --- motion energy of one axis: integer variance (mean squared deviation from the axis mean) ---
+    (defn ab-sqdev (xs mean)
+        (if (ge (len xs) 1)
+            (add (mul (sub (nth xs 0) mean) (sub (nth xs 0) mean)) (ab-sqdev (tail xs) mean))
+            0))
+    (defn ab-var (xs) (if (ge (len xs) 1) (div (ab-sqdev xs (br-mean xs)) (len xs)) 0))
+
+    ; --- the axis (0=x 1=y 2=z) carrying the most motion = the breathing axis ---
+    (defn ab-dominant (ax ay az)
+        (do (let vx (ab-var ax)) (let vy (ab-var ay)) (let vz (ab-var az))
+            (if (ge vx vy) (if (ge vx vz) 0 2) (if (ge vy vz) 1 2))))
+    (defn ab-axis (ax ay az k) (if (eq k 0) ax (if (eq k 1) ay az)))
+    (defn ab-pick (ax ay az) (ab-axis ax ay az (ab-dominant ax ay az)))
+
+    ; --- overall motion level = variance of the dominant axis (0 = a perfectly still phone) ---
+    (defn ab-motion (ax ay az) (ab-var (ab-pick ax ay az)))
+
+    ; --- respiratory rate + confidence from the dominant axis (breath-rhythm autocorrelation) ---
+    ;   lo/hi = lag window (samples), spm = samples*60 (e.g. 5Hz -> 300): rate = spm / peak-lag
+    (defn ab-rate (ax ay az lo hi spm) (br-rate (ab-pick ax ay az) lo hi spm))
+    (defn ab-confidence (ax ay az lo hi) (br-confidence (ab-pick ax ay az) lo hi))
+    0)

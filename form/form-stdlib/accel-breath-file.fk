@@ -1,0 +1,48 @@
+; preludes: form-stdlib/line-grammar.fk form-stdlib/breath-rhythm.fk form-stdlib/accel-breath.fk
+;
+; accel-breath-file.fk — the Form-native reader that closes the awk gap: it READS an accelerometer csv
+; ("epoch,timestamp,x,y,z" rows, signed 2-decimal g), PARSES the x/y/z columns to centi-g integers, and
+; runs accel-breath's analysis — so reading the breath from a file is Form end to end, not a bash pipeline.
+; The only thing left to the carrier is windowing which recent lines to look at (genuine I/O); every parse
+; and every judgment lives here. Values like "-0.01" become -1 (centi-g); a header or short row is skipped.
+
+(do
+    ; --- parse a signed fixed-point string to centi-g int: "-0.01" -> -1, "0.00" -> 0, "1.50" -> 150 ---
+    (defn abf-neg? (s) (if (ge (str_len s) 1) (str_eq (substring s 0 1) "-") 0))
+    (defn abf-mag (s)                              ; |value| in centi-g from the unsigned string
+        (do (let parts (split-on s "."))
+            (let ip (str_to_int (head parts)))
+            (let frac (if (ge (len parts) 2) (nth parts 1) "0"))
+            (let fp (str_to_int frac))
+            ; scale the fraction to exactly 2 places (2 digits -> *1, 1 digit -> *10, 0 -> *0)
+            (let fl (str_len frac))
+            (let fscaled (if (ge fl 2) fp (if (eq fl 1) (mul fp 10) 0)))
+            (add (mul ip 100) fscaled)))
+    (defn abf-centi (s)
+        (do (let body (if (abf-neg? s) (substring s 1 (str_len s)) s))
+            (let m (abf-mag body))
+            (if (abf-neg? s) (sub 0 m) m)))
+
+    ; --- extract column k (0=epoch 1=ts 2=x 3=y 4=z) from each well-formed row as a centi-g list ---
+    (defn abf-col (rows k)
+        (if (eq (len rows) 0) (list)
+            (do (let cells (split-on (head rows) ","))
+                (if (ge (len cells) 5)
+                    (cons (abf-centi (nth cells k)) (abf-col (tail rows) k))
+                    (abf-col (tail rows) k)))))
+
+    ; --- drop a header row if the first cell isn't numeric-looking (starts with a digit or '-') ---
+    (defn abf-digit? (c) (if (str_eq c "-") 1 (if (ge (str_len c) 1) (ge (str_to_int c) 1) 0)))
+    (defn abf-first-cell (line) (head (split-on line ",")))
+    (defn abf-rows (path)
+        (do (let lines (split-on (read_file path) "\n"))
+            (if (eq (len lines) 0) (list)
+                (if (abf-digit? (substring (abf-first-cell (head lines)) 0 1)) lines (tail lines)))))
+
+    ; --- the full read: (dominant-axis  motion  rate  confidence) over the file's rows ---
+    (defn abf-read (path lo hi spm)
+        (do (let rows (abf-rows path))
+            (let ax (abf-col rows 2)) (let ay (abf-col rows 3)) (let az (abf-col rows 4))
+            (list (ab-dominant ax ay az) (ab-motion ax ay az)
+                  (ab-rate ax ay az lo hi spm) (ab-confidence ax ay az lo hi))))
+    0)
