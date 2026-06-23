@@ -31,12 +31,26 @@ if [[ ! -x "$KERNEL" ]]; then
     KERNEL="$(ls -t "$HOME"/.claude-worktrees/*/form/form-kernel-rust/target/release/form-kernel-rust 2>/dev/null | head -1 || true)"
 fi
 [[ -x "$KERNEL" ]] || { echo "FAIL no Form kernel — run: (cd $FORM && ./validate.sh form-stdlib/core.fk form-stdlib/host-sense-organ.fk form-stdlib/tests/host-sense-organ-band.fk)"; exit 1; }
+FORMCLI="$FORM/form-cli"
+if [[ ! -x "$FORMCLI" && -x "$FORM/.cache/form-cli-native-host" ]]; then
+    FORMCLI="$FORM/.cache/form-cli-native-host"
+fi
+if [[ ! -x "$FORMCLI" && -x "$FORM/build-form-cli.sh" ]]; then
+    (cd "$FORM" && ./build-form-cli.sh form-cli >/dev/null 2>&1) || true
+    FORMCLI="$FORM/form-cli"
+fi
 
 # Run one Form driver against host-sense-organ.fk; echo its printed lines.
 form_decide() {  # $1 = body expressions producing prints
     local drv; drv="$(mktemp /tmp/hso-XXXXXX.fk)"; printf '%s\n' "$1" > "$drv"
     ( cd "$FORM" && "$KERNEL" form-stdlib/host-sense-organ.fk "$drv" 2>/dev/null )
     rm -f "$drv"
+}
+
+native_host_row() {  # mic camera screen speech_gate freq surprises samples
+    [[ -x "$FORMCLI" ]] || { echo ""; return; }
+    printf 'native-host macos %s %s %s %s %s %s %s\nquit\n' "$1" "$2" "$3" "$4" "$5" "$6" "$7" \
+        | "$FORMCLI" 2>/dev/null | head -1
 }
 
 # --- raw host readings (carrier measurement only) ---
@@ -92,6 +106,8 @@ while true; do
     organs="${D[0]:-[]}"; power="${D[1]:-0}"; signal="${D[2]:-0}"; ocount="${D[3]:-0}"
     lanes_json="$(printf '%s' "$organs" | sed 's/^\[//; s/\]$//' | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$' | jq -R . | jq -s -c .)"
     [[ -z "$lanes_json" ]] && lanes_json='[]'
+    native_row="$(native_host_row "$mic_ok" "$cam_ok" "$screen_ok" 0 0 0 "$tick")"
+    native_json="$(jq -Rn --arg raw "$native_row" '$raw')"
 
     # --- POST to mesh (carrier marshalling) ---
     base="{\"organ_id\":\"$ORGAN_ID\",\"trust_score_ppm\":820000,\"signal_strength_ppm\":$signal,\"battery_level_ppm\":$batt_ppm,\"power_cost_ppm\":$power,\"discovery_state\":\"streaming\""
@@ -100,16 +116,17 @@ while true; do
             -d "$base,\"organ_kind\":\"host-kernel\",\"app\":\"coherence-sense-mac\",\"app_version\":\"0.2\",\"target\":\"macos-arm64\",\"display_name\":\"$HOST\",\"capabilities\":[\"cap.host.vitals\",\"cap.compute.cpu\",\"cap.compute.gpu\",\"cap.sensor.read\",\"cap.network.presence\",\"cap.mesh.presence\"],\"lanes\":$lanes_json}" >/dev/null && announced=1
     fi
     curl -s -m 8 -X POST "$MESH/hati/mesh/organs/heartbeat" -H "Content-Type: application/json" -H "User-Agent: $UA" \
-        -d "$base,\"listening\":true,\"active_channels\":$lanes_json,\"sample_rate_hz\":1.0,\"bytes_per_second\":$(( rx_bps + tx_bps ))}" >/dev/null
+        -d "$base,\"listening\":true,\"active_channels\":$lanes_json,\"native_host_instance_raw\":$native_json,\"sample_rate_hz\":1.0,\"bytes_per_second\":$(( rx_bps + tx_bps ))}" >/dev/null
 
     # --- local receipt (carrier write; the body's organs/metrics) ---
-    jq -n --arg oid "$ORGAN_ID" --arg host "$HOST" --argjson lanes "$lanes_json" \
+    jq -n --arg oid "$ORGAN_ID" --arg host "$HOST" --arg native_host "$native_row" --argjson lanes "$lanes_json" \
         --argjson cpu "$cpu_ppm" --argjson ram "$ram_ppm" --argjson disk "$disk_ppm" \
         --argjson gpu "$gpu_ppm" --argjson power "$power" --argjson signal "$signal" \
         --argjson batt "$batt_ppm" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         '{organ_id:$oid,organ_kind:"host-kernel",target:"macos-arm64",host:$host,ts:$ts,
           organs_active:$lanes,cpu_load_ppm:$cpu,ram_used_ppm:$ram,disk_used_ppm:$disk,
           gpu_util_ppm:$gpu,power_cost_ppm:$power,signal_strength_ppm:$signal,battery_ppm:$batt,
+          native_host_instance_raw:$native_host,
           privacy:"vitals-and-availability-only",body:"form-stdlib/host-sense-organ.fk"}' > "$RECEIPT"
 
     if [[ $(( tick % 6 )) -eq 0 ]]; then
