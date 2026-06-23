@@ -35,7 +35,13 @@
 ;     Go/Rust/TS walkers present, on the build host, not on mac/windows/android devices.
 ;   - form-cli today builds from GO source (ensure_form_cli_kernel.sh), so it is not yet the
 ;     c-bootstrap fkwu form-cli the receipt names.
-;   - No mac/windows/android device run of any of this has been captured. on-device = pending, all rows.
+;   - The fkwu BINARY now runs these bodies STANDALONE on two real arches: linux/elf (links libc.so.6 +
+;     ld-linux only) and mac/mach-o/arm64 (links /usr/lib/libSystem.B.dylib only) — invoked as
+;     `./fkwu <table> 0` with no walkers in the loop. So BODY + toolchain-free RUNTIME are observed, and
+;     the MAC platform row is observed on real metal (Apple M4 Max, macOS 26.3.1 — evidence
+;     commit_evidence_2026-06-23_fkwu_mac_platform_row.json; linux/elf in ..._fkwu_standalone_receipt.json).
+;     Still pending: c-bootstrap (binary clang-built, tables Go-flattened) and the WINDOWS + ANDROID
+;     device rows (no run captured on those platforms yet).
 ;
 ; So every receipt below the bar reads its honest-floor + pending platform rows. The bar is the work to
 ; do, not a claim to make:
