@@ -532,6 +532,7 @@ sleep-night fkc 127
 sleep-classify fks 127
 sleep-report fks 127
 breath-rhythm fks 127
+accel-breath fks 127
 stt-agree fks 127
 wer-align fks 127
 voice-diarize fks 127
