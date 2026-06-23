@@ -10,10 +10,10 @@ the senses are held until then.
 - **v0 — `mac-witness-server.py`:** senses · share · synchronize · witness. The phone streams its
   field; the Mac *witnesses* it (counts frames, holds the latest, shares it back). A **thin carrier**
   with no recognition logic — the simplest loop, for when you just want to see the two breathe together.
-- **v0.1 — `coherence-sense-eval.py` (BUILT):** *predicting · learning · recognizing.* The body — the
-  Form recipes proven three-way under `form/form-stdlib` — runs **per-frame on the kernel**. Each accel
+- **v0.1 — `coherence-sense-eval.py` (legacy Mac eval):** *predicting · learning · recognizing.* The body — the
+  Form recipes proven three-way under `form/form-stdlib` — runs **per-frame on a local kernel**. Each accel
   frame, the carrier writes a driver `.fk`, runs `signal-derivative` (still/moving) + `sequence-predictor`
-  (the next state) through `form-kernel-rust` (~5ms), and the dashboard shows the **real recognition**,
+  (the next state), and the dashboard shows the **real recognition**,
   the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). It also
   runs the **live learning-arc mechanism** (`learning-arc.fk`): a `nearest-shape` **challenger** interns
   the `signal-derivative` **champion**'s labels and recognizes the nearest exemplar; the dashboard shows
@@ -23,19 +23,18 @@ the senses are held until then.
   is a weak **non-parametric memorizer** (~81% vs ~96% SOTA; "model" = the whole dataset). The "small model
   matches SOTA" prize needs a *parametric* model (integer `mul` + quantized inference) — see the benchmark.
   The carrier only marshals integers in and reads the label out; the recognition is Form, via the kernel.
-- **v1 — phone-native kernel (LIVE, verified on-device):** *autonomy.* The kernel runs **on the phone**,
-  no Mac. `form/form-kernel-rust/build-android.sh` emits `libform_kernel_rust.so` (ARM aarch64) with
-  `--features cabi` — the same `run_source` evaluator the CLI runs, exporting both the C-ABI `form_eval`
-  AND the JNI-named `Java_com_coherence_sense_FormKernel_eval`. `FormKernel.kt` binds it via
-  `System.loadLibrary` + `external fun eval(src)`; `build-android.sh` drops the `.so` into
-  `jniLibs/arm64-v8a` and refreshes the bundled recipe assets. On launch the app runs the proven
-  `signal-derivative` recipe in-process — a self-test reproduces the four-way band verdict **127**
-  (Go=Rust=TS=fkwu) **on the phone**, and a live tick recognizes still-vs-moving from the accelerometer
-  through the same recipe. Verified on a Galaxy S23 Ultra (`adb logcat -s FormKernel`). The phone
-  recognizes **without the Mac**.
+- **v1 — native form-cli host instance (LIVE in this tree):** *autonomy.* Android packages the
+  C-bootstrapped `form-cli` executable as `libform_cli_exec.so` and runs it from the APK's
+  native library directory. The foreground service and Activity feed host readings into
+  `native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples>`
+  and post the returned `native-host-instance` receipt with `/sense` and mesh heartbeats. The
+  phone listens, shares, transcribes when the Form speech gate is open, learns from surprises,
+  and chooses the next lifecycle action through `native-host-instance.fk`. Android is the I/O
+  carrier; Form makes the decision.
 
-So every verb you'd want is live today: senses, share, sync, AND recognition/prediction/learning-signal —
-through the kernel, not in Python.
+So the default Android native path is now form-cli: senses, share, sync, lifecycle decision,
+surprise learning, and transcript gating flow through the same Form cell the Mac and Windows
+carriers can call.
 
 ## Install the APK
 
@@ -55,7 +54,8 @@ From the repository root, rebuild + prove the public asset and mesh handshake af
 scripts/verify_android_sense_public_handshake.sh
 ```
 
-That command builds the debug APK and signed release APK, builds the Hati public asset bundle, starts the Mac witness
+That command cross-compiles native `form-cli`, builds the debug APK and signed release APK,
+builds the Hati public asset bundle, starts the Mac witness
 surface, starts a local Hati mesh API, proves announce / heartbeat / list / offer / list, and writes
 `.cache/android-sense-public-handshake/<stamp>/android-sense-public-handshake-summary.json`.
 
@@ -91,14 +91,13 @@ the highest-trust installer available on that host.
 
 1. On the Mac, on the same WiFi — pick the end you want:
    ```bash
-   # recognition (the body recognizes through the kernel — run from the repo):
-   python3 coherence-sense-eval.py          # builds drivers, runs form-kernel-rust per frame, 0.0.0.0:8800
+   # native host lifecycle (the Android app runs form-cli for decisions):
+   python3 coherence-sense-eval.py          # optional Mac eval witness, 0.0.0.0:8800
    # or the bare witness (no kernel needed, runs anywhere):
    python3 mac-witness-server.py            # 0.0.0.0:8800
    ```
-   (The eval server needs the kernel built once: `cd ../../form && ./validate.sh form-stdlib/core.fk
-   form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk` — it cross-checks the
-   recipe three-way and leaves `form-kernel-rust` in `target/release/`.)
+   (The Android APK packages native form-cli with `../../form/build-android-form-cli.sh`; the
+   app posts `native_host_instance` receipts while the witness receives and displays the field.)
 2. Open the app. It listens for the Mac's `_hati-witness._tcp` service and fills the witness lane
    automatically. Leave the mesh API as `https://api.coherencycoin.com/api` and tap **Start sharing**.
    If you tap before the Mac appears, the button waits and starts sharing when discovery resolves.
@@ -108,9 +107,9 @@ the highest-trust installer available on that host.
    samplers pause with the Activity. The heartbeat sends summary-only capability metadata; it does not
    send raw audio, raw frames, or GPU buffers.
 3. **Open the live dashboard** in a Mac browser: `http://localhost:8800` — a dark console showing
-   *presence* (is the body here, how many frames, how long alive), *recognition* (still / moving, the
-   kernel's call, with the next-state prediction and the running prediction-accuracy — error is the
-   learning signal), *organs active* (which senses are live), the *latest field* values, and an
+   *presence* (is the body here, how many frames, how long alive), *native host receipts*
+   (the Form decision, route, learning count, and transcription gate), *organs active*
+   (which senses are live), the *latest field* values, and an
    *events / surprises* log (an organ coming online or going quiet, a prediction-miss). Set the phone
    down — it reads **still**; pick it up and move — it flips to **moving**, and the miss at the
    transition shows up as a surprise. That flip is Form recipes recognizing your motion through the kernel.
@@ -141,23 +140,27 @@ Useful commands:
 Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
 `~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
-### The Mac as a sensing organ too — Form body, shell carrier
+### The Mac as a sensing organ too — native Form cell, carrier-last
 
 The witness *receives* the phone's senses. The Mac is now its twin: it senses **its own**
 organs and self-registers on the cloud Hati mesh, exactly as the phone registers as
 `android-phone`. `GET /api/hati/mesh/organs` shows phone + Mac host + Mac speech all streaming.
 
 These are **thin carriers — the body is Form**, proven four-way (Go/Rust/TS/fkwu). The shell
-does only physical I/O + measurement; every decision is the recipe's:
+does physical I/O + measurement. The shared lifecycle row is emitted by native `form-cli`
+through `native-host-instance.fk` and recorded as `native_host_instance_raw` on Mac receipts;
+the individual host and speech organ decisions remain Form recipes:
 
 | organ | carrier (I/O only) | Form body (every decision) |
 |-------|--------------------|----------------------------|
-| host  | `mac-sense-organ.sh` | [`host-sense-organ.fk`](../../form/form-stdlib/host-sense-organ.fk) — active organs, power-cost/signal metrics, discovery state |
-| speech| `mac-speech-organ.sh` | [`speech-organ.fk`](../../form/form-stdlib/speech-organ.fk) — VAD gate, pitch band, trust, speaker grouping (composes `voice-traits.fk` + `nearest-shape.fk`) |
+| host lifecycle | native `form-cli native-host ...` | [`native-host-instance.fk`](../../form/form-stdlib/native-host-instance.fk) — listen/share/transcribe/surprise/learn/next-action |
+| host readings  | `mac-sense-organ.sh` | [`host-sense-organ.fk`](../../form/form-stdlib/host-sense-organ.fk) — active organs, power-cost/signal metrics, discovery state |
+| speech readings| `mac-speech-organ.sh` | [`speech-organ.fk`](../../form/form-stdlib/speech-organ.fk) — VAD gate, pitch band, trust, speaker grouping (composes `voice-traits.fk` + `nearest-shape.fk`) |
 
 - **host** reads cpu/ram/disk/network-rates/gpu/thermal/battery (sysctl/vm_stat/ioreg/pmset/
-  netstat), the kernel decides which organs are live and the mesh metrics, and it POSTs +
-  writes `~/.coherence-network/hati/mac-sense-latest.json`.
+  netstat), Form decides which organs are live and the mesh metrics, `form-cli native-host`
+  emits the lifecycle receipt, and the carrier POSTs + writes
+  `~/.coherence-network/hati/mac-sense-latest.json`.
 - **speech** records the mic in rolling windows, measures rms + a lowpass-stabilized pitch
   with sox, transcribes voiced windows with whisper-cli (the STT *oracle*), and the kernel
   decides VAD, pitch band, and which speaker cell — matched by nearest-shape or enrolled as
@@ -167,7 +170,9 @@ does only physical I/O + measurement; every decision is the recipe's:
 
 ```bash
 cd experiments/coherence-sense-android
-# build the Form kernel once (the carriers call it for every decision):
+# build native form-cli once (the carriers call it for the shared lifecycle row):
+(cd ../../form && ./build-form-cli.sh form-cli)
+# prove the organ bodies:
 (cd ../../form && ./validate.sh form-stdlib/core.fk form-stdlib/host-sense-organ.fk \
    form-stdlib/tests/host-sense-organ-band.fk form-stdlib/voice-traits.fk \
    form-stdlib/nearest-shape.fk form-stdlib/speech-organ.fk form-stdlib/tests/speech-organ-band.fk)
