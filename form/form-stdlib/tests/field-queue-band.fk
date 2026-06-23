@@ -1,0 +1,30 @@
+; preludes: form-stdlib/field-queue.fk
+;
+; The reconnect drain, pinned. backlog entries (seq to kind); alice=10 bob=11; kinds announce=1 ping=2 block=5.
+; alice offers [announce ping] (NOT block). Verdict 127 when every claim lands.
+(do
+    (let backlog (list
+        (list 1 10 1)    ; seq1 -> alice announce
+        (list 2 11 1)    ; seq2 -> bob   announce
+        (list 3 10 2)    ; seq3 -> alice ping
+        (list 4 10 5)    ; seq4 -> alice block (alice does NOT offer block)
+        (list 5 10 1)))  ; seq5 -> alice announce
+    (let alice-iface (list 1 2))         ; announce + ping
+    (let alice-all   (list 1 2 5))       ; same cell if it also offered block
+
+    ; from last_seen=1, alice drains seq3 (ping) + seq5 (announce); seq1 seen, seq2 not hers, seq4 denied
+    (let c0 (if (eq (fq-count backlog 10 1 alice-iface) 2) 1 0))
+    ; new cursor is the high-water of the drained set = 5
+    (let c1 (if (eq (fq-cursor backlog 10 1 alice-iface) 5) 2 0))
+    ; order preserved: first drained entry is seq3
+    (let c2 (if (eq (fq-seq (head (fq-drain backlog 10 1 alice-iface))) 3) 4 0))
+    ; consent gate proven: if alice ALSO offered block, seq4 joins -> count 3
+    (let c3 (if (eq (fq-count backlog 10 1 alice-all) 3) 8 0))
+    ; bob from last_seen=0 drains his one announce (seq2)
+    (let c4 (if (eq (fq-count backlog 11 0 (list 1)) 1) 16 0))
+    ; last_seen beyond all -> nothing drains
+    (let c5 (if (eq (fq-count backlog 10 99 alice-iface) 0) 32 0))
+    ; cursor with no matches stays at last_seen
+    (let c6 (if (eq (fq-cursor backlog 10 99 alice-iface) 99) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
