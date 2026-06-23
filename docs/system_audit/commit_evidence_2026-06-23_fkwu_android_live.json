@@ -1,0 +1,37 @@
+{
+  "date": "2026-06-23",
+  "claim": "The C-bootstrap -> fkwu -> form-cli runtime runs LIVE on Android hardware with no go/rust/clang/python on the device, computing the four-way-proven verdicts of the body's recipes.",
+  "north_star": "all work c-bootstrap fkwu form-cli observed on all platforms (mac, windows, android) w/o go, rust, clang, python — the body on its own emitted universal kernel, no rented toolchain",
+  "what_closed": "The Android live-on-device gap. Previously: form-elf band proved fkwu EMITS android arm64 bytes (four-way), but the kernel had never been observed RUNNING on a phone. Now observed.",
+  "method": {
+    "1_emit": "uni.c (the universal kernel's C) emitted from the Go kernel via fkc-emit-universal — build-host bootstrap only, nothing from it on the device",
+    "2_cross_compile": "zig cc -target aarch64-linux-musl -O2 -static (no Android NDK, no clang on device); arc4random -> rand() alias (same as build_fourth's Windows lane). Result: 1.53MB static aarch64 ELF.",
+    "3_device": "push ONLY the static fkwu binary + each band's pre-flattened table to /data/local/tmp; device confirmed to have no go/rust/clang/cc/python/gcc",
+    "4_run": "fkwu <table> 0 | head -1 — the exact invocation validate.sh uses — verdict compared to form/fourth-arm-bands.txt (manifest) AND the Mac fkwu"
+  },
+  "device": {"model": "SM-S918U1 (Galaxy S23 Ultra)", "arch": "aarch64", "toolchain": "none"},
+  "receipt": {
+    "status": "pass",
+    "bands": [
+      {"band": "room-address",    "expected": 127, "android": 127, "mac": 127},
+      {"band": "vision-percept",  "expected": 127, "android": 127, "mac": 127},
+      {"band": "speak-turn",      "expected": 255, "android": 255, "mac": 255},
+      {"band": "ambient-surprise","expected": 127, "android": 127, "mac": 127},
+      {"band": "spatial-fusion",  "expected": 255, "android": 255, "mac": 255},
+      {"band": "journey",         "expected": 127, "android": 127, "mac": 127},
+      {"band": "place-sense",     "expected": 255, "android": 255, "mac": 255}
+    ],
+    "note": "Different verdicts per recipe (127, 255) prove fkwu genuinely computes each recipe on-device, not echoing. A first attempt via the wrong arg form (fkwu TBL 0 BUNDLE) printed a recipe-INDEPENDENT 128-bit vector — caught as a false-proof and corrected to validate's real invocation (fkwu TBL 0 | head -1)."
+  },
+  "platform_matrix": {
+    "mac":     {"emit": "form-macho four-way (31)", "live": "bootstrap-host posix PASS + fkwu native runtime (build)"},
+    "android": {"emit": "form-elf four-way (31)",   "live": "OBSERVED — fkwu static-musl, 7 bands verdict-identical on S23 Ultra"},
+    "windows": {"emit": "form-pe-coff four-way (16383)", "live": "verify_cross_platform_bootstrap_host_no_go.ps1 lane (not run this session — no Windows hardware reachable)"}
+  },
+  "honest_gaps_remaining": [
+    "Windows live-on-device: no Windows hardware reachable from this build host; form-pe-coff band + the no-go .ps1 lane stand in.",
+    "fkwu standing-wall op families (node/substrate parity beyond the generated table, broader host-io source-scans, multi-line mid-walk output): missing op FAMILIES, never divergences — the only honest 'not yet native on fkwu' answers (capabilities.sh)."
+  ],
+  "durable_lane": "scripts/verify_fkwu_android_no_go.sh — repeatable; emits, cross-compiles, pushes, runs, asserts against the manifest; skips gracefully without go/zig/adb/device.",
+  "kin": ["scripts/verify_bootstrap_host_posix.sh", "scripts/verify_cross_platform_bootstrap_host_no_go.ps1", "form/form-stdlib/tests/form-elf-band.fk", "scripts/capabilities.sh"]
+}
