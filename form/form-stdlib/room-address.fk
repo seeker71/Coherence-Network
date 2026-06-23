@@ -1,0 +1,36 @@
+; room-address.fk — from the room's heard words, decide whether the cell is being ADDRESSED and whether
+; a QUESTION was asked. This is the bridge the room-ear was missing: whisper (a carrier) turns sound into
+; words; this Form recipe turns words into the two signals speak-turn weighs (addressed?, question?), so
+; the cell knows a clear turn (named AND asked) without anyone wiring it by hand. Form all the way: the
+; carrier hears, the body decides.
+;
+; Words arrive as a list of lowercased tokens (the carrier splits the transcript — thin glue). wakes is
+; the cell's names + mishearings (as in speak-turn's wakeWords); qwords is the interrogative set (what,
+; why, how, where, who, when, which). Membership is exact-token, so "semantic" never counts as "sema"
+; and "whatever" never counts as "what" — only whole words address or ask.
+;
+; Kin: speak-turn.fk (ra-addressed? -> addressed, ra-question? -> question), ambient-surprise.fk
+; (as-salience -> pressure), world-perception.fk (the heard channel these read). Integers + strings only.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/room-address-band.fk (four-way at validate.sh)
+
+(do
+    ; --- MEMBER?: 1 iff word exactly equals some token in the set. ---
+    (defn ra-member? (word set)
+        (if (eq (len set) 0) 0
+            (if (str_eq word (head set)) 1 (ra-member? word (tail set)))))
+
+    ; --- ANY-MEMBER?: 1 iff any of the words is in the set. ---
+    (defn ra-any-member? (words set)
+        (if (eq (len words) 0) 0
+            (if (eq (ra-member? (head words) set) 1) 1 (ra-any-member? (tail words) set))))
+
+    ; --- ADDRESSED?: was the cell named (a wake word spoken)? ---
+    (defn ra-addressed? (words wakes) (ra-any-member? words wakes))
+
+    ; --- QUESTION?: was an interrogative spoken? ---
+    (defn ra-question? (words qwords) (ra-any-member? words qwords))
+
+    0)
