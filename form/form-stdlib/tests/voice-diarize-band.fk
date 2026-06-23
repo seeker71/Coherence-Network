@@ -1,0 +1,27 @@
+; preludes: form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk
+;
+; voice-diarize-band — the diarization decision made falsifiable. Two speakers enrolled: Voz1 (low pitch,
+; calm) at vec [0 1 0], Voz2 (high pitch, animated) at vec [2 3 2]. Similarity is matching-dimension count
+; (ns-sim, 0..3), so an exact match scores 3 and the enrollment floor is 3. The decisive claim is c6: a
+; voice that matches NO prototype well (a new mid-register voice, strength 1) is enrolled rather than
+; mislabelled — the roster grows 2 -> 3.
+;   1   a known low/calm voice is labelled Voz1                  (vd-label == "Voz1")
+;   2   that match is a full 3/3 similarity                      (vd-strength == 3)
+;   4   a known high/animated voice is labelled Voz2            (vd-label == "Voz2")
+;   8   a new mid voice matches weakly                           (vd-strength == 1)
+;   16  the known voice clears the enrollment floor              (vd-known? @floor 3)
+;   32  the new voice is enrolled under its new label            (vd-route -> "Voz3")
+;   64  enrollment grows the roster 2 -> 3                       (len roster' == 3)
+(do
+    (let v1 (vd-features 120 (list 2 2 3 2)))
+    (let v2 (vd-features 220 (list 1 5 2 7)))
+    (let roster (list (list "Voz1" v1) (list "Voz2" v2)))
+    (let rNew (vd-route roster 175 (list 3 3 3 3) 3 "Voz3"))
+    (let c0 (if (str_eq (vd-label roster 125 (list 2 2 2 3)) "Voz1") 1 0))
+    (let c1 (if (eq (vd-strength roster 125 (list 2 2 2 3)) 3) 2 0))
+    (let c2 (if (str_eq (vd-label roster 215 (list 2 6 1 8)) "Voz2") 4 0))
+    (let c3 (if (eq (vd-strength roster 175 (list 3 3 3 3)) 1) 8 0))
+    (let c4 (if (vd-known? roster 125 (list 2 2 2 3) 3) 16 0))
+    (let c5 (if (str_eq (vd-spoke-of rNew) "Voz3") 32 0))
+    (let c6 (if (eq (len (vd-roster-of rNew)) 3) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,30 @@
+; preludes: form-stdlib/wer-align.fk
+;
+; wer-align-band — word-sequence-aligned WER, made falsifiable. The reference is "we are the iris"; five
+; hypotheses pin the edit distance and the WER percent, the second being the one that matters most — a
+; word SWAP that set-overlap (stt-agree) scores a perfect 100, but which costs 2 edits = 50% WER:
+;   identical (we are the iris)        -> dist 0,  wer 0
+;   swap      (we the are iris)        -> dist 2,  wer 50   <- order error set-overlap is blind to
+;   sub       (we are an iris)         -> dist 1,  wer 25
+;   delete    (we are iris)            -> dist 1
+;   insert    (we are the big iris)    -> dist 1
+;   empty hyp ()                       -> dist 4 (all four ref words inserted)
+;
+; Verdict 127 when every claim lands:
+;   1    an identical read costs 0 edits                        (wa-distance == 0)
+;   2    a word swap costs 2 edits — order is seen              (wa-distance swap == 2)
+;   4    the swap is 50% WER (set-overlap would say 0% error)   (wa-wer100 swap == 50)
+;   8    a substitution costs 1 edit                            (wa-distance sub == 1)
+;   16   a deletion costs 1 edit                                (wa-distance del == 1)
+;   32   an insertion costs 1 edit                              (wa-distance ins == 1)
+;   64   an empty hypothesis costs len(ref) insertions          (wa-distance empty == 4)
+(do
+    (let ref (list "we" "are" "the" "iris"))
+    (let c0 (if (eq (wa-distance (list "we" "are" "the" "iris") ref) 0) 1 0))
+    (let c1 (if (eq (wa-distance (list "we" "the" "are" "iris") ref) 2) 2 0))
+    (let c2 (if (eq (wa-wer100  (list "we" "the" "are" "iris") ref) 50) 4 0))
+    (let c3 (if (eq (wa-distance (list "we" "are" "an" "iris") ref) 1) 8 0))
+    (let c4 (if (eq (wa-distance (list "we" "are" "iris") ref) 1) 16 0))
+    (let c5 (if (eq (wa-distance (list "we" "are" "the" "big" "iris") ref) 1) 32 0))
+    (let c6 (if (eq (wa-distance (list) ref) 4) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
