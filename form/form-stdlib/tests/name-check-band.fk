@@ -80,5 +80,7 @@
         (and (eq (len (name-check call-wrapped-ok known)) 0)
              (eq (len (name-check call-wrapped-bad known)) 1))))))))))
 
-    (print (if pass "name-check-band: PASS" "name-check-band: FAIL"))
+    ;; verdict as an integer (not a printed string) so the fourth arm witnesses it: fkwu answers one
+    ;; value via fk_pr and `print` is not in its op table. 511 = all 9 checks pass; four-way.
+    (if pass 511 0)
 )

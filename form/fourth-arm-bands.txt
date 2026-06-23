@@ -909,3 +909,5 @@ bmf-to-fk fks 3426
 bml fks 268435455
 fk-opt fks 84
 minimal-surface fks 31
+name-check fks 511
+reachability fks 31
