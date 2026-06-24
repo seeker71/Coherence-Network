@@ -1,0 +1,79 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fnri-binary-proven",
+  "commit_scope": "FNRI witness/know/receipt proven on fc-respond dispatch + rebaked form-cli bootstrap (repl band fix)",
+  "files_owned": [
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_dispatch_binary.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk → fourth=4095",
+      "bash scripts/fnri_fkwu_witness.sh → PASS",
+      "bash scripts/verify_fnri_platform_receipt.sh → PASS",
+      "printf 'ping\\nfnri witness\\nreceipt platform\\nquit\\n' | form/form-cli → pong,32767,platform row"
+    ],
+    "fourth_arm": "form-cli-band 4095 (fc-respond fnri witness/know); catalog 32767",
+    "notes": "regen_form_cli_bootstrap BAND was form-cli-main.fk; fixed to form-cli-repl.fk to match fkc-emit-combined-repl"
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "Dispatch path proven on fkwu; mac binary rebaked and observed for ping/fnri/receipt",
+    "expected_behavior_delta": "form-cli-band c10/c11 call fc-respond; binary carries fnri-receipt in flatten SRCS",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "bash scripts/fnri_fkwu_witness.sh",
+      "bash scripts/verify_fnri_platform_receipt.sh"
+    ]
+  },
+  "phase_gate": {
+    "phase": "fnri-proven-binary-mac",
+    "gate": "form-cli-band 4095 + binary fnri witness/receipt",
+    "state": "mac-observed",
+    "can_move_next_phase": false,
+    "next": "Windows/android platform receipt rows; compost JIT melt stdout noise on pipe"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_platform_receipt.sh"
+  ],
+  "standard_receipt": {
+    "claim": "fnri witness/know/receipt on form-cli dispatch (mac observed)",
+    "body": "yes",
+    "c_bootstrap": "observed",
+    "toolchain_free_runtime": "partial",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "form-cli binary: ping, fnri witness=32767, receipt platform"},
+      "windows": {"status": "pending", "trace": "verify_fnri_windows_standalone.sh"},
+      "android": {"status": "pending", "trace": "verify_fnri_android_receipt.sh"}
+    }
+  },
+  "change_files": [
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/build-form-cli.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "form/form-stdlib/bootstrap/"
+  ],
+  "change_intent": "runtime_feature"
+}

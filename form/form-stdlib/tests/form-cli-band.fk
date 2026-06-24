@@ -15,6 +15,6 @@
     (let c7 (if (str_eq (fc-respond "recreate") "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own.") 128 0))
     (let c8 (if (str_eq (fc-respond "") "form-cli: unknown verb '' — type 'help'") 256 0))
     (let c9 (if (str_eq (fc-respond "native-host android 1 1 1 2 690 1 7 gold") "native-host-instance|android|1|1|1|1|1|1|learn-from-surprise|gold") 512 0))
-    (let c10 (if (str_eq (fnri-witness-str) "32767") 1024 0))
-    (let c11 (if (str_eq (fnri-know-line "standard-receipt") "docs/coherence-substrate/standard-receipt.form") 2048 0))
+    (let c10 (if (str_eq (fc-respond "fnri witness") "32767") 1024 0))
+    (let c11 (if (str_eq (fc-respond "fnri know standard-receipt") "docs/coherence-substrate/standard-receipt.form") 2048 0))
     (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
