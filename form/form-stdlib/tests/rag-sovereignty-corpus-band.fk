@@ -1,0 +1,13 @@
+; rag-sovereignty-corpus-band.fk — merge corpus paths for local sovereignty retrieval.
+;
+; preludes: form-stdlib/core.fk
+;
+; R6 witness: the architecture docs rag-heal indexes are visible to fs_list on every
+; kernel at one moment. Membership of two load-bearing .form cells — fixed verdict 3.
+(do
+    (defn rsc-has (xs nm)
+        (if (eq (len xs) 0) 0
+            (if (str_eq (head xs) nm) 1 (rsc-has (tail xs) nm))))
+    (let entries (fs_list "../docs/coherence-substrate"))
+    (add (if (eq (rsc-has entries "standard-receipt.form") 1) 1 0)
+         (if (eq (rsc-has entries "host-kernel.form") 1) 2 0)))

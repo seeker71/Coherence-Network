@@ -1,0 +1,64 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/sovereignty-rag-witness",
+  "commit_scope": "R6 sovereignty corpus four-way band: fs_list witnesses standard-receipt.form and host-kernel.form on all kernels.",
+  "standard_receipt": {
+    "claim": "Merge corpus architecture cells are enumerable for rag-heal on every kernel.",
+    "body": "yes — rag-sovereignty-corpus-band fs_list membership",
+    "c_bootstrap": "partial",
+    "toolchain_free": "pending",
+    "platforms": {
+      "mac": "observed — four-way verdict 3",
+      "windows": "pending",
+      "android": "pending"
+    },
+    "honest_floor": "Band proves enumeration only; full heal loop remains host-io single-runtime witness."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260624_rag_sovereignty_corpus_band.json"
+  ],
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources", "form-cli-self-healing-memory"],
+  "task_ids": ["task-2026-06-24-rag-sovereignty-corpus"],
+  "contributors": [
+    {
+      "contributor_id": "cursor-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "form/form-stdlib/tests/rag-sovereignty-corpus-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "evidence_refs": [
+    "FOUR-WAY: rag-sovereignty-corpus-band -> 3 Go/Rust/TS/fkwu",
+    "R6: standard-receipt.form + host-kernel.form in merge corpus path"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && FORM_STANDARD_LANE=1 ./validate.sh form-stdlib/tests/rag-sovereignty-corpus-band.fk"
+    ],
+    "fourth_arm_outputs": ["rag-sovereignty-corpus four-way 3"]
+  },
+  "ci_validation": { "status": "pending", "commands": [] },
+  "deploy_validation": { "status": "pending", "environment": "local-form-runtime" },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "form-cli ask grounded retrieval smoke and full heal witness still open."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Sovereignty corpus paths registered in fourth-arm manifest.",
+    "public_endpoints": ["local form-cli / fkwu only"],
+    "test_flows": [
+      "cd form && FORM_STANDARD_LANE=1 ./validate.sh form-stdlib/tests/rag-sovereignty-corpus-band.fk"
+    ]
+  }
+}
