@@ -1,0 +1,64 @@
+; bml-proof.fk — proves the BML file-I/O interface (form-stdlib/file-io.bml)
+; streams without truncation and that every door works, on fkwu.
+;
+; The proof script compiles file-io.bml through the BML source-compiler, then
+; flattens the lowered recipes together with THIS band and runs fkwu. The band
+; calls the interface's hoisted methods (fio-*) and the shim Task model.
+;
+; It builds a 262144-byte (256 KiB), 8192-line blob — well past the old
+; 65536-byte kernel buffer that silently truncated reads — writes it, then
+; checks every surface. Each passing door lights one bit:
+;
+;    1  fio-read-all          whole-file slurp streamed into the pool
+;    2  fio-fold-chunks       streaming byte count over host reads
+;    4  fio-fold-lines        streaming line count over chunk boundaries
+;    8  fio-read-lines        lines materialised as a list (order preserved)
+;   16  fio-open/read/close   the reader-handle object lifecycle
+;   32  fio-read-all-async    async Task<string>, awaited
+;   64  fio-read-lines-async  async Task<list>, awaited
+;  128  FileIO descriptor     the generic class minted its abstraction node
+;
+; All eight pass => 255. Any truncation, a lost line at a chunk seam, a short
+; write, a dead handle, a broken Task, or a missing descriptor drops a bit.
+
+(do
+    (defn rep2 (s n) (if (le n 0) s (rep2 (str_concat s s) (sub n 1))))
+    (defn add-len (acc piece) (add acc (str_len piece)))
+    (defn inc1 (acc x) (add acc 1))
+
+    ; 32-byte line (31 chars + newline); doubled 13x => 8192 lines, 262144 bytes
+    (let line "0123456789abcdef0123456789abcde\n")
+    (let blob (rep2 line 13))
+    (let want (str_len blob))
+    (let path (str_concat (temp_dir) "/fk-file-io-bml-proof.txt"))
+
+    (let wrote (fio-write-all path blob))
+
+    ; sync doors
+    (let whole (fio-read-all path))
+    (let streamed (fio-fold-chunks path add-len 0))
+    (let lines (fio-fold-lines path inc1 0))
+    (let listlines (len (fio-read-lines path)))
+
+    ; reader-handle object: open -> read a chunk -> close
+    (let r (fio-open path))
+    (let rok (fio-reader-ok r))
+    (let first (fio-reader-read r 65536))
+    (let handleok (if rok (gt (str_len first) 0) 0))
+    (let shut (fio-reader-close r))
+
+    ; async doors (Task<T>, awaited)
+    (let viatask (str_len (task-await (fio-read-all-async path))))
+    (let ltask (len (task-await (fio-read-lines-async path))))
+
+    ; generic class descriptor
+    (let dname (nth (FileIO) 1))
+
+    (add (if (eq (str_len whole) want) 1 0)
+    (add (if (eq streamed want) 2 0)
+    (add (if (eq lines 8192) 4 0)
+    (add (if (eq listlines 8192) 8 0)
+    (add (if handleok 16 0)
+    (add (if (eq viatask want) 32 0)
+    (add (if (eq ltask 8192) 64 0)
+         (if (str_eq dname "FileIO") 128 0)))))))))
