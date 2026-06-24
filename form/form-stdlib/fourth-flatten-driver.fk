@@ -1,0 +1,56 @@
+; fourth-flatten-driver.fk — the self-hosting flatten lane.
+;
+; The fourth arm's band tables were produced by running the Form flattener
+; (form-flatten.fk) through the Go kernel (bin-go). The flattener IS Form; the
+; Go binary was only its executor. This driver lets the EMITTED universal kernel
+; (fkwu, effect/repl entry) run the flattener itself — bin-go leaves the
+; per-band flatten path entirely.
+;
+; Flattened ONCE into a bootstrap table (T_flat) over the FOURTH_CHAIN modules;
+; thereafter `fkwu-repl T_flat < request` flattens a whole batch of bands. The
+; request arrives on stdin so a single T_flat serves every band, and one
+; invocation emits a marker-delimited stream the harness splits per band —
+; the same ==T-<stem>== / ==T-END== framing the Go path produced:
+;
+;   line 1            nbands       how many bands in this batch
+;   per band:
+;     line            stem         band id (echoed in the marker)
+;     line            kind         "fks" (string pool) | "fkc" (pool-free)
+;     line            nmod         module-source count
+;     nmod lines      <path>       module paths, declared order (shim first)
+;     line            <path>       the band path
+;
+; Output, per band: a line "==T-<stem>==" then the table, and finally
+; "==T-END==". read_file pulls each source; print_str streams the bytes fkwu's
+; table-walker consumes. Only fkwu reads these tables; the three walkers run the
+; band source directly, so the gate is verdict equality — preserved, since the
+; pool-index a pool-free table carries is read-inert and a string-pool table is
+; internally self-consistent.
+
+(defn ffd-read-mods (n)
+    (if (le n 0) (list)
+        (do (let m (read_file (read_line)))
+            (cons m (ffd-read-mods (sub n 1))))))
+
+(defn ffd-one ()
+    (do
+        (let stem (read_line))
+        (let kind (read_line))
+        (let nmod (str_to_int (read_line)))
+        (let mods (ffd-read-mods nmod))
+        (let band (read_file (read_line)))
+        (print_str (str_concat "==T-" (str_concat stem "==")))
+        (print_str
+            (if (str_eq kind "fks")
+                (fks-table-file (flt-band-sources-fns mods band)
+                                (flt-band-sources-pool mods band))
+                (fkc-table-file (flt-band-sources-fns mods band))))))
+
+(defn ffd-loop (n)
+    (if (le n 0) 0 (do (ffd-one) (ffd-loop (sub n 1)))))
+
+(do
+    (let nbands (str_to_int (read_line)))
+    (ffd-loop nbands)
+    (print_str "==T-END==")
+    0)
