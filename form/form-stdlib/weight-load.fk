@@ -1,0 +1,66 @@
+; weight-load.fk — gap C of the LLM-inference arc: load a REAL tensor's weights into Form by composing
+; the proven cells. This is the seam where "find the tensor" (gguf-locate) meets "unpack the superblock"
+; (q6k-dequant) — the weight-load rented to ollama becomes a Form recipe over the file's own bytes.
+;
+; The dequant MATH already crosses four-way (q6k-dequant: a Q6_K superblock -> 256 f32 weights, bit-exact
+; vs gguf's reference); gguf-read/gguf-locate already walk a real GGUF to a tensor's data offset; f16-decode
+; already recovers an f32 from a raw 16-bit pattern. What was missing was the COMPOSITION: from a byte buffer
+; + a tensor's data offset, carve the superblock's four fields out of the file's own bytes and dequant them —
+; including the super-scale d, decoded from its f16 bytes IN the buffer (not handed in pre-decoded). Every
+; step is integer/float arithmetic over a byte list, so it proves on the same four-way floor, no new primitive.
+;
+; Q6_K block memory layout (llama.cpp block_q6_K, QK_K=256), the bytes as they sit at the tensor's data offset:
+;   ql[128]  (off + 0)    lower 4 bits of each quant
+;   qh[64]   (off + 128)  upper 2 bits, packed 4 per byte
+;   scales[16] (off+192)  SIGNED int8 block-scales
+;   d (f16)  (off + 208)  the super-scale, 2 little-endian bytes  -> 210 bytes total
+; So given the located data offset, the four q6k-dequant arguments come straight out of the buffer:
+;   ql     = wl-slice buf off       128
+;   qh     = wl-slice buf (off+128)  64
+;   scales = wl-slice buf (off+192)  16
+;   d      = fd-f16 (le-u16 buf (off+208))
+; and then (q6k-dequant d ql qh scales) -> the 256 dequantized weights.
+;
+; Kin: gguf-read.fk (gg-ti-dataoff locates off), q6k-dequant.fk (the unpack), f16-decode.fk (the d decode),
+; q4k-dequant.fk (the sibling quant, same load shape with type 12), kv-llama-block.fk (the forward the loaded
+; weights feed). The ll-buffer fill (gap C's "fill an ll-buffer / fkwu f64 pool") is the adjacent rung: this
+; cell produces the f32 list; ll-buf wraps the store loop that lands it in the matvec's read buffer.
+;
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk
+;
+; Proven by: form-stdlib/tests/weight-load-band.fk (four-way, against a mini-GGUF carrying a REAL
+; llama3.2:3b token_embd Q6_K superblock, asserting the recovered weights match q6k-dequant-band's ground truth)
+
+(do
+    ; --- wl-slice: n bytes of `bytes` starting at `off` (drop the prefix, take the window). The carrier
+    ; that carves a tensor's region out of the whole-file buffer. ---
+    (defn wl-slice (bytes off n) (take n (drop off bytes)))
+
+    ; --- a little-endian u16 from two bytes at off — the raw f16 bit pattern d is stored as ---
+    (defn wl-u16 (bytes off) (add (nth bytes off) (mul 256 (nth bytes (add off 1)))))
+
+    ; --- the four Q6_K fields, carved from the buffer at the block's base offset `off` ---
+    (defn wl-q6k-ql     (bytes off) (wl-slice bytes off 128))
+    (defn wl-q6k-qh     (bytes off) (wl-slice bytes (add off 128) 64))
+    (defn wl-q6k-scales (bytes off) (wl-slice bytes (add off 192) 16))
+    ; the super-scale d: f16 at off+208, decoded to f32 from the file's own bytes (NOT handed in pre-decoded)
+    (defn wl-q6k-d      (bytes off) (fd-f16 (wl-u16 bytes (add off 208))))
+
+    ; --- wl-load-q6k: the gap-C composition. Given a byte buffer and a Q6_K block's base offset, return the
+    ; 256 dequantized f32 weights — d decoded from the bytes, ql/qh/scales sliced from the bytes, then the
+    ; proven q6k-dequant unpack. The block base offset comes from gguf-locate's gg-ti-dataoff. ---
+    (defn wl-load-q6k (bytes off)
+        (q6k-dequant (wl-q6k-d bytes off)
+                     (wl-q6k-ql bytes off)
+                     (wl-q6k-qh bytes off)
+                     (wl-q6k-scales bytes off)))
+
+    ; --- wl-q6k-at: one dequantized weight at output index i, without materializing the 256-list — the same
+    ; q6k-at math over the bytes-carved fields. Lets a caller (or a band) sample any index cheaply. ---
+    (defn wl-q6k-at (bytes off i)
+        (q6k-at i (wl-q6k-d bytes off)
+                  (wl-q6k-ql bytes off)
+                  (wl-q6k-qh bytes off)
+                  (wl-q6k-scales bytes off)))
+
+    0)
