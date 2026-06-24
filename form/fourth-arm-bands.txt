@@ -991,6 +991,7 @@ gguf-locate fks 127
 form-asm-matvec fks 127
 form-asm-matvec-loop fks 127
 weight-load fks 4095
+weight-load-q4k fks 4095
 block-join fks 255
 block-join-causal fks 15
 block-join-gqa-causal fks 15

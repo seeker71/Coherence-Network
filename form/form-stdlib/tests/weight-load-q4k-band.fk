@@ -1,0 +1,53 @@
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q4k-dequant.fk form-stdlib/weight-load.fk
+;
+; weight-load-q4k-band — Q4_K load composition (gap D₄′): same mini-GGUF shape as weight-load-band but
+; type 12 (Q4_K) and the REAL blk.0.ffn_gate.weight superblock from llama3.2:3b (same bytes as
+; q4k-dequant-band). Proves gguf-locate → wl-slice → fd-f16 → q4k-dequant end-to-end from file bytes.
+;
+; Mini-GGUF: header + KV + Q4_K tensor-info (type 12) + 22-byte align pad + 144-byte superblock at off 96.
+;
+; Verdict 4095 when every claim lands (pins from q4k-dequant-band):
+;   1    gg-tinfo-start == 41
+;   2    gg-ti-type == 12 (Q4_K)
+;   4    dim0 == 256 AND dataoff == 0
+;   8    wl-q4k-d decoded from buffer bytes (round * 1e12)
+;   16   wl-q4k-at i=0   -> -2871
+;   32   wl-q4k-at i=31  -> -10722
+;   64   wl-q4k-at i=64  -> -34391
+;   128  wl-q4k-at i=128 -> 24084
+;   256  wl-q4k-at i=160 -> 29026
+;   512  wl-q4k-at i=191 -> -5137
+;   1024 wl-q4k-at i=200 -> -6369
+;   2048 len(wl-load-q4k)==256 AND list[255] -> 18738
+(do
+    (let g (list
+        71 71 85 70 3 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0
+        1 0 0 0 0 0 0 0 97 4 0 0 0 42 0 0 0
+        1 0 0 0 0 0 0 0 116 1 0 0 0 0 1 0 0 0 0 0 0 12 0 0 0 0 0 0 0 0 0 0 0
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        244 6 197 19 229 178 240 255 160 107 239 191 26 174 22 179 135 151 157 85 141 119 132 25
+        148 67 236 75 75 167 115 128 174 96 117 181 88 109 101 142 159 152 85 156 10 167 235 213
+        146 203 140 191 96 14 137 172 203 135 167 205 186 152 140 104 105 206 186 155 173 116 185 249
+        234 213 153 236 74 153 105 231 185 130 215 82 135 196 38 164 99 99 85 43 227 52 4 143
+        40 178 50 41 40 68 35 182 104 119 144 218 54 134 1 70 58 118 95 195 183 37 121 198
+        151 151 119 118 105 149 136 0 246 133 186 151 162 154 150 168 180 87 25 135 119 107 201 187))
+    (let ti (gg-tinfo-start g))
+    (let dataoff (gg-ti-dataoff g ti))
+    (let off (add (mul (div (add (gg-ti-next g ti) 31) 32) 32) dataoff))
+    (let full (wl-load-q4k g off))
+    (let c0  (if (eq ti 41)                                                     1 0))
+    (let c1  (if (eq (gg-ti-type g ti) 12)                                      2 0))
+    (let c2  (if (and (eq (gg-ti-dim0 g ti) 256) (eq dataoff 0))                4 0))
+    (let c3  (if (eq (round (mul (wl-q4k-d g off) 1000000000000.0))
+                     (round (mul 0.00010609626770019531 1000000000000.0)))    8 0))
+    (let c4  (if (eq (round (mul (wl-q4k-at g off 0)   1000000.0)) -2871)      16 0))
+    (let c5  (if (eq (round (mul (wl-q4k-at g off 31)  1000000.0)) -10722)     32 0))
+    (let c6  (if (eq (round (mul (wl-q4k-at g off 64)  1000000.0)) -34391)     64 0))
+    (let c7  (if (eq (round (mul (wl-q4k-at g off 128) 1000000.0)) 24084)     128 0))
+    (let c8  (if (eq (round (mul (wl-q4k-at g off 160) 1000000.0)) 29026)     256 0))
+    (let c9  (if (eq (round (mul (wl-q4k-at g off 191) 1000000.0)) -5137)     512 0))
+    (let c10 (if (eq (round (mul (wl-q4k-at g off 200) 1000000.0)) -6369)    1024 0))
+    (let c11 (if (and (eq (len full) 256)
+                      (eq (round (mul (nth full 255) 1000000.0)) 18738))    2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
