@@ -1,0 +1,83 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fnri-platform-receipt",
+  "commit_scope": "fnri standard-receipt platform rows — windows CI + mac/android scripts; dispatch-carrier proof band 1023",
+  "files_owned": [
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "scripts/verify_fnri_android_receipt.sh",
+    "form/form-stdlib/tests/fnri-dispatch-carrier-band.fk",
+    "form/fourth-arm-bands.txt",
+    ".github/workflows/windows-host.yml",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_platform_receipt.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh ... fnri-dispatch-carrier-band.fk → 1023 four-way",
+      "cd form && ./validate.sh ... form-native-resource-interfaces-band.fk → 32767 four-way",
+      "./scripts/verify_fnri_platform_receipt.sh"
+    ],
+    "fourth_arm": "fnri-dispatch-carrier 1023; form-native-resource-interfaces 32767 — four-way on Darwin arm64",
+    "notes": "windows row via windows-host.yml step; android via verify_fnri_android_receipt.sh when device present"
+  },
+  "ci_validation": {"status": "pending", "notes": "windows-host.yml fnri standalone step on PR"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "mac fnri platform receipt JSON witness 32767; dispatch-carrier band 1023 four-way",
+    "expected_behavior_delta": "Standard-receipt platform doors named for fnri on mac/windows/android; host-io dispatch shape proven",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "./scripts/verify_fnri_platform_receipt.sh",
+      "bash scripts/verify_fnri_windows_standalone.sh (windows-host CI)"
+    ]
+  },
+  "phase_gate": {
+    "phase": "standard-receipt-fnri-platform-rows",
+    "gate": "fnri witness 32767 observed per platform with honest receipt JSON",
+    "state": "mac-observed-windows-ci-android-device-script",
+    "can_move_next_phase": false,
+    "next": "Runtime host-io witnesses per pending carrier (audio/video/gpu) on real metal"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "form/form-stdlib/tests/fnri-dispatch-carrier-band.fk",
+    ".github/workflows/windows-host.yml"
+  ],
+  "standard_receipt": {
+    "claim": "fnri-witness 32767 on fkwu per platform",
+    "body": "yes",
+    "c_bootstrap": "pending-or-partial",
+    "toolchain_free_runtime": "observed mac; windows CI step; android device script",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "verify_fnri_platform_receipt.sh on Darwin arm64"},
+      "windows": {"status": "ci", "trace": "windows-host.yml verify_fnri_windows_standalone.sh"},
+      "android": {"status": "device-script", "trace": "verify_fnri_android_receipt.sh"}
+    }
+  },
+  "change_files": [
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "scripts/verify_fnri_android_receipt.sh",
+    "scripts/INDEX.md",
+    "form/form-stdlib/tests/fnri-dispatch-carrier-band.fk",
+    "form/fourth-arm-bands.txt",
+    ".github/workflows/windows-host.yml",
+    "specs/form-native-resource-interfaces.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_platform_receipt.json"
+  ],
+  "change_intent": "runtime_feature"
+}
