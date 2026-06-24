@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 346
+**Total files**: 349
 
 | File | Purpose |
 |---|---|
@@ -92,7 +92,9 @@
 | [field_relay_dev_setup.sh](field_relay_dev_setup.sh) | field_relay_dev_setup.sh — provision a session to BUILD + PROVE the field relay's breath-4 carriers. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
+| [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness/resolve/know on c-bootstrap fkwu via fkwu_run.sh. |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
+| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — lightweight fkwu_run.sh witness for form-native resource interfaces. |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
@@ -333,8 +335,8 @@
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
-| [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | Standard-receipt loop: c-bootstrap form-cli + fkwu selfhost flatten with go/rust/clang hidden from PATH; witnesses fnri band + fs-list. |
 | [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
+| [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | verify_form_native_sovereignty.sh — standard-receipt validation on c-bootstrap fkwu |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |

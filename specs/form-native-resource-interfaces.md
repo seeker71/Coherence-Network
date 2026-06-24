@@ -11,13 +11,13 @@ source:
   - file: form/form-stdlib/bml-native-interface-package-import.fk
     symbols: [bnii-interface]
 requirements:
-  - "Eight resource classes expose `bnii-interface` rows linked to `resource-port` shapes via port slugs"
+  - "Eight resource classes expose `bnii-interface` rows linked to `resource-port` shapes via port slugs (ten protocols including `host:file` and `http:request`)"
   - "macos-arm64, android-arm64, and windows-arm64 each bind all ten protocol classes to hos-implementation rows"
   - "Interface resolution and proof run on fkwu only — no Go kernel emission on this path"
   - "Local sovereignty knowledge index maps structural query slugs to body paths for form-first retrieval"
 done_when:
   - "form-native-resource-interfaces-band.fk verdict 32767 at validate.sh (go/rust/ts/fkwu)"
-  - "fnri-dispatch rows map all eight protocols to host-io op families without Go registerNative"
+  - "fnri-dispatch rows map all ten protocols to host-io op families without Go registerNative"
   - "fnri-knowledge-cells lists host-kernel, standard-receipt, and form-first-reasoning paths"
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/tests/form-native-resource-interfaces-band.fk"
 constraints:
@@ -47,7 +47,7 @@ Agents and cells need **class-based** host resource interfaces — port shapes, 
 ## Files to Create/Modify
 
 - `form/form-stdlib/form-native-resource-interfaces.fk` — class catalog, dispatch rows, knowledge index, resolve API.
-- `form/form-stdlib/tests/form-native-resource-interfaces-band.fk` — proof band (verdict 8191).
+- `form/form-stdlib/tests/form-native-resource-interfaces-band.fk` — proof band (verdict 32767).
 - `form/form-stdlib/resource-port.fk` — `afferent-pixel` port shape.
 - `docs/coherence-substrate/hati-os-targets.form` — lineage + honest fkwu gap.
 - `docs/coherence-substrate/host-kernel.form` — native-interfaces lineage edge.
@@ -55,9 +55,9 @@ Agents and cells need **class-based** host resource interfaces — port shapes, 
 
 ## Acceptance Criteria
 
-- `cd form && ./validate.sh … form-native-resource-interfaces-band.fk` returns **8191** with go/rust/ts agreement (band under `form/form-stdlib/tests/`).
+- `cd form && ./validate.sh … form-native-resource-interfaces-band.fk` returns **32767** with four-way agreement (band under `form/form-stdlib/tests/`).
 - `fnri-runtime` = `"fkwu"` and `fnri-no-go-emission?` = 1 in the band proof.
-- All eight `fnri-dispatch-for` rows resolve; process carrier = `filesystem`.
+- All ten `fnri-dispatch-for` rows resolve; process carrier = `filesystem`; http carrier = `http-socket`.
 
 ## Verification
 
@@ -83,8 +83,8 @@ python3 scripts/validate_commit_evidence.py \
 
 ## Known Gaps
 
-- **fkwu fourth-arm**: fixed — `fourth_band_prelude_mods` reads multi-line prelude headers; witness **8191** on fkwu via `./scripts/verify_form_native_sovereignty.sh`.
-- **Standard receipt**: c-bootstrap form-cli platform rows remain `pending` — follow-up: platform witnesses per `standard-receipt.form`.
+- **fkwu fourth-arm**: `form-native-resource-interfaces` in `fourth-arm-bands.txt` → **32767** four-way; `fnri-witness-verdict` shared by band, `fkwu_fnri.sh`, and `form-cli fnri`.
+- **Standard receipt**: mac observed via `./scripts/verify_form_native_sovereignty.sh`; windows/android `pending`.
 - **Host-io witnesses**: per-class mac/windows/android observed traces — follow-up: dispatch witness bands after flatten gap closes.
 - None beyond the above for catalog/metadata scope.
 
