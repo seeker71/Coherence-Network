@@ -1,0 +1,45 @@
+; gguf-read.fk — the weight-load keystone: parse a real GGUF file natively in Form. rung toward
+; form-cli inference on the fkwu body instead of ollama. The dequant MATH already crosses four-way
+; (q4k-dequant / q6k-dequant / f16-decode unpack a superblock to f32, bit-exact vs gguf's reference);
+; the missing carrier was READING the .gguf to find a tensor's bytes. That parse is pure integer
+; arithmetic over a byte buffer — so it proves on the same four-way floor, no new primitive.
+;
+; A thin host carrier reads the file into a byte list (irreducible host-io, like the mic/camera); every
+; structural decision — magic, version, tensor count, metadata walk, tensor-info offsets — is Form.
+;
+; GGUF v3 layout (little-endian): magic u32 "GGUF" (0x47475547 = 1179993927) · version u32 (3) ·
+; tensor_count u64 · metadata_kv_count u64 · then the metadata KV block, then the tensor-info table,
+; then padding to general.alignment, then the tensor data. This cell carries the fixed-header readers
+; and the little-endian integer decode every later stage (KV walk, tensor infos) builds on.
+;
+; Kin: q4k-dequant.fk / q6k-dequant.fk / f16-decode.fk (consume the located superblock bytes),
+; kv-llama-block.fk / transformer-generate-cached.fk (the forward the loaded weights feed),
+; form-cli-ask.fk (the seam where this replaces the ollama HTTP call). Integers only.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/gguf-read-band.fk (four-way, against the real llama3.2:3b GGUF header)
+
+(do
+    ; --- little-endian unsigned integer: n bytes from off, LSB first. The decode every GGUF field uses. ---
+    (defn gg-le (bytes off n)
+        (if (eq n 0) 0
+            (add (nth bytes off)
+                (mul 256 (gg-le bytes (add off 1) (sub n 1))))))
+
+    (defn gg-u8  (bytes off) (nth bytes off))
+    (defn gg-u32 (bytes off) (gg-le bytes off 4))
+    (defn gg-u64 (bytes off) (gg-le bytes off 8))
+
+    ; --- fixed header (offsets 0,4,8,16) ---
+    (defn gg-magic        (bytes) (gg-u32 bytes 0))
+    (defn gg-magic-ok?    (bytes) (if (eq (gg-u32 bytes 0) 1179993927) 1 0))
+    (defn gg-version      (bytes) (gg-u32 bytes 4))
+    (defn gg-tensor-count (bytes) (gg-u64 bytes 8))
+    (defn gg-kv-count     (bytes) (gg-u64 bytes 16))
+
+    ; --- a GGUF string is (u64 length, then `length` bytes). Readers for the KV / tensor-name walk. ---
+    (defn gg-str-len  (bytes off) (gg-u64 bytes off))           ; byte length of the string at off
+    (defn gg-str-next (bytes off) (add (add off 8) (gg-u64 bytes off)))  ; offset just past the string
+
+    0)

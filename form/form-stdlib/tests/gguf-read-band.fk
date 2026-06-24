@@ -1,0 +1,26 @@
+; preludes: form-stdlib/gguf-read.fk
+;
+; gguf-read-band — parse the REAL llama3.2:3b GGUF header, made falsifiable. The fixture is the actual
+; first 24 bytes of ~/.ollama/models/blobs/sha256-dde5aa3...dff (the llama3.2:3b weights ollama serves):
+;   [71 71 85 70  3 0 0 0  255 0 0 0 0 0 0 0  30 0 0 0 0 0 0 0]
+;    G  G  U  F   v3        n_tensors=255      n_kv=30
+; If the Form reader decodes this real header correctly, it can find any tensor in the file.
+;
+; Verdict 127 when every claim lands:
+;   1    magic decodes to GGUF                       (gg-magic == 1179993927)
+;   2    magic-ok? flag is true                      (gg-magic-ok? == 1)
+;   4    version is 3                                 (gg-version == 3)
+;   8    tensor count is 255                          (gg-tensor-count == 255)
+;   16   metadata-kv count is 30                      (gg-kv-count == 30)
+;   32   generic LE reader matches (u64 @8 == 255)    (gg-le bytes 8 8 == 255)
+;   64   a single byte reads back (gg-u8 @0 == 71)    (gg-u8 == 71, 'G')
+(do
+    (let hdr (list 71 71 85 70 3 0 0 0 255 0 0 0 0 0 0 0 30 0 0 0 0 0 0 0))
+    (let c0 (if (eq (gg-magic hdr) 1179993927)   1 0))
+    (let c1 (if (eq (gg-magic-ok? hdr) 1)        2 0))
+    (let c2 (if (eq (gg-version hdr) 3)          4 0))
+    (let c3 (if (eq (gg-tensor-count hdr) 255)   8 0))
+    (let c4 (if (eq (gg-kv-count hdr) 30)       16 0))
+    (let c5 (if (eq (gg-le hdr 8 8) 255)        32 0))
+    (let c6 (if (eq (gg-u8 hdr 0) 71)           64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
