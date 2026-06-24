@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# rag-heal.sh — sovereign RAG index heal via Form (rh-heal-merge), zero Python.
+# rag-heal.sh — sovereign RAG index heal on fkwu (rh-heal-merge-at), zero Python, zero go.
 #
-# Form shell surface: rag-heal.fsh + fsh-rag-heal-main.fk (native `rag-heal` verb).
-# This script runs the heal gate on the bootstrap Go kernel today (bin-go walks
-# the same Form recipes); fkwu is the named runtime target once heal bands flatten
-# on the fourth arm like fs-list-band.
+# Form shell: rag-heal.fsh + fsh-rag-heal-main.fk (`rag-heal <index> <repo-root>`).
+# Runtime: fkwu walks T_flat to flatten the heal gate, then runs the table.
+# No bin-go in this surface — fkwu and fourth-flatten-table.txt must already exist
+# (validate.sh / ensure_form_cli_native.sh). Missing cache degrades honestly.
 #
 #   form/scripts/rag-heal.sh [index-path]
 set -euo pipefail
@@ -15,52 +15,33 @@ INDEX="${1:-$HOME/.coherence-network/rag-index/index.jsonl}"
 mkdir -p "$(dirname "$INDEX")"
 
 cd "$FORM"
-GO_BIN="${GO_BIN:-form-kernel-go/bin-go}"
-[[ -x "$GO_BIN" ]] || (cd form-kernel-go && go build -o bin-go .)
+# shellcheck source=scripts/fourth-arm.sh
+source scripts/fourth-arm.sh
 
-# BML source compile cache (same chain as validate.sh).
-SOURCE_CACHE_DIR="form-stdlib/.cache/source-compiled"
-mkdir -p "$SOURCE_CACHE_DIR"
-compiler_chain=(
-    form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk
-    form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk
-    form-stdlib/bml-source.fk form-stdlib/source-compiler.fk
-    form-stdlib/grammars/form-bml.fk form-stdlib/form-bml-lower.fk
-)
-form_hash16() {
-    if command -v shasum >/dev/null 2>&1; then cat "$@" | shasum | cut -c1-16
-    else cat "$@" | cksum | cut -c1-16; fi
-}
-compiler_stamp="$(form_hash16 "${compiler_chain[@]}" "$GO_BIN")"
-source_compile_dir="$(mktemp -d "${TMPDIR:-/tmp}/form-rag-heal.XXXXXX")"
-trap 'rm -rf "$source_compile_dir"' EXIT
+# Warm fkwu from committed bootstrap (no go emission in this surface).
+stamp="$(fourth_fkwu_cache_stamp)"
+cached_fkwu="$FOURTH_DIR/fkwu-$stamp"
+if [[ -x "$cached_fkwu" ]]; then
+    FKWU="$cached_fkwu"
+else
+    FORM_STANDARD_LANE=1 build_fourth >/dev/null 2>&1 || true
+    for candidate in "$FOURTH_DIR"/fkwu-*; do
+        [[ -x "$candidate" ]] || continue
+        FKWU="$candidate"
+        break
+    done
+fi
 
-prepare_one() {
-    local src="$1" key cached out driver
-    if grep -Eq '^[[:space:]]*section \[' "$src"; then
-        key="$(form_hash16 "$src")-$compiler_stamp"
-        cached="$SOURCE_CACHE_DIR/$key.fk"
-        if [[ ! -s "$cached" ]]; then
-            out="$(mktemp "$SOURCE_CACHE_DIR/.${key}.XXXXXX")"
-            driver="$(mktemp "$source_compile_dir/compile.XXXXXX")"
-            printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
-            if "$GO_BIN" "${compiler_chain[@]}" "$driver" >/dev/null && [[ -s "$out" ]]; then
-                mv -f "$out" "$cached"
-            else
-                rm -f "$out" "$driver"
-                echo "$src"
-                return
-            fi
-            rm -f "$driver"
-        fi
-        echo "$cached"
-    else
-        echo "$src"
-    fi
-}
+if [[ -z "${FKWU:-}" ]]; then
+    echo "[rag] skip heal: no fkwu (run ensure_form_cli_native.sh first)" >&2
+    exit 0
+fi
+if ! fourth_selfhost; then
+    echo "[rag] skip heal: T_flat self-host unavailable (fourth-flatten-table.txt absent)" >&2
+    exit 0
+fi
 
-RAG_PRELUDES=(
-    form-stdlib/core.fk
+RAG_MODS=(
     form-stdlib/adler32.fk
     form-stdlib/rag-key.fk
     form-stdlib/rag-freshness.fk
@@ -71,14 +52,26 @@ RAG_PRELUDES=(
     form-stdlib/rag-heal-shell.fk
 )
 
-prepared=()
-for f in "${RAG_PRELUDES[@]}"; do
-    prepared+=("$(prepare_one "$f")")
-done
+d="$(mktemp -d "${TMPDIR:-/tmp}/fk-rag-heal.XXXXXX")"
+trap 'rm -rf "$d"' EXIT
 
-gate="$(mktemp "$source_compile_dir/gate.XXXXXX.fk")"
+gate="$d/gate.fk"
 printf '(do (print (rh-shell-heal "%s" "%s")))\n' "$INDEX" "$ROOT" > "$gate"
 
-# Form-native heal (bootstrap bin-go carrier; logic in rag-heal.fk).
-out="$("$GO_BIN" "${prepared[@]}" "$gate" 2>/dev/null | sed '/^null$/d' | head -1)"
-echo "[rag] form-shell heal -> ${out:-done} (index: $INDEX)"
+stem="rag-heal-gate"
+flatten_out="$d/flatten.out"
+{
+    printf '1\n'
+    fourth_band_request "$stem" "fks" "${RAG_MODS[@]}" "$gate"
+} | "$FKWU" "$FOURTH_FLATTEN_TABLE" 0 > "$flatten_out" 2>"$d/flatten.err" || true
+
+table="$d/table.txt"
+sed -n "/^==T-${stem}==\$/,/^==T-END==\$/p" "$flatten_out" | sed -e '1d' -e '$d' > "$table"
+if [[ ! -s "$table" ]]; then
+    echo "[rag] skip heal: fkwu self-flatten produced no table" >&2
+    sed -n '1,8p' "$d/flatten.err" >&2 || true
+    exit 0
+fi
+
+out="$("$FKWU" "$table" 0 2>/dev/null | sed '/^null$/d' | head -1)"
+echo "[rag] form-shell heal on fkwu -> ${out:-done} (index: $INDEX)"

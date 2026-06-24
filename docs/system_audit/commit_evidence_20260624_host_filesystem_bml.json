@@ -47,7 +47,7 @@
   "local_validation": {
     "status": "pass",
     "commands": [
-      "cd form && GO_BIN=form-kernel-go/bin-go ./validate.sh form-stdlib/tests/host-filesystem-band.fk"
+      "cd form && FORM_STANDARD_LANE=1 ./validate.sh form-stdlib/tests/host-filesystem-band.fk"
     ],
     "fourth_arm_outputs": ["host-filesystem four-way 15"]
   },
