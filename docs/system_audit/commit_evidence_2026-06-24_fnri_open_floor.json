@@ -1,0 +1,77 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fnri-open-floor",
+  "commit_scope": "Open floor: validate prelude expansion (four-way form-cli-band), compost melt stdout, platform verify",
+  "files_owned": [
+    "form/validate.sh",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_platform_receipt.sh",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_open_floor.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk → 4095 four-way",
+      "bash scripts/form-cli-run.sh ping → pong (no melt lines)",
+      "bash scripts/fnri_fkwu_witness.sh → PASS",
+      "bash scripts/verify_fnri_platform_receipt.sh → PASS",
+      "bash scripts/verify_fnri_windows_standalone.sh → mac cross-check"
+    ],
+    "fourth_arm": "form-cli-band 4095 go/rust/ts/fkwu agree",
+    "notes": "Explicit validate.sh honors ; preludes: on single band files; fk_melt debug print removed from emit"
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "form-cli-band crosses four-way on explicit validate; piped form-cli output clean",
+    "expected_behavior_delta": "Scripts calling validate.sh with one band file get full prelude chain",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "bash scripts/form-cli-run.sh fnri witness"
+    ]
+  },
+  "phase_gate": {
+    "phase": "fnri-open-floor",
+    "gate": "four-way form-cli-band + clean binary pipe",
+    "state": "mac-observed",
+    "can_move_next_phase": false,
+    "next": "android device receipt; regen fkwu-uni.c for melt emit parity"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/validate.sh",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/tests/form-cli-band.fk"
+  ],
+  "standard_receipt": {
+    "claim": "form-cli-band four-way + clean mac pipe",
+    "body": "yes",
+    "c_bootstrap": "observed",
+    "toolchain_free_runtime": "partial",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "validate 4095 four-way; form-cli-run clean"},
+      "windows": {"status": "pending", "trace": "verify_fnri_windows_standalone on MINGW host"},
+      "android": {"status": "pending", "trace": "verify_fnri_android_receipt.sh device"}
+    }
+  },
+  "change_files": [
+    "form/validate.sh",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/bootstrap/",
+    "scripts/verify_fnri_windows_standalone.sh"
+  ],
+  "change_intent": "runtime_feature"
+}
