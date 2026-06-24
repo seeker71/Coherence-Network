@@ -3,8 +3,8 @@
 #
 # Standard-receipt shape (docs/coherence-substrate/standard-receipt.form):
 #   body:         form-fs.fk + form-fs-band.fk on the universal walker
-#   c-bootstrap:  pending at BUILD (table still flattened via Go on first cache miss)
-#   toolchain-free at RUN: yes — only ./fkwu <table> 0 after cache is warm
+#   c-bootstrap:  pending at BUILD (fkwu from bootstrap uni.c; T_flat selfhost when committed)
+#   toolchain-free at RUN: yes — ./fkwu <table> 0 after cache is warm; flatten uses T_flat when present
 #
 # Usage: scripts/form_fs_fkwu_receipt.sh
 # Exit 0 when verdict is 16383 on fkwu; prints JSON receipt line on stdout.
