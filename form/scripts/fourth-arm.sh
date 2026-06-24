@@ -24,7 +24,20 @@ FOURTH_MANIFEST="fourth-arm-bands.txt"
 FOURTH_CHAIN=(
     form-stdlib/minimal-surface.fk
     form-stdlib/hati-os-kernel.fk
+    form-stdlib/fkc-table-serialize.fk
     form-stdlib/hati-os-kernel-emit.fk
+    form-stdlib/form-parse.fk
+    form-stdlib/form-flatten.fk
+    form-stdlib/fourth-shim.fk
+)
+# Lighter chain for bootstrapping T_flat only: the flattener + table serializers,
+# without hati-os-kernel-emit.fk's C-emission literals. fkwu self-host flatten
+# reads these module paths via read_file; parsing the full emit file bus-errors
+# fkwu's fixed arena. Rebuild T_flat with this chain (bin-go once, then fkwu).
+FOURTH_FLATTEN_CHAIN=(
+    form-stdlib/minimal-surface.fk
+    form-stdlib/hati-os-kernel.fk
+    form-stdlib/fkc-table-serialize.fk
     form-stdlib/form-parse.fk
     form-stdlib/form-flatten.fk
     form-stdlib/fourth-shim.fk
@@ -34,13 +47,13 @@ FOURTH_CHAIN=(
 FOURTH_SHIM="form-stdlib/fourth-shim.fk"
 FKWU=""
 
-# T_flat — the flattener (form-flatten.fk) flattened once over FOURTH_CHAIN into a
-# committed bootstrap table. fkwu walks it to flatten every band, so bin-go leaves
-# the per-band flatten path. The driver (fourth-flatten-driver.fk) reads a batch
+# T_flat — the flattener (form-flatten.fk) flattened once over FOURTH_FLATTEN_CHAIN
+# into a committed bootstrap table. fkwu walks it to flatten every band, so bin-go
+# leaves the per-band flatten path. The driver (fourth-flatten-driver.fk) reads a batch
 # request on stdin and prints marker-framed tables — the same ==T-<stem>== /
 # ==T-END== framing the Go path produced, so fourth_run_chunk splits the stream
-# unchanged. Rebuilt only when the flattener source changes (a bin-go bootstrap;
-# see the file header). The trailing fn-0 value + arm profile fkwu prints after
+# unchanged. Rebuilt when form-flatten.fk or fkc-table-serialize.fk changes (bin-go
+# bootstrap over FOURTH_FLATTEN_CHAIN; thereafter fkwu self-host). The trailing fn-0 value + arm profile fkwu prints after
 # ==T-END== falls outside every per-band marker range, so the split ignores it.
 FOURTH_FLATTEN_TABLE="form-stdlib/fourth-flatten-table.txt"
 
@@ -110,7 +123,7 @@ build_fourth() {
         echo "  building fourth kernel (fkwu)..." >&2
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth.XXXXXX")"
         cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk \
-            form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
+            form-stdlib/fkc-table-serialize.fk form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
         cat >> "$d/uni-driver.fk" <<'EOF'
 (do
   (print "==UNI==")
@@ -263,7 +276,7 @@ fourth_table() {
     [[ -n "$kind" ]] || return 0
     while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
     [[ "${#srcs[@]}" -ge 1 ]] || return 0
-    key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_CHAIN[@]}")"
+    key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_FLATTEN_CHAIN[@]}" "$FOURTH_FLATTEN_TABLE")"
     out="$FOURTH_DIR/t-$stem-$key.txt"
     if [[ ! -s "$out" ]]; then
         if fourth_selfhost; then
@@ -356,7 +369,7 @@ fourth_prepare_all() {
         srcs=()
         while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
         [[ "${#srcs[@]}" -ge 1 ]] || continue
-        key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_CHAIN[@]}")"
+        key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_FLATTEN_CHAIN[@]}" "$FOURTH_FLATTEN_TABLE")"
         out="$FOURTH_DIR/t-$stem-$key.txt"
         [[ -s "$out" ]] && continue
         missing=$((missing + 1))
