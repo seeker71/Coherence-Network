@@ -1,0 +1,74 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/da996f0b",
+  "commit_scope": "Lift fnri-witness-verdict to catalog module; fkwu_fnri.sh runtime witness lane aligned to 32767 four-way",
+  "files_owned": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "scripts/fkwu_fnri.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_witness_verdict_lift.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/tests/form-native-resource-interfaces-band.fk",
+      "bash scripts/fkwu_fnri.sh witness",
+      "bash scripts/fnri_fkwu_witness.sh",
+      "./scripts/verify_form_native_sovereignty.sh"
+    ],
+    "fourth_arm": "form-native-resource-interfaces four-way 32767 (go/rust/ts/fkwu); band delegates to fnri-witness-verdict",
+    "notes": "fnri-know-line str_concat coercion for fkwu_run.sh band output; form-cli rebuilt with fnri catalog"
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "validate.sh → 32767 four-way; verify_form_native_sovereignty.sh toolchain-free receipt pass",
+    "expected_behavior_delta": "Single witness function shared by proof band, fkwu_run.sh scripts, and fourth-arm manifest",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "bash scripts/fnri_fkwu_witness.sh",
+      "./scripts/verify_form_native_sovereignty.sh"
+    ]
+  },
+  "phase_gate": {
+    "phase": "standard-receipt-host-resources",
+    "gate": "fnri witness shared across validate, fkwu_run, and form-cli fnri",
+    "state": "observed-mac-host",
+    "can_move_next_phase": false,
+    "next": "windows/android standard-receipt observed rows + per-class host-io dispatch witnesses"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "four-way-proof"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "scripts/fkwu_fnri.sh",
+    "scripts/verify_form_native_sovereignty.sh"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "scripts/fkwu_fnri.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_witness_verdict_lift.json"
+  ],
+  "change_intent": "runtime_feature",
+  "standard_receipt": {
+    "body": "fnri witness 32767 on fkwu + form-cli fnri knowledge",
+    "c_bootstrap": "form-cli self-contained binary rebuilt",
+    "toolchain_free_runtime": "observed macos-arm64",
+    "platforms": {"mac": "observed", "windows": "pending", "android": "pending"}
+  }
+}
