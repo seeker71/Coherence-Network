@@ -136,4 +136,25 @@
             (rh-heal "specs" ".md" index-path)
             (rh-heal "docs/shared" ".md" index-path)))
 
+    ; ── merge-hook body: corpus paths are absolute (repo root passed from the
+    ; form-shell driver). Relative ../ paths are unreliable in fs_list. ──
+    (defn rh-join-root (root rel) (str_concat root (str_concat "/" rel)))
+    (defn rh-body-all-at (repo-root)
+        (append (rh-body (rh-join-root repo-root "form/form-stdlib") ".fk")
+            (append (rh-body (rh-join-root repo-root "specs") ".md")
+                (append (rh-body (rh-join-root repo-root "docs/vision-kb/concepts") ".md")
+                    (append (rh-body (rh-join-root repo-root "docs/coherence-substrate") ".form")
+                            (rh-body (rh-join-root repo-root "docs/shared") ".md"))))))
+    (defn rh-cold-build-merge-at (index-path repo-root)
+        (write_file_text index-path (rh-emit-lines (rh-body-all-at repo-root))))
+    (defn rh-heal-merge-at (index-path repo-root)
+        (if (eq (fs_exists index-path) 1)
+            (do (let body (rh-body-all-at repo-root))
+                (let lines (rh-lines (read_file index-path)))
+                (let heal (rf-heal-set body (rh-index-of lines)))
+                (write_file_text index-path
+                    (str_concat (rh-kept-lines lines heal body)
+                                (rh-emit-lines heal))))
+            (rh-cold-build-merge-at index-path repo-root)))
+
     0)

@@ -42,7 +42,7 @@
   ],
   "evidence_refs": [
     "FOUR-WAY: validate.sh host-filesystem-band -> 15 Go/Rust/TS/fkwu.",
-    "RAG: form_cli_rag.py SOURCES adds docs/shared/*.md (rh-heal-sovereignty parity)."
+    "RAG: merge hook uses form/scripts/rag-heal.sh (rh-heal-merge-at on Form kernel), not form_cli_rag.py"
   ],
   "local_validation": {
     "status": "pass",
