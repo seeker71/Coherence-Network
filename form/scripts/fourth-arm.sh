@@ -49,7 +49,14 @@ fourth_available() { [[ -n "$FKWU" && -x "$FKWU" ]]; }
 # fourth_selfhost — true when the committed flattener table is present, so the
 # fourth arm flattens its own band tables on fkwu. Absent (a partial tree), the
 # flatten falls back to the Go executor path so the suite degrades honestly.
-fourth_selfhost() { [[ -s "$FOURTH_FLATTEN_TABLE" && -n "$FKWU" && -x "$FKWU" ]]; }
+# Gated to POSIX: on Windows fkwu's read_file reads source through a text-mode
+# open() (CRLF-translated), so the self-flattened table diverges from the Go
+# binary's. mac/linux self-host is proven four-way; the Windows self-host (a
+# binary-mode read_file open) is a named follow-up — Windows keeps bin-go flatten.
+fourth_selfhost() {
+    [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]] && return 1
+    [[ -s "$FOURTH_FLATTEN_TABLE" && -n "$FKWU" && -x "$FKWU" ]]
+}
 
 # fourth_band_request — emit one band's request block for the flatten driver:
 #   stem \n kind \n nmod \n <mod path>*nmod \n <band path>
