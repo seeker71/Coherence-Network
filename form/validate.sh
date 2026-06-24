@@ -316,8 +316,18 @@ fourth_ok=0
 
 # --- explicit mode: validate one file list as one workload --------------
 if [[ $# -gt 0 ]]; then
+    explicit_args=("$@")
+    # Single band file: honor `; preludes:` like the full stdlib/tests sweep.
+    if [[ $# -eq 1 ]]; then
+        f="$1"
+        preludes=$(grep -E '^; preludes:' "$f" 2>/dev/null | head -1 | sed 's/^; preludes://' || true)
+        if [[ -n "$preludes" ]]; then
+            # shellcheck disable=SC2206
+            explicit_args=(form-stdlib/core.fk $preludes "$f")
+        fi
+    fi
     label=""
-    for f in "$@"; do
+    for f in "${explicit_args[@]}"; do
         base="$(basename "$f")"
         if [[ -z "$label" ]]; then
             label="$base"
@@ -325,7 +335,7 @@ if [[ $# -gt 0 ]]; then
             label="$label+$base"
         fi
     done
-    run_workload "$label" "$@"
+    run_workload "$label" "${explicit_args[@]}"
 else
     # Pre-flatten every covered band's table in one Go run before the
     # suite fans out — cold cache pays ~20s once; warm runs skip it.

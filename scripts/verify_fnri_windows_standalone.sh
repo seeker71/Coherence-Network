@@ -1,5 +1,5 @@
 #!/bin/sh
-# Composted: windows fnri receipt via form-cli (validate four-way still via form/validate.sh).
+# verify_fnri_windows_standalone.sh — platform receipt row (windows on CI/host, mac cross-check locally).
 set -eu
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 FORM="$ROOT/form"
@@ -15,4 +15,16 @@ grep -q '0 divergent' fnri-platform.out || { echo "FAIL: kernels diverged" >&2; 
 grep -q "$WANT" fnri-platform.out || { echo "FAIL: missing $WANT" >&2; exit 1; }
 "$ROOT/scripts/fnri_fkwu_witness.sh" || exit 1
 "$ROOT/scripts/verify_fsh_fnri_bootstrap.sh" >/dev/null || { echo "FAIL: bootstrap receipt" >&2; exit 1; }
-printf '{"claim":"fnri-witness","platform":"windows","carrier":"form-cli","witness":%s}\n' "$WANT"
+case "$(uname -s 2>/dev/null || echo unknown)" in
+  Darwin)
+    "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
+    PLATFORM=mac
+    ;;
+  MINGW*|MSYS*|CYGWIN*|Windows*)
+    PLATFORM=windows
+    ;;
+  *)
+    PLATFORM=unknown
+    ;;
+esac
+printf '{"claim":"fnri-witness","platform":"%s","carrier":"form-cli","witness":%s}\n' "$PLATFORM" "$WANT"
