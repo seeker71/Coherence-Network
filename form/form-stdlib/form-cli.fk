@@ -63,6 +63,10 @@
                 (str_concat " no-go=" (int_to_str (fnri-no-go-emission?)))))
             (do
                 (let parts (split-on arg " "))
+                (if (str_eq (head parts) "witness")
+                    (fnri-witness-str)
+                (if (str_eq (head parts) "know")
+                    (fnri-know-line (fc-part parts 1 ""))
                 (if (str_eq (head parts) "resolve")
                     (do
                         (let target (fc-part parts 1 "macos-arm64"))
@@ -70,10 +74,7 @@
                         (let resolved (fnri-resolve target protocol))
                         (let iface (fnri-resolve-interface resolved))
                         (bnii-interface-name iface))
-                    (do
-                        (let k (fnri-knowledge-for arg))
-                        (str_concat (fnri-knowledge-slug k)
-                            (str_concat ":" (fnri-knowledge-path k))))))))
+                    (fnri-knowledge-line arg)))))))
 
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))
