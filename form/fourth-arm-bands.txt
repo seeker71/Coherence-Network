@@ -958,6 +958,7 @@ shell-cell fks 15
 live-room-shell fks 63
 file-io-shell fks 255
 form-native-resource-interfaces fks 32767
+fnri-dispatch-carrier fks 1023
 native-host-instance fks 4095
 const-recipe fks 511
 model-search fks 31
