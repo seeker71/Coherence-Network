@@ -1,0 +1,79 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/standard-lane-clang-bootstrap",
+  "commit_scope": "Committed darwin-arm64 fkwu + form-cli bootstrap binaries eliminate clang from standard lane cold start on mac; ensure_form_cli_native and sovereignty verify copy platform binaries when stamped.",
+  "files_owned": [
+    "form/scripts/fourth-arm.sh",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/INDEX.md",
+    "specs/fkwu-native-host-resources.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "rm -f form/form-cli form/form-stdlib/.cache/fourth/fkwu-*",
+      "./scripts/verify_form_native_sovereignty.sh"
+    ],
+    "fourth_arm": "form-native-resource-interfaces 32767; fs-list 3 — cold install from bootstrap binaries, no clang invoked.",
+    "native_binary": "bootstrap/fkwu-darwin-arm64 + form-cli-darwin-arm64 copied to cache; receipt toolchain-free.",
+    "notes": "clang remains maintainer-only via regen_standard_lane_binaries.sh; other platforms need their own bootstrap rows."
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "Cold sovereignty verify on darwin-arm64 without clang or go on PATH",
+    "expected_behavior_delta": "FORM_STANDARD_LANE=1 installs from committed platform binaries before any compile step",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "rm form-cli fkwu cache && ./scripts/verify_form_native_sovereignty.sh → pass"
+    ]
+  },
+  "phase_gate": {
+    "phase": "standard-receipt-clang-free-mac",
+    "gate": "darwin-arm64 cold start without clang in standard lane",
+    "state": "observed-mac-host",
+    "can_move_next_phase": false,
+    "pending_rungs": [
+      "linux/windows/android platform bootstrap binaries",
+      "form-asm emit replaces committed C + platform binaries"
+    ]
+  },
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources"],
+  "task_ids": ["standard-lane-clang-bootstrap"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "validation", "evidence"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64"
+  ],
+  "change_files": [
+    "form/scripts/fourth-arm.sh",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/INDEX.md",
+    "specs/fkwu-native-host-resources.md",
+    "docs/system_audit/commit_evidence_2026-06-24_standard_lane_clang_free_mac.json"
+  ],
+  "change_intent": "runtime_feature"
+}
