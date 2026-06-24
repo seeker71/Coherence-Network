@@ -136,7 +136,10 @@
 ;        loaded seven matrices; y[0][0]=1000297 ≠ toy 1893731.
 ;        ✓ D₃ — block-join-asm.fk (255): join dot uses bj-dot-fam (fam-dot-loop semantics); composes
 ;        with fam-dot-loop/fam-dot2 bytes; witness scripts/block_join_asm_witness.sh runs fam-dot2 on
-;        loaded weights bit-exact vs bj-dot-row-n. Adjacent: d=3072 carrier vs numpy; ll-buffer store-loop.
+;        loaded weights bit-exact vs bj-dot-row-n.
+;        ✓ D₄ — scripts/llama_block0_join_carrier.py d=4: independent ref vs Form
+;        bj-block-causal-gqa-d4 on loaded Q6_K weights; max|Δ|=0, y[0][0]=1.000297. Adjacent:
+;        wl-load-q4k for blk.0 tensors, sliced d>4 toward d_model=3072.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL
