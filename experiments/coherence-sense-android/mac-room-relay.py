@@ -154,7 +154,7 @@ def answer(text):
     if not text:
         return ""
     try:
-        out = subprocess.run(["bash", ASK, text], capture_output=True, text=True, timeout=90).stdout
+        out = subprocess.run(["bash", ASK, text], capture_output=True, text=True, timeout=12).stdout
         # form_cli_ask prints a trust header line first; keep the body after it
         lines = [l for l in out.splitlines() if l.strip()]
         body = [l for l in lines if not l.startswith("trust ") and l.strip() != "?"]
@@ -206,7 +206,7 @@ class Relay(BaseHTTPRequestHandler):
             trans = translate(wav) if (text and not text.isascii()) else ""  # skip for English
             if trans and trans.strip().lower() == text.strip().lower():
                 trans = ""
-            ans = answer(text)
+            ans = answer(text) if os.environ.get("ROOM_EAR_ANSWER", "0") == "1" else ""  # perception-fast default; Sema's reply is empty under cold launchd + speak-turn-gated anyway
             return self._send(200, {"transcript": text, "translation": trans, "answer": ans, "lang": lang})
         finally:
             try: os.remove(wav)
