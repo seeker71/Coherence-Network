@@ -1,0 +1,38 @@
+; input-stream.fk — stream STAGED input by lines: the O(n), bounded-depth reader
+; behind any data-processing verb that comes home to fkwu over staged data.
+;
+; The naive reader (accumulate the whole buffer char-by-char with str_concat) is
+; O(n^2) AND recurses byte-deep — it stack-overflows on large inputs (a 38KB
+; manifest segfaults the universal walker). This reads ONE LINE at a time instead:
+;   - is-line: chars of the line at byte i — per-char recursion bounded by LINE
+;     length (tens), never the whole input.
+;   - is-next: the index just past the next '\n' (or at the NUL terminator).
+;   - is-fold: fold a per-line function over every staged line — recursion bounded
+;     by LINE COUNT, not byte count, and in tail position. The accumulator holds
+;     only what the reducer keeps (e.g. matching rows), so no O(n^2) blowup.
+;
+; fkwu-only: input_byte (tag 17) is the staged-input op only the emitted universal
+; walker carries — a host-io carrier utility, not a four-way recipe. Pair it with a
+; grammar's per-line compute (e.g. shell-exec's sh-words / sh-bi-awk) to run a verb
+; native over a whole staged file, no read_file / no host tool in the compute loop.
+;
+; preludes: form-stdlib/core.fk
+(do
+    ; the line starting at byte i: characters until '\n' or the NUL terminator.
+    (defn is-line (i)
+        (do (let b (input_byte i))
+            (if (eq b 0) ""
+                (if (eq b 10) ""
+                    (str_concat (byte_to_str b) (is-line (add i 1)))))))
+    ; the index just past the next '\n' (or at the NUL terminator if none remains).
+    (defn is-next (i)
+        (do (let b (input_byte i))
+            (if (eq b 0) i
+                (if (eq b 10) (add i 1)
+                    (is-next (add i 1))))))
+    ; fold f over every staged line: acc' = (f acc line). Tail position over lines.
+    (defn is-fold (i f acc)
+        (do (let b (input_byte i))
+            (if (eq b 0) acc
+                (is-fold (is-next i) f (f acc (is-line i))))))
+    0)
