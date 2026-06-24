@@ -13,11 +13,18 @@
 import json, os, subprocess, sys, tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-# Multilingual model by default — handles any whisper language (Brazilian Portuguese, etc.), auto-detected.
+ROOT = os.environ.get("COHERENCE_ROOT") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+# Best multilingual oracle available — small > base (both multilingual: Brazilian Portuguese etc.,
+# auto-detected) > english-only. small translates far better than base (the weak-oracle gap).
+_sm = os.path.expanduser("~/.coherence-whisper/ggml-small.bin")
 _mm = os.path.expanduser("~/.coherence-whisper/ggml-base.bin")
 _en = os.path.expanduser("~/.coherence-whisper/ggml-base.en.bin")
-MODEL = os.environ.get("ROOM_EAR_MODEL", _mm if os.path.exists(_mm) else _en)
+def _best_model():
+    for m in (_sm, _mm, _en):
+        if os.path.exists(m):
+            return m
+    return _en
+MODEL = os.environ.get("ROOM_EAR_MODEL", _best_model())
 WHISPER = os.environ.get("ROOM_EAR_WHISPER", "whisper-cli")
 ASK = os.path.join(ROOT, "scripts", "form_cli_ask.sh")
 PORT = int(os.environ.get("ROOM_RELAY_PORT", "8910"))
@@ -49,6 +56,18 @@ def transcribe(wav_path, lang="auto"):
         text = " ".join(out.split()).strip()
         return "" if _is_noise(text) else text
     except Exception as e:
+        return ""
+
+
+def translate(wav_path):
+    # whisper --translate renders any spoken language into English, so a non-English room is understandable.
+    # Returns "" for English/near-silence (the source transcript already serves); a real translation else.
+    try:
+        out = subprocess.run([WHISPER, "-m", MODEL, "-f", wav_path, "-nt", "-tr"],
+                             capture_output=True, text=True, timeout=90).stdout
+        text = " ".join(out.split()).strip()
+        return "" if _is_noise(text) else text
+    except Exception:
         return ""
 
 
@@ -98,8 +117,12 @@ class Relay(BaseHTTPRequestHandler):
             with open(wav, "wb") as f:
                 f.write(data)
             text = transcribe(wav, lang)
+            # translation: English rendering when the speech wasn't English; "" when it matches (English/silence)
+            trans = translate(wav) if text else ""
+            if trans and trans.strip().lower() == text.strip().lower():
+                trans = ""
             ans = answer(text)
-            return self._send(200, {"transcript": text, "answer": ans, "lang": lang})
+            return self._send(200, {"transcript": text, "translation": trans, "answer": ans, "lang": lang})
         finally:
             try: os.remove(wav)
             except Exception: pass
