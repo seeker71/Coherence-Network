@@ -1,0 +1,83 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fkwu-native-host-resources",
+  "commit_scope": "Land the fkwu-native host resources spec (no Go emission bar, BML platform interfaces, local sovereignty RAG). Unblock T_flat self-host: split fkc-table-serialize.fk from hati-os-kernel-emit.fk, add FOURTH_FLATTEN_CHAIN without C-emission literals, regenerate T_flat, prove fkwu self-host flatten (fs-list verdict 3). Add rh-heal-sovereignty for architecture doc indexing.",
+  "standard_receipt": {
+    "claim": "Per-band flatten runs on fkwu via T_flat without bin-go in the runtime loop; sovereignty architecture is spec'd and indexable locally.",
+    "body": "yes — flattener + fkc-table-serialize are Form; fkwu walks T_flat to flatten bands",
+    "c_bootstrap": "pending — fkwu still built from Go-emitted C + clang",
+    "toolchain_free": "pending — one-time T_flat bootstrap still uses bin-go; runtime self-host flatten is toolchain-free",
+    "platforms": {
+      "mac": "observed — four-way fs-list + fkwu self-host flatten verdict 3 this session",
+      "windows": "pending",
+      "android": "pending"
+    },
+    "receipt_matrix": {
+      "mac": "self-host flatten observed; c-bootstrap pending",
+      "windows": "pending",
+      "android": "pending",
+      "c_bootstrap_toolchain_free": "pending"
+    },
+    "honest_floor": "T_flat bootstrap still uses bin-go over FOURTH_FLATTEN_CHAIN (~1.4GB peak). Runtime band flatten on fkwu does not. Full spec bar (c-bootstrap, BML Host* per platform) not yet met."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260624_fkwu_native_host_resources.json"
+  ],
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources", "form-cli-self-healing-memory"],
+  "task_ids": ["task-2026-06-24-fkwu-native-host-resources"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "no-go-emission-requirement"]
+    },
+    {
+      "contributor_id": "cursor-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation", "spec", "t-flat-selfhost"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "specs/fkwu-native-host-resources.md",
+    "ideas/agent-cli.md",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/fourth-flatten-table.txt",
+    "form/form-stdlib/rag-heal.fk",
+    "form/scripts/fourth-arm.sh",
+    "docs/system_audit/commit_evidence_20260624_fkwu_native_host_resources.json"
+  ],
+  "evidence_refs": [
+    "T_FLAT SELF-HOST: fkwu + fourth-flatten-table.txt flattens fs-list-band -> verdict 3 without bin-go in runtime (mac). Split fkc-table-serialize.fk (118KB) from emit (42KB); FOURTH_FLATTEN_CHAIN omits hati-os-kernel-emit.fk.",
+    "T_FLAT BOOTSTRAP: bin-go over FOURTH_FLATTEN_CHAIN -> 581150 bytes, peak RSS 1.4GB (one-time; not runtime).",
+    "FOUR-WAY: validate.sh fs-list-band -> 3, fourth arm four-way.",
+    "SPEC: specs/fkwu-native-host-resources.md — BML Host* interfaces mac/windows/android, c-bootstrap receipt, local RAG."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/fkwu-native-host-resources.md",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/fs-list-band.fk",
+      "fkwu self-host flatten fs-list -> verdict 3"
+    ],
+    "fourth_arm_outputs": ["fs-list four-way incl fkwu; self-host flatten verdict 3"]
+  },
+  "ci_validation": { "status": "pending", "commands": [] },
+  "deploy_validation": { "status": "pending", "environment": "local-form-runtime", "notes": "No deploy." },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Self-host flatten observed; c-bootstrap + platform BML impls pending per spec."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Runtime band flatten on fkwu without bin-go; spec + RAG sovereignty corpus path.",
+    "public_endpoints": ["local form-cli / fkwu only"],
+    "test_flows": ["mac: fs-list four-way + self-host flatten"]
+  }
+}

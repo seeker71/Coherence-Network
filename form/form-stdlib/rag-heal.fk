@@ -129,4 +129,11 @@
                 (str_concat (rh-kept-lines lines heal body)
                             (rh-emit-lines heal)))))
 
+    ; ── sovereignty corpus: index the architecture docs agents must retrieve locally
+    ; (standard receipt, host-kernel, specs) into the same jsonl index. ──
+    (defn rh-heal-sovereignty (index-path)
+        (do (rh-heal "docs/coherence-substrate" ".form" index-path)
+            (rh-heal "specs" ".md" index-path)
+            (rh-heal "docs/shared" ".md" index-path)))
+
     0)
