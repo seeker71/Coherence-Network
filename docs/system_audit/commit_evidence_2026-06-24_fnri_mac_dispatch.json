@@ -1,0 +1,73 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fnri-dispatch-proven",
+  "commit_scope": "FNRI fnri-cli-band via fc-fnri; mac binary dispatch receipt observed in verify scripts",
+  "files_owned": [
+    "form/form-stdlib/tests/fnri-cli-band.fk",
+    "scripts/verify_fnri_mac_binary_dispatch.sh",
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_mac_dispatch.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash scripts/fnri_fkwu_witness.sh → PASS (4095 + mac binary)",
+      "bash scripts/verify_fnri_platform_receipt.sh → PASS",
+      "bash scripts/verify_fnri_mac_binary_dispatch.sh → witness=32767"
+    ],
+    "fourth_arm": "form-cli-band 4095; mac form-cli dispatch observed",
+    "notes": "fnri-cli-band calls fc-fnri (dispatch body) not duplicate catalog helpers"
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "Platform receipt script now requires mac form-cli binary dispatch, not bands alone",
+    "expected_behavior_delta": "named band-only receipt → proven fkwu + binary dispatch",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "bash scripts/fnri_fkwu_witness.sh",
+      "bash scripts/verify_fnri_platform_receipt.sh",
+      "bash scripts/verify_fnri_mac_binary_dispatch.sh"
+    ]
+  },
+  "phase_gate": {
+    "phase": "fnri-mac-dispatch-observed",
+    "gate": "4095 + mac binary witness/know/receipt",
+    "state": "mac-observed",
+    "can_move_next_phase": false,
+    "next": "windows/android platform receipt rows"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "scripts/verify_fnri_mac_binary_dispatch.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "form/form-stdlib/tests/form-cli-band.fk"
+  ],
+  "standard_receipt": {
+    "claim": "fnri mac platform dispatch observed via form-cli binary",
+    "body": "yes",
+    "c_bootstrap": "observed",
+    "toolchain_free_runtime": "partial",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "verify_fnri_mac_binary_dispatch.sh"},
+      "windows": {"status": "pending", "trace": "verify_fnri_windows_standalone.sh"},
+      "android": {"status": "pending", "trace": "verify_fnri_android_receipt.sh"}
+    }
+  },
+  "change_files": [
+    "form/form-stdlib/tests/fnri-cli-band.fk",
+    "scripts/verify_fnri_mac_binary_dispatch.sh",
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/fnri_fkwu_witness.sh"
+  ],
+  "change_intent": "runtime_feature"
+}
