@@ -103,18 +103,23 @@ fourth_band_request() {
 # Bash ship `sha256sum`; they don't overlap. The value is only ever a per-host
 # cache key, so the algorithm is free — only availability matters.
 fourth_hash16() {
-    if command -v shasum >/dev/null 2>&1 && printf test | shasum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | shasum | cut -c1-16
-    elif command -v sha1sum >/dev/null 2>&1 && printf test | sha1sum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | sha1sum | cut -c1-16
-    elif command -v sha256sum >/dev/null 2>&1 && printf test | sha256sum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | sha256sum | cut -c1-16
-    elif command -v cksum >/dev/null 2>&1 && printf test | cksum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | cksum | cut -c1-16
-    else
-        echo "fourth-arm.sh: need shasum, sha1sum, sha256sum, or cksum for cache keys" >&2
-        return 1
-    fi
+    # Strip CR so cache stamps match across LF checkouts (mac/linux) and CRLF
+    # working trees (Windows Git Bash autocrlf).
+    _fourth_hash_stdin() {
+        if command -v shasum >/dev/null 2>&1 && printf test | shasum >/dev/null 2>&1; then
+            tr -d '\r' | shasum | cut -c1-16
+        elif command -v sha1sum >/dev/null 2>&1 && printf test | sha1sum >/dev/null 2>&1; then
+            tr -d '\r' | sha1sum | cut -c1-16
+        elif command -v sha256sum >/dev/null 2>&1 && printf test | sha256sum >/dev/null 2>&1; then
+            tr -d '\r' | sha256sum | cut -c1-16
+        elif command -v cksum >/dev/null 2>&1 && printf test | cksum >/dev/null 2>&1; then
+            tr -d '\r' | cksum | cut -c1-16
+        else
+            echo "fourth-arm.sh: need shasum, sha1sum, sha256sum, or cksum for cache keys" >&2
+            return 1
+        fi
+    }
+    cat "$@" 2>/dev/null | _fourth_hash_stdin
 }
 
 # fourth_fkwu_cache_stamp — cache key for the standing fkwu binary (emitter chain + committed uni.c).
