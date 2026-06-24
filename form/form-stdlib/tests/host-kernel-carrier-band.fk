@@ -1,0 +1,7 @@
+; tests/host-kernel-carrier-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk
+;
+; Verdict: 1111 when hk-carrier-test passes on all siblings.
+
+(do (hk-carrier-test 0))

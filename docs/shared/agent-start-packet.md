@@ -105,6 +105,12 @@ Form→asm BYTES — `form-asm`/`form-lower`/`form-macho` (31), `recipe-dylib`
 When a band has not crossed that manifest, record `3-kernel only` and name the
 next fourth-arm gap instead of flattening the proof level.
 
+**Collapse direction (2026-06):** new native surface lands in
+`native-op-manifest.fk` + fkwu only — not Go/Rust/TS `registerNative`.
+Stop rules and phased path: [`specs/fkwu-only-kernel-collapse.md`](../../specs/fkwu-only-kernel-collapse.md).
+Gates at `form/validate.sh` start: `validate_fkwu_native_surface.py`,
+`sync_native_op_manifest.py`.
+
 Connected tissue north star: keep sister nodes in agreement. The fourth-arm
 manifest carries the current Form/BML floor; substrate north-star `.form` cells
 carry the direction; native executor ledger records carry proof-run coordination;
@@ -420,7 +426,7 @@ Everything below derives from five axioms ([`core-axioms.form`](../coherence-sub
 
 [`living-axioms.form`](../coherence-substrate/living-axioms.form) reads the same five at the altitude of a life; [`living-vision.form`](../coherence-substrate/living-vision.form) walks them as the organism's dateless gradient and names the honest floor — the body is young and small, thinking mostly on rented frontier minds, tended by a small first circle. Native reasoning is the precondition of the no-exclusion promise: *a mind rented from a gated provider cannot offer sovereignty to others* ([`lc-cognitive-sovereignty`](../vision-kb/concepts/lc-cognitive-sovereignty.md)).
 
-Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
+Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`fkwu-native-host-platform.form`](../coherence-substrate/fkwu-native-host-platform.form) names the **receipt-path requirement**: c-bootstrap fkwu with generic Mac/Windows/Android class bindings — **no Go emission** — read before adding HTTP/FS/GPU/RAM/thread host features; [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
 
 ### Trinity (one substance, three phases)
 

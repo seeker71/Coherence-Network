@@ -1,0 +1,62 @@
+; host-kernel-carrier.fk — OS-independent host resource carriers (port + carrier).
+;
+; Closes the interface gaps at the Form contract layer: every organ and
+; world-port named in host-kernel-interface.bml binds here as a carrier
+; record of function-values. Siblings select a carrier; call sites stay
+; invariant. fkwu reaches host I/O through emitted tags beneath these ops.
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/resource-port.fk
+;
+(do
+    ;; ── RAM organ — namespaced KV over the storage-port memory carrier ──
+    (defn hk-ram-key (ns k) (str_concat (str_concat ns ":") k))
+    (defn hk-ram-open (ns) (storage-open (carrier-memory) ns))
+    (defn hk-ram-put (store ns k v)
+        (storage-put (carrier-memory) store (hk-ram-key ns k) v))
+    (defn hk-ram-get (store ns k)
+        (storage-get (carrier-memory) store (hk-ram-key ns k)))
+    (defn hk-ram-has? (store ns k)
+        (storage-has? (carrier-memory) store (hk-ram-key ns k)))
+
+    ;; ── Clock organ — shape proof only (value diverges by design) ──
+    (defn hk-clock-now-ms () (now_unix_ms))
+    (defn hk-clock-shape-ok? (t) (if (gt t 1000000000) 1 0))
+
+    ;; ── Entropy door — deterministic LCG for four-way bands ──
+    (defn hk-entropy-seed (seed count)
+        (seeded_bytes seed count))
+
+    ;; ── GPU organ — jit compile door (drive the host organ) ──
+    (defn hk-gpu-dispatch (recipe-name)
+        (jit_compile_value recipe-name))
+
+    ;; ── Host-bound route carrier — storage + http_get offload shape ──
+    (defn hk-route-carrier ()
+        (mk-carrier "host-route"
+            hk-ram-open
+            hk-ram-put
+            hk-ram-get
+            hk-ram-has?
+            storage-keys))
+
+    (defn hk-route-offload-key () "route-payload")
+    (defn hk-route-cache-put (store payload)
+        (hk-ram-put store "route" (hk-route-offload-key) payload))
+    (defn hk-route-cache-get (store)
+        (hk-ram-get store "route" (hk-route-offload-key)))
+
+    ;; ── carrier verdict — one test, all organs named ──
+    (defn hk-carrier-test (_x)
+        (do
+            (let s0 (hk-ram-open "hk-test"))
+            (let s1 (hk-ram-put s0 "hk-test" "alpha" 42))
+            (let got (hk-ram-get s1 "hk-test" "alpha"))
+            (let clk (hk-clock-shape-ok? (hk-clock-now-ms)))
+            (let ent (nth (hk-entropy-seed 7 4) 0))
+            (let r1 (if (eq (storage-value got) 42) 1 0))
+            (let r2 (if (eq clk 1) 10 0))
+            (let r3 (if (eq ent 52) 100 0))
+            (let r4 (if (eq (node_type (native_blueprint "read_file")) 10) 1000 0))
+            (sum (list r1 r2 r3 r4))))
+
+    0)

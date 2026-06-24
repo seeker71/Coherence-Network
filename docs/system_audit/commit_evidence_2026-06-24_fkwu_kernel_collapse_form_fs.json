@@ -1,0 +1,132 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/73e78f2c",
+  "commit_scope": "Form-native form-fs on fkwu (four-way 16383); fkwu-only kernel collapse spec with Phase 0 gates (native surface validator) and Phase 1 seed (native-op-manifest + flt-ops generator + sync gate). Host-kernel interface and platform-host carriers included from parallel work on this branch.",
+  "files_owned": [
+    "specs/fkwu-only-kernel-collapse.md",
+    "form/form-stdlib/native-op-manifest.fk",
+    "form/form-stdlib/form-fs.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/scripts/validate_fkwu_native_surface.py",
+    "form/scripts/gen_flt_ops_from_manifest.py",
+    "form/scripts/sync_native_op_manifest.py",
+    "form/validate.sh",
+    "scripts/form_fs_fkwu_receipt.sh",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_kernel_collapse_form_fs.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && python3 scripts/validate_fkwu_native_surface.py",
+      "cd form && python3 scripts/gen_flt_ops_from_manifest.py",
+      "cd form && python3 scripts/sync_native_op_manifest.py",
+      "cd form && GO_BIN=./form-kernel-go/bin-go ./validate.sh form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk",
+      "scripts/form_fs_fkwu_receipt.sh"
+    ],
+    "fourth_arm_outputs": [
+      "form-fs-band: verdict 16383, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI validate.sh will run new gates at suite start."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "Form stdlib + validate gates; c-bootstrap BUILD row still pending on standard receipt."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Phase 0 exit met locally; CI merge and deploy pending. Phase 1 manifest+generator landed; arity-class dispatch and self-hosted build remain."
+  },
+  "idea_ids": [
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse",
+    "fkwu-native-host-platform"
+  ],
+  "task_ids": [
+    "task-2026-06-24-fkwu-kernel-collapse"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "cursor-auto",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "auto"
+  },
+  "change_intent": "runtime_feature",
+  "evidence_refs": [
+    "cd form && GO_BIN=./form-kernel-go/bin-go ./validate.sh form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk -> 16383 four-way",
+    "validate_fkwu_native_surface.py -> OK 107 flt-ops rows",
+    "gen_flt_ops_from_manifest.py + sync_native_op_manifest.py -> OK aligned",
+    "scripts/form_fs_fkwu_receipt.sh -> toolchain_free_run observed; c_bootstrap_build pending"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-fs host-io natives (fs_is_dir, fs_list, source_inventory) cross four-way on fkwu; validate.sh runs collapse gates before kernel legs.",
+    "public_endpoints": [
+      "none changed; Form stdlib + validate gates only"
+    ],
+    "test_flows": [
+      "form-fs-band.fk four-way proof at 16383",
+      "Phase 0-1 gates on every validate.sh invocation"
+    ]
+  },
+  "change_files": [
+    "MANIFEST.md",
+    "docs/PLAN.md",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fkwu-native-host-platform.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_kernel_collapse_form_fs.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bml/fkwu-platform-host.bml",
+    "form/form-stdlib/bml/form-fs.bml",
+    "form/form-stdlib/bml/host-kernel-interface.bml",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/fkwu-uni.stamp",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/fkwu-platform-host-carrier.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/form-fs.fk",
+    "form/form-stdlib/fourth-flatten-table.txt",
+    "form/form-stdlib/host-io-fs-fkwu-emit.fk",
+    "form/form-stdlib/host-kernel-carrier.fk",
+    "form/form-stdlib/host-kernel-fkwu-gap-ledger.fk",
+    "form/form-stdlib/host-kernel-fkwu-native-emit.fk",
+    "form/form-stdlib/host-kernel-interface-self.fk",
+    "form/form-stdlib/native-op-manifest.fk",
+    "form/form-stdlib/tests/fkwu-platform-host-band.fk",
+    "form/form-stdlib/tests/form-fs-band.fk",
+    "form/form-stdlib/tests/host-kernel-carrier-band.fk",
+    "form/form-stdlib/tests/host-kernel-gaps-close-band.fk",
+    "form/form-stdlib/tests/host-kernel-interface-proof.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "form/scripts/gen_flt_ops_from_manifest.py",
+    "form/scripts/sync_native_op_manifest.py",
+    "form/scripts/validate_fkwu_native_surface.py",
+    "form/validate.sh",
+    "scripts/INDEX.md",
+    "scripts/form_fs_fkwu_receipt.sh",
+    "specs/INDEX.md",
+    "specs/fkwu-native-host-platform.md",
+    "specs/fkwu-only-kernel-collapse.md"
+  ]
+}

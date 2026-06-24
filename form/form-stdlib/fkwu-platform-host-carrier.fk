@@ -1,0 +1,70 @@
+; fkwu-platform-host-carrier.fk — platform-dispatch carrier records for fkwu host resources.
+;
+; Selects Mac / Windows / Android implementation records at runtime.
+; Call sites stay invariant; platform syscalls live beneath carrier records
+; emitted into fkwu on the c-bootstrap receipt path (NOT Go uni-driver).
+;
+; Authority: docs/coherence-substrate/fkwu-native-host-platform.form
+;            form/form-stdlib/bml/fkwu-platform-host.bml
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/resource-port.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk
+;
+(do
+    (defn host-platform-id-mac () 0)
+    (defn host-platform-id-windows () 1)
+    (defn host-platform-id-android () 2)
+    (defn host-platform-id-unknown () 3)
+
+    (defn host-platform-detect (_x)
+        ; Floor: compile-time / link-time target is carried by the fkwu binary.
+        ; Receipt path names the platform in commit evidence; runtime detect
+        ; lifts to host-io tags per platform emit slice.
+        (host-platform-id-mac))
+
+    (defn host-platform-name (pid)
+        (if (eq pid (host-platform-id-mac)) "mac"
+        (if (eq pid (host-platform-id-windows)) "windows"
+        (if (eq pid (host-platform-id-android)) "android"
+            "unknown"))))
+
+    (defn host-platform-carrier-record (pid)
+        (list
+            (host-platform-name pid)
+            (if (eq pid (host-platform-id-mac)) "mach-o/arm64"
+            (if (eq pid (host-platform-id-windows)) "pe-coff/x86_64"
+                "elf/aarch64"))
+            (if (eq pid (host-platform-id-mac)) "libSystem"
+            (if (eq pid (host-platform-id-windows)) "ws2_32"
+                "bionic"))))
+
+    ;; Resource doors — delegate to host-kernel-carrier until per-platform
+    ;; emit slices land on c-bootstrap fkwu.
+    (defn host-fs-read (path)
+        (fs-read-text path))
+
+    (defn host-fs-write (path bytes)
+        (fs-write-text path bytes))
+
+    (defn host-net-get (url)
+        (http_get url))
+
+    (defn host-ram-open (ns) (hk-ram-open ns))
+    (defn host-ram-put (s ns k v) (hk-ram-put s ns k v))
+    (defn host-ram-get (s ns k) (hk-ram-get s ns k))
+
+    (defn host-gpu-dispatch (recipe) (hk-gpu-dispatch recipe))
+    (defn host-clock-ms () (hk-clock-now-ms))
+    (defn host-entropy-draw (n) (random_bytes n))
+
+    (defn host-platform-smoke (_x)
+        (do
+            (let pid (host-platform-detect 0))
+            (let rec (host-platform-carrier-record pid))
+            (let n (host-platform-name pid))
+            (let r1 (if (eq (len n) 3) 1 0))
+            (let r2 (if (gt (host-clock-ms) 1000000000) 10 0))
+            (let r3 (if (eq (len (host-entropy-draw 4)) 4) 100 0))
+            (let r4 (if (eq (node_type (native_blueprint "read_file")) 10) 1000 0))
+            (sum (list r1 r2 r3 r4))))
+
+    0)

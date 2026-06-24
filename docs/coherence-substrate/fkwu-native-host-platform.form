@@ -1,0 +1,81 @@
+# fkwu-native-host-platform.form — sovereign fkwu host resources on mac, windows, android
+#
+# REQUIREMENT (Urs, 2026-06-24): No Go/Rust/TS emission for the receipt path.
+# The universal kernel (fkwu) carries ALL host resource interfaces and
+# implementations as Form-native class contracts + platform carrier records.
+# Every agent retrieves this cell locally (substrate ingest, form-cli ask,
+# specs/fkwu-native-host-platform.md) before implementing HTTP, SSE, FS, CPU,
+# GPU, RAM, threads, or any OS duty.
+#
+# Authority chain:
+#   core-axioms.form (five axioms)
+#   host-kernel.form (kernel on host resources)
+#   resource-port.fk + storage-port.fk (port + carrier vocabulary)
+#   host-kernel-interface.bml (organ/world-port catalog)
+#   fkwu-platform-host.bml (generic class + per-platform impl binding)
+#   standard-receipt.form (c-bootstrap fkwu form-cli, toolchain-free, 3 platforms)
+
+(fkwu-native-host-platform
+
+  (requirement
+    (no-go-emission "fkwu tables and fkwu binary MUST NOT be produced by form-kernel-go flatten/emit on the receipt path")
+    (no-rust-ts-emission "sibling walkers are parity witnesses during lift; they are NOT the shipping compiler for host resources on fkwu")
+    (full-native-fkwu "every host resource primitive the contract names runs on fkwu via emitted tags or Form recipes in the pre-flattened table — not stub C that segfaults")
+    (generic-class-contract "BML classes + Form carrier records; no per-feature syscall tables authored beside the recipe")
+    (platforms mac windows android)
+    (sovereignty-retrieval "this cell + spec + BML + bands are ingested; form-cli ask and coh substrate form answer before rented oracle"))
+
+  (honest-floor-today 2026-06-24
+    (three-kernel host-kernel bands green metal-1023 gaps-close-127 carrier-1111 interface-34)
+    (fkwu-builds via go-uni-driver-plus-clang NOT receipt-grade)
+    (gap-natives tags-127-140 segfault-or-diverge on fkwu)
+    (platform-rows mac-android-windows fkwu-runs-simple-bands observed per standard-receipt.form)
+    (c-bootstrap-rung pending form-asm-form-macho-pe-coff-elf replaces clang-plus-go-flatten))
+
+  (architecture
+    (layer-1-port-vocabulary resource-port.fk
+      "afferent/efferent × bool|scalar|bytes|text|pixel|key — content-addressed port NodeID")
+    (layer-2-storage-carrier storage-port.fk
+      "mk-carrier + storage-open/put/get — memory and file backends swappable")
+    (layer-2b-host-filesystem form-fs.bml + form-fs.fk
+      "Path/FileStat/IFormFilesystem — Go os/path · Python pathlib · Node fs; all Form code uses fs-* doors not raw read_file/fs_*")
+    (layer-3-resource-catalog host-kernel-interface.bml
+      "Organs: cpu gpu ram clock | World: fs net entropy persistence hmi route | OS: scheduler threads protection")
+    (layer-4-platform-binding fkwu-platform-host.bml
+      "HostPlatformId + IPlatformHostCarrier + per-resource IPlatformResourceImpl<Mac|Windows|Android>")
+    (layer-5-form-bindings form-stdlib/fkwu-platform-host-carrier.fk
+      "hk-* doors delegate to platform carrier selected by host-platform-detect")
+    (layer-6-fkwu-floor host-kernel-fkwu-native-emit.fk + form-flatten.fk
+      "name→tag→C-arm; table pre-flattened by c-bootstrap flatten recipe NOT go bin-go")
+    (layer-7-receipt standard-receipt.form
+      "form-cli built from c-bootstrap; ./fkwu <table> 0 on mac windows android with zero rented toolchains"))
+
+  (resource-to-port-map
+    (filesystem  "WorldFilesystem — form-fs.fk (fs-read-text fs-write-text fs-list fs-stat fs-glob fs-walk …) over host-io tags 55–63")
+    (http        "WorldNetwork — afferent-bytes efferent-bytes — http_get socket_* ; sse = streaming efferent-bytes on same port")
+    (sse         "WorldNetwork stream facet — efferent-bytes chunked ; not a separate syscall family")
+    (cpu         "OrganCpu — recipe walk + jit ; no host port")
+    (gpu         "OrganGpu VIA_HOST — jit_compile_value / platform gpu carrier")
+    (ram         "OrganRam — storage-port memory carrier + volatile_cell_*")
+    (threads     "OsThreads NAMED today — pthread spawn in fkwu main ; lift to Form primitive when contract admits")
+    (clock       "OrganClock — now_unix_ms tag 135")
+    (entropy     "WorldEntropy — random_bytes tag 134 / seeded_bytes for deterministic bands"))
+
+  (how-to-add-a-feature
+    (step-1 "Name the duty in host-kernel-interface.bml or fkwu-platform-host.bml — RUNS | VIA_HOST | NAMED | GAP")
+    (step-2 "Pick port shapes from resource-port.fk — never invent parallel HTTP/FS APIs in Python or ad-hoc C")
+    (step-3 "Add MacHostX / WindowsHostX / AndroidHostX classes implementing IPlatformResourceImpl in BML")
+    (step-4 "Bind in fkwu-platform-host-carrier.fk — (host-platform-detect) dispatches to the platform record")
+    (step-5 "Register flatten tag in form-flatten.fk ; add C arm in platform emit slice (NOT go-driven uni-driver on receipt path)")
+    (step-6 "Prove tests/<feature>-band.fk three-kernel then four-way fkwu after c-bootstrap table emit")
+    (step-7 "Update RequiredFkwuGapCount / NativePrimitiveBinding rows ; ingest substrate"))
+
+  (retrieval-doors
+    (substrate "?equivalent @spec(fkwu-native-host-platform)")
+    (substrate "annotate docs/coherence-substrate/fkwu-native-host-platform.form")
+    (spec "specs/fkwu-native-host-platform.md")
+    (bml "form/form-stdlib/bml/fkwu-platform-host.bml form/form-stdlib/bml/form-fs.bml")
+    (form-cli "form-cli ask \"how does fkwu implement host filesystem on android\""))
+
+  (kin host-kernel.form standard-receipt.form form-to-asm.form bml-native-north-star.form
+      host-kernel-interface.bml fourth-arm-substrate-carriers.form kernel-on-android.form))

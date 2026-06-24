@@ -1,0 +1,164 @@
+//////////////////////////////////////////////////////////////////////
+//
+// fkwu-platform-host.bml
+//
+// Generic class-based Form-native host resource interfaces for fkwu.
+// Each resource names a contract; Mac, Windows, and Android supply
+// platform implementation classes bound through HostPlatformRegistry.
+//
+// Authority: docs/coherence-substrate/fkwu-native-host-platform.form
+//            specs/fkwu-native-host-platform.md
+//            host-kernel-interface.bml (organ/world-port catalog)
+//
+// Receipt path: c-bootstrap fkwu — NO Go/Rust flatten or emit.
+//
+//////////////////////////////////////////////////////////////////////
+
+package Form.kernel.platform;
+
+import Form.kernel.*;
+
+enum HostPlatformId [public] {
+   MAC,
+   WINDOWS,
+   ANDROID,
+   UNKNOWN
+}
+
+enum HostResourceId [public] {
+   RES_FILESYSTEM,
+   RES_NETWORK,
+   RES_NETWORK_STREAM,
+   RES_CPU,
+   RES_GPU,
+   RES_RAM,
+   RES_CLOCK,
+   RES_ENTROPY,
+   RES_THREADS,
+   RES_HMI
+}
+
+interface IPlatformHostCarrier [public, carrier, native_floor] {
+   section [public] {
+      HostPlatformId Platform() [get];
+      String PlatformName() [get];
+      String ObjectFormat() [get];
+      String LinkCarrier() [get];
+      bool ReceiptGrade() [witness];
+   }
+}
+
+class MacHostCarrier [public, carrier] : IPlatformHostCarrier {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.MAC; }
+      String PlatformName() [get] { return "mac"; }
+      String ObjectFormat() [get] { return "mach-o/arm64"; }
+      String LinkCarrier() [get] { return "libSystem"; }
+      bool ReceiptGrade() [witness] { return false; }
+   }
+}
+
+class WindowsHostCarrier [public, carrier] : IPlatformHostCarrier {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.WINDOWS; }
+      String PlatformName() [get] { return "windows"; }
+      String ObjectFormat() [get] { return "pe-coff/x86_64"; }
+      String LinkCarrier() [get] { return "ws2_32+kernel32"; }
+      bool ReceiptGrade() [witness] { return false; }
+   }
+}
+
+class AndroidHostCarrier [public, carrier] : IPlatformHostCarrier {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.ANDROID; }
+      String PlatformName() [get] { return "android"; }
+      String ObjectFormat() [get] { return "elf/aarch64"; }
+      String LinkCarrier() [get] { return "bionic-static-musl"; }
+      bool ReceiptGrade() [witness] { return false; }
+   }
+}
+
+template<Object THandle, Object TValue> interface IPlatformResourceImpl [public, port, reusable] {
+   section [public] {
+      HostPlatformId Platform() [get];
+      HostResourceId Resource() [get];
+      PortDirection Direction() [get];
+      PortValueShape ValueShape() [get];
+      TValue Sense( THandle hHandle ) [abstract];
+      THandle Act( THandle hHandle, TValue hValue ) [abstract];
+   }
+}
+
+class MacFilesystemImpl [public, runs] : IPlatformResourceImpl<String, String> {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.MAC; }
+      HostResourceId Resource() [get] { return HostResourceId.RES_FILESYSTEM; }
+      PortDirection Direction() [get] { return PortDirection.AFFERENT; }
+      PortValueShape ValueShape() [get] { return PortValueShape.BYTES; }
+      String Sense( String hPath ) [abstract] { return ""; }
+      String Act( String hPath, String hBytes ) [abstract] { return hPath; }
+   }
+}
+
+class WindowsFilesystemImpl [public, runs] : IPlatformResourceImpl<String, String> {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.WINDOWS; }
+      HostResourceId Resource() [get] { return HostResourceId.RES_FILESYSTEM; }
+      PortDirection Direction() [get] { return PortDirection.AFFERENT; }
+      PortValueShape ValueShape() [get] { return PortValueShape.BYTES; }
+      String Sense( String hPath ) [abstract] { return ""; }
+      String Act( String hPath, String hBytes ) [abstract] { return hPath; }
+   }
+}
+
+class AndroidFilesystemImpl [public, runs] : IPlatformResourceImpl<String, String> {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.ANDROID; }
+      HostResourceId Resource() [get] { return HostResourceId.RES_FILESYSTEM; }
+      PortDirection Direction() [get] { return PortDirection.AFFERENT; }
+      PortValueShape ValueShape() [get] { return PortValueShape.BYTES; }
+      String Sense( String hPath ) [abstract] { return ""; }
+      String Act( String hPath, String hBytes ) [abstract] { return hPath; }
+   }
+}
+
+class MacNetworkImpl [public, runs] : IPlatformResourceImpl<String, String> {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.MAC; }
+      HostResourceId Resource() [get] { return HostResourceId.RES_NETWORK; }
+      PortDirection Direction() [get] { return PortDirection.AFFERENT; }
+      PortValueShape ValueShape() [get] { return PortValueShape.BYTES; }
+      String Sense( String hUrl ) [abstract] { return ""; }
+      String Act( String hUrl, String hBody ) [abstract] { return hUrl; }
+   }
+}
+
+class MacNetworkStreamImpl [public, runs_partial] : IPlatformResourceImpl<String, String> {
+   section [public] {
+      HostPlatformId Platform() [get] { return HostPlatformId.MAC; }
+      HostResourceId Resource() [get] { return HostResourceId.RES_NETWORK_STREAM; }
+      PortDirection Direction() [get] { return PortDirection.EFFERENT; }
+      PortValueShape ValueShape() [get] { return PortValueShape.BYTES; }
+      String Sense( String hUrl ) [abstract] { return ""; }
+      String Act( String hUrl, String hChunk ) [abstract] { return hUrl; }
+   }
+}
+
+class HostPlatformRegistry [public, selfHosting, hostKernel, observable] {
+   section [public] {
+      const String RegistryName = "fkwu-platform-host";
+      const String Authority = "BML plus c-bootstrap fkwu receipt path";
+      const int RequiredPlatformCount = 3;
+      const int RequiredResourceFamilyCount = 10;
+
+      int PlatformCount() [get] { return 3; }
+
+      int ResourceFamilyCount() [get] { return 10; }
+
+      bool OsIndependent() [witness] { return true; }
+
+      bool FkwuReceiptPath() [witness] { return true; }
+
+      bool GoEmissionForbidden() [witness] { return true; }
+   }
+}

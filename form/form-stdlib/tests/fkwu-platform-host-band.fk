@@ -1,0 +1,7 @@
+; tests/fkwu-platform-host-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/resource-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fkwu-platform-host-carrier.fk
+;
+; Verdict: 1111 when platform carrier smoke matches host-kernel-carrier floor.
+
+(do (host-platform-smoke 0))

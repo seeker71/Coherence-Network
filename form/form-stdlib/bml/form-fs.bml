@@ -1,0 +1,96 @@
+//////////////////////////////////////////////////////////////////////
+//
+// form-fs.bml — Form-native filesystem stdlib (high grammar authority).
+//
+// Equivalent surface to Go os/path/filepath, Python os/pathlib, Node fs/path:
+// paths, metadata, directory ops, byte/text I/O, append, rename, walk, glob.
+//
+// Implementation: form-stdlib/form-fs.fk (all Form code imports this module).
+// Natives floor: primitive-registry.fk host-io tags 55–63, 101, 104.
+// Platform: Mac / Windows / Android via fkwu platform carriers (same contract).
+//
+// Retrieve: docs/coherence-substrate/fkwu-native-host-platform.form
+//           specs/fkwu-native-host-platform.md
+//
+//////////////////////////////////////////////////////////////////////
+
+package Form.stdlib.fs;
+
+import Form.kernel.*;
+
+enum FsEntryKind [public] {
+   FILE,
+   DIR,
+   MISSING
+}
+
+class FileStat [public, value] {
+   section [public] {
+      int Size() [get];
+      int MtimeUnix() [get];
+      bool IsFile() [get];
+      bool IsDir() [get];
+      bool Exists() [get];
+   }
+}
+
+class Path [public, value, reusable] {
+   section [public] {
+      String Raw() [get];
+
+      Path( String strRaw ) {}
+
+      Path Join( String strSegment ) [abstract];
+      String BaseName() [abstract];
+      String DirName() [abstract];
+      String Extension() [abstract];
+
+      bool Exists() [abstract];
+      bool IsFile() [abstract];
+      bool IsDir() [abstract];
+      FileStat Stat() [abstract];
+
+      String ReadText() [abstract];
+      int WriteText( String strContent ) [abstract];
+      String ReadBytes() [abstract];
+      int WriteBytes( String strBytes ) [abstract];
+      int AppendBytes( String strBytes ) [abstract];
+      String ReadSlice( int nOffset, int nLength ) [abstract];
+
+      int Remove() [abstract];
+      int Rename( String strDest ) [abstract];
+      int MakeDir( bool bParents ) [abstract];
+      int RemoveTree() [abstract];
+
+      String[] List() [abstract];
+      String[] Glob( String strPattern ) [abstract];
+      String[][] Walk( String strSuffix ) [abstract];
+   }
+}
+
+interface IFormFilesystem [public, stdlib, native_floor] {
+   section [public] {
+      const String ModuleName = "form-fs";
+      const String NativeFamily = "host-io-fs-tags-55-63-101-104";
+
+      Path TempDir() [abstract];
+      Path Cwd() [abstract];
+      Path From( String strRaw ) [abstract];
+
+      int Copy( Path src, Path dest ) [abstract];
+      int Move( Path src, Path dest ) [abstract];
+   }
+}
+
+class FormFilesystem [public, stdlib] : IFormFilesystem {
+   section [public] {
+      const int RequiredPrimitiveCount = 18;
+
+      Path TempDir() [abstract] {}
+      Path Cwd() [abstract] {}
+      Path From( String strRaw ) [abstract] {}
+
+      int Copy( Path src, Path dest ) [abstract] {}
+      int Move( Path src, Path dest ) [abstract] {}
+   }
+}

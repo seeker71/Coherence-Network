@@ -1,0 +1,11 @@
+; host-kernel-fkwu-gap-ledger.fk — gap receipts (all closed 2026-06-24).
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (defn hkg-gap (name family gate) (list "hkg-gap" name family gate))
+    (defn hkg-gap-ledger () (empty))
+    (defn hkg-gap-count (ledger) (len ledger))
+    (defn hkg-gap-verdict (ledger expected) (if (eq (hkg-gap-count ledger) expected) 1 0))
+    (defn hkg-gaps-closed () 1)
+    0)

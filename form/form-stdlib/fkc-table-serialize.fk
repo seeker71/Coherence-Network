@@ -124,9 +124,12 @@
     (if (eq (fk-tag n) 133) (fkc-un2 133 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 135) (fkc-un2 135 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 134) (fkc-bin2 134 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    ; 200 fs_is_dir / 202 source_inventory — form-fs stdlib (form-fs.fk)
+    (if (eq (fk-tag n) 200) (fkc-un2 200 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 202) (fkc-tri2 202 (fkc-flat (ms-child (fk-body n) 0) acc) n)
     (if (or (eq (fk-tag n) 81) (or (eq (fk-tag n) 82) (or (eq (fk-tag n) 83) (or (eq (fk-tag n) 85) (or (eq (fk-tag n) 87) (or (eq (fk-tag n) 88) (or (eq (fk-tag n) 89) (or (eq (fk-tag n) 90) (or (eq (fk-tag n) 127) (eq (fk-tag n) 130))))))))))
         (fkc-un2 (fk-tag n) (fkc-flat (fk-body n) acc))
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 
 (defn fkc-call2 (fidx acc1) (cons (list 12 fidx (sub (len acc1) 1) 0) acc1))
 
@@ -353,7 +356,7 @@
 (defn fkc-node-slots () 65536)    ; transient substrate node carrier
 (defn fkc-universal-fn-slots () 2048)
 (defn fkc-universal-node-slots () 65536)
-(defn fkc-arm-slots ()  144)      ; dispatch counters cover tags 0..143 (socket_* 120..126; kernel_stat 127; framebuffer fb_record/events/node_source/clear 128..131)
+(defn fkc-arm-slots ()  256)      ; dispatch counters cover tags 0..255 (host-io-fs 200,202; streaming 133..135; fs_list 132; kernel_stat 127; framebuffer 128..131)
 
 (defn fkc-spool-decl-text ()
     (str_concat "static char *fk_sb; static long long *fk_so; static long long *fk_sl; static long long fk_scap_b; static long long fk_scap_s; static long long fk_sp; static long long fk_sbp; static void fk_sinit(void) { if (fk_sb == 0) { fk_scap_b = "
@@ -560,13 +563,17 @@ static long long fk_sock_write(int fd, const void *buf, unsigned long n) { retur
     (str_concat (fkc-node-decl-text)
     (str_concat (fkc-framebuffer-decl-text)
     (str_concat (fkc-carrier-decl-text)
+    (str_concat (hifse-decl-text)
     (str_concat (fkc-socket-decl-text)
     (str_concat (fkc-http-decl-text)
     (str_concat (fkc-http-header-decl-text)
     (str_concat (fkc-get-decl-text)
     (str_concat (fkc-tls-decl-text)
     (str_concat (fkc-value-native-decl-text)
-                (fkc-melt-text)))))))))))))))))
+                (fkc-melt-text))))))))))))))))))
+
+(defn fkc-form-fs-arms-text ()
+    (hifse-arms-text))
 
 (defn fkc-typed-stdout-text ()
     "static long long fk_str_root_depth(long long i, long long d) { if (d > 64 || i < 0 || i >= fk_node_count) { return 0; } long long t = fk_node[i][0]; if (t == 24 || t == 27 || t == 29 || t == 32 || t == 33 || t == 62 || t == 63 || t == 125) { return 1; } if (t == 6) { if (fk_str_root_depth(fk_node[i][2], d + 1) && fk_str_root_depth(fk_node[i][3], d + 1)) { return 1; } return 0; } if (t == 12) { long long f = fk_node[i][1]; if (f >= 0 && f < fk_fn_count) { return fk_str_root_depth(fk_fn[f], d + 1); } return 0; } if (t == 69) { return fk_str_root_depth(fk_node[i][2], d + 1); } if (t == 109) { return fk_str_root_depth(fk_node[i][3], d + 1); } if (t == 111) { return fk_str_root_depth(fk_node[i][2], d + 1); } return 0; } static void fk_psv(long long v) { long long sa = v >> 1; if (sa >= 0 && sa < fk_sp) { long long j = 0; while (j < fk_sl[sa]) { putchar((int)(unsigned char)fk_sb[fk_so[sa] + j]); j = j + 1; } putchar(10); } else { fk_pv(v); } } static void fk_pv_root(long long root, long long v) { if (fk_str_root_depth(root, 0)) { fk_psv(v); } else { fk_pv(v); } } ")
@@ -636,13 +643,14 @@ static long long fk_sock_write(int fd, const void *buf, unsigned long n) { retur
     (str_concat (fkc-float-arms-text)
                 (str_concat (fkc-value-native-arms-text)
                 (str_concat (fkc-carrier-arms-text)
+                (str_concat (fkc-form-fs-arms-text)
                 (str_concat (fkc-socket-arms-text)
                 (str_concat (fkc-record-field-arms-text)
                 (str_concat (fkc-record-blueprint-arms-text)
                 (str_concat (fkc-jit-lower-arms-text)
                 (str_concat (fkc-kernel-stat-arm-text)
                 (str_concat (fkc-framebuffer-arms-text)
-                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } if (t == 102) { long long ae = fk_walk(fk_node[i][1], fp); long long be = fk_walk(fk_node[i][2], fp); if (fk_num(ae) == fk_num(be)) { return 2; } return 0; } if (t == 103) { long long al = fk_walk(fk_node[i][1], fp); long long bl = fk_walk(fk_node[i][2], fp); if (fk_num(al) < fk_num(bl)) { return 2; } return 0; } if (t == 109) { fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)] = fk_walk(fk_node[i][2], fp); return fk_walk(fk_node[i][3], fp); } if (t == 110) { return fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)]; } if (t == 111) { long long k111 = fk_walk(fk_node[i][1], fp) >> 1; long long sv111 = fk_vsp; long long need111 = fp + 1 + k111; while (fk_vsp < need111) { fk_vs[fk_vsp] = 0; fk_vsp = fk_vsp + 1; } long long r111 = fk_walk(fk_node[i][2], fp); fk_vsp = sv111; return r111; } if (t == 114) { char rbuf[8192]; long long rn = 0; while (rn < 8191) { char rc; long long rg = read(0, &rc, 1); if (rg <= 0) { if (rn == 0) { return 0 - 2; } break; } if (rc == 10) { break; } rbuf[rn] = rc; rn = rn + 1; } while (fk_sbp + rn > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } long long rj = 0; while (rj < rn) { fk_sb[fk_sbp + rj] = rbuf[rj]; rj = rj + 1; } return fk_sintern(fk_sbp, rn) << 1; } if (t == 115) { long long psv = fk_walk(fk_node[i][1], fp); long long psa = psv >> 1; if (psa >= 0 && psa < fk_sp) { long long pj = 0; while (pj < fk_sl[psa]) { putchar((int)(unsigned char)fk_sb[fk_so[psa] + pj]); pj = pj + 1; } } putchar(10); return 0; } if (t == 116) { if (isatty(0)) { return 2; } return 0; } if (t == 117) { if (fk_gen_len <= 0) { return fk_sintern(fk_sbp, 0) << 1; } while (fk_sbp + fk_gen_len > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } long long gj = 0; while (gj < fk_gen_len) { fk_sb[fk_sbp + gj] = (char)fk_gen[gj]; gj = gj + 1; } return fk_sintern(fk_sbp, fk_gen_len) << 1; } return 0; } "))))))))))))))))
+                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } if (t == 102) { long long ae = fk_walk(fk_node[i][1], fp); long long be = fk_walk(fk_node[i][2], fp); if (fk_num(ae) == fk_num(be)) { return 2; } return 0; } if (t == 103) { long long al = fk_walk(fk_node[i][1], fp); long long bl = fk_walk(fk_node[i][2], fp); if (fk_num(al) < fk_num(bl)) { return 2; } return 0; } if (t == 109) { fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)] = fk_walk(fk_node[i][2], fp); return fk_walk(fk_node[i][3], fp); } if (t == 110) { return fk_vs[fp + (fk_walk(fk_node[i][1], fp) >> 1)]; } if (t == 111) { long long k111 = fk_walk(fk_node[i][1], fp) >> 1; long long sv111 = fk_vsp; long long need111 = fp + 1 + k111; while (fk_vsp < need111) { fk_vs[fk_vsp] = 0; fk_vsp = fk_vsp + 1; } long long r111 = fk_walk(fk_node[i][2], fp); fk_vsp = sv111; return r111; } if (t == 114) { char rbuf[8192]; long long rn = 0; while (rn < 8191) { char rc; long long rg = read(0, &rc, 1); if (rg <= 0) { if (rn == 0) { return 0 - 2; } break; } if (rc == 10) { break; } rbuf[rn] = rc; rn = rn + 1; } while (fk_sbp + rn > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } long long rj = 0; while (rj < rn) { fk_sb[fk_sbp + rj] = rbuf[rj]; rj = rj + 1; } return fk_sintern(fk_sbp, rn) << 1; } if (t == 115) { long long psv = fk_walk(fk_node[i][1], fp); long long psa = psv >> 1; if (psa >= 0 && psa < fk_sp) { long long pj = 0; while (pj < fk_sl[psa]) { putchar((int)(unsigned char)fk_sb[fk_so[psa] + pj]); pj = pj + 1; } } putchar(10); return 0; } if (t == 116) { if (isatty(0)) { return 2; } return 0; } if (t == 117) { if (fk_gen_len <= 0) { return fk_sintern(fk_sbp, 0) << 1; } while (fk_sbp + fk_gen_len > fk_scap_b) { fk_scap_b = fk_scap_b * 2; fk_sb = realloc(fk_sb, fk_scap_b); } long long gj = 0; while (gj < fk_gen_len) { fk_sb[fk_sbp + gj] = (char)fk_gen[gj]; gj = gj + 1; } return fk_sintern(fk_sbp, fk_gen_len) << 1; } return 0; } ")))))))))))))))))
 
 ; figure-ops arms (tags 34..42), emitted: each mirrors the walking kernels'
 ; native bit-for-bit — band/bor/bxor/mul are int64 ops; the *_u32 family

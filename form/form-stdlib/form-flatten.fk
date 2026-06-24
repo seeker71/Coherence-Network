@@ -84,6 +84,8 @@
           (list "read_file" 1 63) (list "temp_dir" 0 101)
           (list "write_file_text" 2 104)
           (list "fs_list" 1 132)
+          (list "fs_is_dir" 1 200)
+          (list "source_inventory" 3 202)
           (list "file_open" 1 133) (list "file_read" 2 134) (list "file_close" 1 135)
           (list "http_get" 3 105)
           (list "sock_request" 3 118)

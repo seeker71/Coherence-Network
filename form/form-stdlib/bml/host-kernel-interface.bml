@@ -1,0 +1,907 @@
+//////////////////////////////////////////////////////////////////////
+//
+// host-kernel-interface.bml
+//
+// OS-independent kernel resource interface in high grammar BML.
+// Authority: docs/coherence-substrate/host-kernel.form,
+//            docs/coherence-substrate/fkwu-native-host-platform.form,
+//            form-stdlib/bml/fkwu-platform-host.bml,
+//            form-stdlib/resource-port.fk, storage-port.fk, form-fs.bml,
+//            ports-interface-and-structure.md.
+//
+// RECEIPT PATH: c-bootstrap fkwu on mac/windows/android — NO Go emission.
+// Platform impl bindings live in fkwu-platform-host.bml + fkwu-platform-host-carrier.fk.
+//
+// The body already proves organs and world-ports through per-carrier
+// natives (host-kernel-metal-band.fk, verdict 1023). What was missing
+// was one named, content-addressable contract that:
+//   (1) maps every classic OS duty to a port or organ,
+//   (2) binds each duty to a carrier record (not a syscall table in C),
+//   (3) names RUNS vs VIA-HOST vs NAMED vs GAP per sibling,
+//   (4) receipts the fkwu fourth-arm gaps without pretending parity.
+//
+// Proven by: form-stdlib/tests/host-kernel-interface-proof.fk
+//
+//////////////////////////////////////////////////////////////////////
+
+package Form.kernel.host;
+
+import Form.kernel.*;
+
+interface HostResourceObservable [public, witness, port] {
+   section [public] {
+      String Name() [get];
+      String Kind() [get];
+      String Status() [get];
+      bool RunsOnSibling( String strCarrier ) [witness];
+      bool ViaHostOnSibling( String strCarrier ) [witness];
+      bool NamedOnly() [get];
+      bool GapOnFkwu() [get];
+   }
+}
+
+enum HostResourceStatus [public] {
+   RUNS,
+   RUNS_PARTIAL,
+   VIA_HOST,
+   NAMED,
+   GAP
+}
+
+enum PortDirection [public] {
+   AFFERENT,
+   EFFERENT
+}
+
+enum PortValueShape [public] {
+   BOOL,
+   SCALAR,
+   BYTES,
+   TEXT,
+   PIXEL,
+   KEY,
+   HANDLE
+}
+
+template<Object THandle, Object TValue> interface ResourcePort [public, port, reusable] {
+   section [public] {
+      PortDirection Direction() [get];
+      PortValueShape ValueShape() [get];
+      TValue Sense( THandle hHandle ) [abstract];
+      THandle Act( THandle hHandle, TValue hValue ) [abstract];
+   }
+}
+
+interface HostCarrierOps [public, carrier, native_floor] {
+   section [public] {
+      String CarrierName() [get];
+      String Platform() [get];
+      int OpCount() [get];
+      bool FourWayOnValueBands() [witness];
+      bool HostIoFenced() [witness];
+   }
+}
+
+class HostCarrierRecord [public, value, carrier] : HostCarrierOps {
+   section [private] {
+      String m_strName;
+      String m_strPlatform;
+      int m_nOpCount;
+      bool m_bFourWay;
+      bool m_bHostIoFenced;
+   }
+
+   section [public] {
+      HostCarrierRecord(
+         String strName,
+         String strPlatform,
+         int nOpCount,
+         bool bFourWay,
+         bool bHostIoFenced ) {
+         m_strName = strName;
+         m_strPlatform = strPlatform;
+         m_nOpCount = nOpCount;
+         m_bFourWay = bFourWay;
+         m_bHostIoFenced = bHostIoFenced;
+      }
+
+      String CarrierName() [get] {
+         return m_strName;
+      }
+
+      String Platform() [get] {
+         return m_strPlatform;
+      }
+
+      int OpCount() [get] {
+         return m_nOpCount;
+      }
+
+      bool FourWayOnValueBands() [witness] {
+         return m_bFourWay;
+      }
+
+      bool HostIoFenced() [witness] {
+         return m_bHostIoFenced;
+      }
+   }
+}
+
+class NativePrimitiveBinding [public, value, native_floor] {
+   section [private] {
+      String m_strName;
+      String m_strCategory;
+      String m_strPortFamily;
+      bool m_bOsBoundary;
+      bool m_bFkwuTag;
+      int m_nFkwuTag;
+   }
+
+   section [public] {
+      const String CatCall = "catCall";
+      const String CatWitness = "catWitness";
+      const String CatMath = "catMath";
+
+      NativePrimitiveBinding(
+         String strName,
+         String strCategory,
+         String strPortFamily,
+         bool bOsBoundary,
+         bool bFkwuTag,
+         int nFkwuTag ) {
+         m_strName = strName;
+         m_strCategory = strCategory;
+         m_strPortFamily = strPortFamily;
+         m_bOsBoundary = bOsBoundary;
+         m_bFkwuTag = bFkwuTag;
+         m_nFkwuTag = nFkwuTag;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      String Category() [get] {
+         return m_strCategory;
+      }
+
+      String PortFamily() [get] {
+         return m_strPortFamily;
+      }
+
+      bool OsBoundary() [get] {
+         return m_bOsBoundary;
+      }
+
+      bool FkwuEmittedTag() [get] {
+         return m_bFkwuTag;
+      }
+
+      int FkwuTag() [get] {
+         return m_nFkwuTag;
+      }
+   }
+}
+
+class OrganCpu [public, organ, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "organ-cpu";
+      const String ResourceKind = "organ";
+      const String ResourceStatus = "RUNS";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts"
+                || strCarrier == "fkwu";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return false;
+      }
+   }
+}
+
+class OrganGpu [public, organ, via_host] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "organ-gpu";
+      const String ResourceKind = "organ";
+      const String ResourceStatus = "VIA_HOST";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return true;
+      }
+   }
+}
+
+class OrganRam [public, organ, runs_partial] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "organ-ram";
+      const String ResourceKind = "organ";
+      const String ResourceStatus = "RUNS_PARTIAL";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return true;
+      }
+   }
+}
+
+class OrganClock [public, organ, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "organ-clock";
+      const String ResourceKind = "organ";
+      const String ResourceStatus = "RUNS";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return true;
+      }
+   }
+}
+
+class WorldFilesystem [public, world_port, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "world-fs";
+      const String ResourceKind = "world-port";
+      const String ResourceStatus = "RUNS";
+      const String PortShape = "afferent-bytes efferent-bytes efferent-text";
+      const String StdlibModule = "form-stdlib/form-fs.fk";
+      const String StdlibAuthority = "form-stdlib/bml/form-fs.bml";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts"
+                || strCarrier == "fkwu";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return false;
+      }
+   }
+}
+
+class WorldNetwork [public, world_port, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "world-net";
+      const String ResourceKind = "world-port";
+      const String ResourceStatus = "RUNS";
+      const String PortShape = "afferent-bytes efferent-bytes";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts"
+                || strCarrier == "fkwu";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return false;
+      }
+   }
+}
+
+class WorldEntropy [public, world_port, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "world-entropy";
+      const String ResourceKind = "world-port";
+      const String ResourceStatus = "RUNS";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return true;
+      }
+   }
+}
+
+class WorldPersistence [public, world_port, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "world-persistence";
+      const String ResourceKind = "world-port";
+      const String ResourceStatus = "RUNS";
+      const String StorageContract = "storage-open put get has keys";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts"
+                || strCarrier == "fkwu";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return strCarrier == "form-kernel-go"
+             || strCarrier == "form-kernel-rust";
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return false;
+      }
+   }
+}
+
+class WorldHumanMachine [public, world_port, via_host] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "world-hmi";
+      const String ResourceKind = "world-port";
+      const String ResourceStatus = "VIA_HOST";
+      const String PortShape = "afferent-key efferent-pixel afferent-bytes efferent-bytes";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return true;
+      }
+   }
+}
+
+class OsScheduler [public, os_feature, named] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "os-scheduler";
+      const String ResourceKind = "os-feature";
+      const String ResourceStatus = "NAMED";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return true;
+      }
+
+      bool GapOnFkwu() [get] {
+         return true;
+      }
+   }
+}
+
+class OsProtection [public, os_feature, runs] : HostResourceObservable {
+   section [public] {
+      const String ResourceName = "os-protection";
+      const String ResourceKind = "os-feature";
+      const String ResourceStatus = "RUNS";
+      const String Mechanism = "node-id-unforgeable-capability";
+
+      String Name() [get] {
+         return ResourceName;
+      }
+
+      String Kind() [get] {
+         return ResourceKind;
+      }
+
+      String Status() [get] {
+         return ResourceStatus;
+      }
+
+      bool RunsOnSibling( String strCarrier ) [witness] {
+         save;
+         choose {
+            return strCarrier == "form-kernel-go"
+                || strCarrier == "form-kernel-rust"
+                || strCarrier == "form-kernel-ts"
+                || strCarrier == "fkwu";
+         }, {
+            discard;
+            fail;
+         }
+      }
+
+      bool ViaHostOnSibling( String strCarrier ) [witness] {
+         return false;
+      }
+
+      bool NamedOnly() [get] {
+         return false;
+      }
+
+      bool GapOnFkwu() [get] {
+         return false;
+      }
+   }
+}
+
+class FkwuGapReceipt [public, witness, gap] {
+   section [private] {
+      String m_strName;
+      String m_strFamily;
+      String m_strNextGate;
+   }
+
+   section [public] {
+      FkwuGapReceipt( String strName, String strFamily, String strNextGate ) {
+         m_strName = strName;
+         m_strFamily = strFamily;
+         m_strNextGate = strNextGate;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      String Family() [get] {
+         return m_strFamily;
+      }
+
+      String NextGate() [get] {
+         return m_strNextGate;
+      }
+   }
+}
+
+class HostKernelInterface [public, selfHosting, hostKernel, observable] {
+   section [private] {
+      HostCarrierRecord[] m_hCarriers;
+      NativePrimitiveBinding[] m_hPrimitives;
+      FkwuGapReceipt[] m_hFkwuGaps;
+   }
+
+   section [public] {
+      const String InterfaceName = "host-kernel-interface";
+      const String ImageKind = "HOST-KERNEL-INTERFACE-IMAGE";
+      const String ImageExtension = ".fkb";
+      const String Authority = "BML source plus Form sibling proof";
+      const String PortModel = "resource-port.fk storage-port.fk form-fs.fk";
+      const String TrustRule = "same contract same carrier record same verdict across siblings on value bands";
+      const String ImagePath = "form/form-stdlib/.cache/host-kernel-interface.fkb";
+
+      HostKernelInterface() {
+         m_hCarriers = Array<HostCarrierRecord>();
+         m_hPrimitives = Array<NativePrimitiveBinding>();
+         m_hFkwuGaps = Array<FkwuGapReceipt>();
+      }
+
+      int RequiredOrganCount() [get] {
+         return 4;
+      }
+
+      int RequiredWorldPortCount() [get] {
+         return 6;
+      }
+
+      int RequiredOsFeatureCount() [get] {
+         return 2;
+      }
+
+      int RequiredCarrierCount() [get] {
+         return 4;
+      }
+
+      int RequiredOsBoundaryPrimitiveCount() [get] {
+         return 25;
+      }
+
+      int RequiredFkwuGapCount() [get] {
+         return 0;
+      }
+
+      int RequiredProofCount() [get] {
+         return 7;
+      }
+
+      bool Minimal() [witness] {
+         return true;
+      }
+
+      bool Observable() [witness] {
+         return true;
+      }
+
+      bool OsIndependent() [witness] {
+         return true;
+      }
+
+      bool MetalNative() [witness] {
+         return true;
+      }
+   }
+}
+
+class HostKernelInterfaceImage [public, value, image, hostKernel] {
+   section [private] {
+      String m_strSourcePath;
+      String m_strImagePath;
+      String m_strImageKind;
+      int m_nOrganCount;
+      int m_nWorldPortCount;
+      int m_nCarrierCount;
+      int m_nPrimitiveCount;
+      int m_nFkwuGapCount;
+      int m_nProofCount;
+   }
+
+   section [public] {
+      HostKernelInterfaceImage(
+         String strSourcePath,
+         String strImagePath,
+         int nOrganCount,
+         int nWorldPortCount,
+         int nCarrierCount,
+         int nPrimitiveCount,
+         int nFkwuGapCount,
+         int nProofCount ) {
+         m_strSourcePath = strSourcePath;
+         m_strImagePath = strImagePath;
+         m_strImageKind = "HOST-KERNEL-INTERFACE-IMAGE";
+         m_nOrganCount = nOrganCount;
+         m_nWorldPortCount = nWorldPortCount;
+         m_nCarrierCount = nCarrierCount;
+         m_nPrimitiveCount = nPrimitiveCount;
+         m_nFkwuGapCount = nFkwuGapCount;
+         m_nProofCount = nProofCount;
+      }
+
+      String SourcePath() [get] {
+         return m_strSourcePath;
+      }
+
+      String ImagePath() [get] {
+         return m_strImagePath;
+      }
+
+      String Kind() [get] {
+         return m_strImageKind;
+      }
+
+      int OrganCount() [get] {
+         return m_nOrganCount;
+      }
+
+      int WorldPortCount() [get] {
+         return m_nWorldPortCount;
+      }
+
+      int CarrierCount() [get] {
+         return m_nCarrierCount;
+      }
+
+      int PrimitiveCount() [get] {
+         return m_nPrimitiveCount;
+      }
+
+      int FkwuGapCount() [get] {
+         return m_nFkwuGapCount;
+      }
+
+      int ProofCount() [get] {
+         return m_nProofCount;
+      }
+   }
+}
+
+class HostKernelInterfaceSelf [public, selfHosting, hostKernel, observable] {
+   section [private] {
+      HostKernelInterface m_hInterface;
+      HostKernelInterfaceImage m_hImage;
+   }
+
+   section [public] {
+      const String CoreName = "host-kernel-interface-self";
+      const String RuntimeFamily = "form-kernel-go form-kernel-rust form-kernel-ts fkwu";
+
+      HostKernelInterfaceSelf() {
+         m_hInterface = HostKernelInterface();
+      }
+
+      HostKernelInterface Interface() [get] {
+         return m_hInterface;
+      }
+
+      int RequiredOrganCount() [get] {
+         return 4;
+      }
+
+      int RequiredWorldPortCount() [get] {
+         return 6;
+      }
+
+      int RequiredCarrierCount() [get] {
+         return 4;
+      }
+
+      int RequiredOsBoundaryPrimitiveCount() [get] {
+         return 25;
+      }
+
+      int RequiredFkwuGapCount() [get] {
+         return 0;
+      }
+
+      int RequiredProofCount() [get] {
+         return 7;
+      }
+
+      HostKernelInterfaceImage BuildImage( String strSourcePath ) {
+         m_hImage = HostKernelInterfaceImage(
+            strSourcePath,
+            HostKernelInterface.ImagePath,
+            RequiredOrganCount(),
+            RequiredWorldPortCount(),
+            RequiredCarrierCount(),
+            RequiredOsBoundaryPrimitiveCount(),
+            RequiredFkwuGapCount(),
+            RequiredProofCount() );
+
+         return m_hImage;
+      }
+   }
+}
