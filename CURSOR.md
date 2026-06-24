@@ -31,15 +31,17 @@ Then relational welcome: **[`/come-in`](https://coherencycoin.com/come-in)** and
 
 | Question | Reach for |
 |----------|-----------|
-| New behavior / language feature | **BMF rule** or **BML source** + proof band in `form/form-stdlib/tests/*-band.fk` |
+| New behavior / language feature | **form code** — BMF rule or BML source + proof band in `form/form-stdlib/tests/*-band.fk` on **fkwu** |
+| Search / eval / orchestration | **form shell** — `fsh-main.fk` + `shell-grammar.fk` (not bash/`rg` when Form carriers exist) |
+| Structural lookup / routing | **form-cli ask** (`form-cli-main.fk`) before rented LLM |
 | Same shape in three places | One **Blueprint**; lift/normalize so **`node_eq`** holds |
 | Branching / search / retry | **`choice` in pattern** or **`choose` / fail / stop** in recipe/BMA — not silent host `if` chains without undo |
-| Performance | **Lower hot sequence** to native/JIT; content-addressed dispatch — not micro-optimizing incidental Python |
+| Performance | **fkwu self-JIT** — hot recipe crystallizes to native; not Go plugin or hand-written C |
 | Durable memory | **Source file + ingest** or lattice-facing Form — not chat-only |
 | Equivalence / “is this the same?” | **`?equivalent`**, substrate annotate — not string compare |
 | Observability | **Recipe + source span + trace/receipt** — not log lines alone |
 
-**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` — prove with `cd form && ./validate.sh …`.
+**Default path:** extend `compiler.fk`, `source-compiler.fk`, `grammars/bml.fk`, `engine.fk` as **form code**; prove on **fkwu** first; use `cd form && ./validate.sh …` only for four-way sibling parity (honest floor).
 
 **Lattice queries** are **read** recipes over cells already on the lattice — file/HTTP/persistence natives exist; API/CLI doors may still hit Python bootstrap until `form-notation` grammar lands.
 

@@ -28,8 +28,9 @@ It prints every step before running it, asks before anything heavy, and is
 re-runnable. It will:
 
 1. **clone the source** to `~/coherence-network` (all recipes + content, local)
-2. **set up the Form kernel** — builds from source if you have Go, otherwise
-   downloads the prebuilt macOS arm64 binary from the [latest release](https://github.com/seeker71/Coherence-Network/releases)
+2. **set up the Form kernel** — the **c-bootstrapped `fkwu` binary** (prebuilt
+   per platform from the [latest release](https://github.com/seeker71/Coherence-Network/releases)),
+   not a Go-built `bin-go`
 3. **set up a local oracle** (strongly encouraged) — installs [ollama](https://ollama.com)
    and pulls `llama3.2:3b` (reasoning) + `nomic-embed-text` (memory). Optional, and
    skippable, but this is the sovereignty path — reasoning stays on your machine.
@@ -44,7 +45,8 @@ re-runnable. It will:
 
 ```bash
 git clone https://github.com/seeker71/Coherence-Network.git ~/coherence-network
-cd ~/coherence-network/form/form-kernel-go && go build -o bin-go .   # or download the release binary
+# Use the prebuilt fkwu/form-cli from the release, or form/build-form-cli.sh
+# (c-bootstrap emit — no Go bin-go required for the receipt path)
 brew install ollama && ollama pull llama3.2:3b && ollama pull nomic-embed-text
 ln -s ~/coherence-network/bin/form-cli ~/.local/bin/form-cli
 form-cli index
@@ -74,8 +76,8 @@ form-cli preflight                                              # confirm you ca
 
 ## Requirements
 
-- macOS on Apple silicon (arm64). The prebuilt kernel is `arm64`; on other
-  platforms, build from source (needs [Go](https://go.dev/dl/)).
+- macOS on Apple silicon (arm64). The prebuilt `fkwu`/`form-cli` is `arm64`; other
+  platforms use the release binary or `form/build-form-cli.sh` (c-bootstrap emit).
 - For offline answers: [ollama](https://ollama.com) + the two pulled models. Without
   them the kernel, recipes, gaps, and `eval` still work; `ask` needs the models.
 

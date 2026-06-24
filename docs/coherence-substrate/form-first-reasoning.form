@@ -71,9 +71,11 @@
 
   ; how the body answers under each environment's reach
   (backend
-    (native-router (form-cli ask)                          ; the one door — body-first, four-way sufficiency gate
-                   (engine form-kernel-go)
-                   (built-once scripts/ensure_form_cli_kernel.sh)
+    (native-router (form-cli ask)                          ; body-first, four-way sufficiency gate
+                   (engine fkwu)                            ; c-bootstrapped universal kernel + self-JIT
+                   (entry    form-cli-main.fk)              ; native form-cli on emitted walker
+                   (shell    fsh-main.fk)                   ; form shell — BMF cursor, search/eval/orchestration
+                   (code     "BML and .fk domain grammars")  ; form code — authoring, proof bands, lattice reads
                    (gate form-cli-sufficiency.fk))
     (local-lattice (sovereign offline)                     ; the DEFAULT — the structural layer the router reads
                    (ready-by "scripts/form_first_offline_setup.sh")  ; ingests the repo's own content; offline, no allowlist
