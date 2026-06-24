@@ -335,8 +335,10 @@
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
+| [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | Standard-receipt loop: cached form-cli + fkwu, bootstrap C emit (no Go), no go/rust/clang on PATH. |
+| [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | Maintainer: regen form-stdlib/bootstrap/fkwu-uni.c via bin-go when FOURTH_EMIT_CHAIN changes. |
+| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | Maintainer: regen form-cli bootstrap table + emitted C when form-cli sources change. |
 | [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
-| [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | verify_form_native_sovereignty.sh — standard-receipt validation on c-bootstrap fkwu |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |

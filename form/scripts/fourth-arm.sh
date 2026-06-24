@@ -46,6 +46,15 @@ FOURTH_FLATTEN_CHAIN=(
 # string stones resolve as ordinary function rows; band defns shadow it
 FOURTH_SHIM="form-stdlib/fourth-shim.fk"
 FKWU=""
+# Emitter chain (walker C emission) — lighter than FOURTH_CHAIN; committed as bootstrap/fkwu-uni.c
+FOURTH_EMIT_CHAIN=(
+    form-stdlib/minimal-surface.fk
+    form-stdlib/hati-os-kernel.fk
+    form-stdlib/fkc-table-serialize.fk
+    form-stdlib/hati-os-kernel-emit.fk
+)
+FOURTH_BOOTSTRAP_UNI_C="form-stdlib/bootstrap/fkwu-uni.c"
+FOURTH_BOOTSTRAP_UNI_STAMP="form-stdlib/bootstrap/fkwu-uni.stamp"
 
 # T_flat — the flattener (form-flatten.fk) flattened once over FOURTH_FLATTEN_CHAIN
 # into a committed bootstrap table. fkwu walks it to flatten every band, so bin-go
@@ -106,90 +115,99 @@ fourth_hash16() {
     fi
 }
 
+# fourth_fkwu_cache_stamp — cache key for the standing fkwu binary (emitter chain + committed uni.c).
+fourth_fkwu_cache_stamp() {
+    fourth_hash16 "${FOURTH_CHAIN[@]}" "$FOURTH_BOOTSTRAP_UNI_C"
+}
+
+# fourth_emit_chain_stamp — hash of emitter sources; must match bootstrap/fkwu-uni.stamp.
+fourth_emit_chain_stamp() {
+    fourth_hash16 "${FOURTH_EMIT_CHAIN[@]}"
+}
+
+# fourth_patch_windows_emitted_c — Windows host patches for emitted walker C.
+fourth_patch_windows_emitted_c() {
+    local c_file="$1"
+    sed -i '1i #define _CRT_SECURE_NO_WARNINGS 1' "$c_file"
+    sed -i 's|extern unsigned int arc4random(void);|extern int rand(void); static unsigned int arc4random(void) { return (unsigned int)rand(); }|' "$c_file"
+    sed -i 's|extern long long read(int, void \*, unsigned long);|extern int read(int, void *, unsigned int);|' "$c_file"
+    sed -i 's|extern long long write(long long, const void \*, unsigned long);|extern int write(int, const void *, unsigned int);|' "$c_file"
+    sed -i 's|mkdir(d, 0777)|mkdir(d)|g; s|mkdir(p, 0777)|mkdir(p)|g' "$c_file"
+    sed -i 's|extern int sprintf(char \*, const char \*, ...);|typedef __builtin_va_list fk_va_list; extern int vsnprintf(char *, unsigned long long, const char *, fk_va_list); static int sprintf(char *b, const char *fmt, ...) { fk_va_list ap; __builtin_va_start(ap, fmt); int n = vsnprintf(b, 4096ULL, fmt, ap); __builtin_va_end(ap); return n; }|' "$c_file"
+    sed -i 's|struct timeval { long tv_sec; int tv_usec; }; extern int gettimeofday(struct timeval \*, void \*);|struct timeval { long tv_sec; int tv_usec; }; struct fk_filetime { unsigned int dwLowDateTime; unsigned int dwHighDateTime; }; __declspec(dllimport) void __stdcall GetSystemTimeAsFileTime(struct fk_filetime *); static int gettimeofday(struct timeval *tv, void *tz) { (void)tz; struct fk_filetime ft; unsigned long long ticks; unsigned long long us; GetSystemTimeAsFileTime(\&ft); ticks = ((unsigned long long)ft.dwHighDateTime * 4294967296ULL) + (unsigned long long)ft.dwLowDateTime; us = (ticks / 10ULL) - 11644473600000000ULL; tv->tv_sec = (long)(us / 1000000ULL); tv->tv_usec = (int)(us % 1000000ULL); return 0; }|' "$c_file"
+    sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$c_file"
+    sed -i 's|getaddrinfo(host, port, \&hints, \&res)|fk_sock_getaddrinfo(host, port, \&hints, \&res)|g; s|fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)|fd = fk_sock_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)|g; s|connect(fd, rp->ai_addr, rp->ai_addrlen)|fk_sock_connect(fd, rp->ai_addr, rp->ai_addrlen)|g' "$c_file"
+    sed -i 's|read(fd, resp + total, 65535 - total)|fk_sock_read(fd, resp + total, 65535 - total)|g; s|write(fd, req + wr, rn - wr)|fk_sock_write(fd, req + wr, rn - wr)|g; s|write(fd, rptr + wr, rlen - wr)|fk_sock_write(fd, rptr + wr, rlen - wr)|g; s|close(fd);|fk_sock_close(fd);|g' "$c_file"
+}
+
 # build_fourth — the standing fkwu binary, cached by emitter content.
 build_fourth() {
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
-    command -v clang >/dev/null 2>&1 || return 0
     mkdir -p "$FOURTH_DIR"
-    local stamp out tmp d is_windows
+    local stamp out tmp d is_windows uni_c want got
     local -a clang_args
     is_windows=0
     if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
         is_windows=1
     fi
-    stamp="$(fourth_hash16 "${FOURTH_CHAIN[@]}" "$GO_BIN")"
+    stamp="$(fourth_fkwu_cache_stamp)"
     out="$FOURTH_DIR/fkwu-$stamp"
-    if [[ ! -x "$out" ]]; then
-        echo "  building fourth kernel (fkwu)..." >&2
-        d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth.XXXXXX")"
-        cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk \
-            form-stdlib/fkc-table-serialize.fk form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
-        cat >> "$d/uni-driver.fk" <<'EOF'
-(do
-  (print "==UNI==")
-  (print (fkc-emit-universal))
-  (print "==END==")
-  0)
-EOF
-        "$GO_BIN" "$d/uni-driver.fk" 2>"$d/uni.err" > "$d/uni.out" || true
-        sed -n '/^==UNI==$/,/^==END==$/p' "$d/uni.out" | sed -e '1d' -e '$d' > "$d/uni.c"
-        if [[ "$is_windows" == "1" ]]; then
-            sed -i '1i #define _CRT_SECURE_NO_WARNINGS 1' "$d/uni.c"
-            sed -i 's|extern unsigned int arc4random(void);|extern int rand(void); static unsigned int arc4random(void) { return (unsigned int)rand(); }|' "$d/uni.c"
-            sed -i 's|extern long long read(int, void \*, unsigned long);|extern int read(int, void *, unsigned int);|' "$d/uni.c"
-            sed -i 's|extern long long write(long long, const void \*, unsigned long);|extern int write(int, const void *, unsigned int);|' "$d/uni.c"
-            sed -i 's|mkdir(d, 0777)|mkdir(d)|g; s|mkdir(p, 0777)|mkdir(p)|g' "$d/uni.c"
-            sed -i 's|extern int sprintf(char \*, const char \*, ...);|typedef __builtin_va_list fk_va_list; extern int vsnprintf(char *, unsigned long long, const char *, fk_va_list); static int sprintf(char *b, const char *fmt, ...) { fk_va_list ap; __builtin_va_start(ap, fmt); int n = vsnprintf(b, 4096ULL, fmt, ap); __builtin_va_end(ap); return n; }|' "$d/uni.c"
-            sed -i 's|struct timeval { long tv_sec; int tv_usec; }; extern int gettimeofday(struct timeval \*, void \*);|struct timeval { long tv_sec; int tv_usec; }; struct fk_filetime { unsigned int dwLowDateTime; unsigned int dwHighDateTime; }; __declspec(dllimport) void __stdcall GetSystemTimeAsFileTime(struct fk_filetime *); static int gettimeofday(struct timeval *tv, void *tz) { (void)tz; struct fk_filetime ft; unsigned long long ticks; unsigned long long us; GetSystemTimeAsFileTime(\&ft); ticks = ((unsigned long long)ft.dwHighDateTime * 4294967296ULL) + (unsigned long long)ft.dwLowDateTime; us = (ticks / 10ULL) - 11644473600000000ULL; tv->tv_sec = (long)(us / 1000000ULL); tv->tv_usec = (int)(us % 1000000ULL); return 0; }|' "$d/uni.c"
-            sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$d/uni.c"
-            sed -i 's|getaddrinfo(host, port, \&hints, \&res)|fk_sock_getaddrinfo(host, port, \&hints, \&res)|g; s|fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)|fd = fk_sock_socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)|g; s|connect(fd, rp->ai_addr, rp->ai_addrlen)|fk_sock_connect(fd, rp->ai_addr, rp->ai_addrlen)|g' "$d/uni.c"
-            sed -i 's|read(fd, resp + total, 65535 - total)|fk_sock_read(fd, resp + total, 65535 - total)|g; s|write(fd, req + wr, rn - wr)|fk_sock_write(fd, req + wr, rn - wr)|g; s|write(fd, rptr + wr, rlen - wr)|fk_sock_write(fd, rptr + wr, rlen - wr)|g; s|close(fd);|fk_sock_close(fd);|g' "$d/uni.c"
-        fi
-        tmp="$(mktemp "$FOURTH_DIR/.fkwu-$stamp.XXXXXX")"
-        clang_args=(
-            -O2
-            -Wno-error=implicit-function-declaration
-            -Wno-implicit-function-declaration
-            -Wno-incompatible-library-redeclaration
-            -o "$tmp" "$d/uni.c"
-        )
-        if [[ "$is_windows" == "1" ]]; then
-            clang_args+=(-lws2_32 -llegacy_stdio_definitions)
-            # Windows default thread stack is 1 MiB — too small for the universal
-            # walker's recursive descent on grammar-engine recipes (bmf-grammar,
-            # form.bml cursor). The emitted main() keeps the main-thread entry on
-            # Windows, so reserve 64 MiB for it so the cursor lane crosses the
-            # fourth arm on Windows too, not only on Linux/macOS CI (8 MiB
-            # default). Reserve is address space, committed lazily — no runtime cost.
-            clang_args+=(-Xlinker /STACK:67108864)
-        else
-            # POSIX: the emitted main() runs fk_walk on a pthread sized to
-            # FORM_KERNEL_STACK_MB (the stack-depth floor its siblings already
-            # stand on) — link the pthread carrier so it resolves across CI libc
-            # versions. macOS folds it into libSystem; the flag is harmless there.
-            clang_args+=(-pthread)
-        fi
-        if [[ -s "$d/uni.c" ]] && clang "${clang_args[@]}" 2>"$d/clang.err"; then
-            mv -f "$tmp" "$out"
-        elif [[ -s "$d/uni.c" && "$is_windows" == "1" ]] \
-            && command -v gcc >/dev/null 2>&1 \
-            && gcc -O2 -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -o "$tmp" "$d/uni.c" -lws2_32 2>"$d/gcc.err"; then
-            mv -f "$tmp" "$out"
-        else
-            rm -f "$tmp"
-            if [[ ! -s "$d/uni.c" && -s "$d/uni.err" ]]; then
-                sed -n '1,12p' "$d/uni.err" >&2
-            elif [[ -s "$d/gcc.err" ]]; then
-                sed -n '1,12p' "$d/gcc.err" >&2
-            elif [[ -s "$d/clang.err" ]]; then
-                sed -n '1,12p' "$d/clang.err" >&2
-            fi
-            echo "  fourth kernel build did not land — bands run three-kernel only" >&2
-        fi
-        rm -rf "$d"
+    [[ -x "$out" ]] && FKWU="$out" && return 0
+    if [[ "${FORM_STANDARD_LANE:-0}" == 1 ]]; then
+        echo "  standard lane: fkwu cache miss at $out (no compile)" >&2
+        return 0
     fi
+    command -v clang >/dev/null 2>&1 || { echo "  fourth kernel: clang absent — bands run three-kernel only" >&2; return 0; }
+    uni_c="$FOURTH_BOOTSTRAP_UNI_C"
+    want="$(fourth_emit_chain_stamp)"
+    got="$(cat "$FOURTH_BOOTSTRAP_UNI_STAMP" 2>/dev/null || true)"
+    if [[ ! -s "$uni_c" || "$want" != "$got" ]]; then
+        if [[ "${FORM_ALLOW_BOOTSTRAP_EMIT:-0}" == 1 && -n "${GO_BIN:-}" && -x "$GO_BIN" ]]; then
+            echo "  emitting bootstrap uni.c via bin-go (maintainer regen)..." >&2
+            d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-emit.XXXXXX")"
+            echo '(fkc-emit-universal)' > "$d/emit.fk"
+            "$GO_BIN" "${FOURTH_EMIT_CHAIN[@]}" "$d/emit.fk" > "$uni_c.tmp" 2>"$d/uni.err" || true
+            [[ -s "$uni_c.tmp" ]] && mv -f "$uni_c.tmp" "$uni_c"
+            printf '%s\n' "$want" > "$FOURTH_BOOTSTRAP_UNI_STAMP"
+            rm -rf "$d"
+        else
+            echo "  bootstrap uni.c missing or stale — run scripts/regen_fkwu_bootstrap.sh" >&2
+            return 0
+        fi
+    fi
+    echo "  building fourth kernel (fkwu) from bootstrap uni.c (no Go)..." >&2
+    d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth.XXXXXX")"
+    cp "$uni_c" "$d/uni.c"
+    if [[ "$is_windows" == "1" ]]; then
+        fourth_patch_windows_emitted_c "$d/uni.c"
+    fi
+    tmp="$(mktemp "$FOURTH_DIR/.fkwu-$stamp.XXXXXX")"
+    clang_args=(
+        -O2
+        -Wno-error=implicit-function-declaration
+        -Wno-implicit-function-declaration
+        -Wno-incompatible-library-redeclaration
+        -o "$tmp" "$d/uni.c"
+    )
+    if [[ "$is_windows" == "1" ]]; then
+        clang_args+=(-lws2_32 -llegacy_stdio_definitions)
+        clang_args+=(-Xlinker /STACK:67108864)
+    else
+        clang_args+=(-pthread)
+    fi
+    if [[ -s "$d/uni.c" ]] && clang "${clang_args[@]}" 2>"$d/clang.err"; then
+        mv -f "$tmp" "$out"
+    elif [[ -s "$d/uni.c" && "$is_windows" == "1" ]] \
+        && command -v gcc >/dev/null 2>&1 \
+        && gcc -O2 -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -o "$tmp" "$d/uni.c" -lws2_32 2>"$d/gcc.err"; then
+        mv -f "$tmp" "$out"
+    else
+        rm -f "$tmp"
+        if [[ -s "$d/clang.err" ]]; then sed -n '1,12p' "$d/clang.err" >&2; fi
+        echo "  fourth kernel build did not land — bands run three-kernel only" >&2
+    fi
+    rm -rf "$d"
     [[ -x "$out" ]] && FKWU="$out"
-    # Compost stale binaries from earlier emitter generations.
     find "$FOURTH_DIR" -maxdepth 1 -name 'fkwu-*' ! -name "$(basename "$out")" -delete 2>/dev/null || true
 }
 
@@ -315,6 +333,29 @@ fourth_table() {
         fi
     fi
     [[ -s "$out" ]] && printf '%s\n' "$out"
+}
+
+# fourth_flatten_sources — flatten an ad-hoc prelude list + band (outside the manifest).
+# Prefers fkwu walking T_flat when fourth_selfhost; falls back to bin-go.
+fourth_flatten_sources() {
+    local stem="$1" kind="$2" out="$3"
+    shift 3
+    local srcs=("$@") d
+    [[ "${#srcs[@]}" -ge 1 ]] || return 1
+    if fourth_selfhost; then
+        { printf '1\n'; fourth_band_request "$stem" "$kind" "${srcs[@]}"; } \
+            | "$FKWU" "$FOURTH_FLATTEN_TABLE" 0 2>/dev/null \
+            | sed -n "/^==T-${stem}==\$/,/^==T-END==\$/p" | sed -e '1d' -e '$d' > "$out.tmp"
+        [[ -s "$out.tmp" ]] && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
+    fi
+    if [[ ! -s "$out" ]]; then
+        d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-adhoc.XXXXXX")"
+        cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
+        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
+        "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$out.tmp" && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
+        rm -rf "$d"
+    fi
+    [[ -s "$out" ]]
 }
 
 # fourth_table_for_band — the cached table for a band FILE PATH (the last

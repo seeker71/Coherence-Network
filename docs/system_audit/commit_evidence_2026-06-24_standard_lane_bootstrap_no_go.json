@@ -1,0 +1,80 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/226a07b9",
+  "commit_scope": "Standard lane removes bin-go from flatten/emit: committed bootstrap C for fkwu and form-cli, fkwu self-host flatten, maintainer regen scripts, sovereignty verify on warmed cache only.",
+  "files_owned": [
+    "form/scripts/fourth-arm.sh",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "scripts/regen_fkwu_bootstrap.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/INDEX.md",
+    "specs/fkwu-native-host-resources.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash scripts/regen_fkwu_bootstrap.sh",
+      "cd form && source scripts/fourth-arm.sh && build_fourth",
+      "./scripts/verify_form_native_sovereignty.sh"
+    ],
+    "fourth_arm": "form-native-resource-interfaces witness 32767; fs-list 3 on toolchain-free receipt loop.",
+    "native_binary": "form/form-cli + fkwu-12365e728738713f from bootstrap/fkwu-uni.c (80723 bytes) — no Go in default build path.",
+    "notes": "bin-go/clang remain maintainer-only via regen scripts and SOVEREIGNTY_ALLOW_BOOTSTRAP=1; FORM_STANDARD_LANE=1 skips compile when cache warm."
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "verify_form_native_sovereignty.sh pass with go/rust/clang hidden from PATH",
+    "expected_behavior_delta": "Default fourth-arm and form-cli build use committed bootstrap C; flatten prefers fkwu+T_flat; Go emit only on maintainer regen",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "./scripts/verify_form_native_sovereignty.sh → witnesses 32767/3, receipt toolchain-free"
+    ]
+  },
+  "phase_gate": {
+    "phase": "standard-receipt-bootstrap",
+    "gate": "no bin-go in standard lane flatten/emit; runtime toolchain-free on mac",
+    "state": "observed-mac-host",
+    "can_move_next_phase": false,
+    "pending_rungs": [
+      "form-asm emit replaces committed C + clang link",
+      "platforms{windows,android}: device traces pending"
+    ]
+  },
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources"],
+  "task_ids": ["standard-lane-bootstrap-no-go"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "validation", "evidence"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/regen_fkwu_bootstrap.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "docs/coherence-substrate/standard-receipt.form"
+  ],
+  "change_files": [
+    "form/scripts/fourth-arm.sh",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/fkwu-uni.stamp",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "scripts/regen_fkwu_bootstrap.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/INDEX.md",
+    "specs/fkwu-native-host-resources.md",
+    "docs/system_audit/commit_evidence_2026-06-24_standard_lane_bootstrap_no_go.json"
+  ],
+  "change_intent": "runtime_feature"
+}
