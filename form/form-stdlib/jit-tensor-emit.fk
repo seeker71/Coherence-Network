@@ -659,3 +659,69 @@
   (str_concat (jte-llama-dec-out)
   (str_concat (jte-llama-dec-rms2)
   (str_concat (jte-llama-dec-ffn) "}"))))))))))))
+
+; --- the KV-CACHED CAUSAL GQA DECODE STEP: the autoregressive generation inner loop for the REAL llama3.2
+;     (24 query heads sharing 8 KV heads) on the GPU. The GROUPED-QUERY generalization of
+;     jte-llama-block-decode-step-msl (#3412, single-head/MHA decode): the cache stores the SMALLER n_kv*HD-wide
+;     k/v per position, and query head h attends KV head (h / (n_q/n_kv)). The GPU realization of
+;     kv-gqa-llama-block.fk's lgqa-generate-causal (#3601, four-way 255), proven there BIT-IDENTICAL to the full
+;     causal GQA recompute (lgqa-block-causal, #3590, four-way 15). Each step p: RMSNorm1(x_p) -> project q (to
+;     dq=n_q*HD) and k/v (to the SMALLER KVD=n_kv*HD) from the SINGLE new token -> RoPE q and the new key by
+;     position p -> APPEND the RoPE'd k_p / v_p into cache slot p (KVD-wide) -> per query head, attend its
+;     HD-wide q-slice over the grown prefix cache[0..p] of KV head (h/grp), context concatenated to dq -> Wo/
+;     residual/RMSNorm2/SwiGLU/residual -> y_p. Only the NEW token is projected each step; earlier positions'
+;     k/v are reused from the cache. A cached k_i/v_i depends ONLY on position i, never the future, so the cache
+;     the front-to-back walk holds at step p is exactly the prefix the full causal GQA kernel's mask
+;     (while t < s+1u) cuts at query p, with identical fold order — so looping this kernel reproduces
+;     jte-gqa-llama-block-fwd-causal-msl's (#3590) whole-sequence output BIT-FOR-BIT on silicon
+;     (scripts/metal_gqa_llama_block_decode_audit.sh runs both kernels on the M4 Max GPU and gates the GQA
+;     decode loop == the full causal GQA recompute, bit-exact, both tracking the proven fp64 recipe within fp32
+;     eps). group=1 (n_kv=n_q) reduces to the single-head decode per head — core-abstraction-first, MHA is the
+;     special case, no parallel path. RMSNorm1/RMSNorm2 + the SwiGLU FFN are jte-llama-dec-rms1/rms2/ffn VERBATIM
+;     (those reference only oN1/oH/oN2/oG/oU/oACT, never the attention offsets); only the projection widths (k/v
+;     to KVD), the RoPE width (KVD for the key), and the per-query-head grouped attention loop change. Every dot
+;     is the downward right-fold through a named temporary (no fma contraction); softmax/SiLU is the recipe's OWN
+;     fexp Taylor; RoPE is base-10000 (the cfg10 special case). Dims (p, d, dq, KVD, hid, HD, nkv) arrive as
+;     runtime buffers, so the source is one static string parameterized only by the kernel name. Proven byte-stable
+;     four-way by tests/gqa-llama-block-decode-emit-band.fk.
+;     teaching: lc-cognitive-sovereignty
+(defn jte-gqa-dec-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* wk [[buffer(1)]], device const float* wv [[buffer(2)]], device const float* wo [[buffer(3)]], device const float* g1 [[buffer(4)]], device const float* wg [[buffer(5)]], device const float* wu [[buffer(6)]], device const float* wd [[buffer(7)]], device const float* g2 [[buffer(8)]], device const float* x [[buffer(9)]], device float* ck [[buffer(10)]], device float* cv [[buffer(11)]], device float* y [[buffer(12)]], device float* sc [[buffer(13)]], constant uint& p [[buffer(14)]], constant uint& d [[buffer(15)]], constant uint& dq [[buffer(16)]], constant uint& KVD [[buffer(17)]], constant uint& hid [[buffer(18)]], constant uint& HD [[buffer(19)]], constant uint& nkv [[buffer(20)]], constant float& scale [[buffer(21)]], constant float& eps [[buffer(22)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; single-token scratch; q + attn context are dq wide; scores/exp use (p+1u) slots, sized generously by the host
+(defn jte-gqa-dec-off ()
+  "uint oN1 = 0; uint oQ = oN1 + d; uint oA = oQ + dq; uint oH = oA + dq; uint oN2 = oH + d; uint oSR = oN2 + d; uint oE = oSR + (p + 1u); uint oG = oE + (p + 1u); uint oU = oG + hid; uint oACT = oU + hid; ")
+
+; bias-free q -> oQ (dq), k -> cache slot p (ck[p], KVD wide), v -> cache slot p (cv[p], KVD wide); downward right-fold dot
+(defn jte-gqa-dec-proj ()
+  (str_concat "{ uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wq[r * d + c] * sc[oN1 + c]; acc = pp + acc; } sc[oQ + r] = acc; r += 1; } } "
+  (str_concat "{ uint r = 0; while (r < KVD) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wk[r * d + c] * sc[oN1 + c]; acc = pp + acc; } ck[p * KVD + r] = acc; r += 1; } } "
+  "{ uint r = 0; while (r < KVD) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wv[r * d + c] * sc[oN1 + c]; acc = pp + acc; } cv[p * KVD + r] = acc; r += 1; } } ")))
+
+; RoPE the query (oQ, dq wide) and the new key (ck[p], KVD wide) at position p — each pair rotated by theta = p*base^(-(i mod HD)/HD)
+(defn jte-gqa-dec-rope ()
+  (str_concat "{ uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oQ + i]; float q1 = sc[oQ + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oQ + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oQ + i + 1u] = t2 + t3; i += 2u; } } "
+  "{ uint i = 0; while (i + 1u < KVD) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = ck[p * KVD + i]; float q1 = ck[p * KVD + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; ck[p * KVD + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; ck[p * KVD + i + 1u] = t2 + t3; i += 2u; } } "))
+
+; GQA causal attention of the single new query over the grown cache 0..p -> oA. NQ=dq/HD query heads, grp=NQ/nkv;
+; query head h reads KV head (h/grp); each head dots its HD-wide q-slice against the cached prefix's koff-slice
+(defn jte-gqa-dec-attn ()
+  "{ uint NQ = dq / HD; uint grp = NQ / nkv; uint h = 0; while (h < NQ) { uint kvh = h / grp; uint qoff = h * HD; uint koff = kvh * HD; uint t = 0; while (t < p + 1u) { float acc = 0.0f; uint c = HD; while (c > 0) { c -= 1; float pp = sc[oQ + qoff + c] * ck[t * KVD + koff + c]; acc = pp + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < p + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < p + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < p + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < HD) { sc[oA + qoff + i] = 0.0f; i += 1; } t = 0; while (t < p + 1u) { i = 0; while (i < HD) { float pv = cv[t * KVD + koff + i] * sc[oSR + t]; sc[oA + qoff + i] = sc[oA + qoff + i] + pv; i += 1; } t += 1; } h += 1; } } ")
+
+; output projection Wo*attn (bias-free, attn is dq wide) + residual x -> oH
+(defn jte-gqa-dec-out ()
+  "{ uint i = 0; while (i < d) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float pp = wo[i * dq + c] * sc[oA + c]; acc = pp + acc; } sc[oH + i] = x[i] + acc; i += 1; } } ")
+
+(defn jte-gqa-llama-block-decode-step-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-gqa-dec-sig fname)
+  (str_concat (jte-gqa-dec-off)
+  (str_concat (jte-llama-dec-rms1)
+  (str_concat (jte-gqa-dec-proj)
+  (str_concat (jte-gqa-dec-rope)
+  (str_concat (jte-gqa-dec-attn)
+  (str_concat (jte-gqa-dec-out)
+  (str_concat (jte-llama-dec-rms2)
+  (str_concat (jte-llama-dec-ffn) "}"))))))))))))
