@@ -49,7 +49,7 @@ W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 
 # the emit chain (plain Form) + the flatten chain.
-EMIT_CHAIN="$S/minimal-surface.fk $S/hati-os-kernel.fk $S/fkc-table-serialize.fk $S/hati-os-kernel-emit.fk"
+EMIT_CHAIN="$S/minimal-surface.fk $S/hati-os-kernel.fk $S/host-io-fs-fkwu-emit.fk $S/fkc-table-serialize.fk $S/hati-os-kernel-emit.fk"
 FLAT_CHAIN="$EMIT_CHAIN $S/form-parse.fk $S/form-flatten.fk"
 # The ask lane routes through http-fetch over the socket host-call floor for
 # plaintext HTTP, so it must be defined before the dispatcher that routes to it.
