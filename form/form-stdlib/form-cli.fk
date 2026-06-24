@@ -87,7 +87,7 @@
             (if (str_eq v "ask") (fca-ask (fc-arg cmd))
             (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask native-host help about kernel source recreate verify version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples> [message]: return the Form host lifecycle row. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence."
+                "form-cli verbs: ping ask native-host help about kernel source recreate verify diagnose version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples> [message]: return the Form host lifecycle row. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence. diagnose: the live framebuffer — op-dispatch counts and substrate high-water (fkwu)."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
