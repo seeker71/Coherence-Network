@@ -1,0 +1,65 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/da996f0b",
+  "commit_scope": "Form-native class-based resource interfaces on fkwu — mac/android/windows-arm64 bindings + local sovereignty knowledge index",
+  "files_owned": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "form/form-stdlib/resource-port.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/host-kernel.form",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_form_native_resource_interfaces.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/tests/form-native-resource-interfaces-band.fk"
+    ],
+    "fourth_arm": "3-kernel only — combined prelude flatten on fkwu returns 0 (owned gap); validate.sh go/rust/ts → 8191",
+    "notes": "fnri-runtime fkwu; fnri-no-go-emission? 1; fnri-knowledge-cells maps eight structural body paths for local retrieval"
+  },
+  "ci_validation": {"status": "pending", "notes": "Manifest row form-native-resource-interfaces fks 4067"},
+  "deploy_validation": {"status": "pending", "summary": "No deploy — catalog layer; standard receipt platform rows pending"},
+  "phase_gate": {
+    "phase": "host-kernel-native-interfaces",
+    "gate": "Generic class interfaces + per-platform impl rows discoverable on fkwu without Go emission",
+    "state": "fnri-catalog-four-way",
+    "can_move_next_phase": false,
+    "next": "fkwu host-io dispatch witnesses per class on mac/windows/android under standard receipt"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "four-way-proof"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/resource-port.fk",
+    "docs/coherence-substrate/standard-receipt.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "form/form-stdlib/resource-port.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/host-kernel.form",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_form_native_resource_interfaces.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "validate.sh form-native-resource-interfaces-band → 4067",
+    "expected_behavior_delta": "Eight resource classes resolve interface + hos-impl on fkwu; knowledge index retrievable locally",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": ["cd form && ./validate.sh ... form-native-resource-interfaces-band.fk → 4067"]
+  }
+}

@@ -1,0 +1,72 @@
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
+;           form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk
+;           form-stdlib/form-native-resource-interfaces.fk
+;
+; form-native-resource-interfaces-band — class-based native interfaces wired to
+; macOS, Android, and Windows ARM64 implementations; fkwu-only runtime; local
+; sovereignty knowledge index; host-io dispatch rows without Go emission.
+
+(do
+    (let c0 (if (eq (len (fnri-classes)) 8) 1 0))
+
+    (let c1 (if (str_eq (fnri-runtime) "fkwu")
+                (if (eq (fnri-no-go-emission?) 1) 2 0)
+                0))
+
+    (let mac-bindings (fnri-bindings-for "macos-arm64"))
+    (let c2 (if (eq (fnri-count-bindings mac-bindings) 8) 4 0))
+
+    (let android-bindings (fnri-bindings-for "android-arm64"))
+    (let c3 (if (eq (fnri-count-bindings android-bindings) 8) 8 0))
+
+    (let win-bindings (fnri-bindings-for "windows-arm64"))
+    (let c4 (if (eq (fnri-count-bindings win-bindings) 8) 16 0))
+
+    (let mac-resolved (fnri-resolve "macos-arm64" "host:process"))
+    (let mac-iface (fnri-resolve-interface mac-resolved))
+    (let mac-impl (fnri-resolve-impl mac-resolved))
+    (let mac-dispatch (fnri-resolve-dispatch mac-resolved))
+    (let c5 (if (eq (bnii-interface? mac-iface) 1)
+                (if (str_eq (bnii-interface-name mac-iface) "HostProcess")
+                    (if (str_eq (hos-impl-implementation mac-impl) "libproc+sysctl+proc_pidinfo")
+                        (if (str_eq (fnri-dispatch-sense-op mac-dispatch) "read_file") 32 0)
+                        0)
+                    0)
+                0))
+
+    (let audio-class (fnri-class-for "audio:pcm16"))
+    (let c6 (if (str_eq (fnri-class-protocol audio-class) "audio:pcm16")
+                (if (str_eq (fnri-class-sense-slug audio-class) "afferent-bytes") 64 0)
+                0))
+
+    (let android-resolved (fnri-resolve "android-arm64" "sensor:signal"))
+    (let android-impl (fnri-resolve-impl android-resolved))
+    (let c7 (if (str_eq (hos-impl-implementation android-impl) "SensorManager+LocationManager+GNSS-permission-gated") 128 0))
+
+    (let win-resolved (fnri-resolve "windows-arm64" "gpu:compute"))
+    (let win-impl (fnri-resolve-impl win-resolved))
+    (let c8 (if (str_eq (hos-impl-capability win-impl) "cap.compute.gpu") 256 0))
+
+    (let know (fnri-knowledge-for "form-native-resource-interfaces"))
+    (let receipt (fnri-knowledge-for "standard-receipt"))
+    (let c9 (if (str_eq (fnri-knowledge-path know) "form/form-stdlib/form-native-resource-interfaces.fk")
+                (if (str_eq (fnri-knowledge-kind receipt) "structural") 512 0)
+                0))
+
+    (let targets (fnri-primary-targets))
+    (let c10 (if (eq (len targets) 3)
+                (if (str_eq (head targets) "macos-arm64") 1024 0)
+                0))
+
+    (let mlx-android (hos-impl-for "android-arm64" "mlx:array"))
+    (let mlx-class (fnri-class-for "mlx:array"))
+    (let c11 (if (eq (fnri-capability-matches? mlx-class mlx-android) 1)
+                (if (str_eq (hos-impl-implementation mlx-android) "unsupported-on-android") 2048 0)
+                0))
+
+    (let dispatches (fnri-dispatches))
+    (let c12 (if (eq (len dispatches) 8)
+                (if (str_eq (fnri-dispatch-carrier (fnri-dispatch-for "host:process")) "filesystem") 4096 0)
+                0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12)))

@@ -58,6 +58,7 @@
     (defn afferent-text ()   (port (afferent) (shape-text)))    ; stdin, human-speaks
     (defn efferent-text ()   (port (efferent) (shape-text)))    ; stdout, human-reads
     (defn afferent-key ()    (port (afferent) (shape-key)))     ; keyboard, mouse
+    (defn afferent-pixel ()  (port (afferent) (shape-pixel))) ; camera, screen-read
     (defn efferent-pixel ()  (port (efferent) (shape-pixel)))   ; screen
 
     ;; ---- a TERMINAL binds a port to a carrier handle ----------------------

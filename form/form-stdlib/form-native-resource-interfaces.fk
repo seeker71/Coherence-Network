@@ -1,0 +1,155 @@
+; form-native-resource-interfaces.fk — class-based Form-native resource interfaces
+; wired to per-platform implementations. Runtime proof and receipt path is fkwu-only;
+; no Go kernel emission for interface resolution or sovereignty knowledge lookup.
+;
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
+;           form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk
+;
+(do
+    (defn fnri-source ()
+        (bnii-source "form" "form/form-stdlib/form-native-resource-interfaces.fk" 1))
+
+    (defn fnri-runtime () "fkwu")
+    (defn fnri-no-go-emission? () 1)
+
+    (defn fnri-primary-targets ()
+        (list "macos-arm64" "android-arm64" "windows-arm64"))
+
+    ; port slugs defer intern_node until lookup — friendlier to fkwu flatten tables
+    (defn fnri-port-by-slug (slug)
+        (if (str_eq slug "afferent-bytes") (afferent-bytes)
+            (if (str_eq slug "efferent-bytes") (efferent-bytes)
+                (if (str_eq slug "afferent-scalar") (afferent-scalar)
+                    (if (str_eq slug "efferent-text") (efferent-text)
+                        (if (str_eq slug "afferent-pixel") (afferent-pixel)
+                            (if (str_eq slug "efferent-pixel") (efferent-pixel)
+                                (afferent-bytes))))))))
+
+    ; class row stores sense/act port slugs (strings), not port nodes
+    (defn fnri-class (protocol capability sense-slug act-slug members interface-name)
+        (list protocol capability sense-slug act-slug members interface-name))
+    (defn fnri-class-protocol (row) (nth row 0))
+    (defn fnri-class-capability (row) (nth row 1))
+    (defn fnri-class-sense-slug (row) (nth row 2))
+    (defn fnri-class-act-slug (row) (nth row 3))
+    (defn fnri-class-sense-port (row) (fnri-port-by-slug (fnri-class-sense-slug row)))
+    (defn fnri-class-act-port (row) (fnri-port-by-slug (fnri-class-act-slug row)))
+    (defn fnri-class-members (row) (nth row 4))
+    (defn fnri-class-interface-name (row) (nth row 5))
+
+    (defn fnri-classes ()
+        (list
+            (fnri-class "host:process" "cap.host.process" "afferent-bytes" "efferent-text" (list "Snapshot" "List") "HostProcess")
+            (fnri-class "host:usage" "cap.host.usage" "afferent-scalar" "efferent-text" (list "Sample" "Pressure") "HostUsage")
+            (fnri-class "audio:pcm16" "cap.audio.sample" "afferent-bytes" "efferent-bytes" (list "Capture" "Play") "AudioPcm16")
+            (fnri-class "video:rgba-time" "cap.video.frame" "afferent-pixel" "efferent-pixel" (list "CaptureFrame" "PresentFrame") "VideoRgbaTime")
+            (fnri-class "sensor:signal" "cap.sensor.read" "afferent-scalar" "efferent-text" (list "Read" "Subscribe") "SensorSignal")
+            (fnri-class "gpu:compute" "cap.compute.gpu" "afferent-bytes" "efferent-bytes" (list "Dispatch" "Pressure") "GpuCompute")
+            (fnri-class "dsp:signal" "cap.compute.dsp" "afferent-bytes" "efferent-bytes" (list "Transform" "Measure") "DspSignal")
+            (fnri-class "mlx:array" "cap.compute.mlx" "afferent-bytes" "efferent-bytes" (list "Eval" "Materialize") "MlxArray")))
+
+    (defn fnri-find-class (protocol rows)
+        (if (eq (len rows) 0) (fnri-class "" "" "afferent-bytes" "efferent-bytes" (list) "")
+            (if (str_eq (fnri-class-protocol (head rows)) protocol)
+                (head rows)
+                (fnri-find-class protocol (tail rows)))))
+    (defn fnri-class-for (protocol) (fnri-find-class protocol (fnri-classes)))
+
+    (defn fnri-interface-for-class (class-row)
+        (bnii-interface
+            (fnri-class-interface-name class-row)
+            "HostResource"
+            (fnri-class-members class-row)
+            (fnri-class-sense-port class-row)
+            (fnri-source)))
+
+    (defn fnri-interface-for (protocol)
+        (fnri-interface-for-class (fnri-class-for protocol)))
+
+    ; --- host-io dispatch: protocol -> native op family (fkwu table, no Go registerNative) ---
+    (defn fnri-dispatch (protocol sense-op act-op carrier)
+        (list protocol sense-op act-op carrier))
+    (defn fnri-dispatch-protocol (row) (nth row 0))
+    (defn fnri-dispatch-sense-op (row) (nth row 1))
+    (defn fnri-dispatch-act-op (row) (nth row 2))
+    (defn fnri-dispatch-carrier (row) (nth row 3))
+
+    (defn fnri-dispatches ()
+        (list
+            (fnri-dispatch "host:process" "read_file" "write_file_text" "filesystem")
+            (fnri-dispatch "host:usage" "read_file" "write_file_text" "filesystem")
+            (fnri-dispatch "audio:pcm16" "read_file" "write_file" "host-audio-pending")
+            (fnri-dispatch "video:rgba-time" "read_file" "write_file" "host-video-pending")
+            (fnri-dispatch "sensor:signal" "read_file" "write_file_text" "host-sensor-pending")
+            (fnri-dispatch "gpu:compute" "read_file" "write_file" "host-gpu-pending")
+            (fnri-dispatch "dsp:signal" "read_file" "write_file" "host-dsp-pending")
+            (fnri-dispatch "mlx:array" "read_file" "write_file" "host-mlx-pending")))
+
+    (defn fnri-find-dispatch (protocol rows)
+        (if (eq (len rows) 0) (fnri-dispatch "" "" "" "")
+            (if (str_eq (fnri-dispatch-protocol (head rows)) protocol)
+                (head rows)
+                (fnri-find-dispatch protocol (tail rows)))))
+    (defn fnri-dispatch-for (protocol) (fnri-find-dispatch protocol (fnri-dispatches)))
+
+    (defn fnri-binding (target protocol)
+        (list target protocol (hos-impl-for target protocol) (fnri-class-for protocol) (fnri-dispatch-for protocol)))
+    (defn fnri-binding-target (row) (nth row 0))
+    (defn fnri-binding-protocol (row) (nth row 1))
+    (defn fnri-binding-impl (row) (nth row 2))
+    (defn fnri-binding-class (row) (nth row 3))
+    (defn fnri-binding-dispatch (row) (nth row 4))
+
+    (defn fnri-bindings-for (target)
+        (list
+            (fnri-binding target "host:process")
+            (fnri-binding target "host:usage")
+            (fnri-binding target "audio:pcm16")
+            (fnri-binding target "video:rgba-time")
+            (fnri-binding target "sensor:signal")
+            (fnri-binding target "gpu:compute")
+            (fnri-binding target "dsp:signal")
+            (fnri-binding target "mlx:array")))
+
+    (defn fnri-count-bindings (rows) (len rows))
+
+    (defn fnri-resolve (target protocol)
+        (list
+            (fnri-interface-for protocol)
+            (hos-impl-for target protocol)
+            (fnri-dispatch-for protocol)
+            (fnri-runtime)
+            (fnri-no-go-emission?)))
+    (defn fnri-resolve-interface (resolved) (nth resolved 0))
+    (defn fnri-resolve-impl (resolved) (nth resolved 1))
+    (defn fnri-resolve-dispatch (resolved) (nth resolved 2))
+    (defn fnri-resolve-runtime (resolved) (nth resolved 3))
+
+    (defn fnri-knowledge (slug path query-kind)
+        (list slug path query-kind))
+    (defn fnri-knowledge-slug (row) (nth row 0))
+    (defn fnri-knowledge-path (row) (nth row 1))
+    (defn fnri-knowledge-kind (row) (nth row 2))
+
+    (defn fnri-knowledge-cells ()
+        (list
+            (fnri-knowledge "form-native-resource-interfaces" "form/form-stdlib/form-native-resource-interfaces.fk" "structural")
+            (fnri-knowledge "resource-port" "form/form-stdlib/resource-port.fk" "structural")
+            (fnri-knowledge "hati-os-targets" "form/form-stdlib/hati-os-targets.fk" "structural")
+            (fnri-knowledge "host-kernel" "docs/coherence-substrate/host-kernel.form" "structural")
+            (fnri-knowledge "standard-receipt" "docs/coherence-substrate/standard-receipt.form" "structural")
+            (fnri-knowledge "form-first-reasoning" "docs/coherence-substrate/form-first-reasoning.form" "structural")
+            (fnri-knowledge "ports-interface-structure" "docs/coherence-substrate/ports-interface-and-structure.md" "structural")
+            (fnri-knowledge "bml-native-interface" "form/form-stdlib/bml-native-interface-package-import.fk" "structural")))
+
+    (defn fnri-find-knowledge (slug rows)
+        (if (eq (len rows) 0) (fnri-knowledge "" "" "")
+            (if (str_eq (fnri-knowledge-slug (head rows)) slug)
+                (head rows)
+                (fnri-find-knowledge slug (tail rows)))))
+    (defn fnri-knowledge-for (slug) (fnri-find-knowledge slug (fnri-knowledge-cells)))
+
+    (defn fnri-capability-matches? (class-row impl-row)
+        (if (str_eq (fnri-class-capability class-row) (hos-impl-capability impl-row)) 1 0))
+
+    0)
