@@ -826,6 +826,7 @@ greedy-decode fks 255
 kv-llama-block fks 255
 kv-gqa-llama-block fks 255
 multi-layer-stack fks 255
+gqa-multi-layer-stack fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
 # GATED four-way by scripts/fourth-arm-gate.sh (validate.sh: 0 divergent AND
