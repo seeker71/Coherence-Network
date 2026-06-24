@@ -16,7 +16,6 @@ while [ -h "$src" ]; do
   case "$src" in /*) ;; *) src="$d/$src";; esac
 done
 ROOT="$(cd -P "$(dirname "$src")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"
 RAG="$ROOT/scripts/form_cli_rag.py"
 
 usage() {
@@ -108,8 +107,14 @@ case "$cmd" in
   preflight) exec bash "$ROOT/scripts/form_cli_preflight.sh" "$@" ;;
   eval)
     [ -n "${1:-}" ] || { echo "usage: form-cli eval '<form-expression>'" >&2; exit 2; }
-    [ -x "$GO" ] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
-    tf="$(mktemp)"; printf '(print %s)\n' "$1" > "$tf"
-    "$GO" "$tf" 2>&1 | sed '/^null$/d'; rc=${PIPESTATUS[0]}; rm -f "$tf"; exit "$rc" ;;
+    tf="$(mktemp --suffix=.fk)"
+    empty="$(mktemp)"
+    printf '(print %s)\n' "$1" > "$tf"
+    printf '\n' > "$empty"
+    out="$(bash "$ROOT/scripts/fkwu_run.sh" "$empty" "$tf" 2>&1)"
+    rc=$?
+    rm -f "$tf" "$empty"
+    printf '%s\n' "$out" | sed '/^null$/d'
+    exit "$rc" ;;
   help|-h|--help|*) usage ;;
 esac

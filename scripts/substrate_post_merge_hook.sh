@@ -89,9 +89,10 @@ fi
 # offline; a no-op when nothing drifted. Never fail the merge over it.
 if git diff --name-only "$RANGE" -- \
     'form/form-stdlib/*.fk' 'specs/*.md' \
-    'docs/vision-kb/concepts/*.md' 'docs/coherence-substrate/*.form' 2>/dev/null | grep -q .; then
-    echo "[rag] healing the form-cli memory index for $RANGE:"
-    python3 scripts/form_cli_rag.py heal || true
+    'docs/vision-kb/concepts/*.md' 'docs/coherence-substrate/*.form' \
+    'docs/shared/*.md' 2>/dev/null | grep -q .; then
+    echo "[rag] healing the form-cli memory index for $RANGE (form shell / fkwu):"
+    bash form/scripts/rag-heal.sh || true
 fi
 
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')

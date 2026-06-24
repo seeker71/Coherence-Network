@@ -1,0 +1,41 @@
+//////////////////////////////////////////////////////////////////////
+//
+// host-filesystem.bml
+//
+// Generic host filesystem interface (BML class) and the mac POSIX
+// carrier implementation. Platform-specific walkers (Windows
+// FindFirstFileW, Android NDK) will mirror MacHostFilesystem with
+// the same method names behind flt-ops dispatch.
+//
+//   hfs-list   (dir)           -> entry names (fs_list, op 132)
+//   hfs-read   (path)          -> whole file (read_file, op 63)
+//   hfs-write  (path, text)    -> bytes written (write_file_text, op 104)
+//   hfs-size   (path)          -> byte length (file_size, op 60)
+//
+// Proven by: form-stdlib/tests/host-filesystem-band.fk (four-way + fkwu, 15)
+//
+//////////////////////////////////////////////////////////////////////
+
+section [form.bml] {
+    class HostFilesystem {
+        def hfs-list(dir) = fs_list(dir);
+        def hfs-read(path) = read_file(path);
+        def hfs-write(path, text) = write_file_text(path, text);
+        def hfs-size(path) = file_size(path);
+
+        def hfs-has(entries, name) {
+            if eq(len(entries), 0) then 0 else
+            if str_eq(head(entries), name) then 1 else
+                hfs-has(tail(entries), name);
+        }
+    }
+
+    class MacHostFilesystem {
+        def mac-hfs-list(dir) = fs_list(dir);
+        def mac-hfs-read(path) = read_file(path);
+        def mac-hfs-write(path, text) = write_file_text(path, text);
+        def mac-hfs-size(path) = file_size(path);
+    }
+}
+
+0

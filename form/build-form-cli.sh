@@ -2,9 +2,10 @@
 # build-form-cli.sh — produce the standalone native form-cli binary.
 #
 # Build-time honest floor (2026-06-24):
-#   FLATTEN — fkwu+T_flat (no Go) when warm; bin-go fallback when cold
-#   EMIT    — committed bootstrap/form-cli-emitted.c (no Go); bin-go when stale
+#   FLATTEN — committed bootstrap/form-cli-table.txt OR fkwu+T_flat self-host (no Go)
+#   EMIT    — committed bootstrap/form-cli-emitted.c (no Go on receipt path)
 #   LINK    — clang compiles C (pending: form-macho universal walker); skipped in FORM_STANDARD_LANE
+# Maintainer regen (bin-go allowed off-receipt): scripts/regen_form_cli_bootstrap.sh
 # Runtime: the resulting form-cli runs toolchain-free.
 #
 #   ./build-form-cli.sh            # -> form/form-cli
@@ -14,7 +15,6 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 S=form-stdlib
-GB=form-kernel-go/bin-go
 OUT="${1:-form-cli}"
 CC_BIN="${CC:-clang}"
 CLI_BOOTSTRAP_C="$S/bootstrap/form-cli-emitted.c"
@@ -41,7 +41,6 @@ patch_windows_emitted_c() {
     sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$c_file"
 }
 
-[[ -x "$GB" ]] || { [[ "${FORM_ALLOW_BOOTSTRAP_EMIT:-0}" == 1 ]] && ( echo "building bootstrap kernel..."; cd form-kernel-go && go build -o bin-go . ); }
 if [[ "${FORM_STANDARD_LANE:-0}" != 1 ]]; then
     command -v "$CC_BIN" >/dev/null || { echo "${CC_BIN} is required at BUILD time (not at run time)"; exit 1; }
 fi
@@ -68,7 +67,6 @@ FORM_CLI_SRCS=(
     "$S/speech-organ.fk" "$S/native-host-instance.fk" "$S/form-cli.fk"
     "$S/form-cli-repl.fk"
 )
-export GO_BIN="$GB"
 # shellcheck source=scripts/fourth-arm.sh
 source scripts/fourth-arm.sh
 slug="$(fourth_platform_slug)"
@@ -116,10 +114,8 @@ if [[ -s "$S/bootstrap/form-cli-table.txt" && "$(cat "$CLI_BOOTSTRAP_STAMP" 2>/d
 elif fourth_selfhost && fourth_flatten_sources form-cli-build fks "$W/table.txt" "${FORM_CLI_SRCS[@]}"; then
     echo "  flatten: fkwu self-host (no Go)" >&2
 else
-    [[ -x "$GB" ]] || { echo "bin-go required for flatten; run scripts/regen_form_cli_bootstrap.sh or set FORM_ALLOW_BOOTSTRAP_EMIT=1"; exit 1; }
-    echo "(fks-table-file (flt-band-sources-fns $MODS $BAND) (flt-band-sources-pool $MODS $BAND))" > "$W/flatten.fk"
-    "$GB" $FLAT_CHAIN "$W/flatten.fk" > "$W/table.txt"
-    echo "  flatten: bin-go (fkwu self-host unavailable)" >&2
+    echo "  flatten: unavailable — need bootstrap/form-cli-table.txt or T_flat self-host (maintainer: scripts/regen_form_cli_bootstrap.sh)" >&2
+    exit 1
 fi
 [[ -s "$W/table.txt" ]] || { echo "flatten produced no table"; exit 1; }
 
@@ -128,10 +124,8 @@ if [[ -s "$CLI_BOOTSTRAP_C" && "$(cat "$CLI_BOOTSTRAP_STAMP" 2>/dev/null)" == "$
     cp "$CLI_BOOTSTRAP_C" "$W/form-cli.c"
     echo "  emit: bootstrap (no Go)" >&2
 else
-    [[ -x "$GB" ]] || { echo "bin-go required for emit; run scripts/regen_form_cli_bootstrap.sh"; exit 1; }
-    printf '(fkc-emit-combined-repl "%s")\n' "$(cat "$W/table.txt")" > "$W/emit.fk"
-    "$GB" $EMIT_CHAIN "$W/emit.fk" > "$W/form-cli.c"
-    echo "  emit: bin-go (bootstrap stale — run scripts/regen_form_cli_bootstrap.sh)" >&2
+    echo "  emit: unavailable — need bootstrap/form-cli-emitted.c (maintainer: scripts/regen_form_cli_bootstrap.sh)" >&2
+    exit 1
 fi
 grep -q fk_prog "$W/form-cli.c" || { echo "emit missing baked program"; exit 1; }
 
