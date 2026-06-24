@@ -134,9 +134,18 @@ This is a real step *toward* tool-sovereignty, not a claim of having arrived:
   tool can come home this way: **awk just did** — a first-breath native `awk`
   (field idioms `{print $N}` / `$N==RHS` / `$N==RHS{print $M}`, FS=whitespace) is
   four-way proven (`shell-awk` 127, Go/Rust/TS/fkwu), so the roadmap verb's
-  `awk '$1==stem'` manifest reconciliation now computes in Form, not on host awk
-  (the remaining boundary there is `cat`'s file read — `read_file` host-io, which
-  still diverges across kernels). The python grammar is a first-breath surface
+  `awk '$1==stem'` manifest reconciliation now computes in Form, not on host awk.
+  It even runs **end-to-end on the fkwu c-bootstrap kernel** the sovereign way:
+  fkwu carries no `read_file` (host file reads are a standing wall for the
+  universal walker), so a thin host carrier stages the rows into `input_byte`
+  (tag 17 — the staged-input door fkwu *does* carry) and fkwu runs native awk
+  over them, no `read_file`, no host awk, no bash in the compute loop
+  ([`tests/shell-awk-staged.fk`](../../form/form-stdlib/tests/shell-awk-staged.fk),
+  run via [`scripts/fkwu_run.sh`](../../scripts/fkwu_run.sh) → 127). Two honest
+  edges remain: `read_file` itself stays a per-kernel host-io carrier (the staging
+  carrier reads the bytes), and the naive per-byte reader is O(n²) so the carrier
+  stages the relevant rows — a streaming cursor reader is the follow-on for
+  whole-file inputs. The python grammar is a first-breath surface
   (def/call/return/binop/ident/int), not full CPython yet. So "run any script
   through its grammar" is *real and proven for shell*, *early for python*, and
   *growing* for the rest. The cornerstone audit
