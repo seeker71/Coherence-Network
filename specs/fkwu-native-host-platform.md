@@ -14,8 +14,8 @@ source:
     symbols: [HostKernelInterface, HostResourceObservable]
   - file: form/form-stdlib/fkwu-platform-host-carrier.fk
     symbols: [host-platform-detect, host-platform-carrier]
-  - file: form/form-stdlib/host-kernel-fkwu-native-emit.fk
-    symbols: [hkne-gaps-decl-text, hkne-gaps-arms-text]
+  - file: form/form-stdlib/host-io-fs-fkwu-emit.fk
+    symbols: [hifse-decl-text, hifse-arms-text]
   - file: form/form-stdlib/form-flatten.fk
     symbols: [flt-native-registry]
   - file: docs/coherence-substrate/standard-receipt.form
@@ -95,7 +95,7 @@ python3 scripts/validate_commit_evidence.py \
 ## Known Gaps
 
 - **Follow-up:** Standard receipt platform rows (`mac`, `windows`, `android`) remain `pending` for host-metal bands (Phase 3).
-- **Follow-up:** T_flat self-host removed until arena supports form-fs flatten; Go fallback carries bands (Phase 2).
+- **Follow-up:** T_flat maintainer regen uses bin-go (`scripts/regen_t_flat.sh`, fks table); fkwu-only full driver regen still bus-errors (Phase 2 arena lift).
 - **Follow-up:** SSE and thread pool natives lack dedicated flatten tags — task to add manifest rows when carriers land.
 
 ## Resource map (implement new features here)

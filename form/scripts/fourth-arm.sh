@@ -63,8 +63,9 @@ FOURTH_BOOTSTRAP_UNI_STAMP="form-stdlib/bootstrap/fkwu-uni.stamp"
 # leaves the per-band flatten path. The driver (fourth-flatten-driver.fk) reads a batch
 # request on stdin and prints marker-framed tables — the same ==T-<stem>== /
 # ==T-END== framing the Go path produced, so fourth_run_chunk splits the stream
-# unchanged. Rebuilt when form-flatten.fk or fkc-table-serialize.fk changes (bin-go
-# bootstrap over FOURTH_FLATTEN_CHAIN; thereafter fkwu self-host). The trailing fn-0 value + arm profile fkwu prints after
+# unchanged. Rebuilt when form-flatten.fk or fkc-table-serialize.fk changes via
+# scripts/regen_t_flat.sh (bin-go bootstrap, fks table — not fkc; thereafter fkwu
+# self-host). The trailing fn-0 value + arm profile fkwu prints after
 # ==T-END== falls outside every per-band marker range, so the split ignores it.
 FOURTH_FLATTEN_TABLE="form-stdlib/fourth-flatten-table.txt"
 
