@@ -160,13 +160,12 @@ cd form && python3 scripts/validate_fkwu_native_surface.py \
 ## Risks and Assumptions
 
 - **Assumption:** bin-go remains available for maintainer regen (`regen_fkwu_bootstrap.sh`) until Phase 2.
-- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by Go fallback and T_flat removal until selfhost arena fix.
-- **Risk:** Parallel edits to `flt-ops` bypass manifest — mitigated by sync gate.
+- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by `scripts/regen_t_flat.sh` (fks bootstrap + marker smoke) and Go fallback when T_flat absent.
 
 ## Known Gaps
 
-- **Follow-up:** T_flat self-host flatten melts on form-fs-sized bands; bands use Go flatten fallback until arena lift (Phase 2).
-- **Follow-up:** `host-kernel-fkwu-native-emit.fk` not wired in emit chain (conflicts with fs_list tag 132); use `host-io-fs-fkwu-emit.fk` for tags 200/202 only.
+- **Follow-up:** T_flat maintainer regen still uses bin-go once (`regen_t_flat.sh`); fkwu-only regen bus-errors on full driver flatten (arena lift — Phase 2).
+- **Follow-up:** Arity-class dispatch replacing per-op tags (end of Phase 1).
 - **Follow-up:** Bootstrap `fkwu-uni.c` must be regen'd when `FOURTH_EMIT_CHAIN` changes via `scripts/regen_fkwu_bootstrap.sh`.
 
 ## Research inputs

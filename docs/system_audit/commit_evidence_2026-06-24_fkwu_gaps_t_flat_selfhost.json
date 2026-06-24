@@ -1,0 +1,98 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "codex/close-fkwu-gaps",
+  "commit_scope": "T_flat self-host (fks bootstrap) + bootstrap fkwu sync; compost host-kernel-fkwu-native-emit.fk; mac RUN receipt via form-cli + fkwu (toolchain-free PATH).",
+  "files_owned": [
+    "form/form-stdlib/fourth-flatten-table.txt",
+    "form/form-stdlib/fourth-flatten-table.stamp",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64.stamp",
+    "scripts/regen_t_flat.sh",
+    "form/scripts/fourth-arm.sh",
+    "scripts/form_fs_fkwu_receipt.sh",
+    "docs/coherence-substrate/receipt-t-flat-selfhost.form",
+    "specs/fkwu-only-kernel-collapse.md",
+    "specs/fkwu-native-host-platform.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_gaps_t_flat_selfhost.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form-cli ping -> pong (PATH=/usr/bin:/bin:form only)",
+      "form-cli fnri standard-receipt -> docs/coherence-substrate/standard-receipt.form",
+      "fkwu bootstrap + T_flat selfhost flatten fs-list -> witness 3",
+      "validate.sh form-fs-band -> 16383 four-way with T_flat"
+    ],
+    "fourth_arm_outputs": [
+      "form-fs-band: verdict 16383, fourth arm four-way with committed T_flat",
+      "fs-list: witness 3 via bootstrap fkwu + selfhost flatten"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "T_flat committed (fks); mac selfhost flatten; Windows bin-go flatten per fourth_selfhost gate."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed",
+    "notes": "Form stdlib; standard receipt windows/android rows pending."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "T_flat self-host restored; fkwu-only T_flat regen and arity-class dispatch remain follow-ups."
+  },
+  "idea_ids": ["coherence-substrate"],
+  "spec_ids": ["fkwu-only-kernel-collapse", "fkwu-native-host-resources"],
+  "task_ids": ["task-2026-06-24-close-fkwu-gaps"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "cursor-auto",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "auto"
+  },
+  "change_intent": "runtime_feature",
+  "evidence_refs": [
+    "docs/coherence-substrate/receipt-t-flat-selfhost.form — mac RUN receipt (form-cli + fkwu, toolchain-free PATH)",
+    "T_flat fks bootstrap (not fkc) — driver fn-0 runs fourth-flatten-driver",
+    "composted host-kernel-fkwu-native-emit.fk (tag 132 vs fs_list)",
+    "form-fs-band 16383 four-way with T_flat selfhost"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "fkwu walks committed T_flat; form-cli answers sovereignty questions without rented toolchain at RUN.",
+    "public_endpoints": [
+      "none changed; Form stdlib + bootstrap fkwu sync"
+    ],
+    "test_flows": [
+      "form-cli ping / fnri standard-receipt (toolchain-free)",
+      "fkwu T_flat selfhost -> fs-list witness 3",
+      "form-fs-band four-way 16383"
+    ]
+  },
+  "change_files": [
+    "form/form-stdlib/fourth-flatten-table.txt",
+    "form/form-stdlib/fourth-flatten-table.stamp",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64.stamp",
+    "scripts/regen_t_flat.sh",
+    "form/scripts/fourth-arm.sh",
+    "scripts/form_fs_fkwu_receipt.sh",
+    "docs/coherence-substrate/receipt-t-flat-selfhost.form",
+    "specs/fkwu-only-kernel-collapse.md",
+    "specs/fkwu-native-host-platform.md"
+  ],
+  "composted_files": [
+    "form/form-stdlib/host-kernel-fkwu-native-emit.fk"
+  ]
+}

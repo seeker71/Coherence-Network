@@ -1,0 +1,17 @@
+; receipt-t-flat-selfhost.form — mac RUN receipt for T_flat self-host flatten (2026-06-24).
+;
+; claim:            fkwu walks committed fourth-flatten-table.txt (fks bootstrap) to flatten bands
+; body:             yes — fourth-flatten-driver.fk on universal walker
+; c-bootstrap:      pending — fkwu from emitted uni.c + clang link; bootstrap binary synced to current emit chain
+; toolchain-free:   observed at RUN — form-cli + fkwu only; PATH hides go/rust/clang/bash/python
+; platforms:
+;   mac:      observed — form-cli ping/verify/fnri/diagnose; fkwu T_flat -> fs-list verdict 3
+;   windows:  pending
+;   android:  pending
+; honest-floor:     T_flat maintainer bootstrap still uses bin-go once (fks table); fkwu-only full driver regen bus-errors
+;
+; observed trace (toolchain-free PATH, form/form-cli + form-stdlib/bootstrap/fkwu-darwin-arm64):
+;   ping -> pong
+;   verify -> coherent ... native on fkwu
+;   fnri standard-receipt -> docs/coherence-substrate/standard-receipt.form
+;   T_flat flatten fs-list -> witness 3
