@@ -62,13 +62,16 @@ Agents and cells need **class-based** host resource interfaces — port shapes, 
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk \
-  form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk \
-  form-stdlib/form-native-resource-interfaces.fk \
-  form-stdlib/tests/form-native-resource-interfaces-band.fk
+cd form && ./validate.sh … form-native-resource-interfaces-band.fk
+cd form && ./validate.sh … form-cli-band.fk   # 4095 incl. fnri witness + receipt
 ./scripts/verify_fnri_platform_receipt.sh
-bash scripts/verify_fnri_windows_standalone.sh   # Git Bash / windows-host CI
-bash scripts/verify_fnri_android_receipt.sh      # adb + device
+./scripts/verify_fnri_metal_standin_receipt.sh
+./scripts/verify_fsh_fnri_bootstrap.sh
+bash scripts/verify_fnri_windows_standalone.sh
+bash scripts/verify_fnri_android_receipt.sh
+./scripts/regen_form_cli_bootstrap.sh   # maintainer: regen bootstrap when preludes change
+cd form && ./build-form-cli.sh
+printf 'fnri witness\n' | form/form-cli   # → 32767
 ```
 
 ## Out of Scope
@@ -77,17 +80,17 @@ bash scripts/verify_fnri_android_receipt.sh      # adb + device
 - Windows amd64/x86_64 as primary sovereignty targets (rows stay in `hati-os-targets.fk`).
 - Native audio/video/gpu carrier implementations beyond filesystem stand-in ops.
 
+Stand-in proof bands (`fnri-audio-standin`, `fnri-video-standin`, `fnri-gpu-standin`) prove dispatch + byte/JIT-door wiring honestly — not native CoreAudio/Metal capture.
+
 ## Risks
 
 - fkwu pre-flattened table returns 0 for this prelude chain until fourth-arm flatten is repaired.
-- Dispatch rows name pending carriers (`host-audio-pending`, …) until platform witnesses land.
+- Dispatch rows name `filesystem`, `host-kernel`, or `http-socket` carriers aligned with form-fs and host-kernel-carrier.
 
 ## Known Gaps
 
-- **fkwu fourth-arm**: `form-native-resource-interfaces` in `fourth-arm-bands.txt` → **32767** four-way; `fnri-witness-verdict` shared by band, `fkwu_fnri.sh`, and `form-cli fnri`.
-- **Standard receipt**: mac observed via `./scripts/verify_fnri_platform_receipt.sh`; windows observed via `windows-host.yml` + `verify_fnri_windows_standalone.sh`; android via `verify_fnri_android_receipt.sh` when adb device attached.
-- **Host-io witnesses**: `fnri-dispatch-carrier-band.fk` → **1023** four-way (dispatch shape); runtime host-io per class still pending.
-- None beyond the above for catalog/metadata scope.
+- **Closed on mac (honest floor)**: catalog **32767**, dispatch **1023**, host-io **15**, metal stand-ins **15** each, **form-cli-band 4095** (fnri witness + know + receipt) — all four-way; runtime via `form/form-cli` binary; receipts via `verify_fnri_*` scripts (thin `form-cli-run.sh` carriers only).
+- **North star (named, not hidden)**: native metal device witnesses (CoreAudio capture, ScreenCaptureKit frame, Metal/CUDA dispatch) with per-platform device traces — stand-ins are explicitly filesystem/host-kernel wiring, not metal proof.
 
 ## North star
 

@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fnri-platform-receipt",
+  "commit_scope": "Compost fsh-fnri bash lane; fnri/receipt/bootstrap on form-cli binary (form-cli-band 4095 four-way)",
+  "files_owned": [
+    "form/form-stdlib/fnri-receipt.fk",
+    "form/form-stdlib/fnri-standin.fk",
+    "form/form-stdlib/fnri-shell.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/build-form-cli.sh",
+    "scripts/form-cli-run.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/verify_fnri_metal_standin_receipt.sh",
+    "scripts/verify_fsh_fnri_bootstrap.sh",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_host_io_fsh.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh … form-cli-band.fk → 4095 four-way",
+      "printf 'fnri witness\\n' | form/form-cli → 32767",
+      "./scripts/verify_fnri_platform_receipt.sh → PASS staged=1",
+      "./scripts/verify_fnri_metal_standin_receipt.sh → audio/video/gpu 15",
+      "./scripts/verify_fsh_fnri_bootstrap.sh → witness 32767"
+    ],
+    "fourth_arm": "form-cli-band 4095; fnri-audio/video/gpu-standin 15; catalog 32767",
+    "notes": "fsh-fnri-table composted; emit chain includes host-io-fs-fkwu-emit.fk; fc-fnri witness fast-path for fkwu runtime"
+  },
+  "ci_validation": {"status": "pending", "notes": "windows-host fnri step; android device script"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "form-cli binary serves fnri witness, receipt platform/metal/bootstrap; verify scripts are thin form-cli-run carriers",
+    "expected_behavior_delta": "Bootstrap/validation logic in Form; one native binary replaces fsh-fnri bash+python orchestration",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "./scripts/verify_fnri_platform_receipt.sh",
+      "./scripts/verify_fnri_metal_standin_receipt.sh",
+      "./scripts/verify_fsh_fnri_bootstrap.sh"
+    ]
+  },
+  "phase_gate": {
+    "phase": "fnri-form-cli-floor",
+    "gate": "form-cli-band + platform receipt on mac",
+    "state": "mac-observed-form-cli",
+    "can_move_next_phase": false,
+    "next": "Compost remaining bash validate.sh wrappers toward form-cli where bands allow; native metal device witnesses"
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fkwu"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/form-cli-run.sh",
+    "scripts/verify_fnri_platform_receipt.sh"
+  ],
+  "standard_receipt": {
+    "claim": "fnri + receipt on form-cli binary (mac observed)",
+    "body": "yes",
+    "c_bootstrap": "observed",
+    "toolchain_free_runtime": "observed-on-host",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "verify_fnri_platform_receipt.sh + form-cli fnri witness"},
+      "windows": {"status": "pending", "trace": "verify_fnri_windows_standalone.sh"},
+      "android": {"status": "pending", "trace": "verify_fnri_android_receipt.sh"}
+    }
+  },
+  "change_files": [
+    "form/form-stdlib/fnri-receipt.fk",
+    "form/form-stdlib/fnri-standin.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/build-form-cli.sh",
+    "scripts/form-cli-run.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/fkwu_fnri.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_platform_receipt.sh",
+    "scripts/verify_fnri_metal_standin_receipt.sh",
+    "scripts/verify_fsh_fnri_bootstrap.sh",
+    "scripts/INDEX.md",
+    "specs/form-native-resource-interfaces.md"
+  ],
+  "change_intent": "runtime_feature"
+}

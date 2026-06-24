@@ -1,0 +1,48 @@
+; fnri-standin.fk — shared metal stand-in verdicts (filesystem/host-kernel honest floor).
+;
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
+;           form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk
+;           form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk
+
+(do
+    (defn fnri-audio-standin-verdict ()
+        (do
+            (let audio (fnri-dispatch-for "audio:pcm16"))
+            (let cls (fnri-class-for "audio:pcm16"))
+            (let c0 (if (str_eq (fnri-dispatch-carrier audio) "filesystem") 1 0))
+            (let c1 (if (str_eq (fnri-class-sense-slug cls) "afferent-bytes") 2 0))
+            (let path (str_concat (temp_dir) "/fnri-audio-standin.pcm"))
+            (let payload "pcm16-standin-bytes")
+            (let _w (fs-write-text path payload))
+            (let body (fs-read-text path))
+            (let c2 (if (str_eq body payload) 4 0))
+            (let impl (hos-impl-for "macos-arm64" "audio:pcm16"))
+            (let c3 (if (str_eq (hos-impl-implementation impl) "CoreAudio+AVFoundation") 8 0))
+            (sum (list c0 c1 c2 c3))))
+
+    (defn fnri-video-standin-verdict ()
+        (do
+            (let video (fnri-dispatch-for "video:rgba-time"))
+            (let cls (fnri-class-for "video:rgba-time"))
+            (let c0 (if (str_eq (fnri-dispatch-carrier video) "filesystem") 1 0))
+            (let c1 (if (str_eq (fnri-class-sense-slug cls) "afferent-pixel") 2 0))
+            (let path (str_concat (temp_dir) "/fnri-video-standin.rgba"))
+            (let payload "rgba8-standin-frame")
+            (let _w (fs-write-text path payload))
+            (let body (fs-read-text path))
+            (let c2 (if (str_eq body payload) 4 0))
+            (let impl (hos-impl-for "macos-arm64" "video:rgba-time"))
+            (let c3 (if (str_eq (hos-impl-implementation impl) "ScreenCaptureKit+AVFoundation") 8 0))
+            (sum (list c0 c1 c2 c3))))
+
+    (defn fnri-gpu-standin-verdict ()
+        (do
+            (let gpu (fnri-dispatch-for "gpu:compute"))
+            (let c0 (if (str_eq (fnri-dispatch-carrier gpu) "host-kernel") 1 0))
+            (let c1 (if (str_eq (fnri-dispatch-sense-op gpu) "read_file") 2 0))
+            (let impl (hos-impl-for "macos-arm64" "gpu:compute"))
+            (let c2 (if (str_eq (hos-impl-capability impl) "cap.compute.gpu") 4 0))
+            (let c3 (if (str_eq (hos-impl-implementation impl) "Metal+IOReport+powermetrics") 8 0))
+            (sum (list c0 c1 c2 c3))))
+
+    0)
