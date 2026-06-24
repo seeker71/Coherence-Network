@@ -1,0 +1,19 @@
+; fs-list-band.fk — fs_list (the directory-list host-io op, op 112) proven
+; Go=Rust=TS=fkwu. This is the fkwu witness that directory enumeration now runs on
+; the EMITTED universal kernel, not only the three walkers — the close of the host-io
+; "standing wall" for the self-healing memory loop (rag-heal.fk).
+;
+; preludes: form-stdlib/core.fk
+;
+; fs_list reads a directory's entries — non-deterministic across environments, but at
+; one moment on one machine all four kernels see the SAME directory. We verify by
+; MEMBERSHIP of three files committed to form-stdlib, so the verdict is fixed (3) and
+; order/count-independent: each kernel must enumerate the directory and find them.
+(do
+    (defn fl-has (xs nm)
+        (if (eq (len xs) 0) 0
+            (if (str_eq (head xs) nm) 1 (fl-has (tail xs) nm))))
+    (let entries (fs_list "form-stdlib"))
+    (add (fl-has entries "core.fk")
+        (add (fl-has entries "adler32.fk")
+             (fl-has entries "rag-heal.fk"))))
