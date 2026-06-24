@@ -50,7 +50,7 @@ DEV="$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device"{print $1; exit}')"
 # ── emit uni.c, patch arc4random -> rand(), cross-compile static aarch64 ──
 echo "  emitting uni.c (fkc-emit-universal)..." >&2
 d="$(mktemp -d "$TMPDIR/fkwu-android.XXXXXX")"
-cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
+cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/fkc-table-serialize.fk form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
 printf '(do (print "==UNI==") (print (fkc-emit-universal)) (print "==END==") 0)\n' >> "$d/uni-driver.fk"
 "$GO_BIN" "$d/uni-driver.fk" 2>"$d/uni.err" > "$d/uni.out" || { rm -rf "$d"; skip "uni.c emit failed (see Go kernel)"; }
 sed -n '/^==UNI==$/,/^==END==$/p' "$d/uni.out" | sed -e '1d' -e '$d' \
