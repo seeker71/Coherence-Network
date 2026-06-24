@@ -105,6 +105,11 @@ jobs:
           done
           echo "WINDOWS RECEIPT ROW: fkwu standalone 511/127/127 on $(uname -s) $(uname -m)"
 
+      - name: Prove fnri resource interfaces four-way + standalone fkwu on Windows
+        shell: bash
+        run: |
+          bash scripts/verify_fnri_windows_standalone.sh
+
       - name: Prove Windows fkwu JIT and native form-cli runtime
         shell: pwsh
         run: |
