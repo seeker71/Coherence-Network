@@ -598,6 +598,24 @@ xpath fks 9
 content-address fks 1111111111
 substrate-core fks 11111
 
+# ── framebuffer lane — source attribution as a real fourth-arm carrier ──
+# fkwu carries the sibling's framebuffer natively: fb_record (tag 128, the
+# tri the shim's intern_node_at lowers to) writes a per-node (file line col)
+# attribution map and appends the node to an ordered roots list; framebuffer-
+# events (129) returns the roots as a fresh list in insertion order, matching the
+# siblings' append semantics; node_source (130) reads one node's attribution back
+# as (file line col); framebuffer-clear (131) resets the window. The per-node
+# arrays and the roots list are node-indexed plain ints / negative node boxes /
+# string-pool ids — all melt-stable, so the copying arena never disturbs them,
+# and fb_record is a tri (args in row slots, no arena allocation), so every
+# parsing band that calls intern_node_at keeps its exact verdict and allocation
+# profile. framebuffer-viewer clears, bursts 100 distinct attributed cells, and
+# counts them (100); framebuffer-readback reads (line col) back through
+# node_source (3). The same op-trace surface is reachable live on the
+# C-bootstrapped form-cli through its `diagnose` verb (kernel_stat, tag 127).
+framebuffer-viewer fks 100
+framebuffer-readback fks 3
+
 # ── host-io lane — first real-carrier round-trip on the fourth arm ──
 # substrate-core proved durable interning four-way over the in-memory carrier;
 # real filesystem io was 3-kernel-only (the named "host io" wall). temp_dir is

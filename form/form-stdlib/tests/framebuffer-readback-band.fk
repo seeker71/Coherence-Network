@@ -1,0 +1,20 @@
+; framebuffer-readback-band.fk — node_source reads back the (file line col) that
+; intern_node_at recorded. Proven four-way (Go/Rust/TS/fkwu).
+;
+; intern_node_at attributes a freshly-interned composite to (file=rb/probe.fk,
+; line=7, col=3). node_source(nid) returns the attribution as (file line col);
+; we check the line (index 1) and col (index 2) read back exactly. On fkwu the
+; line+col rode one packed int through fb_record (tag 128) and node_source
+; (tag 130) splits them apart — this band is the witness that the split is exact
+; and matches the siblings, which store the two ints directly.
+;
+; Verdict 3 = (line==7 → 1) + (col==3 → 2). The file (index 0) is a string whose
+; representation differs across kernels (pool id vs interned string), so the band
+; reads only the two ints — the portable, content-equal part of the attribution.
+
+(do
+    (defn rb-cat () (make_nodeid 1 2 12 1))
+    (let nid (intern_node_at (rb-cat) (list (intern_trivial_int 42)) "rb/probe.fk" 7 3))
+    (let src (node_source nid))
+    (add (if (eq (nth src 1) 7) 1 0)
+         (if (eq (nth src 2) 3) 2 0)))
