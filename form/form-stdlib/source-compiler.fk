@@ -2675,10 +2675,29 @@
 
     ;; --- source compiler ---------------------------------------------
 
+    ;; Text outside `section [...]` blocks is emitted verbatim into the lowered
+    ;; Form, but `.bml` modules carry `//` doc-comment lines (preludes, headers)
+    ;; that the Form flattener cannot parse — it only knows `;` comments, so a
+    ;; paren inside a `//` line would derail the function index. Strip the
+    ;; `//`-only lines here in the compiler (after trimming leading space) and
+    ;; pass Form code and `;` comments through untouched.
+    (defn fsc-strip-bml-comments-loop (s i)
+        (if (ge i (str_len s)) ""
+            (do
+                (let nxt (fsc-line-next s i))
+                (let line (fsc-sub s i (fsc-line-end s i)))
+                (if (fsc-prefix? (fsc-trim line) "//")
+                    (fsc-strip-bml-comments-loop s nxt)
+                    (str_concat (fsc-sub s i nxt)
+                                (fsc-strip-bml-comments-loop s nxt))))))
+
+    (defn fsc-strip-bml-comments (s)
+        (fsc-strip-bml-comments-loop s 0))
+
     (defn form-source-compile-loop (src out-path i)
         (do
             (let pos (fsc-find-string-from src "section [" i))
-            (if (lt pos 0) (fsc-sub src i (str_len src))
+            (if (lt pos 0) (fsc-strip-bml-comments (fsc-sub src i (str_len src)))
                 (do
                     (let dialect-start (add pos 9))
                     (let dialect-end (fsc-find-char-from src "]" dialect-start))
@@ -2687,7 +2706,7 @@
                     (let dialect-name (fsc-sub src dialect-start dialect-end))
                     (let body (fsc-sub src (add open 1) close))
                         (str_concat
-                            (fsc-sub src i pos)
+                            (fsc-strip-bml-comments (fsc-sub src i pos))
                             (str_concat
                             (fsc-compile-section dialect-name body)
                             (form-source-compile-loop src out-path (fsc-line-next src close))))))))
