@@ -34,17 +34,22 @@ if [ -x "$ROOT/bin/form-cli" ]; then
     | sed -n '/── learning ──/,/── tool → native/p;/── tool → native/,/── local oracle/p' \
     | grep -vE '^\s*── (tool → native)' | sed 's/^/    /'
 else
-  echo "    (form-cli not built — run scripts/ensure_form_cli_kernel.sh)"
+  echo "    (form-cli not built — run scripts/ensure_form_cli_native.sh)"
 fi
 echo
 
 # ── feed 3: native-thought routing — the tally is Form (host-read + count in native-thought-receipt.fk) ──
 NTR="${NATIVE_THOUGHT_RECEIPTS:-$HOME/.coherence-network/native-thought-receipts.jsonl}"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
-if [ -f "$NTR" ] && [ -x "$GO" ]; then
-  drv="$(mktemp --suffix=.fk)"; printf '(do (print (ntr-tally "%s")))\n' "$NTR" > "$drv"
-  read -r N HIT ESC <<<"$("$GO" "$STD/sovereignty-receipt.fk" "$STD/native-thought-receipt.fk" "$drv" 2>/dev/null | grep -E '^[0-9]+ [0-9]+ [0-9]+$' | head -1)"
-  rm -f "$drv"
+if [ -f "$NTR" ]; then
+  empty="$(mktemp)"
+  drv="$(mktemp --suffix=.fk)"
+  printf '\n' > "$empty"
+  printf '(do (print (ntr-tally "%s")))\n' "$NTR" > "$drv"
+  read -r N HIT ESC <<<"$(bash "$ROOT/scripts/fkwu_run.sh" "$empty" \
+    "$ROOT/form/form-stdlib/sovereignty-receipt.fk" \
+    "$ROOT/form/form-stdlib/native-thought-receipt.fk" \
+    "$drv" 2>/dev/null | grep -E '^[0-9]+ [0-9]+ [0-9]+$' | head -1)"
+  rm -f "$empty" "$drv"
   if [ "${N:-0}" -gt 0 ] 2>/dev/null; then
     PCT=$(( 100 * HIT / N ))
     echo "  native-thought routing (Form tally over the receipt ledger): ${N} thoughts routed — ${HIT} came home (body-hit), ${ESC} rented (escalated) → ${PCT}% sovereign this body"

@@ -1,0 +1,75 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fkwu-host-filesystem-bml",
+  "commit_scope": "Retire bin-go from receipt surfaces: rag-heal, fkwu_run, build-form-cli, form-cli eval, ensure_form_cli_kernel; restore T_flat for fkwu self-host flatten on mac/linux.",
+  "standard_receipt": {
+    "claim": "Agent/runtime surfaces flatten and run on fkwu+bootstrap without requiring bin-go.",
+    "body": "yes — rag-heal.sh, fkwu_run.sh, build-form-cli.sh standard lane, bin/form-cli eval",
+    "c_bootstrap": "partial — darwin-arm64 bootstrap binaries committed",
+    "toolchain_free": "pending — clang still links when platform binary absent",
+    "platforms": {
+      "mac": "observed — FORM_STANDARD_LANE=1 build-form-cli; host-filesystem-band four-way 15; fourth_selfhost OK",
+      "windows": "pending — windows-floor needs fkwu from uni.c+clang or committed windows bootstrap",
+      "android": "pending"
+    },
+    "honest_floor": "Maintainer regen scripts (regen_*_bootstrap.sh) may still use bin-go off-receipt."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260624_bin_go_off_receipt_surfaces.json",
+    "docs/system_audit/commit_evidence_20260624_host_filesystem_bml.json"
+  ],
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources", "form-cli-self-healing-memory"],
+  "task_ids": ["task-2026-06-24-host-filesystem-bml"],
+  "contributors": [
+    {
+      "contributor_id": "cursor-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "bin/form-cli",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/fourth-flatten-table.txt",
+    "form/form-stdlib/rag-heal.fk",
+    "form/scripts/rag-heal.sh",
+    "scripts/INDEX.md",
+    "scripts/ensure_form_cli_kernel.sh",
+    "scripts/fkwu_run.sh",
+    "scripts/sovereignty_report.sh"
+  ],
+  "evidence_refs": [
+    "FOUR-WAY: validate.sh host-filesystem-band -> 15",
+    "T_FLAT: restored fourth-flatten-table.txt (581150 bytes) — removed in #3640, needed for self-host",
+    "SURFACES: rg bin-go on rag-heal/fkwu_run/build-form-cli/ensure_form_cli_kernel — comments only"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && FORM_STANDARD_LANE=1 ./validate.sh form-stdlib/tests/host-filesystem-band.fk",
+      "cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh",
+      "bash scripts/fkwu_run.sh /dev/null form-stdlib/minimal-surface.fk (smoke)"
+    ],
+    "fourth_arm_outputs": ["host-filesystem four-way 15"]
+  },
+  "ci_validation": { "status": "pending", "commands": [] },
+  "deploy_validation": { "status": "pending", "environment": "local-form-runtime" },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Windows/android bootstrap binaries and RAG heal band witness remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Receipt-path scripts no longer invoke go build.",
+    "public_endpoints": ["local form-cli / fkwu only"],
+    "test_flows": [
+      "cd form && FORM_STANDARD_LANE=1 ./validate.sh form-stdlib/tests/host-filesystem-band.fk"
+    ]
+  }
+}
