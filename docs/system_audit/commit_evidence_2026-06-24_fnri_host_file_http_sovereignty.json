@@ -1,0 +1,73 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/vvlo",
+  "commit_scope": "Extended form-native resource interfaces with host:file and http:request classes, platform impl rows, sovereignty verify on cached c-bootstrap artifacts, and fourth-arm multi-line prelude parsing.",
+  "files_owned": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/INDEX.md",
+    "specs/form-native-resource-interfaces.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/tests/form-native-resource-interfaces-band.fk",
+      "./scripts/verify_form_native_sovereignty.sh"
+    ],
+    "fourth_arm": "form-native-resource-interfaces four-way verdict 32767 (go/rust/ts/fkwu); fs-list 3 on receipt loop.",
+    "native_binary": "form/form-cli + cached fkwu-d087f60ccd760048 — toolchain-free receipt loop on macOS arm64.",
+    "notes": "verify_form_native_sovereignty.sh uses warmed form-cli and fkwu cache by default; SOVEREIGNTY_ALLOW_BOOTSTRAP=1 only when artifacts missing."
+  },
+  "ci_validation": {"status": "pending"},
+  "deploy_validation": {"status": "pending"},
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "validate.sh form-native-resource-interfaces-band → 32767; verify_form_native_sovereignty.sh receipt pass",
+    "expected_behavior_delta": "Ten resource classes (host:file, http:request added) resolve on fkwu; sovereignty receipt uses cached c-bootstrap binaries",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "cd form && ./validate.sh ... form-native-resource-interfaces-band.fk → 32767",
+      "./scripts/verify_form_native_sovereignty.sh → witnesses 32767/3"
+    ]
+  },
+  "phase_gate": {
+    "phase": "standard-receipt-host-resources",
+    "gate": "fnri band four-way on fkwu with sovereignty receipt on cached c-bootstrap binaries",
+    "state": "observed-mac-host",
+    "can_move_next_phase": false,
+    "pending_rungs": [
+      "c-bootstrap build row: form-asm emit (clang-free) still pending",
+      "platforms{windows,android}: device traces pending"
+    ]
+  },
+  "idea_ids": ["idea-realization-engine"],
+  "spec_ids": ["form-native-resource-interfaces"],
+  "task_ids": ["form-native-resource-interfaces-fnri"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "validation", "evidence"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "scripts/verify_form_native_sovereignty.sh",
+    "docs/coherence-substrate/standard-receipt.form",
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-native-resource-interfaces.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/form-native-resource-interfaces-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/verify_form_native_sovereignty.sh",
+    "scripts/INDEX.md",
+    "specs/form-native-resource-interfaces.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fnri_host_file_http_sovereignty.json"
+  ],
+  "change_intent": "runtime_feature"
+}
