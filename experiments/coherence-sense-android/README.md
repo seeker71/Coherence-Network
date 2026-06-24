@@ -1,5 +1,26 @@
 # Coherence Sense — Android v0
 
+## ⟐ Sema voice surface (`SemaVoiceActivity`)
+
+A second launcher icon, **"Sema"**, opens a live voice surface: Sema speaks an introduction on open,
+then you tap **Speak to Sema**, ask a question, and she answers **body-first** — grounded in real cells
+(the mission, cognitive sovereignty, the kernel, one engine), with a live read from the public substrate
+door when online, and an **honest** "that's a frontier question I can't ground yet" when it falls outside
+the body. Speech I/O is the phone's own (`TextToSpeech` + `SpeechRecognizer`) — reliable today, while the
+Form-native whisper transcription / TTS synthesis are still wiring. The intro is pure TTS: it can't fail
+offline. Open-ended escalation to a frontier mind is the next wire (a backend RAG+oracle Q&A service).
+
+**Build + install (on the Mac with the device connected):**
+```bash
+cd experiments/coherence-sense-android
+./gradlew assembleDebug                       # or ./build_signed_release.sh for a signed release
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+# then open the "Sema" icon, allow the mic, and she introduces herself.
+```
+Permissions are already declared (`RECORD_AUDIO`, `INTERNET`). **Test it once before the meeting** —
+this code hasn't been built/run from the cloud session; the bulletproof fallback is the TTS introduction,
+which works with no network and no recognizer.
+
 The phone becomes a **sense organ of the network**. It reads the device's senses
 (accelerometer, gyroscope, light, magnetometer), streams them to this Mac over WiFi, and shows what
 the Mac witnesses back — the two **synchronizing in real time**. Nothing streams until you connect;

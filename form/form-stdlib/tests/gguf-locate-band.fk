@@ -1,0 +1,39 @@
+; preludes: form-stdlib/gguf-read.fk
+;
+; gguf-locate-band — walk the variable-length metadata KVs (including an array, the case the tokenizer
+; vocab stresses) and the tensor-info table to LOCATE a tensor, made falsifiable on a hand-built mini-GGUF.
+; This is the keystone step between "parse the header" and "dequant a real weight": find where a tensor's
+; data lives. Logic proven four-way here on a tiny crafted file; a carrier then witnesses it on the real
+; 2GB llama3.2:3b (which can't be a band fixture).
+;
+; The mini-GGUF (offsets noted): header(0..24) · KV "a"=u32(42) at 24 · KV "b"=array<u32>[7,8] at 41 ·
+; tensor "w" n_dims=1 dims=[256] type=12(Q4_K) dataoffset=0 at 74.
+;   KV walk must skip the scalar AND the array to land the tensor table at 74.
+;
+; Verdict 127 when every claim lands:
+;   1    header still parses (tensor_count == 1)        (gg-tensor-count == 1)
+;   2    KV count is 2                                   (gg-kv-count == 2)
+;   4    tensor-info table located past both KVs         (gg-tinfo-start == 74)
+;   8    the tensor's type is Q4_K (12)                  (gg-ti-type @74 == 12)
+;   16   its first dim is 256                            (gg-ti-dim0 @74 == 256)
+;   32   its data offset is 0                            (gg-ti-dataoff @74 == 0)
+;   64   its rank is 1                                   (gg-ti-ndims @74 == 1)
+(do
+    (let g (list
+        ; header: GGUF, v3, tensor_count=1, kv_count=2
+        71 71 85 70  3 0 0 0  1 0 0 0 0 0 0 0  2 0 0 0 0 0 0 0
+        ; KV "a": keylen=1, 'a', vtype=4(u32), value=42
+        1 0 0 0 0 0 0 0  97  4 0 0 0  42 0 0 0
+        ; KV "b": keylen=1, 'b', vtype=9(array), elemtype=4(u32), count=2, [7, 8]
+        1 0 0 0 0 0 0 0  98  9 0 0 0  4 0 0 0  2 0 0 0 0 0 0 0  7 0 0 0  8 0 0 0
+        ; tensor "w": namelen=1, 'w', n_dims=1, dims=[256], type=12(Q4_K), dataoffset=0
+        1 0 0 0 0 0 0 0  119  1 0 0 0  0 1 0 0 0 0 0 0  12 0 0 0  0 0 0 0 0 0 0 0))
+    (let ti (gg-tinfo-start g))
+    (let c0 (if (eq (gg-tensor-count g) 1)        1 0))
+    (let c1 (if (eq (gg-kv-count g) 2)            2 0))
+    (let c2 (if (eq ti 74)                        4 0))
+    (let c3 (if (eq (gg-ti-type g ti) 12)         8 0))
+    (let c4 (if (eq (gg-ti-dim0 g ti) 256)       16 0))
+    (let c5 (if (eq (gg-ti-dataoff g ti) 0)      32 0))
+    (let c6 (if (eq (gg-ti-ndims g ti) 1)        64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

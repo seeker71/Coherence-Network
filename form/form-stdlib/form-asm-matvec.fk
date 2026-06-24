@@ -1,0 +1,61 @@
+; form-asm-matvec.fk — native float compute as Form→asm BYTES, no rustc/clang. The first cell of
+; sovereign inference compute: the matvec inner product (a dot) composed from form-asm's f64 instructions
+; over a buffer pointer, the way ll-buffer composes alloc/store/load/free. Every instruction is an
+; fa-* encoder already byte-identical to the clang oracle (form-asm-float 2047), so a composition of them
+; is correct by construction; this recipe proves the COMPOSITION emits the exact program bytes four-way.
+;
+; fam-dot2: x0 points at four contiguous f64 [a0, a1, b0, b1]; returns d0 = a0*b0 + a1*b1, folded the
+; SAME downward order as transformer-block.fk's tb-dot (j = cols-1 .. 0) so the native result is the
+; recipe's result bit-for-bit, not epsilon-close. The body:
+;   ldr d1,[x0,#8]  ; a1     ldr d2,[x0,#24] ; b1     fmul d0,d1,d2 ; d0 = a1*b1   (j=1)
+;   ldr d1,[x0,#0]  ; a0     ldr d2,[x0,#16] ; b0     fmul d1,d1,d2 ; d1 = a0*b0   (j=0)
+;   fadd d0,d1,d0   ; d0 = a0*b0 + a1*b1                ret
+; (fa-ldr-d takes the SCALED immediate: byte offset / 8, so #8 -> 1, #24 -> 3, #16 -> 2.)
+;
+; A full matvec is rows of this dot (y[i] = dot(W[i], x)); the row/col loop generalizes fam-dot2 the way
+; ll-buf wraps a loop around alloc/store/load/free — the next rung. This is the sovereign native lane:
+; form-asm bytes -> form-macho/recipe-dylib -> fkwu dlopen+call over its own f64 pool. rustc's
+; jit-tensor-emit matvec is the bootstrap-oracle speed reference only.
+;
+; preludes: form-stdlib/form-asm.fk
+;
+; Proven by: form-stdlib/tests/form-asm-matvec-band.fk (four-way; byte-identity vs the ARM/clang oracle)
+
+(do
+    (defn fam-dot2 ()
+        (append (fa-ldr-d 1 0 1)            ; ldr d1,[x0,#8]   a1
+            (append (fa-ldr-d 2 0 3)        ; ldr d2,[x0,#24]  b1
+                (append (fa-fmul 0 1 2)     ; fmul d0,d1,d2    d0 = a1*b1
+                    (append (fa-ldr-d 1 0 0)    ; ldr d1,[x0,#0]   a0
+                        (append (fa-ldr-d 2 0 2)    ; ldr d2,[x0,#16]  b0
+                            (append (fa-fmul 1 1 2)     ; fmul d1,d1,d2    d1 = a0*b0
+                                (append (fa-fadd 0 1 0) ; fadd d0,d1,d0    d0 = a0*b0 + a1*b1
+                                    (fa-ret)))))))))    ; ret
+
+    ; fam-dot-loop: the dot as a LOOP over n elements (the matvec row kernel, no unrolling) — x0=a base,
+    ; x1=b base, x2=n; returns d0 = sum_j a[j]*b[j], j=0..n. Pointer-increment so no register-indexed load
+    ; is needed; the same instruction family ll-buf uses for its loop, now over f64. Branch offsets are in
+    ; INSTRUCTIONS (the lo-streq discipline): b.ge exits +9 to the ret; b loops -9 back to the compare.
+    ;   0 movz x3,#0 (j)   1 movz x4,#0   2 scvtf d0,x4 (acc=0.0)
+    ;   3 cmp x3,x2   4 b.ge +9(end)   5 ldr d1,[x0]   6 ldr d2,[x1]   7 fmul d3,d1,d2   8 fadd d0,d0,d3
+    ;   9 add x0,#8   10 add x1,#8   11 add x3,#1   12 b -9(loop)   13 ret
+    ; (Upward fold; tb-dot's exact downward fold for bit-exact-vs-recipe needs register-shifted addressing
+    ; — a named follow-up. This proves the LOOP emits four-way; correctness of each instruction is inherited
+    ; from form-asm-float/form-asm. A full 2-D matvec wraps an outer row loop around this.)
+    (defn fam-dot-loop ()
+        (append (fa-movz-x 3 0)
+            (append (fa-movz-x 4 0)
+                (append (fa-scvtf 0 4)
+                    (append (fa-cmp-r 3 2)
+                        (append (fa-bcond 10 9)
+                            (append (fa-ldr-d 1 0 0)
+                                (append (fa-ldr-d 2 1 0)
+                                    (append (fa-fmul 3 1 2)
+                                        (append (fa-fadd 0 0 3)
+                                            (append (fa-add-x-imm 0 0 8)
+                                                (append (fa-add-x-imm 1 1 8)
+                                                    (append (fa-add-x-imm 3 3 1)
+                                                        (append (fa-b-off -9)
+                                                            (fa-ret)))))))))))))))
+
+    0)

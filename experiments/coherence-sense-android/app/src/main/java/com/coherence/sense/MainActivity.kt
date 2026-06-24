@@ -28,6 +28,8 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.net.TrafficStats
 import android.net.Uri
@@ -92,6 +94,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var tick = 0
     private var sentBytes = 0L
     private var sentSamples = 0L
+    private var capturedSamples = 0L   // snapshots persisted to the local field-log (the data lake)
+    private var locCapture: LocationManager? = null
+    @Volatile private var lastLoc: Location? = null   // live fix, captured into the lake for journeys
+    private val locCaptureListener = LocationListener { loc -> lastLoc = loc }
     private var innerCellsCreated = 0L
     private var innerCellsUpdated = 0L
     private var innerCellsFreed = 0L
@@ -175,6 +181,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        findViewById<android.widget.TextView>(R.id.backToSema).setOnClickListener { finish() }
         feed = findViewById(R.id.feedView)
         status = findViewById(R.id.statusView)
         identity = findViewById(R.id.identityView)
@@ -345,6 +352,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         registerSensor(Sensor.TYPE_GYROSCOPE)
         registerSensor(Sensor.TYPE_LIGHT)
         registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        startLocationCapture()
         requestOptionalPermissions()
         startMicSamplingIfAllowed()
         startCameraSamplingIfAllowed()
@@ -369,6 +377,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         stopMicSampling()
         stopCameraSampling()
         stopGpuSampling()
+        stopLocationCapture()
         connectBtn.text = "Start sharing"
         lastMacState = "paused"
         status.text = message
@@ -586,17 +595,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun arr(v: FloatArray): JSONArray = JSONArray().apply { put(v[0].toDouble()); put(v[1].toDouble()); put(v[2].toDouble()) }
 
     private fun sendSnapshot() {
-        if (snapshotInFlight) return
-        val base = effectiveWitnessBase()
-        if (base.isBlank()) {
-            pendingStartAfterDiscovery = true
-            discoveryState = "looking for nearby Mac witness"
-            status.text = "Looking for nearby Mac witness before sending samples."
-            startWitnessDiscovery()
-            requestDashboardRender()
-            return
-        }
-        snapshotInFlight = true
+        // Build + persist the snapshot ALWAYS — capture is decoupled from sharing, so the data lake
+        // keeps filling even with no witness in reach (offline, on the move). Sharing happens after.
         val snap = JSONObject()
         snap.put("organ_id", organId)
         latest[Sensor.TYPE_ACCELEROMETER]?.let { snap.put("accel", arr(it)) }
@@ -613,6 +613,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             snap.put("gpu_latency_ms", gpuLatencyMs)
             snap.put("gpu_samples", gpuSamples)
         }
+        lastLoc?.let { loc ->
+            val l = JSONObject()
+            l.put("lat", loc.latitude); l.put("lon", loc.longitude)
+            if (loc.hasSpeed()) l.put("speed", loc.speed.toDouble())       // m/s
+            if (loc.hasBearing()) l.put("bearing", loc.bearing.toDouble()) // degrees
+            if (loc.hasAccuracy()) l.put("acc", loc.accuracy.toDouble())   // meters
+            snap.put("loc", l)
+        }
         val body = bodyStateJson()
         snap.put("organs_active", JSONArray(activeOrgans()))
         snap.put("channels_offered", JSONArray(offeredTransports()))
@@ -621,6 +629,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         snap.put("tick", tick++)
         innerCellsCreated += 1
 
+        // The data lake's first pour: persist EVERY snapshot locally, durably — so the proven
+        // world-model recipes (feature-vector -> world-model-growth -> signal-metabolism -> co-learning)
+        // have real field data to train on, live and after the fact. Pure physical field readings
+        // (motion, light, magnetic, sound-level, camera-luma, gpu) — no identifiable content; raw
+        // audio/images and identifying others stay behind the consent gate (organ-sense.fk).
+        persistSnapshot(snap)
+
+        // Share to a witness only when one is reachable and no POST is already in flight; offline never
+        // stops the capture — it just keeps filling the local lake and keeps looking for a witness.
+        if (snapshotInFlight) return
+        val base = effectiveWitnessBase()
+        if (base.isBlank()) {
+            pendingStartAfterDiscovery = true
+            discoveryState = "looking for nearby Mac witness"
+            status.text = "Capturing locally. Looking for a nearby Mac witness to share with."
+            startWitnessDiscovery()
+            requestDashboardRender()
+            return
+        }
+        snapshotInFlight = true
         Thread {
             try {
                 val conn = (URL("$base/sense").openConnection() as HttpURLConnection).apply {
@@ -649,6 +677,45 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 snapshotInFlight = false
             }
         }.start()
+    }
+
+    // Live location into the lake — lat/lon/speed/bearing per fix, so a journey (journey.fk) is
+    // reconstructable from the recorded track. Only physical position; identifying a place by name or
+    // who is there stays behind the consent gate.
+    private fun startLocationCapture() {
+        val hasLoc = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!hasLoc) return
+        val lm = (locCapture ?: (getSystemService(LOCATION_SERVICE) as LocationManager)).also { locCapture = it }
+        try {
+            for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+                if (lm.isProviderEnabled(p)) {
+                    lm.requestLocationUpdates(p, 1000L, 0f, locCaptureListener, Looper.getMainLooper())
+                    lm.getLastKnownLocation(p)?.let { if (lastLoc == null) lastLoc = it }
+                }
+            }
+        } catch (_: SecurityException) {}
+    }
+
+    private fun stopLocationCapture() {
+        try { locCapture?.removeUpdates(locCaptureListener) } catch (_: Exception) {}
+    }
+
+    // Append one timestamped snapshot to the local field-log (NDJSON, one record per line). This is
+    // the durable memory the senses were missing: reading is liquid, this is body. Wall-clock t_ms makes
+    // every record trainable and a journey reconstructable. Local-only and owner's-own-device by design;
+    // sharing outward to other cells flows through the consent interface (organ-sense.fk), never raw.
+    private fun persistSnapshot(snap: JSONObject) {
+        try {
+            snap.put("t_ms", System.currentTimeMillis())
+            val log = File(filesDir, "field-log.ndjson")
+            FileOutputStream(log, true).bufferedWriter().use { w ->
+                w.append(snap.toString()); w.append("\n")
+            }
+            capturedSamples += 1
+        } catch (_: Exception) {}
     }
 
     private val meshLoop = object : Runnable {

@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 339
+**Total files**: 344
 
 | File | Purpose |
 |---|---|
@@ -40,6 +40,7 @@
 | [build_form_llama.sh](build_form_llama.sh) | build_form_llama.sh — train + fuse + serve the Form-knowledge local oracle. |
 | [build_hati_os_public_assets.sh](build_hati_os_public_assets.sh) | build_hati_os_public_assets.sh - build public Hati-OS native release assets. |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
+| [capabilities.sh](capabilities.sh) | capabilities.sh — the runtime capability readout. Run this when you're about to reach for a |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
 | [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
 | [check_generated_vision_assets.py](check_generated_vision_assets.py) | Validate generated vision assets referenced by concepts and web pages. |
@@ -93,6 +94,7 @@
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
+| [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
@@ -162,6 +164,7 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | V2 iteration — push harder on the two weakest rounds (plan + aerial). |
 | [generate_visuals.py](generate_visuals.py) | Pre-generate all Pollinations images and save as static assets. |
 | [generate_work_visuals.py](generate_work_visuals.py) | Generate hero images for works (asset nodes with creation_kind). |
+| [gguf_locate_witness.py](gguf_locate_witness.py) | gguf_locate_witness.py — witness that the FOUR-WAY-PROVEN Form GGUF locate logic |
 | [ghx.sh](ghx.sh) | _no top-of-file purpose_ |
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
@@ -232,6 +235,7 @@
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
+| [pg_wire_fkwu_witness.sh](pg_wire_fkwu_witness.sh) | pg_wire_fkwu_witness.sh — prove the 4th kernel (fkwu) reads from live Postgres via Form pg-wire. |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
 | [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | Detect, summarize, and optionally auto-rerun failing PR checks. |
@@ -327,6 +331,7 @@
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
+| [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |

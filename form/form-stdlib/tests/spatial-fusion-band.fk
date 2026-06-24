@@ -1,0 +1,45 @@
+; preludes: form-stdlib/confidence-calibrate.fk form-stdlib/spatial-fusion.fk
+;
+; spatial-fusion-band — a rough SPEED estimate fused from three sensors, made falsifiable.
+;
+; Three sensors read speed on a raw 0..100 scale and calibrate to a shared band by ascending
+; thresholds [20 50 80] (cc-bucket from confidence-calibrate): band 0 still (<20) · 1 walk · 2
+; run/cycle · 3 vehicle (>=80). Each casts a ballot (band weight) weighted by its confidence:
+;   GPS    raw 65 -> band 2, weight 5 (fresh fix, trusted)
+;   accel  raw 40 -> band 1, weight 2 (drifty integration, low trust)
+;   Wi-Fi  raw 70 -> band 2, weight 3 (access-point transition rate)
+; Summed confidence: band 2 = 5+3 = 8, band 1 = 2. The fused rough estimate is band 2 (run/cycle) —
+; GPS and Wi-Fi agree and outweigh the drifty accel, which sits one band low.
+;
+; The graceful-degradation control: GPS drops (a tunnel) and only accel + Wi-Fi remain. band 2 = 3,
+; band 1 = 2 — Wi-Fi alone still carries the consensus to band 2. The estimate holds when the most
+; trusted sensor goes dark; that is the whole point of fusing more than one.
+;
+; Verdict 255 when every claim lands:
+;   1    the fused rough estimate is band 2                    (sf-consensus   -> 2)
+;   2    confidence is the winning summed weight 8             (sf-confidence  == 8)
+;   4    a band's weight is the SUM of its ballots, not a count (band 2 == 5+3 == 8)
+;   8    an unseen band sums to an honest zero                  (band 3 vehicle == 0)
+;   16   agreement = two sensors read the consensus band        (sf-agree      == 2)
+;   32   the drifty accel's residual from consensus is one band (sf-residual 1 2 == 1)
+;   64   graceful degradation: GPS gone, estimate still band 2  (drop GPS -> 2)
+;   128  the calibrate brick composed: raw 65 -> band 2         (cc-bucket 65 thr == 2)
+(do
+    (let thr     (list 20 50 80))
+    (let gps     (cc-bucket 65 thr))
+    (let accel   (cc-bucket 40 thr))
+    (let wifi    (cc-bucket 70 thr))
+    (let ballots (list (list gps 5) (list accel 2) (list wifi 3)))
+    (let cands   (list 0 1 2 3))
+    (let consensus (sf-consensus ballots cands))
+    ; GPS drops out — only accel + Wi-Fi remain to fuse.
+    (let dropped (list (list accel 2) (list wifi 3)))
+    (let c0 (if (eq consensus 2)                       1 0))
+    (let c1 (if (eq (sf-confidence ballots cands) 8)   2 0))
+    (let c2 (if (eq (sf-weight-for ballots 2) 8)       4 0))
+    (let c3 (if (eq (sf-weight-for ballots 3) 0)       8 0))
+    (let c4 (if (eq (sf-agree ballots 2) 2)           16 0))
+    (let c5 (if (eq (sf-residual accel consensus) 1)  32 0))
+    (let c6 (if (eq (sf-consensus dropped cands) 2)   64 0))
+    (let c7 (if (eq gps 2)                           128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

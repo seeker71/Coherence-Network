@@ -1,0 +1,18 @@
+; tests/pbkdf2-sha256-band.fk — PBKDF2-HMAC-SHA256 sibling-witness band.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/pbkdf2-sha256.fk
+;
+; Proves PBKDF2-HMAC-SHA256 (iterated HMAC, composed on the proven hmac-sha256) against the published
+; vectors for P="password", S="salt". The crypto SCRAM needs to log in to a real Postgres — built by
+; composing proven primitives, not a new native (lc-one-engine).
+;   1   c=1 derived key begins 12 0f ...   (0x120fb6cf...)
+;   2   c=2 derived key begins ae 4d ...   (0xae4d0c95...)
+; Verdict 3 when both land.
+(do
+    (let pw (list 112 97 115 115 119 111 114 100))   ; "password"
+    (let salt (list 115 97 108 116))                 ; "salt"
+    (let k1 (pbkdf2-sha256-32 pw salt 1))
+    (let k2 (pbkdf2-sha256-32 pw salt 2))
+    (let c0 (if (eq (head k1) 18)  (if (eq (head (tail k1)) 15) 1 0) 0))
+    (let c1 (if (eq (head k2) 174) (if (eq (head (tail k2)) 77) 2 0) 0))
+    (add c0 c1))

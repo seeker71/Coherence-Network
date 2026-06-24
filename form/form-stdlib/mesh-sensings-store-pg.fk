@@ -8,8 +8,11 @@
 ; What is four-way (Go/Rust/TS/fkwu): the SQL builders AND the whole decode pipeline — a pg_query
 ; result string (rows \n-separated, columns \t-separated) parses back into the reading list the
 ; consensus consumes, so a band proves decode + consensus with a pure fixture, no live DB. The ONLY
-; host-io is the two boundary calls pg_exec / pg_query — the standing wall (3-kernel), named here,
-; never buried, exactly as the .fkb store named write_form_binary.
+; host-io is the two boundary calls pg_exec / pg_query — the standing wall (3-kernel) for THIS libpq
+; carrier, named here, never buried, exactly as the .fkb store named write_form_binary. The wall is no
+; longer absolute: form-stdlib/pg-wire.fk speaks the Postgres wire protocol in Form over fkwu's own
+; sockets, so the 4th kernel reads Postgres natively (scripts/pg_wire_fkwu_witness.sh) — the path to
+; cross pg_exec/pg_query to four-way runs through there, not through wider libpq bindings.
 ;
 ; Identity is (presence, subject): both are the table PRIMARY KEY, so a second presence reporting the
 ; same subject is a distinct witness, and one presence re-reporting is last-write-wins via the

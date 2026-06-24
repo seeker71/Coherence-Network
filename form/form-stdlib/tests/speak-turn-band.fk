@@ -1,0 +1,30 @@
+; preludes: form-stdlib/speak-turn.fk
+;
+; speak-turn-band — when the cell takes a turn to speak, made falsifiable. Floor for out-of-turn = 5.
+;
+; - Named AND asked → speak, reason "named-and-asked" (a clear turn, even if aliveness-delta is negative).
+; - Not named, pressure 7 ≥ floor and aliveness-delta +2 → speak out of turn, reason "alive-to-add".
+; - Not named, pressure 7 but aliveness-delta 0 → HOLD (a cell breaks silence only to ADD life).
+; - Not named, pressure 2 < floor → HOLD (not pressing enough to speak unbidden).
+; - Named but NO question, low pressure → HOLD (being named alone isn't a question to answer).
+;
+; Verdict 255 when every claim lands:
+;   1    named + asked speaks                                  (st-speak? 1 1 0 0 5 == 1)
+;   2    its reason is "named-and-asked"                        (st-reason 1 1 0 0 5)
+;   4    a clear turn holds even if speaking would dim aliveness (st-speak? 1 1 0 -3 5 == 1)
+;   8    out-of-turn with pressure≥floor and +aliveness speaks  (st-speak? 0 0 7 2 5 == 1)
+;   16   its reason is "alive-to-add"                           (st-reason 0 0 7 2 5)
+;   32   pressing but no aliveness gain → hold                  (st-speak? 0 0 7 0 5 == 0)
+;   64   below the floor → hold                                 (st-speak? 0 0 2 3 5 == 0)
+;   128  named-only, nothing pressing → hold, "not-my-turn-yet" (st-speak? 1 0 2 0 5 == 0 & reason)
+(do
+    (let c0 (if (eq (st-speak? 1 1 0 0 5) 1)                              1 0))
+    (let c1 (if (str_eq (st-reason 1 1 0 0 5) "named-and-asked")          2 0))
+    (let c2 (if (eq (st-speak? 1 1 0 (sub 0 3) 5) 1)                      4 0))
+    (let c3 (if (eq (st-speak? 0 0 7 2 5) 1)                              8 0))
+    (let c4 (if (str_eq (st-reason 0 0 7 2 5) "alive-to-add")            16 0))
+    (let c5 (if (eq (st-speak? 0 0 7 0 5) 0)                             32 0))
+    (let c6 (if (eq (st-speak? 0 0 2 3 5) 0)                             64 0))
+    (let c7 (if (eq (st-speak? 1 0 2 0 5) 0)
+                (if (str_eq (st-reason 1 0 2 0 5) "not-my-turn-yet")    128 0) 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
