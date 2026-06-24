@@ -1,0 +1,39 @@
+{
+  "brick": "3zl",
+  "date": "2026-06-24",
+  "title": "the MULTI-LAYER causal GQA llama DECODE STACK crosses four-way — the depth structure the REAL llama3.2 runs (28 GQA blocks, llama3 RoPE theta-500000), the KV-cached GQA depth stack BIT-IDENTICAL to the full causal recompute stack",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "summary": "multi-layer-stack.fk (#3z, #3601's predecessor lane) folds the SINGLE-head MHA llama block across depth. Real llama3.2:3b uses GROUPED-QUERY attention (24 query heads sharing 8 KV heads) + llama3 RoPE (theta 500000, piecewise scaling) — so the real model's depth stack is the GQA block, not MHA. The single GQA block runs on the M4 GPU forward (#3587/#3590) and steps incrementally via the GQA KV cache (lgqa-generate-causal, #3601), which also runs on the GPU as a cached decode step (#3612) — but no GQA DEPTH stack existed. This is the named next stone from #3612 ('the multi-layer GQA decode STACK — stack the kernel across the real 28 blocks'), taken at the recipe-altitude rung first (the GPU emit needs a proven fp64 recipe to mirror, exactly as multi-layer-stack.fk backs the MHA GPU stack #3424). gqa-multi-layer-stack.fk folds the causal GQA llama block across depth two ways — the full causal recompute (lgqa-stack-causal) and the KV-cached incremental decode (lgqa-stack-generate) — and proves them BIT-IDENTICAL four-way.",
+  "recipe": "form/form-stdlib/gqa-multi-layer-stack.fk",
+  "band": "form/form-stdlib/tests/gqa-multi-layer-stack-band.fk",
+  "reference": "no new reference — self-grounding: single-head cfg10 reuses the published MHA-stack libm pins (scripts/multi_layer_stack_reference.py, group=1 GQA == MHA bit-for-bit); GQA-sharing magnitudes grounded by equivalence to the already-four-way lgqa-block-causal (#3590)",
+  "manifest_row": "gqa-multi-layer-stack fks 255",
+  "verdict": 255,
+  "four_way": true,
+  "divergent": 0,
+  "validate_cmd": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/tests/gqa-multi-layer-stack-band.fk",
+  "validate_result": "core.fk+...+gqa-multi-layer-stack.fk+gqa-multi-layer-stack-band.fk → 255 ; fourth arm: 1 band four-way (fkwu + pre-flattened tables) ; 1 ok, 0 divergent",
+  "claims": {
+    "1": "scn1[0][0] → 1893731 (1-layer cfg10 GQA stack base case == causal-attention-band, libm-pinned)",
+    "2": "scn2[0][0] → 1936158 (2-layer cfg10 GQA stack == MHA-stack libm pin)",
+    "4": "scn2[1][2] → 1944810 (2-layer cfg10 GQA stack, last token == MHA-stack libm pin)",
+    "8": "sgn2 == scn2 (S=2 cfg10: KV-cached GQA depth stack EXACTLY equals recompute stack, bit-for-bit)",
+    "16": "sgn2s == scn2s (REAL GQA sharing n_q=2 n_kv=1 HD=2 theta-500000: cached == recompute — the heart)",
+    "32": "sgn3s == scn3s (S=3 GQA sharing: the cache threads past the boundary through depth — the inductive step)",
+    "64": "sgn3s[0] == sgn2s[0] (AR invariant through depth + grouping: token 0 unchanged by appending future)",
+    "128": "scn2 == mha2 (consolidation: group=1 cfg10 GQA stack == the MHA stack bit-for-bit — GQA is the general case, MHA the group=1 special case, NO parallel path)"
+  },
+  "load_bearing_claim": "The KV-cached GQA depth stack is BIT-IDENTICAL to the full-recompute GQA depth stack. lgqa-generate-causal == lgqa-block-causal bit-for-bit per layer (#3601); lgqa-block-causal is four-way #3590; so folding the cached decode across layers feeds each layer exactly the input the recompute fold feeds it — by induction over depth, lgqa-stack-generate == lgqa-stack-causal. Composes lgqa-block-causal and lgqa-generate-causal verbatim; no numeric change, nothing re-derived. The layer-bundle accessors (lyr-g1..lyr-wd) are reused from multi-layer-stack.fk verbatim — one bundle shape, MHA and GQA share it.",
+  "consolidation": "group=1 (n_kv=n_q, base-10000 cfg) reduces lgqa-stack-* EXACTLY to multi-layer-stack.fk's lblk-stack-* — claim 128 proves scn2 == mha2 bit-for-bit, so the GQA stack is the general case and the MHA stack its group=1 special case (core-abstraction-first: one engine, not a parallel path). This is why the single-head cfg10 magnitudes can reuse the published MHA-stack libm pins.",
+  "ar_invariant_through_depth": "Appending a future token never changes an earlier token's STACKED GQA output (sgn3s[0] == sgn2s[0]) — because every GQA layer is causal and every (narrower n_kv*HD-wide) cache entry is frozen at its (layer, position). That invariant THROUGH the depth AND grouping is exactly why a multi-layer GQA KV cache is reusable across generation steps.",
+  "two_distinct_layers": "L0 = the causal-attention-band weights; L1 = a second, different bundle — so the stack genuinely threads per-layer weights forward, not one block applied twice.",
+  "read_the_body": "lgqa-block-causal (#3590), lgqa-generate-causal (#3601), the GQA grouping (gqa-attn #3577), llama3 RoPE (theta-500000), and the lyr-* bundle accessors (multi-layer-stack.fk) were all ALREADY four-way / present. The brick composed them at the reusable decoder-engine altitude into a depth fold — no new numeric, no re-derive, no new reference (self-grounded against published MHA-stack pins + equivalence to the four-way GQA block). The cheapest-brick lesson held again for a composition brick: design (the depth-fold signature with the GQA model-wide constants, the self-grounding band shape, the consolidation claim) was the cost; the four-way proof was seconds.",
+  "lane": "recipe-altitude four-way (like 3r/3v/3x/3z/3zj). The GQA sibling of brick 3z (multi-layer-stack.fk). Design was the cost; the four-way proof was seconds.",
+  "named_next_stones": [
+    "emit the multi-layer GQA decode stack to Metal — stack the GQA decode-step kernel (#3612), each layer its OWN device KV-cache buffer (narrower n_kv*HD wide), threaded across S dispatches; fp32 CPU-mirror bit-exact gate (the 3zk/#3612 GPU lane for the stack)",
+    "the full generation loop: tokenize-llama (#3573) + multi-layer GQA decode + greedy argmax (#3402) over real llama3.2:3b GGUF weights at full width (n_q=24, n_kv=8, HD=128, d=3072 — load path q4k/q6k/f16 already Form-native four-way) — the first end-to-end native local llama token",
+    "parallelize the GQA decode step across query heads/rows (one threadgroup per query head)"
+  ],
+  "predecessor_bricks": ["#3590 (causal GQA block four-way)", "#3601 (KV-cached causal GQA decode step four-way)", "#3612 (KV-cached GQA decode step on the M4 GPU)", "#3z/multi-layer-stack.fk (the MHA depth stack four-way)"],
+  "teaching": "lc-cognitive-sovereignty"
+}
