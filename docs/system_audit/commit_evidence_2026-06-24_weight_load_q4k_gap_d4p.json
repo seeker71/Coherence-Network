@@ -1,0 +1,59 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/da996f0b",
+  "commit_scope": "Gap D₄′ — wl-load-q4k composes q4k-dequant on real blk.0.ffn_gate Q4_K bytes; four-way 4095",
+  "files_owned": [
+    "form/form-stdlib/weight-load.fk",
+    "form/form-stdlib/tests/weight-load-q4k-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_weight_load_q4k_gap_d4p.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/q4k-dequant.fk form-stdlib/weight-load.fk form-stdlib/tests/weight-load-q4k-band.fk",
+      "cd form && ./validate.sh ... weight-load-band.fk (regression 4095)"
+    ],
+    "fourth_arm": "weight-load-q4k-band validate.sh → 4095; weight-load-band regression: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "notes": "Real llama3.2:3b blk.0.ffn_gate Q4_K superblock in mini-GGUF; pins match q4k-dequant-band"
+  },
+  "ci_validation": {"status": "pending", "notes": "Manifest row weight-load-q4k fks 4095"},
+  "deploy_validation": {"status": "pending", "summary": "No deploy"},
+  "phase_gate": {
+    "phase": "llm-inference-gap-d",
+    "gate": "Q4_K load composes like Q6_K — file bytes to f32 weights",
+    "state": "d4p-q4k-load-four-way",
+    "can_move_next_phase": false,
+    "next": "block-join from Q4_K blk.0 tensors; carrier sliced d=96+ from full GGUF"
+  },
+  "idea_ids": ["form-native-models"],
+  "spec_ids": ["form-native-models"],
+  "task_ids": ["weight-load-q4k-gap-d4p"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "four-way-proof"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/weight-load.fk",
+    "form/form-stdlib/tests/weight-load-q4k-band.fk",
+    "form/form-stdlib/tests/q4k-dequant-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "form/form-stdlib/weight-load.fk",
+    "form/form-stdlib/tests/weight-load-q4k-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_weight_load_q4k_gap_d4p.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "validate.sh weight-load-q4k-band → 4095",
+    "expected_behavior_delta": "wl-load-q4k / wl-q4k-at carve Q4_K superblock from GGUF buffer and dequant",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": ["cd form && ./validate.sh ... weight-load-q4k-band.fk → 4095"]
+  }
+}
