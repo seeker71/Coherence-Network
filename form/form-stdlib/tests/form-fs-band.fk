@@ -1,0 +1,9 @@
+; tests/form-fs-band.fk — Form-native filesystem stdlib contract.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-fs.fk
+;
+; Verdict: 16383 when fs-stdlib-test passes on all siblings.
+; Covers: path join/dirname/basename, exists, is_file/is_dir, list, stat,
+; read/write text, append bytes, slice read, rename, glob, walk, cleanup.
+
+(do (fs-stdlib-test 0))

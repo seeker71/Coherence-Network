@@ -38,6 +38,17 @@ if [[ -n "$BP_PY" && -f ../scripts/gen_bp_table.py ]]; then
     $BP_PY ../scripts/gen_bp_table.py >/dev/null 2>&1 || true
 fi
 
+# Phase 0 fkwu native surface gate (spec: fkwu-only-kernel-collapse.md).
+if [[ -n "$BP_PY" && -f scripts/validate_fkwu_native_surface.py ]]; then
+    $BP_PY scripts/validate_fkwu_native_surface.py
+fi
+if [[ -n "$BP_PY" && -f scripts/gen_flt_ops_from_manifest.py ]]; then
+    $BP_PY scripts/gen_flt_ops_from_manifest.py
+fi
+if [[ -n "$BP_PY" && -f scripts/sync_native_op_manifest.py ]]; then
+    $BP_PY scripts/sync_native_op_manifest.py
+fi
+
 GO_DIR="form-kernel-go"
 RS_DIR="form-kernel-rust"
 TS_DIR="form-kernel-ts"
