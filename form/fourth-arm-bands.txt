@@ -931,3 +931,4 @@ ml-flow fks 5
 gguf-read fks 127
 gguf-locate fks 127
 form-asm-matvec fks 127
+form-asm-matvec-loop fks 127
