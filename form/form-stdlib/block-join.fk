@@ -10,11 +10,11 @@
 ; for tb-dot once the ll-buffer store-loop lands f32 in the f64 read buffer.
 ;
 ; Kin: weight-load.fk (wl-load-q6k), transformer-block.fk (tb-dot/tb-matvec), llama-block.fk
-; (lblk-proj-seq / lblk-block-causal), kv-llama-block.fk (generation inner loop at block scale).
+; (lblk-proj-seq / lblk-block-causal), llama-gqa-block.fk (lgqa-block-causal), kv-llama-block.fk.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk
 ;
-; Proven by: form-stdlib/tests/block-join-band.fk form-stdlib/tests/block-join-causal-band.fk
+; Proven by: form-stdlib/tests/block-join-band.fk form-stdlib/tests/block-join-causal-band.fk form-stdlib/tests/block-join-gqa-causal-band.fk
 
 (do
     ; --- the first n dequantized weights as a row vector (for embedding in wq/wk/...) ---
@@ -72,6 +72,13 @@
         (lblk-block-causal xs g1 eps
             (nth mats 0) (nth mats 1) (nth mats 2) (nth mats 3)
             (div 1.0 (tn-sqrt 4.0)) 4
+            g2 (nth mats 4) (nth mats 5) (nth mats 6)))
+
+    ; --- causal GQA llama3 block (n_q=2, n_kv=1, HD=2, cfg-llama3) over loaded 4×4 matrices ---
+    (defn bj-block-causal-gqa-d4 (mats xs g1 eps g2)
+        (lgqa-block-causal xs g1 eps
+            (nth mats 0) (nth mats 1) (nth mats 2) (nth mats 3)
+            (div 1.0 (tn-sqrt 2.0)) 2 1 2 (rope-cfg-llama3)
             g2 (nth mats 4) (nth mats 5) (nth mats 6)))
 
     0)
