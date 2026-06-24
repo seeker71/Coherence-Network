@@ -33,8 +33,9 @@
 ;   - Decision bodies (fr-route 127, fiv-verdict 511, fq-drain 127) cross FOUR-WAY incl. the fkwu arm,
 ;     AND lower to native binary. That is strong — but it is observed via validate.sh (bash) with the
 ;     Go/Rust/TS walkers present, on the build host, not on mac/windows/android devices.
-;   - form-cli today builds from GO source (ensure_form_cli_kernel.sh), so it is not yet the
-;     c-bootstrap fkwu form-cli the receipt names.
+;   - form-cli receipt path targets the c-bootstrapped fkwu binary (form/form-cli via
+;     form/build-form-cli.sh); legacy bin/form-cli compost may still reach bootstrap
+;     walkers — named as honest floor, not the agent default.
 ;   - The fkwu BINARY now runs these bodies STANDALONE on all three named platforms (plus linux/elf):
 ;     mac/mach-o/arm64 (links /usr/lib/libSystem.B.dylib only), android/aarch64 (static-musl ELF on a
 ;     Galaxy S23 Ultra that carries NO toolchain at all), and windows/PE/x86_64 (windows-latest, via the
