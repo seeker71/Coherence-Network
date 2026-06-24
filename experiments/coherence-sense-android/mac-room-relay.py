@@ -71,6 +71,84 @@ def translate(wav_path):
         return ""
 
 
+def _openrouter_key():
+    import json as _j
+    try:
+        k = _j.load(open(os.path.expanduser("~/.coherence-network/keys.json")))
+        o = k.get("openrouter")
+        if isinstance(o, dict):
+            o = o.get("api_key")
+        return o or os.environ.get("OPENROUTER_API_KEY", "")
+    except Exception:
+        return os.environ.get("OPENROUTER_API_KEY", "")
+
+
+EYE_MODEL = os.environ.get("ROOM_EYE_MODEL", "google/gemma-4-31b-it:free")  # remote fallback
+EYE_LOCAL = os.environ.get("ROOM_EYE_LOCAL", "moondream")  # local ollama vision (sovereign, free)
+OLLAMA = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
+EYE_PROMPT = ("Describe this room scene in ONE concise sentence, then on a second line prefixed "
+              "'objects:' list the main concrete objects/people/animals as a comma-separated list. "
+              "Be specific and grounded; only name what is actually visible.")
+
+
+def _parse_scene(msg):
+    msg = (msg or "").strip()
+    scene, objects = msg, []
+    for line in msg.splitlines():
+        if line.lower().startswith("objects:"):
+            objects = [o.strip() for o in line.split(":", 1)[1].split(",") if o.strip()]
+            scene = msg.split(line)[0].strip() or scene
+    return scene.replace("\n", " ").strip(), objects
+
+
+def see_local(jpeg_bytes):
+    # LOCAL sovereign vision — ollama VLM on the Mac (no key, no cost, no egress). Tried first.
+    import base64, json as _j, urllib.request
+    b64 = base64.b64encode(jpeg_bytes).decode()
+    body = _j.dumps({"model": EYE_LOCAL, "prompt": EYE_PROMPT, "images": [b64], "stream": False}).encode()
+    req = urllib.request.Request(OLLAMA + "/api/generate", data=body,
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        out = _j.load(r)
+    scene, objects = _parse_scene(out.get("response", ""))
+    return {"scene": scene, "objects": objects, "model": EYE_LOCAL, "where": "local"}
+
+
+def see_remote(jpeg_bytes):
+    # REMOTE oracle fallback — OpenRouter VLM (needs a key/credit; free tiers are throttled).
+    import base64, json as _j, urllib.request
+    key = _openrouter_key()
+    if not key:
+        return {"scene": "", "objects": [], "error": "no local vision + no openrouter key"}
+    b64 = base64.b64encode(jpeg_bytes).decode()
+    body = _j.dumps({"model": EYE_MODEL, "max_tokens": 200, "messages": [{"role": "user", "content": [
+        {"type": "text", "text": EYE_PROMPT},
+        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + b64}}]}]}).encode()
+    req = urllib.request.Request("https://openrouter.ai/api/v1/chat/completions", data=body,
+                                 headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            out = _j.load(r)
+        scene, objects = _parse_scene(out["choices"][0]["message"]["content"])
+        return {"scene": scene, "objects": objects, "model": EYE_MODEL, "where": "remote"}
+    except Exception as e:
+        return {"scene": "", "objects": [], "error": str(e)[:120]}
+
+
+def see(jpeg_bytes):
+    # The eye's oracle: a JPEG room frame → a grounded scene + object list, replacing ML Kit's scattered
+    # low-confidence labels. Form-first: try the LOCAL sovereign VLM, escalate to the remote oracle only on
+    # a miss. Carrier-last: the phone grabs pixels, the oracle grounds them; the form-native vision-percept
+    # (learns the room's own shapes) is the destination, this is the good-enough oracle until then.
+    try:
+        r = see_local(jpeg_bytes)
+        if r.get("scene"):
+            return r
+    except Exception:
+        pass
+    return see_remote(jpeg_bytes)
+
+
 def answer(text):
     if not text:
         return ""
@@ -100,8 +178,14 @@ class Relay(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
+        if path == "/see":
+            n = int(self.headers.get("Content-Length", 0) or 0)
+            data = self.rfile.read(n) if n else b""
+            if not data:
+                return self._send(400, {"error": "empty body (POST a jpeg)"})
+            return self._send(200, see(data))
         if path != "/hear":
-            return self._send(404, {"error": "POST /hear[?lang=auto|pt|en|...] with a wav body"})
+            return self._send(404, {"error": "POST /hear[?lang=...] (wav) or /see (jpeg)"})
         # language: ?lang=pt (Brazilian), ?lang=en, or auto-detect (default)
         lang = DEFAULT_LANG
         if "?" in self.path:
