@@ -490,6 +490,32 @@ not the sovereignty receipt).
 (`engine.fk`, `grammars/*.fk`, `BMF_BML_COMPILER_PICTURE.md`); **carrier last**
 (FastAPI/HTTP/router fan-out only after proof bands).
 
+**The canon — reach for the destination tongue, never the workaround (every agent, every implementation):**
+
+- **Highest grammar first.** Reach for the highest grammar that fits the shape: BML
+  (or a domain grammar) over hand-written s-expr recipes, recipes over host code. New
+  logic is authored at the grammar level so the same source proves four-way AND
+  crystallizes to native — one engine, no second hand-written path. If no grammar
+  carries the shape yet, the move is to *grow the grammar*, not to drop below it.
+- **Form, not Python.** New logic is a Form recipe + four-way band, not a Python
+  script. Python (and Go/Rust/TS host code) is kept only when it names one of three
+  truths — current bridge/upstream carrier, operational tooling, or historical
+  evidence — and is named as the **retiring bridge**, never taught as the destination
+  (the Form-native magnet rule, above).
+- **fsh, not bash.** Prefer the Form shell — `fsh` ([`shell-grammar.fk`](../../form/form-stdlib/shell-grammar.fk),
+  [`fsh-main.fk`](../../form/form-stdlib/fsh-main.fk), [`shell-exec.fk`](../../form/form-stdlib/shell-exec.fk),
+  [`shell-lower.fk`](../../form/form-stdlib/shell-lower.fk)) — and the kernel's own
+  host-io (`host-exec` / `host-read` / `host-write`, `read_file` / `write_file_*`) over
+  bash scripts and coreutils crossings (`ls` / `find` / `grep` / `sed`). Where only
+  bash carries a step today (e.g. directory enumeration has no native host-io op yet),
+  name that as the bridge/gap honestly — do not enshrine it as the shape.
+- **Lift on touch.** Any code you pass through on the way to a task gets lifted toward
+  the north star — higher grammar, fewer special cases, a proof band — not patched with
+  a workaround beside it. A detour that "gets it done" off the path costs twice (the
+  detour, then the unwinding). If the smallest honest step toward the destination is
+  bigger than a placeholder, take the honest step or name the gap plainly — never ship
+  the placeholder (CLAUDE.md → *Find the north star before fitting the ask*, *Core lift*).
+
 - **BMF:** `(pattern, semantic_action)` — `apply-object-rule` in `engine.fk`
 - **BML:** scan → lift → normalize → emit → run-observe; `.fkb` ratchet
 - **Branching:** `choose` / `fail` / `stop`, BMA `save` / `restore` / `discard`

@@ -1,0 +1,28 @@
+; rag-embed-band.fk — proves the sovereign lexical embedding (rag-embed.fk).
+;
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk
+;
+; Four falsifiable claims, bit-summed to verdict 15:
+;   1  determinism — re-vec of a text equals itself
+;   2  sensitivity — re-vec of two distinct texts differ
+;   4  exact       — re-vec-dim "a b c" 4 == (0 1 1 1), pinned by hand from re-hash
+;   8  width       — (len (re-vec "anything")) == 64 (the default dim)
+;
+; The exact pin, computed by hand from re-hash (h=h*31+ord mod 1000003, bucket=h mod 4):
+;   "a" -> ord 97 -> 97 mod 4 = 1 ; "b" -> 98 mod 4 = 2 ; "c" -> 99 mod 4 = 3
+;   histogram over dim 4: index 1,2,3 each get one count -> (0 1 1 1).
+
+(do
+    ; element-wise list equality over int histograms (eq compares ints).
+    (defn rb-list-eq (a b)
+        (if (eq (len a) (len b))
+            (if (eq (len a) 0) 1
+                (if (eq (head a) (head b)) (rb-list-eq (tail a) (tail b)) 0))
+            0))
+
+    (let det (if (eq (rb-list-eq (re-vec "hello world") (re-vec "hello world")) 1) 1 0))
+    (let sens (if (eq (rb-list-eq (re-vec "cat") (re-vec "dog")) 0) 2 0))
+    (let exact (if (eq (rb-list-eq (re-vec-dim "a b c" 4) (list 0 1 1 1)) 1) 4 0))
+    (let width (if (eq (len (re-vec "anything")) 64) 8 0))
+
+    (add (add det sens) (add exact width)))

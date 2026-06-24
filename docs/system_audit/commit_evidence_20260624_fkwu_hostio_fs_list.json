@@ -1,0 +1,124 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/e9c4345e",
+  "commit_scope": "Carry host-io into the fkwu native lane: implement fs_list (the universal directory-list op) on the emitted universal kernel so the self-healing memory loop runs natively, not only on the Go bootstrap kernel. fs_list gets a flattener op row (op 132, arity 1, effectful), an opendir/readdir walker arm in the fkwu emitted-C (name-sorted for cross-kernel parity), and a unary serializer row in fkc-flat (the same as_nid:null serializer-class fix the trivial-typed-leaf precedent records, this time for tag 132). rag-heal.fk is rewritten onto the UNIVERSAL host-io ops (read_file 63 / write_file_text 104 / fs_list 132) so the enumerate->key->embed->write loop runs on the Go kernel AND the fkwu native exe. The heal lane uses the one universal door (fs_list); there was no Go-kernel-specific host-list to remove (the design went straight to the universal op, not a walker-only detour). This is the honest floor: fs_list crosses four-way + fkwu (deterministic by membership), and the full heal loop's host-io primitives compose and run on the fkwu native binary; host-io OUTPUT stays outside the four-way output floor by the kernel's own design (a directory's contents differ by environment).",
+  "standard_receipt": {
+    "claim": "Directory enumeration (fs_list) is a universal Form host-io op the fkwu emitted-C carries, four-way + fkwu; the self-healing memory loop's host-io (enumerate/read/write) runs on the fkwu native exe, not only the Go kernel.",
+    "body": "yes - fs_list is a flattener op (132) + an fkwu emitted-C opendir/readdir arm + an fkc-flat unary serializer row; rag-heal.fk composes fs_list/read_file/write_file_text into the enumerate->key->embed->write loop.",
+    "c_bootstrap": "pending - the fkwu binary is emitted by the Go walker (fkc-emit-universal) and compiled by clang; not yet a C-bootstrap-emitted form-cli.",
+    "toolchain_free": "pending - the four-way witness runs via validate.sh (bash) with the Go/Rust/TS walkers present; no go/rust/clang/bash/python-free run is observed yet.",
+    "platforms": {
+      "mac": "observed (four-way floor incl. fkwu) - fs-list-band crosses Go=Rust=TS=fkwu = 3 on this Apple metal via validate.sh; the enumerate->read->write loop witnessed on the fkwu native exe (36-byte index written, .txt excluded). toolchain-free + c-bootstrap PENDING.",
+      "windows": "pending - not run this session; fs_list uses dirent (POSIX) with a documented Windows shim path in fourth-arm.sh, not yet observed on windows-latest.",
+      "android": "pending - no device this session; not faked."
+    },
+    "receipt_matrix": {
+      "mac": "four-way observed incl fkwu (toolchain-free pending)",
+      "windows": "pending",
+      "android": "pending",
+      "c_bootstrap_toolchain_free": "pending"
+    },
+    "honest_floor": "fs_list crosses FOUR-WAY (Go=Rust=TS=fkwu = 3, 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', 0 divergent) on mac via validate.sh. That is the four-way floor - the LESSER rung - observed via bash-driven validate.sh with the Go/Rust/TS walkers present plus the fkwu pre-flattened table + native exe. It is NOT the standard receipt: a Go-emitted+clang-compiled fkwu is not c-bootstrap, bash-driven validate.sh is not toolchain-free. The full bar is pending on every platform."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260624_fkwu_hostio_fs_list.json"
+  ],
+  "idea_ids": [
+    "agent-cli",
+    "cognitive-sovereignty"
+  ],
+  "spec_ids": [
+    "form-cli-self-healing-memory"
+  ],
+  "task_ids": [
+    "task-2026-06-24-fkwu-hostio-fs-list"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "host-io-on-fkwu-steer"
+      ]
+    },
+    {
+      "contributor_id": "claude-cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "MAC four-way OBSERVED incl. fkwu on this Apple metal via validate.sh (Go/Rust/TS walkers + fkwu pre-flattened table + native exe, NOT c-bootstrap, NOT toolchain-free): ./validate.sh form-stdlib/core.fk form-stdlib/tests/fs-list-band.fk -> 'core.fk+fs-list-band.fk -> 3' + 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' + '1 ok, 0 divergent - kernels agree on every sample.'",
+    "FKWU native-exe direct witness of fs_list: a minimal (len (fs_list \"form-stdlib\")) table run on the freshly emitted+compiled fkwu binary returned 598 (the live entry count); the membership band returned 3; opendir/readdir/count probe returned 500598 (598 entries). The root-cause of the initial fkwu=0 was the cons-loop running before fk_arena() initialized fk_cap, so the heap-overflow guard (fk_hp+1 >= fk_cap) fired immediately and returned nil; adding 'if (fk_cap == 0) { fk_arena(); }' before the cons loop (as fk_cons_val does) fixed it.",
+    "FKWU native-exe witness of the rag-heal enumerate->read->write loop: an inline band over /tmp/rhbody (a.fk, b.fk, skip.txt) flattened to a table and run on the fkwu binary enumerated via fs_list, filtered to .fk (skip.txt excluded), read both files via read_file, concatenated, wrote via write_file_text, and read back 36 bytes - the exact two .fk bodies. The whole host-io loop runs on the fkwu native exe.",
+    "SERIALIZER PRECEDENT: the as_nid:null crash on adding tag 132 is the SAME class as the trivial-typed-leaf precedent in fourth-arm-bands.txt (tags 112/113 needed unary serializer rows beside tag 43, else they fell to the binary fallback and read a missing second child). Fixed by adding the unary fkc-flat row for 132.",
+    "OPCODE COLLISION root-caused: 112 (the first choice) was already a live fk_walk dispatch arm (intern_trivial_bool); fs_list moved to a free opcode 132 (verified free by enumerating all walker tags + flatten opcodes).",
+    "T_FLAT REGENERATED for the self-host flatten lane: upstream (PR #3621, 9bbf56639) added fourth-flatten-driver.fk + a committed bootstrap table form-stdlib/fourth-flatten-table.txt (T_flat) that fkwu walks to flatten every band, taking bin-go out of the per-band flatten path. Adding the fs_list row to form-flatten.fk's flt-ops means the committed T_flat (frozen before op 132) had to be rebuilt so the self-hosted flattener recognizes fs_list -> 132. Rebuilt via the bin-go bootstrap (cat FOURTH_CHAIN + the fks-table-file flatten expr for the driver), peak RSS 1.5GB (well under the 16GB kernel-memory-witness cap; the historical ~24GB figure predates upstream emitter improvements). The fkwu fixed-arena self-host bootstrap of T_flat itself bus-errors parsing hati-os-kernel-emit.fk's string literals, so the bin-go bootstrap remains the rebuild path. New table 658020 bytes (was 635435) - the delta is exactly the new flt-ops row data.",
+    "FULL SUITE re-run on the regenerated T_flat: ./validate.sh -> '951 ok, 2 divergent', 'fourth arm: 637 band(s) four-way (fkwu + pre-flattened tables)'. The 2 divergences (block-join-carrier-export, shell-awk-staged) are THREE-KERNEL-ONLY bands (absent from fourth-arm-bands.txt, so T_flat cannot be their cause) and pre-existing: block-join differs only in go-vs-rust float-repr last digit (...562 vs ...563); shell-awk-staged is 'unbound function input_byte' in go AND rust (input-stream.fk:35, untouched here). Both still diverge with the old HEAD T_flat restored - confirmed independent of this change. cooldown-band -> 63 four-way is the regression canary: the regenerated T_flat flattens existing bands identically.",
+    "WINDOWS / ANDROID PENDING: not run this session; not faked. fs_list uses <dirent.h> guarded by __has_include; the Windows carrier path in scripts/fourth-arm.sh would need a readdir shim, not yet observed.",
+    "C-BOOTSTRAP / TOOLCHAIN-FREE PENDING on all platforms: per docs/coherence-substrate/standard-receipt.form, four-way-in-CI is NOT the platform receipt, a Go-emitted+clang-compiled fkwu is NOT c-bootstrap, and bash-driven validate.sh is NOT toolchain-free."
+  ],
+  "change_files": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/rag-heal.fk",
+    "form/form-stdlib/tests/fs-list-band.fk",
+    "form/form-stdlib/fourth-flatten-table.txt",
+    "form/fourth-arm-bands.txt",
+    "specs/form-cli-self-healing-memory.md",
+    "docs/system_audit/commit_evidence_20260624_fkwu_hostio_fs_list.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/fs-list-band.fk -> '3', 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', '1 ok, 0 divergent'",
+      "fkwu native-exe direct: (len (fs_list \"form-stdlib\")) -> 598; fs-list membership band -> 3",
+      "fkwu native-exe direct: rag-heal enumerate->read->write loop over /tmp/rhbody -> 36 bytes written (skip.txt excluded), index round-tripped",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260624_fkwu_hostio_fs_list.json -> exit 0",
+      "cd form && ./validate.sh (full suite, regenerated T_flat) -> '951 ok, 2 divergent', 'fourth arm: 637 band(s) four-way'; the 2 divergences are pre-existing three-kernel-only bands (block-join-carrier-export float-repr, shell-awk-staged input_byte), independent of T_flat"
+    ],
+    "fourth_arm_outputs": [
+      "fs-list: 'fourth arm: ... four-way (fkwu + pre-flattened tables)' (-> 3) - mac observed",
+      "rag-index-codec -> 15, rag-embed -> 15, rag-freshness -> 63, rag-adaptive-k -> 15, cooldown -> 63, alert-gate -> 127 - all four-way on the regenerated T_flat"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Four-way fs-list band observed locally on mac; CI (windows-floor) will run the band on push. Not yet observed on windows-latest this session."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-form-cli-runtime",
+    "notes": "fkwu is a local kernel artifact; this work is the host-io op + heal-loop runtime, not a public HTTP change. No deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Honest floor only: fs_list four-way + fkwu observed on mac via validate.sh; the rag-heal host-io loop runs on the fkwu native exe (mac). windows/android pending; the c-bootstrap toolchain-free form-cli rung is pending on every platform."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Directory enumeration is now a universal Form host-io op the fkwu emitted-C carries (fs_list, op 132), four-way + fkwu. The self-healing memory loop (rag-heal.fk) is rewritten onto universal host-io (read_file/write_file_text/fs_list) and its enumerate->read->write loop runs on the fkwu native exe, not only the Go bootstrap kernel - closing the directory-list standing wall named in the spec. The heal lane uses the one universal door (fs_list); there was no Go-kernel-specific host-list to remove.",
+    "public_endpoints": [
+      "local form-cli / fkwu kernel only - no public coherencycoin endpoint; band at form/form-stdlib/tests/fs-list-band.fk, op in form/form-stdlib/form-flatten.fk + form/form-stdlib/hati-os-kernel-emit.fk"
+    ],
+    "test_flows": [
+      "mac: ./validate.sh core.fk tests/fs-list-band.fk -> 3, fourth arm four-way, 0 divergent (observed this session).",
+      "mac: fkwu native exe (len (fs_list ...)) -> 598, membership -> 3 (observed this session).",
+      "mac: fkwu native exe rag-heal enumerate->read->write loop -> 36 bytes, skip.txt excluded (observed this session).",
+      "windows + android + c-bootstrap toolchain-free: pending, not faked."
+    ]
+  }
+}

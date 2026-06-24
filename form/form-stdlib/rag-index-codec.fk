@@ -1,0 +1,92 @@
+; rag-index-codec.fk — jsonl codec for the form-cli RAG memory index, as a PURE FORM recipe.
+;
+; preludes: form-stdlib/core.fk
+;
+; The RAG index is one JSON object per line (jsonl). Each line carries a recipe's
+; address and its retrieval payload:
+;   {"id":"form/form-stdlib/shell-grammar.fk","kind":"recipe","key":"152961502","snippet":"text","vec":[12,34,56]}
+; Field order may vary; id/kind/key/snippet are strings, vec is a list of ints.
+;
+; This codec parses and emits those lines with no host code — only the string and
+; list builtins (str_find / substring / str_len / str_concat / ord) over Form
+; recursion — so it crosses Go/Rust/TS/fkwu. The field extractor mirrors the proven
+; "key":"value" reader fnr-jf in form-native-run.fk.
+;
+; Proven by: form-stdlib/tests/rag-index-codec-band.fk
+
+(do
+    ; ── field extractor: "key":"value" -> value ("" if absent). Mirror of fnr-jf. ──
+    (defn ric-field (line key)
+        (do
+            (let patt (str_concat "\"" (str_concat key "\"")))
+            (let ki (str_find line patt 0))
+            (if (lt ki 0)
+                ""
+                (do
+                    (let colon (str_find line ":" (add ki (str_len patt))))
+                    (let q1 (str_find line "\"" (add colon 1)))
+                    (let q2 (str_find line "\"" (add q1 1)))
+                    (if (lt q2 0) "" (substring line (add q1 1) q2))))))
+
+    ; ── named string fields ──
+    (defn ric-id      (line) (ric-field line "id"))
+    (defn ric-kind    (line) (ric-field line "kind"))
+    (defn ric-key     (line) (ric-field line "key"))
+    (defn ric-snippet (line) (ric-field line "snippet"))
+
+    ; ── str -> int: fold ASCII digits (ord '0' = 48) left-to-right ──
+    (defn ric-s2i-go (s i acc)
+        (if (ge i (str_len s))
+            acc
+            (ric-s2i-go s (add i 1)
+                (add (mul acc 10) (sub (ord (substring s i (add i 1))) 48)))))
+    (defn ric-s2i (s) (ric-s2i-go s 0 0))
+
+    ; ── split a comma-joined int substring ("12,34,56") into a list of ints ──
+    (defn ric-split-ints (s)
+        (if (eq (str_len s) 0)
+            (empty)
+            (do
+                (let ci (str_find s "," 0))
+                (if (lt ci 0)
+                    (cons (ric-s2i s) (empty))
+                    (cons (ric-s2i (substring s 0 ci))
+                          (ric-split-ints (substring s (add ci 1) (str_len s))))))))
+
+    ; ── parse the "vec":[a,b,c] field into a list of ints ([] if absent) ──
+    (defn ric-vec (line)
+        (do
+            (let patt "\"vec\":[")
+            (let vi (str_find line patt 0))
+            (if (lt vi 0)
+                (empty)
+                (do
+                    (let start (add vi (str_len patt)))
+                    (let close (str_find line "]" start))
+                    (ric-split-ints (substring line start close))))))
+
+    ; ── emit a list of ints as "[a,b,c]" ──
+    (defn ric-join-ints (vec)
+        (if (eq (len vec) 0)
+            ""
+            (if (eq (len vec) 1)
+                (int_to_str (head vec))
+                (str_concat (int_to_str (head vec))
+                    (str_concat "," (ric-join-ints (tail vec)))))))
+    (defn ric-emit-vec (vec)
+        (str_concat "[" (str_concat (ric-join-ints vec) "]")))
+
+    ; ── emit a full jsonl line (emit then parse round-trips) ──
+    (defn ric-emit (id kind key snippet vec)
+        (str_concat "{\"id\":\""
+        (str_concat id
+        (str_concat "\",\"kind\":\""
+        (str_concat kind
+        (str_concat "\",\"key\":\""
+        (str_concat key
+        (str_concat "\",\"snippet\":\""
+        (str_concat snippet
+        (str_concat "\",\"vec\":"
+        (str_concat (ric-emit-vec vec) "}")))))))))))
+
+    0)
