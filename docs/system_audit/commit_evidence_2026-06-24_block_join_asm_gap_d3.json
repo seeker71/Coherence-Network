@@ -1,0 +1,68 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/da996f0b",
+  "commit_scope": "Gap D₃ — block-join dot path uses fam-dot-loop semantics (bj-dot-fam); composes with form-asm bytes; execution witness on loaded Q6_K weights",
+  "files_owned": [
+    "form/form-stdlib/block-join.fk",
+    "form/form-stdlib/tests/block-join-asm-band.fk",
+    "form/form-stdlib/tests/block-join-asm-witness-snippet.fk",
+    "scripts/block_join_asm_witness.sh",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_block_join_asm_gap_d3.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/block-join.fk form-stdlib/tests/block-join-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/block-join.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/block-join-asm-band.fk",
+      "./scripts/block_join_asm_witness.sh"
+    ],
+    "fourth_arm": "validate.sh block-join-asm-band.fk → 255; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "notes": "bj-dot-row-n/bj-dot-q6k now use bj-dot-fam (fam-dot-loop semantic twin); fam-dot2 witness on real loaded weights bit-exact"
+  },
+  "ci_validation": {"status": "pending", "notes": "Manifest row block-join-asm fks 255"},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; Form recipe + witness script"},
+  "phase_gate": {
+    "phase": "llm-inference-gap-d",
+    "gate": "Load · compute · join — native asm lane wired at semantic + byte + execution layer",
+    "state": "d3-asm-lane-four-way",
+    "can_move_next_phase": false,
+    "next": "d=3072 sliced carrier vs numpy (llama block0 join); fam-dot-loop execution witness for n>2; ll-buffer store-loop"
+  },
+  "idea_ids": ["form-native-models"],
+  "spec_ids": ["form-native-models"],
+  "task_ids": ["block-join-gap-d3"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "four-way-proof", "execution-witness"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/block-join.fk",
+    "form/form-stdlib/tests/block-join-asm-band.fk",
+    "form/form-stdlib/form-asm-matvec.fk",
+    "scripts/block_join_asm_witness.sh",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "form/form-stdlib/block-join.fk",
+    "form/form-stdlib/tests/block-join-asm-band.fk",
+    "form/form-stdlib/tests/block-join-asm-witness-snippet.fk",
+    "scripts/block_join_asm_witness.sh",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_block_join_asm_gap_d3.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "Four-way band 255 + arm64 fam-dot2 witness on loaded Q6_K weights",
+    "expected_behavior_delta": "Join matvec uses fam-dot-loop semantics; composes with proven asm bytes; native execution matches on real weights",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": [
+      "cd form && ./validate.sh ... block-join-asm-band.fk → 255",
+      "./scripts/block_join_asm_witness.sh → WITNESS MATCH"
+    ]
+  }
+}
