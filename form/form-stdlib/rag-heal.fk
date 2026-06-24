@@ -1,42 +1,132 @@
 ; rag-heal.fk — the self-healing memory loop as the recipe the kernel runs.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/rag-freshness.fk
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/rag-freshness.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk
 ;
 ; The body is Form; the kernel is the runtime; no Python in this lane. The pure
-; DECISIONS are already four-way + fkwu — the content key (rag-key.fk → 7), the
-; freshness delta (rag-freshness.fk → 63), the retrieval depth (rag-adaptive-k.fk
-; → 15), the ranking (rag-retrieve.fk → 31). This recipe is the host-io ORCHESTRATION
-; over them: read a file through the kernel's host-io and key it, and sense whether a
-; cached key still matches. host-read is the one crossing; the arithmetic stays Form.
+; DECISIONS are four-way + fkwu — the content key (rag-key.fk → 7), the freshness
+; delta (rag-freshness.fk → 63), the retrieval depth (rag-adaptive-k.fk → 15), the
+; ranking (rag-retrieve.fk → 31), the jsonl codec (rag-index-codec.fk → 15), and the
+; sovereign embedding (rag-embed.fk → 15). This recipe is the host-io ORCHESTRATION
+; that composes them into a memory that senses and repairs itself: enumerate the body,
+; key + embed each cell, parse and write the index — all in Form over the kernel's
+; host-io. The whole lane carries ZERO Python and ZERO model door.
 ;
-; Host-io is non-deterministic, so this lane is kernel-witnessed (Go now; the
-; fkwu-native exe is the platform step), NOT part of the four-way output floor —
-; exactly as host-exec/host-read/host-write are documented in the kernel. The
-; embedding step is a local-oracle model-door crossing (ollama via host-exec),
-; ledgered by form-cli-membrane.fk; enumerating brand-new files needs a directory
-; -list host-io op the kernel does not yet carry — that absorb path is the named
-; gap, while drift and orphan healing are fully Form over host-read.
+; Sovereignty floor: the index this lane writes uses the LEXICAL rag-embed vectors,
+; so it needs no ollama at all — it is the fully-sovereign memory. The neural embedder
+; (nomic-embed-text) stays the optional higher-semantic-quality bridge in the Python
+; carrier (scripts/form_cli_rag.py), and LLM grounding (`ask`) is still a rented mind —
+; that is the honest sovereignty-receipt floor: the body keys, senses, embeds, and
+; writes; generation is rented.
 ;
-; host-read/host-write are Go-kernel + fkwu-native-exe builtins (the Rust/TS walkers
-; do not carry them), so this lane is single-runtime by design, NOT in the fourth-arm
-; manifest. Witness (writes a known text, reads+keys it back, senses fresh-vs-drift,
-; all in Form on the kernel — zero Python; Go leg → 7):
-;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk \
-;     form-stdlib/rag-key.fk form-stdlib/rag-freshness.fk form-stdlib/rag-heal.fk \
-;     <a (do (host-write ...) (rk-text-key ...) (rh-file-key ...) ...) band>
+; Host-io is non-deterministic, so this lane is NOT part of the four-way OUTPUT floor
+; (a directory's contents differ by environment) — but it now RUNS on the fkwu native
+; exe, not only the Go bootstrap kernel. The lane was rewritten onto the UNIVERSAL
+; host-io ops the flattener carries and the fkwu emitted-C implements:
+;   read_file (op 63) · write_file_text (op 104) · fs_list (op 132, this breath).
+; fs_list was the one fs op the fourth arm lacked; giving the flattener an opcode and
+; the emitted walker an opendir/readdir arm closes the "host-io standing wall" for the
+; enumerate→key→embed→write loop. The same recipe now executes on Go AND fkwu; the
+; bootstrap compost is the toolchain that BUILDS fkwu (Go-walker emit + clang), named
+; honestly until the C-self-host rung lands. The pure cells it calls are four-way.
+;
+; Witness (fkwu native exe, zero Python, zero Go in the RUNTIME): fs_list is proven
+; Go=Rust=TS=fkwu by form-stdlib/tests/fs-list-band.fk (deterministic: same dir, same
+; moment). The full enumerate→key→embed→write loop runs on the Go kernel today and on
+; the fkwu binary via the flattened table once fs-list lands four-way.
 
 (do
-    ; the content key of a FILE: read via kernel host-io, then key the bytes in Form.
-    (defn rh-file-key (path) (rk-text-key (host-read path)))
+    ; ── the content key of a FILE: read via kernel host-io, then key the bytes in Form. ──
+    (defn rh-file-key (path) (rk-text-key (read_file path)))
 
-    ; is a cached key still the file's current key? (1 fresh, 0 drifted/missing)
+    ; ── is a cached key still the file's current key? (1 fresh, 0 drifted/missing) ──
     (defn rh-fresh? (path cached-key) (if (str_eq (rh-file-key path) cached-key) 1 0))
 
-    ; sense one cell against the cache: a rag-freshness entry (id key) is stale when
+    ; ── sense one cell against the cache: a rag-freshness entry (id key) is stale when
     ; the file at `id` keys differently than the entry holds. Reuses rf-stale? — the
-    ; same four-way delta logic, fed the file's live key through host-io.
+    ; same four-way delta logic, fed the file's live key through host-io. ──
     (defn rh-cell-stale? (id cached-key)
         (rf-stale? (rf-entry id (rh-file-key id))
                    (list (rf-entry id cached-key))))
+
+    ; ── split a string on newlines into a list of lines (drops blanks). ──
+    (defn rh-lines-scan (s i n cur out)
+        (if (ge i n)
+            (if (str_eq cur "") out (re-snoc out cur))
+            (if (str_eq (char_at s i) "\n")
+                (rh-lines-scan s (add i 1) n "" (if (str_eq cur "") out (re-snoc out cur)))
+                (rh-lines-scan s (add i 1) n (str_concat cur (char_at s i)) out))))
+    (defn rh-lines (s) (rh-lines-scan s 0 (str_len s) "" (empty)))
+
+    ; ── suffix match: does string s end with suf? (1 yes, 0 no) ──
+    (defn rh-ends-with? (s suf)
+        (do (let ls (str_len s)) (let lf (str_len suf))
+            (if (lt ls lf) 0
+                (if (str_eq (substring s (sub ls lf) ls) suf) 1 0))))
+
+    ; ── join a directory and an entry name into a path. ──
+    (defn rh-join (dir name) (str_concat dir (str_concat "/" name)))
+
+    ; ── the body's cells under one directory, by suffix: enumerated with fs_list (the
+    ; universal directory-list op, op 132 — Go=Rust=TS=fkwu), filtered + path-joined in
+    ; Form. No ls, no find, no shell — and it runs on the fkwu native exe. ──
+    (defn rh-dir-paths (dir names suf)
+        (if (eq (len names) 0) (empty)
+            (if (eq (rh-ends-with? (head names) suf) 1)
+                (cons (rh-join dir (head names)) (rh-dir-paths dir (tail names) suf))
+                (rh-dir-paths dir (tail names) suf))))
+    (defn rh-dir-cells (dir suf) (rh-dir-paths dir (fs_list dir) suf))
+
+    ; ── the directory's cells as freshness entries (id = path, key = content key) ──
+    (defn rh-body-of (paths)
+        (if (eq (len paths) 0) (empty)
+            (cons (rf-entry (head paths) (rh-file-key (head paths)))
+                  (rh-body-of (tail paths)))))
+    (defn rh-body (dir suffix) (rh-body-of (rh-dir-cells dir suffix)))
+
+    ; ── the cached index as freshness entries, parsed from its jsonl lines. ──
+    (defn rh-index-of (lines)
+        (if (eq (len lines) 0) (empty)
+            (cons (rf-entry (ric-id (head lines)) (ric-key (head lines)))
+                  (rh-index-of (tail lines)))))
+    (defn rh-index (index-path) (rh-index-of (rh-lines (read_file index-path))))
+
+    ; ── embed one path into a fresh jsonl line: content key + sovereign lexical vec ──
+    ; snippet is the head of the source (substring, kernel-pure); vec is rag-embed.
+    (defn rh-snippet (txt)
+        (substring txt 0 (if (lt (str_len txt) 400) (str_len txt) 400)))
+    (defn rh-embed-line (path)
+        (do (let txt (read_file path))
+            (ric-emit path "cell" (rk-text-key txt) (rh-snippet txt) (re-vec txt))))
+
+    ; ── emit fresh jsonl lines for a list of (id key) entries, source order. ──
+    (defn rh-emit-lines (entries)
+        (if (eq (len entries) 0) ""
+            (str_concat (rh-embed-line (rf-id (head entries)))
+                (str_concat "\n" (rh-emit-lines (tail entries))))))
+
+    ; ── COLD BUILD: write a fully-sovereign index for every cell under dir/suffix. ──
+    (defn rh-build (dir suffix index-path)
+        (write_file_text index-path (rh-emit-lines (rh-body dir suffix))))
+
+    ; ── keep an index line only if its cell still lives and is not being re-embedded. ──
+    (defn rh-keep? (line heal body)
+        (if (eq (rf-has? (ric-id line) body) 0) 0
+            (if (eq (rf-has? (ric-id line) heal) 1) 0 1)))
+    (defn rh-kept-lines (lines heal body)
+        (if (eq (len lines) 0) ""
+            (str_concat
+                (if (eq (rh-keep? (head lines) heal body) 1)
+                    (str_concat (head lines) "\n") "")
+                (rh-kept-lines (tail lines) heal body))))
+
+    ; ── DELTA HEAL: re-embed only the drifted/missing cells, compost orphans, keep
+    ; the fresh lines untouched — git-like tiny deltas, the steady-state path. ──
+    (defn rh-heal (dir suffix index-path)
+        (do (let body  (rh-body dir suffix))
+            (let lines (rh-lines (read_file index-path)))
+            (let heal  (rf-heal-set body (rh-index-of lines)))
+            (write_file_text index-path
+                (str_concat (rh-kept-lines lines heal body)
+                            (rh-emit-lines heal)))))
 
     0)

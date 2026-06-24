@@ -1,0 +1,26 @@
+; rag-index-codec-band.fk — proves the jsonl RAG-index codec round-trips and parses.
+;
+; preludes: form-stdlib/core.fk form-stdlib/rag-index-codec.fk
+;
+; bit 1 — round-trip: emit a known entry, then ric-id / ric-key recover the inputs.
+; bit 2 — round-trip: ric-vec on the emitted line recovers the input vec.
+; bit 4 — parse a hand-written literal line: ric-id and ric-kind read correctly.
+; bit 8 — ric-emit-vec of a known list equals the literal "[7,8]".
+; verdict 15 when all four land.
+
+(do
+    (let vec (cons 12 (cons 34 (cons 56 (empty)))))
+    (let line (ric-emit "form/form-stdlib/shell-grammar.fk" "recipe" "152961502" "some text" vec))
+
+    (let b1 (if (and (str_eq (ric-id line) "form/form-stdlib/shell-grammar.fk")
+                     (str_eq (ric-key line) "152961502")) 1 0))
+
+    (let b2 (if (str_eq (ric-emit-vec (ric-vec line)) "[12,34,56]") 2 0))
+
+    (let lit "{\"id\":\"form/form-stdlib/core.fk\",\"kind\":\"recipe\",\"key\":\"42\",\"snippet\":\"hello\",\"vec\":[7,8]}")
+    (let b4 (if (and (str_eq (ric-id lit) "form/form-stdlib/core.fk")
+                     (str_eq (ric-kind lit) "recipe")) 4 0))
+
+    (let b8 (if (str_eq (ric-emit-vec (cons 7 (cons 8 (empty)))) "[7,8]") 8 0))
+
+    (add b1 (add b2 (add b4 b8))))

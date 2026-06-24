@@ -56,6 +56,15 @@
 #     (read_with_cache / i18n-load) + json codec (json_parse_body/json_response_body). Bands:
 #     channel, cell-registry, persistence, concept-corpus, self-witness, channel-query-json.
 #     Full floor/north-star: docs/coherence-substrate/fourth-arm-substrate-carriers.form
+#     NOT a wall anymore: directory enumeration. fs_list (op 132, the universal
+#     directory-list door) now crosses four-way + fkwu (fs-list-band 3) — the fkwu
+#     emitted-C carries an opendir/readdir arm (name-sorted for cross-kernel parity), the
+#     flattener carries its op row, and the fkc-flat serializer carries its unary tag (the
+#     same as_nid:null serializer fix the trivial-typed-leaf note below records, this time
+#     for 132). This closes the directory-list standing wall for the self-healing memory
+#     loop (rag-heal.fk enumerate→key→embed→write now runs on the fkwu native exe). The
+#     heal lane uses the one universal door (fs_list), not a Go-kernel-specific host-list —
+#     the universal op is the destination, so there is no walker-only detour beside it.
 #   walk_recipe / image  — walk_recipe(_here) + interned-node projection + form-binary image.
 #     Bands: kernel-satsang, prolog-bmf-eval.
 #   multi-line output    — bands that print mid-walk (fkwu answers one value through fk_pr); the fix
@@ -740,6 +749,9 @@ rag-retrieve fks 31
 rag-freshness fks 63
 rag-adaptive-k fkc 15
 rag-key fks 7
+rag-index-codec fks 15
+rag-embed fks 15
+fs-list fks 3
 gcd fkc 31
 form-cli-review-gap fkc 63
 oracle-ensure fks 31
