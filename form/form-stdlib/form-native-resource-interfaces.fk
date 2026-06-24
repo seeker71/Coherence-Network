@@ -46,7 +46,9 @@
             (fnri-class "sensor:signal" "cap.sensor.read" "afferent-scalar" "efferent-text" (list "Read" "Subscribe") "SensorSignal")
             (fnri-class "gpu:compute" "cap.compute.gpu" "afferent-bytes" "efferent-bytes" (list "Dispatch" "Pressure") "GpuCompute")
             (fnri-class "dsp:signal" "cap.compute.dsp" "afferent-bytes" "efferent-bytes" (list "Transform" "Measure") "DspSignal")
-            (fnri-class "mlx:array" "cap.compute.mlx" "afferent-bytes" "efferent-bytes" (list "Eval" "Materialize") "MlxArray")))
+            (fnri-class "mlx:array" "cap.compute.mlx" "afferent-bytes" "efferent-bytes" (list "Eval" "Materialize") "MlxArray")
+            (fnri-class "host:file" "cap.host.file" "afferent-bytes" "efferent-bytes" (list "Read" "Write" "Stat") "HostFile")
+            (fnri-class "http:request" "cap.network.http" "afferent-bytes" "efferent-bytes" (list "Get" "Post") "HttpRequest")))
 
     (defn fnri-find-class (protocol rows)
         (if (eq (len rows) 0) (fnri-class "" "" "afferent-bytes" "efferent-bytes" (list) "")
@@ -83,7 +85,9 @@
             (fnri-dispatch "sensor:signal" "read_file" "write_file_text" "host-sensor-pending")
             (fnri-dispatch "gpu:compute" "read_file" "write_file" "host-gpu-pending")
             (fnri-dispatch "dsp:signal" "read_file" "write_file" "host-dsp-pending")
-            (fnri-dispatch "mlx:array" "read_file" "write_file" "host-mlx-pending")))
+            (fnri-dispatch "mlx:array" "read_file" "write_file" "host-mlx-pending")
+            (fnri-dispatch "host:file" "read_file" "write_file" "filesystem")
+            (fnri-dispatch "http:request" "socket_connect" "socket_send" "http-socket")))
 
     (defn fnri-find-dispatch (protocol rows)
         (if (eq (len rows) 0) (fnri-dispatch "" "" "" "")
@@ -109,7 +113,9 @@
             (fnri-binding target "sensor:signal")
             (fnri-binding target "gpu:compute")
             (fnri-binding target "dsp:signal")
-            (fnri-binding target "mlx:array")))
+            (fnri-binding target "mlx:array")
+            (fnri-binding target "host:file")
+            (fnri-binding target "http:request")))
 
     (defn fnri-count-bindings (rows) (len rows))
 
@@ -140,7 +146,9 @@
             (fnri-knowledge "standard-receipt" "docs/coherence-substrate/standard-receipt.form" "structural")
             (fnri-knowledge "form-first-reasoning" "docs/coherence-substrate/form-first-reasoning.form" "structural")
             (fnri-knowledge "ports-interface-structure" "docs/coherence-substrate/ports-interface-and-structure.md" "structural")
-            (fnri-knowledge "bml-native-interface" "form/form-stdlib/bml-native-interface-package-import.fk" "structural")))
+            (fnri-knowledge "bml-native-interface" "form/form-stdlib/bml-native-interface-package-import.fk" "structural")
+            (fnri-knowledge "http-client" "form/form-stdlib/http-client.fk" "structural")
+            (fnri-knowledge "form-cli-c-bootstrap" "docs/coherence-substrate/form-cli-c-bootstrap.md" "structural")))
 
     (defn fnri-find-knowledge (slug rows)
         (if (eq (len rows) 0) (fnri-knowledge "" "" "")

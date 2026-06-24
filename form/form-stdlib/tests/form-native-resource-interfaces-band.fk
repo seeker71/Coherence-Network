@@ -1,26 +1,24 @@
-; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
-;           form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk
-;           form-stdlib/form-native-resource-interfaces.fk
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk
 ;
 ; form-native-resource-interfaces-band — class-based native interfaces wired to
 ; macOS, Android, and Windows ARM64 implementations; fkwu-only runtime; local
 ; sovereignty knowledge index; host-io dispatch rows without Go emission.
 
 (do
-    (let c0 (if (eq (len (fnri-classes)) 8) 1 0))
+    (let c0 (if (eq (len (fnri-classes)) 10) 1 0))
 
     (let c1 (if (str_eq (fnri-runtime) "fkwu")
                 (if (eq (fnri-no-go-emission?) 1) 2 0)
                 0))
 
     (let mac-bindings (fnri-bindings-for "macos-arm64"))
-    (let c2 (if (eq (fnri-count-bindings mac-bindings) 8) 4 0))
+    (let c2 (if (eq (fnri-count-bindings mac-bindings) 10) 4 0))
 
     (let android-bindings (fnri-bindings-for "android-arm64"))
-    (let c3 (if (eq (fnri-count-bindings android-bindings) 8) 8 0))
+    (let c3 (if (eq (fnri-count-bindings android-bindings) 10) 8 0))
 
     (let win-bindings (fnri-bindings-for "windows-arm64"))
-    (let c4 (if (eq (fnri-count-bindings win-bindings) 8) 16 0))
+    (let c4 (if (eq (fnri-count-bindings win-bindings) 10) 16 0))
 
     (let mac-resolved (fnri-resolve "macos-arm64" "host:process"))
     (let mac-iface (fnri-resolve-interface mac-resolved))
@@ -65,8 +63,22 @@
                 0))
 
     (let dispatches (fnri-dispatches))
-    (let c12 (if (eq (len dispatches) 8)
+    (let c12 (if (eq (len dispatches) 10)
                 (if (str_eq (fnri-dispatch-carrier (fnri-dispatch-for "host:process")) "filesystem") 4096 0)
                 0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12)))
+    (let file-resolved (fnri-resolve "macos-arm64" "host:file"))
+    (let file-iface (fnri-resolve-interface file-resolved))
+    (let file-dispatch (fnri-resolve-dispatch file-resolved))
+    (let c13 (if (str_eq (bnii-interface-name file-iface) "HostFile")
+                (if (str_eq (fnri-dispatch-sense-op file-dispatch) "read_file") 8192 0)
+                0))
+
+    (let http-resolved (fnri-resolve "android-arm64" "http:request"))
+    (let http-iface (fnri-resolve-interface http-resolved))
+    (let http-dispatch (fnri-resolve-dispatch http-resolved))
+    (let c14 (if (str_eq (bnii-interface-name http-iface) "HttpRequest")
+                (if (str_eq (fnri-dispatch-carrier http-dispatch) "http-socket") 16384 0)
+                0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14)))
