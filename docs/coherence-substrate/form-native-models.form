@@ -128,8 +128,11 @@
 ;     C. ✓ DONE — weight-load.fk (4095): gguf-locate + wl-slice + f16-decode + q6k-dequant load a REAL
 ;        llama3.2:3b token_embd Q6_K tensor's weights to f32, four-way, perturbation-checked (one byte flip
 ;        moves the verdict). The ll-buffer store-loop landing the f32 list in the matvec's read buffer is adjacent.
-;     D. COMPOSE BLOCK-0 FORWARD — kv-llama-block (255) over the loaded real weights at real width
-;        (llama3.2:3b d_model=3072) → one block's output vs a reference; stack → logits → the ollama seam retires.
+;     D. ✓ D₀ — block-join.fk (255): compose weight-load + tb-dot/tb-matvec/lblk-proj-seq on REAL
+;        llama3.2:3b Q6_K bytes (mini-GGUF fixture) — load → dot → projection with a loaded wq row.
+;        Four-way incl. fkwu; falsifiable (wqp ≠ toy wq). Adjacent: full lblk-block-causal / lgqa-block-causal
+;        at sliced d then d_model=3072 with all blk.0 tensors + form-asm matvec lane swap; carrier script
+;        vs numpy reference (whisper_block0_real_carrier pattern).
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL

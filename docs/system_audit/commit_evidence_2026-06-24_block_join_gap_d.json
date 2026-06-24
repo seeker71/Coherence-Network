@@ -1,0 +1,59 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/da996f0b",
+  "commit_scope": "Gap D₀ — block-join.fk composes weight-load with forward matvec/projection on real llama3.2:3b Q6_K bytes; four-way 255 incl. fkwu",
+  "files_owned": [
+    "form/form-stdlib/block-join.fk",
+    "form/form-stdlib/tests/block-join-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_block_join_gap_d.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/block-join.fk form-stdlib/tests/block-join-band.fk"
+    ],
+    "fourth_arm": "block-join four-way (Go/Rust/TS/fkwu) verdict 255, 0 divergent",
+    "notes": "Mini-GGUF fixture carries real token_embd Q6_K superblock; join claims load→dot→lblk-proj-seq with bj-wq-row-n"
+  },
+  "ci_validation": {"status": "pending", "notes": "Manifest row block-join fks 255 gates four-way in CI validate.sh"},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; Form recipe landing"},
+  "phase_gate": {
+    "phase": "llm-inference-gap-d",
+    "gate": "Load proven · compute proven → forward uses file bytes",
+    "state": "d0-join-four-way",
+    "can_move_next_phase": false,
+    "next": "Full lblk-block-causal / lgqa-block-causal over all blk.0 tensors at sliced d, then d_model=3072 carrier vs reference; form-asm matvec lane swap"
+  },
+  "idea_ids": ["form-native-models"],
+  "spec_ids": ["form-native-models"],
+  "task_ids": ["block-join-gap-d"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "parallel-orchestration"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "four-way-proof"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "form/form-stdlib/block-join.fk",
+    "form/form-stdlib/tests/block-join-band.fk",
+    "form/form-stdlib/weight-load.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/block-join.fk",
+    "form/form-stdlib/tests/block-join-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_block_join_gap_d.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "summary": "D₀ band only; full block carrier at d=3072 is the next rung",
+    "expected_behavior_delta": "weight-load composes with lblk-proj-seq on real Q6_K bytes; four-way verdict 255",
+    "public_endpoints": ["n/a-form-stdlib-band"],
+    "test_flows": ["cd form && ./validate.sh ... block-join-band.fk → 255 four-way"]
+  }
+}

@@ -1,0 +1,50 @@
+; block-join.fk — gap D of the LLM-inference arc: compose weight-load with the proven forward
+; recipes. The load seam (gguf bytes → f32 weights) and the compute seam (tb-dot / tb-matvec /
+; lblk-block-causal) were proven separately in gaps A/B/C; this cell is the JOIN — real weights
+; from a buffer feed the same matvec/block algebra the toy bands already four-way.
+;
+; bj-dot-row-n / bj-matvec-q6k-row: load one Q6_K superblock from file bytes, then run the tree-walker
+; dot/matvec over the dequantized f32 list — load proven · compute proven → forward matvec proven.
+; bj-wq-row-n: the first n dequantized weights as one projection row (embed a real row into a weight
+; matrix for block forward). The form-asm matvec lane (fam-dot2 / fam-dot-loop) is the adjacent swap
+; for tb-dot once the ll-buffer store-loop lands f32 in the f64 read buffer.
+;
+; Kin: weight-load.fk (wl-load-q6k), transformer-block.fk (tb-dot/tb-matvec), llama-block.fk
+; (lblk-proj-seq / lblk-block-causal), kv-llama-block.fk (generation inner loop at block scale).
+;
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk
+;
+; Proven by: form-stdlib/tests/block-join-band.fk
+
+(do
+    ; --- the first n dequantized weights as a row vector (for embedding in wq/wk/...) ---
+    (defn bj-row-n-from (bytes off i n)
+        (if (eq n 0) (empty)
+            (cons (wl-q6k-at bytes off i)
+                  (bj-row-n-from bytes off (add i 1) (sub n 1)))))
+    (defn bj-row-n (bytes off n) (bj-row-n-from bytes off 0 n))
+
+    ; --- dot the first n loaded weights with x (len x must be n) ---
+    (defn bj-dot-row-n (bytes off n x)
+        (tb-dot (bj-row-n bytes off n) x))
+
+    ; --- load + dot: full 256-list dotted with x (len x must be 256) ---
+    (defn bj-dot-q6k (bytes off x)
+        (tb-dot (wl-load-q6k bytes off) x))
+
+    ; --- load + single-row matvec: y = [ dot(first n weights, x) ] where n = len x ---
+    (defn bj-matvec-q6k-row (bytes off x)
+        (list (bj-dot-row-n bytes off (len x) x)))
+
+    ; --- replace row `r` of matrix `w` with `row` (same width); other rows unchanged ---
+    (defn bj-replace-row-from (w r row i)
+        (if (eq (len w) 0) (empty)
+            (if (eq i r) (cons row (tail w))
+                (cons (head w) (bj-replace-row-from (tail w) r row (add i 1))))))
+    (defn bj-replace-row (w r row) (bj-replace-row-from w r row 0))
+
+    ; --- load the first n weights from a Q6_K superblock into row r of matrix w ---
+    (defn bj-wq-row-n (w r bytes off n)
+        (bj-replace-row w r (bj-row-n bytes off n)))
+
+    0)
