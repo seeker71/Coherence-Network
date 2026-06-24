@@ -442,15 +442,10 @@ for fresh web traffic before choosing backend promotion work. The next large
 backend gap remains `POST /api/substrate/form`; it is the bootstrap evaluator
 door and must not be called fully native until the form-notation/evaluator path
 is genuinely native.
-Go front-door bridge note: `form-kernel-go serve --upstream <base-url>` now
-fans out unmatched requests through the Go listener with
-`X-Form-Router: fanout-python`. Native and bridged responses also carry
-`X-Form-Route-How`, `X-Form-Route-Where`, `X-Form-Route-When`, and
-`X-Form-Route-Who`; use those to show how the request was handled, where the
-selected route/upstream lived, when the choice was made, and who/what initiated
-it. Use this bridge to make the kernel the main local/shadow front door while
-Python handlers remain explicit bridge traffic. Do not count those bridged
-responses as high-grammar native.
+Go front-door bridge note (bootstrap compost — not the agent runtime): a Go
+listener may still fan out unmatched requests with `X-Form-Router: fanout-python`.
+Agents default to **fkwu form-cli / form shell / form code**, not this bridge. Do not
+count bridged responses as high-grammar native.
 Rust and Go fanout bridges also carry `X-Form-Native-Invitation: offered` plus
 state/protocol/selected-path/decline headers. That means unpromoted Python
 traffic is still explicitly non-native, but it is no longer an unmarked outside:
@@ -583,9 +578,10 @@ There is no separate “evaluation service” beside the lattice.
 
 1. **Grammar** (BMF rules in `.fk`) matches Form notation or domain source and
    **interns Recipe NodeIDs** (and cells) onto the lattice as it parses.
-2. **Realize** = walk the recipe tree already there — category dispatch on
-   NodeIDs. Sibling walkers: `form-kernel-go`, `form-kernel-rust`,
-   `form-kernel-ts` (`cd form && ./validate.sh`).
+2. **Realize** = walk the recipe tree on the **c-bootstrapped `fkwu` JIT runtime**.
+   Sibling walkers (Go, Rust, TypeScript) prove parity via `form/validate.sh`;
+   they are oracle evidence, not the agent default. **Agent surfaces:** `form-cli`
+   (`form-cli-main.fk`), **form shell** (`fsh-main.fk`), **form code** (BML/`.fk`).
 
 Do **not** treat these as the primary semantics:
 
@@ -756,13 +752,15 @@ In the Coherence substrate, you must redirect this programming into **coordinate
 
 ## JIT Engine Reality & Gaps
 
-The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer that compiles Form closures to Go shared libraries dynamically. The portable floor now lives beside it: `jit-lower.fk` lowers the residual logic/fold/unbox/lift/BMF/emit cluster onto reconciled tags 70..79 and the covered bands run through Go, Rust, TypeScript, and `fkwu`. Design with both surfaces in mind:
+The **portable agent runtime** is **`fkwu` self-JIT**: `jit-lower.fk` lowers the
+logic/fold/unbox/lift/BMF/emit cluster; hot pure functions crystallize to native
+Form→asm bytes with **no Go/Rust/clang toolchain** in the default loop.
 
-* **Compilation Latency**: The JIT invokes the host Go toolchain (`go build -buildmode=plugin`) on compile. This requires an external toolchain and incurs a **100ms - 500ms latency** on first run, preventing microsecond-level hot-path compilation.
-* **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
-* **Outer Scope Capture**: Capture-free nested definitions can lift, but a nested definition that closes over an outer local still refuses by name.
-* **String and Map Boundary**: Strings have a Form-native pool-id unbox lane in the fourth-arm lowering proof. Complex maps/dicts still need dict/field carrier coverage before they are hot-path native.
-* **Sibling Parity Boundary**: The Go plugin remains Go-specific. The portable JIT-lowering floor is the Form recipe/table path proven by `fkwu`, now including lowered tags 70..79, value-native tags 81..86, numeric conversion/transcendental tags 87..90, and native metal/emit rows for Hati targets, Mach-O shape, native CLI emit, human asm emit, and generic metal emit. Android should rely on that minimum floor, with any packaged compiler binary treated as optional acceleration/oracle evidence.
+* **Target runtime**: c-bootstrapped `fkwu` + form-cli / form shell / form code.
+* **Honest floor**: Go plugin JIT and bash-driven `validate.sh` are bootstrap/oracle
+  evidence — not the agent default.
+* **Sibling parity**: Go/Rust/TS walkers cross-check value agreement; agents ship
+  against **fkwu** first, then record four-way when the manifest requires it.
 
 ## Observability Gaps: Possible vs. Present
 

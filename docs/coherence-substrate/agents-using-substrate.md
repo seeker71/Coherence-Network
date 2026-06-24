@@ -16,13 +16,13 @@ The three SUBSTANCES (the trinity):
 
 The three STATES (the phase axis — set by the counts degree/population/churn, and moving a cell along it WITHIN its substance): **ice** = frozen, load-bearing, widely referenced; **water** = fluid, actively circulating; **gas** = diffuse potential, barely instantiated. A phase change conserves both the NodeID and the kind.
 
-**Start:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — names primary surface (grammar → recipes → realize → read) vs Python `form.py` bootstrap.
+**Start:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — names primary surface (grammar → recipes → realize on **fkwu** → read) vs Python `form.py` bootstrap. **Agent default:** **form-cli ask**, **form shell** (`fsh-main.fk`), **form code** (BML/`.fk`); minimize bash/Python/`rg` when Form carriers exist.
 
-You reach the lattice through **Form notation** parsed into **Recipe NodeIDs**, then **realized** by the native walker. File I/O, HTTP, and persistence **read** already live in `form-stdlib` + kernel (`persistence.fk`, `http-serve.fk`, `read_file`, `http_get`). Agent **queries** need read paths only — not substrate HTTP POST writes.
+You reach the lattice through **Form notation** parsed into **Recipe NodeIDs**, then **realized** on the **c-bootstrapped `fkwu` JIT runtime**. File I/O, HTTP, and persistence **read** already live in `form-stdlib` + `fkwu`. Agent **queries** need read paths only — not substrate HTTP POST writes.
 
-**Carriers today:** `POST /api/substrate/form`, `coh_substrate.py form|run` may still route through Python bootstrap until `form-notation` grammar lands; treat them as doors, not the definition of Form.
+**Carriers today:** `POST /api/substrate/form`, `coh_substrate.py form|run` may still route through Python bootstrap until `form-notation` grammar lands; treat them as doors, not the definition of Form. Prefer **form-cli** / **form shell** / **form code** on **fkwu** first.
 
-**Writing software:** [domain grammar → BMF/BML → Form objects](form-language.md#how-to-write-software-default-for-every-agent) — adapt an existing compiler before adding a new Python service.
+**Writing software:** [domain grammar → BMF/BML → Form objects](form-language.md#how-to-write-software-default-for-every-agent) — **form code** first; adapt an existing compiler before adding a new Python service.
 
 ## When to reach for the substrate
 

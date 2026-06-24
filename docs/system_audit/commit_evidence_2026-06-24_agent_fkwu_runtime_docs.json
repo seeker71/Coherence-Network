@@ -1,0 +1,84 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/f2528d7b",
+  "commit_scope": "Retarget agent docs and session hooks from Go bin-go to c-bootstrapped fkwu JIT runtime; default form-cli, form shell, form code.",
+  "files_owned": [
+    ".claude/settings.json",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CURSOR.md",
+    "docs/FORM-CLI-INSTALL.md",
+    "docs/coherence-substrate/agents-using-substrate.md",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/standard-receipt.form",
+    "docs/shared/agent-start-packet.md",
+    "scripts/ensure_form_cli_kernel.sh",
+    "skills/coherence-network/SKILL.md",
+    "docs/system_audit/commit_evidence_2026-06-24_agent_fkwu_runtime_docs.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "rg -n 'bin-go|form-kernel-go serve' CLAUDE.md AGENTS.md docs/shared/agent-start-packet.md docs/FORM-CLI-INSTALL.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-24_agent_fkwu_runtime_docs.json"
+    ],
+    "summary": "Agent docs no longer teach bin-go as default; ensure_form_cli_kernel.sh warms form/form-cli."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": ["./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI pending until PR checks complete."
+  },
+  "idea_ids": ["living-documentation"],
+  "spec_ids": ["agent-guidance"],
+  "task_ids": ["agent-fkwu-runtime-docs-2026-06-24"],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": ["direction"]
+    },
+    {
+      "contributor_id": "agent:cursor",
+      "contributor_type": "machine",
+      "roles": ["documentation-tending", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "Composer"
+  },
+  "evidence_refs": [
+    "docs/shared/agent-start-packet.md",
+    "form/form-stdlib/fsh-main.fk",
+    "form/form-stdlib/form-cli-main.fk"
+  ],
+  "change_files": [
+    ".claude/settings.json",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CURSOR.md",
+    "docs/FORM-CLI-INSTALL.md",
+    "docs/coherence-substrate/agents-using-substrate.md",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/standard-receipt.form",
+    "docs/shared/agent-start-packet.md",
+    "scripts/ensure_form_cli_kernel.sh",
+    "skills/coherence-network/SKILL.md",
+    "docs/system_audit/commit_evidence_2026-06-24_agent_fkwu_runtime_docs.json"
+  ],
+  "change_intent": "docs_only",
+  "e2e_validation": {
+    "status": "pending",
+    "commands": []
+  }
+}

@@ -4,7 +4,15 @@
 
 ## For agents arriving fresh (read before the long story)
 
-**First entry:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — the body runs Form-native; there is no separate interpreter to learn.
+**First entry:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — the body runs on the **c-bootstrapped `fkwu` JIT runtime**; there is no separate interpreter to learn.
+
+**Agent default surfaces:**
+
+| Surface | Role |
+|---------|------|
+| **form-cli** (`form-cli-main.fk`) | body-first `ask`, routing, sufficiency gate |
+| **form shell** (`fsh-main.fk` + `shell-grammar.fk`) | search, eval, orchestration — not bash/`rg` when Form carriers exist |
+| **form code** (BML, `.fk`, domain grammars) | authoring, proof bands, lattice reads |
 
 The whole language is four moves on one lattice:
 
@@ -117,7 +125,7 @@ This is why **observing is core, not incidental.** The framebuffer — a kernel-
 
 ## How to write software (default for every agent)
 
-**Index:** domain grammar → BMF/BML compile → Form objects (Blueprint / Recipe / NamedCell) → kernel proof. Not: a new host-language service first, not: HTTP stack as the definition of Form.
+**Index:** domain grammar → BMF/BML compile → Form objects (Blueprint / Recipe / NamedCell) → **fkwu** proof. Not: a new host-language service first, not: HTTP stack as the definition of Form.
 
 From here on, **all software in this body is written at the grammar level of the domain it serves** — compiler, HTTP, markdown, strategy, field, ledger, presence, spec. The runtime is one; the **surface grammar** is many. A route handler, a scoring function, a parser, a teaching encoder, and a deploy manifest are the same shape underneath: **rules that match, actions that emit recipes, coordinates that intern.**
 
@@ -128,15 +136,12 @@ From here on, **all software in this body is written at the grammar level of the
 | 1 | **Pick the domain grammar** | `form/form-stdlib/grammars/{domain}.fk`, `bml/*.bml`, or a domain `.form` teaching |
 | 2 | **Express behavior as rules** | `(pattern, semantic_action)` — see `apply-object-rule` in [`form/form-stdlib/engine.fk`](../../form/form-stdlib/engine.fk) |
 | 3 | **Compile / lower** | [`kernels/BMF_BML_COMPILER_PICTURE.md`](../../kernels/BMF_BML_COMPILER_PICTURE.md): scan → lift → **normalize** (same shape → same NodeID) → emit → run-observe |
-| 4 | **Prove** | `form/form-stdlib/tests/*-band.fk` + `cd form && ./validate.sh …` |
+| 4 | **Prove** | **form code** band in `form/form-stdlib/tests/*-band.fk` on **fkwu** first; `cd form && ./validate.sh …` only for four-way sibling parity (honest floor) |
 | 5 | **Carry to production** | `.fk` in stdlib, `.fkb` ratchet, kernel-router manifest, or fan-out tail — **carrier last** |
 
-The kernel should make compiler invocation boring: pass source text and a
-compiler/dialect coordinate, receive a Recipe NodeID. The Go kernel now exposes
-that shape as `compile_source_section("form.bml", body)`,
-`compile_source_text(source)`, and `compile_form_source(source)`, with
-`source_compile_last_error()` for diagnostics. Routes compose those primitives
-from BML; the carrier does not gain route-specific parsers or JSON encoders.
+Compile-from-source primitives (`compile_source_section`, `compile_form_source`, …)
+exist on sibling walkers for bootstrap routes; agents author and prove in **form
+code** on **fkwu**, not via host-language compile helpers.
 
 **Branching** uses `choose` / `fail` / `stop` (and BMA `save` / `restore` / `discard`) — angelic undo, not host-language `if` chains without a reverse path. **Cost** uses `node_eq` and content-addressed dispatch; hot sequences lower to native/JIT (see **Angelic nondeterminism** under Surface syntax below).
 
@@ -163,7 +168,7 @@ HTTP ([`http-serve.fk`](../../form/form-stdlib/http-serve.fk), kernel-router), C
 
 ### Agent one-liner
 
-> **Domain grammar first → BMF/BML to Form objects → proof band → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new host-language app.
+> **Domain grammar first → BMF/BML to Form objects → prove on fkwu (form code) → carrier.** If the grammar does not exist, fork a working grammar and adapt; do not fork a new host-language app.
 
 ### Distinguishing the BML Language from the Bootstrap Form-BML Dialect
 
@@ -1091,7 +1096,7 @@ Shipped surfaces:
 - **CLI** — `coh substrate form "<expr>"` (intern), `coh substrate run "<expr>"` (execute), `coh substrate check` (resolve / type-check, no execution)
 - **MCP** — `coherence_substrate_run` (full runtime), `coherence_substrate_query` (lookup), `coherence_substrate_stats`
 - **Agent integration** — the substrate Read-hook annotates files with structural context on read; the runtime makes Form expressions in markdown active rather than decorative
-- **Native kernels** — [`form/form-kernel-rust`](../../form/form-kernel-rust), [`form/form-kernel-go`](../../form/form-kernel-go), [`form/form-kernel-ts`](../../form/form-kernel-ts), each carrying enough of the runtime to execute the conformance vectors and (Go and Rust) the memoization-JIT natives
+- **Native runtime** — the **c-bootstrapped `fkwu` JIT** (`form-cli-main.fk`, `fsh-main.fk`) is the agent execution surface; Go/Rust/TypeScript walkers prove sibling parity via `form/validate.sh` (honest floor, not the sovereignty receipt)
 
 Host effects and cross-kernel conformance live in their own sections above ("Filesystem facts and host effects", "Cross-kernel conformance"). The conformance harness — `scripts/verify_kernel_conformance.py --kernel rust --kernel go --kernel typescript` — runs every shipped vector across every shipped kernel.
 

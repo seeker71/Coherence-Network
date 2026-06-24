@@ -22,7 +22,7 @@
           },
           {
             "type": "command",
-            "command": "echo '⟐ FORM-FIRST REASONING (the sovereignty gate). On every query, ask the Form body before the rented mind — through the native router  form-cli ask  (the one door, built once + cached: it grounds in the body and runs the four-way-proven sufficiency gate, escalating to the remote oracle only when local was not enough). Structural lookups (NodeID, equivalence, annotate) go straight to the lattice:  python3 scripts/coh_substrate.py form  or  https://api.coherencycoin.com/api/substrate . A grounded / sufficient hit — relay it attributed and STOP, no frontier compute. A miss is the YES to escalate to remote reasoning. Always name which path you took; never dress a remote guess as a body hit. Teaching: docs/coherence-substrate/form-first-reasoning.form'"
+            "command": "echo '⟐ FORM-FIRST REASONING (the sovereignty gate). On every query, ask the Form body before the rented mind — through the c-bootstrapped fkwu runtime: form-cli ask (form-cli-main.fk), form shell (fsh-main.fk for search/eval), form code (BML/.fk for lattice reads). Minimize bash/Python/rg when a Form carrier exists. Structural lookups: form-cli ask, coh substrate form, or https://api.coherencycoin.com/api/substrate. A grounded / sufficient hit — relay attributed and STOP. A miss is the YES to escalate. Name the path; never dress a remote guess as a body hit. Teaching: docs/coherence-substrate/form-first-reasoning.form'"
           }
         ]
       }
