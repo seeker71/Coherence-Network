@@ -138,8 +138,9 @@
 ;        with fam-dot-loop/fam-dot2 bytes; witness scripts/block_join_asm_witness.sh runs fam-dot2 on
 ;        loaded weights bit-exact vs bj-dot-row-n.
 ;        ✓ D₄ — scripts/llama_block0_join_carrier.py d=4: independent ref vs Form
-;        bj-block-causal-gqa-d4 on loaded Q6_K weights; max|Δ|=0, y[0][0]=1.000297. Adjacent:
-;        wl-load-q4k for blk.0 tensors, sliced d>4 toward d_model=3072.
+;        bj-block-causal-gqa-d4 on loaded Q6_K weights; max|Δ|=0, y[0][0]=1.000297.
+;        ✓ D₄′ — weight-load-q4k-band.fk (4095): wl-load-q4k composes q4k-dequant on REAL
+;        blk.0.ffn_gate Q4_K bytes (mini-GGUF). Adjacent: carrier at sliced d>4 from full GGUF.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL

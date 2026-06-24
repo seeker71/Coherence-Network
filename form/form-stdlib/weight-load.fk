@@ -21,15 +21,20 @@
 ;   d      = fd-f16 (le-u16 buf (off+208))
 ; and then (q6k-dequant d ql qh scales) -> the 256 dequantized weights.
 ;
-; Kin: gguf-read.fk (gg-ti-dataoff locates off), q6k-dequant.fk (the unpack), f16-decode.fk (the d decode),
-; q4k-dequant.fk (the sibling quant, same load shape with type 12), kv-llama-block.fk (the forward the loaded
-; weights feed). The ll-buffer fill (gap C's "fill an ll-buffer / fkwu f64 pool") is the adjacent rung: this
-; cell produces the f32 list; ll-buf wraps the store loop that lands it in the matvec's read buffer.
+; Q4_K block memory layout (llama.cpp block_q4_K, QK_K=256), 144 bytes at the block base:
+;   d (f16)    (off + 0)   super-scale
+;   dmin (f16) (off + 2)   super-min
+;   scales[12] (off + 4)   packed 6-bit block-scales/mins
+;   qs[128]    (off + 16)  packed 4-bit quants
+; wl-load-q4k composes q4k-dequant over bytes carved from the buffer (type 12 tensors — blk.0 ffn_*).
 ;
-; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk
+; Kin: gguf-read.fk (gg-ti-dataoff locates off), q6k-dequant.fk, q4k-dequant.fk (the unpack),
+; f16-decode.fk (d/dmin decode), block-join.fk (forward). The ll-buffer fill is adjacent.
 ;
-; Proven by: form-stdlib/tests/weight-load-band.fk (four-way, against a mini-GGUF carrying a REAL
-; llama3.2:3b token_embd Q6_K superblock, asserting the recovered weights match q6k-dequant-band's ground truth)
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/q4k-dequant.fk
+;
+; Proven by: form-stdlib/tests/weight-load-band.fk form-stdlib/tests/weight-load-q4k-band.fk (four-way,
+; mini-GGUF fixtures carrying REAL llama3.2:3b Q6_K / Q4_K superblocks)
 
 (do
     ; --- wl-slice: n bytes of `bytes` starting at `off` (drop the prefix, take the window). The carrier
@@ -62,5 +67,19 @@
                   (wl-q6k-ql bytes off)
                   (wl-q6k-qh bytes off)
                   (wl-q6k-scales bytes off)))
+
+    ; --- Q4_K fields carved from the buffer (block_q4_K, 144 bytes) ---
+    (defn wl-q4k-d      (bytes off) (fd-f16 (wl-u16 bytes off)))
+    (defn wl-q4k-dmin   (bytes off) (fd-f16 (wl-u16 bytes (add off 2))))
+    (defn wl-q4k-scales (bytes off) (wl-slice bytes (add off 4) 12))
+    (defn wl-q4k-qs     (bytes off) (wl-slice bytes (add off 16) 128))
+
+    (defn wl-load-q4k (bytes off)
+        (q4k-dequant (wl-q4k-d bytes off) (wl-q4k-dmin bytes off)
+                     (wl-q4k-scales bytes off) (wl-q4k-qs bytes off)))
+
+    (defn wl-q4k-at (bytes off i)
+        (q4k-at i (wl-q4k-d bytes off) (wl-q4k-dmin bytes off)
+                (wl-q4k-scales bytes off) (wl-q4k-qs bytes off)))
 
     0)
