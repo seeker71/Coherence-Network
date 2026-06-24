@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/226a07b9",
+  "commit_scope": "Streaming file I/O for fkwu, end to end: replace the buffered (truncating, double-copied) read path with host-native streaming primitives in the emitted walker, expose them through a BML high-grammar interface, and lift the proof orchestration's DECISION onto the form-native shell. (1) hati-os-kernel-emit.fk: read_file_slice/read_file (tags 62/63) and write_file_text (tag 104) stream directly through the string pool with dynamic resize instead of a fixed 65536-byte buffer; new streaming carriers file_open/file_read/file_close (tags 133/134/135 — free above main's fs_list op 132) with explicit fkc-flat arity rows. (2) form-flatten.fk: register the three ops + mark them effectful. (3) source-compiler.fk: fsc-strip-bml-comments lifts the BML `//` doc-comment stripping into the compiler itself, so .bml modules lower flattener-clean with no downstream sed. (4) file-io.bml: the interface as a generic class with block-bodied recursive higher-order methods (fold-chunks/fold-lines), a reader-handle object, and a cooperative Task async surface. (5) file-io-shell.fk + tests/file-io-shell-band.fk: the proof orchestration as a Form-shell cell whose witness==255 verdict is the native test/echo gate (decision in Form, not bash); file-io-bml-proof.sh now decides via fio-verdict-code on fkwu and only dispatches on the answer.",
+  "files_owned": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/file-io.bml",
+    "form/form-stdlib/file-io-shell.fk",
+    "form/form-stdlib/tests/file-io-shell-band.fk",
+    "form/form-samples/file-io/bml-proof.fk",
+    "form/scripts/file-io-bml-proof.sh",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_20260624_form_file_io_streaming.json"
+  ],
+  "idea_ids": [
+    "cognitive-sovereignty"
+  ],
+  "spec_ids": [
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "task-2026-06-24-form-file-io-streaming"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "frequency-correction"
+      ]
+    },
+    {
+      "contributor_id": "claude-cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Form-shell orchestration band crosses FOUR-WAY: cd form && ./validate.sh (core + shell prelude chain + file-io-shell.fk + tests/file-io-shell-band.fk) -> '...file-io-shell-band.fk -> 255' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' / '1 ok, 0 divergent — kernels agree on every sample.' The band proves fsh cell lowering, the native test/echo verdict on both PASS (255) and FAIL (7) branches as string and printable-int projections, the passthrough labeling of bootstrap steps (fkc-emit-bml/fkwu-run), and the append redirect.",
+    "BML file-I/O interface end-to-end on fkwu: cd form && ./scripts/file-io-bml-proof.sh -> 'fkwu witness: 255 (expected 255)' then 'form-shell verdict (native test gate on fkwu): 1 (1=PASS 0=FAIL)' then PASS. Drives a 256 KiB / 8192-line file through all eight doors (read-all, fold-chunks, fold-lines, read-lines, reader-handle object, read-all-async, read-lines-async, generic descriptor). The verdict's 255 constant + comparison execute on the 4th kernel via the shell's native `test` builtin; bash only dispatches on the int.",
+    "fkwu-only by design (honest floor, NOT a divergence): the streaming carriers file_open/file_read/file_close (tags 133/134/135) and the input/host-io path are fkwu host-io carriers — the Go/Rust/TS walkers do not carry this op family, so the bml-proof band is 3-kernel only — unsupported op: host-io file streaming. The DECISION logic (file-io-shell) carries no host-io and therefore crosses four-way; only the host-io carriers themselves are fkwu-native.",
+    "No regression in the source-compiler path the `//`-strip lift touches: cd form && ./scripts/storage-port-carriers-test.sh -> 'verdict: 111111' / 'storage port: PASS — one test, identical verdict across memory / file / Postgres.' (exercises form-source-compile-file across memory/file/Postgres carriers).",
+    "Root causes resolved during the arc: tag collisions (70/71/72 were and/or/not; then 127/128/129 were claimed by main's kernel_stat + framebuffer subsystem; then 132 by main's fs_list) -> file ops land on 133/134/135, free above the latest main; fkc-flat fell through to a binary handler for unary ops -> explicit fkc-un2/fkc-bin2 arity rows; BML `//` header copied verbatim into lowered Form derailed the flattener's `;`-only comment scan -> lifted into the compiler as fsc-strip-bml-comments. The shell-band fourth=3 seen mid-arc was a stale fkwu/fourth cache from an older base, cleared by rebuilding bin-go and the fourth cache on the current main; live-room-shell and file-io-shell both then crossed four-way."
+  ],
+  "change_files": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/file-io.bml",
+    "form/form-stdlib/file-io-shell.fk",
+    "form/form-stdlib/tests/file-io-shell-band.fk",
+    "form/form-samples/file-io/bml-proof.fk",
+    "form/scripts/file-io-bml-proof.sh",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_20260624_form_file_io_streaming.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh <shell prelude chain> form-stdlib/file-io-shell.fk form-stdlib/tests/file-io-shell-band.fk -> 255",
+      "cd form && ./scripts/file-io-bml-proof.sh -> fkwu witness 255, form-shell verdict 1, PASS",
+      "cd form && ./scripts/storage-port-carriers-test.sh -> 111111 (no regression in form-source-compile-file)"
+    ],
+    "fourth_arm_outputs": [
+      "fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables) — 1 ok, 0 divergent (file-io-shell band, verdict 255)",
+      "bml-proof / streaming carriers: 3-kernel only — unsupported op: host-io file streaming (file_open/file_read/file_close are fkwu host-io carriers, by design); proven fkwu-native at witness 255"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI re-runs validate.sh across the kernels including the new file-io-shell four-way band; the host-io streaming carriers run fkwu-native (3-kernel-only by op family, named)."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "form-kernel",
+    "notes": "Form kernel / stdlib change — no api/web public surface, no Hostinger deploy. Runtime proof is the four-way band + the fkwu-native bml proof; deploy stays pending as not-applicable for a form-kernel change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Streaming I/O lands with host-native carriers, a BML high-grammar interface, the compiler self-stripping `//` preludes, and the proof's decision on the form shell — all proven locally (four-way for the shell verdict band; fkwu-native at 255 for the host-io carriers). CI re-proof and merge are pending. The named next rung is executing passthrough natively (the driver-organ execvp) so the harness reaches the toolchain-free standard receipt."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form code reading/writing files on fkwu no longer truncates at 65536 bytes or double-copies through a fixed host buffer; it streams through the string pool. A BML high-grammar interface (generic class, reader-handle object, streaming folds, cooperative Task async) is the door other Form code uses. .bml modules lower flattener-clean (compiler strips `//` preludes). The proof harness's pass/fail decision is computed by the form shell on the 4th kernel, not by a bash string compare.",
+    "public_endpoints": [
+      "none — form-kernel/stdlib change, no public HTTP surface"
+    ],
+    "test_flows": [
+      "256 KiB / 8192-line file driven through all eight interface doors on fkwu -> witness 255; native test gate renders PASS (1)."
+    ]
+  }
+}

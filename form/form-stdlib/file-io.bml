@@ -1,0 +1,139 @@
+//////////////////////////////////////////////////////////////////////
+//
+// file-io.bml
+//
+// The Form-native streaming file-I/O interface, authored in BML's high
+// grammar (generic class, block-bodied methods, recursion, higher-order
+// folds) and lowering — through the BML source-compiler — onto fkwu's
+// host-native streaming primitives:
+//
+//   file_open  (path)    -> an OS file handle (>= 0), or -2 on error   [tag 127]
+//   file_read  (fd max)  -> the next <= max bytes as a string;         [tag 128]
+//                           "" at EOF or on a dead handle
+//   file_close (fd)      -> 0, or -2 on error                          [tag 129]
+//   read_file  (path)    -> whole file streamed into the pool (uncapped) [tag 63]
+//   write_file_text      -> bytes written, streamed from the pool       [tag 104]
+//   file_size  (path)    -> size in bytes                               [tag 60]
+//
+// Each pull reads ONE host read() directly into the kernel string pool,
+// the OS advancing the file offset. No fixed staging buffer, so nothing
+// truncates and nothing is copied twice. The folds process a file of ANY
+// size in BOUNDED memory — never holding more than one chunk plus the
+// caller's accumulator.
+//
+// Object model. A reader is a Node, not hidden mutable state: open()
+// returns the list ("FileReader" fd path). The OS file descriptor carries
+// the read position, so the Form value stays immutable while sequential
+// reads advance naturally — stateful at the host, content-addressable in
+// the body. Methods dispatch on that handle (reader-read, reader-close).
+//
+// Async. The surface matches leading platforms' shape — a method returns a
+// Task<T> the caller awaits (compare C# Task<T>, JS Promise, Rust Future).
+// On the single-threaded universal walker completion is COOPERATIVE: the
+// Task is already resolved when handed back (fourth-shim.fk task model).
+// The async door is real and composable today; true host-thread / io_uring
+// overlap is the named next rung, not yet carried here.
+//
+// Proven by: scripts/file-io-bml-proof.sh — compiles this BML, flattens the
+// lowered recipes over fkwu, and witnesses every door (sync whole-file,
+// streaming chunk fold, streaming line fold, lines-as-list, the handle
+// object lifecycle, the async Task surface, and the generic descriptor).
+// fourth arm: fkwu-native — file_open/file_read/file_close are fkwu host-io
+// carriers; Go/Rust/TS lack them by design, so this runs fkwu-only, not
+// three-kernel. Honest floor named, not a divergence.
+//
+//////////////////////////////////////////////////////////////////////
+
+section [form.bml] {
+    // FileIO<T> — the streaming surface. T is the element a fold consumes
+    // (a byte-chunk for fold-chunks, a line for fold-lines); it erases at
+    // lowering, organising the methods and minting the (FileIO) descriptor.
+    class FileIO<T> {
+        // ---- grain ---------------------------------------------------------
+        // one host read() per pull: 64 KiB, the page-friendly streaming grain
+        def fio-chunk() = 65536;
+
+        // ---- reader handle: a Node carrying the OS fd + its path -----------
+        def fio-open(path) = list("FileReader", file_open(path), path);
+        def fio-reader-fd(r) = nth(r, 1);
+        def fio-reader-path(r) = nth(r, 2);
+        def fio-reader-ok(r) = ge(fio-reader-fd(r), 0);
+        // pull the next <= max bytes; "" at EOF (the OS offset advances)
+        def fio-reader-read(r, max) = file_read(fio-reader-fd(r), max);
+        def fio-reader-close(r) = file_close(fio-reader-fd(r));
+
+        // ---- whole file (sync) --------------------------------------------
+        // the honest single-pass read: the kernel streams the file straight
+        // into the string pool (no cap, no second buffer). Composing this in
+        // Form with str_concat would re-copy the prefix each chunk (O(n^2)),
+        // so the whole-file door stays the primitive; the folds below are the
+        // streaming door for large inputs.
+        def fio-read-all(path) = read_file(path);
+        def fio-write-all(path, text) = write_file_text(path, text);
+        def fio-size(path) = file_size(path);
+
+        // ---- streaming chunk fold (bounded memory) ------------------------
+        // (fn acc piece) runs once per host read, in file order, until EOF.
+        // The whole file never lives in memory at once — only the current
+        // chunk and the fold's accumulator.
+        def fio-fold-chunks-r(r, fn, acc) {
+            let piece = fio-reader-read(r, fio-chunk());
+            if eq(str_len(piece), 0) then acc
+            else fio-fold-chunks-r(r, fn, fn(acc, piece));
+        }
+        def fio-fold-chunks(path, fn, acc) {
+            let r = fio-open(path);
+            if fio-reader-ok(r) then fio-fold-chunks-close(r, fn, acc)
+            else acc;
+        }
+        def fio-fold-chunks-close(r, fn, acc) {
+            let out = fio-fold-chunks-r(r, fn, acc);
+            let shut = fio-reader-close(r);
+            out;
+        }
+
+        // ---- streaming line fold ------------------------------------------
+        // (fn acc line) runs once per newline-terminated line, in order. A
+        // line split across a chunk boundary is carried forward, never lost
+        // or doubled; a trailing line with no final newline flushes at EOF.
+        // fio-drain emits every complete line inside `buf`, returning
+        // (cons updated-acc leftover) — the leftover becomes the next carry.
+        def fio-drain(buf, fn, acc) {
+            let nl = str_find(buf, "\n", 0);
+            if lt(nl, 0) then cons(acc, buf)
+            else fio-drain(substring(buf, add(nl, 1), str_len(buf)), fn, fn(acc, substring(buf, 0, nl)));
+        }
+        def fio-fold-lines-r(r, fn, acc, carry) {
+            let piece = fio-reader-read(r, fio-chunk());
+            if eq(str_len(piece), 0) then fio-flush-carry(fn, acc, carry)
+            else fio-fold-lines-step(r, fn, fio-drain(str_concat(carry, piece), fn, acc));
+        }
+        def fio-flush-carry(fn, acc, carry) {
+            if eq(str_len(carry), 0) then acc else fn(acc, carry);
+        }
+        def fio-fold-lines-step(r, fn, st) = fio-fold-lines-r(r, fn, head(st), tail(st));
+        def fio-fold-lines(path, fn, acc) {
+            let r = fio-open(path);
+            if fio-reader-ok(r) then fio-fold-lines-close(r, fn, acc)
+            else acc;
+        }
+        def fio-fold-lines-close(r, fn, acc) {
+            let out = fio-fold-lines-r(r, fn, acc, "");
+            let shut = fio-reader-close(r);
+            out;
+        }
+
+        // ---- lines as a list (order preserved) ----------------------------
+        def fio-cons-line(acc, line) = cons(line, acc);
+        def fio-read-lines(path) = reverse(fio-fold-lines(path, fio-cons-line, empty()));
+
+        // ---- async surface (Task<T>, cooperative) -------------------------
+        // Each returns an already-resolved Task; await it like any platform's
+        // async read. Composable with task-await / task-step continuations.
+        def fio-open-async(path) = task-resolved(fio-open(path));
+        def fio-read-async(r, max) = task-resolved(fio-reader-read(r, max));
+        def fio-read-all-async(path) = task-resolved(read_file(path));
+        def fio-read-lines-async(path) = task-resolved(fio-read-lines(path));
+        def fio-size-async(path) = task-resolved(file_size(path));
+    }
+}

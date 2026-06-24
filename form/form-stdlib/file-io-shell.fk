@@ -1,0 +1,69 @@
+; file-io-shell.fk — the BML file-I/O proof orchestration as a Form-shell cell.
+;
+; file-io-bml-proof.sh used to hold the whole pipeline in Bash: lower the BML
+; interface, build fkwu, flatten, run, then DECIDE pass/fail with a bash
+; `[[ "$out" == "255" ]]`. That last step is a decision, and decisions belong in
+; Form — the same move live-room-shell.fk made for the silence gate. Here the
+; orchestration shape becomes an fsh cell:
+;   - the genuine bootstrap calls (lower BML, build fkwu, flatten, run fkwu) are
+;     PASSTHROUGH — host toolchain (go/clang/fkwu) is the honest floor below the
+;     standard receipt, labelled as host work, never dressed as native.
+;   - the VERDICT (witness == 255 -> PASS) is a NATIVE form builtin: `test` and
+;     `echo` compute it IN FORM, no host tool. fio-verdict runs it for real.
+; The cell lowers to a recipe that walks/JITs on the 4th kernel; fio-plan reads
+; its native-vs-passthrough split so the harness is legible, not opaque Bash.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk
+
+(do
+    ;; the proof's full witness — all eight doors of the BML interface lit.
+    (defn fio-expect () "255")
+
+    ;; the orchestration as one fsh script. Passthrough bootstrap steps stage
+    ;; their output through redirects; the verdict gate is native test/echo.
+    ;; $W is the captured witness — the host runner binds it before the gate.
+    (defn fio-fsh-source ()
+        "fkc-emit-bml file-io.bml > file-io.fk ; fkwu-build ; fkc-flatten file-io.fk bml-proof.fk > table.txt ; fkwu-run table.txt >> witness.txt ; test $W -eq 255 && echo PASS || echo FAIL")
+
+    (defn fio-cell () (sh-lower "file-io-proof" (fio-fsh-source)))
+    (defn fio-plan () (sh-plan (sh-cell-ctor (fio-cell))))
+    (defn fio-demo-out () (sh-cell-run (fio-cell)))
+
+    ;; the verdict as a concrete native script: substitute the captured witness,
+    ;; then the form shell decides PASS/FAIL with no host tool. The bash harness
+    ;; calls the SAME logic so the decision is form-native, not a bash `[[ ]]`.
+    (defn fio-verdict-src (w)
+        (str_concat "test " (str_concat w
+            (str_concat " -eq " (str_concat (fio-expect)
+                " && echo PASS || echo FAIL")))))
+    (defn fio-verdict (w) (sh-out (fio-verdict-src w)))
+
+    ;; the same native `test` gate as a printable integer (1 PASS / 0 FAIL): the
+    ;; universal walker prints a numeric root, so a host runner reads the verdict
+    ;; as an int. The DECISION is still the shell builtin's exit code, in Form.
+    (defn fio-verdict-pass? (w)
+        (eq (sh-exit (str_concat "test " (str_concat w
+            (str_concat " -eq " (fio-expect))))) 0))
+    (defn fio-verdict-code (w) (if (fio-verdict-pass? w) 1 0))
+
+    ;; --- plan introspection (the native/passthrough split, made legible) ----
+    (defn fio-plan-has-name? (steps name)
+        (if (nil? steps) false
+            (if (str_eq (sh-step-name (head steps)) name) true
+                (fio-plan-has-name? (tail steps) name))))
+    (defn fio-plan-has-kind-name? (steps kind name)
+        (if (nil? steps) false
+            (if (and (str_eq (sh-step-kind (head steps)) kind)
+                     (str_eq (sh-step-name (head steps)) name))
+                true
+                (fio-plan-has-kind-name? (tail steps) kind name))))
+    (defn fio-redirs-has-append? (redirs)
+        (if (nil? redirs) false
+            (if (str_eq (head (head redirs)) "__append__") true
+                (fio-redirs-has-append? (tail redirs)))))
+    (defn fio-plan-has-append? (steps)
+        (if (nil? steps) false
+            (if (fio-redirs-has-append? (sh-step-redirs (head steps))) true
+                (fio-plan-has-append? (tail steps)))))
+
+    0)
