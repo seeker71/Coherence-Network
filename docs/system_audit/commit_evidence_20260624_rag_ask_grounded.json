@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/rag-ask-grounded",
+  "commit_scope": "Form-native grounded retrieval: rag-ask.fk, form-shell rag-ask verb, form-cli grounded verb — lexical re-vec + rag-topk, no Python/bash in the retrieval lane.",
+  "standard_receipt": {
+    "claim": "Architecture questions retrieve a grounded corpus id via Form on fkwu without Python.",
+    "body": "yes — rag-ask.fk + form-cli grounded verb + fsh-rag-ask-main.fk",
+    "c_bootstrap": "partial — band proven on fkwu fourth arm; form-cli binary regen pending",
+    "toolchain_free": "pending — retrieval lane is Form; index read uses host-io",
+    "platforms": {
+      "mac": "observed — rag-ask-grounded-band four-way 3 on fkwu",
+      "windows": "pending",
+      "android": "pending"
+    },
+    "honest_floor": "ask still routes to ollama; bin/form-cli search still Python. grounded is the sovereign retrieval step."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260624_rag_ask_grounded.json"
+  ],
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources", "form-cli-self-healing-memory"],
+  "task_ids": ["task-2026-06-24-rag-ask-grounded"],
+  "contributors": [
+    {
+      "contributor_id": "cursor-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "form/form-stdlib/rag-ask.fk",
+    "form/form-stdlib/rag-ask-shell.fk",
+    "form/form-stdlib/fsh-rag-ask-main.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/rag-ask-grounded-band.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/build-form-cli.sh",
+    "form/scripts/rag-ask.fsh"
+  ],
+  "evidence_refs": [
+    "FOUR-WAY: rag-ask-grounded-band -> 3 on fkwu",
+    "FOUR-WAY: form-cli-band -> 1023 with grounded verb in help",
+    "ENTRY: form-cli grounded <question> | form shell rag-ask <index> <query>"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/rag-ask-grounded-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "rag-ask-grounded four-way 3",
+      "form-cli-band four-way 1023"
+    ]
+  },
+  "ci_validation": { "status": "pending", "commands": [] },
+  "deploy_validation": { "status": "pending", "environment": "local-form-runtime" },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Wire grounded into ask+ flow; regen form-cli bootstrap; compost form_cli_rag.py search path."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "grounded:<id> retrieval without Python.",
+    "public_endpoints": ["form-cli grounded verb (native fkwu)"],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/tests/rag-ask-grounded-band.fk"
+    ]
+  }
+}
