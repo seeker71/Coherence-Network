@@ -193,14 +193,70 @@
                     1))))))))) 1)))))
     (defn sh-bi-test (args stdin) (list "" (sh-test args)))
 
+    ;; ── awk (first breath): the unix tool as a Form recipe, not passthrough ──
+    ;; Covers the field idioms shell scripts lean on most (FS = whitespace):
+    ;;   {print $N}          print field N of each line ($0 = whole line)
+    ;;   $N==RHS             print lines whose field N equals RHS ("str" or bareword)
+    ;;   $N==RHS{print $M}   filter on field N, then print field M
+    ;; Single-digit field refs, one pattern + one print action, literal RHS. NOT
+    ;; full awk (no -F, BEGIN/END, arithmetic, field-to-field compare, multi-rule)
+    ;; — the named floor, grown by need exactly like the other native builtins.
+    (defn sh-awk-field (line n)            ; $0 = whole line; $n = nth whitespace field
+        (if (le n 0) line
+            (do (let fs (sh-words line 0 "" (empty)))
+                (if (le n (len fs)) (nth fs (sub n 1)) ""))))
+    (defn sh-awk-trim-l (s)
+        (if (eq (str_len s) 0) s
+            (if (is-ws-cp (ord (char_at s 0))) (sh-awk-trim-l (substring s 1 (str_len s))) s)))
+    (defn sh-awk-trim-r (s)
+        (if (eq (str_len s) 0) s
+            (if (is-ws-cp (ord (char_at s (sub (str_len s) 1)))) (sh-awk-trim-r (substring s 0 (sub (str_len s) 1))) s)))
+    (defn sh-awk-trim (s) (sh-awk-trim-r (sh-awk-trim-l s)))
+    (defn sh-awk-unq (s)                    ; strip a surrounding pair of double-quotes
+        (if (and (ge (str_len s) 2)
+                 (and (str_eq (substring s 0 1) "\"")
+                      (str_eq (substring s (sub (str_len s) 1) (str_len s)) "\"")))
+            (substring s 1 (sub (str_len s) 1)) s))
+    (defn sh-awk-field-ref (seg)            ; digit in the first "$N" of seg, else 0
+        (do (let i (find-from seg "$" 0))
+            (if (lt i 0) 0
+                (do (let c (ord (char_at seg (add i 1))))
+                    (if (and (ge c 48) (le c 57)) (sub c 48) 0)))))
+    (defn sh-awk-before-brace (p)
+        (do (let i (find-from p "{" 0)) (if (lt i 0) p (substring p 0 i))))
+    (defn sh-awk-brace-body (p)
+        (do (let i (find-from p "{" 0))
+            (if (lt i 0) ""
+                (do (let j (find-from p "}" i))
+                    (substring p (add i 1) (if (lt j 0) (str_len p) j))))))
+    (defn sh-awk-rhs (pat)                   ; literal after "==", trimmed + unquoted
+        (do (let i (find-from pat "==" 0))
+            (if (lt i 0) ""
+                (sh-awk-unq (sh-awk-trim (substring pat (add i 2) (str_len pat)))))))
+    (defn sh-awk-emit (lines hp pf prhs af)  ; one output line per matching input line
+        (if (nil? lines) (empty)
+            (do (let ln (head lines))
+                (if (if hp (str_eq (sh-awk-field ln pf) prhs) true)
+                    (cons (sh-awk-field ln af) (sh-awk-emit (tail lines) hp pf prhs af))
+                    (sh-awk-emit (tail lines) hp pf prhs af)))))
+    (defn sh-bi-awk (args stdin)
+        (do (let p (sh-first-nonflag args))  ; the awk program (a single-quoted arg)
+            (let pat (sh-awk-before-brace p))
+            (list (sh-join-nl (sh-awk-emit (sh-lines stdin)
+                                           (ge (find-from pat "==" 0) 0)
+                                           (sh-awk-field-ref pat)
+                                           (sh-awk-rhs pat)
+                                           (sh-awk-field-ref (sh-awk-brace-body p)))) 0)))
+
     (defn sh-builtin? (name)
         (or (str_eq name "echo") (or (str_eq name "cat") (or (str_eq name "grep")
         (or (str_eq name "wc") (or (str_eq name "head") (or (str_eq name "tail")
         (or (str_eq name "seq") (or (str_eq name "rev") (or (str_eq name "sort")
         (or (str_eq name "uniq") (or (str_eq name "tr") (or (str_eq name "nl")
+        (or (str_eq name "awk")
         (or (str_eq name "test") (or (str_eq name "[")
         (or (str_eq name "vd-route")
-        (or (str_eq name "true") (str_eq name "false"))))))))))))))))))
+        (or (str_eq name "true") (str_eq name "false")))))))))))))))))))
     (defn sh-run-builtin (name args stdin)
         (if (str_eq name "echo") (sh-bi-echo args stdin)
         (if (str_eq name "cat") (sh-bi-cat args stdin)
@@ -214,12 +270,13 @@
         (if (str_eq name "uniq") (sh-bi-uniq args stdin)
         (if (str_eq name "tr") (sh-bi-tr args stdin)
         (if (str_eq name "nl") (sh-bi-nl args stdin)
+        (if (str_eq name "awk") (sh-bi-awk args stdin)
         (if (str_eq name "test") (sh-bi-test args stdin)
         (if (str_eq name "[") (sh-bi-test args stdin)
         (if (str_eq name "vd-route") (sh-bi-vd-route args stdin)
         (if (str_eq name "true") (list "" 0)
         (if (str_eq name "false") (list "" 1)
-        (list "" 0)))))))))))))))))))
+        (list "" 0))))))))))))))))))))
 
     ;; ── assignment NAME=value (a lone word whose head is alpha/_) ────────
     (defn sh-assign? (name)

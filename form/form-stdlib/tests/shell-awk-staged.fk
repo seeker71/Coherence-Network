@@ -1,0 +1,29 @@
+; shell-awk-staged.fk — the roadmap verb's manifest reconciliation, run END-TO-END
+; ON FKWU over a WHOLE staged file. fkwu carries no read_file (host file reads are a
+; standing wall for the universal walker), so the sovereign pattern is the body's
+; own (fkwu_run.sh / fsh-main): a thin host carrier stages the bytes into input_byte
+; (tag 17, the staged-input door fkwu DOES carry), and fkwu runs native awk over
+; them — no read_file, no host awk, no bash in the compute loop. fkwu-only
+; (input_byte is not in the Go/Rust/TS walkers); the awk COMPUTE is the four-way
+; shell-awk band.
+;
+; Reads the whole file with the STREAMING line reader (input-stream.fk is-fold):
+; O(n), recursion bounded by line count — so the full 38KB manifest crosses where
+; the naive per-byte accumulator segfaulted. No carrier pre-slicing needed.
+;
+; Run:  scripts/fkwu_run.sh fourth-arm-bands.txt <input-stream + s-expr shell preludes> \
+;         form-stdlib/tests/shell-awk-staged.fk     -> verdict 127 (first stdout line)
+;
+; preludes: form-stdlib/input-stream.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk
+(do
+    ; the awk reducer: awk '$1=="shell-awk"{print $3}', one staged line at a time.
+    ; sh-words gives whitespace fields; the accumulator keeps only matching field 3,
+    ; so it stays tiny across the whole file (no O(n^2)).
+    (defn reduce-verdict (acc line)
+        (do (let fs (sh-words line 0 "" (empty)))
+            (if (if (ge (len fs) 3) (str_eq (nth fs 0) "shell-awk") false)
+                (str_concat acc (str_concat (nth fs 2) "\n"))
+                acc)))
+    ; stream every staged line through the reducer; trim the trailing newline
+    ; (str_to_int stops at non-digits) -> the band's own verdict, 127.
+    (str_to_int (sh-awk-trim (is-fold 0 reduce-verdict ""))))

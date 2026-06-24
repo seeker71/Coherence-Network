@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 337
+**Total files**: 339
 
 | File | Purpose |
 |---|---|
@@ -76,6 +76,7 @@
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
 | [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — the native Form kernel that form-cli routes body-first |
+| [ensure_form_cli_native.sh](ensure_form_cli_native.sh) | ensure_form_cli_native.sh — the c-bootstrap fkwu form-cli, warmed once and cached. |
 | [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
@@ -88,6 +89,7 @@
 | [field_relay_client.py](field_relay_client.py) | field_relay_client.py — breath-4 carriers + dial-out client for the field relay (the on-device e2e receipt). |
 | [field_relay_dev_setup.sh](field_relay_dev_setup.sh) | field_relay_dev_setup.sh — provision a session to BUILD + PROVE the field relay's breath-4 carriers. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
+| [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |

@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "claude/tender-ptolemy-1d0re6",
+  "commit_scope": "Verified the full form-cli COMMAND-LINE INTERFACE builds and runs c-bootstrapped on the fkwu universal kernel — the CLI rung above the bare-recipe rung the 2026-06-23 fkwu-standalone receipt observed. build-form-cli.sh emitted the universal walker (fkc-emit-combined-repl: same fkc-pr-text/fkc-decl-universal-text/fkc-walk-many-text body as fkc-emit-universal, differing only in main()) with the form-cli-repl program baked in, compiled once with clang into a 435536-byte self-contained ELF that links only libc.so.6 + ld-linux (no Go/clang/python/bash at runtime). Exercised every baked verb over piped stdin (ping->pong, version, help, kernel, about, verify, native-host, source, unknown-verb) deterministically; the `source` verb reprinted all 315655 bytes of its own Form source (self-recreating c-bootstrap closure). Separately reproduced the prior receipt: validate.sh field-identity four-way (Go/Rust/TS/fkwu) -> 511, 0 divergent, and ran the fkwu ELF directly on the pre-flattened table (./fkwu <table> 0 -> 511). Also added a .gitignore rule for the reproducible form/form-cli build product so it never dirties the tree.",
+  "files_owned": [
+    ".gitignore",
+    "docs/system_audit/commit_evidence_2026-06-24_form_cli_fkwu_cli_observed.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./build-form-cli.sh   # -> form/form-cli, 435536 bytes self-contained",
+      "ldd form/form-cli                # linux-vdso, libc.so.6, ld-linux only",
+      "echo ping | ./form/form-cli      # -> pong",
+      "printf 'version\\nhelp\\nkernel\\nverify\\nabout\\nquit\\n' | ./form/form-cli",
+      "printf 'source\\n' | ./form/form-cli | wc -c   # -> 315656 (315655 + newline)",
+      "cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk   # -> 511 four-way",
+      "FKWU=form/form-stdlib/.cache/fourth/fkwu-* ; ./$FKWU <field-identity-table> 0   # -> 511"
+    ],
+    "fourth_arm": "field-identity four-way (Go/Rust/TS/fkwu) verdict 511, 0 divergent.",
+    "native_binary": "form/form-cli self-contained ELF (libc+ld-linux only); the fkwu universal-kernel ELF runs the pre-flattened table directly -> 511.",
+    "notes": "The RUN of both the form-cli CLI and the fkwu kernel is toolchain-free; the BUILD used the Go flattener (table) and clang (emit C -> native), so this is the runtime + CLI rung, not yet the clang-free form-asm c-bootstrap lane. The same universal walker carries both surfaces (bare table-runner via fkc-main-universal-text; baked REPL CLI via fkc-main-baked-repl-text) — one engine, two main()s."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation record; the four-way gate runs in CI on the underlying field-identity band."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a build + runtime-observation receipt."},
+  "phase_gate": {
+    "phase": "standard-receipt-cli-rung-observed",
+    "gate": "Observe, in this linux/x86-64 sandbox, that the full form-cli CLI (not just a bare verdict recipe) builds and runs c-bootstrapped on fkwu, toolchain-free at runtime, with a verified self-source closure.",
+    "state": "cli-rung-observed-linux-elf",
+    "can_move_next_phase": false,
+    "pending_rungs": [
+      "c-bootstrap: binary is clang-bootstrapped (Form->C->clang) and the program/table Go-flattened; the clang-free form-asm lane (Form->asm bytes) remains the north-star rung",
+      "platforms{mac,windows,android}: pending — no devices/network in this sandbox; only linux/x86-64 observed"
+    ]
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-identity-verdict"],
+  "task_ids": ["form-cli-fkwu-cli-observed"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["build", "observation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-06-23_fkwu_standalone_receipt.json",
+    "docs/coherence-substrate/standard-receipt.form",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/form-cli-repl.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/scripts/fourth-arm.sh"
+  ],
+  "change_files": [
+    ".gitignore",
+    "docs/system_audit/commit_evidence_2026-06-24_form_cli_fkwu_cli_observed.json"
+  ],
+  "change_intent": "docs_and_ignore"
+}
