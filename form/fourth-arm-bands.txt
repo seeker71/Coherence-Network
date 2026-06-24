@@ -874,7 +874,7 @@ json-meaning-ingestion fks 1000
 form-cli fks 31
 json-emitter fks 31
 json-promoted-types fks 115
-form-cli-band fks 1023
+form-cli-band fks 4095
 http-client-render fks 2047
 socket-loopback fks 111111
 http-client-socket-verbs fks 127
@@ -962,6 +962,11 @@ live-room-shell fks 63
 file-io-shell fks 255
 form-native-resource-interfaces fks 32767
 fnri-dispatch-carrier fks 1023
+fnri-host-io fks 15
+fnri-audio-standin fks 15
+fnri-video-standin fks 15
+fnri-gpu-standin fks 15
+fsh-fnri-staged fks 7
 native-host-instance fks 4095
 const-recipe fks 511
 model-search fks 31

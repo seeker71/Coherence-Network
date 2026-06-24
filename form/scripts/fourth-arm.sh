@@ -399,7 +399,9 @@ fourth_flatten_sources() {
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-adhoc.XXXXXX")"
         cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
         fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
-        "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$out.tmp" && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
+        if [[ -n "${GO_BIN:-}" && -x "${GO_BIN:-}" ]]; then
+            "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$out.tmp" && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
+        fi
         rm -rf "$d"
     fi
     [[ -s "$out" ]]
