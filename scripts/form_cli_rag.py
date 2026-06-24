@@ -46,6 +46,7 @@ SOURCES = [
     ("spec",      "specs/*.md"),
     ("concept",   "docs/vision-kb/concepts/*.md"),
     ("substrate", "docs/coherence-substrate/*.form"),
+    ("shared",    "docs/shared/*.md"),
 ]
 
 

@@ -1,0 +1,67 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/fkwu-host-filesystem-bml",
+  "commit_scope": "First HostFilesystem slice: BML interface, mac carrier module, four-way band (15), RAG corpus adds docs/shared for sovereignty retrieval.",
+  "standard_receipt": {
+    "claim": "HostFilesystem mac carrier list/read/write/size crosses four-way on fkwu.",
+    "body": "yes — host-filesystem-band uses fs_list/read_file/write_file_text/file_size on emitted walker",
+    "c_bootstrap": "pending",
+    "toolchain_free": "pending",
+    "platforms": {
+      "mac": "observed — validate.sh host-filesystem-band four-way 15",
+      "windows": "pending",
+      "android": "pending"
+    },
+    "honest_floor": "Carrier defs inline in band for fkwu manifest flatten; Windows/Android Host* impls pending."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260624_host_filesystem_bml.json"
+  ],
+  "idea_ids": ["agent-cli"],
+  "spec_ids": ["fkwu-native-host-resources", "form-cli-self-healing-memory"],
+  "task_ids": ["task-2026-06-24-host-filesystem-bml"],
+  "contributors": [
+    {
+      "contributor_id": "cursor-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "form/form-stdlib/host-filesystem.bml",
+    "form/form-stdlib/host-filesystem-mac.fk",
+    "form/form-stdlib/tests/host-filesystem-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/form_cli_rag.py",
+    "docs/system_audit/commit_evidence_20260624_host_filesystem_bml.json"
+  ],
+  "evidence_refs": [
+    "FOUR-WAY: validate.sh host-filesystem-band -> 15 Go/Rust/TS/fkwu.",
+    "RAG: form_cli_rag.py SOURCES adds docs/shared/*.md (rh-heal-sovereignty parity)."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && GO_BIN=form-kernel-go/bin-go ./validate.sh form-stdlib/tests/host-filesystem-band.fk"
+    ],
+    "fourth_arm_outputs": ["host-filesystem four-way 15"]
+  },
+  "ci_validation": { "status": "pending", "commands": [] },
+  "deploy_validation": { "status": "pending", "environment": "local-form-runtime", "notes": "No deploy." },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Windows/Android carriers and BML compile proof script remain open."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "HostFilesystem mac ops four-way on fkwu.",
+    "public_endpoints": ["local form-cli / fkwu only"],
+    "test_flows": ["cd form && GO_BIN=form-kernel-go/bin-go ./validate.sh form-stdlib/tests/host-filesystem-band.fk"],
+    "notes": "Band at form/form-stdlib/tests/host-filesystem-band.fk"
+  }
+}
