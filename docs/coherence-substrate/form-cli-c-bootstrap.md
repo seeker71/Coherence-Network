@@ -64,48 +64,60 @@ Verbs today: `ping ask native-host help about kernel source recreate verify vers
 quit`. `ask <question>` answers from a local oracle when one is reachable. This is
 the **sovereign** surface — small, but every byte of it is Form running native.
 
-## Two doors named honestly — `form/form-cli` vs `bin/form-cli`
+## No bridge — bash and python are grammars
 
-There are two binaries called form-cli, and the difference is the whole point:
+There is no permanent bridge to keep. The fkwu walker runs **any source from any
+grammar the body supports**: a grammar parses the source into a Form recipe, the
+recipe runs on fkwu, and hot pure recipes crystallize to native (the self-JIT, or
+the `form-asm` lever) — *faster than the interpreter the source was written for*.
+bash and python are not carriers we depend on; they are **surfaces with grammars**,
+and the body already holds those grammars:
+
+| grammar | cells | state |
+|---|---|---|
+| **shell (bash-like, "fsh")** | [`shell-grammar.fk`](../../form/form-stdlib/shell-grammar.fk) · [`shell-lower.fk`](../../form/form-stdlib/shell-lower.fk) · [`fsh-main.fk`](../../form/form-stdlib/fsh-main.fk) | **four-way proven** — `shell-parse` 255, `shell-exec` 511, `shell-cell` 15 (Go/Rust/TS/fkwu). Parses bash-shaped script → recipe → cell → runs on fkwu; the ctor recipe JIT-lowers to native. Host tools reached by passthrough until a Form builtin replaces each. |
+| **python** | [`python-bmf-eval.fk`](../../form/form-stdlib/python-bmf-eval.fk) · [`python-bmf-lift.fk`](../../form/form-stdlib/python-bmf-lift.fk) | first-breath surface — def/call/return/binop/ident/int chain, matching CPython for that subset; growing toward four-way. |
+| **typescript · prolog** | `typescript-bmf-eval/-lift.fk` · `prolog-bmf-eval.fk` | recipe interpreters, coverage growing. |
+
+The two binaries called form-cli stand at different points on one path —
+**native-now and legacy-surface**:
 
 | | `form/form-cli` | `bin/form-cli` |
 |---|---|---|
-| what | the c-bootstrap native binary (this guide) | a bash launcher |
-| runs on | fkwu, toolchain-free | routes subcommands to python/go scripts |
-| verbs | the baked Form verb set | the rich set: `ask` `gaps` `close` `review` `run` `index` `stats` … |
-| sovereignty | owns its whole loop | leans on rented local tools (python, ollama, the Go kernel) |
+| what | the c-bootstrap native binary (this guide) | today's launcher: bash + python scripts |
+| runs on | fkwu, toolchain-free, JIT-native | python/go processes |
+| relation to grammars | *runs* grammar source as recipes | *is* bash/python source — exactly what the shell/python grammars parse and run |
 
-`bin/form-cli` is the **bridge** — it carries the rich features today by standing on
-python/bash/go. `form/form-cli` is the **destination** — Form all the way down. The
-work is to migrate each rich verb from the bridge into a native Form recipe on the
-destination, so the sovereign binary absorbs what the rented launcher does. Naming
-the bridge as bridge (not as the goal) is the discipline; see the body-vs-bridge
-framing in [CLAUDE.md](../../CLAUDE.md) (Python is fan-out carrier, not the body).
+`bin/form-cli`'s bash/python source is **input to the grammars we already have**. The
+move is "run the existing script through its grammar" — so the surface comes home as
+the grammars deepen, JIT'd faster than the interpreter it left — not "hand-rewrite
+each verb."
 
 ## The practice — own what we can create ourselves
 
-The north star the user named: **we need no tool we can build ourselves**. Any tool
-with a valid grammar lifts to a Form recipe; the recipe is both the four-way proof
-and (on heat, or through the `form-asm` lever) the native binary; the Form source is
-stored in the body, so the tool is *ours* — inspectable, attributable, reproducible
-from source, runnable offline with nothing rented in the loop. This is
+The north star: **we need no tool we can build ourselves**. Any tool with a grammar
+*is* a Form recipe once parsed; the recipe is both the four-way proof and (on heat,
+or through the `form-asm` lever) the native binary; the Form source is stored in the
+body, so the tool is *ours* — inspectable, attributable, reproducible, offline, with
+nothing rented in the loop. This is
 [`lc-cognitive-sovereignty`](../vision-kb/concepts/lc-cognitive-sovereignty.md) and
 [`lc-self-contained-expression`](../vision-kb/concepts/lc-self-contained-expression.md)
 as a runtime habit.
 
-So when you would reach for a one-off python/bash/powershell tool, first ask:
+So when you would reach for a one-off python/bash/powershell tool, ask:
 
 1. **Is the body's answer enough?** Structural questions (NodeID, equivalence,
    shape) go to the substrate; grounded questions go to `form-cli ask` — the
    form-first gate ([`form-first-reasoning.form`](form-first-reasoning.form)). A
    grounded hit costs no rented compute.
-2. **Does the tool have a grammar?** If its shape is expressible as a recipe, the
-   honest step is to author/grow that recipe and store its Form source — not to
-   leave a rented one-off behind. Fold raw data gas → recipe water → native ice
-   (agent-start-packet); don't hand-write a host wrapper a grammar can carry.
-3. **If neither yet — name the gap, use the bridge, and record the opening.** A
-   rented tool used knowingly while its Form recipe is still being grown is honest;
-   a rented tool treated as the destination is the drift.
+2. **Does the body already have the grammar?** Shell (four-way) and python
+   (first-breath) are home; a script in either *is* runnable as a recipe through
+   `fsh` / the python evaluator. Run it through the grammar rather than shelling out.
+   Fold raw data gas → recipe water → native ice (agent-start-packet).
+3. **If the grammar doesn't cover it yet — name the gap, use host passthrough
+   knowingly, and grow the grammar/builtin.** Passthrough to a host tool while its
+   Form builtin is still being grown is honest; treating the host tool as the
+   destination is the drift.
 
 ## Honest floor (so the practice isn't a placeholder)
 
@@ -115,15 +127,15 @@ This is a real step *toward* tool-sovereignty, not a claim of having arrived:
   toolchain-free, but the one-time build still uses clang (emit C → native) and the
   Go flattener (Form → node-table). The clang-free `form-asm` lane (Form → asm
   bytes) is the pending rung that closes this.
-- **The verb surface is small today.** The sovereign binary does not yet replace
-  bash/python for arbitrary work — the rich verbs still live on the bridge. Growing
-  the native verb set is the path, recipe by recipe.
-- **Grammar→recipe coverage is partial.** The cornerstone audit
+- **Grammar coverage is the real frontier, not a bridge.** The shell grammar is
+  four-way proven for parse/exec/cell and runs bash-shaped scripts native; its host
+  tools still passthrough until each Form builtin lands. The python grammar is a
+  first-breath surface (def/call/return/binop/ident/int), not full CPython yet. So
+  "run any script through its grammar" is *real and proven for shell*, *early for
+  python*, and *growing* for the rest. The cornerstone audit
   ([`form-cli-fourth-kernel-baseline.md`](form-cli-fourth-kernel-baseline.md)) reads
-  the body's *ideas* as north-star and its *proof/altitude* as lagging in the
-  grammar/compiler spine. "Any tool with a grammar lifts to a recipe" is true in
-  principle and partially realized in fact — the BMF cursor crosses four-way, the
-  full source-compiler spine does not yet.
+  the body's *ideas* as north-star and *proof/altitude* as lagging in the
+  grammar/compiler spine — deepening each grammar (and its JIT lowering) is the path.
 - **Platforms pending.** Observed on linux/x86-64 here; mac/windows/android device
   runs are the standard receipt's open rows.
 
