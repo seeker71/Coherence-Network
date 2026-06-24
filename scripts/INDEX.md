@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 336
+**Total files**: 337
 
 | File | Purpose |
 |---|---|
@@ -210,6 +210,7 @@
 | [metal_gqa_attn_audit.sh](metal_gqa_attn_audit.sh) | metal_gqa_attn_audit.sh — GROUPED-QUERY ATTENTION (GQA) running on Metal (M4 Max GPU witness). |
 | [metal_gqa_llama_block_audit.sh](metal_gqa_llama_block_audit.sh) | metal_gqa_llama_block_audit.sh — the WHOLE GQA CAUSAL LLAMA BLOCK forward running on Metal (M4 Max GPU witness). |
 | [metal_gqa_llama_block_decode_audit.sh](metal_gqa_llama_block_decode_audit.sh) | metal_gqa_llama_block_decode_audit.sh — the KV-CACHED CAUSAL GQA DECODE STEP running on Metal (M4 Max GPU |
+| [metal_gqa_multi_layer_stack_audit.sh](metal_gqa_multi_layer_stack_audit.sh) | metal_gqa_multi_layer_stack_audit.sh — the MULTI-LAYER causal GQA llama DECODE STACK running on Metal (M4 Max |
 | [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_decode_audit.sh](metal_llama_block_decode_audit.sh) | metal_llama_block_decode_audit.sh — the KV-CACHED DECODE STEP running on Metal (M4 Max GPU witness): the |
