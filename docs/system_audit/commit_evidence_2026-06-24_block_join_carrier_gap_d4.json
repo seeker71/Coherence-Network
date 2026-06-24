@@ -1,0 +1,56 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/da996f0b",
+  "commit_scope": "Gap D₄ — llama_block0_join_carrier: independent reference vs Form join forward on loaded Q6_K weights at d=4",
+  "files_owned": [
+    "scripts/llama_block0_join_carrier.py",
+    "form/form-stdlib/tests/block-join-carrier-export.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_block_join_carrier_gap_d4.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/llama_block0_join_carrier.py 4",
+      "cd form && ./validate.sh form-stdlib/tests/block-join-gqa-causal-band.fk ... (regression 15)"
+    ],
+    "fourth_arm": "block-join-gqa-causal-band: validate.sh → 15; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+    "notes": "Independent numpy-free ref for lgqa-block-causal d=4; max|Form-ref|=0; matches band pin 1.000297"
+  },
+  "ci_validation": {"status": "pending", "notes": "Carrier script is local witness; CI validate bands unchanged"},
+  "deploy_validation": {"status": "pending", "summary": "No deploy"},
+  "phase_gate": {
+    "phase": "llm-inference-gap-d",
+    "gate": "Join forward on loaded weights matches independent reference",
+    "state": "d4-carrier-d4-pass",
+    "can_move_next_phase": false,
+    "next": "wl-load-q4k + carrier at sliced d from real blk.0 GGUF; ll-buffer store-loop"
+  },
+  "idea_ids": ["form-native-models"],
+  "spec_ids": ["form-native-models"],
+  "task_ids": ["block-join-gap-d4"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:cursor", "contributor_type": "machine", "roles": ["implementation", "carrier-witness"]}
+  ],
+  "agent": {"name": "Cursor", "version": "Auto"},
+  "evidence_refs": [
+    "scripts/llama_block0_join_carrier.py",
+    "form/form-stdlib/tests/block-join-gqa-causal-band.fk",
+    "form/form-stdlib/block-join.fk"
+  ],
+  "change_files": [
+    "scripts/llama_block0_join_carrier.py",
+    "form/form-stdlib/tests/block-join-carrier-export.fk",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-24_block_join_carrier_gap_d4.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "python3 scripts/llama_block0_join_carrier.py 4 → PASS max|Δ|=0",
+    "expected_behavior_delta": "Independent reference confirms bj-block-causal-gqa-d4 on file-loaded weights",
+    "public_endpoints": ["n/a-carrier-script"],
+    "test_flows": ["python3 scripts/llama_block0_join_carrier.py 4"]
+  }
+}
