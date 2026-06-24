@@ -76,6 +76,28 @@
             (let samples (if (gt sample-count 0) (list (list platform (list sample-count 0 0))) (empty)))
             (fc-native-host-row (nhi-cycle platform host speech surprises samples msg))))
 
+    ; fnri — local sovereignty knowledge retrieval (no rented mind, no host-exec).
+    ;   fnri                    → runtime + no-go flag
+    ;   fnri <slug>             → slug:path for fnri-knowledge-cells entry
+    ;   fnri resolve <target> <protocol> → interface name for a platform binding
+    (defn fc-fnri (arg)
+        (if (str_eq arg "")
+            (str_concat "runtime=" (str_concat (fnri-runtime)
+                (str_concat " no-go=" (int_to_str (fnri-no-go-emission?)))))
+            (do
+                (let parts (split-on arg " "))
+                (if (str_eq (head parts) "resolve")
+                    (do
+                        (let target (fc-part parts 1 "macos-arm64"))
+                        (let protocol (fc-part parts 2 "host:process"))
+                        (let resolved (fnri-resolve target protocol))
+                        (let iface (fnri-resolve-interface resolved))
+                        (bnii-interface-name iface))
+                    (do
+                        (let k (fnri-knowledge-for arg))
+                        (str_concat (fnri-knowledge-slug k)
+                            (str_concat ":" (fnri-knowledge-path k))))))))
+
     ; the four-way dispatch: every verb here returns a pure string the shared
     ; brain produces on Go/Rust/TS/fkwu alike (tests/form-cli-band.fk). The
     ; native-only verbs that read the binary's own baked source (source, verify)
@@ -85,9 +107,10 @@
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
             (if (str_eq v "ask") (fca-ask (fc-arg cmd))
+            (if (str_eq v "fnri") (fc-fnri (fc-arg cmd))
             (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask native-host help about kernel source recreate verify diagnose version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples> [message]: return the Form host lifecycle row. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence. diagnose: the live framebuffer — op-dispatch counts and substrate high-water (fkwu)."
+                "form-cli verbs: ping ask fnri native-host help about kernel source recreate verify diagnose version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). fnri [slug|resolve <target> <protocol>]: local sovereignty knowledge from form-native-resource-interfaces.fk (no rented mind). native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples> [message]: return the Form host lifecycle row. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence. diagnose: the live framebuffer — op-dispatch counts and substrate high-water (fkwu)."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")

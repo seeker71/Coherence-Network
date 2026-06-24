@@ -213,19 +213,39 @@ fourth_band_stem() {
 # fourth_band_srcs — the band's source list: every non-core prelude in
 # declared order, then the band file itself (same-name convention as the
 # fallback when no prelude is declared).
+# fourth_band_prelude_mods — every module path from a band's ; preludes: header,
+# including continuation lines that start with "; " (multi-line prelude blocks).
+fourth_band_prelude_mods() {
+    local band="$1"
+    awk '
+        /^; preludes:/ {
+            sub(/^; preludes:[[:space:]]*/, "")
+            if (length($0) > 0) print
+            cont = 1
+            next
+        }
+        cont && /^;[[:space:]]/ {
+            sub(/^;[[:space:]]*/, "")
+            if (length($0) > 0) print
+            next
+        }
+        { cont = 0 }
+    ' "$band" 2>/dev/null | tr ' ' '\n' | grep -vE '(^|/)core\.fk$' | grep . || true
+}
+
 fourth_band_srcs() {
-    local stem="$1" band="form-stdlib/tests/$stem-band.fk" mods
+    local stem="$1" mods band
+    band="form-stdlib/tests/${stem}-band.fk"
     # A manifest stem maps to tests/<stem>-band.fk OR the plain tests/<stem>.fk —
     # fourth_band_stem strips -band when reading, so both are the same band.
     # Read the preludes header from whichever file exists, else a stem registered
     # under the plain name silently builds an empty table and runs three-kernel only.
-    [[ -f "$band" ]] || band="form-stdlib/tests/$stem.fk"
+    [[ -f "$band" ]] || band="form-stdlib/tests/${stem}.fk"
     # Drop ONLY the exact core.fk prelude (the shim mirrors it). Anchor the match
     # to a path boundary so sibling-named modules — substrate-core.fk, bmf-core.fk
     # — keep their place in the source list instead of vanishing as substrings.
-    mods="$(grep -E '^; preludes:' "$band" 2>/dev/null | head -1 | sed 's/^; preludes://' \
-        | tr ' ' '\n' | grep -vE '(^|/)core\.fk$' | grep . || true)"
-    [[ -z "$mods" && -f "form-stdlib/$stem.fk" ]] && mods="form-stdlib/$stem.fk"
+    mods="$(fourth_band_prelude_mods "$band")"
+    [[ -z "$mods" && -f "form-stdlib/${stem}.fk" ]] && mods="form-stdlib/${stem}.fk"
     printf '%s\n' $mods "$band"
 }
 

@@ -45,7 +45,7 @@ EMIT_CHAIN="$S/minimal-surface.fk $S/hati-os-kernel.fk $S/fkc-table-serialize.fk
 FLAT_CHAIN="$EMIT_CHAIN $S/form-parse.fk $S/form-flatten.fk"
 # The ask lane routes through http-fetch over the socket host-call floor for
 # plaintext HTTP, so it must be defined before the dispatcher that routes to it.
-MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/line-grammar.fk\") (read_file \"$S/voice-traits.fk\") (read_file \"$S/nearest-shape.fk\") (read_file \"$S/co-learning.fk\") (read_file \"$S/co-learning-stream.fk\") (read_file \"$S/mesh-dispatch.fk\") (read_file \"$S/surprise-salience.fk\") (read_file \"$S/host-sense-organ.fk\") (read_file \"$S/speech-organ.fk\") (read_file \"$S/native-host-instance.fk\") (read_file \"$S/form-cli.fk\"))"
+MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/resource-port.fk\") (read_file \"$S/bml-native-interface-package-import.fk\") (read_file \"$S/hati-os-targets.fk\") (read_file \"$S/form-native-resource-interfaces.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/line-grammar.fk\") (read_file \"$S/voice-traits.fk\") (read_file \"$S/nearest-shape.fk\") (read_file \"$S/co-learning.fk\") (read_file \"$S/co-learning-stream.fk\") (read_file \"$S/mesh-dispatch.fk\") (read_file \"$S/surprise-salience.fk\") (read_file \"$S/host-sense-organ.fk\") (read_file \"$S/speech-organ.fk\") (read_file \"$S/native-host-instance.fk\") (read_file \"$S/form-cli.fk\"))"
 BAND="(read_file \"$S/form-cli-repl.fk\")"
 
 # 1. flatten form-cli-repl into its program table (string pool rides behind it).
@@ -62,7 +62,7 @@ grep -q fk_prog "$W/form-cli.c" || { echo "emit missing baked program"; exit 1; 
 #    print it and you can rebuild from the binary alone. It's the file-marked
 #    concatenation of every recipe the build reads plus this script, appended as a
 #    byte array (escape-free) and read at runtime by self_source (walker tag 117).
-SOURCES="minimal-surface hati-os-kernel fkc-table-serialize hati-os-kernel-emit form-parse form-flatten core fourth-shim http-client form-cli-ask line-grammar voice-traits nearest-shape co-learning co-learning-stream mesh-dispatch surprise-salience host-sense-organ speech-organ native-host-instance form-cli form-cli-main form-cli-repl"
+SOURCES="minimal-surface hati-os-kernel fkc-table-serialize hati-os-kernel-emit form-parse form-flatten core fourth-shim resource-port bml-native-interface-package-import hati-os-targets form-native-resource-interfaces http-client form-cli-ask line-grammar voice-traits nearest-shape co-learning co-learning-stream mesh-dispatch surprise-salience host-sense-organ speech-organ native-host-instance form-cli form-cli-main form-cli-repl"
 {
   for f in $SOURCES; do printf ';;;; ==== FILE: %s/%s.fk ====\n' "$S" "$f"; cat "$S/$f.fk"; done
   printf ';;;; ==== FILE: build-form-cli.sh ====\n'; cat "$(basename "$0")"
