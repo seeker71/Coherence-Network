@@ -5,6 +5,19 @@ in this body's recipes/specs/concepts and your own local documents, fully offlin
 on a local LLM. A remote oracle (Claude, codex, gemini, grok, cursor) is consulted
 only to *review* — never required to answer.
 
+**Zero required external dependencies.** The c-bootstrapped `fkwu` kernel links
+only the host's base C runtime (on macOS, `/usr/lib/libSystem.B.dylib` — no Go,
+Rust, clang, Python, or network library). Structural questions answer from the
+local lattice, the sovereign body, with nothing leaving the machine. Everything
+below is *optional* — fkwu runs without any of it.
+
+**A local oracle is strongly encouraged.** It is the sovereignty path: with a
+host-local model, `form-cli ask` *reasons* at home too, so you rent a frontier
+mind for nothing the body can answer itself ([`lc-cognitive-sovereignty`](docs/vision-kb/concepts/lc-cognitive-sovereignty.md)).
+The installer sets one up for you (step 3); a remote oracle stays optional and
+review-only. With no oracle at all, structural queries still answer offline — only
+reasoning escalation is unavailable, and that miss is honest, never a crash.
+
 ## One-line install
 
 ```bash
@@ -17,8 +30,9 @@ re-runnable. It will:
 1. **clone the source** to `~/coherence-network` (all recipes + content, local)
 2. **set up the Form kernel** — builds from source if you have Go, otherwise
    downloads the prebuilt macOS arm64 binary from the [latest release](https://github.com/seeker71/Coherence-Network/releases)
-3. **set up a local oracle** — installs [ollama](https://ollama.com) (if you allow)
-   and pulls `llama3.2:3b` (reasoning) + `nomic-embed-text` (memory)
+3. **set up a local oracle** (strongly encouraged) — installs [ollama](https://ollama.com)
+   and pulls `llama3.2:3b` (reasoning) + `nomic-embed-text` (memory). Optional, and
+   skippable, but this is the sovereignty path — reasoning stays on your machine.
 4. **ask which agent CLI** to install — `claude` / `codex` / `gemini` / `grok` /
    `cursor` / none. (`codex` and `gemini` install via Homebrew; `claude` via its
    official installer; `grok`/`cursor` print the official command to verify first.)
