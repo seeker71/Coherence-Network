@@ -125,6 +125,23 @@ fourth_emit_chain_stamp() {
     fourth_hash16 "${FOURTH_EMIT_CHAIN[@]}"
 }
 
+# fourth_platform_slug — darwin-arm64, linux-amd64, … for committed bootstrap binaries.
+fourth_platform_slug() {
+    local os arch
+    os="$(uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+    arch="$(uname -m 2>/dev/null)"
+    case "$arch" in
+        x86_64|amd64) arch="amd64" ;;
+        aarch64|arm64) arch="arm64" ;;
+    esac
+    case "$os" in
+        darwin) printf 'darwin-%s' "$arch" ;;
+        linux) printf 'linux-%s' "$arch" ;;
+        mingw*|msys*|cygwin*) printf 'windows-%s' "$arch" ;;
+        *) printf '%s-%s' "$os" "$arch" ;;
+    esac
+}
+
 # fourth_patch_windows_emitted_c — Windows host patches for emitted walker C.
 fourth_patch_windows_emitted_c() {
     local c_file="$1"
@@ -144,7 +161,7 @@ fourth_patch_windows_emitted_c() {
 build_fourth() {
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
     mkdir -p "$FOURTH_DIR"
-    local stamp out tmp d is_windows uni_c want got
+    local stamp out tmp d is_windows uni_c want got slug boot got_boot
     local -a clang_args
     is_windows=0
     if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
@@ -154,10 +171,31 @@ build_fourth() {
     out="$FOURTH_DIR/fkwu-$stamp"
     [[ -x "$out" ]] && FKWU="$out" && return 0
     if [[ "${FORM_STANDARD_LANE:-0}" == 1 ]]; then
+        slug="$(fourth_platform_slug)"
+        boot="form-stdlib/bootstrap/fkwu-${slug}"
+        got_boot="$(cat "${boot}.stamp" 2>/dev/null || true)"
+        if [[ -x "$boot" && "$got_boot" == "$stamp" ]]; then
+            cp "$boot" "$out"
+            chmod +x "$out"
+            FKWU="$out"
+            echo "  standard lane: fkwu from bootstrap/${slug} (no compile)" >&2
+            return 0
+        fi
         echo "  standard lane: fkwu cache miss at $out (no compile)" >&2
         return 0
     fi
     command -v clang >/dev/null 2>&1 || { echo "  fourth kernel: clang absent — bands run three-kernel only" >&2; return 0; }
+    slug="$(fourth_platform_slug)"
+    boot="form-stdlib/bootstrap/fkwu-${slug}"
+    got_boot="$(cat "${boot}.stamp" 2>/dev/null || true)"
+    if [[ -x "$boot" && "$got_boot" == "$stamp" ]]; then
+        cp "$boot" "$out"
+        chmod +x "$out"
+        FKWU="$out"
+        echo "  fourth kernel: bootstrap binary ${slug} (no clang)" >&2
+        find "$FOURTH_DIR" -maxdepth 1 -name 'fkwu-*' ! -name "$(basename "$out")" -delete 2>/dev/null || true
+        return 0
+    fi
     uni_c="$FOURTH_BOOTSTRAP_UNI_C"
     want="$(fourth_emit_chain_stamp)"
     got="$(cat "$FOURTH_BOOTSTRAP_UNI_STAMP" 2>/dev/null || true)"

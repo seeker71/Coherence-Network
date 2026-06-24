@@ -338,6 +338,7 @@
 | [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | Standard-receipt loop: cached form-cli + fkwu, bootstrap C emit (no Go), no go/rust/clang on PATH. |
 | [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | Maintainer: regen form-stdlib/bootstrap/fkwu-uni.c via bin-go when FOURTH_EMIT_CHAIN changes. |
 | [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | Maintainer: regen form-cli bootstrap table + emitted C when form-cli sources change. |
+| [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | Maintainer: regen bootstrap/fkwu-<platform> + form-cli-<platform> binaries (clang once per platform). |
 | [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |

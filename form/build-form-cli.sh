@@ -71,14 +71,43 @@ FORM_CLI_SRCS=(
 export GO_BIN="$GB"
 # shellcheck source=scripts/fourth-arm.sh
 source scripts/fourth-arm.sh
+slug="$(fourth_platform_slug)"
+CLI_BOOTSTRAP_BIN="$S/bootstrap/form-cli-${slug}"
+CLI_BOOTSTRAP_BIN_STAMP="$S/bootstrap/form-cli-${slug}.stamp"
 stamp="$(fourth_fkwu_cache_stamp)"
 cached_fkwu="$FOURTH_DIR/fkwu-$stamp"
 [[ -x "$cached_fkwu" ]] && FKWU="$cached_fkwu"
-if [[ -z "${FKWU:-}" && "${FORM_STANDARD_LANE:-0}" != 1 ]]; then
-    build_fourth >/dev/null 2>&1 || true
+if [[ -z "${FKWU:-}" ]]; then
+    if [[ "${FORM_STANDARD_LANE:-0}" == 1 ]]; then
+        build_fourth
+    else
+        build_fourth >/dev/null 2>&1 || true
+    fi
 fi
 
 want_cli_stamp="$(fourth_hash16 "${FORM_CLI_SRCS[@]}")"
+
+# Standard lane: copy committed platform binary when stamp matches (no clang).
+if [[ "${FORM_STANDARD_LANE:-0}" == 1 ]]; then
+    got_cli_boot="$(cat "$CLI_BOOTSTRAP_BIN_STAMP" 2>/dev/null || true)"
+    if [[ -x "$CLI_BOOTSTRAP_BIN" && "$got_cli_boot" == "$want_cli_stamp" ]]; then
+        cp "$CLI_BOOTSTRAP_BIN" "$OUT"
+        chmod +x "$OUT"
+        echo "standard lane: $OUT from bootstrap/${slug} (no clang)" >&2
+        exit 0
+    fi
+    echo "standard lane: bootstrap form-cli-${slug} missing or stale" >&2
+    exit 1
+fi
+
+# Warm path: copy platform binary before invoking clang when available.
+got_cli_boot="$(cat "$CLI_BOOTSTRAP_BIN_STAMP" 2>/dev/null || true)"
+if [[ -x "$CLI_BOOTSTRAP_BIN" && "$got_cli_boot" == "$want_cli_stamp" ]]; then
+    cp "$CLI_BOOTSTRAP_BIN" "$OUT"
+    chmod +x "$OUT"
+    echo "  link: bootstrap form-cli-${slug} (no clang)" >&2
+    exit 0
+fi
 
 # 1. flatten form-cli-repl into its program table (string pool rides behind it).
 if [[ -s "$S/bootstrap/form-cli-table.txt" && "$(cat "$CLI_BOOTSTRAP_STAMP" 2>/dev/null)" == "$want_cli_stamp" ]]; then
