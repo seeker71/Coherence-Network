@@ -14,7 +14,7 @@
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk
 ;
-; Proven by: form-stdlib/tests/block-join-band.fk
+; Proven by: form-stdlib/tests/block-join-band.fk form-stdlib/tests/block-join-causal-band.fk
 
 (do
     ; --- the first n dequantized weights as a row vector (for embedding in wq/wk/...) ---
@@ -46,5 +46,32 @@
     ; --- load the first n weights from a Q6_K superblock into row r of matrix w ---
     (defn bj-wq-row-n (w r bytes off n)
         (bj-replace-row w r (bj-row-n bytes off n)))
+
+    ; --- a dim×dim matrix from consecutive dequantized weights starting at index `start` ---
+    (defn bj-matrix-row (bytes off start dim r)
+        (bj-row-n-from bytes off (add start (mul r dim)) dim))
+    (defn bj-matrix-from (bytes off start dim r)
+        (if (eq r dim) (empty)
+            (cons (bj-matrix-row bytes off start dim r)
+                  (bj-matrix-from bytes off start dim (add r 1)))))
+    (defn bj-matrix (bytes off start dim)
+        (bj-matrix-from bytes off start dim 0))
+
+    ; --- all seven 4×4 projection matrices for one causal block (112 weights from one superblock) ---
+    (defn bj-block-mats-d4 (bytes off)
+        (list (bj-matrix bytes off 0 4)
+              (bj-matrix bytes off 16 4)
+              (bj-matrix bytes off 32 4)
+              (bj-matrix bytes off 48 4)
+              (bj-matrix bytes off 64 4)
+              (bj-matrix bytes off 80 4)
+              (bj-matrix bytes off 96 4)))
+
+    ; --- causal llama block forward with every weight matrix from bj-block-mats-d4 ---
+    (defn bj-block-causal-d4 (mats xs g1 eps g2)
+        (lblk-block-causal xs g1 eps
+            (nth mats 0) (nth mats 1) (nth mats 2) (nth mats 3)
+            (div 1.0 (tn-sqrt 4.0)) 4
+            g2 (nth mats 4) (nth mats 5) (nth mats 6)))
 
     0)

@@ -130,9 +130,9 @@
 ;        moves the verdict). The ll-buffer store-loop landing the f32 list in the matvec's read buffer is adjacent.
 ;     D. ✓ D₀ — block-join.fk (255): compose weight-load + tb-dot/tb-matvec/lblk-proj-seq on REAL
 ;        llama3.2:3b Q6_K bytes (mini-GGUF fixture) — load → dot → projection with a loaded wq row.
-;        Four-way incl. fkwu; falsifiable (wqp ≠ toy wq). Adjacent: full lblk-block-causal / lgqa-block-causal
-;        at sliced d then d_model=3072 with all blk.0 tensors + form-asm matvec lane swap; carrier script
-;        vs numpy reference (whisper_block0_real_carrier pattern).
+;        ✓ D₁ — block-join-causal.fk (15): full lblk-block-causal d=4 S=2, ALL SEVEN 4×4 matrices from
+;        loaded bytes; y[0][0]=999794 ≠ toy 1893731. Adjacent: lgqa-block-causal at sliced d, d=3072
+;        carrier vs numpy, form-asm matvec lane swap.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL
