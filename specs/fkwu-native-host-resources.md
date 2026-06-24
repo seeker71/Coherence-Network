@@ -58,8 +58,11 @@ Separately, every cell (human or agent) must be able to **retrieve this architec
 
 | Layer | Today | Bar |
 |-------|-------|-----|
-| fkwu binary | Emitted C from **bin-go** running `hati-os-kernel-emit.fk`, compiled by clang | **form-asm → {macho, pe-coff, elf}** from C bootstrap |
-| T_flat | Rebuilt by **bin-go** bootstrap when `form-flatten.fk` changes | **fkwu self-host** walks prior T_flat to emit next T_flat |
+| fkwu emit | **Committed `bootstrap/fkwu-uni.c`** — no Go in default build | form-asm object emit |
+| fkwu link | clang compiles bootstrap C when cache cold; **standard lane uses cache only** | form-macho universal walker |
+| form-cli flatten | **fkwu+T_flat** or committed `bootstrap/form-cli-table.txt` | always fkwu self-host |
+| form-cli emit | **Committed `bootstrap/form-cli-emitted.c`** — no Go in default build | form-asm |
+| form-cli link | clang when building; **standard lane uses warmed `form/form-cli`** | form-macho |
 | Host-io on fkwu | Partial: `read_file`, `write_file_text`, `fs_list`, `temp_dir`, `read_line`, `print_str`, … | **All** `flt-ops` host-io rows + HMI/sensor ports |
 | Resource model | Functional (`resource-port.fk`, `tool-channel.fk`) | **BML interface + platform impl classes**, router-chosen |
 | Platform matrix | mac dirent proven for `fs_list`; windows/android partial/named gaps | **Complete impl set per platform**, receipt traces |
