@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 349
+**Total files**: 353
 
 | File | Purpose |
 |---|---|
@@ -138,6 +138,7 @@
 | [form_elf_so_android_receipt.sh](form_elf_so_android_receipt.sh) | form_elf_so_android_receipt.sh — the physical on-device receipt for form-elf-so.fk: |
 | [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
 | [form_first_offline_setup.sh](form_first_offline_setup.sh) | form_first_offline_setup.sh — bring the body home so Form-first answers OFFLINE. |
+| [form_fs_fkwu_receipt.sh](form_fs_fkwu_receipt.sh) | form_fs_fkwu_receipt.sh — toolchain-free RUN receipt for form-fs on fkwu. |
 | [form_headn_demo.sh](form_headn_demo.sh) | form_headn_demo.sh — `head N`, the REAL head, built with ZERO clang and direct |
 | [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
 | [form_lower_multiarg_receipt.sh](form_lower_multiarg_receipt.sh) | form_lower_multiarg_receipt.sh — the physical on-device receipt for the N-ARG native |
@@ -251,6 +252,9 @@
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
+| [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | regen_fkwu_bootstrap.sh — maintainer-only: emit form-stdlib/bootstrap/fkwu-uni.c via bin-go. |
+| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | regen_form_cli_bootstrap.sh — maintainer-only: flatten (fkwu or go) + emit form-cli C via bin-go. |
+| [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | regen_standard_lane_binaries.sh — maintainer-only: compile fkwu + form-cli and |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
 | [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |
@@ -335,11 +339,8 @@
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
-| [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | Standard-receipt loop: cached form-cli + fkwu, bootstrap C emit (no Go), no go/rust/clang on PATH. |
-| [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | Maintainer: regen form-stdlib/bootstrap/fkwu-uni.c via bin-go when FOURTH_EMIT_CHAIN changes. |
-| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | Maintainer: regen form-cli bootstrap table + emitted C when form-cli sources change. |
-| [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | Maintainer: regen bootstrap/fkwu-<platform> + form-cli-<platform> binaries (clang once per platform). |
 | [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
+| [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | verify_form_native_sovereignty.sh — standard-receipt validation on c-bootstrap fkwu |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |

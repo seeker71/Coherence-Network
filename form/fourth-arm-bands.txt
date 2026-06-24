@@ -721,6 +721,7 @@ eq-effect-once fks 1
 let-effect-once fks 111
 recursive-let-clobber fks 1
 write-file-text fks 1111
+form-fs fks 16383
 file-append fks 11111
 storage-port fks 11111
 graph-node-port fks 11111

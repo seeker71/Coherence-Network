@@ -21,6 +21,12 @@ plan is a direction, not a fixed endpoint: every route trace, JIT miss,
 wellness signal, carrier-tissue read, and repeated edge category can pull the
 core toward more elegant, flexible, adaptable, sovereign runtime tissue.
 
+**Runtime sovereignty** — one c-bootstrap `fkwu` + `form-cli` on every
+platform, with the standard receipt in
+`docs/coherence-substrate/standard-receipt.form` as the graduation bar.
+Phased collapse plan: [`specs/fkwu-only-kernel-collapse.md`](../specs/fkwu-only-kernel-collapse.md)
+(Phase 0 gate: `form/scripts/validate_fkwu_native_surface.py`).
+
 ## In-Scope Work
 
 ### Product Delivery

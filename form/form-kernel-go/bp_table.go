@@ -284,6 +284,7 @@ var bpTable = map[string][4]uint32{
 	"HEARTBEAT-TABLE": {1, 2, 99, 1821},
 	"HEX-DECODE-ERROR": {1, 2, 99, 1770},
 	"HOLO-ONE": {1, 2, 99, 1745},
+	"HOST-KERNEL-INTERFACE-IMAGE": {1, 2, 99, 9513},
 	"HTML-ARR": {1, 2, 99, 11},
 	"HTML-CODE": {1, 2, 99, 4},
 	"HTML-DOC": {1, 2, 99, 1},

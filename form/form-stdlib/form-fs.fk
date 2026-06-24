@@ -1,0 +1,196 @@
+; form-fs.fk — Form-native filesystem stdlib.
+;
+; High-grammar authority: form-stdlib/bml/form-fs.bml
+; Maps Go os/path/filepath · Python pathlib/os · Node fs/path onto kernel
+; host-io primitives (tags 55–63, 101, 104, source_inventory).
+;
+; All Form code uses these doors — not raw read_file/fs_* at call sites.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ;; ── path algebra (pure Form) ──────────────────────────────────────
+    (defn fs-last-slash-from (path i)
+        (if (lt i 0) (sub 0 1)
+        (if (str_eq (char_at path i) "/")
+            i
+            (fs-last-slash-from path (sub i 1)))))
+
+    (defn fs-last-slash (path)
+        (if (eq (str_len path) 0) (sub 0 1)
+            (fs-last-slash-from path (sub (str_len path) 1))))
+
+    (defn fs-ends-with-slash (path)
+        (if (eq (str_len path) 0) 0
+            (if (str_eq (char_at path (sub (str_len path) 1)) "/") 1 0)))
+
+    (defn fs-path-join (a b)
+        (if (str_eq b "") a
+        (if (eq (fs-ends-with-slash a) 1)
+            (str_concat a b)
+            (str_concat (str_concat a "/") b))))
+
+    (defn fs-path-dirname (path)
+        (do
+            (let i (fs-last-slash path))
+            (if (lt i 0) "."
+            (if (eq i 0) "/"
+                (substring path 0 i)))))
+
+    (defn fs-path-basename (path)
+        (do
+            (let i (fs-last-slash path))
+            (if (lt i 0) path
+                (substring path (add i 1) (str_len path)))))
+
+    (defn fs-path-extension (path)
+        (do
+            (let base (fs-path-basename path))
+            (let dot (str_find base "." 0))
+            (if (lt dot 0) ""
+                (substring base dot (str_len base)))))
+
+    ;; ── metadata ────────────────────────────────────────────────────
+    (defn fs-stat-size (path)
+        (file_size path))
+
+    (defn fs-stat-mtime (path)
+        (file_mtime path))
+
+    (defn fs-exists? (path)
+        (fs_exists path))
+
+    (defn fs-is-file? (path)
+        (if (eq (fs_exists path) 0) 0
+            (if (eq (fs_is_dir path) 1) 0 1)))
+
+    (defn fs-is-dir? (path)
+        (fs_is_dir path))
+
+    (defn fs-stat (path)
+        (list
+            (fs-stat-size path)
+            (fs-stat-mtime path)
+            (fs-is-file? path)
+            (fs-is-dir? path)
+            (fs-exists? path)))
+
+    ;; ── text and byte I/O ───────────────────────────────────────────
+    (defn fs-read-text (path)
+        (read_file path))
+
+    (defn fs-write-text (path text)
+        (write_file_text path text))
+
+    (defn fs-read-bytes (path)
+        (read_file_bytes path))
+
+    (defn fs-write-bytes (path bytes)
+        (write_file_bytes path bytes))
+
+    (defn fs-append-bytes (path bytes)
+        (file_append_bytes path bytes))
+
+    (defn fs-read-slice (path offset len)
+        (read_file_slice path offset len))
+
+    (defn fs-byte-at (path offset)
+        (file_byte_at path offset))
+
+    ;; ── directory and file lifecycle ────────────────────────────────
+    (defn fs-mkdir (path)
+        (fs_mkdir path))
+
+    (defn fs-mkdir-parents (path)
+        (fs_mkdir path))
+
+    (defn fs-list (path)
+        (fs_list path))
+
+    (defn fs-remove-file (path)
+        (fs_remove path))
+
+    (defn fs-remove-tree (path)
+        (fs_rmdir path))
+
+    (defn fs-rename (src dest)
+        (fs_rename src dest))
+
+    ;; ── convenience paths ───────────────────────────────────────────
+    (defn fs-temp-dir ()
+        (temp_dir))
+
+    (defn fs-path (raw)
+        raw)
+
+    ;; ── glob: "*.ext" in one directory ───────────────────────────────
+    (defn fs-suffix? (name suffix)
+        (do
+            (let n (str_len name))
+            (let s (str_len suffix))
+            (if (lt n s) 0
+                (if (str_eq (substring name (sub n s) n) suffix) 1 0))))
+
+    (defn fs-glob-suffix (dir suffix)
+        (fs-glob-suffix-acc (fs_list dir) suffix (empty)))
+
+    (defn fs-glob-suffix-acc (names suffix acc)
+        (if (nil? names) acc
+            (if (eq (fs-suffix? (head names) suffix) 1)
+                (fs-glob-suffix-acc (tail names) suffix (cons (head names) acc))
+                (fs-glob-suffix-acc (tail names) suffix acc))))
+
+    (defn fs-glob (dir pattern)
+        (if (and (ge (str_find pattern "*" 0) 0)
+                 (ge (str_find pattern "." 0) 0))
+            (fs-glob-suffix dir (substring pattern 1 (str_len pattern)))
+            (fs_list dir)))
+
+    ;; ── tree walk via source_inventory ──────────────────────────────
+    (defn fs-walk (root suffix)
+        (source_inventory root suffix (list)))
+
+    (defn fs-copy-text (src dest)
+        (fs-write-text dest (fs-read-text src)))
+
+    (defn fs-move (src dest)
+        (fs_rename src dest))
+
+    ;; ── contract smoke (storage-test pattern) ───────────────────────
+    (defn fs-stdlib-test (_x)
+        (do
+            (let root (fs-path-join (fs-temp-dir) "form-fs-band"))
+            (let _pre (fs-remove-tree root))
+            (let _mk (fs-mkdir root))
+            (let fpath (fs-path-join root "alpha.txt"))
+            (let w1 (fs-write-text fpath "hello"))
+            (let fpath2 (fs-path-join root "beta.txt"))
+            (let w2 (fs-write-text fpath2 "world"))
+            (let joined (fs-path-join root "sub"))
+            (let _mk2 (fs-mkdir joined))
+            (let pre (sum (list
+                (if (str_eq (fs-read-text fpath) "hello") 1 0)
+                (if (eq (fs-exists? fpath) 1) 2 0)
+                (if (eq (fs-is-file? fpath) 1) 4 0)
+                (if (eq (fs-is-dir? root) 1) 8 0)
+                (if (ge (len (fs-list root)) 2) 16 0)
+                (if (eq (fs-stat-size fpath) 5) 32 0)
+                (if (gt (fs-stat-mtime fpath) 0) 64 0))))
+            (let app (fs-append-bytes fpath (list 33)))
+            (let r8 (if (eq app 6) 128 0))
+            (let sl (fs-read-slice fpath 0 5))
+            (let r9 (if (str_eq sl "hello") 256 0))
+            (let ren (fs-rename fpath (fs-path-join root "alpha-renamed.txt")))
+            (let r10 (if (and (eq ren 0) (eq (fs-exists? fpath) 0)) 512 0))
+            (let glob (fs-glob root ".txt"))
+            (let r11 (if (ge (len glob) 1) 1024 0))
+            (let walk (fs-walk root ".txt"))
+            (let r12 (if (ge (len walk) 1) 2048 0))
+            (let bn (if (str_eq (fs-path-basename (fs-path-join root "beta.txt")) "beta.txt") 4096 0))
+            (let dn (if (str_eq (fs-path-dirname (fs-path-join root "beta.txt")) root) 8192 0))
+            (let _rm (fs-remove-file fpath2))
+            (let _rm2 (fs-remove-file (fs-path-join root "alpha-renamed.txt")))
+            (let _rt (fs-remove-tree root))
+            (sum (list pre r8 r9 r10 r11 r12 bn dn))))
+
+    0)

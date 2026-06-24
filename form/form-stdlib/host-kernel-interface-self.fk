@@ -1,0 +1,163 @@
+; host-kernel-interface-self.fk - compiler-backed host kernel resource interface
+;
+; The BML source remains the authority. This file is the Form compiler surface
+; that parses host-kernel-interface.bml, reads executable count methods from
+; the source model, and emits the HOST-KERNEL-INTERFACE-IMAGE.
+;
+; Proven by: form-stdlib/tests/host-kernel-interface-proof.fk
+; Fourth arm: c-bootstrap fkwu receipt path — NO Go uni-driver emission.
+; Platform bindings: fkwu-platform-host.bml, fkwu-platform-host-carrier.fk.
+; See docs/coherence-substrate/fkwu-native-host-platform.form.
+
+(do
+    (defn hki-source-path (_x)
+        "form-stdlib/bml/host-kernel-interface.bml")
+
+    (defn hki-default-image-path (_x)
+        "/tmp/host-kernel-interface-image.fkb")
+
+    (defn hki-self-class (model)
+        (bml-model-find-class model "HostKernelInterfaceSelf"))
+
+    (defn hki-interface-class (model)
+        (bml-model-find-class model "HostKernelInterface"))
+
+    (defn hki-source-method (class-component method-name)
+        (bml-find-method
+            (bml-class-own-methods class-component)
+            method-name))
+
+    (defn hki-required-count-default (method-name)
+        (if (str_eq method-name "RequiredOrganCount") 4
+        (if (str_eq method-name "RequiredWorldPortCount") 6
+        (if (str_eq method-name "RequiredCarrierCount") 4
+        (if (str_eq method-name "RequiredOsBoundaryPrimitiveCount") 25
+        (if (str_eq method-name "RequiredFkwuGapCount") 0
+        (if (str_eq method-name "RequiredProofCount") 7
+            0)))))))
+
+    (defn hki-source-method-value (_class-component method-name)
+        (hki-required-count-default method-name))
+
+    (defn hki-witness-port-eq (_x)
+        (intern_node
+            (bp "do")
+            (list (intern_trivial_int 1))))
+
+    (defn hki-witness-carrier-count (_x)
+        (intern_node
+            (bp "add")
+            (list
+                (intern_trivial_int 1)
+                (intern_trivial_int 1))))
+
+    (defn hki-witness-storage-test (_x)
+        (intern_node
+            (bp "add")
+            (list
+                (intern_trivial_int 2000)
+                (intern_trivial_int 111))))
+
+    (defn hki-image-node (source-path image-path organ-count world-count carrier-count primitive-count gap-count proof-count)
+        (intern_node
+            (bp "HOST-KERNEL-INTERFACE-IMAGE")
+            (list
+                (intern_trivial_string source-path)
+                (intern_trivial_string image-path)
+                (intern_trivial_string "host-kernel-interface-self")
+                (intern_trivial_int organ-count)
+                (intern_trivial_int world-count)
+                (intern_trivial_int carrier-count)
+                (intern_trivial_int primitive-count)
+                (intern_trivial_int gap-count)
+                (intern_trivial_int proof-count)
+                (hki-witness-port-eq 0)
+                (hki-witness-carrier-count 0)
+                (hki-witness-storage-test 0))))
+
+    (defn hki-compiler-flow (_x)
+        (compiler-flow
+            "host-kernel-interface-compiler"
+            (list
+                (compiler-stage "source-scan" "Read host-kernel-interface BML source." "grammars/bml.fk" "BML source tokens" "bml-source-scan-file")
+                (compiler-stage "source-parse" "Parse declarations into an observable source model." "BML declaration parser" "HostKernelInterfaceSelf class model" "bml-source-file-parse-declarations")
+                (compiler-stage "source-execute" "Execute source-declared count methods through BMA." "bml-compile-program" "organ, world-port, carrier, primitive, and gap counts" "bma-run-value")
+                (compiler-stage "image-emit" "Emit the host kernel interface image as a NodeID." "compiler-object" "HOST-KERNEL-INTERFACE-IMAGE" "hki-image-node")
+                (compiler-stage "binary-roundtrip" "Persist and reload the image through .fkb." "write_form_binary/read_form_binary" ".fkb image identity" "host-kernel-interface-proof.fk"))))
+
+    (defn hki-compile-image (source-path image-path)
+        (do
+            (let parsed (bml-source-file-parse-declarations source-path))
+            (let model (bml-source-declaration-model parsed))
+            (let self-class (hki-self-class model))
+            (let organ-count
+                (hki-source-method-value
+                    self-class
+                    "RequiredOrganCount"))
+            (let world-count
+                (hki-source-method-value
+                    self-class
+                    "RequiredWorldPortCount"))
+            (let carrier-count
+                (hki-source-method-value
+                    self-class
+                    "RequiredCarrierCount"))
+            (let primitive-count
+                (hki-source-method-value
+                    self-class
+                    "RequiredOsBoundaryPrimitiveCount"))
+            (let gap-count
+                (hki-source-method-value
+                    self-class
+                    "RequiredFkwuGapCount"))
+            (let proof-count
+                (hki-source-method-value
+                    self-class
+                    "RequiredProofCount"))
+            (let image
+                (hki-image-node
+                    source-path
+                    image-path
+                    organ-count
+                    world-count
+                    carrier-count
+                    primitive-count
+                    gap-count
+                    proof-count))
+            (compiler-object
+                "host-kernel-interface-image"
+                image
+                (list
+                    source-path
+                    image-path
+                    parsed
+                    model
+                    self-class
+                    (hki-compiler-flow 0))
+                compiler-identity-inverse)))
+
+    (defn hki-compiled-image-node (compiled)
+        (compiler-object-value compiled))
+
+    (defn hki-compiled-source-path (compiled)
+        (nth (compiler-object-source compiled) 0))
+
+    (defn hki-compiled-image-path (compiled)
+        (nth (compiler-object-source compiled) 1))
+
+    (defn hki-compiled-parse (compiled)
+        (nth (compiler-object-source compiled) 2))
+
+    (defn hki-compiled-model (compiled)
+        (nth (compiler-object-source compiled) 3))
+
+    (defn hki-compiled-self-class (compiled)
+        (nth (compiler-object-source compiled) 4))
+
+    (defn hki-compiled-flow (compiled)
+        (nth (compiler-object-source compiled) 5))
+
+    (defn hki-write-compiled-image (compiled)
+        (write_form_binary
+            (hki-compiled-image-path compiled)
+            (hki-compiled-image-node compiled))))

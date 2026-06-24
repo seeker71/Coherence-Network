@@ -24,6 +24,7 @@ FOURTH_MANIFEST="fourth-arm-bands.txt"
 FOURTH_CHAIN=(
     form-stdlib/minimal-surface.fk
     form-stdlib/hati-os-kernel.fk
+    form-stdlib/host-io-fs-fkwu-emit.fk
     form-stdlib/fkc-table-serialize.fk
     form-stdlib/hati-os-kernel-emit.fk
     form-stdlib/form-parse.fk
@@ -50,6 +51,7 @@ FKWU=""
 FOURTH_EMIT_CHAIN=(
     form-stdlib/minimal-surface.fk
     form-stdlib/hati-os-kernel.fk
+    form-stdlib/host-io-fs-fkwu-emit.fk
     form-stdlib/fkc-table-serialize.fk
     form-stdlib/hati-os-kernel-emit.fk
 )
@@ -101,18 +103,23 @@ fourth_band_request() {
 # Bash ship `sha256sum`; they don't overlap. The value is only ever a per-host
 # cache key, so the algorithm is free — only availability matters.
 fourth_hash16() {
-    if command -v shasum >/dev/null 2>&1 && printf test | shasum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | shasum | cut -c1-16
-    elif command -v sha1sum >/dev/null 2>&1 && printf test | sha1sum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | sha1sum | cut -c1-16
-    elif command -v sha256sum >/dev/null 2>&1 && printf test | sha256sum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | sha256sum | cut -c1-16
-    elif command -v cksum >/dev/null 2>&1 && printf test | cksum >/dev/null 2>&1; then
-        cat "$@" 2>/dev/null | cksum | cut -c1-16
-    else
-        echo "fourth-arm.sh: need shasum, sha1sum, sha256sum, or cksum for cache keys" >&2
-        return 1
-    fi
+    # Strip CR so cache stamps match across LF checkouts (mac/linux) and CRLF
+    # working trees (Windows Git Bash autocrlf).
+    _fourth_hash_stdin() {
+        if command -v shasum >/dev/null 2>&1 && printf test | shasum >/dev/null 2>&1; then
+            tr -d '\r' | shasum | cut -c1-16
+        elif command -v sha1sum >/dev/null 2>&1 && printf test | sha1sum >/dev/null 2>&1; then
+            tr -d '\r' | sha1sum | cut -c1-16
+        elif command -v sha256sum >/dev/null 2>&1 && printf test | sha256sum >/dev/null 2>&1; then
+            tr -d '\r' | sha256sum | cut -c1-16
+        elif command -v cksum >/dev/null 2>&1 && printf test | cksum >/dev/null 2>&1; then
+            tr -d '\r' | cksum | cut -c1-16
+        else
+            echo "fourth-arm.sh: need shasum, sha1sum, sha256sum, or cksum for cache keys" >&2
+            return 1
+        fi
+    }
+    cat "$@" 2>/dev/null | _fourth_hash_stdin
 }
 
 # fourth_fkwu_cache_stamp — cache key for the standing fkwu binary (emitter chain + committed uni.c).
@@ -362,7 +369,8 @@ fourth_table() {
                 | "$FKWU" "$FOURTH_FLATTEN_TABLE" 0 2>/dev/null \
                 | sed -n "/^==T-${stem}==\$/,/^==T-END==\$/p" | sed -e '1d' -e '$d' > "$out.tmp"
             [[ -s "$out.tmp" ]] && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
-        else
+        fi
+        if [[ ! -s "$out" ]]; then
             d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-t.XXXXXX")"
             cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
             fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"

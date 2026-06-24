@@ -1,0 +1,24 @@
+; tests/host-kernel-gaps-close-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/storage-port.fk form-stdlib/resource-port.fk form-stdlib/host-kernel-carrier.fk
+;
+; Closes the eight named fkwu/host-kernel gaps with shape proofs that
+; cross four-way where deterministic. Clock and entropy use shape-only
+; checks; native_blueprint and RAM/route carriers use structural ids.
+;
+; Verdict: 127 when every bit holds across Go, Rust, TypeScript, and fkwu.
+
+(do
+    (let c0 (if (eq (node_type (native_blueprint "read_file")) 10) 1 0))
+    (let c1 (if (eq (node_type (native_blueprint "socket_listen")) 10) 2 0))
+    (let c2 (if (gt (now_unix_ms) 1000000000) 4 0))
+    (let draw (random_bytes 8))
+    (let c3 (if (eq (len draw) 8) 8 0))
+    (let put-ok (volatile_cell_put "gaps" "k" 99))
+    (let got (volatile_cell_get "gaps" "k"))
+    (let c4 (if (and (eq put-ok 1) (eq got 99)) 16 0))
+    (let carrier (hk-carrier-test 0))
+    (let c5 (if (eq carrier 1111) 32 0))
+    (let plus (intern_node (bp "add") (list (intern_trivial_int 2) (intern_trivial_int 3))))
+    (let c6 (if (eq (walk_recipe plus) 5) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

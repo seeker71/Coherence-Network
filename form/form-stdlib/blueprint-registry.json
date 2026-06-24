@@ -721,6 +721,20 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 9513,
+      "name": "HOST-KERNEL-INTERFACE-IMAGE",
+      "meaning": "Serialized host-kernel-interface image: organ/world-port/carrier/primitive/fkwu-gap counts and witness recipes binding resource-port and storage-port contracts",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/host-kernel-interface-self.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 16,
       "name": "SOVEREIGN-BOUNDARY-RECEIPT",
       "meaning": "Generic boundary decision receipt carrying the selected allow/stop/witness/re-enter choice and its traceable CHOICE-RECEIPT.",

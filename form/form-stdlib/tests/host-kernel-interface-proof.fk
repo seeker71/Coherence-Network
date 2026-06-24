@@ -1,0 +1,107 @@
+; tests/host-kernel-interface-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/host-kernel-interface-self.fk form-stdlib/host-kernel-fkwu-gap-ledger.fk form-stdlib/resource-port.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk
+;
+; Proves the host-kernel-interface BML source compiles to a named image,
+; carries the organ/world-port/carrier/primitive/gap counts declared in
+; source, and round-trips through .fkb. Witness recipes exercise port-shape
+; identity (resource-port) and storage-port verdict shape (1111).
+;
+; Verdict: 34 when every assertion holds across Go, Rust, and TypeScript.
+; Round-trip .fkb identity and BML exec-parse rows remain named gaps until
+; the form-binary carrier crosses on all three walkers (same floor as
+; kernel-core-image-compiler-proof).
+
+(do
+    (defn hki-score-bool (actual)
+        (if actual 1 0))
+
+    (defn hki-score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn hki-score-gt (actual expected)
+        (if (gt actual expected) 1 0))
+
+    (defn hki-score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn hki-score-node (actual expected)
+        (if (node_eq actual expected) 1 0))
+
+    (let source-path (hki-source-path 0))
+    (let image-path (str_concat (temp_dir) "/host-kernel-interface-compiler-image.fkb"))
+    (let compiled (hki-compile-image source-path image-path))
+    (let image (hki-compiled-image-node compiled))
+    (let image-kids (node_children image))
+    (let parsed (hki-compiled-parse compiled))
+    (let model (hki-compiled-model compiled))
+    (let self-class (hki-compiled-self-class compiled))
+    (let flow (hki-compiled-flow compiled))
+    (let stages (compiler-flow-stages flow))
+    (let port-eq-recipe (nth image-kids 8))
+    (let carrier-recipe (nth image-kids 9))
+    (let storage-recipe (nth image-kids 10))
+    (let bytes-written (hki-write-compiled-image compiled))
+    (let loaded (read_form_binary image-path))
+    (let loaded-kids (node_children loaded))
+    (let organ-count
+        (hki-source-method-value self-class "RequiredOrganCount"))
+    (let world-count
+        (hki-source-method-value self-class "RequiredWorldPortCount"))
+    (let carrier-count
+        (hki-source-method-value self-class "RequiredCarrierCount"))
+    (let primitive-count
+        (hki-source-method-value self-class "RequiredOsBoundaryPrimitiveCount"))
+    (let gap-count
+        (hki-source-method-value self-class "RequiredFkwuGapCount"))
+    (let proof-count
+        (hki-source-method-value self-class "RequiredProofCount"))
+    (let mem-verdict (storage-test (carrier-memory) "hki-mem"))
+    (let file-path (str_concat (temp_dir) "/hki-storage-port.log"))
+    (let file-verdict (storage-test (carrier-file) file-path))
+    (let gaps-closed (hkg-gaps-closed))
+
+    (sum
+        (list
+            (hki-score-bool (compiler-object? compiled))
+            (hki-score-str (compiler-object-kind compiled) "host-kernel-interface-image")
+            (hki-score-bool (bml-source-exec-parse-ok? parsed))
+            (hki-score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (hki-score-bool (not (nil? self-class)))
+            (hki-score-str (hki-compiled-source-path compiled) source-path)
+            (hki-score-str (hki-compiled-image-path compiled) image-path)
+            (hki-score-str (compiler-flow-name flow) "host-kernel-interface-compiler")
+            (hki-score-int (compiler-flow-stage-count flow) 5)
+            (hki-score-str (compiler-stage-name (head stages)) "source-scan")
+            (hki-score-str (compiler-stage-artifact (nth stages 3)) "HOST-KERNEL-INTERFACE-IMAGE")
+            (hki-score-node (node_category image) (bp "HOST-KERNEL-INTERFACE-IMAGE"))
+            (hki-score-str (node_value (nth image-kids 2)) "host-kernel-interface-self")
+            (hki-score-int organ-count 4)
+            (hki-score-int world-count 6)
+            (hki-score-int carrier-count 4)
+            (hki-score-int primitive-count 25)
+            (hki-score-int gap-count 0)
+            (hki-score-int proof-count 7)
+            (hki-score-int (node_value (nth image-kids 3)) organ-count)
+            (hki-score-int (node_value (nth image-kids 4)) world-count)
+            (hki-score-int (node_value (nth image-kids 5)) carrier-count)
+            (hki-score-int (node_value (nth image-kids 6)) primitive-count)
+            (hki-score-int (node_value (nth image-kids 7)) gap-count)
+            (hki-score-int (walk_recipe port-eq-recipe) 1)
+            (hki-score-int (walk_recipe carrier-recipe) 2)
+            (hki-score-int (walk_recipe storage-recipe) 2111)
+            (hki-score-int mem-verdict 1111)
+            (hki-score-int file-verdict 1111)
+            (hki-score-node (native_blueprint "read_file") (make_nodeid 1 2 10 1))
+            (hki-score-node (native_blueprint "socket_listen") (make_nodeid 1 2 10 1))
+            (hki-score-node (native_blueprint "now_unix_ms") (make_nodeid 1 2 10 1))
+            (hki-score-gt bytes-written 0)
+            (hki-score-gt (file_size image-path) 0)
+            (hki-score-bool (node_eq loaded image))
+            (hki-score-node (node_category loaded) (bp "HOST-KERNEL-INTERFACE-IMAGE"))
+            (hki-score-node (port (afferent) (shape-bytes)) (afferent-bytes))
+            (hki-score-node (port (efferent) (shape-pixel)) (efferent-pixel))
+            (hki-score-int (hkg-gap-verdict (hkg-gap-ledger) gap-count) 1)
+            (hki-score-int gaps-closed 1))))
