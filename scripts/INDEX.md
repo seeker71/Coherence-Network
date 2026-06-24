@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 344
+**Total files**: 346
 
 | File | Purpose |
 |---|---|
@@ -30,6 +30,7 @@
 | [backfill_task_workspaces.py](backfill_task_workspaces.py) | Backfill agent_tasks.workspace_id from linked idea.context.idea_id. |
 | [backfill_traceability.py](backfill_traceability.py) | Backfill traceability links: spec→idea, code→spec, PR→spec. |
 | [backup_postgres.sh](backup_postgres.sh) | Nightly Postgres backup for Coherence Network. |
+| [block_join_asm_witness.sh](block_join_asm_witness.sh) | block_join_asm_witness.sh — gap D₃ execution witness: fam-dot2 RUNS on REAL loaded weights |
 | [bmf_bootstrap_audit.sh](bmf_bootstrap_audit.sh) | bmf_bootstrap_audit.sh — measure the BMF bootstrap's minimum closure vs releasable tissue. |
 | [bml_form_jit_metal_planes_audit.sh](bml_form_jit_metal_planes_audit.sh) | bml_form_jit_metal_planes_audit.sh — supported target assembly floor. |
 | [bml_hati_native_compiler_probe.sh](bml_hati_native_compiler_probe.sh) | _no top-of-file purpose_ |
@@ -76,7 +77,7 @@
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
-| [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — the native Form kernel that form-cli routes body-first |
+| [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — warm the Go bootstrap flattener (bin-go) that |
 | [ensure_form_cli_native.sh](ensure_form_cli_native.sh) | ensure_form_cli_native.sh — the c-bootstrap fkwu form-cli, warmed once and cached. |
 | [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
@@ -201,6 +202,7 @@
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
 | [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
 | [live_speech_loop_receipt.sh](live_speech_loop_receipt.sh) | live_speech_loop_receipt.sh - known text played over speaker, heard by live mics. |
+| [llama_block0_join_carrier.py](llama_block0_join_carrier.py) | scripts/llama_block0_join_carrier.py — gap D₄: independent numpy-free reference vs Form |
 | [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |

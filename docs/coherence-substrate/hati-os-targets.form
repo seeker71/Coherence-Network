@@ -5,6 +5,8 @@
     (rests-on hati-os.form tool-channel.form fourth-kernel-physical-lanes.form)
     (recipe form/form-stdlib/hati-os-targets.fk)
     (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 8388607 four-way-fkwu)
+    (resource-interfaces form/form-stdlib/form-native-resource-interfaces.fk)
+    (resource-interfaces-proof form/form-stdlib/tests/form-native-resource-interfaces-band.fk -> 8191 three-kernel; fkwu flatten table returns 0 — fourth-arm gap owned)
     (native-cli-emit-proof form/form-stdlib/tests/hati-os-native-cli-emit-band.fk -> 7 four-way-fkwu)
     (metal-emit-proof form/form-stdlib/tests/metal-emit-band.fk -> 31 four-way-fkwu)
     (form-macho-proof form/form-stdlib/tests/form-macho-band.fk -> 31 four-way-fkwu)

@@ -58,6 +58,7 @@
   (lineage
     (implements  core-axioms.form)                      # this kernel IS an implementation of the core spec
     (resource-as-port   resource-port.fk)               # axiom-4 over host resources
+    (native-interfaces  form-native-resource-interfaces.fk hati-os-targets.fk)  # class-based interfaces + per-platform impl rows; fkwu-only resolution
     (open-set    learned-primitive.fk open-primitive-set.form)  # trusted composites by heat
     (choice      recognition-router.fk champion-challenger.fk)  # sovereign choice + A/B
     (organ       local-inference-as-organ.form)         # drive the silicon, do not reimplement it
