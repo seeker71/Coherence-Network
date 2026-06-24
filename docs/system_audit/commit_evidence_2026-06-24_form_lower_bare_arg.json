@@ -1,0 +1,84 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "claude/adoring-elgamal-03ccd7",
+  "commit_scope": "Heal the integer-lane ARG register read so the bare single-arg ARG node (2) — no index slot — lowers to base+0, restoring four-way for the two leaf bands that carried it. #3592 (the multi-arg calling convention) generalized lo-argr from `argr` to `base + (lo-val prog i)`, reading the ARG's index from slot 1. The indexed multi-arg shape (2 k 0 0) supplies that slot; but two single-arg leaf bands — inram-leaf-emit and recipe-dylib — carry the bare legacy ARG (2) (the comment's documented 'a single-arg function's only ARG is index 0'), whose row has no slot 1. lo-val read it as null and `add base null` crashed the three reference walkers at the typed host boundary (Go: as_int: null; Rust: as_int: Null; TS: math.int: expected int-like, got null). fkwu's lenient out-of-range nth returned 0, so the fourth arm computed the correct verdict and the divergence hid as a 'registered fourth-arm band'. lo-argi reads the index, defaulting the bare (2) (row length 1) to 0 so arg 0 -> base + 0 = base, byte-identical to the pre-#3592 single-arg behavior; indexed ARGs (length >= 2) read slot 1 unchanged. The fix removes the hidden dependency on fkwu's lenient nth — all four kernels now compute the index via the explicit length check, not nth-out-of-range semantics. The brief's hypothesis that #3607/#3608 caused the regression was disproved by bisect: lo-argr/lo-val are byte-identical across #3607, #3608, and their parent; the regression is #3592.",
+  "files_owned": [
+    "form/form-stdlib/form-lower.fk",
+    "docs/system_audit/commit_evidence_2026-06-24_form_lower_bare_arg.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/inram-leaf-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-macho.fk form-stdlib/tests/recipe-dylib-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "inram-leaf-emit: verdict 14073, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree on every sample (was: Go/Rust/TS crash as_int: null, fkwu 14073 — divergent).",
+      "recipe-dylib: verdict 787349, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree on every sample (was: same crash signature, fkwu 787349 — divergent).",
+      "No regression across the ARG-lowering family (each four-way, 0 divergent): form-lower 31, form-lower-multiarg 127, form-lower-cond 31, form-lower-condgen 15, form-lower-cvt 15, form-lower-float 15, form-lower-fp-stack 31, form-lower-sim 15, form-lower-map 31, form-lower-x64 15, capability-form-tree 13113, capability-form-mul 2428, capability-form-div 3027, merkle 4, merkle-readdress 127, afferent-priority 1023."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI has not run yet for this branch. The change heals one Form lowering recipe (lo-argr via a new lo-argi helper); CI re-runs validate.sh across the suite, which now crosses the two previously-divergent leaf bands four-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "Form stdlib lowerer recipe fix; no public HTTP endpoint or service change. The recipe reaches the kernels through the repo, not a deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (inram 14073, recipe-dylib 787349, 0 divergent; no regression across the lowering family); CI and merge remain pending. No deploy applies to a Form stdlib lowerer recipe."
+  },
+  "idea_ids": [
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "form-lower-arg-index-default"
+  ],
+  "task_ids": [
+    "task-2026-06-24-form-lower-bare-arg"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "acceptance-criteria"]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": ["analysis", "bisect", "implementation", "validation", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "change_intent": "runtime_fix",
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/inram-leaf-emit-band.fk -> '✓ → 14073' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent'.",
+    "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-macho.fk form-stdlib/tests/recipe-dylib-band.fk -> '✓ → 787349' and 'fourth arm: 1 band(s) four-way' and '1 ok, 0 divergent'.",
+    "Before the fix: Go 'as_int: null', Rust 'as_int: Null', TS 'math.int: expected int-like, got null' at lo-argr@form-lower.fk:47 < lo-mul@91 < lo-add@71 < lo-compile < lo-compile-fn; fkwu 14073. Crash trace: form/.cache/form-kernel-go/crash-20260624T051804Z-6932.json.",
+    "Bisect: `git show 8475eb21c:form/form-stdlib/form-lower.fk` shows lo-argr was `(add base (lo-val prog i))` already at #3592; identical at #3607 (dbcb45ca7) and #3608 (804c1b196). Before #3592 (8475eb21c^) the integer lane used `argr` directly (no slot-1 read). The bare (2) ARG has been in both bands since #3274/#3277.",
+    "No regression: ARG-lowering family each four-way, 0 divergent — form-lower 31, form-lower-multiarg 127, form-lower-cond 31, form-lower-condgen 15, form-lower-cvt 15, form-lower-float 15, form-lower-fp-stack 31, form-lower-sim 15, form-lower-map 31, form-lower-x64 15, capability-form-tree 13113, capability-form-mul 2428, capability-form-div 3027, merkle 4, merkle-readdress 127, afferent-priority 1023."
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "lo-compile-fn now lowers a leaf prog whose single ARG is the bare (2) node (no explicit index) to the same native image fkwu already produced — arg 0 -> base + 0 = base. The two leaf bands (inram-leaf-emit emits the in-RAM JIT image; recipe-dylib wraps it as a Mach-O .o) cross four-way at 14073 / 787349 with 0 divergent, instead of crashing the Go/Rust/TS walkers at the typed host boundary. Indexed multi-arg ARGs (2 k 0 0) are byte-for-byte unchanged.",
+    "public_endpoints": [
+      "none changed; the recipe is a Form stdlib lowerer body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: validate.sh runs inram-leaf-emit-band (14073) and recipe-dylib-band (787349) on Go, Rust, TypeScript, and fkwu to the identical verdict with 0 divergent.",
+      "Bisect: lo-argr/lo-val byte-identical across #3607, #3608, and parent 8475eb21c — root cause is #3592 (multi-arg lo-argr = base + slot1), not the brief's #3607/#3608 hypothesis.",
+      "No regression: the full ARG-lowering family (form-lower, multiarg, cond, condgen, cvt, float, fp-stack, sim, map, x64, capability-form-tree/mul/div, merkle, merkle-readdress, afferent-priority) re-crosses four-way — the change only alters the length-1 ARG row (previously a guaranteed null crash), leaving every indexed-ARG path identical."
+    ]
+  },
+  "change_files": [
+    "form/form-stdlib/form-lower.fk",
+    "docs/system_audit/commit_evidence_2026-06-24_form_lower_bare_arg.json"
+  ]
+}

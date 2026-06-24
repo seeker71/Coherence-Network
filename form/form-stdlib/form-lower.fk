@@ -37,14 +37,18 @@
     (defn lo-arg? (prog i) (eq (lo-tag prog i) 2))     ; is the node ARG (held in w<base+index>)?
     (defn lo-lit? (prog i) (eq (lo-tag prog i) 1))
     ; an ARG node carries its argument INDEX in slot 1 (a single-arg function's only
-    ; ARG is index 0 — the legacy shape (2 0 0 0)). The register holding arg k is
-    ; base + k: ONE formula, the index is data, no per-arity code. A single-arg
-    ; function passes base = its banked register (1 for the straight-line fn, 0/19
-    ; in the recursive frame); arg 0 -> base + 0 = base, byte-identical to before.
-    ; A multi-arg function banks w0..w(n-1) into a contiguous block w19..w(19+n-1)
-    ; (base 19), so arg k -> w(19+k) — w19+ are callee-saved, untouched by the
-    ; single-accumulator scratch (w0/w2) a leaf body uses.
-    (defn lo-argr (prog i base) (add base (lo-val prog i)))   ; register holding ARG node i
+    ; ARG is index 0 — the legacy shapes (2 0 0 0) AND the bare (2)). The register
+    ; holding arg k is base + k: ONE formula, the index is data, no per-arity code.
+    ; A single-arg function passes base = its banked register (1 for the straight-line
+    ; fn, 0/19 in the recursive frame); arg 0 -> base + 0 = base, byte-identical to
+    ; before. A multi-arg function banks w0..w(n-1) into a contiguous block
+    ; w19..w(19+n-1) (base 19), so arg k -> w(19+k) — w19+ are callee-saved, untouched
+    ; by the single-accumulator scratch (w0/w2) a leaf body uses.
+    ; lo-argi reads that index, defaulting the bare single-arg ARG (2) — no slot 1 — to
+    ; 0, so a leaf prog needn't spell the implicit index. Indexed ARGs (len >= 2) read
+    ; slot 1 as before; only the absent-slot case (which read null) is healed.
+    (defn lo-argi (prog i) (if (eq (len (lo-row prog i)) 1) 0 (lo-val prog i)))
+    (defn lo-argr (prog i base) (add base (lo-argi prog i)))   ; register holding ARG node i
 
     ; lower the subtree rooted at i to its instruction byte image. Convention: the
     ; single argument n lives in w<argr> (1 for the straight-line function, 19 —
