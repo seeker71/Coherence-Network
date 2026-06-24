@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 337
+**Total files**: 338
 
 | File | Purpose |
 |---|---|
@@ -89,6 +89,7 @@
 | [field_relay_client.py](field_relay_client.py) | field_relay_client.py — breath-4 carriers + dial-out client for the field relay (the on-device e2e receipt). |
 | [field_relay_dev_setup.sh](field_relay_dev_setup.sh) | field_relay_dev_setup.sh — provision a session to BUILD + PROVE the field relay's breath-4 carriers. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
+| [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
