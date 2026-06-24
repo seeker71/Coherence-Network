@@ -932,3 +932,4 @@ gguf-read fks 127
 gguf-locate fks 127
 form-asm-matvec fks 127
 form-asm-matvec-loop fks 127
+weight-load fks 4095
