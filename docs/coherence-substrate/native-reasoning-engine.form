@@ -27,6 +27,20 @@
   (lean-on android-mesh-learning      "the oracle-retirement flywheel: ask native first, retire the oracle per class as MEASURED confidence crosses the gate")
   (lean-on form-train-step           "the SGD atom, four-way — composed by the chain rule into the full backprop loop")
 
+  ; ── THE ORACLE COMES HOME (the teacher signal runs on owned ground) ───────────────────
+  ; The champion/challenger flywheel asks native first and retires the oracle per class as
+  ; measured confidence crosses the gate. That oracle can be a host-local on-device model —
+  ; so the whole loop that GROWS the Form-native body runs on owned hardware, with nothing
+  ; leaving the device even while it is still learning. The rented frontier becomes the last
+  ; rung, asked only when the on-device oracle is itself not enough. The on-device model is a
+  ; bridge — a frozen binary, not a recipe — that teaches the native body which will retire
+  ; it, never the destination. (form-first-reasoning.form ladder; lc-cognitive-sovereignty.)
+  (oracle-comes-home
+    (was   rented-frontier-teacher   egress-for-every-training-signal)
+    (now   host-local-on-device      sovereign-in-egress     measured llama3.2:3b-52%)
+    (kind  bridge non-native         composts-per-class-toward native-form-91%)
+    (frontier last-rung beyond-on-device-only))
+
   ; ── THE GAP (named as closing recipe, not debt) ──────────────────────────────────────
   (gap structured-code-corpus "the corpus is request->output text today; lift it to (intent -> code-as-cells) over the body's own files + git diffs, using the cursor + bridge — the act of structuring teaches the model our body")
   (gap code-gen-loop          "compose form-train-step through attention+FFN to GENERATE a recipe/diff, not predict a tool; prove the loop four-way on a tiny net, then scale (arch-capacity already searches capacity)")

@@ -1,0 +1,94 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk
+;
+; gqa-multi-layer-stack-band — the DEPTH stack of causal GQA llama decoder blocks lifted to the four-kernel
+; floor: the depth structure the REAL llama3.2:3b runs (28 blocks, each its OWN weights and OWN KV cache,
+; GROUPED-QUERY attention + llama3 RoPE theta-500000). The single GQA block runs on the M4 GPU forward
+; (#3587/#3590) and the GQA KV-cached decode step runs on the GPU (#3612, four-way recipe #3601); this proves
+; they STACK through DEPTH. The proof is that the KV-cached GQA depth stack is BIT-IDENTICAL to the
+; full-recompute GQA depth stack (each layer's cached decode == its full causal recompute, #3601;
+; lgqa-block-causal is four-way #3590).
+;
+; Self-grounding — every magnitude is either a PUBLISHED four-way pin or an equivalence to an already-four-way
+; recipe; no new libm reference authored (the GQA-stack sibling of kv-gqa-llama-block-band's discipline):
+;   the single-head (n_q=1 n_kv=1 HD=4, base-10000 cfg) GQA stack reduces EXACTLY to the MHA stack
+;     (multi-layer-stack.fk), so its magnitudes are the PUBLISHED MHA-stack libm pins
+;     (multi_layer_stack_reference.py, self-checked to reproduce causal-attention-band): 1893731 / 1936158 /
+;     1944810 — and the band proves group=1 GQA stack == MHA stack bit-for-bit (the consolidation, claim 128).
+;   the REAL GQA sharing (n_q=2, n_kv=1, HD=2, llama3 theta-500000) magnitudes are grounded by EQUIVALENCE to
+;     the already-four-way lgqa-block-causal (#3590): the recompute GQA stack is a fold of that proven block,
+;     and the cached GQA stack == it bit-for-bit (S=2 AND the S=3 inductive step that threads the cache past
+;     the boundary THROUGH the depth).
+;
+; Two distinct layers (L0 = the causal-attention-band weights; L1 = a second, different bundle) so the stack
+; genuinely threads per-layer weights forward — not one block applied twice.
+;
+; Verdict 255 when the multi-layer causal GQA llama stack lands four-way:
+;   1     scn1[0][0]  → 1893731   (1-layer cfg10 GQA stack base case == causal-attention-band, libm-pinned)
+;   2     scn2[0][0]  → 1936158   (2-layer cfg10 GQA stack == MHA-stack libm pin)
+;   4     scn2[1][2]  → 1944810   (2-layer cfg10 GQA stack, last token == MHA-stack libm pin)
+;   8     sgn2 == scn2            (S=2 cfg10: the KV-cached GQA depth stack EXACTLY equals the recompute stack)
+;   16    sgn2s == scn2s          (REAL GQA sharing n_q=2 n_kv=1 HD=2 theta-500000: cached == recompute — heart)
+;   32    sgn3s == scn3s          (S=3 GQA sharing: the cache threads past the boundary through depth — inductive)
+;   64    sgn3s[0] == sgn2s[0]    (AR invariant through depth+grouping: token 0 unchanged by appending future)
+;   128   scn2 == mha2            (consolidation: group=1 cfg10 GQA stack == the MHA stack bit-for-bit — GQA is
+;                                  the general case, MHA the group=1 special case, NO parallel path)
+(do
+    ; --- element-wise float vector equality (for the AR-invariant token-vector claim) ---
+    (defn gm-veq (a b)
+      (if (eq (len a) 0) 1
+          (if (eq (head a) (head b)) (gm-veq (tail a) (tail b)) 0)))
+
+    ; --- layer 0: the causal-attention-band / llama-block-band fixture (d=4, weights re-read per cfg) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    ; --- layer 1: a SECOND, distinct weight bundle (same architecture, different weights) ---
+    (let g1b (list 1.0 0.9 1.05 1.1))  (let g2b (list 0.95 1.1 0.9 1.0))
+    (let wqb (list (list 0.1 0.3 -0.2 0.4) (list -0.3 0.2 0.5 -0.1) (list 0.4 -0.1 0.2 0.3) (list 0.0 0.25 -0.35 0.15)))
+    (let wkb (list (list 0.3 -0.2 0.4 0.1) (list 0.15 0.5 -0.1 0.2) (list -0.05 0.3 0.25 -0.15) (list 0.4 -0.25 0.1 0.35)))
+    (let wvb (list (list 0.2 0.4 -0.15 0.3) (list 0.5 -0.1 0.2 0.45) (list -0.2 0.35 0.1 -0.05) (list 0.25 0.15 -0.3 0.2)))
+    (let wob (list (list 0.4 -0.3 0.2 0.5) (list 0.1 0.45 -0.15 0.2) (list -0.25 0.3 0.4 0.05) (list 0.35 -0.1 0.25 -0.2)))
+    (let wgb (list (list 0.3 0.2 -0.4 0.1) (list 0.5 -0.3 0.15 0.25) (list -0.1 0.4 0.3 -0.2) (list 0.2 0.05 -0.25 0.45)))
+    (let wub (list (list 0.15 0.35 -0.2 0.1) (list 0.4 -0.15 0.25 0.3) (list -0.25 0.2 0.35 -0.1) (list 0.3 0.1 -0.05 0.4)))
+    (let wdb (list (list 0.35 -0.15 0.25 0.2) (list 0.2 0.4 -0.3 0.1) (list -0.2 0.15 0.5 -0.25) (list 0.1 -0.05 0.3 0.45)))
+    (let eps 0.00001)
+    ; --- the SAME 9-element layer bundles multi-layer-stack.fk uses (lyr-* accessors shared) ---
+    (let L0 (list g1 wq wk wv wo g2 wg wu wd))
+    (let L1 (list g1b wqb wkb wvb wob g2b wgb wub wdb))
+    (let layers1 (list L0))
+    (let layers2 (list L0 L1))
+    (let x3 (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75) (list 0.5 1.0 -0.5 0.25)))
+
+    ; --- single-head cfg10 (n_q=1 n_kv=1 HD=4): the GQA stack reduces EXACTLY to the MHA stack ---
+    (let cfg10 (rope-cfg 10000.0 32.0 1.0 4.0 8192.0))
+    (let sc4 (div 1.0 (tn-sqrt 4.0)))
+    (let scn1 (lgqa-stack-causal   x  layers1 eps sc4 1 1 4 cfg10))
+    (let scn2 (lgqa-stack-causal   x  layers2 eps sc4 1 1 4 cfg10))
+    (let sgn2 (lgqa-stack-generate x  layers2 eps sc4 1 1 4 cfg10))
+    (let c0 (if (eq (round (mul (nth (nth scn1 0) 0) 1000000.0)) 1893731) 1 0))
+    (let c1 (if (eq (round (mul (nth (nth scn2 0) 0) 1000000.0)) 1936158) 2 0))
+    (let c2 (if (eq (round (mul (nth (nth scn2 1) 2) 1000000.0)) 1944810) 4 0))
+    (let c3 (if (eq (kv-lol-eq sgn2 scn2) 1) 8 0))
+
+    ; --- the REAL GQA sharing (n_q=2 n_kv=1 HD=2) under the llama3 theta-500000 cfg, S=2 and S=3 ---
+    (let cfgl3 (rope-cfg-llama3))
+    (let sc2 (div 1.0 (tn-sqrt 2.0)))
+    (let scn2s (lgqa-stack-causal   x  layers2 eps sc2 2 1 2 cfgl3))
+    (let sgn2s (lgqa-stack-generate x  layers2 eps sc2 2 1 2 cfgl3))
+    (let scn3s (lgqa-stack-causal   x3 layers2 eps sc2 2 1 2 cfgl3))
+    (let sgn3s (lgqa-stack-generate x3 layers2 eps sc2 2 1 2 cfgl3))
+    (let c4 (if (eq (kv-lol-eq sgn2s scn2s) 1) 16 0))
+    (let c5 (if (eq (kv-lol-eq sgn3s scn3s) 1) 32 0))
+    (let c6 (if (eq (gm-veq (nth sgn3s 0) (nth sgn2s 0)) 1) 64 0))
+
+    ; --- consolidation: group=1 cfg10 GQA stack == the MHA stack (multi-layer-stack.fk) bit-for-bit ---
+    (let mha2 (lblk-stack-causal x layers2 eps sc4 4))
+    (let c7 (if (eq (kv-lol-eq scn2 mha2) 1) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

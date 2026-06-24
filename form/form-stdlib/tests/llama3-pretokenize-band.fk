@@ -1,0 +1,51 @@
+; preludes: form-stdlib/core.fk form-stdlib/llama3-pretokenize.fk
+;
+; llama3-pretokenize-band — Llama 3 (tiktoken-style) regex pre-tokenization on the four-kernel floor.
+; The whisper/GPT-2 tokenizer front-end is four-way (pretokenize #3542, byte-to-symbol #3503, bpe #3447,
+; tokenize #3550) — but the GPU decode stack the body runs on the M4 (#3424/#3412 multi-layer KV-cached
+; llama decode) is LLAMA, and llama3's tokenizer differs in exactly ONE algorithmic piece: this
+; pre-tokenization `pat_str`. The byte→symbol map and lowest-rank-first BPE merge are SHARED with whisper;
+; only the rank table (DATA) and this splitter differ. So this is the one algorithmic gap between the
+; proven GPU llama decode and the first end-to-end native LLAMA token.
+;
+; The proof is the splitting LAWS — the four that DISTINGUISH llama3 from GPT-2, plus the shared
+; load-bearing ones — each confirmed bit-identical to Python `re` (ASCII-reduced llama3 pat_str) before
+; authoring:
+;
+;   bit 1   — ANCHOR / leading-char word: " tokenizer" -> [" tokenizer"]. The space is absorbed into the
+;             word by `[^\r\nA-Za-z0-9]?\p{L}+`; this is the exact string the llama path must tokenize.
+;   bit 2   — CASE-INSENSITIVE contraction `(?i:)`: "DON'T" -> ["DON","'T"]. llama3 splits the UPPERCASE
+;             'T; GPT-2's lowercase-only `'t` would NOT. DISTINGUISHING LAW #1.
+;   bit 4   — DIGITS group 1-3 `[0-9]{1,3}`: "1234" -> ["123","4"]. GPT-2's ` ?\p{N}+` gives ["1234"].
+;             DISTINGUISHING LAW #2.
+;   bit 8   — WORD leading char is ANY non-newline non-alnum, not just a space: "_word" -> ["_word"].
+;             GPT-2's ` ?\p{L}+` gives ["_","word"]. DISTINGUISHING LAW #3.
+;   bit 16  — DIGITS take NO leading space (no ` ?` on `[0-9]{1,3}`): " 42" -> [" ","42"]. GPT-2's
+;             ` ?\p{N}+` gives [" 42"]. DISTINGUISHING LAW #4 — and it forces the ws run==1 path (one space
+;             before a non-space): llama3 emits the lone space, where GPT-2's ` ?` absorption never hits it.
+;   bit 32  — INTERNAL whitespace `\s+(?!\S)`: "a   b" -> ["a","  "," b"] — a run of 3 spaces leaves its
+;             LAST space to lead the next word (shared with GPT-2; the load-bearing lookahead law).
+;   bit 64  — NEWLINE rule `\s*[\r\n]+`: "a\nb" -> ["a","\n","b"] — a ws run is cut after its last newline,
+;             llama3's explicit newline handling (the `l3-lastnl` cut).
+;   bit 128 — the COMPOSITE real anchor: "DON'T 1234" -> ["DON","'T"," ","123","4"] — ties the
+;             case-insensitive contraction, the lone-space-before-digits, and the 1-3 digit grouping in one
+;             string: three distinguishing laws firing together in left-to-right scan order.
+;
+; Pure string/int/list recursion — no host I/O, no floats (no e-notation risk), small tables — the
+; fourth-friendly subset. Verdict 255 when the llama3 splitter lands four-way.
+(do
+  (defn strs-eq (a b)
+    (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+        (if (eq (len b) 0) 0
+            (if (str_eq (head a) (head b)) (strs-eq (tail a) (tail b)) 0))))
+
+  (let c0 (if (eq (strs-eq (llama3-pretokenize " tokenizer") (list " tokenizer")) 1) 1 0))
+  (let c1 (if (eq (strs-eq (llama3-pretokenize "DON'T") (list "DON" "'T")) 1) 2 0))
+  (let c2 (if (eq (strs-eq (llama3-pretokenize "1234") (list "123" "4")) 1) 4 0))
+  (let c3 (if (eq (strs-eq (llama3-pretokenize "_word") (list "_word")) 1) 8 0))
+  (let c4 (if (eq (strs-eq (llama3-pretokenize " 42") (list " " "42")) 1) 16 0))
+  (let c5 (if (eq (strs-eq (llama3-pretokenize "a   b") (list "a" "  " " b")) 1) 32 0))
+  (let c6 (if (eq (strs-eq (llama3-pretokenize "a\nb") (list "a" "\n" "b")) 1) 64 0))
+  (let c7 (if (eq (strs-eq (llama3-pretokenize "DON'T 1234") (list "DON" "'T" " " "123" "4")) 1) 128 0))
+
+  (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

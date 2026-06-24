@@ -1,0 +1,56 @@
+; gqa-attn.fk — grouped-query attention (GQA): the attention real llama3.2/3.1/3.3
+; (and most modern decoder models) use. n_head query heads share n_kv_head < n_head
+; KV heads; query head h reads KV head (h / group), group = n_head / n_kv_head.
+;
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk
+;
+; transformer-mh.fk (four-way) is plain MHA: every head slices q AND k/v at (mul h hd)
+; — one KV head per query head (n_kv_head = n_head). Real llama3.2:3b has 24 query
+; heads but only 8 KV heads, so 3 query heads share each KV head and k/v are projected
+; to the SMALLER n_kv_head*hd width. That sharing mapping lived ONLY inside
+; transformer-kernel.fk's tk-emit-llama as emitted C (kvh = h / (heads/kv_heads),
+; three-way, projecting to a C unit) — never a standalone four-way recipe. This lifts
+; it to the four-kernel floor, composing transformer-mh's OWN proven primitives
+; (tb-seq-headslice, tb-attn-seq, tb-seq-cat). The ONLY new arithmetic vs MHA is the
+; kv-head index (div h grp) — so GQA at group=1 IS tb-mh-attn (MHA is the
+; n_kv_head = n_head case; core-abstraction-first, MHA generalizes to GQA, not a
+; parallel path). With KVD < D a query-head-indexed k/v slice walks off the end of the
+; shorter k/v vector; only the divided kv-head index stays in bounds — that
+; out-of-bounds is the strange-minimal catch the band pins.
+
+; query head h reads kv head kvh (each width hd); shared √hd scale.
+(defn tb-gqa-head (qs ks vs h kvh hd scale)
+  (tb-attn-seq (tb-seq-headslice qs h hd)
+               (tb-seq-headslice ks kvh hd)
+               (tb-seq-headslice vs kvh hd) scale))
+
+; heads h..n-1 concatenated position-wise; query head h reads kv head (div h grp).
+(defn tb-gqa-loop (qs ks vs h n grp hd scale)
+  (if (eq h (sub n 1))
+      (tb-gqa-head qs ks vs h (div h grp) hd scale)
+      (tb-seq-cat (tb-gqa-head qs ks vs h (div h grp) hd scale)
+                  (tb-gqa-loop qs ks vs (add h 1) n grp hd scale))))
+
+; GQA over projected q/k/v: n query heads, nkv kv heads (k/v are nkv*hd wide), head-dim hd.
+; group = n / nkv. group=1 (nkv=n) reduces exactly to transformer-mh's tb-mh-attn.
+(defn tb-gqa-attn (qs ks vs n nkv hd scale)
+  (tb-gqa-loop qs ks vs 0 n (div n nkv) hd scale))
+
+; --- causal GQA: the autoregressive decoder mask, per head. Query position i in
+;     head h attends only to keys/values 0..i of its shared KV head (tb-attn-seq-causal,
+;     transformer-block.fk, four-way 511). Identical to tb-gqa-attn but each head's
+;     attention is masked — the only change is tb-attn-seq → tb-attn-seq-causal, no new
+;     arithmetic. At the last position the prefix is the whole sequence, so the last
+;     token is bit-identical to non-causal GQA; earlier tokens differ (they no longer
+;     see the future). This is the block the generation loop steps. ---
+(defn tb-gqa-head-causal (qs ks vs h kvh hd scale)
+  (tb-attn-seq-causal (tb-seq-headslice qs h hd)
+                      (tb-seq-headslice ks kvh hd)
+                      (tb-seq-headslice vs kvh hd) scale))
+(defn tb-gqa-loop-causal (qs ks vs h n grp hd scale)
+  (if (eq h (sub n 1))
+      (tb-gqa-head-causal qs ks vs h (div h grp) hd scale)
+      (tb-seq-cat (tb-gqa-head-causal qs ks vs h (div h grp) hd scale)
+                  (tb-gqa-loop-causal qs ks vs (add h 1) n grp hd scale))))
+(defn tb-gqa-attn-causal (qs ks vs n nkv hd scale)
+  (tb-gqa-loop-causal qs ks vs 0 n (div n nkv) hd scale))

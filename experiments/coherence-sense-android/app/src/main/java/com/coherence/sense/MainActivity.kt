@@ -50,6 +50,7 @@ import android.opengl.EGLDisplay
 import android.opengl.EGLSurface
 import android.opengl.GLES20
 import android.provider.Settings
+import android.util.Log
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
@@ -147,6 +148,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var cachedBluetoothState = "unknown"
     private var cachedSpeakerState = "unknown"
     private var cachedCameraState = "unknown"
+
+    // On-device native host tick: Android executes the packaged C-bootstrapped
+    // form-cli and asks native-host-instance.fk for lifecycle decisions. Host APIs
+    // measure; Form decides.
+    private val accelWindow = ArrayDeque<Int>()
+    private var onDeviceSelfTest = "native form-cli: warming"
+    private var onDeviceLive = "native host: gathering local readings"
 
     private lateinit var feed: TextView
     private lateinit var status: TextView
@@ -248,6 +256,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
         handler.postDelayed({ checkForAppUpdate(false) }, 1600)
+        startOnDeviceRecognition()
     }
 
     private fun renderFirstFrame() {
@@ -612,9 +621,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if (loc.hasAccuracy()) l.put("acc", loc.accuracy.toDouble())   // meters
             snap.put("loc", l)
         }
+        val body = bodyStateJson()
         snap.put("organs_active", JSONArray(activeOrgans()))
         snap.put("channels_offered", JSONArray(offeredTransports()))
-        snap.put("body_state", bodyStateJson())
+        snap.put("body_state", body)
+        snap.put("native_host_instance", nativeHostInstance(body))
         snap.put("tick", tick++)
         innerCellsCreated += 1
 
@@ -652,10 +663,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 sentBytes += encoded.toByteArray().size.toLong()
                 sentSamples += 1
                 val code = conn.responseCode
-                val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                val responseBody = (if (code in 200..299) conn.inputStream else conn.errorStream)
                     ?.bufferedReader()?.readText() ?: ""
                 conn.disconnect()
-                runOnUiThread { onReply(code, body, snap) }
+                runOnUiThread { onReply(code, responseBody, snap) }
             } catch (e: Exception) {
                 runOnUiThread {
                     lastMacState = "offline — ${e.message}"
@@ -713,6 +724,47 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             refreshMesh()
             handler.postDelayed(this, 5000)
         }
+    }
+
+    // The phone-native lifecycle tick is entirely on-device and independent of
+    // the Mac. Each pass returns a Form native-host receipt through form-cli.
+    private val onDeviceLoop = object : Runnable {
+        override fun run() {
+            latest[Sensor.TYPE_ACCELEROMETER]?.let { a ->
+                val mag = sqrt((a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).toDouble())
+                accelWindow.addLast(mag.toInt())
+                while (accelWindow.size > 8) accelWindow.removeFirst()
+            }
+            val body = bodyStateJson()
+            Thread {
+                val nativeHost = nativeHostInstance(body)
+                runOnUiThread {
+                    onDeviceLive = nativeHostStatus(nativeHost)
+                    requestDashboardRender()
+                }
+            }.start()
+            handler.postDelayed(this, 2000)
+        }
+    }
+
+    // Start on-device native Form decisioning independently of Mac sharing.
+    private fun startOnDeviceRecognition() {
+        registerSensor(Sensor.TYPE_ACCELEROMETER)
+        handler.removeCallbacks(onDeviceLoop)
+        handler.postDelayed(onDeviceLoop, 800)
+        Thread {
+            val nativeHost = nativeHostInstance(bodyStateJson())
+            Log.i("NativeFormCli", "native host receipt = ${nativeHost.optString("raw", nativeHost.toString())}; available=${NativeFormCli.available(this)}")
+            runOnUiThread {
+                onDeviceSelfTest = if (nativeHost.optBoolean("native", false)) {
+                    "native form-cli: LIVE - ${nativeHost.optString("kind")} decision=${nativeHost.optString("decision")}"
+                } else {
+                    "native form-cli: ${nativeHost.optString("decision", "unavailable")} ${nativeHost.optString("error")}"
+                }
+                onDeviceLive = nativeHostStatus(nativeHost)
+                requestDashboardRender()
+            }
+        }.start()
     }
 
     private fun announcePresence() {
@@ -1221,6 +1273,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("sample_count", sentSamples + micSamples + cameraSamples + gpuSamples)
     }
 
+    private fun nativeHostInstance(body: JSONObject, message: String = ""): JSONObject =
+        NativeFormCli.nativeHostJson(
+            this,
+            platform = "android",
+            mic = packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE),
+            camera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
+            screen = true,
+            speechGate = if (micSamples > 0 && micRms > 0.025) 2 else 0,
+            freq = 0,
+            surprises = body.optLong("surprise_count", 0L),
+            samples = body.optLong("sample_count", 0L),
+            message = message,
+        )
+
+    private fun nativeHostStatus(nativeHost: JSONObject): String =
+        "native host: decision=${nativeHost.optString("decision", "unknown")} route=${nativeHost.optString("share_route", "quiet")} listening=${nativeHost.optBoolean("listening", false)} transcribing=${nativeHost.optBoolean("transcribing", false)} learned=${nativeHost.optLong("learned_count", 0L)}"
+
     private fun jsonArrayHas(array: JSONArray?, value: String): Boolean {
         if (array == null) return false
         for (i in 0 until array.length()) {
@@ -1589,6 +1658,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "gpu $gpuSamples latency=${"%.2f".format(Locale.US, gpuLatencyMs)}ms",
         ).joinToString("\n")
         dashboard.text = listOf(
+            onDeviceSelfTest,
+            onDeviceLive,
             "floor: active samples, silence, unavailable hardware, and not-granted lanes are visible signals",
             "north-star: signed organs negotiate wifi, bluetooth, audio, video, screen, sensor, and network channels by heartbeat, then measure fidelity, confidence, and density",
             "learned from sister work: signals are information, not verdicts; silence is evidence",
@@ -1609,6 +1680,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun sendHeartbeat(base: String) {
         val (samplesPerSecond, bytesPerSecond) = flowRates()
+        val body = bodyStateJson()
         val payload = JSONObject()
             .put("organ_id", organId)
             .put("listening", true)
@@ -1616,7 +1688,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("organs_active", JSONArray(activeOrgans()))
             .put("channels_offered", JSONArray(offeredTransports()))
             .put("heartbeat", heartbeatJson())
-            .put("body_state", bodyStateJson())
+            .put("body_state", body)
+            .put("native_host_instance", nativeHostInstance(body))
             .put("sample_rate_hz", samplesPerSecond)
             .put("bytes_per_second", bytesPerSecond)
         val conn = (URL("$base/hati/mesh/organs/heartbeat").openConnection() as HttpURLConnection).apply {
@@ -1766,6 +1839,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sm.unregisterListener(this)
         handler.removeCallbacks(loop)
         handler.removeCallbacks(meshLoop)
+        handler.removeCallbacks(onDeviceLoop)
         stopMicSampling()
         stopCameraSampling()
         stopGpuSampling()
@@ -1773,6 +1847,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
+        // On-device recognition runs whether or not we are sharing with a Mac.
+        registerSensor(Sensor.TYPE_ACCELEROMETER)
+        handler.removeCallbacks(onDeviceLoop)
+        handler.postDelayed(onDeviceLoop, 800)
         if (connected) {
             registerSensor(Sensor.TYPE_ACCELEROMETER)
             registerSensor(Sensor.TYPE_GYROSCOPE)

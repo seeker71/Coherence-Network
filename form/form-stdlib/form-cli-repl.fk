@@ -15,10 +15,38 @@
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
 (do
+    ; 'diagnose' reads the live framebuffer the walker is born with — fk_arms[t]
+    ; per-op dispatch counts plus the node/string/arena/value-stack/float
+    ; high-water — back into this running program through kernel_stat (a fkwu-only
+    ; op, tag 127, the read twin of self_source). The readout is the kernel
+    ; inspecting itself mid-session: what it is computing, how big its substrate
+    ; has grown, where its time is going. fkwu-only, so it sits beside source/
+    ; verify in the runtime wrapper, never in the four-way dispatch.
+    (defn fc-diagnose ()
+        (str_concat "fkwu live | ops="
+        (str_concat (int_to_str (kernel_stat 0))
+        (str_concat " distinct="
+        (str_concat (int_to_str (kernel_stat 1))
+        (str_concat " hottest=tag"
+        (str_concat (int_to_str (kernel_stat 2))
+        (str_concat "x"
+        (str_concat (int_to_str (kernel_stat 3))
+        (str_concat " nodes="
+        (str_concat (int_to_str (kernel_stat 4))
+        (str_concat " strings="
+        (str_concat (int_to_str (kernel_stat 5))
+        (str_concat " cons="
+        (str_concat (int_to_str (kernel_stat 6))
+        (str_concat " vstack="
+        (str_concat (int_to_str (kernel_stat 7))
+        (str_concat " floats="
+                    (int_to_str (kernel_stat 8))))))))))))))))))))
+
     ; the native-only verbs read this binary's own baked source via self_source
     ; (a fkwu-only op), so they live here in the runtime wrapper rather than in
     ; the four-way dispatch: 'source' prints the Form source the binary was built
-    ; from; 'verify' reports that the binary carries its own source (self-coherence).
+    ; from; 'verify' reports that the binary carries its own source (self-coherence);
+    ; 'diagnose' surfaces the live framebuffer/observability state (see above).
     ; Everything else routes to fc-respond, the four-way-proven brain.
     (defn fc-native (line)
         (if (str_eq (fc-verb line) "source") (self_source)
@@ -26,7 +54,8 @@
                 (str_concat "coherent: this binary carries "
                     (str_concat (int_to_str (str_len (self_source)))
                                 " bytes of its own Form source (run 'source' to print it); program running native on fkwu."))
-                (fc-respond line))))
+                (if (str_eq (fc-verb line) "diagnose") (fc-diagnose)
+                    (fc-respond line)))))
     ; one self-recursive loop: prompt (only on a real tty), read a line, and
     ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
     ; let (an effect op) so it fires exactly once per turn, not once per use.

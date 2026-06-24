@@ -13,9 +13,15 @@
 ;   lower(ADD(x, LIT i))= lower(x) ; add w0, w0, #i
 ;   lower(SUB(x, LIT i))= lower(x) ; sub w0, w0, #i
 ;   compile(tree)       = lower(tree) ; ret
-; Multi-register operands, the calling convention, and control flow for COND are
-; the named closing cells (form-to-asm.form). Proven three-way by
-; tests/form-lower-band.fk; witnessed against clang by scripts/form_lower_demo.sh.
+; An ARG node carries its argument INDEX in slot 1, and lo-argr maps index k to the
+; register base+k — ONE formula, the index is data. The straight-line single-arg
+; function banks w0->w1 (base 1, arg 0 -> w1); lo-compile-fn-n banks N args
+; w0..w(n-1) into the contiguous callee-saved block w19..w(19+n-1) (base 19, the
+; AAPCS64 multi-arg calling convention) so the single-accumulator body never
+; clobbers a live argument. Control flow for COND and the recursive CALL scheme are
+; the named closing cells (form-to-asm.form). Proven four-way by
+; tests/form-lower-band.fk (and form-lower-multiarg-band.fk for the N-arg path);
+; witnessed against clang by scripts/form_lower_demo.sh.
 
 (do
     (defn lo-nil? (xs) (eq (len xs) 0))
@@ -28,8 +34,21 @@
     (defn lo-imm (prog i) (lo-val prog (lo-c2 prog i))) ; the immediate = LIT value of child-2
 
     (defn lo-c3  (prog i) (nth (lo-row prog i) 3))     ; COND else-branch index (slot 3)
-    (defn lo-arg? (prog i) (eq (lo-tag prog i) 2))     ; is the node ARG (n, held in w1)?
+    (defn lo-arg? (prog i) (eq (lo-tag prog i) 2))     ; is the node ARG (held in w<base+index>)?
     (defn lo-lit? (prog i) (eq (lo-tag prog i) 1))
+    ; an ARG node carries its argument INDEX in slot 1 (a single-arg function's only
+    ; ARG is index 0 — the legacy shapes (2 0 0 0) AND the bare (2)). The register
+    ; holding arg k is base + k: ONE formula, the index is data, no per-arity code.
+    ; A single-arg function passes base = its banked register (1 for the straight-line
+    ; fn, 0/19 in the recursive frame); arg 0 -> base + 0 = base, byte-identical to
+    ; before. A multi-arg function banks w0..w(n-1) into a contiguous block
+    ; w19..w(19+n-1) (base 19), so arg k -> w(19+k) — w19+ are callee-saved, untouched
+    ; by the single-accumulator scratch (w0/w2) a leaf body uses.
+    ; lo-argi reads that index, defaulting the bare single-arg ARG (2) — no slot 1 — to
+    ; 0, so a leaf prog needn't spell the implicit index. Indexed ARGs (len >= 2) read
+    ; slot 1 as before; only the absent-slot case (which read null) is healed.
+    (defn lo-argi (prog i) (if (eq (len (lo-row prog i)) 1) 0 (lo-val prog i)))
+    (defn lo-argr (prog i base) (add base (lo-argi prog i)))   ; register holding ARG node i
 
     ; lower the subtree rooted at i to its instruction byte image. Convention: the
     ; single argument n lives in w<argr> (1 for the straight-line function, 19 —
@@ -39,7 +58,7 @@
     ; because the naive lower-then-fold would clobber w0 (correctness, not elegance).
     (defn lo-node (prog i argr)
         (if (eq (lo-tag prog i) 1) (fa-movz 0 (lo-val prog i))
-        (if (eq (lo-tag prog i) 2) (fa-mov 0 argr)
+        (if (eq (lo-tag prog i) 2) (fa-mov 0 (lo-argr prog i argr))
         (if (eq (lo-tag prog i) 3) (lo-add prog i argr)
         (if (eq (lo-tag prog i) 4) (lo-sub prog i argr)
         (if (eq (lo-tag prog i) 5) (lo-mul prog i argr)
@@ -56,7 +75,7 @@
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-add 0 0 (lo-imm prog i)))
         (if (lo-arg? prog (lo-c1 prog i))
-            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-add-r 0 argr 0))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-add-r 0 (lo-argr prog (lo-c1 prog i) argr) 0))
             (lo-tree prog i argr 0))))
     ; SUB: (ARG, LIT i) -> sub w0,w<argr>,#i (direct) · (x, LIT i) -> lower(x); sub w0,w0,#i ·
     ; else (denominator not a LIT) -> lo-tree. Both fast paths require c2=LIT (they read its
@@ -64,7 +83,7 @@
     (defn lo-sub (prog i argr)
         (if (lo-lit? prog (lo-c2 prog i))
             (if (lo-arg? prog (lo-c1 prog i))
-                (fa-sub 0 argr (lo-imm prog i))
+                (fa-sub 0 (lo-argr prog (lo-c1 prog i) argr) (lo-imm prog i))
                 (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-sub 0 0 (lo-imm prog i))))
             (lo-tree prog i argr 0)))
     ; MUL: arm64 has no mul-immediate, so it's operand-aware like ADD/SUB. (ARG, x) /
@@ -74,9 +93,9 @@
     ; frontier (would need allocation) — left as the empty tail, never a wrong answer.
     (defn lo-mul (prog i argr)
         (if (lo-arg? prog (lo-c1 prog i))
-            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-mul 0 0 argr))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-mul 0 0 (lo-argr prog (lo-c1 prog i) argr)))
         (if (lo-arg? prog (lo-c2 prog i))
-            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-mul 0 0 argr))
+            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-mul 0 0 (lo-argr prog (lo-c2 prog i) argr)))
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-mul 0 0 2))
         (if (lo-lit? prog (lo-c1 prog i))
@@ -87,9 +106,9 @@
     ; (x, LIT i) -> x/i: lower x->w0; movz w2,#i; udiv w0,w0,w2 · (LIT a, x) -> a/x: lower x->w0; movz w2,#a; udiv w0,w2,w0
     (defn lo-div (prog i argr)
         (if (lo-arg? prog (lo-c1 prog i))
-            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-udiv 0 argr 0))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-udiv 0 (lo-argr prog (lo-c1 prog i) argr) 0))
         (if (lo-arg? prog (lo-c2 prog i))
-            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-udiv 0 0 argr))
+            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-udiv 0 0 (lo-argr prog (lo-c2 prog i) argr)))
         (if (lo-lit? prog (lo-c2 prog i))
             (lo-app (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-movz 2 (lo-imm prog i))) (fa-udiv 0 0 2))
         (if (lo-lit? prog (lo-c1 prog i))
@@ -116,20 +135,45 @@
             (lo-tree-op (lo-tag prog i) sr)))
     (defn lo-tree (prog i argr depth)
         (if (lo-lit? prog i) (fa-movz 0 (lo-val prog i))
-        (if (lo-arg? prog i) (fa-mov 0 argr)
+        (if (lo-arg? prog i) (fa-mov 0 (lo-argr prog i argr))
             (lo-tree-bin prog i argr depth (add 9 depth)))))
-    ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
+    ; COND(CMP(ARG, LIT i), then, else) — the control-flow scheme with computed
     ; branch offsets (in instructions = bytes/4):
-    ;   cmp w<argr>,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
-    (defn lo-cond (prog i argr)
-        (lo-cond2 prog i argr (lo-node prog (lo-c2 prog i) argr) (lo-node prog (lo-c3 prog i) argr)))
-    (defn lo-cond2 (prog i argr tcode ecode)
+    ;   cmp w<argr>,#i ; b.<skip> +(len(then)+2) ; then ; b +(len(else)+1) ; else
+    ; The condition node's TAG is the compare op, as DATA; the branch that SKIPS the
+    ; then-block is its NEGATION (lo-cmp-skip). One frame, every compare drops in —
+    ; LE was the only one wired before, but EQ is what fd-mag/fd-value test against 0/1.
+    ; lo-cmp-skip: compare tag -> the arm64 condition code that jumps OVER the then-block
+    ;   LE(5)->GT(12)  EQ(14)->NE(1)  LT(15)->GE(10)  GE(16)->LT(11)  GT(17)->LE(13)  NE(18)->EQ(0)
+    ; (the condition-tag space is read ONLY here, never by lo-node, so it is its own vocabulary.)
+    (defn lo-cmp-skip (tag)
+        (if (eq tag 5) 12
+        (if (eq tag 14) 1
+        (if (eq tag 15) 10
+        (if (eq tag 16) 11
+        (if (eq tag 17) 13
+        (if (eq tag 18) 0
+            12)))))))
+    ; lo-cond-frame — the lane-agnostic scaffold: the cmp on the integer arg (cargr is the
+    ; int arg's register), the negated skip-branch, then the PRE-LOWERED branch blocks. The
+    ; branches are lowered by the caller's lane (lo-node -> w0, lo-fnode -> d0), so the same
+    ; frame serves an integer-result COND and a float-result COND. fa-bcond with the LE-skip
+    ; (12) and a positive offset is byte-identical to the old fa-bgt — the LE bands re-cross.
+    (defn lo-cond-frame (prog i cargr tcode ecode)
         (lo-cat (list
-            (fa-cmp argr (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; LE's LIT operand
-            (fa-bgt (add (div (len tcode) 4) 2))
+            (fa-cmp (lo-argr prog (lo-c1 prog (lo-c1 prog i)) cargr) (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; cmp w<arg>,#LIT
+            (fa-bcond (lo-cmp-skip (lo-tag prog (lo-c1 prog i))) (add (div (len tcode) 4) 2))
             tcode
             (fa-b (add (div (len ecode) 4) 1))
             ecode)))
+    ; integer-result COND: both arg-compare and branches share argr (the w-register lane).
+    (defn lo-cond (prog i argr)
+        (lo-cond-frame prog i argr (lo-node prog (lo-c2 prog i) argr) (lo-node prog (lo-c3 prog i) argr)))
+    ; float-result COND (fd-mag's shape): the compare is on an INTEGER arg (cmp w<int>,#imm —
+    ; e.g. (eq (fd-exp ...) 0)) while the branches produce d0 via lo-fnode. The single int arg
+    ; rides w0 (cargr 0), the lo-i2f convention; multi-int-arg banking is the named next.
+    (defn lo-fcond (prog i argr)
+        (lo-cond-frame prog i 0 (lo-fnode prog (lo-c2 prog i) argr) (lo-fnode prog (lo-c3 prog i) argr)))
     (defn lo-cat (xss) (if (eq (len xss) 1) (head xss) (lo-app (head xss) (lo-cat (tail xss)))))
 
     ; STR_EQ(a, b) — the byte-compare LOOP, the ll-streq rung (roadmap.fk). Strings
@@ -216,6 +260,19 @@
     ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
     (defn lo-compile-fn (prog root) (lo-app (fa-mov 1 0) (lo-compile prog root)))
 
+    ; compile a function OF n ARGS (the AAPCS64 calling convention, the generalization
+    ; of lo-compile-fn): the args arrive in w0..w(n-1); the preamble banks them into a
+    ; contiguous callee-saved block w19..w(19+n-1) so the single-accumulator body
+    ; (which churns w0/w2) never clobbers a live argument. lo-bank-args is GENERAL —
+    ; it banks w0->w19, w1->w20, ... by recursion, so any arity lowers without
+    ; per-arity code (the source w0..w(n-1) and dest w19.. are disjoint for n<=19, so
+    ; the moves never step on a not-yet-banked arg). The body then lowers with base 19:
+    ; an ARG node of index k reads w(19+k) via lo-argr. ret returns w0.
+    (defn lo-bank-args (k n)
+        (if (eq k n) (list) (lo-app (fa-mov (add 19 k) k) (lo-bank-args (add k 1) n))))
+    (defn lo-compile-fn-n (prog root n)
+        (lo-app (lo-bank-args 0 n) (lo-app (lo-node prog root 19) (fa-ret))))
+
     ; ── the FLOAT lowering twin — lower a float-op tree to arm64 scalar-double bytes ──
     ; The integer lane above lowers to w-registers; this lowers the SAME op-tagged tree to
     ; the FP tier (form-asm.fk's fa-f* — the byte-proven encodings of gap #12). Convention
@@ -232,7 +289,10 @@
         (if (eq (lo-tag prog i) 4) (lo-fsub prog i argr)
         (if (eq (lo-tag prog i) 5) (lo-fmul prog i argr)
         (if (eq (lo-tag prog i) 8) (lo-fdiv prog i argr)
-            (list)))))))
+        (if (eq (lo-tag prog i) 12) (lo-i2f prog i)             ; I2F: int->f64 (scvtf) — the int->float boundary
+        (if (eq (lo-tag prog i) 13) (lo-f2i prog i argr)        ; F2I: f64->int trunc (fcvtzs) — the float->int boundary
+        (if (eq (lo-tag prog i) 6) (lo-fcond prog i argr)       ; COND with float-producing branches (fd-mag's shape)
+            (list))))))))))
     ; FADD/FMUL commute: ARG on both sides folds to one register-form instruction; ARG on
     ; one side lowers the other subtree into d0, then the op against the banked arg.
     (defn lo-fadd (prog i argr)
@@ -266,6 +326,28 @@
         (if (lo-arg? prog (lo-c1 prog i))
             (lo-app (lo-fnode prog (lo-c2 prog i) argr) (fa-fdiv 0 argr 0))
             (list))))
+    ; ── the int↔float BOUNDARY — the lane crossing every real-model recipe makes ──
+    ; A real model's weights enter as integer bit-fields (q4k unpack, f16 mantissa/exponent)
+    ; and rebuild as f64 (fd-frac's (mul 1.0 (fd-mant ...))); the verdict casts back to int
+    ; (round). form-asm.fk already byte-proves the two arm64 conversion instructions against
+    ; the clang oracle — scvtf d<rd>,x<rn> (signed i64 -> f64) and fcvtzs x<rd>,d<rn> (f64 ->
+    ; signed i64, toward zero). These two nodes wire them into the lowerer so a recipe that
+    ; crosses the lane lowers to native bytes with no clang. Round-to-nearest (fcvtns) is the
+    ; adjacent named-next; F2I here is the C-cast truncation.
+    ; I2F (tag 12): lower the INTEGER child (the w-register lane) then scvtf its w0 into d0. An
+    ; ARG-in-w0 child reads x0 directly (oracle-matched, no redundant mov), mirroring lo-add's
+    ; operand-aware discipline; a general int subtree lands in w0 first. The single int arg is
+    ; the w0 convention (argr 0) — multi-int-arg banking into the FP frontend is the named next.
+    (defn lo-i2f (prog i)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (fa-scvtf 0 (lo-argr prog (lo-c1 prog i) 0))
+            (lo-app (lo-node prog (lo-c1 prog i) 0) (fa-scvtf 0 0))))
+    ; F2I (tag 13): lower the FLOAT child (the d-register lane, lo-fnode) into d0, then fcvtzs
+    ; d0 -> x0. The child rides the same float argr as the surrounding FP body, so F2I composes
+    ; on top of any proven FP subtree (e.g. trunc(d*d)).
+    (defn lo-f2i (prog i argr)
+        (lo-app (lo-fnode prog (lo-c1 prog i) argr) (fa-fcvtzs 0 0)))
+
     ; compile a float function OF one float arg: bank d0 -> d1, lower the body, ret.
     (defn lo-fcompile (prog root) (lo-app (lo-fnode prog root 1) (fa-ret)))
     (defn lo-fcompile-fn (prog root) (lo-app (fa-fmov 1 0) (lo-fcompile prog root)))

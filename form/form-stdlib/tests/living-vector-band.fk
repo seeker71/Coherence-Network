@@ -1,0 +1,31 @@
+; preludes: form-stdlib/living-vector.fk
+;
+; Sovereignty and vitality as vectors, pinned where they carry meaning. Per-mille axes.
+;
+;   SOVEREIGNTY of an agentic response TODAY = [cognitive 400, proof 900, infra 200, generative 0].
+;     The vector must COMPUTE the body's stated floor: generative (axis 3) is the binding constraint,
+;     proof (axis 1) is the strength. Lift generative by 600 and the binding constraint must MOVE to
+;     infrastructure (axis 2) — the north-star walk made arithmetic.
+;   VITALITY of a healthy cell = [circ 800, fb 700, edges 900, fresh 850]  (supple memory)
+;            of a tight cell    = [circ 100, fb 50,  edges 200, fresh 100] (a report nobody reads)
+;     Supple must Pareto-DOMINATE tight; tight's binding axis is feedback (the blood barely moving);
+;     supple is already above a 600-everywhere north-star profile (gap 0), tight is far from it.
+; Integer math -> exact checks. Verdict 1023 when every claim lands.
+(do
+    (let sov     (list 400 900 200 0))      ; today's agentic sovereignty
+    (let healthy (list 800 700 900 850))    ; a supple, circulating cell
+    (let tight   (list 100 50 200 100))     ; tight memory — once-loved, now unread
+    (let target  (list 600 600 600 600))    ; a plain north-star profile (600 on every axis)
+
+    (let c0 (if (eq (lv-reading sov) 375)               1   0))  ; overall sovereignty reading = (400+900+200+0)/4
+    (let c1 (if (eq (lv-binding sov) 3)                 2   0))  ; binding axis = GENERATIVE (the real floor)
+    (let c2 (if (eq (lv-strongest sov) 1)               4   0))  ; strength = PROOF (four-way is what we have)
+    (let c3 (if (eq (lv-binding (lv-lift sov 3 600)) 2) 8   0))  ; lift generative -> binding MOVES to infra
+    (let c4 (if (eq (nth (lv-lift sov 3 600) 3) 600)    16  0))  ; ...and the lifted axis actually rose to 600
+    (let c5 (if (eq (lv-dominates? healthy tight) 1)    32  0))  ; supple Pareto-dominates tight
+    (let c6 (if (eq (lv-dominates? tight healthy) 0)    64  0))  ; ...and not the other way
+    (let c7 (if (eq (lv-binding tight) 1)               128 0))  ; tight's binding axis = FEEDBACK (blood barely moving)
+    (let c8 (if (eq (lv-gap healthy target) 0)          256 0))  ; supple already clears the north-star profile
+    (let c9 (if (eq (lv-gap tight target) 1950)         512 0))  ; tight is 1950 per-mille short across its axes
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

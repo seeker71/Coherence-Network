@@ -1,0 +1,85 @@
+; kv-gqa-llama-block.fk — the KV-cached causal GQA llama decoder block: the inner step of the
+; autoregressive generation loop for the REAL llama3.2 (24 query heads, 8 KV heads), proven
+; BIT-IDENTICAL to the full causal GQA llama block (lgqa-block-causal, llama-gqa-block.fk four-way 15).
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk
+;
+; kv-llama-block.fk (#3408) proved the cache for a SINGLE-head (MHA) llama block: lblk-generate-causal ==
+; lblk-block-causal bit-for-bit. Real llama3.2 uses GROUPED-QUERY attention — n_q query heads share
+; n_kv < n_q KV heads — so the cache stores the SMALLER n_kv*HD-wide k/v per position, and query head h
+; attends KV head (h / (n_q/n_kv)). This lifts the cached decode to GQA, composing gqa-attn's grouping with
+; the cache; no new arithmetic — the (n_q=n_kv=1) case IS lblk-generate-causal (core-abstraction-first, MHA
+; is the group=1 special case, not a parallel path).
+;
+; The load-bearing claim is the same as #3408: the cache is EXACT, not approximating. A cached k_i/v_i is
+; RoPE(Wk·RMSNorm1(x_i), i) / Wv·RMSNorm1(x_i) — narrower (n_kv*HD wide) but still position-only, never the
+; future. So at step p the grown cache is exactly the prefix [k_0..k_p] = (tb-take ks (add p 1)) the causal
+; GQA mask cuts at query p. Per query head h, tb-gqa-attend-one slices q_p's head h and attends it (one query
+; over the whole prefix) against KV head (h/group)'s slice of that cached prefix — IDENTICAL arguments to
+; tb-gqa-head-causal's masked attention at position p (tb-attend-one over the full prefix == the causal mask
+; at the last query of that prefix). The Wo/residual/RMSNorm2/SwiGLU/residual tail is per-token. Therefore
+; lgqa-generate-causal == lgqa-block-causal bit-for-bit. Composes tb-attend-one (per head over the cache),
+; tb-vslice/tb-seq-headslice (gqa-attn's own slicing), kv-append, and llama-block's own RMSNorm/proj/RoPE/
+; SwiGLU verbatim — no numeric change.
+;
+; The autoregressive INVARIANT (the reason a cache is reusable across generation steps): appending a future
+; token never changes an earlier token's GQA output — a cached k_i/v_i is frozen at its narrower position i.
+; Proven here as gen3[token i] == gen2[token i].
+;
+; This lives at the reusable decoder-engine altitude (like tb-attn-seq-causal, kv-generate, lblk-generate-
+; causal before it): any causal GQA block generates through the same cache; this instance is the real llama3
+; block (RMSNorm + llama3 RoPE + GQA + SwiGLU). Position = absolute token index. fp64 lane; the GPU emit
+; (cached GQA attention as a key-prefix in the threadgroup walk, mirroring jte-gqa-llama-block-fwd-causal-msl
+; #3590) is the named follow-up. Proven four-way against lgqa-block-causal (#3590) by tests/kv-gqa-llama-block-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- single-query GQA attend over the grown cache: query head h reads KV head (div h grp) over the cache's
+;     kvh-slice. q is the new token's full n_q*HD-wide query; gks/gvs hold the narrower n_kv*HD-wide cached
+;     keys/values for positions 0..p. tb-attend-one over the whole prefix is the causal mask at the last
+;     query of that prefix — so this mirrors tb-gqa-attn-causal at a single position, head by head. ---
+(defn gqa-attend-one-head (q gks gvs h kvh HD scale)
+  (tb-attend-one (tb-vslice q (mul h HD) HD)
+                 (tb-seq-headslice gks kvh HD)
+                 (tb-seq-headslice gvs kvh HD) scale))
+; heads h..n_q-1 of the single new token, concatenated toward d_model (head h reads kv head (div h grp)).
+(defn gqa-attend-one-loop (q gks gvs h n_q grp HD scale)
+  (if (eq h (sub n_q 1))
+      (gqa-attend-one-head q gks gvs h (div h grp) HD scale)
+      (tb-cat (gqa-attend-one-head q gks gvs h (div h grp) HD scale)
+              (gqa-attend-one-loop q gks gvs (add h 1) n_q grp HD scale))))
+; GQA attend for one query vector over the cache: group=1 (n_kv=n_q) reduces to tb-attend-one over one head.
+(defn tb-gqa-attend-one (q gks gvs n_q n_kv HD scale)
+  (gqa-attend-one-loop q gks gvs 0 n_q (div n_q n_kv) HD scale))
+
+; --- the block TAIL, per token: h = x + Wo·a ; y = h + Wdown·SwiGLU(Wgate·RMSNorm2(h), Wup·RMSNorm2(h)).
+;     Identical to kv-llama-block.fk's lblk-dec-tail — taken one token at a time. ---
+(defn lgqa-dec-tail (h g2 eps wg wu wd)
+  (tb-vec-add h (lblk-ffn wg wu wd (ln-rmsnorm h g2 eps))))
+(defn lgqa-dec-out (x q gks gvs scale wo n_q n_kv HD g2 eps wg wu wd)
+  (lgqa-dec-tail (tb-vec-add x (tb-matvec wo (tb-gqa-attend-one q gks gvs n_q n_kv HD scale))) g2 eps wg wu wd))
+
+; --- one decode step over an already-grown cache (gks/gvs hold positions 0..p): emit this token's block
+;     output, then thread the grown cache forward as the next step's prior cache. ---
+(defn lgqa-dec-grow (x q gks gvs xs p g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (cons (lgqa-dec-out x q gks gvs scale wo n_q n_kv HD g2 eps wg wu wd)
+        (lgqa-dec-run xs p gks gvs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)))
+
+; --- per token: RMSNorm1 once (n1), then project+RoPE q (n_q*HD wide) / k (narrower n_kv*HD wide), project v
+;     (n_kv*HD wide), APPEND k/v to the cache, and hand the grown cache to lgqa-dec-grow. Position p is the
+;     token's absolute index; rope-scaled walks pairwise with (mod i HD) so the rotation resets per head. ---
+(defn lgqa-dec-n1 (x n1 xs p cks cvs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (lgqa-dec-grow x (rope-scaled (tb-matvec wq n1) p HD c)
+                 (kv-append cks (rope-scaled (tb-matvec wk n1) p HD c))
+                 (kv-append cvs (tb-matvec wv n1))
+                 xs (add p 1) g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd))
+
+; --- the autoregressive walk: front to back, threading the growing cache (cks/cvs = positions 0..p-1) ---
+(defn lgqa-dec-run (xs p cks cvs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (if (eq (len xs) 0) (empty)
+      (lgqa-dec-n1 (head xs) (ln-rmsnorm (head xs) g1 eps) (tail xs) p cks cvs
+                   g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)))
+
+; --- generate the whole output sequence incrementally from an empty cache. Equals
+;     (lgqa-block-causal xs ...) bit-for-bit — the equivalence the band proves. ---
+(defn lgqa-generate-causal (xs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (lgqa-dec-run xs 0 (empty) (empty) g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd))

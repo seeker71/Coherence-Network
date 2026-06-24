@@ -1,0 +1,28 @@
+; preludes: form-stdlib/living-vector.fk form-stdlib/sense-self.fk
+;
+; The body reading its own sovereignty and vitality from raw counts, pinned where it carries meaning.
+;
+;   sovereignty from counts (body-answered 6/10, proven bands 4/4, owned runs 2/10, native-gen 0/8)
+;     -> [cognitive 600, proof 1000, infra 200, generative 0]. The vector must surface the floor:
+;     generative (axis 3) is 0 and is the binding constraint; proof (axis 1) is the strength.
+;   vitality from counts (read 9/10, updated 7/10, connected 8/10, fresh 9/10)
+;     -> [circ 900, fb 700, edges 800, fresh 900]. Feedback (axis 1) is the binding axis; the cell
+;     Pareto-dominates a tight one. Honest-0 on no data (denominator 0) is proven directly.
+; Integer math -> exact checks. Verdict 1023 when every claim lands.
+(do
+    (let sov (ss-sovereignty 6 10 4 4 2 10 0 8))   ; the body's sovereignty self-reading
+    (let vit (ss-vitality 9 10 7 10 8 10 9 10))    ; the body's vitality self-reading
+    (let tight (list 100 50 200 100))              ; a tight cell to dominate
+
+    (let c0 (if (eq (ss-share 6 10) 600)        1   0))  ; a share is per-mille (6 of 10 = 600)
+    (let c1 (if (eq (ss-share 5 0) 0)           2   0))  ; no data -> honest 0, never divide by zero
+    (let c2 (if (eq (lv-binding sov) 3)         4   0))  ; binding sovereignty axis = GENERATIVE (the floor)
+    (let c3 (if (eq (lv-strongest sov) 1)       8   0))  ; strength = PROOF (four-way is what we have)
+    (let c4 (if (eq (nth sov 3) 0)              16  0))  ; generation is literally 0 native today
+    (let c5 (if (eq (lv-reading sov) 450)       32  0))  ; overall sovereignty reading = (600+1000+200+0)/4
+    (let c6 (if (eq (lv-binding vit) 1)         64  0))  ; binding vitality axis = FEEDBACK
+    (let c7 (if (eq (nth vit 0) 900)            128 0))  ; circulation share read straight through
+    (let c8 (if (eq (lv-dominates? vit tight) 1) 256 0))  ; a circulating cell dominates a tight one
+    (let c9 (if (eq (ss-share 3 4) 750)         512 0))  ; share rounds in per-mille (3 of 4 = 750)
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

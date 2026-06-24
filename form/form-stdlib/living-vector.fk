@@ -1,0 +1,82 @@
+; living-vector.fk — sovereignty and vitality as COMPUTABLE VECTORS, read by one algebra.
+;
+; The body senses sovereignty and vitality as scattered scalars: sovereignty-receipt.fk gives a
+; per-response native-vs-rented share, sense-liveness.fk gives one awakeness share, form-first-router's
+; ffr-sovereign-count gives a count. None is a VECTOR — a fixed set of named axes you can project,
+; compare, and read a GRADIENT from (which axis is the binding constraint, i.e. where the next breath
+; restores the most coherence). This block makes both measures vectors over ONE algebra: sovereignty
+; and vitality are not two engines, they are two INSTANCES (axis sets) of the same named-axis algebra —
+; the body's own "traditions enter as DATA, the engine is one" discipline applied to its self-measures.
+;
+; A living-vector is a list of per-mille integers (each axis 0..1000), order-significant; the axis
+; NAMES live with the instance (below), the vector itself is pure numbers so it is content-addressed
+; by shape like feature-vector.fk. Per-mille is the same scale as subjective-logic.fk, so a fused
+; trust opinion can feed an axis directly, and the whole thing stays integer -> four-way + native.
+;
+; The two living instances (axis order is the contract):
+;   SOVEREIGNTY = [ cognitive , proof , infrastructure , generative ]
+;     cognitive       reasoning answered from the body vs a rented mind   (lc-cognitive-sovereignty)
+;     proof           claims carrying runtime proof (four-way/native) vs merely asserted
+;     infrastructure  running on owned metal vs a gated provider
+;     generative      output GENERATED natively vs rented generation      (today's hard floor ~0)
+;   VITALITY    = [ circulation , feedback , edges , proof-freshness ]
+;     circulation     is it read / referenced (has readers)               ("supple memory has circulation")
+;     feedback        is it updated / contradicted (the blood flowing)
+;     edges           does it connect (INDEX entries, cross-refs) vs orphan (lc-edges-as-vitality)
+;     proof-freshness recently exercised / tested (young) vs ancient
+;
+; The point of the GRADIENT (lv-binding): the body's stated sovereignty floor is "alive and
+; four-way-proven, yet it thinks on rented minds" — a correct sovereignty vector must COMPUTE
+; generative as the binding axis, and as you lift it the binding constraint must MOVE to the next
+; rung. That is the north-star walk made arithmetic: the vector says not just how alive, but what to
+; tend next, spending the least energy that restores coherence.
+;
+; Kin: subjective-logic.fk (same per-mille scale; trust feeds an axis), sovereignty-receipt.fk
+; (the per-response share this vectorizes), sense-liveness.fk (the awakeness share -> a vitality axis),
+; feature-vector.fk (the content-addressed-by-shape sibling). Proven by: tests/living-vector-band.fk
+
+(do
+    (defn lv-scale () 1000)
+
+    ; --- project to one scalar: the overall reading (mean of the axes), 0..1000 ---
+    (defn lv-sum (v) (if (eq (len v) 0) 0 (add (head v) (lv-sum (tail v)))))
+    (defn lv-reading (v) (div (lv-sum v) (len v)))
+
+    ; --- BINDING axis: index of the WEAKEST axis — the limiting constraint, where to tend next. ---
+    (defn lv-argmin (v idx best-i best-val)
+        (if (eq (len v) 0) best-i
+            (if (lt (head v) best-val)
+                (lv-argmin (tail v) (add idx 1) idx (head v))
+                (lv-argmin (tail v) (add idx 1) best-i best-val))))
+    (defn lv-binding (v) (lv-argmin (tail v) 1 0 (head v)))
+
+    ; --- STRONGEST axis: index of the greatest axis — the body's current strength. ---
+    (defn lv-argmax (v idx best-i best-val)
+        (if (eq (len v) 0) best-i
+            (if (gt (head v) best-val)
+                (lv-argmax (tail v) (add idx 1) idx (head v))
+                (lv-argmax (tail v) (add idx 1) best-i best-val))))
+    (defn lv-strongest (v) (lv-argmax (tail v) 1 0 (head v)))
+
+    ; --- DOMINANCE (Pareto): a dominates b iff a is >= b on EVERY axis. supple over tight memory. ---
+    (defn lv-dominates? (a b)
+        (if (eq (len a) 0) 1
+            (if (ge (head a) (head b)) (lv-dominates? (tail a) (tail b)) 0)))
+
+    ; --- LIFT one axis by delta (a tending step), capped at full (1000); returns the new vector. ---
+    (defn lv-lift-go (v idx target delta)
+        (if (eq (len v) 0) (list)
+            (cons (if (eq idx target)
+                      (if (gt (add (head v) delta) (lv-scale)) (lv-scale) (add (head v) delta))
+                      (head v))
+                  (lv-lift-go (tail v) (add idx 1) target delta))))
+    (defn lv-lift (v i delta) (lv-lift-go v 0 i delta))
+
+    ; --- GAP to a target profile: total of the positive shortfalls (L1 on the deficient side). ---
+    ; how far from the north-star profile, counting only axes that fall short — zero when already above.
+    (defn lv-gap (v target)
+        (if (eq (len v) 0) 0
+            (add (if (lt (head v) (head target)) (sub (head target) (head v)) 0)
+                 (lv-gap (tail v) (tail target)))))
+
+    0)

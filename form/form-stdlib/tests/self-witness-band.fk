@@ -22,6 +22,22 @@
 ; delta drop toward zero on more corpora than just JSON. The witness
 ; this file embodies is the loss function the mutator will minimize.
 ;
+; Fourth arm: 3-kernel only — and a cache-gated one. i18n-load goes through
+;           read_with_cache (cache.fk): COLD (no .fkb) it parses en.json with
+;           json_parse_body, which fkwu walks natively — so on a cold cache the
+;           fourth arm DOES cross at 1121. But read_with_cache writes the .fkb on
+;           that first load, and every WARM run then takes read_form_binary —
+;           the host-io recipe-image read fkwu does not carry (the same family as
+;           kernel-satsang's read_form_binary and symbols' bytes_to_recipe). On a
+;           warm cache fkwu gets an empty `en`, so common-pair-count and
+;           emitted-braces collapse to 0 and it answers 1000 where the three
+;           walkers answer 1121. Because the cold cross is one-shot (the cold run
+;           itself warms the cache), the fourth-arm verdict is non-deterministic
+;           across runs and the band stays UNregistered — not a divergence (the
+;           native-parse path proves the recipes agree), but the host-io carrier
+;           for the .fkb image (docs/coherence-substrate/fourth-arm-substrate-
+;           carriers.form) must land before it can register as a stable crosser.
+;
 ; preludes: form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/self-witness.fk
 
 (do

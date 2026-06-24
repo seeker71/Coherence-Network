@@ -20,6 +20,32 @@ export GO_BIN="$ROOT/form/form-kernel-go/bin-go"; export TMPDIR="${TMPDIR:-/tmp}
 BUNDLE="${1:?bundle file}"; shift
 RECIPES=("$@"); [ "${#RECIPES[@]}" -ge 1 ] || { echo "need at least one recipe"; exit 2; }
 
+# Resolve a path the way a caller would expect: we run from form/, so accept a
+# form/-relative path, a repo-root-relative one (leading form/ stripped), or an
+# absolute path. Fail LOUD if it resolves to nothing — a missing recipe used to
+# flatten to an empty band and return a silent 0 (the footgun this prevents).
+resolve_path() {
+    local p="$1"
+    if [ -e "$p" ]; then printf '%s\n' "$p"; return 0; fi
+    if [ -e "${p#form/}" ]; then printf '%s\n' "${p#form/}"; return 0; fi
+    if [ -e "$ROOT/$p" ]; then printf '%s\n' "$ROOT/$p"; return 0; fi
+    echo "fkwu_run: file not found: $p  (paths are relative to form/ or the repo root)" >&2
+    return 1
+}
+BUNDLE="$(resolve_path "$BUNDLE")" || exit 2
+# Resolve each recipe; drop core.fk — it is BML (section [form.bml]) and the
+# fourth-shim already mirrors its vocabulary, so flattening it raw corrupts the
+# table (the `melt` diagnostic). This matches validate.sh's fourth-arm path,
+# which drops core.fk for the same reason.
+_resolved=()
+for r in "${RECIPES[@]}"; do
+    case "$r" in */core.fk|core.fk) echo "fkwu_run: dropping core.fk (the shim mirrors it)" >&2; continue;; esac
+    rp="$(resolve_path "$r")" || exit 2
+    _resolved+=("$rp")
+done
+RECIPES=("${_resolved[@]}")
+[ "${#RECIPES[@]}" -ge 1 ] || { echo "need at least one recipe (after dropping core.fk)"; exit 2; }
+
 # the fourth-arm lane tooling owns build_fourth + the flatten driver shape
 # shellcheck disable=SC1091
 set +u; . scripts/fourth-arm.sh; set -u

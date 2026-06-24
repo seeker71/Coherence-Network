@@ -12,7 +12,7 @@
 ; (form-cli-repl.fk, tags 114/115/116). One native engine on the emitted kernel,
 ; not 23 bespoke carriers.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk
 
 (do
     ; the verb is the command up to the first space (or the whole line).
@@ -25,6 +25,57 @@
         (do (let sp (str_find cmd " " 0))
             (if (lt sp 0) "" (substring cmd (add sp 1) (str_len cmd)))))
 
+    (defn fc-part (parts i fallback)
+        (if (gt (len parts) i) (nth parts i) fallback))
+
+    (defn fc-part-int (parts i fallback)
+        (str_to_int (fc-part parts i (int_to_str fallback))))
+
+    (defn fc-native-host-row (r)
+        (str_concat (nhi-rec-kind r)
+        (str_concat "|"
+        (str_concat (nhi-rec-platform r)
+        (str_concat "|"
+        (str_concat (int_to_str (nhi-rec-native? r))
+        (str_concat "|"
+        (str_concat (int_to_str (nhi-rec-listening? r))
+        (str_concat "|"
+        (str_concat (int_to_str (nhi-rec-sharing? r))
+        (str_concat "|"
+        (str_concat (int_to_str (nhi-rec-transcribe? r))
+        (str_concat "|"
+        (str_concat (int_to_str (nhi-rec-surprises r))
+        (str_concat "|"
+        (str_concat (int_to_str (nhi-rec-learned r))
+        (str_concat "|"
+        (str_concat (nhi-rec-decision r)
+        (str_concat "|"
+                    (nhi-rec-share-route r))))))))))))))))))))
+
+    ; native-host <platform> <mic> <camera> <screen> <speech_gate> <freq>
+    ;             <surprise_count> <sample_count> [message-token]
+    ;
+    ; A C-bootstrapped/form-cli carrier can pass host readings as argv/stdin and
+    ; receive the lifecycle decision row without linking a Rust evaluator.
+    (defn fc-native-host (arg)
+        (do
+            (let parts (split-on arg " "))
+            (let platform (fc-part parts 0 "android"))
+            (let mic (fc-part-int parts 1 1))
+            (let cam (fc-part-int parts 2 0))
+            (let screen (fc-part-int parts 3 1))
+            (let gate (fc-part-int parts 4 0))
+            (let freq (fc-part-int parts 5 0))
+            (let surprise-count (fc-part-int parts 6 0))
+            (let sample-count (fc-part-int parts 7 0))
+            (let msg0 (fc-part parts 8 ""))
+            (let msg (if (str_eq msg0 "gold") "gold clear" msg0))
+            (let host (hso-receipt 200000 0 0 0 800000 mic cam screen))
+            (let speech (so-receipt gate freq (if (gt gate 0) 55 0) platform))
+            (let surprises (if (gt surprise-count 0) (list (list "host-surprise" 72)) (empty)))
+            (let samples (if (gt sample-count 0) (list (list platform (list sample-count 0 0))) (empty)))
+            (fc-native-host-row (nhi-cycle platform host speech surprises samples msg))))
+
     ; the four-way dispatch: every verb here returns a pure string the shared
     ; brain produces on Go/Rust/TS/fkwu alike (tests/form-cli-band.fk). The
     ; native-only verbs that read the binary's own baked source (source, verify)
@@ -34,8 +85,9 @@
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
             (if (str_eq v "ask") (fca-ask (fc-arg cmd))
+            (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask help about kernel source recreate verify version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence."
+                "form-cli verbs: ping ask native-host help about kernel source recreate verify diagnose version quit. ask <question>: answer it via the local oracle (native on fkwu, no host-exec). native-host <platform> <mic> <camera> <screen> <speech_gate> <freq> <surprises> <samples> [message]: return the Form host lifecycle row. about: what this is. kernel: what it runs on. source: its own Form source. recreate: how to rebuild. verify: self-coherence. diagnose: the live framebuffer — op-dispatch counts and substrate high-water (fkwu)."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
@@ -43,6 +95,6 @@
             (if (str_eq v "recreate")
                 "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own."
             (if (str_eq v "version")
-                "form-cli 0.2"
-                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'")))))))))))
+                "form-cli 0.3"
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))))
     0)

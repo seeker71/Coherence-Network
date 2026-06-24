@@ -1,34 +1,32 @@
-; framebuffer-viewer-band.fk — produce framebuffer activity for the viewer.
+; framebuffer-viewer-band.fk — produce framebuffer activity for the viewer,
+; and prove the framebuffer four-way (Go/Rust/TS/fkwu).
 ;
-; The Go/Rust/TS kernels record source-attributed cell creations in
-; the framebuffer side-map (the source_attr map). Every intern_node_at
-; call adds one entry. This band issues a deterministic burst of
-; intern_node_at calls across synthetic source coordinates and reports
-; how many entries the framebuffer holds at the end.
+; Every kernel records source-attributed cell creations in the framebuffer:
+; each intern_node_at call writes one (file line col) entry keyed by NodeID and
+; appends the NodeID to the ordered roots list. framebuffer-clear resets that
+; window; framebuffer-events returns the roots. This band clears the framebuffer
+; (so prelude/parse attribution is wiped and the window starts empty on EVERY
+; kernel), bursts a deterministic set of attributed cells, and counts them.
 ;
-; The score is (len (framebuffer-events)) — the count of distinct
-; source-attributed NodeIDs at the close of the run. Because intern is
-; content-addressed and the framebuffer is keyed by NodeID, two
-; intern_node_at calls with identical (category, children) collapse
-; into one map entry. We exploit that for determinism: every call
-; produces a unique composite (line number distinguishes the child
-; trivial), so the count is fixed across kernels.
+; The score is (len (framebuffer-events)) = 100. Clearing first makes the count
+; absolute (no kernel-specific prelude baseline to subtract), and because intern
+; is content-addressed, each distinct line yields a distinct composite NodeID, so
+; the 100 cells are 100 distinct entries on all four kernels.
 ;
-; The viewer at scripts/framebuffer_viewer.py loads this same band
-; through a wrapper driver and prints the events list — turning the
-; emitter's side-map into an observer-visible visualization.
-;
-; preludes: form-stdlib/json.fk
+; The framebuffer this band exercises is reachable live on the C-bootstrapped
+; form-cli through its `diagnose` verb (the op-dispatch side, kernel_stat tag 127)
+; and through framebuffer-events / node_source (the source-attribution side,
+; tags 129/130) for any Form program running on fkwu.
 
 (do
-    ;; A single category for every cell — keeps the viewer's "Top
-    ;; Blueprint" pane focused on one (pkg, level, type) signature so
-    ;; the visualization clearly shows where the burst landed.
+    ;; A single category for every cell — keeps the viewer's "Top Blueprint"
+    ;; pane focused on one (pkg, level, type) signature so the visualization
+    ;; clearly shows where the burst landed.
     (defn cell-cat (_x) (make_nodeid 1 2 12 1))
 
-    ;; emit-one: intern a composite with the line number as its child
-    ;; trivial. The child differs across lines, so each call produces
-    ;; a distinct composite NodeID and a fresh framebuffer entry.
+    ;; emit-one: intern a composite with the line number as its child trivial.
+    ;; The child differs across lines, so each call produces a distinct composite
+    ;; NodeID and a fresh framebuffer entry.
     (defn emit-one (file line)
         (intern_node_at (cell-cat 0)
                         (list (intern_trivial_int line))
@@ -41,21 +39,14 @@
                 (emit-one file start)
                 (emit-range file (add start 1) end))))
 
-    ;; Snapshot the framebuffer BEFORE we add anything — captures the
-    ;; entries the prelude load already deposited (core.fk's BML
-    ;; compile, json.fk's parser machinery). The witness then reports
-    ;; the DELTA after our burst, which is deterministic regardless of
-    ;; how the prelude internally interns.
-    (let before (len (framebuffer-events)))
+    ;; Clear first — the window now starts empty on every kernel (the prelude's
+    ;; parse-time attribution is wiped), so the final count is absolute, not a
+    ;; kernel-specific delta.
+    (framebuffer-clear)
 
-    ;; Burst: 100 cells across one synthetic file, distinct line nums
-    ;; (so distinct composites, distinct framebuffer entries).
+    ;; Burst: 100 cells across one synthetic file, distinct line nums (so
+    ;; distinct composites, distinct framebuffer entries).
     (emit-range "viewer/burst.fk" 1 101)
 
-    ;; Touch the equality machinery once — proves value_eq runs through
-    ;; the substrate without disturbing the recording count.
-    (let probe-eq (value_eq (intern_trivial_int 7) (intern_trivial_int 7)))
-
-    ;; The witness: delta = events the burst added.
-    ;; Expected: 100 — one per emit-one call.
-    (sub (len (framebuffer-events)) before))
+    ;; The witness: 100 — one entry per emit-one call.
+    (len (framebuffer-events)))

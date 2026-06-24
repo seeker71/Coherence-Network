@@ -58,6 +58,9 @@
           (list "input_byte" 1 17)
           (list "read_line" 0 114) (list "print_str" 1 115) (list "isatty" 0 116)
           (list "self_source" 0 117)
+          (list "kernel_stat" 1 127)
+          (list "fb_record" 3 128) (list "framebuffer-events" 0 129)
+          (list "node_source" 1 130) (list "framebuffer-clear" 0 131)
           (list "intern_trivial_int" 1 43)
           (list "intern_trivial_bool" 1 112) (list "intern_trivial_float" 1 113)
           (list "make_nodeid" 4 91)
@@ -479,6 +482,16 @@
     (if (str_eq name "EXTERNAL-URI")    (flt-nodeid4 1 2 99 1716)
     (if (str_eq name "QUERY-PARSE-ERROR")(flt-nodeid4 1 2 99 1717)
     (if (str_eq name "SCHEMA-LIST-CAT") (flt-nodeid4 1 1 14 0)
+    ;; SHAMBALLA-RAISED is read by node_level (sh-raise lifts a cell one level):
+    ;; the string fallback has no level field, so node_level came back 0 not 3 and
+    ;; shamballa-channel's raise-ok diverged (fkwu 1111101111 vs 1111111111).
+    ;; Folding both Shamballa blueprints to their registry NodeIDs crosses it.
+    ;; NOTE: the fallback is NOT blanket-foldable to a live (bp name) lookup — the
+    ;; grammar bands (bmf-core/bmf-grammar/natural-language/shell-parse) build and
+    ;; compare nodes through the string-carried category and regress when those
+    ;; names fold to real NodeIDs. Generalizing this table to the registry is a
+    ;; separate investigation (why the grammar path needs the string carrier),
+    ;; tracked in docs/coherence-substrate/fourth-arm-substrate-carriers.form.
     (if (str_eq name "SHAMBALLA-RAISED")(flt-nodeid4 1 3 99 1718)
     (if (str_eq name "SHAMBALLA-CRYSTAL")(flt-nodeid4 1 2 99 1719)
         (flt-bp-fallback name env))))))))))))))))))))))))))))))))))))))))))))))

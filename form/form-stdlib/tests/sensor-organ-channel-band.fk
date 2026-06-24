@@ -1,0 +1,58 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk
+;
+; sensor-organ-channel-band — physical sensor streams become mesh-safe organ readings, and a
+; higher motion organ composes gps/imu/barometer/magnetometer confidence into one derived claim.
+;
+; Verdict 4095 when every claim lands:
+;   1     a fresh, high-confidence derived GPS sample is usable
+;   2     a stale sample is unanswered / unusable
+;   4     raw-private samples are kept off-mesh
+;   8     the sample reading is named sensor:gps:location with kind sensor-sample
+;   16    the sample rides the generic organ-reading engine as observed
+;   32    walking is recognized from low speed + cadence
+;   64    running is recognized from cadence/acceleration
+;   128   biking is recognized from medium speed without cadence
+;   256   driving is recognized from road speed without vertical lift
+;   512   flying is recognized from road speed + vertical lift
+;   1024  motion fusion records four supporting organs and mean confidence
+;   2048  disagreement makes the composite absent/not-safe, while the clean composite is observed
+
+(do
+    (let gps (sensor-sample
+        "gps" "location" 12345 "microdeg" "wgs84" 900000 5 (sensor-privacy-derived) (list "fix3d" "carrier-local")))
+    (let stale (sensor-sample
+        "gps" "location" 12345 "microdeg" "wgs84" 900000 0 (sensor-privacy-derived) (list "stale")))
+    (let raw (sensor-sample
+        "mic" "soundscape" 42 "db" "room" 900000 5 (sensor-privacy-raw-private) (list "raw-local")))
+
+    (let gps-reading (sensor-sample-reading gps 500000 10 5))
+    (let gps-sense (wmls-from-reading gps-reading))
+
+    (let walk (motion-mode-observation 140 95 0 900 700000 850000 650000 600000 0 (sensor-privacy-derived)))
+    (let run  (motion-mode-observation 320 165 0 2100 750000 900000 600000 550000 0 (sensor-privacy-derived)))
+    (let bike (motion-mode-observation 650 0 20 800 800000 700000 650000 600000 0 (sensor-privacy-derived)))
+    (let drive (motion-mode-observation 1600 0 30 700 900000 700000 600000 600000 0 (sensor-privacy-derived)))
+    (let fly (motion-mode-observation 2200 0 450 900 900000 700000 800000 600000 0 (sensor-privacy-derived)))
+    (let split (motion-mode-observation 140 95 0 900 700000 850000 650000 600000 1 (sensor-privacy-derived)))
+
+    (let split-reading (composite-reading split 500000 10 5))
+    (let split-sense (wmls-from-reading split-reading))
+
+    (let c0  (if (eq (sensor-usable? gps 500000) 1) 1 0))
+    (let c1  (if (and (eq (sensor-answered? stale) 0) (eq (sensor-usable? stale 500000) 0)) 2 0))
+    (let c2  (if (eq (sensor-usable? raw 500000) 0) 4 0))
+    (let c3  (if (and (str_eq (or-name gps-reading) "sensor:gps:location")
+                      (str_eq (or-kind gps-reading) "sensor-sample")) 8 0))
+    (let c4  (if (str_eq (wmg-sense-verdict gps-sense) "observed") 16 0))
+    (let c5  (if (str_eq (co-claim walk) "walking") 32 0))
+    (let c6  (if (str_eq (co-claim run) "running") 64 0))
+    (let c7  (if (str_eq (co-claim bike) "biking") 128 0))
+    (let c8  (if (str_eq (co-claim drive) "driving") 256 0))
+    (let c9  (if (str_eq (co-claim fly) "flying") 512 0))
+    (let c10 (if (and (eq (co-supporting walk) 4)
+                      (eq (co-confidence walk) 700000)) 1024 0))
+    (let c11 (if (and (eq (composite-safe? walk 500000) 1)
+                      (and (eq (composite-safe? split 500000) 0)
+                           (str_eq (wmg-sense-verdict split-sense) "absent"))) 2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

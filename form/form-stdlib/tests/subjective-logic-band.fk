@@ -1,0 +1,39 @@
+; preludes: form-stdlib/subjective-logic.fk
+;
+; The trust calculus, pinned at the edges that make it a NETWORK, not a scalar. Per-mille opinions
+; (1.000 -> 1000). Two scenarios:
+;
+;   transitivity — A trusts B: (800,100,100,500).  B asserts X: (600,200,200,500).
+;     A's discounted opinion of X must be WEAKER and VAGUER than B's own (indirect knowledge),
+;     and a fully distrusted source must carry ZERO belief however confidently it asserts.
+;   agreement   — two independent witnesses of X: (600,200,200,500) and (500,300,200,500).
+;     Cumulative fusion must lower uncertainty BELOW either witness and lift belief ABOVE either —
+;     agreement makes the body more certain than any single source.
+;
+; Plus the two base-rate anchors: a vacuous opinion (know nothing) projects to exactly the prior;
+; a certain belief projects to 1000. Integer math means the checks are mostly EXACT equality;
+; fusion carries at most a per-mille rounding crumb, so sl-valid? allows tol=3. Verdict 1023.
+(do
+    (let tol 3)
+    (let ab (sl-opinion 800 100 100 500))      ; A's trust in B
+    (let bx (sl-opinion 600 200 200 500))      ; B's opinion of X
+    (let disc (sl-discount ab bx))             ; A's discounted opinion of X -> (480,160,360,500), E=660
+    (let w1 (sl-opinion 600 200 200 500))      ; witness 1 of X
+    (let w2 (sl-opinion 500 300 200 500))      ; witness 2 of X
+    (let fused (sl-fuse w1 w2))                ; fused -> (611,277,111,500)
+    (let vac (sl-opinion 0 0 1000 500))        ; know nothing
+    (let distrust (sl-opinion 0 900 100 500))  ; a source A does not trust at all
+    (let certain (sl-opinion 1000 0 0 500))    ; full belief
+
+    (let c0 (if (eq (sl-valid? disc tol) 1)                 1   0))  ; discount stays a valid opinion
+    (let c1 (if (lt (sl-b disc) (sl-b bx))                  2   0))  ; transitivity WEAKENS belief (480<600)
+    (let c2 (if (gt (sl-u disc) (sl-u bx))                  4   0))  ; ...and grows uncertainty (360>200)
+    (let c3 (if (eq (sl-expectation disc) 660)              8   0))  ; discounted expectation = 0.660
+    (let c4 (if (eq (sl-valid? fused tol) 1)                16  0))  ; fusion stays a valid opinion
+    (let c5 (if (lt (sl-u fused) (sl-u w1))                 32  0))  ; agreement LOWERS uncertainty (111<200)
+    (let c6 (if (gt (sl-b fused) (sl-b w1))                 64  0))  ; ...and lifts belief past either (611>600)
+    (let c7 (if (eq (sl-expectation vac) 500)              128 0))  ; vacuous -> exactly the prior
+    (let c8 (if (eq (sl-b (sl-discount distrust bx)) 0)    256 0))  ; distrust -> zero belief
+    (let c9 (if (eq (sl-expectation certain) 1000)        512 0))  ; certain belief -> 1.0
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

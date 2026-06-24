@@ -9,6 +9,20 @@
 ;   4. Look up symbols by name; verify values match by structure.
 ;
 ; Three-way sibling parity attests the wire path + NodeID resolution.
+;
+; Fourth arm: 3-kernel only — the node floor crosses (intern_node,
+;           intern_trivial_int/string, make_nodeid, node_eq, node_inst,
+;           node_children, len), but the wire round-trip rests on an op family
+;           the fourth arm (fkwu) does not carry: recipe_to_bytes /
+;           bytes_to_recipe — serializing an arbitrary recipe tree to .fkb wire
+;           bytes and reconstructing it. fkwu lowers each to its literal-0
+;           fallback, so recipe_to_bytes yields no bytes and bytes_to_recipe
+;           rebuilds an empty table: every name lookup misses, only the
+;           absent-lookup assertion holds, and it answers 1 where the three
+;           walkers answer 5 — an unsupported op family, named here, not a
+;           divergence. It crosses when the recipe-serialization carrier
+;           (docs/coherence-substrate/fourth-arm-substrate-carriers.form)
+;           joins the fourth arm.
 
 (do
     ;; Build sender's symbol table with three bindings.

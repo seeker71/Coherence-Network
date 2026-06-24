@@ -1,0 +1,83 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-elf-so.fk
+;
+; form-lower-multiarg-band — the N-ARG native lane: a REAL pure-arithmetic recipe of
+; THREE arguments lowers to an arm64 byte body (AAPCS64: args in w0,w1,w2; result in
+; w0), the lowered bytes byte-equal the form-asm encoding (byte-conviction), the
+; recipe WALKED by an in-band interpreter on concrete args equals the integer the
+; lowered program computes, and elf-so-body wraps the body into a loadable .so. This
+; is the form-lower -> elf-so-body -> dlopen native-JIT-on-ARM lane carrying a real
+; recipe, not a constant — the on-device half is scripts/form_lower_multiarg_receipt.sh.
+;
+; The recipe: ((a * b) + c). Nodes (tag c1 c2 c3); ARG slot 1 = argument INDEX:
+;   0 ARG#0 (a) · 1 ARG#1 (b) · 2 MUL(0,1) · 3 ARG#2 (c) · 4 ADD(2,3) = root
+; lo-compile-fn-n prog 4 3 lowers to 11 instructions (44 bytes):
+;   mov w19,w0 ; mov w20,w1 ; mov w21,w2          (bank a,b,c into the callee-saved block)
+;   mov w0,w19 ; mov w9,w0 ; mov w0,w20 ; mul w0,w9,w0     ((a*b) via the register stack)
+;   mov w9,w0 ; mov w0,w21 ; add w0,w9,w0 ; ret            ((a*b)+c, return in w0)
+; On the strange-but-covering case a=7,b=6,c=5 the answer is 7*6+5 = 47, exercising
+; multi-arg banking (indices 0,1,2 -> w19,w20,w21), the general register-stack tree
+; (lo-tree), and the register-form MUL/ADD — the whole multi-register frontier.
+;
+; Verdict 127:
+;   1   N-ARG BANK — the preamble banks the 3 args into the contiguous w19,w20,w21
+;        (mov w19,w0 = f3 03 00 2a ; mov w20,w1 = f4 03 01 2a ; mov w21,w2 = f5 03 02 2a)
+;   2   INDEX->REGISTER — lo-argr maps ARG index k to base+k: arg#0->w19 (mov w0,w19),
+;        arg#1->w20 (mov w0,w20), arg#2->w21 (mov w0,w21) read inside the body
+;   4   SHAPE — the lowered body is 44 bytes (11 instructions) ending in ret
+;   8   BYTE-CONVICTION — the lowered bytes byte-equal the hand form-asm sequence
+;        (compile(recipe) == [bank][mov][mov][mov][mul][mov][mov][add][ret], byte-for-byte)
+;   16  INTERPRETER == NATIVE-INTENT — the recipe walked by the in-band evaluator on
+;        (a=7,b=6,c=5) equals 47, the integer the lowered program returns in w0
+;   32  LOADABLE — elf-so-body wraps the 44-byte body into an 840-byte ET_DYN .so:
+;        ELF64 magic + EM_AARCH64, the code lands at offset 176 (mov w19,w0 = f3 03 00 2a)
+;   64  EXPORT — .dynsym[1] form_native: st_info 0x12 (GLOBAL|FUNC), st_value 176 (the body)
+(do
+    (defn ma-nil? (xs) (eq (len xs) 0))
+    (defn ma-app (xs ys) (if (ma-nil? xs) ys (cons (head xs) (ma-app (tail xs) ys))))
+
+    (let prog (list
+        (list 2 0 0 0)    ; 0 ARG#0 (a)
+        (list 2 1 0 0)    ; 1 ARG#1 (b)
+        (list 5 0 1 0)    ; 2 MUL(0,1)
+        (list 2 2 0 0)    ; 3 ARG#2 (c)
+        (list 3 2 3 0)))  ; 4 ADD(2,3) = root
+
+    (let body (lo-compile-fn-n prog 4 3))   ; the lowered arm64 byte image (ret-terminated)
+    (let img (elf-so-body body))            ; wrapped into the loadable .so
+
+    ; the hand form-asm sequence the lowering must byte-equal (the oracle):
+    (let hand (fa-image (list
+        (fa-mov 19 0) (fa-mov 20 1) (fa-mov 21 2)   ; bank a,b,c -> w19,w20,w21
+        (fa-mov 0 19) (fa-mov 9 0) (fa-mov 0 20) (fa-mul 0 9 0)   ; (a*b)
+        (fa-mov 9 0) (fa-mov 0 21) (fa-add-r 0 9 0) (fa-ret))))   ; (a*b)+c ; ret
+
+    ; the in-band interpreter: walk the SAME op-tagged recipe on concrete args.
+    ; args is a list indexed by ARG index; this is the recipe's interpreted value
+    ; (the integer the native body must also return).
+    (defn ma-row (prog i) (nth prog i))
+    (defn ma-tag (prog i) (nth (ma-row prog i) 0))
+    (defn ma-eval (prog i args)
+        (if (eq (ma-tag prog i) 1) (nth (ma-row prog i) 1)                              ; LIT
+        (if (eq (ma-tag prog i) 2) (nth args (nth (ma-row prog i) 1))                   ; ARG#k
+        (if (eq (ma-tag prog i) 5)                                                       ; MUL
+            (mul (ma-eval prog (nth (ma-row prog i) 1) args) (ma-eval prog (nth (ma-row prog i) 2) args))
+        (if (eq (ma-tag prog i) 3)                                                       ; ADD
+            (add (ma-eval prog (nth (ma-row prog i) 1) args) (ma-eval prog (nth (ma-row prog i) 2) args))
+            0)))))
+    (let walked (ma-eval prog 4 (list 7 6 5)))   ; the interpreter's value on (a=7,b=6,c=5)
+
+    (let c0 (if (eq (nth body 0) 243) (if (eq (nth body 4) 244)
+            (if (eq (nth body 8) 245) 1 0) 0) 0))   ; mov w19/w20/w21 first bytes f3/f4/f5
+    (let c1 (if (eq (nth body 14) 19) (if (eq (nth body 22) 20)
+            (if (eq (nth body 34) 21) 2 0) 0) 0))   ; body reads w19 (a), w20 (b), w21 (c)
+    (let c2 (if (eq (len body) 44)
+            (if (eq (nth body 40) 192) (if (eq (nth body 43) 214) 4 0) 0) 0))  ; 44 bytes, ends in ret
+    (let c3 (if (eq (fa-conviction body hand) 1)
+            (if (eq (fa-may-drop (fa-conviction body hand) 1) 1) 8 0) 0))      ; bytes == form-asm
+    (let c4 (if (eq walked 47) 16 0))               ; interpreter walk = 47 (= native intent)
+    (let c5 (if (eq (nth img 0) 127) (if (eq (nth img 18) 183)
+            (if (eq (nth img 176) 243) 32 0) 0) 0)) ; ELF64 + EM_AARCH64, code at 176 (f3=mov w19,w0)
+    (let c6 (if (eq (nth img 248) 1) (if (eq (nth img 252) 18)
+            (if (eq (nth img 256) 176) 64 0) 0) 0)) ; form_native: st_name 1, st_info 0x12, st_value 176
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

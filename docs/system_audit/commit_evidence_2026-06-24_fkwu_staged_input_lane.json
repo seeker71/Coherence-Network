@@ -1,0 +1,53 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "claude/tender-ptolemy-1d0re6",
+  "commit_scope": "Debugged the fkwu staged-input lane and proved the roadmap verb's reconciliation runs END-TO-END ON FKWU (the c-bootstrap kernel) over staged data, native awk, no read_file / no host awk / no bash in the compute loop -> 127 (matches host awk). fkwu carries no read_file (host file reads are a standing wall for the universal walker), so the sovereign pattern is the body's own (fkwu_run.sh / fsh-main): a thin host carrier stages bytes into input_byte (tag 17, the door fkwu DOES carry) and fkwu computes native. Hardened scripts/fkwu_run.sh against two footguns that made the lane silently return 0: (1) it cd's to form/, so form/-prefixed paths read empty -> now resolve_path accepts form/-relative, repo-root-relative, or absolute and FAILS LOUD on a missing file; (2) core.fk is BML (section [form.bml]) and corrupts the flattened table (the `melt` diagnostic) -> now dropped, since the fourth-shim mirrors its vocabulary (matching validate.sh's fourth-arm path).",
+  "files_owned": [
+    "scripts/fkwu_run.sh",
+    "form/form-stdlib/tests/shell-awk-staged.fk",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_staged_input_lane.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "printf 'shell-awk fks 127\\n' > rows; scripts/fkwu_run.sh rows <s-expr shell preludes> form-stdlib/tests/shell-awk-staged.fk   # -> 127 (first stdout line)",
+      "scripts/fkwu_run.sh fourth-arm-bands.txt form-stdlib/tests/does-not-exist.fk   # -> 'file not found' loud, non-zero",
+      "scripts/fkwu_run.sh rows form-stdlib/core.fk ... shell-awk-staged.fk   # -> 'dropping core.fk (the shim mirrors it)'"
+    ],
+    "fourth_arm": "The awk COMPUTE is the four-way shell-awk band (127). The staged run is fkwu-only (input_byte tag 17 is not in Go/Rust/TS) — a sovereign-run demonstration, not a four-way claim.",
+    "native_binary": "fkwu universal-kernel binary runs the reconciliation over input_byte-staged rows -> 127, matching host awk.",
+    "notes": "Two honest edges named: read_file stays a per-kernel host-io carrier (and diverges: go=0/rust=0/ts=127 over a relative path), so the staging carrier does the read; and saw-read materializes the input by per-byte recursion (O(n^2), deep) — it segfaults on the full 38KB manifest, so the carrier stages the relevant rows and a streaming cursor reader is the named follow-on. The str_to_int('127\\n')->0 newline gotcha was fixed in the recipe via sh-awk-trim."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation; the awk compute's four-way gate runs in CI on the shell-awk band."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a lane fix + sovereign-run demonstration."},
+  "phase_gate": {
+    "phase": "staging-lane-debugged-sovereign-run-proven",
+    "gate": "Make the fkwu staged-input lane robust (no silent-0 footguns) and prove a real rented verb's logic runs sovereign on fkwu over staged data, respecting the host-io wall instead of fighting it.",
+    "state": "staged-reconciliation-on-fkwu",
+    "can_move_next_phase": true,
+    "next": "Streaming input_byte cursor reader (no O(n^2) materialization) so whole-file inputs cross; then wire a carrier so `form-cli roadmap`/`fsh` stages rows and runs the reconciliation natively as the live path."
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": [],
+  "task_ids": ["fkwu-staged-input-lane"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "chose-debug-staging-lane"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["debug", "fix", "proof", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "scripts/fkwu_run.sh",
+    "form/form-stdlib/tests/shell-awk-staged.fk",
+    "form/form-stdlib/fsh-main.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "docs/system_audit/commit_evidence_2026-06-24_shell_awk_native.json"
+  ],
+  "change_files": [
+    "scripts/fkwu_run.sh",
+    "form/form-stdlib/tests/shell-awk-staged.fk",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_staged_input_lane.json"
+  ],
+  "change_intent": "lane_fix_and_sovereign_run"
+}

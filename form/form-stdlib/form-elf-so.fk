@@ -1,0 +1,183 @@
+; form-elf-so.fk — the ELF64 loadable SHARED OBJECT (.so) wrapper: a Form recipe
+; that emits a minimal aarch64 ET_DYN image the Android dynamic linker can dlopen,
+; exporting one function ("form_native") over Form-native arm64 bytes (the same
+; encoders form-elf-exec.fk / form-asm.fk produce). This is the Android twin of
+; form-macho.fk's recipe-dylib (the Mac loadable-dylib lane): the SAME arm64 code,
+; wrapped in an ELF shared object instead of a Mach-O dylib, and no codesign. It is
+; the native-JIT-on-ARM floor — a hot Form recipe crystallized to a .so the phone
+; loads and calls, the carrier the Mac already has (form-asm -> form-macho ->
+; recipe-dylib -> codesign -> dlopen) made concrete for Android (form-asm ->
+; form-elf-so -> dlopen). form-elf.fk emits a .o (relocatable); this emits the
+; LOADABLE shape: program headers (PT_LOAD + PT_DYNAMIC), a dynamic section, a
+; dynamic symbol table, a SysV hash table — everything dlopen/dlsym resolve a
+; symbol through, with no relocations (a position-independent leaf body needs none).
+; The exported body is arbitrary arm64 bytes: elf-so-leaf-const wraps a constant
+; leaf; elf-so-body wraps a REAL lowered recipe (form-lower's bytes, e.g.
+; (add (mul a b) c) over w0,w1,w2), so a hot Form recipe crystallizes to a .so the
+; phone dlopens and calls with concrete integer args — the form-lower -> elf-so-body
+; -> dlopen native-JIT-on-ARM lane, twin of the Mac recipe-dylib path.
+;
+; Layout (file offset == vaddr; one PT_LOAD mapped at base 0, the loader rebases):
+;   0    ELF header (64)            64   2 program headers (2*56=112)
+;   176  code (the function body)   then dynsym / dynstr / .hash / .dynamic (8-aligned)
+;
+; Structural shape proven four-way by tests/form-elf-so-band.fk. On-device dlopen
+; is a physical receipt when a device runner is present (the form-elf-exec pattern:
+; the band proves the bytes; running them is a separate carrier step).
+
+(do
+    (defn so-nil? (xs) (eq (len xs) 0))
+    (defn so-app (xs ys) (if (so-nil? xs) ys (cons (head xs) (so-app (tail xs) ys))))
+    (defn so-cat (xss) (if (eq (len xss) 1) (head xss) (so-app (head xss) (so-cat (tail xss)))))
+    (defn so-zeroes (n) (if (le n 0) (list) (cons 0 (so-zeroes (sub n 1)))))
+    (defn so-align (n a) (if (eq (mod n a) 0) n (add n (sub a (mod n a)))))
+    (defn so-pad (n a) (so-zeroes (sub (so-align n a) n)))
+
+    (defn so-u16 (n) (list (mod n 256) (mod (div n 256) 256)))
+    (defn so-u32 (n) (list (mod n 256) (mod (div n 256) 256)
+                           (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+    (defn so-u64 (n) (so-app (so-u32 n) (list 0 0 0 0)))
+
+    ; ── layout offsets (file offset == vaddr; one PT_LOAD at 0) ──
+    (defn so-code-off () 176)               ; ehdr 64 + 2 phdrs (2*56=112)
+    (defn so-dynsym-off (clen) (so-align (add (so-code-off) clen) 8))
+    (defn so-dynsym-size () 48)             ; 2 * Elf64_Sym(24): null + form_native
+    (defn so-dynstr-off (clen) (add (so-dynsym-off clen) (so-dynsym-size)))
+    (defn so-dynstr () (list 0 102 111 114 109 95 110 97 116 105 118 101 0)) ; "\0form_native\0"
+    (defn so-dynstr-size () 13)
+    (defn so-hash-off (clen) (so-align (add (so-dynstr-off clen) (so-dynstr-size)) 8))
+    (defn so-hash-size () 20)               ; nbucket,nchain,bucket[1],chain[2] = 5*u32
+    (defn so-dyn-off (clen) (so-align (add (so-hash-off clen) (so-hash-size)) 8))
+    (defn so-dyn-size () 96)                ; 6 * Elf64_Dyn(16)
+    ; bionic's loader, once section headers exist, cross-checks them against the
+    ; program headers — it needs e_shentsize 0x40, a real .shstrtab at e_shstrndx, AND
+    ; a SHT_DYNAMIC section header whose addr matches PT_DYNAMIC. So we carry the FULL
+    ; section header table a real .so has: NULL .hash .dynsym .dynstr .dynamic .shstrtab.
+    (defn so-dyn-end (clen) (add (so-dyn-off clen) (so-dyn-size)))
+    (defn so-shstrtab () (list 0
+        46 104 97 115 104 0                  ; ".hash"     name 1
+        46 100 121 110 115 121 109 0         ; ".dynsym"   name 7
+        46 100 121 110 115 116 114 0         ; ".dynstr"   name 15
+        46 100 121 110 97 109 105 99 0       ; ".dynamic"  name 23
+        46 115 104 115 116 114 116 97 98 0)) ; ".shstrtab" name 32
+    (defn so-shstr-off (clen) (so-dyn-end clen))
+    (defn so-shoff (clen) (so-align (add (so-shstr-off clen) (len (so-shstrtab))) 8))
+    (defn so-shnum () 6)
+    (defn so-total (clen) (add (so-shoff clen) (mul (so-shnum) 64)))
+
+    ; ── ELF header: ET_DYN, EM_AARCH64, 2 program headers, 1 SHT_NULL section ──
+    (defn so-header (clen)
+        (so-cat (list
+            (list 127 69 76 70 2 1 1 0 0 0 0 0 0 0 0 0)   ; ELF64, little-endian
+            (so-u16 3)                       ; ET_DYN
+            (so-u16 183)                     ; EM_AARCH64
+            (so-u32 1)                       ; EV_CURRENT
+            (so-u64 0)                       ; e_entry (none for a .so)
+            (so-u64 64)                      ; e_phoff
+            (so-u64 (so-shoff clen))         ; e_shoff (section header table, after .shstrtab)
+            (so-u32 0)                       ; e_flags
+            (so-u16 64)                      ; e_ehsize
+            (so-u16 56) (so-u16 2)           ; e_phentsize, e_phnum = 2
+            (so-u16 64)                      ; e_shentsize MUST be 0x40 (bionic checks it)
+            (so-u16 (so-shnum)) (so-u16 5))))  ; e_shnum = 6, e_shstrndx = 5 (-> .shstrtab)
+
+    ; ── program headers: PT_LOAD (whole image, R+X) and PT_DYNAMIC ──
+    (defn so-phdr-load (clen)
+        (so-cat (list
+            (so-u32 1)                       ; PT_LOAD
+            (so-u32 5)                       ; PF_R | PF_X
+            (so-u64 0) (so-u64 0) (so-u64 0) ; p_offset, p_vaddr, p_paddr
+            (so-u64 (so-total clen))         ; p_filesz
+            (so-u64 (so-total clen))         ; p_memsz
+            (so-u64 4096))))                 ; p_align (page)
+    (defn so-phdr-dynamic (clen)
+        (so-cat (list
+            (so-u32 2)                       ; PT_DYNAMIC
+            (so-u32 4)                       ; PF_R
+            (so-u64 (so-dyn-off clen))       ; p_offset
+            (so-u64 (so-dyn-off clen))       ; p_vaddr
+            (so-u64 (so-dyn-off clen))       ; p_paddr
+            (so-u64 (so-dyn-size))           ; p_filesz
+            (so-u64 (so-dyn-size))           ; p_memsz
+            (so-u64 8))))                    ; p_align
+
+    ; ── .dynsym: Elf64_Sym = name(u32) info(u8) other(u8) shndx(u16) value(u64) size(u64) ──
+    (defn so-sym (name info other shndx value size)
+        (so-cat (list (so-u32 name) (list info other) (so-u16 shndx)
+                      (so-u64 value) (so-u64 size))))
+    (defn so-dynsym (clen)
+        (so-cat (list
+            (so-zeroes 24)                                ; index 0: the null symbol
+            (so-sym 1 18 0 1 (so-code-off) clen))))       ; form_native: GLOBAL|FUNC (0x12), value=code
+
+    ; ── .hash (SysV): one bucket; the chain ends at STN_UNDEF (0) ──
+    ;   lookup(form_native): h % 1 = 0 ; bucket[0] = 1 ; sym[1] matches -> found.
+    (defn so-hash ()
+        (so-cat (list (so-u32 1) (so-u32 2) (so-u32 1) (so-u32 0) (so-u32 0))))
+
+    ; ── .dynamic: the tags the linker needs to resolve form_native ──
+    (defn so-dyn-entry (tag val) (so-cat (list (so-u64 tag) (so-u64 val))))
+    (defn so-dynamic (clen)
+        (so-cat (list
+            (so-dyn-entry 4  (so-hash-off clen))     ; DT_HASH
+            (so-dyn-entry 5  (so-dynstr-off clen))   ; DT_STRTAB
+            (so-dyn-entry 6  (so-dynsym-off clen))   ; DT_SYMTAB
+            (so-dyn-entry 10 (so-dynstr-size))       ; DT_STRSZ
+            (so-dyn-entry 11 24)                     ; DT_SYMENT
+            (so-dyn-entry 0  0))))                   ; DT_NULL
+
+    ; ── section header table: Elf64_Shdr (64) = name typ flags addr off size link info align entsize ──
+    (defn so-shdr (name typ flags addr off size link info align entsize)
+        (so-cat (list (so-u32 name) (so-u32 typ) (so-u64 flags) (so-u64 addr)
+                      (so-u64 off) (so-u64 size) (so-u32 link) (so-u32 info)
+                      (so-u64 align) (so-u64 entsize))))
+    ; allocated sections carry addr == offset (vaddr == file offset, one mapping);
+    ; sh_link wires .hash->.dynsym(2), .dynsym->.dynstr(3), .dynamic->.dynstr(3).
+    (defn so-section-headers (clen)
+        (so-cat (list
+            (so-zeroes 64)                                                                         ; [0] SHT_NULL
+            (so-shdr 1  5  2 (so-hash-off clen)   (so-hash-off clen)   (so-hash-size)   2 0 4 4)   ; [1] .hash
+            (so-shdr 7  11 2 (so-dynsym-off clen) (so-dynsym-off clen) (so-dynsym-size) 3 1 8 24)  ; [2] .dynsym
+            (so-shdr 15 3  2 (so-dynstr-off clen) (so-dynstr-off clen) (so-dynstr-size) 0 0 1 0)   ; [3] .dynstr
+            (so-shdr 23 6  3 (so-dyn-off clen)    (so-dyn-off clen)    (so-dyn-size)    3 0 8 16)  ; [4] .dynamic
+            (so-shdr 32 3  0 0 (so-shstr-off clen) (len (so-shstrtab)) 0 0 1 0))))                 ; [5] .shstrtab
+
+    ; ── assemble the loadable .so around a function body (arm64 bytes) ──
+    (defn elf-so (code)
+        (so-cat (list
+            (so-header (len code))
+            (so-phdr-load (len code))
+            (so-phdr-dynamic (len code))
+            code
+            (so-pad (add (so-code-off) (len code)) 8)                       ; code -> dynsym
+            (so-dynsym (len code))
+            (so-dynstr)
+            (so-pad (add (so-dynstr-off (len code)) (so-dynstr-size)) 8)    ; dynstr -> hash
+            (so-hash)
+            (so-pad (add (so-hash-off (len code)) (so-hash-size)) 8)        ; hash -> dynamic
+            (so-dynamic (len code))
+            (so-shstrtab)
+            (so-pad (add (so-shstr-off (len code)) (len (so-shstrtab))) 8)  ; shstrtab -> shdr table
+            (so-section-headers (len code)))))
+
+    ; ── a leaf exported function: movz x0,#imm ; ret  (returns imm; no relocations) ──
+    (defn so-movz-x0 (imm)
+        (list (mod (mul imm 32) 256)
+              (mod (div (mul imm 32) 256) 256)
+              (add 128 (mod (div (mul imm 32) 65536) 32))
+              210))
+    (defn so-ret () (list 192 3 95 214))    ; 0xd65f03c0
+    (defn elf-so-leaf-const (imm) (so-cat (list (so-movz-x0 imm) (so-ret))))
+
+    ; ── elf-so-body: wrap an ARBITRARY lowered recipe body into the loadable .so ──
+    ; The body is the byte image form-lower produces for a real recipe (already
+    ; ret-terminated by lo-compile / lo-compile-fn-n), taking its integer args in
+    ; w0,w1,w2,... and returning in w0 — the AAPCS64 leaf convention dlopen+dlsym
+    ; resolve form_native through. This is the named door the native-JIT-on-ARM lane
+    ; crystallizes a hot recipe through: form-lower bytes -> elf-so-body -> dlopen.
+    ; elf-so-leaf-const is just the constant case of the same wrap; elf-so is the
+    ; lower-level image assembler both ride. No relocations: a position-independent
+    ; arithmetic leaf needs none (the integer arg registers are caller-provided).
+    (defn elf-so-body (code) (elf-so code))
+
+    0)
