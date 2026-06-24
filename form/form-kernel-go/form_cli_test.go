@@ -157,7 +157,7 @@ func TestFkwuFormCliRepl(t *testing.T) {
 	// quit ends the loop; each line before it produces exactly one response line,
 	// in input order, and nothing else (effect-only entry — no root/arm dump).
 	got := run("ping\nversion\nquit\n")
-	want := "pong\nform-cli 0.2\n"
+	want := "pong\nform-cli 0.3\n"
 	if got != want {
 		t.Fatalf("repl transcript:\n got=%q\nwant=%q", got, want)
 	}
@@ -165,6 +165,14 @@ func TestFkwuFormCliRepl(t *testing.T) {
 	// EOF (closed stdin, no quit verb) also ends the loop cleanly — same output.
 	if eof := run("ping\nversion\n"); eof != want {
 		t.Fatalf("repl EOF transcript:\n got=%q\nwant=%q", eof, want)
+	}
+
+	// 'diagnose' surfaces the live framebuffer (fk_arms op-dispatch counts plus
+	// the node/string/arena/value-stack/float high-water) back through kernel_stat
+	// (tag 127) — a fkwu-only verb beside source/verify. The exact counts are a
+	// live snapshot of this session, so assert the readout shape, not the numbers.
+	if d := run("diagnose\nquit\n"); !strings.Contains(d, "fkwu live | ops=") || !strings.Contains(d, "nodes=") {
+		t.Fatalf("repl diagnose: got=%q, want a live framebuffer readout", d)
 	}
 
 	// An unknown verb echoes it back; the verb is the line up to the first space.
@@ -262,13 +270,19 @@ func TestFkwuFormCliCombined(t *testing.T) {
 		}
 		return string(out)
 	}
-	want := "pong\nform-cli 0.2\n"
+	want := "pong\nform-cli 0.3\n"
 	if got := run("ping\nversion\nquit\n"); got != want {
 		t.Fatalf("combined form-cli transcript:\n got=%q\nwant=%q", got, want)
 	}
 	// EOF (no quit) ends cleanly too.
 	if eof := run("ping\nversion\n"); eof != want {
 		t.Fatalf("combined form-cli EOF transcript:\n got=%q\nwant=%q", eof, want)
+	}
+	// the binary inspects its OWN running kernel: 'diagnose' reads the live
+	// framebuffer (op-dispatch counts + substrate high-water) through kernel_stat
+	// (tag 127). A live snapshot, so assert the readout shape, not the numbers.
+	if d := run("diagnose\nquit\n"); !strings.Contains(d, "fkwu live | ops=") || !strings.Contains(d, "nodes=") {
+		t.Fatalf("combined diagnose: got=%q, want a live framebuffer readout", d)
 	}
 	// the binary expresses its OWN baked source (self_source reads fk_genesis).
 	if src := run("source\nquit\n"); src != genesis+"\n" {
