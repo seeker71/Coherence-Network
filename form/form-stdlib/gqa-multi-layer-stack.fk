@@ -1,0 +1,66 @@
+; gqa-multi-layer-stack.fk — the DEPTH stack of causal GQA llama decoder blocks: the depth structure
+; the REAL llama3.2:3b runs (28 decoder blocks, each layer its OWN weights and OWN KV cache, GROUPED-QUERY
+; attention: 24 query heads sharing 8 KV heads, llama3 RoPE theta-500000). The single GQA block runs on the
+; M4 GPU forward (#3587/#3590) and steps incrementally via the GQA KV cache (lgqa-generate-causal,
+; kv-gqa-llama-block.fk, four-way #3601) which also runs on the GPU as a cached decode step (#3612). This
+; file is the GQA sibling of multi-layer-stack.fk (#3z, MHA): the named next stone after #3612, "the
+; multi-layer GQA decode STACK — stack the kernel across the real 28 blocks, each its own device cache."
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk
+;
+; A model is depth. Layer 0 reads the embeddings; each later layer reads the previous layer's output
+; sequence: x¹ = block₀(x⁰); x² = block₁(x¹); …; x^N = block_{N-1}(x^{N-1}). The weights are recipe DATA all
+; the way down — a layer is a SEQUENCE element, the stack a fold, mutable at runtime. Each GQA layer keeps
+; its OWN KV cache: a cached k_i/v_i in layer ℓ is RoPE(Wk_ℓ·RMSNorm1_ℓ(x_i^ℓ), i) — narrower (n_kv·HD wide)
+; and frozen at (layer ℓ, position i), independent of later tokens and of other layers' caches.
+;
+; The layer bundle is multi-layer-stack.fk's SAME 9-element (g1 wq wk wv wo g2 wg wu wd) — reused verbatim
+; via lyr-g1..lyr-wd (one bundle accessor, MHA and GQA share it). GQA adds only the model-wide constants
+; n_q, n_kv, c (the rope-cfg) over the MHA stack's eps/scale/HD; group=1 (n_kv=n_q, base-10000 cfg) reduces
+; lgqa-stack-* EXACTLY to multi-layer-stack.fk's lblk-stack-* (core-abstraction-first: MHA is the GQA
+; special case, not a parallel path — the band proves it bit-for-bit).
+;
+; The load-bearing claim, composing what is already four-way: the KV-cached GQA depth stack is BIT-IDENTICAL
+; to the full-recompute GQA depth stack. lgqa-generate-causal == lgqa-block-causal bit-for-bit per layer
+; (#3601), so folding the cached decode across layers feeds each layer exactly the input the recompute fold
+; feeds it — by induction over depth, lgqa-stack-generate == lgqa-stack-causal. The stack is the efficient
+; realization of the same N four-way-proven causal GQA blocks; no numeric change, nothing re-derived — it
+; composes lgqa-block-causal (#3590, four-way 15) and lgqa-generate-causal (#3601, four-way 255) verbatim.
+;
+; The autoregressive INVARIANT survives depth AND grouping: appending a future token never changes an
+; earlier token's STACKED GQA output — because every layer is causal and every (narrower) cache entry is
+; frozen at its (layer, position). That invariant THROUGH the depth is exactly why a multi-layer GQA KV
+; cache can be reused across generation steps; the band proves stack-gen3[earlier]==stack-gen2[earlier].
+;
+; Lives at the reusable decoder-engine altitude (like multi-layer-stack.fk before it): any list of causal
+; GQA blocks stacks the same way; this instance is the real llama3 block (RMSNorm + llama3 RoPE + GQA +
+; SwiGLU). eps/scale/n_q/n_kv/HD/c are model-wide architecture constants; a layer bundle carries the
+; per-layer weights. fp64 lane; the GPU emit (stack the GQA decode-step kernel #3612, each layer its own
+; device cache) is the named follow-up. Proven four-way against the full-recompute GQA stack and — for the
+; single-head base-10000 case — the published MHA-stack libm pins (multi_layer_stack_reference.py, group=1
+; GQA == MHA bit-for-bit) by tests/gqa-multi-layer-stack-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- one GQA layer, full causal recompute (the whole sequence at once). Reuses multi-layer-stack.fk's
+;     lyr-* bundle accessors verbatim; n_q/n_kv/c are the GQA model-wide constants over the MHA signature. ---
+(defn lgqa-layer-causal (xs L eps scale n_q n_kv HD c)
+  (lgqa-block-causal xs (lyr-g1 L) eps (lyr-wq L) (lyr-wk L) (lyr-wv L) (lyr-wo L)
+                     scale n_q n_kv HD c (lyr-g2 L) (lyr-wg L) (lyr-wu L) (lyr-wd L)))
+
+; --- one GQA layer, KV-cached incremental decode (its OWN narrower cache, grown fresh from empty inside) ---
+(defn lgqa-layer-generate (xs L eps scale n_q n_kv HD c)
+  (lgqa-generate-causal xs (lyr-g1 L) eps (lyr-wq L) (lyr-wk L) (lyr-wv L) (lyr-wo L)
+                        scale n_q n_kv HD c (lyr-g2 L) (lyr-wg L) (lyr-wu L) (lyr-wd L)))
+
+; --- fold the full causal GQA block across depth: the recompute stack (a fold of the four-way #3590 block) ---
+(defn lgqa-stack-causal (xs layers eps scale n_q n_kv HD c)
+  (if (eq (len layers) 0) xs
+      (lgqa-stack-causal (lgqa-layer-causal xs (head layers) eps scale n_q n_kv HD c)
+                         (tail layers) eps scale n_q n_kv HD c)))
+
+; --- fold the KV-cached GQA decode across depth, each layer its own narrower cache: the real generation
+;     stack. == lgqa-stack-causal bit-for-bit (the equivalence the band proves). ---
+(defn lgqa-stack-generate (xs layers eps scale n_q n_kv HD c)
+  (if (eq (len layers) 0) xs
+      (lgqa-stack-generate (lgqa-layer-generate xs (head layers) eps scale n_q n_kv HD c)
+                           (tail layers) eps scale n_q n_kv HD c)))
