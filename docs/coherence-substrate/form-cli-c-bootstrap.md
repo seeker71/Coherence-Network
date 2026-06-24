@@ -128,11 +128,18 @@ This is a real step *toward* tool-sovereignty, not a claim of having arrived:
   Go flattener (Form → node-table). The clang-free `form-asm` lane (Form → asm
   bytes) is the pending rung that closes this.
 - **Grammar coverage is the real frontier, not a bridge.** The shell grammar is
-  four-way proven for parse/exec/cell and runs bash-shaped scripts native; its host
-  tools still passthrough until each Form builtin lands. The python grammar is a
-  first-breath surface (def/call/return/binop/ident/int), not full CPython yet. So
-  "run any script through its grammar" is *real and proven for shell*, *early for
-  python*, and *growing* for the rest. The cornerstone audit
+  four-way proven for parse/exec/cell and runs bash-shaped scripts native; its
+  native builtins are `echo cat grep wc head tail seq rev sort uniq tr nl test awk`,
+  and host tools passthrough until each Form builtin lands. Every open-source unix
+  tool can come home this way: **awk just did** — a first-breath native `awk`
+  (field idioms `{print $N}` / `$N==RHS` / `$N==RHS{print $M}`, FS=whitespace) is
+  four-way proven (`shell-awk` 127, Go/Rust/TS/fkwu), so the roadmap verb's
+  `awk '$1==stem'` manifest reconciliation now computes in Form, not on host awk
+  (the remaining boundary there is `cat`'s file read — `read_file` host-io, which
+  still diverges across kernels). The python grammar is a first-breath surface
+  (def/call/return/binop/ident/int), not full CPython yet. So "run any script
+  through its grammar" is *real and proven for shell*, *early for python*, and
+  *growing* for the rest. The cornerstone audit
   ([`form-cli-fourth-kernel-baseline.md`](form-cli-fourth-kernel-baseline.md)) reads
   the body's *ideas* as north-star and *proof/altitude* as lagging in the
   grammar/compiler spine — deepening each grammar (and its JIT lowering) is the path.
