@@ -3,18 +3,17 @@
 ; lblk-block-causal) were proven separately in gaps A/B/C; this cell is the JOIN — real weights
 ; from a buffer feed the same matvec/block algebra the toy bands already four-way.
 ;
-; bj-dot-row-n / bj-matvec-q6k-row: load one Q6_K superblock from file bytes, then run the tree-walker
-; dot/matvec over the dequantized f32 list — load proven · compute proven → forward matvec proven.
-; bj-wq-row-n: the first n dequantized weights as one projection row (embed a real row into a weight
-; matrix for block forward). The form-asm matvec lane (fam-dot2 / fam-dot-loop) is the adjacent swap
-; for tb-dot once the ll-buffer store-loop lands f32 in the f64 read buffer.
+; bj-dot-row-n / bj-matvec-q6k-row: load one Q6_K superblock from file bytes, then run the
+; fam-dot-loop semantic (bj-dot-fam — upward counted fold, tree-walker twin of fam-dot-loop) over
+; the dequantized f32 list. Native bytes: (fam-dot-loop) / (fam-dot2) in form-asm-matvec.fk;
+; execution witness: scripts/block_join_asm_witness.sh on loaded weights.
 ;
 ; Kin: weight-load.fk (wl-load-q6k), transformer-block.fk (tb-dot/tb-matvec), llama-block.fk
 ; (lblk-proj-seq / lblk-block-causal), llama-gqa-block.fk (lgqa-block-causal), kv-llama-block.fk.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk
 ;
-; Proven by: form-stdlib/tests/block-join-band.fk form-stdlib/tests/block-join-causal-band.fk form-stdlib/tests/block-join-gqa-causal-band.fk
+; Proven by: form-stdlib/tests/block-join-band.fk form-stdlib/tests/block-join-causal-band.fk form-stdlib/tests/block-join-gqa-causal-band.fk form-stdlib/tests/block-join-asm-band.fk
 
 (do
     ; --- the first n dequantized weights as a row vector (for embedding in wq/wk/...) ---
@@ -24,13 +23,20 @@
                   (bj-row-n-from bytes off (add i 1) (sub n 1)))))
     (defn bj-row-n (bytes off n) (bj-row-n-from bytes off 0 n))
 
+    ; --- dot semantics matching fam-dot-loop (upward counted fold; tree-walker twin of native lane) ---
+    (defn bj-dot-fam-from (a b i n acc)
+        (if (eq i n) acc
+            (bj-dot-fam-from (tail a) (tail b) (add i 1) n
+                (add acc (mul (head a) (head b))))))
+    (defn bj-dot-fam (a b) (bj-dot-fam-from a b 0 (len a) 0.0))
+
     ; --- dot the first n loaded weights with x (len x must be n) ---
     (defn bj-dot-row-n (bytes off n x)
-        (tb-dot (bj-row-n bytes off n) x))
+        (bj-dot-fam (bj-row-n bytes off n) x))
 
     ; --- load + dot: full 256-list dotted with x (len x must be 256) ---
     (defn bj-dot-q6k (bytes off x)
-        (tb-dot (wl-load-q6k bytes off) x))
+        (bj-dot-fam (wl-load-q6k bytes off) x))
 
     ; --- load + single-row matvec: y = [ dot(first n weights, x) ] where n = len x ---
     (defn bj-matvec-q6k-row (bytes off x)

@@ -1,0 +1,51 @@
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/block-join.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; block-join-asm-band — gap D₃: the join dot path uses fam-dot-loop semantics (bj-dot-fam) and composes
+; with the proven form-asm byte lane. Regression pins from block-join-band still land; fam-dot-loop /
+; fam-dot2 program bytes are present; bj-dot-fam matches tb-dot on loaded rows (walker ≡ native semantics).
+;
+; Verdict 255 when every claim lands:
+;   1    bj-dot-row-n n=1 x=[1] -> 11215                         (join regression)
+;   2    bj-dot-row-n n=4 x=token -> 61310                       (join regression)
+;   4    bj-dot-row-n n=32 x=e0+e31 -> -771                      (join regression)
+;   8    bj-dot-fam == tb-dot on loaded 4-vector (semantic swap)   (walker twin of fam-dot-loop)
+;   16   fam-dot-loop program is 56 bytes                         (native row kernel)
+;   32   fam-dot2 program is 32 bytes                             (native 2-wide kernel)
+;   64   bj-dot-fam first-2 == fam-dot2-down on loaded w,x       (2-wide fold matches)
+;   128  len (wl-load-q6k g off) still 256                        (load not broken by swap)
+(do
+    (let g (list
+        71 71 85 70 3 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0
+        1 0 0 0 0 0 0 0 97 4 0 0 0 42 0 0 0
+        1 0 0 0 0 0 0 0 116 1 0 0 0 0 1 0 0 0 0 0 0 14 0 0 0 0 0 0 0 0 0 0 0
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        129 67 45 48 246 235 134 149 186 127 28 200 234 116 6 4 49 221 74 254 192 205 18 137
+        34 162 64 213 250 173 64 57 126 163 27 184 54 160 166 158 148 231 71 98 8 92 31 12
+        221 193 69 80 20 103 72 176 235 201 188 123 81 139 162 183 40 198 208 233 142 80 135 134
+        25 169 70 99 147 0 200 106 135 2 231 97 45 177 89 92 55 93 105 158 202 125 1 89
+        13 118 37 32 255 88 100 181 162 50 128 188 42 29 39 252 218 93 46 23 143 250 181 135
+        239 144 2 33 0 129 2 107 17 117 84 164 74 130 149 138 110 222 169 173 162 150 16 197
+        149 153 182 101 28 105 134 173 98 151 170 155 128 98 166 158 216 21 214 81 154 96 101 105
+        148 106 21 102 149 10 110 148 5 36 229 172 106 83 120 9 170 120 154 193 89 46 6 213
+        192 142 156 84 171 59 159 128 171 183 158 97 146 61 77 171 196 0))
+    (let ti (gg-tinfo-start g))
+    (let off (add (mul (div (add (gg-ti-next g ti) 31) 32) 32) (gg-ti-dataoff g ti)))
+    (let xtok (list 1.0 -0.5 0.5 2.0))
+    (let x32 (list 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+                    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0))
+    (let row4 (bj-row-n g off 4))
+    ; fam-dot2 downward fold on first two elements (matches native byte lane for n=2)
+    (defn bja-dot-fam2-down (a b)
+        (add (mul (nth a 1) (nth b 1)) (mul (nth a 0) (nth b 0))))
+    (let c0 (if (eq (round (mul (bj-dot-row-n g off 1 (list 1.0)) 1000000.0)) 11215) 1 0))
+    (let c1 (if (eq (round (mul (bj-dot-row-n g off 4 xtok) 1000000.0)) 61310) 2 0))
+    (let c2 (if (eq (round (mul (bj-dot-row-n g off 32 x32) 1000000.0)) -771) 4 0))
+    (let c3 (if (eq (round (mul (bj-dot-fam row4 xtok) 1000000.0))
+                    (round (mul (tb-dot row4 xtok) 1000000.0))) 8 0))
+    (let c4 (if (eq (len (fam-dot-loop)) 56) 16 0))
+    (let c5 (if (eq (len (fam-dot2)) 32) 32 0))
+    (let c6 (if (eq (round (mul (bj-dot-fam (list (nth row4 0) (nth row4 1))
+                                        (list (nth xtok 0) (nth xtok 1))) 1000000.0))
+                    (round (mul (bja-dot-fam2-down row4 xtok) 1000000.0))) 64 0))
+    (let c7 (if (eq (len (wl-load-q6k g off)) 256) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

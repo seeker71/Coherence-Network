@@ -994,4 +994,5 @@ weight-load fks 4095
 block-join fks 255
 block-join-causal fks 15
 block-join-gqa-causal fks 15
+block-join-asm fks 255
 form-glsl fks 7
