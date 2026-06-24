@@ -7,6 +7,8 @@ pillar: pipeline
 specs:
   - unified-agent-cli-flow-patch-on-fail
   - agent-execution-lifecycle-hooks
+  - form-cli-self-healing-memory
+  - fkwu-native-host-resources
 capabilities:
   - id: coherence-cli-npm
     title: coherence-cli (npm)

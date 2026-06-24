@@ -138,7 +138,7 @@ try {
     $driver = Join-Path $work "fkwu-self-jit-driver.fk"
     $stdlib = Join-Path $repoRoot "form\form-stdlib"
     $body = [System.Text.StringBuilder]::new()
-    foreach ($file in @("minimal-surface.fk", "hati-os-kernel.fk", "hati-os-kernel-emit.fk")) {
+    foreach ($file in @("minimal-surface.fk", "hati-os-kernel.fk", "fkc-table-serialize.fk", "hati-os-kernel-emit.fk")) {
         [void]$body.AppendLine([System.IO.File]::ReadAllText((Join-Path $stdlib $file), $utf8NoBom))
     }
     [void]$body.AppendLine(@'
