@@ -1,0 +1,20 @@
+; preludes: form-stdlib/rag-adaptive-k.fk
+;
+; rag-adaptive-k-band — knee-cut retrieval depth made falsifiable.
+;
+;   [1 2 3 50 51]  gaps 1,1,47,1   -> knee after index 2, k=3   (near cluster of 3)
+;   [1 2 3 4 5]    gaps 1,1,1,1    -> flat field, floor at kmin  -> k=2
+;   [7 9]          fewer than kmin -> return n                    -> k=2
+;   [1 2 50 51 99] kmax caps depth -> knee after idx1, k=2 (<=kmax)
+;
+; Verdict 15 when every claim lands:
+;   1   a clear knee cuts at the cluster edge      (k == 3)
+;   2   a flat field falls back to the kmin floor   (k == 2)
+;   4   fewer cells than kmin returns all of them   (k == 2 == n)
+;   8   kmax caps the depth even past a later knee  (k == 2)
+(do
+    (let c0 (if (eq (rak-k (list 1 2 3 50 51) 1 5) 3) 1 0))
+    (let c1 (if (eq (rak-k (list 1 2 3 4 5) 2 5) 2) 2 0))
+    (let c2 (if (eq (rak-k (list 7 9) 5 10) 2) 4 0))
+    (let c3 (if (eq (rak-k (list 1 2 50 51 99) 1 2) 2) 8 0))
+    (add c0 (add c1 (add c2 c3))))

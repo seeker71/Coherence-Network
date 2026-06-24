@@ -1,0 +1,44 @@
+; rag-adaptive-k.fk — how many cells to recall: the KNEE, not a magic constant.
+;
+; preludes: form-stdlib/core.fk
+;
+; rag-retrieve ranks the body by L1 distance to a query; a fixed k=5 then cuts the
+; list arbitrarily — too few when many cells cluster near the query, too many when
+; only one or two are truly close. This reads the shape of the sorted distances and
+; cuts at the largest gap (the knee): where the near cluster ends and the far field
+; begins. Bounded by [kmin, kmax] so a flat field still returns a sane floor and a
+; long tail never floods the prompt. Pure arithmetic — four-way.
+;
+; Input: ds = distances ASCENDING (rag-retrieve already sorts); kmin, kmax bounds.
+; A "cut after index i" keeps cells 0..i (k = i+1); the gap at cut i is ds[i+1]-ds[i],
+; defined for i in 0..n-2. We scan cuts in [kmin-1 .. min(kmax,n)-1] (and <= n-2 so a
+; gap exists) and pick the largest gap; ties keep the SMALLER k (tighter cluster),
+; stable like rag-retrieve's first-wins.
+;
+; Proven by: form-stdlib/tests/rag-adaptive-k-band.fk (four-way at validate.sh)
+
+(do
+    (defn rak-nth (xs i) (if (eq i 0) (head xs) (rak-nth (tail xs) (sub i 1))))
+
+    ; gap between consecutive distances at cut i: ds[i+1] - ds[i]
+    (defn rak-gap (ds i) (sub (rak-nth ds (add i 1)) (rak-nth ds i)))
+
+    ; scan cut indices lo+1..hi, carrying the best (smallest-i on ties via strict >)
+    (defn rak-knee-loop (ds i hi best-i best-gap)
+        (if (gt i hi) (add best-i 1)
+            (if (gt (rak-gap ds i) best-gap)
+                (rak-knee-loop ds (add i 1) hi i (rak-gap ds i))
+                (rak-knee-loop ds (add i 1) hi best-i best-gap))))
+
+    ; choose k in [kmin, kmax], clamped to what's available.
+    (defn rak-k (ds kmin kmax)
+        (do (let n (len ds))
+            (if (le n kmin) n
+                (do (let kmax2 (if (lt kmax n) kmax n))   ; can't exceed available
+                    (let lo (sub kmin 1))                 ; first cut index (k=kmin)
+                    (let hicap (sub kmax2 1))             ; last cut index (k<=kmax)
+                    (let hi (if (lt hicap (sub n 2)) hicap (sub n 2)))  ; gap needs i<=n-2
+                    (if (lt hi lo) kmin
+                        (rak-knee-loop ds (add lo 1) hi lo (rak-gap ds lo)))))))
+
+    0)

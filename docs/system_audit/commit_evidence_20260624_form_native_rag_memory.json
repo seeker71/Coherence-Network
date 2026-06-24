@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "cursor/e9c4345e",
+  "commit_scope": "The form-cli's self-healing memory moves its LOGIC home to Form, four-way + fkwu, and opens a no-Python heal lane on the kernel. The content key (the freshness coordinate) is now a Form recipe — rag-key.fk's rk-text-key = adler32 over the byte list (str-bytes) — replacing host hashlib. rag-heal.fk keys a file through the kernel host-io (host-read -> rk-text-key) and senses fresh-vs-drift via rf-stale?, the heal lane in Form on the kernel. The Python carrier (form_cli_rag.py) is reframed as the RETIRING bootstrap bridge; its content_key now mirrors the Form key (zlib.adler32 == the recipe's algorithm). Decisions stay Form: freshness (rag-freshness.fk), depth (rag-adaptive-k.fk), ranking (rag-retrieve.fk).",
+  "files_owned": [
+    "form/form-stdlib/rag-key.fk",
+    "form/form-stdlib/tests/rag-key-band.fk",
+    "form/form-stdlib/rag-heal.fk",
+    "scripts/form_cli_rag.py",
+    "specs/form-cli-self-healing-memory.md",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_20260624_form_native_rag_memory.json"
+  ],
+  "idea_ids": [
+    "agent-cli",
+    "cognitive-sovereignty"
+  ],
+  "spec_ids": [
+    "form-cli-self-healing-memory"
+  ],
+  "task_ids": [
+    "task-2026-06-24-form-native-rag-memory"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision",
+        "fkwu-no-python-steer"
+      ]
+    },
+    {
+      "contributor_id": "claude-cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "Form content key crosses four-way + fkwu: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk -> '✓ core.fk+adler32.fk+rag-key.fk+rag-key-band.fk → 7' + 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' + '1 ok, 0 divergent'. The band pins the RFC adler32 vector (adler32(\"123456789\")==152961502) through str-bytes, then proves identical text shares a key (fresh) and a changed byte drifts (heal).",
+    "Freshness delta four-way: ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk -> '→ 63' + fourth arm four-way + 0 divergent. Adaptive depth four-way: ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk -> '→ 15' + fourth arm four-way + 0 divergent.",
+    "Heal lane runs in Form on the kernel, zero Python: rag-heal.fk's rh-file-key (host-read -> rk-text-key) + rh-cell-stale? (over rf-stale?) witnessed via validate explicit mode with a host-write/host-read roundtrip band -> Go leg returns 7 (read->key roundtrip == in-memory key; matching cached key fresh; wrong cached key stale). host-read/host-write are Go-kernel + fkwu-native-exe builtins (Rust/TS walkers report 'unbound host-write'), so this lane is single-runtime and non-deterministic, OUTSIDE the four-way output floor by the kernel's own design (per main.go host-io comment) — not added to the fourth-arm manifest.",
+    "Carrier reframed honestly: form_cli_rag.py docstring now names the destination (fkwu/Form on the kernel) and itself as the RETIRING bridge; content_key replaced sha1 with zlib.adler32 (a labeled mirror of rk-text-key — the same algorithm the Form recipe canonically implements). Live index re-healed under the adler32 key (delta heal re-embeds the migrated cells)."
+  ],
+  "change_files": [
+    "form/form-stdlib/rag-key.fk",
+    "form/form-stdlib/tests/rag-key-band.fk",
+    "form/form-stdlib/rag-heal.fk",
+    "form/form-stdlib/rag-freshness.fk",
+    "form/form-stdlib/rag-adaptive-k.fk",
+    "form/form-stdlib/tests/rag-freshness-band.fk",
+    "form/form-stdlib/tests/rag-adaptive-k-band.fk",
+    "scripts/form_cli_rag.py",
+    "scripts/substrate_post_merge_hook.sh",
+    "specs/form-cli-self-healing-memory.md",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_20260624_form_native_rag_memory.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/tests/rag-key-band.fk -> 7, fourth arm four-way, 0 divergent",
+      "cd form && ./validate.sh form-stdlib/rag-freshness.fk form-stdlib/tests/rag-freshness-band.fk -> 63, fourth arm four-way, 0 divergent",
+      "cd form && ./validate.sh form-stdlib/rag-adaptive-k.fk form-stdlib/tests/rag-adaptive-k-band.fk -> 15, fourth arm four-way, 0 divergent",
+      "rag-heal host-io witness (host-write/host-read roundtrip + drift sense) -> Go leg 7 (Rust/TS lack host-io by design)"
+    ],
+    "fourth_arm_outputs": [
+      "rag-key: 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' (→ 7)",
+      "rag-freshness: 'fourth arm: 1 band(s) four-way' (→ 63)",
+      "rag-adaptive-k: 'fourth arm: 1 band(s) four-way' (→ 15)"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI runs the full form/validate.sh suite, which now includes rag-key/rag-freshness/rag-adaptive-k via fourth-arm-bands.txt."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-form-cli-runtime",
+    "notes": "form-cli is a local-first tool; no public HTTP change. The self-healing index is local to ~/.coherence-network/rag-index."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The logic (key, freshness, depth, ranking) is Form, four-way + fkwu; the heal lane runs in Form on the kernel (Go + fkwu-native-exe). The default serving path still rides the Python bridge until the Form jsonl/index codec + embed/write loop land in rag-heal.fk; enumerating brand-new files needs a directory-list host-io op (drift+orphan heal are already full Form). The standard receipt (c-bootstrap fkwu form-cli on mac/windows/android, toolchain-free) is pending, not observed."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The form-cli memory's freshness coordinate and heal sensing are now Form, proven on all four kernels; a no-Python heal lane runs on the kernel. The index is a content-addressed water layer keyed by a Form recipe, so a drifted/new file is sensed by the body's own arithmetic instead of a host hash.",
+    "public_endpoints": [
+      "local form-cli only (no public coherencycoin endpoint); index at ~/.coherence-network/rag-index"
+    ],
+    "test_flows": [
+      "Form bands: rag-key → 7, rag-freshness → 63, rag-adaptive-k → 15, all fourth-arm four-way.",
+      "Kernel host-io heal witness: write text -> read+key -> compare -> 7 on Go.",
+      "form-cli ask 'what is form shell?' grounds in shell-grammar.fk / fsh-main.fk after heal (the original failing query)."
+    ]
+  }
+}
