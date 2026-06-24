@@ -14,9 +14,6 @@ set -euo pipefail
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORM="$ROOT/form"
 CLI="$FORM/form-cli"
-GO_BIN="$FORM/form-kernel-go/bin-go"
-export GO_BIN
-
 fail() { echo "FAIL: $1" >&2; exit 1; }
 note() { echo "  $1" >&2; }
 
@@ -33,13 +30,16 @@ run_cli() {
 
 # ── Phase A: use warmed c-bootstrap form-cli (build only when missing) ────────
 if [[ ! -x "$CLI" ]]; then
-  if [[ "${SOVEREIGNTY_ALLOW_BOOTSTRAP:-0}" == 1 ]]; then
-    note "bootstrap: form-cli absent — compile from bootstrap C (clang only, no Go)..."
-    command -v clang >/dev/null 2>&1 || fail "clang required for one-time form-cli link (not at runtime)"
-    (cd "$FORM" && ./build-form-cli.sh)
-  else
-    fail "form-cli missing at $CLI — warm with scripts/ensure_form_cli_native.sh or SOVEREIGNTY_ALLOW_BOOTSTRAP=1"
-  fi
+  note "bootstrap: form-cli absent — install from platform bootstrap (no clang)..."
+  (cd "$FORM" && FORM_STANDARD_LANE=1 ./build-form-cli.sh) || {
+    if [[ "${SOVEREIGNTY_ALLOW_BOOTSTRAP:-0}" == 1 ]]; then
+      note "fallback: clang link from bootstrap C..."
+      command -v clang >/dev/null 2>&1 || fail "clang required when platform bootstrap missing"
+      (cd "$FORM" && ./build-form-cli.sh)
+    else
+      fail "form-cli missing — run ensure_form_cli_native.sh or add bootstrap/form-cli-<platform>"
+    fi
+  }
 fi
 
 [[ -x "$CLI" ]] || fail "form-cli missing at $CLI"
@@ -85,11 +85,15 @@ cached_fkwu="$FOURTH_DIR/fkwu-$stamp"
 if [[ -x "$cached_fkwu" ]]; then
   FKWU="$cached_fkwu"
 else
-  if [[ "${SOVEREIGNTY_ALLOW_BOOTSTRAP:-0}" == 1 ]]; then
-    note "bootstrap: fkwu cache miss — compile from bootstrap uni.c (clang only, no Go)..."
-    FORM_STANDARD_LANE=0 build_fourth
-  else
-    fail "fkwu cache missing ($cached_fkwu) — warm once via validate.sh/fourth-arm or SOVEREIGNTY_ALLOW_BOOTSTRAP=1"
+  note "bootstrap: fkwu cache miss — install from platform bootstrap..."
+  FORM_STANDARD_LANE=1 build_fourth
+  if ! fourth_available; then
+    if [[ "${SOVEREIGNTY_ALLOW_BOOTSTRAP:-0}" == 1 ]]; then
+      note "fallback: clang link from bootstrap uni.c..."
+      FORM_STANDARD_LANE=0 build_fourth
+    else
+      fail "fkwu cache missing — add bootstrap/fkwu-<platform> or SOVEREIGNTY_ALLOW_BOOTSTRAP=1"
+    fi
   fi
 fi
 fourth_available || fail "fkwu binary did not build"
