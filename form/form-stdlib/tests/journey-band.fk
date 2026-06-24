@@ -1,0 +1,31 @@
+; preludes: form-stdlib/spatial-fusion.fk form-stdlib/journey.fk
+;
+; journey-band — a rough journey read from a track of timestamped speed-band fixes, made falsifiable.
+;
+; A track of eight fixes (t in seconds, speed band): still, then a short walk, then a drive, then
+; still again — (0,0)(2,1)(4,1)(6,2)(8,3)(10,3)(12,3)(14,0). Band counts: still 2, walk 2, run 1,
+; vehicle 3. The journey lasted 14 seconds; its transport mode is the consensus over every moment —
+; vehicle (band 3, the plurality), fused across time by the same spine spatial-fusion uses across
+; sensors; six of the eight fixes were moving (band > 0). Knowledge from recorded sense, not invented.
+;
+; Verdict 127 when every claim lands:
+;   1    duration = last - first timestamp                       (jr-duration -> 14)
+;   2    transport mode = the consensus band over the track      (jr-transport -> 3, vehicle)
+;   4    moving fixes counted (band > 0)                          (jr-moving   -> 6)
+;   8    the track's first timestamp                              (jr-first-t  -> 0)
+;   16   the track's last timestamp                               (jr-last-t   -> 14)
+;   32   a single-fix track has zero duration (no span yet)       (jr-duration [(5 2)] -> 0)
+;   64   a still-only track's transport mode is still (band 0)    (jr-transport still -> 0)
+(do
+    (let track (list (list 0 0) (list 2 1) (list 4 1) (list 6 2) (list 8 3) (list 10 3) (list 12 3) (list 14 0)))
+    (let bands (list 0 1 2 3))
+    (let one   (list (list 5 2)))
+    (let still (list (list 0 0) (list 2 0) (list 4 0)))
+    (let c0 (if (eq (jr-duration track) 14)          1 0))
+    (let c1 (if (eq (jr-transport track bands) 3)    2 0))
+    (let c2 (if (eq (jr-moving track) 6)             4 0))
+    (let c3 (if (eq (jr-first-t track) 0)            8 0))
+    (let c4 (if (eq (jr-last-t track) 14)           16 0))
+    (let c5 (if (eq (jr-duration one) 0)            32 0))
+    (let c6 (if (eq (jr-transport still bands) 0)   64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

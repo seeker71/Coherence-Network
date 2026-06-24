@@ -1,0 +1,33 @@
+; preludes: form-stdlib/place-sense.fk
+;
+; place-sense-band — world sense from a reverse-geocoded place hierarchy, made falsifiable.
+;
+; Four generic places (rank name), coarse -> fine. p1 = country C / region R / town T / street S; p2 is
+; the same hierarchy (a second read of the same place); p3 names only down to the town (a coarser,
+; containing place); p4 is a different town/street under the same region. Recognition is by NAMED SHAPE:
+; p1 and p2 are the same place though they are separate reads; p1 sits within p3; p1 is not within p4.
+;
+; Verdict 255 when every claim lands:
+;   1    the most specific name we can give                  (pl-name p1   -> "S")
+;   2    how specific that knowing is                          (pl-scale p1  == 3)
+;   4    how many levels are named                             (pl-depth p1  == 4)
+;   8    two reads recognized as the SAME place (presence)     (pl-same? p1 p2  == 1)
+;   16   a different place is distinguished                    (pl-same? p1 p4  == 0)
+;   32   containment: p1 is within the town p3 (world nesting) (pl-within? p1 p3 == 1)
+;   64   non-containment: p1 is not within p4                  (pl-within? p1 p4 == 0)
+;   128  recognized among remembered places ("been here")      (pl-known? p1 [p3 p4 p2] == 1)
+(do
+    (let p1 (list (list 0 "C") (list 1 "R") (list 2 "T") (list 3 "S")))
+    (let p2 (list (list 0 "C") (list 1 "R") (list 2 "T") (list 3 "S")))
+    (let p3 (list (list 0 "C") (list 1 "R") (list 2 "T")))
+    (let p4 (list (list 0 "C") (list 1 "R") (list 2 "X") (list 3 "Y")))
+    (let known (list p3 p4 p2))
+    (let c0 (if (str_eq (pl-name p1) "S")        1 0))
+    (let c1 (if (eq (pl-scale p1) 3)             2 0))
+    (let c2 (if (eq (pl-depth p1) 4)             4 0))
+    (let c3 (if (eq (pl-same? p1 p2) 1)          8 0))
+    (let c4 (if (eq (pl-same? p1 p4) 0)         16 0))
+    (let c5 (if (eq (pl-within? p1 p3) 1)       32 0))
+    (let c6 (if (eq (pl-within? p1 p4) 0)       64 0))
+    (let c7 (if (eq (pl-known? p1 known) 1)    128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

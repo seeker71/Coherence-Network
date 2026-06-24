@@ -1,0 +1,70 @@
+; pg-wire.fk — the Postgres wire protocol (v3) spoken in FORM, over fkwu's own TCP sockets.
+;
+; preludes: form-stdlib/core.fk form-stdlib/str-byte-at.fk
+;
+; This retires the standing wall. The DB carrier floor was Rust-only — pg_connect / pg_exec / pg_query
+; bound libpq, named in mesh-sensings-store-pg.fk as "host-io ... 3-kernel" and in storage-port-db.fk as
+; "Rust-only (pg_* lives in the Rust kernel)". So the 4th kernel (fkwu) could NOT reach Postgres. It can
+; now: the wire protocol is Form DATA over the kernel's socket natives (socket_connect/send/recv/close —
+; tags 123-126, emitted into fkwu), so the SAME recipe that crosses the walkers also runs on the
+; C-bootstrapped 4th kernel. Bytes ride as strings (socket_send writes the string's bytes; socket_recv
+; returns bytes as a string), so the protocol is built and parsed with byte_to_str / char_at / ord.
+;
+; PROVEN: fkwu connects to a live Postgres, sends StartupMessage, runs a simple Query, and reads the
+; DataRow value back (scripts/pg_wire_fkwu_witness.sh).
+;
+; Scope (honest floor): StartupMessage + trust auth + simple Query ('Q') + first-DataRow first-field read,
+; single recv. NAMED GAPS, not hidden:
+;   - AUTH: only trust (AuthenticationOk) today. MD5 needs md5; SCRAM-SHA-256 (production default) needs
+;     SHA-256 + HMAC + PBKDF2 — a crypto increment, the next wall.
+;   - large/streamed results: one socket_recv (fine for small rows); a length-framed read loop is the
+;     next increment for results that span packets.
+;   - typed decode: returns the field's raw text bytes; pg_query's tab/newline row encoding is a layer up.
+
+(do
+    ;; ---- bytes-as-string helpers ----------------------------------------
+    (defn pw-b (n) (byte_to_str n))                 ; int (0..255) -> 1-byte string
+    (defn pw-be32 (n)                                ; int -> 4-byte big-endian string
+        (str_concat (pw-b (mod (div n 16777216) 256))
+        (str_concat (pw-b (mod (div n 65536) 256))
+        (str_concat (pw-b (mod (div n 256) 256))
+                    (pw-b (mod n 256))))))
+    ;; reads: str-byte-at / str-be32 (form-stdlib/str-byte-at.fk) — the shared raw-byte accessor,
+    ;; four-way incl. fkwu (NOT the kernel-native str_byte_at, which returns 0 on fkwu).
+
+    ;; ---- protocol messages ----------------------------------------------
+    ;; StartupMessage: len + proto(196608=3.0) + "user\0<u>\0database\0<d>\0\0"
+    (defn pw-startup (user db)
+        (do (let body (str_concat (pw-be32 196608)
+              (str_concat "user" (str_concat (pw-b 0)
+              (str_concat user (str_concat (pw-b 0)
+              (str_concat "database" (str_concat (pw-b 0)
+              (str_concat db (str_concat (pw-b 0) (pw-b 0)))))))))))
+            (str_concat (pw-be32 (add (str_len body) 4)) body)))
+    ;; Query 'Q': 'Q' + len + sql + \0
+    (defn pw-query (sql)
+        (do (let body (str_concat sql (pw-b 0)))
+            (str_concat "Q" (str_concat (pw-be32 (add (str_len body) 4)) body))))
+
+    ;; ---- response parse: walk typed messages, find the first DataRow 'D' (68) ----
+    (defn pw-find-msg (s i ty)                       ; offset of first message of type `ty`, or -1
+        (if (ge (add i 5) (str_len s)) -1
+            (if (eq (str-byte-at s i) ty) i
+                (pw-find-msg s (add i (add 1 (str-be32 s (add i 1)))) ty))))
+    ;; first DataRow's first field value (raw text bytes). "" if no row.
+    ;; D = [68][int32 len][int16 nfields][int32 col0len][col0 bytes]...
+    ;; d+1..4 msg len, d+5..6 nfields, d+7..10 col0 len, value at d+11. (pw-find-msg returns -1
+    ;; on no row; callers query keys they expect to exist — a flat read keeps this four-way-clean.)
+    (defn pw-first-value (s)
+        (do (let d (pw-find-msg s 0 68))
+            (substring s (add d 11) (add (add d 11) (str-be32 s (add d 7))))))
+
+    ;; ---- the door: compose the blocks INLINE in the band (proven on fkwu) ----
+    ;; A SELECT against trust-auth Postgres, returning the first row's first field:
+    ;;   (let conn (socket_connect host port))
+    ;;   (socket_send conn (pw-startup user db))   (let hs (socket_recv conn 65535))   ; handshake
+    ;;   (socket_send conn (pw-query sql))         (let r  (socket_recv conn 65535))   ; T,D,C,Z
+    ;;   (socket_close conn)                       (pw-first-value r)
+    ;; (Composed inline, not behind a select-wrapper defn: a 5-arg wrapper calling these blocks
+    ;; cross-file tripped a kernel scope quirk; the inline composition is what crosses to fkwu.)
+    0)

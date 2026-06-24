@@ -1,0 +1,36 @@
+; ambient-surprise.fk — listen to the always-on field, notice SURPRISE, and refine what we expect. The
+; cell carries a running expectation (baseline) of the ambient level (sound energy, motion, light...).
+; A reading far from that baseline is a surprise — novelty above the recognition floor (signal-metabolism
+; kind 3). The salience of the surprise (how far it sits from expectation) is exactly the PRESSURE that
+; speak-turn weighs: a big enough surprise, if speaking would add aliveness, can earn an out-of-turn.
+; And every reading refines the baseline a step — the cell learns the room's normal so tomorrow's
+; surprise is measured against today's learning. Listen → notice surprise → refine → repeat.
+;
+; All integer, no division: the baseline tracks by a SIGN step (toward the reading by 1 each tick — a
+; sign-LMS tracker), which the curated band set proves without a div it cannot carry. Over many ticks
+; the baseline settles at the running level; a sudden spike stands out as surprise before the baseline
+; has time to follow it.
+;
+; Kin: signal-metabolism.fk (surprise as a signal kind that must clear a floor), speak-turn.fk
+; (as-salience feeds its `pressure`), world-model-growth.fk (refined baselines are what the world model
+; stores and grows), confidence-calibrate.fk (bands a reading when a coarser surprise is wanted).
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/ambient-surprise-band.fk (four-way at validate.sh)
+
+(do
+    ; --- SALIENCE: how far a reading sits from what we expected — the size of the surprise. ---
+    (defn as-salience (reading baseline) (abs (sub reading baseline)))
+
+    ; --- SURPRISE?: 1 when the salience exceeds the tolerance band — novelty worth noticing. ---
+    (defn as-surprise? (reading baseline tol)
+        (if (gt (as-salience reading baseline) tol) 1 0))
+
+    ; --- REFINE: learn — step the baseline one toward the reading (up, down, or hold). The running
+    ;     expectation tracks the room's normal so surprise is always measured against current learning. ---
+    (defn as-refine (baseline reading)
+        (if (gt reading baseline) (add baseline 1)
+            (if (gt baseline reading) (sub baseline 1) baseline)))
+
+    0)

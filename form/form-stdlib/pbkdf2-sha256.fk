@@ -1,0 +1,32 @@
+; pbkdf2-sha256.fk — PBKDF2-HMAC-SHA256 (RFC 8018), one 32-byte block, as a Form recipe.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk
+;
+; The crypto SCRAM-SHA-256 needs to authenticate to a real Postgres — built by COMPOSING the proven
+; primitives, not a new native (lc-one-engine). hmac-sha256.fk already crosses four-way incl. fkwu; PBKDF2
+; is just iterated HMAC XOR'd together:
+;   U1 = HMAC(pw, salt || INT32BE(1));  U2 = HMAC(pw, U1);  ...  Uc = HMAC(pw, U(c-1))
+;   DK = U1 XOR U2 XOR ... XOR Uc       (one block; dkLen = 32 = the SHA-256 output, which is all SCRAM needs)
+; Inputs are byte-lists (as sha256/hmac take); output is a 32-byte list.
+;
+; pbkdf2-sha256-32  pw-bytes  salt-bytes  iterations  -> 32-byte derived key
+;
+; Verified against the published PBKDF2-HMAC-SHA256 vectors (P="password", S="salt"):
+;   c=1 -> 12 0f b6 cf ...   c=2 -> ae 4d 0c 95 ...   (tests/pbkdf2-sha256-band.fk)
+
+(do
+    (defn pb-nil? (xs) (eq (len xs) 0))
+    (defn pb-app (a b) (if (pb-nil? a) b (cons (head a) (pb-app (tail a) b))))
+    (defn pb-xor (a b) (if (pb-nil? a) (empty) (cons (bxor (head a) (head b)) (pb-xor (tail a) (tail b)))))
+
+    ;; iterate U <- HMAC(pw, U), folding each into the accumulator, (c-1) more times
+    (defn pb-iter (pw u acc n)
+        (if (eq n 0) acc
+            (do (let u2 (hmac-sha256 pw u))
+                (pb-iter pw u2 (pb-xor acc u2) (sub n 1)))))
+
+    ;; PBKDF2-HMAC-SHA256, block index 1, dkLen = 32 (the SCRAM case)
+    (defn pbkdf2-sha256-32 (pw salt c)
+        (do (let u1 (hmac-sha256 pw (pb-app salt (list 0 0 0 1))))
+            (pb-iter pw u1 u1 (sub c 1))))
+    0)

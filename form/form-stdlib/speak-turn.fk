@@ -1,0 +1,50 @@
+; speak-turn.fk — when does the cell take a turn to SPEAK? Listening is always-on (the ear hears the
+; room 24/7); speaking is what's gated, because a voice that speaks out of turn lowers the aliveness it
+; means to raise. Two ways a turn is earned (Urs):
+;
+;   1. A CLEAR turn — the cell was named AND a question was asked. No deliberation: that is its turn.
+;   2. OUT of turn, like any living cell — only when the pressure to speak EXCEEDS a floor AND speaking
+;      now would INCREASE the organism's aliveness. A cell may break silence unbidden, but only to add
+;      life, never to fill it. (The floor is signal-metabolism's rule: pressure must exceed the operator
+;      threshold before a reflex fires — here the reflex is the voice.)
+;
+; Anything else: HOLD. Keep listening. Silence is the default and is never a failure — it is the cell
+; attending. This is the body logic; the tap button is its manual override ("you may take a turn now"),
+; the training-wheel until the cell learns its own turns from the heard field (named?, question?, and a
+; learned sense of when its voice raises aliveness).
+;
+; A moment is read as four small integers:
+;   addressed        1 if the cell's name was called, else 0
+;   question         1 if a question was posed, else 0
+;   pressure         0..N — how strongly there is something to say (salience / importance)
+;   aliveness-delta  signed — how much speaking NOW would raise (+) or lower (−) the organism's aliveness
+;
+; Kin: signal-metabolism.fk (the exceed-the-floor reflex rule this borrows), choice-receipt-learning.fk
+; (each turn-decision is a choice the cell can learn from over time — was speaking welcome or not?),
+; speaker-id.fk (who spoke, so "named by whom" can be grounded later). Integers + strings only.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/speak-turn-band.fk (four-way at validate.sh)
+
+(do
+    ; --- CLEAR TURN: named AND asked — speak for sure, no deliberation. ---
+    (defn st-named-turn? (addressed question)
+        (if (eq addressed 1) (if (eq question 1) 1 0) 0))
+
+    ; --- ALIVE TURN: out of turn — only when pressure clears the floor AND speaking raises aliveness. ---
+    (defn st-alive-turn? (pressure aliveness-delta floor)
+        (if (ge pressure floor) (if (gt aliveness-delta 0) 1 0) 0))
+
+    ; --- SPEAK?: take a turn if it is a clear turn OR an alive turn; otherwise hold and keep listening. ---
+    (defn st-speak? (addressed question pressure aliveness-delta floor)
+        (if (eq (st-named-turn? addressed question) 1) 1
+            (st-alive-turn? pressure aliveness-delta floor)))
+
+    ; --- REASON: legible cause for the choice, so it can be learned from (welcome? or out-of-place?). ---
+    (defn st-reason (addressed question pressure aliveness-delta floor)
+        (if (eq (st-named-turn? addressed question) 1) "named-and-asked"
+            (if (eq (st-alive-turn? pressure aliveness-delta floor) 1) "alive-to-add"
+                "not-my-turn-yet")))
+
+    0)

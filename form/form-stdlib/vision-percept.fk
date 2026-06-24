@@ -1,0 +1,40 @@
+; vision-percept.fk — the eye as a FORM recipe, not a foreign model. A downscaled grayscale frame is a
+; raw numeric window (a list of luma values); the body recognizes it the same way it recognizes any
+; signal — bin to a feature (feature-vector), match to the nearest learned shape (nearest-shape), and
+; either name it or call it NOVEL and intern it (novelty). The eye does not arrive knowing 400 labels
+; from someone else's training; it LEARNS the room's own shapes — a person, a plant, a pet — as it sees
+; them, and names them by grounding. Form-native all the way (Urs): the camera carrier hands pixels;
+; the seeing is Form, four-way, kernel-executable. Bigger feature/model = a stronger carrier the
+; recognition-router selects — small to large without changing the body.
+;
+; A frame is a list of luma values 0..255 (a downscaled grid, e.g. 8x8). thresholds + nbins bin it into
+; a histogram feature; prototypes are learned (label, feature) cells; floor is the recognition strength
+; (matching bars) below which the body honestly says "novel" instead of forcing the nearest label.
+;
+; Kin: perception-pipeline.fk (the same raw-window→label flow this names for vision), feature-vector.fk
+; (the histogram feature), nearest-shape.fk (match + ns-intern to LEARN), novelty.fk (the honest-new
+; gate), recognition-router.fk (small/medium/large vision carriers, routed by confidence),
+; world-perception.fk (vp-channel emits the (kind value confidence source) vision channel it ingests).
+;
+; preludes: form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/novelty.fk
+;
+; Proven by: form-stdlib/tests/vision-percept-band.fk (four-way at validate.sh)
+
+(do
+    ; --- FEATURE: the frame as a histogram (the same fv the rest of perception uses). ---
+    (defn vp-feature (pixels thresholds nbins) (fv-histogram pixels thresholds nbins))
+
+    ; --- READ: recognize the frame against learned shapes, or call it novel. -> (verdict label score) ---
+    (defn vp-read (pixels thresholds nbins prototypes floor)
+        (nv-decide (ns-strength (vp-feature pixels thresholds nbins) prototypes)
+            (ns-label (vp-feature pixels thresholds nbins) prototypes) floor))
+
+    (defn vp-label   (pixels thresholds nbins prototypes floor) (nv-label   (vp-read pixels thresholds nbins prototypes floor)))
+    (defn vp-verdict (pixels thresholds nbins prototypes floor) (nv-verdict (vp-read pixels thresholds nbins prototypes floor)))
+    (defn vp-score   (pixels thresholds nbins prototypes floor) (nv-score   (vp-read pixels thresholds nbins prototypes floor)))
+
+    ; --- LEARN: intern this frame's feature as a named shape — the eye growing its own vocabulary. ---
+    (defn vp-learn (prototypes label pixels thresholds nbins)
+        (ns-intern prototypes label (vp-feature pixels thresholds nbins)))
+
+    0)

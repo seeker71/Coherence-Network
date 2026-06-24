@@ -1,0 +1,90 @@
+; gguf-read.fk — the weight-load keystone: parse a real GGUF file natively in Form. rung toward
+; form-cli inference on the fkwu body instead of ollama. The dequant MATH already crosses four-way
+; (q4k-dequant / q6k-dequant / f16-decode unpack a superblock to f32, bit-exact vs gguf's reference);
+; the missing carrier was READING the .gguf to find a tensor's bytes. That parse is pure integer
+; arithmetic over a byte buffer — so it proves on the same four-way floor, no new primitive.
+;
+; A thin host carrier reads the file into a byte list (irreducible host-io, like the mic/camera); every
+; structural decision — magic, version, tensor count, metadata walk, tensor-info offsets — is Form.
+;
+; GGUF v3 layout (little-endian): magic u32 "GGUF" (0x47475547 = 1179993927) · version u32 (3) ·
+; tensor_count u64 · metadata_kv_count u64 · then the metadata KV block, then the tensor-info table,
+; then padding to general.alignment, then the tensor data. This cell carries the fixed-header readers
+; and the little-endian integer decode every later stage (KV walk, tensor infos) builds on.
+;
+; Kin: q4k-dequant.fk / q6k-dequant.fk / f16-decode.fk (consume the located superblock bytes),
+; kv-llama-block.fk / transformer-generate-cached.fk (the forward the loaded weights feed),
+; form-cli-ask.fk (the seam where this replaces the ollama HTTP call). Integers only.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/gguf-read-band.fk (four-way, against the real llama3.2:3b GGUF header)
+
+(do
+    ; --- little-endian unsigned integer: n bytes from off, LSB first. The decode every GGUF field uses. ---
+    (defn gg-le (bytes off n)
+        (if (eq n 0) 0
+            (add (nth bytes off)
+                (mul 256 (gg-le bytes (add off 1) (sub n 1))))))
+
+    (defn gg-u8  (bytes off) (nth bytes off))
+    (defn gg-u32 (bytes off) (gg-le bytes off 4))
+    (defn gg-u64 (bytes off) (gg-le bytes off 8))
+
+    ; --- fixed header (offsets 0,4,8,16) ---
+    (defn gg-magic        (bytes) (gg-u32 bytes 0))
+    (defn gg-magic-ok?    (bytes) (if (eq (gg-u32 bytes 0) 1179993927) 1 0))
+    (defn gg-version      (bytes) (gg-u32 bytes 4))
+    (defn gg-tensor-count (bytes) (gg-u64 bytes 8))
+    (defn gg-kv-count     (bytes) (gg-u64 bytes 16))
+
+    ; --- a GGUF string is (u64 length, then `length` bytes). Readers for the KV / tensor-name walk. ---
+    (defn gg-str-len  (bytes off) (gg-u64 bytes off))           ; byte length of the string at off
+    (defn gg-str-next (bytes off) (add (add off 8) (gg-u64 bytes off)))  ; offset just past the string
+
+    ; --- METADATA KV WALK: skip the variable-length KV block to reach the tensor-info table. ---
+    ; Fixed-width scalar value-type sizes (GGUF: 0/1=u8/i8, 2/3=u16/i16, 4/5/6=u32/i32/f32, 7=bool,
+    ; 10/11/12=u64/i64/f64). string (8) and array (9) are variable, handled in gg-val-next.
+    (defn gg-vtype-size (t)
+        (if (or (eq t 0) (or (eq t 1) (eq t 7))) 1
+            (if (or (eq t 2) (eq t 3)) 2
+                (if (or (eq t 4) (or (eq t 5) (eq t 6))) 4 8))))
+
+    ; offset just past one value of type t at off (mutually recursive with gg-arr-skip for arrays)
+    (defn gg-val-next (bytes off t)
+        (if (eq t 8) (gg-str-next bytes off)
+            (if (eq t 9)
+                (gg-arr-skip bytes (add off 12) (gg-u32 bytes off) (gg-u64 bytes (add off 4)))
+                (add off (gg-vtype-size t)))))
+    ; skip `count` array elements. Variable-width elements (string=8, nested array=9) walk one at a time;
+    ; fixed-width scalars skip in O(1) — vital on real files (the tokenizer's 128k-element arrays would
+    ; otherwise force 128k-deep recursion).
+    (defn gg-arr-skip-var (bytes off et count)
+        (if (eq count 0) off
+            (gg-arr-skip-var bytes (gg-val-next bytes off et) et (sub count 1))))
+    (defn gg-arr-skip (bytes off et count)
+        (if (or (eq et 8) (eq et 9))
+            (gg-arr-skip-var bytes off et count)
+            (add off (mul count (gg-vtype-size et)))))
+
+    ; offset just past one KV (key-string, then value-type u32, then the typed value)
+    (defn gg-kv-next (bytes off)
+        (gg-val-next bytes (add (gg-str-next bytes off) 4) (gg-u32 bytes (gg-str-next bytes off))))
+    ; skip n KVs from off
+    (defn gg-kv-skip (bytes off n)
+        (if (eq n 0) off (gg-kv-skip bytes (gg-kv-next bytes off) (sub n 1))))
+    ; the tensor-info table begins right after the full metadata KV block
+    (defn gg-tinfo-start (bytes) (gg-kv-skip bytes 24 (gg-kv-count bytes)))
+
+    ; --- TENSOR-INFO WALK: a record is (name-string, n_dims u32, dims u64[n_dims], type u32, offset u64). ---
+    (defn gg-ti-ndims   (bytes off) (gg-u32 bytes (gg-str-next bytes off)))
+    (defn gg-ti-dim     (bytes off k) (gg-u64 bytes (add (add (gg-str-next bytes off) 4) (mul k 8))))
+    (defn gg-ti-dim0    (bytes off) (gg-ti-dim bytes off 0))
+    ; the byte offset where (type, data-offset) sit: past name, n_dims, and the dims array
+    (defn gg-ti-tail    (bytes off) (add (add (gg-str-next bytes off) 4) (mul (gg-ti-ndims bytes off) 8)))
+    (defn gg-ti-type    (bytes off) (gg-u32 bytes (gg-ti-tail bytes off)))         ; ggml_type (12 = Q4_K)
+    (defn gg-ti-dataoff (bytes off) (gg-u64 bytes (add (gg-ti-tail bytes off) 4))) ; offset into the tensor-data region
+    (defn gg-ti-next    (bytes off) (add (gg-ti-tail bytes off) 12))              ; past this record (type u32 + offset u64)
+    (defn gg-ti-namelen (bytes off) (gg-str-len bytes off))
+
+    0)

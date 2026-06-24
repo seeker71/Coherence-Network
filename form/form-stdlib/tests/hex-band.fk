@@ -1,6 +1,6 @@
 ; tests/hex-band.fk — Hexadecimal sibling-witness band.
 ;
-; preludes: form-stdlib/hex.fk
+; preludes: form-stdlib/str-byte-at.fk form-stdlib/hex.fk
 ;
 ; Validates that the Form-recipe hex (in form-stdlib/hex.fk) produces
 ; RFC 4648 §8 correct outputs on every kernel that carries the small-int

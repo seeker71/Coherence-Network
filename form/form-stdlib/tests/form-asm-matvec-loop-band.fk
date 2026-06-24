@@ -1,0 +1,31 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-matvec-loop-band — the dot as a LOOP (the matvec row kernel) emits four-way as Form→asm bytes,
+; no rustc. fam-dot-loop is 14 arm64 instructions (56 bytes): acc-init, then a counted loop (cmp / b.ge
+; exit / f64 load×2 / fmul / fadd / pointer++ ×2 / counter++ / b back). This proves the LOOP composition —
+; the branch-offset discipline (offsets in instructions: b.ge +9 to the ret, b -9 to the compare) and the
+; counter/pointer arithmetic — emits identically on Go=Rust=TS=fkwu. The float body (ldr-d/fmul/fadd) is
+; already proven in form-asm-float / form-asm-matvec; here the new ground is the loop control.
+;
+; The pinned 4-byte little-endian oracle words (arm64 encoding, the ones form-asm proves):
+;   b.ge +9    = 5400012a   b -9        = 17fffff7   cmp x3,x2 = 6b02007f
+;   scvtf d0,x4= 9e620080   add x0,#8   = 91002000   add x3,#1 = 91000463
+;
+; Verdict 127 when every claim lands:
+;   1    the loop is 14 instructions = 56 bytes      (len == 56)
+;   2    b.ge exit branch (+9, scaled offset)         (fa-conviction == 1)
+;   4    b back-edge (-9, 26-bit signed offset)       (fa-conviction == 1)
+;   8    the loop compare cmp x3,x2                    (fa-conviction == 1)
+;   16   acc init scvtf d0,x4 (int 0 → 0.0)            (fa-conviction == 1)
+;   32   pointer advance add x0,x0,#8                  (fa-conviction == 1)
+;   64   counter advance add x3,x3,#1                  (fa-conviction == 1)
+(do
+    (let prog (fam-dot-loop))
+    (let c0 (if (eq (len prog) 56)                                         1 0))
+    (let c1 (if (eq (fa-conviction (fa-bcond 10 9) (list 42 1 0 84))   1)  2 0))
+    (let c2 (if (eq (fa-conviction (fa-b-off -9) (list 247 255 255 23)) 1) 4 0))
+    (let c3 (if (eq (fa-conviction (fa-cmp-r 3 2) (list 127 0 2 107))  1)  8 0))
+    (let c4 (if (eq (fa-conviction (fa-scvtf 0 4) (list 128 0 98 158)) 1) 16 0))
+    (let c5 (if (eq (fa-conviction (fa-add-x-imm 0 0 8) (list 0 32 0 145)) 1) 32 0))
+    (let c6 (if (eq (fa-conviction (fa-add-x-imm 3 3 1) (list 99 4 0 145)) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -2,8 +2,11 @@
 ;
 ; Binds the pg_* natives (the DB carrier floor) to the storage-port interface —
 ; the PRODUCTION backend. Same four functions as memory and file; the call site
-; never changes. Rust-only (pg_* lives in the Rust kernel), so programs using
-; this carrier run on form-kernel-rust, exactly like the socket shim is TS-only.
+; never changes. The pg_* natives bind libpq and are Rust-only — so THIS carrier runs on
+; form-kernel-rust. The libpq dependency is no longer the only door, though: form-stdlib/pg-wire.fk
+; speaks the Postgres v3 wire protocol in pure Form over the kernel's sockets, so the 4th kernel (fkwu,
+; C-bootstrap) reads Postgres with no libpq (scripts/pg_wire_fkwu_witness.sh). Binding this carrier onto
+; pg-wire (CREATE/INSERT/SELECT + production SCRAM auth) is the increment that retires the Rust-only edge.
 ;
 ; The store handle is a connection handle (an int from pg_connect). The key/value
 ; table is a minimal kv table the carrier ensures on open:

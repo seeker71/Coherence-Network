@@ -36,19 +36,33 @@
 # the work ships; if the fix is a deeper walker-emitter change, the divergence
 # is still owned and tracked to that fix, never buried by omission here.
 #
-# The standing walls (what keeps a band out today, by blocked-band count):
-#   remaining node/substrate family — generated bp table parity beyond the
-#     current literal registry floor, the symbol wire sibling constructor,
-#     field constructors, the float-NodeID read-back (float_value / make_float64),
-#     and deeper content-addressed lattice surfaces beyond the explicit
-#     make_nodeid, the trivial typed leaves (int/bool/float),
-#     category/pkg/level/type/inst projection, and generic/doc/concept/dns/session
-#     floor
-#   host io family        — broader source-scan recipes.
-#     Full floor/north-star for this arc:
-#     docs/coherence-substrate/fourth-arm-substrate-carriers.form
-#   multi-line output     — bands that print mid-walk (the walker answers
-#     one value through fk_pr)
+# The standing walls (what keeps a band out today). The node content-addressing CORE
+# (intern_node, make_nodeid, node_children, node_eq, bp, intern_trivial_int) is NOT a wall —
+# it crosses four-way; a 2026-06-23 sweep moved 24 such bands from 3-kernel-only to four-way
+# (they were merely unregistered). The genuine remaining walls, small and named:
+#   bp-table parity      — flt-bp-node (form-flatten.fk) is a HAND-CODED literal floor; a bp name
+#     it lacks folds to the tag-45 string fallback → malformed nodes. Add the name with its EXACT
+#     bp_table.go tuple to fold it (done for the QUERY/SUBSTRATE-REF/SHAMBALLA families). NORTH STAR:
+#     make flt-bp-node read the full generated bp_table instead of the hand-coded subset.
+#   symbol-wire ctor     — recipe_to_bytes / bytes_to_recipe (.fkb wire round-trip). ~2 bands
+#     (symbols, source-corpus-roundtrip).
+#   float-NodeID read-back — DONE for the ML lane: make_float64/float_value (fourth-shim) + fk_neq
+#     value-compare on type-6/7 leaves now cross (ml-flow four-way). RESIDUAL: float-natives needs true
+#     f32 NARROWING (the shim does not narrow), IEEE corner exactness (±Inf/subnormals/NaN identity),
+#     and the math natives (sqrt/pow/floor/ceil) over the node ABI.
+#   field constructors   — field_* native family; best re-expressed over make_nodeid+intern_node.
+#     ~1 raw-native band (production field work already crosses via the BML DSL).
+#   host io family       — broader source-scan + .fkb codec (read/write_form_binary) + corpus reads
+#     (read_with_cache / i18n-load) + json codec (json_parse_body/json_response_body). Bands:
+#     channel, cell-registry, persistence, concept-corpus, self-witness, channel-query-json.
+#     Full floor/north-star: docs/coherence-substrate/fourth-arm-substrate-carriers.form
+#   walk_recipe / image  — walk_recipe(_here) + interned-node projection + form-binary image.
+#     Bands: kernel-satsang, prolog-bmf-eval.
+#   multi-line output    — bands that print mid-walk (fkwu answers one value through fk_pr); the fix
+#     is to reshape the band to return a single integer verdict (done for name-check, reachability).
+#   fs-semantics DIVERGENCE (a hard gate, not a wall) — cell-log-store: fkwu's fs_rmdir (non-recursive),
+#     fs_mkdir (inverted return), fs_rename-on-dir diverge from the siblings in the compact path. Must
+#     be root-caused to four-way, never registered as 3-kernel-only.
 #
 # Crossed walls (kept here as named precedent, not standing blockers):
 #   float-pool capacity   — the assembled transformer TRAINING bands
@@ -293,6 +307,14 @@ champion-challenger fks 127
 classifier-eval fks 63
 confidence-calibrate fks 127
 confidence-weighted-vote fks 127
+spatial-fusion fks 255
+spatial-colearn fkc 255
+journey fkc 127
+place-sense fks 255
+speak-turn fks 255
+ambient-surprise fkc 127
+vision-percept fks 127
+room-address fks 127
 device-heartbeat fks 127
 drift-detect fks 63
 ensemble-vote fks 127
@@ -887,7 +909,6 @@ http-serve fks 1023
 lifecycle-fitness-receipt fks 1111111111
 mandala fks 111111
 meaning-translation-receipt fks 1111111
-mel-frame fks 1023
 merkle fks 4
 merkle-readdress fks 127
 mlp-train-emit fks 7
@@ -934,4 +955,37 @@ mlp-fwd-emit fks 7
 pdf-text fks 1
 form-pe-coff-arm64 fks 63
 form-glsl-ffn-fwd fks 7
+str-byte-at fks 15
+pbkdf2-sha256 fks 3
+# node/substrate content-addressing bands — proven four-way crossers registered 2026-06-23 (the
+# 'node family' wall was largely a registration gap: intern_node/make_nodeid/node_children/node_eq/bp
+# /intern_trivial_int already cross fkwu; these bands simply were not yet listed).
+synesthesia fks 4
+codon fks 910
+gematria-channel fks 1111111
+sanskrit-channel fks 1111111
+shamballa-light-channel fks 11111111
+triangulate fks 1700
+pareto fks 1050
+auto-fitness fks 1900
+autoresearch-loop fks 530
+ping fks 5
+sovereign-boundary-protocol fks 16383
+verb-router fks 3
+midi-bmf fks 1500
+afferent-priority fks 1023
+bmf-mini fks 15
+bmf-to-fk fks 3426
+bml fks 268435455
+fk-opt fks 84
+minimal-surface fks 31
+name-check fks 511
+reachability fks 31
+channel-query fks 5
+ml-flow fks 5
+gguf-read fks 127
+gguf-locate fks 127
+form-asm-matvec fks 127
+form-asm-matvec-loop fks 127
+weight-load fks 4095
 form-glsl fks 7

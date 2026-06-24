@@ -1,0 +1,39 @@
+; preludes: form-stdlib/spatial-fusion.fk form-stdlib/spatial-colearn.fk
+;
+; spatial-colearn-band — one round of sensor co-learning sharpens the estimate, made falsifiable.
+;
+; Same three speed sensors as spatial-fusion-band: GPS (band 2, weight 5), accel (band 1, weight 2,
+; drifty), Wi-Fi (band 2, weight 3). The fused consensus is band 2. After ONE co-learning round
+; (clamp [1 9]):
+;   GPS   tracked consensus (residual 0) -> 5 + 1 = 6
+;   accel missed by one band (residual 1) -> 2 - 1 = 1   (faded, but floored at 1 — can recover)
+;   Wi-Fi tracked consensus (residual 0) -> 3 + 1 = 4
+; Band 2's summed confidence rises 8 -> 10 while the drifty accel's falls 2 -> 1: the estimate is
+; sharper and the accurate sensors now carry more of it. Nobody told the body which sensor to trust;
+; it learned it from its own agreement.
+;
+; Verdict 255 when every claim lands:
+;   1    a sensor that tracked consensus gained trust       (GPS  5 -> 6)
+;   2    a sensor that missed lost trust                      (accel 2 -> 1)
+;   4    a second tracking sensor gained too                  (Wi-Fi 3 -> 4)
+;   8    re-weighting preserves each sensor's band            (GPS band still 2)
+;   16   the estimate sharpened: band 2 summed 8 -> 10        (sf-weight-for learned 2 == 10)
+;   32   the clamp FLOORS a fading weight above zero          (update 1 missed, lo 1 -> 1, recoverable)
+;   64   the clamp CAPS a strong weight                        (update 9 tracked, hi 9 -> 9, no runaway)
+;   128  the consensus holds after re-weighting               (sf-consensus learned -> 2)
+(do
+    (let ballots (list (list 2 5) (list 1 2) (list 2 3)))
+    (let cands   (list 0 1 2 3))
+    (let learned (sc-round ballots cands 1 9))
+    (let gpsW   (nth (nth learned 0) 1))
+    (let accelW (nth (nth learned 1) 1))
+    (let wifiW  (nth (nth learned 2) 1))
+    (let c0 (if (eq gpsW 6)                          1 0))
+    (let c1 (if (eq accelW 1)                        2 0))
+    (let c2 (if (eq wifiW 4)                         4 0))
+    (let c3 (if (eq (nth (nth learned 0) 0) 2)       8 0))
+    (let c4 (if (eq (sf-weight-for learned 2) 10)   16 0))
+    (let c5 (if (eq (sc-update-weight 1 5 1 9) 1)   32 0))
+    (let c6 (if (eq (sc-update-weight 9 0 1 9) 9)   64 0))
+    (let c7 (if (eq (sf-consensus learned cands) 2) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

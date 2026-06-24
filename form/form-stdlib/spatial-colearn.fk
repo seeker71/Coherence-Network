@@ -1,0 +1,63 @@
+; spatial-colearn.fk — one ROUND of sensor co-learning: fuse the ballots, then move each sensor's
+; confidence by how well it tracked the consensus. This is the "train each separately and learn from
+; each other" arc of the spatial-sense loop (Urs): the sensors are not graded against an oracle — they
+; are graded against the body's OWN agreement (sf-consensus), so a sensor that tracks what the rest
+; agreed on EARNS confidence and one that drifts LOSES it, and next round's fusion is sharper.
+;
+; spatial-fusion.fk produces the rough estimate + the per-sensor residual; this closes the loop around
+; it. One round:
+;   1. fuse the (band weight) ballots -> consensus band (sf-consensus).
+;   2. for each sensor, residual = |its band - consensus| (sf-residual).
+;   3. move its weight: tracked consensus (residual 0) -> +1, missed -> -1, CLAMPED to [lo hi].
+;   4. return the re-weighted ballots — the input to the next round's fusion.
+;
+; Over rounds: an accurate sensor's weight rises toward hi and dominates; a chronically-drifting one
+; falls toward lo and fades from the estimate — but the clamp floor keeps it ABOVE zero so it can
+; recover the moment it starts tracking again (graceful re-entry, never a permanent exile), and the cap
+; keeps a good sensor from running away and drowning the redundancy that makes fusion robust. The whole
+; point of more than one sensor — the estimate survives one going bad, and the body re-learns which to
+; trust without being told.
+;
+; Integers only; the update is +/-1 per round (the body has add/sub; a graded float gain it cannot
+; prove is refused). Reinforcement from AGREEMENT, the same agreement-as-grounding the four kernels and
+; stt-agree live by — here turned on the sensors themselves.
+;
+; Kin: spatial-fusion.fk (the fuse + residual this closes the loop around), confidence-calibrate.fk
+; (bands the raw readings before they vote), trust-weighted-colearning.fk (admits a PEER's learning by
+; trust — this re-weights a SENSOR's by accuracy; siblings of the same co-learning law), trust-decay.fk
+; (the bounded-gate update idiom). Carrier-last: the phone only streams ballots; the learning is Form.
+;
+; preludes: form-stdlib/spatial-fusion.fk
+;
+; Proven by: form-stdlib/tests/spatial-colearn-band.fk (four-way at validate.sh)
+
+(do
+    ; --- CLAMP a confidence into [lo hi] — keeps weights from running away (hi) or going negative
+    ;     (lo); a floored-but-positive weight is a faded sensor that can still recover. ---
+    (defn sc-clamp (v lo hi) (if (lt v lo) lo (if (gt v hi) hi v)))
+
+    ; --- UPDATE one sensor's confidence from its residual: residual 0 (tracked) -> +1, else -1,
+    ;     clamped. The agreement reinforcement, one round. ---
+    (defn sc-update-weight (weight residual lo hi)
+        (if (eq residual 0)
+            (sc-clamp (add weight 1) lo hi)
+            (sc-clamp (sub weight 1) lo hi)))
+
+    ; --- RE-WEIGHT one ballot (band weight) against the consensus: keep its band, move its weight by
+    ;     how far the band sat from consensus (sf-residual from spatial-fusion). ---
+    (defn sc-relearn-ballot (ballot consensus lo hi)
+        (list (nth ballot 0)
+            (sc-update-weight (nth ballot 1) (sf-residual (nth ballot 0) consensus) lo hi)))
+
+    ; --- WALK the ballots, re-weighting each against a fixed consensus. ---
+    (defn sc-round-walk (ballots consensus lo hi)
+        (if (eq (len ballots) 0) (empty)
+            (cons (sc-relearn-ballot (head ballots) consensus lo hi)
+                (sc-round-walk (tail ballots) consensus lo hi))))
+
+    ; --- ONE ROUND: fuse to consensus, then re-weight every ballot against it. Returns the new ballot
+    ;     set for the next round's fusion — the loop closed in one proven step. ---
+    (defn sc-round (ballots candidates lo hi)
+        (sc-round-walk ballots (sf-consensus ballots candidates) lo hi))
+
+    0)

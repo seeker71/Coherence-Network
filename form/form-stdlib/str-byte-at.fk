@@ -1,0 +1,31 @@
+; str-byte-at.fk — the Form-native raw-byte accessor, four-way (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+;
+; The kernel exposes a `str_byte_at` native, but it is NOT correctly emitted into the 4th kernel — on
+; fkwu it returns 0 (found while bringing Postgres home over pg-wire). Meanwhile THREE byte-oriented
+; recipes each rolled their OWN private copy of the same one-liner — b64-byte-at, hex-byte-at,
+; url-byte-at = (ord (substring s i (add i 1))) — each proven four-way INCLUDING fkwu. This lifts that
+; repeated shape into one shared cell: a raw-byte read that is a Form recipe (so it crosses to fkwu like
+; its callers do), not a kernel native (which does not). char_at is the byte path on fkwu (tag-28 SCHAR);
+; substring-of-one + ord is the same byte, and it is what the proven callers already use. pg-wire.fk
+; composes on it here; b64-byte-at / hex-byte-at / url-byte-at are the remaining private copies that can
+; compost onto this next (each is the identical one-liner, already four-way).
+;
+; str-byte-at  s i        -> the i-th BYTE of s (0..255). str_len is the byte count.
+; str-be16     s i        -> big-endian uint16 at byte offset i
+; str-be32     s i        -> big-endian uint32 at byte offset i (binary-protocol framing: pg-wire et al.)
+
+(do
+    ;; the raw byte at index i — the shape b64/hex/url-encode each defined privately, now shared.
+    (defn str-byte-at (s i) (ord (substring s i (add i 1))))
+
+    ;; big-endian decoders compose on it — the reason binary protocols want byte access.
+    (defn str-be16 (s i)
+        (add (mul (str-byte-at s i) 256) (str-byte-at s (add i 1))))
+    (defn str-be32 (s i)
+        (add (mul (str-byte-at s i) 16777216)
+        (add (mul (str-byte-at s (add i 1)) 65536)
+        (add (mul (str-byte-at s (add i 2)) 256)
+             (str-byte-at s (add i 3))))))
+    0)

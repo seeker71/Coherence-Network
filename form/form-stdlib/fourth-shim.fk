@@ -171,4 +171,16 @@
     (defn _dict-scan (xs k) (if (nil? xs) (value-none) (if (str_eq (head xs) k) (head (tail xs)) (_dict-scan (tail (tail xs)) k))))
     (defn _dict_get (d k) (_dict-scan (tail d) k))
     (defn _dict_has (d k) (if (node_eq (_dict_get d k) (value-none)) 0 1))
+    ; ── float-NodeID construct + read-back — the fourth-arm image of the host-float ABI ──
+    ; The three reference kernels carry make_float64/float_value as natives over a VFloat value;
+    ; fkwu has no host-float value, but it DOES box doubles (fk_fbox) and store the boxed value in a
+    ; type-7 trivial-float node's fk_nval (intern_trivial_float, tag 113). So the faithful image is:
+    ;   make_float64 x  = intern the float's text as a trivial-float node (int_to_str renders a boxed
+    ;                     float as %.15g, the same surface the json codec uses); same value → node_eq
+    ;                     by VALUE now that fk_neq decodes type-6/7 leaves (mirrors `eq`).
+    ;   float_value n   = node_value n — fk_nval IS the boxed float, ready for float arithmetic.
+    ; A grammar's float vector builds and compares the same on all four arms.
+    (defn float_value (n) (node_value n))
+    (defn make_float64 (x) (intern_trivial_float (int_to_str x)))
+    (defn make_float32 (x) (intern_trivial_float (int_to_str x)))
     0)

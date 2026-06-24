@@ -1,11 +1,34 @@
 package com.coherence.sense
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import androidx.core.content.ContextCompat
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.graphics.ImageFormat
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.ImageReader
+import android.media.MediaRecorder
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
+import java.util.concurrent.atomic.AtomicInteger
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -13,9 +36,18 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.OutputStreamWriter
+import java.io.Writer
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.ln
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 
 class CapabilityHeartbeatService : Service() {
     private val channelId = "coherence_sense_capability"
@@ -27,20 +59,301 @@ class CapabilityHeartbeatService : Service() {
     private var beat = 0L
     private var running = false
 
+    // Continuous overnight logging — runs in the FOREGROUND SERVICE so it survives screen-off, the
+    // single requirement for capturing a night of breathing/motion. Two files on the phone:
+    //   sleep-<date>/accel.csv  — linear_acceleration in the exact format breath-rhythm.fk reads
+    //   sense-log-<date>.ndjson — every sensor event (motion, light, magnetic), for training tomorrow.
+    private var sensors: SensorManager? = null
+    private var accelWriter: Writer? = null
+    private var fieldWriter: Writer? = null
+    private var audioWriter: Writer? = null
+    private var heardWriter: Writer? = null
+    private var audioRecord: AudioRecord? = null
+    private var audioThread: Thread? = null
+    @Volatile private var audioRunning = false
+
+    // Room-ear understanding lane: tap the same PCM the energy logger reads, gather a rolling clip, and
+    // when there's been speech-likely sound, POST it to the Mac relay (whisper -> body-first agent) and
+    // log {transcript, answer}. The phone is a pure audio carrier; transcription + reasoning live where
+    // they work (the relay / the rented mind), sidestepping the dead on-device recognizer.
+    private val relayUrl = System.getenv("ROOM_RELAY_URL") ?: "http://192.168.1.225:8910/hear"
+    private val clipWindows = ArrayList<ShortArray>()   // last ~6s of 0.5s PCM windows
+    @Volatile private var lastClipMs = 0L
+    @Volatile private var recentPeakBand = 0
+    @Volatile private var uploadInFlight = false
+
+    // The eye: an always-on camera (camera2, no preview) labels objects/animals/scene and counts faces
+    // on throttled frames, on-device (ML Kit). Each detection is a (kind value confidence source) channel
+    // — the SAME shape the ear and sensors use — logged for the proven Form world-perception body.
+    private var camDevice: CameraDevice? = null
+    private var camSession: CameraCaptureSession? = null
+    private var visionReader: ImageReader? = null
+    private var visionThread: HandlerThread? = null
+    private var visionHandler: Handler? = null
+    private var seenWriter: Writer? = null
+    @Volatile private var lastVisionMs = 0L
+    private val labeler by lazy {
+        ImageLabeling.getClient(ImageLabelerOptions.Builder().setConfidenceThreshold(0.55f).build())
+    }
+    private val faceDetector by lazy {
+        FaceDetection.getClient(FaceDetectorOptions.Builder()
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST).build())
+    }
+    @Volatile private var logged = 0L
+    private val wallFmt = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
+
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(e: SensorEvent) {
+            try {
+                val nowMs = System.currentTimeMillis()
+                val tSec = e.timestamp / 1_000_000_000.0   // device monotonic seconds
+                if (e.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION && e.values.size >= 3) {
+                    accelWriter?.append(
+                        "%.6f,%s,%.5f,%.5f,%.5f\n".format(
+                            tSec, wallFmt.format(Date(nowMs)), e.values[0], e.values[1], e.values[2])
+                    )
+                }
+                val o = JSONObject().put("t_ms", nowMs).put("ts", tSec).put("type", e.sensor.type)
+                val arr = JSONArray(); for (v in e.values) arr.put(v.toDouble())
+                fieldWriter?.append(o.put("v", arr).toString())?.append("\n")
+                logged++
+            } catch (_: Exception) {}
+        }
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    private val flushLoop = object : Runnable {
+        override fun run() {
+            try { accelWriter?.flush(); fieldWriter?.flush(); audioWriter?.flush() } catch (_: Exception) {}
+            workerHandler?.postDelayed(this, 5000)
+        }
+    }
+
+    private fun startLogging() {
+        val sm = (getSystemService(Context.SENSOR_SERVICE) as? SensorManager) ?: return
+        sensors = sm
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val dir = File(filesDir, "sleep-$date").apply { mkdirs() }
+            val accelFile = File(dir, "accel.csv")
+            if (!accelFile.exists() || accelFile.length() == 0L) accelFile.writeText("ts,wall,x,y,z\n")
+            accelWriter = java.io.FileWriter(accelFile, true).buffered()   // append
+            fieldWriter = java.io.FileWriter(File(filesDir, "sense-log-$date.ndjson"), true).buffered()
+        } catch (_: Exception) { return }
+        val h = workerHandler
+        // 5Hz linear-accel (what breath-rhythm.fk expects) + motion at ~10Hz + ambient at normal.
+        sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)?.let { sm.registerListener(sensorListener, it, 200_000, h) }
+        sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sm.registerListener(sensorListener, it, 100_000, h) }
+        sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let { sm.registerListener(sensorListener, it, 100_000, h) }
+        sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
+        sm.getDefaultSensor(Sensor.TYPE_LIGHT)?.let { sm.registerListener(sensorListener, it, SensorManager.SENSOR_DELAY_NORMAL, h) }
+        h?.postDelayed(flushLoop, 5000)
+        startAudioLogging()
+        startVision()
+    }
+
+    // The always-on ear: one continuous AudioRecord owns the mic and logs the ENERGY ENVELOPE per
+    // ~0.5s window (RMS + a 0..9 band) — enough for snoring, surprises, room liveness, and the world
+    // model, while raw speech stays OUT of the log. Transcription / music-id come from routing audio to
+    // the agent later; on-device they'd need their own mic, which this capture already holds.
+    private fun startAudioLogging() {
+        if (audioRunning) return
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            val af = File(File(filesDir, "sleep-$date").apply { mkdirs() }, "audio.csv")
+            if (!af.exists() || af.length() == 0L) af.writeText("t_ms,wall,rms,band\n")
+            audioWriter = java.io.FileWriter(af, true).buffered()
+            heardWriter = java.io.FileWriter(File(File(filesDir, "sleep-$date").apply { mkdirs() }, "room-heard.ndjson"), true).buffered()
+            val sr = 16000
+            val minBuf = AudioRecord.getMinBufferSize(sr, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            val rec = AudioRecord(
+                MediaRecorder.AudioSource.MIC, sr,
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                max(minBuf, sr) // ~1s
+            )
+            if (rec.state != AudioRecord.STATE_INITIALIZED) { rec.release(); return }
+            audioRecord = rec
+            audioRunning = true
+            rec.startRecording()
+            audioThread = Thread {
+                val win = ShortArray(sr / 2)   // 0.5s windows
+                while (audioRunning) {
+                    val n = rec.read(win, 0, win.size)
+                    if (n <= 0) continue
+                    var sumSq = 0.0
+                    for (i in 0 until n) { val s = win[i].toDouble(); sumSq += s * s }
+                    val rms = sqrt(sumSq / n)
+                    val band = min(9, max(0, (ln(rms + 1.0) / ln(2.0)).toInt()))  // log2 energy band 0..9
+                    val nowMs = System.currentTimeMillis()
+                    try { audioWriter?.append("$nowMs,${wallFmt.format(Date(nowMs))},${rms.toInt()},$band\n") } catch (_: Exception) {}
+                    // gather a rolling ~6s clip; track recent loudness for the speech-likely trigger
+                    synchronized(clipWindows) {
+                        clipWindows.add(win.copyOf(n))
+                        while (clipWindows.size > 12) clipWindows.removeAt(0)
+                    }
+                    if (band > recentPeakBand) recentPeakBand = band
+                    // every ~25s, if there was speech-likely sound, send a clip to the room-ear relay
+                    if (nowMs - lastClipMs > 25_000) {
+                        lastClipMs = nowMs
+                        val peak = recentPeakBand; recentPeakBand = 0
+                        if (peak >= 4 && !uploadInFlight) uploadClip()
+                    }
+                }
+            }.also { it.isDaemon = true; it.start() }
+        } catch (_: Exception) { audioRunning = false }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startVision() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
+        val cm = (getSystemService(Context.CAMERA_SERVICE) as? CameraManager) ?: return
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            seenWriter = java.io.FileWriter(File(File(filesDir, "sleep-$date").apply { mkdirs() }, "room-seen.ndjson"), true).buffered()
+            visionThread = HandlerThread("coherence-vision").also { it.start() }
+            visionHandler = Handler(visionThread!!.looper)
+            val camId = cm.cameraIdList.firstOrNull {
+                cm.getCameraCharacteristics(it).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+            } ?: cm.cameraIdList.firstOrNull() ?: return
+            val reader = ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 2)
+            visionReader = reader
+            reader.setOnImageAvailableListener({ r -> onVisionFrame(r) }, visionHandler)
+            cm.openCamera(camId, object : CameraDevice.StateCallback() {
+                override fun onOpened(device: CameraDevice) {
+                    camDevice = device
+                    try {
+                        val req = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply { addTarget(reader.surface) }
+                        device.createCaptureSession(listOf(reader.surface), object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(session: CameraCaptureSession) {
+                                camSession = session
+                                try { session.setRepeatingRequest(req.build(), null, visionHandler) } catch (_: Exception) {}
+                            }
+                            override fun onConfigureFailed(session: CameraCaptureSession) {}
+                        }, visionHandler)
+                    } catch (_: Exception) {}
+                }
+                override fun onDisconnected(device: CameraDevice) { device.close() }
+                override fun onError(device: CameraDevice, error: Int) { device.close() }
+            }, visionHandler)
+        } catch (_: Exception) {}
+    }
+
+    private fun onVisionFrame(reader: ImageReader) {
+        val image = try { reader.acquireLatestImage() } catch (_: Exception) { null } ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastVisionMs < 2500) { image.close(); return }   // ~1 frame / 2.5s — the eye glances, doesn't stare
+        lastVisionMs = now
+        val input = try { InputImage.fromMediaImage(image, 90) } catch (_: Exception) { image.close(); return }
+        val pending = AtomicInteger(2)
+        val closeWhenDone = { if (pending.decrementAndGet() == 0) try { image.close() } catch (_: Exception) {} }
+        labeler.process(input).addOnSuccessListener { labels ->
+            labels.sortedByDescending { it.confidence }.take(3).forEach { logSeen("object", it.text, (it.confidence * 100).toInt()) }
+        }.addOnCompleteListener { closeWhenDone() }
+        faceDetector.process(input).addOnSuccessListener { faces ->
+            if (faces.isNotEmpty()) logSeen("face", "${faces.size} face(s)", 90)
+        }.addOnCompleteListener { closeWhenDone() }
+    }
+
+    private fun logSeen(kind: String, value: String, conf: Int) {
+        try {
+            val o = JSONObject().put("t_ms", System.currentTimeMillis())
+                .put("kind", kind).put("value", value).put("conf", conf).put("source", "camera")
+            seenWriter?.append(o.toString())?.append("\n"); seenWriter?.flush()
+        } catch (_: Exception) {}
+    }
+
+    private fun stopVision() {
+        try { camSession?.close() } catch (_: Exception) {}
+        try { camDevice?.close() } catch (_: Exception) {}
+        try { visionReader?.close() } catch (_: Exception) {}
+        try { visionThread?.quitSafely() } catch (_: Exception) {}
+        try { seenWriter?.flush(); seenWriter?.close() } catch (_: Exception) {}
+        camSession = null; camDevice = null; visionReader = null
+    }
+
+    private fun stopAudioLogging() {
+        audioRunning = false
+        try { audioThread?.join(800) } catch (_: Exception) {}
+        try { audioRecord?.stop(); audioRecord?.release() } catch (_: Exception) {}
+        audioRecord = null
+        try { audioWriter?.flush(); audioWriter?.close() } catch (_: Exception) {}
+    }
+
+    private fun uploadClip() {
+        val pcm: ShortArray = synchronized(clipWindows) {
+            val total = clipWindows.sumOf { it.size }
+            val out = ShortArray(total); var i = 0
+            for (w in clipWindows) { System.arraycopy(w, 0, out, i, w.size); i += w.size }
+            out
+        }
+        if (pcm.isEmpty()) { uploadInFlight = false; return }
+        Thread {
+            try {
+                val wav = buildWav(pcm, 16000)
+                val conn = (URL(relayUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"; doOutput = true
+                    connectTimeout = 5000; readTimeout = 120000
+                    setRequestProperty("Content-Type", "audio/wav")
+                }
+                conn.outputStream.use { it.write(wav) }
+                if (conn.responseCode in 200..299) {
+                    val o = JSONObject(conn.inputStream.bufferedReader().readText())
+                    val rec = JSONObject()
+                        .put("t_ms", System.currentTimeMillis())
+                        .put("transcript", o.optString("transcript"))
+                        .put("answer", o.optString("answer"))
+                    try { heardWriter?.append(rec.toString())?.append("\n"); heardWriter?.flush() } catch (_: Exception) {}
+                }
+                conn.disconnect()
+            } catch (_: Exception) {} finally { uploadInFlight = false }
+        }.start()
+    }
+
+    private fun buildWav(pcm: ShortArray, sampleRate: Int): ByteArray {
+        val dataLen = pcm.size * 2
+        val out = java.io.ByteArrayOutputStream(44 + dataLen)
+        fun le32(v: Int) { out.write(v and 0xff); out.write((v shr 8) and 0xff); out.write((v shr 16) and 0xff); out.write((v shr 24) and 0xff) }
+        fun le16(v: Int) { out.write(v and 0xff); out.write((v shr 8) and 0xff) }
+        out.write("RIFF".toByteArray()); le32(36 + dataLen); out.write("WAVE".toByteArray())
+        out.write("fmt ".toByteArray()); le32(16); le16(1); le16(1)
+        le32(sampleRate); le32(sampleRate * 2); le16(2); le16(16)
+        out.write("data".toByteArray()); le32(dataLen)
+        for (s in pcm) { out.write(s.toInt() and 0xff); out.write((s.toInt() shr 8) and 0xff) }
+        return out.toByteArray()
+    }
+
+    private fun stopLogging() {
+        try { sensors?.unregisterListener(sensorListener) } catch (_: Exception) {}
+        stopAudioLogging()
+        stopVision()
+        try { heardWriter?.flush(); heardWriter?.close() } catch (_: Exception) {}
+        try { accelWriter?.flush(); accelWriter?.close() } catch (_: Exception) {}
+        try { fieldWriter?.flush(); fieldWriter?.close() } catch (_: Exception) {}
+    }
+
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        startForeground(
-            notificationId,
-            NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(android.R.drawable.stat_notify_sync)
-                .setContentTitle("Coherence Sense")
-                .setContentText("Capability heartbeat is live")
-                .setOngoing(true)
-                .build(),
-        )
+        val notif = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setContentTitle("Coherence Sense")
+            .setContentText("Sensing the field — motion, light, sound")
+            .setOngoing(true)
+            .build()
+        // Android 10+ wants the FGS type at start time; microphone type is required to capture audio.
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(
+                notificationId, notif,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC or
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA,
+            )
+        } else {
+            startForeground(notificationId, notif)
+        }
         worker = HandlerThread("coherence-capability-heartbeat").also { it.start() }
         workerHandler = Handler(worker!!.looper)
+        workerHandler?.post { startLogging() }   // begin sensor logging immediately, witness or not
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -52,8 +365,9 @@ class CapabilityHeartbeatService : Service() {
             ?: prefs.getString(KEY_WITNESS_BASE, "")
             ?: "").trim().removeSuffix("/")
         if (witnessBase.isBlank()) {
-            stopSelf()
-            return START_NOT_STICKY
+            // No witness to share with, but keep the service ALIVE — logging runs regardless (started
+            // in onCreate). The night of data lands on the phone whether or not a witness is reachable.
+            return START_STICKY
         }
         prefs.edit()
             .putString(KEY_ORGAN_ID, organId)
@@ -69,6 +383,7 @@ class CapabilityHeartbeatService : Service() {
 
     override fun onDestroy() {
         running = false
+        stopLogging()
         workerHandler?.removeCallbacksAndMessages(null)
         worker?.quitSafely()
         worker = null

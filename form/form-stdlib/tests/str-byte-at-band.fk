@@ -1,0 +1,18 @@
+; tests/str-byte-at-band.fk — sibling-witness band for the Form-native raw-byte accessor.
+;
+; preludes: form-stdlib/str-byte-at.fk
+;
+; Proves str-byte-at (and the big-endian decoders that compose on it) read the same raw bytes on every
+; kernel — including fkwu, where the kernel-native str_byte_at returns 0. ASCII literals so each byte is
+; its codepoint and the verdict is deterministic across the four walkers.
+;   1   str-byte-at "ABCD" 0 == 65 (A)
+;   2   str-byte-at "ABCD" 3 == 68 (D)
+;   4   str-be16 "AB"   == 16706         (65*256 + 66)
+;   8   str-be32 "ABCD" == 1094861636    (65*2^24 + 66*2^16 + 67*2^8 + 68)
+; Verdict 15 when every claim lands.
+(do
+    (let c0 (if (eq (str-byte-at "ABCD" 0) 65) 1 0))
+    (let c1 (if (eq (str-byte-at "ABCD" 3) 68) 2 0))
+    (let c2 (if (eq (str-be16 "AB" 0) 16706) 4 0))
+    (let c3 (if (eq (str-be32 "ABCD" 0) 1094861636) 8 0))
+    (add c0 (add c1 (add c2 c3))))

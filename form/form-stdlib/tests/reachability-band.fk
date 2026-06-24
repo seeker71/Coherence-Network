@@ -54,5 +54,7 @@
         (and (eq (rc-count-in all-defns reached 0) 3)
              (rc-member? "cb" tl-refs))))))
 
-    (print (if pass "reachability-band: PASS" "reachability-band: FAIL"))
+    ;; verdict as an integer (not a printed string) so the fourth arm witnesses it: fkwu answers one
+    ;; value via fk_pr and `print` is not in its op table. 31 = all 5 checks pass; four-way.
+    (if pass 31 0)
 )

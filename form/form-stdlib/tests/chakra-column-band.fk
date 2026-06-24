@@ -1,4 +1,4 @@
-; preludes: form-stdlib/chakra-column.fk
+; preludes: form-stdlib/json.fk form-stdlib/synesthesia.fk form-stdlib/chakra-column.fk
 ;
 ; chakra-column-band — the seven gates, made falsifiable.
 ;
