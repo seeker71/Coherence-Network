@@ -1,0 +1,43 @@
+; nl-reason.fk — the keystone wiring: reason about NATURAL LANGUAGE, end to end, natively.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/string-case.fk form-stdlib/nl-lexicon-data.fk form-stdlib/nl-translate.fk form-stdlib/forward-chaining.fk form-stdlib/derivation.fk
+;
+; nl-translate.fk turns an English surface into a Form node — "the body is cell" -> property(body,cell),
+; content words normalized onto language-neutral pivot symbols (n0..n6). The reasoning blocks
+; (forward-chaining, derivation) reason over integer atoms and RETURN the proof. This cell is the thin
+; bridge between them, and it is the whole of "execute and reason about any NL": a parsed property node's
+; attribute IS a proposition; the pivot symbol n<k> IS the atom k; so a sentence becomes a fact, a rule
+; chains it, the derivation names WHY, and the conclusion decodes back to a sentence. The engine never
+; changes — adding a sentence shape is adding a grammar rule, adding a word is adding a lexicon row.
+;
+; A frontier mind reads the sentence and guesses an answer; this one PARSES it to structure, DERIVES the
+; answer over explicit rules, and hands back both the English conclusion AND its proof — sovereign,
+; exact, re-checkable. The honest boundary is the one named in the body: any NL the grammar can parse
+; and the rules can chain. Both are growable data, never a wall.
+;
+; Kin: nl-translate.fk (surface<->pivot, the translator), forward-chaining.fk + derivation.fk (the
+; reasoning + proof), native-reasoning-blocks.form (the library). Proven by: tests/nl-reason-band.fk
+
+(do
+    ; the seed pivot symbols are "n0".."n6", so the reasoning atom simply IS the index.
+    (defn nlr-sym->atom (s)
+        (if (str_eq s "n0") 0 (if (str_eq s "n1") 1 (if (str_eq s "n2") 2
+        (if (str_eq s "n3") 3 (if (str_eq s "n4") 4 (if (str_eq s "n5") 5
+        (if (str_eq s "n6") 6 (sub 0 1)))))))))
+    (defn nlr-atom->sym (a)
+        (if (eq a 0) "n0" (if (eq a 1) "n1" (if (eq a 2) "n2"
+        (if (eq a 3) "n3" (if (eq a 4) "n4" (if (eq a 5) "n5"
+        (if (eq a 6) "n6" "n0"))))))))
+
+    ; the proposition a parsed sentence asserts = the atom of its attribute (the "Y" in "the X is Y").
+    (defn nlr-attr-atom (pivot) (nlr-sym->atom (nlt-kidv pivot 1)))
+    ; the subject pivot symbol (the "X"), carried through so the answer keeps the same subject.
+    (defn nlr-subj-sym (pivot) (nlt-kidv pivot 0))
+
+    ; decode a derived conclusion (subject symbol + attribute atom) back to an English sentence,
+    ; reusing nl-translate's own decoder over a freshly built pivot property node.
+    (defn nlr-answer (subj-sym attr-atom)
+        (dec-en (intern_node (bp "property")
+                    (list (nlt-s subj-sym) (nlt-s (nlr-atom->sym attr-atom))))))
+
+    0)

@@ -1,0 +1,49 @@
+; backward-chaining.fk — goal-directed proof search, the second reasoning skill.
+;
+; preludes: form-stdlib/forward-chaining.fk
+;
+; Forward-chaining (skill 1) pushes from the axioms toward everything they force. Backward-chaining
+; pulls from a GOAL: to prove G, find a rule that concludes G and recursively prove its premises;
+; an axiom proves itself. Same rule data, opposite direction — the proof-search half of a reasoning
+; body. It reuses skill 1's accessors (fwd-prems / fwd-concl / fwd-member?) unchanged: the framework
+; composes, it does not fork. A frontier mind guesses whether a claim follows; this SEARCHES for the
+; actual proof, exactly, and the search is pure-numeric so it crystallizes to native.
+;
+; Soundness <-> completeness bridge: over the same (facts, rules), backward-chaining answers a goal
+; EXACTLY as forward-chaining's entailment does — proven as a claim in the band. Two engines, one truth.
+;
+; Termination is honest: cyclic rules (A->B, B->A) cannot loop forever because fuel decrements on
+; every rule expansion; fuel = (len rules) is the proof-depth bound (a proof longer than the rule
+; count would have to reuse a rule, i.e. cycle). A goal unreachable within that depth returns 0
+; without hanging — proven by the cyclic-rules claim.
+;
+; Kin: forward-chaining.fk (the dual), form-first-router.fk (route vs. derive), core-axioms.form.
+; Proven by: form-stdlib/tests/backward-chaining-band.fk (four-way at validate.sh)
+
+(do
+    ; --- can we prove EVERY premise in the list? (a rule fires backward only if all its premises hold) ---
+    (defn bwd-all-provable? (prems facts rules fuel)
+        (if (eq (len prems) 0) 1
+            (if (eq (bwd-provable? (head prems) facts rules fuel) 1)
+                (bwd-all-provable? (tail prems) facts rules fuel)
+                0)))
+
+    ; --- try each remaining rule: if its conclusion IS the goal and its premises all prove, done. ---
+    (defn bwd-try-rules (goal facts rules remaining fuel)
+        (if (eq (len remaining) 0) 0
+            (if (and (eq (fwd-concl (head remaining)) goal)
+                     (eq (bwd-all-provable? (fwd-prems (head remaining)) facts rules fuel) 1))
+                1
+                (bwd-try-rules goal facts rules (tail remaining) fuel))))
+
+    ; --- PROVABLE? — the goal-directed search. an axiom proves itself; else find a rule for it. ---
+    ; fuel is the proof-depth budget; 0 fuel means "not proven within the bound" (no hang on cycles).
+    (defn bwd-provable? (goal facts rules fuel)
+        (if (eq (fwd-member? goal facts) 1) 1
+            (if (eq fuel 0) 0
+                (bwd-try-rules goal facts rules rules (sub fuel 1)))))
+
+    ; --- PROVE? — THE query, with the honest depth bound baked in. ---
+    (defn bwd-prove? (goal facts rules) (bwd-provable? goal facts rules (len rules)))
+
+    0)

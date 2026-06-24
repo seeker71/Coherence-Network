@@ -34,6 +34,14 @@ HOST="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
 KERNEL="$FORM/form-kernel-rust/target/release/form-kernel-rust"
 if [[ ! -x "$KERNEL" ]]; then KERNEL="$(ls -t "$HOME"/.claude-worktrees/*/form/form-kernel-rust/target/release/form-kernel-rust 2>/dev/null | head -1 || true)"; fi
 [[ -x "$KERNEL" ]] || { echo "FAIL no Form kernel — run: (cd $FORM && ./validate.sh form-stdlib/core.fk form-stdlib/speech-organ.fk form-stdlib/tests/speech-organ-band.fk)"; exit 1; }
+FORMCLI="$FORM/form-cli"
+if [[ ! -x "$FORMCLI" && -x "$FORM/.cache/form-cli-native-host" ]]; then
+    FORMCLI="$FORM/.cache/form-cli-native-host"
+fi
+if [[ ! -x "$FORMCLI" && -x "$FORM/build-form-cli.sh" ]]; then
+    (cd "$FORM" && ./build-form-cli.sh form-cli >/dev/null 2>&1) || true
+    FORMCLI="$FORM/form-cli"
+fi
 [[ -f "$MODEL" ]] || { echo "FAIL whisper model not found: $MODEL"; exit 2; }
 
 PRELUDES=(form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/speech-organ.fk)
@@ -41,6 +49,12 @@ form_decide() {  # $1 = body producing prints → echo lines
     local drv; drv="$(mktemp /tmp/so-XXXXXX.fk)"; printf '%s\n' "$1" > "$drv"
     ( cd "$FORM" && "$KERNEL" "${PRELUDES[@]}" "$drv" 2>/dev/null )
     rm -f "$drv"
+}
+
+native_host_row() {  # speech_gate freq surprises samples
+    [[ -x "$FORMCLI" ]] || { echo ""; return; }
+    printf 'native-host macos 1 0 0 %s %s %s %s\nquit\n' "$1" "$2" "$3" "$4" \
+        | "$FORMCLI" 2>/dev/null | head -1
 }
 
 protos_literal() {  # speakers JSON → Form prototype literal (or (empty))
@@ -137,9 +151,11 @@ while true; do
     heard="$(transcribe "$wav")"
     read -r gate band sp f rmsx < <(process "$wav" "$heard")
     rm -f "$wav"
+    native_row="$(native_host_row "${gate:-0}" "${f:-0}" 0 "$hb_tick")"
     jq -n --arg oid "$ORGAN_ID" --arg host "$HOST" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        --arg native_host "$native_row" \
         --arg text "$heard" --arg sp "$sp" --argjson gate "${gate:-0}" --argjson band "${band:-0}" --argjson freq "${f:-0}" \
-        '{organ_id:$oid,host:$host,ts:$ts,kind:"utterance",transcript:$text,speaker:$sp,voiced_gate:$gate,speaker_band:$band,freq_hz:$freq,body:"form-stdlib/speech-organ.fk"}' > "$RECEIPT"
+        '{organ_id:$oid,host:$host,ts:$ts,kind:"utterance",transcript:$text,speaker:$sp,voiced_gate:$gate,speaker_band:$band,freq_hz:$freq,native_host_instance_raw:$native_host,body:"form-stdlib/speech-organ.fk"}' > "$RECEIPT"
     echo "[speech] «$sp» band=$band ${f}Hz: ${heard:-(no text)}"
     beat true
 done

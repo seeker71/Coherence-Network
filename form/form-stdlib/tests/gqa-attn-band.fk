@@ -1,0 +1,57 @@
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk
+;
+; gqa-attn-band — grouped-query attention (GQA), the attention real llama3.2:3b uses
+; (24 query heads sharing 8 KV heads). Three strange-minimal claims, hd=2, scale=1,
+; each pinned to the fp64 reference (softmax(scale*q.k).v) at 1e-6:
+;
+;   bit 1  GQA n=2 nkv=1 (group=2): both query heads read kv head 0; k/v are HALF the
+;          q width (KVD=2 < D=4). Head 0 reproduces MHA's head 0 (same q, same kv0);
+;          head 1 reads kv0 too (differs from MHA's head1 → the sharing does real work).
+;          A query-head-indexed k/v slice would walk off the shorter k/v vector; only
+;          (div h grp) stays in bounds — the off-end catch.
+;   bit 2  GQA n=2 nkv=2 (group=1) EQUALS transformer-mh's tb-mh-attn bit-for-bit —
+;          GQA generalizes MHA, MHA is the n_kv_head = n_head case (no parallel path).
+;   bit 4  GQA n=4 nkv=2 (group=2): heads 0,1 -> kv0 ; heads 2,3 -> kv1 — the same
+;          (h / group) grouping arithmetic llama3.2 runs at 24 -> 8.
+;
+; Verdict 7 when all three cross.
+
+(do
+  (defn gqa-vmaxdiff (a b)
+    (if (eq (len a) 0) 0.0
+        (do (let d (tn-abs (sub (head a) (head b))))
+            (let r (gqa-vmaxdiff (tail a) (tail b)))
+            (if (gt d r) d r))))
+  (defn gqa-maxdiff (as bs)
+    (if (eq (len as) 0) 0.0
+        (do (let d (gqa-vmaxdiff (head as) (head bs)))
+            (let r (gqa-maxdiff (tail as) (tail bs)))
+            (if (gt d r) d r))))
+
+  (let scale 1.0) (let hd 2)
+
+  ; --- claim 1: GQA n=2 nkv=1 (group=2), k/v half the q width ---
+  (let qs1 (list (list 0.5 -0.3 0.9 0.2) (list -0.4 0.7 -0.1 0.6)))
+  (let ks1 (list (list 0.2 0.8) (list -0.5 0.3)))
+  (let vs1 (list (list 1.0 -1.0) (list 0.4 0.6)))
+  (let exp1 (list (list 0.7299003983874868 -0.2797343956999647 0.804883163549388 -0.47968843613170165)
+                  (list 0.7104957145998338 -0.2279885722662236 0.7343487127591333 -0.2915965673576889)))
+  (let got1 (tb-gqa-attn qs1 ks1 vs1 2 1 hd scale))
+  (let c1 (if (lt (gqa-maxdiff got1 exp1) 0.000001) 1 0))
+
+  ; --- claim 2: GQA n=2 nkv=2 (group=1) == tb-mh-attn exactly ---
+  (let ks2 (list (list 0.2 0.8 -0.1 0.5) (list -0.5 0.3 0.6 -0.2)))
+  (let vs2 (list (list 1.0 -1.0 0.3 0.7) (list 0.4 0.6 -0.8 0.1)))
+  (let got2 (tb-gqa-attn qs1 ks2 vs2 2 2 hd scale))
+  (let mha2 (tb-mh-attn qs1 ks2 vs2 2 hd scale))
+  (let c2 (if (lt (gqa-maxdiff got2 mha2) 0.000001) 2 0))
+
+  ; --- claim 3: GQA n=4 nkv=2 (group=2), the real llama 24->8 grouping shape ---
+  (let qs3 (list (list 0.5 -0.3 0.9 0.2 -0.4 0.7 0.1 -0.6)
+                 (list -0.2 0.8 0.3 -0.5 0.6 0.1 -0.7 0.4)))
+  (let exp3 (list (list 0.7299003983874868 -0.2797343956999647 0.804883163549388 -0.47968843613170165 -0.048127016890052804 0.5101125362417893 -0.3821170755773992 0.3279361405941459)
+                  (list 0.7387817750818175 -0.30341806688484674 0.6940007998720208 -0.18400213299205526 -0.34527933680906314 0.34802945264960194 -0.048127016890052804 0.5101125362417893)))
+  (let got3 (tb-gqa-attn qs3 ks2 vs2 4 2 hd scale))
+  (let c3 (if (lt (gqa-maxdiff got3 exp3) 0.000001) 4 0))
+
+  (add c1 (add c2 c3)))

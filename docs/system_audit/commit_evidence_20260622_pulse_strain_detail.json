@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/witness-strain-calibration-20260622",
+  "commit_scope": "Expose successful strain details in the pulse current-state API so slow and fallback organs name their reason instead of returning null detail.",
+  "files_owned": [
+    "pulse/pulse_app/main.py",
+    "pulse/tests/test_main.py",
+    "scripts/validate_commit_evidence.py",
+    "docs/system_audit/commit_evidence_20260622_pulse_strain_detail.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m pytest pulse/tests -q",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+    ],
+    "summary": "Pulse package tests passed: 78 passed. The evidence validator now treats pulse/ as production runtime tissue, and the branch evidence validates against the full diff. The new regression test confirms an ok=True slow sample returns status=strained with its detail visible in /pulse/now."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 10 https://pulse.coherencycoin.com/pulse/now | jq '{overall, organs: [.organs[] | select(.status != \"breathing\") | {name,status,latency_ms,detail,last_sample_at}], silences: .ongoing_silences}'"
+    ],
+    "summary": "Pre-change live witness was strained with web and API endpoint strain but returned detail=null for successful slow samples. Public deploy verification remains pending."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair"
+  ],
+  "task_ids": [
+    "witness-strain-calibration-20260622"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "witness-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex",
+    "model": "gpt-5-codex",
+    "session": "witness-strain-calibration-20260622"
+  },
+  "evidence_refs": [
+    "live witness before change: overall=strained; web latency 4691ms detail=null; endpoint_ideas latency 1643ms detail=null; endpoint_vitality latency 1654ms detail=null",
+    "python3 -m pytest pulse/tests -q -> 78 passed",
+    "scripts/validate_commit_evidence.py runtime prefixes include pulse/ so pulse service changes are classified as runtime changes"
+  ],
+  "change_files": [
+    "pulse/pulse_app/main.py",
+    "pulse/tests/test_main.py",
+    "scripts/validate_commit_evidence.py",
+    "docs/system_audit/commit_evidence_20260622_pulse_strain_detail.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET /pulse/now exposes detail for ok=True strained samples, so live slow/fallback organs name their reason instead of showing detail=null.",
+    "public_endpoints": [
+      "GET https://pulse.coherencycoin.com/pulse/now"
+    ],
+    "test_flows": [
+      "Local route-level regression: store an ok=True web sample with detail='slow: 4691ms > 2000ms threshold'; pulse_now returns web.status='strained' and web.detail with the same slow reason."
+    ],
+    "pending_reason": "Public endpoint verification waits for PR merge and Hostinger deploy."
+  }
+}

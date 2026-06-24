@@ -205,8 +205,10 @@ active-inference fks 127
 indirect-call-runtime-probe fks 7
 higher-order-fn-arg fks 1111
 branch-choice-order fks 511
+backtrack-search fkc 31
 channel-interface fks 127
 organ-sense fks 11230
+organ-offer fks 63
 world-build fks 132
 cross-cell-interface fks 51113
 channel-flow fks 8388607
@@ -253,6 +255,7 @@ text-tokenize fks 31
 bpe-tokenizer fks 31
 byte-to-symbol fks 255
 pretokenize fks 255
+llama3-pretokenize fks 255
 tokenize fks 31
 form-cli-judge fks 127
 obs-verify fks 31
@@ -341,6 +344,19 @@ recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
 form-first-router fks 511
+forward-chaining fkc 1023
+backward-chaining fkc 1023
+subjective-logic fkc 1023
+living-vector fkc 1023
+sense-self fkc 1023
+unify fkc 1023
+derivation fkc 1023
+proof-trust fkc 1023
+rational fkc 1023
+float-ops fks 255
+nl-reason fks 255
+resolution fkc 8191
+host-diagnostic fkc 1023
 reference-packs fks 1023
 # Port-shape rows now cross the fourth arm without live external carriers:
 # resource cells, application graph SQL strings, and auth/header/hash wrappers.
@@ -348,6 +364,9 @@ resource-port fks 1111111
 application-graph-node-port fks 1111
 auth-port fks 1111
 bml-native-interface-package-import fks 255
+field-relay fkc 127
+field-identity fkc 511
+field-queue fkc 127
 bml-native-mutable-locals fks 1023
 bml-native-source-control fks 2047
 dynamic-grammar-carrier fks 4095
@@ -396,16 +415,20 @@ form-diagnose fks 31
 form-debug fks 31
 form-lower fks 31
 form-lower-float fkc 15
+form-lower-cvt fkc 15
+form-lower-condgen fkc 15
 form-lower-cond fks 31
 form-lower-map fks 31
 form-lower-rec fks 31
 form-lower-streq fks 31
+form-lower-multiarg fks 127
 form-macho fks 31
 form-pe-coff fks 16383
 form-pe-coff-affine fks 127
 bootstrap-host fks 4095
 form-elf fks 31
 form-elf-exec fks 63
+form-elf-so fks 127
 form-mut fks 31
 form-spy fks 31
 gematria fks 11111
@@ -433,6 +456,9 @@ block-fwd-emit fks 7
 llama-block-fwd-emit fks 7
 llama-block-fwd-causal-emit fks 7
 llama-block-decode-emit fks 7
+gqa-attn-emit fks 7
+llama-gqa-block-fwd-causal-emit fks 7
+gqa-llama-block-decode-emit fks 7
 float-conversions fks 31
 trig fks 127
 trig-atan fks 1111111
@@ -455,6 +481,7 @@ neural-lm fks 31
 neural-lm-real fks 7
 llama-numerics fks 4095
 rope fks 4095
+llama3-rope fks 255
 llama-block fks 4095
 causal-attention fks 511
 geometric-learning fks 8388607
@@ -478,6 +505,7 @@ shared-heart fks 31
 shamballa-codes fks 11111
 shamballa-light-codes fks 111111
 shamballa-symbol-packs fks 1023
+shamballa-channel fks 1111111111
 silence-floor fks 31
 slice-update-roundtrip fks 127
 update-ingest fkc 63
@@ -538,7 +566,10 @@ sleep-night fkc 127
 sleep-classify fks 127
 sleep-report fks 127
 breath-rhythm fks 127
+accel-breath fks 127
 stt-agree fks 127
+wer-align fks 127
+voice-diarize fks 127
 witness-theorem fks 31
 witness-to-co-regulate fks 127
 
@@ -588,6 +619,24 @@ xpath fks 9
 # (storage-put → (carrier-put carrier) indirect call) both ride the fourth arm.
 content-address fks 1111111111
 substrate-core fks 11111
+
+# ── framebuffer lane — source attribution as a real fourth-arm carrier ──
+# fkwu carries the sibling's framebuffer natively: fb_record (tag 128, the
+# tri the shim's intern_node_at lowers to) writes a per-node (file line col)
+# attribution map and appends the node to an ordered roots list; framebuffer-
+# events (129) returns the roots as a fresh list in insertion order, matching the
+# siblings' append semantics; node_source (130) reads one node's attribution back
+# as (file line col); framebuffer-clear (131) resets the window. The per-node
+# arrays and the roots list are node-indexed plain ints / negative node boxes /
+# string-pool ids — all melt-stable, so the copying arena never disturbs them,
+# and fb_record is a tri (args in row slots, no arena allocation), so every
+# parsing band that calls intern_node_at keeps its exact verdict and allocation
+# profile. framebuffer-viewer clears, bursts 100 distinct attributed cells, and
+# counts them (100); framebuffer-readback reads (line col) back through
+# node_source (3). The same op-trace surface is reachable live on the
+# C-bootstrapped form-cli through its `diagnose` verb (kernel_stat, tag 127).
+framebuffer-viewer fks 100
+framebuffer-readback fks 3
 
 # ── host-io lane — first real-carrier round-trip on the fourth arm ──
 # substrate-core proved durable interning four-way over the in-memory carrier;
@@ -747,6 +796,7 @@ nl-translate fks 32767
 form-bml-cursor-parse fks 123
 # ...and the cursor LOWERING to the runnable recipe (fsc-rec-* path) crosses too.
 form-bml-cursor-lower fks 113
+form-bml-cursor-full fks 67
 bmf-object-data fks 65535
 bmf-form-object-runtime fks 67108863
 bmf-symbol-wire fks 255
@@ -784,6 +834,9 @@ transformer-gelu-erf fks 255
 conv-stem fks 1
 positional fks 1
 transformer-mh fks 1
+gqa-attn fks 7
+llama-gqa-block fks 31
+llama-gqa-block-causal fks 15
 transformer-decoder fks 1
 transformer-generate fks 1
 whisper-mh-block-real fks 1
@@ -802,7 +855,7 @@ json-meaning-ingestion fks 1000
 form-cli fks 31
 json-emitter fks 31
 json-promoted-types fks 115
-form-cli-band fks 511
+form-cli-band fks 1023
 http-client-render fks 2047
 socket-loopback fks 111111
 http-client-socket-verbs fks 127
@@ -811,7 +864,9 @@ nanite-mem-parse fks 15
 kv-cache fks 255
 greedy-decode fks 255
 kv-llama-block fks 255
+kv-gqa-llama-block fks 255
 multi-layer-stack fks 255
+gqa-multi-layer-stack fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
 # GATED four-way by scripts/fourth-arm-gate.sh (validate.sh: 0 divergent AND
@@ -854,7 +909,6 @@ http-serve fks 1023
 lifecycle-fitness-receipt fks 1111111111
 mandala fks 111111
 meaning-translation-receipt fks 1111111
-mel-frame fks 1023
 merkle fks 4
 merkle-readdress fks 127
 mlp-train-emit fks 7
@@ -881,9 +935,12 @@ q-actor-critic-fixpoint fks 255
 diffusion-q-autoresearch fks 63
 form-lower-sim fks 15
 form-lower-fp-stack fks 31
-shell-parse fks 31
-shell-exec fks 63
+shell-parse fks 255
+shell-exec fks 511
+shell-awk fks 127
 shell-cell fks 15
+live-room-shell fks 63
+native-host-instance fks 4095
 const-recipe fks 511
 model-search fks 31
 tooluse-model-search fks 63
@@ -905,7 +962,6 @@ pbkdf2-sha256 fks 3
 # /intern_trivial_int already cross fkwu; these bands simply were not yet listed).
 synesthesia fks 4
 codon fks 910
-chakra-column fks 127
 gematria-channel fks 1111111
 sanskrit-channel fks 1111111
 shamballa-light-channel fks 11111111
@@ -926,10 +982,10 @@ minimal-surface fks 31
 name-check fks 511
 reachability fks 31
 channel-query fks 5
-shamballa-channel fks 1111111111
 ml-flow fks 5
 gguf-read fks 127
 gguf-locate fks 127
 form-asm-matvec fks 127
 form-asm-matvec-loop fks 127
 weight-load fks 4095
+form-glsl fks 7

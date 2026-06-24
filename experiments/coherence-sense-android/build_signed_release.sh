@@ -100,6 +100,10 @@ repair_generated_pkcs12_config() {
 write_config_if_missing
 repair_generated_pkcs12_config
 
+# The native form-cli executable is gitignored; cross-compile + drop it into
+# jniLibs so the signed APK ships the C-bootstrapped Form decision carrier.
+"$ROOT/form/build-android-form-cli.sh"
+
 JAVA_HOME="$JAVA_HOME" "$ANDROID_DIR/gradlew" -p "$ANDROID_DIR" :app:assembleRelease
 [[ -f "$APK" ]] || { echo "FAIL signed release APK missing: $APK" >&2; exit 1; }
 

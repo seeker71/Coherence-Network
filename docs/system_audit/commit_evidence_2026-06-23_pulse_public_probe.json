@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/public-pulse-health-20260623",
+  "commit_scope": "Make the pulse witness probe public API and web origins when production is configured with Docker-local service aliases, and narrow the ideas probe to a small native-route canary.",
+  "files_owned": [
+    "pulse/README.md",
+    "pulse/pulse_app/organs.py",
+    "pulse/pulse_app/probe.py",
+    "pulse/tests/test_probe.py",
+    "docs/system_audit/commit_evidence_2026-06-23_pulse_public_probe.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m pytest pulse/tests/test_probe.py -q",
+      "python3 -m pytest pulse/tests -q",
+      "git diff --check",
+      "PYTHONPATH=pulse python3 - <<'PY' ... probe_all('https://api.coherencycoin.com', 'https://coherencycoin.com') ... PY"
+    ],
+    "summary": "Prompt guide passed after attaching the worktree branch. Wellness completed and named active deploy/public reach instability. Pulse probe tests passed: 32 passed. Full pulse package tests passed: 79 passed. Whitespace check passed. Live public probe after the limited ideas change showed endpoint_ideas breathing at 341ms; concurrent Hostinger deploy activity still produced real public 502/timeout windows that should remain visible."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "Pending PR checks after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -sS --max-time 10 https://pulse.coherencycoin.com/pulse/now | jq '{overall, checked_at, strained: [.organs[] | select(.status != \"breathing\") | {name,status,latency_ms,detail,last_sample_at}], silences: (.ongoing_silences|length)}'"
+    ],
+    "summary": "Pre-deploy production pulse still runs the old probe path: endpoint_ideas reports 'fell back: expected native-kernel, got no router header' while direct public /api/ideas?limit=1 returns native-kernel 200 in about 0.4s. Public verification remains pending until this pulse image lands."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair"
+  ],
+  "task_ids": [
+    "pulse-public-probe-strain-20260623"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "witness-priority"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex",
+    "model": "gpt-5-codex",
+    "session": "public-pulse-health-20260623"
+  },
+  "evidence_refs": [
+    "Live production pulse before change: overall=strained with endpoint_ideas detail 'fell back: expected native-kernel, got no router header' and web slow strain.",
+    "Direct public route checks during diagnosis: /api/ideas?limit=1&offset=0&sort=marginal_cc returned 200 with x-form-router native-kernel in about 0.35-0.41s and 2167 bytes; default /api/ideas returned about 371210 bytes and about 1.9-2.24s.",
+    "The deployed pulse README/config path uses PULSE_API_BASE=http://api:8000 and PULSE_WEB_BASE=http://web:3000 in Docker, which bypasses the public Traefik/native-router path unless lifted.",
+    "Active Hostinger deploy churn caused real public timeouts/502s during diagnosis; those are not hidden by this change."
+  ],
+  "change_files": [
+    "pulse/README.md",
+    "pulse/pulse_app/organs.py",
+    "pulse/pulse_app/probe.py",
+    "pulse/tests/test_probe.py",
+    "docs/system_audit/commit_evidence_2026-06-23_pulse_public_probe.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When the pulse monitor is configured with Docker service aliases, it probes the public API and web origins, so endpoint_ideas no longer strains merely because the internal API path lacks x-form-router. The ideas canary also reads one idea instead of the full default payload.",
+    "public_endpoints": [
+      "GET https://pulse.coherencycoin.com/pulse/now",
+      "GET https://api.coherencycoin.com/api/ideas?limit=1&offset=0&sort=marginal_cc",
+      "GET https://coherencycoin.com/"
+    ],
+    "test_flows": [
+      "pulse/tests/test_probe.py::test_docker_local_bases_probe_public_witness_path proves Docker-local configured bases produce public API/web probe URLs.",
+      "Live pre-deploy public probe shows limited endpoint_ideas returns breathing with native-kernel carrier."
+    ],
+    "pending_reason": "Public endpoint verification waits for PR merge and Hostinger deploy."
+  }
+}

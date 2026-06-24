@@ -56,15 +56,14 @@ What is measured vs stated (the honesty bar)
     files; it is offered as evidence of the layering's weight, NOT as a precise
     "fraction of runtime" (wall-clock fraction depends on inputs and is dominated
     by FastAPI+Pydantic+network for any real request — stated, not faked).
-  • Kernel-FIRST has two honest readings. SERVED is read from the public
-    front-door probe: when /api/attention/kernel-runtime returns
-    X-Form-Router: native-kernel, the live Host(api.coherencycoin.com) entrance
-    is the kernel-router and every manifest row is live native surface. CAPABLE
-    is the count of native handlers in deploy/kernel-router/production-routes.fk
-    whether or not the public router has been flipped yet. Byte parity remains
-    useful evidence for promoted twins, but the operational gate is simpler:
-    the website, API smoke, tool flows, native observability, and fallback all
-    still work.
+  • Kernel-FIRST has two honest readings. SERVED is read from public native
+    entrance probes: the production manifest at /api/attention/kernel-runtime
+    and the sibling BML read front door at /api/ready. CAPABLE is the count of
+    native handlers in deploy/kernel-router/production-routes.fk plus
+    deploy/front-door/api.bml whether or not every public router has been flipped
+    yet. Byte parity remains useful evidence for promoted twins, but the
+    operational gate is simpler: the website, API smoke, tool flows, native
+    observability, and fallback all still work.
 
 This is a SENSING instrument — read-only, no behavior change, like the wellness
 probe and the attribution report. It tells the body the unflattering truth about
@@ -367,11 +366,20 @@ def probe_kernel_front_door() -> dict:
         with urllib.request.urlopen(req, timeout=4) as resp:
             body = resp.read(256).decode("utf-8", errors="replace")
             router = resp.headers.get("X-Form-Router", "")
+            handler = resp.headers.get("X-Form-Handler", "")
+            authority = resp.headers.get("X-Form-Python-Authority", "")
             return {
                 "url": url,
                 "reachable": True,
                 "status": resp.status,
                 "x_form_router": router,
+                "x_form_handler": handler,
+                "x_form_python_authority": authority,
+                "front_door_catalog": (
+                    "bml-front-door"
+                    if handler == "api_attention_kernel_runtime"
+                    else "production-manifest"
+                ),
                 "kernel_front_door": router == "native-kernel",
                 "reported_native_route_count": _reported_native_route_count(body),
                 "body_preview": body,
@@ -379,11 +387,20 @@ def probe_kernel_front_door() -> dict:
     except urllib.error.HTTPError as exc:
         body = exc.read(256).decode("utf-8", errors="replace")
         router = exc.headers.get("X-Form-Router", "")
+        handler = exc.headers.get("X-Form-Handler", "")
+        authority = exc.headers.get("X-Form-Python-Authority", "")
         return {
             "url": url,
             "reachable": True,
             "status": exc.code,
             "x_form_router": router,
+            "x_form_handler": handler,
+            "x_form_python_authority": authority,
+            "front_door_catalog": (
+                "bml-front-door"
+                if handler == "api_attention_kernel_runtime"
+                else "production-manifest"
+            ),
             "kernel_front_door": router == "native-kernel",
             "reported_native_route_count": _reported_native_route_count(body),
             "body_preview": body,
@@ -394,6 +411,9 @@ def probe_kernel_front_door() -> dict:
             "reachable": False,
             "status": None,
             "x_form_router": "",
+            "x_form_handler": "",
+            "x_form_python_authority": "",
+            "front_door_catalog": "",
             "kernel_front_door": False,
             "error": str(exc),
         }
@@ -582,25 +602,28 @@ def build_report() -> dict:
     bml_read_routes = bml_front_door_read_routes()
     front_door = probe_kernel_front_door()
     reported_native_route_count = front_door.get("reported_native_route_count")
+    bml_ingress_declared = bml_read_ingress_declared()
     bml_front_door = (
         probe_bml_read_front_door()
-        if front_door.get("kernel_front_door") and bml_read_ingress_declared()
+        if bml_ingress_declared
         else {
             "reachable": False,
             "bml_read_front_door": False,
-            "reason": "kernel front door unread or grouped BML read ingress undeclared",
+            "reason": "grouped BML read ingress undeclared",
         }
     )
+    manifest_served = 0
     if front_door.get("kernel_front_door"):
-        manifest_served = (
-            reported_native_route_count
-            if isinstance(reported_native_route_count, int)
-            else len(manifest_capable)
-        )
-        bml_read_served = len(bml_read_routes) if bml_front_door.get("bml_read_front_door") else 0
-        n_front_door_served = min(n_capable, manifest_served + bml_read_served)
-    else:
-        n_front_door_served = 0
+        if front_door.get("front_door_catalog") == "bml-front-door":
+            manifest_served = 0
+        else:
+            manifest_served = (
+                reported_native_route_count
+                if isinstance(reported_native_route_count, int)
+                else len(manifest_capable)
+            )
+    bml_read_served = len(bml_read_routes) if bml_front_door.get("bml_read_front_door") else 0
+    n_front_door_served = min(n_capable, manifest_served + bml_read_served)
 
     usage_pct = (100.0 * n_served / total_routes) if total_routes else None
     loc_per_route = (cpy["total"] / n_served) if n_served else None
@@ -622,8 +645,10 @@ def build_report() -> dict:
         "kernel_first_capable_route_names": capable,
         "kernel_first_deployed_native_route_count": reported_native_route_count,
         "kernel_first_manifest_capable_routes": len(manifest_capable),
+        "kernel_first_manifest_served_routes": manifest_served,
         "bml_front_door_read_capable_routes": len(bml_read_routes),
-        "bml_front_door_read_ingress_declared": bml_read_ingress_declared(),
+        "bml_front_door_read_served_routes": bml_read_served,
+        "bml_front_door_read_ingress_declared": bml_ingress_declared,
         "bml_front_door_probe": bml_front_door,
         "kernel_first_routes": n_front_door_served,  # back-compat alias of SERVED
         "front_door_probe": front_door,

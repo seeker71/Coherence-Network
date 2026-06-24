@@ -20,11 +20,13 @@
     "The current live physical floor observed an unlocked SM-S918U1 sharing to the Mac witness with 141 witness frames, nonzero mic RMS, nonzero camera luma, 2367 camera luma samples, 99 GPU EGL readback samples, and body sample_count 5084."
     "Those live witness counters now have a Form-native receipt row in witness-state-receipt.fk, with integer-scaled summary metrics, heldout learner rows, source-backed oracle label/export rows, live oracle process rows, continuous emission-cycle rows, and a four-way proof at verdict 67108863."
     "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, active mic/camera/GPU sample rows, and capability-receipt readiness that lifts speech, vision, and multimodal routing to native-first when those lanes are present."
+    "sensor-organ-channel.form adds the generic physical sensor contract: confidence, freshness, privacy, frame, trace, sample-to-organ-reading lowering, composite observations, and an Android active-sample bridge for mic/camera/GPU summaries."
     "The GPU lane now reports its own PROOF, not just a frame counter: a GPU bit-exact verdict lowers into a wmg-sense row (gpu-mesh-sense.form / gpu-mesh-sense.fk, four-way 511) and GROWS a world-model state (gpu-mesh-grow, four-way 255) — the GPU organ is a first-class learning organ, with cross-vendor agreement observed (Metal/Apple M4 Max and Vulkan/Adreno 740 both bit-exact on matvec).")
 
   (north-star
     "Mac and Android run continuously: Mac LaunchAgent keeps the witness and local Form learners available; Android keeps Coherence Sense sharing permissioned samples."
     "Sensor, audio, video, host, network, GPU, DSP/NPU, and model receipts feed Form-native learners. Third-party LLM/model/compiler oracles are sampled as teachers and heldout judges until native recipes beat them per lane."
+    "Generic sensor-organ channels let GPS, IMU, magnetometer, barometer, light, sound, room anchors, host organs, and model receipts compose into higher spatial, activity, presence, and travel-mode organs with visible confidence and disagreement."
     "The mesh ingests ideas, code, feature requests, runtime traces, and physical-world samples; digests them into typed receipts and exemplars; then embodies winning recipes as first-class native choices.")
 
   (receipt-command

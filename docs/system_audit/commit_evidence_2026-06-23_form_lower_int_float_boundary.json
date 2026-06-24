@@ -1,0 +1,88 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/admiring-easley-33f2fd",
+  "commit_scope": "Close the keystone of the standing native-lowering gap: the int↔float BOUNDARY now lowers to native arm64 BYTES with no clang. The gap was stated as 'fd-f16 (with fpow, recursion) and the GQA block are not yet lowerable by form-lower (it does arithmetic trees, not recursion/float-recipes)' — on inspection that framing was partly stale (form-lower already lowers recursion via lo-rec-fn and float arithmetic via lo-fnode). What a real model block genuinely could not do is CROSS the lane: weights arrive as integer bit-fields (the f16 mantissa/exponent of f16-decode.fk, the q4k unpack) and rebuild as f64 (fd-frac's (mul 1.0 (fd-mant ...))), then cast back to int (round). form-asm.fk already byte-proved scvtf/fcvtzs against the clang oracle; the lowerer had no node to emit them. lo-i2f (tag 12) / lo-f2i (tag 13) wire them in. Adds the two lowering nodes, a four-way proof band (verdict 15), the fourth-arm manifest row, and the JIT_GAP_LEDGER #12 update.",
+  "files_owned": [
+    "form/form-stdlib/form-lower.fk",
+    "form/form-stdlib/tests/form-lower-cvt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-06-23_form_lower_int_float_boundary.json"
+  ],
+  "idea_ids": [
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "form-lower-int-float-boundary"
+  ],
+  "task_ids": [
+    "task-2026-06-23-form-lower-int-float-boundary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "acceptance-criteria"]
+    },
+    {
+      "contributor_id": "claude-sema",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "validation", "evidence"]
+    }
+  ],
+  "agent": {
+    "name": "claude-code",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-cvt-band.fk -> '✓ form-asm.fk+form-lower.fk+form-lower-cvt-band.fk → 15' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent — kernels agree on every sample.'",
+    "clang/LLVM ORACLE (otool -tvVj of clang -c -arch arm64) confirmed every byte: scvtf d0,x0=9e620000, fcvtzs x0,d0=9e780000, fmov d1,d0=1e604001, fmul d0,d1,d1=1e610820, ret=d65f03c0. clang is NOT in the native path — the recipe lowers to bytes, clang only confirmed them.",
+    "Verdict bits: 1 to_f64(x)=float(x) lowers to the exact 8-byte image (scvtf reads x0 directly, no redundant mov); 2 round_trip(x)=trunc(float(x)) lowers byte-identical (the full int→f64→int crossing composes both ways); 4 sq_trunc(d)=trunc(d*d) lowers byte-identical (F2I/fcvtzs caps a register-form FP subtree fmul d0,d1,d1); 8 the round_trip image is exactly 3 instructions (12 bytes), one conversion each way, no junk.",
+    "Manifest row added: 'form-lower-cvt fkc 15' in form/fourth-arm-bands.txt, next to its kin form-lower-float.",
+    "No regression: form-lower (31), form-lower-float (15), form-lower-rec (31), form-lower-multiarg (127) all re-cross four-way after the change.",
+    "Companion gap observed NOT reproducing: 'fkwu broken on this local machine — verdict 0 for untouched f16-decode' did not reproduce on current main in this worktree. A freshly built fkwu computes the f16-decode band verdict 4095 four-way (validate: 'fourth arm: 1 band four-way'; standalone $FKWU $table 0 first line = 4095). The earlier local failure had healed — likely a stale binary from a prior emitter generation or the memory-pressure transient the kernel-memory-witness guards."
+  ],
+  "change_files": [
+    "form/form-stdlib/form-lower.fk",
+    "form/form-stdlib/tests/form-lower-cvt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-06-23_form_lower_int_float_boundary.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-cvt-band.fk"
+    ],
+    "fourth_arm_outputs": [
+      "form-lower-cvt: verdict 15, fourth arm 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent — kernels agree"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI has not run yet for this branch. The change adds two Form lowering nodes + a proof band + a fourth-arm manifest row; CI re-runs validate.sh across the suite."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-runtime-floor",
+    "notes": "Form stdlib lowerer recipe + proof band + ledger update; no public HTTP endpoint or service change. The recipe reaches the kernels through the repo, not a deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way validation passed (verdict 15, 0 divergent); CI and merge remain pending. No deploy applies to a Form stdlib lowerer recipe."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-lower can now lower a recipe that CROSSES the int↔float lane to native arm64 bytes with no clang: lo-i2f (scvtf, int→f64) and lo-f2i (fcvtzs, f64→int toward-zero) are byte-identical to the clang oracle and agree across Go/Rust/TS/fkwu at verdict 15. This is the keystone a real model block (f16-decode, q4k-dequant, the GQA block) needs to lower as ONE binary — it mixes integer field-extraction with float reconstruction.",
+    "public_endpoints": [
+      "none changed; the recipe is a Form stdlib lowerer body proven by validate.sh"
+    ],
+    "test_flows": [
+      "Four-kernel proof: validate.sh runs form-lower-cvt-band on Go, Rust, TypeScript, and fkwu to the identical verdict 15 with 0 divergent.",
+      "Oracle byte-conviction: each lowered function image (to_f64, round_trip, sq_trunc) is byte-for-byte the clang -c sequence via fa-conviction; the round-trip trunc(float(x))=x is value-identity for integer inputs.",
+      "No regression: form-lower / form-lower-float / form-lower-rec / form-lower-multiarg re-cross four-way at their prior verdicts (31/15/31/127)."
+    ]
+  }
+}

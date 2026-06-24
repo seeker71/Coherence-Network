@@ -1,0 +1,72 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/field-relay-dev-setup",
+  "commit_scope": "Add scripts/field_relay_dev_setup.sh — a cloud-session setup script that provisions the breath-4 carrier deps (fastapi + uvicorn[standard]->websockets + cryptography + PyNaCl, all already declared in api/requirements.txt) so the next session can BUILD and PROVE the field relay's carriers/clients end-to-end (ed25519 identity carrier, dial-out client, reconnect drain), which the bare sandbox cannot. The decision bodies are already proven and merged (verdicts fr-route 127, fiv-verdict 511, fq-drain 127; their proofs live in the per-recipe evidence records). Modeled on form_first_offline_setup.sh; idempotent, best-effort, carrier/process only.",
+  "files_owned": [
+    "scripts/field_relay_dev_setup.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_field_relay_dev_setup.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/field_relay_dev_setup.sh"
+    ],
+    "notes": "Shell syntax check passes. Dep INSTALL is not run here (the sandbox agent phase has no network and the script is meant for the setup phase); the script is idempotent and verifies importability of fastapi/websockets/ed25519 before declaring ready."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Process tooling; no CI gate beyond shellcheck/lint if configured."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Not deployed; a developer/setup-phase script."
+  },
+  "phase_gate": {
+    "phase": "field-relay-breath4-enablement",
+    "gate": "Give a cloud session the deps to build + prove the breath-4 carriers (crypto, client, board I/O) end-to-end. The decision bodies (fr-route, fiv-verdict, fq-drain) are already proven and merged per their own evidence records; this unblocks their carriers.",
+    "state": "enablement-script-added",
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "federation-and-nodes"
+  ],
+  "spec_ids": [
+    "field-relay-always-open-connection"
+  ],
+  "task_ids": [
+    "field-relay-dev-setup"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "4.x"
+  },
+  "evidence_refs": [
+    "scripts/field_relay_dev_setup.sh",
+    "scripts/form_first_offline_setup.sh",
+    "api/requirements.txt",
+    "specs/field-relay-always-open-connection.md"
+  ],
+  "change_files": [
+    "scripts/field_relay_dev_setup.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_field_relay_dev_setup.json"
+  ],
+  "change_intent": "process_only"
+}

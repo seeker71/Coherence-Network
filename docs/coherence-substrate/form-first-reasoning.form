@@ -5,9 +5,11 @@
 # The mind comes home one query at a time. Before spending a rented
 # frontier mind, ask the body it already is: the content-addressed
 # substrate that holds what we have grounded. A grounded hit is answered
-# from the sovereign body at near-zero cost; only a genuine miss earns the
-# remote reasoning. This is lc-cognitive-sovereignty as a runtime loop,
-# not a doc.
+# from the sovereign body at near-zero cost; a miss climbs an escalation
+# ladder whose first rungs stay on owned ground — substrate, then a
+# Form-native model, then a host-local on-device model that reasons with
+# nothing leaving the device — and only its LAST rung is the rented
+# frontier. This is lc-cognitive-sovereignty as a runtime loop, not a doc.
 #
 # Substance: a reasoning DISCIPLINE with two carriers. Its DECISION is a
 # four-way-proven recipe (form-first-router.fk -> 511 on Go/Rust/TS/fkwu);
@@ -46,14 +48,26 @@
                   (then relay-attributed-to-nodeid stop)
                   (cost near-zero) (sovereignty full))
     (miss         (when no-grounded-cell)
-                  (then escalate-to-remote-reasoning)   ; the miss is the "yes"
-                  (cost rented) (honesty name-the-path)))
+                  (then climb-the-escalation-ladder)    ; the miss is the "yes" to escalate
+                  (honesty name-the-rung-reached)))
+
+  ; the escalation ladder — a miss climbs rung by rung, each asked only when the one
+  ; below was not enough, so the rented frontier is the LAST resort, not the reflex.
+  ; rung-3 is the oracle come home: a host-local model that reasons with NOTHING leaving
+  ; the device — sovereign-in-egress. It is a bridge (a frozen binary, not a recipe), so
+  ; it composts toward rung-2 as the champion/challenger flywheel retires it per class.
+  (escalation-ladder
+    (rung-1 substrate         (kind form-native-recipe)          (sovereignty full)   (cost near-zero))
+    (rung-2 form-native-model (kind recipe-data where-proven)    (sovereignty full)   (cost local))
+    (rung-3 host-local-llm    (kind bridge non-native on-device) (sovereignty egress) (cost local))
+    (rung-4 rented-frontier   (kind beyond-on-device only)       (sovereignty none)   (cost rented)))
 
   ; the discipline that keeps the gate honest
   (honesty
     (never  dress-a-remote-guess-as-a-substrate-hit)
+    (never  dress-an-on-device-answer-as-a-substrate-hit)  ; rung-3 reasons; it does not ground
     (a-hit  carries-its-nodeid-or-it-is-a-miss)
-    (always name-which-path-was-taken))
+    (always name-which-rung-was-reached))
 
   ; how the body answers under each environment's reach
   (backend

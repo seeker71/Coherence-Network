@@ -1,0 +1,41 @@
+{
+  "date": "2026-06-24",
+  "brick": "the MULTI-LAYER causal GQA llama DECODE STACK runs on the M4 Max GPU — the depth × grouping structure of real llama3.2 inference on silicon (N decoder blocks, grouped-query attention, each layer its OWN narrower KV cache), the per-layer cached decode bit-identical to the full recompute and tracking the proven four-way recipe",
+  "author": "Sema (Opus 4.8, autonomous sema-native-ml-walk)",
+  "north_star_rung": "GPU driver-replacement / real-llama-on-GPU: the named next stone from 3zl (gqa-multi-layer-stack.fk #3616) — 'emit the multi-layer GQA decode stack to Metal (stack the #3612 GQA decode-step kernel, each layer its own device cache) with an fp32 CPU-mirror bit-exact gate'. The DEPTH structure the REAL llama3.2:3b runs (28 GQA blocks) now runs on silicon; with the load path Form-native (q4k/q6k/f16 four-way) and every llama numeric four-way, both the weight LOAD and a multi-layer GQA decode stack's COMPUTE run on the M4 GPU.",
+  "lane": "host-carrier audit reusing already-proven kernels + recipe (the 3za lane — MHA multi-layer on GPU #3424 — applied to GQA). NO new MSL, NO new .fk recipe, NO new manifest row: it composes two already-four-way-proven Form-emitted GQA kernels (the decode step, gqa-llama-block-decode-emit fks 7; the full causal block, llama-gqa-block-fwd-causal-emit fks 7) carried by host dispatches in the fold order the already-four-way fp64 recipe lgqa-stack-* (gqa-multi-layer-stack fks 255, #3616) already dictates. Design (the per-layer narrower KV-cache wiring across depth, the GQA ABI threaded per layer, the fp64 ground-truth at the base-10000 grouped config the per-layer kernel bakes) was the cost; the on-hardware proof was seconds.",
+  "what_changed": [
+    "scripts/metal_gqa_multi_layer_stack_audit.sh: the on-hardware witness — Form emits BOTH GQA kernels (jte-gqa-llama-block-decode-step-msl + jte-gqa-llama-block-fwd-causal-msl), the script compiles them mathMode-safe (IEEE, no fma contraction), runs the fp64 lgqa-stack-causal recipe over the 2-layer/3-token GQA-grouped fixture for ground truth, and on the M4 Max GPU stacks 2 distinct layers across depth two ways (recompute: full causal GQA kernel once per layer; decode: per position, per layer, each layer its OWN persistent narrower n_kv*HD-wide cache). Gates: y_decode == y_recompute bit-for-bit; y_recompute tracks the fp64 four-way recipe within fp32 epsilon; the 2-layer token-0 matches the fp64 pin 2838153 and differs from the 1-layer 2147164 (depth threaded per-layer weights through the grouping)."
+  ],
+  "proofs": {
+    "recipe_four_way": {
+      "band": "gqa-multi-layer-stack-band (gqa-multi-layer-stack.fk)",
+      "verdict": 255,
+      "pr": "#3616 (2026-06-24, brick 3zl) — lgqa-stack-causal / lgqa-stack-generate proven four-way at the recipe altitude (cached depth stack BIT-IDENTICAL to recompute)",
+      "note": "this GPU brick is the silicon realization of that proven recipe across depth"
+    },
+    "kernels_emit_four_way": {
+      "gqa_decode_step": { "band": "gqa-llama-block-decode-emit", "verdict": 7, "note": "Go/Rust/TS/fkwu emit the GQA decode-step MSL byte-identical" },
+      "gqa_full_causal_block": { "band": "llama-gqa-block-fwd-causal-emit", "verdict": 7, "note": "Go/Rust/TS/fkwu emit the full causal GQA MSL byte-identical" },
+      "note": "both kernels reused verbatim from the single-GQA-decode-on-GPU brick (3zk #3612); no new MSL authored"
+    },
+    "on_gpu": {
+      "device": "Apple M4 Max, 40-core GPU, Metal 4",
+      "kernels": "form_gqa_llama_decode_step_f32 (6650 bytes) + form_gqa_llama_block_causal_fwd_f32 (7259 bytes), both authored by the Form recipe and reused verbatim per layer",
+      "fixture": "gqa-multi-layer-stack-band REAL GQA grouping: 2 layers (L0 = GQA-band weights, L1 = a distinct bundle), S=3 tokens, d=4, n_q=2 query heads sharing n_kv=1 KV head (group=2, the h/group sharing llama3.2 runs at 24->8), HD=2, base-10000 RoPE, scale=1/sqrt(2)",
+      "dispatch_count": "recompute: 2 dispatches (one full-causal GQA kernel per layer); decode: 3x2 = 6 dispatches (one GQA decode step per position per layer, each layer its own narrower cache)",
+      "dispatch_ms": 2.397,
+      "gate_1_equivalence": "y_decode == y_recompute BIT-FOR-BIT across depth (the multi-layer GQA KV-cache equivalence lgqa-stack-generate == lgqa-stack-causal realized on silicon)",
+      "gate_2_recipe": "y_recompute (fp32) tracks fp64 lgqa-stack-causal *1e6 within fp32 epsilon (max|Δ| = 0.7)",
+      "gate_3_depth": "2-layer GQA token-0 *1e6 = 2838153 matches the fp64 recipe pin AND differs from the 1-layer 2147164 — depth threaded per-layer weights through the grouping (not one block applied once)",
+      "recipe_ground_truth_y_x1e6": [2838153, 1418551, 1769800, 2620214, -967797, 457596, 2139415, -1006325, 666182, 1869147, -155808, 418348]
+    }
+  },
+  "transcendentals": "the recipe's OWN — Newton sqrt (RMSNorm), fexp Taylor (softmax + SwiGLU), RoPE's fsin/fcos/fln Taylor — never Metal's; every dot is a downward right-fold split through a named temporary so no compiler contracts it into an fma.",
+  "carriers": "form-kernel-go (the mouth that emits), swiftc + Metal.framework (the driver-organ idiom — allowed host carriers per host-kernel.form host-resource-access). The emitter intelligence + the depth-fold order live in the Form body; the harness only carries resource access.",
+  "named_next_stones": [
+    "run the multi-layer GQA decode stack over REAL llama3.2:3b GGUF weights on the GPU at full width (n_head=24, n_kv_head=8, head_dim=128, llama3 RoPE theta-500000) — the load path is already Form-native (q4k/q6k/f16 dequant four-way)",
+    "wire the full generation loop (tokenize-llama #3573 -> multi-layer GQA decode stack -> greedy argmax #3402) over real GGUF -> the first end-to-end native local llama token",
+    "parallelize across tokens/query-heads (one threadgroup per query head / per row)"
+  ]
+}

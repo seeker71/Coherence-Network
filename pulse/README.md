@@ -95,6 +95,11 @@ curl -s http://localhost:8100/pulse/health | jq
 | `PULSE_RETENTION_DAYS`    | `180`                            | Raw-sample retention (silences forever)  |
 | `PULSE_CORS_ORIGINS`      | `*`                              | Comma-separated list                     |
 
+When `PULSE_API_BASE=http://api:8000` or `PULSE_WEB_BASE=http://web:3000`
+is used in Docker, the monitor lifts those service aliases to the public
+origins before probing. The witness measures the same Traefik/native-router
+path visitors use, not a container-network shortcut.
+
 ## Deploy to the VPS (docker-compose snippet)
 
 Add these sections to `/docker/coherence-network/docker-compose.yml` on

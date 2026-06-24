@@ -1,0 +1,77 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk
+;
+; llama-gqa-block-causal-band — the REAL autoregressive llama3.2 decoder block:
+; GQA attention with the causal mask + llama3 RoPE (rope_theta 500000 + scaling) +
+; RMSNorm + SwiGLU, lifted to the four-kernel floor. lgqa-block-causal composes
+; tb-gqa-attn-causal (gqa-attn.fk — tb-attn-seq-causal, four-way 511) with the same
+; theta-RoPE / RMSNorm / SwiGLU as the non-causal block. No new arithmetic; the only
+; change vs lgqa-block is the per-head causal mask. Strange-minimal claims:
+;
+;   GENERALIZATION: lblk-block-causal (llama-block.fk, four-way 4095) is the
+;   single-head, base-10000 special case of lgqa-block-causal — bit-for-bit.
+;
+;   CAUSALITY IS REAL, AND DOESN'T OVER-MASK: at the last token the causal prefix is
+;   the whole sequence, so the last token is bit-identical to the non-causal block;
+;   token 0 DIFFERS from non-causal (the mask removed the future it had mixed in).
+;   A clean cross-check: at position 0 RoPE is the identity (angle 0), so theta is
+;   irrelevant for token 0 — the causal cfg-llama3 token-0 output equals the published
+;   four-way causal value 1893731 (causal-attention-band / kv-llama-block-band), the
+;   same number base-10000 produces.
+;
+;   GQA SHARING propagates through the causal block: sharing one KV head (n_kv=1) gives
+;   a different last-token output than per-head (n_kv=2).
+;
+; Fixture: the llama-block-band fixture (S=2, d=4, HD=4); the same 4x4 weights re-read
+; as 2 heads of width 2 (HD=2) for GQA sharing.
+;
+; Verdict 15 when the causal GQA llama block lands four-way:
+;   1   lgqa-block-causal(n_q=1,n_kv=1,HD=4, cfg base 10000) == lblk-block-causal, bit-for-bit
+;   2   lgqa-block-causal(n_q=1,n_kv=1,HD=4, cfg-llama3) y[0][0] -> 1893731  (causal token 0 = published four-way value; pos-0 RoPE identity; != non-causal 1116075 -> mask is real)
+;   4   lgqa-block-causal(cfg-llama3) last token == lgqa-block(cfg-llama3) last token, bit-for-bit  (no over-masking)
+;   8   lgqa-block-causal(n_q=2,n_kv=1,HD=2) last[1][0] != lgqa-block-causal(n_q=2,n_kv=2,HD=2) last[1][0]  (GQA grouping is real in the causal block)
+(do
+    (defn gc-vmaxdiff (a b)
+      (if (eq (len a) 0) 0.0
+          (do (let d (tn-abs (sub (head a) (head b))))
+              (let r (gc-vmaxdiff (tail a) (tail b)))
+              (if (gt d r) d r))))
+    (defn gc-maxdiff (as bs)
+      (if (eq (len as) 0) 0.0
+          (do (let d (gc-vmaxdiff (head as) (head bs)))
+              (let r (gc-maxdiff (tail as) (tail bs)))
+              (if (gt d r) d r))))
+
+    ; --- the llama-block-band fixture (S=2 tokens, d=4, HD=4) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    (let eps 0.00001)
+    (let cfg10 (rope-cfg 10000.0 32.0 1.0 4.0 8192.0))
+    (let cfgl3 (rope-cfg-llama3))
+
+    ; --- claim 1: single-head base-10000 causal == lblk-block-causal (bit-for-bit) ---
+    (let sc4 (div 1.0 (tn-sqrt 4.0)))
+    (let g1c (lgqa-block-causal x g1 eps wq wk wv wo sc4 1 1 4 cfg10 g2 wg wu wd))
+    (let blc (lblk-block-causal x g1 eps wq wk wv wo sc4 4 g2 wg wu wd))
+    (let c0 (if (eq (gc-maxdiff g1c blc) 0.0) 1 0))
+
+    ; --- claims 2,4: causal cfg-llama3 — token 0 (mask real), last token (no over-masking) ---
+    (let yc (lgqa-block-causal x g1 eps wq wk wv wo sc4 1 1 4 cfgl3 g2 wg wu wd))
+    (let yn (lgqa-block        x g1 eps wq wk wv wo sc4 1 1 4 cfgl3 g2 wg wu wd))
+    (let c1 (if (eq (round (mul (nth (nth yc 0) 0) 1000000.0)) 1893731) 2 0))
+    (let c2 (if (eq (gc-vmaxdiff (nth yc 1) (nth yn 1)) 0.0) 4 0))
+
+    ; --- claim 8: GQA sharing through the causal block (n_q=2, HD=2) ---
+    (let sc2 (div 1.0 (tn-sqrt 2.0)))
+    (let shr (lgqa-block-causal x g1 eps wq wk wv wo sc2 2 1 2 cfgl3 g2 wg wu wd))
+    (let phd (lgqa-block-causal x g1 eps wq wk wv wo sc2 2 2 2 cfgl3 g2 wg wu wd))
+    (let c3 (if (eq (round (mul (nth (nth shr 1) 0) 1000000.0))
+                    (round (mul (nth (nth phd 1) 0) 1000000.0))) 0 8))
+
+    (add c0 (add c1 (add c2 c3))))

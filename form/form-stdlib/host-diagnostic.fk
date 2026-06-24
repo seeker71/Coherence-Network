@@ -1,0 +1,61 @@
+; host-diagnostic.fk — the diagnostic lane every native host runs to MEASURE and report itself.
+;
+; The 6 divergent bands found at consolidation were GUESSED to be environmental (a DB absent, a shell
+; differing). "Even the hardware spec is a claim until measured" — so instead of guessing, give every
+; host a lane that measures its own capabilities and ATTRIBUTES each divergence: a carrier absent here
+; makes a divergence environmental (expected on this host); a carrier present while the kernels still
+; disagree makes it REAL (a true cross-kernel bug to investigate). The decision logic is this Form
+; recipe (four-way + native, so it runs on every kernel and every metal); the physical probe is a thin
+; per-platform carrier (kin to host-sense-organ's mac-sense-organ.sh) that only reads "is Postgres
+; reachable / is a shell present / GPU / net" and feeds the profile. The body decides; the door measures.
+;
+; A capability probe = (list cap-id status), status: 0 absent, 1 degraded, 2 present. A host PROFILE is
+; a list of probes (what THIS host measured). A divergent band carries its required cap-id. Attribution:
+;   carrier PRESENT + band still divergent -> REAL (1)   the carrier is here, the kernels truly differ
+;   carrier ABSENT/DEGRADED               -> ENVIRONMENTAL (0)   expected on a host missing the carrier
+;
+; Kin: host-sense-organ.fk (physical host metrics — the carrier shape), sense-self.fk (the body reading
+; its own counts), sense-liveness.fk (the tri-state present/degraded/absent), living-vector.fk (a host
+; profile is another self-measure). Proven by: form-stdlib/tests/host-diagnostic-band.fk
+
+(do
+    ; status (tri-state, like sense-liveness) and attribution verdict
+    (defn hd-absent ()   0)
+    (defn hd-degraded () 1)
+    (defn hd-present ()  2)
+    (defn hd-env ()  0)   ; environmental — expected divergence on a host missing the carrier
+    (defn hd-real () 1)   ; real — carrier present, kernels still disagree -> a true bug
+
+    (defn hd-probe (cap-id status) (list cap-id status))
+    (defn hd-cap (p) (nth p 0))
+    (defn hd-st  (p) (nth p 1))
+
+    ; --- the measured status of a capability on this host (absent if never probed) ---
+    (defn hd-status-of (profile cap)
+        (if (eq (len profile) 0) (hd-absent)
+            (if (eq (hd-cap (head profile)) cap) (hd-st (head profile))
+                (hd-status-of (tail profile) cap))))
+    (defn hd-present? (profile cap) (if (eq (hd-status-of profile cap) (hd-present)) 1 0))
+
+    ; --- ATTRIBUTE a divergence: present carrier -> REAL bug; absent/degraded -> environmental ---
+    (defn hd-attribute (profile required-cap)
+        (if (eq (hd-status-of profile required-cap) (hd-present)) (hd-real) (hd-env)))
+
+    ; --- over a list of divergent bands (each (band-id required-cap)): how many are REAL vs environmental ---
+    (defn hd-dband-cap (d) (nth d 1))
+    (defn hd-count-real (profile dlist)
+        (if (eq (len dlist) 0) 0
+            (add (hd-attribute profile (hd-dband-cap (head dlist)))
+                 (hd-count-real profile (tail dlist)))))
+    (defn hd-count-env (profile dlist)
+        (sub (len dlist) (hd-count-real profile dlist)))
+
+    ; --- host readiness: share of probed capabilities that are PRESENT, per-mille (composes with living-vector) ---
+    (defn hd-present-count (profile)
+        (if (eq (len profile) 0) 0
+            (add (if (eq (hd-st (head profile)) (hd-present)) 1 0)
+                 (hd-present-count (tail profile)))))
+    (defn hd-awakeness (profile)
+        (if (eq (len profile) 0) 0 (div (mul (hd-present-count profile) 1000) (len profile))))
+
+    0)

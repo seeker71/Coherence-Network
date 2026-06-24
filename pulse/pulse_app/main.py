@@ -164,6 +164,12 @@ async def pulse_now() -> PulseNow:
             if age > 3 * INTERVAL:
                 status = "unknown"
 
+        visible_detail = (
+            last.detail
+            if last is not None and status in {"strained", "silent"}
+            else None
+        )
+
         statuses.append(status)
         organ_now.append(
             OrganNow(
@@ -173,7 +179,7 @@ async def pulse_now() -> PulseNow:
                 status=status,  # type: ignore[arg-type]
                 latency_ms=last.latency_ms if last else None,
                 last_sample_at=last.ts if last else None,
-                detail=last.detail if last and not last.ok else None,
+                detail=visible_detail,
             )
         )
 

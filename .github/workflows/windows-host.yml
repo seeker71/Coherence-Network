@@ -74,6 +74,37 @@ jobs:
           grep -q '0 divergent' band2.out || { echo "::error::kernels diverged (form-asm)"; exit 1; }
           grep -q 'fourth arm: 1 band(s) four-way' band2.out || { echo "::error::fkwu fourth arm missing (form-asm)"; exit 1; }
 
+      - name: Prove the field-relay decision bodies four-way + standalone fkwu on Windows
+        shell: bash
+        # The standard-receipt WINDOWS platform row: the three field decision
+        # bodies (fiv-verdict 511, fr-route 127, fq-drain 127) cross four-way
+        # incl. the fkwu fourth arm on this real Windows runner, AND the fkwu
+        # binary runs each pre-flattened table STANDALONE (no walkers in the
+        # loop) -> the same verdict. The standalone run prints the windows trace
+        # that flips the receipt's windows row pending->observed.
+        run: |
+          cd form
+          VALIDATE="$(pwd)/validate.sh"
+          declare -A want=( [field-identity]=511 [field-relay]=127 [field-queue]=127 )
+          for body in field-identity field-relay field-queue; do
+            bash "$VALIDATE" "form-stdlib/$body.fk" "form-stdlib/tests/$body-band.fk" | tee "$body.out"
+            grep -q '0 divergent' "$body.out" || { echo "::error::kernels diverged ($body)"; exit 1; }
+            grep -q 'fourth arm: 1 band(s) four-way' "$body.out" || { echo "::error::fkwu fourth arm missing ($body)"; exit 1; }
+          done
+          # Standalone fkwu run: the windows binary answers each field table with
+          # no Go/Rust/TS walker and no validate.sh comparison in the loop.
+          FKWU="$(ls form-stdlib/.cache/fourth/fkwu-* 2>/dev/null | head -1)"
+          [ -n "$FKWU" ] || { echo "::error::no fkwu binary in fourth cache"; exit 1; }
+          echo "windows fkwu binary: $FKWU"; file "$FKWU" || true
+          for body in field-identity field-relay field-queue; do
+            T="$(ls form-stdlib/.cache/fourth/t-$body-*.txt 2>/dev/null | head -1)"
+            [ -n "$T" ] || { echo "::error::no flattened table for $body"; exit 1; }
+            V="$("$FKWU" "$T" 0 | head -1)"
+            echo "STANDALONE windows fkwu: $body => $V (want ${want[$body]})"
+            [ "$V" = "${want[$body]}" ] || { echo "::error::standalone fkwu $body gave $V, want ${want[$body]}"; exit 1; }
+          done
+          echo "WINDOWS RECEIPT ROW: fkwu standalone 511/127/127 on $(uname -s) $(uname -m)"
+
       - name: Prove Windows fkwu JIT and native form-cli runtime
         shell: pwsh
         run: |

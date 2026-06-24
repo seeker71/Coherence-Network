@@ -8440,7 +8440,7 @@ struct RouterMetrics {
     observed_fanout_path_requests: HashMap<String, u64>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 struct RouterMetricsSnapshot {
     native_route_count: usize,
     total_requests: u64,
@@ -8553,16 +8553,68 @@ impl RouterMetrics {
     }
 }
 
-fn router_metrics_snapshot(
+fn router_metrics_snapshot_including_request(
     metrics: &Arc<Mutex<RouterMetrics>>,
     native_route_count: usize,
+    path: &str,
+    router: &str,
 ) -> RouterMetricsSnapshot {
     match metrics.lock() {
-        Ok(guard) => guard.snapshot(native_route_count),
-        Err(_) => RouterMetricsSnapshot {
-            native_route_count,
-            ..RouterMetricsSnapshot::default()
-        },
+        Ok(guard) => {
+            let mut snapshot = guard.snapshot(native_route_count);
+            snapshot.total_requests += 1;
+            if !guard.observed_paths.contains(path) {
+                snapshot.observed_path_count += 1;
+            }
+            match router {
+                "native-kernel" => {
+                    snapshot.native_requests += 1;
+                    if !guard.observed_native_paths.contains(path) {
+                        snapshot.observed_native_route_count += 1;
+                    }
+                }
+                "fanout-python" => {
+                    snapshot.fanout_requests += 1;
+                    if !guard.observed_fanout_paths.contains(path) {
+                        snapshot.observed_fanout_path_count += 1;
+                    }
+                }
+                "native-kernel-error" => {
+                    snapshot.native_error_requests += 1;
+                    if !guard.observed_native_paths.contains(path) {
+                        snapshot.observed_native_route_count += 1;
+                    }
+                }
+                _ => {
+                    snapshot.local_control_requests += 1;
+                }
+            }
+            snapshot
+        }
+        Err(_) => {
+            let mut snapshot = RouterMetricsSnapshot {
+                native_route_count,
+                total_requests: 1,
+                ..RouterMetricsSnapshot::default()
+            };
+            match router {
+                "native-kernel" => {
+                    snapshot.native_requests = 1;
+                    snapshot.observed_native_route_count = 1;
+                }
+                "fanout-python" => {
+                    snapshot.fanout_requests = 1;
+                    snapshot.observed_fanout_path_count = 1;
+                }
+                "native-kernel-error" => {
+                    snapshot.native_error_requests = 1;
+                    snapshot.observed_native_route_count = 1;
+                }
+                _ => snapshot.local_control_requests = 1,
+            }
+            snapshot.observed_path_count = 1;
+            snapshot
+        }
     }
 }
 
@@ -9365,7 +9417,12 @@ fn handle_request(
         // (form-urlencoded merged in; JSON/other captured under "__body__"). The
         // typed KernelHTTPRequest in router context preserves method/path/headers,
         // query fields, and raw body without flattening them into this projection.
-        let metrics_snapshot = router_metrics_snapshot(router_metrics, route_specs.len());
+        let metrics_snapshot = router_metrics_snapshot_including_request(
+            router_metrics,
+            route_specs.len(),
+            &path,
+            "native-kernel",
+        );
         let mut handler_data = router_context_data(
             &method,
             &target,
@@ -9386,7 +9443,7 @@ fn handle_request(
                 .collect(),
         ));
         let request_arg = if route.typed_request {
-            router_http_request_value(&selection.candidate)
+            router_http_request_value_with_router_context(&selection.candidate, &metrics_snapshot)
         } else {
             q_alist
         };
@@ -11670,6 +11727,86 @@ fn router_http_request_value(candidate: &RouteCandidateValue) -> Value {
     )
 }
 
+fn router_context_query_data(metrics: &RouterMetricsSnapshot) -> Vec<(String, String)> {
+    vec![
+        (
+            "__router_native_route_count__".to_string(),
+            metrics.native_route_count.to_string(),
+        ),
+        (
+            "__router_observed_path_count__".to_string(),
+            metrics.observed_path_count.to_string(),
+        ),
+        (
+            "__router_observed_native_route_count__".to_string(),
+            metrics.observed_native_route_count.to_string(),
+        ),
+        (
+            "__router_observed_fanout_path_count__".to_string(),
+            metrics.observed_fanout_path_count.to_string(),
+        ),
+        (
+            "__router_total_requests__".to_string(),
+            metrics.total_requests.to_string(),
+        ),
+        (
+            "__router_native_requests__".to_string(),
+            metrics.native_requests.to_string(),
+        ),
+        (
+            "__router_fanout_requests__".to_string(),
+            metrics.fanout_requests.to_string(),
+        ),
+        (
+            "__router_local_control_requests__".to_string(),
+            metrics.local_control_requests.to_string(),
+        ),
+        (
+            "__router_native_error_requests__".to_string(),
+            metrics.native_error_requests.to_string(),
+        ),
+        (
+            "__router_choice_attempts__".to_string(),
+            metrics.choice_attempts.to_string(),
+        ),
+        (
+            "__router_choice_successes__".to_string(),
+            metrics.choice_successes.to_string(),
+        ),
+        (
+            "__router_choice_failures__".to_string(),
+            metrics.choice_failures.to_string(),
+        ),
+        (
+            "__router_next_bml_candidate_path__".to_string(),
+            metrics.next_bml_candidate_path.clone(),
+        ),
+        (
+            "__router_next_bml_candidate_requests__".to_string(),
+            metrics.next_bml_candidate_requests.to_string(),
+        ),
+        (
+            "__router_next_bml_candidate_source__".to_string(),
+            metrics.next_bml_candidate_source.clone(),
+        ),
+    ]
+}
+
+fn router_http_request_value_with_router_context(
+    candidate: &RouteCandidateValue,
+    metrics: &RouterMetricsSnapshot,
+) -> Value {
+    let mut query = router_context_query_data(metrics);
+    query.extend(candidate.request_query.iter().cloned());
+    router_http_request_parts_value(
+        &candidate.request_method,
+        &candidate.request_path,
+        &candidate.request_headers,
+        &query,
+        &candidate.request_body,
+    )
+}
+
 fn router_string_list_value(items: &[&str]) -> Value {
     Value::List(Arc::new(
         items
@@ -12056,7 +12193,7 @@ fn router_context_data(
             let candidate = &selection.candidate;
             pairs.push((
                 "__kernel_request__".to_string(),
-                router_http_request_value(candidate),
+                router_http_request_value_with_router_context(candidate, metrics),
             ));
             pairs.push((
                 "__router_route_candidate__".to_string(),
@@ -12330,6 +12467,45 @@ mod router_context_tests {
         }
     }
 
+    fn field_pair_matches(value: &Value, expected_name: &str, expected_value: &str) -> bool {
+        matches!(
+            value,
+            Value::List(xs)
+                if xs.len() == 3
+                    && matches!(&xs[0], Value::Int(tag) if *tag == KH_TAG_FIELD)
+                    && matches!(&xs[1], Value::Str(name) if name.as_ref() == expected_name)
+                    && matches!(&xs[2], Value::Str(field_value) if field_value.as_ref() == expected_value)
+        )
+    }
+
+    #[test]
+    fn router_metrics_snapshot_context_includes_in_flight_native_request() {
+        let metrics = Arc::new(Mutex::new(RouterMetrics::default()));
+        let first = router_metrics_snapshot_including_request(
+            &metrics,
+            72,
+            "/api/attention/kernel-runtime",
+            "native-kernel",
+        );
+        assert_eq!(first.native_route_count, 72);
+        assert_eq!(first.total_requests, 1);
+        assert_eq!(first.native_requests, 1);
+        assert_eq!(first.observed_path_count, 1);
+        assert_eq!(first.observed_native_route_count, 1);
+
+        record_router_metrics(&metrics, "/api/attention/kernel-runtime", "native-kernel");
+        let second = router_metrics_snapshot_including_request(
+            &metrics,
+            72,
+            "/api/attention/kernel-runtime",
+            "native-kernel",
+        );
+        assert_eq!(second.total_requests, 2);
+        assert_eq!(second.native_requests, 2);
+        assert_eq!(second.observed_path_count, 1);
+        assert_eq!(second.observed_native_route_count, 1);
+    }
+
     #[test]
     fn router_context_carries_selected_route_candidate_form_value() {
         let upstream = None;
@@ -12450,6 +12626,14 @@ mod router_context_tests {
             _ => panic!("kernel request query must be a Form list value"),
         };
         assert_eq!(list_tag(&request_query[0]), KH_TAG_FIELD);
+        assert!(field_pair_matches(
+            &request_query[0],
+            "__router_native_route_count__",
+            "1"
+        ));
+        assert!(request_query
+            .iter()
+            .any(|field| field_pair_matches(field, "limit", "20")));
         assert!(
             matches!(&request_rows[5], Value::Str(body) if body.as_ref() == "{\"alive\":true}")
         );

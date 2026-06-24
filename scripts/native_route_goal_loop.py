@@ -34,6 +34,7 @@ TARGET_SHARE = 0.90
 WEB_PROXY_UPSTREAM_ENDPOINTS = {
     ("GET", "/api/health-proxy"): "/api/health",
 }
+TASK_DETAIL_RESERVED_SEGMENTS = {"active", "activity", "attention", "count"}
 
 
 @dataclass(frozen=True)
@@ -375,6 +376,12 @@ def _template_route_matches(pattern: str, endpoint: str) -> bool:
         )
         if template_segment:
             if not endpoint_part:
+                return False
+            if (
+                pattern == "/api/agent/tasks/{task_id}"
+                and pattern_part == "{task_id}"
+                and endpoint_part in TASK_DETAIL_RESERVED_SEGMENTS
+            ):
                 return False
             continue
         if pattern_part != endpoint_part:

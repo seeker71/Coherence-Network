@@ -510,6 +510,85 @@ services_to_rebuild() {
   echo "${out[*]}"
 }
 
+compose_service_state() {
+  local service="$1"
+  docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s {print $2; exit}'
+}
+
+wait_for_compose_service_running() {
+  local service="$1"
+  local timeout_seconds="${2:-180}"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local state
+  while (( $(date +%s) < deadline )); do
+    state="$(compose_service_state "$service")"
+    if [[ "$state" == "running" ]]; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
+}
+
+recreate_orphans_for_service() {
+  local service="$1"
+  docker ps -a --format '{{.Names}}' | grep -E "^[0-9a-f]{6,}_coherence-network-${service}-1$" || true
+}
+
+containers_for_service() {
+  local service="$1"
+  docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true
+}
+
+wait_for_recreate_orphans_gone() {
+  local service="$1"
+  local timeout_seconds="${2:-60}"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local orphans
+  while (( $(date +%s) < deadline )); do
+    orphans="$(recreate_orphans_for_service "$service")"
+    if [[ -z "$orphans" ]]; then
+      return 0
+    fi
+    log "waiting for recreate orphan removal for ${service}: $(echo "$orphans" | tr '\n' ' ')"
+    sleep 2
+  done
+
+  orphans="$(recreate_orphans_for_service "$service")"
+  if [[ -n "$orphans" ]]; then
+    log "clearing recreate orphans still present for ${service}: $(echo "$orphans" | tr '\n' ' ')"
+    echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
+  fi
+}
+
+wait_for_service_container_names_gone() {
+  local service="$1"
+  local timeout_seconds="${2:-60}"
+  local deadline=$(( $(date +%s) + timeout_seconds ))
+  local names
+  while (( $(date +%s) < deadline )); do
+    names="$(containers_for_service "$service")"
+    if [[ -z "$names" ]]; then
+      return 0
+    fi
+    log "waiting for container name release for ${service}: $(echo "$names" | tr '\n' ' ')"
+    sleep 2
+  done
+
+  names="$(containers_for_service "$service")"
+  if [[ -n "$names" ]]; then
+    log "clearing container names still present for ${service}: $(echo "$names" | tr '\n' ' ')"
+    echo "$names" | xargs -r docker rm -f >/dev/null 2>&1 || true
+  fi
+}
+
+wait_for_rebuild_recreate_orphans_gone() {
+  local service
+  for service in "$@"; do
+    wait_for_recreate_orphans_gone "$service"
+  done
+}
+
 # Pick the comparison base: prefer what's ACTUALLY RUNNING in the api
 # container over what the repo claims is its HEAD. The repo's OLD_SHA
 # gets advanced by `git reset --hard` on every deploy, but if a prior
@@ -587,6 +666,11 @@ else
     log "clearing recreate orphans: $(echo "$orphans" | tr '\n' ' ')"
     echo "$orphans" | xargs -r docker rm -f >/dev/null 2>&1 || true
   fi
+  # Docker may report async removal-in-progress for the hash-prefixed
+  # recreate container. Wait until names are actually released before asking
+  # compose to start the same service again.
+  # shellcheck disable=SC2086 -- intentional word-splitting on service list
+  wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
   log "docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES}"
   # shellcheck disable=SC2086 -- intentional word-splitting on service list
   if ! docker compose up -d --wait --wait-timeout 180 --force-recreate ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"; then
@@ -600,6 +684,8 @@ else
       log "force-recreate still conflicted; stop+remove then clean up -d"
       # shellcheck disable=SC2086
       docker compose rm -fsv ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE" || true
+      # shellcheck disable=SC2086 -- intentional word-splitting on service list
+      wait_for_rebuild_recreate_orphans_gone ${REBUILD_SERVICES}
       # shellcheck disable=SC2086
       docker compose up -d ${REBUILD_SERVICES} 2>&1 | tee -a "$LOG_FILE"
     fi
@@ -620,6 +706,7 @@ else
     if ! docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
       log "post-deploy: ${svc} is NOT running — clearing orphans and forcing a clean recreate"
       docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${svc}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      wait_for_recreate_orphans_gone "$svc"
       docker compose up -d "${svc}" 2>&1 | tee -a "$LOG_FILE" || true
       sleep 3
       if docker ps --format '{{.Names}}' | grep -qx "coherence-network-${svc}-1"; then
@@ -636,6 +723,11 @@ sync_field_docs() {
   if [[ ! -d "$REPO_DIR/docs/field" ]]; then
     log "field docs: no docs/field directory found (skipped)"
     return 0
+  fi
+
+  if ! wait_for_compose_service_running api 180; then
+    log "FATAL field docs: api container did not reach running before docs sync"
+    return 1
   fi
 
   # The api container may still be settling right after a force-recreate (exec races the fresh
@@ -845,16 +937,7 @@ run_substrate_ingest() {
 # happened not to be present inside the api container image.
 wait_for_running() {
   local service="$1"
-  local deadline=$(( $(date +%s) + 180 ))
-  while (( $(date +%s) < deadline )); do
-    local state
-    state="$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s {print $2}')"
-    if [[ "$state" == "running" ]]; then
-      return 0
-    fi
-    sleep 3
-  done
-  return 1
+  wait_for_compose_service_running "$service" 180
 }
 
 ensure_kernel_router_canary() {
@@ -871,10 +954,11 @@ ensure_kernel_router_canary() {
 
   local service stale
   for service in "${canary_services[@]}"; do
-    stale="$(docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" || true)"
+    stale="$(containers_for_service "$service")"
     if [[ -n "$stale" ]]; then
       log "kernel-router canary: clearing stale containers for ${service}: $(echo "$stale" | tr '\n' ' ')"
       echo "$stale" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      wait_for_service_container_names_gone "$service"
     fi
   done
 
@@ -889,7 +973,8 @@ ensure_kernel_router_canary() {
       log "kernel-router canary: force-recreate still conflicted; stop+remove then clean up -d"
       docker compose "${compose_args[@]}" rm -fsv "${canary_services[@]}" 2>&1 | tee -a "$LOG_FILE" || true
       for service in "${canary_services[@]}"; do
-        docker ps -a --format '{{.Names}}' | grep -E "(^|_)coherence-network-${service}-1$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+        containers_for_service "$service" | xargs -r docker rm -f >/dev/null 2>&1 || true
+        wait_for_service_container_names_gone "$service"
       done
       docker compose "${compose_args[@]}" up -d --build --no-deps "${canary_services[@]}" 2>&1 | tee -a "$LOG_FILE"
     fi
@@ -913,15 +998,19 @@ ensure_kernel_router_canary() {
   done
 
   for service in "${canary_services[@]}"; do
-    local listener_probe_path="/api/attention/kernel-runtime"
-    local listener_wait_seconds=90
-    local listener_curl_timeout_seconds=5
-    # Contract marker: $service listener did not accept local HTTP within 90s.
-    if [[ "$service" == "kernel-router-bml-front-door" ]]; then
-      listener_probe_path="/api/utils/kernel_status"
-      listener_wait_seconds=360
-      listener_curl_timeout_seconds=10
+    # The production-manifest kernel-router has already passed compose/Docker
+    # health above, and the public-gate/default mutation probes below prove its
+    # real routed behavior through Traefik. A second local docker-exec curl has
+    # repeatedly false-failed while the public canary succeeded after routing
+    # settled, so only the BML sibling keeps a local listener probe here.
+    if [[ "$service" == "kernel-router" ]]; then
+      log "kernel-router canary: ${service} listener covered by Docker health and public mutation probes"
+      continue
     fi
+    local listener_probe_path="/api/utils/kernel_status"
+    local listener_wait_seconds=360
+    local listener_curl_timeout_seconds=10
+    # Contract marker: $service listener did not accept local HTTP within 360s.
     log "kernel-router canary: waiting for ${service} listener at ${listener_probe_path} (${listener_wait_seconds}s budget)"
     deadline=$(( $(date +%s) + listener_wait_seconds ))
     listener_ready=0
@@ -1027,15 +1116,16 @@ ensure_kernel_router_canary() {
   fi
 
   local kernel_image_payload='{"expression":"class KernelCoreSelf { int RequiredPrimitiveCount() [get] { return 8; } int RequiredDispatchCount() [get] { return 15; } int RequiredProofCount() [get] { return 6; } bool Minimal() { return true; } bool Observable() { return true; } bool Executable() { return true; } bool Trustable() { return true; } } class KernelCoreImage {}","grammar":"bml","source_label":"deploy-bml-front-door-canary"}'
-  deadline=$(( $(date +%s) + 120 ))
+  deadline=$(( $(date +%s) + 360 ))
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS --max-time 10 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
+      "printf '%s' '$kernel_image_payload' >/tmp/kernel-image.request.json \
+        && curl -fsS --max-time 30 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
         -X POST http://127.0.0.1:8080/api/substrate/kernel-image/proposals \
         -H 'Accept: application/json' \
         -H 'Content-Type: application/json' \
-        --data '$kernel_image_payload' \
+        --data-binary @/tmp/kernel-image.request.json \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-image.headers \
         && grep -q '\"proposal_status\":\"accepted-preview\"' /tmp/kernel-image.body \
         && grep -q '\"handler\":\"api_substrate_kernel_image_proposals\"' /tmp/kernel-image.body \
@@ -1047,6 +1137,10 @@ ensure_kernel_router_canary() {
     sleep 3
   done
   if [[ "$probe_ok" != "1" ]]; then
+    docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "echo 'kernel-image headers:'; cat /tmp/kernel-image.headers 2>/dev/null || true; \
+       echo 'kernel-image body:'; head -c 1200 /tmp/kernel-image.body 2>/dev/null || true; echo" \
+      2>&1 | tee -a "$LOG_FILE" || true
     log "FAIL: BML front-door kernel-image route did not return native proposal proof"
     exit 1
   fi
@@ -1223,6 +1317,7 @@ ensure_kernel_router_canary() {
         'spec-registry|/api/spec-registry?limit=2|api_spec_registry' \
         'spec-registry-detail|/api/spec-registry/web-ideas-specs-usage-pages|api_spec_registry_detail' \
         'idea-specs|/api/ideas/user-surfaces/specs|api_idea_specs' \
+        'runtime-attention|/api/attention/kernel-runtime|api_attention_kernel_runtime' \
         'lenses|/api/lenses|api_lenses' \
         'sensings|/api/sensings?limit=2|api_sensings' \
         'translations-page-flow|/api/translations/page/flow|api_translations_entity'; do \

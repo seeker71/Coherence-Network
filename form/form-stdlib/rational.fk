@@ -1,0 +1,50 @@
+; rational.fk — exact rational arithmetic: the format chosen, not the format forced.
+;
+; When floats crashed fkwu's cons-list path I compromised subjective-logic to fixed-point per-mille
+; and accepted the rounding — as if "lossy fixed-point" and "crashing floats" were the only options.
+; They were not. We emit the kernel; the number type is a DESIGN CHOICE. For trust and proof the
+; honest choice is EXACT RATIONALS — an integer numerator over an integer denominator, no rounding at
+; all — and because it is integer pairs it crosses all four kernels (Go/Rust/TS/fkwu) TODAY and
+; crystallizes to native. 1/3 + 1/3 + 1/3 is exactly 1 here, where per-mille gives 999. The belief was
+; not in the kernel; it was in assuming the kernel's current float gap dictated the math.
+;
+; A rational is (list num den), kept canonical by rat: den > 0, reduced by gcd, so equality is decidable
+; and numbers stay small under repeated ops. All integer arithmetic — the exact-everywhere foundation a
+; trust calculus, a probability, or any measured reasoning can rest on without a rounding apology.
+;
+; Kin: subjective-logic.fk (the trust calculus this can carry without rounding), the reasoning blocks
+; (a derived conclusion's weight can be an exact fraction). Proven by: tests/rational-band.fk
+
+(do
+    (defn rat-num (x) (nth x 0))
+    (defn rat-den (x) (nth x 1))
+    (defn rat-abs (v) (if (lt v 0) (sub 0 v) v))
+    (defn rat-gcd (a b) (if (eq b 0) (rat-abs a) (rat-gcd b (mod a b))))
+
+    ; --- canonical constructor: sign on the numerator, denominator positive, reduced by gcd. ---
+    (defn rat (n d)
+        (do (let s  (if (lt d 0) (sub 0 1) 1))
+            (let n2 (mul s n))
+            (let d2 (mul s d))
+            (let g  (rat-gcd (rat-abs n2) d2))
+            (let g2 (if (eq g 0) 1 g))
+            (list (div n2 g2) (div d2 g2))))
+    (defn rat-int (n) (list n 1))
+
+    ; --- arithmetic (exact; results reduced) ---
+    (defn rat-add (x y) (rat (add (mul (rat-num x) (rat-den y)) (mul (rat-num y) (rat-den x)))
+                            (mul (rat-den x) (rat-den y))))
+    (defn rat-sub (x y) (rat (sub (mul (rat-num x) (rat-den y)) (mul (rat-num y) (rat-den x)))
+                            (mul (rat-den x) (rat-den y))))
+    (defn rat-mul (x y) (rat (mul (rat-num x) (rat-num y)) (mul (rat-den x) (rat-den y))))
+    (defn rat-div (x y) (rat (mul (rat-num x) (rat-den y)) (mul (rat-den x) (rat-num y))))
+
+    ; --- comparison (denominators positive after rat, so cross-multiply preserves order) ---
+    (defn rat-eq (x y) (if (eq (mul (rat-num x) (rat-den y)) (mul (rat-num y) (rat-den x))) 1 0))
+    (defn rat-lt (x y) (if (lt (mul (rat-num x) (rat-den y)) (mul (rat-num y) (rat-den x))) 1 0))
+    (defn rat-le (x y) (if (le (mul (rat-num x) (rat-den y)) (mul (rat-num y) (rat-den x))) 1 0))
+
+    ; --- a trust expectation in exact rationals: E = b + a*u (the per-mille version rounded this) ---
+    (defn rat-expectation (b a u) (rat-add b (rat-mul a u)))
+
+    0)

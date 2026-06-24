@@ -1,0 +1,63 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk form-stdlib/sensor-organ-android-bridge.fk
+;
+; sensor-organ-android-bridge-band — Android active summary rows lower into generic sensor organ
+; samples, then compose into a derived active-media observation.
+;
+; Verdict 4095 when every claim lands:
+;   1     mic active sample maps to android:mic sound-level rms
+;   2     camera active sample maps to light-level luma
+;   4     gpu active sample maps to compute-latency ms
+;   8     trust percent becomes ppm confidence
+;   16    active count becomes freshness
+;   32    empty privacy becomes raw-private and is not mesh-safe
+;   64    inactive rows become unanswered
+;   128   mic reading rides the generic organ-reading engine as observed
+;   256   three active rows are usable through the generic sensor gate
+;   512   full media floor emits media-floor with confidence 1000000
+;   1024  missing camera emits media-incomplete and absent/not-safe
+;   2048  composite payload preserves summary-only raw policy
+
+(do
+    (let mic (aml-mic-rms-sample 4 12))
+    (let cam (aml-camera-luma-sample 2 50))
+    (let gpu (aml-gpu-readback-sample 3 7))
+    (let inactive (aml-active-sample "mic" "audio:pcm16" "rms-summary" 4 12 78 "summary-only/no-raw-audio" 0))
+    (let rawish (aml-active-sample "mic" "audio:pcm16" "rms-summary" 4 12 78 "" 1))
+
+    (let mic-sensor (soab-active-sample-to-sensor mic))
+    (let cam-sensor (soab-active-sample-to-sensor cam))
+    (let gpu-sensor (soab-active-sample-to-sensor gpu))
+    (let rawish-sensor (soab-active-sample-to-sensor rawish))
+    (let inactive-sensor (soab-active-sample-to-sensor inactive))
+    (let mic-reading (soab-active-sample-reading mic 500000 10 5))
+    (let mic-sense (wmls-from-reading mic-reading))
+
+    (let full (list mic cam gpu))
+    (let missing-camera (list mic gpu))
+    (let full-obs (soab-media-observation full 500000))
+    (let missing-obs (soab-media-observation missing-camera 500000))
+    (let full-reading (composite-reading full-obs 500000 10 5))
+    (let missing-reading (composite-reading missing-obs 500000 10 5))
+    (let full-payload (or-payload full-reading))
+
+    (let c0 (if (and (str_eq (ss-source mic-sensor) "android:mic")
+                     (and (str_eq (ss-kind mic-sensor) "sound-level")
+                          (str_eq (ss-unit mic-sensor) "rms"))) 1 0))
+    (let c1 (if (and (str_eq (ss-kind cam-sensor) "light-level")
+                     (str_eq (ss-unit cam-sensor) "luma")) 2 0))
+    (let c2 (if (and (str_eq (ss-kind gpu-sensor) "compute-latency")
+                     (str_eq (ss-unit gpu-sensor) "ms")) 4 0))
+    (let c3 (if (eq (ss-confidence mic-sensor) 780000) 8 0))
+    (let c4 (if (eq (ss-freshness mic-sensor) 4) 16 0))
+    (let c5 (if (and (eq (ss-privacy rawish-sensor) (sensor-privacy-raw-private))
+                     (eq (sensor-usable? rawish-sensor 500000) 0)) 32 0))
+    (let c6 (if (eq (sensor-answered? inactive-sensor) 0) 64 0))
+    (let c7 (if (str_eq (wmg-sense-verdict mic-sense) "observed") 128 0))
+    (let c8 (if (eq (soab-usable-count full 500000) 3) 256 0))
+    (let c9 (if (and (str_eq (co-claim full-obs) "media-floor")
+                     (eq (co-confidence full-obs) 1000000)) 512 0))
+    (let c10 (if (and (str_eq (co-claim missing-obs) "media-incomplete")
+                      (str_eq (wmg-sense-verdict (wmls-from-reading missing-reading)) "absent")) 1024 0))
+    (let c11 (if (str_eq (nth full-payload 10) "summary-only") 2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

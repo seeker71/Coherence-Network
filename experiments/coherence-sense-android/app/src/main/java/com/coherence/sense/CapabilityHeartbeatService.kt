@@ -404,12 +404,15 @@ class CapabilityHeartbeatService : Service() {
     private fun sendHeartbeat() {
         val base = witnessBase.trim().removeSuffix("/")
         if (base.isBlank()) return
+        val body = bodyState()
+        val nativeHost = nativeHostInstance(body)
         val payload = JSONObject()
             .put("organ_id", organId)
             .put("capability_heartbeat", capabilityHeartbeat())
             .put("organs_active", JSONArray(activeOrgans()))
             .put("channels_offered", JSONArray(offeredTransports()))
-            .put("body_state", bodyState())
+            .put("body_state", body)
+            .put("native_host_instance", nativeHost)
             .put("tick", beat++)
         try {
             val conn = (URL("$base/sense").openConnection() as HttpURLConnection).apply {
@@ -457,6 +460,19 @@ class CapabilityHeartbeatService : Service() {
             .put("surprise_count", 0)
             .put("error_count", 0)
             .put("sample_count", beat + 1)
+
+    private fun nativeHostInstance(body: JSONObject): JSONObject =
+        NativeFormCli.nativeHostJson(
+            this,
+            platform = "android",
+            mic = packageManager.hasSystemFeature(PackageManager.FEATURE_MICROPHONE),
+            camera = packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY),
+            screen = true,
+            speechGate = 0,
+            freq = 0,
+            surprises = body.optLong("surprise_count", 0L),
+            samples = body.optLong("sample_count", 0L),
+        )
 
     private fun ensureNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

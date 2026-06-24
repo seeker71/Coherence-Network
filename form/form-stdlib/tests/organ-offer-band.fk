@@ -1,0 +1,96 @@
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/hati-mesh.fk form-stdlib/organ-offer.fk
+;
+; organ-offer-band - plane-aware organ offers with ask-first and withholding.
+;
+; Verdict 63 when:
+;   1   an organ offers a plane to one audience
+;   2   the same offer withholds from another audience
+;   4   an organ can ask a question before offering
+;   8   reaching beyond the offered interface withholds
+;   16  the chooser uses only actual offers, skipping ask-first and withheld rows
+;   32  a Hati mesh channel lowers into a plane-aware organ offer
+
+(do
+    (let sema
+        (oo-offer
+            "sema"
+            "text-witness"
+            (list "reasoning" "planning" "knowledge")
+            (list "public")
+            (empty)
+            "summary"
+            "cited-synthesis"
+            "not-available"
+            (list (m-offer) (m-witness))))
+
+    (let android
+        (oo-offer
+            "android-phone"
+            "magnetometer"
+            (list "electromagnetic" "observation" "flowing")
+            (list "trusted-circle")
+            (list "What duration should I sense?")
+            "numeric"
+            "sensor-timeseries"
+            "needs-consent-or-calibration"
+            (list (m-offer) (m-ask-how))))
+
+    (let private-body
+        (oo-offer
+            "human-body"
+            "felt-sense"
+            (list "being" "sensing" "reacting")
+            (list "self")
+            (empty)
+            "presence-signal"
+            "self-report"
+            "silence"
+            (list (m-silence))))
+
+    (let sema-public (oo-invite sema "reasoning" "public" (m-offer)))
+    (let sema-trusted (oo-invite sema "reasoning" "trusted-circle" (m-offer)))
+    (let android-ask (oo-invite android "electromagnetic" "trusted-circle" (m-offer)))
+    (let body-reach (oo-invite private-body "sensing" "self" (m-see)))
+    (let selected (oo-select-offer (list android private-body sema) "reasoning" "public" (m-offer)))
+
+    (let sensor-channel
+        (hm-offer-channel
+            "hati-organ-android-a1"
+            "hati-organ-macos-b1"
+            "sensor:signal"
+            "offer:observe-sensor-field"
+            "cap.sensor.read"
+            "json"
+            1
+            320))
+    (let sensor-offer
+        (oo-from-hm-channel
+            sensor-channel
+            (list "observation" "flowing")
+            (list "trusted-circle")
+            (empty)
+            "numeric"
+            "sensor-timeseries"
+            "needs-consent-or-calibration"))
+    (let sensor-response (oo-invite sensor-offer "observation" "trusted-circle" (m-witness)))
+
+    (let c0 (if (str_eq (oo-response-status sema-public) "organ/offer")
+                (if (str_eq (oo-response-receipt sema-public) "cited-synthesis") 1 0)
+                0))
+    (let c1 (if (str_eq (oo-response-status sema-trusted) "organ/withheld") 2 0))
+    (let c2 (if (str_eq (oo-response-status android-ask) "organ/ask-first")
+                (if (str_eq (oo-response-question android-ask) "What duration should I sense?") 4 0)
+                0))
+    (let c3 (if (str_eq (oo-response-status body-reach) "organ/withheld") 8 0))
+    (let c4 (if (str_eq (oo-response-status selected) "organ/offer")
+                (if (str_eq (oo-response-organ selected) "sema")
+                    (if (str_eq (oo-response-receipt selected) "cited-synthesis") 16 0)
+                    0)
+                0))
+    (let c5 (if (str_eq (oo-response-status sensor-response) "organ/offer")
+                (if (str_eq (oo-response-organ sensor-response) "hati-organ-android-a1")
+                    (if (str_eq (oo-response-channel sensor-response) "sensor:signal") 32 0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

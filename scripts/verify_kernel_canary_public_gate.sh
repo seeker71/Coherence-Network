@@ -307,24 +307,25 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
       || true
   )"
   runtime_router="$(header_value "$runtime_headers" "x-form-router:")"
+  runtime_handler="$(header_value "$runtime_headers" "x-form-handler:")"
 
-  if [[ "$runtime_status" == "200" && "$runtime_router" == "native-kernel" ]]; then
+  if [[ "$runtime_status" == "200" && "$runtime_router" == "native-kernel" && "$runtime_handler" == "api_attention_kernel_runtime" ]]; then
     if assert_kernel_runtime_body "$runtime_body"; then
-      echo "PASS ordinary API host enters native front door status=${runtime_status} router=${runtime_router}"
+      echo "PASS ordinary API host enters stable native attention front door status=${runtime_status} router=${runtime_router} handler=${runtime_handler}"
       break
     fi
   fi
 
   if [[ "$attempt" -ge "$ATTEMPTS" ]]; then
     echo "FAIL ordinary API host did not reach native front door after ${ATTEMPTS} attempts"
-    echo "last_status=${runtime_status:-none} last_router=${runtime_router:-none}"
+    echo "last_status=${runtime_status:-none} last_router=${runtime_router:-none} last_handler=${runtime_handler:-none}"
     echo "body preview:"
     head -c 500 "$runtime_body" || true
     echo
     exit 1
   fi
 
-  echo "WAIT native front-door attempt ${attempt}/${ATTEMPTS}: status=${runtime_status:-none} router=${runtime_router:-none}"
+  echo "WAIT native front-door attempt ${attempt}/${ATTEMPTS}: status=${runtime_status:-none} router=${runtime_router:-none} handler=${runtime_handler:-none}"
   sleep "$SLEEP_SECONDS"
 done
 

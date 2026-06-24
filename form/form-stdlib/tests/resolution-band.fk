@@ -1,0 +1,66 @@
+; preludes: form-stdlib/unify.fk form-stdlib/resolution.fk
+;
+; First-order resolution, pinned. ids — vars X=0, Y=1, Z=2; consts socrates=10, plato=11, zeus=12,
+; abe=40, homer=41, bart=42, lisa=43; functors man=20, mortal=21, thinker=22, parent=30, ancestor=31.
+;
+; PART 1 — universal laws + who-queries:
+;   mortal(X):-man(X) ; thinker(X):-mortal(X) ; man(socrates). man(plato).
+; PART 2 — RECURSIVE RELATIONAL rule (multi-premise, the standardizing-apart test):
+;   parent(abe,homer). parent(homer,bart). parent(homer,lisa).
+;   ancestor(X,Z):-parent(X,Z).
+;   ancestor(X,Z):-parent(X,Y), ancestor(Y,Z).
+; PART 3 — CROSS-PREMISE BACKTRACKING (SLD completeness): functors p=50,q=51,r=52; consts a=60,b=61.
+;   p(a). p(b). q(b). r(X):-p(X),q(X).
+;   Proving r(Y) must NOT commit to p's first solution X=a (q(a) absent) — it backtracks to X=b where
+;   q(b) holds. A first-proof-only search reports r unprovable; a complete one answers Y=b.
+; Verdict 8191 when every claim lands.
+(do
+    (let X (u-mkvar 0)) (let Y (u-mkvar 1)) (let Z (u-mkvar 2))
+    (let socrates (u-mkconst 10)) (let plato (u-mkconst 11)) (let zeus (u-mkconst 12))
+    (let abe (u-mkconst 40)) (let homer (u-mkconst 41)) (let bart (u-mkconst 42)) (let lisa (u-mkconst 43))
+    (let aa (u-mkconst 60)) (let bb (u-mkconst 61))
+    (defn manT (a)     (u-mkcompound 20 (list a)))
+    (defn mortalT (a)  (u-mkcompound 21 (list a)))
+    (defn thinkerT (a) (u-mkcompound 22 (list a)))
+    (defn parentT (a b)   (u-mkcompound 30 (list a b)))
+    (defn ancestorT (a b) (u-mkcompound 31 (list a b)))
+    (defn pT (a) (u-mkcompound 50 (list a)))
+    (defn qT (a) (u-mkcompound 51 (list a)))
+    (defn rT (a) (u-mkcompound 52 (list a)))
+
+    (let kb (list
+        (list (mortalT X)  (list (manT X)))                          ; mortal(X) :- man(X)
+        (list (thinkerT X) (list (mortalT X)))                       ; thinker(X) :- mortal(X)
+        (list (manT socrates) (list)) (list (manT plato) (list))     ; man facts
+        (list (parentT abe homer)  (list))                           ; parent facts
+        (list (parentT homer bart) (list)) (list (parentT homer lisa) (list))
+        (list (ancestorT X Z) (list (parentT X Z)))                  ; ancestor(X,Z) :- parent(X,Z)
+        (list (ancestorT X Z) (list (parentT X Y) (ancestorT Y Z)))  ; ancestor(X,Z) :- parent(X,Y), ancestor(Y,Z)
+        (list (pT aa) (list)) (list (pT bb) (list)) (list (qT bb) (list)) ; p(a). p(b). q(b).
+        (list (rT X) (list (pT X) (qT X)))))                         ; r(X) :- p(X), q(X)  (backtracking)
+
+    ; PART 1
+    (let c0 (if (eq (res-proven? (mortalT socrates) kb) 1) 1 0))   ; derive mortal(socrates) from the law
+    (let c1 (if (eq (res-proven? (mortalT zeus) kb) 0)     2 0))   ; zeus: no man fact -> not proven
+    (let c2 (if (eq (res-proven? (manT socrates) kb) 1)    4 0))   ; man(socrates): a fact
+    (let c3 (if (and (eq (res-proven? (mortalT Y) kb) 1)
+                     (eq (u-eq? (res-answer Y (mortalT Y) kb) socrates) 1)) 8 0))   ; WHO is mortal? -> socrates
+    (let c4 (if (eq (res-proven? (thinkerT socrates) kb) 1) 16 0)) ; two-step: thinker <- mortal <- man
+    (let c5 (if (eq (res-proven? (thinkerT zeus) kb) 0)     32 0)) ; zeus still not a thinker
+    (let c6 (if (and (eq (res-proven? (thinkerT Y) kb) 1)
+                     (eq (u-eq? (res-answer Y (thinkerT Y) kb) socrates) 1)) 64 0)) ; who thinks? -> socrates
+    (let c7 (if (eq (res-proven? (mortalT plato) kb) 1)   128 0))  ; SAME law, new individual: plato is mortal
+
+    ; PART 2 — recursive relational
+    (let c8  (if (eq (res-proven? (ancestorT abe homer) kb) 1) 256 0))  ; direct ancestor (rule 1)
+    (let c9  (if (eq (res-proven? (ancestorT abe bart) kb) 1)  512 0))  ; TRANSITIVE: abe->homer->bart (recursive rule)
+    (let c10 (if (eq (res-proven? (ancestorT bart abe) kb) 0) 1024 0))  ; directionality: bart is NOT abe's ancestor
+    (let c11 (if (and (eq (res-proven? (ancestorT homer Z) kb) 1)
+                      (eq (u-eq? (res-answer Z (ancestorT homer Z) kb) bart) 1)) 2048 0)) ; who descends homer? -> bart
+
+    ; PART 3 — cross-premise backtracking: r(Y) provable only by backtracking p(Y) past a to b
+    (let c12 (if (and (eq (res-proven? (rT Y) kb) 1)
+                      (eq (u-eq? (res-answer Y (rT Y) kb) bb) 1)) 4096 0)) ; r holds via X=b, not the dead-end X=a
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+        (add c8 (add c9 (add c10 (add c11 c12)))))))))))))

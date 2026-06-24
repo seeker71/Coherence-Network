@@ -1,0 +1,81 @@
+; forward-chaining.fk — the atomic deduction step, as a proven recipe.
+;
+; The first skill of a native, axiom-based reasoning body: given a set of AXIOMS (facts that
+; hold) and a set of RULES (premises -> conclusion), derive every new fact that the axioms force,
+; to fixpoint (saturation), then answer entailment. This is modus ponens iterated — the engine
+; under Datalog, expert systems, and the substrate's own structural reasoning. A frontier mind does
+; this probabilistically and approximately; here it is EXACT, proven four-way, and pure-numeric so
+; it crystallizes to native asm (tags 1-7,12) — observable and optimizable on any metal.
+;
+; Everything is DATA; the inference is Form:
+;   atom   = an integer id (a content-addressed fact name; integers keep the engine JIT-native)
+;   facts  = (list atom ...)                         the axioms / what is currently known
+;   rule   = (list (list atom ...) atom)             (premises conclusion) — all premises -> conclusion
+;   rules  = (list rule ...)                          the inference rules
+;
+; Termination is honest: facts only grow and are bounded by the rule conclusions, so saturation
+; reaches fixpoint in at most (len rules) passes — that exact bound is the recursion fuel. The
+; fixpoint test is structural (the fact count stopped growing), never a magic depth.
+;
+; Kin: form-first-router.fk (route a query to a mind — this DERIVES the answer when the body holds
+; the rules), active-inference.fk (the predictive-coding sibling), core-axioms.form (the five the
+; body's own reasoning rests on). Backward-chaining and resolution build on this same step.
+; Proven by: form-stdlib/tests/forward-chaining-band.fk (four-way at validate.sh)
+
+(do
+    ; --- rule accessors: a rule is (premises conclusion) ---
+    (defn fwd-prems (r) (nth r 0))
+    (defn fwd-concl (r) (nth r 1))
+
+    ; --- is atom x already in the fact base? (the membership primitive) ---
+    (defn fwd-member? (x xs)
+        (if (eq (len xs) 0) 0
+            (if (eq (head xs) x) 1 (fwd-member? x (tail xs)))))
+
+    ; --- are ALL premises present in the facts? (the rule's left-hand side is satisfied) ---
+    (defn fwd-all-present? (prems facts)
+        (if (eq (len prems) 0) 1
+            (if (eq (fwd-member? (head prems) facts) 1)
+                (fwd-all-present? (tail prems) facts)
+                0)))
+
+    ; --- does this rule FIRE? premises all present AND the conclusion is genuinely new. ---
+    ; the "genuinely new" guard is what makes saturation a fixpoint instead of an infinite loop.
+    (defn fwd-fires? (facts r)
+        (if (and (eq (fwd-all-present? (fwd-prems r) facts) 1)
+                 (eq (fwd-member? (fwd-concl r) facts) 0)) 1 0))
+
+    ; --- apply one rule: if it fires, the conclusion joins the known facts; else nothing moves. ---
+    (defn fwd-apply-rule (facts r)
+        (if (eq (fwd-fires? facts r) 1)
+            (cons (fwd-concl r) facts)
+            facts))
+
+    ; --- one full pass: fold every rule once over the (growing) fact base. ---
+    (defn fwd-step (facts rules)
+        (if (eq (len rules) 0)
+            facts
+            (fwd-step (fwd-apply-rule facts (head rules)) (tail rules))))
+
+    ; --- saturate: iterate the pass to fixpoint. fuel bounds it at (len rules) passes — a chain
+    ; of N rules in worst order fires one new fact per pass, so N passes always suffices. ---
+    (defn fwd-saturate (facts rules fuel)
+        (if (eq fuel 0)
+            facts
+            (do (let next (fwd-step facts rules))
+                (if (eq (len next) (len facts))
+                    facts
+                    (fwd-saturate next rules (sub fuel 1))))))
+
+    ; --- the closure of the axioms under the rules: everything the body can know. ---
+    (defn fwd-closure (facts rules) (fwd-saturate facts rules (len rules)))
+
+    ; --- ENTAILMENT — THE query: do the axioms + rules force this goal to be true? ---
+    (defn fwd-entails? (facts rules goal)
+        (fwd-member? goal (fwd-closure facts rules)))
+
+    ; --- how many NEW facts the reasoning derived (the body's contribution beyond the axioms). ---
+    (defn fwd-derived-count (facts rules)
+        (sub (len (fwd-closure facts rules)) (len facts)))
+
+    0)

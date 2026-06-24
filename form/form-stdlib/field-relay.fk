@@ -1,0 +1,60 @@
+; field-relay.fk — the content-blind routing + consent decision for the always-open field relay.
+;
+; The relay carries the agent-coordination membrane across networks: any cell that speaks the protocol
+; dials OUT to the public API (no inbound ports, open join — no connection-time auth), and the relay
+; forwards membrane envelopes between cells. This recipe is the DECISION the relay applies to each
+; envelope. Two laws hold it honest:
+;
+;   1. CONTENT-BLIND. fr-route reads an envelope's metadata only — from, to, kind. It NEVER reads the
+;      body (index 3). So a private channel's payload rides as ciphertext the relay cannot inspect;
+;      routing through the public API never means the public API sees the contents. (Sovereignty by
+;      construction, lc-private-channel-via-substrate.)
+;   2. CONSENT IS THE ONE GATE. A cell is reachable only through the signal-kinds it offers in its
+;      interface (channel-interface-consent). Not identity, not an allowlist — the relay does not police
+;      who you are. Identity is content-addressed; authoring AS a NodeID is signing (a recipient's
+;      concern to verify, TOFU), never a permission check here. The relay is a dumb, trusting forwarder;
+;      sensing lives in the cells (presence-over-protection, trust-over-fear).
+;
+; A registry entry is (list nodeid connected? interface) — interface a list of offered kind-tokens.
+; An envelope is (list from to kind body) — body opaque, never read here. fr-route yields one of:
+;   DELIVER 1 (recipient connected + consent ok) · QUEUE 2 (recipient known-but-offline + consent ok,
+;   the append-only board holds it) · DENY 3 (kind not in recipient's offered interface) · DROP 0
+;   (recipient unknown to the registry).
+; Kin: agent-coordination-membrane.form (the vocabulary), channel-interface-consent.form (the gate).
+; Proven by: tests/field-relay-band.fk
+
+(do
+    ; --- envelope accessors: metadata only. There is deliberately NO body accessor used by fr-route. ---
+    (defn fr-envelope (from to kind body) (list from to kind body))
+    (defn fr-env-from (e) (nth e 0))
+    (defn fr-env-to   (e) (nth e 1))
+    (defn fr-env-kind (e) (nth e 2))
+
+    ; --- registry entry accessors ---
+    (defn fr-reg-id    (r) (nth r 0))
+    (defn fr-reg-conn  (r) (nth r 1))   ; 1 connected, 0 offline
+    (defn fr-reg-iface (r) (nth r 2))   ; list of offered kind-tokens
+
+    ; --- membership (consent test): is kind among the offered kinds? ---
+    (defn fr-member? (x xs)
+        (if (eq (len xs) 0) 0 (if (eq (head xs) x) 1 (fr-member? x (tail xs)))))
+    (defn fr-consent-ok? (kind iface) (fr-member? kind iface))
+
+    ; --- registry lookup by NodeID; (empty) when unknown ---
+    (defn fr-lookup (registry id)
+        (if (eq (len registry) 0) (empty)
+            (if (eq (fr-reg-id (head registry)) id) (head registry)
+                (fr-lookup (tail registry) id))))
+    (defn fr-registry-has? (registry id) (if (eq (len (fr-lookup registry id)) 0) 0 1))
+
+    ; --- THE decision: metadata in, one of DELIVER/QUEUE/DENY/DROP out. Body never touched. ---
+    (defn fr-route (registry env)
+        (do (let to    (fr-env-to env))
+            (let kind  (fr-env-kind env))
+            (let entry (fr-lookup registry to))
+            (if (eq (len entry) 0) 0                                  ; unknown recipient -> DROP
+                (if (eq (fr-consent-ok? kind (fr-reg-iface entry)) 0) 3   ; kind not offered -> DENY
+                    (if (eq (fr-reg-conn entry) 1) 1 2)))))           ; connected -> DELIVER else QUEUE
+    (defn fr-deliver? (registry env) (if (eq (fr-route registry env) 1) 1 0))
+
+    0)

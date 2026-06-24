@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/bounded-runtime-attention",
+  "commit_scope": "Heal the deployed production-manifest attention route after Hostinger Auto Deploy run 27964943784 showed the kernel-router container serving /api/attention/kernel-runtime but timing out every local and public probe. The route now reports bounded scalar fanout observation data and the next candidate without recursively serializing the live fanout path history.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_bounded_runtime_attention.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cargo build --release --bin form-kernel-rust",
+      "direct local form-kernel-rust.exe serve probe for GET /api/attention/kernel-runtime",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_kernel_canary_public_gate.sh deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_bounded_runtime_attention.json"
+    ],
+    "notes": "The direct native server probe loaded deploy/kernel-router/production-routes.fk through the release kernel, returned HTTP 200 with X-Form-Router native-kernel, native_route_count 45, observed_fanout_path_count present, and fanout_path_counts as an empty bounded list. The broader kernel_front_door_local_preflight.sh could not run unchanged on this Windows host because the available Bash lacks lsof; the direct native server probe covered the failing route shape without changing repo code."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI and Hostinger Auto Deploy will run after this follow-up PR merges."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger native kernel-router canary",
+    "notes": "Before this fix, public /api/health already reported deployed_sha b434d9254e7e096453d0aba9df83d4a42735fa2c and /api/ready plus /api/utils/kernel_status returned native-kernel. During deploy, /api/attention/kernel-runtime timed out with zero bytes and the kernel-router container was unhealthy; after startup settled, the same route answered 200 but returned a 33140 byte body with the full fanout_path_counts history. The fixed local route returned the same attention contract in 407 bytes with bounded fanout_path_counts. After merge, Hostinger deploy should roll the bounded attention route and the public kernel canary should pass during startup."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local native proof passed; merge, deploy, and public no-header /api/attention/kernel-runtime verification remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "deploy-canary-stability",
+    "kernel-runtime-attention"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-bounded-runtime-attention"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27964943784 failed in Roll forward VPS because the kernel-router listener at /api/attention/kernel-runtime did not accept local HTTP within 90 seconds.",
+    "The same run's logs showed the production manifest compiled and listed ANY /api/attention/kernel-runtime as a native route, while the kernel-router container stayed unhealthy and public curls timed out during startup.",
+    "A later public probe at deployed_sha b434d9254e7e096453d0aba9df83d4a42735fa2c returned HTTP 200 from /api/attention/kernel-runtime but produced a 33140 byte body containing hundreds of fanout_path_counts rows.",
+    "The bounded route removes the handler's read of __router_observation__.fanout_path_counts, adds observed_fanout_path_count, keeps next_bml_candidate, and returns fanout_path_counts as an empty bounded list."
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_20260622_bounded_runtime_attention.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The production-manifest kernel-router should become healthy because /api/attention/kernel-runtime returns bounded JSON instead of recursively serializing unbounded fanout path history.",
+    "public_endpoints": [
+      "GET /api/attention/kernel-runtime",
+      "GET /api/ready",
+      "GET /api/utils/kernel_status",
+      "POST /api/substrate/kernel-image/proposals"
+    ],
+    "test_flows": [
+      "local release kernel serves /api/attention/kernel-runtime with X-Form-Router native-kernel and bounded fanout_path_counts.",
+      "static deploy-path check pins the bounded attention route source shape so unbounded fanout_path_counts expansion cannot return silently.",
+      "post-merge deploy should complete Roll forward VPS and public verification should observe /api/attention/kernel-runtime as native-kernel."
+    ]
+  }
+}

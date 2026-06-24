@@ -18,6 +18,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
 import httpx
 
@@ -125,6 +126,29 @@ _SLOW_PREFIX = "slow: "
 # self-heals without scarring uptime.
 _FORM_ROUTER_HEADER = "x-form-router"
 _FALLBACK_PREFIX = "fell back: "
+_PUBLIC_API_BASE = "https://api.coherencycoin.com"
+_PUBLIC_WEB_BASE = "https://coherencycoin.com"
+_DOCKER_API_HOSTS = frozenset({"api"})
+_DOCKER_WEB_HOSTS = frozenset({"web"})
+
+
+def _host(base: str) -> str:
+    return (urlparse(base).hostname or "").lower()
+
+
+def _public_api_base(api_base: str) -> str:
+    """Return the public API origin when the configured base is Docker-local.
+
+    The witness often runs beside the app in docker-compose. Internal aliases
+    such as ``http://api:8000`` bypass the public Traefik/native-router path.
+    This witness exists to sense what visitors see, so Docker-local aliases are
+    lifted to the public origin before any probe URL is built.
+    """
+    return _PUBLIC_API_BASE if _host(api_base) in _DOCKER_API_HOSTS else api_base
+
+
+def _public_web_base(web_base: str) -> str:
+    return _PUBLIC_WEB_BASE if _host(web_base) in _DOCKER_WEB_HOSTS else web_base
 
 
 def _router_fallback_detail(organ: Organ, result: UpstreamResult) -> str | None:
@@ -193,12 +217,17 @@ def _build_url(
     json_body=None; the substrate Form evaluator needs a POST with a
     known-good expression so the witness keeps tension on it.
     """
-    api = api_base.rstrip("/")
-    web = web_base.rstrip("/")
+    api = _public_api_base(api_base).rstrip("/")
+    web = _public_web_base(web_base).rstrip("/")
     mapping: dict[str, tuple[str, str, str, dict[str, Any] | None]] = {
         "api_health": (f"{api}/api/health", "json", "GET", None),
         "api_ready": (f"{api}/api/ready", "json", "GET", None),
-        "api_ideas": (f"{api}/api/ideas", "json", "GET", None),
+        "api_ideas": (
+            f"{api}/api/ideas?limit=1&offset=0&sort=marginal_cc",
+            "json",
+            "GET",
+            None,
+        ),
         "api_vitality": (
             f"{api}/api/workspaces/coherence-network/vitality", "json", "GET", None,
         ),

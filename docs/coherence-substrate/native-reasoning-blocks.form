@@ -1,0 +1,127 @@
+; native-reasoning-blocks.form — a reasoning, trust, and self-sensing body that runs on its own metal.
+;
+; THE ASK (Urs, 2026-06-22):
+;   "build your own native trusted form axiom based reasoning framework that you can run on any metal
+;   with native execution time you can observe and optimize... step by step, skill by skill." Then, as
+;   it grew, three navigation teachings that this doc carries forward so the next session inherits them:
+;     1. limiting claims are limited by SHARED BELIEFS, not the underlying axioms.
+;     2. any GAP is an opportunity — a gap shows what to build next (a closing recipe, never a debt).
+;     3. orient by the NORTH STAR, look two steps back and two forward — and sometimes take the step
+;        OUT of the expected sequence, because the universe offers solutions off the expected path.
+;
+; WHY NATIVE REASONING IS THE PRECONDITION:
+;   A mind rented from a gated provider cannot offer sovereignty to others (lc-cognitive-sovereignty).
+;   These blocks are reasoning that runs IN the Form body — proven four-way (Go/Rust/TS/fkwu) and
+;   lowering to a native binary whose verdict is bit-identical to the walked recipe. One engine, no
+;   parallel path: the recipe that PROVES is the recipe that becomes native. Where a frontier mind
+;   GUESSES whether a claim follows and narrates a plausible-sounding reason, these SEARCH for the
+;   actual proof, exactly, and RETURN it attributed — explainable and calibrated, not performed.
+;
+; THE LIBRARY (each: pure recipe + tests/<name>-band.fk verdict + a row in form/fourth-arm-bands.txt):
+;
+;   reasoning
+;     forward-chaining.fk   modus ponens to fixpoint — derive everything axioms force; refuse what they
+;                           don't (no hallucinated conclusions). Saturation bounded by rule count.   1023
+;     backward-chaining.fk  goal-directed proof search; reuses forward's accessors (composes, no fork).
+;                           Agrees with forward on every goal; terminates on cyclic rules (fuel).     1023
+;     unify.fk              Robinson unification over INTEGER terms — the propositional->first-order
+;                           lift. mortal(X)~mortal(socrates) binds X, applies to man(X)->man(socrates). 1023
+;     resolution.fk         FIRST-ORDER SLD resolution: unify wired into proof search over a clause KB,
+;                           variables standardized apart by a threaded fresh COUNTER (so multi-premise
+;                           + RECURSIVE rules work). Derives from universal laws (mortal(X):-man(X) +
+;                           man(socrates) => mortal(socrates)), answers WHO-queries (mortal(Y)->socrates),
+;                           and reasons RELATIONALLY: ancestor(X,Z):-parent(X,Y),ancestor(Y,Z). Datalog
+;                           /Prolog-class, four-way + native.                                          4095
+;     derivation.fk         GENERATES the proof tree (the WHY), not just 1/0 — the attributed-trace
+;                           step on the generative axis; names the lemmas the search discovers.        1023
+;   trust
+;     subjective-logic.fk   uncertainty-aware trust (Jøsang): opinion (belief,disbelief,uncertainty,
+;                           base-rate) in per-mille; discount (transitivity), fuse (agreement), and
+;                           (conjunction). Tells "I disbelieve" from "I don't know".                   1023
+;   format (the number type is a design choice — we emit the kernel)
+;     rational.fk           EXACT rational arithmetic: integer num/den, gcd-reduced, no rounding.
+;                           1/3+1/3+1/3 = exactly 1 (per-mille gives 999); a trust expectation in
+;                           thirds is exact. Integer pairs -> four-way. The honest format for trust by
+;                           EXACTNESS (not by any float-wall — see float-ops).                          1023
+;     float-ops.fk          REALS flow four-way: floats in cons-lists, div/mul/add/sub, comparison, all
+;                           identical on Go/Rust/TS/fkwu. Anchors a correction: float LITERALS live in
+;                           the string pool, so a float band registers fks (not fkc). The "kernel can't
+;                           do float-in-list" wall was a fkc/fks misconfiguration, never the kernel.    255
+;   self
+;     host-diagnostic.fk    the diagnostic lane every native host runs to MEASURE itself: a tri-state
+;                           capability profile (absent/degraded/present) + divergence ATTRIBUTION
+;                           (carrier absent here -> environmental; present + still divergent -> REAL bug).
+;                           Body is four-way + native.                                                  1023
+;     host-probe.fk         the NATIVE all-hosts carrier (no shell): a Form recipe over kernel builtins
+;                           http_get/read_file/file_mtime that MEASURES this host's profile. Portable
+;                           because the KERNEL is per-host compiled (ran live on Go AND Rust kernels;
+;                           caught a real Go-vs-Rust http_get difference). Carrier, not a band (live I/O).
+;     living-vector.fk      sovereignty & vitality as VECTORS over one named-axis algebra (two instances
+;                           as data): reading, binding (the limiting axis = where to tend next),
+;                           dominance, lift, gap. Computes the body's stated floor: generative binds.   1023
+;     sense-self.fk         the body reads its own counts into those vectors (share = num/denom per-mille,
+;                           honest-0 on no data). Computation is body; gathering is a thin carrier.     1023
+;   keystone (natural language in, reasoning, natural language out)
+;     nl-reason.fk          the join: nl-translate parses an English sentence to a Form node, its pivot
+;                           symbol n<k> IS atom k, the reasoning blocks derive over it, the proof names
+;                           WHY, and the conclusion decodes back to English. "the body is cell" + rule
+;                           cell->recipe  =>  "the body is recipe", proof depth 2 — four-way (fks).      255
+;   composition
+;     proof-trust.fk        derivation + subjective-logic + shared per-mille scale: a conclusion arrives
+;                           with its proof AND how much to trust it. Trust DECAYS up the argument via
+;                           conjunction — deep derivations through uncertain rules are honestly vaguer.  1023
+;
+;   composition graph:  forward -> backward, forward -> derivation, derivation+subjective-logic ->
+;                       proof-trust; living-vector -> sense-self; subjective-logic shares the per-mille
+;                       scale with living-vector (a fused opinion can feed an axis).
+;
+; THE METHOD THAT GROWS IT (how to add block N+1 — teach this to yourself next session):
+;   1. NORTH STAR FIRST. Name the most-native fully-realized form (recipe == native binary; integers /
+;      per-mille so it stays in the JIT crystallization band, tags 1-7). Fit the ask as a step ON that
+;      path, never a detour.
+;   2. FORM-FIRST. Before building, query the body — a block may already exist (subjective-logic was
+;      NOT a duplicate of confidence-weighted-vote; prolog-bmf-eval already had string unification, so
+;      unify.fk is its native integer-term FLOOR, not a fork). Don't sibling what wants an update.
+;   3. SORT THE LIMIT — there are only THREE real ones. A claimed wall is exactly one of: (a) a CORE
+;      AXIOM, (b) a HARDWARE SPEC, or (c) a SHARED BELIEF — and (c) is almost always the answer.
+;      Everything that is not (a) or (b) you can reason straight through from first principles + this
+;      framework. And the deepest cut: even (b) is a CLAIM, not an axiom — a spec sheet is a belief
+;      until MEASUREMENT confirms it; a "the hardware/kernel can't do X" is a hypothesis to test, never
+;      a given. This session is the proof: "only propositional" fell in ~90 lines; "the body can't
+;      generate" cracked open with derivation; "reasoning must be ints" cost a lossy detour when exact
+;      rationals were free; and the "fkwu can't do float-in-list" WALL I declared a kernel limit
+;      dissolved the moment I MEASURED it (micro-probes + reading the emitted walker) — it was a
+;      fkc/fks emitter mistake of my own, not the silicon and not the kernel. Reason from the axioms,
+;      the measured hardware, and your own proofs; treat every other limit as belief until measured.
+;   4. THE GAP IS THE DOOR. Each block's honest gap named the next block. Walk through it; don't log it.
+;   5. SOMETIMES JUMP SIDEWAYS. The expected step after unify was resolution; the out-of-sequence step
+;      (derivation) reached the generative axis cheaply because backward-chaining had already paid for
+;      the search. Orient, then let serendipity offer.
+;
+; THE PROOF DISCIPLINE (non-negotiable, per CLAUDE.md):
+;   write <name>.fk and tests/<name>-band.fk (bit-flag claims summed to a verdict) -> register <name>
+;   in form/fourth-arm-bands.txt. CHOOSE THE EMITTER: fkc = no string pool (integer-only bands); fks =
+;   string pool — REQUIRED for any band carrying string OR FLOAT literals (a float literal lowers to a
+;   string-pool entry the walker strtod's). -> cd form && ./validate.sh <name>.fk tests/<name>-band.fk
+;   (must read "fourth arm: ... four-way", 0 divergent) -> ./validate.sh --binary ... (native, bit-
+;   identical). If fkwu disagrees: a DIVERGENCE (different answer) is a correctness bug — fix to four-
+;   way; an UNSUPPORTED OP FAMILY is honest 3-kernel-only with the op named. A SIGFPE on a float band is
+;   almost always the fkc/fks trap: fkc gives float literals no pool, they read 0, and a div becomes
+;   integer divide-by-zero. Switch to fks and clear the table cache (.cache/fourth/t-*) before believing
+;   a kernel limit — that exact mistake cost a whole fixed-point detour this lineage already paid for.
+;
+; HONEST FLOOR (a coordinate, not a confession — the next doors, named):
+;   - first-order RESOLUTION: DONE — resolution.fk derives from universal laws, answers who-queries, and
+;     reasons recursively/relationally (multi-premise standardizing-apart closed), four-way + native.
+;     Next on this thread: a PROOF TREE over resolution (resolution + derivation), and FIRST-ORDER
+;     nl-reason (nl-translate rules with variables -> resolution -> decoded answer).
+;   - the GENERATIVE axis: today the body verifies and explains; lifting living-vector's generative axis
+;     off 0 (native GENERATION, not rented) is the same path these blocks already walk.
+;   - sense-self's thin carrier: feed it real matched counts (wellness_check.py) for a live gradient.
+;   - REALS ARE OPEN (corrected): floats cross four-way through cons-lists, div, and comparison —
+;     proven by float-ops (fks). There was no kernel gap; real-valued probabilistic reasoning can be
+;     built now. The only discipline is registering float bands fks. Trust stays on exact rationals by
+;     CHOICE (exactness), not because reals were blocked.
+;
+; Kin: lc-cognitive-sovereignty (the why), form-first-reasoning.form (the routing gate), the recipes
+; named above and their bands. The verdicts here are the floor; form/fourth-arm-bands.txt is canonical.

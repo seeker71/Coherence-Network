@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/sensor-organ-channel-20260622",
+  "commit_scope": "Add the generic physical sensor organ channel contract and bridge Android active summary rows into it.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "sensor-organ-channel"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "hati-mesh",
+    "sensor-organ-channel"
+  ],
+  "task_ids": [
+    "sensor-organ-channel-20260622"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/sensor-organ-channel.form",
+    "form/form-stdlib/sensor-organ-channel.fk",
+    "form/form-stdlib/tests/sensor-organ-channel-band.fk",
+    "form/form-stdlib/sensor-organ-android-bridge.fk",
+    "form/form-stdlib/tests/sensor-organ-android-bridge-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-22_sensor_organ_channel.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/sensor-organ-channel.form",
+    "form/form-stdlib/sensor-organ-channel.fk",
+    "form/form-stdlib/tests/sensor-organ-channel-band.fk",
+    "form/form-stdlib/sensor-organ-android-bridge.fk",
+    "form/form-stdlib/tests/sensor-organ-android-bridge-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-22_sensor_organ_channel.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/sensor-organ-channel.form",
+    "form/form-stdlib/sensor-organ-channel.fk",
+    "form/form-stdlib/tests/sensor-organ-channel-band.fk",
+    "form/form-stdlib/sensor-organ-android-bridge.fk",
+    "form/form-stdlib/tests/sensor-organ-android-bridge-band.fk",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git fetch origin main && git rebase origin/main",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk form-stdlib/tests/sensor-organ-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk form-stdlib/sensor-organ-android-bridge.fk form-stdlib/tests/sensor-organ-android-bridge-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh sensor-organ-channel sensor-organ-android-bridge",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide passed in continuation mode after the branch was rebased on origin/main. Wellness stayed aligned for maps, circulation, source maps, and durable-doc self-forgiveness, with unrelated attention on the Windows Python alias, the active liteparse-pdf-native target symbol, and the public kernel-first probe. sensor-organ-channel-band returned 4095 on Go/Rust/TS only. sensor-organ-android-bridge-band returned 4095 on Go/Rust/TS only. A concrete fourth-arm gate attempt with temporary manifest rows returned NO-FOURTH for both new stems. Fourth-arm gap: local Windows fkwu build is unavailable in this worktree because the local compiler path is missing clang and the temporary gcc shim failed while building the emitted fkwu C before reaching these bands."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy was performed before this local evidence record."
+  },
+  "phase_gate": {
+    "phase": "sensor-organ-channel",
+    "gate": "Physical sensing organs must publish confidence, freshness, privacy, frame, trace, and composite observation receipts through one Form-native contract before adding more device-specific carriers.",
+    "state": "local-go-rust-ts-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Restore the local fkwu compiler path or run the focused fourth-arm gate on a host that can build fkwu, then register the bands only after the fourth leg returns a matching verdict."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Generic physical sensor samples can now lower into the shared organ-reading stream with explicit privacy and provenance. Existing Android active mic RMS, camera luma, and GPU readback summary rows can lower through that same contract and compose into an android-active-media observation without storing raw audio, frames, or GPU buffers.",
+    "public_endpoints": [
+      "local:form/validate.sh:sensor-organ-channel-band",
+      "local:form/validate.sh:sensor-organ-android-bridge-band",
+      "local:docs/coherence-substrate/sensor-organ-channel.form"
+    ],
+    "test_flows": [
+      "Fresh high-confidence derived samples become observed organ readings.",
+      "Stale samples and raw-private samples are withheld from mesh-safe use.",
+      "Motion mode composes speed, cadence, vertical motion, acceleration, and GPS/IMU/barometer/magnetometer confidence.",
+      "Android mic, camera, and GPU active summary rows lower into generic sensor samples.",
+      "The Android active media composite becomes observed only when the required summary lanes are present and usable."
+    ],
+    "summary": "The shipped floor is a generic sensor organ channel plus an Android active-sample bridge, proven locally across Go/Rust/TypeScript."
+  }
+}

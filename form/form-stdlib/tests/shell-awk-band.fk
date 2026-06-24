@@ -1,0 +1,26 @@
+; shell-awk-band.fk — proves the native awk builtin: field extract + pattern
+; filter over whitespace fields, computed IN FORM (no host awk), byte-identical
+; on the 4th kernel. Verdict = 127 (all seven pass). The unix tool, come home as
+; a Form recipe — exactly what replaces awk's passthrough for the field idioms
+; shell scripts (and bin/form-cli's own carriers) lean on most.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk
+
+(do
+    ; {print $N}: extract a field
+    (let a1 (if (str_eq (sh-out "echo a b c | awk '{print $2}'") "b\n") 1 0))
+    ; {print $0}: the whole line
+    (let a2 (if (str_eq (sh-out "echo a b c | awk '{print $0}'") "a b c\n") 2 0))
+    ; multi-line field extract
+    (let a3 (if (str_eq (sh-out "seq 3 | awk '{print $1}'") "1\n2\n3\n") 4 0))
+    ; $N==RHS pattern, default action prints the whole matching line
+    (let a4 (if (str_eq (sh-out "seq 3 | awk '$1==\"2\"'") "2\n") 8 0))
+    ; $N==RHS{print $M}: filter then print a field
+    (let a5 (if (str_eq (sh-out "seq 5 | awk '$1==\"3\"{print $1}'") "3\n") 16 0))
+    ; filter on $1, print a different field
+    (let a6 (if (str_eq (sh-out "echo x y z | awk '$1==\"x\"{print $3}'") "z\n") 32 0))
+    ; no match -> empty output
+    (let a7 (if (str_eq (sh-out "seq 3 | awk '$1==\"9\"'") "") 64 0))
+
+    ; expected total: 127
+    (add a1 (add a2 (add a3 (add a4 (add a5 (add a6 a7)))))))

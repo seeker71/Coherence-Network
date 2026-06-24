@@ -1,0 +1,68 @@
+; llama-gqa-block.fk — the REAL llama3.2 decoder block as proven Form: GQA
+; attention (n_q query heads sharing n_kv < n_q KV heads) + llama3 RoPE
+; (rope_theta 500000 + piecewise scaling) + RMSNorm + SwiGLU, composed from
+; recipes that are ALREADY four-way. This is the block the fused hati-translator
+; (Llama-3.2-3B: hidden 3072, 24 query heads, 8 KV heads, head_dim 128,
+; rope_theta 500000, rope_scaling "llama3") actually runs.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk
+;
+; lblk-block (llama-block.fk, four-way 4095) is SINGLE-head, full MHA, base-10000
+; RoPE. Two numerics separate it from a real llama3 block, and BOTH are now
+; standalone four-way recipes this file only composes — no new arithmetic:
+;   GQA      tb-gqa-attn (gqa-attn.fk, four-way 7): query head h reads KV head
+;            (h / (n_q/n_kv)); group=1 (n_kv=n_q) reduces exactly to MHA.
+;   theta    rope-scaled (rope.fk, four-way via llama3-rope-band): rope_theta
+;   RoPE     base + the piecewise wavelength scaling, carried as a rope-cfg.
+; lblk-block is the (n_q=n_kv=1, cfg base 10000 no-scaling) special case of
+; lgqa-block — core-abstraction-first, no parallel path. Weights stay arguments
+; (lists of rows): the block is recipe DATA, a layer stack a SEQUENCE of calls.
+; fp64 lane; non-causal (matching lblk-block / tb-gqa-attn — the causal GQA mask
+; is the mechanical next step, tb-attn-seq-causal already four-way). Position =
+; absolute token index. Proven four-way against the libm fp64 reference by
+; tests/llama-gqa-block-band.fk.
+;
+;   n1 = RMSNorm1(x)
+;   q  = RoPE_cfg(Wq·n1)  [n_q·HD wide]   k = RoPE_cfg(Wk·n1) [n_kv·HD]   v = Wv·n1 [n_kv·HD]
+;   h  = x + Wo·GQA(q, k, v, n_q, n_kv, HD, scale)            (bias-free proj, residual)
+;   n2 = RMSNorm2(h)
+;   y  = h + Wdown·SwiGLU(Wgate·n2, Wup·n2)
+
+; --- RoPE each token's projected vector by its absolute position under cfg c (HD per head) ---
+; The full projected vector is n_head·HD wide; rope-scaled walks it pairwise with
+; (mod i HD), so the rotation resets every head — applying RoPE to the whole
+; vector then head-slicing is identical to slicing then RoPE per head.
+(defn lgqa-rope-seq-i (xs i HD c)
+  (if (eq (len xs) 0) (empty)
+      (cons (rope-scaled (head xs) i HD c) (lgqa-rope-seq-i (tail xs) (add i 1) HD c))))
+(defn lgqa-rope-seq (xs HD c) (lgqa-rope-seq-i xs 0 HD c))
+
+; --- GQA attention sub-block: RMSNorm → q/k/v proj → RoPE(q),RoPE(k) → GQA → Wo → +residual ---
+; reuses llama-block.fk's lblk-proj-seq (bias-free projection) and lblk-rms-seq.
+(defn lgqa-attn-sub (n1 wq wk wv wo scale n_q n_kv HD c)
+  (lblk-proj-seq wo
+    (tb-gqa-attn (lgqa-rope-seq (lblk-proj-seq wq n1) HD c)
+                 (lgqa-rope-seq (lblk-proj-seq wk n1) HD c)
+                 (lblk-proj-seq wv n1) n_q n_kv HD scale)))
+(defn lgqa-attn-block (xs g1 eps wq wk wv wo scale n_q n_kv HD c)
+  (tb-add-seq xs (lgqa-attn-sub (lblk-rms-seq xs g1 eps) wq wk wv wo scale n_q n_kv HD c)))
+
+; --- the whole GQA llama block (FFN sub-block is lblk-ffn-block from llama-block.fk) ---
+(defn lgqa-block (xs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (lblk-ffn-block (lgqa-attn-block xs g1 eps wq wk wv wo scale n_q n_kv HD c) g2 eps wg wu wd))
+
+; --- the causal GQA llama block: the REAL autoregressive decoder. Identical to
+;     lgqa-block but each token attends only to itself and the tokens before it
+;     (tb-gqa-attn-causal). At the last token the prefix is the whole sequence, so the
+;     last position is bit-identical to lgqa-block; earlier tokens differ. This is the
+;     block the generation loop steps — and the (n_q=n_kv=1, base-10000) special case is
+;     lblk-block-causal (llama-block.fk, four-way 4095). ---
+(defn lgqa-attn-sub-causal (n1 wq wk wv wo scale n_q n_kv HD c)
+  (lblk-proj-seq wo
+    (tb-gqa-attn-causal (lgqa-rope-seq (lblk-proj-seq wq n1) HD c)
+                        (lgqa-rope-seq (lblk-proj-seq wk n1) HD c)
+                        (lblk-proj-seq wv n1) n_q n_kv HD scale)))
+(defn lgqa-attn-block-causal (xs g1 eps wq wk wv wo scale n_q n_kv HD c)
+  (tb-add-seq xs (lgqa-attn-sub-causal (lblk-rms-seq xs g1 eps) wq wk wv wo scale n_q n_kv HD c)))
+(defn lgqa-block-causal (xs g1 eps wq wk wv wo scale n_q n_kv HD c g2 wg wu wd)
+  (lblk-ffn-block (lgqa-attn-block-causal xs g1 eps wq wk wv wo scale n_q n_kv HD c) g2 eps wg wu wd))

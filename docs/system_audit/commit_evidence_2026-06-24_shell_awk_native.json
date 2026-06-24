@@ -1,0 +1,53 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "claude/tender-ptolemy-1d0re6",
+  "commit_scope": "First rented unix tool brought home as a Form recipe to prove 'grammars, not a bridge': a native awk builtin added to the form-native shell grammar (shell-exec.fk), four-way proven (shell-awk 127, Go/Rust/TS/fkwu, 0 divergent). First breath covers the field idioms shell scripts (and bin/form-cli's bash carriers) lean on most: {print $N}, $N==RHS (default print whole line), $N==RHS{print $M}, FS=whitespace, single-digit field refs, literal RHS. Demonstrated the roadmap verb's reconciliation (manifest_has = awk '$1==stem') computing in Form: the native awk read the manifest and extracted shell-awk's own verdict (127) and shell-exec's presence (1 -> 1127), matching host awk exactly on the TS kernel. The remaining boundary is named honestly: cat's file read is read_file host-io, which diverges across kernels (rust=0), so the cat-fed reconciliation is not yet four-way end-to-end — the awk COMPUTE is, the host file-read carrier is the open frontier.",
+  "files_owned": [
+    "form/form-stdlib/shell-exec.fk",
+    "form/form-stdlib/tests/shell-awk-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-24_shell_awk_native.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh <shell preludes> form-stdlib/shell-exec.fk form-stdlib/tests/shell-awk-band.fk   # -> 127",
+      "cd form && ./validate.sh <shell preludes> form-stdlib/shell-exec.fk form-stdlib/tests/shell-exec-band.fk  # -> 511 (regression, unchanged)"
+    ],
+    "fourth_arm": "shell-awk four-way (Go/Rust/TS/fkwu) verdict 127, 0 divergent. shell-exec regression 511 four-way, 0 divergent (awk addition is additive).",
+    "native_binary": "the awk builtin is pure-compute (string/list ops); it rides fkwu's self-JIT like the other shell builtins.",
+    "notes": "awk's compute is four-way; the manifest-reconciliation demo (cat manifest | awk ... | wc -l) diverges only on cat's read_file host-io (TS=1127 correct, Rust=0) — the host file-read carrier is the named open boundary, not an awk bug. The demo band was a throwaway (not added to the manifest); nothing divergent ships."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation; the four-way gate runs in CI on the shell-awk band via the manifest row."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a Form-runtime landing."},
+  "phase_gate": {
+    "phase": "grammars-not-a-bridge-first-tool-home",
+    "gate": "Prove the 'any open-source tool lifts to a Form recipe' claim with one concrete landing: awk, native, four-way, used to run a real bin/form-cli verb's logic.",
+    "state": "awk-native-four-way",
+    "can_move_next_phase": true,
+    "next": "nativize read_file four-way (the host-io frontier) so cat-fed reconciliations cross end-to-end; grow awk (-F, multi-digit fields, BEGIN/END) by need; bring the next tool (sed/cut/tr-classes) home the same way."
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": [],
+  "task_ids": ["shell-awk-native"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "naming-the-move"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["implementation", "proof", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "form/form-stdlib/shell-exec.fk",
+    "form/form-stdlib/shell-grammar.fk",
+    "form/form-stdlib/tests/shell-awk-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md"
+  ],
+  "change_files": [
+    "form/form-stdlib/shell-exec.fk",
+    "form/form-stdlib/tests/shell-awk-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-24_shell_awk_native.json"
+  ],
+  "change_intent": "form_runtime_landing"
+}

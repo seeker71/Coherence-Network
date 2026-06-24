@@ -145,14 +145,17 @@
         (and (gt (len rec) 0) (eq (head (head rec)) (sub 0 1))))
     (defn record_blueprint (rec)
         (if (record? rec) (head (tail (head rec))) 0))
-    ; intern_node_at — the content-addressed intern plus source attribution.
-    ; The returned NodeID is exactly intern_node(cat, kids): file/line/col feed
-    ; the framebuffer side-map only (an observer-side trace), never the verdict a
-    ; band computes. fkwu carries no framebuffer and answers one value, so the
-    ; faithful image on the fourth arm is the carried intern_node (tag 47) over
-    ; (cat, kids), with the attribution parameters held in the frame, read by
-    ; nothing. A grammar's parse produces the same recipe tree on all four arms.
-    (defn intern_node_at (cat kids file line col) (intern_node cat kids))
+    ; intern_node_at — the content-addressed intern PLUS source attribution.
+    ; The returned NodeID is exactly intern_node(cat, kids); file/line/col now
+    ; feed a real framebuffer on the fourth arm too. fb_record (tag 128, a tri so
+    ; its args ride the row slots with no arena allocation) records (file line col)
+    ; into fkwu's per-node attribution map, appends the node to the ordered roots
+    ; list, and returns the node UNCHANGED — so the verdict is identical to the old
+    ; carried-intern image, while framebuffer-events (129) and node_source (130)
+    ; now read the trace back, matching the three siblings. line+col ride one int
+    ; (line<<16 | col); node_source splits them apart again.
+    (defn intern_node_at (cat kids file line col)
+        (fb_record (intern_node cat kids) file (add (mul line 65536) col)))
     ; ── null + dict mirrors — the host value-null model on the fourth arm ──
     ; The three reference kernels carry a VNull value and native _dict_*/value_kind.
     ; fkwu has no host-null in its value ABI, so null is carried STRUCTURALLY: a

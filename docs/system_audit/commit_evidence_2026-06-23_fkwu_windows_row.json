@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/amazing-gagarin-b118a6",
+  "commit_scope": "Standard-receipt WINDOWS platform row earned for the three FIELD decision bodies, via the CI door on a real Windows runner. The Windows Host Floor workflow (windows-host.yml, runs on windows-latest) was extended to four-way-prove AND standalone-run the field bodies: each crossed four-way (Go/Rust/TS/fkwu, 0 divergent) on Windows, then the fkwu binary ran each pre-flattened table STANDALONE -- no walker, no validate.sh comparison in the loop -- returning the manifest verdict. CI run 28054289485 (conclusion success) captured: STANDALONE windows fkwu: field-identity => 511, field-relay => 127, field-queue => 127; WINDOWS RECEIPT ROW: fkwu standalone 511/127/127 on MINGW64_NT-10.0-26100 x86_64. The windows fkwu was built on the runner (fkwu-3783ce1c6e205ad4, PE x86_64) and run via the same `./fkwu <table> 0` native invocation as mac/linux/android.",
+  "files_owned": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_windows_row.json"],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk   # 511 four-way (also re-proved on this mac host)",
+      "(on windows-latest, via windows-host.yml) bash validate.sh field-<body>.fk tests/field-<body>-band.fk  # 0 divergent + fourth arm four-way",
+      "(on windows-latest) ./fkwu form-stdlib/.cache/fourth/t-field-<body>-*.txt 0 | head -1  # -> 511 / 127 / 127"
+    ],
+    "fourth_arm": "field-identity 511, field-relay 127, field-queue 127 -- four-way (Go/Rust/TS/fkwu) on windows-latest, 0 divergent each. fourth arm: 1 band(s) four-way per body.",
+    "native_binary": "Windows fkwu binary (fkwu-3783ce1c6e205ad4, PE x86_64) run directly on the pre-flattened tables -> 511 / 127 / 127. Different verdicts per body prove fkwu genuinely computes each on Windows.",
+    "notes": "Runner: windows-latest (MINGW64_NT-10.0-26100 x86_64). CI run https://github.com/seeker71/Coherence-Network/actions/runs/28054289485 (conclusion success). The RUN of each recipe is via the standalone fkwu binary; the BUILD used clang (emit C -> clang, build_fourth's windows lane with ws2_32/legacy_stdio) and the tables used the Go flattener, so this is the windows RUNTIME rung, NOT yet the c-bootstrap clang-free form-pe-coff lane. The CI door is a genuine windows trace per the standard receipt: a real Windows machine ran the fkwu binary and printed the verdict."
+  },
+  "ci_validation": {"status": "pass", "notes": "Windows Host Floor run 28054289485 conclusion success; the field-bodies step printed the standalone fkwu verdicts 511/127/127 on windows-latest."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a CI-observed runtime receipt for the windows platform row."},
+  "phase_gate": {
+    "phase": "standard-receipt-windows-platform-row-observed-field-bodies",
+    "gate": "Earn the windows platform row of the standard receipt for the field decision bodies on a real Windows runner: BODY (fkwu runs the recipes) + toolchain-free RUNTIME (standalone fkwu binary, no walker in the loop) on windows-latest, directly observed in CI for fiv-verdict/fr-route/fq-drain. The clang-free c-bootstrap form-pe-coff lane remains pending.",
+    "state": "windows-runtime-rung-observed-pe-x86_64-ci",
+    "can_move_next_phase": false
+  },
+  "standard_receipt": {
+    "template": "docs/coherence-substrate/standard-receipt.form",
+    "claim": "The field decision bodies (fiv-verdict/fr-route/fq-drain) run on the fkwu universal kernel, standalone, on a real Windows machine.",
+    "body": "yes -- fkwu (universal Form walker) executes the recipes; verdicts 511/127/127.",
+    "c_bootstrap": "pending -- windows fkwu built via clang (build_fourth windows lane) from emitted C; tables Go-flattened. The form-pe-coff clang-free lane is the next rung.",
+    "toolchain_free": "observed (runtime) -- `./fkwu <table> 0` runs the recipe with no Go/Rust/TS walker and no validate.sh comparison in the loop; the four-way step (which builds the walkers) is a separate proof.",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "commit_evidence_2026-06-23_fkwu_mac_platform_row.json -- Apple M4 Max, Mach-O arm64 fkwu standalone -> 511/127/127"},
+      "windows": {"status": "observed", "trace": "this record -- windows-latest (MINGW64_NT-10.0-26100 x86_64), CI run 28054289485; PE x86_64 fkwu standalone -> 511/127/127"},
+      "android": {"status": "observed", "trace": "commit_evidence_2026-06-23_fkwu_field_android_row.json -- Galaxy S23 Ultra, Android 16, static-musl aarch64 fkwu standalone -> 511/127/127"}
+    },
+    "honest_floor": "All three platform rows (mac + windows + android) now observed at the RUNTIME rung on real metal, plus linux/elf. The remaining gap to the full bar is c-bootstrap: every fkwu binary is still clang/zig-cc-built from emitted C and the tables are Go-flattened. The clang-free form-asm/{form-macho,form-pe-coff,form-elf} lane is the one rung left between this and the full receipt."
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-identity-verdict", "field-relay-always-open-connection", "field-queue-drain"],
+  "task_ids": ["fkwu-windows-row"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "standard-setting", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["observation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "docs/system_audit/commit_evidence_2026-06-23_fkwu_mac_platform_row.json",
+    "docs/system_audit/commit_evidence_2026-06-23_fkwu_field_android_row.json",
+    ".github/workflows/windows-host.yml",
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/field-relay.fk",
+    "form/form-stdlib/field-queue.fk"
+  ],
+  "change_files": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_windows_row.json"],
+  "change_intent": "docs_only"
+}

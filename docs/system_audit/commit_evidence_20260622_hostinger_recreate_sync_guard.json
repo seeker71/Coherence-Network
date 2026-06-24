@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/hostinger-recreate-sync-guard",
+  "commit_scope": "Heal the Hostinger roll-forward failure observed after native runtime attention landed. The deploy script now waits for Docker recreate temp containers to actually release their names before retrying compose up, and it waits for the API service to reach running state before field-doc sync copies into the container.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_hostinger_recreate_sync_guard.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh"
+    ],
+    "notes": "Hostinger Auto Deploy run 27969759322 failed in Roll forward VPS after Docker reported a hash-prefixed API recreate container name conflict, then removal already in progress, then container marked for removal and cannot be started. The script reached field docs sync immediately after the fragile fallback start. This change adds bounded wait helpers around both recreate-orphan removal and the API docs-sync precondition."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production deploy workflow",
+    "notes": "The previous merged commit b2f6d34e did not fully land on production: public /api/health still reported deployed_sha f58855eac40a6b07c5ab494fc7ad061a6612f0fe after the failed run. A new Hostinger roll-forward must pass before all native running instances can be called deployed and validated."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local syntax proof passed; PR checks, Hostinger deploy, and public repeated native probes remain pending."
+  },
+  "idea_ids": [
+    "deploy-canary-stability",
+    "native-kernel-front-door"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-hostinger-recreate-sync-guard"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "GitHub Actions run 27969759322 failed during Roll forward VPS for target b2f6d34e2244d87bbf2d4cd618e42c8c3d0f594b.",
+    "The failed log showed Docker compose recreate conflict for /12780d88a5cb_coherence-network-api-1, removal already in progress, then container is marked for removal and cannot be started.",
+    "The same failed log showed field docs syncing immediately after the fallback API start, before the later wait_for_running api gate in the script.",
+    "Public health after the failed deploy still reported the older deployed_sha f58855eac40a6b07c5ab494fc7ad061a6612f0fe, so the native runtime attention deployment was not fully validated on production."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_hostinger_recreate_sync_guard.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger roll-forward should recover from Docker compose recreate temp-container conflicts without starting a container whose name is still being removed, then field-doc sync should run only after the API service is in running state.",
+    "public_endpoints": [
+      "GET /api/health",
+      "GET /api/attention/kernel-runtime",
+      "GET /api/ready"
+    ],
+    "test_flows": [
+      "deploy script shell syntax validates locally.",
+      "Hostinger Auto Deploy completes for the merge commit after PR merge.",
+      "public health reports the new deployed_sha and repeated /api/attention/kernel-runtime probes return native BML handler headers."
+    ]
+  }
+}

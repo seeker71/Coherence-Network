@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/native-host-instance-20260623",
+  "commit_scope": "Add the Form-native always-on host instance contract for Mac, Windows, and Android so listening, sharing, transcription gating, surprise detection, learning, and next-action choice live in a four-way-proven Form cell rather than in a shell carrier.",
+  "files_owned": [
+    "form/form-stdlib/native-host-instance.fk",
+    "form/form-stdlib/tests/native-host-instance-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/native-host-instance.form",
+    "docs/coherence-substrate/native-presence.form",
+    "docs/coherence-substrate/INDEX.md",
+    "form/native/presence/form_presence_host.c",
+    "docs/system_audit/commit_evidence_2026-06-23_native_host_instance.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form-cli ask \"Where does the existing Coherence Network body define native host instances for always-on sensing/transcribing/learning across mac, windows, android?\"",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/tests/native-host-instance-band.fk",
+      "tmp=\"$(mktemp -d /tmp/form-presence-always.XXXXXX)\"; mkdir -p \"$tmp/queue\"; cc form/native/presence/form_presence_host.c -O2 -o \"$tmp/form-presence-host\"; FORM_PRESENCE_TICKS=0 FORM_PRESENCE_POLL_MS=10 FORM_PRESENCE_HEARTBEAT=1 \"$tmp/form-presence-host\" \"$tmp\" & pid=$!; sleep 0.08; touch \"$tmp/stop\"; wait \"$pid\"; grep -q \"event=heartbeat\" \"$tmp/out.log\"; grep -q \"event=rest\" \"$tmp/out.log\"",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_native_host_instance.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "fourth_arm_outputs": [
+      "native-host-instance-band: validate.sh returned 4095 with 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent -- kernels agree on every sample.'"
+    ],
+    "notes": "make wellness completed with existing non-blocking drift in registry/source-map/API-health readings. The native host instance is pure Form list/string/integer semantics and crossed fkwu; no fkwu divergence was omitted. The user corrected the prior shell carrier direction; this change places the lifecycle decision contract in Form and leaves launchd, PowerShell, Android services, ffmpeg, Whisper, OS APIs, and shell wrappers as resource carriers only. The native presence body now has an always-on tick mode using FORM_PRESENCE_TICKS=0 and exits only through the explicit stop sentinel."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after push/PR. Local proof covers the focused native host instance Form band and fkwu fourth-arm agreement."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "no public deploy yet",
+    "notes": "This branch changes Form stdlib and substrate documentation. Public deployment proof is pending PR merge and normal repository CI/deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way proof passed; PR CI, merge, and any public deployment settlement remain pending."
+  },
+  "idea_ids": [
+    "native-host-instance",
+    "always-on-form-sense-loop"
+  ],
+  "spec_ids": [
+    "native-host-instance-mac-windows-android"
+  ],
+  "task_ids": [
+    "task-2026-06-23-native-host-instance"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria",
+        "carrier-boundary"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "native-host-instance.fk composes host-sense-organ, speech-organ, surprise-salience, co-learning-stream, and mesh-dispatch into a lifecycle receipt with decision priority: unsupported host refusal, surprise learning, ask answering, transcript append, listen, or open-listener.",
+    "native-host-instance-band.fk proves Mac, Windows, and Android support rows; unsupported host refusal; transcribe/no-transcribe gating; surprise outranking ask/transcribe; learning count; gold routing; host streaming state; and a combined Android listen/share/transcribe/surprise/learn receipt.",
+    "form/fourth-arm-bands.txt registers native-host-instance with expected verdict 4095.",
+    "docs/coherence-substrate/native-host-instance.form records that shell, launchd, PowerShell, Android services, ffmpeg, Whisper, and OS drivers are carriers only while lifecycle decisions live in Form.",
+    "form_presence_host.c records FORM_PRESENCE_TICKS<=0 as always-on until stop, and the local C proof compiled it, observed a heartbeat, created the stop sentinel, and observed rest without killing the process.",
+    "Focused validate.sh output: 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent -- kernels agree on every sample.'",
+    "worktree_pr_guard.py --mode local passed with ready_for_push=True and local_preflight=pass; check_pr_followthrough.py reported stale_codex_prs=0."
+  ],
+  "change_files": [
+    "form/form-stdlib/native-host-instance.fk",
+    "form/form-stdlib/tests/native-host-instance-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/native-host-instance.form",
+    "docs/coherence-substrate/native-presence.form",
+    "docs/coherence-substrate/INDEX.md",
+    "form/native/presence/form_presence_host.c",
+    "docs/system_audit/commit_evidence_2026-06-23_native_host_instance.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Form body now has a four-way-proven native host instance lifecycle cell for Mac, Windows, and Android. It decides when a host is listening, sharing, transcribing, surprised, learning, answering, appending a transcript, or opening a listener without putting those decisions in shell.",
+    "public_endpoints": [
+      "none added; local Form stdlib and substrate documentation only"
+    ],
+    "test_flows": [
+      "native host flow: native-host-instance-band returns 4095 on Go/Rust/TypeScript/fkwu.",
+      "platform flow: macos, windows, and android all produce native/listening receipts from the same recipe.",
+      "decision flow: unsupported platforms refuse, salient surprises choose learn-from-surprise, ask messages choose answer, and voiced speech chooses append-transcript when no higher priority signal outranks it.",
+      "native process flow: form_presence_host.c runs with FORM_PRESENCE_TICKS=0 until the stop sentinel appears, and the proof requires heartbeat plus rest receipts.",
+      "carrier boundary flow: docs and recipe comments state that shell, launchd, PowerShell, Android services, ffmpeg, Whisper, OS APIs, and drivers are carriers only."
+    ]
+  }
+}

@@ -10,6 +10,10 @@
 ;   command   echo a b        fncall("echo", "a", "b")          ; TAG = command name
 ;   pipeline  a | b           fncall("__pipe__", <a>, <b>)
 ;   script    a ; b           fncall("__seq__", <a>, <b>)
+;   for       for W in a b ; do S done
+;                               fncall("__for__", "W", "a", "b", <script>)
+;   while     while C ; do S done
+;                               fncall("__while__", <cond-pipeline>, <script>)
 ;   variable  $NAME           fncall("__var__", "NAME")
 ;   redirect  > f / >> f / <f fncall("__redir__"/"__append__"/"__from__", <f>)
 ; Literal words and quoted strings are bare string leaves (no children); the
@@ -50,10 +54,50 @@
                 (list "seq" (p-lit "||") (p-cap "p" (p-ref "pipeline")))
                 (t-emit "fncall" (list (t-const "__||__") (t-splice "p"))))
 
-            ;; pipeline: command ("|" command)*   ->  fncall(__pipe__, commands...)
+            ;; pipeline: statement ("|" statement)*   ->  fncall(__pipe__, statements...)
             (rule3 "pipeline"
-                (p-cap "cs" (p-sep (p-ref "command") (p-lit "|")))
+                (p-cap "cs" (p-sep (p-ref "statement") (p-lit "|")))
                 (t-emit "fncall" (list (t-const "__pipe__") (t-splices "cs"))))
+
+            ;; statement: compound before command, so loop keywords bind at statement start.
+            (rule3 "statement"
+                (p-cap "v" (list "alt" (p-ref "forstmt") (p-ref "whilestmt") (p-ref "command")))
+                (t-splice "v"))
+
+            ;; for VAR in WORD* ; do SCRIPT done
+            ;; Body parsing uses semicolon-terminated body items so `done` remains the closer,
+            ;; not a bare command word consumed by the recursive script.
+            (rule3 "forstmt"
+                (list "seq"
+                    (p-lit "for")
+                    (p-cap "var" (p-ref "word"))
+                    (p-lit "in")
+                    (p-cap "items" (p-rep (p-ref "word")))
+                    (p-lit ";")
+                    (p-lit "do")
+                    (p-cap "body" (p-ref "loopbody"))
+                    (p-lit "done"))
+                (t-emit "fncall" (list (t-const "__for__") (t-splice "var") (t-splices "items") (t-splice "body"))))
+
+            ;; while PIPELINE ; do SCRIPT done
+            (rule3 "whilestmt"
+                (list "seq"
+                    (p-lit "while")
+                    (p-cap "cond" (p-ref "pipeline"))
+                    (p-lit ";")
+                    (p-lit "do")
+                    (p-cap "body" (p-ref "loopbody"))
+                    (p-lit "done"))
+                (t-emit "fncall" (list (t-const "__while__") (t-splice "cond") (t-splice "body"))))
+
+            ;; loopbody: (andor ";")* -> fncall(__seq__, andors...)
+            ;; This is the delimiter-aware body shape for `do ... done`.
+            (rule3 "loopbody"
+                (p-cap "ps" (p-rep (p-ref "bodyitem")))
+                (t-emit "fncall" (list (t-const "__seq__") (t-splices "ps"))))
+            (rule3 "bodyitem"
+                (list "seq" (p-cap "s" (p-ref "andor")) (p-lit ";"))
+                (t-splice "s"))
 
             ;; command : word part*               ->  fncall(name, parts...)
             (rule3 "command"

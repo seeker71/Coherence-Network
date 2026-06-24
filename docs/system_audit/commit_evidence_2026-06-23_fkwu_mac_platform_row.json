@@ -1,0 +1,57 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/amazing-gagarin-b118a6",
+  "commit_scope": "Second standard-receipt platform row flipped pending->observed: the MAC row. The fkwu universal-kernel BINARY, emitted+built ON a real arm64 Mac (Mac16,5 / Apple M4 Max, macOS 26.3.1, Darwin 25.3.0), runs all three field decision bodies STANDALONE -- fiv-verdict (field-identity) -> 511, fr-route (field-relay) -> 127, fq-drain (field-queue) -> 127 -- invoked directly as `./fkwu <table> 0` with NO go/rust/ts/python/clang in the run loop and NO validate.sh orchestration. The Mach-O arm64 binary links ONLY /usr/lib/libSystem.B.dylib (mac's libc equivalent). This is the mac sibling of the 2026-06-23 linux/elf receipt: same recipes, mach-o/arm64 metal. Honestly scoped per docs/coherence-substrate/standard-receipt.form: BODY + toolchain-free-RUNTIME observed on mac/mach-o/arm64; c-bootstrap still pending (binary clang-built, table Go-flattened); windows/android-device rows still pending.",
+  "files_owned": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_mac_platform_row.json"],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk",
+      "cd form && ./validate.sh form-stdlib/field-relay.fk form-stdlib/tests/field-relay-band.fk",
+      "cd form && ./validate.sh form-stdlib/field-queue.fk form-stdlib/tests/field-queue-band.fk",
+      "FKWU=form/form-stdlib/.cache/fourth/fkwu-ea7c968c02c50340 ; ./$FKWU <field-*-table> 0"
+    ],
+    "fourth_arm": "field-identity 511, field-relay 127, field-queue 127 -- each four-way (Go/Rust/TS/fkwu) on this mac, 0 divergent. fourth arm: 1 band(s) four-way per body.",
+    "native_binary": "The fkwu Mach-O arm64 binary run directly on the pre-flattened tables -> 511 / 127 / 127, deterministic across repeated runs, ~3ms/run.",
+    "notes": "file(fkwu): Mach-O 64-bit executable arm64. otool -L: ONLY /usr/lib/libSystem.B.dylib -- no toolchain runtime, no go/rust/node. binary sha256 6cb7807e8e293754c7623c1079307945da142b23c6c28999f0592ff0136753f2. codesign: Mach-O thin (arm64), adhoc. The RUN of each recipe is toolchain-free on mac metal; the BUILD of the binary used clang (emit C -> clang) and the tables used the Go flattener, so this is the mac runtime rung, NOT yet the c-bootstrap clang-free form-asm/form-macho lane (that lane is the next pending receipt row)."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation record; the four-way gate runs in CI on the underlying bands."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a runtime-observation receipt for the mac platform row."},
+  "phase_gate": {
+    "phase": "standard-receipt-mac-platform-row-observed",
+    "gate": "Earn the mac platform row of the standard receipt on real arm64 metal: BODY (fkwu runs the recipes) + toolchain-free RUNTIME on mac/mach-o/arm64, directly observed for all three field decision bodies. The clang-free c-bootstrap form-asm/form-macho lane and the windows/android device rows remain pending.",
+    "state": "mac-runtime-rung-observed-macho-arm64",
+    "can_move_next_phase": false
+  },
+  "standard_receipt": {
+    "template": "docs/coherence-substrate/standard-receipt.form",
+    "claim": "The field decision bodies (fiv-verdict/fr-route/fq-drain) run on the fkwu universal kernel, toolchain-free at runtime, on a real arm64 Mac.",
+    "body": "yes -- fkwu (universal Form walker) executes the recipes; verdicts 511/127/127.",
+    "c_bootstrap": "pending -- fkwu binary emitted-as-C then clang-built; tables Go-flattened. The form-asm/form-macho clang-free lane is the next rung.",
+    "toolchain_free": "observed (runtime) -- `./fkwu <table> 0` links only libSystem.B.dylib; no go/rust/ts/clang/python/node/bash-orchestration in the compute loop.",
+    "platforms": {
+      "mac": {"status": "observed", "trace": "this record -- Mac16,5 / Apple M4 Max, macOS 26.3.1, Darwin 25.3.0, arm64; Mach-O fkwu standalone -> 511/127/127"},
+      "windows": {"status": "pending", "trace": "no real Windows run captured yet (windows-floor CI runner is a real Windows machine -- a CI job running the fkwu binary would flip this)"},
+      "android": {"status": "pending", "trace": "no real Android/arm64 device run captured yet; the 2026-06-23 linux/elf receipt observed the elf object family but not on an Android device"}
+    },
+    "honest_floor": "mac row observed on real metal (runtime + body); linux/elf row observed (prior record); c-bootstrap clang-free lane pending; windows + android device rows pending. The bar -- c-bootstrap fkwu form-cli on mac+windows+android, toolchain-free -- is not yet met; this is one real rung toward it."
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": ["field-identity-verdict", "field-relay-always-open-connection", "field-queue-drain"],
+  "task_ids": ["fkwu-mac-platform-row"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "standard-setting", "acceptance"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["observation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "docs/system_audit/commit_evidence_2026-06-23_fkwu_standalone_receipt.json",
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/field-relay.fk",
+    "form/form-stdlib/field-queue.fk",
+    "form/scripts/fourth-arm.sh"
+  ],
+  "change_files": ["docs/system_audit/commit_evidence_2026-06-23_fkwu_mac_platform_row.json"],
+  "change_intent": "docs_only"
+}

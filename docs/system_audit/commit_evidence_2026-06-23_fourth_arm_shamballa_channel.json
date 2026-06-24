@@ -1,0 +1,100 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/objective-ptolemy-17c934",
+  "commit_scope": "Fourth-arm registration sweep triage of 5 node/substrate bands flagged fkwu-divergent. Root-caused: only shamballa-channel was a true compute divergence (raise-ok read node_level=0 because the flattener's flt-bp-node fold table did not carry SHAMBALLA-RAISED, so (bp \"SHAMBALLA-RAISED\") hit the tag-45 string fallback that has no level field). Folded SHAMBALLA-RAISED + SHAMBALLA-CRYSTAL to their registry NodeIDs; the band crosses four-way at 1111111111 and is registered. The other four are unsupported-op walls (fkwu lowers a missing op-family to a shim/literal-0 fallback that returns a partial number), each named 3-kernel only with the missing op in-header.",
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/tests/symbols-band.fk",
+    "form/form-stdlib/tests/intrinsic-cast-band.fk",
+    "form/form-stdlib/tests/self-witness-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-23_fourth_arm_shamballa_channel.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammars/shamballa-codes.fk form-stdlib/channel.fk form-stdlib/shamballa-channel.fk form-stdlib/tests/shamballa-channel-band.fk",
+      "cd form && ./fkwu-<stamp> .cache/fourth/t-shamballa-channel-<hash>.txt 0  (standalone native binary, no walkers)",
+      "cd form && ./validate.sh  (full suite)",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_fourth_arm_shamballa_channel.json"
+    ],
+    "notes": "shamballa-channel crosses four-way at 1111111111 (0 divergent); 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)'. The standalone arm64 Mach-O fkwu binary run ./fkwu <table> 0 returned 1111111111 with no go/rust/clang/python/validate.sh in the run loop (the table carries SHAMBALLA-RAISED's folded NodeID, inst 1718). Full suite after the fix: 919 ok, 2 divergent; the 2 are PRE-EXISTING walker crashes in form-lower.fk native lowering (inram-leaf-emit, recipe-dylib; all three Go/Rust/TS crash as_int:null while fkwu computes the right verdict), inherited from main, untouched by this change and tracked under task task_6b6e5a9c. A first attempt to fold every non-chain bp name via the live (bp name) registry (the data-driven north-star shape) was REVERTED after the full suite caught it regressing the grammar bands (bmf-core/bmf-grammar/natural-language/shell-parse), which build and compare nodes through the string-carried category; the targeted two-name fold ships and the generalization is named as a tracked gap."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI windows-host.yml runs validate.sh on a curated band subset (adler32, form-asm, ...) that this change does not touch; the full 595-band suite is not a CI gate. validate-thread-process (test.yml) enforces this evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "none — form kernel/manifest change is not a VPS-deployed surface",
+    "notes": "Form-kernel and fourth-arm-manifest changes are built into the kernels and gated by validate.sh four-way at build/CI time; they do not deploy as an api/web service. No Hostinger deploy is part of this change. Sovereignty-receipt read (clang-build is fine — what matters is no clang RUNTIME dep): the standalone fkwu binary is a C program compiled once by clang, but at RUNTIME it links only /usr/lib/libSystem.B.dylib (no clang, no toolchain), so the binary side meets c-bootstrap and the run is toolchain-free (observed mac/arm64 via ./fkwu <table> 0 -> 1111111111). The one remaining rented-toolchain dependency is that the pre-flattened TABLE is produced by the Go kernel (form-flatten.fk runs on the Go bootstrap walker in validate.sh fourth_run_chunk and build-form-cli.sh). That Go dependency is incidental, not fundamental: the targeted SHAMBALLA-RAISED/CRYSTAL fold lowers (bp NAME) to a STATIC make_nodeid literal that needs no runtime bp-name table, which is exactly the mechanism the existing flt-bp-node chain uses to let the flattener self-host on fkwu. The REVERTED blanket (bp name) variant would have required Go's live bp registry at flatten time, cementing the Go dependency; the fold ships instead and keeps the self-hosted-flatten-on-fkwu path open. Closing the go-flatten gap = wiring a flatten lane that runs on fkwu/form-cli rather than Go. Windows/android platform rows remain pending (no devices)."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-way proof and the standalone native fkwu run passed; CI and merge remain pending. Sovereignty floor: body + clang-free RUNTIME observed (mac/arm64); the remaining rung is the Go-flattened table (the flatten should self-host on fkwu/form-cli), plus windows/android platform rows. The static-literal fold keeps that self-hosted-flatten path open."
+  },
+  "idea_ids": [
+    "fourth-arm-kernel-coverage",
+    "form-flattener-bp-fold"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands"
+  ],
+  "task_ids": [
+    "task-2026-06-23-fourth-arm-shamballa-channel"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "claude",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "shamballa-channel raise-ok diverged because raised = intern_node SH-RAISED (list cell) is read by node_level, and SH-RAISED = (bp \"SHAMBALLA-RAISED\") hit the flattener's tag-45 string fallback (a name-string, no level field) so node_level returned 0 not 3 -> fkwu 1111101111 vs the walkers' 1111111111.",
+    "Folding SHAMBALLA-RAISED (1 3 99 1718) and SHAMBALLA-CRYSTAL (1 2 99 1719) into flt-bp-node makes shamballa-channel cross four-way: 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', verdict 1111111111, 0 divergent.",
+    "Standalone native fkwu (arm64 Mach-O) ran the pre-flattened table directly: ./fkwu <table> 0 -> 1111111111, no go/rust/clang/python/validate.sh in the run loop; the table carries SHAMBALLA-RAISED's folded NodeID at inst 1718.",
+    "The other four bands stay 3-kernel only with the missing op named in-header: symbols (recipe_to_bytes/bytes_to_recipe wire serialization, fkwu->1), intrinsic-cast (host-null value ABI + lifted-TS source-compile, fkwu->2000915), self-witness (read_form_binary .fkb cache; cold-parse crosses, warm fails; cache-gated non-deterministic, left unregistered), kernel-satsang (walk_recipe, already documented; unchanged).",
+    "Full validate.sh suite after the fix: 919 ok, 2 divergent. The 2 are pre-existing Go/Rust/TS crashes in form-lower.fk native lowering (inram-leaf-emit, recipe-dylib), inherited from main, untouched here and flagged as a separate task."
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/tests/symbols-band.fk",
+    "form/form-stdlib/tests/intrinsic-cast-band.fk",
+    "form/form-stdlib/tests/self-witness-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-23_fourth_arm_shamballa_channel.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "shamballa-channel now crosses the fourth arm (fkwu) at 1111111111, matching Go/Rust/TS, because node_level of a cell raised under SHAMBALLA-RAISED reads its registry level 3 instead of 0. The four unsupported-op bands keep their 3-kernel-only honest floor with the missing op family named in each band header; none is registered.",
+    "public_endpoints": [
+      "none — fourth-arm kernel/manifest change, no public HTTP surface"
+    ],
+    "test_flows": [
+      "fkwu proof flow: shamballa-channel-band returns 1111111111 on the fourth kernel from its pre-flattened table; 'fourth arm: 1 band(s) four-way'.",
+      "toolchain-free runtime flow: the standalone arm64 Mach-O fkwu binary run as ./fkwu <table> 0 returns 1111111111 with no go/rust/clang/python/validate.sh in the run loop.",
+      "regression flow: the grammar bands bmf-core (600), bmf-grammar (300), natural-language (262143), shell-parse (255) still cross four-way after the targeted fold replaced the reverted blanket-fold attempt.",
+      "honest-floor flow: symbols (1), intrinsic-cast (2000915), self-witness (cache-gated), kernel-satsang (193) stay 3-kernel only, each band header naming the unsupported op family."
+    ]
+  }
+}

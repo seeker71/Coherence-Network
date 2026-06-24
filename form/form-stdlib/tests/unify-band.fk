@@ -1,0 +1,45 @@
+; preludes: form-stdlib/unify.fk
+;
+; Robinson unification, pinned at every edge that matters, ending in the first-order payoff.
+; ids — vars: X=0, Y=1 ; constants: a=10, b=11, socrates=20 ; functors: f=100, g=101, man=200, mortal=201.
+;
+;   const/const, var binding, compound with two variables (f(X,b) ~ f(a,Y) -> X=a, Y=b),
+;   occurs check (X ~ f(X) fails), functor mismatch, arity mismatch — then the payoff:
+;   unify the rule head mortal(X) with the goal mortal(socrates), bind X=socrates, and APPLY that
+;   binding to the rule body man(X) -> man(socrates). That last step IS modus ponens with a variable:
+;   "all men are mortal" + a concrete goal instantiates the subgoal. Verdict 1023 when all land.
+(do
+    (let X (u-mkvar 0)) (let Y (u-mkvar 1))
+    (let a (u-mkconst 10)) (let b (u-mkconst 11)) (let socrates (u-mkconst 20))
+    (let mt (list))                                   ; the empty substitution
+
+    ; c0: a ~ a succeeds
+    (let c0 (if (eq (u-ok? (u-unify a a mt)) 1) 1 0))
+    ; c1: a ~ b fails
+    (let c1 (if (eq (u-ok? (u-unify a b mt)) 0) 2 0))
+    ; c2: X ~ a succeeds and binds X to a
+    (let r2 (u-unify X a mt))
+    (let c2 (if (and (eq (u-ok? r2) 1) (eq (u-eq? (u-walk X (u-subst r2)) a) 1)) 4 0))
+    ; c3-c5: f(X,b) ~ f(a,Y)  ->  ok, X=a, Y=b
+    (let t1 (u-mkcompound 100 (list X b)))
+    (let t2 (u-mkcompound 100 (list a Y)))
+    (let r3 (u-unify t1 t2 mt))
+    (let c3 (if (eq (u-ok? r3) 1) 8 0))
+    (let c4 (if (eq (u-eq? (u-walk X (u-subst r3)) a) 1) 16 0))
+    (let c5 (if (eq (u-eq? (u-walk Y (u-subst r3)) b) 1) 32 0))
+    ; c6: occurs check — X ~ f(X) must fail (no infinite term)
+    (let c6 (if (eq (u-ok? (u-unify X (u-mkcompound 100 (list X)) mt)) 0) 64 0))
+    ; c7: functor mismatch — f(a) ~ g(a) fails
+    (let c7 (if (eq (u-ok? (u-unify (u-mkcompound 100 (list a)) (u-mkcompound 101 (list a)) mt)) 0) 128 0))
+    ; c8: arity mismatch — f(a) ~ f(a,b) fails
+    (let c8 (if (eq (u-ok? (u-unify (u-mkcompound 100 (list a)) (u-mkcompound 100 (list a b)) mt)) 0) 256 0))
+    ; c9: FIRST-ORDER payoff — mortal(X) ~ mortal(socrates), apply to body man(X) -> man(socrates)
+    (let rule-head (u-mkcompound 201 (list X)))       ; mortal(X)
+    (let goal      (u-mkcompound 201 (list socrates))); mortal(socrates)
+    (let rule-body (u-mkcompound 200 (list X)))       ; man(X)
+    (let rr (u-unify rule-head goal mt))
+    (let derived (u-apply rule-body (u-subst rr)))    ; man(socrates), instantiated
+    (let c9 (if (and (eq (u-ok? rr) 1)
+                     (eq (u-eq? derived (u-mkcompound 200 (list socrates))) 1)) 512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

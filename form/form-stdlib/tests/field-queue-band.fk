@@ -1,0 +1,33 @@
+; preludes: form-stdlib/field-queue.fk
+;
+; The reconnect drain, pinned. backlog entries (seq to kind); alice=10 bob=11; kinds announce=1 ping=2 block=5.
+; alice offers [announce ping] (NOT block). A DENIED entry (block) sits at the TAIL (seq6) to pin the
+; cursor's consent-INDEPENDENT, present-tense discard semantics (lc-consent-is-continuous): the cursor
+; advances past a denied entry so replay never depends on unrelated later messages. Verdict 127.
+(do
+    (let backlog (list
+        (list 1 10 1)    ; seq1 -> alice announce
+        (list 2 11 1)    ; seq2 -> bob   announce
+        (list 3 10 2)    ; seq3 -> alice ping
+        (list 4 10 5)    ; seq4 -> alice block (alice does NOT offer block) -- denied
+        (list 5 10 1)    ; seq5 -> alice announce
+        (list 6 10 5)))  ; seq6 -> alice block at the TAIL -- denied, max addressed-unseen
+    (let alice-iface (list 1 2))         ; announce + ping
+    (let alice-all   (list 1 2 5))       ; same cell if it also offered block
+
+    ; from last_seen=1, alice DRAINS seq3 (ping) + seq5 (announce); seq4/seq6 denied (block), seq2 not hers
+    (let c0 (if (eq (fq-count backlog 10 1 alice-iface) 2) 1 0))
+    ; cursor advances over ALL addressed-unseen incl the denied tail seq6 -> 6 (discard, deterministic)
+    (let c1 (if (eq (fq-cursor backlog 10 1) 6) 2 0))
+    ; order preserved: first drained entry is seq3
+    (let c2 (if (eq (fq-seq (head (fq-drain backlog 10 1 alice-iface))) 3) 4 0))
+    ; consent gate proven: if alice ALSO offered block, seq4 + seq6 join -> count 4
+    (let c3 (if (eq (fq-count backlog 10 1 alice-all) 4) 8 0))
+    ; bob from last_seen=0 drains his one announce (seq2)
+    (let c4 (if (eq (fq-count backlog 11 0 (list 1)) 1) 16 0))
+    ; last_seen beyond all -> nothing drains
+    (let c5 (if (eq (fq-count backlog 10 99 alice-iface) 0) 32 0))
+    ; cursor with nothing addressed-unseen stays at last_seen
+    (let c6 (if (eq (fq-cursor backlog 10 99) 99) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

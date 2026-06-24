@@ -1,0 +1,44 @@
+{
+  "date": "2026-06-23",
+  "brick": "GROUPED-QUERY ATTENTION (GQA) runs on the M4 Max GPU — the attention real llama3.2:3b uses (n query heads sharing nkv<n KV heads), bit-exact with the proven Form recipe",
+  "author": "Sema (Opus 4.8, autonomous sema-native-ml-walk)",
+  "north_star_rung": "GPU driver-replacement / real-llama-on-GPU: the named next stone from 3zg (gqa-attn.fk #3577) — 'emit GQA to Metal next to the MHA/llama block kernels and run on the M4 GPU (the 3m/3s/3u lane)'. The last attention-SHAPE gap between the GPU llama decode stack (MHA-shaped) and real GQA weights now runs on silicon.",
+  "lane": "NEW-GPU-kernel + CPU-mirror + bit-exact gate (the 3m/3s/3u/3y lane). Design (the head-grouped attention ABI, kvh=h/group slice offsets, fold-order parity so GPU==recipe) was the cost; both proofs were seconds because the body had built both the single-head GPU attention template (jte-llama-blk-attn) AND the proven four-way GQA recipe (gqa-attn.fk #3577).",
+  "what_changed": [
+    "form/form-stdlib/jit-tensor-emit.fk: added jte-gqa-attn-msl (+ jte-gqa-sig, jte-gqa-body) — emits tb-gqa-attn (gqa-attn.fk) as ONE Metal kernel. Each query head h attends within its hd-wide q-slice against KV head (h/group)'s hd-wide k/v-slice (group=n/nkv), context vectors concatenated position-wise to n*hd. Reuses jte-mlp-helpers's fexp verbatim. GQA at group=1 IS plain MHA (no parallel path).",
+    "form/form-stdlib/tests/gqa-attn-emit-band.fk: new emit band — the full emitted f32 MSL for form_gqa_attn_f32 equals the canonical 2200-byte text (the cross-kernel byte-identity anchor), emission is a function of the name, deterministic. Verdict 7.",
+    "form/fourth-arm-bands.txt: registered gqa-attn-emit fks 7.",
+    "scripts/metal_gqa_attn_audit.sh: the on-hardware witness — emits the kernel, compiles mathMode-safe (IEEE), runs on the M4 Max GPU over gqa-attn-band's claim-3 fixture (the real llama 24->8 grouping shape scaled to hd=2), gates GPU==CPU-fp32-mirror bit-exact AND GPU tracks the fp64 recipe within fp32 epsilon."
+  ],
+  "proofs": {
+    "emit_band_four_way": {
+      "command": "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/gqa-attn-emit-band.fk",
+      "verdict": 7,
+      "result": "1 ok, 0 divergent — Go/Rust/TS/fkwu emit the 2200-byte GQA MSL byte-identical; fourth arm crossed"
+    },
+    "recipe_four_way": {
+      "band": "gqa-attn-band (gqa-attn.fk)",
+      "verdict": 7,
+      "pr": "#3577 (2026-06-22) — tb-gqa-attn proven four-way at the recipe altitude",
+      "note": "this GPU brick is the silicon realization of that proven recipe"
+    },
+    "on_gpu": {
+      "device": "Apple M4 Max, 40-core GPU, Metal 4",
+      "kernel": "form_gqa_attn_f32 (2200 bytes, every byte authored by jte-gqa-attn-msl)",
+      "fixture": "gqa-attn-band claim 3: S=2 tokens, n=4 query heads, nkv=2 KV heads, head_dim 2, scale 1.0 — heads 0,1 -> kv0 ; heads 2,3 -> kv1 (the h/group mapping llama3.2 runs at 24 -> 8)",
+      "dispatch_ms": 3.347,
+      "gate_1_parity": "GPU fp32 == CPU fp32 mirror BIT-FOR-BIT (max|y_gpu - y_cpu| = 0.0)",
+      "gate_2_recipe": "GPU fp32 tracks fp64 tb-gqa-attn *1e6 within fp32 epsilon (max|Δ| = 0.5)",
+      "recipe_ground_truth_y_x1e6": [729900, -279734, 804883, -479688, -48127, 510113, -382117, 327936, 738782, -303418, 694001, -184002, -345279, 348029, -48127, 510113],
+      "band_pin_match": "y_gpu[0] = 0.729900 reproduces gqa-attn-band's published exp3[0][0] = 0.7299003983874868 within fp32 epsilon"
+    }
+  },
+  "transcendentals": "softmax exp is the recipe's OWN fexp Taylor (jte-mlp-helpers), never Metal's; every dot is tb-dot's downward right-fold split through a named temporary so no compiler contracts it into an fma.",
+  "carriers": "form-kernel-go (the mouth that emits), swiftc + Metal.framework (the driver-organ idiom — allowed host carriers per host-kernel.form host-resource-access). The emitter intelligence lives in the Form body; the harness only carries resource access.",
+  "named_next_stones": [
+    "emit a WHOLE GQA llama block kernel (RMSNorm+proj+RoPE+GQA-attn+FFN) and run on the M4 GPU — the GQA generalization of jte-llama-block-fwd-causal-msl (#3376), the block real GGUF weights need",
+    "GQA over real llama3.2:3b GGUF (n_head=24, n_kv_head=8, head_dim=128) on the GPU",
+    "parallelize across query heads (one threadgroup per head)",
+    "wire the full generation loop (tokenize-llama -> multi-layer GQA decode -> greedy argmax) over real GGUF — the first end-to-end native llama token"
+  ]
+}

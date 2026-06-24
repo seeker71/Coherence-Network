@@ -197,6 +197,7 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
 
     expected = ("kernel-native-high-grammar", "BML", True, True)
     header_gated = ("kernel-native-header-gated", "BML", False, False)
+    python_fanout = ("python-fanout", "agent task grammar", False, False)
     assert native_route_goal_loop.route_status("GET", "/api/inventory/flow", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/_form/inventory-flow-observation", native_routes) == header_gated
     assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
@@ -215,7 +216,12 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/household/events", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/active", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/activity", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/task_example", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/agent-anything", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/attention", native_routes) == python_fanout
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/count", native_routes) == python_fanout
     assert native_route_goal_loop.route_status("GET", "/api/health/persistence", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/automation/usage/readiness", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/sensings", native_routes) == expected

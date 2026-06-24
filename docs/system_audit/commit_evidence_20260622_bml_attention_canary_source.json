@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/bml-attention-canary-source",
+  "commit_scope": "Align the Hostinger kernel-router canary with the promoted native attention route. The public /api/attention/kernel-runtime surface is now owned and proven by the BML front-door service, so the older production-manifest sibling uses a lightweight kernel_status listener probe while the BML canary continues to verify api_attention_kernel_runtime.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_bml_attention_canary_source.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260622_bml_attention_canary_source.json",
+      "JSONL parse of docs/system_audit/model_executor_runs.jsonl",
+      "git diff --check"
+    ],
+    "notes": "Hostinger Auto Deploy run 27970739573 advanced public health to deployed_sha d11d67ac and public /api/attention/kernel-runtime returned 200 with X-Form-Router native-kernel and X-Form-Handler api_attention_kernel_runtime. The workflow failed because the older production-manifest kernel-router service was locally polled on the duplicate attention route until the listener budget expired."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production deploy workflow",
+    "notes": "A new Hostinger deploy must pass and public probes must confirm /api/health reports the new merge SHA while /api/attention/kernel-runtime is served by api_attention_kernel_runtime."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR checks, Hostinger deploy, and repeated public probes remain pending."
+  },
+  "idea_ids": [
+    "deploy-canary-stability",
+    "native-kernel-front-door"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-bml-attention-canary-source"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27970739573 rebuilt api, web, pulse, and both kernel-router services, and field-doc sync completed after the new running-state guard.",
+    "The same run failed when kernel-router listener probing /api/attention/kernel-runtime did not accept local HTTP within 90 seconds; logs showed the BML front-door sibling was healthy.",
+    "Public production after the failed run reported deployed_sha d11d67ac0da9bd1df337bde8efc17e3f15789afa and /api/attention/kernel-runtime returned 200 with native-kernel and api_attention_kernel_runtime.",
+    "The deploy script already has a BML deploy canary entry runtime-attention|/api/attention/kernel-runtime|api_attention_kernel_runtime, so this change moves only the older sibling listener probe off the promoted route."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260622_bml_attention_canary_source.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger deploy should observe the production-manifest kernel-router with a lightweight native listener route and observe the promoted runtime attention surface through the BML front-door handler that actually owns public traffic.",
+    "public_endpoints": [
+      "GET /api/health",
+      "GET /api/attention/kernel-runtime",
+      "GET /api/utils/kernel_status"
+    ],
+    "test_flows": [
+      "deploy script shell syntax validates locally.",
+      "static Hostinger deploy path checks continue to require the BML runtime attention canary handler.",
+      "post-merge Hostinger deploy passes and repeated public attention probes return X-Form-Handler api_attention_kernel_runtime."
+    ]
+  }
+}

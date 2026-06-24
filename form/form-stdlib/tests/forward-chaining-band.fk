@@ -1,0 +1,33 @@
+; preludes: form-stdlib/forward-chaining.fk
+;
+; The atomic deduction step, pinned at its edges. A tiny world:
+;   axioms = {A, B}                      (atoms 1, 2)
+;   rules  = { A & B -> C ,  C -> D ,  D & E -> F }
+; The engine must DERIVE C directly, derive D TRANSITIVELY (D is never stated — the rules force
+; it through C), and REFUSE to derive F (its premise E is absent — exact inference never
+; hallucinates a conclusion). Saturation, not a single pass: the reversed ruleset still reaches D.
+; Verdict 1023 when every claim lands.
+(do
+    (let A 1) (let B 2) (let C 3) (let D 4) (let E 5) (let F 6)
+    (let facts0 (list A B))                       ; the axioms
+    (let r1 (list (list A B) C))                  ; A & B -> C
+    (let r2 (list (list C) D))                    ; C -> D
+    (let r3 (list (list D E) F))                  ; D & E -> F   (E absent -> never fires)
+    (let rules    (list r1 r2 r3))
+    (let reversed (list r2 r1 r3))                ; conclusion-before-premise order
+
+    (let c0 (if (eq (fwd-entails? facts0 rules C) 1)        1   0))  ; direct: A & B -> C
+    (let c1 (if (eq (fwd-entails? facts0 rules D) 1)        2   0))  ; TRANSITIVE: D forced via C
+    (let c2 (if (eq (fwd-entails? facts0 rules F) 0)        4   0))  ; F NOT derived — premise E missing
+    (let c3 (if (eq (fwd-entails? facts0 rules E) 0)        8   0))  ; E was never a fact, never invented
+    (let c4 (if (eq (fwd-entails? facts0 rules A) 1)        16  0))  ; an axiom is trivially entailed
+    (let c5 (if (eq (fwd-derived-count facts0 rules) 2)     32  0))  ; exactly C and D — nothing spurious
+    (let c6 (if (eq (fwd-all-present? (list A B) facts0) 1) 64  0))  ; both premises of r1 present
+    (let c7 (if (eq (fwd-all-present? (list A E) facts0) 0) 128 0))  ; E absent -> not all present
+    (let c8 (if (eq (fwd-fires? facts0 r3) 0)               256 0))  ; r3 cannot fire over the axioms
+
+    ; order-independence: saturation reaches D even when the rule that needs D's producer is listed
+    ; first. proves we iterate to fixpoint, not a one-shot left-to-right scan.
+    (let c9b (if (eq (fwd-entails? facts0 reversed D) 1)    512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9b))))))))))

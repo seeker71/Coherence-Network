@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-22",
+  "thread_branch": "codex/native-mutation-jsonb-carrier",
+  "commit_scope": "Repair the production kernel-router native mutation carrier so public-gate and native-default POST/PATCH routes parse the compact request body shape and emit valid JSONB property payloads instead of casting quote-stripped request bodies.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_20260622_native_mutation_jsonb_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cargo build --release (form/form-kernel-rust)",
+      "Copy-Item form/form-kernel-rust/target/release/form-kernel-rust.exe to target/release/form-kernel-rust for the Unix-path harness expectation",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python direct Rust serve smoke: production-routes.fk booted with 45 native routes including /api/spec-registry/source-list and mutation route-choice rows",
+      "git diff --check"
+    ],
+    "notes": "The direct Windows HTTP listener accepted sockets but timed out for /health and POST probes, so local HTTP response proof remains a Windows carrier gap. The Linux/Postgres mutation_public_gate_harness.py path skipped locally because initdb is not installed. api/.venv pytest for api/tests/test_native_mutation_public_gate.py had four passing static checks and four Windows launcher/script expectation failures unrelated to this route edit."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI and the Hostinger deploy workflow must run the Linux route and public canary proof after this branch is pushed."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "Hostinger production native kernel-router",
+    "notes": "Current public SHA a1b2f12f14b284c1d11ddbec53bc7abd2fdfb89a reaches native-kernel for POST /api/ideas after settling but returns 503 with pg_exec invalid JSON because properties were emitted from a quote-stripped request body. This commit should change that to 202 with native persistence."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local static/build/boot proof passed; PR checks, Hostinger deploy, and public kernel canary proof remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "deploy-canary-stability"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door"
+  ],
+  "task_ids": [
+    "task-2026-06-22-native-mutation-jsonb-carrier"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27976799948 deployed a1b2f12f14b284c1d11ddbec53bc7abd2fdfb89a and passed public deployment verification, then failed Verify kernel public canary with repeated 422 router=none during the initial settling window.",
+    "After settling, public POST /api/ideas with X-Form-Native-Public-Gate reached X-Form-Router: native-kernel but returned 503. The body showed persistence.stage=pg_exec and error invalid input syntax for type json, with SQL casting '{id:idea-probe...,name:...}'::jsonb.",
+    "The same public probe showed explicit X-Form-Python-Fallback remained observable as fanout-python and Accept-bearing GET /api/attention/kernel-runtime remained native-kernel api_attention_kernel_runtime.",
+    "The edited production-routes.fk now uses mpv-flat-body-value-or as a fallback for compact request bodies and emits mpv-idea-properties-json/mpv-spec-properties-json into mpv-jsonb for native mutation SQL."
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_20260622_native_mutation_jsonb_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public X-Form-Native-Public-Gate and no-header native default mutation canaries should execute native persistence and return 202 with decision/native-invitation receipts after deploy.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "GET /api/attention/kernel-runtime",
+      "GET /api/health"
+    ],
+    "test_flows": [
+      "production manifest boots with source-list and mutation routes bound.",
+      "Hostinger Auto Deploy reaches Verify kernel public canary.",
+      "scripts/verify_kernel_canary_public_gate.sh passes publicly after deploy."
+    ]
+  }
+}

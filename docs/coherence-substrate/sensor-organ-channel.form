@@ -1,0 +1,33 @@
+# sensor-organ-channel.form - physical sensor streams as composable mesh organs
+
+(sensor-organ-channel
+  (lineage
+    (rests-on android-mesh-learning.form mesh-sensings.form organ-reading.fk channel-interface-consent.form)
+    (recipe form/form-stdlib/sensor-organ-channel.fk)
+    (proof form/form-stdlib/tests/sensor-organ-channel-band.fk -> 4095)
+    (android-bridge form/form-stdlib/sensor-organ-android-bridge.fk)
+    (android-bridge-proof form/form-stdlib/tests/sensor-organ-android-bridge-band.fk -> 4095))
+
+  (purpose
+    "Make physical sensing organs speak one inspectable channel contract."
+    "Each raw carrier reports scaled integer summaries with source, kind, unit, frame, confidence, freshness, privacy, and trace."
+    "Higher organs compose lower streams into derived observations without a new mesh engine.")
+
+  (floor
+    "sensor-organ-channel.fk defines privacy levels, mesh-safe gates, sensor-sample rows, sample-to-organ-reading lowering, composite-observation rows, and a first motion-mode organ."
+    "The motion-mode organ fuses speed, cadence, vertical motion, acceleration, and GPS/IMU/barometer/magnetometer confidence into still, walking, running, biking, driving, or flying claims."
+    "sensor-organ-android-bridge.fk lowers existing Android active mic RMS, camera luma, and GPU readback summary rows into the generic sensor-sample contract, then composes them into an android-active-media observation."
+    "Raw audio, frames, GPU buffers, and raw private samples stay local; the mesh receives derived summary observations with confidence, freshness, privacy, and source trace."
+    "Current focused proof on this Windows host is Go/Rust/TypeScript agreement at verdict 4095 for both bands. The fourth-arm row is not registered until the local fkwu compiler path is available or another host returns PASS-4WAY.")
+
+  (north-star
+    "GPS, IMU, magnetometer, barometer, light, sound level, Wi-Fi/BLE/UWB, camera/lidar summaries, host vitals, GPU/DSP/NPU receipts, and model outputs all enter through the same sensor-sample channel."
+    "Each organ publishes only consented claims at the privacy level it offers: public, derived, sensitive, or raw-private/local."
+    "Composite organs subscribe to other organ streams: spatial presence, room sense, soundscape, travel mode, activity, gait-like motion clustering, device health, and local model readiness."
+    "The mesh carries observations with provenance and disagreement visible, so GPS can fade indoors while room anchors, inertial motion, barometer, Wi-Fi/BLE, and map context carry the next breath."
+    "A physical sensor claim becomes actionable when independent organs agree or the composite proof names why the local evidence is sufficient.")
+
+  (receipt-command
+    (sensor-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk form-stdlib/tests/sensor-organ-channel-band.fk")
+    (android-bridge-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/sensor-organ-channel.fk form-stdlib/sensor-organ-android-bridge.fk form-stdlib/tests/sensor-organ-android-bridge-band.fk")
+    (fourth-arm-gap "local Windows fkwu build path is unavailable; do not claim four-way for these bands until scripts/fourth-arm-gate.sh returns PASS-4WAY")))

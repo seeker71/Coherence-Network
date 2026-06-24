@@ -1,0 +1,60 @@
+{
+  "date": "2026-06-24",
+  "thread_branch": "claude/tender-ptolemy-1d0re6",
+  "commit_scope": "Streaming staged-input reader + a live, parameterized native awk tool on fkwu — whole-file inputs now cross without carrier pre-slicing. input-stream.fk (is-line / is-next / is-fold) folds a per-line function over staged input with recursion bounded by LINE COUNT (not byte count) and no O(n^2) accumulator, so the full 38KB manifest folds (918 lines) where the naive per-byte reader segfaulted. fkwu-awk.fk + scripts/fkwu_awk.sh make it a live tool: `fkwu_awk.sh <file> '<awk-program>'` stages the awk program on line 0 and the file's data after it, streams each line through sh-bi-awk (the four-way native awk), and returns the numeric result computed on the fkwu c-bootstrap kernel — no read_file, no host awk, no bash in the compute loop. Verified parameterized over the whole manifest: shell-awk->127, shell-exec->511, shell-parse->255, each MATCHING host awk.",
+  "files_owned": [
+    "form/form-stdlib/input-stream.fk",
+    "form/form-stdlib/fkwu-awk.fk",
+    "scripts/fkwu_awk.sh",
+    "form/form-stdlib/tests/shell-awk-staged.fk",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_streaming_awk.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "scripts/fkwu_awk.sh form/fourth-arm-bands.txt '$1==\"shell-awk\"{print $3}'    # -> 127 (host awk: 127)",
+      "scripts/fkwu_awk.sh form/fourth-arm-bands.txt '$1==\"shell-exec\"{print $3}'   # -> 511 (host awk: 511)",
+      "scripts/fkwu_awk.sh form/fourth-arm-bands.txt '$1==\"shell-parse\"{print $3}'  # -> 255 (host awk: 255)",
+      "is-fold line-count over the full 38KB manifest -> 918 (host wc -l: 918), no segfault"
+    ],
+    "fourth_arm": "The awk COMPUTE is the four-way shell-awk band (127). input-stream.fk + fkwu-awk.fk are fkwu-only (input_byte tag 17 is not in Go/Rust/TS) — host-io carrier utilities for the sovereign-run path, not four-way claims.",
+    "native_binary": "fkwu universal-kernel binary streams the whole manifest by line and computes native awk -> matches host awk for every probed stem.",
+    "notes": "Bug trail resolved this step: (1) the naive saw-read was O(n^2) + byte-deep -> segfault on 38KB; is-fold streams by line (depth = line count) -> crosses. (2) HOF and closures both work on fkwu (proved: (ap inc 5)->6, (ap add-p 5) with captured p->12), so the per-line reducer captures the staged program. (3) fk_pv_root (fkwu_run.sh's value entry) prints a runtime-built STRING as its box, not its text (a string LITERAL prints fine), so fkwu-awk.fk returns an INTEGER (str_to_int) — the honest unit for a numeric field query; a general string/multi-row awk wants the print_str effect entry (fsh-main's), the named follow-on. read_file stays a per-kernel host-io carrier (the thin carrier reads the file's bytes)."
+  },
+  "ci_validation": {"status": "pending", "notes": "Observation; the awk compute's four-way gate runs in CI on the shell-awk band."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a Form-runtime tool + sovereign-run lane."},
+  "phase_gate": {
+    "phase": "streaming-reader-and-live-native-awk",
+    "gate": "Make whole-file staged inputs cross on fkwu (streaming, no O(n^2)) and turn the sovereign reconciliation into a live, parameterized, callable native tool — not a fixed demo.",
+    "state": "fkwu_awk-live-numeric-whole-file",
+    "can_move_next_phase": true,
+    "next": "print_str effect entry so general string/multi-row awk output crosses; a presence-count query variant; then wire form-cli roadmap's manifest_has to fkwu_awk behind a warm-lane gate (opt-in until the fkwu table is pre-built) so the live verb routes through the sovereign kernel without a cold-start regression."
+  },
+  "idea_ids": ["federation-and-nodes"],
+  "spec_ids": [],
+  "task_ids": ["fkwu-streaming-awk"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "named-the-streaming-reader-and-live-path"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["implementation", "proof", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "form/form-stdlib/input-stream.fk",
+    "form/form-stdlib/fkwu-awk.fk",
+    "scripts/fkwu_awk.sh",
+    "scripts/fkwu_run.sh",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_staged_input_lane.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/input-stream.fk",
+    "form/form-stdlib/fkwu-awk.fk",
+    "scripts/fkwu_awk.sh",
+    "form/form-stdlib/tests/shell-awk-staged.fk",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-24_fkwu_streaming_awk.json"
+  ],
+  "change_intent": "streaming_reader_and_live_tool"
+}

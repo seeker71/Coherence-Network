@@ -17,7 +17,7 @@
 ; query at position i attends ONLY to keys/values 0..i (whisper's causal decoder mask).
 (defn tb-attn-causal-acc (qs ks vs scale i)
   (if (eq (len qs) 0) (empty)
-      (cons (tb-attend-one (head qs) (tb-take (add i 1) ks) (tb-take (add i 1) vs) scale)
+      (cons (tb-attend-one (head qs) (tb-take ks (add i 1)) (tb-take vs (add i 1)) scale)
             (tb-attn-causal-acc (tail qs) ks vs scale (add i 1)))))
 (defn tb-attn-causal-seq (qs ks vs scale) (tb-attn-causal-acc qs ks vs scale 0))
 

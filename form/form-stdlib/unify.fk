@@ -1,0 +1,113 @@
+; unify.fk — the unification core: first-order reasoning as a pure, four-way, native brick.
+;
+; forward-chaining.fk and backward-chaining.fk reason about SPECIFIC facts (A&B->C). Unification is
+; the one primitive that lifts them to FIRST-ORDER: "all X that are men are mortal" + "socrates is a
+; man" |- "socrates is mortal" — a rule with a VARIABLE matched against a goal, the variable bound,
+; the binding carried into the rule's body. Robinson's unification (1965) is that match: given two
+; terms, find the most-general substitution making them identical, or report that none exists.
+;
+; The body already has first-order logic in prolog-bmf-eval.fk — but that is the STRING-term BMF-node
+; interpreter (str_find / char_at / node_value / nil?), the host-null + node families that keep it OFF
+; the fourth arm. This is its native floor: integer terms, no strings, no nodes, so the SAME logic
+; crosses all four kernels (Go/Rust/TS/fkwu) and crystallizes to native. The interpreter is the
+; bootstrap; this is the proven brick it can come home to.
+;
+; A term is a tagged list (everything an integer -> pure-numeric, JIT tags 1-7, native):
+;   variable  (list 0 vid)          vid  = variable id
+;   constant  (list 1 cid)          cid  = constant/atom id
+;   compound  (list 2 fid args)     fid  = functor id, args = (list term ...)   e.g. f(a,X)
+; A substitution is an alist of (vid term). unify returns a wrapped result (list ok subst):
+;   ok = 1 with the substitution, or ok = 0 (fail) — distinct from the empty (but valid) substitution.
+;
+; Kin: backward-chaining.fk (this makes its rules first-order), prolog-bmf-eval.fk (the string
+; interpreter this is the native floor of). Proven by: form-stdlib/tests/unify-band.fk
+
+(do
+    ; --- term constructors + accessors ---
+    (defn u-mkvar      (v)       (list 0 v))
+    (defn u-mkconst    (c)       (list 1 c))
+    (defn u-mkcompound (f args)  (list 2 f args))
+    (defn u-tag   (t) (nth t 0))
+    (defn u-var?      (t) (eq (u-tag t) 0))
+    (defn u-const?    (t) (eq (u-tag t) 1))
+    (defn u-compound? (t) (eq (u-tag t) 2))
+    (defn u-vid  (t) (nth t 1))
+    (defn u-cid  (t) (nth t 1))
+    (defn u-fid  (t) (nth t 1))
+    (defn u-args (t) (nth t 2))
+
+    ; --- result wrapper: ok+subst, or fail (distinct from the valid empty substitution) ---
+    (defn u-ok    (subst) (list 1 subst))
+    (defn u-fail  ()      (list 0 (list)))
+    (defn u-ok?   (r) (eq (nth r 0) 1))
+    (defn u-subst (r) (nth r 1))
+
+    ; --- substitution: alist of (vid term) ---
+    (defn u-extend (vid t subst) (cons (list vid t) subst))
+    (defn u-lookup (vid subst)
+        (if (eq (len subst) 0) (list)
+            (if (eq (head (head subst)) vid)
+                (head (tail (head subst)))
+                (u-lookup vid (tail subst)))))
+
+    ; --- walk: follow a variable's binding chain to its current value (or the unbound var itself) ---
+    (defn u-walk (t subst)
+        (if (u-var? t)
+            (do (let b (u-lookup (u-vid t) subst))
+                (if (eq (len b) 0) t (u-walk b subst)))
+            t))
+
+    ; --- occurs check: does vid appear in t? (refuses the infinite term X = f(X)) ---
+    (defn u-occurs? (vid t subst)
+        (do (let tw (u-walk t subst))
+            (if (u-var? tw) (eq (u-vid tw) vid)
+                (if (u-compound? tw) (u-occurs-list? vid (u-args tw) subst) 0))))
+    (defn u-occurs-list? (vid ts subst)
+        (if (eq (len ts) 0) 0
+            (if (eq (u-occurs? vid (head ts) subst) 1) 1
+                (u-occurs-list? vid (tail ts) subst))))
+
+    ; --- UNIFY: the most-general unifier of t1 and t2 under subst, or fail. ---
+    (defn u-unify (t1 t2 subst)
+        (do (let a (u-walk t1 subst))
+            (let b (u-walk t2 subst))
+            (if (and (u-var? a) (u-var? b))
+                (if (eq (u-vid a) (u-vid b)) (u-ok subst) (u-ok (u-extend (u-vid a) b subst)))
+                (if (u-var? a)
+                    (if (eq (u-occurs? (u-vid a) b subst) 1) (u-fail) (u-ok (u-extend (u-vid a) b subst)))
+                    (if (u-var? b)
+                        (if (eq (u-occurs? (u-vid b) a subst) 1) (u-fail) (u-ok (u-extend (u-vid b) a subst)))
+                        (if (and (u-const? a) (u-const? b))
+                            (if (eq (u-cid a) (u-cid b)) (u-ok subst) (u-fail))
+                            (if (and (u-compound? a) (u-compound? b))
+                                (if (eq (u-fid a) (u-fid b)) (u-unify-list (u-args a) (u-args b) subst) (u-fail))
+                                (u-fail))))))))
+    ; unify argument lists pairwise, threading the growing substitution; arity mismatch fails.
+    (defn u-unify-list (as bs subst)
+        (if (eq (len as) 0)
+            (if (eq (len bs) 0) (u-ok subst) (u-fail))
+            (if (eq (len bs) 0) (u-fail)
+                (do (let r (u-unify (head as) (head bs) subst))
+                    (if (eq (u-ok? r) 1) (u-unify-list (tail as) (tail bs) (u-subst r)) (u-fail))))))
+
+    ; --- apply a substitution through a whole term (instantiate variables) — the modus-ponens step ---
+    (defn u-apply (t subst)
+        (do (let tw (u-walk t subst))
+            (if (u-compound? tw) (u-mkcompound (u-fid tw) (u-apply-list (u-args tw) subst)) tw)))
+    (defn u-apply-list (ts subst)
+        (if (eq (len ts) 0) (list)
+            (cons (u-apply (head ts) subst) (u-apply-list (tail ts) subst))))
+
+    ; --- structural term equality (to read results) ---
+    (defn u-eq? (t1 t2)
+        (if (and (u-const? t1) (u-const? t2)) (eq (u-cid t1) (u-cid t2))
+            (if (and (u-var? t1) (u-var? t2)) (eq (u-vid t1) (u-vid t2))
+                (if (and (u-compound? t1) (u-compound? t2))
+                    (if (eq (u-fid t1) (u-fid t2)) (u-eq-list? (u-args t1) (u-args t2)) 0)
+                    0))))
+    (defn u-eq-list? (as bs)
+        (if (eq (len as) 0) (if (eq (len bs) 0) 1 0)
+            (if (eq (len bs) 0) 0
+                (if (eq (u-eq? (head as) (head bs)) 1) (u-eq-list? (tail as) (tail bs)) 0))))
+
+    0)

@@ -1,0 +1,45 @@
+{
+  "date": "2026-06-23",
+  "brick": "form-elf-so — loadable aarch64 ELF .so, dlopen'd + run on a real Android phone",
+  "title": "the native-JIT-on-ARM floor: a Form recipe emits a loadable ELF .so that Android's bionic linker dlopen's and runs — zero clang for the .so, verified on a Galaxy S23 Ultra",
+  "north_star_track": "the phone as a sovereign cell — gap #2 of the Android arc: after the interpreter kernel (FormKernel, gap #1) runs on-device, the native lane (form-asm -> loadable .so -> dlopen) so hot recipes crystallize to native ARM code on the phone, the Android twin of the Mac form-asm -> form-macho -> recipe-dylib -> codesign -> dlopen path",
+  "what": "form-elf.fk emitted only an ELF object (.o); the Mac's recipe-dylib (form-macho.fk, verdict 787349) is what turns Form-asm bytes into a dlopen-able module. This builds the Android twin: form-elf-so.fk emits a LOADABLE aarch64 ET_DYN shared object from Form-native arm64 bytes (the same form-asm/form-elf-exec encoders) — no clang as compiler, assembler, OR linker for the .so. It carries everything dlopen/dlsym resolve a symbol through: program headers (PT_LOAD R+X + PT_DYNAMIC), a .dynamic section (DT_HASH/STRTAB/SYMTAB/STRSZ/SYMENT/NULL), a dynamic symbol table (null + the exported form_native), a SysV hash table, and the full section header table. A position-independent leaf body (movz x0,#imm ; ret) needs no relocations. The on-device receipt (scripts/form_elf_so_android_receipt.sh) emits the .so, pushes it + a tiny dlopen harness to the phone, and the bionic linker dlopen's it and calls the native function — RESULT 42. The only clang is the NDK building the test HARNESS (the runner, like form-elf-exec's qemu/adb leg), never the .so.",
+  "files": {
+    "recipe": "form/form-stdlib/form-elf-so.fk (elf-so, elf-so-leaf-const, so-header/-phdr-*/-dynsym/-hash/-dynamic/-section-headers)",
+    "band": "form/form-stdlib/tests/form-elf-so-band.fk",
+    "receipt": "scripts/form_elf_so_android_receipt.sh",
+    "manifest_row": "form-elf-so fks 127",
+    "doc": "docs/coherence-substrate/kernel-on-android.form (native Form->asm .so on ARM now MEASURED)"
+  },
+  "proof": {
+    "four_way": {
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-so.fk form-stdlib/tests/form-elf-so-band.fk",
+      "verdict": 127,
+      "fourth_arm": "1 band four-way (fkwu + pre-flattened tables)",
+      "divergent": 0,
+      "kernels": "Go, Rust, TypeScript, fkwu — agree on every byte"
+    },
+    "on_device": {
+      "command": "bash scripts/form_elf_so_android_receipt.sh",
+      "device": "Galaxy S23 Ultra (arm64-v8a, Android 14 / bionic)",
+      "result": "RESULT 42 — bionic dlopen'd the Form-emitted .so and ran exported native form_native()",
+      "clang_for_so": "none — Form is compiler + assembler + linker for the .so; NDK clang builds only the dlopen harness"
+    }
+  },
+  "bionic_gauntlet": "the on-device test surfaced + pinned bionic's exact requirements for a load-by-program-headers .so, each now a band assertion: (1) e_shentsize must be 0x40 even with section headers absent; (2) e_shstrndx must point to a real SHT_STRTAB (.shstrtab); (3) once section headers exist, a SHT_DYNAMIC section header matching PT_DYNAMIC is required. The fix was the FULL section header table a real .so carries: NULL/.hash/.dynsym/.dynstr/.dynamic/.shstrtab with matching addrs and sh_links.",
+  "verdict_claims": {
+    "1": "MAGIC — ELF64 little-endian 0x7f 'E' 'L' 'F'",
+    "2": "TARGET — ET_DYN + EM_AARCH64",
+    "4": "PROGRAM HEADER TABLE — e_phoff 64, e_phentsize 56, e_phnum 2",
+    "8": "SEGMENTS + BIONIC FIELDS — PT_LOAD (R+X), PT_DYNAMIC (R), e_shentsize 0x40, e_shnum 6, total 800 bytes",
+    "16": "TEXT — movz x0,#42 (40 05 80 d2) then ret (c0 03 5f d6) at offset 176",
+    "32": "EXPORT — .dynsym[1] form_native: GLOBAL|FUNC, st_value 176 (the code)",
+    "64": "RESOLUTION — .dynstr, .hash nbucket, DT_HASH in .dynamic"
+  },
+  "lesson": "The hardest UNKNOWN of gap #2 — does a hand-rolled, Form-native ELF .so load and run on a real phone's bionic linker? — is now answered YES with a device receipt. The on-device loop turned bionic's strictness from a guessing game into a checklist: each dlopen error named the exact next field, and pinning each into the four-way band means the loadable shape can't silently regress. This is the FLOOR of the native-JIT-on-ARM lane (the .so loads + runs); the leaf body is a stand-in — wiring real form-asm function bodies + the kernel-driven crystallize-on-heat/melt-on-cool hot-swap is the layer above, now standing on proven ground rather than hope.",
+  "named_next_stones": [
+    "wire real recipe bodies: feed form-asm output (arbitrary pure functions, tags 1-7,12) as the .so's code instead of the leaf const, so a hot Form recipe becomes a native .so on the phone",
+    "kernel-driven hot-swap: the on-device FormKernel detects a hot recipe, emits + dlopen's its .so, champions it, melts on cool — uniting the interpreter (gap #1) and the native lane (this) into one self-JIT, the Android mirror of fkwu's crystallize-on-heat",
+    "relocations: bodies that call other functions / read data need a minimal DT_RELA + R_AARCH64_RELATIVE pass beyond the leaf floor"
+  ]
+}

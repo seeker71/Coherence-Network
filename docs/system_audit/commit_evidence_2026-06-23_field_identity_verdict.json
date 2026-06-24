@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "claude/field-identity-verdict",
+  "commit_scope": "Breath-3 keystone: the field identity VERDICT recipe (fiv-verdict over crypto results -> TRUSTED / FIRST_USE_PIN / UNVERIFIED / REJECT_PIN_CONFLICT / REJECT_NODEID_MISMATCH / REJECT_DELEGATION, plus accept?/should-pin?/impersonation?). Decision is Form (four-way + native); cryptography (ed25519, sha256 NodeID-derivation) and the pin store are carriers fed in as inputs. Identity at the edge; the relay stays open + content-blind.",
+  "files_owned": [
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/tests/field-identity-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/field-identity-verdict.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-23_field_identity_verdict.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/field-identity-verdict.md"
+    ],
+    "fourth_arm": "field-identity band crosses four-way (Go/Rust/TS/fkwu) at verdict 511, 0 divergent; registered in form/fourth-arm-bands.txt as 'field-identity fkc 511'.",
+    "native_binary": "validate.sh --binary -> 511, 0 divergent (kernels agree on every binary artifact).",
+    "notes": "Pure structural decision recipe; no host-io, node/substrate, or multi-line ops -- fully four-way friendly."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR pending at evidence-write time; the four-way + native proof is the local gate. CI windows-floor/validate-thread-process to confirm."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy required for a stdlib recipe + band; it becomes load-bearing when the breath-3 carrier (ed25519/pin store) and breath-4 client integration land."
+  },
+  "phase_gate": {
+    "phase": "field-identity-verdict-keystone",
+    "gate": "Deliver the identity verdict as a four-way + native decision body so the field can tell people apart at the edge. The crypto carrier (ed25519, sha256 NodeID-derivation), the TOFU pin store, and client integration are named follow-ups (this spec's R2-R5).",
+    "state": "decision-body-proven",
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "federation-and-nodes"
+  ],
+  "spec_ids": [
+    "field-identity-verdict"
+  ],
+  "task_ids": [
+    "field-identity-verdict"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "design",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "4.x"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/tests/field-identity-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/field-identity-verdict.md",
+    "specs/field-relay-always-open-connection.md"
+  ],
+  "change_files": [
+    "form/form-stdlib/field-identity.fk",
+    "form/form-stdlib/tests/field-identity-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/field-identity-verdict.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-23_field_identity_verdict.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A recipient can compute a trust verdict over a presented sender identity: TRUSTED / FIRST_USE_PIN / UNVERIFIED / REJECT_PIN_CONFLICT / REJECT_NODEID_MISMATCH / REJECT_DELEGATION. This is the decision body only; end-to-end trust (a real signed envelope rejected as impersonation, accepted+pinned on first use) becomes observable once the ed25519 carrier + pin store (R3/R4) and client integration (R5, breath 4) land.",
+    "public_endpoints": [
+      "form-local: ./validate.sh form-stdlib/field-identity.fk form-stdlib/tests/field-identity-band.fk -> 511 four-way",
+      "form-local: ./validate.sh --binary (same) -> 511 native binary, 0 divergent"
+    ],
+    "test_flows": [
+      "form/form-stdlib/tests/field-identity-band.fk asserts all six verdicts + accept?/should-pin?/impersonation? -> 511 four-way + native binary, 0 divergent."
+    ],
+    "summary": "Decision body proven (511 four-way + native). True end-to-end identity flow is pending its carriers (crypto + pin store + client); status pending and honestly scoped, not claimed."
+  }
+}

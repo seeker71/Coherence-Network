@@ -1,0 +1,40 @@
+; backtrack-search.fk — the ONE generic depth-first backtracking search: choice / fail / stop /
+; backtrack as a single recursive engine. The hypothesis-tree search (auto-ml / auto-research), the
+; PEG parser, provider-routing-with-fallback, and a proof search are all THIS engine with a different
+; choice-space supplied as DATA — exactly as arch-search.fk is the ONE architecture searcher over a
+; candidate list. Here the canonical instance is SUBSET-SUM: does some subset of `items` sum to
+; `target`? It is the smallest expression that forces all four primitives to fire at once.
+;
+;   CHOICE     — at each item, two branches: include it, or exclude it.
+;   FAIL       — a partial sum past the target is a dead branch: prune, do not descend.
+;   STOP       — items exhausted with the sum exactly on target: a solution, return 1.
+;   BACKTRACK  — when the include-branch fails, fall back to the exclude-branch (and back up the tree).
+;
+; The four seams (the include/exclude choice, the overshoot fail-predicate, the exact-on-exhaust stop,
+; the fall-back-to-the-other backtrack) are where a different domain plugs a different rule. The next
+; breath lifts them to pluggable goal data so the parser / router / proof-search drop on directly,
+; each getting branch-choice-order.fk's learned ordering for free. Proven four-way by
+; tests/backtrack-search-band.fk (Go=Rust=TS=fkwu).
+;
+; preludes: form-stdlib/core.fk
+(do
+    ; bts-go — depth-first over `items`, carrying the partial sum `sofar`. Returns 1 if some choice of
+    ; the remaining items lands the total exactly on `target`, else 0.
+    (defn bts-go (items target sofar)
+        (if (gt sofar target)
+            0                                              ; FAIL — overshoot: prune this whole branch.
+            (if (eq (len items) 0)
+                (if (eq sofar target) 1 0)                 ; STOP — exhausted: 1 iff exactly on target.
+                (do
+                    (let it (head items))
+                    (let rest (tail items))
+                    ; CHOICE — try INCLUDING `it` first ...
+                    (let included (bts-go rest target (add sofar it)))
+                    (if (eq included 1)
+                        1
+                        ; ... BACKTRACK — the include-branch died; fall back to EXCLUDING `it`.
+                        (bts-go rest target sofar))))))
+
+    ; the door — search from an empty running sum.
+    (defn bts-find? (items target) (bts-go items target 0))
+    0)

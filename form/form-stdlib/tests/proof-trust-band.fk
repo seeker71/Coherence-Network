@@ -1,0 +1,36 @@
+; preludes: form-stdlib/forward-chaining.fk form-stdlib/derivation.fk form-stdlib/subjective-logic.fk form-stdlib/proof-trust.fk
+;
+; Trust flowing up a generated proof, pinned where it carries meaning. Same world {A,B} + rules
+; {A&B->C, C->D, D&E->F}. Source trust of the axioms = (900,50,50,500); trust of each rule =
+; (800,100,100,500). Deriving D builds the proof D<-C<-{A,B}; trust must DECAY down that argument:
+; belief in D < belief in C < belief in the axioms, and projected confidence drops with depth. An
+; axiom leaf takes its source trust exactly. Conjunction's identity and weakening are pinned, and a
+; fully distrusted rule must COLLAPSE the conclusion to zero belief. Verdict 1023.
+(do
+    (let A 1) (let B 2) (let C 3) (let D 4) (let E 5) (let F 6)
+    (let facts (list A B))
+    (let rules (list (list (list A B) C) (list (list C) D) (list (list D E) F)))
+    (let src     (sl-opinion 900 50 50 500))    ; how much we trust the axioms' source
+    (let rule-op (sl-opinion 800 100 100 500))  ; how much we trust each rule
+    (let bad     (sl-opinion 0 900 100 500))    ; a rule we do not trust at all
+    (let tol 3)
+
+    (let dD (pf-derive D facts rules))
+    (let dC (head (pf-subs dD)))                 ; the C subproof the search discovered
+    (let dA (pf-derive A facts rules))
+    (let tD (ptr-trust dD src rule-op))          ; trust of D's whole derivation
+    (let tC (ptr-trust dC src rule-op))          ; trust of C's
+
+    (let c0 (if (eq (sl-valid? tD tol) 1)                              1   0))  ; D's trust is a valid opinion
+    (let c1 (if (lt (sl-b tD) (sl-b tC))                              2   0))  ; deeper -> less belief (D<C)
+    (let c2 (if (lt (sl-b tC) (sl-b src))                             4   0))  ; one rule step already weakens (C<axiom)
+    (let c3 (if (lt (ptr-confidence dD src rule-op)
+                    (ptr-confidence dC src rule-op))                  8   0))  ; projected confidence drops with depth
+    (let c4 (if (eq (sl-b (ptr-trust dA src rule-op)) 900)            16  0))  ; an axiom leaf takes its source trust
+    (let c5 (if (eq (sl-b (sl-and src (ptr-certain))) (sl-b src))     32  0))  ; AND identity: x AND certain = x
+    (let c6 (if (le (sl-b (sl-and src rule-op)) (sl-b rule-op))       64  0))  ; AND never believes more than either
+    (let c7 (if (eq (sl-b (ptr-trust dD src bad)) 0)                  128 0))  ; a distrusted rule collapses belief to 0
+    (let c8 (if (eq (sl-b (ptr-none)) 0)                              256 0))  ; a failed proof earns no belief
+    (let c9 (if (and (eq (sl-valid? tC tol) 1) (gt (sl-b tD) 0))      512 0))  ; C valid; D still positively believed
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
