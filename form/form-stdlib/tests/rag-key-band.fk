@@ -1,0 +1,22 @@
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk
+;
+; rag-key-band — the Form content key made falsifiable.
+;
+; The RFC 1950 canonical vector pins str-bytes + adler32: "123456789" must key to
+; 152961502 (0x091E01DE) — proof the bytes reach the fold in the right order. Then
+; the freshness property: identical text shares a key (fresh), one changed byte
+; drifts to a different key (heal). No host hash, no mtime — the key is Form.
+;
+; Verdict 7 when every claim lands:
+;   1   the canonical adler32 vector matches      (key "123456789" == 152961502)
+;   2   identical texts share a key                (fresh — no false drift)
+;   4   a changed byte drifts the key              (heal — no missed change)
+(do
+    (let k1 (rk-text-key "123456789"))
+    (let kA (rk-text-key "shell-grammar fsh"))
+    (let kB (rk-text-key "shell-grammar fsh"))
+    (let kC (rk-text-key "shell-grammar FSH"))
+    (let c0 (if (str_eq k1 "152961502") 1 0))
+    (let c1 (if (str_eq kA kB) 2 0))
+    (let c2 (if (str_eq kA kC) 0 4))
+    (add c0 (add c1 c2)))

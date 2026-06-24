@@ -1,0 +1,37 @@
+; preludes: form-stdlib/rag-freshness.fk
+;
+; rag-freshness-band — the self-healing cache made falsifiable.
+;
+; A body of three cells, each (id content-key):
+;   "a" h1   "b" h2   "c" h3
+; against an index that has drifted:
+;   "a" h1     (fresh — key matches)
+;   "b" hOLD   (drifted — key changed on disk)
+;   "z" hz     (orphan — no source for "z" anymore)
+;   (no "c"    — missing — new file the cache never saw)
+; The heal-set must be (b c): drifted first, missing second (source order). The
+; orphans must be (z). The cache is NOT fresh. A second index that equals the body
+; is fresh with an empty heal-set.
+;
+; Verdict 63 when every claim lands:
+;   1   heal-set has two cells                  (b drifted + c missing)
+;   2   the drifted cell comes first            (heal[0] == b)
+;   4   the missing cell comes second           (heal[1] == c)
+;   8   the orphan is found                      (orphans == (z))
+;   16  a drifted cache reads NOT fresh          (rf-fresh? == 0)
+;   32  a matching cache reads fresh, no heal    (rf-fresh? == 1, heal empty)
+(do
+    (let body (list (rf-entry "a" "h1") (rf-entry "b" "h2") (rf-entry "c" "h3")))
+    (let index (list (rf-entry "a" "h1") (rf-entry "b" "hOLD") (rf-entry "z" "hz")))
+    (let heal (rf-heal-set body index))
+    (let orph (rf-orphans index body))
+    (let idx2 (list (rf-entry "a" "h1") (rf-entry "b" "h2") (rf-entry "c" "h3")))
+
+    (let c0 (if (eq (len heal) 2) 1 0))
+    (let c1 (if (str_eq (rf-id (head heal)) "b") 2 0))
+    (let c2 (if (str_eq (rf-id (nth heal 1)) "c") 4 0))
+    (let c3 (if (and (eq (len orph) 1) (str_eq (rf-id (head orph)) "z")) 8 0))
+    (let c4 (if (eq (rf-fresh? body index) 0) 16 0))
+    (let c5 (if (and (eq (rf-fresh? body idx2) 1) (eq (len (rf-heal-set body idx2)) 0)) 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

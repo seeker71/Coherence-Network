@@ -737,6 +737,9 @@ export-trie fkc 6391
 native-code-fit fks 15
 reproduce-from-history fkc 8
 rag-retrieve fks 31
+rag-freshness fks 63
+rag-adaptive-k fkc 15
+rag-key fks 7
 gcd fkc 31
 form-cli-review-gap fkc 63
 oracle-ensure fks 31

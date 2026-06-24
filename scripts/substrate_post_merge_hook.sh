@@ -83,6 +83,17 @@ if git diff --name-only "$RANGE" -- '*.fk' '*.form' 2>/dev/null | grep -q .; the
     python3 scripts/training_corpus.py --source git --range "$RANGE" || true
 fi
 
+# form-cli RAG memory — the index is WATER, kept fresh by content-addressing. When
+# any body source (recipe/spec/concept/substrate) changed in the range, heal the
+# index: re-embed only the drifted/missing delta, compost orphans. Delta-only and
+# offline; a no-op when nothing drifted. Never fail the merge over it.
+if git diff --name-only "$RANGE" -- \
+    'form/form-stdlib/*.fk' 'specs/*.md' \
+    'docs/vision-kb/concepts/*.md' 'docs/coherence-substrate/*.form' 2>/dev/null | grep -q .; then
+    echo "[rag] healing the form-cli memory index for $RANGE:"
+    python3 scripts/form_cli_rag.py heal || true
+fi
+
 CHANGED=$(printf "%s\n%s" "$CHANGED_MD" "$CHANGED_CODE" | sed '/^$/d')
 
 if [ -z "$CHANGED" ]; then
