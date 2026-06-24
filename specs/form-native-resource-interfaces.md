@@ -66,8 +66,9 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk \
   form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk \
   form-stdlib/form-native-resource-interfaces.fk \
   form-stdlib/tests/form-native-resource-interfaces-band.fk
-python3 scripts/validate_commit_evidence.py \
-  --file docs/system_audit/commit_evidence_2026-06-24_form_native_resource_interfaces.json
+./scripts/verify_fnri_platform_receipt.sh
+bash scripts/verify_fnri_windows_standalone.sh   # Git Bash / windows-host CI
+bash scripts/verify_fnri_android_receipt.sh      # adb + device
 ```
 
 ## Out of Scope
@@ -84,8 +85,8 @@ python3 scripts/validate_commit_evidence.py \
 ## Known Gaps
 
 - **fkwu fourth-arm**: `form-native-resource-interfaces` in `fourth-arm-bands.txt` → **32767** four-way; `fnri-witness-verdict` shared by band, `fkwu_fnri.sh`, and `form-cli fnri`.
-- **Standard receipt**: mac observed via `./scripts/verify_form_native_sovereignty.sh`; windows/android `pending`.
-- **Host-io witnesses**: per-class mac/windows/android observed traces — follow-up: dispatch witness bands after flatten gap closes.
+- **Standard receipt**: mac observed via `./scripts/verify_fnri_platform_receipt.sh`; windows observed via `windows-host.yml` + `verify_fnri_windows_standalone.sh`; android via `verify_fnri_android_receipt.sh` when adb device attached.
+- **Host-io witnesses**: `fnri-dispatch-carrier-band.fk` → **1023** four-way (dispatch shape); runtime host-io per class still pending.
 - None beyond the above for catalog/metadata scope.
 
 ## North star

@@ -1,0 +1,29 @@
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk
+;
+; fnri-dispatch-carrier-band — host-io dispatch shape: filesystem + http-socket + pending carriers.
+
+(do
+    (let c0 (if (eq (len (fnri-dispatches)) 10) 1 0))
+    (let proc (fnri-dispatch-for "host:process"))
+    (let c1 (if (str_eq (fnri-dispatch-carrier proc) "filesystem") 2 0))
+    (let file (fnri-dispatch-for "host:file"))
+    (let c2 (if (str_eq (fnri-dispatch-sense-op file) "read_file")
+                (if (str_eq (fnri-dispatch-carrier file) "filesystem") 4 0)
+                0))
+    (let http (fnri-dispatch-for "http:request"))
+    (let c3 (if (str_eq (fnri-dispatch-sense-op http) "socket_connect")
+                (if (str_eq (fnri-dispatch-carrier http) "http-socket") 8 0)
+                0))
+    (let audio (fnri-dispatch-for "audio:pcm16"))
+    (let c4 (if (str_eq (fnri-dispatch-carrier audio) "host-audio-pending") 16 0))
+    (let video (fnri-dispatch-for "video:rgba-time"))
+    (let c5 (if (str_eq (fnri-dispatch-carrier video) "host-video-pending") 32 0))
+    (let sensor (fnri-dispatch-for "sensor:signal"))
+    (let c6 (if (str_eq (fnri-dispatch-carrier sensor) "host-sensor-pending") 64 0))
+    (let gpu (fnri-dispatch-for "gpu:compute"))
+    (let c7 (if (str_eq (fnri-dispatch-carrier gpu) "host-gpu-pending") 128 0))
+    (let dsp (fnri-dispatch-for "dsp:signal"))
+    (let c8 (if (str_eq (fnri-dispatch-carrier dsp) "host-dsp-pending") 256 0))
+    (let mlx (fnri-dispatch-for "mlx:array"))
+    (let c9 (if (str_eq (fnri-dispatch-carrier mlx) "host-mlx-pending") 512 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))
