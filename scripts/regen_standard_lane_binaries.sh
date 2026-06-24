@@ -24,8 +24,10 @@ echo "regen: fkwu-${slug} ($(wc -c < "form-stdlib/bootstrap/fkwu-${slug}" | tr -
 FORM_CLI_SRCS=(
     form-stdlib/fourth-shim.fk form-stdlib/core.fk form-stdlib/resource-port.fk
     form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk
-    form-stdlib/form-native-resource-interfaces.fk form-stdlib/http-client.fk
-    form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk
+    form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk
+    form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk
+    form-stdlib/fnri-receipt.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk
+    form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk
     form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk
     form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk
     form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/form-cli.fk
