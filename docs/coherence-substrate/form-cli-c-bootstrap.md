@@ -141,11 +141,19 @@ This is a real step *toward* tool-sovereignty, not a claim of having arrived:
   (tag 17 — the staged-input door fkwu *does* carry) and fkwu runs native awk
   over them, no `read_file`, no host awk, no bash in the compute loop
   ([`tests/shell-awk-staged.fk`](../../form/form-stdlib/tests/shell-awk-staged.fk),
-  run via [`scripts/fkwu_run.sh`](../../scripts/fkwu_run.sh) → 127). Two honest
-  edges remain: `read_file` itself stays a per-kernel host-io carrier (the staging
-  carrier reads the bytes), and the naive per-byte reader is O(n²) so the carrier
-  stages the relevant rows — a streaming cursor reader is the follow-on for
-  whole-file inputs. The python grammar is a first-breath surface
+  run via [`scripts/fkwu_run.sh`](../../scripts/fkwu_run.sh) → 127). The **whole
+  file** now crosses, not just a slice: [`input-stream.fk`](../../form/form-stdlib/input-stream.fk)
+  (`is-line`/`is-next`/`is-fold`) streams staged input by line — recursion bounded
+  by line count, no O(n²) accumulator — so the full 38KB manifest folds without the
+  byte-deep stack overflow the naive reader hit. And it is a **live, parameterized
+  tool**, not a fixed demo: [`scripts/fkwu_awk.sh`](../../scripts/fkwu_awk.sh)
+  `<file> '<awk-program>'` stages the program + file and runs a numeric field query
+  native on fkwu — `fkwu_awk.sh fourth-arm-bands.txt '$1=="shell-exec"{print $3}'`
+  → 511, matching host awk for every stem. Honest edges: `read_file` stays a
+  per-kernel host-io carrier (the thin carrier reads the bytes; fkwu computes), and
+  the value entry prints a numeric result — a general string/multi-row awk wants the
+  effect entry (`print_str`, as `fsh-main` uses), the named follow-on. The python
+  grammar is a first-breath surface
   (def/call/return/binop/ident/int), not full CPython yet. So "run any script
   through its grammar" is *real and proven for shell*, *early for python*, and
   *growing* for the rest. The cornerstone audit
