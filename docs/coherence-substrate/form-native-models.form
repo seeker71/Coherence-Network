@@ -97,6 +97,38 @@
 ;     distilling/porting ECAPA's weights into our asm lane (the "architecture AND weights are recipe data"
 ;     path). Race design + measured table: experiments/rune-galdr/CHALLENGERS.md (recordings/roster/timeline
 ;     stay private in ~/.coherence-network — voiceprints are biometric).
+;   FLOOR — LLM INFERENCE ON THE BODY (proven 2026-06-24, this session — the rented mind starts coming home):
+;     form-cli's "local" call today is an HTTP POST to ollama (form-cli-ask.fk:79, http://localhost:11434);
+;     ollama/llama.cpp does the forward, fkwu only routes. The body now holds the pieces to do it itself, each
+;     four-way:
+;       WEIGHT-LOAD (M1, whole): gguf-read.fk parses a real GGUF header (LE u8/u32/u64, magic/version/counts →
+;         127); gguf-locate (KV walk skipping the 128k-element vocab arrays in O(1), + tensor-info walk → 127)
+;         finds any tensor — WITNESSED on the real llama3.2:3b ollama serves (scripts/gguf_locate_witness.py:
+;         tinfo_start past 7.8MB of metadata, token_embd Q6_K [3072,128256], blk.0 ffn Q4_K/Q6_K, monotonic
+;         offsets). The dequant MATH was already four-way vs real weights (q4k/q6k-dequant, f16-decode). So:
+;         thin host read → Form finds any tensor → Form dequants to f32. The weight-load rented to ollama is
+;         now a Form body.
+;       NATIVE COMPUTE (M2, first cell): form-asm-matvec.fk fam-dot2 — the matvec inner product as Form→asm
+;         BYTES (fa-ldr-d/fa-fmul/fa-fadd/fa-ret over a buffer, folded tb-dot's downward order) → 127, NO
+;         rustc/clang. Answers "buffer bridge?": there is none — ll-buffer + the four-way float instructions
+;         compose native compute over fkwu's own f64 pool; form-asm bytes → recipe-dylib → fkwu dlopen+call.
+;   NORTH STAR — THE MIND COMES HOME: form-cli's local model calls run inference on the fkwu BODY — the proven
+;     forward recipes (kv-llama-block 255, transformer-generate-cached) over GGUF weights loaded by gguf-locate
+;     + dequant, computed by the form-asm matvec lane — REPLACING the ollama HTTP seam, at vLLM-class speed
+;     (the form-asm/Metal emit lane + batching + paged-KV). One engine: the recipe that proves four-way is the
+;     recipe that lowers to asm bytes; rustc/Go are oracle/walker, never the runtime. lc-cognitive-sovereignty.
+;   GAPS — LLM INFERENCE (ordered; none are new math — forward recipes + dequant + the dot are proven; what
+;   remains is composition + the loop + execution; walked in parallel this session):
+;     A. FULL MATVEC LOOP — wrap the row/col loop around fam-dot2 (form-asm branch/counter/index bytes, the way
+;        ll-buf wraps a loop around alloc/store/load/free) → matvec(W,x,rows,cols) as Form→asm bytes, four-way.
+;     B. EXECUTION WITNESS — form-macho wrap fam-dot2 → recipe-dylib → run → assert d0 == the recipe's dot on
+;        real f64 (the bytes EXECUTE correctly on hardware, beyond byte-identity to the oracle).
+;     C. WEIGHT → ll-buffer LOAD — compose gguf-locate + q6k/q4k-dequant → fill an ll-buffer / fkwu f64 pool
+;        with a real tensor's weights (the buffer the matvec reads), four-way over a real-tensor fixture.
+;     D. COMPOSE BLOCK-0 FORWARD — kv-llama-block (255) over the loaded real weights at real width
+;        (llama3.2:3b d_model=3072) → one block's output vs a reference; stack → logits → the ollama seam retires.
+;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
+;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL
 ;     TRANSLATE through the language-neutral pivot, and text → audio (TTS) — so ANY input voice in ANY tongue
 ;     becomes ANY output voice in ANY tongue, where every stage's architecture AND weights are content-addressed
