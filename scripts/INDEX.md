@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 336
+**Total files**: 337
 
 | File | Purpose |
 |---|---|
@@ -76,6 +76,7 @@
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
 | [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — the native Form kernel that form-cli routes body-first |
+| [ensure_form_cli_native.sh](ensure_form_cli_native.sh) | ensure_form_cli_native.sh — the c-bootstrap fkwu form-cli, warmed once and cached. |
 | [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
