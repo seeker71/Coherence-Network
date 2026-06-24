@@ -1,0 +1,5 @@
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/fnri-standin.fk
+;
+; fnri-audio-standin-band — filesystem stand-in round-trip for audio:pcm16 (not native CoreAudio).
+
+(do (fnri-audio-standin-verdict))
