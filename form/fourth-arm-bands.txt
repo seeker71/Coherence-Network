@@ -754,6 +754,7 @@ rag-index-codec fks 15
 rag-embed fks 15
 fs-list fks 3
 rag-sovereignty-corpus fks 3
+rag-ask-grounded fks 3
 host-filesystem fks 15
 gcd fkc 31
 form-cli-review-gap fkc 63

@@ -1,0 +1,19 @@
+; rag-ask-grounded-band.fk — lexical retrieve ranks the right corpus cell (four-way).
+;
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-ask.fk
+;
+; Two index entries with sovereign lexical vectors. Query "standard receipt" must
+; nearest-neighbor to the sovereignty doc, not the host-kernel doc.
+; Verdict 3: nearest id (1) + top-1 list head (2).
+(do
+    (let index (list
+        (rag-entry "docs/coherence-substrate/standard-receipt.form"
+            (re-vec "standard receipt c-bootstrap toolchain-free"))
+        (rag-entry "docs/coherence-substrate/host-kernel.form"
+            (re-vec "host kernel ports organs resources"))))
+    (let q "standard receipt")
+    (let top (rag-topk (re-vec q) index 1))
+    (add (if (str_eq (ra-nearest-id-for q index)
+                     "docs/coherence-substrate/standard-receipt.form") 1 0)
+         (if (str_eq (nth top 0)
+                     "docs/coherence-substrate/standard-receipt.form") 2 0)))

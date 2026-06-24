@@ -18,8 +18,10 @@ FORM_CLI_SRCS=(
     form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk
     form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk
     form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk
-    form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/form-cli.fk
-    form-stdlib/form-cli-repl.fk
+    form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk
+    form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk
+    form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk
+    form-stdlib/form-cli.fk form-stdlib/form-cli-repl.fk
 )
 mkdir -p form-stdlib/bootstrap
 if fourth_selfhost && fourth_flatten_sources form-cli-build fks form-stdlib/bootstrap/form-cli-table.txt "${FORM_CLI_SRCS[@]}"; then
@@ -34,7 +36,7 @@ else
     "$GB" $FLAT_CHAIN /tmp/flatten.fk > form-stdlib/bootstrap/form-cli-table.txt
 fi
 fourth_hash16 "${FORM_CLI_SRCS[@]}" > form-stdlib/bootstrap/form-cli.stamp
-EMIT_CHAIN="form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/fkc-table-serialize.fk form-stdlib/hati-os-kernel-emit.fk"
+EMIT_CHAIN="form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/host-io-fs-fkwu-emit.fk form-stdlib/fkc-table-serialize.fk form-stdlib/hati-os-kernel-emit.fk"
 d="$(mktemp -d)"
 printf '(fkc-emit-combined-repl "%s")\n' "$(cat form-stdlib/bootstrap/form-cli-table.txt)" > "$d/emit.fk"
 "$GB" $EMIT_CHAIN "$d/emit.fk" > form-stdlib/bootstrap/form-cli-emitted.c

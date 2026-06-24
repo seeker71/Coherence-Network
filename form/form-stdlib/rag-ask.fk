@@ -1,0 +1,44 @@
+; rag-ask.fk — sovereign grounded retrieval over the healed jsonl index (zero Python).
+;
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk
+;           form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk
+;
+; Composes four-way cells (re-vec, ric-*, rag-topk) with kernel host-io read_file
+; only at the orchestration boundary. The ranking is pure Form; the index is WATER
+; written by rag-heal.fk. Output shape for receipts: grounded:<id>
+
+(do
+    (defn ra-default-index () ".coherence-network/rag-index/index.jsonl")
+
+    (defn ra-lines-scan (s i n cur out)
+        (if (ge i n)
+            (if (str_eq cur "") out (re-snoc out cur))
+            (if (str_eq (char_at s i) "\n")
+                (ra-lines-scan s (add i 1) n "" (if (str_eq cur "") out (re-snoc out cur)))
+                (ra-lines-scan s (add i 1) n (str_concat cur (char_at s i)) out))))
+    (defn ra-lines (s) (ra-lines-scan s 0 (str_len s) "" (empty)))
+
+    (defn ra-entry-of-line (line)
+        (rag-entry (ric-id line) (ric-vec line)))
+
+    (defn ra-entries-of (lines)
+        (if (eq (len lines) 0) (empty)
+            (if (str_eq (head lines) "") (ra-entries-of (tail lines))
+                (cons (ra-entry-of-line (head lines))
+                      (ra-entries-of (tail lines))))))
+
+    (defn ra-read-index (index-path)
+        (ra-entries-of (ra-lines (read_file index-path))))
+
+    (defn ra-nearest-id-for (query entries)
+        (rag-nearest-id (re-vec query) entries))
+
+    ; top-1 grounded hit — the R6 retrieval lane before any rented oracle.
+    (defn ra-grounded-at (index-path query)
+        (do (let entries (ra-read-index index-path))
+            (str_concat "grounded:" (ra-nearest-id-for query entries))))
+
+    (defn ra-grounded (query)
+        (ra-grounded-at (ra-default-index) query))
+
+    0)
