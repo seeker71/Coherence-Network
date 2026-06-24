@@ -92,9 +92,11 @@
 | [field_relay_dev_setup.sh](field_relay_dev_setup.sh) | field_relay_dev_setup.sh — provision a session to BUILD + PROVE the field relay's breath-4 carriers. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
-| [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness/resolve/know on c-bootstrap fkwu via fkwu_run.sh. |
+| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | Maintainer regen: flatten fnri/receipt stack into `form-stdlib/bootstrap/form-cli-table.txt` + emit C. |
+| [form-cli-run.sh](form-cli-run.sh) | Minimal stdin carrier for `form/form-cli` — one line piped, then EOF. |
+| [fkwu_fnri.sh](fkwu_fnri.sh) | Thin wrapper → `form-cli-run.sh fnri …` (logic in `fnri-shell.fk` / `form-cli.fk`). |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
-| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — lightweight fkwu_run.sh witness for form-native resource interfaces. |
+| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri witness + resolve smoke via `form-cli-run.sh` (form-cli binary). |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
@@ -340,8 +342,10 @@
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
 | [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
-| [verify_fnri_android_receipt.sh](verify_fnri_android_receipt.sh) | verify_fnri_android_receipt.sh — fnri standard-receipt android runtime row (device). |
-| [verify_fnri_platform_receipt.sh](verify_fnri_platform_receipt.sh) | verify_fnri_platform_receipt.sh — standard-receipt row for fnri on THIS host. |
+| [verify_fnri_metal_standin_receipt.sh](verify_fnri_metal_standin_receipt.sh) | Standard-receipt JSON for audio/video/gpu stand-in bands (15 four-way each). |
+| [verify_fsh_fnri_bootstrap.sh](verify_fsh_fnri_bootstrap.sh) | `form-cli receipt bootstrap` — witness 32767 via native binary. |
+| [verify_fnri_android_receipt.sh](verify_fnri_android_receipt.sh) | fnri android device receipt — catalog, host-io, metal stand-ins, form-cli-band on device. |
+| [verify_fnri_platform_receipt.sh](verify_fnri_platform_receipt.sh) | Full fnri mac receipt: catalog, witness, metal stand-ins, fsh bootstrap, staged band. |
 | [verify_fnri_windows_standalone.sh](verify_fnri_windows_standalone.sh) | verify_fnri_windows_standalone.sh — fnri standard-receipt windows runtime row. |
 | [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | verify_form_native_sovereignty.sh — standard-receipt validation on c-bootstrap fkwu |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |

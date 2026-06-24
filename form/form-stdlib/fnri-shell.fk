@@ -1,0 +1,60 @@
+; fnri-shell.fk — fnri witness / resolve / know via BMF cursor (no tokenizer).
+;
+; form-cli pipes one line on stdin; fnri-parse walks the BMF cursor over that
+; surface and fnri-exec dispatches the fncall AST — same discipline as fsh.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk
+;           form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/fnri-grammar.fk
+;           form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk
+;           form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk
+
+(do
+    (defn fnri-shell-witness () (fnri-witness-verdict))
+
+    (defn fnri-shell-resolve (target protocol)
+        (fnri-resolve-line target protocol))
+
+    (defn fnri-shell-know (slug)
+        (fnri-know-line slug))
+
+    ; host carriers append \n — trim trailing eol only (not tokenization)
+    (defn fnri-shell-trim-chars (s ch)
+        (do (let n (str_len s))
+            (if (le n 0) s
+                (do (let tail (substring s (sub n 1) n))
+                    (if (str_eq tail ch)
+                        (fnri-shell-trim-chars (substring s 0 (sub n 1)) ch)
+                        s)))))
+
+    (defn fnri-shell-trim-eol (s)
+        (fnri-shell-trim-chars (fnri-shell-trim-chars s "\n") "\r"))
+
+    (defn fnri-shell-parse-fail? (node)
+        (node_eq node (intern_trivial_string "PARSE-FAIL")))
+
+    (defn fnri-shell-leaf? (n) (nil? (node_children n)))
+
+    (defn fnri-shell-tag (n)
+        (if (fnri-shell-leaf? n) ""
+            (node_value (head (node_children n)))))
+
+    (defn fnri-shell-arg (n i)
+        (node_value (nth (node_children n) i)))
+
+    (defn fnri-shell-exec (node)
+        (do (let tag (fnri-shell-tag node))
+            (if (str_eq tag "witness") (int_to_str (fnri-shell-witness))
+            (if (str_eq tag "resolve")
+                (fnri-shell-resolve (fnri-shell-arg node 1) (fnri-shell-arg node 2))
+            (if (str_eq tag "know")
+                (fnri-shell-know (fnri-shell-arg node 1))
+                "fnri: witness | resolve <target> <protocol> | know <slug>")))))
+
+    (defn fnri-shell-run (line)
+        (do (let clean (fnri-shell-trim-eol line))
+            (let ast (fnri-parse clean))
+            (if (fnri-shell-parse-fail? ast)
+                "fnri: witness | resolve <target> <protocol> | know <slug>"
+                (fnri-shell-exec ast))))
+
+    0)

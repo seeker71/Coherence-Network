@@ -1,0 +1,43 @@
+; fnri-receipt.fk — standard-receipt lines for form-cli (fkwu-native, no bash).
+;
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
+;           form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk
+;           form-stdlib/form-native-resource-interfaces.fk form-stdlib/fnri-shell.fk
+;           form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk
+;           form-stdlib/fnri-standin.fk
+
+(do
+    (defn fcr-pass? (got want) (if (eq got want) 1 0))
+
+    (defn fcr-platform-line ()
+        (str_concat "claim=fnri-witness witness="
+        (str_concat (int_to_str (fnri-witness-verdict))
+        (str_concat " audio="
+        (str_concat (int_to_str (fnri-audio-standin-verdict))
+        (str_concat " video="
+        (str_concat (int_to_str (fnri-video-standin-verdict))
+        (str_concat " gpu="
+        (str_concat (int_to_str (fnri-gpu-standin-verdict))
+        (str_concat " staged="
+        (int_to_str (fcr-pass? (fnri-witness-verdict) 32767))))))))))))
+
+    (defn fcr-metal-line ()
+        (str_concat "claim=fnri-metal-standin audio="
+        (str_concat (int_to_str (fnri-audio-standin-verdict))
+        (str_concat " video="
+        (str_concat (int_to_str (fnri-video-standin-verdict))
+        (str_concat " gpu="
+        (int_to_str (fnri-gpu-standin-verdict))))))))
+
+    (defn fcr-bootstrap-line ()
+        (str_concat "claim=fnri-bootstrap witness="
+            (int_to_str (fnri-witness-verdict))))
+
+    (defn fc-receipt (arg)
+        (do
+            (if (str_eq arg "platform") (fcr-platform-line)
+                (if (str_eq arg "metal-standin") (fcr-metal-line)
+                    (if (str_eq arg "bootstrap") (fcr-bootstrap-line)
+                        "receipt: platform | metal-standin | bootstrap")))))
+
+    0)

@@ -58,10 +58,9 @@ BAND="(read_file \"$S/form-cli-repl.fk\")"
 
 # Prefer fkwu self-host flatten (no Go) when T_flat + cached fkwu are warm.
 FORM_CLI_SRCS=(
-    "$S/fourth-shim.fk" "$S/core.fk" "$S/resource-port.fk"
-    "$S/bml-native-interface-package-import.fk" "$S/hati-os-targets.fk"
-    "$S/form-native-resource-interfaces.fk" "$S/http-client.fk"
-    "$S/form-cli-ask.fk" "$S/line-grammar.fk" "$S/voice-traits.fk"
+    "$S/fourth-shim.fk" "$S/core.fk" "$S/line-grammar.fk"
+    "$S/resource-port.fk" "$S/bml-native-interface-package-import.fk" "$S/hati-os-targets.fk"
+    "$S/form-native-resource-interfaces.fk" "$S/http-client.fk" "$S/form-cli-ask.fk" "$S/voice-traits.fk"
     "$S/nearest-shape.fk" "$S/co-learning.fk" "$S/co-learning-stream.fk"
     "$S/mesh-dispatch.fk" "$S/surprise-salience.fk" "$S/host-sense-organ.fk"
     "$S/speech-organ.fk" "$S/native-host-instance.fk"

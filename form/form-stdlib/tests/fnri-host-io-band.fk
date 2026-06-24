@@ -1,0 +1,16 @@
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk
+;
+; fnri-host-io-band — host:file dispatch + form-fs round-trip on fkwu (runtime host-io).
+
+(do
+    (let path (str_concat (temp_dir) "/fnri-host-io-band.txt"))
+    (let payload "fnri-host-io")
+    (let _w (fs-write-text path payload))
+    (let body (fs-read-text path))
+    (let disp (fnri-dispatch-for "host:file"))
+    (let c0 (if (str_eq body payload) 1 0))
+    (let c1 (if (str_eq (fnri-dispatch-carrier disp) "filesystem") 2 0))
+    (let c2 (if (str_eq (fnri-dispatch-sense-op disp) "read_file") 4 0))
+    (let entries (fs-list "form-stdlib"))
+    (let c3 (if (gt (len entries) 0) 8 0))
+    (sum (list c0 c1 c2 c3)))

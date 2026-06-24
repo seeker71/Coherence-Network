@@ -1,0 +1,5 @@
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk
+;
+; fnri-gpu-standin-band — host-kernel JIT door stand-in for gpu:compute (not native Metal/CUDA).
+
+(do (fnri-gpu-standin-verdict))

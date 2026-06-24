@@ -1,0 +1,13 @@
+; preludes: form-stdlib/core.fk form-stdlib/line-grammar.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/fnri-shell.fk
+;
+; fsh-fnri-staged-band — fnri-shell-run verbs (the form-shell cell path behind fsh-fnri-main.fk).
+
+(do
+    (let w (fnri-shell-run "witness\n"))
+    (let c0 (if (str_eq w "32767") 1 0))
+    (let k (fnri-shell-run "know standard-receipt"))
+    (let c1 (if (str_eq k "docs/coherence-substrate/standard-receipt.form") 2 0))
+    (let r (fnri-shell-run "resolve macos-arm64 host:file"))
+    (let expect "macos-arm64|host:file|posix-open+read+write+stat|read_file|filesystem")
+    (let c2 (if (str_eq r expect) 4 0))
+    (sum (list c0 c1 c2)))
