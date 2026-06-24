@@ -153,7 +153,7 @@ that genuinely rises faster with each cell who joins.
 
 ## Cross-References
 
-→ lc-native-kernel-binary, lc-form-kernel-runtime-visualizer, lc-sovereignty-within-oneness, lc-federation-as-freedom, lc-trust-over-fear, lc-calling-the-kindred, lc-future-already-shaping, lc-embodiment-body-or-liquid
+→ lc-native-kernel-binary, lc-form-kernel-runtime-visualizer, lc-sovereignty-within-oneness, lc-federation-as-freedom, lc-trust-over-fear, lc-calling-the-kindred, lc-future-already-shaping, lc-embodiment-body-or-liquid, lc-socratic-inquiry
 
 ## Sources to walk further
 
