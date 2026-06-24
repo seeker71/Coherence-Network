@@ -40,6 +40,13 @@ The body’s north star is a **minimal non-Form bootstrap** that replaces itself
 
 This spec is the **collapse plan**: phased moves from today’s honest floor to the standard receipt in `docs/coherence-substrate/standard-receipt.form`, with explicit **stop rules** so effort stops feeding parallel kernels.
 
+## Requirements
+
+- [ ] **R1 — Gate on every validate:** `validate_fkwu_native_surface.py` runs at start of `form/validate.sh` and fails on tag drift or missing `fkc-flat` coverage.
+- [ ] **R2 — Manifest is source of truth:** `native-op-manifest.fk` drives `flt-ops` via generator; no hand-edited per-op tags without manifest row.
+- [ ] **R3 — Sibling freeze:** Go/Rust/TS accept oracle-only changes; new natives land in Form stdlib + fkwu emit chain only.
+- [ ] **R4 — Receipt honesty:** Standard receipt rows stay `pending` until c-bootstrap fkwu + form-cli traces exist on mac/windows/android.
+
 ## Stop rules (effective immediately)
 
 | Action | Verdict |
@@ -115,6 +122,52 @@ bootstrap bytes (form-asm, once)
         ↓
    next fkwu / dylibs / tables (content-addressed)
 ```
+
+## Files to Create/Modify
+
+- `form/scripts/validate_fkwu_native_surface.py` — Phase 0 gate
+- `form/scripts/gen_flt_ops_from_manifest.py` — manifest → flt-ops generator
+- `form/scripts/sync_native_op_manifest.py` — drift check between manifest and flt-ops
+- `form/form-stdlib/native-op-manifest.fk` — canonical native catalog
+- `form/form-stdlib/form-fs.fk` — first host-io band proving tags 200/202
+- `form/scripts/fourth-arm.sh` — emit chain + Go flatten fallback
+- `form/validate.sh` — invoke gates before band runs
+- `specs/fkwu-only-kernel-collapse.md` — this plan
+
+## Acceptance Tests
+
+- `form/form-stdlib/tests/form-fs-band.fk` — four-way 16383 on fkwu with fs_is_dir + source_inventory
+- `form/scripts/validate_fkwu_native_surface.py` — exits 0 with 107 manifest rows
+- `form/scripts/gen_flt_ops_from_manifest.py` — exits 0 aligned with manifest
+
+## Verification
+
+```bash
+cd form && python3 scripts/validate_fkwu_native_surface.py \
+  && python3 scripts/gen_flt_ops_from_manifest.py \
+  && python3 scripts/sync_native_op_manifest.py \
+  && GO_BIN=./form-kernel-go/bin-go ./validate.sh \
+    form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk
+```
+
+## Out of Scope
+
+- Removing Go/Rust/TS kernels in this phase (Phase 4)
+- form-asm production fkwu build without clang (Phase 2)
+- Platform receipt scripts on mac/windows/android (Phase 3)
+- Arity-class dispatch replacing per-op tags (end of Phase 1 — design only)
+
+## Risks and Assumptions
+
+- **Assumption:** bin-go remains available for maintainer regen (`regen_fkwu_bootstrap.sh`) until Phase 2.
+- **Risk:** Stale `fourth-flatten-table.txt` diverges fkwu flatten from Go path — mitigated by Go fallback and T_flat removal until selfhost arena fix.
+- **Risk:** Parallel edits to `flt-ops` bypass manifest — mitigated by sync gate.
+
+## Known Gaps
+
+- **Follow-up:** T_flat self-host flatten melts on form-fs-sized bands; bands use Go flatten fallback until arena lift (Phase 2).
+- **Follow-up:** `host-kernel-fkwu-native-emit.fk` not wired in emit chain (conflicts with fs_list tag 132); use `host-io-fs-fkwu-emit.fk` for tags 200/202 only.
+- **Follow-up:** Bootstrap `fkwu-uni.c` must be regen'd when `FOURTH_EMIT_CHAIN` changes via `scripts/regen_fkwu_bootstrap.sh`.
 
 ## Research inputs
 

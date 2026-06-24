@@ -46,15 +46,57 @@ Ship the universal kernel (fkwu) as the **only** host resource runtime on the st
 
 ## Requirements
 
-- **R1 — No Go emission on receipt path:** Retire `build-form-cli.sh` / `fourth-arm.sh` dependence on `form-kernel-go/bin-go` for flatten and `fkc-emit-universal` on the path that earns `standard-receipt.form`. Replace with c-bootstrap chain: `bootstrap-host` → `form-flatten` (recipe) → `form-asm` / `form-macho` / `form-pe-coff` / `form-elf` → fkwu.
+- [ ] **R1 — No Go emission on receipt path:** Retire `build-form-cli.sh` / `fourth-arm.sh` dependence on `form-kernel-go/bin-go` for flatten and `fkc-emit-universal` on the path that earns `standard-receipt.form`. Replace with c-bootstrap chain: `bootstrap-host` → `form-flatten` (recipe) → `form-asm` / `form-macho` / `form-pe-coff` / `form-elf` → fkwu.
 
-- **R2 — Class-based platform binding:** `fkwu-platform-host.bml` defines `HostPlatformId`, `IPlatformHostCarrier`, and `IPlatformResourceImpl` templates. Each resource has `Mac*`, `Windows*`, `Android*` implementation classes. `HostPlatformRegistry` resolves `(platform, resource) → carrier record`.
+- [ ] **R2 — Class-based platform binding:** `fkwu-platform-host.bml` defines `HostPlatformId`, `IPlatformHostCarrier`, and `IPlatformResourceImpl` templates. Each resource has `Mac*`, `Windows*`, `Android*` implementation classes. `HostPlatformRegistry` resolves `(platform, resource) → carrier record`.
 
-- **R3 — Port-shaped APIs only:** New features use `resource-port.fk` shapes and `host-kernel-interface.bml` catalog entries. HTTP and SSE are **WorldNetwork** bytes ports; filesystem is **WorldFilesystem**; GPU is **OrganGpu** via host JIT door; RAM is **OrganRam** + `storage-port` memory carrier.
+- [ ] **R3 — Port-shaped APIs only:** New features use `resource-port.fk` shapes and `host-kernel-interface.bml` catalog entries. HTTP and SSE are **WorldNetwork** bytes ports; filesystem is **WorldFilesystem**; GPU is **OrganGpu** via host JIT door; RAM is **OrganRam** + `storage-port` memory carrier.
 
-- **R4 — Full fkwu natives:** Every `RUNS` primitive in the contract has a `form-flatten.fk` tag and a platform C arm (or pure-Form table row). Gap natives 127–140 must four-way without segfault.
+- [ ] **R4 — Full fkwu natives:** Every `RUNS` primitive in the contract has a `form-flatten.fk` tag and a platform C arm (or pure-Form table row). Gap natives 127–140 must four-way without segfault.
 
-- **R5 — Local retrieval:** `docs/coherence-substrate/fkwu-native-host-platform.form` is the canonical architecture cell; agents read it via substrate ingest / `form-cli ask` before implementing host features.
+- [ ] **R5 — Local retrieval:** `docs/coherence-substrate/fkwu-native-host-platform.form` is the canonical architecture cell; agents read it via substrate ingest / `form-cli ask` before implementing host features.
+
+## Files to Create/Modify
+
+- `docs/coherence-substrate/fkwu-native-host-platform.form` — architecture cell
+- `form/form-stdlib/bml/fkwu-platform-host.bml` — platform carrier contracts
+- `form/form-stdlib/bml/form-fs.bml` — filesystem BML interface
+- `form/form-stdlib/form-fs.fk` — Form filesystem recipes
+- `form/form-stdlib/host-io-fs-fkwu-emit.fk` — fkwu C arms for fs natives
+- `form/form-stdlib/fkwu-platform-host-carrier.fk` — runtime dispatch
+- `form/form-stdlib/tests/form-fs-band.fk` — four-way proof band
+
+## Acceptance Tests
+
+- `form/form-stdlib/tests/form-fs-band.fk` — verdict 16383 four-way
+- `form/form-stdlib/tests/host-kernel-gaps-close-band.fk` — gap natives without segfault
+- `form/form-stdlib/tests/fkwu-platform-host-band.fk` — platform carrier shape
+
+## Verification
+
+```bash
+cd form && GO_BIN=./form-kernel-go/bin-go ./validate.sh \
+  form-stdlib/core.fk form-stdlib/form-fs.fk form-stdlib/tests/form-fs-band.fk
+python3 scripts/validate_commit_evidence.py \
+  --file docs/system_audit/commit_evidence_2026-06-24_fkwu_kernel_collapse_form_fs.json
+```
+
+## Out of Scope
+
+- Composting Go/Rust/TS walking kernels (tracked in `specs/fkwu-only-kernel-collapse.md` Phase 4)
+- SSE stream native tag (TBD in resource map)
+- Android carrier implementation beyond dispatch-shape proof
+
+## Risks and Assumptions
+
+- **Assumption:** Clang remains bootstrap compiler for fkwu until form-asm Phase 2 lands.
+- **Risk:** Platform-specific C arms diverge on Windows CRLF selfhost flatten — gated off on Windows today.
+
+## Known Gaps
+
+- **Follow-up:** Standard receipt platform rows (`mac`, `windows`, `android`) remain `pending` for host-metal bands (Phase 3).
+- **Follow-up:** T_flat self-host removed until arena supports form-fs flatten; Go fallback carries bands (Phase 2).
+- **Follow-up:** SSE and thread pool natives lack dedicated flatten tags — task to add manifest rows when carriers land.
 
 ## Resource map (implement new features here)
 
