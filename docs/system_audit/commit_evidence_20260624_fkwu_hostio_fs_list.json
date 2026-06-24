@@ -64,6 +64,8 @@
     "FKWU native-exe witness of the rag-heal enumerate->read->write loop: an inline band over /tmp/rhbody (a.fk, b.fk, skip.txt) flattened to a table and run on the fkwu binary enumerated via fs_list, filtered to .fk (skip.txt excluded), read both files via read_file, concatenated, wrote via write_file_text, and read back 36 bytes - the exact two .fk bodies. The whole host-io loop runs on the fkwu native exe.",
     "SERIALIZER PRECEDENT: the as_nid:null crash on adding tag 132 is the SAME class as the trivial-typed-leaf precedent in fourth-arm-bands.txt (tags 112/113 needed unary serializer rows beside tag 43, else they fell to the binary fallback and read a missing second child). Fixed by adding the unary fkc-flat row for 132.",
     "OPCODE COLLISION root-caused: 112 (the first choice) was already a live fk_walk dispatch arm (intern_trivial_bool); fs_list moved to a free opcode 132 (verified free by enumerating all walker tags + flatten opcodes).",
+    "T_FLAT REGENERATED for the self-host flatten lane: upstream (PR #3621, 9bbf56639) added fourth-flatten-driver.fk + a committed bootstrap table form-stdlib/fourth-flatten-table.txt (T_flat) that fkwu walks to flatten every band, taking bin-go out of the per-band flatten path. Adding the fs_list row to form-flatten.fk's flt-ops means the committed T_flat (frozen before op 132) had to be rebuilt so the self-hosted flattener recognizes fs_list -> 132. Rebuilt via the bin-go bootstrap (cat FOURTH_CHAIN + the fks-table-file flatten expr for the driver), peak RSS 1.5GB (well under the 16GB kernel-memory-witness cap; the historical ~24GB figure predates upstream emitter improvements). The fkwu fixed-arena self-host bootstrap of T_flat itself bus-errors parsing hati-os-kernel-emit.fk's string literals, so the bin-go bootstrap remains the rebuild path. New table 658020 bytes (was 635435) - the delta is exactly the new flt-ops row data.",
+    "FULL SUITE re-run on the regenerated T_flat: ./validate.sh -> '951 ok, 2 divergent', 'fourth arm: 637 band(s) four-way (fkwu + pre-flattened tables)'. The 2 divergences (block-join-carrier-export, shell-awk-staged) are THREE-KERNEL-ONLY bands (absent from fourth-arm-bands.txt, so T_flat cannot be their cause) and pre-existing: block-join differs only in go-vs-rust float-repr last digit (...562 vs ...563); shell-awk-staged is 'unbound function input_byte' in go AND rust (input-stream.fk:35, untouched here). Both still diverge with the old HEAD T_flat restored - confirmed independent of this change. cooldown-band -> 63 four-way is the regression canary: the regenerated T_flat flattens existing bands identically.",
     "WINDOWS / ANDROID PENDING: not run this session; not faked. fs_list uses <dirent.h> guarded by __has_include; the Windows carrier path in scripts/fourth-arm.sh would need a readdir shim, not yet observed.",
     "C-BOOTSTRAP / TOOLCHAIN-FREE PENDING on all platforms: per docs/coherence-substrate/standard-receipt.form, four-way-in-CI is NOT the platform receipt, a Go-emitted+clang-compiled fkwu is NOT c-bootstrap, and bash-driven validate.sh is NOT toolchain-free."
   ],
@@ -72,6 +74,7 @@
     "form/form-stdlib/form-flatten.fk",
     "form/form-stdlib/rag-heal.fk",
     "form/form-stdlib/tests/fs-list-band.fk",
+    "form/form-stdlib/fourth-flatten-table.txt",
     "form/fourth-arm-bands.txt",
     "specs/form-cli-self-healing-memory.md",
     "docs/system_audit/commit_evidence_20260624_fkwu_hostio_fs_list.json"
@@ -83,10 +86,12 @@
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/fs-list-band.fk -> '3', 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)', '1 ok, 0 divergent'",
       "fkwu native-exe direct: (len (fs_list \"form-stdlib\")) -> 598; fs-list membership band -> 3",
       "fkwu native-exe direct: rag-heal enumerate->read->write loop over /tmp/rhbody -> 36 bytes written (skip.txt excluded), index round-tripped",
-      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260624_fkwu_hostio_fs_list.json -> exit 0"
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260624_fkwu_hostio_fs_list.json -> exit 0",
+      "cd form && ./validate.sh (full suite, regenerated T_flat) -> '951 ok, 2 divergent', 'fourth arm: 637 band(s) four-way'; the 2 divergences are pre-existing three-kernel-only bands (block-join-carrier-export float-repr, shell-awk-staged input_byte), independent of T_flat"
     ],
     "fourth_arm_outputs": [
-      "fs-list: 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' (-> 3) - mac observed"
+      "fs-list: 'fourth arm: ... four-way (fkwu + pre-flattened tables)' (-> 3) - mac observed",
+      "rag-index-codec -> 15, rag-embed -> 15, rag-freshness -> 63, rag-adaptive-k -> 15, cooldown -> 63, alert-gate -> 127 - all four-way on the regenerated T_flat"
     ]
   },
   "ci_validation": {
