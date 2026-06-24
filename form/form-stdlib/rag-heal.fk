@@ -1,0 +1,42 @@
+; rag-heal.fk — the self-healing memory loop as the recipe the kernel runs.
+;
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/rag-key.fk form-stdlib/rag-freshness.fk
+;
+; The body is Form; the kernel is the runtime; no Python in this lane. The pure
+; DECISIONS are already four-way + fkwu — the content key (rag-key.fk → 7), the
+; freshness delta (rag-freshness.fk → 63), the retrieval depth (rag-adaptive-k.fk
+; → 15), the ranking (rag-retrieve.fk → 31). This recipe is the host-io ORCHESTRATION
+; over them: read a file through the kernel's host-io and key it, and sense whether a
+; cached key still matches. host-read is the one crossing; the arithmetic stays Form.
+;
+; Host-io is non-deterministic, so this lane is kernel-witnessed (Go now; the
+; fkwu-native exe is the platform step), NOT part of the four-way output floor —
+; exactly as host-exec/host-read/host-write are documented in the kernel. The
+; embedding step is a local-oracle model-door crossing (ollama via host-exec),
+; ledgered by form-cli-membrane.fk; enumerating brand-new files needs a directory
+; -list host-io op the kernel does not yet carry — that absorb path is the named
+; gap, while drift and orphan healing are fully Form over host-read.
+;
+; host-read/host-write are Go-kernel + fkwu-native-exe builtins (the Rust/TS walkers
+; do not carry them), so this lane is single-runtime by design, NOT in the fourth-arm
+; manifest. Witness (writes a known text, reads+keys it back, senses fresh-vs-drift,
+; all in Form on the kernel — zero Python; Go leg → 7):
+;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/adler32.fk \
+;     form-stdlib/rag-key.fk form-stdlib/rag-freshness.fk form-stdlib/rag-heal.fk \
+;     <a (do (host-write ...) (rk-text-key ...) (rh-file-key ...) ...) band>
+
+(do
+    ; the content key of a FILE: read via kernel host-io, then key the bytes in Form.
+    (defn rh-file-key (path) (rk-text-key (host-read path)))
+
+    ; is a cached key still the file's current key? (1 fresh, 0 drifted/missing)
+    (defn rh-fresh? (path cached-key) (if (str_eq (rh-file-key path) cached-key) 1 0))
+
+    ; sense one cell against the cache: a rag-freshness entry (id key) is stale when
+    ; the file at `id` keys differently than the entry holds. Reuses rf-stale? — the
+    ; same four-way delta logic, fed the file's live key through host-io.
+    (defn rh-cell-stale? (id cached-key)
+        (rf-stale? (rf-entry id (rh-file-key id))
+                   (list (rf-entry id cached-key))))
+
+    0)

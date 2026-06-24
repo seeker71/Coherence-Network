@@ -117,7 +117,7 @@
 | [form_cli_neural_lm_train.sh](form_cli_neural_lm_train.sh) | form_cli_neural_lm_train.sh — train the Form-native neural LM (neural-lm.fk) on the |
 | [form_cli_preflight.sh](form_cli_preflight.sh) | form_cli_preflight.sh — air-gap readiness check for the form-cli. |
 | [form_cli_prove4.sh](form_cli_prove4.sh) | form_cli_prove4.sh — promote a closed recipe to a FOUR-WAY-proven stdlib cell. |
-| [form_cli_rag.py](form_cli_rag.py) | form_cli_rag.py — offline semantic memory for the form-cli's local oracle. |
+| [form_cli_rag.py](form_cli_rag.py) | form_cli_rag.py — RETIRING bootstrap bridge for the form-cli's self-healing memory. |
 | [form_cli_replay.sh](form_cli_replay.sh) | form_cli_replay.sh — measure how the native models do against the agent. |
 | [form_cli_roadmap.sh](form_cli_roadmap.sh) | form_cli_roadmap.sh — list the floor->north-star steps and the next one to build. |
 | [form_cli_self_review.sh](form_cli_self_review.sh) | form_cli_self_review.sh — the self-review flywheel, driven through form-cli. |

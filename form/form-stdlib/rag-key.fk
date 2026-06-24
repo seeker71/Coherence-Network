@@ -1,0 +1,28 @@
+; rag-key.fk — the content-addressed freshness key, in Form.
+;
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk
+;
+; The coordinate the self-healing index turns on: a content hash of the source
+; bytes, computed in Form (adler32 over the byte list) — never a host hash library,
+; never mtime. mtime lies across clones and checkouts; the body's own axiom is the
+; content. str-bytes lifts a string to the byte list adler32 folds (ord each char,
+; adler32's byte-mask keeps the low 8 bits), so the key is identical on Go, Rust,
+; TS, and fkwu. The arithmetic is four-way; keying a FILE adds one host-io crossing
+; (host-read), which lives in the host-io orchestration (rag-heal), outside this
+; four-way floor by design — host-io is non-deterministic. Written in BML so it
+; composes with adler32.fk's class (the same dialect carries the call), mirroring
+; pack-manifest.fk's pm-ascii-bytes / pm-hash.
+;
+; Proven by: form-stdlib/tests/rag-key-band.fk (four-way at validate.sh)
+
+section [form.bml] {
+    // string -> byte list (ASCII: byte == scalar). ord each char, source order.
+    def rk-bytes-loop(s, i, n, acc) = if ge(i, n) then reverse(acc) else rk-bytes-loop(s, add(i, 1), n, cons(ord(char_at(s, i)), acc));
+    def str-bytes(s) = rk-bytes-loop(s, 0, str_len(s), empty);
+
+    // the content key of a text: adler32 of its bytes, as a decimal string
+    // (string-shaped so it slots straight into rag-freshness's (id key) pairs).
+    def rk-text-key(txt) = int_to_str(adler32(str-bytes(txt)));
+
+    0;
+}

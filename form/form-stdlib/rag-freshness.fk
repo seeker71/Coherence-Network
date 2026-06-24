@@ -1,0 +1,69 @@
+; rag-freshness.fk — the RAG index is WATER: a materialized cache derived from the
+; body, kept fresh by content-addressing. This recipe is the freshness DECISION:
+; given the body's current cells and the index's cached cells — each named by its
+; content key (a hash of source bytes) — it names the delta to heal.
+;
+; preludes: form-stdlib/core.fk
+;
+; The carrier (scripts/form_cli_rag.py) reads bytes and computes each key (host-IO,
+; like rag-retrieve's embed call); THIS decides what drifted, exactly as rag-retrieve
+; keeps the ranking in Form while the embedder stays a carrier. Pure list/string
+; arithmetic — the same delta on Go, Rust, TS, and fkwu.
+;
+; A cell entry is (id key): id = the source's address (path), key = its content hash.
+;   body  = the cells that exist on disk right now
+;   index = the cells the cache currently holds
+; The three sets that make the cache self-heal (git-like tiny deltas):
+;   heal-set = body cells missing from the index OR whose key drifted  -> (re)embed
+;   orphans  = index cells whose source no longer exists               -> compost
+;   fresh?   = heal-set and orphans both empty                         -> cache == body
+;
+; Proven by: form-stdlib/tests/rag-freshness-band.fk (four-way at validate.sh)
+
+(do
+    ; --- an entry: (id key) ---
+    (defn rf-entry (id key) (list id key))
+    (defn rf-id  (e) (nth e 0))
+    (defn rf-key (e) (nth e 1))
+
+    ; --- key lookup: the key an id carries in a list, or "" if the id is absent ---
+    ; (keys are non-empty content hashes, so "" is an unambiguous "not present").
+    (defn rf-key-of (id es)
+        (if (eq (len es) 0) ""
+            (if (str_eq (rf-id (head es)) id) (rf-key (head es))
+                (rf-key-of id (tail es)))))
+
+    (defn rf-has? (id es) (if (str_eq (rf-key-of id es) "") 0 1))
+
+    ; --- STALE: a body cell is stale vs the index if missing or drifted ---
+    ;   missing  -> the index has no key for this id
+    ;   drifted  -> the index's key differs from the body's current key
+    (defn rf-stale? (be index)
+        (do (let ik (rf-key-of (rf-id be) index))
+            (if (str_eq ik "") 1
+                (if (str_eq ik (rf-key be)) 0 1))))
+
+    ; --- HEAL-SET: the body cells to (re)embed, source order preserved ---
+    (defn rf-heal-set (body index)
+        (if (eq (len body) 0) (empty)
+            (if (eq (rf-stale? (head body) index) 1)
+                (cons (head body) (rf-heal-set (tail body) index))
+                (rf-heal-set (tail body) index))))
+
+    ; --- ORPHANS: index cells whose source is gone — to compost ---
+    (defn rf-orphans (index body)
+        (if (eq (len index) 0) (empty)
+            (if (eq (rf-has? (rf-id (head index)) body) 0)
+                (cons (head index) (rf-orphans (tail index) body))
+                (rf-orphans (tail index) body))))
+
+    ; --- FRESH?: nothing to heal and nothing orphaned — the cache equals the body ---
+    (defn rf-fresh? (body index)
+        (if (and (eq (len (rf-heal-set body index)) 0)
+                 (eq (len (rf-orphans index body)) 0)) 1 0))
+
+    ; --- counts for the trust readout (how far the cache drifted) ---
+    (defn rf-stale-count  (body index) (len (rf-heal-set body index)))
+    (defn rf-orphan-count (index body) (len (rf-orphans index body)))
+
+    0)
