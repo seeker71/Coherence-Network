@@ -929,3 +929,4 @@ channel-query fks 5
 shamballa-channel fks 1111111111
 ml-flow fks 5
 gguf-read fks 127
+gguf-locate fks 127

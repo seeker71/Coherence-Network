@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 330
+**Total files**: 331
 
 | File | Purpose |
 |---|---|
@@ -156,6 +156,7 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | V2 iteration — push harder on the two weakest rounds (plan + aerial). |
 | [generate_visuals.py](generate_visuals.py) | Pre-generate all Pollinations images and save as static assets. |
 | [generate_work_visuals.py](generate_work_visuals.py) | Generate hero images for works (asset nodes with creation_kind). |
+| [gguf_locate_witness.py](gguf_locate_witness.py) | gguf_locate_witness.py — witness that the FOUR-WAY-PROVEN Form GGUF locate logic |
 | [ghx.sh](ghx.sh) | _no top-of-file purpose_ |
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
