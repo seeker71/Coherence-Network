@@ -2,9 +2,8 @@
 # verify_form_native_sovereignty.sh — standard-receipt validation on c-bootstrap fkwu
 # form-cli with native JIT. The RECEIPT phase runs with no go/rust/clang on PATH.
 #
-# Uses the warmed artifacts when present (form/form-cli, form-stdlib/.cache/fourth/fkwu-*).
-# One-time bootstrap (go flattener + clang) only when SOVEREIGNTY_ALLOW_BOOTSTRAP=1
-# and a cache entry is missing — same honest floor as ensure_form_cli_native.sh.
+# Uses committed bootstrap C (no Go emit) + warmed binaries. Clang only when
+# SOVEREIGNTY_ALLOW_BOOTSTRAP=1 compiles a missing cache entry.
 #
 # Usage:
 #   ./scripts/verify_form_native_sovereignty.sh
@@ -35,12 +34,8 @@ run_cli() {
 # ── Phase A: use warmed c-bootstrap form-cli (build only when missing) ────────
 if [[ ! -x "$CLI" ]]; then
   if [[ "${SOVEREIGNTY_ALLOW_BOOTSTRAP:-0}" == 1 ]]; then
-    note "bootstrap: form-cli absent — one-time build (go+clang via build-form-cli.sh)..."
-    if [[ ! -x "$GO_BIN" ]]; then
-      command -v go >/dev/null 2>&1 || fail "no bin-go and no go toolchain for bootstrap build"
-      (cd "$FORM/form-kernel-go" && go build -o bin-go .)
-    fi
-    command -v clang >/dev/null 2>&1 || fail "clang required for one-time form-cli build (not at runtime)"
+    note "bootstrap: form-cli absent — compile from bootstrap C (clang only, no Go)..."
+    command -v clang >/dev/null 2>&1 || fail "clang required for one-time form-cli link (not at runtime)"
     (cd "$FORM" && ./build-form-cli.sh)
   else
     fail "form-cli missing at $CLI — warm with scripts/ensure_form_cli_native.sh or SOVEREIGNTY_ALLOW_BOOTSTRAP=1"
@@ -85,14 +80,14 @@ cd "$FORM"
 source scripts/fourth-arm.sh
 
 # Prefer the content-stamped cache; only invoke go+clang build when absent.
-stamp="$(fourth_hash16 "${FOURTH_CHAIN[@]}" "$GO_BIN")"
+stamp="$(fourth_fkwu_cache_stamp)"
 cached_fkwu="$FOURTH_DIR/fkwu-$stamp"
 if [[ -x "$cached_fkwu" ]]; then
   FKWU="$cached_fkwu"
 else
   if [[ "${SOVEREIGNTY_ALLOW_BOOTSTRAP:-0}" == 1 ]]; then
-    note "bootstrap: fkwu cache miss — one-time build (go+clang)..."
-    build_fourth
+    note "bootstrap: fkwu cache miss — compile from bootstrap uni.c (clang only, no Go)..."
+    FORM_STANDARD_LANE=0 build_fourth
   else
     fail "fkwu cache missing ($cached_fkwu) — warm once via validate.sh/fourth-arm or SOVEREIGNTY_ALLOW_BOOTSTRAP=1"
   fi

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # build-form-cli.sh — produce the standalone native form-cli binary.
 #
-# Build-time uses the bootstrap kernel (to flatten form-cli + emit the C) and
-# clang (to compile) ONCE. The result — form/form-cli — is self-contained: it
-# runs directly with NO Go, NO clang, NO C source, NO table file, nothing but the
-# native binary and stdin. The form-cli program is baked into the binary as
-# fk_prog (see fkc-emit-combined-repl in form-stdlib/hati-os-kernel-emit.fk).
+# Build-time honest floor (2026-06-24):
+#   FLATTEN — fkwu+T_flat (no Go) when warm; bin-go fallback when cold
+#   EMIT    — committed bootstrap/form-cli-emitted.c (no Go); bin-go when stale
+#   LINK    — clang compiles C (pending: form-macho universal walker); skipped in FORM_STANDARD_LANE
+# Runtime: the resulting form-cli runs toolchain-free.
 #
 #   ./build-form-cli.sh            # -> form/form-cli
 #   echo ping | ./form-cli        # -> pong   (no toolchain present)
@@ -17,6 +17,13 @@ S=form-stdlib
 GB=form-kernel-go/bin-go
 OUT="${1:-form-cli}"
 CC_BIN="${CC:-clang}"
+CLI_BOOTSTRAP_C="$S/bootstrap/form-cli-emitted.c"
+CLI_BOOTSTRAP_STAMP="$S/bootstrap/form-cli.stamp"
+
+if [[ "${FORM_STANDARD_LANE:-0}" == 1 && -x "$OUT" ]]; then
+    echo "standard lane: $OUT present (no build)" >&2
+    exit 0
+fi
 
 is_windows_host() {
     [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]
@@ -34,8 +41,10 @@ patch_windows_emitted_c() {
     sed -i 's|extern void \*dlopen(const char \*, int); extern void \*dlsym(void \*, const char \*);|static void *dlopen(const char *p, int f) { (void)p; (void)f; return 0; } static void *dlsym(void *h, const char *s) { (void)h; (void)s; return 0; }|' "$c_file"
 }
 
-[[ -x "$GB" ]] || ( echo "building bootstrap kernel..."; cd form-kernel-go && go build -o bin-go . )
-command -v "$CC_BIN" >/dev/null || { echo "${CC_BIN} is required at BUILD time (not at run time)"; exit 1; }
+[[ -x "$GB" ]] || { [[ "${FORM_ALLOW_BOOTSTRAP_EMIT:-0}" == 1 ]] && ( echo "building bootstrap kernel..."; cd form-kernel-go && go build -o bin-go . ); }
+if [[ "${FORM_STANDARD_LANE:-0}" != 1 ]]; then
+    command -v "$CC_BIN" >/dev/null || { echo "${CC_BIN} is required at BUILD time (not at run time)"; exit 1; }
+fi
 
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
@@ -48,14 +57,53 @@ FLAT_CHAIN="$EMIT_CHAIN $S/form-parse.fk $S/form-flatten.fk"
 MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/resource-port.fk\") (read_file \"$S/bml-native-interface-package-import.fk\") (read_file \"$S/hati-os-targets.fk\") (read_file \"$S/form-native-resource-interfaces.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/line-grammar.fk\") (read_file \"$S/voice-traits.fk\") (read_file \"$S/nearest-shape.fk\") (read_file \"$S/co-learning.fk\") (read_file \"$S/co-learning-stream.fk\") (read_file \"$S/mesh-dispatch.fk\") (read_file \"$S/surprise-salience.fk\") (read_file \"$S/host-sense-organ.fk\") (read_file \"$S/speech-organ.fk\") (read_file \"$S/native-host-instance.fk\") (read_file \"$S/form-cli.fk\"))"
 BAND="(read_file \"$S/form-cli-repl.fk\")"
 
+# Prefer fkwu self-host flatten (no Go) when T_flat + cached fkwu are warm.
+FORM_CLI_SRCS=(
+    "$S/fourth-shim.fk" "$S/core.fk" "$S/resource-port.fk"
+    "$S/bml-native-interface-package-import.fk" "$S/hati-os-targets.fk"
+    "$S/form-native-resource-interfaces.fk" "$S/http-client.fk"
+    "$S/form-cli-ask.fk" "$S/line-grammar.fk" "$S/voice-traits.fk"
+    "$S/nearest-shape.fk" "$S/co-learning.fk" "$S/co-learning-stream.fk"
+    "$S/mesh-dispatch.fk" "$S/surprise-salience.fk" "$S/host-sense-organ.fk"
+    "$S/speech-organ.fk" "$S/native-host-instance.fk" "$S/form-cli.fk"
+    "$S/form-cli-repl.fk"
+)
+export GO_BIN="$GB"
+# shellcheck source=scripts/fourth-arm.sh
+source scripts/fourth-arm.sh
+stamp="$(fourth_fkwu_cache_stamp)"
+cached_fkwu="$FOURTH_DIR/fkwu-$stamp"
+[[ -x "$cached_fkwu" ]] && FKWU="$cached_fkwu"
+if [[ -z "${FKWU:-}" && "${FORM_STANDARD_LANE:-0}" != 1 ]]; then
+    build_fourth >/dev/null 2>&1 || true
+fi
+
+want_cli_stamp="$(fourth_hash16 "${FORM_CLI_SRCS[@]}")"
+
 # 1. flatten form-cli-repl into its program table (string pool rides behind it).
-echo "(fks-table-file (flt-band-sources-fns $MODS $BAND) (flt-band-sources-pool $MODS $BAND))" > "$W/flatten.fk"
-"$GB" $FLAT_CHAIN "$W/flatten.fk" > "$W/table.txt"
+if [[ -s "$S/bootstrap/form-cli-table.txt" && "$(cat "$CLI_BOOTSTRAP_STAMP" 2>/dev/null)" == "$want_cli_stamp" ]]; then
+    cp "$S/bootstrap/form-cli-table.txt" "$W/table.txt"
+    echo "  flatten: bootstrap table (no Go)" >&2
+elif fourth_selfhost && fourth_flatten_sources form-cli-build fks "$W/table.txt" "${FORM_CLI_SRCS[@]}"; then
+    echo "  flatten: fkwu self-host (no Go)" >&2
+else
+    [[ -x "$GB" ]] || { echo "bin-go required for flatten; run scripts/regen_form_cli_bootstrap.sh or set FORM_ALLOW_BOOTSTRAP_EMIT=1"; exit 1; }
+    echo "(fks-table-file (flt-band-sources-fns $MODS $BAND) (flt-band-sources-pool $MODS $BAND))" > "$W/flatten.fk"
+    "$GB" $FLAT_CHAIN "$W/flatten.fk" > "$W/table.txt"
+    echo "  flatten: bin-go (fkwu self-host unavailable)" >&2
+fi
 [[ -s "$W/table.txt" ]] || { echo "flatten produced no table"; exit 1; }
 
 # 2. emit the combined walker with the table baked in (fk_prog).
-printf '(fkc-emit-combined-repl "%s")\n' "$(cat "$W/table.txt")" > "$W/emit.fk"
-"$GB" $EMIT_CHAIN "$W/emit.fk" > "$W/form-cli.c"
+if [[ -s "$CLI_BOOTSTRAP_C" && "$(cat "$CLI_BOOTSTRAP_STAMP" 2>/dev/null)" == "$want_cli_stamp" ]]; then
+    cp "$CLI_BOOTSTRAP_C" "$W/form-cli.c"
+    echo "  emit: bootstrap (no Go)" >&2
+else
+    [[ -x "$GB" ]] || { echo "bin-go required for emit; run scripts/regen_form_cli_bootstrap.sh"; exit 1; }
+    printf '(fkc-emit-combined-repl "%s")\n' "$(cat "$W/table.txt")" > "$W/emit.fk"
+    "$GB" $EMIT_CHAIN "$W/emit.fk" > "$W/form-cli.c"
+    echo "  emit: bin-go (bootstrap stale — run scripts/regen_form_cli_bootstrap.sh)" >&2
+fi
 grep -q fk_prog "$W/form-cli.c" || { echo "emit missing baked program"; exit 1; }
 
 # 3. bake the GENESIS — this binary's own Form source — so 'form-cli source' can
@@ -75,6 +123,10 @@ GEN_LEN=$(wc -c < "$W/genesis.txt" | tr -d ' ')
 } >> "$W/form-cli.c"
 
 # 4. compile once -> the standalone native binary (program + own source baked in).
+if [[ "${FORM_STANDARD_LANE:-0}" == 1 ]]; then
+    echo "standard lane: skip clang link (use warmed $OUT)" >&2
+    exit 0
+fi
 out_dir="$(dirname "$OUT")"
 [[ "$out_dir" == "." ]] || mkdir -p "$out_dir"
 clang_args=(
