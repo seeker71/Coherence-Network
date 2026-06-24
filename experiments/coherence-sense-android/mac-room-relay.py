@@ -84,7 +84,7 @@ def _openrouter_key():
 
 
 EYE_MODEL = os.environ.get("ROOM_EYE_MODEL", "google/gemma-4-31b-it:free")  # remote fallback
-EYE_LOCAL = os.environ.get("ROOM_EYE_LOCAL", "moondream")  # local ollama vision (sovereign, free)
+EYE_LOCAL = os.environ.get("ROOM_EYE_LOCAL", "llava:7b")  # local ollama vision (sovereign, free)
 OLLAMA = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 EYE_PROMPT = ("Describe this room scene in ONE concise sentence, then on a second line prefixed "
               "'objects:' list the main concrete objects/people/animals as a comma-separated list. "
