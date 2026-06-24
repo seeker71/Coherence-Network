@@ -49,9 +49,10 @@ def _is_noise(t):
 
 
 def transcribe(wav_path, lang="auto"):
+    # -ng = CPU (no GPU): whisper's Metal init HANGS under launchd's minimal env; CPU is ~8s/pass, reliable.
     # -l auto detects the spoken language (English, Portuguese, ...); a forced lang sharpens accuracy.
     try:
-        out = subprocess.run([WHISPER, "-m", MODEL, "-f", wav_path, "-nt", "-l", lang or "auto"],
+        out = subprocess.run([WHISPER, "-ng", "-m", MODEL, "-f", wav_path, "-nt", "-l", lang or "auto"],
                              capture_output=True, text=True, timeout=90).stdout
         text = " ".join(out.split()).strip()
         return "" if _is_noise(text) else text
@@ -63,7 +64,7 @@ def translate(wav_path):
     # whisper --translate renders any spoken language into English, so a non-English room is understandable.
     # Returns "" for English/near-silence (the source transcript already serves); a real translation else.
     try:
-        out = subprocess.run([WHISPER, "-m", MODEL, "-f", wav_path, "-nt", "-tr"],
+        out = subprocess.run([WHISPER, "-ng", "-m", MODEL, "-f", wav_path, "-nt", "-tr"],
                              capture_output=True, text=True, timeout=90).stdout
         text = " ".join(out.split()).strip()
         return "" if _is_noise(text) else text
@@ -202,7 +203,7 @@ class Relay(BaseHTTPRequestHandler):
                 f.write(data)
             text = transcribe(wav, lang)
             # translation: English rendering when the speech wasn't English; "" when it matches (English/silence)
-            trans = translate(wav) if text else ""
+            trans = translate(wav) if (text and not text.isascii()) else ""  # skip for English
             if trans and trans.strip().lower() == text.strip().lower():
                 trans = ""
             ans = answer(text)
