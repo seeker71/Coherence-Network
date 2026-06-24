@@ -53,6 +53,7 @@
           (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)
           (list "_plus" 2 3)
           (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)
+          (list "str_byte_at" 2 28)
           (list "substring" 3 29) (list "str_find" 3 30)
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
           (list "input_byte" 1 17)

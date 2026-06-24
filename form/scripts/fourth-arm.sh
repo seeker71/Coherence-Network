@@ -34,7 +34,46 @@ FOURTH_CHAIN=(
 FOURTH_SHIM="form-stdlib/fourth-shim.fk"
 FKWU=""
 
+# T_flat — the flattener (form-flatten.fk) flattened once over FOURTH_CHAIN into a
+# committed bootstrap table. fkwu walks it to flatten every band, so bin-go leaves
+# the per-band flatten path. The driver (fourth-flatten-driver.fk) reads a batch
+# request on stdin and prints marker-framed tables — the same ==T-<stem>== /
+# ==T-END== framing the Go path produced, so fourth_run_chunk splits the stream
+# unchanged. Rebuilt only when the flattener source changes (a bin-go bootstrap;
+# see the file header). The trailing fn-0 value + arm profile fkwu prints after
+# ==T-END== falls outside every per-band marker range, so the split ignores it.
+FOURTH_FLATTEN_TABLE="form-stdlib/fourth-flatten-table.txt"
+
 fourth_available() { [[ -n "$FKWU" && -x "$FKWU" ]]; }
+
+# fourth_selfhost — true when the committed flattener table is present, so the
+# fourth arm flattens its own band tables on fkwu. Absent (a partial tree), the
+# flatten falls back to the Go executor path so the suite degrades honestly.
+# Gated to POSIX: on Windows fkwu's read_file reads source through a text-mode
+# open() (CRLF-translated), so the self-flattened table diverges from the Go
+# binary's. mac/linux self-host is proven four-way; the Windows self-host (a
+# binary-mode read_file open) is a named follow-up — Windows keeps bin-go flatten.
+fourth_selfhost() {
+    [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]] && return 1
+    [[ -s "$FOURTH_FLATTEN_TABLE" && -n "$FKWU" && -x "$FKWU" ]]
+}
+
+# fourth_band_request — emit one band's request block for the flatten driver:
+#   stem \n kind \n nmod \n <mod path>*nmod \n <band path>
+# Modules are the shim (always first) then every non-band source in order; the
+# last source is the band — matching fourth_flatten_expr's module/band split.
+fourth_band_request() {
+    local stem="$1" kind="$2"; shift 2
+    local srcs=("$@") count last band i
+    count="${#srcs[@]}"
+    last=$((count - 1))
+    band="${srcs[$last]}"
+    local mods=("$FOURTH_SHIM")
+    for ((i = 0; i < last; i++)); do mods+=("${srcs[$i]}"); done
+    printf '%s\n%s\n%s\n' "$stem" "$kind" "${#mods[@]}"
+    printf '%s\n' "${mods[@]}"
+    printf '%s\n' "$band"
+}
 
 # Portable content hash for cache stamps. macOS ships `shasum`; Linux and Git
 # Bash ship `sha256sum`; they don't overlap. The value is only ever a per-host
@@ -215,8 +254,9 @@ fourth_flatten_expr() {
 }
 
 # fourth_table — cached flattened node-table for one band (path on stdout).
-# Emits through the Go walker on a cache miss; empty output means the band
-# runs three-kernel only this time.
+# Flattens on fkwu (the committed T_flat) on a cache miss, or through the Go
+# executor when the self-host table is absent; empty output means the band runs
+# three-kernel only this time.
 fourth_table() {
     local stem="$1" kind key out d f srcs=()
     kind="$(awk -v b="$stem" '$1==b{print $2; exit}' "$FOURTH_MANIFEST")"
@@ -226,11 +266,20 @@ fourth_table() {
     key="$(fourth_hash16 "${srcs[@]}" "${FOURTH_CHAIN[@]}")"
     out="$FOURTH_DIR/t-$stem-$key.txt"
     if [[ ! -s "$out" ]]; then
-        d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-t.XXXXXX")"
-        cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
-        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
-        "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$out.tmp" && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
-        rm -rf "$d"
+        if fourth_selfhost; then
+            # one-band request → fkwu walks T_flat → marker-framed table; the
+            # trailing fn-0 value + arm profile sit past ==T-END==, outside the range.
+            { printf '1\n'; fourth_band_request "$stem" "$kind" "${srcs[@]}"; } \
+                | "$FKWU" "$FOURTH_FLATTEN_TABLE" 0 2>/dev/null \
+                | sed -n "/^==T-${stem}==\$/,/^==T-END==\$/p" | sed -e '1d' -e '$d' > "$out.tmp"
+            [[ -s "$out.tmp" ]] && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
+        else
+            d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-t.XXXXXX")"
+            cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
+            fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
+            "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$out.tmp" && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
+            rm -rf "$d"
+        fi
     fi
     [[ -s "$out" ]] && printf '%s\n' "$out"
 }
@@ -244,17 +293,25 @@ fourth_table_for_band() {
     fourth_table "$stem"
 }
 
-# fourth_run_chunk — flatten ONE chunk's driver through the Go walker in a
-# single pass, then split the marker-delimited output into per-band tables.
-#   driver: FOURTH_CHAIN  +  (==T-stem== marker, flatten expr)*  +  ==T-END==
+# fourth_run_chunk — flatten ONE chunk in a single pass, then split the
+# marker-delimited output into per-band tables.
+#   driver: self-host → a batch request (nbands + per-band blocks) fkwu walks
+#           through T_flat; Go path → FOURTH_CHAIN + (==T-stem==, flatten expr)*
+#           + ==T-END==
 #   plan:   one "stem<TAB>outpath" line per band, in driver order
+# Both paths emit the same ==T-<stem>== / ==T-END== framing, so the split is
+# identical (the self-host trailing fn-0 value + arm profile sit past ==T-END==).
 # Self-contained (reads only its two files), so it runs safely as a background
 # job: every table publishes atomically (mv -f "$cur.tmp" "$cur"), so parallel
 # chunks never collide. A band whose flatten emits nothing leaves no table and
 # runs three-kernel only — honest degradation, never a red suite.
 fourth_run_chunk() {
     local driver="$1" plan="$2" out_all="$1.out"
-    "$GO_BIN" "$driver" 2>/dev/null > "$out_all" || true
+    if fourth_selfhost; then
+        "$FKWU" "$FOURTH_FLATTEN_TABLE" 0 < "$driver" 2>/dev/null > "$out_all" || true
+    else
+        "$GO_BIN" "$driver" 2>/dev/null > "$out_all" || true
+    fi
     local stems=() outs=() s o
     while IFS=$'\t' read -r s o; do stems+=("$s"); outs+=("$o"); done < "$plan"
     local n="${#stems[@]}" p cur nextmark
@@ -275,11 +332,24 @@ fourth_run_chunk() {
 # cold cache) into ceil(N/batch_max). Chunks fan out across cores in waves of
 # $jobs with a plain `wait` barrier: no busy-poll, no `wait -n`, holds in bash
 # 3.2 (macOS default). Warm runs (missing=0) return before any walker starts.
+# fourth_seal_chunk — close a chunk so fourth_run_chunk emits ==T-END==.
+# Self-host: prepend the band count so the driver's stdin loop knows the batch
+# size. Go path: append the literal end marker.
+fourth_seal_chunk() {
+    local driver="$1" n="$2" selfhost="$3"
+    if [[ "$selfhost" -eq 1 ]]; then
+        { printf '%s\n' "$n"; cat "$driver"; } > "$driver.req" && mv -f "$driver.req" "$driver"
+    else
+        printf '(print "==T-END==")\n' >> "$driver"
+    fi
+}
+
 fourth_prepare_all() {
     fourth_available || return 0
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
     local workdir stem kind key out missing=0 f srcs driver plan cidx=0 ccount=0
     local batch_max="${FOURTH_PREPARE_ALL_BATCH_MAX:-48}"
+    local selfhost=0; fourth_selfhost && selfhost=1
     workdir="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-all.XXXXXX")"
     while read -r stem kind _; do
         [[ -z "$stem" || "$stem" == \#* ]] && continue
@@ -292,19 +362,24 @@ fourth_prepare_all() {
         missing=$((missing + 1))
         if [[ "$ccount" -eq 0 ]]; then        # open a fresh chunk driver + plan
             driver="$workdir/driver-$cidx.fk"; plan="$workdir/plan-$cidx.tsv"
-            cat "${FOURTH_CHAIN[@]}" > "$driver"; : > "$plan"
+            if [[ "$selfhost" -eq 1 ]]; then : > "$driver"; else cat "${FOURTH_CHAIN[@]}" > "$driver"; fi
+            : > "$plan"
         fi
-        printf '(print "==T-%s==")\n' "$stem" >> "$driver"
-        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$driver"
+        if [[ "$selfhost" -eq 1 ]]; then
+            fourth_band_request "$stem" "$kind" "${srcs[@]}" >> "$driver"
+        else
+            printf '(print "==T-%s==")\n' "$stem" >> "$driver"
+            fourth_flatten_expr "$kind" "${srcs[@]}" >> "$driver"
+        fi
         printf '%s\t%s\n' "$stem" "$out" >> "$plan"
         ccount=$((ccount + 1))
         if [[ "$ccount" -ge "$batch_max" ]]; then   # seal a full chunk
-            printf '(print "==T-END==")\n' >> "$driver"
+            fourth_seal_chunk "$driver" "$ccount" "$selfhost"
             cidx=$((cidx + 1)); ccount=0
         fi
     done < "$FOURTH_MANIFEST"
     if [[ "$ccount" -gt 0 ]]; then               # seal the trailing partial chunk
-        printf '(print "==T-END==")\n' >> "$driver"
+        fourth_seal_chunk "$driver" "$ccount" "$selfhost"
         cidx=$((cidx + 1))
     fi
     if [[ "$missing" -eq 0 ]]; then
