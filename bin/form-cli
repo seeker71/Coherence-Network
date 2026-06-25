@@ -36,7 +36,7 @@ ensure_native_cli() {
 
 native_send() {
   b="$(ensure_native_cli)" || exit "$?"
-  (cd "$ROOT" && printf '%s\nquit\n' "$1" | "$b" | sed '/^null$/d')
+  (cd "${HOME:-$ROOT}" && printf '%s\nquit\n' "$1" | "$b" | sed '/^null$/d')
 }
 
 usage() {
@@ -142,7 +142,7 @@ case "$cmd" in
     if [ "$#" -gt 0 ]; then
       exec bash "$ROOT/form/scripts/rag-heal.sh" "$@"
     fi
-    exec bash "$ROOT/form/scripts/rag-heal.sh" "$ROOT/.coherence-network/rag-index/index.jsonl" ;;
+    exec bash "$ROOT/form/scripts/rag-heal.sh" "${HOME:-$ROOT}/.coherence-network/rag-index/index.jsonl" ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;
   asm)       exec bash "$ROOT/scripts/form_cli_asm.sh" "$@" ;;
   gaps)      exec bash "$ROOT/scripts/form_cli_gaps.sh" "$@" ;;

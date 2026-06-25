@@ -20,8 +20,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORM="$ROOT/form"
 GO_ABS="$FORM/form-kernel-go/bin-go"
 [[ -x "$GO_ABS" ]] || (cd "$FORM/form-kernel-go" && go build -o bin-go .)
-cd "$FORM"
-GO="form-kernel-go/bin-go"; STD="form-stdlib"
+GO="$GO_ABS"; STD="$FORM/form-stdlib"
+cd "${HOME:-$ROOT}"
 
 MODEL="coder"; JUDGE="llama3.2:3b"; REMOTE="claude -p"; TRUST=60; RETRIES=1; JUDGE_GATE=0
 while [[ $# -gt 0 ]]; do
