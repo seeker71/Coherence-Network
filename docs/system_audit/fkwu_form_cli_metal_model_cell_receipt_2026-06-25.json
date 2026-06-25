@@ -1,0 +1,60 @@
+{
+  "date": "2026-06-25",
+  "trace_id": "fkwu-form-cli-metal-model-cell-20260625T222847Z",
+  "receipt_kind": "fkwu-form-cli-metal-model-cell-receipt",
+  "thread_branch": "codex/form-metal-model-cell-20260625",
+  "git_commit": "feeae12cb",
+  "verdict": "pass",
+  "receipt_path": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25.json",
+  "observable_trace": {
+    "trace_dir": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace",
+    "trace_sha256": "32cca92d4e1a2fc2aba7796262f378a5aa419b8e7593e4dfb6ad37cade145848",
+    "runtime_output": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/runtime.out",
+    "runtime_output_sha256": "98f688c07acb477a0058cd65498d9bcdf171da1a8f687a74363a1c787f4e57c5",
+    "build_output": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/build.out",
+    "build_output_sha256": "50de250c7b81662506c021efdf963128dd9a3129bacd29ac50e42c6b99ebf55e",
+    "linked_libraries": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/linked-libraries.out",
+    "linked_libraries_sha256": "20a3a565d88d467dc6ee5bc782a513bd6b33639d019342e228ab8f84d275c830",
+    "metal_source": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/matvec.metal",
+    "metal_source_sha256": "1bdcfccc8018dacb2428cfb26c92084bc3c096883a9fdc7396e5e16e87421b1d",
+    "carrier_source": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/fkwu_metal_matvec_carrier.m",
+    "carrier_source_sha256": "63ffccd7d57ebfe74fff6f56a35f3fad4b819c784b6576ba49667d3139dd8d6d",
+    "model_cell_manifest": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model-cell-manifest.txt",
+    "model_cell_manifest_sha256": "48044381392b8faf4577a64087e265726102e6005c753c4dd6c5be2d5895f179",
+    "runtime_manifest_artifact": ".cache/body-test-receipts/fkwu-form-cli-metal-model-cell-20260625T222847Z/artifact/model-cell.manifest",
+    "runtime_manifest_storage": ".cache (not committed); sanitized manifest trace is committed",
+    "model_layout": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model-layout.txt",
+    "model_hex": "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model.hex",
+    "model_hex_sha256": "13ee827140a8357d7b9b9d4f7befd3919d445ab6d9d8011d0d1549f0d3e831b6",
+    "model_bytes_artifact": ".cache/body-test-receipts/fkwu-form-cli-metal-model-cell-20260625T222847Z/artifact/model.bin",
+    "model_bytes_sha256": "3836efd8c75b6322609b96a9b1894cd727586ce30f673a1d72502c2751b77c70",
+    "model_bytes_storage": ".cache (not committed); text hex/layout trace is committed",
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-form-cli-metal-model-cell-20260625T222847Z/artifact/form-cli-metal-model-cell",
+    "compiled_artifact_sha256": "20524efb69dcf6903029695592316d31c90e5eba044ab7b0a9f665329c9010f5",
+    "compiled_artifact_storage": ".cache (not committed)"
+  },
+  "target": {
+    "desired_path": "form-cli REPL -> fkwu Form SHA-256 model-cell manifest gate -> fkwu native tag 204 -> linked metal_matvec_f32 carrier -> supplied MSL/model bytes -> device/library/pipeline/buffers/dispatch/readback",
+    "rejected_path": "form-cli -> HTTP/socket -> Ollama",
+    "runtime_dependency_claim_scope": "compiled proof binary under sanitized PATH"
+  },
+  "gates": {
+    "fkwu_form_cli_native_tag_204": true,
+    "form_cli_repl_verb_metal_model_cell": true,
+    "model_cell_sha256_verified_in_form": true,
+    "model_cell_sha256": "3836efd8c75b6322609b96a9b1894cd727586ce30f673a1d72502c2751b77c70",
+    "metal_device_observed": true,
+    "runtime_path_sanitized": true,
+    "denied_toolchain_names_visible_on_path": 0,
+    "http_or_ollama_absent": true,
+    "msl_bytes_loaded": 451,
+    "model_bytes_loaded": 44,
+    "gpu_y": "[-0.250000,5.000000]",
+    "max_delta": "0.000000000"
+  },
+  "open_bridges": [
+    "full GGUF tensor map into this content-addressed model-cell path",
+    "full-width Llama 3.2 tokenizer -> 28-layer GQA decode -> logits/argmax -> decoded token without Ollama",
+    "Android Vulkan and Windows DirectML/D3D12 generic carrier receipts matching the macOS Metal generic carrier"
+  ]
+}
