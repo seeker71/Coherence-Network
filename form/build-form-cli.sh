@@ -19,6 +19,9 @@ OUT="${1:-form-cli}"
 CC_BIN="${CC:-clang}"
 CLI_BOOTSTRAP_C="$S/bootstrap/form-cli-emitted.c"
 CLI_BOOTSTRAP_STAMP="$S/bootstrap/form-cli.stamp"
+FORM_CLI_FORCE_LINK="${FORM_CLI_FORCE_LINK:-0}"
+FORM_CLI_EXTRA_SRC="${FORM_CLI_EXTRA_SRC:-}"
+FORM_CLI_EXTRA_LDFLAGS="${FORM_CLI_EXTRA_LDFLAGS:-}"
 
 if [[ "${FORM_STANDARD_LANE:-0}" == 1 && -x "$OUT" ]]; then
     echo "standard lane: $OUT present (no build)" >&2
@@ -104,7 +107,7 @@ fi
 
 # Warm path: copy platform binary before invoking clang when available.
 got_cli_boot="$(cat "$CLI_BOOTSTRAP_BIN_STAMP" 2>/dev/null || true)"
-if [[ -x "$CLI_BOOTSTRAP_BIN" && "$got_cli_boot" == "$want_cli_stamp" ]]; then
+if [[ "$FORM_CLI_FORCE_LINK" != 1 && -z "$FORM_CLI_EXTRA_SRC" && -x "$CLI_BOOTSTRAP_BIN" && "$got_cli_boot" == "$want_cli_stamp" ]]; then
     cp "$CLI_BOOTSTRAP_BIN" "$OUT"
     chmod +x "$OUT"
     echo "  link: bootstrap form-cli-${slug} (no clang)" >&2
@@ -163,6 +166,16 @@ clang_args=(
   -Wno-incompatible-library-redeclaration
   -o "$OUT" "$W/form-cli.c"
 )
+if [[ -n "$FORM_CLI_EXTRA_SRC" ]]; then
+  # shellcheck disable=SC2206
+  extra_srcs=($FORM_CLI_EXTRA_SRC)
+  clang_args+=("${extra_srcs[@]}")
+fi
+if [[ -n "$FORM_CLI_EXTRA_LDFLAGS" ]]; then
+  # shellcheck disable=SC2206
+  extra_ldflags=($FORM_CLI_EXTRA_LDFLAGS)
+  clang_args+=("${extra_ldflags[@]}")
+fi
 if is_windows_host; then
   patch_windows_emitted_c "$W/form-cli.c"
   clang_args+=(-lws2_32 -llegacy_stdio_definitions)

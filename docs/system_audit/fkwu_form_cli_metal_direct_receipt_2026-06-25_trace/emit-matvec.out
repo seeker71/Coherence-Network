@@ -1,0 +1,4 @@
+==MSL==
+kernel void form_fkwu_direct_matvec_f32(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = float(acc); }
+==END==
+null
