@@ -1,0 +1,149 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/form-metal-generic-matvec-20260625",
+  "commit_scope": "Add a generic fkwu form-cli metal_matvec_f32 receipt that loads supplied MSL and model bytes through native tag 204 with no HTTP/Ollama runtime path.",
+  "files_owned": [
+    "form/form-stdlib/native-op-manifest.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/form-cli-repl.fk",
+    "scripts/fkwu_form_cli_metal_matvec_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/runtime.out"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 form/scripts/sync_native_op_manifest.py && python3 form/scripts/validate_fkwu_native_surface.py",
+      "bash -n scripts/fkwu_form_cli_metal_matvec_receipt.sh",
+      "scripts/regen_form_cli_bootstrap.sh",
+      "scripts/regen_fkwu_bootstrap.sh",
+      "scripts/regen_standard_lane_binaries.sh",
+      "scripts/fkwu_form_cli_metal_matvec_receipt.sh docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25.json",
+      "tmp=\"$(mktemp /tmp/form-cli-standard.XXXXXX)\"; (cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh \"$tmp\") && printf 'ping\\nmetal-matvec\\nquit\\n' | \"$tmp\"; rm -f \"$tmp\"",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+      "cd form/form-kernel-go && go test -run 'TestFkwuFormCli|TestFkwuLocaleUtf8'"
+    ],
+    "results": [
+      "native-op manifest and generated flt-ops aligned at 109 rows; max tag 204 under 256 arm slots",
+      "receipt script parsed cleanly with bash -n",
+      "form-cli bootstrap table/emitted C regenerated with stamp ba177353d715eaa7",
+      "fkwu bootstrap uni.c regenerated with stamp f8e8ede8c128ab57",
+      "standard fkwu platform binary regenerated with stamp 6fff1577ba23e210",
+      "standard form-cli platform binary regenerated with stamp ba177353d715eaa7",
+      "generic Metal receipt passed on Apple M4 Max with metal_api=metal_matvec_f32, model_bytes_loaded=44, gpu_y=[-0.250000,5.000000], and max_delta=0.000000000",
+      "runtime transcript showed runtime_path_sanitized=true, denied_toolchain_names_visible_on_path=0, http_or_ollama=absent, metal_owner=fkwu-form-cli",
+      "standard lane copied bootstrap/darwin-arm64 with no clang and returned pong plus metal-matvec usage text",
+      "form-cli-band passed four-way with verdict 16383",
+      "metal-emit-band passed four-way with verdict 31",
+      "go test passed: ok form-kernel-go 86.293s"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "PR checks have not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployed web/API surface changed; this is a local form/fkwu runtime receipt."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A proof-linked form-cli binary can dispatch the native-only metal-matvec verb through fkwu tag 204 into a linked Metal carrier that receives MSL bytes, kernel name, and binary model bytes, then owns device creation, library/pipeline creation, buffers, command dispatch, wait, and readback without HTTP/Ollama or visible runtime toolchain names.",
+    "public_endpoints": [
+      "local fkwu form-cli proof binary",
+      "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25.json"
+    ],
+    "test_flows": [
+      "env -i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp> <proof-form-cli> <<<'metal-matvec <msl> form_fkwu_generic_matvec_f32 <model>\\nquit'",
+      "FORM_STANDARD_LANE=1 ./build-form-cli.sh <tmp> && printf 'ping\\nmetal-matvec\\nquit\\n' | <tmp>",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The generic fkwu-to-Metal matvec primitive is proven for supplied MSL and supplied f32 model bytes. The real GGUF/content-addressed tensor-cell loader, full Llama decode loop, Android Vulkan receipt, and Windows DirectML/D3D12 receipt remain open bridges."
+  },
+  "idea_ids": [
+    "form-native-metal-model-inference",
+    "on-device-sovereign-form-cli"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse",
+    "metal-emit-band",
+    "form-cli-band"
+  ],
+  "task_ids": [
+    "2026-06-25-fkwu-form-cli-generic-metal-matvec"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence",
+        "trace"
+      ]
+    },
+    {
+      "contributor_id": "subagent-019effc4-63ce-74b1-9506-a2d5b54d9b70",
+      "contributor_type": "machine",
+      "roles": [
+        "codebase exploration",
+        "implementation plan"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/fkwu_metal_matvec_carrier.m",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/model.hex",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64"
+  ],
+  "change_files": [
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/fkwu-uni.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/form-cli-repl.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/native-op-manifest.fk",
+    "scripts/fkwu_form_cli_metal_matvec_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/emit-matvec.err",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/emit-matvec.fk",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/emit-matvec.out",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/fkwu_metal_matvec_carrier.m",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/model.hex",
+    "docs/system_audit/fkwu_form_cli_metal_matvec_receipt_2026-06-25_trace/runtime.out",
+    "docs/system_audit/commit_evidence_2026-06-25_fkwu_form_cli_generic_metal_matvec.json"
+  ],
+  "change_intent": "runtime_feature"
+}

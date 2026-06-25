@@ -42,6 +42,16 @@
         (str_concat " floats="
                     (int_to_str (kernel_stat 8))))))))))))))))))))
 
+    (defn fc-metal-matvec (arg)
+        (do
+            (let parts (split-on arg " "))
+            (let msl-path (fc-part parts 0 ""))
+            (let kernel (fc-part parts 1 "form_fkwu_generic_matvec_f32"))
+            (let model-path (fc-part parts 2 ""))
+            (if (or (str_eq msl-path "") (str_eq model-path ""))
+                "usage: metal-matvec <msl-path> <kernel-name> <model-path>"
+                (metal_matvec_f32 (read_file msl-path) kernel (read_file model-path)))))
+
     ; the native-only verbs read this binary's own baked source via self_source
     ; (a fkwu-only op), so they live here in the runtime wrapper rather than in
     ; the four-way dispatch: 'source' prints the Form source the binary was built
@@ -50,6 +60,8 @@
     ; 'metal-fixture' crosses the same fkwu-only door into a linked native
     ; Metal carrier when the proof binary supplies one; otherwise it reports a
     ; skip instead of pretending the bridge exists.
+    ; 'metal-matvec' is the generic successor: MSL source bytes, kernel name, and
+    ; model bytes cross the same fkwu-native door into a linked carrier.
     ; Everything else routes to fc-respond, the four-way-proven brain.
     (defn fc-native (line)
         (if (str_eq (fc-verb line) "source") (self_source)
@@ -59,7 +71,8 @@
                                 " bytes of its own Form source (run 'source' to print it); program running native on fkwu."))
                 (if (str_eq (fc-verb line) "diagnose") (fc-diagnose)
                     (if (str_eq (fc-verb line) "metal-fixture") (metal_matvec_fixture)
-                        (fc-respond line))))))
+                        (if (str_eq (fc-verb line) "metal-matvec") (fc-metal-matvec (fc-arg line))
+                            (fc-respond line)))))))
     ; one self-recursive loop: prompt (only on a real tty), read a line, and
     ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
     ; let (an effect op) so it fires exactly once per turn, not once per use.
