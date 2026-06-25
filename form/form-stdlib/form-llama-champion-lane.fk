@@ -1,0 +1,122 @@
+; form-llama-champion-lane.fk — promotion policy for the local Form-knowledge model.
+;
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk
+;
+; Existing host scripts may leave legacy receipts, but they are not the home.
+; This cell names the on-device target: model knowledge, heldout windows,
+; multimodal witness rows, inference, training, and promotion policy live as
+; Form data/recipes. The local challenger is not authority just because it
+; improved. It earns authority only when the required lanes are present,
+; source-backed, local-device capable, held out, and the champion-challenger
+; window reaches the incumbent. The runtime target is Form-native inference and
+; training over content-addressed model cells, lowering toward Form->asm bytes:
+; no Python, no shell, no Go/Rust service, no clang fast path.
+
+(do
+    (defn flc-required-lanes ()
+        (list
+            "form-syntax"
+            "substrate-concepts"
+            "spec-lookup"
+            "route-reasoning"
+            "multimodal-witness"
+            "form-first-routing"))
+
+    (defn flc-lane-row (lane samples heldout source-backed local-device)
+        (list "form-llama-lane" lane samples heldout source-backed local-device))
+
+    (defn flc-row? (row)
+        (and (eq (len row) 6) (str_eq (nth row 0) "form-llama-lane")))
+
+    (defn flc-row-lane (row) (nth row 1))
+    (defn flc-row-samples (row) (nth row 2))
+    (defn flc-row-heldout (row) (nth row 3))
+    (defn flc-row-source-backed (row) (nth row 4))
+    (defn flc-row-local-device (row) (nth row 5))
+
+    (defn flc-nonempty? (s) (gt (str_len s) 0))
+
+    (defn flc-row-valid? (row)
+        (if (flc-row? row)
+            (and
+                (flc-nonempty? (flc-row-lane row))
+                (and
+                    (gt (flc-row-samples row) 0)
+                    (and
+                        (gt (flc-row-heldout row) 0)
+                        (and
+                            (eq (flc-row-source-backed row) 1)
+                            (eq (flc-row-local-device row) 1)))))
+            false))
+
+    (defn flc-row-ready? (row min-heldout)
+        (and (flc-row-valid? row) (ge (flc-row-heldout row) min-heldout)))
+
+    (defn flc-count-lane (rows lane)
+        (if (eq (len rows) 0)
+            0
+            (add
+                (if (str_eq (flc-row-lane (head rows)) lane) 1 0)
+                (flc-count-lane (tail rows) lane))))
+
+    (defn flc-has-lane? (rows lane)
+        (if (gt (flc-count-lane rows lane) 0) 1 0))
+
+    (defn flc-all-lanes-present-loop? (rows lanes)
+        (if (eq (len lanes) 0)
+            1
+            (if (eq (flc-has-lane? rows (head lanes)) 1)
+                (flc-all-lanes-present-loop? rows (tail lanes))
+                0)))
+
+    (defn flc-all-lanes-present? (rows)
+        (flc-all-lanes-present-loop? rows (flc-required-lanes)))
+
+    (defn flc-first-lane-row (rows lane)
+        (if (eq (len rows) 0)
+            (flc-lane-row "" 0 0 0 0)
+            (if (str_eq (flc-row-lane (head rows)) lane)
+                (head rows)
+                (flc-first-lane-row (tail rows) lane))))
+
+    (defn flc-required-ready-loop? (rows lanes min-heldout)
+        (if (eq (len lanes) 0)
+            1
+            (if (flc-row-ready? (flc-first-lane-row rows (head lanes)) min-heldout)
+                (flc-required-ready-loop? rows (tail lanes) min-heldout)
+                0)))
+
+    (defn flc-ready-window? (rows min-heldout)
+        (and
+            (eq (flc-all-lanes-present? rows) 1)
+            (eq (flc-required-ready-loop? rows (flc-required-lanes) min-heldout) 1)))
+
+    (defn flc-promote? (rows trials min-samples margin min-heldout)
+        (if (flc-ready-window? rows min-heldout)
+            (cc-promote? trials min-samples margin)
+            0))
+
+    (defn flc-authority (rows trials min-samples margin min-heldout)
+        (if (eq (flc-promote? rows trials min-samples margin min-heldout) 1)
+            "challenger"
+            "champion"))
+
+    (defn flc-native-runtime-row (model weights inference trainer lowering)
+        (list "form-llama-native-runtime" model weights inference trainer lowering))
+
+    (defn flc-native-runtime? (row)
+        (and
+            (eq (len row) 6)
+            (and
+                (str_eq (nth row 0) "form-llama-native-runtime")
+                (and
+                    (str_eq (nth row 1) "form-llama")
+                    (and
+                        (str_eq (nth row 2) "content-addressed-model-cells")
+                        (and
+                            (str_eq (nth row 3) "form-native-inference")
+                            (and
+                                (str_eq (nth row 4) "form-native-training")
+                                (str_eq (nth row 5) "form-asm-bytes"))))))))
+
+    0)

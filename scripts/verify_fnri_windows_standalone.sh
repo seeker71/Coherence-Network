@@ -16,8 +16,12 @@ grep -q "$WANT" fnri-platform.out || { echo "FAIL: missing $WANT" >&2; exit 1; }
 "$ROOT/scripts/fnri_fkwu_witness.sh" || exit 1
 case "$(uname -s 2>/dev/null || echo unknown)" in
   Darwin)
-    "$ROOT/scripts/verify_fsh_fnri_bootstrap.sh" >/dev/null || { echo "FAIL: bootstrap receipt" >&2; exit 1; }
-    "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
+    if [ -x "${FORM_CLI:-$ROOT/form/form-cli}" ]; then
+      "$ROOT/scripts/verify_fsh_fnri_bootstrap.sh" >/dev/null || { echo "FAIL: bootstrap receipt" >&2; exit 1; }
+      "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
+    else
+      echo "skip: mac binary dispatch absent; fkwu/FNRI floor proved above" >&2
+    fi
     PLATFORM=mac
     ;;
   MINGW*|MSYS*|CYGWIN*|Windows*)

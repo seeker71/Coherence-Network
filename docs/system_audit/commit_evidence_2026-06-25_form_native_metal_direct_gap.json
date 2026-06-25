@@ -1,0 +1,220 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/local-model-knowledge-status-20260623",
+  "commit_scope": "Corrected receipt for the desired no-HTTP, no-Ollama Form-native Metal model inference path.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-25_form_native_metal_direct_gap.json"
+  ],
+  "local_validation": {
+    "status": "fail",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "form-cli ask \"For the target no HTTP Ollama proxy: Form must load model weights and run inference through the native Metal path. What existing Form-native files prove or block that path?\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/q4k-dequant.fk form-stdlib/tests/q4k-dequant-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk form-stdlib/tests/tokenize-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/llama3-pretokenize.fk form-stdlib/tests/llama3-pretokenize-band.fk",
+      "cd form && ./validate.sh form-stdlib/transformer-kernel.fk form-stdlib/tests/transformer-kernel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/rope.fk form-stdlib/tests/llama3-rope-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/tests/llama-gqa-block-causal-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/llama-gqa-block-fwd-causal-emit-band.fk",
+      "scripts/metal_llama_block_decode_audit.sh",
+      "scripts/metal_multi_layer_stack_audit.sh",
+      "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+      "bash -n scripts/metal_weight_bytes_runtime_boundary.sh",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+      "scripts/metal_weight_bytes_runtime_boundary.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_metal_weight_bytes_runtime_boundary.json"
+    ],
+    "results": [
+      "plain make prompt-guide failed on a sibling worktree continuity blocker; the user asked to continue, so the documented PROMPT_GATE_SKIP_CONTINUITY=1 gate was used and passed in dirty continuation mode",
+      "wellness passed with existing nonblocking drift in blueprint registry rows and primitive registry rows",
+      "form-cli ask returned no grounded body text, so this receipt is not a local sufficiency hit",
+      "Q4_K dequant passed four-way at verdict 4095 against real llama3.2 Q4_K bytes",
+      "byte-level tokenizer composition passed four-way at verdict 31",
+      "Llama 3 pretokenizer passed four-way at verdict 255",
+      "transformer-kernel projection passed four-way at verdict 511",
+      "Llama 3 RoPE passed four-way at verdict 255",
+      "GQA causal llama block passed four-way at verdict 15",
+      "GQA causal llama block Metal emitter passed four-way at verdict 7",
+      "Metal KV-cached decode step passed on Apple M4 Max GPU with GPU decode bit-for-bit identical to full causal recompute and max recipe delta 0.5 x1e-6",
+      "Metal multi-layer causal decode stack passed on Apple M4 Max GPU with decode stack bit-for-bit identical to recompute stack and max recipe delta 0.4 x1e-6",
+      "standalone Metal GQA llama block runtime boundary passed under env -i with an empty PATH and denied toolchain names visible on PATH = 0",
+      "Metal weight-bytes runtime boundary passed: model_bytes_loaded=44, weight_bytes_loaded=24, input_bytes_loaded=12, gpu_y=[-0.250000,5.000000], expected_y=[-0.250000,5.000000], max_delta=0.000000000, http_or_ollama=absent, denied toolchain names visible on PATH = 0",
+      "the desired end-to-end path still fails as a composed claim because fkwu form-cli does not yet directly load real GGUF model weights or own the Metal dispatch loop; the previously proven form-cli ask path is HTTP/Ollama proxy and is explicitly out of scope"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No PR or CI run was opened for this evidence-only correction."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployed surface changed; this is local proof and gap accounting."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "End-to-end Form-native model load plus Metal inference from the c-bootstrap/fkwu form-cli app is not yet proven."
+  },
+  "idea_ids": [
+    "form-native-model-inference",
+    "metal-form-llama-runtime-boundary",
+    "fkwu-direct-model-loader"
+  ],
+  "spec_ids": [
+    "q4k-dequant-band",
+    "tokenize-band",
+    "llama3-pretokenize-band",
+    "transformer-kernel-band",
+    "llama3-rope-band",
+    "llama-gqa-block-causal-band",
+    "llama-gqa-block-fwd-causal-emit-band"
+  ],
+  "task_ids": [
+    "2026-06-25-form-native-metal-direct-gap"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "validation",
+        "evidence",
+        "gap-analysis"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-06-16_real_llama_weights_on_gpu.json",
+    "docs/system_audit/commit_evidence_2026-06-22_tokenize_compose_four_way.json",
+    "docs/system_audit/commit_evidence_2026-06-23_llama3_rope_and_gqa_block_four_way.json",
+    "docs/system_audit/commit_evidence_2026-06-23_gqa_llama_block_on_gpu.json",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+    "docs/system_audit/commit_evidence_2026-06-25_metal_weight_bytes_runtime_boundary.json",
+    "scripts/metal_llama_block_decode_audit.sh",
+    "scripts/metal_multi_layer_stack_audit.sh",
+    "scripts/metal_weight_bytes_runtime_boundary.sh",
+    "form/form-stdlib/q4k-dequant.fk",
+    "form/form-stdlib/tokenize.fk",
+    "form/form-stdlib/llama3-pretokenize.fk",
+    "form/form-stdlib/llama-gqa-block.fk",
+    "form/form-stdlib/jit-tensor-emit.fk"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-25_form_native_metal_direct_gap.json"
+  ],
+  "change_intent": "docs_only",
+  "request": "Reject HTTP/Ollama proxy and ensure the path is Form-native: Form loads the model and does inference through the native Metal path.",
+  "overall_verdict": "not_proven_end_to_end",
+  "strict_target": {
+    "must_not_use": [
+      "HTTP to Ollama",
+      "Ollama server",
+      "MLX serving as the inference runtime",
+      "host-exec oracle path"
+    ],
+    "must_use": [
+      "c-bootstrap/fkwu form-cli app as the control surface",
+      "Form-owned tokenizer/model/weight cells",
+      "Form-owned GGUF or equivalent weight loading/dequant",
+      "Form-emitted Metal kernels for llama inference",
+      "direct native carrier boundary with no Go/Rust/Python/shell/clang dependency at runtime"
+    ]
+  },
+  "native_pieces_proven": [
+    {
+      "piece": "Q4_K dequant for real llama3.2 bytes",
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/q4k-dequant.fk form-stdlib/tests/q4k-dequant-band.fk",
+      "result": "4095; fourth arm passed"
+    },
+    {
+      "piece": "tokenizer composition",
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk form-stdlib/tests/tokenize-band.fk",
+      "result": "31; fourth arm passed"
+    },
+    {
+      "piece": "Llama 3 pretokenization",
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/llama3-pretokenize.fk form-stdlib/tests/llama3-pretokenize-band.fk",
+      "result": "255; fourth arm passed"
+    },
+    {
+      "piece": "Llama 3 RoPE and GQA causal block",
+      "commands": [
+        "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/rope.fk form-stdlib/tests/llama3-rope-band.fk",
+        "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/tests/llama-gqa-block-causal-band.fk"
+      ],
+      "result": "255 and 15; fourth arm passed"
+    },
+    {
+      "piece": "Form-emitted Metal GQA block text",
+      "command": "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/llama-gqa-block-fwd-causal-emit-band.fk",
+      "result": "7; fourth arm passed"
+    },
+    {
+      "piece": "Metal KV-cached decode and multi-layer decode structure",
+      "commands": [
+        "scripts/metal_llama_block_decode_audit.sh",
+        "scripts/metal_multi_layer_stack_audit.sh"
+      ],
+      "result": "both passed on Apple M4 Max GPU"
+    },
+    {
+      "piece": "runtime-loaded model bytes into a Form-emitted Metal kernel",
+      "commands": [
+        "bash -n scripts/metal_weight_bytes_runtime_boundary.sh",
+        "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+        "scripts/metal_weight_bytes_runtime_boundary.sh"
+      ],
+      "result": "passed on Apple M4 Max GPU under env -i with empty PATH; no HTTP/Ollama; model bytes loaded at runtime; GPU output matched expected values exactly"
+    }
+  ],
+  "closed_this_turn": [
+    {
+      "boundary": "byte-loaded model weights into Metal runtime",
+      "status": "closed for a small matvec fixture",
+      "receipt": "docs/system_audit/commit_evidence_2026-06-25_metal_weight_bytes_runtime_boundary.json",
+      "not_claimed": [
+        "direct fkwu Metal primitive",
+        "full GGUF parser",
+        "full-width Llama 3.2 tensor set",
+        "28-layer generation loop",
+        "tokenizer-to-decoded-token end-to-end"
+      ]
+    }
+  ],
+  "missing_bridges": [
+    {
+      "gap": "fkwu form-cli real model weight loading",
+      "detail": "A standalone Metal runtime now loads a small binary weight file at runtime. The current fkwu form-cli app still has an HTTP/socket ask lane and does not directly open a real GGUF model file or materialize content-addressed tensor cells into the Llama runtime."
+    },
+    {
+      "gap": "fkwu-owned Metal dispatch",
+      "detail": "Metal audits use Form-emitted MSL plus Swift/Metal host carriers. The standalone fkwu form-cli app does not yet own the Metal device, pipeline, buffer, dispatch, and readback loop."
+    },
+    {
+      "gap": "real GGUF to full generation loop",
+      "detail": "The repo proves Q4_K dequant and real-weight matvec separately, and proves fixture-sized Metal decode stacks. It does not yet prove tokenize prompt -> real GGUF tensor load/dequant -> full-width 28-layer GQA decode -> logits/argmax -> decoded token without Ollama."
+    }
+  ],
+  "rejected_previous_proof": {
+    "path": "form-cli ask -> HTTP/socket -> Ollama form-llama",
+    "reason": "The user clarified that HTTP to Ollama is not the desired path. That proof remains useful only as a proxy/oracle transport receipt, not as Form-native model inference."
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "local Form/fkwu and Metal proof commands supplied validation for the component pieces",
+    "rented_oracle_share": "gap analysis and prose synthesis were produced by the rented frontier model",
+    "trust_matrix": {
+      "path": "mixed: native component proofs plus rented synthesis",
+      "grounded": "partial: commands and files are grounded, but form-cli ask returned no sufficient native answer",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "no: target end-to-end path remains unproven",
+      "observed": false
+    }
+  }
+}

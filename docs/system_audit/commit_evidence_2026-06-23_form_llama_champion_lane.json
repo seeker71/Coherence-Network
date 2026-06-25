@@ -1,0 +1,151 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/local-model-knowledge-status-20260623",
+  "commit_scope": "Add a Form-only authority gate for the local form-llama fine-tune so it cannot be treated as the repo's concept/spec/form reasoning authority until held-out local lanes prove it reaches the champion.",
+  "files_owned": [
+    "form/form-stdlib/form-llama-champion-lane.fk",
+    "form/form-stdlib/tests/form-llama-champion-lane-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/eval_form_knowledge.py",
+    "docs/system_audit/commit_evidence_2026-06-23_form_llama_champion_lane.json",
+    "docs/system_audit/form_llama_on_device_validation_2026-06-23.json",
+    "docs/system_audit/form_native_execution_validation_2026-06-23.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form-cli ask \"What does the body already know about local form-llama fine-tune authority and on-device reasoning?\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/form-llama-champion-lane.fk form-stdlib/tests/form-llama-champion-lane-band.fk",
+      "jq empty ~/.coherence-network/form-knowledge-corpus/full/train.jsonl",
+      "jq empty ~/.coherence-network/form-knowledge-corpus/full/valid.jsonl",
+      "python3 -m py_compile scripts/eval_form_knowledge.py",
+      "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-elf-so.fk form-stdlib/tests/form-lower-multiarg-band.fk",
+      "scripts/form_lower_multiarg_receipt.sh 7 6 5",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-macho.fk form-stdlib/tests/form-macho-band.fk",
+      "scripts/form_macho_demo.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk form-stdlib/tests/form-pe-coff-arm64-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_form_llama_champion_lane.json",
+      "git diff --check"
+    ],
+    "fourth_arm_outputs": [
+      "form-llama-champion-lane-band: validate.sh returned 255 with 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '1 ok, 0 divergent -- kernels agree on every sample.'"
+    ],
+    "notes": "The prompt guide and wellness passed before this work with existing non-blocking drift already recorded by the body. form-cli ask exited without a grounded body answer in this session, so the implementation is reported as rented-mind authored and body-validated rather than native-generated. The focused proof uses the existing repository validator as development evidence only; the accepted runtime authority is Form-native model cells, inference, training, and Form->asm bytes, with no Python, shell, Go/Rust service, or clang fast path."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI will run after push/PR. Local proof covers the focused Form authority gate and fourth-arm agreement."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "no public deploy yet",
+    "notes": "This branch changes Form stdlib and substrate documentation only. Public deployment proof is pending PR merge and normal repository CI/deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Form proof passed; PR CI, merge, and any public deployment settlement remain pending."
+  },
+  "idea_ids": [
+    "form-llama-local-authority",
+    "on-device-form-native-reasoning"
+  ],
+  "spec_ids": [
+    "form-llama-champion-lane"
+  ],
+  "task_ids": [
+    "task-2026-06-23-form-llama-champion-lane"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria",
+        "runtime-boundary"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form-llama-champion-lane.fk defines the six required authority lanes: form-syntax, substrate-concepts, spec-lookup, route-reasoning, multimodal-witness, and form-first-routing.",
+    "Each lane row must be source-backed, local-device capable, and held out above the minimum before promotion is possible.",
+    "flc-promote? composes the lane readiness gate with champion-challenger cc-promote? so local fine-tune improvement alone is not authority.",
+    "flc-native-runtime? accepts only the runtime row form-llama + content-addressed-model-cells + form-native-inference + form-native-training + form-asm-bytes.",
+    "tests/form-llama-champion-lane-band.fk proves all lanes present, missing-lane refusal, weak multimodal refusal, reached-challenger promotion, too-few-samples refusal, stable authority labels, and native-runtime row acceptance.",
+    "form/fourth-arm-bands.txt registers form-llama-champion-lane with expected verdict 255.",
+    "docs/coherence-substrate/form-native-models.form and docs/coherence-substrate/INDEX.md record the no Python, no shell, no Go/Rust service, no clang runtime boundary.",
+    "docs/system_audit/form_llama_on_device_validation_2026-06-23.json records the current local validation: form-llama ran on device through Ollama/MLX with OLLAMA_NO_CLOUD=1 and 100% GPU residency, but raw repo recall failed 0/3 while context-supplied answering passed.",
+    "scripts/eval_form_knowledge.py now includes the three failed raw recall probes in deterministic scoring.",
+    "Local corpus repair seed added three paraphrased training rows and three exact validation rows to ~/.coherence-network/form-knowledge-corpus/full/{train,valid}.jsonl; both files pass jq empty.",
+    "docs/system_audit/form_native_execution_validation_2026-06-23.json records the platform execution validation: Mac Form->Mach-O physical execution passed, Android Form->ELF .so dlopen physical execution passed on device R5CW20DK17A, and Windows PE/COFF object floors passed four-way while physical Windows runtime remains pending."
+  ],
+  "change_files": [
+    "form/form-stdlib/form-llama-champion-lane.fk",
+    "form/form-stdlib/tests/form-llama-champion-lane-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/eval_form_knowledge.py",
+    "docs/system_audit/commit_evidence_2026-06-23_form_llama_champion_lane.json",
+    "docs/system_audit/form_llama_on_device_validation_2026-06-23.json",
+    "docs/system_audit/form_native_execution_validation_2026-06-23.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The local form-llama fine-tune now has a Form-native promotion policy that refuses authority until local held-out text, substrate, route, multimodal, and form-first routing lanes prove the challenger reaches the champion.",
+    "public_endpoints": [
+      "none added; local Form stdlib and substrate documentation only"
+    ],
+    "test_flows": [
+      "ready-lane flow: all six lanes present and held out returns readiness.",
+      "missing-lane flow: absent multimodal witness refuses readiness.",
+      "weak-lane flow: multimodal witness with zero heldout refuses readiness.",
+      "competition flow: ready lanes plus reached champion-challenger trials promote the challenger.",
+      "sample-floor flow: too few scored trials keeps the champion.",
+      "runtime-boundary flow: only content-addressed model cells, Form-native inference, Form-native training, and Form->asm bytes satisfy runtime authority."
+    ]
+  },
+  "form_llama_on_device_validation": {
+    "status": "partial_pass",
+    "on_device_inference": "pass",
+    "no_cloud_local_ollama": "pass",
+    "raw_repo_knowledge_recall": "fail",
+    "context_following": "pass",
+    "authority_for_repo_questions": "not_ready"
+  },
+  "fine_tune_repair_seed": {
+    "status": "added",
+    "eval_rows_added": 3,
+    "local_train_rows_added": 3,
+    "local_valid_rows_added": 3,
+    "notes": "This does not claim the model is improved yet. It gives the next local fine-tune and eval the exact failure surface observed on device."
+  },
+  "form_native_execution_validation": {
+    "mac": "pass",
+    "android": "pass",
+    "windows": "object_floor_pass_physical_runtime_pending",
+    "strict_model_runtime": "not_validated"
+  }
+}
