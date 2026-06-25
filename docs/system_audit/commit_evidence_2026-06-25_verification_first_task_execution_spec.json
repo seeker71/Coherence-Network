@@ -1,0 +1,78 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/local-workspace-merge-20260625",
+  "commit_scope": "Recover the verification-first task execution spec from the local worker-copy branch into canonical specs/ without merging nested worker residue.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-25_verification_first_task_execution_spec.json",
+    "specs/verification-first-task-execution.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "rg -n \"env var|environment variable|printenv|os\\.getenv|fallback|config key|secret\" specs/verification-first-task-execution.md",
+      "python3 scripts/validate_spec_quality.py --file specs/verification-first-task-execution.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_verification_first_task_execution_spec.json",
+      "git diff --check",
+      "make wellness"
+    ],
+    "notes": "The imported worker spec was retuned from env-var fallback wording to the file-backed config contract before validation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR checks pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "docs-only",
+    "notes": "No runtime deploy behavior changes in this commit."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local spec validation passed; PR CI and merge checks remain pending."
+  },
+  "idea_ids": [
+    "verification-first-task-execution"
+  ],
+  "spec_ids": [
+    "verification-first-task-execution"
+  ],
+  "task_ids": [
+    "task_7c01747ad0f1de9b"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "recovery",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "docs_only",
+  "evidence_refs": [
+    "Recovered source: codex/local-workspace-cleanup-20260625:.claude/worktrees/worker/specs/verification-first-task-execution.md",
+    "Retuned blocker playbook wording to config files only: ~/.coherence-network/config.json and api/config/api.json",
+    "python3 scripts/validate_spec_quality.py --file specs/verification-first-task-execution.md -> OK",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_verification_first_task_execution_spec.json -> OK",
+    "make wellness -> exit 0; existing attention remains specs/INDEX drift and three specs without test/proof frontmatter"
+  ],
+  "change_files": [
+    "specs/verification-first-task-execution.md"
+  ]
+}
