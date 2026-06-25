@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/embodied-room-memory-receipt-20260624",
+  "commit_scope": "Ship the trusted phone presence receipt across Android, iPhone, macOS, Windows, and web, with phone calls as the first action lane.",
+  "files_owned": [
+    "form/form-stdlib/phone-presence.fk",
+    "form/form-stdlib/tests/phone-presence-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/phone-presence.form",
+    "docs/coherence-substrate/INDEX.md",
+    "specs/trusted-phone-presence.md",
+    "specs/INDEX.md",
+    "web/app/sense/page.tsx",
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-25_trusted_phone_presence.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/phone-presence.fk form-stdlib/tests/phone-presence-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/trusted-phone-presence.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "cd web && npm ci",
+      "cd web && npm run build"
+    ],
+    "notes": "Form validation passed with phone-presence-band -> 4095 across the sibling kernels and fkwu registration present in fourth-arm-bands.txt. The first web build attempt failed because next was not installed in web/node_modules; npm ci restored the package-lock dependency set, then npm run build passed. npm ci reported existing peer warnings and 4 audit findings; no tracked package files changed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "/sense now recognizes iPhone explicitly and shows a first-class iPhone presence entry that routes to the live surface while the Form receipt proves Android, iPhone, macOS, Windows, and web call floors.",
+    "public_endpoints": [
+      "https://coherencycoin.com/sense",
+      "https://coherencycoin.com/sense/surface"
+    ],
+    "test_flows": [
+      "Open /sense from an iPhone user agent and confirm the iPhone card is marked as the current device.",
+      "Open /sense from Android and macOS user agents and confirm existing cards still render.",
+      "After deploy, run the public web/API verification flow required by the release thread."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The cross-platform receipt, iPhone web/call door, documentation, and local proof are complete. Native iOS packaging, CallKit runtime receipts, PR checks, merge, and public deploy verification remain future phase gates."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "trusted-phone-presence"
+  ],
+  "task_ids": [
+    "trusted-phone-presence-all-platforms-20260625"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "platform scope",
+        "trust principle"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/phone-presence.fk defines the platform support, Form-native floor, phone flag, call mode, surface mode, memory readiness, and receipt accessors.",
+    "form/form-stdlib/tests/phone-presence-band.fk proves Android, iPhone, macOS, Windows, web, Android direct/dialer lanes, iPhone tel/CallKit lanes, web tel links, and shared memory readiness with verdict 4095; fkwu is registered in form/fourth-arm-bands.txt.",
+    "web/app/sense/page.tsx detects iPhone/iPad/iPod user agents and renders an iPhone presence card that routes to /sense/surface.",
+    "specs/trusted-phone-presence.md records the official Apple CallKit, Apple tel link/default-calling-app, Android intent, Android permission-minimization, and Android default-dialer source links.",
+    "docs/coherence-substrate/phone-presence.form keeps the phone framed as trusted presence, not surveillance, and names native iOS packaging as the next carrier proof."
+  ],
+  "official_platform_sources": [
+    "https://developer.apple.com/documentation/callkit",
+    "https://developer.apple.com/library/archive/featuredarticles/iPhoneURLScheme_Reference/PhoneLinks/PhoneLinks.html",
+    "https://developer.apple.com/documentation/callkit/preparing-your-app-to-be-the-default-calling-app",
+    "https://developer.android.com/guide/components/intents-common",
+    "https://developer.android.com/privacy-and-security/minimize-permission-requests",
+    "https://developer.android.com/develop/connectivity/telecom/dialer-app"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/phone-presence.form",
+    "docs/system_audit/commit_evidence_2026-06-25_trusted_phone_presence.json",
+    "form/form-stdlib/phone-presence.fk",
+    "form/form-stdlib/tests/phone-presence-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "specs/trusted-phone-presence.md",
+    "web/app/sense/page.tsx"
+  ],
+  "change_intent": "runtime_feature"
+}

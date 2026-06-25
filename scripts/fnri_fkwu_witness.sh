@@ -13,5 +13,16 @@ else
   VERDICT="$(echo "$OUT" | grep 'fourth' | tail -1 | awk '{print $NF}' || true)"
 fi
 [ "$VERDICT" = "$WANT" ] || { echo "FAIL: form-cli-band verdict=$VERDICT want $WANT" >&2; exit 1; }
-"$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
-echo "PASS: fnri form-cli-band $WANT (fkwu source + mac binary dispatch)"
+case "$(uname -s 2>/dev/null || echo unknown)" in
+  Darwin)
+    "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
+    dispatch="mac binary dispatch"
+    ;;
+  MINGW*|MSYS*|CYGWIN*|Windows*)
+    dispatch="windows standalone dispatch handled by caller"
+    ;;
+  *)
+    dispatch="no host binary dispatch for this platform"
+    ;;
+esac
+echo "PASS: fnri form-cli-band $WANT (fkwu source + $dispatch)"

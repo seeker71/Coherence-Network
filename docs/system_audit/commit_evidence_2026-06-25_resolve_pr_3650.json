@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/embodied-room-memory-receipt-20260624",
+  "commit_scope": "Resolve PR #3650 stale follow-through by making the FNRI fkwu witness platform-aware on Windows and aligning /sense iPhone copy with current browser permissions.",
+  "files_owned": [
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "web/app/sense/page.tsx",
+    "specs/trusted-phone-presence.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-25_resolve_pr_3650.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "sh -n scripts/fnri_fkwu_witness.sh scripts/verify_fnri_windows_standalone.sh",
+      "git diff --check",
+      "python3 scripts/validate_spec_quality.py --file specs/trusted-phone-presence.md",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/phone-presence.fk form-stdlib/tests/phone-presence-band.fk",
+      "scripts/fnri_fkwu_witness.sh",
+      "scripts/verify_fnri_windows_standalone.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "cd web && npm run build"
+    ],
+    "notes": "The first index check found stale MANIFEST.md and scripts/INDEX.md after rebase; python3 scripts/generate_repo_indexes.py refreshed both, and the final --check passed. make wellness completed and named pre-existing registry drift that is handled on the mesh registry branch, not introduced by this repair. The phone-presence band returned 4095 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. scripts/fnri_fkwu_witness.sh returned 4095 and PASS on mac binary dispatch; scripts/verify_fnri_windows_standalone.sh returned the FNRI 32767 band and the form-cli 4095 band with fourth-arm proof. The first CI rerun proved the Windows fkwu branch no longer ran Mac dispatch, then exposed that the same FNRI step required form/form-cli before the workflow builds it; this record now covers the Windows bootstrap gate skip for that step."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push to PR #3650 and GitHub Windows Host Floor rerun."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "/sense iPhone copy no longer advertises microphone or camera access while current global Permissions-Policy denies both; PR #3650 Windows Host Floor should no longer invoke Mac-only form-cli dispatch or require form/form-cli inside the standalone FNRI Windows step.",
+    "public_endpoints": [
+      "https://coherencycoin.com/sense",
+      "https://github.com/seeker71/Coherence-Network/pull/3650"
+    ],
+    "test_flows": [
+      "Open /sense and confirm the iPhone card describes remembered context, trusted-call tel/CallKit lanes, and the live web surface without promising mic/camera access.",
+      "After push, confirm Windows Host Floor reruns scripts/verify_fnri_windows_standalone.sh without FAIL: form-cli fnri witness= want 32767 or FAIL: bootstrap receipt.",
+      "After merge and deploy, run the public web/API verification flow for the release thread."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof for the stale PR repair passed. CI and deploy validation remain pending until the branch is pushed and PR checks complete."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "trusted-phone-presence"
+  ],
+  "task_ids": [
+    "resolve-stale-pr-3650-20260625"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge follow-through"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "debugging",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "scripts/fnri_fkwu_witness.sh now keeps the fkwu source band on every platform while running verify_fnri_mac_binary_dispatch.sh only on Darwin; Windows leaves standalone dispatch to scripts/verify_fnri_windows_standalone.sh.",
+    "scripts/verify_fnri_windows_standalone.sh now skips verify_fsh_fnri_bootstrap.sh on Windows because the workflow proves native form-cli in the following Windows step.",
+    "scripts/verify_fnri_windows_standalone.sh passed locally on macOS with FNRI verdict 32767 and form-cli-band verdict 4095; CI must prove the Windows uname branch.",
+    "web/app/sense/page.tsx no longer advertises mic/camera on the iPhone card while web/next.config.ts denies camera and microphone through Permissions-Policy.",
+    "specs/trusted-phone-presence.md now records that microphone/camera lanes require a future Permissions-Policy change and runtime receipts.",
+    "phone-presence validation returned 4095 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "specs/trusted-phone-presence.md",
+    "web/app/sense/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-25_resolve_pr_3650.json"
+  ],
+  "change_intent": "runtime_fix"
+}

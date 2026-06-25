@@ -1,0 +1,30 @@
+; phone-presence.form - the phone as a trusted carried presence.
+;
+; The personal assistant frequency lifts when the phone stops being a command
+; surface and becomes a presence that learns with its person. It listens, sees,
+; remembers, informs, contributes, and touches any physical or digital surface it
+; knows how to interact with.
+;
+; Phone calls are the first action lane because voice carries relationship,
+; timing, and trust more directly than any notification. The call is not framed
+; as surveillance or automation. It is a remembered exchange with a clear
+; membrane: before the call, read the relationship thread and intention; during
+; the call, support live listening and shared context; after the call, record
+; commitments, open threads, and learning into the contact thread.
+;
+; Platform lanes:
+;   android - Coherence Sense native organ plus ACTION_DIAL by default, direct
+;             ACTION_CALL only when the carrier holds permission.
+;   iphone  - first-class phone presence. Public phone-number calls begin at
+;             tel: confirmation; VoIP/native calling uses CallKit; iOS 18.2+
+;             can let a calling app handle tel: URLs when selected as default.
+;   macos   - native host plus tel/facetime/handoff carrier.
+;   windows - native host plus tel/default-app carrier.
+;   web     - PWA/browser door plus tel links and shared relationship memory.
+;
+; The proof floor is `form/form-stdlib/phone-presence.fk` and
+; `form/form-stdlib/tests/phone-presence-band.fk` -> 4095, registered for fkwu
+; four-way validation. This proves the platform routing and trusted-call receipt;
+; OS launchers, App Store packaging, Play Store packaging, CallKit, Android
+; intents, contacts, and carrier audio remain host surfaces that must each leave
+; their own runtime receipt.
