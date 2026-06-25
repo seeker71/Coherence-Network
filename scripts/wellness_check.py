@@ -25,6 +25,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+
+def _python_cmd() -> list[str]:
+    """Run nested Python checks with the interpreter already executing wellness."""
+    return [sys.executable or "python3"]
+
 # Files at root that are meant to be there even without incoming refs.
 # Config, tooling, canonical orientation, license-style docs.
 ROOT_EXEMPT = {
@@ -886,7 +891,7 @@ def sense_form_ontology() -> list[str]:
         return ["  (form/scripts/validate_form_ontology.py not present; skipping)"]
     try:
         result = subprocess.run(
-            ["python3", str(script)],
+            [*_python_cmd(), str(script)],
             capture_output=True, text=True, timeout=15,
         )
     except Exception as exc:
@@ -918,7 +923,7 @@ def sense_form_blueprints() -> list[str]:
         return ["  (scripts/scan_form_blueprints.py not present; skipping)"]
     try:
         result = subprocess.run(
-            ["python3", str(script), "--check"],
+            [*_python_cmd(), str(script), "--check"],
             capture_output=True, text=True, timeout=30,
         )
     except Exception as exc:
@@ -966,7 +971,7 @@ def sense_form_primitives() -> list[str]:
         return ["  (form/scripts/validate_primitive_registry.py not present; skipping)"]
     try:
         result = subprocess.run(
-            ["python3", str(script)],
+            [*_python_cmd(), str(script)],
             capture_output=True, text=True, timeout=30,
         )
     except Exception as exc:
