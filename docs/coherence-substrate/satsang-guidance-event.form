@@ -1,0 +1,26 @@
+; satsang-guidance-event.form - edited transcripts offered as a guidance turn.
+;
+; A satsang companion listens first. When the circle explicitly offers a turn,
+; names the presence, or presses the button, the edited transcript can become a
+; guidance request to Sema or another invoked presence. The protocol keeps all
+; detected utterances visible, carries edits as edits, and records the target
+; presence and turn mode before any transmission is asked for.
+;
+; Carrier:
+;   experiments/satsang-mac-app - SwiftUI Mac desktop app. It tails the local
+;   transcript JSONL, lets the holder edit utterances, and writes the request to
+;   ~/.coherence-network/satsang-guidance/events.jsonl plus the latest JSON and
+;   .form receipt. No external receiver is invoked by the GUI.
+;
+; Body:
+;   form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
+;   valid guidance request or must hold. It accepts Sema, the satsang companion,
+;   or a new invoked presence; accepts turn-offered, named-and-asked, and
+;   button-invoked modes; requires a non-empty transcript, all detected lines
+;   included, and a present question. Proof:
+;   form/form-stdlib/tests/satsang-guidance-event-band.fk -> 255.
+;
+; Boundary:
+;   The event is an offer, not an interruption. The GUI does not decide that a
+;   presence should speak on its own. It records that the turn was offered, then
+;   gives the transcript and question to the presence lane.

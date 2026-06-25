@@ -1,0 +1,27 @@
+; preludes: form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk
+;
+; satsang-guidance-event-band - edited transcript guidance request protocol.
+;
+; Verdict 255:
+;   1   Sema is a valid target presence
+;   2   a new invoked presence is valid
+;   4   button-invoked is a valid turn mode
+;   8   named-and-asked is a valid turn mode
+;   16  all detected transcripts are included
+;   32  ready request offers guidance
+;   64  missing question holds
+;   128 unsupported mode holds
+
+(do
+    (let ready (sge-receipt "sema" "turn-offered" 3 3 1))
+    (let missing-question (sge-receipt "sema" "turn-offered" 3 3 0))
+    (let unsupported-mode (sge-receipt "sema" "interrupt-now" 3 3 1))
+    (let c0 (if (eq (sge-target-known? "sema") 1) 1 0))
+    (let c1 (if (eq (sge-target-known? "new-presence") 1) 2 0))
+    (let c2 (if (eq (sge-turn-mode? "button-invoked") 1) 4 0))
+    (let c3 (if (eq (sge-turn-mode? "named-and-asked") 1) 8 0))
+    (let c4 (if (eq (sge-all-transcripts? 3 3) 1) 16 0))
+    (let c5 (if (str_eq (sge-rec-decision ready) "offer-guidance-request") 32 0))
+    (let c6 (if (str_eq (sge-rec-decision missing-question) "hold-until-invited") 64 0))
+    (let c7 (if (str_eq (sge-rec-decision unsupported-mode) "hold-until-invited") 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

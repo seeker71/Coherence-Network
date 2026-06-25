@@ -56,6 +56,7 @@
 - [recipes-tuned-by-trace](recipes-tuned-by-trace.md) — Recipes Tuned by Trace
 - [sacred-imagination-embodiment](sacred-imagination-embodiment.md) — Sacred Imagination Embodiment
 - [sacred-imagination-emilio-ortiz-ingest](sacred-imagination-emilio-ortiz-ingest.md) — Sacred Imagination Emilio Ortiz Ingest
+- [satsang-mac-guidance-app](satsang-mac-guidance-app.md) — Satsang Mac Guidance App
 - [source-artifact-sensing-graph-integration](source-artifact-sensing-graph-integration.md) — Source Artifact Sensing Graph Integration
 - [stability-harmony-goal-sensing](stability-harmony-goal-sensing.md) — Stability Harmony Goal Sensing
 - [trace-symbol-spaces-form](trace-symbol-spaces-form.md) — Trace-Grounded Symbol Spaces in Form
