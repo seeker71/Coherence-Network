@@ -1,0 +1,156 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/form-metal-model-cell-20260625",
+  "commit_scope": "Add a fkwu form-cli metal-model-cell receipt that verifies content-addressed model bytes in Form before dispatching those exact bytes through native tag 204 to Metal.",
+  "files_owned": [
+    "form/build-form-cli.sh",
+    "form/form-stdlib/form-cli-repl.fk",
+    "form/form-stdlib/form-cli.fk",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/fkwu_form_cli_metal_model_cell_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/runtime.out"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form-cli ask \"next bridge after generic metal_matvec_f32: fkwu-controlled model byte cell or GGUF tensor loader for form-cli Metal path\"",
+      "cd form && ./validate.sh form-stdlib/sha256.fk form-stdlib/tests/sha256-band.fk",
+      "cd form && ./validate.sh form-stdlib/str-byte-at.fk form-stdlib/hex.fk form-stdlib/tests/hex-band.fk",
+      "bash -n scripts/fkwu_form_cli_metal_model_cell_receipt.sh",
+      "scripts/regen_form_cli_bootstrap.sh",
+      "scripts/regen_standard_lane_binaries.sh",
+      "cd form && printf 'ping\\nversion\\nmetal-model-cell\\nquit\\n' | ./form-stdlib/bootstrap/form-cli-darwin-arm64",
+      "mkdir -p form/.cache && cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh .cache/form-cli-standard-test && printf 'ping\\nmetal-model-cell\\nquit\\n' | .cache/form-cli-standard-test",
+      "scripts/fkwu_form_cli_metal_model_cell_receipt.sh docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25.json",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+      "cd form/form-kernel-go && go test -run 'TestFkwuFormCli|TestFkwuLocaleUtf8'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_fkwu_form_cli_metal_model_cell.json"
+    ],
+    "results": [
+      "form-cli ask attempted first; it returned path:rented grounded:no freq:no suffic:no and the external oracle limit message, so no grounded native answer was claimed",
+      "sha256-band passed four-way with verdict 2",
+      "hex-band plus str-byte-at passed four-way with verdict 14",
+      "receipt script parsed cleanly with bash -n",
+      "form-cli bootstrap table/emitted C regenerated with stamp 731e14fb3a9f9231",
+      "standard fkwu platform binary was unchanged at stamp 6fff1577ba23e210",
+      "standard form-cli platform binary regenerated with stamp 731e14fb3a9f9231",
+      "regenerated form-cli returned pong, form-cli 0.3, and metal-model-cell usage text",
+      "standard lane copied bootstrap/darwin-arm64 with no clang and returned pong plus metal-model-cell usage text",
+      "model-cell receipt passed on Apple M4 Max: model_cell_verified=true, model_cell_sha256=3836efd8c75b6322609b96a9b1894cd727586ce30f673a1d72502c2751b77c70, metal_api=metal_matvec_f32, model_bytes_loaded=44, gpu_y=[-0.250000,5.000000], max_delta=0.000000000",
+      "runtime transcript showed runtime_path_sanitized=true, denied_toolchain_names_visible_on_path=0, http_or_ollama=absent, metal_owner=fkwu-form-cli",
+      "form-cli-band passed four-way with verdict 16383",
+      "metal-emit-band passed four-way with verdict 31",
+      "go test passed: ok form-kernel-go 80.014s",
+      "commit evidence validates"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "PR checks have not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployed web/API surface changed; this is a local form/fkwu runtime receipt."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A proof-linked form-cli binary can read a model-cell manifest, compute SHA-256 over the referenced binary model bytes in Form, compare it with the content address, and only then dispatch those exact bytes through fkwu tag 204 into the linked Metal matvec carrier without HTTP/Ollama or visible runtime toolchain names.",
+    "public_endpoints": [
+      "local fkwu form-cli proof binary",
+      "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25.json"
+    ],
+    "test_flows": [
+      "env -i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp> <proof-form-cli> <<<'metal-model-cell <manifest>\\nquit'",
+      "FORM_STANDARD_LANE=1 ./build-form-cli.sh <tmp> && printf 'ping\\nmetal-model-cell\\nquit\\n' | <tmp>",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The fkwu-controlled content-addressed f32 model-byte cell is proven before Metal matvec. Full GGUF tensor mapping, tokenizer, autoregressive Llama decode binding, and Android/Windows carrier receipts remain open bridges."
+  },
+  "idea_ids": [
+    "form-native-metal-model-inference",
+    "on-device-sovereign-form-cli"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse",
+    "metal-emit-band",
+    "form-cli-band",
+    "sha256-band",
+    "hex-band"
+  ],
+  "task_ids": [
+    "2026-06-25-fkwu-form-cli-metal-model-cell"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence",
+        "trace"
+      ]
+    },
+    {
+      "contributor_id": "subagent-019f00dd-0279-7173-8cf0-0a760157300e",
+      "contributor_type": "machine",
+      "roles": [
+        "codebase exploration",
+        "implementation plan"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/fkwu_metal_matvec_carrier.m",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model-cell-manifest.txt",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model.hex",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64"
+  ],
+  "change_files": [
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli-repl.fk",
+    "form/form-stdlib/form-cli.fk",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/fkwu_form_cli_metal_model_cell_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/emit-matvec.err",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/emit-matvec.fk",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/emit-matvec.out",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/fkwu_metal_matvec_carrier.m",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model-cell-manifest.txt",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/model.hex",
+    "docs/system_audit/fkwu_form_cli_metal_model_cell_receipt_2026-06-25_trace/runtime.out",
+    "docs/system_audit/commit_evidence_2026-06-25_fkwu_form_cli_metal_model_cell.json"
+  ],
+  "change_intent": "runtime_feature"
+}
