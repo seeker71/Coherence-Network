@@ -48,10 +48,10 @@ func readFiles(t *testing.T, paths ...string) string {
 	return b.String()
 }
 
-// emitChain returns the three sources whose walk emits fkwu and carries the
+// emitChain returns the sources whose walk emits fkwu and carries the
 // hati-os program/flatten surface (fkc-emit-universal, fkc-table-file,
 // fkcount-fns), skipping the test if any is missing.
-func emitChain(t *testing.T, stdlib string) (minimal, hatiKernel, hatiEmit string) {
+func emitChain(t *testing.T, stdlib string) (minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit string) {
 	t.Helper()
 	mustExist := func(p string) string {
 		if _, err := os.Stat(p); err != nil {
@@ -61,14 +61,16 @@ func emitChain(t *testing.T, stdlib string) (minimal, hatiKernel, hatiEmit strin
 	}
 	return mustExist(filepath.Join(stdlib, "minimal-surface.fk")),
 		mustExist(filepath.Join(stdlib, "hati-os-kernel.fk")),
+		mustExist(filepath.Join(stdlib, "host-io-fs-fkwu-emit.fk")),
+		mustExist(filepath.Join(stdlib, "fkc-table-serialize.fk")),
 		mustExist(filepath.Join(stdlib, "hati-os-kernel-emit.fk"))
 }
 
 // buildFkwu emits the universal fkwu C source in-process and compiles it,
 // returning the binary path. Requires clang.
-func buildFkwu(t *testing.T, clang, dir, minimal, hatiKernel, hatiEmit string) string {
+func buildFkwu(t *testing.T, clang, dir, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit string) string {
 	t.Helper()
-	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-emit-universal)\n")
+	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)+"\n(fkc-emit-universal)\n")
 	if len(strings.TrimSpace(cSrc)) < 1000 {
 		t.Fatalf("fkwu emit produced suspiciously small C source (%d bytes)", len(cSrc))
 	}
@@ -95,20 +97,20 @@ func requireClang(t *testing.T) string {
 func TestFkwuOffloadBridge(t *testing.T) {
 	clang := requireClang(t)
 	stdlib := filepath.Join("..", "form-stdlib")
-	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit := emitChain(t, stdlib)
 	formParse := filepath.Join(stdlib, "form-parse.fk")
 	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	band := filepath.Join(stdlib, "tests", "content-address-band.fk")
 
 	dir := t.TempDir()
-	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)
 
 	// Flatten the band to a node-table in-process (fks: string-pool variant).
 	flattenExpr := "(fks-table-file " +
 		"(flt-band-sources-fns (list (read_file \"" + shim + "\")) (read_file \"" + band + "\")) " +
 		"(flt-band-sources-pool (list (read_file \"" + shim + "\")) (read_file \"" + band + "\")))"
-	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
 	if len(strings.TrimSpace(table)) < 100 {
 		t.Fatalf("flatten produced suspiciously small table (%d bytes)", len(table))
 	}
@@ -136,14 +138,14 @@ func TestFkwuOffloadBridge(t *testing.T) {
 func TestFkwuOffloadInput(t *testing.T) {
 	clang := requireClang(t)
 	stdlib := filepath.Join("..", "form-stdlib")
-	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit := emitChain(t, stdlib)
 
 	dir := t.TempDir()
-	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)
 
 	// fkcount: a program that reads the staged input (fk_src) via fk-buf and
 	// returns its byte count — the minimal input-dependent fourth-kernel program.
-	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-table-file (fkcount-fns))\n")
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)+"\n(fkc-table-file (fkcount-fns))\n")
 	if len(strings.TrimSpace(table)) < 20 {
 		t.Fatalf("fkcount flatten produced suspiciously small table (%d bytes)", len(table))
 	}

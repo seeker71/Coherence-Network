@@ -11,16 +11,16 @@
 # The scoring is Form (the kernel computes overlap + match + tally); this shell
 # runs the predictor and tallies the report. No remote calls — the model is local.
 #
-# Usage: form_cli_replay.sh [N] [oracle] [corpus]
+# Usage: form_cli_replay.sh [N] [local-teacher-command] [corpus]
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STD="$ROOT/form/form-stdlib"; GO="$ROOT/form/form-kernel-go/bin-go"
-N="${1:-12}"; ORACLE="${2:-ollama run coder}"
+N="${1:-12}"; TEACHER="${2:-ollama run coder}"
 CORPUS="${3:-${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}}"
 [[ -x "$GO" ]] || ( cd "$ROOT/form/form-kernel-go" && go build -o bin-go . ) 2>/dev/null
 [[ -f "$CORPUS" ]] || { echo "no corpus at $CORPUS"; exit 1; }
 
-echo "── replay: native ($ORACLE) vs the agent, on $N tasks ──"
+echo "── replay: local teacher ($TEACHER) vs the agent, on $N tasks ──"
 KNOWN="Bash Read Write Edit Grep Glob Agent"
 
 # pick N substantive tasks; emit "agent_tools<TAB>task" per line
@@ -56,7 +56,7 @@ while IFS=$'\t' read -r agent_tools task; do
     prompt="You are a coding agent with these tools: $KNOWN. For the task below, list ONLY the tool names you would use, one per line, most important first, nothing else.
 Task: $task"
     pf="$(mktemp)"; printf '%s' "$prompt" > "$pf"
-    raw="$($ORACLE < "$pf" 2>/dev/null)"; rm -f "$pf"
+    raw="$($TEACHER < "$pf" 2>/dev/null)"; rm -f "$pf"
     # extract known tool names from the reply, preserving order, unique
     native="$(printf '%s\n' "$raw" | grep -oiE 'Bash|Read|Write|Edit|Grep|Glob|Agent' \
         | awk '{print toupper(substr($0,1,1)) tolower(substr($0,2))}' | awk '!seen[$0]++' | head -8)"

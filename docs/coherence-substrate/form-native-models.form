@@ -97,10 +97,14 @@
 ;     distilling/porting ECAPA's weights into our asm lane (the "architecture AND weights are recipe data"
 ;     path). Race design + measured table: experiments/rune-galdr/CHALLENGERS.md (recordings/roster/timeline
 ;     stay private in ~/.coherence-network — voiceprints are biometric).
-;   FLOOR — LLM INFERENCE ON THE BODY (proven 2026-06-24, this session — the rented mind starts coming home):
-;     form-cli's "local" call today is an HTTP POST to ollama (form-cli-ask.fk:79, http://localhost:11434);
-;     ollama/llama.cpp does the forward, fkwu only routes. The body now holds the pieces to do it itself, each
-;     four-way:
+;   FLOOR — LLM INFERENCE ON THE BODY (proven 2026-06-24 — the rented mind starts coming home):
+;     The HTTP "local oracle" answer lane is retired from form-cli ask. The current local answer path is
+;     fkwu grounded RAG: form-cli stages the question, fkwu reads
+;     ~/.coherence-network/rag-index/index.jsonl directly, performs native JSONL
+;     grounding, and returns an attributed grounded cell plus
+;     synthesis-lane:pending-fkwu-metal-llm. It does not POST to ollama, localhost:11434, or http-fetch.
+;     Full prose generation is still the named composition gap: the body now holds the pieces to do it itself,
+;     each four-way:
 ;       WEIGHT-LOAD (M1, whole): gguf-read.fk parses a real GGUF header (LE u8/u32/u64, magic/version/counts →
 ;         127); gguf-locate (KV walk skipping the 128k-element vocab arrays in O(1), + tensor-info walk → 127)
 ;         finds any tensor — WITNESSED on the real llama3.2:3b ollama serves (scripts/gguf_locate_witness.py:
@@ -112,7 +116,7 @@
 ;         BYTES (fa-ldr-d/fa-fmul/fa-fadd/fa-ret over a buffer, folded tb-dot's downward order) → 127, NO
 ;         rustc/clang. Answers "buffer bridge?": there is none — ll-buffer + the four-way float instructions
 ;         compose native compute over fkwu's own f64 pool; form-asm bytes → recipe-dylib → fkwu dlopen+call.
-;   NORTH STAR — THE MIND COMES HOME: form-cli's local model calls run inference on the fkwu BODY — the proven
+;   NORTH STAR — THE MIND COMES HOME: form-cli's local synthesis calls run inference on the fkwu BODY — the proven
 ;     forward recipes (kv-llama-block 255, transformer-generate-cached) over GGUF weights loaded by gguf-locate
 ;     + dequant, computed by the form-asm matvec lane — REPLACING the ollama HTTP seam, at vLLM-class speed
 ;     (the form-asm/Metal emit lane + batching + paged-KV). One engine: the recipe that proves four-way is the

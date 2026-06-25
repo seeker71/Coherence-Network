@@ -1,8 +1,8 @@
 #!/bin/sh
-# fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 4095).
+# fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 16383).
 set -eu
 ROOT="$(cd -P "$(dirname "$0")/.." && pwd)"
-WANT=4095
+WANT=16383
 OUT="$(cd "$ROOT/form" && ./validate.sh form-stdlib/tests/form-cli-band.fk 2>&1)"
 echo "$OUT" | grep -E '4095|fourth|divergent' | tail -3 || true
 if echo "$OUT" | grep -qE '(→|fourth.*=)[[:space:]]*4095'; then

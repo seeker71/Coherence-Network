@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
 # form_cli_preflight.sh — air-gap readiness check for the form-cli.
 #
-# Proves the offline self-improvement kit is whole WHILE the network is still
-# reachable to fix anything: the Form kernel builds and runs, the surface
-# membrane is legible (Form-native), local oracles are present (sovereign,
-# offline), the stdlib recipes + specs are on disk, and the agent loop runs
-# end-to-end against a LOCAL oracle with no network crossing.
+# Proves the offline self-improvement kit is whole: the native fkwu form-cli
+# runs, the surface membrane is legible, local grounded RAG is present, the
+# stdlib recipes + specs are on disk, and legacy bridge checks are named as
+# bridge checks instead of the runtime.
 #
 # The LOGIC (the surface report) is Form, evaluated on the kernel. This shell is
 # a thin carrier: it orchestrates checks and runs the kernel. No body lives here.
 # Written for stock macOS bash 3.2 — no mapfile, arrays guarded.
 #
-# Usage: scripts/form_cli_preflight.sh [smoke-oracle]
-#   smoke-oracle defaults to a fast local model just to prove the loop.
+# Usage: scripts/form_cli_preflight.sh
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GO_DIR="$ROOT/form/form-kernel-go"
 GO="$GO_DIR/bin-go"
-SMOKE_ORACLE="${1:-ollama run llama3.2:3b}"
 MENTOR_MODELS="$HOME/mentor-install/.models"
 PASS=0; GAP=0
 ok(){ printf "  ✓  %s\n" "$1"; PASS=$((PASS+1)); }
@@ -69,24 +66,19 @@ else
     gap "skipped — kernel unavailable"
 fi
 
-# 3. Local oracles: sovereign, offline -----------------------------------------
-echo "[3] Local oracles (offline)"
-FAST=""; CODER=""; N_LOCAL=0; LOCAL_LIST=""
-if command -v ollama >/dev/null 2>&1; then
-    while IFS= read -r m; do
-        [[ -z "$m" ]] && continue
-        N_LOCAL=$((N_LOCAL+1)); LOCAL_LIST="$LOCAL_LIST $m"
-        case "$m" in *3b*|*3.2*) FAST="$m";; esac
-        case "$m" in *coder*) CODER="$m";; esac
-    done < <(ollama list 2>/dev/null | awk 'NR>1 && $1 !~ /:cloud/ {print $1}')
-    if [[ "$N_LOCAL" -gt 0 ]]; then
-        ok "ollama: $N_LOCAL local model(s) —$LOCAL_LIST"
-        [[ -z "$FAST" ]] && FAST="$(printf '%s' "$LOCAL_LIST" | awk '{print $1}')"
-    else
-        gap "ollama present but no local models pulled"
-    fi
+# 3. Native form-cli + local model assets --------------------------------------
+echo "[3] Native form-cli + model assets"
+NATIVE_CLI=""
+if [[ -x "$ROOT/form/form-cli" ]]; then
+    NATIVE_CLI="$ROOT/form/form-cli"
+elif [[ "$(uname -s)-$(uname -m)" == "Darwin-arm64" && -x "$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64" ]]; then
+    NATIVE_CLI="$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64"
+fi
+if [[ -n "$NATIVE_CLI" ]]; then
+    ver="$(printf 'version\nquit\n' | "$NATIVE_CLI" 2>/dev/null | head -1)"
+    ok "native fkwu form-cli present: $ver"
 else
-    gap "ollama not on PATH"
+    gap "native fkwu form-cli missing — run scripts/ensure_form_cli_native.sh"
 fi
 N_GGUF=0; CODER_GGUF=""
 if [[ -d "$MENTOR_MODELS" ]]; then
@@ -95,13 +87,9 @@ if [[ -d "$MENTOR_MODELS" ]]; then
         N_GGUF=$((N_GGUF+1))
         case "$g" in *coder*) CODER_GGUF="$g";; esac
     done < <(find "$MENTOR_MODELS" -maxdepth 1 -iname '*.gguf' 2>/dev/null)
-    [[ "$N_GGUF" -gt 0 ]] && ok "coder GGUF on disk: $N_GGUF file(s) in mentor-install/.models"
+    [[ "$N_GGUF" -gt 0 ]] && ok "GGUF weights on disk: $N_GGUF file(s) in mentor-install/.models"
 fi
-if [[ -n "$CODER" ]]; then
-    note "coder oracle ready in ollama: $CODER"
-elif [[ -n "$CODER_GGUF" ]]; then
-    note "coder oracle stageable (no internet needed): ollama create coder -f <(echo \"FROM $CODER_GGUF\")"
-fi
+[[ -n "$CODER_GGUF" ]] && note "coder GGUF available for the fkwu+Metal synthesis lane: $CODER_GGUF"
 
 # 4. Recipes + specs on disk ---------------------------------------------------
 echo "[4] Body on disk (recipes + specs)"
@@ -110,43 +98,54 @@ SPECS=$(find "$ROOT/specs" -name '*.md' 2>/dev/null | grep -c . | tr -d ' ')
 [[ "$FK" -gt 0 ]] && ok "$FK Form stdlib recipes present" || gap "no Form recipes found"
 [[ "$SPECS" -gt 0 ]] && ok "$SPECS specs present (idea→form-spec source)" || gap "no specs found"
 
-# 5. Offline loop smoke: agent loop on a LOCAL oracle, no network ---------------
-echo "[5] Offline agent loop (local oracle: $SMOKE_ORACLE)"
-loop_out="$(bash "$ROOT/scripts/form_native_run.sh" \
-    "Use the bash tool to run: echo PREFLIGHT-OK. Then report the output as your final answer." \
-    "$SMOKE_ORACLE" 3 2>/dev/null)"
-if printf '%s' "$loop_out" | grep -q "PREFLIGHT-OK"; then
-    ok "agent loop ran end-to-end against a local oracle (no network)"
+# 5. Native grounded ask smoke --------------------------------------------------
+echo "[5] Native grounded ask"
+if [[ -n "$NATIVE_CLI" ]]; then
+    mkdir -p "$HOME/.coherence-network"
+    printf 'substrate' > "$HOME/.coherence-network/rag-query.txt"
+    ask_out="$(cd "$HOME" && printf 'ask-staged\nquit\n' | "$NATIVE_CLI" 2>/dev/null)"
+    if printf '%s' "$ask_out" | grep -q '^grounded:'; then
+        ok "native staged ask returns a grounded RAG cell"
+    else
+        gap "native ask did not return a grounded cell"
+    fi
 else
-    gap "offline loop smoke did not complete (oracle '$SMOKE_ORACLE' reachable?)"
+    gap "skipped — native form-cli unavailable"
 fi
 
 # 6. Offline semantic memory (RAG over the body) ------------------------------
 echo "[6] Offline semantic memory (RAG)"
 RAG_INDEX="$HOME/.coherence-network/rag-index/index.jsonl"
 RAG_N=0; [[ -f "$RAG_INDEX" ]] && RAG_N=$(grep -c . "$RAG_INDEX" 2>/dev/null | tr -d ' ')
-EMBED=""; command -v ollama >/dev/null 2>&1 && EMBED="$(ollama list 2>/dev/null | awk 'NR>1 && $1 ~ /embed/ {print $1; exit}')"
-if [[ "$RAG_N" -gt 0 && -n "$EMBED" ]]; then
-    # the memory works when a routing query recalls the routing/oracle region (Form-ranked)
-    recall="$(python3 "$ROOT/scripts/form_cli_rag.py" search "how does form-cli route between a local and a remote oracle" -k 3 2>/dev/null)"
-    if printf '%s' "$recall" | grep -qE 'form-cli|tier-router|oracle'; then
-        ok "RAG index: $RAG_N docs ($EMBED) — query recalls the right recipes (rag-retrieve.fk)"
-    else
-        ok "RAG index: $RAG_N docs ($EMBED) present"
-        note "recall smoke did not surface the routing region — check the embedder"
-    fi
+if [[ "$RAG_N" -gt 0 ]]; then
+    ok "RAG index: $RAG_N cells present for fkwu rag-ask.fk"
 else
-    gap "no offline memory — run: scripts/form_cli_rag.py build (needs ollama + nomic-embed-text)"
+    gap "no offline memory — run the startup RAG/index setup before agent work"
 fi
 
-# 7. Readiness receipt ---------------------------------------------------------
+# 7. Synthesis lane receipt -----------------------------------------------------
+echo "[7] Native synthesis lane"
+if [[ -n "$NATIVE_CLI" ]]; then
+    synth_out="$(cd "$HOME" && printf 'synthesis-status\nquit\n' | "$NATIVE_CLI" 2>/dev/null)"
+    if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm'; then
+        ok "synthesis lane is named honestly as pending"
+        note "available pieces are tracked; end-to-end prose generation is not claimed"
+    else
+        gap "synthesis lane did not return an honest pending receipt"
+    fi
+else
+    gap "skipped — native form-cli unavailable"
+fi
+
+# 8. Readiness receipt ---------------------------------------------------------
 echo "── receipt ──"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 VERDICT="READY"; [[ "$GAP" -gt 0 ]] && VERDICT="GAPS:$GAP"
-printf "  when      %s\n  checks    %d passed, %d gap(s)\n  fast      %s\n  coder     %s\n  verdict   %s\n" \
-    "$STAMP" "$PASS" "$GAP" "${FAST:-none}" "${CODER:-unstaged}" "$VERDICT"
+printf "  when      %s\n  checks    %d passed, %d gap(s)\n  native    %s\n  gguf      %s\n  verdict   %s\n" \
+    "$STAMP" "$PASS" "$GAP" "${NATIVE_CLI:-missing}" "${N_GGUF:-0}" "$VERDICT"
 if [[ "$GAP" -eq 0 ]]; then
-    echo "  the kit is whole — you can lose the network and keep improving."
+    echo "  the grounded kit is whole — you can lose the network and keep improving."
+    echo "  prose synthesis remains an honest pending lane, not a hidden HTTP oracle."
 else
     echo "  close the gaps above before the network goes dark."
 fi

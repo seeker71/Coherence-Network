@@ -23,29 +23,50 @@ import (
 func TestFkwuFormCli(t *testing.T) {
 	clang := requireClang(t)
 	stdlib := filepath.Join("..", "form-stdlib")
-	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit := emitChain(t, stdlib)
 	formParse := filepath.Join(stdlib, "form-parse.fk")
 	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
-	// The ask lane rides ahead of form-cli.fk so fc-respond can route through
-	// http-fetch before dispatch. Mirrors build-form-cli.sh's MODS.
-	httpClient := filepath.Join(stdlib, "http-client.fk")
+	resourcePort := filepath.Join(stdlib, "resource-port.fk")
+	bnii := filepath.Join(stdlib, "bml-native-interface-package-import.fk")
+	targets := filepath.Join(stdlib, "hati-os-targets.fk")
+	fnri := filepath.Join(stdlib, "form-native-resource-interfaces.fk")
+	formFs := filepath.Join(stdlib, "form-fs.fk")
+	storagePort := filepath.Join(stdlib, "storage-port.fk")
+	hostKernel := filepath.Join(stdlib, "host-kernel-carrier.fk")
+	fnriStandin := filepath.Join(stdlib, "fnri-standin.fk")
+	fnriReceipt := filepath.Join(stdlib, "fnri-receipt.fk")
+	lineGrammar := filepath.Join(stdlib, "line-grammar.fk")
+	voiceTraits := filepath.Join(stdlib, "voice-traits.fk")
+	nearestShape := filepath.Join(stdlib, "nearest-shape.fk")
+	coLearning := filepath.Join(stdlib, "co-learning.fk")
+	coLearningStream := filepath.Join(stdlib, "co-learning-stream.fk")
+	meshDispatch := filepath.Join(stdlib, "mesh-dispatch.fk")
+	surpriseSalience := filepath.Join(stdlib, "surprise-salience.fk")
+	hostSense := filepath.Join(stdlib, "host-sense-organ.fk")
+	speechOrgan := filepath.Join(stdlib, "speech-organ.fk")
+	nativeHost := filepath.Join(stdlib, "native-host-instance.fk")
+	textTokenize := filepath.Join(stdlib, "text-tokenize.fk")
+	ragEmbed := filepath.Join(stdlib, "rag-embed.fk")
+	ragIndexCodec := filepath.Join(stdlib, "rag-index-codec.fk")
+	ragRetrieve := filepath.Join(stdlib, "rag-retrieve.fk")
+	ragAsk := filepath.Join(stdlib, "rag-ask.fk")
 	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	mainCli := filepath.Join(stdlib, "form-cli-main.fk")
 
 	dir := t.TempDir()
-	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)
 
 	// Flatten form-cli-main (preludes: shim + core + form-cli, band: the runtime
 	// entry) to a string-pool node table — the fks path that carries strings.
-	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + httpClient + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + resourcePort + `") (read_file "` + bnii + `") (read_file "` + targets + `") (read_file "` + fnri + `") (read_file "` + formFs + `") (read_file "` + storagePort + `") (read_file "` + hostKernel + `") (read_file "` + fnriStandin + `") (read_file "` + fnriReceipt + `") (read_file "` + lineGrammar + `") (read_file "` + voiceTraits + `") (read_file "` + nearestShape + `") (read_file "` + coLearning + `") (read_file "` + coLearningStream + `") (read_file "` + meshDispatch + `") (read_file "` + surpriseSalience + `") (read_file "` + hostSense + `") (read_file "` + speechOrgan + `") (read_file "` + nativeHost + `") (read_file "` + textTokenize + `") (read_file "` + ragEmbed + `") (read_file "` + ragIndexCodec + `") (read_file "` + ragRetrieve + `") (read_file "` + ragAsk + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
 	band := `(read_file "` + mainCli + `")`
 	flattenExpr := "(fks-table-file " +
 		"(flt-band-sources-fns " + mods + " " + band + ") " +
 		"(flt-band-sources-pool " + mods + " " + band + "))"
-	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
 	if len(strings.TrimSpace(table)) < 100 {
 		t.Fatalf("form-cli flatten produced suspiciously small table (%d bytes)", len(table))
 	}
@@ -62,7 +83,7 @@ func TestFkwuFormCli(t *testing.T) {
 		want string
 	}{
 		{"ping", "pong"},
-		{"version", "form-cli 0.2"},
+		{"version", "form-cli 0.3"},
 		{"ping extra", "pong"},
 		{"foobar", "form-cli: unknown verb 'foobar' — type 'help'"},
 	}
@@ -78,7 +99,7 @@ func TestFkwuFormCli(t *testing.T) {
 	// the self-description verbs return their pure strings (exact match lives in
 	// the four-way band tests/form-cli-band.fk; here we confirm they reach fkwu).
 	for _, c := range []struct{ cmd, sub string }{
-		{"help", "ping ask help about kernel source recreate verify version"},
+		{"help", "synthesis-status"},
 		{"about", "one self-contained native binary"},
 		{"kernel", "fkwu, a universal walker"},
 	} {
@@ -102,15 +123,36 @@ func TestFkwuFormCli(t *testing.T) {
 func TestFkwuFormCliRepl(t *testing.T) {
 	clang := requireClang(t)
 	stdlib := filepath.Join("..", "form-stdlib")
-	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit := emitChain(t, stdlib)
 	formParse := filepath.Join(stdlib, "form-parse.fk")
 	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
-	// The ask lane rides ahead of form-cli.fk so fc-respond can route through
-	// http-fetch before dispatch. Mirrors build-form-cli.sh's MODS.
-	httpClient := filepath.Join(stdlib, "http-client.fk")
+	resourcePort := filepath.Join(stdlib, "resource-port.fk")
+	bnii := filepath.Join(stdlib, "bml-native-interface-package-import.fk")
+	targets := filepath.Join(stdlib, "hati-os-targets.fk")
+	fnri := filepath.Join(stdlib, "form-native-resource-interfaces.fk")
+	formFs := filepath.Join(stdlib, "form-fs.fk")
+	storagePort := filepath.Join(stdlib, "storage-port.fk")
+	hostKernel := filepath.Join(stdlib, "host-kernel-carrier.fk")
+	fnriStandin := filepath.Join(stdlib, "fnri-standin.fk")
+	fnriReceipt := filepath.Join(stdlib, "fnri-receipt.fk")
+	lineGrammar := filepath.Join(stdlib, "line-grammar.fk")
+	voiceTraits := filepath.Join(stdlib, "voice-traits.fk")
+	nearestShape := filepath.Join(stdlib, "nearest-shape.fk")
+	coLearning := filepath.Join(stdlib, "co-learning.fk")
+	coLearningStream := filepath.Join(stdlib, "co-learning-stream.fk")
+	meshDispatch := filepath.Join(stdlib, "mesh-dispatch.fk")
+	surpriseSalience := filepath.Join(stdlib, "surprise-salience.fk")
+	hostSense := filepath.Join(stdlib, "host-sense-organ.fk")
+	speechOrgan := filepath.Join(stdlib, "speech-organ.fk")
+	nativeHost := filepath.Join(stdlib, "native-host-instance.fk")
+	textTokenize := filepath.Join(stdlib, "text-tokenize.fk")
+	ragEmbed := filepath.Join(stdlib, "rag-embed.fk")
+	ragIndexCodec := filepath.Join(stdlib, "rag-index-codec.fk")
+	ragRetrieve := filepath.Join(stdlib, "rag-retrieve.fk")
+	ragAsk := filepath.Join(stdlib, "rag-ask.fk")
 	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	repl := filepath.Join(stdlib, "form-cli-repl.fk")
 
@@ -118,7 +160,7 @@ func TestFkwuFormCliRepl(t *testing.T) {
 	// the REPL rides the effect-only entry (fkc-emit-repl): walk fk_fn[0] for
 	// effect, no root-value print, no arm-profile dump — so stdout is exactly the
 	// responses the loop emits via print_str.
-	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-emit-repl)\n")
+	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)+"\n(fkc-emit-repl)\n")
 	cPath := filepath.Join(dir, "fkwu-repl.c")
 	if err := os.WriteFile(cPath, []byte(cSrc), 0o644); err != nil {
 		t.Fatalf("write fkwu-repl.c: %v", err)
@@ -128,12 +170,12 @@ func TestFkwuFormCliRepl(t *testing.T) {
 		t.Fatalf("clang fkwu-repl: %v\n%s", err, out)
 	}
 
-	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + httpClient + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + resourcePort + `") (read_file "` + bnii + `") (read_file "` + targets + `") (read_file "` + fnri + `") (read_file "` + formFs + `") (read_file "` + storagePort + `") (read_file "` + hostKernel + `") (read_file "` + fnriStandin + `") (read_file "` + fnriReceipt + `") (read_file "` + lineGrammar + `") (read_file "` + voiceTraits + `") (read_file "` + nearestShape + `") (read_file "` + coLearning + `") (read_file "` + coLearningStream + `") (read_file "` + meshDispatch + `") (read_file "` + surpriseSalience + `") (read_file "` + hostSense + `") (read_file "` + speechOrgan + `") (read_file "` + nativeHost + `") (read_file "` + textTokenize + `") (read_file "` + ragEmbed + `") (read_file "` + ragIndexCodec + `") (read_file "` + ragRetrieve + `") (read_file "` + ragAsk + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
 	band := `(read_file "` + repl + `")`
 	flattenExpr := "(fks-table-file " +
 		"(flt-band-sources-fns " + mods + " " + band + ") " +
 		"(flt-band-sources-pool " + mods + " " + band + "))"
-	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
 	if len(strings.TrimSpace(table)) < 100 {
 		t.Fatalf("repl flatten produced suspiciously small table (%d bytes)", len(table))
 	}
@@ -202,32 +244,53 @@ func TestFkwuFormCliRepl(t *testing.T) {
 func TestFkwuFormCliCombined(t *testing.T) {
 	clang := requireClang(t)
 	stdlib := filepath.Join("..", "form-stdlib")
-	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit := emitChain(t, stdlib)
 	formParse := filepath.Join(stdlib, "form-parse.fk")
 	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 	cli := filepath.Join(stdlib, "form-cli.fk")
-	// The ask lane rides ahead of form-cli.fk so fc-respond can route through
-	// http-fetch before dispatch. Mirrors build-form-cli.sh's MODS.
-	httpClient := filepath.Join(stdlib, "http-client.fk")
+	resourcePort := filepath.Join(stdlib, "resource-port.fk")
+	bnii := filepath.Join(stdlib, "bml-native-interface-package-import.fk")
+	targets := filepath.Join(stdlib, "hati-os-targets.fk")
+	fnri := filepath.Join(stdlib, "form-native-resource-interfaces.fk")
+	formFs := filepath.Join(stdlib, "form-fs.fk")
+	storagePort := filepath.Join(stdlib, "storage-port.fk")
+	hostKernel := filepath.Join(stdlib, "host-kernel-carrier.fk")
+	fnriStandin := filepath.Join(stdlib, "fnri-standin.fk")
+	fnriReceipt := filepath.Join(stdlib, "fnri-receipt.fk")
+	lineGrammar := filepath.Join(stdlib, "line-grammar.fk")
+	voiceTraits := filepath.Join(stdlib, "voice-traits.fk")
+	nearestShape := filepath.Join(stdlib, "nearest-shape.fk")
+	coLearning := filepath.Join(stdlib, "co-learning.fk")
+	coLearningStream := filepath.Join(stdlib, "co-learning-stream.fk")
+	meshDispatch := filepath.Join(stdlib, "mesh-dispatch.fk")
+	surpriseSalience := filepath.Join(stdlib, "surprise-salience.fk")
+	hostSense := filepath.Join(stdlib, "host-sense-organ.fk")
+	speechOrgan := filepath.Join(stdlib, "speech-organ.fk")
+	nativeHost := filepath.Join(stdlib, "native-host-instance.fk")
+	textTokenize := filepath.Join(stdlib, "text-tokenize.fk")
+	ragEmbed := filepath.Join(stdlib, "rag-embed.fk")
+	ragIndexCodec := filepath.Join(stdlib, "rag-index-codec.fk")
+	ragRetrieve := filepath.Join(stdlib, "rag-retrieve.fk")
+	ragAsk := filepath.Join(stdlib, "rag-ask.fk")
 	cliAsk := filepath.Join(stdlib, "form-cli-ask.fk")
 	repl := filepath.Join(stdlib, "form-cli-repl.fk")
 
 	dir := t.TempDir()
 
 	// 1. flatten form-cli-repl into its program table (build-time, on the bootstrap).
-	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + httpClient + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
+	mods := `(list (read_file "` + shim + `") (read_file "` + core + `") (read_file "` + resourcePort + `") (read_file "` + bnii + `") (read_file "` + targets + `") (read_file "` + fnri + `") (read_file "` + formFs + `") (read_file "` + storagePort + `") (read_file "` + hostKernel + `") (read_file "` + fnriStandin + `") (read_file "` + fnriReceipt + `") (read_file "` + lineGrammar + `") (read_file "` + voiceTraits + `") (read_file "` + nearestShape + `") (read_file "` + coLearning + `") (read_file "` + coLearningStream + `") (read_file "` + meshDispatch + `") (read_file "` + surpriseSalience + `") (read_file "` + hostSense + `") (read_file "` + speechOrgan + `") (read_file "` + nativeHost + `") (read_file "` + textTokenize + `") (read_file "` + ragEmbed + `") (read_file "` + ragIndexCodec + `") (read_file "` + ragRetrieve + `") (read_file "` + ragAsk + `") (read_file "` + cliAsk + `") (read_file "` + cli + `"))`
 	band := `(read_file "` + repl + `")`
 	flattenExpr := "(fks-table-file (flt-band-sources-fns " + mods + " " + band + ") (flt-band-sources-pool " + mods + " " + band + "))"
-	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
 	table = strings.TrimSpace(table)
 	if len(table) < 100 {
 		t.Fatalf("flatten produced suspiciously small table (%d bytes)", len(table))
 	}
 
 	// 2. emit the COMBINED walker with the table baked in (fk_prog).
-	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-emit-combined-repl \""+table+"\")\n")
+	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)+"\n(fkc-emit-combined-repl \""+table+"\")\n")
 	if !strings.Contains(cSrc, "fk_prog") {
 		t.Fatalf("combined emit missing the baked program literal")
 	}
@@ -302,14 +365,14 @@ func TestFkwuFormCliCombined(t *testing.T) {
 func TestFkwuLocaleUtf8(t *testing.T) {
 	clang := requireClang(t)
 	stdlib := filepath.Join("..", "form-stdlib")
-	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit := emitChain(t, stdlib)
 	formParse := filepath.Join(stdlib, "form-parse.fk")
 	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
 	shim := filepath.Join(stdlib, "fourth-shim.fk")
 	core := filepath.Join(stdlib, "core.fk")
 
 	dir := t.TempDir()
-	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit)
 
 	// a band whose root is a multi-script string: CJK, Arabic, Devanagari, emoji,
 	// em-dash. If any continuation byte is dropped/corrupted, this mismatches.
@@ -324,7 +387,7 @@ func TestFkwuLocaleUtf8(t *testing.T) {
 	mods := `(list (read_file "` + shim + `") (read_file "` + core + `"))`
 	band := `(read_file "` + bandPath + `")`
 	flattenExpr := "(fks-table-file (flt-band-sources-fns " + mods + " " + band + ") (flt-band-sources-pool " + mods + " " + band + "))"
-	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hostIOFs, fkcSerialize, hatiEmit, formParse, formFlatten)+"\n"+flattenExpr+"\n")
 	tablePath := filepath.Join(dir, "locale-table.txt")
 	if err := os.WriteFile(tablePath, []byte(table), 0o644); err != nil {
 		t.Fatalf("write table: %v", err)

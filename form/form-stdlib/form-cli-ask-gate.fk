@@ -6,13 +6,13 @@
 ;
 ; form-cli-sufficiency.fk reads six signals and returns accept / retry / escalate.
 ; This is the ask lane's adapter onto it: the live carrier (form-cli-ask.fk) reads
-; the real local answer this turn and reduces it to four numbers; the gate maps
-; those into the sufficiency signal list and lets the proven verdict decide. The
-; gate is pure + numeric, so it crosses four-way; the oracle calls (local lane via
-; http-fetch, judge via http-fetch, remote escalation via host-exec) wrap it.
+; the real local grounded answer this turn and reduces it to four numbers; the
+; gate maps those into the sufficiency signal list and lets the proven verdict
+; decide. The gate is pure + numeric, so it crosses four-way; the local lane is
+; fkwu RAG and only remote escalation uses host-exec.
 ;
 ; Signals the carrier computes from the real local answer:
-;   okp      1 if the local oracle produced a usable answer (non-empty, not an
+;   okp      1 if the local grounded lane produced a usable answer (non-empty, not an
 ;            error / refusal marker), else 0 — it feeds BOTH has-output and
 ;            shape-ok (an unusable answer fails both at once)
 ;   content  0..100 substance score: the judge's coverage rating when a judge ran,
@@ -64,11 +64,10 @@
 
 ; ── the live per-step trust row: render THIS step's trust matrix as one line via
 ;    the four-way-proven trust-row.fk. For the ask+ lane the body-only signals read
-;    from the verdict — path is native + suffic when local stood, rented + not when
-;    it escalated. grounded and freq are 0: the pure oracle lane carries neither a
-;    substrate NodeID nor a freq reading, so the row honestly shows them absent and
-;    the answer never claims full trust-observation. The row makes the native-vs-
-;    rented mix visible on every query. ──
+;    from the verdict — path is native + grounded + suffic when the local grounded
+;    lane stood, rented + no body-only signals when it escalated. freq remains 0
+;    until a frequency reading is attached, so the row is native-partial rather
+;    than OBSERVED. The row makes the native-vs-rented mix visible on every query. ──
 (defn fca-ask-trace-row (final-verdict)
-    (tr-row (fca-ask-path final-verdict) 0 0 (fca-ask-path final-verdict)))
+    (tr-row (fca-ask-path final-verdict) (fca-ask-path final-verdict) 0 (fca-ask-path final-verdict)))
 0

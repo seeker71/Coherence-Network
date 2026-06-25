@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # form_cli_self_review.sh — the self-review flywheel, driven through form-cli.
 #
-# The body answers from its OWN model; an INTERNAL judge and the ORACLE (Claude via
+# An explicit local teacher model answers; an INTERNAL judge and the ORACLE (Claude via
 # the CLI by default — proof the body can be reviewed by, and learn from, its
 # strongest oracle) both score the SAME answer against the reference; the Form
 # convergence metric (form-cli-review-gap.fk) measures how close the internal review
-# is to the oracle's. While the gap is wide the oracle is the authority; when a
+# is to the oracle's. This script is a training/review lane, not `form-cli ask`.
+# While the gap is wide the oracle is the authority; when a
 # majority of reviews agree within tolerance the internal review has REACHED the
-# oracle and the remote reviewer can retire. The judges are carriers; the answer is
-# the body's own; the convergence tally is Form (four-way proven).
+# oracle and the remote reviewer can retire. The judges are carriers; the
+# convergence tally is Form (four-way proven).
 #
 # Every oracle review is captured (form_cli_capture.sh) so the internal judge can be
 # trained toward it — "learn from the oracle until your own review is as good."

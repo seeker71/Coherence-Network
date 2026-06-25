@@ -28,7 +28,7 @@ Usage:
   form_cli_rag.py build  [--index PATH] [--docs DIR ...]   # full (re)embed over the body
   form_cli_rag.py heal   [--index PATH] [--docs DIR ...]   # delta-only: embed what drifted
   form_cli_rag.py fresh  [--index PATH]                    # report drift without changing it
-  form_cli_rag.py ask    "question" [-k N] [-m MODEL] [--no-heal]
+  form_cli_rag.py ask    "question" [-k N] [--no-heal]     # context only; native form-cli answers
   form_cli_rag.py search "query" [-k N] [--no-heal]
 """
 from __future__ import annotations
@@ -264,17 +264,6 @@ def retrieve(query: str, index_path: str, k: int | None) -> list[dict]:
     return ranked[:k]
 
 
-def ground(query: str, hits: list[dict], model: str) -> str:
-    context = "\n\n".join(f"[{h['id']}]\n{h['snippet']}" for h in hits)
-    prompt = (
-        "You are the Coherence Network's offline cell. Answer the question using ONLY the "
-        "excerpts from the body below. Cite the doc ids you used. If the excerpts do not "
-        "answer it, say so plainly.\n\n"
-        f"=== body excerpts ===\n{context}\n\n=== question ===\n{query}\n\n=== answer ===\n"
-    )
-    return _post("/api/generate", {"model": model, "prompt": prompt, "stream": False})["response"].strip()
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -290,7 +279,7 @@ def main() -> int:
     c.add_argument("-k", type=int, default=3); c.add_argument("--index", default=INDEX)
     c.add_argument("--no-heal", action="store_true")
     a = sub.add_parser("ask"); a.add_argument("question")
-    a.add_argument("-k", type=int, default=0); a.add_argument("-m", "--model", default="qwen2.5:72b")
+    a.add_argument("-k", type=int, default=0)
     a.add_argument("--index", default=INDEX); a.add_argument("--no-heal", action="store_true")
     args = ap.parse_args()
 
@@ -327,8 +316,11 @@ def main() -> int:
     print("── retrieved (Form-ranked: rag-retrieve.fk, knee-cut: rag-adaptive-k.fk) ──")
     for h in hits:
         print(f"  · {h['id']}  ({h['kind']})")
-    print("\n── grounded answer (local oracle, no network) ──")
-    print(ground(args.question, hits, args.model))
+    print("\n── grounded context only ──")
+    print("This Python carrier does not synthesize answers or call a local HTTP oracle.")
+    print("Use native `form-cli ask` for the fkwu grounded lane; full prose synthesis belongs to the fkwu+Metal model lane.")
+    for h in hits:
+        print(f"\n[{h['id']}]\n{h['snippet']}")
     return 0
 
 
