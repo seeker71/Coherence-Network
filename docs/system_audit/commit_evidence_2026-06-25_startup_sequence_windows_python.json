@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/fix-startup-sequence",
+  "commit_scope": "Repair Windows startup sensing by making nested Python startup and wellness probes reuse the interpreter already running the parent script instead of shelling out to a literal python3 launcher. This keeps make wellness, arrival.py, and nested Form drift checks aligned with the Windows Makefile launcher py -3 and avoids the Microsoft Store python alias.",
+  "files_owned": [
+    "scripts/wellness_check.py",
+    "scripts/arrival.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/system_audit/commit_evidence_2026-06-25_startup_sequence_windows_python.json"
+  ],
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "developer-quick-start"
+  ],
+  "task_ids": [
+    "task-2026-06-25-startup-sequence-windows-python"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Before the fix, make wellness launched on Windows through Makefile PYTHON=py -3, but nested wellness checks invoked literal python3 and reported the Microsoft Store alias message under Form ontology.",
+    "scripts/wellness_check.py now has _python_cmd(), returning the current sys.executable, and sense_form_ontology, sense_form_blueprints, and sense_form_primitives all use it for nested Python probes.",
+    "scripts/arrival.py now invokes scripts/wellness_check.py through sys.executable as well, so session arrival and manual wellness share the same interpreter selection.",
+    "api/tests/test_edge_cases_regression.py pins the nested wellness probes so they use the current interpreter instead of a literal python3 launcher.",
+    "Post-fix make wellness no longer reports the Microsoft Store alias message; Form ontology reports 'form ontology matches kernel parsers (Go/Rust/TS)'."
+    ,
+    "Sub-agent validation (Hilbert, qa-engineer) inspected the diff, confirmed the intended interpreter replacement and regression test, ran py_compile and make wellness successfully, and reported the same focused pytest environment blocker: ModuleNotFoundError for pywebpush with no API venv present."
+  ],
+  "change_files": [
+    "scripts/wellness_check.py",
+    "scripts/arrival.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/system_audit/commit_evidence_2026-06-25_startup_sequence_windows_python.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "py -3 -m py_compile scripts\\wellness_check.py scripts\\arrival.py",
+      "make wellness",
+      "standalone regression probe importing scripts/wellness_check.py and stubbing subprocess.run to assert nested probes call sys.executable",
+      "sub-agent Hilbert read-only validation: git diff inspection, py_compile, make wellness, git diff --check"
+    ],
+    "notes": "Focused pytest target with system Python was blocked before collection by missing optional API dependency pywebpush. The regression logic was run standalone without importing app.main, and make wellness exercised the affected startup path."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-startup-tooling-change",
+    "notes": "Local startup scripts and wellness sensing changed; no public HTTP endpoint was changed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR CI and merge validation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "On Windows, make wellness and session arrival no longer depend on a literal python3 executable for nested Python probes. The body-state read reaches the real Form ontology, blueprint, and primitive drift checks.",
+    "public_endpoints": [
+      "none changed; local startup and wellness tooling only"
+    ],
+    "test_flows": [
+      "make wellness on Windows worktree reports Form ontology match instead of Microsoft Store python alias message.",
+      "Nested wellness probe regression asserts child commands start with sys.executable."
+    ]
+  }
+}
