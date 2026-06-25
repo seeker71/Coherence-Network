@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/literal-gap-symbols-20260625",
+  "commit_scope": "Resolve literal source-map drift around named Form/BML/emitted-C symbols by teaching wellness symbol resolution the declaration shapes already used in the repo, adding a literal platforms row to the standard receipt, and regenerating stale repository indexes.",
+  "files_owned": [
+    "scripts/wellness_check.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/coherence-substrate/standard-receipt.form",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json"
+  ],
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "fkwu-native-host-resources",
+    "fkwu-native-host-platform",
+    "form-native-resource-interfaces",
+    "fkwu-only-kernel-collapse",
+    "liteparse-pdf-native"
+  ],
+  "task_ids": [
+    "task-2026-06-25-literal-gap-symbols"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Before this change, make wellness reported 13 active target symbols pending even though IFormFilesystem, IPlatformHostCarrier, HostResourceObservable, port, act, sense, prim, and inflate already existed in their source files.",
+    "scripts/wellness_check.py now recognizes BML interface and enum declarations, parenthesized Form defn declarations, and emitted static C function declarations inside Form emitter payloads.",
+    "docs/coherence-substrate/standard-receipt.form now has a literal form platforms row for the mac, windows, and android receipt evidence references.",
+    "api/tests/test_edge_cases_regression.py includes a synthetic repo regression proving BML interface, Form defn, emitted-C fk_walk, and form platforms symbols resolve.",
+    "make wellness now reports every claimed symbol resolves in its file: 1061 symbols across 130 specs checked.",
+    "python3 scripts/generate_repo_indexes.py repaired stale scripts, specs, and manifest indexes after wellness reported specs/INDEX.md drift."
+  ],
+  "change_files": [
+    "scripts/wellness_check.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/coherence-substrate/standard-receipt.form",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py::test_wellness_symbol_resolution_recognizes_form_bml_and_emitted_c",
+      "python3 - <<'PY' ... w.sense_spec_symbols() ... PY",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/wellness_check.py tests/test_edge_cases_regression.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json",
+      "git diff --check"
+    ],
+    "notes": "Initial make prompt-guide failed on continuity because a sibling Codex worktree was locally ahead/no-upstream after squash merge; the prompt guide itself allowed PROMPT_GATE_SKIP_CONTINUITY=1 for this temporary bypass. The focused pytest passed with existing deprecation warnings only."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-process-and-doc-check-change",
+    "notes": "No public runtime endpoint changed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is passing; PR CI and merge validation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Wellness no longer reports already-realized Form/BML/emitted-C symbols as active pending target symbols. The larger active specs remain active, but their source symbol rows now reflect what is literally present.",
+    "public_endpoints": [
+      "none changed; wellness/source-map process only"
+    ],
+    "test_flows": [
+      "make wellness reports every claimed symbol resolves in its file.",
+      "The targeted regression test resolves BML interface, Form defn, emitted-C fk_walk, and standard-receipt platforms rows in a synthetic repo."
+    ]
+  }
+}

@@ -65,3 +65,9 @@
 ; the evidence JSON is WHERE a receipt lives; this is the SHAPE every receipt drives toward. Kin:
 ; fourth-arm-bands.txt (the four-way floor), lc-cognitive-sovereignty (why toolchain-free matters),
 ; form-first-reasoning.form (the body answering before the rented mind).
+
+form platforms = {
+  mac: "observed: commit_evidence_2026-06-23_fkwu_mac_platform_row.json"
+  windows: "observed: commit_evidence_2026-06-23_fkwu_windows_row.json"
+  android: "observed: commit_evidence_2026-06-23_fkwu_field_android_row.json"
+}
