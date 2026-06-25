@@ -1,0 +1,63 @@
+; node-exchange.form - offered/requested/delivered nodes.
+;
+; THE ASK
+;   Nodes can be offered and requested and delivered with consent or following
+;   any shared interface.
+;
+; THE SHAPE
+;   A node is a content-addressed thing with a kind, privacy band, size, layer,
+;   and receipt. A cell or organ can offer that node. Another can request it.
+;   Delivery happens when the request fits the offer and either:
+;     - explicit consent is present, or
+;     - the request action is honored by the offered shared interface.
+;
+;   A shared interface is already a consent membrane. It is not a loophole.
+;
+; RUNNABLE HEART
+;   form-stdlib/node-exchange.fk names:
+;     nx-node              NodeID, kind, privacy, bytes, layer, receipt
+;     nx-offer             offerer, node, offered interface, consent, bounds
+;     nx-request           requester, kind, action, receiver interface, bounds
+;     nx-consentful?       explicit consent OR honored shared interface
+;     nx-deliverable?      offer + request + channel + bounds + consent/interface
+;     nx-deliver           delivered/withheld receipt row
+;
+; DELIVERY CONDITIONS
+;   A node delivery requires:
+;     - non-empty NodeID
+;     - node receipt
+;     - offer receipt
+;     - request receipt
+;     - kind match
+;     - privacy within both offer and request bounds
+;     - size within both offer and request bounds
+;     - explicit consent or request action honored by offered interface
+;     - open, connected Hati channel with enough bandwidth
+;
+; INTERFACE EXAMPLE
+;   An organ may offer `(m-offer, m-witness)` for a temperature summary node.
+;   A requester asking with `m-offer` can receive it through that shared
+;   interface. A requester asking with a mode outside the offered interface is
+;   answered with `withheld`, with receipt.
+;
+; HOW IT LAYERS
+;   node-exchange composes with cell-organ-layer:
+;     cells form organs
+;     organs open channels
+;     substrate layers carry address/consent/receipt
+;     nodes are offered/requested/delivered through those channels
+;     delivered nodes can promote through summary -> memory -> prediction ->
+;     report -> research only while receipts and consent remain intact.
+;
+; PROOF
+;   cd form && ./validate.sh form-stdlib/core.fk \
+;     form-stdlib/channel-interface.fk \
+;     form-stdlib/hati-mesh.fk \
+;     form-stdlib/cell-organ-layer.fk \
+;     form-stdlib/node-exchange.fk \
+;     form-stdlib/tests/node-exchange-band.fk
+;
+; KIN
+;   cell-organ-layer.form, channel-interface-consent.form, organ-offer.form,
+;   hati-mesh.form, mesh-seed.form, organism-mesh.form, mesh-cell-design.form,
+;   shared-sensing.form.

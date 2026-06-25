@@ -1,0 +1,76 @@
+; preludes: form-stdlib/core.fk form-stdlib/hati-mesh.fk form-stdlib/cell-organ-layer.fk
+;
+; cell-organ-layer-band - trusted cells form organs over layered substrate.
+;
+; Verdict 4095 when every claim lands:
+;   1    trusted cells are counted by trust, consent, and vitality
+;   2    a quorum of trusted cells forms an organ
+;   4    an untrusted/without-consent set cannot form an organ
+;   8    an open channel connects organs
+;   16   closed/low-bandwidth channels are refused
+;   32   substrate layers require address, consent, and receipt
+;   64   an organ can share content across an open channel and valid layer
+;   128  raw-private content is refused
+;   256  content without NodeID is refused
+;   512  a layered organ has enough valid layers
+;   1024 invalid layer stacks refuse layered-organ status
+;   2048 lower content can promote to a higher valid substrate layer
+
+(do
+    (let c1 (col-cell "cell-1" "sensor" 90 1 80 (list "temperature")))
+    (let c2 (col-cell "cell-2" "memory" 84 1 76 (list "cache")))
+    (let c3 (col-cell "cell-3" "predictor" 60 1 70 (list "sequence")))
+    (let c4 (col-cell "cell-4" "reporter" 91 0 82 (list "report")))
+
+    (let raw-layer (col-layer "raw-local" 0 1 1 1))
+    (let summary-layer (col-layer "summary" 1 1 1 1))
+    (let memory-layer (col-layer "memory" 2 1 1 1))
+    (let bad-layer (col-layer "ambient" 1 1 0 1))
+
+    (let organ-a (col-organ "organ-a" "care" (list c1 c2 c3) (empty) (list raw-layer summary-layer memory-layer)))
+    (let organ-b (col-organ "organ-b" "research" (list c1 c2) (empty) (list summary-layer memory-layer)))
+    (let weak-organ (col-organ "organ-x" "weak" (list c3 c4) (empty) (list summary-layer)))
+    (let bad-stack-organ (col-organ "organ-bad" "bad-stack" (list c1 c2) (empty) (list summary-layer bad-layer)))
+
+    (let open-channel (hm-open-channel "organ-a" "organ-b" "substrate:content" "offer:show-channel-state" "cap.substrate.share" "bmf" 1 4096))
+    (let slow-channel (hm-open-channel "organ-a" "organ-b" "substrate:content" "offer:show-channel-state" "cap.substrate.share" "bmf" 1 8))
+    (let closed-channel (hm-channel "organ-a" "organ-b" "substrate:content" "offer:show-channel-state" "cap.substrate.share" "bmf" "closed" 1 4096))
+
+    (let summary (col-content "content-1" "temperature-summary" 1 512 "1.2.3.4" 1))
+    (let raw (col-content "content-2" "raw-audio" 3 512 "1.2.3.5" 1))
+    (let no-node (col-content "content-3" "unaddressed-note" 1 512 "" 1))
+
+    (let p0 (if (eq (col-trusted-count (list c1 c2 c3 c4) 70 60) 2) 1 0))
+    (let p1 (if (eq (col-organ-forms? organ-a 70 60 2) 1) 2 0))
+    (let p2 (if (eq (col-organ-forms? weak-organ 70 60 2) 0) 4 0))
+    (let p3
+        (if (and (eq (col-channel-connects? open-channel "organ-a" "organ-b") 1)
+                 (eq (col-channel-open? open-channel 1024) 1))
+            8 0))
+    (let p4
+        (if (and (eq (col-channel-open? slow-channel 1024) 0)
+                 (eq (col-channel-open? closed-channel 1024) 0))
+            16 0))
+    (let p5
+        (if (and (eq (col-layer-valid? summary-layer) 1)
+                 (eq (col-layer-valid? bad-layer) 0))
+            32 0))
+    (let p6
+        (if (eq (col-organ-can-share? organ-a organ-b open-channel summary summary-layer 70 60 2 2 4096 1024) 1)
+            64 0))
+    (let p7
+        (if (eq (col-organ-can-share? organ-a organ-b open-channel raw summary-layer 70 60 2 2 4096 1024) 0)
+            128 0))
+    (let p8
+        (if (eq (col-organ-can-share? organ-a organ-b open-channel no-node summary-layer 70 60 2 2 4096 1024) 0)
+            256 0))
+    (let p9
+        (if (eq (col-layered-organ? organ-a 3) 1) 512 0))
+    (let p10
+        (if (eq (col-layered-organ? bad-stack-organ 2) 0) 1024 0))
+    (let p11
+        (if (and (eq (col-layer-promote? summary summary-layer memory-layer) 1)
+                 (eq (col-layer-promote? summary memory-layer summary-layer) 0))
+            2048 0))
+
+    (add p0 (add p1 (add p2 (add p3 (add p4 (add p5 (add p6 (add p7 (add p8 (add p9 (add p10 p11))))))))))))

@@ -1,0 +1,62 @@
+; preludes: form-stdlib/core.fk form-stdlib/organism-mesh.fk
+;
+; organism-mesh-band - organism-scale cells prove stewardship and benefit.
+;
+; Verdict 4095 when every claim lands:
+;   1    a consenting human can accept a swallowed pass-through summary cell
+;   2    raw organism data export is refused
+;   4    colonizing/spreading behavior is refused
+;   8    a guarded animal can accept a low-invasiveness collar cell
+;   16   the same animal refuses a swallowed cell when the steward allowed only contact
+;   32   a plant can accept a biodegradable leaf/soil cell
+;   64   soil can accept a biodegradable moisture/nutrient cell
+;   128  wild habitat observation works when it is field-only and stewarded
+;   256  wild swallowed/contact-invasive cells are refused by default
+;   512  heat/water/air early warning is a vital restorative scenario
+;   1024 surveillance/extraction is not a vital scenario
+;   2048 Earth awareness means diverse consented trusted restorative receipts
+
+(do
+    (let human (om-organism "human-a" "human" "self" 1 2))
+    (let animal (om-organism "dog-a" "animal" "guardian" 1 1))
+    (let plant (om-organism "tree-a" "plant" "steward" 1 1))
+    (let soil (om-organism "soil-bed-a" "soil" "land-steward" 1 1))
+    (let wild (om-organism "wild-bird-field" "wildlife" "ecological-steward" 1 0))
+
+    (let gut-cell (om-cell "gut-seed" "swallowed-pass-through" "vital-summary" 2 1 1 0 1))
+    (let raw-cell (om-cell "raw-gut" "swallowed-pass-through" "raw-biometric" 2 1 1 0 2))
+    (let spreading-cell (om-cell "spread-agent" "biological-colony" "colonize" 4 0 0 0 2))
+    (let collar-cell (om-cell "collar-seed" "collar" "motion-heat-summary" 1 1 1 0 1))
+    (let leaf-cell (om-cell "leaf-film" "leaf-film" "water-stress" 1 1 0 1 1))
+    (let soil-cell (om-cell "soil-bead" "soil-bead" "moisture-nutrient" 1 1 0 1 1))
+    (let field-cell (om-cell "field-listener" "habitat-field" "acoustic-presence" 0 1 1 0 1))
+
+    (let heat-water (om-scenario "heat-water-air-early-warning" "human-animal-plant-soil" 92 8 50 95 1 1))
+    (let pollinator (om-scenario "pollinator-corridor-repair" "plant-insect-soil" 85 10 60 90 1 1))
+    (let surveillance (om-scenario "raw-behavior-extraction" "human-animal" 45 80 90 20 0 0))
+    (let earth-field (om-field 5 150 120 4))
+    (let thin-field (om-field 2 150 120 4))
+
+    (let c0 (if (eq (om-admissible? human gut-cell) 1) 1 0))
+    (let c1 (if (eq (om-admissible? human raw-cell) 0) 2 0))
+    (let c2 (if (eq (om-admissible? human spreading-cell) 0) 4 0))
+    (let c3 (if (eq (om-admissible? animal collar-cell) 1) 8 0))
+    (let c4 (if (eq (om-admissible? animal gut-cell) 0) 16 0))
+    (let c5 (if (eq (om-admissible? plant leaf-cell) 1) 32 0))
+    (let c6 (if (eq (om-admissible? soil soil-cell) 1) 64 0))
+    (let c7 (if (eq (om-admissible? wild field-cell) 1) 128 0))
+    (let c8 (if (eq (om-admissible? wild collar-cell) 0) 256 0))
+    (let c9
+        (if (and (eq (om-vital-scenario? heat-water) 1)
+                 (str_eq (om-prefer-scenario heat-water surveillance) "heat-water-air-early-warning"))
+            512 0))
+    (let c10
+        (if (and (eq (om-vital-scenario? surveillance) 0)
+                 (str_eq (om-prefer-scenario heat-water pollinator) "pollinator-corridor-repair"))
+            1024 0))
+    (let c11
+        (if (and (eq (om-earth-awareness-surface? earth-field) 1)
+                 (eq (om-earth-awareness-surface? thin-field) 0))
+            2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

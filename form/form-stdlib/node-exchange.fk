@@ -1,0 +1,99 @@
+; node-exchange.fk - offered/requested/delivered nodes over shared interfaces.
+;
+; A node may be offered. Another cell/organ may request it. Delivery happens
+; only when the node is addressed, bounded, receipted, and either explicit
+; consent is present or the request action is honored by the node's offered
+; interface. A shared interface is a consent shape, not a bypass.
+
+(do
+    ; --- node, offer, request, delivery rows -------------------------------
+    ; privacy is 0 public / 1 derived / 2 sensitive / 3 raw-private.
+    (defn nx-node (node-id kind privacy bytes layer receipt)
+        (list node-id kind privacy bytes layer receipt))
+    (defn nx-node-id      (n) (nth n 0))
+    (defn nx-node-kind    (n) (nth n 1))
+    (defn nx-node-privacy (n) (nth n 2))
+    (defn nx-node-bytes   (n) (nth n 3))
+    (defn nx-node-layer   (n) (nth n 4))
+    (defn nx-node-receipt (n) (nth n 5))
+
+    (defn nx-offer (offer-id from-id node interface explicit-consent max-privacy max-bytes receipt)
+        (list offer-id from-id node interface explicit-consent max-privacy max-bytes receipt))
+    (defn nx-offer-id       (o) (nth o 0))
+    (defn nx-offer-from     (o) (nth o 1))
+    (defn nx-offer-node     (o) (nth o 2))
+    (defn nx-offer-interface (o) (nth o 3))
+    (defn nx-offer-consent  (o) (nth o 4))
+    (defn nx-offer-privacy  (o) (nth o 5))
+    (defn nx-offer-bytes    (o) (nth o 6))
+    (defn nx-offer-receipt  (o) (nth o 7))
+
+    (defn nx-request (request-id requester-id kind action interface max-privacy max-bytes receipt)
+        (list request-id requester-id kind action interface max-privacy max-bytes receipt))
+    (defn nx-request-id        (r) (nth r 0))
+    (defn nx-requester         (r) (nth r 1))
+    (defn nx-request-kind      (r) (nth r 2))
+    (defn nx-request-action    (r) (nth r 3))
+    (defn nx-request-interface (r) (nth r 4))
+    (defn nx-request-privacy   (r) (nth r 5))
+    (defn nx-request-bytes     (r) (nth r 6))
+    (defn nx-request-receipt   (r) (nth r 7))
+
+    (defn nx-delivery (offer-id request-id node-id from-id to-id status receipt)
+        (list offer-id request-id node-id from-id to-id status receipt))
+    (defn nx-delivery-status  (d) (nth d 5))
+    (defn nx-delivery-receipt (d) (nth d 6))
+
+    ; --- gates -------------------------------------------------------------
+    (defn nx-node-addressed? (node)
+        (if (str_eq (nx-node-id node) "") 0 1))
+    (defn nx-node-safe? (node max-privacy max-bytes)
+        (if (and (eq (nx-node-addressed? node) 1)
+                 (and (eq (nx-node-receipt node) 1)
+                      (and (not (gt (nx-node-privacy node) max-privacy))
+                           (not (gt (nx-node-bytes node) max-bytes)))))
+            1 0))
+    (defn nx-kind-matches? (offer request)
+        (if (str_eq (nx-node-kind (nx-offer-node offer)) (nx-request-kind request)) 1 0))
+    (defn nx-offer-bounds? (offer)
+        (nx-node-safe? (nx-offer-node offer) (nx-offer-privacy offer) (nx-offer-bytes offer)))
+    (defn nx-request-bounds? (offer request)
+        (nx-node-safe? (nx-offer-node offer) (nx-request-privacy request) (nx-request-bytes request)))
+    (defn nx-explicit-consent? (offer)
+        (if (eq (nx-offer-consent offer) 1) 1 0))
+    (defn nx-mode-member? (mode interface)
+        (if (eq (len interface) 0)
+            0
+            (if (eq mode (head interface)) 1 (nx-mode-member? mode (tail interface)))))
+    (defn nx-shared-interface? (offer request)
+        (if (eq (nx-request-action request) (m-silence))
+            1
+            (nx-mode-member? (nx-request-action request) (nx-offer-interface offer))))
+    (defn nx-consentful? (offer request)
+        (if (eq (nx-explicit-consent? offer) 1)
+            1
+            (nx-shared-interface? offer request)))
+    (defn nx-offer-valid? (offer)
+        (if (and (eq (nx-offer-receipt offer) 1)
+                 (eq (nx-offer-bounds? offer) 1))
+            1 0))
+    (defn nx-request-valid? (request)
+        (if (eq (nx-request-receipt request) 1) 1 0))
+    (defn nx-channel-ready? (channel from-id to-id min-bps)
+        (if (and (eq (col-channel-connects? channel from-id to-id) 1)
+                 (eq (col-channel-open? channel min-bps) 1))
+            1 0))
+    (defn nx-deliverable? (offer request channel min-bps)
+        (if (and (eq (nx-offer-valid? offer) 1)
+                 (and (eq (nx-request-valid? request) 1)
+                      (and (eq (nx-kind-matches? offer request) 1)
+                           (and (eq (nx-request-bounds? offer request) 1)
+                                (and (eq (nx-consentful? offer request) 1)
+                                     (eq (nx-channel-ready? channel (nx-offer-from offer) (nx-requester request) min-bps) 1))))))
+            1 0))
+    (defn nx-deliver (offer request channel min-bps)
+        (if (eq (nx-deliverable? offer request channel min-bps) 1)
+            (nx-delivery (nx-offer-id offer) (nx-request-id request) (nx-node-id (nx-offer-node offer)) (nx-offer-from offer) (nx-requester request) "delivered" 1)
+            (nx-delivery (nx-offer-id offer) (nx-request-id request) (nx-node-id (nx-offer-node offer)) (nx-offer-from offer) (nx-requester request) "withheld" 1)))
+
+    0)

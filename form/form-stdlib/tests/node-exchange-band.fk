@@ -1,0 +1,67 @@
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/hati-mesh.fk form-stdlib/cell-organ-layer.fk form-stdlib/node-exchange.fk
+;
+; node-exchange-band - nodes are offered, requested, and delivered.
+;
+; Verdict 4095 when every claim lands:
+;   1    addressed receipted node is safe within privacy/size bounds
+;   2    unaddressed node is refused
+;   4    explicit consent allows delivery
+;   8    a shared offered interface allows delivery
+;   16   reaching beyond the offered interface is refused
+;   32   privacy bounds refuse raw-private nodes
+;   64   size bounds refuse oversized nodes
+;   128  request kind must match offered node kind
+;   256  channel must be open and connected
+;   512  low-bandwidth channel refuses delivery
+;   1024 delivery returns delivered status and receipt
+;   2048 withheld delivery returns withheld status and receipt
+
+(do
+    (let summary-node (nx-node "1.2.3.summary" "temperature-summary" 1 512 "summary" 1))
+    (let raw-node (nx-node "1.2.3.raw" "raw-audio" 3 512 "raw-local" 1))
+    (let large-node (nx-node "1.2.3.large" "temperature-summary" 1 8192 "summary" 1))
+    (let no-id-node (nx-node "" "temperature-summary" 1 512 "summary" 1))
+
+    (let explicit-offer (nx-offer "offer-1" "organ-a" summary-node (list (m-witness)) 1 2 4096 1))
+    (let interface-offer (nx-offer "offer-2" "organ-a" summary-node (list (m-offer) (m-witness)) 0 2 4096 1))
+    (let narrow-offer (nx-offer "offer-3" "organ-a" summary-node (list (m-witness)) 0 2 4096 1))
+    (let raw-offer (nx-offer "offer-4" "organ-a" raw-node (list (m-offer)) 1 3 4096 1))
+    (let large-offer (nx-offer "offer-5" "organ-a" large-node (list (m-offer)) 1 2 9000 1))
+    (let no-id-offer (nx-offer "offer-6" "organ-a" no-id-node (list (m-offer)) 1 2 4096 1))
+
+    (let req (nx-request "req-1" "organ-b" "temperature-summary" (m-offer) (list (m-witness)) 2 4096 1))
+    (let witness-req (nx-request "req-2" "organ-b" "temperature-summary" (m-witness) (list (m-witness)) 2 4096 1))
+    (let wrong-kind (nx-request "req-3" "organ-b" "motion-summary" (m-offer) (list (m-witness)) 2 4096 1))
+    (let raw-limited (nx-request "req-4" "organ-b" "raw-audio" (m-offer) (list (m-witness)) 2 4096 1))
+    (let too-small (nx-request "req-5" "organ-b" "temperature-summary" (m-offer) (list (m-witness)) 2 1024 1))
+
+    (let open-channel (hm-open-channel "organ-a" "organ-b" "substrate:node" "offer:show-channel-state" "cap.node.deliver" "bmf" 1 4096))
+    (let slow-channel (hm-open-channel "organ-a" "organ-b" "substrate:node" "offer:show-channel-state" "cap.node.deliver" "bmf" 1 8))
+    (let wrong-channel (hm-open-channel "organ-x" "organ-b" "substrate:node" "offer:show-channel-state" "cap.node.deliver" "bmf" 1 4096))
+
+    (let delivered (nx-deliver interface-offer req open-channel 1024))
+    (let withheld (nx-deliver narrow-offer req open-channel 1024))
+
+    (let c0 (if (eq (nx-node-safe? summary-node 2 4096) 1) 1 0))
+    (let c1 (if (eq (nx-node-safe? no-id-node 2 4096) 0) 2 0))
+    (let c2 (if (eq (nx-deliverable? explicit-offer req open-channel 1024) 1) 4 0))
+    (let c3 (if (eq (nx-deliverable? interface-offer req open-channel 1024) 1) 8 0))
+    (let c4 (if (eq (nx-deliverable? narrow-offer req open-channel 1024) 0) 16 0))
+    (let c5 (if (eq (nx-deliverable? raw-offer raw-limited open-channel 1024) 0) 32 0))
+    (let c6 (if (eq (nx-deliverable? large-offer too-small open-channel 1024) 0) 64 0))
+    (let c7 (if (eq (nx-deliverable? interface-offer wrong-kind open-channel 1024) 0) 128 0))
+    (let c8
+        (if (and (eq (nx-deliverable? interface-offer req wrong-channel 1024) 0)
+                 (eq (nx-deliverable? no-id-offer req open-channel 1024) 0))
+            256 0))
+    (let c9 (if (eq (nx-deliverable? interface-offer req slow-channel 1024) 0) 512 0))
+    (let c10
+        (if (and (str_eq (nx-delivery-status delivered) "delivered")
+                 (eq (nx-delivery-receipt delivered) 1))
+            1024 0))
+    (let c11
+        (if (and (str_eq (nx-delivery-status withheld) "withheld")
+                 (eq (nx-delivery-receipt withheld) 1))
+            2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
