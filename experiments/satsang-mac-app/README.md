@@ -34,8 +34,16 @@ open "experiments/satsang-mac-app/dist/Satsang Guidance.app"
 
 The GUI does not invoke an external receiver. Pressing Send writes the JSONL
 event, a latest JSON receipt, and a latest `.form` envelope directly. The Form
-protocol proofs live in `form/form-stdlib/satsang-guidance-event.fk` and
+protocol proofs live in `form/form-stdlib/satsang-guidance-event.fk`,
+`form/form-stdlib/satsang-host-boundary.fk`, and
 `form/form-stdlib/satsang-listen-route.fk`.
+
+The app boundary is intentionally small. Shared routing and sufficiency logic is
+Form-native; Swift is the current macOS host carrier for GUI, microphone, speech,
+file, and process resources. The request receipt names a generic host OS
+resource interface intended to be carried by equivalent Windows and Android host
+adapters. Python, Go, Rust, and TypeScript are not app-boundary runtimes for this
+carrier.
 
 Before Send writes the event, the app asks the repo-local native `form-cli`
 for a local body/RAG answer. The resulting route receipt is stored inside the

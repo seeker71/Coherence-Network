@@ -1,0 +1,35 @@
+; preludes: form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk
+;
+; satsang-host-boundary-band — shared Form body, minimal host ABI, no app
+; boundary Python/Go/Rust/TypeScript.
+;
+; Verdict 1023:
+;   1   Form is an allowed app runtime
+;   2   Swift is only the minimal host carrier
+;   4   Python is forbidden at the app boundary
+;   8   Go is forbidden at the app boundary
+;   16  Rust is forbidden at the app boundary
+;   32  TypeScript is forbidden at the app boundary
+;   64  generic file/process resources are allowed
+;   128 macOS is a target platform
+;   256 Windows is a target platform
+;   512 Android is a target platform
+(do
+    (let rec (shb-receipt "swift-minimal-host-carrier" "process-stdin-stdout" "macos"))
+
+    (let c0 (if (eq (shb-app-runtime-allowed? "form") 1) 1 0))
+    (let c1 (if (eq (shb-app-runtime-allowed? "swift-minimal-host-carrier") 1) 2 0))
+    (let c2 (if (eq (shb-runtime-forbidden? "python") 1) 4 0))
+    (let c3 (if (eq (shb-runtime-forbidden? "go") 1) 8 0))
+    (let c4 (if (eq (shb-runtime-forbidden? "rust") 1) 16 0))
+    (let c5 (if (eq (shb-runtime-forbidden? "typescript") 1) 32 0))
+    (let c6 (if (and (eq (shb-resource-kind? "file-read") 1)
+                     (and (eq (shb-resource-kind? "file-append") 1)
+                          (eq (shb-resource-kind? "process-stdin-stdout") 1))) 64 0))
+    (let c7 (if (eq (shb-platform-target? "macos") 1) 128 0))
+    (let c8 (if (eq (shb-platform-target? "windows") 1) 256 0))
+    (let c9 (if (and (eq (shb-platform-target? "android") 1)
+                     (and (eq (shb-rec-ok? rec) 1)
+                          (eq (shb-rec-forbidden? rec) 0))) 512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

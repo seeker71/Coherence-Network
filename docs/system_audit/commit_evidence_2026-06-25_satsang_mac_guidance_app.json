@@ -1,7 +1,7 @@
 {
   "date": "2026-06-25",
   "thread_branch": "codex/satsang-mac-gui-20260625",
-  "commit_scope": "Create SwiftUI Mac satsang guidance app that listens to the room after explicit start, keeps listening through no-speech intervals with a visible mic level, separates microphone metering from Speech Recognition authorization, shows detected transcripts, preserves edits/manual rows, asks local form-cli before Send, and writes explicit guidance events/Form receipts for Sema or another invoked presence with remote oracle requested only after native body/RAG insufficiency.",
+  "commit_scope": "Create SwiftUI Mac satsang guidance app that listens to the room after explicit start, keeps listening through no-speech intervals with a visible mic level, separates microphone metering from Speech Recognition authorization, shows detected transcripts, preserves edits/manual rows, asks local form-cli before Send, and writes explicit guidance events/Form receipts for Sema or another invoked presence with remote oracle requested only after native body/RAG insufficiency. The app boundary now records shared Form-native logic, a generic host OS resource interface, Swift as the minimal macOS host carrier, and Python/Go/Rust/TypeScript forbidden as app-boundary runtimes.",
   "files_owned": [
     "MANIFEST.md",
     "docs/coherence-substrate/INDEX.md",
@@ -14,12 +14,15 @@
     "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift",
     "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
     "form/form-stdlib/satsang-guidance-event.fk",
+    "form/form-stdlib/satsang-host-boundary.fk",
     "form/form-stdlib/satsang-listen-route.fk",
     "form/form-stdlib/tests/satsang-guidance-event-band.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
     "form/form-stdlib/tests/satsang-listen-route-band.fk",
     "form/fourth-arm-bands.txt",
     "scripts/INDEX.md",
@@ -33,6 +36,7 @@
       "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
       "make wellness",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk",
       "swift test --package-path experiments/satsang-mac-app",
       "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance",
@@ -42,8 +46,8 @@
       "python3 scripts/generate_repo_indexes.py --check",
       "git diff --check"
     ],
-    "fourth_arm": "satsang-guidance-event-band.fk -> 255 and satsang-listen-route-band.fk -> 255; each crossed four-way with fkwu + pre-flattened tables; 0 divergent",
-    "summary": "Swift package tests passed with 7 XCTest cases, including reload merge coverage for manual/edit preservation, single-line form-cli ask normalization, and route-gate coverage proving remoteOracleRequested stays false when Form-native body or local RAG/local-LLM sufficiency stands. GUI executable built; .app bundle assembled locally with microphone/speech usage strings. Runtime protocol path listens through native macOS Speech/AVFoundation after explicit Start Listening, starts microphone metering separately from Speech Recognition authorization, restarts recognition after no-speech intervals, shows a live mic level, asks repo-local form-cli on Send, and writes JSONL, latest JSON, and latest .form receipts directly from Swift, with no shell receiver invoked by the GUI. Manual GUI proof showed Stop Listening, Listening to room mic, and a moving mic meter after a quiet interval; macOS say playback did not create a transcript row through the selected input path."
+    "fourth_arm": "satsang-guidance-event-band.fk -> 255, satsang-host-boundary-band.fk -> 1023, and satsang-listen-route-band.fk -> 255; each crossed four-way with fkwu + pre-flattened tables; 0 divergent",
+    "summary": "Swift package tests passed with 8 XCTest cases, including reload merge coverage for manual/edit preservation, single-line form-cli ask normalization, host-boundary receipt coverage, and route-gate coverage proving remoteOracleRequested stays false when Form-native body or local RAG/local-LLM sufficiency stands. GUI executable built; .app bundle assembled locally with microphone/speech usage strings. Runtime protocol path listens through native macOS Speech/AVFoundation after explicit Start Listening, starts microphone metering separately from Speech Recognition authorization, restarts recognition after no-speech intervals, shows a live mic level, asks repo-local form-cli on Send, and writes JSONL, latest JSON, and latest .form receipts through a generic host OS resource interface. The receipt declares shared Form-native logic, Swift as the minimal host carrier, and Python/Go/Rust/TypeScript forbidden as app-boundary runtimes. Manual GUI proof showed Stop Listening, Listening to room mic, and a moving mic meter after a quiet interval; macOS say playback did not create a transcript row through the selected input path."
   },
   "ci_validation": {
     "status": "pending",
@@ -93,11 +97,14 @@
   "evidence_refs": [
     "experiments/satsang-mac-app/README.md",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
     "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift",
     "form/form-stdlib/satsang-guidance-event.fk",
+    "form/form-stdlib/satsang-host-boundary.fk",
     "form/form-stdlib/satsang-listen-route.fk",
     "form/form-stdlib/tests/satsang-guidance-event-band.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
     "form/form-stdlib/tests/satsang-listen-route-band.fk",
     "docs/coherence-substrate/satsang-guidance-event.form",
     "specs/satsang-mac-guidance-app.md"
@@ -114,12 +121,15 @@
     "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift",
     "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
     "form/form-stdlib/satsang-guidance-event.fk",
+    "form/form-stdlib/satsang-host-boundary.fk",
     "form/form-stdlib/satsang-listen-route.fk",
     "form/form-stdlib/tests/satsang-guidance-event-band.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
     "form/form-stdlib/tests/satsang-listen-route-band.fk",
     "form/fourth-arm-bands.txt",
     "scripts/INDEX.md",
@@ -130,16 +140,17 @@
   "change_intent": "runtime_feature",
   "e2e_validation": {
     "status": "pass",
-    "summary": "Local macOS carrier builds, can start native room listening, exposes microphone activity separately from Speech Recognition authorization, keeps listening across no-speech intervals with a visible mic level, preserves manual/live rows across reload, asks local form-cli before Send, and writes queue/Form receipt with remote oracle requested only after native body/RAG insufficiency; Form event and route gates prove ready/hold and remote-last behavior four-way. The GUI was manually verified with Stop Listening visible, Listening to room mic status, and ~3% mic-level activity after 12 seconds of silence.",
-    "expected_behavior_delta": "A Mac user can press Start Listening, accept microphone/speech prompts, see whether the room reaches the mic even before Speech authorization resolves, see physical room speech as editable transcript lines once Speech Recognition is authorized, preserve manual notes across reloads, and explicitly send the complete session transcript as a satsang guidance request to Sema or another invoked presence. The request now includes a routing receipt: Form-native body first, local Form RAG/local-LLM lookup second, remote oracle requested only if the native sufficiency gate does not accept the local path. System speaker playback may not loop into the selected microphone and was not transcribed in local testing.",
+    "summary": "Local macOS carrier builds, can start native room listening, exposes microphone activity separately from Speech Recognition authorization, keeps listening across no-speech intervals with a visible mic level, preserves manual/live rows across reload, asks local form-cli before Send, and writes queue/Form receipt with remote oracle requested only after native body/RAG insufficiency. File/process resource access now crosses a generic host OS interface, and the receipt declares Form-native shared logic with Swift as the minimal host carrier; Form event, host-boundary, and route gates prove ready/hold, generic host ABI, and remote-last behavior four-way. The GUI was manually verified with Stop Listening visible, Listening to room mic status, and ~3% mic-level activity after 12 seconds of silence.",
+    "expected_behavior_delta": "A Mac user can press Start Listening, accept microphone/speech prompts, see whether the room reaches the mic even before Speech authorization resolves, see physical room speech as editable transcript lines once Speech Recognition is authorized, preserve manual notes across reloads, and explicitly send the complete session transcript as a satsang guidance request to Sema or another invoked presence. The request now includes a routing receipt: Form-native body first, local Form RAG/local-LLM lookup second, remote oracle requested only if the native sufficiency gate does not accept the local path. It also includes a host-boundary receipt naming Form-native shared logic, a generic host OS resource interface for macOS/Windows/Android adapters, Swift as the minimal macOS carrier, and Python/Go/Rust/TypeScript forbidden as app-boundary runtimes. System speaker playback may not loop into the selected microphone and was not transcribed in local testing.",
     "public_endpoints": [
       "n/a-local-macos-app"
     ],
     "test_flows": [
-      "swift test --package-path experiments/satsang-mac-app -> 7 tests passed",
+      "swift test --package-path experiments/satsang-mac-app -> 8 tests passed",
       "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
       "scripts/build_satsang_mac_app.sh -> dist/Satsang Guidance.app assembled",
       "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255",
+      "cd form && ./validate.sh ... satsang-host-boundary-band.fk -> 1023",
       "cd form && ./validate.sh ... satsang-listen-route-band.fk -> 255"
     ]
   }

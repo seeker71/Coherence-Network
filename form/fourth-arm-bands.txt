@@ -948,6 +948,7 @@ research-corpus fks 127
 resid-train-emit fks 7
 satsang-field fks 255
 satsang-guidance-event fks 255
+satsang-host-boundary fks 1023
 satsang-listen-route fks 255
 satsang-share fks 255
 scheduler fks 511

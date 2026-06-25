@@ -75,6 +75,14 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         rows.append("    (listen-receipt \"\(escape(receipt.listenReceipt))\")")
         rows.append("    (transcribe-route \"\(escape(receipt.transcribeRoute))\")")
         rows.append("    (form-request-kind \"\(escape(receipt.formRequestKind))\")")
+        rows.append("    (host-boundary-kind \"\(escape(receipt.hostBoundary.kind))\")")
+        rows.append("    (shared-logic \"\(escape(receipt.hostBoundary.sharedLogic))\")")
+        rows.append("    (host-carrier \"\(escape(receipt.hostBoundary.hostCarrier))\")")
+        rows.append("    (host-resource-interface \"\(escape(receipt.hostBoundary.resourceInterface))\")")
+        rows.append("    (platform-targets \"\(escape(receipt.hostBoundary.platformTargets.joined(separator: ",")))\")")
+        rows.append("    (allowed-resource-kinds \"\(escape(receipt.hostBoundary.allowedResourceKinds.joined(separator: ",")))\")")
+        rows.append("    (app-boundary-runtimes \"\(escape(receipt.hostBoundary.appBoundaryRuntimes.joined(separator: ",")))\")")
+        rows.append("    (forbidden-runtime-carriers \"\(escape(receipt.hostBoundary.forbiddenRuntimeCarriers.joined(separator: ",")))\")")
         rows.append("    (body-lane \"\(escape(receipt.bodyLookup.lane))\")")
         rows.append("    (body-grounded \(receipt.bodyLookup.grounded ? 1 : 0))")
         rows.append("    (body-sufficient \(receipt.bodyLookup.sufficient ? 1 : 0))")
@@ -114,11 +122,13 @@ public final class GuidanceRequestSender: @unchecked Sendable {
     public var queueURL: URL
     public var latestJSONURL: URL
     public var latestFormURL: URL
+    public var host: any HostResourceInterface
 
-    public init(queueURL: URL) {
+    public init(queueURL: URL, host: any HostResourceInterface = FoundationHostResourceInterface()) {
         self.queueURL = queueURL
         self.latestJSONURL = queueURL.deletingLastPathComponent().appendingPathComponent("latest-request.json")
         self.latestFormURL = queueURL.deletingLastPathComponent().appendingPathComponent("latest-request.form")
+        self.host = host
     }
 
     public func send(_ request: GuidanceRequest) throws -> GuidanceSendResult {
@@ -130,20 +140,12 @@ public final class GuidanceRequestSender: @unchecked Sendable {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let line = try encoder.encode(request)
-        try FileManager.default.createDirectory(at: queueURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if !FileManager.default.fileExists(atPath: queueURL.path) {
-            FileManager.default.createFile(atPath: queueURL.path, contents: nil)
-        }
-        let handle = try FileHandle(forWritingTo: queueURL)
-        try handle.seekToEnd()
-        try handle.write(contentsOf: line)
-        try handle.write(contentsOf: Data("\n".utf8))
-        try handle.close()
+        try host.appendLine(line, to: queueURL)
 
         let pretty = JSONEncoder()
         pretty.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try pretty.encode(request).write(to: latestJSONURL, options: .atomic)
-        try request.formEnvelope.write(to: latestFormURL, atomically: true, encoding: .utf8)
+        try host.writeData(pretty.encode(request), to: latestJSONURL, options: .atomic)
+        try host.writeData(Data(request.formEnvelope.utf8), to: latestFormURL, options: .atomic)
 
         return GuidanceSendResult(
             queueURL: queueURL,

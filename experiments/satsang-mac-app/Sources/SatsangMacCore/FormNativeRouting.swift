@@ -111,6 +111,7 @@ public struct FormNativeRouteReceipt: Codable, Equatable, Sendable {
     public var listenReceipt: String
     public var transcribeRoute: String
     public var formRequestKind: String
+    public var hostBoundary: FormHostBoundaryReceipt
     public var bodyLookup: FormNativeLookupSignal
     public var ragLookup: FormNativeLookupSignal
     public var sufficiencyVerdict: String
@@ -123,6 +124,7 @@ public struct FormNativeRouteReceipt: Codable, Equatable, Sendable {
         listenReceipt: String = "form-native-listen-receipt",
         transcribeRoute: String = "local-stt-form-receipt",
         formRequestKind: String = "satsang-guidance-request",
+        hostBoundary: FormHostBoundaryReceipt = FormHostBoundaryReceipt(),
         bodyLookup: FormNativeLookupSignal,
         ragLookup: FormNativeLookupSignal,
         remoteOracle: String = "remote-llm-oracle"
@@ -131,6 +133,7 @@ public struct FormNativeRouteReceipt: Codable, Equatable, Sendable {
         self.listenReceipt = listenReceipt
         self.transcribeRoute = transcribeRoute
         self.formRequestKind = formRequestKind
+        self.hostBoundary = hostBoundary
         self.bodyLookup = bodyLookup
         self.ragLookup = ragLookup
         self.remoteOracle = remoteOracle
@@ -196,10 +199,16 @@ public struct FormNativeRouteReceipt: Codable, Equatable, Sendable {
 public struct FormNativeLookupRunner: Sendable {
     public var formCLIURL: URL
     public var workingDirectory: URL
+    public var host: any HostResourceInterface
 
-    public init(formCLIURL: URL, workingDirectory: URL) {
+    public init(
+        formCLIURL: URL,
+        workingDirectory: URL,
+        host: any HostResourceInterface = FoundationHostResourceInterface()
+    ) {
         self.formCLIURL = formCLIURL
         self.workingDirectory = workingDirectory
+        self.host = host
     }
 
     static func normalizeAskInput(_ question: String) -> String {
@@ -209,27 +218,17 @@ public struct FormNativeLookupRunner: Sendable {
     }
 
     public func ask(_ question: String) -> FormNativeLookupSignal {
-        guard FileManager.default.isExecutableFile(atPath: formCLIURL.path) else {
+        guard host.isExecutableFile(at: formCLIURL) else {
             return .unavailable("form-native-rag-local-llm", reason: "form-cli executable not found at \(formCLIURL.path)")
         }
         let normalizedQuestion = Self.normalizeAskInput(question)
 
-        let process = Process()
-        let input = Pipe()
-        let output = Pipe()
-        process.executableURL = formCLIURL
-        process.currentDirectoryURL = workingDirectory
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = output
-
         do {
-            try process.run()
-            try input.fileHandleForWriting.write(contentsOf: Data("ask \(normalizedQuestion)\n".utf8))
-            try input.fileHandleForWriting.close()
-            process.waitUntilExit()
-            let data = output.fileHandleForReading.readDataToEndOfFile()
-            let text = String(decoding: data, as: UTF8.self)
+            let text = try host.runExecutable(
+                at: formCLIURL,
+                workingDirectory: workingDirectory,
+                standardInput: "ask \(normalizedQuestion)\n"
+            )
             return .formCLIOutput(text)
         } catch {
             return .unavailable("form-native-rag-local-llm", reason: error.localizedDescription)

@@ -51,6 +51,9 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: result.latestFormURL.path))
         let form = try String(contentsOf: result.latestFormURL)
         XCTAssertTrue(form.contains("(target \"sema\")"))
+        XCTAssertTrue(form.contains("(host-boundary-kind \"form-native-host-boundary\")"))
+        XCTAssertTrue(form.contains("(host-resource-interface \"host-os-generic-resource-interface\")"))
+        XCTAssertTrue(form.contains("(forbidden-runtime-carriers \"python,go,rust,typescript\")"))
         XCTAssertTrue(form.contains("(remote-oracle-requested 1)"))
         XCTAssertTrue(form.contains("hello edited"))
     }
@@ -91,6 +94,19 @@ final class SatsangMacCoreTests: XCTestCase {
         """)
 
         XCTAssertEqual(normalized, "What wants to be offered? room mic: first line Voz 2: second line")
+    }
+
+    func testHostBoundaryReceiptKeepsAppRuntimeSmall() {
+        let boundary = FormHostBoundaryReceipt()
+
+        XCTAssertTrue(boundary.usesOnlyAllowedAppRuntimes)
+        XCTAssertEqual(boundary.sharedLogic, "form-native-shared-logic")
+        XCTAssertEqual(boundary.resourceInterface, "host-os-generic-resource-interface")
+        XCTAssertEqual(boundary.appBoundaryRuntimes, ["form", "swift-minimal-host-carrier"])
+        XCTAssertEqual(boundary.forbiddenRuntimeCarriers, ["python", "go", "rust", "typescript"])
+        XCTAssertTrue(boundary.platformTargets.contains("macos"))
+        XCTAssertTrue(boundary.platformTargets.contains("windows"))
+        XCTAssertTrue(boundary.platformTargets.contains("android"))
     }
 
     func testTranscriptMergePreservesManualRowsAcrossReload() {

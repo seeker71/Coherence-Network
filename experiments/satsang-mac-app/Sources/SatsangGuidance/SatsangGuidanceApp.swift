@@ -32,18 +32,19 @@ final class AppModel: ObservableObject {
     private let defaultTranscriptPath: String
     private let defaultQueuePath: String
     private let repositoryRoot: URL?
+    private let hostResources: FoundationHostResourceInterface
     private var timer: Timer?
     private let roomTranscriber = RoomTranscriber()
 
     init() {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let hostResources = FoundationHostResourceInterface()
+        self.hostResources = hostResources
+        let home = hostResources.homeDirectory
         defaultTranscriptPath = home.appendingPathComponent(".coherence-network/agent-room-memory/transcript.jsonl").path
         defaultQueuePath = home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
-        repositoryRoot = Self.resolveRepositoryRoot(home: home)
-        transcriptPath = ProcessInfo.processInfo.environment["SATSANG_TRANSCRIPT_PATH"]
-            ?? defaultTranscriptPath
-        queuePath = ProcessInfo.processInfo.environment["SATSANG_GUIDANCE_EVENTS"]
-            ?? defaultQueuePath
+        repositoryRoot = Self.resolveRepositoryRoot(home: home, host: hostResources)
+        transcriptPath = defaultTranscriptPath
+        queuePath = defaultQueuePath
         roomTranscriber.onStateChange = { [weak self] listening, message in
             self?.isListening = listening
             self?.status = message
@@ -92,7 +93,10 @@ final class AppModel: ObservableObject {
 
     func reload(silent: Bool = false) {
         do {
-            let loaded = try TranscriptParser.load(from: URL(fileURLWithPath: expanded(transcriptPath)))
+            let loaded = try TranscriptParser.load(
+                from: URL(fileURLWithPath: expanded(transcriptPath)),
+                host: hostResources
+            )
             utterances = TranscriptMerger.merge(loaded: loaded, current: utterances)
             if selectedID == nil { selectedID = utterances.first?.id }
             if !silent { status = "Loaded \(utterances.count) transcript lines" }
@@ -146,7 +150,8 @@ final class AppModel: ObservableObject {
         )
         do {
             let sender = GuidanceRequestSender(
-                queueURL: URL(fileURLWithPath: expanded(queuePath))
+                queueURL: URL(fileURLWithPath: expanded(queuePath)),
+                host: hostResources
             )
             let result = try sender.send(request)
             status = "Sent \(request.utterances.count) lines to \(targetPresence). \(routeReceipt.summary). Form envelope: \(result.latestFormURL.path)"
@@ -183,14 +188,13 @@ final class AppModel: ObservableObject {
             let url = URL(fileURLWithPath: expanded(queuePath))
                 .deletingLastPathComponent()
                 .appendingPathComponent("edited-transcript.jsonl")
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
             let data = try utterances.map { try String(decoding: encoder.encode($0), as: UTF8.self) }
                 .joined(separator: "\n")
                 .appending("\n")
                 .data(using: .utf8)!
-            try data.write(to: url, options: .atomic)
+            try hostResources.writeData(data, to: url, options: .atomic)
             status = "Exported edited transcript to \(url.path)"
         } catch {
             status = "Export failed: \(error.localizedDescription)"
@@ -198,9 +202,9 @@ final class AppModel: ObservableObject {
     }
 
     private func expanded(_ path: String) -> String {
-        if path == "~" { return FileManager.default.homeDirectoryForCurrentUser.path }
+        if path == "~" { return hostResources.homeDirectory.path }
         if path.hasPrefix("~/") {
-            return FileManager.default.homeDirectoryForCurrentUser
+            return hostResources.homeDirectory
                 .appendingPathComponent(String(path.dropFirst(2)))
                 .path
         }
@@ -224,7 +228,7 @@ final class AppModel: ObservableObject {
             "docs/coherence-substrate/form-first-reasoning.form"
         ]
         return candidates.filter {
-            FileManager.default.fileExists(atPath: repositoryRoot.appendingPathComponent($0).path)
+            hostResources.fileExists(at: repositoryRoot.appendingPathComponent($0))
         }
     }
 
@@ -232,23 +236,23 @@ final class AppModel: ObservableObject {
         guard let repositoryRoot else {
             return .unavailable("form-native-rag-local-llm", reason: "repository root not found")
         }
-        guard let formCLIURL = Self.resolveFormCLI(repositoryRoot: repositoryRoot) else {
+        guard let formCLIURL = resolveFormCLI(repositoryRoot: repositoryRoot) else {
             return .unavailable("form-native-rag-local-llm", reason: "form-cli executable not found")
         }
         let query = [guidanceQuestion, transcriptText]
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let runner = FormNativeLookupRunner(formCLIURL: formCLIURL, workingDirectory: repositoryRoot)
+        let runner = FormNativeLookupRunner(
+            formCLIURL: formCLIURL,
+            workingDirectory: repositoryRoot,
+            host: hostResources
+        )
         return runner.ask(query.isEmpty ? guidanceQuestion : query)
     }
 
-    private static func resolveRepositoryRoot(home: URL) -> URL? {
-        let environment = ProcessInfo.processInfo.environment
+    private static func resolveRepositoryRoot(home: URL, host: FoundationHostResourceInterface) -> URL? {
         var candidates: [URL] = []
-        if let configured = environment["COHERENCE_REPO_ROOT"], !configured.isEmpty {
-            candidates.append(URL(fileURLWithPath: configured))
-        }
-        candidates.append(URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+        candidates.append(host.currentDirectory)
         let bundleURL = Bundle.main.bundleURL
         candidates.append(bundleURL
             .deletingLastPathComponent()
@@ -258,16 +262,16 @@ final class AppModel: ObservableObject {
         candidates.append(home.appendingPathComponent("source/Coherence-Network"))
 
         return candidates.first { candidate in
-            FileManager.default.fileExists(atPath: candidate.appendingPathComponent("form/form-stdlib/satsang-guidance-event.fk").path)
+            host.fileExists(at: candidate.appendingPathComponent("form/form-stdlib/satsang-guidance-event.fk"))
         }
     }
 
-    private static func resolveFormCLI(repositoryRoot: URL) -> URL? {
+    private func resolveFormCLI(repositoryRoot: URL) -> URL? {
         let candidates = [
             repositoryRoot.appendingPathComponent("form/form-cli"),
-            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/form-cli")
+            hostResources.homeDirectory.appendingPathComponent(".local/bin/form-cli")
         ]
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) }
+        return candidates.first { hostResources.isExecutableFile(at: $0) }
     }
 
     private func isLikelyFilePath(_ path: String) -> Bool {

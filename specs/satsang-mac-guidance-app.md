@@ -14,8 +14,12 @@ source:
     symbols: [GuidanceRequest, GuidanceRequestSender]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift
     symbols: [FormNativeLookupSignal, FormNativeRouteReceipt, FormNativeLookupRunner]
+  - file: experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift
+    symbols: [HostResourceInterface, FoundationHostResourceInterface, FormHostBoundaryReceipt]
   - file: form/form-stdlib/satsang-guidance-event.fk
     symbols: [sge-target-known?, sge-turn-mode?, sge-all-transcripts?, sge-ready?, sge-receipt]
+  - file: form/form-stdlib/satsang-host-boundary.fk
+    symbols: [shb-app-runtime-allowed?, shb-runtime-forbidden?, shb-resource-kind?, shb-platform-target?, shb-boundary-ok?, shb-receipt]
   - file: form/form-stdlib/satsang-listen-route.fk
     symbols: [slr-decision, slr-remote-oracle?, slr-receipt]
 requirements:
@@ -29,15 +33,18 @@ requirements:
   - "The request names Sema or another invoked presence and a turn-offered protocol mode"
   - "The send path records Form-native body/RAG lookup before any remote oracle request"
   - "Remote LLM oracle routing is only an explicit request when the native sufficiency gate fails"
+  - "Shared app logic is declared Form-native and host access crosses a generic host OS resource interface"
+  - "Python, Go, Rust, and TypeScript are rejected as app-boundary runtimes for this carrier"
 done_when:
-  - "Swift package tests pass for parsing, request writing, and route-gate receipts"
+  - "Swift package tests pass for parsing, request writing, host-boundary, and route-gate receipts"
   - "Swift package builds the GUI executable"
-  - "satsang-guidance-event and satsang-listen-route Form bands cross four-way with verdict 255"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk"
+  - "satsang-guidance-event and satsang-listen-route Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 1023"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
   - "The GUI edits local event payloads only; speech capture starts only from explicit user action"
   - "The presence speaks only when the turn is offered, named-and-asked, or button-invoked"
+  - "App-boundary resource code stays in the minimal host carrier; shared logic belongs in Form"
 ---
 
 # Satsang Mac Guidance App
@@ -70,7 +77,11 @@ transcript files, and writes a local protocol event queue.
       sufficiency receipt in JSON and Form output.
 - [x] The route receipt sets `remoteOracleRequested` only when the local native
       sufficiency gate does not accept the body/RAG result.
+- [x] The request records a host-boundary receipt: Form shared logic, a generic
+      host OS resource interface, Swift as the minimal host carrier, and
+      Python/Go/Rust/TypeScript forbidden at the app boundary.
 - [x] A Form proof names the valid event/protocol boundary.
+- [x] A Form proof names the generic host ABI boundary.
 - [x] A Form proof names the remote-last listen/transcribe route boundary.
 
 ## Files
@@ -82,10 +93,13 @@ transcript files, and writes a local protocol event queue.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift` - transcript reload merge policy.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift` - event writer.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift` - local Form/RAG route receipt writer.
+- `experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift` - generic host resource interface and host-boundary receipt.
 - `experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift` - package tests.
 - `scripts/build_satsang_mac_app.sh` - `.app` bundle builder.
 - `form/form-stdlib/satsang-guidance-event.fk` - Form protocol.
 - `form/form-stdlib/tests/satsang-guidance-event-band.fk` - Form proof.
+- `form/form-stdlib/satsang-host-boundary.fk` - generic host ABI and forbidden runtime protocol.
+- `form/form-stdlib/tests/satsang-host-boundary-band.fk` - generic host ABI proof.
 - `form/form-stdlib/satsang-listen-route.fk` - remote-last listen/transcribe route protocol.
 - `form/form-stdlib/tests/satsang-listen-route-band.fk` - remote-last route proof.
 - `docs/coherence-substrate/satsang-guidance-event.form` - teaching.
@@ -95,6 +109,7 @@ transcript files, and writes a local protocol event queue.
 - `swift test --package-path experiments/satsang-mac-app` passes.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidance` passes.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `1023`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
 - Manual validation: launch the app, press Start Listening, allow macOS
   microphone/speech prompts, speak into the room, edit a transcript line, press
@@ -112,6 +127,7 @@ swift test --package-path experiments/satsang-mac-app
 swift build --package-path experiments/satsang-mac-app --product SatsangGuidance
 scripts/build_satsang_mac_app.sh
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk
 python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md
 ```
@@ -121,6 +137,8 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Autonomous interruption by Sema or another presence.
 - Invoking a remote LLM directly from the GUI.
 - Replacing macOS Speech with a fully Form-native acoustic decoder.
+- Replacing the current SwiftUI macOS GUI carrier with Windows or Android host
+  adapters in this PR.
 
 ## Risks
 
@@ -138,6 +156,9 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - The local Form/RAG lookup depends on a repo-local `form/form-cli` binary or a
   user-local `~/.local/bin/form-cli`. If neither exists, the request records
   that local lookup was unavailable before requesting remote oracle handling.
+- The portable host ABI is a receipt and resource-interface contract in this
+  PR; Windows and Android still need their own thin host adapters over the same
+  Form/shared body.
 
 ## Known Gaps and Follow-up Tasks
 

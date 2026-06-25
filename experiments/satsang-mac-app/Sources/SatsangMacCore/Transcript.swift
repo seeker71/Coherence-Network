@@ -33,9 +33,11 @@ public struct TranscriptUtterance: Codable, Equatable, Identifiable, Sendable {
 }
 
 public enum TranscriptParser {
-    public static func load(from url: URL) throws -> [TranscriptUtterance] {
-        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-        let data = try Data(contentsOf: url)
+    public static func load(
+        from url: URL,
+        host: any HostResourceInterface = FoundationHostResourceInterface()
+    ) throws -> [TranscriptUtterance] {
+        guard let data = try host.readData(from: url) else { return [] }
         let text = String(decoding: data, as: UTF8.self)
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.hasPrefix("[") {

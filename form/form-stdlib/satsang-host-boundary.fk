@@ -1,0 +1,57 @@
+; satsang-host-boundary.fk — app logic in Form, host code as a minimal ABI carrier.
+;
+; The shared satsang guidance body belongs in Form. Platform apps may carry the
+; smallest OS adapter needed for microphone, speech, file, and process resources,
+; but Python, Go, Rust, and TypeScript are not app-boundary runtimes.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn shb-app-runtime-allowed? (runtime)
+        (if (str_eq runtime "form") 1
+            (if (str_eq runtime "swift-minimal-host-carrier") 1 0)))
+
+    (defn shb-runtime-forbidden? (runtime)
+        (if (str_eq runtime "python") 1
+            (if (str_eq runtime "go") 1
+                (if (str_eq runtime "rust") 1
+                    (if (str_eq runtime "typescript") 1 0)))))
+
+    (defn shb-resource-kind? (kind)
+        (if (str_eq kind "audio-input") 1
+            (if (str_eq kind "speech-transcript") 1
+                (if (str_eq kind "file-read") 1
+                    (if (str_eq kind "file-append") 1
+                        (if (str_eq kind "file-write-atomic") 1
+                            (if (str_eq kind "process-stdin-stdout") 1 0)))))))
+
+    (defn shb-platform-target? (platform)
+        (if (str_eq platform "macos") 1
+            (if (str_eq platform "windows") 1
+                (if (str_eq platform "android") 1 0))))
+
+    (defn shb-boundary-ok? (runtime resource platform)
+        (if (and (eq (shb-app-runtime-allowed? runtime) 1)
+                 (and (eq (shb-resource-kind? resource) 1)
+                      (eq (shb-platform-target? platform) 1))) 1 0))
+
+    (defn shb-receipt (runtime resource platform)
+        (list "form-native-host-boundary"
+              "form-native-shared-logic"
+              runtime
+              "host-os-generic-resource-interface"
+              resource
+              platform
+              (shb-boundary-ok? runtime resource platform)
+              (shb-runtime-forbidden? runtime)))
+
+    (defn shb-rec-kind       (r) (nth r 0))
+    (defn shb-rec-shared     (r) (nth r 1))
+    (defn shb-rec-runtime    (r) (nth r 2))
+    (defn shb-rec-interface  (r) (nth r 3))
+    (defn shb-rec-resource   (r) (nth r 4))
+    (defn shb-rec-platform   (r) (nth r 5))
+    (defn shb-rec-ok?        (r) (nth r 6))
+    (defn shb-rec-forbidden? (r) (nth r 7))
+
+    0)
