@@ -1,6 +1,5 @@
 // sense.hati.earth — the download door for Coherence Sense. Detects the visitor's
-// device and offers the right artifact: the Android .apk (phone as a sense organ)
-// or the macOS kernel + launcher (the Mac that recognizes through the Form kernel).
+// device and offers the right artifact or entry lane for each platform.
 "use client";
 
 import Link from "next/link";
@@ -11,13 +10,13 @@ const APK =
 const MAC =
   "https://github.com/seeker71/Coherence-Network/releases/download/coherence-sense-v0/coherence-sense-mac.zip";
 
-type OS = "mac" | "android" | "other";
+type OS = "mac" | "android" | "ios" | "other";
 
 function detectOS(): OS {
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent.toLowerCase();
   if (/android/.test(ua)) return "android";
-  if (/iphone|ipad|ipod/.test(ua)) return "other"; // iOS: nothing to offer yet
+  if (/iphone|ipad|ipod/.test(ua)) return "ios";
   if (/macintosh|mac os x/.test(ua)) return "mac";
   return "other";
 }
@@ -27,11 +26,12 @@ function Card({
   href,
   primary,
 }: {
-  kind: "android" | "mac";
+  kind: "android" | "ios" | "mac";
   href: string;
   primary: boolean;
 }) {
   const isAndroid = kind === "android";
+  const isIOS = kind === "ios";
   return (
     <a
       href={href}
@@ -45,15 +45,21 @@ function Card({
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs uppercase tracking-wider text-neutral-500">
-            {isAndroid ? "Android" : "macOS"}
+            {isAndroid ? "Android" : isIOS ? "iPhone" : "macOS"}
             {primary && <span className="ml-2 text-emerald-400">· your device</span>}
           </div>
           <div className="mt-1 text-lg text-neutral-100">
-            {isAndroid ? "Coherence Sense (.apk)" : "Mac sense — kernel + launcher"}
+            {isAndroid
+              ? "Coherence Sense (.apk)"
+              : isIOS
+                ? "iPhone presence — web + calls"
+                : "Mac sense — kernel + launcher"}
           </div>
           <div className="mt-1 text-sm text-neutral-500">
             {isAndroid
               ? "The phone as a sense organ — streams its senses to the network."
+              : isIOS
+                ? "A first iPhone door: remembered context, trusted-call tel/CallKit lanes, and the live web surface."
               : "Recognizes the stream through the Form kernel. Needs Python 3."}
           </div>
         </div>
@@ -72,19 +78,21 @@ export default function SensePage() {
       <div className="text-xs uppercase tracking-[0.2em] text-emerald-500">Coherence · Sense</div>
       <h1 className="mt-3 text-3xl font-semibold text-neutral-50">Become a sense organ of the network.</h1>
       <p className="mt-4 max-w-xl text-neutral-400">
-        Your phone reads its senses — motion, light, orientation — and streams them to a Mac that
-        recognizes the field through the Form kernel: the two synchronizing, predicting, surfacing
-        what is alive in the room. Nothing streams until you connect.
+        Your phone becomes a trusted carried presence: it senses, remembers, informs, contributes,
+        and touches the physical or digital surfaces it knows. Phone calls are the first action
+        lane: relationship context before, live support during, exchange memory after.
       </p>
 
       <div className="mt-10 grid gap-3">
         <Card kind="android" href={APK} primary={os === "android"} />
+        <Card kind="ios" href="/sense/surface" primary={os === "ios"} />
         <Card kind="mac" href={MAC} primary={os === "mac"} />
       </div>
 
       {os === "other" && (
         <p className="mt-4 text-sm text-neutral-500">
-          On a phone? Open this on Android to install. On a Mac? Grab the kernel + launcher above.
+          On a phone? Android can install the native sense organ; iPhone can enter through the web
+          presence door while the native CallKit lane lands. On a Mac? Grab the kernel + launcher above.
         </p>
       )}
 
@@ -97,14 +105,16 @@ export default function SensePage() {
       </Link>
       <p className="mt-2 text-xs text-neutral-600">
         Heard text + translation, who-can-hear-whom, the room&apos;s echo, place, what&apos;s
-        playing — computed from the four-way-proven world-perception recipe, no install needed.
+        playing, and the trusted-call floor — computed from proven Form recipes where the body
+        already carries them.
       </p>
 
       <div className="mt-10 border-t border-white/10 pt-6 text-sm text-neutral-500">
         <p>
           The Android build is debug-signed — your phone will ask you to allow installing from your
-          browser (Settings → unknown sources). The Mac bundle is the kernel binary + the proven
-          recipes + a one-tap launcher.
+          browser (Settings → unknown sources). iPhone starts with the web door and the system
+          phone/CallKit lanes; the native iOS app is the next packaging step. The Mac bundle is the
+          kernel binary + the proven recipes + a one-tap launcher.
         </p>
         <p className="mt-3">
           Source &amp; honest scope:{" "}

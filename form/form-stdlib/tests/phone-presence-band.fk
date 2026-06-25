@@ -1,0 +1,43 @@
+; preludes: form-stdlib/core.fk form-stdlib/phone-presence.fk
+;
+; phone-presence-band - cross-platform trusted carried presence.
+;
+; Verdict 4095:
+;   1     Android is supported
+;   2     iPhone is supported
+;   4     macOS is supported
+;   8     Windows is supported
+;   16    Web is supported
+;   32    Android can direct-call when the carrier holds permission
+;   64    Android uses dialer confirmation without direct-call permission
+;   128   iPhone tel confirmation is the honest public phone-call floor
+;   256   iPhone CallKit/VoIP lane is named when voip-ready
+;   512   iPhone is a phone but not yet a Form-native host floor
+;   1024  Web opens a tel link lane
+;   2048  Shared voice + exchange memory makes context ready
+
+(do
+    (let android-direct (pp-receipt "android" "call" 1 0 1 1))
+    (let android-dialer (pp-receipt "android" "call" 0 0 1 1))
+    (let iphone-tel (pp-receipt "iphone" "call" 0 0 1 1))
+    (let iphone-voip (pp-receipt "iphone" "call" 0 1 1 1))
+    (let mac (pp-receipt "macos" "digital" 0 0 1 1))
+    (let win (pp-receipt "windows" "physical" 0 0 1 0))
+    (let web (pp-receipt "web" "call" 0 0 1 1))
+
+    (let c0 (if (eq (pp-rec-supported? android-direct) 1) 1 0))
+    (let c1 (if (eq (pp-rec-supported? iphone-tel) 1) 2 0))
+    (let c2 (if (eq (pp-rec-supported? mac) 1) 4 0))
+    (let c3 (if (eq (pp-rec-supported? win) 1) 8 0))
+    (let c4 (if (eq (pp-rec-supported? web) 1) 16 0))
+    (let c5 (if (str_eq (pp-rec-call-mode android-direct) "android-direct-call") 32 0))
+    (let c6 (if (str_eq (pp-rec-call-mode android-dialer) "android-dialer-confirm") 64 0))
+    (let c7 (if (str_eq (pp-rec-call-mode iphone-tel) "iphone-tel-confirm") 128 0))
+    (let c8 (if (str_eq (pp-rec-call-mode iphone-voip) "iphone-callkit-voip") 256 0))
+    (let c9 (if (and (eq (pp-rec-phone? iphone-tel) 1)
+                     (eq (pp-rec-native? iphone-tel) 0)) 512 0))
+    (let c10 (if (str_eq (pp-rec-call-mode web) "web-tel-link") 1024 0))
+    (let c11 (if (eq (pp-rec-memory? iphone-tel) 1) 2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))

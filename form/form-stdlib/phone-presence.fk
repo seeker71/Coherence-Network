@@ -1,0 +1,87 @@
+; phone-presence.fk - a phone as trusted carried presence across platforms.
+;
+; The phone is not a utility wrapper. It is a carried presence: it senses,
+; remembers, informs, contributes, and acts on physical or digital surfaces it
+; knows how to touch. Phone calls are the first action surface because voice is
+; the most direct relationship membrane.
+;
+; Platform truth, honestly:
+;   android  - native sense organ + dialer/direct-call lane
+;   iphone   - first-class presence lane; phone calls ride tel confirmation,
+;              CallKit/VoIP, and default-calling-app surfaces where available
+;   macos    - native host + tel/facetime/handoff lane
+;   windows  - native host + tel/default app lane
+;   web      - browser/PWA door + tel link lane
+;
+; The carrier opens apps, dials, records, or talks to OS APIs. This recipe names
+; the body decision and the receipt that shared memory consumes.
+
+(do
+    (defn pp-platform-supported? (platform)
+        (if (str_eq platform "android") 1
+            (if (str_eq platform "iphone") 1
+                (if (str_eq platform "macos") 1
+                    (if (str_eq platform "windows") 1
+                        (if (str_eq platform "web") 1 0))))))
+
+    (defn pp-form-native? (platform)
+        (if (str_eq platform "android") 1
+            (if (str_eq platform "macos") 1
+                (if (str_eq platform "windows") 1 0))))
+
+    (defn pp-phone? (platform)
+        (if (str_eq platform "android") 1
+            (if (str_eq platform "iphone") 1 0)))
+
+    (defn pp-call-mode (platform direct-permission voip-ready)
+        (if (str_eq platform "android")
+            (if (eq direct-permission 1) "android-direct-call" "android-dialer-confirm")
+            (if (str_eq platform "iphone")
+                (if (eq voip-ready 1) "iphone-callkit-voip" "iphone-tel-confirm")
+                (if (str_eq platform "macos")
+                    "macos-tel-facetime-handoff"
+                    (if (str_eq platform "windows")
+                        "windows-tel-handler"
+                        (if (str_eq platform "web") "web-tel-link" "unsupported-call"))))))
+
+    (defn pp-surface-mode (surface)
+        (if (str_eq surface "call") "trusted-call"
+            (if (str_eq surface "physical") "sense-physical-surface"
+                (if (str_eq surface "digital") "interact-digital-surface"
+                    (if (str_eq surface "relationship") "read-relationship-thread"
+                        "reflect-and-plan")))))
+
+    (defn pp-memory-ready? (voice-memory exchange-memory)
+        (if (and (eq voice-memory 1) (eq exchange-memory 1)) 1 0))
+
+    ; Receipt layout:
+    ; (phone-presence platform supported form-native phone call-mode surface-mode
+    ;  memory-ready decision)
+    (defn pp-receipt (platform surface direct-permission voip-ready voice-memory exchange-memory)
+        (list "phone-presence"
+              platform
+              (pp-platform-supported? platform)
+              (pp-form-native? platform)
+              (pp-phone? platform)
+              (pp-call-mode platform direct-permission voip-ready)
+              (pp-surface-mode surface)
+              (pp-memory-ready? voice-memory exchange-memory)
+              (if (eq (pp-platform-supported? platform) 0)
+                  "refuse-unsupported-platform"
+                  (if (str_eq surface "call")
+                      "open-trusted-call"
+                      (if (eq (pp-memory-ready? voice-memory exchange-memory) 1)
+                          "contribute-from-shared-memory"
+                          "listen-and-learn")))))
+
+    (defn pp-rec-kind       (r) (nth r 0))
+    (defn pp-rec-platform   (r) (nth r 1))
+    (defn pp-rec-supported? (r) (nth r 2))
+    (defn pp-rec-native?    (r) (nth r 3))
+    (defn pp-rec-phone?     (r) (nth r 4))
+    (defn pp-rec-call-mode  (r) (nth r 5))
+    (defn pp-rec-surface    (r) (nth r 6))
+    (defn pp-rec-memory?    (r) (nth r 7))
+    (defn pp-rec-decision   (r) (nth r 8))
+
+    0)

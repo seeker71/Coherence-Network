@@ -971,6 +971,7 @@ fnri-video-standin fks 15
 fnri-gpu-standin fks 15
 fsh-fnri-staged fks 7
 native-host-instance fks 4095
+phone-presence fks 4095
 const-recipe fks 511
 model-search fks 31
 tooluse-model-search fks 63
