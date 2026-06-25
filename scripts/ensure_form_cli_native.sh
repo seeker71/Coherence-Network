@@ -21,6 +21,15 @@ if (cd "$FORM_DIR" && FORM_STANDARD_LANE=1 ./build-form-cli.sh) >>"$LOG" 2>&1; t
   [ -x "$TARGET" ] && exit 0
 fi
 
+if ! command -v clang >/dev/null 2>&1; then
+  for llvm_bin in "/c/Program Files/LLVM/bin" "/c/Program Files (x86)/LLVM/bin"; do
+    if [[ -x "$llvm_bin/clang.exe" ]]; then
+      export PATH="$llvm_bin:$PATH"
+      break
+    fi
+  done
+fi
+
 if command -v clang >/dev/null 2>&1; then
   printf "⟐ c-bootstrap form-cli warming in background (bootstrap C + clang link); one-time, then cached. Guide: docs/coherence-substrate/form-cli-c-bootstrap.md\n"
   nohup bash -c "cd '$FORM_DIR' && ./build-form-cli.sh" >"$LOG" 2>&1 &

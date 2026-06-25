@@ -51,6 +51,40 @@ jobs:
           }
           Add-Content -Path $env:GITHUB_PATH -Value $llvmBin
 
+      - name: Prove agent PATH wrappers expose form-cli on Windows
+        shell: pwsh
+        run: |
+          $env:Path = "$HOME\.local\bin;$env:Path"
+          & "C:\Program Files\Git\bin\bash.exe" ./scripts/ensure_coord_cli.sh --quiet
+          if ($LASTEXITCODE -ne 0) {
+            throw "PATH wrapper refresh failed"
+          }
+          $cmd = Get-Command form-cli -ErrorAction Stop
+          if ($cmd.Source -notlike "*.cmd") {
+            throw "PowerShell did not resolve form-cli through the Windows command shim: $($cmd.Source)"
+          }
+          form-cli help | Select-String "form-cli" | Out-Null
+          & "C:\Program Files\Git\bin\bash.exe" -lc 'command -v form-cli >/dev/null && form-cli help >/dev/null'
+          if ($LASTEXITCODE -ne 0) {
+            throw "Git Bash did not resolve runnable form-cli"
+          }
+          $startupProof = @'
+          set -e
+          poison="$(mktemp -d)"
+          for tool in python python3 py go cargo rustc; do
+            printf "%s\n" "#!/usr/bin/env sh" "echo unexpected form-cli startup dependency: $tool >&2" "exit 127" > "$poison/$tool"
+            chmod +x "$poison/$tool"
+          done
+          export PATH="$HOME/.local/bin:$poison:/mingw64/bin:/usr/bin:/bin:/c/Windows/System32"
+          command -v form-cli >/dev/null
+          form-cli help >/tmp/form-cli-minimal-help
+          '@
+          $encodedStartupProof = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($startupProof))
+          & "C:\Program Files\Git\bin\bash.exe" -lc "printf '%s' '$encodedStartupProof' | base64 -d | bash"
+          if ($LASTEXITCODE -ne 0) {
+            throw "form-cli wrapper has a Python/Go/Rust startup dependency"
+          }
+
       # Rust (rustup + cargo) is preinstalled on the windows-latest image;
       # validate.sh builds the Go/Rust kernels and bundles the TS kernel itself.
       - name: Prove the Form-native floor (four-way with fkwu on Windows)

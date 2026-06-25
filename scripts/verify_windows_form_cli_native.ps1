@@ -67,20 +67,32 @@ function Invoke-FormCli {
         [string]$RuntimePath
     )
 
+    $tmpInput = [System.IO.Path]::GetTempFileName()
+    $tmpCmd = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), ".cmd")
+    [System.IO.File]::WriteAllText($tmpInput, $InputText, [System.Text.ASCIIEncoding]::new())
+    [System.IO.File]::WriteAllText(
+        $tmpCmd,
+        "@echo off`r`n`"$Exe`" < `"$tmpInput`"`r`n",
+        [System.Text.ASCIIEncoding]::new()
+    )
+
     $psi = [System.Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $Exe
+    $psi.FileName = Join-Path $env:SystemRoot "System32\cmd.exe"
+    $psi.Arguments = "/d /c `"$tmpCmd`""
     $psi.UseShellExecute = $false
-    $psi.RedirectStandardInput = $true
     $psi.RedirectStandardOutput = $true
     $psi.RedirectStandardError = $true
     $psi.Environment["PATH"] = $RuntimePath
 
-    $process = [System.Diagnostics.Process]::Start($psi)
-    $process.StandardInput.Write($InputText)
-    $process.StandardInput.Close()
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
+    try {
+        $process = [System.Diagnostics.Process]::Start($psi)
+        $stdout = $process.StandardOutput.ReadToEnd()
+        $stderr = $process.StandardError.ReadToEnd()
+        $process.WaitForExit()
+    } finally {
+        Remove-Item -LiteralPath $tmpInput -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $tmpCmd -Force -ErrorAction SilentlyContinue
+    }
 
     if ($process.ExitCode -ne 0) {
         throw "form-cli exited with $($process.ExitCode)`nstdout:`n$stdout`nstderr:`n$stderr"

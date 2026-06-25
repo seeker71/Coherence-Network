@@ -27,8 +27,11 @@ Gemini) and the human share one live field — a coordination membrane
 board (`scripts/agent-coord.sh`). On session start the hook already ran
 `agent-coord.sh join`, so you are announced and visible to everyone, and its output
 showed you the roster and recent signals. SessionStart also refreshes PATH
-wrappers in `~/.local/bin`, so `coord` and `coord-heartbeat` work in the shell
-without manual sourcing. Generic agent names become worktree-local session ids
+wrappers in `~/.local/bin`, so `form-cli`, `coord`, and `coord-heartbeat` work
+in the shell without manual sourcing; the `form-cli` door is installed before
+Python/Go/Rust startup sensing and does not require those toolchains just to
+exist. Requests begin at `form-cli ask` before remote reasoning when the body
+has a carrier. Generic agent names become worktree-local session ids
 (`codex@cf56`, `claude@bml-metal-planes-floor-20260613`) so multiple active
 sessions from the same tool stay distinct and mutually visible. To take part:
 

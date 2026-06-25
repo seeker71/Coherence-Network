@@ -17,8 +17,11 @@
 #   falls back to the intrinsic grounded-hit score.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
-[[ -x "$GO" ]] || (cd "$ROOT/form/form-kernel-go" && go build -o bin-go .)
+FORM="$ROOT/form"
+GO_ABS="$FORM/form-kernel-go/bin-go"
+[[ -x "$GO_ABS" ]] || (cd "$FORM/form-kernel-go" && go build -o bin-go .)
+cd "$FORM"
+GO="form-kernel-go/bin-go"; STD="form-stdlib"
 
 MODEL="coder"; JUDGE="llama3.2:3b"; REMOTE="claude -p"; TRUST=60; RETRIES=1; JUDGE_GATE=0
 while [[ $# -gt 0 ]]; do
@@ -45,7 +48,15 @@ work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 # raw to the kernel as a parse error.
 CACHE="$STD/.cache/source-compiled"; mkdir -p "$CACHE"
 CHAIN=("$STD/form-ontology-loader.fk" "$STD/line-grammar.fk" "$STD/bmf-core.fk" "$STD/bmf-grammar.fk" "$STD/bml.fk" "$STD/bml-source.fk" "$STD/source-compiler.fk" "$STD/grammars/form-bml.fk" "$STD/form-bml-lower.fk")
-hash16() { cat "$@" 2>/dev/null | shasum -a 256 | cut -c1-16; }
+hash16() {
+  if command -v shasum >/dev/null 2>&1; then
+    cat "$@" 2>/dev/null | shasum -a 256 | cut -c1-16
+  elif command -v sha256sum >/dev/null 2>&1; then
+    cat "$@" 2>/dev/null | sha256sum | cut -c1-16
+  else
+    cat "$@" 2>/dev/null | openssl dgst -sha256 -r | cut -c1-16
+  fi
+}
 stamp="$(hash16 "${CHAIN[@]}" "$GO")"
 compile_bml() {  # src -> path to compiled s-expr on stdout (cached); exits on failure
   local src="$1" key cached out drv
