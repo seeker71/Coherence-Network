@@ -10,6 +10,7 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
     public var turnMode: String
     public var guidanceQuestion: String
     public var utterances: [TranscriptUtterance]
+    public var routeReceipt: FormNativeRouteReceipt?
 
     public init(
         id: String = UUID().uuidString,
@@ -19,7 +20,8 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         invocation: String,
         turnMode: String,
         guidanceQuestion: String,
-        utterances: [TranscriptUtterance]
+        utterances: [TranscriptUtterance],
+        routeReceipt: FormNativeRouteReceipt? = nil
     ) {
         self.kind = "satsang-guidance-request"
         self.id = id
@@ -30,6 +32,7 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         self.turnMode = turnMode
         self.guidanceQuestion = guidanceQuestion
         self.utterances = utterances
+        self.routeReceipt = routeReceipt
     }
 
     public var editedCount: Int {
@@ -47,6 +50,9 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         rows.append("  (question \"\(Self.escape(guidanceQuestion))\")")
         rows.append("  (utterance-count \(utterances.count))")
         rows.append("  (edited-count \(editedCount))")
+        if let routeReceipt {
+            rows.append(Self.routeEnvelope(routeReceipt))
+        }
         rows.append("  (utterances")
         for utterance in utterances {
             rows.append("    (utterance \"\(Self.escape(utterance.speaker))\" \"\(Self.escape(utterance.timestamp))\" \"\(Self.escape(utterance.text))\")")
@@ -60,6 +66,27 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "\n", with: "\\n")
+    }
+
+    private static func routeEnvelope(_ receipt: FormNativeRouteReceipt) -> String {
+        var rows: [String] = []
+        rows.append("  (routing")
+        rows.append("    (kind \"\(escape(receipt.kind))\")")
+        rows.append("    (listen-receipt \"\(escape(receipt.listenReceipt))\")")
+        rows.append("    (transcribe-route \"\(escape(receipt.transcribeRoute))\")")
+        rows.append("    (form-request-kind \"\(escape(receipt.formRequestKind))\")")
+        rows.append("    (body-lane \"\(escape(receipt.bodyLookup.lane))\")")
+        rows.append("    (body-grounded \(receipt.bodyLookup.grounded ? 1 : 0))")
+        rows.append("    (body-sufficient \(receipt.bodyLookup.sufficient ? 1 : 0))")
+        rows.append("    (rag-lane \"\(escape(receipt.ragLookup.lane))\")")
+        rows.append("    (rag-grounded \(receipt.ragLookup.grounded ? 1 : 0))")
+        rows.append("    (rag-sufficient \(receipt.ragLookup.sufficient ? 1 : 0))")
+        rows.append("    (sufficiency-verdict \"\(escape(receipt.sufficiencyVerdict))\")")
+        rows.append("    (sufficiency-reason \"\(escape(receipt.sufficiencyReason))\")")
+        rows.append("    (decision \"\(escape(receipt.decision))\")")
+        rows.append("    (remote-oracle-requested \(receipt.remoteOracleRequested ? 1 : 0))")
+        rows.append("    (remote-oracle \"\(escape(receipt.remoteOracle))\"))")
+        return rows.joined(separator: "\n")
     }
 }
 

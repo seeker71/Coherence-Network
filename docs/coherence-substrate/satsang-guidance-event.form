@@ -15,7 +15,9 @@
 ;   intervals restart recognition and the visible mic level shows whether the
 ;   room is reaching the input device. The mic meter comes alive separately from
 ;   Speech Recognition authorization so permission delay is visible instead of
-;   silent.
+;   silent. On Send, the GUI asks the local Form CLI first and records the
+;   body/RAG sufficiency receipt in the JSON and .form event; a remote oracle is
+;   only requested as an explicit insufficient-local route, not called by the GUI.
 ;
 ; Body:
 ;   form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
@@ -24,6 +26,9 @@
 ;   button-invoked modes; requires a non-empty transcript, all detected lines
 ;   included, and a present question. Proof:
 ;   form/form-stdlib/tests/satsang-guidance-event-band.fk -> 255.
+;   form/form-stdlib/satsang-listen-route.fk keeps the listen/transcribe route
+;   remote-last with form-cli-sufficiency.fk. Proof:
+;   form/form-stdlib/tests/satsang-listen-route-band.fk -> 255.
 ;
 ; Boundary:
 ;   The event is an offer, not an interruption. The GUI does not decide that a

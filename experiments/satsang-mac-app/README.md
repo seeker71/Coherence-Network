@@ -34,7 +34,14 @@ open "experiments/satsang-mac-app/dist/Satsang Guidance.app"
 
 The GUI does not invoke an external receiver. Pressing Send writes the JSONL
 event, a latest JSON receipt, and a latest `.form` envelope directly. The Form
-protocol proof lives in `form/form-stdlib/satsang-guidance-event.fk`.
+protocol proofs live in `form/form-stdlib/satsang-guidance-event.fk` and
+`form/form-stdlib/satsang-listen-route.fk`.
+
+Before Send writes the event, the app asks the repo-local native `form-cli`
+for a local body/RAG answer. The resulting route receipt is stored inside the
+JSON and `.form` request. `remoteOracleRequested` is set only when the
+Form-native body and local RAG/local-LLM lane are not sufficient; the GUI does
+not call the remote oracle itself.
 
 The first use of `Start Listening` asks macOS for microphone and speech
 recognition permission. The microphone meter starts as soon as microphone access

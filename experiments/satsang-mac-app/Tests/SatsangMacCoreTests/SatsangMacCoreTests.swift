@@ -38,7 +38,11 @@ final class SatsangMacCoreTests: XCTestCase {
                     detectedText: "hello",
                     text: "hello edited"
                 )
-            ]
+            ],
+            routeReceipt: FormNativeRouteReceipt(
+                bodyLookup: .bodyProtocol(sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"]),
+                ragLookup: .formCLIOutput("cell")
+            )
         )
 
         let result = try sender.send(request)
@@ -47,7 +51,46 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: result.latestFormURL.path))
         let form = try String(contentsOf: result.latestFormURL)
         XCTAssertTrue(form.contains("(target \"sema\")"))
+        XCTAssertTrue(form.contains("(remote-oracle-requested 1)"))
         XCTAssertTrue(form.contains("hello edited"))
+    }
+
+    func testNativeRouteKeepsRemoteBehindSufficiencyGate() {
+        let body = FormNativeLookupSignal.bodyProtocol(
+            sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"],
+            sufficient: false
+        )
+        let groundedRAG = FormNativeLookupSignal.formCLIOutput("grounded:docs/coherence-substrate/satsang-guidance-event.form")
+        let localReceipt = FormNativeRouteReceipt(bodyLookup: body, ragLookup: groundedRAG)
+
+        XCTAssertEqual(localReceipt.decision, "use-form-native-rag-llm")
+        XCTAssertFalse(localReceipt.remoteOracleRequested)
+
+        let missReceipt = FormNativeRouteReceipt(bodyLookup: body, ragLookup: .formCLIOutput("cell"))
+        XCTAssertEqual(missReceipt.decision, "request-remote-llm-oracle")
+        XCTAssertTrue(missReceipt.remoteOracleRequested)
+    }
+
+    func testBodySufficientRouteNeverRequestsRemoteOracle() {
+        let body = FormNativeLookupSignal.bodyProtocol(
+            sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"],
+            sufficient: true
+        )
+        let weakRAG = FormNativeLookupSignal.formCLIOutput("cell")
+        let receipt = FormNativeRouteReceipt(bodyLookup: body, ragLookup: weakRAG)
+
+        XCTAssertEqual(receipt.decision, "use-form-native-body")
+        XCTAssertFalse(receipt.remoteOracleRequested)
+    }
+
+    func testFormCLIAskInputIsSingleLine() {
+        let normalized = FormNativeLookupRunner.normalizeAskInput("""
+        What wants to be offered?
+        room mic: first line
+        Voz 2: second line
+        """)
+
+        XCTAssertEqual(normalized, "What wants to be offered? room mic: first line Voz 2: second line")
     }
 
     func testTranscriptMergePreservesManualRowsAcrossReload() {

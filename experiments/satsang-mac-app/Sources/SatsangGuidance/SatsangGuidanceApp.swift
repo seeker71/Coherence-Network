@@ -26,10 +26,12 @@ final class AppModel: ObservableObject {
     @Published var partialTranscript: String = ""
     @Published var utterances: [TranscriptUtterance] = []
     @Published var selectedID: TranscriptUtterance.ID?
+    @Published var routeSummary: String = "Form route: waiting for request"
     @Published var status: String = "Ready"
 
     private let defaultTranscriptPath: String
     private let defaultQueuePath: String
+    private let repositoryRoot: URL?
     private var timer: Timer?
     private let roomTranscriber = RoomTranscriber()
 
@@ -37,6 +39,7 @@ final class AppModel: ObservableObject {
         let home = FileManager.default.homeDirectoryForCurrentUser
         defaultTranscriptPath = home.appendingPathComponent(".coherence-network/agent-room-memory/transcript.jsonl").path
         defaultQueuePath = home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
+        repositoryRoot = Self.resolveRepositoryRoot(home: home)
         transcriptPath = ProcessInfo.processInfo.environment["SATSANG_TRANSCRIPT_PATH"]
             ?? defaultTranscriptPath
         queuePath = ProcessInfo.processInfo.environment["SATSANG_GUIDANCE_EVENTS"]
@@ -130,20 +133,23 @@ final class AppModel: ObservableObject {
 
     func send() {
         commitLiveDraftIfNeeded()
+        let routeReceipt = makeRouteReceipt()
+        routeSummary = routeReceipt.summary
         let request = GuidanceRequest(
             sessionTitle: sessionTitle,
             targetPresence: targetPresence,
             invocation: invocation,
             turnMode: turnMode,
             guidanceQuestion: guidanceQuestion,
-            utterances: utterances
+            utterances: utterances,
+            routeReceipt: routeReceipt
         )
         do {
             let sender = GuidanceRequestSender(
                 queueURL: URL(fileURLWithPath: expanded(queuePath))
             )
             let result = try sender.send(request)
-            status = "Sent \(request.utterances.count) lines to \(targetPresence). Form envelope: \(result.latestFormURL.path)"
+            status = "Sent \(request.utterances.count) lines to \(targetPresence). \(routeReceipt.summary). Form envelope: \(result.latestFormURL.path)"
         } catch {
             status = "Send failed: \(error.localizedDescription)"
         }
@@ -199,6 +205,69 @@ final class AppModel: ObservableObject {
                 .path
         }
         return path
+    }
+
+    private func makeRouteReceipt() -> FormNativeRouteReceipt {
+        let bodySources = formBodySources()
+        let body = FormNativeLookupSignal.bodyProtocol(sourceIDs: bodySources, sufficient: false)
+        let rag = formNativeAskSignal()
+        return FormNativeRouteReceipt(bodyLookup: body, ragLookup: rag)
+    }
+
+    private func formBodySources() -> [String] {
+        guard let repositoryRoot else { return [] }
+        let candidates = [
+            "form/form-stdlib/satsang-guidance-event.fk",
+            "form/form-stdlib/form-cli-sufficiency.fk",
+            "form/form-stdlib/rag-ask.fk",
+            "docs/coherence-substrate/satsang-guidance-event.form",
+            "docs/coherence-substrate/form-first-reasoning.form"
+        ]
+        return candidates.filter {
+            FileManager.default.fileExists(atPath: repositoryRoot.appendingPathComponent($0).path)
+        }
+    }
+
+    private func formNativeAskSignal() -> FormNativeLookupSignal {
+        guard let repositoryRoot else {
+            return .unavailable("form-native-rag-local-llm", reason: "repository root not found")
+        }
+        guard let formCLIURL = Self.resolveFormCLI(repositoryRoot: repositoryRoot) else {
+            return .unavailable("form-native-rag-local-llm", reason: "form-cli executable not found")
+        }
+        let query = [guidanceQuestion, transcriptText]
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let runner = FormNativeLookupRunner(formCLIURL: formCLIURL, workingDirectory: repositoryRoot)
+        return runner.ask(query.isEmpty ? guidanceQuestion : query)
+    }
+
+    private static func resolveRepositoryRoot(home: URL) -> URL? {
+        let environment = ProcessInfo.processInfo.environment
+        var candidates: [URL] = []
+        if let configured = environment["COHERENCE_REPO_ROOT"], !configured.isEmpty {
+            candidates.append(URL(fileURLWithPath: configured))
+        }
+        candidates.append(URL(fileURLWithPath: FileManager.default.currentDirectoryPath))
+        let bundleURL = Bundle.main.bundleURL
+        candidates.append(bundleURL
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent())
+        candidates.append(home.appendingPathComponent("source/Coherence-Network"))
+
+        return candidates.first { candidate in
+            FileManager.default.fileExists(atPath: candidate.appendingPathComponent("form/form-stdlib/satsang-guidance-event.fk").path)
+        }
+    }
+
+    private static func resolveFormCLI(repositoryRoot: URL) -> URL? {
+        let candidates = [
+            repositoryRoot.appendingPathComponent("form/form-cli"),
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/form-cli")
+        ]
+        return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) }
     }
 
     private func isLikelyFilePath(_ path: String) -> Bool {
@@ -413,6 +482,9 @@ struct ContentView: View {
                 Button("Send to Form / Sema") { model.send() }
                     .buttonStyle(.borderedProminent)
             }
+            Text(model.routeSummary)
+                .font(.footnote)
+                .foregroundStyle(model.routeSummary.contains("remote oracle") ? .orange : .secondary)
 
             Text("All transcript lines in this request")
                 .font(.headline)

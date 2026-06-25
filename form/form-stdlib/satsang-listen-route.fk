@@ -1,0 +1,62 @@
+; satsang-listen-route.fk — listen/transcribe guidance routing with remote last.
+;
+; The room carrier may be macOS audio today, but the protocol receipt is Form:
+; listen/transcribe produce a request, the local body/RAG lanes are checked first,
+; and a remote LLM oracle is requested only when the sufficiency gate says the
+; native/local answer did not stand.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk
+;           form-stdlib/form-cli-sufficiency.fk
+
+(do
+    (defn slr-body-sufficient? (grounded sufficient)
+        (if (and (eq grounded 1) (eq sufficient 1)) 1 0))
+
+    (defn slr-rag-sufficient? (grounded signals)
+        (if (and (eq grounded 1) (eq (fsuf-verdict signals) 0)) 1 0))
+
+    (defn slr-decision (body-grounded body-sufficient rag-grounded signals)
+        (if (eq (slr-body-sufficient? body-grounded body-sufficient) 1)
+            "use-form-native-body"
+            (if (eq (slr-rag-sufficient? rag-grounded signals) 1)
+                "use-form-native-rag-llm"
+                (if (eq (fsuf-verdict signals) 1)
+                    "retry-form-native-rag"
+                    "request-remote-llm-oracle"))))
+
+    (defn slr-remote-oracle? (body-grounded body-sufficient rag-grounded signals)
+        (if (str_eq (slr-decision body-grounded body-sufficient rag-grounded signals)
+                    "request-remote-llm-oracle") 1 0))
+
+    (defn slr-verdict-label (body-grounded body-sufficient rag-grounded signals)
+        (if (eq (slr-body-sufficient? body-grounded body-sufficient) 1)
+            "accept-local"
+            (if (eq (slr-rag-sufficient? rag-grounded signals) 1)
+                "accept-local"
+                (if (eq (fsuf-verdict signals) 1) "retry-local" "escalate-remote"))))
+
+    ; Receipt layout:
+    ; (satsang-listen-transcribe-route listen transcribe request body-grounded
+    ;  body-sufficient rag-grounded verdict decision remote?)
+    (defn slr-receipt (body-grounded body-sufficient rag-grounded has-output shape-ok content confidence trust retries)
+        (do (let signals (fsuf-signals has-output shape-ok content confidence trust retries))
+            (list "satsang-listen-transcribe-route"
+                  "form-native-listen-receipt"
+                  "local-stt-form-receipt"
+                  "satsang-guidance-request"
+                  body-grounded
+                  body-sufficient
+                  rag-grounded
+                  (slr-verdict-label body-grounded body-sufficient rag-grounded signals)
+                  (slr-decision body-grounded body-sufficient rag-grounded signals)
+                  (slr-remote-oracle? body-grounded body-sufficient rag-grounded signals))))
+
+    (defn slr-rec-kind      (r) (nth r 0))
+    (defn slr-rec-listen    (r) (nth r 1))
+    (defn slr-rec-transcribe (r) (nth r 2))
+    (defn slr-rec-request   (r) (nth r 3))
+    (defn slr-rec-verdict   (r) (nth r 7))
+    (defn slr-rec-decision  (r) (nth r 8))
+    (defn slr-rec-remote?   (r) (nth r 9))
+
+    0)
