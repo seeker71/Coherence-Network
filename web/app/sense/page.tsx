@@ -59,7 +59,7 @@ function Card({
             {isAndroid
               ? "The phone as a sense organ — streams its senses to the network."
               : isIOS
-                ? "A first iPhone door: remembered context, mic/camera when granted, and trusted-call tel/CallKit lanes."
+                ? "A first iPhone door: remembered context, trusted-call tel/CallKit lanes, and the live web surface."
               : "Recognizes the stream through the Form kernel. Needs Python 3."}
           </div>
         </div>

@@ -91,8 +91,8 @@ cd web && npm run build
   implemented and reviewed.
 - Android direct calls require `CALL_PHONE`; the consent-first lane remains
   `ACTION_DIAL` unless a privileged calling surface is explicitly granted.
-- Web microphone and camera access depends on browser permission prompts and must
-  not be presented as always-on sensing.
+- Web sensing stays within currently enabled browser surfaces; microphone and
+  camera lanes require a future Permissions-Policy change and runtime receipts.
 
 ## Known Gaps and Follow-up Tasks
 
@@ -121,7 +121,9 @@ the call: decisions, commitments, open threads, and felt context.
   calling app handle `tel:` URLs as the default calling app.
 - macOS: native host presence plus tel/FaceTime/handoff.
 - Windows: native host presence plus tel/default-app handling.
-- Web: PWA relationship memory, microphone/camera where granted, and `tel:` links.
+- Web: PWA relationship memory, browser-visible surface, and `tel:` links;
+  microphone/camera lanes require a future Permissions-Policy change and runtime
+  receipts.
 
 ## Official Platform Sources
 

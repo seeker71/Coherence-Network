@@ -14,13 +14,15 @@ bash ./validate.sh \
 grep -q '0 divergent' fnri-platform.out || { echo "FAIL: kernels diverged" >&2; exit 1; }
 grep -q "$WANT" fnri-platform.out || { echo "FAIL: missing $WANT" >&2; exit 1; }
 "$ROOT/scripts/fnri_fkwu_witness.sh" || exit 1
-"$ROOT/scripts/verify_fsh_fnri_bootstrap.sh" >/dev/null || { echo "FAIL: bootstrap receipt" >&2; exit 1; }
 case "$(uname -s 2>/dev/null || echo unknown)" in
   Darwin)
+    "$ROOT/scripts/verify_fsh_fnri_bootstrap.sh" >/dev/null || { echo "FAIL: bootstrap receipt" >&2; exit 1; }
     "$ROOT/scripts/verify_fnri_mac_binary_dispatch.sh" >/dev/null || exit 1
     PLATFORM=mac
     ;;
   MINGW*|MSYS*|CYGWIN*|Windows*)
+    # The Windows workflow proves native form-cli in the next step. This step is
+    # the standalone fkwu/FNRI floor and must not require form/form-cli first.
     PLATFORM=windows
     ;;
   *)
