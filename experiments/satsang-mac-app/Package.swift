@@ -12,7 +12,11 @@ let package = Package(
         .target(name: "SatsangMacCore"),
         .executableTarget(
             name: "SatsangGuidance",
-            dependencies: ["SatsangMacCore"]
+            dependencies: ["SatsangMacCore"],
+            linkerSettings: [
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("Speech"),
+            ]
         ),
         .testTarget(
             name: "SatsangMacCoreTests",

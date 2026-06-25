@@ -22,11 +22,14 @@ final class AppModel: ObservableObject {
     @Published var guidanceQuestion: String = "What wants to be offered to the circle now?"
     @Published var turnMode: String = "turn-offered"
     @Published var followTranscript: Bool = true
+    @Published var isListening: Bool = false
+    @Published var partialTranscript: String = ""
     @Published var utterances: [TranscriptUtterance] = []
     @Published var selectedID: TranscriptUtterance.ID?
     @Published var status: String = "Ready"
 
     private var timer: Timer?
+    private let roomTranscriber = RoomTranscriber()
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
@@ -34,6 +37,16 @@ final class AppModel: ObservableObject {
             ?? home.appendingPathComponent(".coherence-network/agent-room-memory/transcript.jsonl").path
         queuePath = ProcessInfo.processInfo.environment["SATSANG_GUIDANCE_EVENTS"]
             ?? home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
+        roomTranscriber.onStateChange = { [weak self] listening, message in
+            self?.isListening = listening
+            self?.status = message
+        }
+        roomTranscriber.onPartial = { [weak self] text in
+            self?.upsertLiveDraft(text)
+        }
+        roomTranscriber.onUtterance = { [weak self] utterance in
+            self?.commitLiveUtterance(utterance)
+        }
         reload()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -55,14 +68,7 @@ final class AppModel: ObservableObject {
     func reload(silent: Bool = false) {
         do {
             let loaded = try TranscriptParser.load(from: URL(fileURLWithPath: expanded(transcriptPath)))
-            let edited = Dictionary(uniqueKeysWithValues: utterances.map { ($0.id, $0) })
-            utterances = loaded.map { next in
-                var merged = next
-                if let current = edited[next.id], current.wasEdited {
-                    merged.text = current.text
-                }
-                return merged
-            }
+            utterances = TranscriptMerger.merge(loaded: loaded, current: utterances)
             if selectedID == nil { selectedID = utterances.first?.id }
             if !silent { status = "Loaded \(utterances.count) transcript lines" }
         } catch {
@@ -87,6 +93,9 @@ final class AppModel: ObservableObject {
     func deleteSelected() {
         guard let selectedID else { return }
         utterances.removeAll { $0.id == selectedID }
+        if selectedID == "live-draft" {
+            partialTranscript = ""
+        }
         self.selectedID = utterances.first?.id
     }
 
@@ -98,6 +107,7 @@ final class AppModel: ObservableObject {
     }
 
     func send() {
+        commitLiveDraftIfNeeded()
         let request = GuidanceRequest(
             sessionTitle: sessionTitle,
             targetPresence: targetPresence,
@@ -115,6 +125,29 @@ final class AppModel: ObservableObject {
         } catch {
             status = "Send failed: \(error.localizedDescription)"
         }
+    }
+
+    func toggleListening() {
+        if isListening {
+            roomTranscriber.stop()
+        } else {
+            status = "Requesting microphone and speech permissions"
+            roomTranscriber.start()
+        }
+    }
+
+    func commitLiveDraftIfNeeded() {
+        let trimmed = partialTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let now = ISO8601DateFormatter().string(from: Date())
+        commitLiveUtterance(TranscriptUtterance(
+            id: "live-\(UUID().uuidString)",
+            timestamp: now,
+            speaker: "room mic",
+            detectedText: trimmed,
+            text: trimmed,
+            source: "live-mic"
+        ))
     }
 
     func exportEditedTranscript() {
@@ -144,6 +177,40 @@ final class AppModel: ObservableObject {
                 .path
         }
         return path
+    }
+
+    private func upsertLiveDraft(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        partialTranscript = trimmed
+        guard !trimmed.isEmpty else {
+            utterances.removeAll { $0.id == "live-draft" }
+            return
+        }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let draft = TranscriptUtterance(
+            id: "live-draft",
+            timestamp: now,
+            speaker: "room mic",
+            detectedText: trimmed,
+            text: trimmed,
+            source: "live-mic-partial"
+        )
+        if let index = utterances.firstIndex(where: { $0.id == draft.id }) {
+            utterances[index] = draft
+        } else {
+            utterances.append(draft)
+            selectedID = draft.id
+        }
+    }
+
+    private func commitLiveUtterance(_ utterance: TranscriptUtterance) {
+        utterances.removeAll { $0.id == "live-draft" }
+        if !utterances.contains(where: { $0.id == utterance.id }) {
+            utterances.append(utterance)
+        }
+        partialTranscript = ""
+        selectedID = utterance.id
     }
 }
 
@@ -178,6 +245,13 @@ struct ContentView: View {
                 Spacer()
                 Toggle("Follow", isOn: $model.followTranscript)
                     .toggleStyle(.switch)
+                if model.isListening {
+                    Button("Stop Listening") { model.toggleListening() }
+                        .buttonStyle(.bordered)
+                } else {
+                    Button("Start Listening") { model.toggleListening() }
+                        .buttonStyle(.borderedProminent)
+                }
                 Button("Reload") { model.reload() }
                 Button("Send to Form") { model.send() }
                     .keyboardShortcut(.return, modifiers: [.command])
@@ -194,6 +268,14 @@ struct ContentView: View {
             }
             .textFieldStyle(.roundedBorder)
             .font(.callout)
+            if model.isListening || !model.partialTranscript.isEmpty {
+                Text(model.partialTranscript.isEmpty ? "Listening..." : model.partialTranscript)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
         }
         .padding(16)
     }

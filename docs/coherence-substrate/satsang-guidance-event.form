@@ -8,7 +8,8 @@
 ;
 ; Carrier:
 ;   experiments/satsang-mac-app - SwiftUI Mac desktop app. It tails the local
-;   transcript JSONL, lets the holder edit utterances, and writes the request to
+;   transcript JSONL, listens to the room microphone after explicit Start
+;   Listening, lets the holder edit utterances, and writes the request to
 ;   ~/.coherence-network/satsang-guidance/events.jsonl plus the latest JSON and
 ;   .form receipt. No external receiver is invoked by the GUI.
 ;

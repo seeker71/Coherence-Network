@@ -32,6 +32,10 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <string>13.0</string>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Satsang Guidance listens to the room microphone only after Start Listening is pressed, so the session transcript can be reviewed and offered.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>Satsang Guidance uses local macOS speech recognition to turn the room microphone into editable transcript lines.</string>
 </dict>
 </plist>
 PLIST

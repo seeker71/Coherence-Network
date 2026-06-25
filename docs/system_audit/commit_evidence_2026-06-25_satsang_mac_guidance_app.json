@@ -1,7 +1,7 @@
 {
   "date": "2026-06-25",
   "thread_branch": "codex/satsang-mac-gui-20260625",
-  "commit_scope": "Create SwiftUI Mac satsang guidance app that shows detected transcripts, allows edits, and writes explicit guidance events/Form receipts for Sema or another invoked presence.",
+  "commit_scope": "Create SwiftUI Mac satsang guidance app that listens to the room after explicit start, shows detected transcripts, preserves edits/manual rows, and writes explicit guidance events/Form receipts for Sema or another invoked presence.",
   "files_owned": [
     "MANIFEST.md",
     "docs/coherence-substrate/INDEX.md",
@@ -11,8 +11,10 @@
     "experiments/satsang-mac-app/Package.swift",
     "experiments/satsang-mac-app/README.md",
     "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift",
     "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
     "form/form-stdlib/satsang-guidance-event.fk",
     "form/form-stdlib/tests/satsang-guidance-event-band.fk",
@@ -37,7 +39,7 @@
       "git diff --check"
     ],
     "fourth_arm": "satsang-guidance-event-band.fk -> 255; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
-    "summary": "Swift package tests passed with 2 XCTest cases; GUI executable built; .app bundle assembled locally. Runtime protocol path writes JSONL, latest JSON, and latest .form receipts directly from Swift, with no shell receiver invoked by the GUI."
+    "summary": "Swift package tests passed with 4 XCTest cases, including reload merge coverage for manual/edit preservation; GUI executable built; .app bundle assembled locally with microphone/speech usage strings. Runtime protocol path listens through native macOS Speech/AVFoundation after explicit Start Listening and writes JSONL, latest JSON, and latest .form receipts directly from Swift, with no shell receiver invoked by the GUI."
   },
   "ci_validation": {
     "status": "pending",
@@ -66,7 +68,8 @@
       "contributor_type": "human",
       "roles": [
         "direction",
-        "protocol-correction"
+        "protocol-correction",
+        "bug-report"
       ]
     },
     {
@@ -85,6 +88,8 @@
   },
   "evidence_refs": [
     "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift",
     "form/form-stdlib/satsang-guidance-event.fk",
     "form/form-stdlib/tests/satsang-guidance-event-band.fk",
     "docs/coherence-substrate/satsang-guidance-event.form",
@@ -99,8 +104,10 @@
     "experiments/satsang-mac-app/Package.swift",
     "experiments/satsang-mac-app/README.md",
     "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
     "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift",
     "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
     "form/form-stdlib/satsang-guidance-event.fk",
     "form/form-stdlib/tests/satsang-guidance-event-band.fk",
@@ -113,13 +120,13 @@
   "change_intent": "runtime_feature",
   "e2e_validation": {
     "status": "pass",
-    "summary": "Local macOS carrier builds and writes queue/Form receipt; Form event gate proves ready/hold behavior four-way.",
-    "expected_behavior_delta": "A Mac user can view/edit detected transcript lines and explicitly send the complete session transcript as a satsang guidance request to Sema or another invoked presence.",
+    "summary": "Local macOS carrier builds, can start native room transcription, preserves manual/live rows across reload, and writes queue/Form receipt; Form event gate proves ready/hold behavior four-way.",
+    "expected_behavior_delta": "A Mac user can press Start Listening, accept microphone/speech prompts, see room speech as editable transcript lines, preserve manual notes across reloads, and explicitly send the complete session transcript as a satsang guidance request to Sema or another invoked presence.",
     "public_endpoints": [
       "n/a-local-macos-app"
     ],
     "test_flows": [
-      "swift test --package-path experiments/satsang-mac-app -> 2 tests passed",
+      "swift test --package-path experiments/satsang-mac-app -> 4 tests passed",
       "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
       "scripts/build_satsang_mac_app.sh -> dist/Satsang Guidance.app assembled",
       "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255"

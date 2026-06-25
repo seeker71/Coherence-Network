@@ -4,13 +4,18 @@ status: active
 source:
   - file: experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift
     symbols: [SatsangGuidanceApp, AppModel, ContentView]
+  - file: experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift
+    symbols: [RoomTranscriber]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift
     symbols: [TranscriptUtterance, TranscriptParser]
+  - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift
+    symbols: [TranscriptMerger]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift
     symbols: [GuidanceRequest, GuidanceRequestSender]
   - file: form/form-stdlib/satsang-guidance-event.fk
     symbols: [sge-target-known?, sge-turn-mode?, sge-all-transcripts?, sge-ready?, sge-receipt]
 requirements:
+  - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
   - "Mac desktop GUI shows detected transcripts from the local transcript file"
   - "Transcript lines can be edited before sending"
   - "The full transcript set is included in the guidance request"
@@ -22,7 +27,7 @@ done_when:
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
-  - "The GUI edits local event payloads only; speech capture remains a separate consented carrier"
+  - "The GUI edits local event payloads only; speech capture starts only from explicit user action"
   - "The presence speaks only when the turn is offered, named-and-asked, or button-invoked"
 ---
 
@@ -31,14 +36,19 @@ constraints:
 ## Purpose
 
 This spec creates a native Mac desktop carrier for the satsang companion loop:
-detected transcripts are visible, editable, and sent as an explicit guidance
-request to Sema or another invoked presence only when a turn is offered. The
-carrier reads local transcript files and writes a local protocol event queue.
+room speech and detected transcript files are visible, editable, and sent as an
+explicit guidance request to Sema or another invoked presence only when a turn
+is offered. The carrier listens only after explicit user action, reads local
+transcript files, and writes a local protocol event queue.
 
 ## Requirements
 
 - [x] The GUI loads detected transcript lines from a JSONL or JSON-array file.
+- [x] The GUI starts/stops native macOS microphone transcription with explicit
+      user action.
+- [x] Live microphone partials appear as editable `room mic` transcript rows.
 - [x] The GUI allows editing individual utterances before sending.
+- [x] Manual and live rows survive transcript-file reloads.
 - [x] The send action includes all loaded transcript lines in the request.
 - [x] The request records target presence, invocation text, turn mode, and
       guidance question.
@@ -48,7 +58,9 @@ carrier reads local transcript files and writes a local protocol event queue.
 
 - `experiments/satsang-mac-app/Package.swift` - Swift package.
 - `experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift` - SwiftUI GUI.
+- `experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift` - native room microphone transcription.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift` - transcript parser.
+- `experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift` - transcript reload merge policy.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift` - event writer.
 - `experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift` - package tests.
 - `scripts/build_satsang_mac_app.sh` - `.app` bundle builder.
@@ -61,7 +73,10 @@ carrier reads local transcript files and writes a local protocol event queue.
 - `swift test --package-path experiments/satsang-mac-app` passes.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidance` passes.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
-- Manual validation: launch the app, edit a transcript line, press Send, and see a JSON/Form event under `~/.coherence-network/satsang-guidance/`.
+- Manual validation: launch the app, press Start Listening, allow macOS
+  microphone/speech prompts, speak into the room, edit a transcript line, press
+  Send, and see a JSON/Form event under
+  `~/.coherence-network/satsang-guidance/`.
 
 ## Verification
 
@@ -75,8 +90,6 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 
 ## Out of Scope
 
-- Microphone capture inside the GUI; existing satsang/room listeners remain the
-  consented detection carriers.
 - Autonomous interruption by Sema or another presence.
 - Cloud transcription or remote LLM routing.
 
@@ -88,6 +101,8 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
   and latest Form envelope under `~/.coherence-network/satsang-guidance/`.
 - The app does not replace turn-taking learning; it records that the turn was
   offered or manually invoked.
+- macOS microphone and speech-recognition permission prompts must be accepted
+  before live room transcription can run.
 
 ## Known Gaps and Follow-up Tasks
 

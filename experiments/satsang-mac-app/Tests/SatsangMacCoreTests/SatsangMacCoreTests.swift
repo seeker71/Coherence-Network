@@ -49,4 +49,51 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(form.contains("(target \"sema\")"))
         XCTAssertTrue(form.contains("hello edited"))
     }
+
+    func testTranscriptMergePreservesManualRowsAcrossReload() {
+        let loaded = [
+            TranscriptUtterance(
+                id: "file-1",
+                timestamp: "2026-06-25T06:00:00Z",
+                speaker: "Voz 1",
+                detectedText: "from file"
+            )
+        ]
+        let manual = TranscriptUtterance(
+            id: "manual-1",
+            timestamp: "2026-06-25T06:00:02Z",
+            speaker: "manual",
+            detectedText: "",
+            text: "holder note",
+            source: "manual"
+        )
+
+        let merged = TranscriptMerger.merge(loaded: loaded, current: [manual])
+
+        XCTAssertEqual(merged.map(\.id), ["file-1", "manual-1"])
+        XCTAssertEqual(merged.last?.text, "holder note")
+    }
+
+    func testTranscriptMergePreservesEditsOnReloadedRows() {
+        let loaded = [
+            TranscriptUtterance(
+                id: "file-1",
+                timestamp: "2026-06-25T06:00:00Z",
+                speaker: "Voz 1",
+                detectedText: "detected original"
+            )
+        ]
+        let edited = TranscriptUtterance(
+            id: "file-1",
+            timestamp: "2026-06-25T06:00:00Z",
+            speaker: "Voz 1",
+            detectedText: "detected original",
+            text: "edited by holder"
+        )
+
+        let merged = TranscriptMerger.merge(loaded: loaded, current: [edited])
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].text, "edited by holder")
+    }
 }
