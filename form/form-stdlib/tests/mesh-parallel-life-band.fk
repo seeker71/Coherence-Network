@@ -1,0 +1,82 @@
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/hati-mesh.fk form-stdlib/organism-mesh.fk form-stdlib/mesh-cell-design.fk form-stdlib/cell-organ-layer.fk form-stdlib/node-exchange.fk form-stdlib/mesh-parallel-life.fk
+(do
+    (let organism (om-organism "human-1" "human" "direct" 1 2))
+    (let cell (om-cell "cell-1" "swallowed" "messenger" 2 1 1 0 1))
+    (let delivery (mpl-delivery-cycle "delivery-1" organism cell "closed" 1 1 1 1 1 0 1))
+    (let stuck-delivery (mpl-delivery-cycle "delivery-2" organism cell "dwell" 1 1 1 0 0 0 1))
+
+    (let power (mpl-power-lease "lease-1" "power-cell" "sensor-cell" "environment" 8 5 4 4 1 1 1 1 1 1 1))
+    (let no-remote-consent (mpl-power-lease "lease-2" "power-cell" "sensor-cell" "dock" 8 5 4 4 1 0 1 1 1 1 1))
+    (let no-harvest-consent (mpl-power-lease "lease-3" "power-cell" "sensor-cell" "environment" 8 5 4 4 0 1 1 1 1 0 1))
+
+    (let role (mpl-role-contract "sensor" (list "temperature-summary") (list "power") (list "raw-export") (list "summary-layer") 1 200 1))
+    (let unknown-role (mpl-role-contract "extractor" (list "temperature-summary") (list "power") (list "raw-export") (list "summary-layer") 1 200 1))
+
+    (let recog (mpl-recognition 80 90 70 85 75 1 1))
+    (let weak-recog (mpl-recognition 5 5 5 5 5 1 1))
+
+    (let activation (mpl-activation "ask-1" "offer-1" "ready" 80 80 80 1 80 3 2 1 2 1))
+    (let weak-activation (mpl-activation "ask-2" "offer-2" "ready" 80 80 20 1 80 3 2 1 2 1))
+
+    (let care (mpl-care-loop 1 1 1 1 1 1 1 1 1))
+    (let care-no-consent (mpl-care-loop 1 1 0 1 1 1 1 1 1))
+
+    (let vitality (mpl-vitality-impact "human-1" 60 75 80 1))
+    (let vitality-drop (mpl-vitality-impact "human-1" 75 60 80 1))
+
+    (let summary-layer (col-layer "summary" 1 1 1 1))
+    (let research-layer (col-layer "research" 5 1 1 1))
+    (let content (col-content "content-1" "temperature-summary" 1 256 "node:temp-summary" 1))
+    (let retention (mpl-retention-policy "ret-1" summary-layer 30 1 1 1 0 2 content 1))
+    (let research-unsafe (mpl-retention-policy "ret-2" research-layer 30 1 0 1 0 2 content 1))
+
+    (let field (om-field 4 120 100 4))
+    (let earth (mpl-earth-rollup "earth-1" field 12 80 1 1))
+
+    (let channel (hm-open-channel "organ-a" "organ-b" "sensor:signal" "offer:summary" "cap.sensor.read" "json" 1 512))
+    (let node (nx-node "node:temp-summary" "temperature-summary" 1 256 summary-layer 1))
+    (let offer (nx-offer "offer-1" "organ-a" node (list (m-offer) (m-witness)) 0 1 512 1))
+    (let request (nx-request "request-1" "organ-b" "temperature-summary" (m-offer) (list (m-offer)) 1 512 1))
+
+    (let state (mpl-parallel-state power delivery role recog activation care vitality retention earth offer request channel 128))
+
+    (let c0 (if (eq (mpl-power-deliverable? power) 1) 1 0))
+    (let c1 (if (eq (mpl-power-deliverable? no-remote-consent) 0) 2 0))
+    (let c2 (if (eq (mpl-power-deliverable? no-harvest-consent) 0) 4 0))
+    (let c3 (if (eq (mpl-delivery-complete? delivery) 1) 8 0))
+    (let c4 (if (eq (mpl-delivery-complete? stuck-delivery) 0) 16 0))
+    (let c5 (if (eq (mpl-role-executable? role) 1) 32 0))
+    (let c6 (if (eq (mpl-role-executable? unknown-role) 0) 64 0))
+    (let c7 (if (eq (mpl-recognized? recog 300) 1) 128 0))
+    (let c8 (if (eq (mpl-recognized? weak-recog 300) 0) 256 0))
+    (let c9 (if (eq (mpl-activation-ready? activation recog 300) 1) 512 0))
+    (let c10 (if (eq (mpl-activation-ready? weak-activation recog 300) 0) 1024 0))
+    (let c11 (if (eq (mpl-care-complete? care) 1) 2048 0))
+    (let c12 (if (eq (mpl-care-complete? care-no-consent) 0) 4096 0))
+    (let c13 (if (eq (mpl-vitality-improved? vitality) 1) 8192 0))
+    (let c14 (if (eq (mpl-vitality-improved? vitality-drop) 0) 16384 0))
+    (let c15 (if (eq (mpl-retention-safe? retention) 1) 32768 0))
+    (let c16 (if (eq (mpl-retention-safe? research-unsafe) 0) 65536 0))
+    (let c17 (if (eq (mpl-earth-actionable? earth) 1) 131072 0))
+    (let c18 (if (eq (nx-deliverable? offer request channel 128) 1) 262144 0))
+    (let c19 (if (eq (mpl-parallel-executable? state 300) 1) 524288 0))
+
+    (add c0
+        (add c1
+            (add c2
+                (add c3
+                    (add c4
+                        (add c5
+                            (add c6
+                                (add c7
+                                    (add c8
+                                        (add c9
+                                            (add c10
+                                                (add c11
+                                                    (add c12
+                                                        (add c13
+                                                            (add c14
+                                                                (add c15
+                                                                    (add c16
+                                                                        (add c17
+                                                                            (add c18 c19))))))))))))))))))))

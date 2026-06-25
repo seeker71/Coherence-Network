@@ -3633,6 +3633,37 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1399,
+      "name": "VALUE-NONE",
+      "meaning": "Structural null/None sentinel used by the fourth-arm flatten/runtime path where host VNull is represented as a content-addressed blueprint node.",
+      "aliases": [],
+      "reuse": 2,
+      "defined_in": [
+        "form/form-stdlib/fourth-shim.fk",
+        "form/form-stdlib/form-flatten.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 31415,
+      "name": "FSH-SCRIPT",
+      "meaning": "Form shell lowered-script cell marker used by shell-lower.fk when wrapping an fsh source recipe as a CELL-V0.",
+      "aliases": [
+        "fsh-bp"
+      ],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/shell-lower.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1400,
       "name": "MIDI-NOTE-ON",
       "meaning": "",

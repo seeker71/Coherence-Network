@@ -332,6 +332,12 @@ learned-primitive fks 255
 markov-2 fks 127
 mesh-gradient fks 127
 mesh-relay fks 127
+mesh-seed fks 4095
+organism-mesh fks 4095
+mesh-cell-design fks 8191
+cell-organ-layer fks 4095
+node-exchange fks 4095
+mesh-parallel-life fks 1048575
 nearest-shape fks 127
 native-route-goal-cells fks 1048575
 # Native mutation receipts now ride the same fourth-arm floor as the route-goal

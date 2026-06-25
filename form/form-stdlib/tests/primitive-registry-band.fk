@@ -8,17 +8,17 @@
 ; ksat-part discipline applied to the primitive surface itself. This band
 ; is the circle: it runs every lane-1 verification on all three kernels and
 ; refuses a part that claims an outside its recipe cannot produce. Lane-0
-; entries (40) stay declared and visible — panic-contract, host-io,
+; entries (42) stay declared and visible — panic-contract, host-io,
 ; socket-carrier, sweep-hazard, toolchain, sibling-gap — counted here, gated against kernel
 ; source by form/scripts/validate_primitive_registry.py and surfaced by the
 ; wellness primitive-coverage sense.
 ;
 ; Band verdict 63 when every claim lands:
-;   1   shape: 204 entries, every one well-formed (7 fields, nonempty
+;   1   shape: 207 entries, every one well-formed (7 fields, nonempty
 ;       name + spec, known category token), no duplicate names
 ;   2   every lane-1 verification recipe yields its declared outside
-;       (164 of 164 — one false claim anywhere drops this bit)
-;   4   the lanes are pinned: 164 in-band + 40 carrier-declared = 204;
+;       (165 of 165 — one false claim anywhere drops this bit)
+;   4   the lanes are pinned: 165 in-band + 42 carrier-declared = 207;
 ;       a new native or lane flip must touch these numbers consciously
 ;   8   a part claiming a wrong outside is REFUSED: verification compares
 ;       against the declaration, never against what the recipe happens
@@ -33,17 +33,17 @@
     (let reg (prim-registry))
 
     ; ── 1: shape — every entry well-formed, no duplicates ──
-    (let c0 (if (and (eq (len reg) 204)
-                 (and (eq (prim-shapes-ok-count reg) 204)
+    (let c0 (if (and (eq (len reg) 207)
+                 (and (eq (prim-shapes-ok-count reg) 207)
                       (eq (prim-dup-count reg) 0)))
                 1 0))
 
     ; ── 2: every lane-1 verification answers its declared outside ──
-    (let c1 (if (eq (prim-verified-count reg) 164) 2 0))
+    (let c1 (if (eq (prim-verified-count reg) 165) 2 0))
 
     ; ── 4: the lanes are pinned numbers, not drift ──
-    (let c2 (if (and (eq (prim-mode-count reg 1) 164)
-                     (eq (prim-mode-count reg 0) 40))
+    (let c2 (if (and (eq (prim-mode-count reg 1) 165)
+                     (eq (prim-mode-count reg 0) 42))
                 4 0))
 
     ; ── 8: a wrong claimed outside is refused ──
@@ -52,7 +52,7 @@
     (let c3 (if (prim-verified? bad-part) 0 8))
 
     ; ── 16: declared categories match kernel attestation ──
-    (let c4 (if (eq (prim-attested-count reg) 164) 16 0))
+    (let c4 (if (eq (prim-attested-count reg) 165) 16 0))
 
     ; ── 32: the registry reads back as a spec surface ──
     (let pow-entry (prim-find reg "pow"))

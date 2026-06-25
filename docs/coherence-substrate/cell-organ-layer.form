@@ -1,0 +1,74 @@
+; cell-organ-layer.form - trusted cells form organs over layered substrate.
+;
+; THE ASK
+;   Trusted cells can form organs that share content via channels and shared
+;   substrate that can be layered.
+;
+; THE SHAPE
+;   A cell is the smallest sovereign participant. An organ is a quorum of
+;   trusted cells with a shared role. A channel is the consented path between
+;   organs. A substrate layer is the content-addressed surface where receipts,
+;   summaries, memories, predictions, reports, and research can stack without
+;   becoming one undifferentiated stream.
+;
+;   This is the next composition:
+;     cell -> trusted cell quorum -> organ -> channel -> substrate layer
+;          -> higher layer -> shared mesh memory/action
+;
+; RUNNABLE HEART
+;   form-stdlib/cell-organ-layer.fk names:
+;     col-cell                id, role, trust, consent, vitality, offers
+;     col-trusted?            trust + consent + vitality gate
+;     col-organ               id, kind, cells, channels, layers
+;     col-organ-forms?        quorum of trusted cells becomes an organ
+;     col-layer               name, level, content-addressed, consented, receipt
+;     col-content             kind, privacy, bytes, NodeID, receipt
+;     col-organ-can-share?    formed organ + open channel + valid layer/content
+;     col-layered-organ?      formed organ with enough valid substrate layers
+;     col-layer-promote?      lower-layer content can become higher-layer memory
+;
+; LAYERS
+;   The first substrate stack can be:
+;     0 raw-local
+;       Raw samples stay inside the cell/organ unless separately offered.
+;
+;     1 summary
+;       Derived readings: temperature summary, motion state, light level,
+;       hydration risk, air quality class, soil moisture band.
+;
+;     2 memory
+;       Durable content-addressed observations and friend-cache receipts.
+;
+;     3 prediction
+;       Sequence/pattern forecasts built from consented memories.
+;
+;     4 report
+;       Human/organ-readable summaries with confidence, provenance, and limits.
+;
+;     5 research
+;       Aggregated, de-identified, consent-scoped study material.
+;
+; ACTIVATION
+;   The organ exists only while enough trusted cells are present. Sharing exists
+;   only while a channel is open and content is safe for the target layer. Layer
+;   promotion is explicit: a summary can become memory, memory can feed
+;   prediction, prediction can feed report, and report can feed research only
+;   with address, consent, and receipt intact.
+;
+; WHY THIS MATTERS
+;   This gives the mesh a body plan. A sensor cell, nutrient cell, memory cell,
+;   predictor cell, reporter cell, researcher cell, scout cell, caregiver cell,
+;   sage cell, and power cell are no longer a loose swarm. They can become an
+;   organ when trust and vitality are high enough, speak through channels, and
+;   layer shared substrate content without losing sovereignty.
+;
+; PROOF
+;   cd form && ./validate.sh form-stdlib/core.fk \
+;     form-stdlib/hati-mesh.fk \
+;     form-stdlib/cell-organ-layer.fk \
+;     form-stdlib/tests/cell-organ-layer-band.fk
+;
+; KIN
+;   mesh-seed.form, organism-mesh.form, mesh-cell-design.form, hati-mesh.form,
+;   organ-offer.form, shared-sensing.form, sensor-organ-channel.form,
+;   recognition-router.form, mesh-health.form.

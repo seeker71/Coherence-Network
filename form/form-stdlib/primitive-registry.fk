@@ -240,6 +240,8 @@
             (defn pv-float-to-int () (add (float_to_int 3.9) (float_to_int -2.9))) 1 1)
         (prim "ord" "access" "first byte as int; empty string answers -1"
             (defn pv-ord () (add (ord "A") (ord ""))) 64 1)
+        (prim "str_byte_at" "access" "raw UTF-8 byte at index; out-of-range panics"
+            (defn pv-str-byte-at () (str_byte_at "AZ" 1)) 90 1)
         (prim "byte_to_str" "access" "one byte (0..255) as a one-char string; out-of-range answers empty"
             (defn pv-byte-to-str () (if (str_eq (byte_to_str 65) "A") 1 0)) 1 1)
         (prim "list" "list" "variadic list literal"
@@ -349,6 +351,10 @@
             (defn pv-recipe-to-bytes () (if (ge (len (recipe_to_bytes (pv-probe-recipe))) 10) 1 0)) 1 1)
         (prim "bytes_to_recipe" "witness" ".fkb wire bytes back to a walkable recipe — the round-trip keeps the value"
             (defn pv-bytes-to-recipe () (walk_recipe (bytes_to_recipe (recipe_to_bytes (pv-probe-recipe))))) 5 1)
+        (prim "form_compile" "witness" "sibling-gap (go-only): source string compiled into an in-memory recipe NodeID"
+            (defn pv-form-compile () (if (node_eq (form_compile "(do 5)") (form_compile "(do 5)")) 1 0)) 1 0)
+        (prim "form_walk" "witness" "sibling-gap (go-only): walks a compiled recipe NodeID in a fresh frame"
+            (defn pv-form-walk () (form_walk (form_compile "(do (add 2 3))"))) 5 0)
         (prim "jit_compile" "witness" "host-JIT of a named closure: 1 compiled, 0 honest fallback, -1 unbound name"
             (defn pv-jit-compile () (add (jit_compile "pv-jit-absent-name") 1)) 0 1)
         (prim "jit_emit_c" "witness" "recipe lowered to C source on the go carrier; siblings answer honest empty"

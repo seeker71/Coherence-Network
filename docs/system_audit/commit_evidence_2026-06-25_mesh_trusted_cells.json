@@ -1,0 +1,158 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/mesh-trusted-learning-20260625",
+  "commit_scope": "Executable trusted physical/organism mesh cells plus registry drift repair. Adds Form-native mesh seed, organism stewardship, concrete hardware/software design rows, cell-organ substrate layering, node exchange, and a parallel life-mesh gate; closes blueprint drift for VALUE-NONE and FSH-SCRIPT/fsh-bp; closes primitive registry drift for str_byte_at, form_compile, and form_walk.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/cell-organ-layer.form",
+    "docs/coherence-substrate/mesh-cell-design.form",
+    "docs/coherence-substrate/mesh-parallel-life.form",
+    "docs/coherence-substrate/mesh-seed.form",
+    "docs/coherence-substrate/node-exchange.form",
+    "docs/coherence-substrate/organism-mesh.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/system_audit/commit_evidence_2026-06-25_mesh_trusted_cells.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/fkwu-uni.stamp",
+    "form/form-stdlib/cell-organ-layer.fk",
+    "form/form-stdlib/mesh-cell-design.fk",
+    "form/form-stdlib/mesh-parallel-life.fk",
+    "form/form-stdlib/mesh-seed.fk",
+    "form/form-stdlib/node-exchange.fk",
+    "form/form-stdlib/organism-mesh.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/cell-organ-layer-band.fk",
+    "form/form-stdlib/tests/mesh-cell-design-band.fk",
+    "form/form-stdlib/tests/mesh-parallel-life-band.fk",
+    "form/form-stdlib/tests/mesh-seed-band.fk",
+    "form/form-stdlib/tests/node-exchange-band.fk",
+    "form/form-stdlib/tests/organism-mesh-band.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/device-heartbeat.fk form-stdlib/provisioning.fk form-stdlib/mesh-relay.fk form-stdlib/friend-node.fk form-stdlib/mesh-health.fk form-stdlib/hati-mesh.fk form-stdlib/organism-mesh.fk form-stdlib/mesh-cell-design.fk form-stdlib/cell-organ-layer.fk form-stdlib/node-exchange.fk form-stdlib/mesh-seed.fk form-stdlib/tests/mesh-seed-band.fk form-stdlib/tests/organism-mesh-band.fk form-stdlib/tests/mesh-cell-design-band.fk form-stdlib/tests/cell-organ-layer-band.fk form-stdlib/tests/node-exchange-band.fk form-stdlib/mesh-parallel-life.fk form-stdlib/tests/mesh-parallel-life-band.fk",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "cd form && python3 scripts/validate_primitive_registry.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "git diff --check",
+      "make wellness"
+    ],
+    "fourth_arm_outputs": [
+      "mesh-seed-band: verdict 4095, fourth arm 1 band(s) four-way, 1 ok, 0 divergent",
+      "organism-mesh-band: verdict 4095, fourth arm 1 band(s) four-way, 1 ok, 0 divergent",
+      "mesh-cell-design-band: verdict 8191, fourth arm 1 band(s) four-way, 1 ok, 0 divergent",
+      "cell-organ-layer-band: verdict 4095, fourth arm 1 band(s) four-way, 1 ok, 0 divergent",
+      "node-exchange-band: verdict 4095, fourth arm 1 band(s) four-way, 1 ok, 0 divergent",
+      "mesh-parallel-life-band: verdict 1048575, fourth arm 1 band(s) four-way, 1 ok, 0 divergent"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-form-stdlib-and-docs",
+    "notes": "No public deployment attempted before PR merge; this commit changes Form stdlib, generated tables, and durable docs."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI, PR review, merge, and deploy verification still pending."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "coherence-substrate-form-stdlib",
+    "fkwu-only-kernel-collapse"
+  ],
+  "task_ids": [
+    "task-2026-06-25-mesh-trusted-cells"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "concept"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "runtime_feature",
+  "evidence_refs": [
+    "form-cli ask returned no grounded local prose for the mesh inventory and merge workflow; repo inspection and native Form proofs drove implementation.",
+    "combined mesh validate command -> 1048575 with fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent",
+    "scan_form_blueprints.py --check -> unregistered type-99: 0, unregistered bp refs: 0",
+    "validate_primitive_registry.py -> natives: 207, registry: 207, lanes: 165 in-band verified and 42 carrier-declared",
+    "primitive-registry-band -> 63, 1 ok, 0 divergent",
+    "make wellness -> Form blueprints and Form primitives healthy; only unrelated chain proof attention remains"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The trusted physical mesh concept now has executable Form gates for cells, organism stewardship, hardware/software design, organ layers, node exchange, and parallel life-mesh activation. Registry wellness no longer reports fsh-bp/VALUE-NONE or form_compile/form_walk/str_byte_at drift.",
+    "public_endpoints": [
+      "none changed"
+    ],
+    "test_flows": [
+      "six mesh bands validate through fkwu fourth arm",
+      "primitive registry drift gate matches 207 Go kernel natives",
+      "blueprint scanner reports no unregistered type-99 or bp refs",
+      "wellness reports Form Blueprint and Form primitive surfaces healthy"
+    ]
+  },
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/cell-organ-layer.form",
+    "docs/coherence-substrate/mesh-cell-design.form",
+    "docs/coherence-substrate/mesh-parallel-life.form",
+    "docs/coherence-substrate/mesh-seed.form",
+    "docs/coherence-substrate/node-exchange.form",
+    "docs/coherence-substrate/organism-mesh.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/system_audit/commit_evidence_2026-06-25_mesh_trusted_cells.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/fkwu-uni.stamp",
+    "form/form-stdlib/cell-organ-layer.fk",
+    "form/form-stdlib/mesh-cell-design.fk",
+    "form/form-stdlib/mesh-parallel-life.fk",
+    "form/form-stdlib/mesh-seed.fk",
+    "form/form-stdlib/node-exchange.fk",
+    "form/form-stdlib/organism-mesh.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/cell-organ-layer-band.fk",
+    "form/form-stdlib/tests/mesh-cell-design-band.fk",
+    "form/form-stdlib/tests/mesh-parallel-life-band.fk",
+    "form/form-stdlib/tests/mesh-seed-band.fk",
+    "form/form-stdlib/tests/node-exchange-band.fk",
+    "form/form-stdlib/tests/organism-mesh-band.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/fourth-arm-bands.txt"
+  ]
+}

@@ -1,0 +1,98 @@
+; mesh-parallel-life.form - all missing physical mesh concepts run in parallel.
+;
+; THE ASK
+;   Make all missing executable concepts at once.
+;
+; THE SHAPE
+;   The physical organism mesh now has a parallel execution layer. Each missing
+;   concept is a lane with its own receipt and refusal boundary. A mesh can act
+;   only when every lane that matters is open at the same time:
+;
+;     power/nutrient lease
+;     physical delivery lifecycle
+;     role-specific cell contract
+;     recognition by multiple means
+;     resonance/cohesion activation
+;     care/action workflow
+;     vitality impact feedback
+;     retention and promotion policy
+;     Earth-awareness rollup
+;     offered/requested/delivered node exchange
+;
+;   This is "parallel" in the body-plan sense: no lane waits to become a
+;   separate subsystem. Each lane can prove independently, then the parallel
+;   state proves all of them are simultaneously executable under the same
+;   consent membrane.
+;
+; RUNNABLE HEART
+;   form-stdlib/mesh-parallel-life.fk names:
+;
+;     mpl-power-lease
+;       Power and nutrient exchange. Remote power requires explicit consent.
+;       Environmental harvest requires harvest consent. Delivery must stay
+;       inside proximity, thermal, active lease, offered/requested/delivered,
+;       and receipt bounds.
+;
+;     mpl-delivery-cycle
+;       Physical delivery from provision/place/enter through sense and close.
+;       A complete cycle requires organism-mesh admissibility, consent,
+;       entry, sensing, and exit/retrieval/biodegradation closure.
+;
+;     mpl-role-contract
+;       Role-specific cells become executable contracts. The first known roles
+;       are sensor, nutrient, memory, predictor, reporter, researcher,
+;       explorer, scout, caregiver, sage, wizard, and shepherd.
+;
+;     mpl-recognition
+;       Proximity, internal knowing, shared history, shared shape, shared
+;       offerings, challenge success, and receipt become a recognition score.
+;       No single signal grants trust by itself.
+;
+;     mpl-activation
+;       Resonance and cohesion become a state gate: ready status,
+;       recognition, offer fit, ask fit, confidence, consent, vitality,
+;       trusted-cell quorum, shared goal, and open channels.
+;
+;     mpl-care-loop
+;       Observe, predict, ask consent, recommend, act, verify, learn, and report
+;       as one care workflow. Missing consent withholds the loop.
+;
+;     mpl-vitality-impact
+;       Before/after vitality with confidence and receipt. The mesh can claim
+;       benefit only when vitality rises with enough confidence.
+;
+;     mpl-retention-policy
+;       Layer, TTL, revocation, steward scope, de-identification, aggregation,
+;       content safety, and receipts govern what may stay and promote. Research
+;       retention requires de-identification and aggregation.
+;
+;     mpl-earth-rollup
+;       Local consented receipts roll up into an actionable Earth-awareness
+;       surface only when organism-mesh already sees enough domains, trusted
+;       receipts, consented receipts, and restorative scenarios.
+;
+;     mpl-parallel-state
+;       The full gate. All lanes plus node-exchange must be deliverable at once.
+;
+; WHY THIS MATTERS
+;   A tiny cell can now be more than a sensor. It can participate in a parallel
+;   organism: fed by consented power, delivered and closed cleanly, recognized
+;   by shared relation, activated by resonance/cohesion, contributing through a
+;   role, caring with feedback, retaining memory safely, and rolling local
+;   receipts upward without taking ownership of the organism or place.
+;
+; PROOF
+;   cd form && ./validate.sh form-stdlib/core.fk \
+;     form-stdlib/channel-interface.fk \
+;     form-stdlib/hati-mesh.fk \
+;     form-stdlib/organism-mesh.fk \
+;     form-stdlib/mesh-cell-design.fk \
+;     form-stdlib/cell-organ-layer.fk \
+;     form-stdlib/node-exchange.fk \
+;     form-stdlib/mesh-parallel-life.fk \
+;     form-stdlib/tests/mesh-parallel-life-band.fk
+;
+; KIN
+;   mesh-seed.form, organism-mesh.form, mesh-cell-design.form,
+;   cell-organ-layer.form, node-exchange.form, sensor-organ-channel.form,
+;   organ-offer.form, hati-mesh.form, channel-interface-consent.form.

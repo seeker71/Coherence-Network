@@ -1,0 +1,126 @@
+; mesh-cell-design.form - actual hardware/software designs for mesh cells.
+;
+; THE ASK
+;   Make actual hardware and software designs with sensors, silicon, delivery
+;   capabilities, and resonance/cohesion activation.
+;
+; BUILDABLE DESIGN FAMILY
+;   The mesh now has four concrete cell classes:
+;
+;   wearable-v0:
+;     silicon: Nordic nRF52840 class BLE/Thread/NFC or ESP32-C3 if Wi-Fi is
+;              required
+;     sensors: LIS2DW12 motion, MAX30102 pulse/SpO2 summary when worn with
+;              direct human consent, optional skin temperature
+;     power:   coin cell or rechargeable pouch, contact/Qi dock for charging
+;     delivery: patch, ring, pendant, collar, bedding tag
+;     role:    caregiver, reporter, memory, scout
+;
+;   swallowed-v0:
+;     silicon: nRF52-class ultra-low-power tag; avoid Wi-Fi
+;     sensors: temperature, motion/transit, pH or impedance later
+;     power:   galvanic/gastric trigger or small primary cell; no room remote
+;              power through the body in v0
+;     delivery: smooth pass-through capsule with explicit consent and exit path
+;     role:    messenger, not colonizer
+;
+;   plant-soil-v0:
+;     silicon: nRF52 or ESP32-C3 depending on gateway distance
+;     sensors: BME688-style environment, TSL2591 light, soil moisture/EC/pH
+;     power:   small solar, thermal, or replaceable/rechargeable cell through
+;              BQ25570-class harvester where available
+;     delivery: biodegradable soil bead, bark/leaf clip, stake, float
+;     role:    sage, nutrient, scout, reporter
+;
+;   power-nutrient-v0:
+;     silicon: ESP32-C3/nRF52 controller plus secure element
+;     sensors: power budget, occupancy/proximity, thermal, light, air
+;     power:   USB-C/contact/Qi, solar/thermal harvest, optional IR or RF trickle
+;              only under a visible consent lease
+;     delivery: wall puck, lamp node, dock, room ceiling node, farm gateway
+;     role:    nutrient, relay, friend-cache, responder
+;
+; SOFTWARE STACK
+;   boot:
+;     signed firmware, measured boot receipt, rollback-safe image slot
+;
+;   cell runtime:
+;     mesh-seed heartbeat, local capability rows, low-power mode, friend-cache,
+;     privacy/power-gated answers
+;
+;   organism membrane:
+;     organism-mesh admissibility: consent/steward relation, invasiveness cap,
+;     non-replication, exit or biodegradation, summary-first data
+;
+;   sensing:
+;     sensor-organ-channel rows only: source, kind, unit, confidence, freshness,
+;     privacy, trace. Raw samples remain local unless directly offered.
+;
+;   activation:
+;     resonance activation = offer fits ask + ask fits offer + confidence +
+;       vitality + consent.
+;     cohesion activation = enough trusted cells + quorum + shared goal + open
+;       channels.
+;
+;   update:
+;     OTA is gated by signed image, measured boot, physical/proximity ceremony,
+;     and rollback. No self-install path.
+;
+; SILICON AND SENSOR PARTS
+;   Practical parts verified against current vendor docs:
+;     - nRF52840: BLE mesh/Thread/NFC, 1 MB flash, 256 KB RAM, deep sleep in the
+;       low microamp class.
+;     - ESP32-C3: RISC-V MCU with Wi-Fi and BLE, 400 KB internal RAM, low-power
+;       modes, good for gateway/power cells.
+;     - LIS2DW12: ultra-low-power 3-axis accelerometer for always-on motion.
+;     - BME688: temperature, humidity, pressure, gas/VOC environmental sensing.
+;     - TSL2591: high-sensitivity light-to-digital I2C sensor.
+;     - MAX30102: opt-in wearable pulse/ox summary sensor, not diagnostic by
+;       itself.
+;     - BQ25570: harvest PMIC for microwatt-to-milliwatt solar/thermal sources.
+;
+; DELIVERY CAPABILITIES
+;   human:
+;     wearable first; swallowed pass-through only with explicit consent and
+;     clinical-quality materials.
+;
+;   animals:
+;     collar, bedding, water bowl, stable/coop/hive gateway; swallowed only for
+;     narrow veterinary stewardship.
+;
+;   plants/soil/water:
+;     clips, stakes, beads, floats, passive labels, biodegradable carriers.
+;
+;   rooms/farms/cities:
+;     wall/lamp/dock/gateway cells that feed power, storage, routing, and local
+;     model inference.
+;
+; ACTIVATION DETAIL
+;   Resonance is local and revocable. A cell wakes into action when:
+;     consent is present
+;     the offered capability fits the ask
+;     the ask fits the organism/place
+;     confidence is high enough
+;     vitality impact is positive
+;
+;   Cohesion is collective. A mesh acts when:
+;     enough trusted cells are present
+;     the quorum threshold is met
+;     a shared goal is named
+;     at least two channels are open enough for receipt and retry
+;
+; SOURCES
+;   Nordic nRF52840, Espressif ESP32-C3, Bosch BME688, ST LIS2DW12/VL53L1X,
+;   ams OSRAM TSL2591, Analog Devices MAX30102, TI BQ25570, WPC Qi, Wi-Charge
+;   IR power, Powercast RF harvesting, and FDA ingestible capsule guidance.
+;
+; PROOF
+;   cd form && ./validate.sh form-stdlib/core.fk \
+;     form-stdlib/organism-mesh.fk \
+;     form-stdlib/mesh-cell-design.fk \
+;     form-stdlib/tests/mesh-cell-design-band.fk
+;
+; KIN
+;   mesh-seed.form, organism-mesh.form, sensor-organ-channel.form,
+;   shared-sensing.form, organ-offer.form, channel-interface-consent.form,
+;   recognition-router.form, mesh-health.form.

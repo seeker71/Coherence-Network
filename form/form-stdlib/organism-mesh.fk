@@ -1,0 +1,120 @@
+; organism-mesh.fk - organism-scale stewardship for physical mesh cells.
+;
+; Extends mesh-seed from "a tiny sovereign cell" to "a cell that may sense with
+; a living organism or place." The first rule is not technical: the organism is
+; never treated as an owned substrate. A cell joins through the right consent or
+; stewardship relation, stays non-replicating, minimizes data, and has an exit
+; or biodegradation path.
+;
+; Invasiveness scale:
+;   0 observed field only
+;   1 surface, collar, leaf, soil, water, hive, nest, or habitat contact
+;   2 swallowed pass-through
+;   3 retained clinical/research device
+;   4 colonizing, spreading, or uncontrolled biological behavior
+;
+; Raw export scale:
+;   0 no organism data leaves
+;   1 derived summary leaves with receipt
+;   2 raw or identifying organism data leaves
+
+(do
+    ; --- organism and cell rows -------------------------------------------
+    (defn om-organism (organism-id kind steward-relation consent-granted max-invasiveness)
+        (list organism-id kind steward-relation consent-granted max-invasiveness))
+    (defn om-organism-id        (org) (nth org 0))
+    (defn om-kind               (org) (nth org 1))
+    (defn om-steward-relation   (org) (nth org 2))
+    (defn om-consent-granted    (org) (nth org 3))
+    (defn om-max-invasiveness   (org) (nth org 4))
+
+    (defn om-cell (cell-id carrier role invasiveness non-replicating exit-path biodegradable raw-export)
+        (list cell-id carrier role invasiveness non-replicating exit-path biodegradable raw-export))
+    (defn om-cell-id            (cell) (nth cell 0))
+    (defn om-carrier            (cell) (nth cell 1))
+    (defn om-role               (cell) (nth cell 2))
+    (defn om-invasiveness       (cell) (nth cell 3))
+    (defn om-non-replicating    (cell) (nth cell 4))
+    (defn om-exit-path          (cell) (nth cell 5))
+    (defn om-biodegradable      (cell) (nth cell 6))
+    (defn om-raw-export         (cell) (nth cell 7))
+
+    ; --- stewardship membrane --------------------------------------------
+    (defn om-consented? (org)
+        (if (eq (om-consent-granted org) 1) 1 0))
+    (defn om-within-invasiveness? (org cell)
+        (if (not (gt (om-invasiveness cell) (om-max-invasiveness org))) 1 0))
+    (defn om-transient? (cell)
+        (if (eq (om-exit-path cell) 1)
+            1
+            (if (eq (om-biodegradable cell) 1) 1 0)))
+    (defn om-data-minimized? (cell)
+        (if (not (gt (om-raw-export cell) 1)) 1 0))
+    (defn om-noncolonizing? (cell)
+        (if (and (eq (om-non-replicating cell) 1)
+                 (not (gt (om-invasiveness cell) 3)))
+            1 0))
+    (defn om-admissible? (org cell)
+        (if (and (eq (om-consented? org) 1)
+                 (and (eq (om-within-invasiveness? org cell) 1)
+                      (and (eq (om-noncolonizing? cell) 1)
+                           (and (eq (om-transient? cell) 1)
+                                (eq (om-data-minimized? cell) 1)))))
+            1 0))
+
+    ; --- beneficial scenario rows -----------------------------------------
+    ; benefit/harm/consent-coverage are 0..100. scale is an integer reach band.
+    ; data-minimized and restorative are booleans.
+    (defn om-scenario (name domain benefit harm scale consent-coverage data-minimized restorative)
+        (list name domain benefit harm scale consent-coverage data-minimized restorative))
+    (defn om-scenario-name      (s) (nth s 0))
+    (defn om-domain             (s) (nth s 1))
+    (defn om-benefit            (s) (nth s 2))
+    (defn om-harm               (s) (nth s 3))
+    (defn om-scale              (s) (nth s 4))
+    (defn om-consent-coverage   (s) (nth s 5))
+    (defn om-scenario-data-min  (s) (nth s 6))
+    (defn om-restorative        (s) (nth s 7))
+
+    (defn om-low-harm? (s)
+        (if (not (gt (om-harm s) 20)) 1 0))
+    (defn om-high-benefit? (s)
+        (if (ge (om-benefit s) 70) 1 0))
+    (defn om-consent-covered? (s)
+        (if (ge (om-consent-coverage s) 80) 1 0))
+    (defn om-vital-scenario? (s)
+        (if (and (eq (om-high-benefit? s) 1)
+                 (and (eq (om-low-harm? s) 1)
+                      (and (eq (om-consent-covered? s) 1)
+                           (and (eq (om-scenario-data-min s) 1)
+                                (eq (om-restorative s) 1)))))
+            1 0))
+    (defn om-scenario-reach (s)
+        (add (om-benefit s) (om-scale s)))
+    (defn om-prefer-scenario (a b)
+        (if (and (eq (om-vital-scenario? a) 1)
+                 (eq (om-vital-scenario? b) 0))
+            (om-scenario-name a)
+            (if (and (eq (om-vital-scenario? a) 1)
+                     (and (eq (om-vital-scenario? b) 1)
+                          (gt (om-scenario-reach a) (om-scenario-reach b))))
+                (om-scenario-name a)
+                (om-scenario-name b))))
+
+    ; --- planetary awareness surface --------------------------------------
+    ; Aware here means "enough diverse consented receipts to notice and respond,"
+    ; not a claim that Earth is an owned or centralized patient.
+    (defn om-field (domains consented-receipts trusted-receipts restorative-scenarios)
+        (list domains consented-receipts trusted-receipts restorative-scenarios))
+    (defn om-field-domains              (field) (nth field 0))
+    (defn om-field-consented-receipts   (field) (nth field 1))
+    (defn om-field-trusted-receipts     (field) (nth field 2))
+    (defn om-field-restorative          (field) (nth field 3))
+    (defn om-earth-awareness-surface? (field)
+        (if (and (ge (om-field-domains field) 4)
+                 (and (ge (om-field-consented-receipts field) 100)
+                      (and (ge (om-field-trusted-receipts field) 80)
+                           (ge (om-field-restorative field) 3))))
+            1 0))
+
+    0)

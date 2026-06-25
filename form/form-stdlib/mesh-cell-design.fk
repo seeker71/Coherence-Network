@@ -1,0 +1,130 @@
+; mesh-cell-design.fk - buildable hardware/software profiles for mesh cells.
+;
+; This layer turns mesh-seed and organism-mesh into actual design rows:
+; silicon, sensors, power, delivery, firmware, and activation. "Resonance"
+; means a cell's offer matches a living ask with enough consent, confidence, and
+; vitality. "Cohesion" means enough trusted cells share goal, channel, and quorum
+; to act as a mesh rather than isolated gadgets.
+
+(do
+    ; --- physical part rows ------------------------------------------------
+    (defn mcd-silicon (name family ram-kb flash-kb radio-count secure-element deep-sleep-ua)
+        (list name family ram-kb flash-kb radio-count secure-element deep-sleep-ua))
+    (defn mcd-si-name          (s) (nth s 0))
+    (defn mcd-si-family        (s) (nth s 1))
+    (defn mcd-si-ram-kb        (s) (nth s 2))
+    (defn mcd-si-flash-kb      (s) (nth s 3))
+    (defn mcd-si-radio-count   (s) (nth s 4))
+    (defn mcd-si-secure        (s) (nth s 5))
+    (defn mcd-si-sleep-ua      (s) (nth s 6))
+
+    (defn mcd-sensor (name kind interface avg-ua privacy summary-only organism-fit)
+        (list name kind interface avg-ua privacy summary-only organism-fit))
+    (defn mcd-sensor-name      (s) (nth s 0))
+    (defn mcd-sensor-kind      (s) (nth s 1))
+    (defn mcd-sensor-interface (s) (nth s 2))
+    (defn mcd-sensor-ua        (s) (nth s 3))
+    (defn mcd-sensor-privacy   (s) (nth s 4))
+    (defn mcd-sensor-summary   (s) (nth s 5))
+    (defn mcd-sensor-fit       (s) (nth s 6))
+
+    (defn mcd-power (name source storage-mwh output-mw remote consent-lease harvest)
+        (list name source storage-mwh output-mw remote consent-lease harvest))
+    (defn mcd-power-name       (p) (nth p 0))
+    (defn mcd-power-source     (p) (nth p 1))
+    (defn mcd-power-storage    (p) (nth p 2))
+    (defn mcd-power-output-mw  (p) (nth p 3))
+    (defn mcd-power-remote     (p) (nth p 4))
+    (defn mcd-power-consent    (p) (nth p 5))
+    (defn mcd-power-harvest    (p) (nth p 6))
+
+    (defn mcd-firmware (name signed-image measured-boot rollback-safe local-summary ota-gated)
+        (list name signed-image measured-boot rollback-safe local-summary ota-gated))
+    (defn mcd-fw-name          (fw) (nth fw 0))
+    (defn mcd-fw-signed        (fw) (nth fw 1))
+    (defn mcd-fw-measured      (fw) (nth fw 2))
+    (defn mcd-fw-rollback      (fw) (nth fw 3))
+    (defn mcd-fw-summary       (fw) (nth fw 4))
+    (defn mcd-fw-ota           (fw) (nth fw 5))
+
+    (defn mcd-design (name silicon sensors power delivery firmware role)
+        (list name silicon sensors power delivery firmware role))
+    (defn mcd-design-name      (d) (nth d 0))
+    (defn mcd-design-silicon   (d) (nth d 1))
+    (defn mcd-design-sensors   (d) (nth d 2))
+    (defn mcd-design-power     (d) (nth d 3))
+    (defn mcd-design-delivery  (d) (nth d 4))
+    (defn mcd-design-firmware  (d) (nth d 5))
+    (defn mcd-design-role      (d) (nth d 6))
+
+    ; --- viability gates ---------------------------------------------------
+    (defn mcd-silicon-viable? (s)
+        (if (and (ge (mcd-si-ram-kb s) 128)
+                 (and (ge (mcd-si-flash-kb s) 512)
+                      (and (ge (mcd-si-radio-count s) 1)
+                           (not (gt (mcd-si-sleep-ua s) 20)))))
+            1 0))
+    (defn mcd-firmware-sovereign? (fw)
+        (if (and (eq (mcd-fw-signed fw) 1)
+                 (and (eq (mcd-fw-measured fw) 1)
+                      (and (eq (mcd-fw-rollback fw) 1)
+                           (and (eq (mcd-fw-summary fw) 1)
+                                (eq (mcd-fw-ota fw) 1)))))
+            1 0))
+    (defn mcd-sensor-safe? (sensor max-privacy)
+        (if (and (eq (mcd-sensor-summary sensor) 1)
+                 (not (gt (mcd-sensor-privacy sensor) max-privacy)))
+            1 0))
+    (defn mcd-sensors-under-budget? (sensors budget-ua)
+        (if (eq (len sensors) 0)
+            1
+            (if (gt (mcd-sensor-ua (head sensors)) budget-ua)
+                0
+                (mcd-sensors-under-budget? (tail sensors) (sub budget-ua (mcd-sensor-ua (head sensors)))))))
+    (defn mcd-sensors-safe? (sensors max-privacy)
+        (if (eq (len sensors) 0)
+            1
+            (if (eq (mcd-sensor-safe? (head sensors) max-privacy) 1)
+                (mcd-sensors-safe? (tail sensors) max-privacy)
+                0)))
+    (defn mcd-power-usable? (p)
+        (if (eq (mcd-power-remote p) 1)
+            (mcd-power-consent p)
+            1))
+    (defn mcd-buildable? (design sensor-budget-ua max-privacy)
+        (if (and (eq (mcd-silicon-viable? (mcd-design-silicon design)) 1)
+                 (and (eq (mcd-firmware-sovereign? (mcd-design-firmware design)) 1)
+                      (and (eq (mcd-sensors-under-budget? (mcd-design-sensors design) sensor-budget-ua) 1)
+                           (and (eq (mcd-sensors-safe? (mcd-design-sensors design) max-privacy) 1)
+                                (eq (mcd-power-usable? (mcd-design-power design)) 1)))))
+            1 0))
+
+    ; --- activation gates --------------------------------------------------
+    ; offer-fit, ask-fit, confidence, consent, vitality, trust, quorum, and
+    ; shared-goal are 0..100 except consent/shared-goal booleans.
+    (defn mcd-resonance-score (offer-fit ask-fit confidence vitality)
+        (add offer-fit (add ask-fit (add confidence vitality))))
+    (defn mcd-resonance-active? (offer-fit ask-fit confidence consent vitality)
+        (if (and (eq consent 1)
+                 (and (ge offer-fit 70)
+                      (and (ge ask-fit 70)
+                           (and (ge confidence 70)
+                                (ge vitality 70)))))
+            1 0))
+    (defn mcd-cohesion-active? (trusted-cells quorum shared-goal open-channels)
+        (if (and (ge trusted-cells quorum)
+                 (and (eq shared-goal 1)
+                      (ge open-channels 2)))
+            1 0))
+    (defn mcd-activate? (design sensor-budget-ua max-privacy offer-fit ask-fit confidence consent vitality trusted-cells quorum shared-goal open-channels)
+        (if (and (eq (mcd-buildable? design sensor-budget-ua max-privacy) 1)
+                 (and (eq (mcd-resonance-active? offer-fit ask-fit confidence consent vitality) 1)
+                      (eq (mcd-cohesion-active? trusted-cells quorum shared-goal open-channels) 1)))
+            1 0))
+
+    ; Delivery compatibility reuses organism-mesh rows for the body/place
+    ; boundary. The delivery row is an om-cell.
+    (defn mcd-delivery-admissible? (organism design)
+        (om-admissible? organism (mcd-design-delivery design)))
+
+    0)

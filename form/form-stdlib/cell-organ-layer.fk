@@ -1,0 +1,111 @@
+; cell-organ-layer.fk - trusted cells form organs over layered substrate.
+;
+; A cell is a trusted participant. An organ is a quorum of trusted cells with a
+; shared role. A channel is the offered path between organs. A substrate layer is
+; the content-addressed surface that carries summaries, memories, predictions,
+; reports, and research receipts without collapsing them into one flat stream.
+
+(do
+    ; --- cells and organs --------------------------------------------------
+    (defn col-cell (cell-id role trust consent vitality offers)
+        (list cell-id role trust consent vitality offers))
+    (defn col-cell-id   (c) (nth c 0))
+    (defn col-cell-role (c) (nth c 1))
+    (defn col-trust     (c) (nth c 2))
+    (defn col-consent   (c) (nth c 3))
+    (defn col-vitality  (c) (nth c 4))
+    (defn col-offers    (c) (nth c 5))
+
+    (defn col-trusted? (cell trust-floor vitality-floor)
+        (if (and (ge (col-trust cell) trust-floor)
+                 (and (eq (col-consent cell) 1)
+                      (ge (col-vitality cell) vitality-floor)))
+            1 0))
+    (defn col-trusted-count (cells trust-floor vitality-floor)
+        (if (eq (len cells) 0)
+            0
+            (if (eq (col-trusted? (head cells) trust-floor vitality-floor) 1)
+                (add 1 (col-trusted-count (tail cells) trust-floor vitality-floor))
+                (col-trusted-count (tail cells) trust-floor vitality-floor))))
+
+    (defn col-organ (organ-id kind cells channels layers)
+        (list organ-id kind cells channels layers))
+    (defn col-organ-id       (o) (nth o 0))
+    (defn col-organ-kind     (o) (nth o 1))
+    (defn col-organ-cells    (o) (nth o 2))
+    (defn col-organ-channels (o) (nth o 3))
+    (defn col-organ-layers   (o) (nth o 4))
+    (defn col-organ-forms? (organ trust-floor vitality-floor quorum)
+        (if (ge (col-trusted-count (col-organ-cells organ) trust-floor vitality-floor) quorum) 1 0))
+
+    ; --- channel and substrate layer --------------------------------------
+    (defn col-channel-open? (channel min-bps)
+        (if (and (str_eq (hm-channel-status channel) "open")
+                 (ge (hm-channel-bytes-per-second channel) min-bps))
+            1 0))
+    (defn col-channel-connects? (channel from-organ to-organ)
+        (if (and (str_eq (hm-channel-from channel) from-organ)
+                 (str_eq (hm-channel-to channel) to-organ))
+            1 0))
+
+    (defn col-layer (name level content-addressed consented receipt-carrying)
+        (list name level content-addressed consented receipt-carrying))
+    (defn col-layer-name       (l) (nth l 0))
+    (defn col-layer-level      (l) (nth l 1))
+    (defn col-layer-addressed  (l) (nth l 2))
+    (defn col-layer-consented  (l) (nth l 3))
+    (defn col-layer-receipt    (l) (nth l 4))
+    (defn col-layer-valid? (layer)
+        (if (and (eq (col-layer-addressed layer) 1)
+                 (and (eq (col-layer-consented layer) 1)
+                      (eq (col-layer-receipt layer) 1)))
+            1 0))
+    (defn col-stack-valid? (layers)
+        (if (eq (len layers) 0)
+            1
+            (if (eq (col-layer-valid? (head layers)) 1)
+                (col-stack-valid? (tail layers))
+                0)))
+    (defn col-layer-count (layers)
+        (len layers))
+
+    ; --- content carried on layered substrate ------------------------------
+    ; privacy is 0 public / 1 derived / 2 sensitive / 3 raw-private.
+    (defn col-content (content-id kind privacy bytes nodeid receipt)
+        (list content-id kind privacy bytes nodeid receipt))
+    (defn col-content-id      (c) (nth c 0))
+    (defn col-content-kind    (c) (nth c 1))
+    (defn col-content-privacy (c) (nth c 2))
+    (defn col-content-bytes   (c) (nth c 3))
+    (defn col-content-nodeid  (c) (nth c 4))
+    (defn col-content-receipt (c) (nth c 5))
+    (defn col-content-addressed? (content)
+        (if (str_eq (col-content-nodeid content) "") 0 1))
+    (defn col-content-safe? (content max-privacy max-bytes)
+        (if (and (eq (col-content-addressed? content) 1)
+                 (and (eq (col-content-receipt content) 1)
+                      (and (not (gt (col-content-privacy content) max-privacy))
+                           (not (gt (col-content-bytes content) max-bytes)))))
+            1 0))
+
+    ; --- organ sharing and layer composition -------------------------------
+    (defn col-organ-can-share? (from-organ to-organ channel content layer trust-floor vitality-floor quorum max-privacy max-bytes min-bps)
+        (if (and (eq (col-organ-forms? from-organ trust-floor vitality-floor quorum) 1)
+                 (and (eq (col-channel-connects? channel (col-organ-id from-organ) (col-organ-id to-organ)) 1)
+                      (and (eq (col-channel-open? channel min-bps) 1)
+                           (and (eq (col-content-safe? content max-privacy max-bytes) 1)
+                                (eq (col-layer-valid? layer) 1)))))
+            1 0))
+    (defn col-layered-organ? (organ min-layers)
+        (if (and (eq (col-organ-forms? organ 70 60 2) 1)
+                 (and (eq (col-stack-valid? (col-organ-layers organ)) 1)
+                      (ge (col-layer-count (col-organ-layers organ)) min-layers)))
+            1 0))
+    (defn col-layer-promote? (lower-content lower-layer upper-layer)
+        (if (and (eq (col-content-safe? lower-content 2 4096) 1)
+                 (and (eq (col-layer-valid? lower-layer) 1)
+                      (and (eq (col-layer-valid? upper-layer) 1)
+                           (gt (col-layer-level upper-layer) (col-layer-level lower-layer)))))
+            1 0))
+
+    0)

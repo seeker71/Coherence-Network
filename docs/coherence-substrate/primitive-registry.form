@@ -8,7 +8,7 @@
 # verification recipe, expected outside), swapped only when the
 # replacement keeps the declared spec and survives the circle. This
 # registry applies that discipline to the real surface: every native the
-# Go kernel registers — 204 names across main.go's registerNative calls,
+# Go kernel registers — 207 names across main.go's registerNative calls,
 # the fieldConstructors table, and registerEnvNative — carries its
 # declared outside in form-stdlib/primitive-registry.fk.
 #
@@ -37,7 +37,7 @@
 
   (lineage
     (discipline     kernel-satsang.fk ksat-part)            # spec + verify + expected, circle-witnessed
-    (registry       form-stdlib/primitive-registry.fk)      # 204 entries, main.go order
+    (registry       form-stdlib/primitive-registry.fk)      # 207 entries, main.go order
     (proof          form-stdlib/tests/primitive-registry-band.fk -> 63 three-way)
     (drift-gate     form/scripts/validate_primitive_registry.py)  # registry == kernel source
     (wellness       scripts/wellness_check.py sense_form_primitives)
@@ -45,9 +45,9 @@
 
   # ── what the band proves, three-way, every validate run ─────────────
   (band-claims
-    (shape          204-entries-7-fields-known-tokens-no-duplicates)
-    (verification   164-of-164-lane-1-recipes-answer-their-declared-outside)
-    (lanes-pinned   164-in-band-plus-40-carrier-declared)
+    (shape          207-entries-7-fields-known-tokens-no-duplicates)
+    (verification   165-of-165-lane-1-recipes-answer-their-declared-outside)
+    (lanes-pinned   165-in-band-plus-42-carrier-declared)
     (refusal        a-part-claiming-a-wrong-outside-is-dissented)     # ksat bad-swap, kept
     (attestation    declared-category-equals-native_blueprint-category-by-exemplar)
     (spec-surface   entries-readable-without-running))                # pow: method, 1024
@@ -62,7 +62,7 @@
     (ts-node-eq-attribution-drift   healed)
     (go-write-form-binary-duplicate composted))
 
-  # ── the visible tail (lane 0, 37 entries) ───────────────────────────
+  # ── the visible tail (lane 0, 42 entries) ───────────────────────────
   (carrier-lanes
     (panic-contract  form_error form-error)
     (socket-carrier  socket_listen socket_port socket_accept socket_connect
@@ -72,6 +72,7 @@
     (host-io         host-exec host-read host-write)
     (sibling-gap     # go-only: the Hati-OS kernel's audit lane runs these
                      compile_form_source compile-form-source
+                     form_compile form_walk
                      compile_source_section compile-source-section
                      compile_source_text compile-source-text
                      source_compile_last_error source-compile-last-error
@@ -97,7 +98,7 @@
     (parity-gate    answers-must-equal-the-walkers-before-any-timing-counts))
 
   (floor
-    "Every kernel native has a registry row; 164 entries verify in-band across Go/Rust/TS and 40 carrier-declared entries stay visible.")
+    "Every kernel native has a registry row; 165 entries verify in-band across Go/Rust/TS and 42 carrier-declared entries stay visible.")
 
   (north-star
     "Every native has either an in-band three-kernel proof or an honest physical carrier receipt, and every host-facing native has a Form recipe successor where the kernel can carry it directly."))
