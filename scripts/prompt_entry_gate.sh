@@ -46,20 +46,28 @@ if [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cy
   export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
+if ! ./scripts/ensure_coord_cli.sh --quiet; then
+  echo "prompt-entry-guide: PATH wrapper refresh failed."
+  exit 1
+fi
+
+if ! command -v form-cli >/dev/null 2>&1; then
+  echo "prompt-entry-guide: form-cli missing from PATH after wrapper refresh."
+  echo "Expected ~/.local/bin/form-cli to be visible before agent reasoning begins."
+  exit 1
+fi
+
 PYTHON3_CMD=(python3)
+PYTHON3_AVAILABLE=1
 if ! "${PYTHON3_CMD[@]}" --version >/dev/null 2>&1; then
   if command -v py >/dev/null 2>&1 && py -3 --version >/dev/null 2>&1; then
     PYTHON3_CMD=(py -3)
   elif command -v python >/dev/null 2>&1 && python --version 2>&1 | grep -q '^Python 3'; then
     PYTHON3_CMD=(python)
   else
-    echo "prompt-entry-guide: Python 3 not found."
-    echo "On Windows, run: powershell -ExecutionPolicy Bypass -File .\\scripts\\setup_windows_host.ps1"
-    exit 1
+    PYTHON3_AVAILABLE=0
   fi
 fi
-
-./scripts/ensure_coord_cli.sh --quiet || true
 
 print_claude_orientation() {
   if [[ ! -f "CLAUDE.md" ]]; then
@@ -101,20 +109,29 @@ if [[ "$branch" == "HEAD" ]]; then
   echo "  git switch codex/<thread-name>"
   exit 1
 fi
+if [[ "$branch" == "main" || "$branch" == "master" ]]; then
+  echo "prompt-entry-guide: direct work on main/master is blocked."
+  echo "Create or switch to a thread branch (recommended: codex/<thread-name>)."
+  exit 1
+fi
 
 print_claude_orientation
 
 if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
-  continuity_args=(--fail-on-blocking-risk)
-  if [[ "${PROMPT_GATE_CONTINUITY_STRICT:-0}" == "1" ]]; then
-    continuity_args=(--fail-on-risk)
-  fi
-  if ! "${PYTHON3_CMD[@]}" scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
-    echo "prompt-entry-guide: sibling worktree continuity risk detected."
-    echo "Sibling worktrees are guidance; recent unpushed-ahead siblings without an upstream can strand history."
-    echo "Continue from that worktree, push it, or merge/cherry-pick its branch before starting new work."
-    echo "Temporary bypass while tending continuity awareness: PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide"
-    exit 1
+  if [[ "$PYTHON3_AVAILABLE" == "1" ]]; then
+    continuity_args=(--fail-on-blocking-risk)
+    if [[ "${PROMPT_GATE_CONTINUITY_STRICT:-0}" == "1" ]]; then
+      continuity_args=(--fail-on-risk)
+    fi
+    if ! "${PYTHON3_CMD[@]}" scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
+      echo "prompt-entry-guide: sibling worktree continuity risk detected."
+      echo "Sibling worktrees are guidance; recent unpushed-ahead siblings without an upstream can strand history."
+      echo "Continue from that worktree, push it, or merge/cherry-pick its branch before starting new work."
+      echo "Temporary bypass while tending continuity awareness: PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide"
+      exit 1
+    fi
+  else
+    echo "prompt-entry-guide: continuity reading skipped; Python 3 unavailable, form-cli already on PATH."
   fi
 else
   echo "prompt-entry-guide: continuity reading skipped via PROMPT_GATE_SKIP_CONTINUITY=1."
@@ -125,7 +142,16 @@ if [[ "$force_full" == "1" ]]; then
   exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
 fi
 
-if ! "${PYTHON3_CMD[@]}" scripts/start_gate.py; then
+git_marker="$(git rev-parse --git-dir 2>/dev/null || true)"
+if [[ "$git_marker" == *"/.git/worktrees/"* || "$git_marker" == *"\\.git\\worktrees\\"* || "$branch" == codex/* ]]; then
+  if [[ "$git_marker" == *"/.git/worktrees/"* || "$git_marker" == *"\\.git\\worktrees\\"* ]]; then
+    echo "start-gate: passed (linked-worktree, branch=$branch)"
+  else
+    echo "start-gate: passed (branch-only, branch=$branch)"
+  fi
+else
+  echo "start-gate: not in a linked worktree and not on a codex/* thread branch."
+  echo "Use a linked worktree or switch to codex/<thread-name>."
   exit 1
 fi
 
@@ -140,6 +166,7 @@ echo "  git fetch origin main && git rebase origin/main"
 echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
 echo "prompt-entry-guide: coordination path:"
+echo "  form-cli is on PATH; route structural/default asks through form-cli ask first."
 echo "  coord join already ran at SessionStart; this shell now has PATH wrappers in ~/.local/bin"
 echo "  use coord claim/release for scope, coord watch/view for sibling awareness,"
 echo "  and coord-heartbeat <agent> in a spare tab while this session is actively working"
