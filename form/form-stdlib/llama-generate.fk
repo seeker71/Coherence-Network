@@ -1,0 +1,79 @@
+; llama-generate.fk — the llama (decoder-only, GQA) AUTOREGRESSIVE GENERATION LOOP: token ids in,
+; token ids out. The last recipe-altitude piece before wiring real GGUF weights into the proven body.
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk
+;
+; Every piece of real llama3.2 decode is already four-way and on the M4 GPU: the multi-layer GQA
+; decode stack (gqa-multi-layer-stack.fk, lgqa-stack-causal/-generate, #3616), RMSNorm
+; (llama-numerics.fk ln-rmsnorm, #3308), matvec (transformer-block.fk tb-matvec), greedy argmax
+; (greedy-decode.fk gd-token, #3402). This cell closes the LOOP that wires them into actual TOKENS —
+; llama's greedy decode, the decoder-only sibling of transformer-generate.fk (whisper's encoder-decoder
+; loop). No new arithmetic; a pure composition over already-four-way recipes:
+;
+;   embed   : xs = [token_embd[id] for id in ids]      (no learned positional — RoPE lives in attention)
+;   states  : hs = multi-layer GQA decode stack over xs
+;   final   : normed = RMSNorm(hs[last], g_final, eps)  (the model's output norm on the last position)
+;   logits  : tb-matvec(unembed, normed)                (output projection; llama3.2 ties unembed = token_embd)
+;   next id : gd-token(logits)                          (greedy argmax, ties -> lowest index)
+;   repeat, appending the new id.
+;
+; The load-bearing claim, composing what is already four-way: the KV-cached generation loop produces
+; the IDENTICAL token sequence as the full-recompute loop. lgqa-stack-generate == lgqa-stack-causal
+; bit-for-bit (#3616), and the rest of the step (embed/norm/unembed/argmax) is identical, so the chosen
+; argmax token is identical at every step — lg-generate-cached == lg-generate token-for-token. That IS
+; the correctness law of a KV cache for generation, carried up from the hidden-state level (#3616) to
+; the TOKEN level. (Each cached step here re-grows its cache from the full ids-so-far — the equivalence
+; is the proof; true cross-step incremental caching is the GPU/runtime optimization already proven
+; bit-identical at the stack level by #3601/#3616.)
+;
+; group=1 (n_kv=n_q, base-10000 cfg) reduces lgqa-stack-* EXACTLY to multi-layer-stack.fk's lblk-stack-*
+; (#3616 claim 128), so the GQA generation loop reduces to the MHA generation loop at group=1 — MHA is
+; the special case, NOT a parallel path (core-abstraction-first; the band proves it token-for-token).
+;
+; Lives at the reusable decoder-engine altitude: any token_embd / layer list / unembed generates the
+; same way; this instance is the real llama3 stack (RMSNorm + llama3 RoPE + GQA + SwiGLU). eps/scale/
+; n_q/n_kv/HD/c are model-wide architecture constants; layers carry the per-layer weights; token_embd
+; and unembed are the (tied) vocabulary table. fp64 lane; the GPU realization (run the proven decode-step
+; kernel #3612 in the loop over real GGUF weights) is the named follow-up. Proven four-way against the
+; independent libm reference (scripts/llama_generate_reference.py, self-checked to reproduce
+; causal-attention-band's published pins) by tests/llama-generate-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- list helpers: last element, snoc (append at the end), embed a sequence of ids ---
+(defn lg-last (xs) (if (eq (len xs) 1) (head xs) (lg-last (tail xs))))
+(defn lg-snoc (xs v) (if (eq (len xs) 0) (cons v (empty)) (cons (head xs) (lg-snoc (tail xs) v))))
+(defn lg-embed (tok ids)
+  (if (eq (len ids) 0) (empty)
+      (cons (nth tok (head ids)) (lg-embed tok (tail ids)))))
+
+; --- logits for the last position: stack -> final RMSNorm -> unembed projection ---
+(defn lg-logits (hs gf unembed eps) (tb-matvec unembed (ln-rmsnorm (lg-last hs) gf eps)))
+
+; --- one greedy step over the FULL-RECOMPUTE GQA stack: ids -> next token id ---
+(defn lg-step-causal (ids tok layers gf unembed eps scale n_q n_kv HD c)
+  (gd-token (lg-logits (lgqa-stack-causal (lg-embed tok ids) layers eps scale n_q n_kv HD c) gf unembed eps)))
+
+; --- one greedy step over the KV-CACHED GQA stack (== recompute, the equivalence the band proves) ---
+(defn lg-step-generate (ids tok layers gf unembed eps scale n_q n_kv HD c)
+  (gd-token (lg-logits (lgqa-stack-generate (lg-embed tok ids) layers eps scale n_q n_kv HD c) gf unembed eps)))
+
+; --- the autoregressive greedy loop, RECOMPUTE path: ids -> ids + `steps` generated token ids ---
+(defn lg-generate (ids tok layers gf unembed eps scale n_q n_kv HD c steps)
+  (if (eq steps 0) ids
+      (lg-generate (lg-snoc ids (lg-step-causal ids tok layers gf unembed eps scale n_q n_kv HD c))
+                   tok layers gf unembed eps scale n_q n_kv HD c (sub steps 1))))
+
+; --- the autoregressive greedy loop, KV-CACHED path: == lg-generate token-for-token (the band's heart) ---
+(defn lg-generate-cached (ids tok layers gf unembed eps scale n_q n_kv HD c steps)
+  (if (eq steps 0) ids
+      (lg-generate-cached (lg-snoc ids (lg-step-generate ids tok layers gf unembed eps scale n_q n_kv HD c))
+                          tok layers gf unembed eps scale n_q n_kv HD c (sub steps 1))))
+
+; --- one greedy step over the MHA stack (multi-layer-stack.fk), for the consolidation claim: the
+;     group=1 GQA generation loop == the MHA generation loop (no parallel path) ---
+(defn lg-step-mha (ids tok layers gf unembed eps scale HD)
+  (gd-token (lg-logits (lblk-stack-causal (lg-embed tok ids) layers eps scale HD) gf unembed eps)))
+(defn lg-generate-mha (ids tok layers gf unembed eps scale HD steps)
+  (if (eq steps 0) ids
+      (lg-generate-mha (lg-snoc ids (lg-step-mha ids tok layers gf unembed eps scale HD))
+                       tok layers gf unembed eps scale HD (sub steps 1))))
