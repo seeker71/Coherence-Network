@@ -69,3 +69,44 @@
       (cons (if (ge (head xs) thr) (head xs) 0.0) (smp-topp-keep (tail xs) thr))))
 (defn smp-topp-mask (probs p)
   (smp-renorm (smp-topp-keep probs (smp-topp-thr probs p))))
+
+; === the DRAW: a filtered distribution → an actual token id. The half sampling.fk above punts. ===
+; The header says "the RNG is not a recipe" — that is the one thing here that is NOT true. A COUNTER
+; PRNG is pure integer arithmetic with no host entropy: fully deterministic, reproducible bit-for-bit,
+; and so four-way provable like every other fold above. MINSTD (Park-Miller) is the canonical
+; minimal-standard generator: state' = (16807 * state) mod (2^31 - 1). Its sequence from seed 1 is a
+; PUBLISHED reference (16807, 282475249, 1622650073, …) — the band grounds the PRNG against an
+; authority OUTSIDE our own recipe, not values we emitted ourselves.
+;
+; Integer mod via floor-div — q4k-dequant.fk's proven pattern (no bitwise/mod primitive needed):
+; state, 16807, and their product are non-negative integers, so div truncates and
+; mod = a - (a/n)*n. The product reaches ~3.6e13 < 2^53, so it stays an exact fp64 integer.
+(defn smp-imod (a n) (sub a (mul (div a n) n)))
+(defn smp-minstd (state) (smp-imod (mul 16807 state) 2147483647))
+
+; u in [0,1): the state as a fraction of the modulus. The ONE float step; everything above is integer.
+(defn smp-uniform (state) (div state 2147483647.0))
+
+; inverse-CDF draw: walk the distribution accumulating mass; the first bucket whose CUMULATIVE mass
+; exceeds u is the drawn index. probs is a filtered distribution from the masks above (sums to ~1).
+; idx threads the position, cum the running mass; the last bucket catches u rounded up to total mass.
+(defn smp-cdf-pick (probs u idx cum)
+  (if (eq (len probs) 0) (sub idx 1)
+      (do
+        (let cum2 (add cum (head probs)))
+        (if (gt cum2 u) idx
+            (smp-cdf-pick (tail probs) u (add idx 1) cum2)))))
+(defn smp-sample (probs u) (smp-cdf-pick probs u 0 0.0))
+
+; one draw from a PRNG state: advance the generator, map to u, pick the bucket. Returns the token id.
+; A PEAKED distribution (all mass on one index) draws THAT index for every u — so the draw reduces to
+; greedy argmax with no parallel path, exactly as temperature→0 collapses sampling to greedy.
+(defn smp-draw (probs state) (smp-sample probs (smp-uniform (smp-minstd state))))
+
+; a generation of n draws: thread the PRNG state, collect token ids. Deterministic from the seed —
+; same seed, same token sequence, every kernel. This is the sampling analog of greedy-decode's loop.
+(defn smp-draw-seq (probs state n)
+  (if (eq n 0) (empty)
+      (do
+        (let st2 (smp-minstd state))
+        (cons (smp-sample probs (smp-uniform st2)) (smp-draw-seq probs st2 (sub n 1))))))
