@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 364
+**Total files**: 369
 
 | File | Purpose |
 |---|---|
@@ -79,7 +79,7 @@
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
 | [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — warm the c-bootstrap fkwu form-cli (agent runtime). |
 | [ensure_form_cli_native.sh](ensure_form_cli_native.sh) | ensure_form_cli_native.sh — the c-bootstrap fkwu form-cli, warmed once and cached. |
-| [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
+| [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge teacher fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
 | [export_graph_to_repo.py](export_graph_to_repo.py) | Export graph-stored content back into the repo as files. |
@@ -93,6 +93,7 @@
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
 | [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness / resolve / know via fkwu (fc-fnri direct, proven source). |
+| [fkwu_form_cli_metal_direct_receipt.sh](fkwu_form_cli_metal_direct_receipt.sh) | fkwu_form_cli_metal_direct_receipt.sh |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
 | [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 16383). |
 | [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form-cli (one line, then EOF). |
@@ -147,6 +148,7 @@
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
 | [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [form_native_metal_body_trace_receipt.sh](form_native_metal_body_trace_receipt.sh) | form_native_metal_body_trace_receipt.sh |
 | [form_native_run.sh](form_native_run.sh) | form_native_run.sh — run the PURE FORM agent runner (form-stdlib/form-native-run.fk) |
 | [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface, as a Form recipe over a |
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
@@ -223,12 +225,14 @@
 | [metal_gqa_attn_audit.sh](metal_gqa_attn_audit.sh) | metal_gqa_attn_audit.sh — GROUPED-QUERY ATTENTION (GQA) running on Metal (M4 Max GPU witness). |
 | [metal_gqa_llama_block_audit.sh](metal_gqa_llama_block_audit.sh) | metal_gqa_llama_block_audit.sh — the WHOLE GQA CAUSAL LLAMA BLOCK forward running on Metal (M4 Max GPU witness). |
 | [metal_gqa_llama_block_decode_audit.sh](metal_gqa_llama_block_decode_audit.sh) | metal_gqa_llama_block_decode_audit.sh — the KV-CACHED CAUSAL GQA DECODE STEP running on Metal (M4 Max GPU |
+| [metal_gqa_llama_block_runtime_boundary.sh](metal_gqa_llama_block_runtime_boundary.sh) | metal_gqa_llama_block_runtime_boundary.sh |
 | [metal_gqa_multi_layer_stack_audit.sh](metal_gqa_multi_layer_stack_audit.sh) | metal_gqa_multi_layer_stack_audit.sh — the MULTI-LAYER causal GQA llama DECODE STACK running on Metal (M4 Max |
 | [metal_llama_block_audit.sh](metal_llama_block_audit.sh) | metal_llama_block_audit.sh — the whole LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_causal_audit.sh](metal_llama_block_causal_audit.sh) | metal_llama_block_causal_audit.sh — the CAUSAL LLAMA decoder block running FORWARD on Metal (M4 Max GPU witness). |
 | [metal_llama_block_decode_audit.sh](metal_llama_block_decode_audit.sh) | metal_llama_block_decode_audit.sh — the KV-CACHED DECODE STEP running on Metal (M4 Max GPU witness): the |
 | [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [metal_multi_layer_stack_audit.sh](metal_multi_layer_stack_audit.sh) | metal_multi_layer_stack_audit.sh — the MULTI-LAYER causal llama DECODE STACK running on Metal (M4 Max GPU |
+| [metal_weight_bytes_runtime_boundary.sh](metal_weight_bytes_runtime_boundary.sh) | metal_weight_bytes_runtime_boundary.sh |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
 | [minimal_kernel_census.sh](minimal_kernel_census.sh) | minimal_kernel_census.sh — count the Go kernel's registered natives by the four |
@@ -256,8 +260,8 @@
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
 | [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | regen_fkwu_bootstrap.sh — maintainer-only: emit form-stdlib/bootstrap/fkwu-uni.c via bin-go. |
-| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | regen_form_cli_bootstrap.sh — maintainer-only: flatten (bin-go) + emit form-cli C. |
-| [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | regen_standard_lane_binaries.sh — maintainer-only: compile fkwu + form-cli and |
+| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | regen_form_cli_bootstrap.sh — maintainer-only: refresh the pre-flattened |
+| [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | regen_standard_lane_binaries.sh — maintainer-only: refresh fkwu + form-cli |
 | [regen_t_flat.sh](regen_t_flat.sh) | regen_t_flat.sh — maintainer bootstrap for form-stdlib/fourth-flatten-table.txt |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
@@ -336,6 +340,7 @@
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |
+| [validate_form_cli_local_receipts.sh](validate_form_cli_local_receipts.sh) | validate_form_cli_local_receipts.sh — local receipts for the form-cli ask lane. |
 | [validate_local_api_matrix.py](validate_local_api_matrix.py) | Validate local API-backed page contracts and timing against a running API. |
 | [validate_locale_surfaces.py](validate_locale_surfaces.py) | Validate locale surfaces for default-locale parity and translation-mode drift. |
 | [validate_spec_idea_traceability.py](validate_spec_idea_traceability.py) | _no top-of-file purpose_ |

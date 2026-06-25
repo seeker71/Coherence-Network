@@ -336,12 +336,13 @@ def sense_spec_symbols() -> list[str]:
     the file is still there, but ``bar()`` has been renamed,
     deleted, or moved. The body's claim aged silently.
 
-    Symbols are matched against common Python, TypeScript, and Form declaration
-    shapes (def, class, async def, top-level assignment, export
-    function/class/const/type/interface). Identifiers that don't match
-    a real-looking name pattern are skipped — many spec frontmatters
-    use prose-shaped entries inside ``symbols: [...]`` ("error_summary,
-    error_category fields") that aren't single identifiers.
+    Symbols are matched against common Python, TypeScript, BML, Form, Rust,
+    shell, and emitted-C declaration shapes (def, class, async def, top-level
+    assignment, export function/class/const/type/interface, BML interface,
+    parenthesized Form defn). Identifiers that don't match a real-looking name
+    pattern are skipped — many spec frontmatters use prose-shaped entries
+    inside ``symbols: [...]`` ("error_summary, error_category fields") that
+    aren't single identifiers.
 
     Drafts skipped (forward projections). Missing paths skipped (those
     are caught by sense_spec_sources). This lens speaks only to symbol
@@ -384,6 +385,10 @@ def sense_spec_symbols() -> list[str]:
             rf"\bexport\s+(?:default\s+)?(?:async\s+)?(?:const|let|var)\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:default\s+)?class\s+{re.escape(sym)}\b",
             rf"\bexport\s+(?:type|interface)\s+{re.escape(sym)}\b",
+            # BML declarations use C#/Java-like class/interface syntax without
+            # TypeScript's `export` keyword.
+            rf"^\s*(?:template<[^>]+>\s+)?interface\s+{re.escape(sym)}\b",
+            rf"^\s*enum\s+{re.escape(sym)}\b",
             # TS/JS non-exported declarations. `function` is a reserved
             # word so it doesn't appear in prose as a definition marker;
             # the `function`-keyword match is safe without `export`.
@@ -394,7 +399,7 @@ def sense_spec_symbols() -> list[str]:
             rf"\b(?:async\s+)?function\s+{re.escape(sym)}\b",
             rf"^\s*(?:const|let|var)\s+{re.escape(sym)}\s*[:=]",
             rf"^\s*form\s+{re.escape(sym)}\b",         # Form shape
-            rf"^\s*defn\s+{re.escape(sym)}\b",         # Form definition
+            rf"^\s*\(?\s*defn\s+{re.escape(sym)}\b",   # Form definition
             # Kernel natives — all three sibling kernels declare a native by
             # REGISTERING its name as a string: Go/TS `registerNative("sym"`,
             # Rust `register_native("sym"`. The registry is the definition
@@ -411,6 +416,10 @@ def sense_spec_symbols() -> list[str]:
             rf"^\s*(?:function\s+)?{re.escape(sym)}\s*\(\)\s*\{{",  # shell function
             rf"^{re.escape(sym)}\s*[:=]",              # top-level assignment / type alias
             rf"\b{re.escape(sym)}\s*=\s*\(",           # arrow function / lambda binding
+            # fkwu emitters carry C function definitions as Form string
+            # payloads. A spec may name that emitted symbol because the
+            # declaration surface lives in the emitter file.
+            rf"\bstatic\s+(?:[A-Za-z_][A-Za-z0-9_\s\*]*\s+)+{re.escape(sym)}\s*\(",
         ]
         return any(re.search(p, text, re.MULTILINE) for p in patterns)
 
