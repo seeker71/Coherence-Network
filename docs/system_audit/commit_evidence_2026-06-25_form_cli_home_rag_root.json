@@ -1,0 +1,104 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/form-cli-home-rag-root-d617",
+  "commit_scope": "Align form-cli ask and native dispatch carriers with the home-managed local RAG store so top-level form-cli requests use the same fkwu grounded index that preflight verifies.",
+  "files_owned": [
+    "bin/form-cli",
+    "docs/system_audit/commit_evidence_2026-06-25_form_cli_home_rag_root.json",
+    "scripts/form_cli_ask.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "git fetch origin main && git rebase origin/main",
+      "bin/form-cli synthesis-status",
+      "bin/form-cli ask substrate",
+      "bin/form-cli rag-status",
+      "scripts/validate_form_cli_local_receipts.sh substrate",
+      "bin/form-cli preflight",
+      "git diff --check"
+    ],
+    "fourth_arm_outputs": [
+      "validate_form_cli_local_receipts.sh: form-cli native dispatch band passed under fkwu with fourth-arm receipts",
+      "validate_form_cli_local_receipts.sh: block-join, cached generation semantics, and Metal emitter bands passed under fkwu",
+      "Metal matvec witness passed with parity_bitexact_rows=16/16",
+      "Metal llama decode-step witness matched full causal recompute"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-cli-carrier-fix",
+    "notes": "Public deploy validation follows PR merge; this branch changes local form-cli shell carriers only."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI, PR review, merge, and deploy verification remain pending."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "form-first-reasoning"
+  ],
+  "spec_ids": [
+    "coherence-substrate-form-stdlib",
+    "form-cli-local-rag"
+  ],
+  "task_ids": [
+    "task-2026-06-25-form-cli-home-rag-root"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "process_only",
+  "evidence_refs": [
+    "Before fix: bin/form-cli ask substrate escalated to rented path and reported weekly limit while rag-status showed raw=0 from the repo-root carrier cwd.",
+    "After fix: bin/form-cli ask substrate -> trust path:native, grounded:yes, suffic:yes, grounded:form/form-stdlib/adler32.fk, local-lane:fkwu-rag-grounded, synthesis-lane:pending-fkwu-metal-llm.",
+    "After fix: bin/form-cli rag-status -> rag-index raw=5806938 query=9 hit=5183 id-marker=4500 grounded:form/form-stdlib/adler32.fk.",
+    "scripts/validate_form_cli_local_receipts.sh substrate -> PASS, including fkwu bands, Metal matvec witness, and Metal llama decode-step witness.",
+    "bin/form-cli preflight -> 9 passed, 0 gaps, READY; prose synthesis remains an honest pending lane."
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Top-level form-cli ask and native dispatch commands now read the home-managed local RAG index, matching preflight and preventing false local misses caused by repo-relative carrier working directories.",
+    "public_endpoints": [
+      "local CLI: bin/form-cli ask",
+      "local CLI: bin/form-cli rag-status",
+      "local CLI: bin/form-cli index"
+    ],
+    "test_flows": [
+      "form-cli ask substrate returns native trust row and local fkwu RAG receipt",
+      "form-cli rag-status sees the home RAG index and staged query",
+      "validate_form_cli_local_receipts passes with ask, synthesis status, fkwu proof bands, and Metal witnesses",
+      "preflight still reports the fkwu+Metal prose generator as pending, not live"
+    ]
+  },
+  "change_files": [
+    "bin/form-cli",
+    "scripts/form_cli_ask.sh"
+  ]
+}
