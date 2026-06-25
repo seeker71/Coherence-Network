@@ -1,23 +1,24 @@
-; form-cli-ask-plus.fk — the `ask+` daily-driver: local-first, then the four-way
-; sufficiency gate escalates to the subscription oracle when local is not enough.
+; form-cli-ask-plus.fk — the `ask+` daily-driver: fkwu grounded first, then the
+; four-way sufficiency gate escalates to the subscription oracle when local has
+; no grounded hit.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/trust-row.fk form-stdlib/form-cli-ask-gate.fk
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/trust-row.fk form-stdlib/form-cli-ask-gate.fk
 ;
 ; form-cli-ask.fk's `fca-ask` is the PURE local verb (the native binary's `ask`:
-; one socket call to the local oracle, no host-exec). This is its escalating
+; one fkwu read of the local RAG index plus Form ranking, no host-exec and no
+; HTTP local oracle). This is its escalating
 ; sibling — the verb `ask+` runs. The flow:
 ;
-;   1. ask the LOCAL oracle (model) over http-fetch — same socket lane as fca-ask
+;   1. ask the LOCAL body through fkwu grounded RAG — same lane as fca-ask
 ;   2. read THIS run's signals: usable? (non-empty, not an error marker) and a
 ;      0..100 content score. The DEFAULT score is the intrinsic, sovereignty-first
 ;      read — a usable answer is trusted; only a local failure reads 0. With the
-;      judge gate on, the judge model's coverage rating replaces it (a small judge
-;      is noisy enough to escalate correct answers, so it is opt-in)
+;      judge gate on before the fkwu+Metal generator is wired, the judge call uses
+;      the same grounded lane and usually falls back to the intrinsic score.
 ;   3. let form-cli-ask-gate.fk (composing the four-way-proven form-cli-sufficiency.fk)
 ;      return the verdict: accept (local stands) / retry (re-run local once) / escalate
 ;   4. on escalate, run the REMOTE oracle (the subscription agent CLI, e.g. claude -p)
-;      via host-exec — the only host-exec in the path; the local + judge lanes stay
-;      pure socket calls
+;      via host-exec — the only host-exec in the path; the local lane stays fkwu.
 ;
 ; The decision math is the gate's, proven four-way; this file is the live carrier
 ; that feeds it real signals and carries the verdict out to the oracles.

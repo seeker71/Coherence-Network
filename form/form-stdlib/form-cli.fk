@@ -76,23 +76,80 @@
                         (bnii-interface-name iface))
                     (fnri-knowledge-line arg)))))))
 
+    (defn fc-rag-status ()
+        (do
+            (let raw (read_file (ra-default-index)))
+            (let staged-query (read_file (ra-staged-query)))
+            (let raw-len (str_len raw))
+            (let query-len (str_len staged-query))
+            (let query-hit (if (eq query-len 0) -1 (str_find raw staged-query 0)))
+            (let last-id (if (lt query-hit 0) -1 (ra-last-id-before-loop (ra-default-index) 0 query-hit -1)))
+            (let grounded (fc-grounded-staged))
+            (let a (str_concat "rag-index raw=" (int_to_str raw-len)))
+            (let b (str_concat a (str_concat " query=" (int_to_str query-len))))
+            (let c (str_concat b (str_concat " hit=" (int_to_str query-hit))))
+            (let d (str_concat c (str_concat " id-marker=" (int_to_str last-id))))
+            (str_concat d (str_concat " " grounded))))
+
+    (defn fc-grounded-staged ()
+        (do
+            (let raw (read_file (ra-default-index)))
+            (let q (read_file (ra-staged-query)))
+            (if (or (eq (str_len raw) 0) (eq (str_len q) 0))
+                "grounded:miss"
+                (do
+                    (let hit (str_find raw q 0))
+                    (if (lt hit 0)
+                        "grounded:miss"
+                        (do
+                            (let id-pos (ra-last-id-before-loop (ra-default-index) 0 hit -1))
+                            (if (lt id-pos 0)
+                                "grounded:miss"
+                                (do
+                                    (let spaced-key (ra-id-key-spaced))
+                                    (let tight-key (ra-id-key))
+                                    (let key (if (eq (str_find raw spaced-key id-pos) id-pos) spaced-key tight-key))
+                                    (let id-start (add id-pos (str_len key)))
+                                    (let id-end (str_find raw "\"" id-start))
+                                    (if (lt id-end 0)
+                                        "grounded:miss"
+                                        (str_concat "grounded:" (substring raw id-start id-end)))))))))))
+
+    (defn fc-ask-staged ()
+        (do (let grounded (fc-grounded-staged))
+            (if (str_eq grounded "grounded:miss")
+                "[ask: local fkwu RAG index has no grounded hit]"
+                (str_concat grounded
+                    "\nlocal-lane:fkwu-rag-grounded\nsynthesis-lane:pending-fkwu-metal-llm"))))
+
+    (defn fc-synthesis-status ()
+        (str_concat "synthesis-lane:pending-fkwu-metal-llm"
+        (str_concat "\nreason:end-to-end-gguf-decode-not-bound-to-ask-staged"
+        (str_concat "\navailable:gguf-locate,weight-load,block-join,metal-matvec,metal-decode-step"
+                    "\nmissing:tokenizer-carrier,full-model-weight-map,autoregressive-loop-binding,ask-staged-model-call"))))
+
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
             (if (str_eq v "ask") (fca-ask (fc-arg cmd))
+            (if (str_eq v "ask-staged") (fc-ask-staged)
             (if (str_eq v "grounded") (ra-grounded (fc-arg cmd))
+            (if (str_eq v "grounded-staged") (fc-grounded-staged)
+            (if (str_eq v "rag-status") (fc-rag-status)
+            (if (str_eq v "synthesis-status") (fc-synthesis-status)
+            (if (str_eq v "model-status") (fc-synthesis-status)
             (if (str_eq v "fnri") (fc-fnri (fc-arg cmd))
             (if (str_eq v "receipt") (fc-receipt (fc-arg cmd))
             (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask grounded fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local oracle (ollama). grounded <question>: lexical retrieve from healed index (re-vec + rag-topk, no Python). fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
+                "form-cli verbs: ping ask grounded rag-status synthesis-status fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
                 "form-cli runs on fkwu, a universal walker generated entirely from Form recipes and compiled to native code. The same walker runs any Form program. this binary has the form-cli program built into it."
             (if (str_eq v "recreate")
-                "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own."
+                "to rebuild: run the source verb to print the Form source this binary carries. build-form-cli.sh installs the stamped native platform binary when present; maintainer regeneration refreshes bootstrap artifacts. the result runs on its own."
             (if (str_eq v "version")
                 "form-cli 0.3"
-                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'")))))))))))))))
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))))))))))))
     0)

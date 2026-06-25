@@ -4,7 +4,7 @@
 ;
 ; Two index entries with sovereign lexical vectors. Query "standard receipt" must
 ; nearest-neighbor to the sovereignty doc, not the host-kernel doc.
-; Verdict 3: nearest id (1) + top-1 list head (2).
+; Verdict 7: nearest id (1) + top-1 list head (2) + jsonl line split (4).
 (do
     (let index (list
         (rag-entry "docs/coherence-substrate/standard-receipt.form"
@@ -13,7 +13,11 @@
             (re-vec "host kernel ports organs resources"))))
     (let q "standard receipt")
     (let top (rag-topk (re-vec q) index 1))
+    (let raw (str_concat "{\"id\":\"one\",\"vec\":[1]}"
+                         (str_concat (byte_to_str 10) "{\"id\":\"two\",\"vec\":[2]}")))
+    (let lines (ra-lines raw))
     (add (if (str_eq (ra-nearest-id-for q index)
                      "docs/coherence-substrate/standard-receipt.form") 1 0)
-         (if (str_eq (nth top 0)
-                     "docs/coherence-substrate/standard-receipt.form") 2 0)))
+         (add (if (str_eq (nth top 0)
+                          "docs/coherence-substrate/standard-receipt.form") 2 0)
+              (if (eq (len lines) 2) 4 0))))

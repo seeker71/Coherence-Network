@@ -1,9 +1,11 @@
 # form-cli offline — the air-gap self-improvement kit
 
 The form-cli improves itself with no network: it senses its own surface, names
-its own gaps, and closes them against a **local** oracle. Everything it needs
-lives on disk — the Form kernel, the stdlib recipes, the specs, and sovereign
-local models. This is the body keeping its breath when the air goes thin.
+its own gaps, answers grounded questions through fkwu RAG, and can use explicit
+local teacher oracles for training/review when a gap needs a teacher. Everything
+it needs lives on disk — the Form kernel, the stdlib recipes, the specs, the
+local RAG index, and optional local model assets. This is the body keeping its
+breath when the air goes thin.
 
 ## One command to know the kit is whole
 
@@ -11,11 +13,11 @@ local models. This is the body keeping its breath when the air goes thin.
 scripts/form_cli_preflight.sh
 ```
 
-It proves, while the network is still reachable to fix anything: the Form kernel
-builds and evaluates; the **surface membrane** is legible (Form-native); local
-oracles are present; the recipes and specs are on disk; and the agent loop runs
-end-to-end against a local oracle. Exit 0 = `READY` — you can lose the network
-and keep improving.
+It proves, while the network is still reachable to fix anything: the native fkwu
+`form-cli` is present, grounded `ask` can read the local RAG index, the **surface
+membrane** is legible (Form-native), recipes/specs are on disk, and optional
+teacher oracles are named as teachers rather than as the answer lane. Exit 0 =
+`READY` — you can lose the network and keep improving.
 
 ## The surface membrane
 
@@ -30,7 +32,7 @@ surfaces:
 |---|---|---|
 | `native-recipe` | stayed in the Form body — no OS membrane crossed | no |
 | `os-kernel` | crossed to the OS kernel (host:exec / host:file) | no |
-| `local-oracle` | via the OS kernel to a **local** model (sovereign) | no |
+| `local-teacher` | via the OS kernel to a **local** model for review/training | no |
 | `remote-oracle` | via the OS kernel to a **remote** model | **yes** |
 
 Each crossing is a `choice-receipt` (the choice of *which surface*), so the
@@ -67,10 +69,10 @@ whether it's **offline-closable** or needs the network **first**:
 | rung | meaning | next move | offline |
 |---|---|---|---|
 | `samples` | samples on disk, no recipe | train a native recipe | yes |
-| `local-oracle` | a local oracle is installed | distill samples | yes |
-| `source-local` | local oracle source on disk, needs building | build the source | yes |
-| `remote-only` | only a remote oracle | **stage remote→local** | **no — ⚑ before flight** |
-| `none` | no oracle at all | find/stage an oracle | **no** |
+| `local-teacher` | a local teacher is installed | distill/review samples | yes |
+| `source-local` | local teacher source on disk, needs building | build the source | yes |
+| `remote-only` | only a remote teacher/oracle | **stage remote→local** | **no — ⚑ before flight** |
+| `none` | no teacher at all | find/stage one if the lane needs it | **no** |
 
 The catalog tallies `open / offline-closable / stage-before-flight` and reads
 **flight-ready** iff nothing needs the network first — the membrane's
@@ -83,9 +85,16 @@ offline-closable, 1 stage-before-flight (`remote-llm`).
 Recipe: [`form-cli-membrane.fk`](../../form/form-stdlib/form-cli-membrane.fk) —
 proven four-way (`form-cli-membrane-band`, verdict 1023, go/rust/ts/fkwu).
 
-## The local oracles (sovereign)
+## Grounded local answer + optional teachers
 
-Already on disk — no download race:
+`form-cli ask` is the local answer surface: the wrapper stages the question, the
+native fkwu binary reads `~/.coherence-network/rag-index/index.jsonl`, performs
+JSONL grounding, and returns a grounded id plus the current synthesis-lane
+status. It does not call Ollama, `localhost:11434`, or `http-fetch`.
+
+Optional local teacher models can still be useful for distillation, self-review,
+and gap-closing. When used, they are tagged as `local-teacher` membrane crossings,
+not as the native answer lane. Assets commonly staged on disk include:
 
 - **fast** — `ollama run llama3.2:3b` (proves the loop quickly)
 - **reasoners** — `qwen2.5:72b`, `llama3.3:70b`, `deepseek-r1:32b` in ollama
@@ -95,12 +104,12 @@ Already on disk — no download race:
   ollama create coder -f <(echo "FROM ~/mentor-install/.models/qwen2.5-coder-32b-instruct-q5_k_m.gguf")
   ```
 
-The runner picks `local` over `remote` by surface; the preflight names which
-oracles are staged.
+The runner picks native grounded RAG first. Teacher models are selected only by
+flows that explicitly ask for teaching, judging, or drafting.
 
 ## Closing a gap offline
 
-Name a gap, let a local coder oracle draft the recipe, and validate it on the
+Name a gap, let a local coder teacher draft the recipe, and validate it on the
 kernel — all offline:
 
 ```bash
@@ -112,7 +121,7 @@ scripts/form_cli_close_gap.sh triangular \
 The loop ([`scripts/form_cli_close_gap.sh`](../../scripts/form_cli_close_gap.sh)):
 the coder drafts the recipe in the Form `.fk` dialect → the kernel **validates**
 it against the assertion → the crossing is **ledgered** through the membrane
-recipe (`surface=local-oracle`, `gap=1`, `receipt-valid=1`). A validated draft
+recipe (`surface=local-teacher`, `gap=1`, `receipt-valid=1`). A validated draft
 lands in `form/form-stdlib/drafts/` (gitignored); promote it by writing an
 assertion band and adding it to the manifest to make it four-way. Measured
 offline: `(defn tri (n) (div (mul n (add n 1)) 2))` and a recursive list-sum,
@@ -359,8 +368,8 @@ Snapshot (local coder, threshold 60): native **~25% pass, avg ~25/100**, mostly
 | **reasoning** (`task → answer`) | **~25%** — the open frontier |
 
 That contrast *is* the finding: the easy lane is done; reasoning is the real
-road. (The judge here is a local oracle — a membrane crossing — so this score
-itself isn't yet offline-pure; a Form-native semantic judge is the next cell.)
+road. (The judge here is a local teacher — a membrane crossing — so this score
+itself isn't yet fkwu-pure; a Form-native semantic judge is the next cell.)
 
 ## What is proven, and the honest frontier
 

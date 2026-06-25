@@ -1,20 +1,25 @@
-; preludes: form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk
 ;
 ; form-cli-band — native form-cli dispatch + fnri catalog on fkwu (source walk).
-; Verdict 4095 = 1023 core + 1024 witness + 2048 know.
+; Verdict 16383 = 4095 dispatch/fnri + 4096 ask reaches grounded lane
+; + 8192 synthesis-status names the missing composition.
 
 (do
     (let c0 (if (str_eq (fc-respond "ping") "pong") 1 0))
     (let help (fc-respond "help"))
-    (let c1 (if (lt (str_find help "receipt" 0) 0) 0 2))
+    (let c1 (if (lt (str_find help "no HTTP oracle" 0) 0) 0 2))
     (let c2 (if (str_eq (fc-respond "version") "form-cli 0.3") 4 0))
     (let c3 (if (str_eq (fc-respond "ping extra") "pong") 8 0))
     (let c4 (if (str_eq (fc-respond "foobar") "form-cli: unknown verb 'foobar' — type 'help'") 16 0))
     (let c5 (if (str_eq (fc-respond "about") "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs.") 32 0))
     (let c6 (if (str_eq (fc-respond "kernel") "form-cli runs on fkwu, a universal walker generated entirely from Form recipes and compiled to native code. The same walker runs any Form program. this binary has the form-cli program built into it.") 64 0))
-    (let c7 (if (str_eq (fc-respond "recreate") "to rebuild: run the source verb to print the Form source this binary carries, then build-form-cli.sh turns those recipes into native code and bakes form-cli into the walker, reproducing this binary. Building needs the bootstrap toolchain. the result runs on its own.") 128 0))
+    (let c7 (if (str_eq (fc-respond "recreate") "to rebuild: run the source verb to print the Form source this binary carries. build-form-cli.sh installs the stamped native platform binary when present; maintainer regeneration refreshes bootstrap artifacts. the result runs on its own.") 128 0))
     (let c8 (if (str_eq (fc-respond "") "form-cli: unknown verb '' — type 'help'") 256 0))
     (let c9 (if (str_eq (fc-respond "native-host android 1 1 1 2 690 1 7 gold") "native-host-instance|android|1|1|1|1|1|1|learn-from-surprise|gold") 512 0))
     (let c10 (if (str_eq (fc-respond "fnri witness") "32767") 1024 0))
     (let c11 (if (str_eq (fc-respond "fnri know standard-receipt") "docs/coherence-substrate/standard-receipt.form") 2048 0))
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
+    (let c12 (if (str_eq (fc-respond "ask standard receipt") "[ask: local fkwu RAG index has no grounded hit]") 4096 0))
+    (let synth (fc-respond "synthesis-status"))
+    (let c13 (if (and (not (lt (str_find synth "pending-fkwu-metal-llm" 0) 0))
+                      (not (lt (str_find synth "missing:tokenizer-carrier" 0) 0))) 8192 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))
