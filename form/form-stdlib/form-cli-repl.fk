@@ -13,7 +13,7 @@
 ; 114/115/116); they are not in the three host walkers, so this is fkwu-native,
 ; the same way input_byte (tag 17) is. One native engine, both surfaces.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/form-cli.fk
+; preludes: form-stdlib/core.fk form-stdlib/str-byte-at.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/form-cli.fk
 (do
     ; 'diagnose' reads the live framebuffer the walker is born with — fk_arms[t]
     ; per-op dispatch counts plus the node/string/arena/value-stack/float
@@ -52,6 +52,61 @@
                 "usage: metal-matvec <msl-path> <kernel-name> <model-path>"
                 (metal_matvec_f32 (read_file msl-path) kernel (read_file model-path)))))
 
+    (defn fc-strip-last-byte-if (s code)
+        (do
+            (let n (str_len s))
+            (if (and (gt n 0) (eq (str-byte-at s (sub n 1)) code))
+                (substring s 0 (sub n 1))
+                s)))
+
+    (defn fc-strip-eol (s)
+        (fc-strip-last-byte-if (fc-strip-last-byte-if s 10) 13))
+
+    (defn fc-string-bytes-loop (s i n acc)
+        (if (ge i n) acc
+            (fc-string-bytes-loop
+                s
+                (add i 1)
+                n
+                (append acc (list (str-byte-at s i))))))
+
+    (defn fc-string-bytes (s)
+        (fc-string-bytes-loop s 0 (str_len s) (list)))
+
+    (defn fc-model-cell-digest (bytes)
+        (hex-encode (sha256 (fc-string-bytes bytes))))
+
+    (defn fc-metal-model-cell (arg)
+        (if (str_eq arg "")
+            "usage: metal-model-cell <manifest-path>"
+            (do
+                (let manifest (fc-strip-eol (read_file arg)))
+                (let parts (split-on manifest " "))
+                (let kind (fc-part parts 0 ""))
+                (let expected-sha (fc-part parts 1 ""))
+                (let model-path (fc-part parts 2 ""))
+                (let msl-path (fc-part parts 3 ""))
+                (let kernel (fc-part parts 4 "form_fkwu_generic_matvec_f32"))
+                (if (or (or (str_eq kind "") (str_eq expected-sha ""))
+                        (or (str_eq model-path "") (str_eq msl-path "")))
+                    "FAIL model-cell manifest expected: model-cell-v1 <sha256> <model-path> <msl-path> <kernel-name>"
+                    (if (str_eq kind "model-cell-v1")
+                        (do
+                            (let model-bytes (read_file model-path))
+                            (let actual-sha (fc-model-cell-digest model-bytes))
+                            (if (str_eq actual-sha expected-sha)
+                                (str_concat "model_cell_verified=true\n"
+                                (str_concat "model_cell_source=content-addressed-manifest\n"
+                                (str_concat "model_cell_format=f32-matvec-v1\n"
+                                (str_concat "model_cell_sha256="
+                                (str_concat actual-sha
+                                (str_concat "\n"
+                                    (metal_matvec_f32 (read_file msl-path) kernel model-bytes)))))))
+                                (str_concat "FAIL model-cell sha256 mismatch\nmodel_cell_verified=false\nmodel_cell_expected_sha256="
+                                (str_concat expected-sha
+                                (str_concat "\nmodel_cell_sha256=" actual-sha)))))
+                        (str_concat "FAIL model-cell manifest kind=" kind))))))
+
     ; the native-only verbs read this binary's own baked source via self_source
     ; (a fkwu-only op), so they live here in the runtime wrapper rather than in
     ; the four-way dispatch: 'source' prints the Form source the binary was built
@@ -62,6 +117,8 @@
     ; skip instead of pretending the bridge exists.
     ; 'metal-matvec' is the generic successor: MSL source bytes, kernel name, and
     ; model bytes cross the same fkwu-native door into a linked carrier.
+    ; 'metal-model-cell' proves the model bytes are content-addressed by Form
+    ; before the same native Metal carrier sees them.
     ; Everything else routes to fc-respond, the four-way-proven brain.
     (defn fc-native (line)
         (if (str_eq (fc-verb line) "source") (self_source)
@@ -72,7 +129,8 @@
                 (if (str_eq (fc-verb line) "diagnose") (fc-diagnose)
                     (if (str_eq (fc-verb line) "metal-fixture") (metal_matvec_fixture)
                         (if (str_eq (fc-verb line) "metal-matvec") (fc-metal-matvec (fc-arg line))
-                            (fc-respond line)))))))
+                            (if (str_eq (fc-verb line) "metal-model-cell") (fc-metal-model-cell (fc-arg line))
+                                (fc-respond line))))))))
     ; one self-recursive loop: prompt (only on a real tty), read a line, and
     ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
     ; let (an effect op) so it fires exactly once per turn, not once per use.

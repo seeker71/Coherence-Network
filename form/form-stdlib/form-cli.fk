@@ -125,8 +125,8 @@
     (defn fc-synthesis-status ()
         (str_concat "synthesis-lane:pending-fkwu-metal-llm"
         (str_concat "\nreason:end-to-end-gguf-decode-not-bound-to-ask-staged"
-        (str_concat "\navailable:gguf-locate,weight-load,block-join,metal-matvec,metal-decode-step"
-                    "\nmissing:tokenizer-carrier,full-model-weight-map,autoregressive-loop-binding,ask-staged-model-call"))))
+        (str_concat "\navailable:gguf-locate,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step"
+                    "\nmissing:tokenizer-carrier,full-gguf-weight-map,autoregressive-loop-binding,ask-staged-model-call"))))
 
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))
@@ -142,7 +142,7 @@
             (if (str_eq v "receipt") (fc-receipt (fc-arg cmd))
             (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask grounded rag-status synthesis-status fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
+                "form-cli verbs: ping ask grounded rag-status synthesis-status fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. metal-model-cell <manifest-path>: fkwu-native content-addressed model bytes before Metal. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
