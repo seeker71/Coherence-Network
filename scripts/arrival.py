@@ -226,7 +226,7 @@ def main() -> int:
     print()
     print("── body state right now ──\n")
     subprocess.run(
-        ["python3", str(ROOT / "scripts" / "wellness_check.py")],
+        [sys.executable or "python3", str(ROOT / "scripts" / "wellness_check.py")],
         check=False,
     )
     return 0

@@ -689,6 +689,24 @@ def test_wellness_reading_projects_sections_into_shared_shape() -> None:
     assert "Witness-trace: trace breathing within budget" in reading["what_can_compost"][1]
 
 
+def test_wellness_nested_python_checks_use_current_interpreter(monkeypatch) -> None:
+    """Nested wellness probes should not depend on a literal python3 launcher."""
+    mod = _load_script_module("wellness_check")
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    assert mod.sense_form_ontology() == ["  form ontology matches kernel parsers (Go/Rust/TS)"]
+    assert mod.sense_form_blueprints()[0].startswith("  every Form Blueprint number is registered")
+    assert mod.sense_form_primitives()[0].startswith("  every kernel native carries")
+    assert calls
+    assert all(cmd[0] == mod.sys.executable for cmd in calls)
+
+
 def test_static_to_dynamic_cells_are_live_not_attention() -> None:
     """Resolved static-to-dynamic surfaces leave wants_attention."""
     mod = _load_script_module("wellness_check")
