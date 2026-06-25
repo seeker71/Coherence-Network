@@ -1,0 +1,73 @@
+; mesh-seed.form - a practical tiny physical mesh cell.
+;
+; THE ASK
+;   Make the living mesh practical as a physical "pill" or seed device: minimal
+;   hardware, minimal power, a tiny software pack, automatic neighbor discovery,
+;   capability offers, sensor-aware answers, and an emergent trusted health /
+;   wellness / fitness organism. Keep the useful biological shape while refusing
+;   the unsafe one: this is not stealth, not malware, and not uncontrolled
+;   replication. It is an owned device that joins by consent.
+;
+; THE SHAPE
+;   A mesh seed is a small sovereign cell:
+;     identity       stable seed id plus signed image
+;     body           MCU, RAM, flash, battery, sleep/listen/transmit cost
+;     channels       BLE, Wi-Fi, NFC/dock, audio, LoRa, or other declared carriers
+;     senses         temperature, motion, light, sound-level, air, pulse, host vitals
+;     capabilities   answerable rows with confidence, privacy, and power cost
+;     membrane       allowlist, human consent, physical presence, signed-image gate
+;     metabolism     sleep, listen, sense, relay, and friend-cache modes
+;
+;   The runnable heart is form-stdlib/mesh-seed.fk:
+;     ms-heartbeat       uses device-heartbeat for neighbor discovery
+;     ms-admit?          uses provisioning for shared-wire plus human consent
+;     ms-power-mode      chooses sleep/listen/relay/sense from battery and need
+;     ms-answerable?     answers only from safe local capability rows
+;     ms-relay?          forwards only fresh TTL messages with enough power
+;     ms-cache-if-friend caches for sleeping peers only when the cell can carry it
+;     ms-spawn-allowed?  requires human consent, signed image, and physical presence
+;
+; PRACTICAL HARDWARE FLOOR
+;   The first real seed can be commodity and boring:
+;     MCU: ESP32-C3 / nRF52 / RP2040-W class
+;     RAM: 256-512 KB
+;     flash: 1-4 MB
+;     power: single-digit microamp deep sleep, milliamps listening, burst TX only
+;     channels: BLE advertising/scanning first; optional Wi-Fi, NFC/dock, audio chirp
+;     sensors: start with IMU + temperature/light/sound-level; add SpO2/air/other only
+;              when the consent and power rows prove useful
+;     storage: ring buffer of signed heartbeats, capability rows, and recent readings
+;
+;   The seed does not need a GPU or remote model. Its first intelligence is routing:
+;   what can I sense, what can my neighbors sense, what is the cheapest sufficient
+;   local answer, and when should I stay silent?
+;
+; EMERGING MESH CAPABILITIES
+;   A single seed can report a narrow reading. A mesh can do more:
+;     - proximity and co-presence from heartbeats and shared carriers
+;     - shared sensing from many cells observing one subject
+;     - rough health/wellness/fitness context from motion, sound level, light,
+;       temperature, air, pulse, sleep/wake, and host-vital summaries
+;     - resilient memory through friend-cache cells holding messages for sleepers
+;     - prediction by local sequence/capability cells once enough consented samples exist
+;     - reporter/researcher/scout roles by capability rows, not hard-coded classes
+;
+; SOVEREIGNTY MEMBRANE
+;   The seed may look biologically small, but it does not behave like a worm.
+;   It never installs itself, hides, scrapes raw data, or expands by radio match
+;   alone. Admission requires a shared channel and consent. New physical cells
+;   require signed image, human consent, and physical presence. Raw-private sensor
+;   values stay local; mesh answers are derived summaries with confidence,
+;   privacy, power cost, and trace.
+;
+; PROOF
+;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/device-heartbeat.fk \
+;     form-stdlib/provisioning.fk form-stdlib/mesh-relay.fk \
+;     form-stdlib/friend-node.fk form-stdlib/mesh-health.fk \
+;     form-stdlib/hati-mesh.fk form-stdlib/mesh-seed.fk \
+;     form-stdlib/tests/mesh-seed-band.fk
+;
+; KIN
+;   device-heartbeat.form, provisioning.form, mesh-relay.form, friend-node.form,
+;   mesh-health.form, hati-mesh.form, sensor-organ-channel.form, shared-sensing.form,
+;   recognition-router.form, channel-interface-consent.form.

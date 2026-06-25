@@ -1,0 +1,111 @@
+; organism-mesh.form - extending physical mesh cells to living organisms.
+;
+; THE ASK
+;   Store and extend the swallowed / physical mesh cell idea to any organism,
+;   then name the most beneficial scenarios for humanity and Earth as an aware,
+;   trusted superorganism we are part of.
+;
+; THE SHAPE
+;   The cell does not own the organism. The organism, steward, community, or
+;   ecology sets the membrane. A physical mesh cell can be:
+;     - worn, touched, perched nearby, or placed in habitat
+;     - swallowed as a pass-through messenger when the organism can consent
+;       directly or the clinical/research stewardship is explicit
+;     - placed with plants, soils, water, hives, nests, farms, or reefs only
+;       at the lowest useful invasiveness
+;     - biodegradable or recoverable, and non-replicating
+;     - summary-first: raw organism data stays local unless explicitly offered
+;
+;   The runnable heart is form-stdlib/organism-mesh.fk:
+;     om-organism                 organism kind, steward relation, consent, limit
+;     om-cell                     carrier, role, invasiveness, transient path, data
+;     om-admissible?              consent + invasiveness + noncolonizing + exit
+;     om-scenario                 benefit/harm/scale/consent/restoration rows
+;     om-vital-scenario?          high-benefit, low-harm, consented, restorative
+;     om-earth-awareness-surface? diverse consented trusted restorative receipts
+;
+; ORGANISM CLASSES
+;   human:
+;     Direct consent. Swallowed pass-through cells can make sense for hydration,
+;     heat stress, medication timing, digestive transit, sleep/recovery, and
+;     early infection/inflammation signals. Retained devices are clinical.
+;
+;   companion animal:
+;     Guardian consent. Prefer collars, bedding, water bowl, litter, stable, or
+;     near-field habitat cells. Swallowed cells are narrow veterinary/research
+;     cases, not the default.
+;
+;   livestock and working animals:
+;     Guardian plus welfare stewardship. Best uses are heat stress, hydration,
+;     lameness/motion, feed/water quality, outbreak early warning, and lower
+;     antibiotic pressure through earlier care.
+;
+;   plant, crop, tree, forest:
+;     Land/steward consent. Prefer leaf films, bark clips, soil beads, root-zone
+;     moisture/nutrient sensing, fungal-network-adjacent sensing, and pollinator
+;     corridor receipts. The plant is not a socket; the cell listens lightly.
+;
+;   soil, water, reef, hive, habitat:
+;     Community/ecological stewardship. Prefer passive beads, floats, acoustic
+;     listeners, light/temperature/chemistry summaries, and retrieval or
+;     biodegradation. Use the field as teacher, not as mine.
+;
+;   wildlife:
+;     Ecological review and local/Indigenous/community stewardship where
+;     relevant. Default to field-only observation: acoustic, camera-trap summary,
+;     eDNA sampling done by people, habitat sensors. Body contact only with a
+;     strong welfare reason and named steward.
+;
+; BENEFICIAL SCENARIOS
+;   1. Heat, hydration, and air early warning
+;      Humans, animals, plants, and soils share local heat, water, shade, and air
+;      stress summaries. The mesh routes cooling, water, rest, and shade actions
+;      before bodies fail.
+;
+;   2. Regenerative farm and food web care
+;      Soil moisture, nutrient cycling, plant stress, pollinator presence,
+;      livestock welfare, and human labor fatigue become one consented field.
+;      The outcome is less waste, less chemical overuse, better yields, and more
+;      life in the soil.
+;
+;   3. Zoonotic and antimicrobial-resistance early noticing
+;      Farms, clinics, shelters, wastewater, and wildlife-habitat boundaries emit
+;      derived anomaly receipts instead of raw surveillance. Earlier care reduces
+;      spread and lowers indiscriminate antibiotic use.
+;
+;   4. Watershed and reef vitality
+;      Soft cells in streams, wetlands, farms, storm drains, reefs, and coastal
+;      zones read temperature, turbidity, pH, oxygen, salinity, and organism
+;      presence summaries. The mesh sees stress before collapse and attributes
+;      upstream causes without turning every creature into a tracker.
+;
+;   5. Human wellness as ecological participation
+;      Fitness/health is no longer isolated metrics. Sleep, movement, nutrition,
+;      heat exposure, indoor air, local food, green space, social care, and
+;      ecological state can be read as one vitality surface.
+;
+;   6. Disaster response and care corridors
+;      During fire, flood, heat, smoke, drought, or disease, cells become scouts:
+;      passable routes, safe water, shelter load, vulnerable bodies, animal
+;      movement, soil/water contamination, and community needs.
+;
+;   7. Biodiversity corridors that can prove healing
+;      Plants, pollinators, birds, soil organisms, water, and human stewards share
+;      minimal receipts that show whether a corridor is becoming more alive.
+;
+; EARTH AWARENESS SURFACE
+;   This does not make Earth a centralized patient or a platform someone owns.
+;   It makes a consented, plural awareness surface: many organisms and places
+;   share enough trusted, derived receipts to notice harm early and coordinate
+;   restorative action. The superorganism is not above us. It is the living
+;   relation we are already inside, made readable without stripping sovereignty.
+;
+; PROOF
+;   cd form && ./validate.sh form-stdlib/core.fk \
+;     form-stdlib/organism-mesh.fk \
+;     form-stdlib/tests/organism-mesh-band.fk
+;
+; KIN
+;   mesh-seed.form, shared-sensing.form, sensor-organ-channel.form,
+;   organ-offer.form, channel-interface-consent.form, mesh-health.form,
+;   hati-mesh.form, trust-matrix.form.

@@ -1,0 +1,130 @@
+; mesh-seed.fk - minimal consentful mesh seed for tiny physical cells.
+;
+; This is the practical "bacterium" shape without uncontrolled spread: a small
+; owned device can announce, recognize neighbors, choose a low-power mode, admit
+; only consented peers, answer only from safe capabilities, relay once with TTL,
+; and cache for sleepers when it has enough power. Carriers such as BLE, Wi-Fi,
+; audio, NFC, LoRa, or a wired dock live outside this recipe; the body-level law
+; is the same on every carrier.
+;
+; Composes the existing mesh spine:
+;   device-heartbeat.fk - neighbor discovery and shared channels
+;   provisioning.fk     - human consent plus shared wire before join
+;   mesh-relay.fk       - forward only fresh, reachable messages
+;   friend-node.fk      - powered cells cache for low-power sleepers
+;   mesh-health.fk      - whole mesh connected/partitioned read
+;   hati-mesh.fk        - organ identity and channel offer rows
+;
+; No install, replication, or mutation path is present. A new physical cell can
+; join only through ms-spawn-allowed? and ms-admit?, both explicit gates.
+
+(do
+    ; --- physical hardware profile -----------------------------------------
+    ; chip/ram/flash are descriptive. Power values are integer microamps.
+    (defn ms-hardware (chip ram-kb flash-kb sleep-ua listen-ua tx-ua battery-mah channels sensors)
+        (list chip ram-kb flash-kb sleep-ua listen-ua tx-ua battery-mah channels sensors))
+    (defn ms-hw-chip        (hw) (nth hw 0))
+    (defn ms-hw-ram-kb      (hw) (nth hw 1))
+    (defn ms-hw-flash-kb    (hw) (nth hw 2))
+    (defn ms-hw-sleep-ua    (hw) (nth hw 3))
+    (defn ms-hw-listen-ua   (hw) (nth hw 4))
+    (defn ms-hw-tx-ua       (hw) (nth hw 5))
+    (defn ms-hw-battery-mah (hw) (nth hw 6))
+    (defn ms-hw-channels    (hw) (nth hw 7))
+    (defn ms-hw-sensors     (hw) (nth hw 8))
+
+    ; A capability is what the seed can answer from. confidence is 0..100,
+    ; privacy is 0 public / 1 derived / 2 sensitive / 3 raw-private, and
+    ; power-cost-ua is the cost class the local policy may refuse.
+    (defn ms-capability (name kind protocol confidence privacy power-cost-ua)
+        (list name kind protocol confidence privacy power-cost-ua))
+    (defn ms-cap-name       (cap) (nth cap 0))
+    (defn ms-cap-kind       (cap) (nth cap 1))
+    (defn ms-cap-protocol   (cap) (nth cap 2))
+    (defn ms-cap-confidence (cap) (nth cap 3))
+    (defn ms-cap-privacy    (cap) (nth cap 4))
+    (defn ms-cap-power-ua   (cap) (nth cap 5))
+
+    ; A seed is the minimal software pack: identity, hardware, capability rows,
+    ; a human allowlist, and two explicit spread gates.
+    (defn ms-seed (seed-id hardware capabilities allowlist human-consent signed-image)
+        (list seed-id hardware capabilities allowlist human-consent signed-image))
+    (defn ms-id            (seed) (nth seed 0))
+    (defn ms-hw            (seed) (nth seed 1))
+    (defn ms-capabilities  (seed) (nth seed 2))
+    (defn ms-allowlist     (seed) (nth seed 3))
+    (defn ms-human-consent (seed) (nth seed 4))
+    (defn ms-signed-image  (seed) (nth seed 5))
+    (defn ms-channels      (seed) (ms-hw-channels (ms-hw seed)))
+    (defn ms-sensors       (seed) (ms-hw-sensors (ms-hw seed)))
+
+    ; --- identity, heartbeat, and offered channel rows ----------------------
+    (defn ms-heartbeat (seed beat)
+        (list (ms-id seed) (ms-sensors seed) (ms-channels seed) beat))
+    (defn ms-join-request (seed)
+        (list (ms-id seed) (ms-channels seed)))
+    (defn ms-organ-identity (seed organ-kind)
+        (hm-identity (ms-id seed) organ-kind (hm-unbound-steward) "stable-seed-id" "signed self-sovereign mesh seed"))
+    (defn ms-offer-channel (from-seed to-id protocol interface capability codec sample-rate bytes-per-second)
+        (hm-offer-channel (ms-id from-seed) to-id protocol interface capability codec sample-rate bytes-per-second))
+
+    ; --- consent and spread gates ------------------------------------------
+    (defn ms-admit? (self peer)
+        (pv-admit? (ms-join-request peer) (ms-channels self) (ms-allowlist self)))
+    (defn ms-spawn-allowed? (seed physical-presence)
+        (if (and (eq (ms-human-consent seed) 1)
+                 (and (eq (ms-signed-image seed) 1)
+                      (eq physical-presence 1)))
+            1 0))
+
+    ; --- low-power local policy --------------------------------------------
+    ; urgent=1 means sense now. Below 15 percent, sleep unless urgent. A high
+    ; battery with multiple neighbors may relay. Otherwise listen/beacon.
+    (defn ms-power-mode (battery-pct neighbor-count urgent)
+        (if (eq urgent 1)
+            "sense"
+            (if (gt 15 battery-pct)
+                "sleep"
+                (if (and (ge battery-pct 40) (gt neighbor-count 1))
+                    "relay"
+                    "listen"))))
+    (defn ms-friend? (battery-pct plugged-in open-channels)
+        (if (eq plugged-in 1)
+            (if (gt open-channels 0) 1 0)
+            (if (and (ge battery-pct 80) (gt open-channels 0)) 1 0)))
+
+    ; --- capability answer gate --------------------------------------------
+    (defn ms-cap-usable? (cap ask-kind min-confidence max-privacy max-power-ua)
+        (if (and (str_eq (ms-cap-kind cap) ask-kind)
+                 (and (ge (ms-cap-confidence cap) min-confidence)
+                      (and (not (gt (ms-cap-privacy cap) max-privacy))
+                           (not (gt (ms-cap-power-ua cap) max-power-ua)))))
+            1 0))
+    (defn ms-find-cap (caps ask-kind min-confidence max-privacy max-power-ua)
+        (if (eq (len caps) 0)
+            (empty)
+            (if (eq (ms-cap-usable? (head caps) ask-kind min-confidence max-privacy max-power-ua) 1)
+                (head caps)
+                (ms-find-cap (tail caps) ask-kind min-confidence max-privacy max-power-ua))))
+    (defn ms-answerable? (seed ask-kind min-confidence max-privacy max-power-ua)
+        (if (gt (len (ms-find-cap (ms-capabilities seed) ask-kind min-confidence max-privacy max-power-ua)) 0) 1 0))
+    (defn ms-answer-capability (seed ask-kind min-confidence max-privacy max-power-ua)
+        (if (eq (ms-answerable? seed ask-kind min-confidence max-privacy max-power-ua) 1)
+            (ms-cap-name (ms-find-cap (ms-capabilities seed) ask-kind min-confidence max-privacy max-power-ua))
+            ""))
+
+    ; --- relay, friend cache, and mesh health -------------------------------
+    (defn ms-relay? (msg seen battery-pct)
+        (if (and (eq (mr-relay? msg seen) 1)
+                 (ge battery-pct 40))
+            1 0))
+    (defn ms-cache-if-friend (cache msg battery-pct plugged-in open-channels)
+        (if (eq (ms-friend? battery-pct plugged-in open-channels) 1)
+            (fn-store cache msg)
+            cache))
+    (defn ms-vital? (present-peers open-channels expected-peers)
+        (if (and (eq (mh-connected? (list present-peers open-channels expected-peers)) 1)
+                 (eq (mh-partitioned? (list present-peers open-channels expected-peers)) 0))
+            1 0))
+
+    0)

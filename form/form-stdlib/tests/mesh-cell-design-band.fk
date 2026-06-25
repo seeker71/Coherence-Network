@@ -1,0 +1,86 @@
+; preludes: form-stdlib/core.fk form-stdlib/organism-mesh.fk form-stdlib/mesh-cell-design.fk
+;
+; mesh-cell-design-band - actual cell designs prove viability and activation.
+;
+; Verdict 8191 when every claim lands:
+;   1     nRF52840-class silicon is viable for a low-power mesh cell
+;   2     ESP32-C3-class silicon is viable when Wi-Fi is needed
+;   4     signed/measured/local-summary firmware is sovereign enough to ship
+;   8     unsafe firmware is refused
+;   16    wearable human cell is buildable
+;   32    swallowed pass-through human cell is delivery-admissible
+;   64    remote power requires a consent lease
+;   128   no-consent remote power is refused
+;   256   raw/private sensor export blocks buildability
+;   512   plant/soil bead design is delivery-admissible
+;   1024  wildlife defaults to field-only delivery
+;   2048  resonance activation requires consent plus fit/confidence/vitality
+;   4096  cohesion activation requires trusted quorum and open channels
+
+(do
+    (let nrf (mcd-silicon "nrf52840" "ble-thread-nfc" 256 1024 2 1 2))
+    (let esp (mcd-silicon "esp32-c3" "wifi-ble" 400 4096 2 1 5))
+    (let tiny-bad (mcd-silicon "tiny-bad" "none" 32 128 0 0 50))
+
+    (let motion (mcd-sensor "lis2dw12" "motion" "i2c-spi" 2 1 1 "human-animal"))
+    (let env (mcd-sensor "bme688" "air-temp-humidity-pressure-gas" "i2c-spi" 900 1 1 "room-soil-plant"))
+    (let light (mcd-sensor "tsl2591" "light" "i2c" 50 1 1 "plant-room"))
+    (let pulse (mcd-sensor "max30102" "pulse-ox-summary" "i2c" 1200 2 1 "human"))
+    (let raw-audio (mcd-sensor "raw-mic" "audio" "pdm" 800 3 0 "human-room"))
+
+    (let coin (mcd-power "coin-cell" "battery" 220 1 0 0 0))
+    (let contact (mcd-power "qi-dock" "contact-wireless" 5000 5000 0 0 0))
+    (let ir-power (mcd-power "ir-room-power" "infrared" 10000 300 1 1 0))
+    (let rogue-ir (mcd-power "rogue-ir" "infrared" 10000 300 1 0 0))
+    (let harvest (mcd-power "solar-thermal-harvest" "environment" 50 10 0 0 1))
+
+    (let fw (mcd-firmware "mesh-seed-fw" 1 1 1 1 1))
+    (let bad-fw (mcd-firmware "unsigned-fw" 0 0 0 1 0))
+
+    (let human (om-organism "human-a" "human" "self" 1 2))
+    (let plant (om-organism "tree-a" "plant" "land-steward" 1 1))
+    (let wild (om-organism "wild-field" "wildlife" "ecological-steward" 1 0))
+
+    (let skin-delivery (om-cell "skin-patch" "wearable-patch" "vital-summary" 1 1 1 0 1))
+    (let gut-delivery (om-cell "gut-pass" "swallowed-pass-through" "vital-summary" 2 1 1 0 1))
+    (let soil-delivery (om-cell "soil-bead" "soil-bead" "moisture-light-summary" 1 1 0 1 1))
+    (let field-delivery (om-cell "habitat-listener" "field-only" "acoustic-presence-summary" 0 1 1 0 1))
+    (let wild-contact (om-cell "wild-contact" "body-contact" "movement-summary" 1 1 1 0 1))
+
+    (let wearable (mcd-design "wearable-v0" nrf (list motion pulse) coin skin-delivery fw "caregiver"))
+    (let swallowed (mcd-design "swallowed-v0" nrf (list motion) coin gut-delivery fw "messenger"))
+    (let room (mcd-design "room-power-cell" esp (list env light) ir-power skin-delivery fw "power-nutrient"))
+    (let rogue-room (mcd-design "rogue-room-power-cell" esp (list env light) rogue-ir skin-delivery fw "power-nutrient"))
+    (let raw-design (mcd-design "raw-audio-cell" nrf (list raw-audio) coin skin-delivery fw "reporter"))
+    (let plant-cell (mcd-design "plant-soil-v0" nrf (list env light) harvest soil-delivery fw "soil-sage"))
+    (let wild-field-cell (mcd-design "wild-field-v0" nrf (list motion) coin field-delivery fw "scout"))
+    (let wild-contact-cell (mcd-design "wild-contact-v0" nrf (list motion) coin wild-contact fw "scout"))
+
+    (let c0 (if (eq (mcd-silicon-viable? nrf) 1) 1 0))
+    (let c1 (if (and (eq (mcd-silicon-viable? esp) 1)
+                     (eq (mcd-silicon-viable? tiny-bad) 0))
+                2 0))
+    (let c2 (if (eq (mcd-firmware-sovereign? fw) 1) 4 0))
+    (let c3 (if (eq (mcd-firmware-sovereign? bad-fw) 0) 8 0))
+    (let c4 (if (eq (mcd-buildable? wearable 2000 2) 1) 16 0))
+    (let c5 (if (eq (mcd-delivery-admissible? human swallowed) 1) 32 0))
+    (let c6 (if (eq (mcd-buildable? room 2000 1) 1) 64 0))
+    (let c7 (if (eq (mcd-buildable? rogue-room 2000 1) 0) 128 0))
+    (let c8 (if (eq (mcd-buildable? raw-design 2000 2) 0) 256 0))
+    (let c9 (if (eq (mcd-delivery-admissible? plant plant-cell) 1) 512 0))
+    (let c10
+        (if (and (eq (mcd-delivery-admissible? wild wild-field-cell) 1)
+                 (eq (mcd-delivery-admissible? wild wild-contact-cell) 0))
+            1024 0))
+    (let c11
+        (if (and (eq (mcd-resonance-active? 80 82 90 1 88) 1)
+                 (and (eq (mcd-resonance-active? 80 82 90 0 88) 0)
+                      (eq (mcd-resonance-active? 60 82 90 1 88) 0)))
+            2048 0))
+    (let c12
+        (if (and (eq (mcd-activate? wearable 2000 2 80 82 90 1 88 5 3 1 2) 1)
+                 (and (eq (mcd-cohesion-active? 2 3 1 2) 0)
+                      (eq (mcd-activate? wearable 2000 2 80 82 90 1 88 5 3 1 1) 0)))
+            4096 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 c12)))))))))))))

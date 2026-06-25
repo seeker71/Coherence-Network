@@ -1,0 +1,76 @@
+; preludes: form-stdlib/core.fk form-stdlib/device-heartbeat.fk form-stdlib/provisioning.fk form-stdlib/mesh-relay.fk form-stdlib/friend-node.fk form-stdlib/mesh-health.fk form-stdlib/hati-mesh.fk form-stdlib/mesh-seed.fk
+;
+; mesh-seed-band - a minimal physical mesh seed proves its consent boundary.
+;
+; Verdict 4095 when every claim lands:
+;   1    the seed carries a tiny hardware profile
+;   2    heartbeat discovery finds a shared channel
+;   4    consented/allowlisted peer is admitted
+;   8    unallowlisted peer is refused
+;   16   low battery sleeps
+;   32   urgent sensing overrides sleep
+;   64   high battery plus neighbors can relay
+;   128  a safe local sensor capability answers
+;   256  raw-private data is refused by policy
+;   512  high-power capability is refused by policy
+;   1024 relay requires both fresh TTL and enough power
+;   2048 no autonomous spread: physical presence, human consent, and signed image are all required
+
+(do
+    (let hw-a (ms-hardware "esp32-c3" 400 4096 8 9000 120000 220 (list "ble" "wifi") (list "temp" "motion")))
+    (let caps-a
+        (list
+            (ms-capability "temp-summary" "temperature" "sensor:signal" 90 1 500)
+            (ms-capability "raw-audio" "sound" "audio:pcm16" 95 3 800)
+            (ms-capability "camera-frame" "vision" "video:rgba-time" 92 2 250000)))
+    (let seed-a (ms-seed "seed-a" hw-a caps-a (list "seed-b") 1 1))
+
+    (let hw-b (ms-hardware "nrf52" 256 1024 4 2500 15000 80 (list "ble") (list "motion")))
+    (let seed-b (ms-seed "seed-b" hw-b (list (ms-capability "motion-summary" "motion" "sensor:signal" 80 1 300)) (list "seed-a") 1 1))
+    (let ghost (ms-seed "ghost" hw-b (empty) (empty) 0 0))
+    (let priority (list "wifi" "ble" "audio"))
+
+    (let msg (list "m1" "seed-a" (list "h" "h") "ask:temperature"))
+    (let dead (list "m2" "seed-a" (empty) "ask:temperature"))
+    (let cache (list (list "old" "seed-b" "held")))
+
+    (let c0
+        (if (and (str_eq (ms-hw-chip (ms-hw seed-a)) "esp32-c3")
+                 (and (eq (ms-hw-sleep-ua (ms-hw seed-a)) 8)
+                      (eq (len (ms-channels seed-a)) 2)))
+            1 0))
+    (let c1
+        (if (and (eq (hb-can-connect? (ms-heartbeat seed-a 10) (ms-heartbeat seed-b 11)) 1)
+                 (str_eq (hb-best-channel (ms-heartbeat seed-a 10) (ms-heartbeat seed-b 11) priority) "ble"))
+            2 0))
+    (let c2
+        (if (eq (ms-admit? seed-a seed-b) 1) 4 0))
+    (let c3
+        (if (eq (ms-admit? seed-a ghost) 0) 8 0))
+    (let c4
+        (if (str_eq (ms-power-mode 9 0 0) "sleep") 16 0))
+    (let c5
+        (if (str_eq (ms-power-mode 9 0 1) "sense") 32 0))
+    (let c6
+        (if (str_eq (ms-power-mode 70 3 0) "relay") 64 0))
+    (let c7
+        (if (and (eq (ms-answerable? seed-a "temperature" 80 1 1000) 1)
+                 (str_eq (ms-answer-capability seed-a "temperature" 80 1 1000) "temp-summary"))
+            128 0))
+    (let c8
+        (if (eq (ms-answerable? seed-a "sound" 80 1 1000) 0) 256 0))
+    (let c9
+        (if (eq (ms-answerable? seed-a "vision" 80 2 1000) 0) 512 0))
+    (let c10
+        (if (and (eq (ms-relay? msg (empty) 80) 1)
+                 (and (eq (ms-relay? msg (empty) 20) 0)
+                      (eq (ms-relay? dead (empty) 80) 0)))
+            1024 0))
+    (let c11
+        (if (and (eq (ms-spawn-allowed? seed-a 1) 1)
+                 (and (eq (ms-spawn-allowed? seed-a 0) 0)
+                      (and (eq (ms-spawn-allowed? ghost 1) 0)
+                           (eq (len (ms-cache-if-friend cache msg 90 0 1)) 2))))
+            2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
