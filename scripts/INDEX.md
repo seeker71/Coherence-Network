@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 363
+**Total files**: 364
 
 | File | Purpose |
 |---|---|
@@ -208,6 +208,7 @@
 | [live_speech_loop_receipt.sh](live_speech_loop_receipt.sh) | live_speech_loop_receipt.sh - known text played over speaker, heard by live mics. |
 | [llama_block0_join_carrier.py](llama_block0_join_carrier.py) | scripts/llama_block0_join_carrier.py — gap D₄: independent numpy-free reference vs Form |
 | [llama_generate_reference.py](llama_generate_reference.py) | llama_generate_reference.py — independent pure-libm fp64 reference for the llama |
+| [llama_sample_generate_reference.py](llama_sample_generate_reference.py) | llama_sample_generate_reference.py — independent pure-libm fp64 reference for the llama |
 | [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
