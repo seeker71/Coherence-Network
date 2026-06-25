@@ -1,0 +1,41 @@
+{
+  "brick": "3zn",
+  "date": "2026-06-24",
+  "title": "the llama (decoder-only, GQA) AUTOREGRESSIVE GENERATION LOOP crosses four-way — embed → multi-layer GQA decode stack → final RMSNorm → unembed → greedy argmax → append → repeat, the loop that turns the proven body into actual TOKEN ids; the KV-cached loop BIT-IDENTICAL to the full-recompute loop, token-for-token",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "summary": "Every PIECE of real llama3.2 decode is already four-way and on the M4 GPU: the multi-layer GQA decode stack (gqa-multi-layer-stack.fk, lgqa-stack-causal/-generate, #3616), RMSNorm (llama-numerics.fk ln-rmsnorm, #3308), matvec (transformer-block.fk tb-matvec), greedy argmax (greedy-decode.fk gd-token, #3402). But no LOOP wired them into actual TOKEN ids. READ-THE-BODY (23rd time): transformer-generate.fk closes the WHISPER loop (encoder-decoder, cross-attention, learned positional) — the decoder-only llama loop (embed → GQA decode stack → final norm → unembed → argmax) was a genuine gap, the last recipe-altitude piece before wiring real GGUF weights. llama-generate.fk closes it at the reusable decoder-engine altitude, a pure composition over already-four-way recipes — no new arithmetic. The KEY design move: the tied embed/unembed table is chosen so embed([0,1]) == the band's published x fixture, so the stack inside the loop reuses the already-four-way pins and the independent libm reference (scripts/llama_generate_reference.py) grounds the actual generated token ids after self-checking against causal-attention-band's published pins.",
+  "recipe": "form/form-stdlib/llama-generate.fk",
+  "band": "form/form-stdlib/tests/llama-generate-band.fk",
+  "reference": "scripts/llama_generate_reference.py — independent pure-libm fp64 oracle; self-checks the 1-layer stack against causal-attention-band's published pins (1893731, -1069281, 1648117), then runs the FULL loop (embed/stack/norm/unembed/argmax) and emits the generated token ids the band pins. GQA-sharing magnitudes need no new reference — grounded by equivalence (cached loop == recompute loop, token-for-token).",
+  "manifest_row": "llama-generate fks 255",
+  "verdict": 255,
+  "four_way": true,
+  "divergent": 0,
+  "validate_cmd": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk form-stdlib/tests/llama-generate-band.fk",
+  "validate_result": "core.fk+...+llama-generate.fk+llama-generate-band.fk → 255 ; fourth arm: 1 band four-way (fkwu + pre-flattened tables) ; 1 ok, 0 divergent",
+  "claims": {
+    "1": "gen3 == [0 1 1 1 1] (GROUNDED end-to-end: embed→stack→norm→unembed→argmax→loop produces the python-pinned sequence — real llama generation, single-head cfg10, 2 layers)",
+    "2": "tA != tB (input-dependence: first generated token from seed [0,1]=1 vs seed [1,0]=0 — argmax follows the prompt, the loop is not a stuck constant)",
+    "4": "gc2 == gr2 (single-head cfg10: the KV-cached generation loop == the full-recompute loop, 2 steps — the KV-cache-for-generation law at the token level)",
+    "8": "gc3 == gr3 (single-head cfg10: cached == recompute, 3 steps — inductive)",
+    "16": "gqc2 == gqr2 (REAL GQA sharing n_q=2 n_kv=1 HD=2 theta-500000: cached == recompute, 2 steps — the heart, real grouping)",
+    "32": "gqc3 == gqr3 (REAL GQA sharing: cached == recompute, 3 steps — inductive, the cache threads past the boundary)",
+    "64": "take(gr3,4) == gr2 (prefix-stable: a longer generation never rewrites earlier tokens — greedy appends, never recomputes history differently)",
+    "128": "gr3 == gmha3 (consolidation: group=1 cfg10 GQA generation loop == the MHA generation loop token-for-token — GQA is the general case, MHA the group=1 special case, NO parallel path)"
+  },
+  "load_bearing_claim": "The KV-cached generation loop produces the IDENTICAL token sequence as the full-recompute loop. lgqa-stack-generate == lgqa-stack-causal bit-for-bit (#3616), and the rest of each step (embed/norm/unembed/argmax) is identical, so the chosen argmax token is identical at every step — lg-generate-cached == lg-generate token-for-token. That carries the cache==recompute equivalence up from the hidden-state level (#3616) to the TOKEN level: the correctness law of a KV cache for generation.",
+  "consolidation": "group=1 (n_kv=n_q, base-10000 cfg) reduces lgqa-stack-* EXACTLY to multi-layer-stack.fk's lblk-stack-* (#3616 claim 128), so the GQA generation loop reduces to the MHA generation loop at group=1 — claim 128 proves gr3 == gmha3 token-for-token. MHA is the special case, NOT a parallel path (core-abstraction-first: one loop engine).",
+  "input_dependence": "A different seed yields a different first generated token (seed [0,1]→1 vs seed [1,0]→0) — the loop responds to the prompt; the unembed+argmax does real work and is not a stuck constant. Both values grounded by the python reference.",
+  "design_move": "The tied embed/unembed table is chosen so embed([0,1]) == the band's published x fixture ([[1,-0.5,0.5,2],[-1,0.25,1.5,-0.75]]) — so the stack inside the loop reuses the already-four-way published pins, and the libm reference (self-checked against causal-attention-band) grounds the generated token ids. The GQA-sharing claims need no new reference: pure cached==recompute equivalence.",
+  "caching_note": "Each cached step here re-grows its KV cache from the full ids-so-far inside lgqa-stack-generate; the proof is the equivalence (cached path == recompute path, token-for-token). True cross-step incremental caching (carry the per-layer caches across generation steps) is the GPU/runtime optimization already proven bit-identical at the stack level by #3601/#3612/#3616 — the recipe-level law here is what makes that optimization sound.",
+  "read_the_body": "transformer-generate.fk / transformer-generate-cached.fk close the WHISPER loop (encoder-decoder, cross-attention, learned positional). The decoder-only llama generation loop (RoPE inside attention, no learned positional, GQA decode stack, tied unembed) was a genuine gap. The multi-layer GQA stack (#3616), greedy-decode (#3402), ln-rmsnorm (#3308), and tb-matvec were all already four-way — the brick composed them into the loop. The cheapest-brick lesson held again for a composition brick: design (the loop shape, the embed-table-reuses-pins move, the self-grounded band, the input-dependence + consolidation claims) was the cost; the four-way proof was seconds.",
+  "lane": "recipe-altitude four-way composition brick (like 3r/3v/3x/3z/3zj/3zl). The decoder-only llama sibling of transformer-generate.fk (whisper's loop). Design was the cost; the four-way proof was seconds.",
+  "named_next_stones": [
+    "wire real llama3.2:3b GGUF weights into the proven loop: parse the GGUF tensors → dequant via q4k/q6k/f16 (already Form-native four-way) → token_embd + per-layer GQA bundles + final norm + tied unembed at full width (n_q=24, n_kv=8, HD=128, d=3072, 28 layers, llama3 theta-500000) — then lg-generate over a real BOS prompt produces the first end-to-end native local llama token",
+    "run the generation loop on the M4 GPU: drive the multi-layer GQA decode-step kernel (#3612/#3620) in the loop with a host-carrier harness, feeding argmax back as the next token (the GPU realization of lg-generate)",
+    "tokenize-llama (#3573) → lg-generate → detokenize: the full text-in/text-out path",
+    "temperature / top-k / nucleus sampling as an alternative selection over the same logits (sampling.fk), beside greedy"
+  ],
+  "predecessor_bricks": ["#3616 (multi-layer GQA decode stack four-way)", "#3601 (KV-cached causal GQA decode step four-way)", "#3402 (greedy argmax four-way)", "#3308 (llama numerics / RMSNorm four-way)", "transformer-generate.fk (whisper generation loop)"],
+  "teaching": "lc-cognitive-sovereignty"
+}

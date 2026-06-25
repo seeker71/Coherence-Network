@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 356
+**Total files**: 364
 
 | File | Purpose |
 |---|---|
@@ -77,7 +77,7 @@
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
 | [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
-| [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | Alias to ensure_form_cli_native.sh — c-bootstrap form-cli (bin-go not warmed here). |
+| [ensure_form_cli_kernel.sh](ensure_form_cli_kernel.sh) | ensure_form_cli_kernel.sh — warm the c-bootstrap fkwu form-cli (agent runtime). |
 | [ensure_form_cli_native.sh](ensure_form_cli_native.sh) | ensure_form_cli_native.sh — the c-bootstrap fkwu form-cli, warmed once and cached. |
 | [eval_form_knowledge.py](eval_form_knowledge.py) | Honest base-vs-tuned eval for the Form-knowledge fine-tune. |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
@@ -92,11 +92,10 @@
 | [field_relay_dev_setup.sh](field_relay_dev_setup.sh) | field_relay_dev_setup.sh — provision a session to BUILD + PROVE the field relay's breath-4 carriers. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
-| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | Maintainer regen: flatten fnri/receipt stack into `form-stdlib/bootstrap/form-cli-table.txt` + emit C. |
-| [form-cli-run.sh](form-cli-run.sh) | Minimal stdin carrier for `form/form-cli` — one line piped, then EOF. |
-| [fkwu_fnri.sh](fkwu_fnri.sh) | Thin wrapper → `form-cli-run.sh fnri …` (logic in `fnri-shell.fk` / `form-cli.fk`). |
+| [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness / resolve / know via fkwu (fc-fnri direct, proven source). |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
-| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri witness + resolve smoke via `form-cli-run.sh` (form-cli binary). |
+| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 4095). |
+| [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form-cli (one line, then EOF). |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
@@ -208,6 +207,7 @@
 | [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
 | [live_speech_loop_receipt.sh](live_speech_loop_receipt.sh) | live_speech_loop_receipt.sh - known text played over speaker, heard by live mics. |
 | [llama_block0_join_carrier.py](llama_block0_join_carrier.py) | scripts/llama_block0_join_carrier.py — gap D₄: independent numpy-free reference vs Form |
+| [llama_generate_reference.py](llama_generate_reference.py) | llama_generate_reference.py — independent pure-libm fp64 reference for the llama |
 | [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
@@ -251,12 +251,14 @@
 | [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
 | [public_api_rendezvous_receipt.sh](public_api_rendezvous_receipt.sh) | public_api_rendezvous_receipt.sh — live public API nonce-hash rendezvous receipt. |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
+| [push-thread-repos.sh](push-thread-repos.sh) | _no top-of-file purpose_ |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
 | [regen_fkwu_bootstrap.sh](regen_fkwu_bootstrap.sh) | regen_fkwu_bootstrap.sh — maintainer-only: emit form-stdlib/bootstrap/fkwu-uni.c via bin-go. |
-| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | regen_form_cli_bootstrap.sh — maintainer-only: flatten (fkwu or go) + emit form-cli C via bin-go. |
+| [regen_form_cli_bootstrap.sh](regen_form_cli_bootstrap.sh) | regen_form_cli_bootstrap.sh — maintainer-only: flatten (bin-go) + emit form-cli C. |
 | [regen_standard_lane_binaries.sh](regen_standard_lane_binaries.sh) | regen_standard_lane_binaries.sh — maintainer-only: compile fkwu + form-cli and |
+| [regen_t_flat.sh](regen_t_flat.sh) | regen_t_flat.sh — maintainer bootstrap for form-stdlib/fourth-flatten-table.txt |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
 | [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |
@@ -326,6 +328,7 @@
 | [test_verify_web_api_css_assets.sh](test_verify_web_api_css_assets.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_pulse_witness.sh](test_verify_web_api_pulse_witness.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_sha_patience.sh](test_verify_web_api_sha_patience.sh) | _no top-of-file purpose_ |
+| [thread-runtime.sh](thread-runtime.sh) | _no top-of-file purpose_ |
 | [thread_runtime_ports.sh](thread_runtime_ports.sh) | _no top-of-file purpose_ |
 | [training_corpus.py](training_corpus.py) | Feed the body's edges into the form-cli training catalog as (intent->realization) pairs. |
 | [transformer_kernel_audit.sh](transformer_kernel_audit.sh) | transformer_kernel_audit.sh — a full transformer block on every organ. |
@@ -342,12 +345,13 @@
 | [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
 | [verify_bootstrap_host_posix.sh](verify_bootstrap_host_posix.sh) | Prove the cross-platform bootstrap host on macOS/Linux/Android(Termux) — the POSIX twin of verify_cross_platform_bootstrap_host_no_go.ps1. |
 | [verify_fkwu_android_no_go.sh](verify_fkwu_android_no_go.sh) | verify_fkwu_android_no_go.sh — observe the C-bootstrap → fkwu runtime LIVE on an Android device, |
-| [verify_fnri_metal_standin_receipt.sh](verify_fnri_metal_standin_receipt.sh) | Standard-receipt JSON for audio/video/gpu stand-in bands (15 four-way each). |
-| [verify_fsh_fnri_bootstrap.sh](verify_fsh_fnri_bootstrap.sh) | `form-cli receipt bootstrap` — witness 32767 via native binary. |
-| [verify_fnri_android_receipt.sh](verify_fnri_android_receipt.sh) | fnri android device receipt — catalog, host-io, metal stand-ins, form-cli-band on device. |
-| [verify_fnri_platform_receipt.sh](verify_fnri_platform_receipt.sh) | Full fnri mac receipt: catalog, witness, metal stand-ins, fsh bootstrap, staged band. |
-| [verify_fnri_windows_standalone.sh](verify_fnri_windows_standalone.sh) | verify_fnri_windows_standalone.sh — fnri standard-receipt windows runtime row. |
+| [verify_fnri_android_receipt.sh](verify_fnri_android_receipt.sh) | verify_fnri_android_receipt.sh — fnri standard-receipt android runtime row (device). |
+| [verify_fnri_mac_binary_dispatch.sh](verify_fnri_mac_binary_dispatch.sh) | verify_fnri_mac_binary_dispatch.sh — mac form-cli binary fnri/receipt dispatch (observed). |
+| [verify_fnri_metal_standin_receipt.sh](verify_fnri_metal_standin_receipt.sh) | _no top-of-file purpose_ |
+| [verify_fnri_platform_receipt.sh](verify_fnri_platform_receipt.sh) | verify_fnri_platform_receipt.sh — platform receipt via fnri stand-in bands (fourth arm). |
+| [verify_fnri_windows_standalone.sh](verify_fnri_windows_standalone.sh) | verify_fnri_windows_standalone.sh — platform receipt row (windows on CI/host, mac cross-check locally). |
 | [verify_form_native_sovereignty.sh](verify_form_native_sovereignty.sh) | verify_form_native_sovereignty.sh — standard-receipt validation on c-bootstrap fkwu |
+| [verify_fsh_fnri_bootstrap.sh](verify_fsh_fnri_bootstrap.sh) | _no top-of-file purpose_ |
 | [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
 | [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |

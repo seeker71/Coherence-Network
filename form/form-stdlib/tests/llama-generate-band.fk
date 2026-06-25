@@ -1,0 +1,103 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk
+;
+; llama-generate-band — the llama (decoder-only, GQA) AUTOREGRESSIVE GENERATION LOOP lifted to the
+; four-kernel floor: the loop that turns the proven body into actual TOKEN ids. Composes the multi-layer
+; GQA decode stack (#3616), RMSNorm (#3308), matvec, and greedy argmax (#3402) into llama's greedy decode:
+; embed -> stack -> final RMSNorm -> unembed -> argmax -> append -> repeat. This is the last recipe-altitude
+; piece before wiring real GGUF weights into the loop; the GPU realization (run the decode-step kernel
+; #3612 over real weights) is the named follow-up.
+;
+; Grounded + self-grounded (the gqa-multi-layer-stack-band discipline):
+;   The single-head base-10000 case (n_q=1 n_kv=1 HD=4) reduces the GQA stack EXACTLY to the MHA stack
+;   (#3616 claim 128), so the independent libm reference scripts/llama_generate_reference.py — which
+;   self-checks against causal-attention-band's published pins (1893731, -1069281, 1648117), then runs the
+;   FULL loop — is the correct oracle for the generated token ids. The embed/unembed table is tied and
+;   chosen so embed([0,1]) == the band's published x fixture, so the stack inside the loop reuses the
+;   already-four-way pins. The GQA-sharing magnitudes need NO new reference: they are grounded by
+;   EQUIVALENCE (KV-cached loop == recompute loop, token-for-token).
+;
+; Two distinct layers (L0 = causal-attention-band weights; L1 = a second bundle) so the stack threads
+; per-layer weights through depth. token_embd rows 0,1 == the x fixture; rows 2,3 are two further tokens
+; (vocab V=4). reference token ids: generate([0,1], 3) == [0,1,1,1,1]; first token from [1,0] == 0.
+;
+; Verdict 255 when the llama GQA generation loop lands four-way:
+;   1    gen3 == [0 1 1 1 1]    (GROUNDED end-to-end: embed->stack->norm->unembed->argmax->loop, python-pinned)
+;   2    tA != tB              (input-dependence: first token from seed [0,1]=1 vs [1,0]=0 — argmax follows the prompt)
+;   4    gc2 == gr2            (single-head cfg10: KV-cached loop == recompute loop, 2 steps — the cache-for-gen law)
+;   8    gc3 == gr3            (single-head cfg10: cached == recompute, 3 steps — inductive)
+;   16   gqc2 == gqr2          (REAL GQA sharing n_q=2 n_kv=1 theta-500000: cached == recompute, 2 steps — heart)
+;   32   gqc3 == gqr3          (REAL GQA sharing: cached == recompute, 3 steps — inductive, cache threads the boundary)
+;   64   take(gr3,4) == gr2    (prefix-stable: a longer generation never rewrites earlier tokens — greedy appends)
+;   128  gr3 == gmha3          (consolidation: group=1 cfg10 GQA loop == the MHA loop token-for-token — no parallel path)
+(do
+    ; --- flat int-list equality, and prefix (take first n) ---
+    (defn lg-ieq (a b)
+      (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+          (if (eq (len b) 0) 0
+              (if (eq (head a) (head b)) (lg-ieq (tail a) (tail b)) 0))))
+    (defn lg-take (xs n)
+      (if (eq n 0) (empty) (cons (head xs) (lg-take (tail xs) (sub n 1)))))
+
+    ; --- layer 0: the causal-attention-band / llama-block-band fixture (d=4) ---
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    ; --- layer 1: a SECOND, distinct weight bundle ---
+    (let g1b (list 1.0 0.9 1.05 1.1))  (let g2b (list 0.95 1.1 0.9 1.0))
+    (let wqb (list (list 0.1 0.3 -0.2 0.4) (list -0.3 0.2 0.5 -0.1) (list 0.4 -0.1 0.2 0.3) (list 0.0 0.25 -0.35 0.15)))
+    (let wkb (list (list 0.3 -0.2 0.4 0.1) (list 0.15 0.5 -0.1 0.2) (list -0.05 0.3 0.25 -0.15) (list 0.4 -0.25 0.1 0.35)))
+    (let wvb (list (list 0.2 0.4 -0.15 0.3) (list 0.5 -0.1 0.2 0.45) (list -0.2 0.35 0.1 -0.05) (list 0.25 0.15 -0.3 0.2)))
+    (let wob (list (list 0.4 -0.3 0.2 0.5) (list 0.1 0.45 -0.15 0.2) (list -0.25 0.3 0.4 0.05) (list 0.35 -0.1 0.25 -0.2)))
+    (let wgb (list (list 0.3 0.2 -0.4 0.1) (list 0.5 -0.3 0.15 0.25) (list -0.1 0.4 0.3 -0.2) (list 0.2 0.05 -0.25 0.45)))
+    (let wub (list (list 0.15 0.35 -0.2 0.1) (list 0.4 -0.15 0.25 0.3) (list -0.25 0.2 0.35 -0.1) (list 0.3 0.1 -0.05 0.4)))
+    (let wdb (list (list 0.35 -0.15 0.25 0.2) (list 0.2 0.4 -0.3 0.1) (list -0.2 0.15 0.5 -0.25) (list 0.1 -0.05 0.3 0.45)))
+    (let eps 0.00001)
+    (let L0 (list g1 wq wk wv wo g2 wg wu wd))
+    (let L1 (list g1b wqb wkb wvb wob g2b wgb wub wdb))
+    (let layers2 (list L0 L1))
+
+    ; --- the tied embed/unembed table (V=4): rows 0,1 == the x fixture so the stack reuses the published
+    ;     pins; rows 2,3 are two further vocabulary tokens. g_final = the model's output norm gain. ---
+    (let tok (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)
+                   (list 0.5 1.0 -0.5 0.25) (list 0.25 -1.0 0.75 -0.5)))
+    (let gf (list 1.1 0.9 1.0 1.05))
+    (let seed  (list 0 1))   ; embeds to the band's x fixture exactly
+    (let seedb (list 1 0))   ; the x fixture with rows swapped
+
+    ; --- single-head cfg10 (n_q=1 n_kv=1 HD=4): the GQA loop reduces EXACTLY to the MHA loop ---
+    (let cfg10 (rope-cfg 10000.0 32.0 1.0 4.0 8192.0))
+    (let sc4 (div 1.0 (tn-sqrt 4.0)))
+    (let gr2 (lg-generate seed tok layers2 gf tok eps sc4 1 1 4 cfg10 2))
+    (let gr3 (lg-generate seed tok layers2 gf tok eps sc4 1 1 4 cfg10 3))
+    (let gc2 (lg-generate-cached seed tok layers2 gf tok eps sc4 1 1 4 cfg10 2))
+    (let gc3 (lg-generate-cached seed tok layers2 gf tok eps sc4 1 1 4 cfg10 3))
+    (let tA (lg-step-causal seed  tok layers2 gf tok eps sc4 1 1 4 cfg10))
+    (let tB (lg-step-causal seedb tok layers2 gf tok eps sc4 1 1 4 cfg10))
+    (let c0 (if (eq (lg-ieq gr3 (list 0 1 1 1 1)) 1) 1 0))
+    (let c1 (if (eq tA tB) 0 2))
+    (let c2 (if (eq (lg-ieq gc2 gr2) 1) 4 0))
+    (let c3 (if (eq (lg-ieq gc3 gr3) 1) 8 0))
+
+    ; --- the REAL GQA sharing (n_q=2 n_kv=1 HD=2) under the llama3 theta-500000 cfg ---
+    (let cfgl3 (rope-cfg-llama3))
+    (let sc2 (div 1.0 (tn-sqrt 2.0)))
+    (let gqr2 (lg-generate        seed tok layers2 gf tok eps sc2 2 1 2 cfgl3 2))
+    (let gqc2 (lg-generate-cached seed tok layers2 gf tok eps sc2 2 1 2 cfgl3 2))
+    (let gqr3 (lg-generate        seed tok layers2 gf tok eps sc2 2 1 2 cfgl3 3))
+    (let gqc3 (lg-generate-cached seed tok layers2 gf tok eps sc2 2 1 2 cfgl3 3))
+    (let c4 (if (eq (lg-ieq gqc2 gqr2) 1) 16 0))
+    (let c5 (if (eq (lg-ieq gqc3 gqr3) 1) 32 0))
+
+    ; --- prefix stability: take(gr3, 4) == gr2 (a longer generation never rewrites earlier tokens) ---
+    (let c6 (if (eq (lg-ieq (lg-take gr3 4) gr2) 1) 64 0))
+
+    ; --- consolidation: group=1 cfg10 GQA generation loop == the MHA generation loop, token-for-token ---
+    (let gmha3 (lg-generate-mha seed tok layers2 gf tok eps sc4 4 3))
+    (let c7 (if (eq (lg-ieq gr3 gmha3) 1) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
