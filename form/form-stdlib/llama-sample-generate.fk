@@ -1,0 +1,54 @@
+; llama-sample-generate.fk — the llama (decoder-only, GQA) autoregressive SAMPLED generation loop:
+; the same decode stack as greedy, but the token is DRAWN from a shaped distribution with a seeded
+; counter PRNG instead of taken by argmax. Wires the four-way greedy loop (llama-generate.fk, #3649)
+; to the four-way sampling draw (sampling.fk, #3651) — the named next stone from #3651's own receipt.
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk form-stdlib/sampling.fk
+;
+; The greedy loop (lg-generate, #3649) takes the most-likely token: embed -> multi-layer GQA decode
+; stack -> final RMSNorm -> tied unembed -> gd-token (argmax). Serving wants the rung above greedy:
+; SHAPE the distribution, then DRAW. sampling.fk owns both halves four-way — the deterministic filter
+; (temperature/softmax/top-k/top-p) AND the draw (a MINSTD counter PRNG + inverse-CDF, #3651). No new
+; arithmetic here; a pure composition that threads the PRNG state alongside the ids:
+;
+;   logits : lg-logits (lgqa-stack-causal (embed ids) ...)   ; the SAME stack+unembed as greedy
+;   shape  : probs = smp-topk-mask (smp-softmax (smp-temperature logits t)) k
+;   draw   : st2 = smp-minstd state ; u = smp-uniform st2 ; next = smp-sample probs u
+;   repeat, appending next and threading st2 (advance the PRNG ONCE per step — the smp-draw-seq rule).
+;
+; The LOAD-BEARING law, composing what is already four-way (core-abstraction-first): with k=1 the
+; top-k mask keeps only the single largest probability, so smp-sample returns that index for EVERY u —
+; the sampled loop reduces EXACTLY to the greedy loop lg-generate. Greedy is the k=1 special case, NOT
+; a parallel path. (Even when the max ties, a near-zero u picks the lowest-index max bucket, matching
+; gd-token's ties->lowest rule — so k=1 with a low-u seed is greedy whether or not the argmax is
+; unique.) Temperature is a monotone positive scaling (smp-temperature scales by 1/t), so it never
+; reorders the logits — k=1 is temperature-invariant too. These reductions are how the whole sampled
+; pipeline is grounded by EQUIVALENCE to the four-way greedy loop; the genuine draw path (k>1) is
+; grounded against the independent libm+MINSTD reference scripts/llama_sample_generate_reference.py.
+;
+; Lives at the reusable decoder-engine altitude (any token_embd / layer list / unembed samples the
+; same way; this instance is the real llama3 stack). fp64 lane; deterministic and reproducible from the
+; seed — same seed, same token sequence, every kernel. Proven four-way by tests/llama-sample-generate-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- the shaped distribution at the current ids: stack -> final RMSNorm -> unembed -> temperature ->
+;     softmax -> top-k mask. The same logits as greedy (lg-logits), then sampling.fk's filter. ---
+(defn lgs-probs (ids tok layers gf unembed eps scale n_q n_kv HD c t k)
+  (smp-topk-mask
+    (smp-softmax
+      (smp-temperature
+        (lg-logits (lgqa-stack-causal (lg-embed tok ids) layers eps scale n_q n_kv HD c) gf unembed eps)
+        t))
+    k))
+
+; --- the autoregressive SAMPLED loop: thread (ids, PRNG state). Advance the PRNG ONCE per step (the
+;     smp-draw-seq discipline), draw the next token from the shaped distribution, append, recurse.
+;     Deterministic from the seed: same state, same ids, same token sequence — four-way like every fold. ---
+(defn lg-generate-sampled (ids tok layers gf unembed eps scale n_q n_kv HD c t k state steps)
+  (if (eq steps 0) ids
+      (do
+        (let st2 (smp-minstd state))
+        (let nxt (smp-sample (lgs-probs ids tok layers gf unembed eps scale n_q n_kv HD c t k)
+                             (smp-uniform st2)))
+        (lg-generate-sampled (lg-snoc ids nxt) tok layers gf unembed eps scale n_q n_kv HD c t k
+                             st2 (sub steps 1)))))
