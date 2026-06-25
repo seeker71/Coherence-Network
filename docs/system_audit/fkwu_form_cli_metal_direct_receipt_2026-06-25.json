@@ -1,0 +1,45 @@
+{
+  "date": "2026-06-25",
+  "trace_id": "fkwu-form-cli-metal-direct-20260625T165858Z",
+  "receipt_kind": "fkwu-form-cli-direct-metal-receipt",
+  "thread_branch": "codex/form-metal-direct-bridge-20260625",
+  "git_commit": "64b40fc8a",
+  "verdict": "pass",
+  "receipt_path": "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25.json",
+  "observable_trace": {
+    "trace_dir": "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace",
+    "trace_sha256": "c2419c2d52684f6a2c9913cbe3d45f8d7dc1a95e3951fc2ac947e023ef91cbbb",
+    "runtime_output": "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/runtime.out",
+    "runtime_output_sha256": "f85b7a0342b487fb02202979ca0ca736b876cc9317aa3ea7e27abae5497daca3",
+    "build_output": "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/build.out",
+    "build_output_sha256": "fd9ddcb2b71b8c713339023cf0d14cb44d635dc7748b2736dcd71fb5d04951cf",
+    "linked_libraries": "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/linked-libraries.out",
+    "linked_libraries_sha256": "662c4fc652e16777ea6b9653de48c60e005c65e9f6fb1c81766837c03960e27d",
+    "metal_source": "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/matvec.metal",
+    "metal_source_sha256": "2adaeb025565fa32113c4db484b4ba2216823a6bad267f826f71ca8928267a9e",
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-form-cli-metal-direct-20260625T165858Z/artifact/form-cli-metal-direct",
+    "compiled_artifact_sha256": "6c569d3906860f35943e42021adc5edbf173d3bbe11a3b65669f0ba223838af2",
+    "compiled_artifact_storage": ".cache (not committed)"
+  },
+  "target": {
+    "desired_path": "form-cli REPL -> fkwu native tag 203 -> linked Metal carrier -> device/library/pipeline/buffers/dispatch/readback",
+    "rejected_path": "form-cli -> HTTP/socket -> Ollama",
+    "runtime_dependency_claim_scope": "compiled proof binary under sanitized PATH"
+  },
+  "gates": {
+    "fkwu_form_cli_native_tag_203": true,
+    "form_cli_repl_verb_metal_fixture": true,
+    "metal_device_observed": true,
+    "runtime_path_sanitized": true,
+    "denied_toolchain_names_visible_on_path": 0,
+    "http_or_ollama_absent": true,
+    "embedded_msl_bytes": 450,
+    "gpu_y": "[-0.250000,5.000000]",
+    "max_delta": "0.000000000"
+  },
+  "open_bridges": [
+    "generic metal_matvec_f32(msl,kernel,model_bytes) primitive instead of a deterministic fixture",
+    "real GGUF/content-addressed tensor-cell loader in the fkwu-controlled model path",
+    "full-width Llama 3.2 tokenizer -> 28-layer GQA decode -> logits/argmax -> decoded token without Ollama"
+  ]
+}

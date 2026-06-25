@@ -1,0 +1,731 @@
+; jit-tensor-emit.fk — the tensor JIT's emitter as a FORM RECIPE (close-jit-crystallization's heart).
+;
+; host-kernel.form's highest-leverage closing recipe asks the JIT to become body, not kernel hardcode:
+; the EMITTER — the intelligence that turns a recipe shape into native source — is Form; the kernel
+; keeps only the dumb carriers (rustc --crate-type=cdylib, dlopen, call-by-pointer). This recipe emits
+; the M5 slice-ABI matvec: `pub unsafe extern fn NAME(w,x,y,rows,cols)` over contiguous f64 buffers
+; (`extern fn` is C-ABI in Rust — no quote characters, so the source stays a plain Form string).
+;
+; CONFORMANCE BY CONSTRUCTION: the inner loop accumulates j from cols-1 DOWN to 0 — exactly
+; transformer-block.fk's tb-dot right-fold (a0·b0 + (a1·b1 + (… + 0.0))). Same op order, same fp64:
+; the native result is the recipe's result to the last bit, not merely within epsilon. fp64 lane
+; first; the bf16/int8 lanes parameterize the same emission with format-arith.fk's semantics when
+; the kernel carrier learns the slice ABI.
+;
+; The string IS the cell: an emitted source text is content-addressed like any value, so two
+; identical emissions intern to one NodeID — the crystallization cache comes free.
+
+(defn jte-matvec-rust (fname)
+  (str_concat "#[no_mangle] pub unsafe extern fn "
+  (str_concat fname
+              " (w: *const f64, x: *const f64, y: *mut f64, rows: i64, cols: i64) { let r = rows as usize; let c = cols as usize; let mut i = 0usize; while i < r { let row = w.add(i * c); let mut acc = 0.0f64; let mut j = c; while j > 0 { j -= 1; acc = *row.add(j) * *x.add(j) + acc; } *y.add(i) = acc; i += 1; } }")))
+
+; jte-matvec-msl-spine — the SAME emitter discipline pointed at the GPU: Metal Shading Language
+; source for the matvec, one thread per output row (rows are independent — parallelism without
+; touching the fold), inner loop accumulating j DOWN exactly like tb-dot and the rust emission
+; above. ONE spine; precision arrives as DATA (elemty = the lane's storage type, accty = the
+; accumulator type), so half and bfloat are rows, never copies of the emitter.
+;
+; The conversion chain the spine declares (per format-arith's cross-precision discipline — each
+; side held to its declared precision, the gate defined BY the format's own semantics):
+;   load    elemty -> accty   exact (every half/bfloat value is representable in fp32)
+;   mul/add in accty          two roundings, split through the named temporary p so no
+;                             conformant Metal compiler can contract them into an fma
+;   store   accty -> elemty   ONE rounding, round-to-nearest-even (MSL conversions and
+;                             format-arith's fq-rne agree on the tie rule)
+; For the fp32 lane the conversions are identities — the spine names the chain uniformly.
+; MEASURED on this shape (M4 Max, mathMode safe): every lane's output rows bit-exact vs a CPU
+; reference computed in the same chain (scripts/metal_matvec_audit.sh). No #include needed —
+; kernel/device/constant/uint/half/bfloat are language-level, so the source stays one quote-free
+; line, a plain Form string like its rust sibling.
+
+(defn jte-matvec-msl-spine (fname elemty accty)
+  (str_concat "kernel void "
+  (str_concat fname
+  (str_concat "(device const "
+  (str_concat elemty
+  (str_concat "* w [[buffer(0)]], device const "
+  (str_concat elemty
+  (str_concat "* x [[buffer(1)]], device "
+  (str_concat elemty
+  (str_concat "* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const "
+  (str_concat elemty
+  (str_concat "* row = w + i * cols; "
+  (str_concat accty
+  (str_concat " acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; "
+  (str_concat accty
+  (str_concat " p = "
+  (str_concat accty
+  (str_concat "(row[j]) * "
+  (str_concat accty
+  (str_concat "(x[j]); acc = p + acc; } y[i] = "
+  (str_concat elemty "(acc); }")))))))))))))))))))))
+
+; format rows — the lane's MSL storage type and accumulator type as data. The accumulator is
+; fp32 in every current lane (M1 format-arith's e.g.: accumulate wide, store in the lane format,
+; one rounding at the boundary); a future lane that accumulates differently is a new row here,
+; not a new emitter. "bf16" carries the Metal-version gate: MSL bfloat is Metal 3.1+ — the live
+; witness checks at runtime and skips-with-name where absent.
+(defn jte-msl-elem (fmt) (if (str_eq fmt "f16") "half" (if (str_eq fmt "bf16") "bfloat" "float")))
+(defn jte-msl-acc (fmt) "float")
+
+(defn jte-matvec-msl-fmt (fname fmt) (jte-matvec-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+(defn jte-matvec-msl (fname) (jte-matvec-msl-fmt fname "f32"))
+
+; --- affine-layer TRAINING-STEP kernel, emitted as a Form recipe (the learning kernel on metal) ---
+; One GPU thread per output row i of y = W·x + b. It computes the forward dot (the SAME downward
+; right-fold as tb-dot / the matvec spine, so the order matches the recipe), the SSE residual and
+; per-row loss, the upstream grad g = 2(y_i - t_i), then applies the SGD update IN PLACE:
+;   row_i[j] -= lr · g · x[j]   (this row of dW = outer(g, x))      b[i] -= lr · g   (db = g).
+; This is transformer-backprop.fk's tbp-step, one row, on the GPU: every thread owns row i, reads
+; its whole row before writing it, so there is no cross-thread aliasing. The Form recipe transformer-
+; backprop.fk (fp64, proven 127 three-way) is the algorithm; this is its GPU carrier, gated bit-exact
+; against an fp32 CPU reference in the lane's own semantics (metal_backprop_audit.sh). Buffers: w,b,x,t
+; in the lane elem type; loss, lr, and every accumulator in the fp32 acc type (accumulate-wide).
+(defn jte-train-msl-sig (fname el ac)
+  (str_concat "kernel void "
+  (str_concat fname
+  (str_concat "(device "
+  (str_concat el
+  (str_concat "* w [[buffer(0)]], device "
+  (str_concat el
+  (str_concat "* b [[buffer(1)]], device const "
+  (str_concat el
+  (str_concat "* x [[buffer(2)]], device const "
+  (str_concat el
+  (str_concat "* t [[buffer(3)]], device "
+  (str_concat ac
+  (str_concat "* loss [[buffer(4)]], constant uint& rows [[buffer(5)]], constant uint& cols [[buffer(6)]], constant "
+  (str_concat ac
+  "& lr [[buffer(7)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; ")))))))))))))))
+(defn jte-train-msl-fwd (el ac)
+  (str_concat "device " (str_concat el
+  (str_concat "* row = w + i * cols; " (str_concat ac
+  (str_concat " acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; " (str_concat ac
+  (str_concat " p = " (str_concat ac
+  (str_concat "(row[j]) * " (str_concat ac
+  (str_concat "(x[j]); acc = p + acc; } " (str_concat ac
+  (str_concat " y = acc + " (str_concat ac
+  (str_concat "(b[i]); " (str_concat ac
+  (str_concat " d = y - " (str_concat ac
+  (str_concat "(t[i]); loss[i] = d * d; " (str_concat ac
+  " g = 2.0f * d; ")))))))))))))))))))))
+(defn jte-train-msl-upd (el ac)
+  (str_concat "uint k = cols; while (k > 0) { k -= 1; row[k] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  (str_concat "(row[k]) - lr * g * " (str_concat ac
+  (str_concat "(x[k])); } b[i] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  "(b[i]) - lr * g); }")))))))))))
+(defn jte-affine-train-msl-spine (fname el ac)
+  (str_concat (jte-train-msl-sig fname el ac)
+  (str_concat (jte-train-msl-fwd el ac) (jte-train-msl-upd el ac))))
+(defn jte-affine-train-msl-fmt (fname fmt) (jte-affine-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+(defn jte-affine-train-msl (fname) (jte-affine-train-msl-fmt fname "f32"))
+
+
+; --- CUDA / NVIDIA (RTX, sm_89) lane: __global__ twins of the MSL matvec + affine-train spines ---
+; The Metal lane's exact transform for NVIDIA, every byte still authored by this recipe:
+;   kernel void                  -> __global__ void
+;   device / device const / [[buffer(n)]]  -> plain pointers (drop the qualifiers)
+;   constant uint& rows ...      -> unsigned rows ...        constant <ac>& lr -> <ac> lr (by value)
+;   uint i [[thread_position_in_grid]]  -> unsigned i = blockIdx.x * blockDim.x + threadIdx.x
+; The ARITHMETIC BODY is byte-for-byte the MSL body — same downward right-fold, same two-rounding
+; mul-then-add, fp32 accumulator. Compiled with nvcc --fmad=false (no FMA contraction) the GPU
+; result is the recipe's result to the last bit; scripts/cuda_matvec_audit.sh / cuda_affine_train_audit.sh
+; gate it bit-exact against the CPU right-fold (the CUDA twins of metal_matvec_audit.sh / metal_backprop_audit.sh).
+; No `extern "C"` — that needs quote chars (the recipe stays a plain Form string, like the rust sibling's
+; `extern fn`); the audit's host main() calls the kernel in the same .cu, so C++ mangling is irrelevant.
+; elem/acc rows mirror jte-msl-elem/acc: f32 is the bit-exact ground; the __half / __nv_bfloat16 lanes
+; are the next rung (one RNE store at the lane boundary, same as the MSL f16/bf16 lanes).
+(defn jte-cuda-elem (fmt) (if (str_eq fmt "f16") "__half" (if (str_eq fmt "bf16") "__nv_bfloat16" "float")))
+(defn jte-cuda-acc (fmt) "float")
+
+(defn jte-matvec-cuda-spine (fname elemty accty)
+  (str_concat "__global__ void "
+  (str_concat fname
+  (str_concat "(const "
+  (str_concat elemty
+  (str_concat "* w, const "
+  (str_concat elemty
+  (str_concat "* x, "
+  (str_concat elemty
+  (str_concat "* y, unsigned rows, unsigned cols) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; const "
+  (str_concat elemty
+  (str_concat "* row = w + i * cols; "
+  (str_concat accty
+  (str_concat " acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; "
+  (str_concat accty
+  (str_concat " p = "
+  (str_concat accty
+  (str_concat "(row[j]) * "
+  (str_concat accty
+  (str_concat "(x[j]); acc = p + acc; } y[i] = "
+  (str_concat elemty "(acc); }")))))))))))))))))))))
+(defn jte-matvec-cuda-fmt (fname fmt) (jte-matvec-cuda-spine fname (jte-cuda-elem fmt) (jte-cuda-acc fmt)))
+(defn jte-matvec-cuda (fname) (jte-matvec-cuda-fmt fname "f32"))
+
+(defn jte-train-cuda-sig (fname el ac)
+  (str_concat "__global__ void "
+  (str_concat fname
+  (str_concat "("
+  (str_concat el
+  (str_concat "* w, "
+  (str_concat el
+  (str_concat "* b, const "
+  (str_concat el
+  (str_concat "* x, const "
+  (str_concat el
+  (str_concat "* t, "
+  (str_concat ac
+  (str_concat "* loss, unsigned rows, unsigned cols, "
+  (str_concat ac
+  " lr) { unsigned i = blockIdx.x * blockDim.x + threadIdx.x; if (i >= rows) return; ")))))))))))))))
+(defn jte-train-cuda-fwd (el ac)
+  (str_concat el
+  (str_concat "* row = w + i * cols; " (str_concat ac
+  (str_concat " acc = 0.0f; unsigned j = cols; while (j > 0) { j -= 1; " (str_concat ac
+  (str_concat " p = " (str_concat ac
+  (str_concat "(row[j]) * " (str_concat ac
+  (str_concat "(x[j]); acc = p + acc; } " (str_concat ac
+  (str_concat " y = acc + " (str_concat ac
+  (str_concat "(b[i]); " (str_concat ac
+  (str_concat " d = y - " (str_concat ac
+  (str_concat "(t[i]); loss[i] = d * d; " (str_concat ac
+  " g = 2.0f * d; "))))))))))))))))))))
+(defn jte-train-cuda-upd (el ac)
+  (str_concat "unsigned k = cols; while (k > 0) { k -= 1; row[k] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  (str_concat "(row[k]) - lr * g * " (str_concat ac
+  (str_concat "(x[k])); } b[i] = " (str_concat el
+  (str_concat "(" (str_concat ac
+  "(b[i]) - lr * g); }")))))))))))
+(defn jte-affine-train-cuda-spine (fname el ac)
+  (str_concat (jte-train-cuda-sig fname el ac)
+  (str_concat (jte-train-cuda-fwd el ac) (jte-train-cuda-upd el ac))))
+(defn jte-affine-train-cuda-fmt (fname fmt) (jte-affine-train-cuda-spine fname (jte-cuda-elem fmt) (jte-cuda-acc fmt)))
+(defn jte-affine-train-cuda (fname) (jte-affine-train-cuda-fmt fname "f32"))
+
+
+; --- FFN (MLP) TRAINING-STEP kernel, emitted as a Form recipe — the architect's layer, learning on Metal ---
+; transformer-backprop.fk's tbp-mlp-step is the algorithm (fp64, proven three-way): one SGD step over the
+; two-layer FFN y = W2·gelu(W1·x + b1) + b2 — the exact block ac-ffn-layer builds and the architect trains.
+; This emits that step as ONE Metal kernel run by a SINGLE threadgroup, every byte authored by the recipe.
+;
+; The transcendental is the recipe's OWN, not the hardware's: gelu/gelu' are composed here from fexp (the
+; square-and-reduce 14-term Taylor of tn-exp) and ftanh ((e^2x-1)/(e^2x+1) of tn-tanh) — so the GPU walks
+; transformer-numerics.fk's approximation, not Metal's tanh(). Same algorithm as the fp32 CPU mirror, so the
+; parity gate is honest (metal_ffn_audit.sh): no hidden hardware intrinsic between the recipe and the silicon.
+;
+; Threading without aliasing: each thread strides over hidden units (phases 1,3,5) or outputs (phases 2,4).
+; The folds match the recipe — the two forward matvecs carry tb-dot's DOWNWARD right-fold; the dh1 column
+; reduction Σ_i W2[i][k]·gy[i] carries tbp-wt-gy-acc's FORWARD left-fold. The one ordering subtlety the
+; residual-free block forces: dh1 (phase 3) reads the OLD W2 to backprop into the hidden layer, so it must
+; finish before phase 4 overwrites W2 — a threadgroup_barrier(mem_device) between every phase makes the
+; single-group read-then-write deterministic. Scratch buffers h1/a/gy/dh1 hold the forward intermediates the
+(defn jte-mlp-helpers (ac)
+  (str_concat ac (str_concat " fexp_small(" (str_concat ac (str_concat " x){ " (str_concat ac (str_concat " n = 1.0f; " (str_concat ac (str_concat " term = 1.0f; " (str_concat ac (str_concat " acc = 1.0f; while (n <= 14.0f) { term = term * (x / n); acc = acc + term; n = n + 1.0f; } return acc; } " (str_concat ac (str_concat " fexp(" (str_concat ac (str_concat " x){ int k = 0; while ((x < 0.0f ? -x : x) > 0.5f) { x = x / 2.0f; k = k + 1; } " (str_concat ac (str_concat " v = fexp_small(x); while (k > 0) { v = v * v; k = k - 1; } return v; } " (str_concat ac (str_concat " ftanh(" (str_concat ac (str_concat " x){ " (str_concat ac (str_concat " e = fexp(2.0f * x); return (e - 1.0f) / (e + 1.0f); } " (str_concat ac (str_concat " fgelu(" (str_concat ac (str_concat " x){ " (str_concat ac (str_concat " z = 0.7978845608028654f * (x + 0.044715f * (x * (x * x))); return (0.5f * x) * (1.0f + ftanh(z)); } " (str_concat ac (str_concat " fgelud(" (str_concat ac (str_concat " x){ " (str_concat ac (str_concat " z = 0.7978845608028654f * (x + 0.044715f * (x * (x * x))); " (str_concat ac " th = ftanh(z); return (0.5f * (1.0f + th)) + ((0.5f * x) * ((1.0f - (th * th)) * (0.7978845608028654f * (1.0f + (0.134145f * (x * x)))))); } "))))))))))))))))))))))))))))))))))))
+
+(defn jte-mlp-sig (fname el ac)
+  (str_concat "kernel void " (str_concat fname (str_concat "(device " (str_concat el (str_concat "* w1 [[buffer(0)]], device " (str_concat el (str_concat "* b1 [[buffer(1)]], device " (str_concat el (str_concat "* w2 [[buffer(2)]], device " (str_concat el (str_concat "* b2 [[buffer(3)]], device const " (str_concat el (str_concat "* x [[buffer(4)]], device const " (str_concat el (str_concat "* t [[buffer(5)]], device " (str_concat ac (str_concat "* loss [[buffer(6)]], device " (str_concat ac (str_concat "* h1 [[buffer(7)]], device " (str_concat ac (str_concat "* a [[buffer(8)]], device " (str_concat ac (str_concat "* gy [[buffer(9)]], device " (str_concat ac (str_concat "* dh1 [[buffer(10)]], constant uint& indim [[buffer(11)]], constant uint& hid [[buffer(12)]], constant uint& outd [[buffer(13)]], constant " (str_concat ac "& lr [[buffer(14)]], uint tid [[thread_position_in_threadgroup]], uint tgs [[threads_per_threadgroup]]) { ")))))))))))))))))))))))))))
+
+(defn jte-mlp-fwd1 (el ac)
+  (str_concat "for (uint k = tid; k < hid; k += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint j = indim; while (j > 0) { j -= 1; acc = " (str_concat ac (str_concat "(w1[k * indim + j]) * " (str_concat ac (str_concat "(x[j]) + acc; } " (str_concat ac (str_concat " hk = acc + " (str_concat ac "(b1[k]); h1[k] = hk; a[k] = fgelu(hk); } threadgroup_barrier(mem_flags::mem_device); ")))))))))))
+
+(defn jte-mlp-fwd2 (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint k = hid; while (k > 0) { k -= 1; acc = " (str_concat ac (str_concat "(w2[i * hid + k]) * a[k] + acc; } " (str_concat ac (str_concat " yi = acc + " (str_concat ac (str_concat "(b2[i]); " (str_concat ac (str_concat " d = yi - " (str_concat ac "(t[i]); loss[i] = d * d; gy[i] = 2.0f * d; } threadgroup_barrier(mem_flags::mem_device); ")))))))))))))
+
+(defn jte-mlp-dh1 (el ac)
+  (str_concat "for (uint k = tid; k < hid; k += tgs) { " (str_concat ac (str_concat " s = 0.0f; uint i = 0; while (i < outd) { s = s + gy[i] * " (str_concat ac "(w2[i * hid + k]); i += 1; } dh1[k] = s * fgelud(h1[k]); } threadgroup_barrier(mem_flags::mem_device); ")))))
+
+(defn jte-mlp-upd (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { uint k = hid; while (k > 0) { k -= 1; w2[i * hid + k] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(w2[i * hid + k]) - lr * gy[i] * a[k]); } b2[i] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(b2[i]) - lr * gy[i]); } for (uint k = tid; k < hid; k += tgs) { uint j = indim; while (j > 0) { j -= 1; w1[k * indim + j] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(w1[k * indim + j]) - lr * dh1[k] * " (str_concat ac (str_concat "(x[j])); } b1[k] = " (str_concat el (str_concat "(" (str_concat ac "(b1[k]) - lr * dh1[k]); } }")))))))))))))))))))
+
+(defn jte-mlp-train-msl-spine (fname el ac)
+  (str_concat (jte-mlp-helpers ac)
+  (str_concat (jte-mlp-sig fname el ac)
+  (str_concat (jte-mlp-fwd1 el ac)
+  (str_concat (jte-mlp-fwd2 el ac)
+  (str_concat (jte-mlp-dh1 el ac) (jte-mlp-upd el ac)))))))
+
+(defn jte-mlp-train-msl-fmt (fname fmt) (jte-mlp-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+
+(defn jte-mlp-train-msl (fname) (jte-mlp-train-msl-fmt fname "f32"))
+
+; ── forward-only kernel: y = W2·gelu(W1·x + b1) + b2 (no loss/grad/update) — the SAME forward as the
+; training step (jte-mlp-fwd1 + the recipe's own fgelu), emitted standalone so the held-out EVAL runs
+; through recipe-authored bytes, not a hand-rolled host copy. Buffers w1,b1,w2,b2,x -> y, scratch h1,a. ──
+(defn jte-mlp-fwd-sig (fname el ac)
+  (str_concat "kernel void " (str_concat fname (str_concat "(device " (str_concat el (str_concat "* w1 [[buffer(0)]], device " (str_concat el (str_concat "* b1 [[buffer(1)]], device " (str_concat el (str_concat "* w2 [[buffer(2)]], device " (str_concat el (str_concat "* b2 [[buffer(3)]], device const " (str_concat el (str_concat "* x [[buffer(4)]], device " (str_concat el (str_concat "* y [[buffer(5)]], device " (str_concat ac (str_concat "* h1 [[buffer(6)]], device " (str_concat ac "* a [[buffer(7)]], constant uint& indim [[buffer(8)]], constant uint& hid [[buffer(9)]], constant uint& outd [[buffer(10)]], uint tid [[thread_position_in_threadgroup]], uint tgs [[threads_per_threadgroup]]) { ")))))))))))))))))))
+
+(defn jte-mlp-fwd-out (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint k = hid; while (k > 0) { k -= 1; acc = " (str_concat ac (str_concat "(w2[i * hid + k]) * a[k] + acc; } y[i] = " (str_concat el (str_concat "(acc + " (str_concat ac "(b2[i])); } }")))))))))
+
+(defn jte-mlp-fwd-msl-spine (fname el ac)
+  (str_concat (jte-mlp-helpers ac)
+  (str_concat (jte-mlp-fwd-sig fname el ac)
+  (str_concat (jte-mlp-fwd1 el ac) (jte-mlp-fwd-out el ac)))))
+
+(defn jte-mlp-fwd-msl-fmt (fname fmt) (jte-mlp-fwd-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+(defn jte-mlp-fwd-msl (fname) (jte-mlp-fwd-msl-fmt fname "f32"))
+
+; --- FFN-RESIDUAL (one pre-LN layer) TRAINING-STEP kernel, emitted as a Form recipe — the architect's ACTUAL
+; layer on Metal. tbp-stk-step over one "ffn" layer is the algorithm (fp64, proven three-way): the residual
+; block y = h + (W2*gelu(W1*LN(h) + b1) + b2), exactly what ac-ffn-layer builds and ac-train trains. This is
+; the FFN core kernel (jte-mlp-train-msl) wrapped with the two pieces the architect's block adds: a pre-LN of
+; the input (z = LN(h), computed by thread 0 with tn-mean/tn-var/tn-sqrt's exact folds — biased variance, eps
+; inside a 50-iteration Newton sqrt) and the residual highway (y = h + ffn, so the output-gradient gy = 2(y-t)
+; flows straight to the FFN as gout). The FFN reads z, and the W1 update uses z, not the raw input. Same
+; recipe-own exp/tanh (jte-mlp-helpers); same downward forward folds and forward dh1 column fold; same
+; barriered single-threadgroup phases plus phase 0 for the layernorm. Proven byte-stable by
+; tests/resid-train-emit-band.fk; trained live and capacity-searched on the M4 Max by scripts/metal_arch_search_audit.sh.
+
+(defn jte-resid-sig (fname el ac)
+  (str_concat "kernel void " (str_concat fname (str_concat "(device " (str_concat el (str_concat "* w1 [[buffer(0)]], device " (str_concat el (str_concat "* b1 [[buffer(1)]], device " (str_concat el (str_concat "* w2 [[buffer(2)]], device " (str_concat el (str_concat "* b2 [[buffer(3)]], device const " (str_concat el (str_concat "* h [[buffer(4)]], device const " (str_concat el (str_concat "* t [[buffer(5)]], device " (str_concat ac (str_concat "* loss [[buffer(6)]], device " (str_concat ac (str_concat "* h1 [[buffer(7)]], device " (str_concat ac (str_concat "* a [[buffer(8)]], device " (str_concat ac (str_concat "* gy [[buffer(9)]], device " (str_concat ac (str_concat "* dh1 [[buffer(10)]], device " (str_concat ac (str_concat "* z [[buffer(11)]], constant uint& indim [[buffer(12)]], constant uint& hid [[buffer(13)]], constant uint& outd [[buffer(14)]], constant " (str_concat ac (str_concat "& lr [[buffer(15)]], constant " (str_concat ac "& eps [[buffer(16)]], uint tid [[thread_position_in_threadgroup]], uint tgs [[threads_per_threadgroup]]) { ")))))))))))))))))))))))))))))))
+
+(defn jte-resid-ln (el ac)
+  (str_concat "if (tid == 0) { " (str_concat ac (str_concat " sm = 0.0f; uint j = 0; while (j < indim) { sm = sm + " (str_concat ac (str_concat "(h[j]); j += 1; } " (str_concat ac (str_concat " mean = sm / " (str_concat ac (str_concat "(indim); " (str_concat ac (str_concat " va = 0.0f; j = 0; while (j < indim) { " (str_concat ac (str_concat " dm = " (str_concat ac (str_concat "(h[j]) - mean; va = va + dm * dm; j += 1; } " (str_concat ac (str_concat " varv = va / " (str_concat ac (str_concat "(indim); " (str_concat ac (str_concat " sd = varv + eps; " (str_concat ac (str_concat " g = sd; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sd / g); } " (str_concat ac (str_concat " inv = 1.0f / g; j = 0; while (j < indim) { z[j] = (" (str_concat ac "(h[j]) - mean) * inv; j += 1; } } threadgroup_barrier(mem_flags::mem_device); ")))))))))))))))))))))))))))
+
+(defn jte-resid-fwd1 (el ac)
+  (str_concat "for (uint k = tid; k < hid; k += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint j = indim; while (j > 0) { j -= 1; acc = " (str_concat ac (str_concat "(w1[k * indim + j]) * z[j] + acc; } " (str_concat ac (str_concat " hk = acc + " (str_concat ac "(b1[k]); h1[k] = hk; a[k] = fgelu(hk); } threadgroup_barrier(mem_flags::mem_device); ")))))))))
+
+(defn jte-resid-fwd2 (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { " (str_concat ac (str_concat " acc = 0.0f; uint k = hid; while (k > 0) { k -= 1; acc = " (str_concat ac (str_concat "(w2[i * hid + k]) * a[k] + acc; } " (str_concat ac (str_concat " ffn = acc + " (str_concat ac (str_concat "(b2[i]); " (str_concat ac (str_concat " yi = " (str_concat ac (str_concat "(h[i]) + ffn; " (str_concat ac (str_concat " d = yi - " (str_concat ac "(t[i]); loss[i] = d * d; gy[i] = 2.0f * d; } threadgroup_barrier(mem_flags::mem_device); ")))))))))))))))))
+
+(defn jte-resid-dh1 (el ac)
+  (str_concat "for (uint k = tid; k < hid; k += tgs) { " (str_concat ac (str_concat " s = 0.0f; uint i = 0; while (i < outd) { s = s + gy[i] * " (str_concat ac "(w2[i * hid + k]); i += 1; } dh1[k] = s * fgelud(h1[k]); } threadgroup_barrier(mem_flags::mem_device); ")))))
+
+(defn jte-resid-upd (el ac)
+  (str_concat "for (uint i = tid; i < outd; i += tgs) { uint k = hid; while (k > 0) { k -= 1; w2[i * hid + k] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(w2[i * hid + k]) - lr * gy[i] * a[k]); } b2[i] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(b2[i]) - lr * gy[i]); } for (uint k = tid; k < hid; k += tgs) { uint j = indim; while (j > 0) { j -= 1; w1[k * indim + j] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(w1[k * indim + j]) - lr * dh1[k] * z[j]); } b1[k] = " (str_concat el (str_concat "(" (str_concat ac "(b1[k]) - lr * dh1[k]); } }")))))))))))))))))
+
+(defn jte-resid-train-msl-spine (fname el ac)
+  (str_concat (jte-mlp-helpers ac)
+  (str_concat (jte-resid-sig fname el ac)
+  (str_concat (jte-resid-ln el ac)
+  (str_concat (jte-resid-fwd1 el ac)
+  (str_concat (jte-resid-fwd2 el ac)
+  (str_concat (jte-resid-dh1 el ac) (jte-resid-upd el ac))))))))
+
+(defn jte-resid-train-msl-fmt (fname fmt) (jte-resid-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+
+(defn jte-resid-train-msl (fname) (jte-resid-train-msl-fmt fname "f32"))
+
+; --- ATTENTION (cross-attention-residual) TRAINING-STEP kernel, emitted as a Form recipe — the architect's
+; OTHER layer type on Metal. tbp-layer-step on an "attn" layer is the algorithm (fp64, proven three-way): one
+; SGD step over h = x + Wo·attend(Wq·LN(x), ks, vs, scale) for a fixed (keys, values) context, updating Wq and
+; Wo. It composes every attention-core gradient — softmax-back, the dv partition, the dq weighted-key sum — plus
+; the pre-LN and the residual highway (gy = 2(h-t) flows straight to Wo as dh). The keys/values are small in the
+; architect's blocks, so this kernel runs the whole step in one thread, matching the recipe's folds serially:
+; the q/score/value dots carry tb-dot's DOWNWARD fold, the att/datt/dq sums carry tb-weighted-acc / tbp-wt-gy-acc
+; / tbp-attn-dq-acc's FORWARD fold, softmax carries tn-max-subtract + the recipe's own fexp. Same recipe-own
+; exp/tanh helpers as the FFN kernels. Proven byte-stable by tests/attn-train-emit-band.fk; trained live on the
+; M4 Max by scripts/metal_attn_audit.sh. Parallelizing across keys and projection rows is the named follow-up;
+; this closes the type axis — attention now trains on the silicon alongside the FFN and residual blocks.
+
+(defn jte-attn-sig (fname el ac)
+  (str_concat "kernel void " (str_concat fname (str_concat "(device " (str_concat el (str_concat "* wq [[buffer(0)]], device " (str_concat el (str_concat "* wo [[buffer(1)]], device const " (str_concat el (str_concat "* x [[buffer(2)]], device const " (str_concat el (str_concat "* t [[buffer(3)]], device const " (str_concat el (str_concat "* ks [[buffer(4)]], device const " (str_concat el (str_concat "* vs [[buffer(5)]], device " (str_concat ac (str_concat "* loss [[buffer(6)]], device " (str_concat ac (str_concat "* n [[buffer(7)]], device " (str_concat ac (str_concat "* q [[buffer(8)]], device " (str_concat ac (str_concat "* alpha [[buffer(9)]], device " (str_concat ac (str_concat "* att [[buffer(10)]], device " (str_concat ac (str_concat "* gy [[buffer(11)]], device " (str_concat ac (str_concat "* datt [[buffer(12)]], device " (str_concat ac (str_concat "* dqg [[buffer(13)]], device " (str_concat ac (str_concat "* es [[buffer(14)]], constant uint& dmodel [[buffer(15)]], constant uint& dq [[buffer(16)]], constant uint& dv [[buffer(17)]], constant uint& nk [[buffer(18)]], constant " (str_concat ac (str_concat "& scale [[buffer(19)]], constant " (str_concat ac (str_concat "& lr [[buffer(20)]], constant " (str_concat ac "& eps [[buffer(21)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))))))))))))))))))))))))))))))))))))))
+
+(defn jte-attn-body (el ac)
+  (str_concat ac (str_concat " sm = 0.0f; uint j = 0; while (j < dmodel) { sm = sm + " (str_concat ac (str_concat "(x[j]); j += 1; } " (str_concat ac (str_concat " mean = sm / " (str_concat ac (str_concat "(dmodel); " (str_concat ac (str_concat " va = 0.0f; j = 0; while (j < dmodel) { " (str_concat ac (str_concat " dm = " (str_concat ac (str_concat "(x[j]) - mean; va = va + dm * dm; j += 1; } " (str_concat ac (str_concat " varv = va / " (str_concat ac (str_concat "(dmodel); " (str_concat ac (str_concat " sd = varv + eps; " (str_concat ac (str_concat " gg = sd; uint it = 50; while (it > 0) { it -= 1; gg = 0.5f * (gg + sd / gg); } " (str_concat ac (str_concat " inv = 1.0f / gg; j = 0; while (j < dmodel) { n[j] = (" (str_concat ac (str_concat "(x[j]) - mean) * inv; j += 1; } uint r = 0; while (r < dq) { " (str_concat ac (str_concat " acc = 0.0f; uint c = dmodel; while (c > 0) { c -= 1; acc = " (str_concat ac (str_concat "(wq[r * dmodel + c]) * n[c] + acc; } q[r] = acc; r += 1; } uint kk = 0; while (kk < nk) { " (str_concat ac (str_concat " acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; acc = q[c] * " (str_concat ac (str_concat "(ks[kk * dq + c]) + acc; } alpha[kk] = acc * scale; kk += 1; } " (str_concat ac (str_concat " mx = alpha[0]; kk = 1; while (kk < nk) { if (alpha[kk] > mx) { mx = alpha[kk]; } kk += 1; } " (str_concat ac (str_concat " sumes = 0.0f; kk = 0; while (kk < nk) { " (str_concat ac (str_concat " e = fexp(alpha[kk] - mx); es[kk] = e; sumes = sumes + e; kk += 1; } " (str_concat ac (str_concat " invs = 1.0f / sumes; kk = 0; while (kk < nk) { alpha[kk] = es[kk] * invs; kk += 1; } uint vi = 0; while (vi < dv) { att[vi] = 0.0f; vi += 1; } kk = 0; while (kk < nk) { vi = 0; while (vi < dv) { att[vi] = att[vi] + " (str_concat ac (str_concat "(vs[kk * dv + vi]) * alpha[kk]; vi += 1; } kk += 1; } loss[0] = 0.0f; uint oi = 0; while (oi < dmodel) { " (str_concat ac (str_concat " acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; acc = " (str_concat ac (str_concat "(wo[oi * dv + c]) * att[c] + acc; } " (str_concat ac (str_concat " hh = " (str_concat ac (str_concat "(x[oi]) + acc; " (str_concat ac (str_concat " df = hh - " (str_concat ac (str_concat "(t[oi]); loss[0] = loss[0] + df * df; gy[oi] = 2.0f * df; oi += 1; } uint dj = 0; while (dj < dv) { datt[dj] = 0.0f; dj += 1; } oi = 0; while (oi < dmodel) { dj = 0; while (dj < dv) { datt[dj] = datt[dj] + gy[oi] * " (str_concat ac (str_concat "(wo[oi * dv + dj]); dj += 1; } oi += 1; } kk = 0; while (kk < nk) { " (str_concat ac (str_concat " acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; acc = datt[c] * " (str_concat ac (str_concat "(vs[kk * dv + c]) + acc; } es[kk] = acc; kk += 1; } " (str_concat ac (str_concat " gdot = 0.0f; { uint c = nk; while (c > 0) { c -= 1; gdot = es[c] * alpha[c] + gdot; } } kk = 0; while (kk < nk) { es[kk] = alpha[kk] * (es[kk] - gdot); kk += 1; } uint qr = 0; while (qr < dq) { dqg[qr] = 0.0f; qr += 1; } kk = 0; while (kk < nk) { qr = 0; while (qr < dq) { dqg[qr] = dqg[qr] + es[kk] * " (str_concat ac (str_concat "(ks[kk * dq + qr]); qr += 1; } kk += 1; } qr = 0; while (qr < dq) { dqg[qr] = dqg[qr] * scale; qr += 1; } qr = 0; while (qr < dq) { uint c = 0; while (c < dmodel) { wq[qr * dmodel + c] = " (str_concat el (str_concat "(" (str_concat ac (str_concat "(wq[qr * dmodel + c]) - lr * dqg[qr] * n[c]); c += 1; } qr += 1; } oi = 0; while (oi < dmodel) { uint c = 0; while (c < dv) { wo[oi * dv + c] = " (str_concat el (str_concat "(" (str_concat ac "(wo[oi * dv + c]) - lr * gy[oi] * att[c]); c += 1; } oi += 1; } }"))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+(defn jte-attn-train-msl-spine (fname el ac)
+  (str_concat (jte-mlp-helpers ac)
+  (str_concat (jte-attn-sig fname el ac) (jte-attn-body el ac))))
+
+(defn jte-attn-train-msl-fmt (fname fmt) (jte-attn-train-msl-spine fname (jte-msl-elem fmt) (jte-msl-acc fmt)))
+
+(defn jte-attn-train-msl (fname) (jte-attn-train-msl-fmt fname "f32"))
+
+; --- TRANSFORMER BLOCK FORWARD (inference) kernel, emitted as a Form recipe — the whole pre-LN block
+; running on Metal, the INFERENCE half of the model on the silicon (M4 of form-native-models.form lowered
+; to the GPU). transformer-block.fk's tb-block is the ALGORITHM (fp64, proven FOUR-WAY 511): one whisper-
+; shaped block over a SEQUENCE of token vectors —
+;   h = xs + Wo·attn(Wq·LN1(xs), Wk·LN1(xs), Wv·LN1(xs), scale) + bo     (self-attention + residual)
+;   y = h  + W2·gelu(W1·LN2(h) + b1) + b2                                 (FFN + residual)
+; This emits that forward as ONE Metal kernel run by a single thread (gid==0), walking the recipe's exact
+; folds serially: every dot is tb-dot's DOWNWARD right-fold split through a named temporary p so no
+; conformant Metal compiler contracts it into an fma; the value-mix is tb-weighted-acc's FORWARD fold; the
+; softmax is tn-softmax's max-subtract over the recipe's OWN fexp (transformer-numerics' Taylor), never
+; Metal's exp(); each LayerNorm is tn-layernorm's biased variance + 50-step Newton tn-sqrt (the exact
+; jte-resid-ln walk); gelu is the recipe's fgelu. So the transcendental floor is the body's, not the
+; hardware's — the parity gate against an fp32 CPU mirror of the SAME folds is honest end to end
+; (scripts/metal_block_audit.sh), and the GPU output tracks the proven fp64 recipe within fp32 epsilon.
+;
+; Dims arrive as RUNTIME buffers (S tokens, d model, dq query/key, dv value, hid FFN), so the emitted MSL
+; is one static string parameterized only by the kernel name — a layer stack is a sequence of these calls,
+; weights as recipe DATA all the way down (the dynamic-recipe advantage). Scratch is one device buffer the
+; carrier sizes from the dims; regions ln/q/k/v/att/h/ln2/scores/es/a are laid out by computed offsets.
+; The single-thread walk matches the recipe serially and bit-exactly; parallelizing across tokens and rows
+; (one threadgroup per query, the matvec spine's per-row threads) is the named follow-up, as with the attn
+; and ffn training kernels. fp32 lane first; format lanes (f16/bf16) parameterize the same spine when the
+; carrier learns the block ABI, exactly as the matvec spine already does. Proven byte-stable four-way by
+; tests/block-fwd-emit-band.fk.
+
+(defn jte-blk-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* bq [[buffer(1)]], device const float* wk [[buffer(2)]], device const float* bk [[buffer(3)]], device const float* wv [[buffer(4)]], device const float* bv [[buffer(5)]], device const float* wo [[buffer(6)]], device const float* bo [[buffer(7)]], device const float* g1 [[buffer(8)]], device const float* be1 [[buffer(9)]], device const float* w1 [[buffer(10)]], device const float* b1 [[buffer(11)]], device const float* w2 [[buffer(12)]], device const float* b2 [[buffer(13)]], device const float* g2 [[buffer(14)]], device const float* be2 [[buffer(15)]], device const float* x [[buffer(16)]], device float* y [[buffer(17)]], device float* sc [[buffer(18)]], constant uint& S [[buffer(19)]], constant uint& d [[buffer(20)]], constant uint& dq [[buffer(21)]], constant uint& dv [[buffer(22)]], constant uint& hid [[buffer(23)]], constant float& scale [[buffer(24)]], constant float& eps [[buffer(25)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+(defn jte-blk-off ()
+  "uint oLN = 0; uint oQ = oLN + S * d; uint oK = oQ + S * dq; uint oV = oK + S * dq; uint oA = oV + S * dv; uint oH = oA + S * dv; uint oN2 = oH + S * d; uint oSR = oN2 + S * d; uint oE = oSR + S; uint oFA = oE + S; ")
+
+(defn jte-blk-ln1 ()
+  "{ uint s = 0; while (s < S) { float sm = 0.0f; uint j = 0; while (j < d) { sm = sm + x[s * d + j]; j += 1; } float mean = sm / float(d); float va = 0.0f; j = 0; while (j < d) { float dm = x[s * d + j] - mean; float dd = dm * dm; va = va + dd; j += 1; } float varv = va / float(d); float sdv = varv + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = (x[s * d + j] - mean) * inv; float sg = nm * g1[j]; sc[oLN + s * d + j] = sg + be1[j]; j += 1; } s += 1; } } ")
+
+(defn jte-blk-proj ()
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wq[r * d + c] * sc[oLN + s * d + c]; acc = p + acc; } sc[oQ + s * dq + r] = acc + bq[r]; r += 1; } s += 1; } } "
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wk[r * d + c] * sc[oLN + s * d + c]; acc = p + acc; } sc[oK + s * dq + r] = acc + bk[r]; r += 1; } s += 1; } } "
+  "{ uint s = 0; while (s < S) { uint r = 0; while (r < dv) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wv[r * d + c] * sc[oLN + s * d + c]; acc = p + acc; } sc[oV + s * dv + r] = acc + bv[r]; r += 1; } s += 1; } } ")))
+
+(defn jte-blk-attn ()
+  "{ uint s = 0; while (s < S) { uint t = 0; while (t < S) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float p = sc[oQ + s * dq + c] * sc[oK + t * dq + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < S) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < S) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < S) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + s * dv + i] = 0.0f; i += 1; } t = 0; while (t < S) { i = 0; while (i < dv) { float pv = sc[oV + t * dv + i] * sc[oSR + t]; sc[oA + s * dv + i] = sc[oA + s * dv + i] + pv; i += 1; } t += 1; } s += 1; } } ")
+
+(defn jte-blk-out ()
+  "{ uint s = 0; while (s < S) { uint i = 0; while (i < d) { float acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; float p = wo[i * dv + c] * sc[oA + s * dv + c]; acc = p + acc; } float o = acc + bo[i]; sc[oH + s * d + i] = x[s * d + i] + o; i += 1; } s += 1; } } ")
+
+(defn jte-blk-ln2 ()
+  "{ uint s = 0; while (s < S) { float sm = 0.0f; uint j = 0; while (j < d) { sm = sm + sc[oH + s * d + j]; j += 1; } float mean = sm / float(d); float va = 0.0f; j = 0; while (j < d) { float dm = sc[oH + s * d + j] - mean; float dd = dm * dm; va = va + dd; j += 1; } float varv = va / float(d); float sdv = varv + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = (sc[oH + s * d + j] - mean) * inv; float sg = nm * g2[j]; sc[oN2 + s * d + j] = sg + be2[j]; j += 1; } s += 1; } } ")
+
+(defn jte-blk-ffn ()
+  "{ uint s = 0; while (s < S) { uint k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = w1[k * d + c] * sc[oN2 + s * d + c]; acc = p + acc; } sc[oFA + k] = fgelu(acc + b1[k]); k += 1; } uint i = 0; while (i < d) { float acc2 = 0.0f; uint kk = hid; while (kk > 0) { kk -= 1; float p2 = w2[i * hid + kk] * sc[oFA + kk]; acc2 = p2 + acc2; } float f = acc2 + b2[i]; y[s * d + i] = sc[oH + s * d + i] + f; i += 1; } s += 1; } } ")
+
+(defn jte-block-fwd-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-blk-sig fname)
+  (str_concat (jte-blk-off)
+  (str_concat (jte-blk-ln1)
+  (str_concat (jte-blk-proj)
+  (str_concat (jte-blk-attn)
+  (str_concat (jte-blk-out)
+  (str_concat (jte-blk-ln2)
+  (str_concat (jte-blk-ffn) "}"))))))))))
+
+; ── the LLAMA decoder block forward, emitted as ONE Metal kernel ──────────────────────────────────
+; The whisper block above (jte-block-fwd-msl, brick 3m) runs on the M4 GPU. A REAL llama3.2:3b block
+; differs in exactly the numerics lifted to four-way standalone recipes — RMSNorm (llama-numerics.fk,
+; not LayerNorm: no mean-subtract, no bias, just a root-mean-square rescale × per-channel gain), RoPE
+; on q/k (rope.fk: each adjacent pair rotated by θ = pos·base^(−hd/HD)), and SwiGLU (llama-numerics.fk:
+; silu(Wg·n)·(Wu·n), not gelu). The projections are bias-free. llama-block.fk's lblk-block composes
+; them into the block (proven FOUR-WAY 4095 by tests/llama-block-band.fk); this emits that exact
+; forward as one Metal kernel the M4 GPU runs, mirroring lblk-block's serial folds bit-for-bit:
+;   n1 = RMSNorm1(x)
+;   h  = x + Wo·attn( RoPE(Wq·n1), RoPE(Wk·n1), Wv·n1, scale )        (non-causal self-attention)
+;   n2 = RMSNorm2(h)
+;   y  = h + Wdown·SwiGLU( Wgate·n2, Wup·n2 )
+; Every dot is tb-dot's DOWNWARD right-fold split through a named temporary p so no conformant Metal
+; compiler contracts it into an fma; the sum-of-squares is ln-sumsq-acc's FORWARD fold; the softmax is
+; tn-softmax's max-subtract over the recipe's OWN fexp; each RMSNorm is the biased mean-square + 50-step
+; Newton tn-sqrt; SiLU's sigmoid is the recipe's fexp; RoPE's sin/cos/pow are trig.fk's OWN Taylor
+; recipes (fsin/fcos via range-reduce, fpow = fexp(e·fln b)), never Metal's transcendentals. So the
+; transcendental floor is the body's, not the hardware's — the parity gate against an fp32 CPU mirror of
+; the SAME folds is honest end to end (scripts/metal_llama_block_audit.sh), and the GPU output tracks the
+; proven fp64 recipe within fp32 epsilon. Dims (S tokens, d model, dq query/key, dv value, hid FFN, HD
+; head-dim) arrive as RUNTIME buffers, so the emitted MSL is one static string parameterized only by the
+; kernel name — a layer stack is a sequence of these calls, weights as recipe DATA all the way down.
+; Single-thread walk (gid==0) matches the recipe serially; parallelizing across tokens/rows is the named
+; follow-up. fp32 lane first; the causal mask is an orthogonal follow-up (a per-query key-prefix, no
+; numeric change). Proven byte-stable four-way by tests/llama-block-fwd-emit-band.fk.
+
+; --- llama-specific MSL helpers: sin/cos/ln/pow as the recipe's OWN Taylor (fexp comes from jte-mlp-helpers) ---
+(defn jte-llama-helpers ()
+  "float rr_2pi(float x){ float t = 6.283185307179586f; return x - t * round(x / t); } float fsin(float x){ float r = rr_2pi(x); float x2 = r * r; float term = r; float acc = 0.0f; int k = 0; while (k < 10) { acc = acc + term; int m = 2 * (k + 1); float den = float(m * (m + 1)); float nt = term * ((-1.0f * x2) / den); term = nt; k = k + 1; } return acc; } float fcos(float x){ return fsin(x + 1.5707963267948966f); } float fln(float x){ float a = x; int e = 0; while (a >= 2.0f) { a = a * 0.5f; e = e + 1; } while (a < 1.0f) { a = a * 2.0f; e = e - 1; } float z = (a - 1.0f) / (a + 1.0f); float z2 = z * z; float zpow = z; float acc = 0.0f; int j = 0; while (j < 14) { float num = zpow * z2; float den = float(2 * (j + 1) + 1); acc = acc + (num / den); zpow = zpow * z2; j = j + 1; } float lm = 2.0f * (z + acc); return float(e) * 0.6931471805599453f + lm; } float fpow(float b, float e){ if (b <= 0.0f) return 0.0f; return fexp(e * fln(b)); } ")
+
+(defn jte-llama-blk-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* wk [[buffer(1)]], device const float* wv [[buffer(2)]], device const float* wo [[buffer(3)]], device const float* g1 [[buffer(4)]], device const float* wg [[buffer(5)]], device const float* wu [[buffer(6)]], device const float* wd [[buffer(7)]], device const float* g2 [[buffer(8)]], device const float* x [[buffer(9)]], device float* y [[buffer(10)]], device float* sc [[buffer(11)]], constant uint& S [[buffer(12)]], constant uint& d [[buffer(13)]], constant uint& dq [[buffer(14)]], constant uint& dv [[buffer(15)]], constant uint& hid [[buffer(16)]], constant uint& HD [[buffer(17)]], constant float& scale [[buffer(18)]], constant float& eps [[buffer(19)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+(defn jte-llama-blk-off ()
+  "uint oN1 = 0; uint oQ = oN1 + S * d; uint oK = oQ + S * dq; uint oV = oK + S * dq; uint oA = oV + S * dv; uint oH = oA + S * dv; uint oN2 = oH + S * d; uint oSR = oN2 + S * d; uint oE = oSR + S; uint oG = oE + S; uint oU = oG + hid; uint oACT = oU + hid; ")
+
+; RMSNorm of x → oN1: o_i = (x_i / sqrt(mean(x²)+eps)) · g1_i  (forward sum-of-squares fold, Newton sqrt)
+(defn jte-llama-blk-rms1 ()
+  "{ uint s = 0; while (s < S) { float ss = 0.0f; uint j = 0; while (j < d) { float xv = x[s * d + j]; float sq = xv * xv; ss = ss + sq; j += 1; } float meansq = ss / float(d); float sdv = meansq + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = x[s * d + j] * inv; sc[oN1 + s * d + j] = nm * g1[j]; j += 1; } s += 1; } } ")
+
+; bias-free q/k/v projections from oN1 (downward right-fold dot through a named temporary)
+(defn jte-llama-blk-proj ()
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wq[r * d + c] * sc[oN1 + s * d + c]; acc = p + acc; } sc[oQ + s * dq + r] = acc; r += 1; } s += 1; } } "
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wk[r * d + c] * sc[oN1 + s * d + c]; acc = p + acc; } sc[oK + s * dq + r] = acc; r += 1; } s += 1; } } "
+  "{ uint s = 0; while (s < S) { uint r = 0; while (r < dv) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wv[r * d + c] * sc[oN1 + s * d + c]; acc = p + acc; } sc[oV + s * dv + r] = acc; r += 1; } s += 1; } } ")))
+
+; RoPE q (oQ) and k (oK) in place, each pair (i,i+1) rotated by θ = pos·base^(−(i mod HD)/HD), pos = token index
+(defn jte-llama-blk-rope ()
+  (str_concat "{ uint s = 0; while (s < S) { uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(s) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oQ + s * dq + i]; float q1 = sc[oQ + s * dq + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oQ + s * dq + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oQ + s * dq + i + 1u] = t2 + t3; i += 2u; } s += 1; } } "
+  "{ uint s = 0; while (s < S) { uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(s) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oK + s * dq + i]; float q1 = sc[oK + s * dq + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oK + s * dq + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oK + s * dq + i + 1u] = t2 + t3; i += 2u; } s += 1; } } "))
+
+; non-causal softmax attention over the sequence → oA (scores · scale, max-subtract softmax, weighted value fold)
+(defn jte-llama-blk-attn ()
+  "{ uint s = 0; while (s < S) { uint t = 0; while (t < S) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float p = sc[oQ + s * dq + c] * sc[oK + t * dq + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < S) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < S) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < S) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + s * dv + i] = 0.0f; i += 1; } t = 0; while (t < S) { i = 0; while (i < dv) { float pv = sc[oV + t * dv + i] * sc[oSR + t]; sc[oA + s * dv + i] = sc[oA + s * dv + i] + pv; i += 1; } t += 1; } s += 1; } } ")
+
+; output projection Wo·attn (bias-free) + residual x → oH
+(defn jte-llama-blk-out ()
+  "{ uint s = 0; while (s < S) { uint i = 0; while (i < d) { float acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; float p = wo[i * dv + c] * sc[oA + s * dv + c]; acc = p + acc; } sc[oH + s * d + i] = x[s * d + i] + acc; i += 1; } s += 1; } } ")
+
+; RMSNorm of oH → oN2
+(defn jte-llama-blk-rms2 ()
+  "{ uint s = 0; while (s < S) { float ss = 0.0f; uint j = 0; while (j < d) { float xv = sc[oH + s * d + j]; float sq = xv * xv; ss = ss + sq; j += 1; } float meansq = ss / float(d); float sdv = meansq + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = sc[oH + s * d + j] * inv; sc[oN2 + s * d + j] = nm * g2[j]; j += 1; } s += 1; } } ")
+
+; SwiGLU FFN: gate=Wg·n2, up=Wu·n2 (hid), act_i = silu(gate_i)·up_i, out = Wd·act (d), + residual oH → y
+(defn jte-llama-blk-ffn ()
+  "{ uint s = 0; while (s < S) { uint k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wg[k * d + c] * sc[oN2 + s * d + c]; acc = p + acc; } sc[oG + k] = acc; k += 1; } k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wu[k * d + c] * sc[oN2 + s * d + c]; acc = p + acc; } sc[oU + k] = acc; k += 1; } k = 0; while (k < hid) { float gv = sc[oG + k]; float sig = 1.0f / (1.0f + fexp(-1.0f * gv)); float sl = gv * sig; sc[oACT + k] = sl * sc[oU + k]; k += 1; } uint i = 0; while (i < d) { float acc2 = 0.0f; uint kk = hid; while (kk > 0) { kk -= 1; float p2 = wd[i * hid + kk] * sc[oACT + kk]; acc2 = p2 + acc2; } y[s * d + i] = sc[oH + s * d + i] + acc2; i += 1; } s += 1; } } ")
+
+(defn jte-llama-block-fwd-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-llama-blk-sig fname)
+  (str_concat (jte-llama-blk-off)
+  (str_concat (jte-llama-blk-rms1)
+  (str_concat (jte-llama-blk-proj)
+  (str_concat (jte-llama-blk-rope)
+  (str_concat (jte-llama-blk-attn)
+  (str_concat (jte-llama-blk-out)
+  (str_concat (jte-llama-blk-rms2)
+  (str_concat (jte-llama-blk-ffn) "}"))))))))))))
+
+; --- the CAUSAL llama block forward: the real autoregressive decoder on the GPU. Identical byte-for-byte
+;     to jte-llama-block-fwd-msl EXCEPT the attention mask — query at position s sees only keys/values 0..s
+;     (the per-query key PREFIX of tb-attn-seq-causal: every "while (t < S)" of the non-causal attn becomes
+;     "while (t < s + 1u)"). No numeric change to the per-pair dot/softmax (composes the same fexp/max-subtract
+;     fold), so it mirrors llama-block.fk's lblk-block-causal (proven FOUR-WAY 511 by tests/causal-attention-band.fk)
+;     serially and bit-for-bit. At the last token the prefix is the whole sequence so it equals the non-causal
+;     block; the first token attends only to itself (softmax of a single score = 1.0). This is the block the
+;     generation loop steps — it produces one token's next-state without leaking later positions. ---
+(defn jte-llama-blk-attn-causal ()
+  "{ uint s = 0; while (s < S) { uint t = 0; while (t < s + 1u) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float p = sc[oQ + s * dq + c] * sc[oK + t * dq + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < s + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < s + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < s + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + s * dv + i] = 0.0f; i += 1; } t = 0; while (t < s + 1u) { i = 0; while (i < dv) { float pv = sc[oV + t * dv + i] * sc[oSR + t]; sc[oA + s * dv + i] = sc[oA + s * dv + i] + pv; i += 1; } t += 1; } s += 1; } } ")
+
+(defn jte-llama-block-fwd-causal-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-llama-blk-sig fname)
+  (str_concat (jte-llama-blk-off)
+  (str_concat (jte-llama-blk-rms1)
+  (str_concat (jte-llama-blk-proj)
+  (str_concat (jte-llama-blk-rope)
+  (str_concat (jte-llama-blk-attn-causal)
+  (str_concat (jte-llama-blk-out)
+  (str_concat (jte-llama-blk-rms2)
+  (str_concat (jte-llama-blk-ffn) "}"))))))))))))
+
+; --- GROUPED-QUERY ATTENTION (GQA) over a sequence on the GPU. The attention real llama3.2:3b runs:
+;     n query heads share nkv < n KV heads; query head h reads KV head (h / group), group = n / nkv,
+;     and k/v are projected to the SMALLER nkv*hd width. This emits tb-gqa-attn (gqa-attn.fk, four-way 7
+;     by tests/gqa-attn-band.fk) as ONE Metal kernel: for each query head h, attention runs INDEPENDENTLY
+;     within head h's hd-wide q-slice against KV head (h/group)'s hd-wide k/v-slice, the per-head context
+;     vectors concatenated position-wise back to n*hd. Every fold matches the recipe so it stays
+;     bit-deterministic across kernels exactly as the single-head block does: each dot is tb-dot's downward
+;     right-fold split through a named temporary (no fma contraction), softmax is tn-softmax's max-subtract
+;     over the recipe's OWN fexp (never Metal's), the value-mix is the forward weighted fold. GQA at group=1
+;     (nkv=n) IS plain MHA — the n_kv_head = n_head case, no parallel path. Inputs are PROJECTED q/k/v
+;     (qs: S*n*hd, ks/vs: S*nkv*hd), so this is the attention core a real llama GQA block calls after the
+;     bias-free q/k/v projections and RoPE. Dims (S, n, nkv, hd) and scale arrive as runtime buffers, so the
+;     emitted source is one static string parameterized only by the kernel name. The single-thread (gid==0)
+;     serial walk matches the recipe fold order; parallelizing across query heads is the named follow-up.
+;     Compiles and runs on the M4 Max GPU (scripts/metal_gqa_attn_audit.sh): GPU fp32 bit-exact vs a CPU
+;     fp32 mirror of the same folds, tracking the proven fp64 recipe within fp32 epsilon. ---
+(defn jte-gqa-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* qs [[buffer(0)]], device const float* ks [[buffer(1)]], device const float* vs [[buffer(2)]], device float* y [[buffer(3)]], device float* sc [[buffer(4)]], constant uint& S [[buffer(5)]], constant uint& n [[buffer(6)]], constant uint& nkv [[buffer(7)]], constant uint& hd [[buffer(8)]], constant float& scale [[buffer(9)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; the head-grouped attention body. N = n*hd (q/out width), KVD = nkv*hd (k/v width), group = n/nkv.
+; scratch sc holds S scores (oSR) then S exp values (oE). Each query head writes its hd-wide slice at qoff=h*hd.
+(defn jte-gqa-body ()
+  "uint N = n * hd; uint KVD = nkv * hd; uint grp = n / nkv; uint oSR = 0; uint oE = oSR + S; uint h = 0; while (h < n) { uint kvh = h / grp; uint qoff = h * hd; uint koff = kvh * hd; uint s = 0; while (s < S) { uint t = 0; while (t < S) { float acc = 0.0f; uint c = hd; while (c > 0) { c -= 1; float p = qs[s * N + qoff + c] * ks[t * KVD + koff + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < S) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < S) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < S) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < hd) { y[s * N + qoff + i] = 0.0f; i += 1; } t = 0; while (t < S) { i = 0; while (i < hd) { float pv = vs[t * KVD + koff + i] * sc[oSR + t]; y[s * N + qoff + i] = y[s * N + qoff + i] + pv; i += 1; } t += 1; } s += 1; } h += 1; } }")
+
+(defn jte-gqa-attn-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-gqa-sig fname) (jte-gqa-body))))
+
+; --- the WHOLE GQA CAUSAL LLAMA BLOCK forward on the GPU: the real llama3.2 decoder block as ONE Metal kernel,
+;     the GQA generalization of jte-llama-block-fwd-causal-msl (#3376). That block's attention was SINGLE-head
+;     (one dq-wide dot); this one runs proper GROUPED-QUERY multi-head attention — n_q query heads sharing
+;     n_kv < n_q KV heads, query head h reading KV head (h / (n_q/n_kv)) — the attention real llama3.2:3b runs
+;     (24 query heads, 8 KV heads, head_dim 128). Composed from llama-gqa-block.fk's lgqa-block-causal (proven
+;     four-way 15 by tests/llama-gqa-block-causal-band.fk): n1=RMSNorm1(x) ; h = x + Wo*GQA-causal(RoPE(Wq*n1),
+;     RoPE(Wk*n1), Wv*n1) ; n2=RMSNorm2(h) ; y = h + Wdown*SwiGLU(Wgate*n2, Wup*n2). The ONLY change from the
+;     single-head causal block is the projection widths (k/v project to the SMALLER n_kv*HD = KVD) and the
+;     attention loop (per query head h: dot the HD-wide q-slice at h*HD against KV head (h/grp)'s HD-wide
+;     k/v-slice at (h/grp)*HD, causal mask t<s+1u, context concatenated position-wise to n_q*HD). group=1
+;     (n_kv=n_q) IS the single-head block per head — core-abstraction-first, no parallel path. RMSNorm1/RMSNorm2
+;     and the SwiGLU FFN are jte-llama-blk-rms1/rms2/ffn VERBATIM (same offsets). Every dot is the downward
+;     right-fold split through a named temporary (no fma contraction); softmax is the recipe's OWN fexp Taylor
+;     (never Metal's); RoPE is base-10000 (fpow=fexp*fln), the cfg10 special case of lgqa's rope-scaled (band
+;     claim 1: lgqa-block-causal(cfg10) == lblk-block-causal bit-for-bit) — the llama3 theta-500000 rope-scaling
+;     MSL is the named next stone. Dims (S, d, dq, KVD, hid, HD, nkv) arrive as runtime buffers, so the source is
+;     one static string parameterized only by the kernel name. Compiles + runs on the M4 Max GPU
+;     (scripts/metal_gqa_llama_block_audit.sh): GPU fp32 bit-exact vs a CPU fp32 mirror of the same folds,
+;     tracking the proven fp64 lgqa-block-causal within fp32 epsilon, on the real (n_q=2, n_kv=1) grouping. ---
+(defn jte-gqa-blk-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* wk [[buffer(1)]], device const float* wv [[buffer(2)]], device const float* wo [[buffer(3)]], device const float* g1 [[buffer(4)]], device const float* wg [[buffer(5)]], device const float* wu [[buffer(6)]], device const float* wd [[buffer(7)]], device const float* g2 [[buffer(8)]], device const float* x [[buffer(9)]], device float* y [[buffer(10)]], device float* sc [[buffer(11)]], constant uint& S [[buffer(12)]], constant uint& d [[buffer(13)]], constant uint& dq [[buffer(14)]], constant uint& KVD [[buffer(15)]], constant uint& hid [[buffer(16)]], constant uint& HD [[buffer(17)]], constant uint& nkv [[buffer(18)]], constant float& scale [[buffer(19)]], constant float& eps [[buffer(20)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; offsets — q is dq=n_q*HD wide; k/v are the SMALLER KVD=n_kv*HD wide; attn output oA is dq wide (context per head concatenated)
+(defn jte-gqa-blk-off ()
+  "uint oN1 = 0; uint oQ = oN1 + S * d; uint oK = oQ + S * dq; uint oV = oK + S * KVD; uint oA = oV + S * KVD; uint oH = oA + S * dq; uint oN2 = oH + S * d; uint oSR = oN2 + S * d; uint oE = oSR + S; uint oG = oE + S; uint oU = oG + hid; uint oACT = oU + hid; ")
+
+; bias-free q/k/v projections from oN1 — q to dq, k and v to the smaller KVD (downward right-fold dot through a named temporary)
+(defn jte-gqa-blk-proj ()
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wq[r * d + c] * sc[oN1 + s * d + c]; acc = p + acc; } sc[oQ + s * dq + r] = acc; r += 1; } s += 1; } } "
+  (str_concat "{ uint s = 0; while (s < S) { uint r = 0; while (r < KVD) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wk[r * d + c] * sc[oN1 + s * d + c]; acc = p + acc; } sc[oK + s * KVD + r] = acc; r += 1; } s += 1; } } "
+  "{ uint s = 0; while (s < S) { uint r = 0; while (r < KVD) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float p = wv[r * d + c] * sc[oN1 + s * d + c]; acc = p + acc; } sc[oV + s * KVD + r] = acc; r += 1; } s += 1; } } ")))
+
+; RoPE q (oQ, dq wide) and k (oK, KVD wide) in place, each pair (i,i+1) rotated by theta = pos*base^(-(i mod HD)/HD), pos = token index
+(defn jte-gqa-blk-rope ()
+  (str_concat "{ uint s = 0; while (s < S) { uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(s) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oQ + s * dq + i]; float q1 = sc[oQ + s * dq + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oQ + s * dq + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oQ + s * dq + i + 1u] = t2 + t3; i += 2u; } s += 1; } } "
+  "{ uint s = 0; while (s < S) { uint i = 0; while (i + 1u < KVD) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(s) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oK + s * KVD + i]; float q1 = sc[oK + s * KVD + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oK + s * KVD + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oK + s * KVD + i + 1u] = t2 + t3; i += 2u; } s += 1; } } "))
+
+; GQA causal softmax attention -> oA. NQ=dq/HD query heads, grp=NQ/nkv; query head h reads KV head (h/grp);
+; each head attends its HD-wide q-slice over the causal prefix t<s+1u, context written to oA's h*HD slice.
+(defn jte-gqa-blk-attn-causal ()
+  "{ uint NQ = dq / HD; uint grp = NQ / nkv; uint h = 0; while (h < NQ) { uint kvh = h / grp; uint qoff = h * HD; uint koff = kvh * HD; uint s = 0; while (s < S) { uint t = 0; while (t < s + 1u) { float acc = 0.0f; uint c = HD; while (c > 0) { c -= 1; float p = sc[oQ + s * dq + qoff + c] * sc[oK + t * KVD + koff + c]; acc = p + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < s + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < s + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < s + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < HD) { sc[oA + s * dq + qoff + i] = 0.0f; i += 1; } t = 0; while (t < s + 1u) { i = 0; while (i < HD) { float pv = sc[oV + t * KVD + koff + i] * sc[oSR + t]; sc[oA + s * dq + qoff + i] = sc[oA + s * dq + qoff + i] + pv; i += 1; } t += 1; } s += 1; } h += 1; } } ")
+
+; output projection Wo*attn (bias-free, attn is dq wide) + residual x -> oH
+(defn jte-gqa-blk-out ()
+  "{ uint s = 0; while (s < S) { uint i = 0; while (i < d) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float p = wo[i * dq + c] * sc[oA + s * dq + c]; acc = p + acc; } sc[oH + s * d + i] = x[s * d + i] + acc; i += 1; } s += 1; } } ")
+
+(defn jte-gqa-llama-block-fwd-causal-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-gqa-blk-sig fname)
+  (str_concat (jte-gqa-blk-off)
+  (str_concat (jte-llama-blk-rms1)
+  (str_concat (jte-gqa-blk-proj)
+  (str_concat (jte-gqa-blk-rope)
+  (str_concat (jte-gqa-blk-attn-causal)
+  (str_concat (jte-gqa-blk-out)
+  (str_concat (jte-llama-blk-rms2)
+  (str_concat (jte-llama-blk-ffn) "}"))))))))))))
+
+; --- the KV-CACHED DECODE STEP: the autoregressive generation inner loop on the GPU. One token per dispatch,
+;     over a PERSISTENT cache the host threads across dispatches. This is the GPU realization of kv-llama-block.fk's
+;     lblk-generate-causal (#3408, four-way 255), proven there BIT-IDENTICAL to the full causal recompute
+;     (lblk-block-causal, #3365). Each step p: RMSNorm1(x_p) -> project q/k/v from the SINGLE new token ->
+;     RoPE q and k by position p -> APPEND the RoPE'd k_p / v_p into the running cache slot p -> attend the
+;     query over the grown prefix cache[0..p] -> Wo/residual/RMSNorm2/SwiGLU/residual -> y_p. Only the NEW
+;     token is projected each step; earlier positions' k/v are reused from the cache (O(n) per token, not the
+;     O(n^2) recompute of the whole block over [x0..xt]). A cached k_i/v_i depends ONLY on position i, never the
+;     future, so the cache the front-to-back walk holds at step p is exactly the prefix the full causal kernel's
+;     mask (while t < s+1u) cuts at query p, with identical fold order — so looping this kernel reproduces
+;     jte-llama-block-fwd-causal-msl's whole-sequence output BIT-FOR-BIT on silicon. The new token's slot is p,
+;     so the cache is passed device-writable; the host owns the persistent cacheK/cacheV buffers. Single-thread
+;     (gid==0) serial walk matches the recipe; the transcendentals stay the recipe's OWN (Newton sqrt, fexp,
+;     trig Taylor). Proven byte-stable four-way by tests/llama-block-decode-emit-band.fk; run on the M4 GPU by
+;     scripts/metal_llama_block_decode_audit.sh (the decode loop == the full causal kernel, bit-exact). ---
+(defn jte-llama-dec-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* wk [[buffer(1)]], device const float* wv [[buffer(2)]], device const float* wo [[buffer(3)]], device const float* g1 [[buffer(4)]], device const float* wg [[buffer(5)]], device const float* wu [[buffer(6)]], device const float* wd [[buffer(7)]], device const float* g2 [[buffer(8)]], device const float* x [[buffer(9)]], device float* ck [[buffer(10)]], device float* cv [[buffer(11)]], device float* y [[buffer(12)]], device float* sc [[buffer(13)]], constant uint& p [[buffer(14)]], constant uint& d [[buffer(15)]], constant uint& dq [[buffer(16)]], constant uint& dv [[buffer(17)]], constant uint& hid [[buffer(18)]], constant uint& HD [[buffer(19)]], constant float& scale [[buffer(20)]], constant float& eps [[buffer(21)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; scratch for a single token; scores/exp use (p+1u) slots, sized generously by the host
+(defn jte-llama-dec-off ()
+  "uint oN1 = 0; uint oQ = oN1 + d; uint oA = oQ + dv; uint oH = oA + dv; uint oN2 = oH + d; uint oSR = oN2 + d; uint oE = oSR + (p + 1u); uint oG = oE + (p + 1u); uint oU = oG + hid; uint oACT = oU + hid; ")
+
+; RMSNorm1 of the single new token x -> oN1
+(defn jte-llama-dec-rms1 ()
+  "{ float ss = 0.0f; uint j = 0; while (j < d) { float xv = x[j]; float sq = xv * xv; ss = ss + sq; j += 1; } float meansq = ss / float(d); float sdv = meansq + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = x[j] * inv; sc[oN1 + j] = nm * g1[j]; j += 1; } } ")
+
+; bias-free q -> oQ, k -> cache slot p (ck[p]), v -> cache slot p (cv[p]); downward right-fold dot
+(defn jte-llama-dec-proj ()
+  (str_concat "{ uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wq[r * d + c] * sc[oN1 + c]; acc = pp + acc; } sc[oQ + r] = acc; r += 1; } } "
+  (str_concat "{ uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wk[r * d + c] * sc[oN1 + c]; acc = pp + acc; } ck[p * dq + r] = acc; r += 1; } } "
+  "{ uint r = 0; while (r < dv) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wv[r * d + c] * sc[oN1 + c]; acc = pp + acc; } cv[p * dv + r] = acc; r += 1; } } ")))
+
+; RoPE the query (oQ) and the new key (ck[p]) at position p — each pair rotated by theta = p*base^(-(i mod HD)/HD)
+(defn jte-llama-dec-rope ()
+  (str_concat "{ uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oQ + i]; float q1 = sc[oQ + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oQ + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oQ + i + 1u] = t2 + t3; i += 2u; } } "
+  "{ uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = ck[p * dq + i]; float q1 = ck[p * dq + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; ck[p * dq + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; ck[p * dq + i + 1u] = t2 + t3; i += 2u; } } "))
+
+; causal attention of the query over the grown cache 0..p -> oA (scores*scale, max-subtract softmax, value fold)
+(defn jte-llama-dec-attn ()
+  "{ uint t = 0; while (t < p + 1u) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float pp = sc[oQ + c] * ck[t * dq + c]; acc = pp + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < p + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < p + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < p + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < dv) { sc[oA + i] = 0.0f; i += 1; } t = 0; while (t < p + 1u) { i = 0; while (i < dv) { float pv = cv[t * dv + i] * sc[oSR + t]; sc[oA + i] = sc[oA + i] + pv; i += 1; } t += 1; } } ")
+
+; output projection Wo*attn (bias-free) + residual x -> oH
+(defn jte-llama-dec-out ()
+  "{ uint i = 0; while (i < d) { float acc = 0.0f; uint c = dv; while (c > 0) { c -= 1; float pp = wo[i * dv + c] * sc[oA + c]; acc = pp + acc; } sc[oH + i] = x[i] + acc; i += 1; } } ")
+
+; RMSNorm2 of oH -> oN2
+(defn jte-llama-dec-rms2 ()
+  "{ float ss = 0.0f; uint j = 0; while (j < d) { float xv = sc[oH + j]; float sq = xv * xv; ss = ss + sq; j += 1; } float meansq = ss / float(d); float sdv = meansq + eps; float g = sdv; uint it = 50; while (it > 0) { it -= 1; g = 0.5f * (g + sdv / g); } float inv = 1.0f / g; j = 0; while (j < d) { float nm = sc[oH + j] * inv; sc[oN2 + j] = nm * g2[j]; j += 1; } } ")
+
+; SwiGLU FFN: gate=Wg*n2, up=Wu*n2 (hid), act_i = silu(gate_i)*up_i, out = Wd*act (d), + residual oH -> y
+(defn jte-llama-dec-ffn ()
+  "{ uint k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wg[k * d + c] * sc[oN2 + c]; acc = pp + acc; } sc[oG + k] = acc; k += 1; } k = 0; while (k < hid) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wu[k * d + c] * sc[oN2 + c]; acc = pp + acc; } sc[oU + k] = acc; k += 1; } k = 0; while (k < hid) { float gv = sc[oG + k]; float sig = 1.0f / (1.0f + fexp(-1.0f * gv)); float sl = gv * sig; sc[oACT + k] = sl * sc[oU + k]; k += 1; } uint i = 0; while (i < d) { float acc2 = 0.0f; uint kk = hid; while (kk > 0) { kk -= 1; float p2 = wd[i * hid + kk] * sc[oACT + kk]; acc2 = p2 + acc2; } y[i] = sc[oH + i] + acc2; i += 1; } } ")
+
+(defn jte-llama-block-decode-step-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-llama-dec-sig fname)
+  (str_concat (jte-llama-dec-off)
+  (str_concat (jte-llama-dec-rms1)
+  (str_concat (jte-llama-dec-proj)
+  (str_concat (jte-llama-dec-rope)
+  (str_concat (jte-llama-dec-attn)
+  (str_concat (jte-llama-dec-out)
+  (str_concat (jte-llama-dec-rms2)
+  (str_concat (jte-llama-dec-ffn) "}"))))))))))))
+
+; --- the KV-CACHED CAUSAL GQA DECODE STEP: the autoregressive generation inner loop for the REAL llama3.2
+;     (24 query heads sharing 8 KV heads) on the GPU. The GROUPED-QUERY generalization of
+;     jte-llama-block-decode-step-msl (#3412, single-head/MHA decode): the cache stores the SMALLER n_kv*HD-wide
+;     k/v per position, and query head h attends KV head (h / (n_q/n_kv)). The GPU realization of
+;     kv-gqa-llama-block.fk's lgqa-generate-causal (#3601, four-way 255), proven there BIT-IDENTICAL to the full
+;     causal GQA recompute (lgqa-block-causal, #3590, four-way 15). Each step p: RMSNorm1(x_p) -> project q (to
+;     dq=n_q*HD) and k/v (to the SMALLER KVD=n_kv*HD) from the SINGLE new token -> RoPE q and the new key by
+;     position p -> APPEND the RoPE'd k_p / v_p into cache slot p (KVD-wide) -> per query head, attend its
+;     HD-wide q-slice over the grown prefix cache[0..p] of KV head (h/grp), context concatenated to dq -> Wo/
+;     residual/RMSNorm2/SwiGLU/residual -> y_p. Only the NEW token is projected each step; earlier positions'
+;     k/v are reused from the cache. A cached k_i/v_i depends ONLY on position i, never the future, so the cache
+;     the front-to-back walk holds at step p is exactly the prefix the full causal GQA kernel's mask
+;     (while t < s+1u) cuts at query p, with identical fold order — so looping this kernel reproduces
+;     jte-gqa-llama-block-fwd-causal-msl's (#3590) whole-sequence output BIT-FOR-BIT on silicon
+;     (scripts/metal_gqa_llama_block_decode_audit.sh runs both kernels on the M4 Max GPU and gates the GQA
+;     decode loop == the full causal GQA recompute, bit-exact, both tracking the proven fp64 recipe within fp32
+;     eps). group=1 (n_kv=n_q) reduces to the single-head decode per head — core-abstraction-first, MHA is the
+;     special case, no parallel path. RMSNorm1/RMSNorm2 + the SwiGLU FFN are jte-llama-dec-rms1/rms2/ffn VERBATIM
+;     (those reference only oN1/oH/oN2/oG/oU/oACT, never the attention offsets); only the projection widths (k/v
+;     to KVD), the RoPE width (KVD for the key), and the per-query-head grouped attention loop change. Every dot
+;     is the downward right-fold through a named temporary (no fma contraction); softmax/SiLU is the recipe's OWN
+;     fexp Taylor; RoPE is base-10000 (the cfg10 special case). Dims (p, d, dq, KVD, hid, HD, nkv) arrive as
+;     runtime buffers, so the source is one static string parameterized only by the kernel name. Proven byte-stable
+;     four-way by tests/gqa-llama-block-decode-emit-band.fk.
+;     teaching: lc-cognitive-sovereignty
+(defn jte-gqa-dec-sig (fname)
+  (str_concat "kernel void " (str_concat fname
+  "(device const float* wq [[buffer(0)]], device const float* wk [[buffer(1)]], device const float* wv [[buffer(2)]], device const float* wo [[buffer(3)]], device const float* g1 [[buffer(4)]], device const float* wg [[buffer(5)]], device const float* wu [[buffer(6)]], device const float* wd [[buffer(7)]], device const float* g2 [[buffer(8)]], device const float* x [[buffer(9)]], device float* ck [[buffer(10)]], device float* cv [[buffer(11)]], device float* y [[buffer(12)]], device float* sc [[buffer(13)]], constant uint& p [[buffer(14)]], constant uint& d [[buffer(15)]], constant uint& dq [[buffer(16)]], constant uint& KVD [[buffer(17)]], constant uint& hid [[buffer(18)]], constant uint& HD [[buffer(19)]], constant uint& nkv [[buffer(20)]], constant float& scale [[buffer(21)]], constant float& eps [[buffer(22)]], uint gid [[thread_position_in_grid]]) { if (gid != 0u) return; ")))
+
+; single-token scratch; q + attn context are dq wide; scores/exp use (p+1u) slots, sized generously by the host
+(defn jte-gqa-dec-off ()
+  "uint oN1 = 0; uint oQ = oN1 + d; uint oA = oQ + dq; uint oH = oA + dq; uint oN2 = oH + d; uint oSR = oN2 + d; uint oE = oSR + (p + 1u); uint oG = oE + (p + 1u); uint oU = oG + hid; uint oACT = oU + hid; ")
+
+; bias-free q -> oQ (dq), k -> cache slot p (ck[p], KVD wide), v -> cache slot p (cv[p], KVD wide); downward right-fold dot
+(defn jte-gqa-dec-proj ()
+  (str_concat "{ uint r = 0; while (r < dq) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wq[r * d + c] * sc[oN1 + c]; acc = pp + acc; } sc[oQ + r] = acc; r += 1; } } "
+  (str_concat "{ uint r = 0; while (r < KVD) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wk[r * d + c] * sc[oN1 + c]; acc = pp + acc; } ck[p * KVD + r] = acc; r += 1; } } "
+  "{ uint r = 0; while (r < KVD) { float acc = 0.0f; uint c = d; while (c > 0) { c -= 1; float pp = wv[r * d + c] * sc[oN1 + c]; acc = pp + acc; } cv[p * KVD + r] = acc; r += 1; } } ")))
+
+; RoPE the query (oQ, dq wide) and the new key (ck[p], KVD wide) at position p — each pair rotated by theta = p*base^(-(i mod HD)/HD)
+(defn jte-gqa-dec-rope ()
+  (str_concat "{ uint i = 0; while (i + 1u < dq) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = sc[oQ + i]; float q1 = sc[oQ + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; sc[oQ + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; sc[oQ + i + 1u] = t2 + t3; i += 2u; } } "
+  "{ uint i = 0; while (i + 1u < KVD) { uint hd = i % HD; float fr = fpow(10000.0f, (-1.0f * float(hd)) / float(HD)); float a = float(p) * fr; float ca = fcos(a); float sa = fsin(a); float q0 = ck[p * KVD + i]; float q1 = ck[p * KVD + i + 1u]; float t0 = q0 * ca; float t1 = q1 * sa; ck[p * KVD + i] = t0 - t1; float t2 = q0 * sa; float t3 = q1 * ca; ck[p * KVD + i + 1u] = t2 + t3; i += 2u; } } "))
+
+; GQA causal attention of the single new query over the grown cache 0..p -> oA. NQ=dq/HD query heads, grp=NQ/nkv;
+; query head h reads KV head (h/grp); each head dots its HD-wide q-slice against the cached prefix's koff-slice
+(defn jte-gqa-dec-attn ()
+  "{ uint NQ = dq / HD; uint grp = NQ / nkv; uint h = 0; while (h < NQ) { uint kvh = h / grp; uint qoff = h * HD; uint koff = kvh * HD; uint t = 0; while (t < p + 1u) { float acc = 0.0f; uint c = HD; while (c > 0) { c -= 1; float pp = sc[oQ + qoff + c] * ck[t * KVD + koff + c]; acc = pp + acc; } sc[oSR + t] = acc * scale; t += 1; } float mx = sc[oSR + 0]; t = 1; while (t < p + 1u) { if (sc[oSR + t] > mx) { mx = sc[oSR + t]; } t += 1; } float sumes = 0.0f; t = 0; while (t < p + 1u) { float e = fexp(sc[oSR + t] - mx); sc[oE + t] = e; sumes = sumes + e; t += 1; } float invs = 1.0f / sumes; t = 0; while (t < p + 1u) { sc[oSR + t] = sc[oE + t] * invs; t += 1; } uint i = 0; while (i < HD) { sc[oA + qoff + i] = 0.0f; i += 1; } t = 0; while (t < p + 1u) { i = 0; while (i < HD) { float pv = cv[t * KVD + koff + i] * sc[oSR + t]; sc[oA + qoff + i] = sc[oA + qoff + i] + pv; i += 1; } t += 1; } h += 1; } } ")
+
+; output projection Wo*attn (bias-free, attn is dq wide) + residual x -> oH
+(defn jte-gqa-dec-out ()
+  "{ uint i = 0; while (i < d) { float acc = 0.0f; uint c = dq; while (c > 0) { c -= 1; float pp = wo[i * dq + c] * sc[oA + c]; acc = pp + acc; } sc[oH + i] = x[i] + acc; i += 1; } } ")
+
+(defn jte-gqa-llama-block-decode-step-msl (fname)
+  (str_concat (jte-mlp-helpers "float")
+  (str_concat (jte-llama-helpers)
+  (str_concat (jte-gqa-dec-sig fname)
+  (str_concat (jte-gqa-dec-off)
+  (str_concat (jte-llama-dec-rms1)
+  (str_concat (jte-gqa-dec-proj)
+  (str_concat (jte-gqa-dec-rope)
+  (str_concat (jte-gqa-dec-attn)
+  (str_concat (jte-gqa-dec-out)
+  (str_concat (jte-llama-dec-rms2)
+  (str_concat (jte-llama-dec-ffn) "}"))))))))))))
+
+(print "==MSL==")
+(print (jte-matvec-msl "form_fkwu_direct_matvec_f32"))
+(print "==END==")

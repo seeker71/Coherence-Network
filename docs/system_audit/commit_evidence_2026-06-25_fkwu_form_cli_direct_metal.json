@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/form-metal-direct-bridge-20260625",
+  "commit_scope": "Add a direct fkwu form-cli Metal fixture receipt that runs through a native tag with no HTTP/Ollama runtime path.",
+  "files_owned": [
+    "form/build-form-cli.sh",
+    "form/form-stdlib/native-op-manifest.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/form-cli-repl.fk",
+    "scripts/fkwu_form_cli_metal_direct_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/runtime.out"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 form/scripts/sync_native_op_manifest.py && python3 form/scripts/gen_flt_ops_from_manifest.py",
+      "scripts/regen_form_cli_bootstrap.sh",
+      "scripts/regen_fkwu_bootstrap.sh",
+      "scripts/regen_standard_lane_binaries.sh",
+      "scripts/fkwu_form_cli_metal_direct_receipt.sh docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25.json",
+      "tmp=\"$(mktemp /tmp/form-cli-standard.XXXXXX)\"; (cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh \"$tmp\") && printf 'ping\\nmetal-fixture\\nquit\\n' | \"$tmp\"",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+      "cd form/form-kernel-go && go test -run 'TestFkwuFormCli|TestFkwuLocaleUtf8'"
+    ],
+    "results": [
+      "native-op manifest and generated flt-ops aligned at 108 rows; max tag 203 under 256 arm slots",
+      "form-cli bootstrap table/emitted C regenerated with stamp 773ed8c70e883277",
+      "fkwu bootstrap uni.c regenerated with stamp b0e574e7d98548e0",
+      "standard fkwu platform binary regenerated with stamp f991080e0a8c95be",
+      "standard form-cli platform binary regenerated with stamp 773ed8c70e883277",
+      "direct Metal receipt passed on Apple M4 Max with gpu_y=[-0.250000,5.000000] and max_delta=0.000000000",
+      "runtime transcript showed runtime_path_sanitized=true, denied_toolchain_names_visible_on_path=0, http_or_ollama=absent, metal_owner=fkwu-form-cli",
+      "standard lane copied bootstrap/darwin-arm64 with no clang and returned pong plus explicit unlinked Metal skip",
+      "form-cli-band passed four-way with verdict 16383",
+      "metal-emit-band passed four-way with verdict 31",
+      "go test passed: ok form-kernel-go 62.775s"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "PR checks have not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployed web/API surface changed; this is a local form/fkwu runtime receipt."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A proof-linked form-cli binary can dispatch the native-only metal-fixture verb through fkwu tag 203 into a linked Metal carrier that owns device creation, library/pipeline creation, buffers, command dispatch, wait, and readback without HTTP/Ollama or visible runtime toolchain names.",
+    "public_endpoints": [
+      "local fkwu form-cli proof binary",
+      "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25.json"
+    ],
+    "test_flows": [
+      "env -i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp> <proof-form-cli> <<<'metal-fixture\\nquit'",
+      "FORM_STANDARD_LANE=1 ./build-form-cli.sh <tmp> && printf 'ping\\nmetal-fixture\\nquit\\n' | <tmp>",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The direct fkwu-to-Metal lifecycle is proven for a deterministic fixture. The generic metal_matvec_f32 API, GGUF/tensor-cell loader, and full Llama decode loop remain open bridges."
+  },
+  "idea_ids": [
+    "form-native-metal-model-inference",
+    "on-device-sovereign-form-cli"
+  ],
+  "spec_ids": [
+    "fkwu-only-kernel-collapse",
+    "metal-emit-band",
+    "form-cli-band"
+  ],
+  "task_ids": [
+    "2026-06-25-fkwu-form-cli-direct-metal"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence",
+        "trace"
+      ]
+    },
+    {
+      "contributor_id": "subagent-019effa5-02a7-7411-a395-03034e64e00b",
+      "contributor_type": "machine",
+      "roles": [
+        "codebase exploration",
+        "implementation plan"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/fkwu_metal_carrier.m",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64"
+  ],
+  "change_files": [
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64",
+    "form/form-stdlib/bootstrap/fkwu-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/fkwu-uni.c",
+    "form/form-stdlib/bootstrap/fkwu-uni.stamp",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/fkc-table-serialize.fk",
+    "form/form-stdlib/form-cli-repl.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/native-op-manifest.fk",
+    "scripts/fkwu_form_cli_metal_direct_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25.json",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/emit-matvec.err",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/emit-matvec.fk",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/emit-matvec.out",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/fkwu_metal_carrier.m",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_metal_direct_receipt_2026-06-25_trace/runtime.out"
+  ],
+  "change_intent": "runtime_feature"
+}

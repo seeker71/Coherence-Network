@@ -1,0 +1,14 @@
+runtime_path_sanitized=true
+denied_toolchain_names_visible_on_path=0
+http_or_ollama=absent
+metal_owner=fkwu-form-cli
+metal_linked=true
+metal_device=Apple M4 Max
+embedded_msl_bytes=450
+rows=2
+cols=3
+dispatch_ms=3.816
+gpu_y=[-0.250000,5.000000]
+expected_y=[-0.250000,5.000000]
+max_delta=0.000000000
+PASS fkwu-form-cli-metal-direct
