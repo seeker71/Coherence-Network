@@ -1,0 +1,68 @@
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/form-llama-champion-lane.fk
+;
+; form-llama-champion-lane-band — the local Form-knowledge model can become
+; authority only with a full freedom/trust eval window: Form syntax, substrate
+; concepts, spec lookup, route reasoning, multimodal witness, and form-first
+; routing are all present, source-backed, local-device capable, held out, and
+; the challenger reaches the incumbent.
+;
+; Verdict 255 when:
+;   1   all six required lanes are present
+;   2   a missing lane refuses readiness
+;   4   every lane is source-backed/local-device/heldout enough
+;   8   weak multimodal evidence refuses readiness
+;   16  ready + reached competition promotes the challenger
+;   32  too few scored samples keeps the champion
+;   64  authority labels are stable
+;   128 runtime row points at form-llama as Form-native model cells/inference/training/asm bytes
+
+(do
+    (let lanes-ready (list
+        (flc-lane-row "form-syntax" 6 6 1 1)
+        (flc-lane-row "substrate-concepts" 6 6 1 1)
+        (flc-lane-row "spec-lookup" 6 6 1 1)
+        (flc-lane-row "route-reasoning" 6 6 1 1)
+        (flc-lane-row "multimodal-witness" 6 6 1 1)
+        (flc-lane-row "form-first-routing" 6 6 1 1)))
+
+    (let lanes-missing (list
+        (flc-lane-row "form-syntax" 6 6 1 1)
+        (flc-lane-row "substrate-concepts" 6 6 1 1)
+        (flc-lane-row "spec-lookup" 6 6 1 1)
+        (flc-lane-row "route-reasoning" 6 6 1 1)
+        (flc-lane-row "form-first-routing" 6 6 1 1)))
+
+    (let lanes-weak-mm (list
+        (flc-lane-row "form-syntax" 6 6 1 1)
+        (flc-lane-row "substrate-concepts" 6 6 1 1)
+        (flc-lane-row "spec-lookup" 6 6 1 1)
+        (flc-lane-row "route-reasoning" 6 6 1 1)
+        (flc-lane-row "multimodal-witness" 6 0 1 1)
+        (flc-lane-row "form-first-routing" 6 6 1 1)))
+
+    ; 12 scored rows: the local challenger reaches and exceeds the base champion.
+    (let trials-reached (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 1) (list 0 1) (list 0 1) (list 0 1)
+        (list 0 1) (list 0 1) (list 0 0) (list 0 0)))
+
+    (let runtime (flc-native-runtime-row
+        "form-llama"
+        "content-addressed-model-cells"
+        "form-native-inference"
+        "form-native-training"
+        "form-asm-bytes"))
+
+    (let c0 (if (eq (flc-all-lanes-present? lanes-ready) 1) 1 0))
+    (let c1 (if (eq (flc-ready-window? lanes-missing 6) 0) 2 0))
+    (let c2 (if (eq (flc-ready-window? lanes-ready 6) 1) 4 0))
+    (let c3 (if (eq (flc-ready-window? lanes-weak-mm 6) 0) 8 0))
+    (let c4 (if (eq (flc-promote? lanes-ready trials-reached 12 0 6) 1) 16 0))
+    (let c5 (if (eq (flc-promote? lanes-ready trials-reached 20 0 6) 0) 32 0))
+    (let c6 (if (and
+                    (str_eq (flc-authority lanes-ready trials-reached 12 0 6) "challenger")
+                    (str_eq (flc-authority lanes-weak-mm trials-reached 12 0 6) "champion"))
+                64 0))
+    (let c7 (if (flc-native-runtime? runtime) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

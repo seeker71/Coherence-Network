@@ -1,0 +1,28 @@
+build_phase:
+  emitted_msl_bytes=7259
+  recipe_x1e6=[2147164,241870,1179734,2527995,-1198924,395649,1838649,-1119522]
+  artifact=/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T//fkgqablk-rt.Eq3Doo/form_gqa_llama_block_runtime_artifact
+linked_libraries:
+  /var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T//fkgqablk-rt.Eq3Doo/form_gqa_llama_block_runtime_artifact:
+  	/System/Library/Frameworks/Metal.framework/Versions/A/Metal (compatibility version 1.0.0, current version 370.64.2)
+  	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+  	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4201.0.0)
+  	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+  	/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)
+  	/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0, weak)
+  	/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 56.0.0, weak)
+  	/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)
+  	/usr/lib/swift/libswiftMetal.dylib (compatibility version 1.0.0, current version 370.64.2, weak)
+  	/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 951.1.0, weak)
+  	/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 105.0.14, weak)
+  	/usr/lib/swift/libswift_Builtin_float.dylib (compatibility version 1.0.0, current version 0.0.0, weak)
+runtime_phase:
+  env=-i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp>
+runtime_path_sanitized=true
+denied_toolchain_names_visible_on_path=0
+metal_device=Apple M4 Max
+embedded_msl_bytes=7259
+dispatch_ms=3.900
+gpu_y_x1e6_round=[2147164,241870,1179734,2527995,-1198924,395649,1838649,-1119522]
+max_recipe_delta_x1e6=0.431
+PASS standalone-metal-gqa-llama-block-runtime

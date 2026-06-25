@@ -1,0 +1,11 @@
+warn: alias flt-ops tag 3: ['add', '_plus']
+warn: alias flt-ops tag 51: ['math_floor', 'floor']
+warn: alias flt-ops tag 80: ['node_eq', 'value_eq']
+warn: alias flt-ops tag 88: ['ceil', 'math_ceil']
+validate_fkwu_native_surface: OK (107 flt-ops rows, max_tag=202, arm_slots=256, 4 warning(s))
+gen_flt_ops_from_manifest: OK (107 rows aligned)
+sync_native_op_manifest: OK (107 rows aligned; edit manifest first, then regenerate flt-ops — not the reverse)
+  ✓  jit-tensor-emit.fk+metal-emit-band.fk  → 31
+
+  fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)
+  1 ok, 0 divergent — kernels agree on every sample.

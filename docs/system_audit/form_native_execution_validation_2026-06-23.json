@@ -1,0 +1,65 @@
+{
+  "date": "2026-06-23",
+  "purpose": "Validate concrete on-device Form-native execution lanes after the form-llama local model validation exposed that strict Form-native runtime is still separate from Ollama/MLX.",
+  "mac": {
+    "status": "pass",
+    "host": "local arm64 macOS",
+    "command": "scripts/form_macho_demo.sh",
+    "receipt": [
+      "Form-emitted Mach-O object: 247 bytes (no clang)",
+      "file: Mach-O 64-bit object arm64",
+      "program: ((40 + 1) - 1)",
+      "exit code = 40",
+      "Form compiled the code, emitted the Mach-O object, ld linked it, and the binary ran."
+    ],
+    "boundary": "No clang compiler or assembler in the emitted object path. macOS ld remains the linker carrier."
+  },
+  "android": {
+    "status": "pass",
+    "device": "R5CW20DK17A",
+    "command": "scripts/form_lower_multiarg_receipt.sh 7 6 5",
+    "receipt": [
+      "Form-emitted ELF .so: 840 bytes (ZERO clang)",
+      "file: ELF 64-bit LSB shared object, ARM aarch64, dynamically linked, stripped",
+      "Form interpreter walk: form_native(7,6,5) = 47",
+      "Android dlopen result: RESULT 47",
+      "The Android linker dlopen'd the Form-emitted .so and ran form_native(7,6,5) on device."
+    ],
+    "boundary": "The .so was emitted by Form without clang. NDK clang built only the tiny dlopen test harness, not the native Form artifact."
+  },
+  "windows": {
+    "status": "partial_pass",
+    "physical_runtime": "not_validated_on_this_mac",
+    "object_floor_command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk form-stdlib/tests/form-pe-coff-arm64-band.fk",
+    "object_floor_receipt": "returned 63 with fourth-arm agreement",
+    "runtime_script_available": "scripts/verify_windows_form_cli_native.ps1",
+    "boundary": "PE/COFF x64 and arm64 object floors are proven four-way. The standalone Windows form-cli runtime proof requires running the PowerShell script on a Windows host."
+  },
+  "form_proofs": [
+    {
+      "name": "form-lower-multiarg-band",
+      "command": "cd form && ./validate.sh form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-elf-so.fk form-stdlib/tests/form-lower-multiarg-band.fk",
+      "verdict": 127,
+      "fourth_arm": "pass"
+    },
+    {
+      "name": "form-macho-band",
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-macho.fk form-stdlib/tests/form-macho-band.fk",
+      "verdict": 31,
+      "fourth_arm": "pass"
+    },
+    {
+      "name": "form-pe-coff-band + form-pe-coff-arm64-band",
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/form-pe-coff.fk form-stdlib/tests/form-pe-coff-band.fk form-stdlib/tests/form-pe-coff-arm64-band.fk",
+      "verdict": 63,
+      "fourth_arm": "pass"
+    }
+  ],
+  "verdict": {
+    "mac_form_native_execution": "pass",
+    "android_form_native_execution": "pass",
+    "windows_form_native_execution": "pending_physical_windows_host",
+    "strict_model_runtime": "not_validated",
+    "notes": "This validates Form-native code execution on Mac and Android, plus Windows object emission. It does not yet validate form-llama inference/training as Form model cells or a Form-native model runtime."
+  }
+}

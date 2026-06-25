@@ -306,6 +306,21 @@
 ;     scripts/model_carrier_rehash_audit.sh physically compiles/runs the CPU, Metal, and MLX C carrier
 ;     witnesses on macOS arm64; on this host CPU, generic GPU via Metal, Metal, and MLX all returned the
 ;     same sha256 for the sample payload.
+;     form-llama-champion-lane.fk now names the local fine-tune's authority gate as a Form-only policy:
+;     form syntax, substrate concepts, spec lookup, route reasoning, multimodal witness, and form-first
+;     routing must all be present, source-backed, local-device capable, and held out before a challenger
+;     can outrank the champion. The runtime row points at content-addressed model cells, Form-native
+;     inference, Form-native training, and Form->asm bytes. Legacy host scripts can leave receipts, but
+;     they are not the runtime home: no Python, no shell, no Go/Rust service, and no clang fast path.
+;     The 2026-06-23 local validation is recorded separately: on-device/no-cloud inference passed,
+;     context-supplied answering passed, raw repo recall failed, and strict Form-native runtime is not
+;     proven. The three failed recall probes are now in the deterministic eval and local LoRA corpus
+;     seed, so the next fine-tune has to face the actual miss. Proof: tests/form-llama-champion-lane-band.fk
+;     returns 255 with the fourth arm.
+;     Same-day execution receipts moved real platform ground forward: Mac Form->Mach-O ran a local
+;     arm64 binary with zero clang compiler/assembler; Android Form->ELF .so dlopen'd and ran on the
+;     attached phone; Windows PE/COFF x64/arm64 object floors are four-way, with physical Windows
+;     runtime still pending a Windows host.
 ;     model-vitality-production-band now returns 32767 on the host-I/O kernels: it stores a live
 ;     model-vitality row, reads it back, and routes it through production pulse/runtime rows that carry
 ;     attribution, observed timestamp, latency, byte count, native-kernel router, and Python-authority

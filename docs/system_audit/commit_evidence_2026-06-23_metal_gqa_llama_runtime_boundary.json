@@ -1,0 +1,148 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/local-model-knowledge-status-20260623",
+  "commit_scope": "Validate the existing proven Metal GQA causal llama block fixture as a standalone post-build runtime artifact under a sanitized environment. This does not claim full form-llama, real GGUF weights, full generation, or strict Form-native c-bootstrap integration.",
+  "files_owned": [
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/metal_gqa_llama_block_runtime_boundary.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/tests/llama-gqa-block-causal-band.fk",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/llama-gqa-block-fwd-causal-emit-band.fk",
+      "scripts/metal_gqa_llama_block_audit.sh",
+      "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json"
+    ],
+    "results": [
+      "syntax check passed",
+      "recipe band verdict 15; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "emitter band verdict 7; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "existing Metal audit passed on Apple M4 Max: GPU fp32 == CPU fp32 mirror bit-exact; max recipe delta x1e6 = 0.4",
+      "standalone runtime artifact passed under env -i with empty PATH; denied toolchain names visible on PATH = 0; max recipe delta x1e6 = 0.431"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No CI run was opened for this local receipt-only validation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deploy surface changed; this is a local Metal runtime-boundary proof."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete for the small boundary; CI/deploy were not run."
+  },
+  "idea_ids": [
+    "metal-runtime-boundary"
+  ],
+  "spec_ids": [
+    "llama-gqa-block-causal-band",
+    "llama-gqa-block-fwd-causal-emit-band"
+  ],
+  "task_ids": [
+    "2026-06-23-metal-gqa-llama-runtime-boundary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "scripts/metal_gqa_llama_block_audit.sh",
+    "form/native/GPU_GAPS.md",
+    "form/form-stdlib/tests/llama-gqa-block-causal-band.fk",
+    "form/form-stdlib/tests/llama-gqa-block-fwd-causal-emit-band.fk",
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "docs/system_audit/commit_evidence_2026-06-23_gqa_llama_block_on_gpu.json",
+    "docs/system_audit/commit_evidence_2026-06-23_llama3_rope_and_gqa_block_four_way.json",
+    "docs/system_audit/form_llama_on_device_validation_2026-06-23.json"
+  ],
+  "change_files": [
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json"
+  ],
+  "change_intent": "process_only",
+  "runtime_boundary_receipt": {
+    "build_phase": {
+      "uses_tools": [
+        "shell",
+        "form-kernel-go",
+        "xcrun swiftc",
+        "base64",
+        "sed",
+        "paste",
+        "otool"
+      ],
+      "emitted_msl_bytes": 7259,
+      "recipe_x1e6": [
+        2147164,
+        241870,
+        1179734,
+        2527995,
+        -1198924,
+        395649,
+        1838649,
+        -1119522
+      ]
+    },
+    "runtime_phase": {
+      "artifact_shape": "single compiled Swift executable with the Form-emitted Metal kernel and fixture receipt embedded",
+      "sanitized_environment": "env -i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp>",
+      "linked_libraries": [
+        "Metal.framework",
+        "Foundation.framework",
+        "libSystem.B.dylib",
+        "libobjc.A.dylib",
+        "Swift runtime dylibs from /usr/lib/swift"
+      ],
+      "not_needed_after_build": [
+        "Go",
+        "Rust",
+        "Python",
+        "shell PATH lookup",
+        "clang",
+        "swiftc",
+        "external .metal source file"
+      ],
+      "runtime_output": {
+        "runtime_path_sanitized": true,
+        "denied_toolchain_names_visible_on_path": 0,
+        "metal_device": "Apple M4 Max",
+        "embedded_msl_bytes": 7259,
+        "dispatch_ms": 4.203,
+        "gpu_y_x1e6_round": [
+          2147164,
+          241870,
+          1179734,
+          2527995,
+          -1198924,
+          395649,
+          1838649,
+          -1119522
+        ],
+        "max_recipe_delta_x1e6": 0.431,
+        "verdict": "PASS standalone-metal-gqa-llama-block-runtime"
+      }
+    },
+    "remaining_boundaries": [
+      "The build phase still uses shell, form-kernel-go, and xcrun swiftc; this receipt only proves the post-build runtime artifact boundary.",
+      "The artifact uses Apple's Metal runtime compiler through Metal.framework makeLibrary(source:) over embedded MSL; it is not direct AIR/metallib/AGX bytes.",
+      "The fixture is the existing S=2, d=4, n_q=2, n_kv=1, HD=2 proof shape; it is not real llama3.2:3b width, real GGUF weights, multi-layer decode, tokenizer, or full form-llama.",
+      "Strict c-bootstrap/fkwu/form-cli integration is not closed here; the validated artifact is a Swift/Metal native runtime carrier for the proven fixture."
+    ]
+  }
+}

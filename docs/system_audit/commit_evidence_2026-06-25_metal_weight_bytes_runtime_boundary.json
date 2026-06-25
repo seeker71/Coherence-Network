@@ -1,0 +1,149 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/local-model-knowledge-status-20260623",
+  "commit_scope": "Add a focused no-HTTP/no-Ollama validation lane showing a Form-emitted Metal inference kernel loading model weight bytes at runtime. This closes a small boundary only: byte-loaded weights into a standalone Metal runtime artifact, not full GGUF parsing, full llama generation, or a direct fkwu Metal primitive.",
+  "files_owned": [
+    "scripts/metal_weight_bytes_runtime_boundary.sh",
+    "docs/system_audit/commit_evidence_2026-06-25_metal_weight_bytes_runtime_boundary.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/metal_weight_bytes_runtime_boundary.sh",
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+      "scripts/metal_weight_bytes_runtime_boundary.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_metal_weight_bytes_runtime_boundary.json"
+    ],
+    "results": [
+      "syntax check passed",
+      "metal-emit-band verdict 31; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "standalone runtime artifact passed under env -i with empty PATH; denied toolchain names visible on PATH = 0; http_or_ollama=absent; model_bytes_loaded=44; weight_bytes_loaded=24; input_bytes_loaded=12; gpu_y=[-0.250000,5.000000]; expected_y=[-0.250000,5.000000]; max_delta=0.000000000; verdict=PASS form-native-metal-weight-bytes-runtime",
+      "evidence validation passed"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No CI run was opened for this local proof-lane patch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deploy surface changed; this is a local Metal runtime-boundary proof."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete for the small boundary; CI/deploy were not run."
+  },
+  "idea_ids": [
+    "form-native-metal-model-inference"
+  ],
+  "spec_ids": [
+    "metal-emit-band",
+    "metal-weight-bytes-runtime-boundary"
+  ],
+  "task_ids": [
+    "2026-06-25-metal-weight-bytes-runtime-boundary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "investigation",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/native/GPU_GAPS.md",
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/metal-emit-band.fk",
+    "form/form-stdlib/tests/q4k-dequant-band.fk",
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "scripts/metal_weight_bytes_runtime_boundary.sh"
+  ],
+  "change_files": [
+    "scripts/metal_weight_bytes_runtime_boundary.sh",
+    "docs/system_audit/commit_evidence_2026-06-25_metal_weight_bytes_runtime_boundary.json"
+  ],
+  "change_intent": "process_only",
+  "runtime_boundary_receipt": {
+    "observed_existing_surfaces": {
+      "fkwu_direct_metal_primitive": "not found; fkwu_bridge.go states fkwu makes no host call in that offload path",
+      "fkwu_input_bytes": "present as argv[3] staged into fk_src for programs that read fk-buf; this is an input channel, not Metal execution",
+      "kernel_file_byte_load": "read_file_bytes is present in sibling kernels and recipes such as q4k-dequant use real llama weight bytes as Form data",
+      "metal_emission": "jte-matvec-msl emits deterministic MSL and metal-emit-band proves it four-way",
+      "metal_runtime": "existing scripts prove Form-emitted kernels through Swift/Metal host carriers; GPU_GAPS names weight load to device as not yet wired"
+    },
+    "new_lane": {
+      "build_phase": {
+        "uses_tools": [
+          "shell",
+          "form-kernel-go",
+          "xcrun swiftc",
+          "base64",
+          "otool"
+        ],
+        "emitted_msl_bytes": 444,
+        "model_fixture_layout": "u32 rows, u32 cols, f32 weights, f32 input"
+      },
+      "runtime_phase": {
+        "artifact_shape": "single compiled Swift executable with Form-emitted Metal source embedded; model weights supplied as a separate binary file",
+        "sanitized_environment": "env -i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp>",
+        "linked_libraries": [
+          "Metal.framework",
+          "Foundation.framework",
+          "libSystem.B.dylib",
+          "libobjc.A.dylib",
+          "Swift runtime dylibs from /usr/lib/swift"
+        ],
+        "not_needed_after_build": [
+          "HTTP",
+          "Ollama",
+          "Go",
+          "Rust",
+          "Python",
+          "shell PATH lookup",
+          "clang",
+          "swiftc",
+          "external .metal source file"
+        ],
+        "runtime_output": {
+          "runtime_path_sanitized": true,
+          "denied_toolchain_names_visible_on_path": 0,
+          "http_or_ollama": "absent",
+          "metal_device": "Apple M4 Max",
+          "embedded_msl_bytes": 444,
+          "model_bytes_loaded": 44,
+          "weight_bytes_loaded": 24,
+          "input_bytes_loaded": 12,
+          "rows": 2,
+          "cols": 3,
+          "gpu_y": [
+            -0.25,
+            5.0
+          ],
+          "expected_y": [
+            -0.25,
+            5.0
+          ],
+          "max_delta": 0.0,
+          "verdict": "PASS form-native-metal-weight-bytes-runtime"
+        }
+      }
+    },
+    "remaining_boundaries": [
+      "There is still no direct fkwu primitive that invokes Metal.",
+      "The build phase still uses shell, form-kernel-go, and xcrun swiftc.",
+      "The runtime artifact uses Metal.framework makeLibrary(source:) over embedded MSL; it is not direct AIR/metallib/AGX bytes.",
+      "The model fixture is a small matvec byte layout; it is not full GGUF parsing, llama tokenizer, KV-cache decode, or multi-layer generation.",
+      "Weight bytes are loaded into shared Metal buffers for one dispatch; persistent resident model weights and full scheduler integration remain open."
+    ]
+  }
+}

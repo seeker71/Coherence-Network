@@ -1,0 +1,316 @@
+{
+  "date": "2026-06-23",
+  "thread_branch": "codex/local-model-knowledge-status-20260623",
+  "commit_scope": "End-to-end receipt for strict fkwu/form-cli, Metal runtime, local form-llama carrier, and oracle/cell channel validation gaps.",
+  "files_owned": [
+    "docs/system_audit/fkwu_form_cli_metal_oracle_e2e_receipt_2026-06-23.json",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "form/build-form-cli.sh",
+    "form/form-kernel-go/form_cli_test.go",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/tests/form-cli-band.fk"
+  ],
+  "local_validation": {
+    "status": "fail",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk form-stdlib/tests/http-client-socket-verbs-band.fk form-stdlib/tests/http-client-socket-response-band.fk",
+      "cd form/form-kernel-go && go test -run 'TestFkwuFormCli' -count=1",
+      "form/build-form-cli.sh .cache/fkwu-form-cli-e2e/form-cli",
+      "printf 'ping\\nverify\\nkernel\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli",
+      "printf 'ask Reply with exactly FORM-CLI-ASK-OK.\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli",
+      "scripts/metal_gqa_llama_block_audit.sh",
+      "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+      "jq empty docs/system_audit/fkwu_form_cli_metal_oracle_e2e_receipt_2026-06-23.json"
+    ],
+    "results": [
+      "entry checks passed with existing nonblocking wellness drift",
+      "Form/fkwu bands passed with verdict 8191",
+      "focused fkwu form-cli Go tests passed",
+      "standalone fkwu form-cli built and deterministic sanitized runtime verbs passed",
+      "standalone fkwu form-cli live ask remains partial: direct curl to Ollama passes, app returns ask error marker plus fallback 'cell'",
+      "Metal GQA block audit and standalone runtime boundary passed",
+      "receipt JSON is syntactically valid"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No PR/CI run was opened for this local validation receipt."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployed surface changed; proof is local runtime and evidence."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The request asked for all gaps closed; live fkwu ask, full form-llama strict runtime, frontier proxy cell, and Windows physical runtime remain open."
+  },
+  "e2e_validation": {
+    "status": "fail",
+    "expected_behavior_delta": "Standalone fkwu form-cli should run deterministic verbs and local ask under a sanitized runtime; standalone Metal GQA fixture should run with no denied toolchain visible after build. Deterministic verbs and Metal boundary pass; live local ask does not.",
+    "public_endpoints": [
+      "local-binary:.cache/fkwu-form-cli-e2e/form-cli",
+      "local-http:http://127.0.0.1:11434/api/generate",
+      "local-script:scripts/metal_gqa_llama_block_runtime_boundary.sh"
+    ],
+    "test_flows": [
+      "standalone-fkwu-deterministic-verbs: printf 'ping\\nverify\\nkernel\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli -> pass",
+      "standalone-fkwu-live-local-ask: printf 'ask Reply with exactly FORM-CLI-ASK-OK.\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli -> fail; returned ask error marker plus fallback 'cell'",
+      "standalone-metal-gqa-runtime-boundary: scripts/metal_gqa_llama_block_runtime_boundary.sh -> pass"
+    ],
+    "commands": [
+      "form/build-form-cli.sh .cache/fkwu-form-cli-e2e/form-cli",
+      "printf 'ping\\nverify\\nkernel\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli",
+      "printf 'ask Reply with exactly FORM-CLI-ASK-OK.\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli",
+      "scripts/metal_gqa_llama_block_runtime_boundary.sh"
+    ],
+    "passed": [
+      "standalone fkwu form-cli deterministic verbs under sanitized PATH",
+      "standalone Metal GQA llama block runtime boundary"
+    ],
+    "failed": [
+      "standalone fkwu form-cli live local-oracle ask returned an ask error marker plus fallback 'cell' instead of FORM-CLI-ASK-OK"
+    ],
+    "reason": "The composed target is not end-to-end complete until live ask, full strict form-llama runtime, frontier proxy cell, and Windows physical runtime pass."
+  },
+  "idea_ids": [
+    "fkwu-form-cli-strict-runtime",
+    "metal-form-llama-runtime-boundary",
+    "frontier-oracle-proxy-cell"
+  ],
+  "spec_ids": [
+    "form-cli-band",
+    "http-client-socket-verbs-band",
+    "http-client-socket-response-band",
+    "llama-gqa-block-causal-band",
+    "llama-gqa-block-fwd-causal-emit-band",
+    "form-llama-champion-lane-band"
+  ],
+  "task_ids": [
+    "2026-06-23-fkwu-form-cli-metal-oracle-e2e-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "orchestration",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/form_llama_on_device_validation_2026-06-23.json",
+    "docs/system_audit/form_native_execution_validation_2026-06-23.json",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+    "docs/system_audit/commit_evidence_2026-06-23_form_llama_champion_lane.json",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/http-client.fk",
+    "form/build-form-cli.sh",
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh"
+  ],
+  "change_files": [
+    "docs/system_audit/fkwu_form_cli_metal_oracle_e2e_receipt_2026-06-23.json",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "form/build-form-cli.sh",
+    "form/form-kernel-go/form_cli_test.go",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/tests/form-cli-band.fk"
+  ],
+  "change_intent": "runtime_fix",
+  "request": "Prove the on-device c-bootstrap/fkwu/kernel form-cli based app with Metal native execution, no Rust/Go/Python/shell/clang runtime dependencies, direct or proxy cell/oracle channels, and end-to-end receipts.",
+  "overall_verdict": "partial_pass_with_named_gaps",
+  "summary": "Standalone fkwu form-cli runtime, deterministic app verbs, macOS native object execution, Android ELF shared-library execution, and a standalone post-build Metal GQA llama block runtime boundary were proven locally. Full form-llama inference/training inside fkwu/form-cli, live standalone form-cli ask over local Ollama, Windows physical runtime, and proxy-cell frontier oracle routing remain unproven.",
+  "entry_checks": {
+    "make_prompt_guide": "passed in dirty-continuation mode",
+    "make_wellness": "passed with existing nonblocking drift: user-space blueprint VALUE-NONE, missing primitive registry rows form_compile/form_walk/str_byte_at, bootstrap compost remains"
+  },
+  "subagents": [
+    {
+      "agent_id": "019ef577-83b3-7e93-a29f-d7781e579c41",
+      "slice": "fkwu/form-cli app path audit",
+      "result": "standalone runtime proof exists; build and validation still use shell/Go/clang and broader bin/form-cli remains a bash/Python wrapper"
+    },
+    {
+      "agent_id": "019ef577-84aa-7f12-9556-04a7c9dcebf3",
+      "slice": "Metal/form-llama execution audit",
+      "result": "Metal GQA/llama block bricks are proven, but full form-llama inference/training inside fkwu/form-cli is not proven"
+    },
+    {
+      "agent_id": "019ef577-8531-7592-86e6-a5faa65afe98",
+      "slice": "cell/oracle channel audit",
+      "result": "native local ask is socket-based; frontier oracle paths still use host-exec or Python/API subprocess lanes, not a strict proxy cell"
+    },
+    {
+      "agent_id": "019ef57b-45af-7411-bd10-f54c9bb5bb6c",
+      "slice": "Metal runtime boundary closure",
+      "result": "added and proved scripts/metal_gqa_llama_block_runtime_boundary.sh"
+    }
+  ],
+  "proofs_passed": [
+    {
+      "name": "form-llama champion/authority gate",
+      "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/form-llama-champion-lane.fk form-stdlib/tests/form-llama-champion-lane-band.fk",
+      "result": "255; fourth-arm pass",
+      "scope": "policy gate only; not a model runtime"
+    },
+    {
+      "name": "standalone fkwu form-cli deterministic runtime",
+      "commands": [
+        "form/build-form-cli.sh .cache/fkwu-form-cli-e2e/form-cli",
+        "file .cache/fkwu-form-cli-e2e/form-cli",
+        "otool -L .cache/fkwu-form-cli-e2e/form-cli",
+        "printf 'ping\\nverify\\nkernel\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli"
+      ],
+      "result": "built Mach-O arm64 executable; runtime links only /usr/lib/libSystem.B.dylib; sanitized PATH deterministic verbs passed; verify reported embedded Form source and native fkwu runtime",
+      "runtime_not_needed": [
+        "Go",
+        "Rust",
+        "Python",
+        "shell PATH lookup",
+        "clang",
+        "table file"
+      ],
+      "build_boundary": "build still uses shell, form-kernel-go, and clang once"
+    },
+    {
+      "name": "form-cli BML ask build integration",
+      "commands": [
+        "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk form-stdlib/tests/http-client-socket-verbs-band.fk form-stdlib/tests/http-client-socket-response-band.fk",
+        "cd form/form-kernel-go && go test -run 'TestFkwuFormCli' -count=1"
+      ],
+      "result": "Form/fkwu band passed with verdict 8191; fkwu form-cli Go tests passed",
+      "fixes_made": [
+        "build-form-cli now source-compiles BML core/http-client/form-cli-ask before flattening",
+        "form-cli tests now mirror that compiled-BML build path",
+        "form-cli-band covers ask usage instead of unbound-cell fallback"
+      ]
+    },
+    {
+      "name": "Metal GQA llama runtime boundary",
+      "commands": [
+        "scripts/metal_gqa_llama_block_audit.sh",
+        "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+        "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json"
+      ],
+      "result": "standalone post-build runtime artifact passed under env -i with empty PATH; denied toolchain names visible on PATH = 0; Metal device Apple M4 Max; embedded MSL bytes 7259; max_recipe_delta_x1e6 = 0.431",
+      "receipt": "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+      "not_claimed": [
+        "full form-llama",
+        "real GGUF weights",
+        "tokenizer/generation",
+        "direct AIR/metallib/AGX bytes",
+        "strict c-bootstrap/fkwu/form-cli integration"
+      ]
+    },
+    {
+      "name": "Mac and Android native execution floor",
+      "receipt": "docs/system_audit/form_native_execution_validation_2026-06-23.json",
+      "result": "macOS Form-emitted Mach-O object linked and ran with exit 40; Android attached device R5CW20DK17A ran Form-emitted ARM64 ELF .so via dlopen and returned 47"
+    },
+    {
+      "name": "on-device form-llama carrier floor",
+      "receipt": "docs/system_audit/form_llama_on_device_validation_2026-06-23.json",
+      "result": "local Ollama/MLX with OLLAMA_NO_CLOUD=1 ran form-llama on Apple M4 Max GPU; context-supplied answer passed; raw repo recall failed 0/3"
+    }
+  ],
+  "proofs_failed_or_partial": [
+    {
+      "name": "standalone fkwu form-cli live local-oracle ask",
+      "commands": [
+        "OLLAMA_NO_CLOUD=1 ollama serve",
+        "printf 'ask Reply with exactly FORM-CLI-ASK-OK.\\nquit\\n' | env -i HOME=$HOME PATH=/no-tools .cache/fkwu-form-cli-e2e/form-cli",
+        "curl -sS http://127.0.0.1:11434/api/generate -H 'Content-Type: application/json' -d '{\"model\":\"form-llama\",\"prompt\":\"Reply with exactly FORM-CLI-ASK-OK.\",\"stream\":false}'"
+      ],
+      "observed": "direct curl to Ollama returned JSON with FORM-CLI-ASK-OK; standalone fkwu form-cli returned '[ask: no answer from local oracle - is ollama running at 127.0.0.1:11434?]' and, after native sock_request fallback, appended 'cell'. Ollama logs showed POST /api/generate hits during fallback, so transport reaches the server but the app does not yet lift the response field.",
+      "status": "gap_open",
+      "boundary": "external loopback HTTP response extraction/fallback behavior in standalone fkwu app"
+    },
+    {
+      "name": "full form-llama Form-native runtime",
+      "observed": "Metal GQA/llama block bricks and on-device Ollama/MLX carrier are proven separately; content-addressed model cells, Form-native inference/training, real GGUF weights, tokenizer, multi-layer decode, and generation inside fkwu/form-cli are not proven.",
+      "status": "gap_open"
+    },
+    {
+      "name": "frontier model agent CLI as strict proxy cell",
+      "observed": "ask+ and tiered runners still use host-exec or Python/API subprocess lanes for remote frontier access; no strict fkwu app proxy-cell oracle receipt exists.",
+      "status": "gap_open"
+    },
+    {
+      "name": "Windows physical runtime",
+      "observed": "PE/COFF x64+arm64 object floor passed four-way; no physical Windows runtime was run in this session.",
+      "status": "gap_open"
+    }
+  ],
+  "strict_runtime_matrix": {
+    "standalone_fkwu_form_cli_verbs": {
+      "macos": "pass",
+      "android": "not_run_for_form_cli",
+      "windows": "not_run_this_session",
+      "runtime_requires_go": false,
+      "runtime_requires_rust": false,
+      "runtime_requires_python": false,
+      "runtime_requires_shell_path": false,
+      "runtime_requires_clang": false
+    },
+    "standalone_metal_gqa_fixture": {
+      "macos": "pass",
+      "runtime_requires_go": false,
+      "runtime_requires_rust": false,
+      "runtime_requires_python": false,
+      "runtime_requires_shell_path": false,
+      "runtime_requires_clang": false,
+      "runtime_requires_swiftc": false,
+      "runtime_uses": [
+        "Metal.framework",
+        "Foundation.framework",
+        "Swift runtime dylibs",
+        "libSystem"
+      ]
+    },
+    "form_llama_full_model": {
+      "macos": "partial_ollama_mlx_carrier_only",
+      "android": "not_proven",
+      "windows": "not_proven",
+      "strict_fkwu_runtime": "not_proven"
+    },
+    "frontier_oracle_proxy_cell": {
+      "strict_fkwu_runtime": "not_proven",
+      "current_runtime": "host-exec or Python/API subprocess"
+    }
+  },
+  "files_changed_for_this_receipt_family": [
+    "form/build-form-cli.sh",
+    "form/form-kernel-go/form_cli_test.go",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "docs/system_audit/commit_evidence_2026-06-23_metal_gqa_llama_runtime_boundary.json",
+    "docs/system_audit/fkwu_form_cli_metal_oracle_e2e_receipt_2026-06-23.json"
+  ],
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "verification and lookup only; local Form/fkwu/Metal commands supplied proof artifacts",
+    "rented_oracle_share": "the orchestration and prose synthesis in this receipt were generated by the rented frontier model",
+    "trust_matrix": {
+      "path": "mixed: native proofs plus rented synthesis",
+      "grounded": "partial: file/command evidence but no single NodeID receipt",
+      "freq": "not measured",
+      "suffic": "no: live ask and full model runtime gaps remain",
+      "observed": false
+    }
+  }
+}

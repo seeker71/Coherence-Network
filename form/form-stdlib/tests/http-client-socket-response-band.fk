@@ -5,7 +5,8 @@
 ; Extends the HTTP verb socket floor beyond request bytes: a high-grammar BML
 ; recipe renders PATCH, sends it over socket_send, the loopback peer returns a
 ; framed HTTP response over socket_send, and the client consumes the response
-; bytes with socket_recv before Form parses status/body/framing. Verdict: 8191.
+; bytes with http-recv-response before Form parses status/body/framing.
+; Verdict: 8191.
 
 section [form.bml] {
     def hcsr-contains(s, needle) = ge(str_find(s, needle, 0), 0);
@@ -34,7 +35,7 @@ section [form.bml] {
     let response-sent = if hcsr-contains(request, body) then http-send-all(conn, response, 0) else -1;
     let response-sent-ok = hcsr-score(gt(response-sent, 0), 64);
 
-    let wire = if gt(response-sent, 0) then socket_recv(cli, str_len(response)) else "";
+    let wire = if gt(response-sent, 0) then http-recv-response(cli) else "";
     let close-server = if gt(str_len(wire), 0) then socket_close(conn) else socket_close(conn);
     let close-server-ok = hcsr-score(eq(close-server, 0), 128);
     let close-client = socket_close(cli);
