@@ -106,11 +106,20 @@ $localBin = Join-Path $HOME ".local\bin"
 New-Item -ItemType Directory -Force -Path $localBin | Out-Null
 Add-UserPathEntry $localBin -Prepend
 
-$pythonShim = Join-Path $localBin "python3"
-$pythonShimCmd = Join-Path $localBin "python3.cmd"
-[System.IO.File]::WriteAllText($pythonShim, "#!/usr/bin/env bash`nexec py -3 ""`$@""`n", [System.Text.UTF8Encoding]::new($false))
-[System.IO.File]::WriteAllText($pythonShimCmd, "@echo off`r`npy -3 %*`r`n", [System.Text.Encoding]::ASCII)
-& $gitBash -lc "chmod +x ~/.local/bin/python3"
+$pythonShimCmd = Join-Path $localBin "python.cmd"
+$python3ShimCmd = Join-Path $localBin "python3.cmd"
+$pythonShimCmdBody = "@echo off`r`npy -3 %*`r`n"
+[System.IO.File]::WriteAllText($pythonShimCmd, $pythonShimCmdBody, [System.Text.Encoding]::ASCII)
+[System.IO.File]::WriteAllText($python3ShimCmd, $pythonShimCmdBody, [System.Text.Encoding]::ASCII)
+$pyLauncher = (Get-Command py -ErrorAction Stop).Source
+Copy-Item $pyLauncher (Join-Path $localBin "python.exe") -Force
+Copy-Item $pyLauncher (Join-Path $localBin "python3.exe") -Force
+Remove-Item (Join-Path $localBin "python") -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $localBin "python3") -Force -ErrorAction SilentlyContinue
+& $gitBash -lc "./scripts/ensure_coord_cli.sh --quiet"
+if ($LASTEXITCODE -ne 0) {
+    throw "failed to refresh form-cli/coord PATH wrappers"
+}
 
 if ((-not (Test-Path "api\.env")) -or $ForceEnv) {
     Copy-Item "api\.env.example" "api\.env" -Force:$ForceEnv

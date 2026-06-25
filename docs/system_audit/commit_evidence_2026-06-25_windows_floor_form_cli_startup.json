@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/windows-floor",
+  "commit_scope": "Make form-cli available at agent startup before Python, Go, or Rust sensing; route default requests through Form-native carriers; prove the Windows fkwu floor remains green.",
+  "standard_receipt": {
+    "claim": "Agent startup installs a form-cli door first, without requiring Python, Go, Rust, clang, or LLVM just to make the command available.",
+    "body": "yes - prompt_entry_gate.sh refreshes PATH wrappers before Python sensing; bin/form-cli defaults ask/search/index to Form/native carriers where available.",
+    "c_bootstrap": "observed - verify_windows_form_cli_native.ps1 builds and runs standalone Windows form-cli with runtime PATH stripped.",
+    "toolchain_free": "observed for startup wrapper and native runtime smoke; build and proof carriers still use Go/clang where explicitly named.",
+    "platforms": {
+      "windows": "observed - PowerShell and Git Bash wrapper proofs, no-toolchain startup proof, fkwu socket/http/self-JIT proofs",
+      "mac": "not changed",
+      "android": "not changed"
+    },
+    "honest_floor": "form-cli existence at startup is shell-wrapper only and does not depend on Python/Go/Rust. Some explicit legacy verbs still use Python, and form-cli index needs T_flat for native index healing."
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-25_windows_floor_form_cli_startup.json"
+  ],
+  "idea_ids": ["agent-cli", "idea-realization-engine"],
+  "spec_ids": ["fkwu-native-host-resources", "fkwu-only-kernel-collapse", "form-cli-self-healing-memory"],
+  "task_ids": ["task-2026-06-25-windows-floor-form-cli-startup"],
+  "contributors": [
+    {
+      "contributor_id": "codex-agent",
+      "contributor_type": "machine",
+      "roles": ["implementation", "verification"]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "change_intent": "process_only",
+  "change_files": [
+    ".gitattributes",
+    ".github/workflows/windows-host.yml",
+    "bin/form-cli",
+    "docs/shared/agent-start-packet.md",
+    "scripts/ensure_coord_cli.sh",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/form_cli_ask.sh",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/setup_windows_host.ps1",
+    "scripts/verify_windows_form_cli_native.ps1"
+  ],
+  "evidence_refs": [
+    "NO-TOOLCHAIN STARTUP: prompt_entry_gate.sh passed with PATH limited to Git Bash/System32 and no python/python3/py/go/cargo/rustc",
+    "WRAPPER: form-cli help exits 0 from PowerShell and Git Bash",
+    "ASK: form-cli ask --remote \"printf fallback-answer\" \"wrapper smoke\" exits 0 and returns fallback-answer",
+    "FORM FOUR-WAY: ask/trust band -> 16383 with fourth arm; grounded retrieval band -> 3 with fourth arm",
+    "WINDOWS FKWU: socket loopback verdict=111111; HTTP verbs verdict=127; HTTP response verdict=8191; self-JIT cold=317811 hot=317811",
+    "WINDOWS NATIVE CLI: verify_windows_form_cli_native.ps1 passed ping/verify/source with runtime PATH stripped of Go/clang/LLVM",
+    "GO WINDOWS HOST TESTS: go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1 passed"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/prompt_entry_gate.sh scripts/ensure_coord_cli.sh bin/form-cli scripts/form_cli_ask.sh scripts/ensure_form_cli_native.sh form/scripts/rag-heal.sh",
+      "PATH=/mingw64/bin:/usr/bin:/bin:/c/WINDOWS/System32 GHX_SKIP_AUTH_CHECK=1 ./scripts/prompt_entry_gate.sh",
+      "form-cli help",
+      "form-cli ask --remote \"printf fallback-answer\" \"wrapper smoke\"",
+      "make prompt-guide",
+      "make wellness",
+      "git diff --check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/trust-row.fk form-stdlib/form-cli-ask-gate.fk form-stdlib/tests/form-cli-ask-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/tests/rag-ask-grounded-band.fk",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_form_cli_native.ps1",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_socket_loopback.ps1",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_http_verbs_socket.ps1",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_http_response_socket.ps1",
+      "powershell -ExecutionPolicy Bypass -File .\\scripts\\verify_windows_fkwu_self_jit.ps1",
+      "cd form\\form-kernel-go; go test . -run 'TestWindows(RecipeDLL|BootstrapHost)' -count=1"
+    ],
+    "fourth_arm_outputs": [
+      "form-cli-ask-band four-way 16383",
+      "rag-ask-grounded-band four-way 3",
+      "windows native form-cli runtime toolchain-free"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      ".github/workflows/windows-host.yml will prove wrapper availability and poison Python/Go/Rust startup tools on Windows CI"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-windows-worktree"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Windows floor and no-toolchain startup proofs passed. CI/PR/deploy validation remains the external merge gate."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A new agent session can resolve form-cli before Python/Go/Rust availability is known; default ask routes through the Form ask carrier.",
+    "public_endpoints": ["form-cli shell command"],
+    "test_flows": [
+      "stripped PATH prompt_entry_gate.sh",
+      "PowerShell form-cli help",
+      "PowerShell form-cli ask smoke",
+      "Windows fkwu floor scripts"
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # form-cli — the one door into the Form-native organism.
 #
-# Everything routes through here: ask a question through the native fkwu grounded
-# RAG lane, see your own open gaps, close one offline with an explicit teacher
-# oracle, review your own thinking against an oracle, run the self-guided agent
-# loop, or evaluate a Form expression directly on the kernel. Local-first by
-# design — a remote oracle (incl. Claude via `claude -p`) is consulted only to
-# review/escalate, never required for a grounded answer.
+# Everything routes through here: ask a question (answered local-first, grounded
+# in the body's recipes/specs/concepts and any local docs you index), see your own
+# open gaps, close one offline with a local oracle, review your own thinking
+# against an oracle, run the self-guided agent loop, or evaluate a Form expression
+# directly on the kernel. Local-first by design — a remote oracle (incl. Claude via
+# `claude -p`) is consulted only to review, never required to answer.
 set -u
 # resolve through symlinks — the installer links this onto PATH (~/.local/bin),
 # so BASH_SOURCE is the symlink; follow it to the real file in the cloned repo.
@@ -18,47 +18,38 @@ done
 ROOT="$(cd -P "$(dirname "$src")/.." && pwd)"
 RAG="$ROOT/scripts/form_cli_rag.py"
 
-native_form_cli() {
-  if [ -x "$ROOT/form/form-cli" ]; then
-    printf '%s\n' "$ROOT/form/form-cli"
-    return 0
+ensure_native_cli() {
+  if [ ! -x "$ROOT/form/form-cli" ]; then
+    bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
   fi
-  case "$(uname -s)-$(uname -m)" in
-    Darwin-arm64)
-      if [ -x "$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64" ]; then
-        printf '%s\n' "$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64"
-        return 0
-      fi
-      ;;
-  esac
-  return 1
+  tries=0
+  while [ ! -x "$ROOT/form/form-cli" ] && [ "$tries" -lt 20 ]; do
+    sleep 1
+    tries=$((tries + 1))
+  done
+  if [ ! -x "$ROOT/form/form-cli" ]; then
+    echo "form-cli: native binary unavailable; run scripts/ensure_form_cli_native.sh" >&2
+    return 3
+  fi
+  printf '%s\n' "$ROOT/form/form-cli"
 }
 
 native_send() {
-  b="$(native_form_cli)" || {
-    echo "form-cli: no native fkwu form-cli binary available; run scripts/ensure_form_cli_native.sh" >&2
-    exit 3
-  }
-  (cd "${HOME:-$ROOT}" && printf '%s\nquit\n' "$1" | "$b")
-}
-
-native_query() {
-  home="${HOME:-$ROOT}"
-  mkdir -p "$home/.coherence-network"
-  printf '%s' "$2" > "$home/.coherence-network/rag-query.txt"
-  native_send "$1"
+  b="$(ensure_native_cli)" || exit "$?"
+  (cd "$ROOT" && printf '%s\nquit\n' "$1" | "$b" | sed '/^null$/d')
 }
 
 usage() {
-  cat <<EOF
+  cat <<'EOF'
 form-cli — the one door (local-first, Form-native)
 
-  form-cli                          interactive REPL (bare at a terminal) — like claude/codex
-  form-cli -p "<question>"          one-shot print mode (scripts/pipes); also: echo q | form-cli
-  form-cli repl                     force the interactive REPL
+  form-cli                          show this help; default requests use form-cli ask
+  form-cli -p "<question>"          one-shot print mode, same Form-native carrier as ask
+  form-cli repl                     native fkwu form-cli REPL
 
-  form-cli ask "<question>"
-        answer through the native fkwu grounded-RAG lane; no local HTTP oracle
+  form-cli ask "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
+        default ask path: Form-native local-first route through form-cli-ask-plus.fk;
+        the four-way sufficiency gate escalates only when local is not enough
   form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
         daily-driver ask: local-first, then the four-way-proven sufficiency gate
         (form-cli-sufficiency.fk via form-cli-ask-gate.fk) escalates to the
@@ -81,18 +72,22 @@ form-cli — the one door (local-first, Form-native)
         SHADOW MODE: replay N real captured agent turns through the native lane and
         score its tool-prediction against what the agent actually did (vs baseline)
         — watch how form-cli would have handled real work, without it being live
-  form-cli index [--docs DIR ...]
-        (re)build the searchable index over the body and any local doc folders
-  form-cli search "<query>" [-k N]
-        list the nearest body/doc cells for a query (retrieval only)
+  form-cli index [INDEX_PATH]
+        heal the searchable index through the Form-shell rag-heal path
+  form-cli search "<query>"
+        Form-native grounded retrieval through the native form-cli grounded verb
+  form-cli rag-ask "<question>" [-k N] [-m MODEL]
+        retiring Python bridge for the old vector RAG lane; explicit only
+  form-cli rag-status
+        native receipt for the healed index/query staging lane
   form-cli synthesis-status
         native receipt for the fkwu+Metal GGUF prose lane: what is present,
         what is missing, and why ask still reports pending
   form-cli roadmap
         list the floor->north-star steps (roadmap.fk) and the next one to build
   form-cli asm "<C>" [--ir|--opt|--x86|--passes]
-        ask LLVM/clang as an offline lowering teacher; this is an oracle surface,
-        not a form-cli runtime dependency
+        ask LLVM offline how it lowers/optimizes — clang emits the arm64 asm, IR,
+        opt-delta, other targets, or per-pass pipeline (the lowering teacher)
   form-cli gaps
         walk the body's open gaps (ideas/specs/capabilities), offline-closable tally
   form-cli close "<name>" "<spec>" "<assert>" "<expected>" [oracle]
@@ -109,23 +104,32 @@ form-cli — the one door (local-first, Form-native)
   form-cli preflight
         air-gap readiness check (kernel, oracles, body on disk, offline loop, memory)
 
-Local model lane: fkwu grounded RAG now; full prose synthesis moves through the
-fkwu+Metal GGUF/block-join lane as that composition lands. Legacy index/search
-carriers remain available for rebuilding or inspecting the local RAG cache.
+Models are local (ollama): coder, qwen2.5:72b, deepseek-r1:32b, llama3.2:3b.
 EOF
+}
+
+run_native_cli() {
+  out="$(native_send "$1")"
+  if [ -z "$out" ]; then
+    echo "form-cli: native grounded lookup returned no result; run form-cli index after T_flat is available" >&2
+    exit 4
+  fi
+  printf '%s\n' "$out"
 }
 
 cmd="${1:-}"; shift 2>/dev/null || true
 case "$cmd" in
-  "")          b="$(native_form_cli)" || { echo "form-cli: no native fkwu binary available" >&2; exit 3; }; cd "${HOME:-$ROOT}" && exec "$b" ;;
-  repl)        b="$(native_form_cli)" || { echo "form-cli: no native fkwu binary available" >&2; exit 3; }; cd "${HOME:-$ROOT}" && exec "$b" ;;
-  -p|--print)  native_query "ask-staged" "$*" ;;
-  -*)          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$cmd" "$@" ;; # flags (-m/-j/--local-only/...) -> ask engine
-  ask)       native_query "ask-staged" "$*" ;;
-  grounded)  native_query "grounded-staged" "$*" ;;
-  rag-status) native_send "rag-status" ;;
-  synthesis-status|model-status) native_send "synthesis-status" ;;
+  "")        usage ;;
+  help|-h|--help) usage ;;
+  repl)      b="$(ensure_native_cli)" || exit "$?"; cd "${HOME:-$ROOT}" && exec "$b" ;;
+  -p|--print) exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # one-shot print mode uses the Form-native ask carrier
+  -*)        exec bash "$ROOT/scripts/form_cli_ask.sh" "$cmd" "$@" ;; # ask flags (-m/-j/--remote/...) -> Form-native ask carrier
+  ask)       exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # default asks route through Form-native code
   ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
+  grounded)  run_native_cli "grounded $*" ;;
+  rag-status) run_native_cli "rag-status" ;;
+  synthesis-status|model-status) run_native_cli "synthesis-status" ;;
+  rag-ask)   exec python3 "$RAG" ask "$@" ;;
   do)        exec bash "$ROOT/scripts/form_cli_agent.sh" "$@" ;;  # tiered agent loop (local-first, escalate)
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;
   train)     exec bash "$ROOT/scripts/agent_tooluse_train.sh" "$@" ;;
@@ -133,8 +137,12 @@ case "$cmd" in
   gold)      exec bash "$ROOT/scripts/form_cli_gold.sh" "$@" ;;  # record a human freq-reading (verdict + named boundary) into the gold catalog
   shadow)    exec env FORM_CLI_CORPUS="${FORM_CLI_CORPUS:-$HOME/.coherence-network/form-cli-corpus/corpus.jsonl}" \
                   bash "$ROOT/scripts/form_cli_replay.sh" "$@" ;;
-  search)    exec python3 "$RAG" search "$@" ;;
-  index)     exec python3 "$RAG" build "$@" ;;
+  search)    run_native_cli "grounded $*" ;;
+  index)
+    if [ "$#" -gt 0 ]; then
+      exec bash "$ROOT/form/scripts/rag-heal.sh" "$@"
+    fi
+    exec bash "$ROOT/form/scripts/rag-heal.sh" "$ROOT/.coherence-network/rag-index/index.jsonl" ;;
   roadmap)   exec bash "$ROOT/scripts/form_cli_roadmap.sh" "$@" ;;
   asm)       exec bash "$ROOT/scripts/form_cli_asm.sh" "$@" ;;
   gaps)      exec bash "$ROOT/scripts/form_cli_gaps.sh" "$@" ;;
@@ -155,5 +163,5 @@ case "$cmd" in
     rm -f "$tf" "$empty"
     printf '%s\n' "$out" | sed '/^null$/d'
     exit "$rc" ;;
-  help|-h|--help|*) usage ;;
+  *) usage ;;
 esac
