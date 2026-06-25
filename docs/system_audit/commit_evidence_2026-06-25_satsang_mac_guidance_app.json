@@ -1,7 +1,7 @@
 {
   "date": "2026-06-25",
   "thread_branch": "codex/satsang-mac-gui-20260625",
-  "commit_scope": "Create SwiftUI Mac satsang guidance app that listens to the room after explicit start, shows detected transcripts, preserves edits/manual rows, and writes explicit guidance events/Form receipts for Sema or another invoked presence.",
+  "commit_scope": "Create SwiftUI Mac satsang guidance app that listens to the room after explicit start, keeps listening through no-speech intervals with a visible mic level, separates microphone metering from Speech Recognition authorization, shows detected transcripts, preserves edits/manual rows, and writes explicit guidance events/Form receipts for Sema or another invoked presence.",
   "files_owned": [
     "MANIFEST.md",
     "docs/coherence-substrate/INDEX.md",
@@ -39,7 +39,7 @@
       "git diff --check"
     ],
     "fourth_arm": "satsang-guidance-event-band.fk -> 255; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
-    "summary": "Swift package tests passed with 4 XCTest cases, including reload merge coverage for manual/edit preservation; GUI executable built; .app bundle assembled locally with microphone/speech usage strings. Runtime protocol path listens through native macOS Speech/AVFoundation after explicit Start Listening and writes JSONL, latest JSON, and latest .form receipts directly from Swift, with no shell receiver invoked by the GUI."
+    "summary": "Swift package tests passed with 4 XCTest cases, including reload merge coverage for manual/edit preservation; GUI executable built; .app bundle assembled locally with microphone/speech usage strings. Runtime protocol path listens through native macOS Speech/AVFoundation after explicit Start Listening, starts microphone metering separately from Speech Recognition authorization, restarts recognition after no-speech intervals, shows a live mic level, and writes JSONL, latest JSON, and latest .form receipts directly from Swift, with no shell receiver invoked by the GUI. Manual GUI proof showed Stop Listening, Listening to room mic, and a moving mic meter after a quiet interval; macOS say playback did not create a transcript row through the selected input path."
   },
   "ci_validation": {
     "status": "pending",
@@ -120,8 +120,8 @@
   "change_intent": "runtime_feature",
   "e2e_validation": {
     "status": "pass",
-    "summary": "Local macOS carrier builds, can start native room transcription, preserves manual/live rows across reload, and writes queue/Form receipt; Form event gate proves ready/hold behavior four-way.",
-    "expected_behavior_delta": "A Mac user can press Start Listening, accept microphone/speech prompts, see room speech as editable transcript lines, preserve manual notes across reloads, and explicitly send the complete session transcript as a satsang guidance request to Sema or another invoked presence.",
+    "summary": "Local macOS carrier builds, can start native room listening, exposes microphone activity separately from Speech Recognition authorization, keeps listening across no-speech intervals with a visible mic level, preserves manual/live rows across reload, and writes queue/Form receipt; Form event gate proves ready/hold behavior four-way. The GUI was manually verified with Stop Listening visible, Listening to room mic status, and ~3% mic-level activity after 12 seconds of silence.",
+    "expected_behavior_delta": "A Mac user can press Start Listening, accept microphone/speech prompts, see whether the room reaches the mic even before Speech authorization resolves, see physical room speech as editable transcript lines once Speech Recognition is authorized, preserve manual notes across reloads, and explicitly send the complete session transcript as a satsang guidance request to Sema or another invoked presence. System speaker playback may not loop into the selected microphone and was not transcribed in local testing.",
     "public_endpoints": [
       "n/a-local-macos-app"
     ],

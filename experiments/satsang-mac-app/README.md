@@ -37,5 +37,10 @@ event, a latest JSON receipt, and a latest `.form` envelope directly. The Form
 protocol proof lives in `form/form-stdlib/satsang-guidance-event.fk`.
 
 The first use of `Start Listening` asks macOS for microphone and speech
-recognition permission. Partial speech appears immediately in the transcript
-list as `room mic`; pressing `Stop Listening` commits the current partial line.
+recognition permission. The microphone meter starts as soon as microphone access
+is available, then Speech Recognition attaches transcription when authorized.
+Partial speech appears in the transcript list as `room mic`; pressing `Stop
+Listening` commits the current partial line. If macOS reports a no-speech
+interval, the listener stays open and restarts the recognition pass. The header
+shows a live microphone level while listening, so the holder can see whether the
+room is reaching the mic even while Speech permission is still pending.

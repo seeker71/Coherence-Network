@@ -16,6 +16,9 @@ source:
     symbols: [sge-target-known?, sge-turn-mode?, sge-all-transcripts?, sge-ready?, sge-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
+  - "No-speech intervals do not stop the active room listener"
+  - "A live microphone level shows whether the room is reaching the app"
+  - "Microphone activity is visible separately from Speech Recognition authorization"
   - "Mac desktop GUI shows detected transcripts from the local transcript file"
   - "Transcript lines can be edited before sending"
   - "The full transcript set is included in the guidance request"
@@ -46,6 +49,11 @@ transcript files, and writes a local protocol event queue.
 - [x] The GUI loads detected transcript lines from a JSONL or JSON-array file.
 - [x] The GUI starts/stops native macOS microphone transcription with explicit
       user action.
+- [x] The GUI keeps listening through no-speech intervals by restarting the
+      speech recognition pass.
+- [x] The GUI shows a live microphone level while listening.
+- [x] The GUI starts microphone metering separately from Speech Recognition
+      authorization so permission delays do not leave a silent requesting state.
 - [x] Live microphone partials appear as editable `room mic` transcript rows.
 - [x] The GUI allows editing individual utterances before sending.
 - [x] Manual and live rows survive transcript-file reloads.
@@ -77,6 +85,10 @@ transcript files, and writes a local protocol event queue.
   microphone/speech prompts, speak into the room, edit a transcript line, press
   Send, and see a JSON/Form event under
   `~/.coherence-network/satsang-guidance/`.
+- Manual validation: leave the app listening during silence and confirm it stays
+  in listening state instead of closing on `No speech detected`.
+- Manual validation: if Speech Recognition permission is still pending or
+  denied, confirm the app still shows microphone activity and an explicit status.
 
 ## Verification
 
@@ -101,8 +113,11 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
   and latest Form envelope under `~/.coherence-network/satsang-guidance/`.
 - The app does not replace turn-taking learning; it records that the turn was
   offered or manually invoked.
-- macOS microphone and speech-recognition permission prompts must be accepted
-  before live room transcription can run.
+- macOS microphone permission must be accepted before the app can listen to the
+  room; Speech Recognition permission must be accepted before live room
+  transcription can run.
+- The listener can only transcribe audio that reaches the selected macOS input
+  device; system speaker playback may not loop back into the microphone.
 
 ## Known Gaps and Follow-up Tasks
 

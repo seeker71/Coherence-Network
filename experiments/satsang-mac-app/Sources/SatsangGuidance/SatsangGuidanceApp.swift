@@ -8,7 +8,6 @@ struct SatsangGuidanceApp: App {
             ContentView()
                 .frame(minWidth: 1040, minHeight: 700)
         }
-        .windowStyle(.titleBar)
     }
 }
 
@@ -23,20 +22,25 @@ final class AppModel: ObservableObject {
     @Published var turnMode: String = "turn-offered"
     @Published var followTranscript: Bool = true
     @Published var isListening: Bool = false
+    @Published var micLevel: Double = 0
     @Published var partialTranscript: String = ""
     @Published var utterances: [TranscriptUtterance] = []
     @Published var selectedID: TranscriptUtterance.ID?
     @Published var status: String = "Ready"
 
+    private let defaultTranscriptPath: String
+    private let defaultQueuePath: String
     private var timer: Timer?
     private let roomTranscriber = RoomTranscriber()
 
     init() {
         let home = FileManager.default.homeDirectoryForCurrentUser
+        defaultTranscriptPath = home.appendingPathComponent(".coherence-network/agent-room-memory/transcript.jsonl").path
+        defaultQueuePath = home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
         transcriptPath = ProcessInfo.processInfo.environment["SATSANG_TRANSCRIPT_PATH"]
-            ?? home.appendingPathComponent(".coherence-network/agent-room-memory/transcript.jsonl").path
+            ?? defaultTranscriptPath
         queuePath = ProcessInfo.processInfo.environment["SATSANG_GUIDANCE_EVENTS"]
-            ?? home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
+            ?? defaultQueuePath
         roomTranscriber.onStateChange = { [weak self] listening, message in
             self?.isListening = listening
             self?.status = message
@@ -47,12 +51,30 @@ final class AppModel: ObservableObject {
         roomTranscriber.onUtterance = { [weak self] utterance in
             self?.commitLiveUtterance(utterance)
         }
+        roomTranscriber.onLevel = { [weak self] level in
+            self?.micLevel = level
+        }
         reload()
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.followTranscript else { return }
                 self.reload(silent: true)
             }
+        }
+    }
+
+    func resetInvalidPathsIfNeeded() {
+        var didReset = false
+        if !isLikelyFilePath(transcriptPath) {
+            transcriptPath = defaultTranscriptPath
+            didReset = true
+        }
+        if !isLikelyFilePath(queuePath) {
+            queuePath = defaultQueuePath
+            didReset = true
+        }
+        if didReset {
+            reload()
         }
     }
 
@@ -179,6 +201,10 @@ final class AppModel: ObservableObject {
         return path
     }
 
+    private func isLikelyFilePath(_ path: String) -> Bool {
+        path.hasPrefix("/") || path.hasPrefix("~/") || path.hasPrefix("./") || path.hasPrefix("../")
+    }
+
     private func upsertLiveDraft(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         partialTranscript = trimmed
@@ -216,16 +242,24 @@ final class AppModel: ObservableObject {
 
 struct ContentView: View {
     @StateObject private var model = AppModel()
+    @FocusState private var focusedPathField: PathField?
+
+    private enum PathField: Hashable {
+        case transcript
+        case queue
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             header
+                .frame(height: 180, alignment: .top)
             Divider()
-            HSplitView {
+            HStack(spacing: 0) {
                 transcriptList
-                    .frame(minWidth: 360)
+                    .frame(width: 420)
+                Divider()
                 detail
-                    .frame(minWidth: 620)
+                    .frame(maxWidth: .infinity)
             }
             Divider()
             Text(model.status)
@@ -234,6 +268,10 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+        }
+        .onAppear {
+            model.resetInvalidPathsIfNeeded()
+            focusedPathField = nil
         }
     }
 
@@ -260,24 +298,36 @@ struct ContentView: View {
                 GridRow {
                     Text("Transcript")
                     TextField("Transcript JSONL", text: $model.transcriptPath)
+                        .focused($focusedPathField, equals: .transcript)
                 }
                 GridRow {
                     Text("Event queue")
                     TextField("Guidance event queue", text: $model.queuePath)
+                        .focused($focusedPathField, equals: .queue)
                 }
             }
             .textFieldStyle(.roundedBorder)
             .font(.callout)
             if model.isListening || !model.partialTranscript.isEmpty {
-                Text(model.partialTranscript.isEmpty ? "Listening..." : model.partialTranscript)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(2)
-                    .textSelection(.enabled)
+                HStack(spacing: 10) {
+                    Text(model.partialTranscript.isEmpty ? "Listening..." : model.partialTranscript)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(2)
+                        .textSelection(.enabled)
+                    ProgressView(value: model.micLevel)
+                        .frame(width: 120)
+                    Text("\(Int(model.micLevel * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, alignment: .trailing)
+                }
             }
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.top, 64)
+        .padding(.bottom, 8)
     }
 
     private var transcriptList: some View {

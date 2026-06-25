@@ -11,7 +11,11 @@
 ;   transcript JSONL, listens to the room microphone after explicit Start
 ;   Listening, lets the holder edit utterances, and writes the request to
 ;   ~/.coherence-network/satsang-guidance/events.jsonl plus the latest JSON and
-;   .form receipt. No external receiver is invoked by the GUI.
+;   .form receipt. No external receiver is invoked by the GUI. No-speech
+;   intervals restart recognition and the visible mic level shows whether the
+;   room is reaching the input device. The mic meter comes alive separately from
+;   Speech Recognition authorization so permission delay is visible instead of
+;   silent.
 ;
 ; Body:
 ;   form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
