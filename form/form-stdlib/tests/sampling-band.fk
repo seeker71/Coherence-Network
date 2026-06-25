@@ -7,14 +7,21 @@
 ; op order (cross-checked below: smp-softmax(L) == tn-softmax(L), bit-identical). top-k / top-p use the
 ; selection recipes in sampling.fk (no sort native: repeated-max extraction). The expected integers were
 ; EMITTED FROM the recipe (same folds, same fp64) and frozen here — the band proves determinism across
-; kernels plus correctness of the pinned values, every one cross-checked by hand below. No RNG: these
-; functions produce the deterministic FILTERED DISTRIBUTION; the draw against it is the sampler's job.
+; kernels plus correctness of the pinned values, every one cross-checked by hand below.
+;
+; The DRAW (claims 11-15) closes what the filter half punts: a counter PRNG (MINSTD) IS a recipe —
+; pure integer arithmetic, no host entropy — so the actual token selection is four-way provable too.
+; The PRNG is grounded against its PUBLISHED canonical sequence (an authority outside our own folds);
+; the inverse-CDF draws are hand-checked against the cumulative; the peaked-distribution draw proves
+; sampling reduces to greedy argmax (no parallel path). Independent reference:
+; scripts/sampling_draw_reference.py (self-checks MINSTD against the Park-Miller published values).
 ;
 ; Fixtures:
 ;   L = [1.0, 2.0, 0.5, -1.0]              (raw logits, for temperature + softmax)
 ;   P = [0.1, 0.5, 0.3, 0.1]               (a probability distribution, sums to 1, for top-k / top-p)
+;   seed 1                                 (PRNG seed for the draw claims; cumulative(P)=[0.1,0.6,0.9,1.0])
 ;
-; Verdict 2047 when every claim lands:
+; Verdict 65535 when every claim lands:
 ;   1     temperature(L, 0.5)      = [2.0, 4.0, 1.0, -2.0]              (each logit / 0.5, exact)
 ;   2     softmax(L)               = [224208, 609460, 135989, 30343]   (×1e6, tn-softmax bits)
 ;   4     softmax(L) sums to 1     = 1000000                            (a distribution, exactly)
@@ -26,6 +33,12 @@
 ;   256   topp-thr(P, 0.7)         = 300000   (cum 0.5<0.7, +0.3=0.8>=0.7 → threshold 0.3)
 ;   512   topp-mask(P, 0.7)        = [0, 625000, 375000, 0]            (nucleus {0.5,0.3}, == topk k=2)
 ;   1024  topp-mask(P, 0.4)        = [0, 1000000, 0, 0]                (cum 0.5>=0.4 at rank0 → {0.5})
+;   2048  minstd seq (seed 1, x6) = [16807,282475249,1622650073,984943658,1144108930,470211272]
+;                                                                      (Park-Miller PUBLISHED sequence)
+;   4096  u(state) x1e6, x6       = [8,131538,755605,458650,532767,218959]   (state / (2^31-1))
+;   8192  draw-seq(P, seed1, 6)   = [0,1,2,1,1,1]   (inverse-CDF on cumulative [0.1,0.6,0.9,1.0])
+;   16384 draw-seq(PEAK, seed1,6) = [2,2,2,2,2,2]   (all mass on idx2 → greedy argmax, no parallel path)
+;   32768 draw-seq([.5,.5],s1,6)  = [0,0,1,0,1,0]   (u<0.5→0, u>=0.5→1; the binary draw)
 (do
     ; --- value reducer: a vec → flat list of (round (x·1e6)) integers ---
     (defn spb-ints (v)
@@ -60,6 +73,27 @@
     (let tp4 (smp-topp-mask P 0.4))
     (let tp4-want (list 0 1000000 0 0))
 
+    ; --- draw: PRNG (MINSTD) + inverse-CDF ---
+    ; spb-states: the minstd sequence of length n from a seed (mirrors smp-draw-seq's state thread).
+    (defn spb-states (state n)
+      (if (eq n 0) (empty)
+          (do (let st2 (smp-minstd state))
+              (cons st2 (spb-states st2 (sub n 1))))))
+    (defn spb-umap (xs)
+      (if (eq (len xs) 0) (empty)
+          (cons (smp-uniform (head xs)) (spb-umap (tail xs)))))
+    (let states6 (spb-states 1 6))
+    (let states6-want (list 16807 282475249 1622650073 984943658 1144108930 470211272))
+    (let u6-want (list 8 131538 755605 458650 532767 218959))
+    (let PEAK (list 0.0 0.0 1.0 0.0))
+    (let BIN (list 0.5 0.5))
+    (let drawP (smp-draw-seq P 1 6))
+    (let drawP-want (list 0 1 2 1 1 1))
+    (let drawPEAK (smp-draw-seq PEAK 1 6))
+    (let drawPEAK-want (list 2 2 2 2 2 2))
+    (let drawBIN (smp-draw-seq BIN 1 6))
+    (let drawBIN-want (list 0 0 1 0 1 0))
+
     ; --- claims ---
     (let c0  (if (spb-ieq (spb-ints temp) temp-want) 1 0))
     (let c1  (if (spb-ieq (spb-ints sm) sm-want) 2 0))
@@ -72,6 +106,11 @@
     (let c8  (if (eq (round (mul (smp-topp-thr P 0.7) 1000000.0)) 300000) 256 0))
     (let c9  (if (spb-ieq (spb-ints tp7) tp7-want) 512 0))
     (let c10 (if (spb-ieq (spb-ints tp4) tp4-want) 1024 0))
+    (let c11 (if (spb-ieq states6 states6-want) 2048 0))
+    (let c12 (if (spb-ieq (spb-ints (spb-umap states6)) u6-want) 4096 0))
+    (let c13 (if (spb-ieq drawP drawP-want) 8192 0))
+    (let c14 (if (spb-ieq drawPEAK drawPEAK-want) 16384 0))
+    (let c15 (if (spb-ieq drawBIN drawBIN-want) 32768 0))
 
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
-    (add c8 (add c9 c10)))))))))))
+    (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 c15))))))))))))))))

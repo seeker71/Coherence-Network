@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 364
+**Total files**: 363
 
 | File | Purpose |
 |---|---|
@@ -251,7 +251,6 @@
 | [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
 | [public_api_rendezvous_receipt.sh](public_api_rendezvous_receipt.sh) | public_api_rendezvous_receipt.sh — live public API nonce-hash rendezvous receipt. |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
-| [push-thread-repos.sh](push-thread-repos.sh) | _no top-of-file purpose_ |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
 | [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
@@ -273,6 +272,7 @@
 | [run_mvp_local_baseline.sh](run_mvp_local_baseline.sh) | _no top-of-file purpose_ |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | Pinned-idea (portfolio-governance) acceptance: one path, proof at each step. |
 | [runtime_surface_report.py](runtime_surface_report.py) | Runtime-surface report — how much of the API runs in CPython vs the Form kernel. |
+| [sampling_draw_reference.py](sampling_draw_reference.py) | sampling_draw_reference.py — independent reference for sampling.fk's DRAW half. |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | spec: full-code-traceability |
 | [scan_dyad_candidates.py](scan_dyad_candidates.py) | Refined dyad-pair candidate scan over Living Collective concept cells. |
 | [scan_dyad_candidates_word.py](scan_dyad_candidates_word.py) | WORD-domain prose-structural dyad-pair scan over Living Collective concepts. |
@@ -328,7 +328,6 @@
 | [test_verify_web_api_css_assets.sh](test_verify_web_api_css_assets.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_pulse_witness.sh](test_verify_web_api_pulse_witness.sh) | _no top-of-file purpose_ |
 | [test_verify_web_api_sha_patience.sh](test_verify_web_api_sha_patience.sh) | _no top-of-file purpose_ |
-| [thread-runtime.sh](thread-runtime.sh) | _no top-of-file purpose_ |
 | [thread_runtime_ports.sh](thread_runtime_ports.sh) | _no top-of-file purpose_ |
 | [training_corpus.py](training_corpus.py) | Feed the body's edges into the form-cli training catalog as (intent->realization) pairs. |
 | [transformer_kernel_audit.sh](transformer_kernel_audit.sh) | transformer_kernel_audit.sh — a full transformer block on every organ. |
