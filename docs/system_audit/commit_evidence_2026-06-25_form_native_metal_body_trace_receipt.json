@@ -1,0 +1,188 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/local-model-knowledge-status-20260623",
+  "commit_scope": "Add an observable body-test trace receipt for the no-HTTP/no-Ollama Form-native Metal model path.",
+  "files_owned": [
+    "scripts/form_native_metal_body_trace_receipt.sh",
+    "docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+    "docs/system_audit/trace/steps.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "chmod +x scripts/form_native_metal_body_trace_receipt.sh",
+      "bash -n scripts/form_native_metal_body_trace_receipt.sh",
+      "scripts/form_native_metal_body_trace_receipt.sh docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+      "jq empty docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+      "jq '{trace_id, verdict, observable_trace, gates, open_bridges}' docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_form_native_metal_body_trace_receipt.json",
+      "git diff --check"
+    ],
+    "results": [
+      "trace runner syntax passed",
+      "body trace receipt generated at docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+      "receipt JSON parsed with jq",
+      "trace_id=form-native-metal-20260625T162403Z",
+      "verdict=pass_observable_trace_with_open_bridges",
+      "observable trace has 13 steps, 13 passed, 0 failed",
+      "trace outputs are durable under docs/system_audit/trace/",
+      "trace_sha256=b72dc12deb9e6f2f117cb8bc0a312082a91c07a6a468d27ffad2ae2e8d7e2c14"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No PR or CI run was opened for this local trace receipt."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployed surface changed; this is a local body-test trace artifact."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The local form-cli dispatch surface answers ask through native fkwu grounded RAG without HTTP/Ollama, reports an explicit local miss when the healed index has no grounded hit, and exposes synthesis-status as pending-fkwu-metal-llm until the direct Metal model-call bridge is bound. The local Metal receipt proves model weight bytes can be loaded and dispatched on-device without HTTP/Ollama or visible runtime toolchain names.",
+    "public_endpoints": [
+      "local form-cli runtime",
+      "local Metal runtime boundary",
+      "docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-client.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk",
+      "scripts/metal_weight_bytes_runtime_boundary.sh",
+      "scripts/form_native_metal_body_trace_receipt.sh docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+      "scripts/regen_form_cli_bootstrap.sh && cd form && ./build-form-cli.sh .cache/form-cli-rebuilt && printf 'ask standard receipt\\nsynthesis-status\\nfnri witness\\nquit\\n' | .cache/form-cli-rebuilt"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The observable trace passed, but it still records open bridges for direct fkwu-to-Metal and full GGUF generation."
+  },
+  "idea_ids": [
+    "form-native-metal-model-inference",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "q4k-dequant-band",
+    "tokenize-band",
+    "llama3-pretokenize-band",
+    "llama3-rope-band",
+    "llama-gqa-block-causal-band",
+    "metal-emit-band",
+    "metal-weight-bytes-runtime-boundary"
+  ],
+  "task_ids": [
+    "2026-06-25-form-native-metal-body-trace-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence",
+        "trace"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+    "docs/system_audit/trace/steps.jsonl",
+    "docs/system_audit/trace/01_prompt_gate.out",
+    "docs/system_audit/trace/02_wellness.out",
+    "docs/system_audit/trace/03_form_first.out",
+    "docs/system_audit/trace/04_q4k_dequant.out",
+    "docs/system_audit/trace/05_tokenize.out",
+    "docs/system_audit/trace/06_llama3_pretokenize.out",
+    "docs/system_audit/trace/07_llama3_rope.out",
+    "docs/system_audit/trace/08_gqa_causal_block.out",
+    "docs/system_audit/trace/09_metal_emit.out",
+    "docs/system_audit/trace/10_metal_weight_bytes.out",
+    "docs/system_audit/trace/11_metal_decode.out",
+    "docs/system_audit/trace/12_metal_stack.out",
+    "docs/system_audit/trace/13_metal_runtime_boundary.out",
+    "scripts/form_native_metal_body_trace_receipt.sh",
+    "scripts/metal_weight_bytes_runtime_boundary.sh",
+    "scripts/metal_llama_block_decode_audit.sh",
+    "scripts/metal_multi_layer_stack_audit.sh",
+    "scripts/metal_gqa_llama_block_runtime_boundary.sh",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "scripts/INDEX.md"
+  ],
+  "change_files": [
+    "scripts/form_native_metal_body_trace_receipt.sh",
+    "docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+    "docs/system_audit/trace/steps.jsonl",
+    "docs/system_audit/trace/01_prompt_gate.out",
+    "docs/system_audit/trace/02_wellness.out",
+    "docs/system_audit/trace/03_form_first.out",
+    "docs/system_audit/trace/04_q4k_dequant.out",
+    "docs/system_audit/trace/05_tokenize.out",
+    "docs/system_audit/trace/06_llama3_pretokenize.out",
+    "docs/system_audit/trace/07_llama3_rope.out",
+    "docs/system_audit/trace/08_gqa_causal_block.out",
+    "docs/system_audit/trace/09_metal_emit.out",
+    "docs/system_audit/trace/10_metal_weight_bytes.out",
+    "docs/system_audit/trace/11_metal_decode.out",
+    "docs/system_audit/trace/12_metal_stack.out",
+    "docs/system_audit/trace/13_metal_runtime_boundary.out",
+    "docs/system_audit/fkwu_form_cli_metal_oracle_e2e_receipt_2026-06-23.json",
+    "form/form-kernel-go/form_cli_test.go",
+    "form/form-stdlib/form-cli-ask.fk",
+    "form/form-stdlib/http-client.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/http-client-socket-response-band.fk",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/verify_fnri_windows_standalone.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "scripts/INDEX.md"
+  ],
+  "change_intent": "runtime_fix",
+  "body_trace": {
+    "receipt": "docs/system_audit/form_native_metal_body_trace_receipt_2026-06-25.json",
+    "trace_dir": "docs/system_audit/trace",
+    "steps": 13,
+    "passed": 13,
+    "failed": 0,
+    "gates": {
+      "form_first_sufficient": false,
+      "q4k_dequant_four_way": true,
+      "tokenizer_four_way": true,
+      "llama3_pretokenize_four_way": true,
+      "llama3_rope_four_way": true,
+      "gqa_causal_block_four_way": true,
+      "metal_emit_four_way": true,
+      "metal_weight_bytes_runtime_pass": true,
+      "http_or_ollama_absent_in_weight_runtime": true,
+      "denied_toolchain_names_hidden_in_sanitized_runtime": true
+    },
+    "open_bridges": [
+      "direct fkwu form-cli primitive or carrier that owns Metal device/pipeline/buffer/dispatch/readback",
+      "real GGUF/content-addressed tensor-cell loader in the fkwu-controlled model path",
+      "full-width Llama 3.2 tokenizer -> 28-layer GQA decode -> logits/argmax -> decoded token without Ollama"
+    ]
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "the trace command outputs and Form/Metal validations are native/local evidence",
+    "rented_oracle_share": "this evidence summary and orchestration were produced by the rented frontier model",
+    "trust_matrix": {
+      "path": "native proof trace plus rented synthesis",
+      "grounded": "partial: every proof step has an output file and digest, but form-cli ask returned no sufficient answer",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "no for full target, yes for observable trace",
+      "observed": false
+    }
+  }
+}

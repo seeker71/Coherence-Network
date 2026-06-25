@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-23",
+  "host": "local Mac",
+  "purpose": "Validate whether the local form-llama model runs on device and whether it can answer repo-grounded questions from its own learned weights.",
+  "runtime_boundary": {
+    "on_device_local_model": true,
+    "strict_form_native_runtime": false,
+    "reason": "The validation used a local Ollama 0.23.2 server and MLX/GPU runner on 127.0.0.1. This proves local on-device inference, but not the desired final runtime of content-addressed Form model cells, Form-native inference/training, and Form->asm bytes with no Python, shell, Go/Rust service, or clang fast path.",
+    "network_boundary": "Rerun with OLLAMA_NO_CLOUD=1; server log reported 'Ollama cloud disabled: true'.",
+    "device_receipt": "Ollama discovered Metal backend on Apple M4 Max; ollama ps reported form-llama:latest id=469161b6c9e9 size=4.0 GB processor=100% GPU context=131072."
+  },
+  "model": {
+    "name": "form-llama:latest",
+    "id": "469161b6c9e9",
+    "architecture": "llama",
+    "parameters": "1.1B",
+    "quantization": "q4_k_m",
+    "context_length": 131072,
+    "capability": "completion"
+  },
+  "probes": [
+    {
+      "name": "raw_agent_start_packet_recall",
+      "prompt": "In the Coherence Network repo, when a new agent has little context, what file should it start with? Return only the path.",
+      "expected": "docs/shared/agent-start-packet.md",
+      "actual": "The file is `agents.py`. That is where every agent starts -- the flow that makes sense to one new agent may not be the same for another. The agents.read_file() function reads the local rulebook, which is stored in `agents.txt`, but it also inherits the global rules from the network's configuration file",
+      "pass": false,
+      "receipt": {
+        "model": "form-llama",
+        "done": true,
+        "total_duration_ns": 1529175875,
+        "load_duration_ns": 512376458,
+        "prompt_eval_count": 36,
+        "eval_count": 64
+      }
+    },
+    {
+      "name": "raw_wellness_command_recall",
+      "prompt": "In Coherence Network AGENTS.md, what command senses the body on arrival? Return only the command.",
+      "expected": "make wellness",
+      "actual": "The command is: sense_body_on_arrival 1 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 ",
+      "pass": false,
+      "receipt": {
+        "model": "form-llama",
+        "done": true,
+        "total_duration_ns": 3921985584,
+        "load_duration_ns": 8778500,
+        "prompt_eval_count": 30,
+        "eval_count": 64
+      }
+    },
+    {
+      "name": "raw_form_first_command_recall",
+      "prompt": "In Coherence Network, what command name is used for Form-first local reasoning before spending a rented frontier model? Return only the command name.",
+      "expected": "form-cli ask",
+      "actual": "smerge_first",
+      "pass": false,
+      "receipt": {
+        "model": "form-llama",
+        "done": true,
+        "total_duration_ns": 381634834,
+        "load_duration_ns": 10692584,
+        "prompt_eval_count": 37,
+        "eval_count": 3
+      }
+    },
+    {
+      "name": "context_supplied_agent_start_packet",
+      "prompt": "Context: AGENTS.md says: When a new agent has little context, start with docs/shared/agent-start-packet.md. Question: what file should the agent start with? Return only the path.",
+      "expected": "docs/shared/agent-start-packet.md",
+      "actual": "docs/shared/agent-start-packet.md",
+      "pass": true,
+      "receipt": {
+        "model": "form-llama",
+        "done": true,
+        "total_duration_ns": 177611583,
+        "load_duration_ns": 8498625,
+        "prompt_eval_count": 50,
+        "eval_count": 8
+      }
+    }
+  ],
+  "verdict": {
+    "on_device_inference": "pass",
+    "no_cloud_local_ollama": "pass",
+    "raw_repo_knowledge_recall": "fail",
+    "context_following": "pass",
+    "authority_for_repo_questions": "not_ready",
+    "recommended_next": "Treat form-llama as a local on-device carrier that can answer with supplied context, not as an internal repo-knowledge authority. Improve the fine-tune/eval set and require the Form authority gate before promotion."
+  },
+  "repair_seed": {
+    "status": "added",
+    "repo_eval_file": "scripts/eval_form_knowledge.py",
+    "local_train_file": "~/.coherence-network/form-knowledge-corpus/full/train.jsonl",
+    "local_valid_file": "~/.coherence-network/form-knowledge-corpus/full/valid.jsonl",
+    "changes": [
+      "Added deterministic eval coverage for the exact failed raw recall shapes: agent-start-packet path, make wellness, and form-cli ask.",
+      "Added three paraphrased training rows to the local full corpus.",
+      "Added three exact validation rows to the local full corpus."
+    ],
+    "validation": [
+      "jq empty ~/.coherence-network/form-knowledge-corpus/full/train.jsonl",
+      "jq empty ~/.coherence-network/form-knowledge-corpus/full/valid.jsonl",
+      "python3 -m py_compile scripts/eval_form_knowledge.py"
+    ]
+  }
+}

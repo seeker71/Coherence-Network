@@ -6,8 +6,9 @@
 ; receives lowered Form recipes from source-compiler.fk.
 ;
 ; Plain HTTP verbs are recipes over the host socket floor:
-; socket_connect / socket_send / socket_recv / socket_close. http_get and
-; sock_request remain compatibility natives, not the method layer.
+; socket_connect / socket_send / socket_recv / socket_close. http_get remains a
+; compatibility native outside the method layer. sock_request is retained only as
+; a native fallback when the decomposed socket_connect path cannot open the peer.
 
 section [form.bml] {
     def kh-render-request(method, path, host, body) {
@@ -84,7 +85,7 @@ section [form.bml] {
         if eq(str_len(chunk), 0) then acc else http-recv-response-next(conn, acc, chunk);
     }
 
-    def http-recv-response(conn) = http-recv-response-into(conn, "");
+    def http-recv-response(conn) = socket_recv(conn, 65536);
 
     def http-plain-request-connected(conn, req) {
         let sent = http-send-all(conn, req, 0);
@@ -93,9 +94,14 @@ section [form.bml] {
         response;
     }
 
+    def http-plain-request-response-or-fallback(host, port, conn, req) {
+        let response = http-plain-request-connected(conn, req);
+        if gt(str_len(response), 0) then response else sock_request(host, port, req);
+    }
+
     def http-plain-request(host, port, req) {
         let conn = http-open(host, port);
-        if lt(conn, 0) then "" else http-plain-request-connected(conn, req);
+        if lt(conn, 0) then sock_request(host, port, req) else http-plain-request-response-or-fallback(host, port, conn, req);
     }
 
     def http-fetch(method, url, body) {
