@@ -79,6 +79,7 @@
           (nom-row "fs_is_dir" 1 200 "host-pool")
           (nom-row "source_inventory" 3 202 "host-pool")
           (nom-row "metal_matvec_fixture" 0 203 "host-pool")
+          (nom-row "metal_matvec_f32" 3 204 "host-pool")
           (nom-row "file_open" 1 133 "host-pool")
           (nom-row "file_read" 2 134 "host-pool")
           (nom-row "file_close" 1 135 "host-pool")
