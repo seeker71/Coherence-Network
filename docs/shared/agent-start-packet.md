@@ -202,7 +202,7 @@ JIT runtime — no Go/Rust/clang in the default path:
 
 | Agent move | Native surface | Minimize |
 |------------|----------------|----------|
-| Ask / route / structural lookup | `form-cli ask` (`form-cli-main.fk`) | Python `coh_substrate.py`, rented LLM |
+| Ask / route / structural lookup | `form-cli ask` (`form-cli-main.fk` + `rag-ask.fk`: fkwu grounded RAG, no HTTP local oracle) | Python `coh_substrate.py`, rented LLM, host-local LLM as default answer |
 | Search / eval / orchestration | **form shell** — `fsh-main.fk` + `shell-grammar.fk` | bash one-offs, `rg`/`grep` when `source_inventory` exists |
 | Author / test / prove | **form code** — BML or `.fk` proof bands | new Python services, hand-written host scripts |
 | Four-way parity (honest floor) | `cd form && ./validate.sh …` only when a band needs sibling agreement | treating bash+walkers as the sovereignty receipt |
@@ -241,6 +241,11 @@ logic/fold/lift/emit passes: `node_value`, dict/field access (`_dict_get`),
 node introspection/write primitives, `intern_trivial_float`, and route semantics.
 Latest warmed observation state is `11` compile-failed / `76` warming /
 `9` compiled / `8` dispatch-hit rows.
+
+Local content memory is also expected at agent startup: the healed RAG cache under
+`~/.coherence-network/rag-index/` is the default corpus for `form-cli ask`. If the
+index or production DB config is missing, report the setup gap directly; do not
+silently substitute an Ollama/HTTP answer and call it native.
 
 Native route promotion loop: `/goal` means run
 `python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400`;

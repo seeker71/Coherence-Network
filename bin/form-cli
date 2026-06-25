@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # form-cli — the one door into the Form-native organism.
 #
-# Everything routes through here: ask a question (answered local-first, grounded
-# in the body's recipes/specs/concepts and any local docs you index), see your own
-# open gaps, close one offline with a local oracle, review your own thinking
-# against an oracle, run the self-guided agent loop, or evaluate a Form expression
-# directly on the kernel. Local-first by design — a remote oracle (incl. Claude via
-# `claude -p`) is consulted only to review, never required to answer.
+# Everything routes through here: ask a question through the native fkwu grounded
+# RAG lane, see your own open gaps, close one offline with an explicit teacher
+# oracle, review your own thinking against an oracle, run the self-guided agent
+# loop, or evaluate a Form expression directly on the kernel. Local-first by
+# design — a remote oracle (incl. Claude via `claude -p`) is consulted only to
+# review/escalate, never required for a grounded answer.
 set -u
 # resolve through symlinks — the installer links this onto PATH (~/.local/bin),
 # so BASH_SOURCE is the symlink; follow it to the real file in the cloned repo.
@@ -18,6 +18,37 @@ done
 ROOT="$(cd -P "$(dirname "$src")/.." && pwd)"
 RAG="$ROOT/scripts/form_cli_rag.py"
 
+native_form_cli() {
+  if [ -x "$ROOT/form/form-cli" ]; then
+    printf '%s\n' "$ROOT/form/form-cli"
+    return 0
+  fi
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64)
+      if [ -x "$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64" ]; then
+        printf '%s\n' "$ROOT/form/form-stdlib/bootstrap/form-cli-darwin-arm64"
+        return 0
+      fi
+      ;;
+  esac
+  return 1
+}
+
+native_send() {
+  b="$(native_form_cli)" || {
+    echo "form-cli: no native fkwu form-cli binary available; run scripts/ensure_form_cli_native.sh" >&2
+    exit 3
+  }
+  (cd "${HOME:-$ROOT}" && printf '%s\nquit\n' "$1" | "$b")
+}
+
+native_query() {
+  home="${HOME:-$ROOT}"
+  mkdir -p "$home/.coherence-network"
+  printf '%s' "$2" > "$home/.coherence-network/rag-query.txt"
+  native_send "$1"
+}
+
 usage() {
   cat <<EOF
 form-cli — the one door (local-first, Form-native)
@@ -26,8 +57,8 @@ form-cli — the one door (local-first, Form-native)
   form-cli -p "<question>"          one-shot print mode (scripts/pipes); also: echo q | form-cli
   form-cli repl                     force the interactive REPL
 
-  form-cli ask "<question>" [-k N] [-m MODEL]
-        answer from the body + local docs, grounded (local oracle, no network)
+  form-cli ask "<question>"
+        answer through the native fkwu grounded-RAG lane; no local HTTP oracle
   form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
         daily-driver ask: local-first, then the four-way-proven sufficiency gate
         (form-cli-sufficiency.fk via form-cli-ask-gate.fk) escalates to the
@@ -54,11 +85,14 @@ form-cli — the one door (local-first, Form-native)
         (re)build the searchable index over the body and any local doc folders
   form-cli search "<query>" [-k N]
         list the nearest body/doc cells for a query (retrieval only)
+  form-cli synthesis-status
+        native receipt for the fkwu+Metal GGUF prose lane: what is present,
+        what is missing, and why ask still reports pending
   form-cli roadmap
         list the floor->north-star steps (roadmap.fk) and the next one to build
   form-cli asm "<C>" [--ir|--opt|--x86|--passes]
-        ask LLVM offline how it lowers/optimizes — clang emits the arm64 asm, IR,
-        opt-delta, other targets, or per-pass pipeline (the lowering teacher)
+        ask LLVM/clang as an offline lowering teacher; this is an oracle surface,
+        not a form-cli runtime dependency
   form-cli gaps
         walk the body's open gaps (ideas/specs/capabilities), offline-closable tally
   form-cli close "<name>" "<spec>" "<assert>" "<expected>" [oracle]
@@ -75,17 +109,22 @@ form-cli — the one door (local-first, Form-native)
   form-cli preflight
         air-gap readiness check (kernel, oracles, body on disk, offline loop, memory)
 
-Models are local (ollama): coder, qwen2.5:72b, deepseek-r1:32b, llama3.2:3b.
+Local model lane: fkwu grounded RAG now; full prose synthesis moves through the
+fkwu+Metal GGUF/block-join lane as that composition lands. Legacy index/search
+carriers remain available for rebuilding or inspecting the local RAG cache.
 EOF
 }
 
 cmd="${1:-}"; shift 2>/dev/null || true
 case "$cmd" in
-  "")          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" ;;        # bare: recipe picks the mode (TTY -> REPL)
-  repl)        exec python3 "$ROOT/scripts/form_cli_ask_smart.py" --repl ;; # force interactive
-  -p|--print)  exec python3 "$ROOT/scripts/form_cli_ask_smart.py" -p "$@" ;; # one-shot print mode (scripts/pipes)
+  "")          b="$(native_form_cli)" || { echo "form-cli: no native fkwu binary available" >&2; exit 3; }; cd "${HOME:-$ROOT}" && exec "$b" ;;
+  repl)        b="$(native_form_cli)" || { echo "form-cli: no native fkwu binary available" >&2; exit 3; }; cd "${HOME:-$ROOT}" && exec "$b" ;;
+  -p|--print)  native_query "ask-staged" "$*" ;;
   -*)          exec python3 "$ROOT/scripts/form_cli_ask_smart.py" "$cmd" "$@" ;; # flags (-m/-j/--local-only/...) -> ask engine
-  ask)       exec python3 "$RAG" ask "$@" ;;
+  ask)       native_query "ask-staged" "$*" ;;
+  grounded)  native_query "grounded-staged" "$*" ;;
+  rag-status) native_send "rag-status" ;;
+  synthesis-status|model-status) native_send "synthesis-status" ;;
   ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
   do)        exec bash "$ROOT/scripts/form_cli_agent.sh" "$@" ;;  # tiered agent loop (local-first, escalate)
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;

@@ -21,7 +21,7 @@
 ;   512   the "[ask: .." error marker is NOT usable (okp 0)
 ;   1024  a real answer IS usable         (okp 1)
 ;   2048  intrinsic content: usable -> 70, unusable -> 0  (the sovereignty-first read)
-;   4096  the live trust row for a native accept  (path:native suffic:yes -> native-partial)
+;   4096  the live trust row for a native accept  (path:native grounded:yes suffic:yes -> native-partial)
 ;   8192  the live trust row for a rented escalate (path:rented suffic:no  -> rented)
 (do
     (let c0  (if (eq  (fca-ask-verdict 1 80 60 1) 0)                                       1    0))
@@ -33,11 +33,11 @@
     (let c6  (if (eq  (fca-ask-path 2) 0)                                                  64   0))
     (let c7  (if (eq  (fca-ask-verdict 1 60 60 1) 0)                                       128  0))
     (let c8  (if (eq  (fca-usable? "") 0)                                                  256  0))
-    (let c9  (if (eq  (fca-usable? "[ask: no answer from the local oracle]") 0)            512  0))
+    (let c9  (if (eq  (fca-usable? "[ask: local fkwu RAG index has no grounded hit]") 0)  512  0))
     (let c10 (if (eq  (fca-usable? "Four.") 1)                                             1024 0))
     (let c11 (if (and (eq (fca-content-intrinsic "Four.") 70) (eq (fca-content-intrinsic "") 0)) 2048 0))
     (let c12 (if (str_eq (fca-ask-trace-row 0)
-                  "trust  path:native  grounded:no  freq:no  suffic:yes  -> native-partial") 4096 0))
+                  "trust  path:native  grounded:yes  freq:no  suffic:yes  -> native-partial") 4096 0))
     (let c13 (if (str_eq (fca-ask-trace-row 2)
                   "trust  path:rented  grounded:no  freq:no  suffic:no  -> rented")          8192 0))
 

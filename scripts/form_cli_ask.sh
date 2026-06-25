@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # form_cli_ask.sh — thin WITNESS for `form-cli ask+`. The body is Form: the kernel
-# runs form-cli-ask-plus.fk (local-first; the four-way-proven sufficiency gate
-# escalates to the subscription oracle when local is not enough — claude-code quality).
+# runs form-cli-ask-plus.fk (fkwu grounded-RAG first; the four-way-proven
+# sufficiency gate escalates only when the local body has no grounded hit).
 #
 # This carrier only source-compiles the BML sections the body is written in — core,
-# http-client, form-cli-ask (the local lane), form-cli-ask-plus (the escalating flow)
+# form-cli-ask (the local lane), form-cli-ask-plus (the escalating flow)
 # — exactly the way validate.sh does (form-source-compile-file through the compiler
 # chain, content-cached), links them with the s-expr gate recipes (router / judge /
 # sufficiency / ask-gate), and invokes the kernel on the recipe. The decision math is
 # the gate's, proven four-way; this shell marshals args and wires the carriers.
 #
 # Usage: form_cli_ask.sh [-m local-model] [-j judge] [--remote "claude -p"] [--trust N] [--retries N] [--judge-gate] "question..."
-#   By default the local body is trusted (sovereignty-first): a usable local answer
-#   stands, and only a local FAILURE (empty / error / refusal) escalates to the oracle.
-#   --judge-gate turns on the judge model as the content scorer — claude-code quality at
-#   the cost of the judge's latency and noise (a small judge can mis-score a good answer).
+#   By default the local body is trusted (sovereignty-first): a grounded local hit
+#   stands, and only a local MISS escalates to the oracle. --judge-gate is kept as
+#   a compatibility flag; until the fkwu+Metal generator is wired, the judge lane
+#   falls back to the intrinsic grounded-hit score.
 set -u
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GO="$ROOT/form/form-kernel-go/bin-go"; STD="$ROOT/form/form-stdlib"
@@ -64,7 +64,6 @@ compile_bml() {  # src -> path to compiled s-expr on stdout (cached); exits on f
   printf '%s\n' "$cached"
 }
 CORE="$(compile_bml "$STD/core.fk")"
-HTTP="$(compile_bml "$STD/http-client.fk")"
 ASK="$(compile_bml "$STD/form-cli-ask.fk")"
 ASKPLUS="$(compile_bml "$STD/form-cli-ask-plus.fk")"
 
@@ -78,7 +77,7 @@ esc(){ printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 printf '(print (fca-ask-plus-traced "%s" "%s" "%s" "%s" %s %s %s))\n' \
   "$(esc "$Q")" "$(esc "$MODEL")" "$(esc "$JUDGE")" "$(esc "$REMOTE")" "$TRUST" "$RETRIES" "$JUDGE_GATE" > "$work/ask.fk"
 
-out="$("$GO" "$CORE" "$HTTP" "$ASK" \
+out="$("$GO" "$CORE" "$STD/text-tokenize.fk" "$STD/rag-embed.fk" "$STD/rag-index-codec.fk" "$STD/rag-retrieve.fk" "$STD/rag-ask.fk" "$ASK" \
   "$STD/form-cli-router.fk" "$STD/form-cli-judge.fk" "$STD/form-cli-sufficiency.fk" "$STD/trust-row.fk" "$STD/form-cli-ask-gate.fk" \
   "$ASKPLUS" "$work/ask.fk" | sed '/^null$/d')"
 printf '%s\n' "$out" | sed -n '1p' >&2   # line 1: the live trust row -> stderr

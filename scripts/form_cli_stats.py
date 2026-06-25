@@ -25,7 +25,7 @@ CATALOG = f"{CN}/form-cli-catalog.jsonl"
 ESCAL = f"{CN}/form-cli-escalations.jsonl"
 TRUST = f"{CN}/form-cli-trust.json"
 METRIC = f"{CN}/form-cli-model-metric.json"
-OLLAMA = "http://localhost:11434"
+RAG_INDEX = f"{CN}/rag-index/index.jsonl"
 
 
 def kernel(exprs):
@@ -60,6 +60,7 @@ def main():
     escal = jsonl(ESCAL)
     trust = json.load(open(TRUST)) if os.path.exists(TRUST) else {}
     metric = json.load(open(METRIC)) if os.path.exists(METRIC) else None
+    rag_docs = sum(1 for _ in open(RAG_INDEX)) if os.path.exists(RAG_INDEX) else 0
     ask = trust.get("ask", {"pass": 0, "att": 0})
     att, passed = ask.get("att", 0), ask.get("pass", 0)
     escalated = att - passed
@@ -85,13 +86,10 @@ def main():
     oc = collections.Counter(t.get("oracle", "?") for t in turns)
     for name, n in oc.most_common(6):
         print(f"    corpus oracle  {name:14} {n:5}  ({pct(n, len(turns))}%)")
-    try:
-        tags = json.loads(subprocess.run(["curl", "-sS", "--max-time", "3", f"{OLLAMA}/api/tags"],
-                                          capture_output=True, text=True).stdout)
-        names = [m["name"] for m in tags.get("models", [])]
-        print(f"    local models installed (ollama)          : {len(names)} — {', '.join(names[:6])}")
-    except Exception:
-        print("    local models installed (ollama)          : ollama unreachable")
+    print("    local answer lane                        : fkwu grounded RAG")
+    print(f"    local RAG index                          : {rag_docs} cells")
+    print("    prose synthesis lane                     : pending fkwu+Metal GGUF/block-join composition")
+    print("    synthesis receipt                        : form-cli synthesis-status")
 
     # 3 ─ TOOL
     print("\n  ── tools (real agent corpus) ──")
@@ -114,10 +112,10 @@ def main():
     else:
         print("    native tool-predictor not yet measured — run `form-cli train`")
 
-    # 5 ─ LOCAL ORACLE
-    print("\n  ── local oracle ──")
+    # 5 ─ LOCAL GROUNDED LANE
+    print("\n  ── local grounded lane ──")
     print(f"    answers held locally (sufficient)        : {passed}  ({pct(passed, att)}% of asks)")
-    print(f"    air-gapped (no network crossing)         : {passed} asks")
+    print(f"    air-gapped grounded hits                 : {passed} asks")
 
     # 6 ─ REMOTE ORACLE
     print("\n  ── remote oracle ──")

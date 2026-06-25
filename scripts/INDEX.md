@@ -94,7 +94,7 @@
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
 | [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness / resolve / know via fkwu (fc-fnri direct, proven source). |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
-| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 4095). |
+| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 16383). |
 | [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form-cli (one line, then EOF). |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |

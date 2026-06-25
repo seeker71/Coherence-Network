@@ -1,8 +1,8 @@
 # form-cli, c-bootstrapped on fkwu — build it, use it, grow it
 
 The sovereign command-line door into the body: one self-contained native binary,
-emitted from Form recipes and compiled **once**, that then runs with **no go, rust,
-clang, python, or bash in its loop**. This is the standard-receipt destination
+emitted from Form recipes and refreshed as a stamped platform artifact, that then
+runs with **no go, rust, clang, python, or bash in its loop**. This is the standard-receipt destination
 ([`standard-receipt.form`](standard-receipt.form)) walking as an everyday tool —
 and the practice of preferring it over rented local tools, held to its honest floor.
 
@@ -13,8 +13,9 @@ form-cli program baked in (`fkc-emit-combined-repl` — the same walker body, a
 different `main()`; see [`hati-os-kernel-emit.fk`](../../form/form-stdlib/hati-os-kernel-emit.fk)).
 The brain is Form, four-way proven: [`form-cli.fk`](../../form/form-stdlib/form-cli.fk)
 dispatches the verbs, [`form-cli-repl.fk`](../../form/form-stdlib/form-cli-repl.fk)
-is the read-eval-print loop over real stdin. The result is one ELF that links only
-libc + ld:
+is the read-eval-print loop over real stdin. The result is one platform binary
+that links only to the host system runtime, for example libSystem on macOS or
+libc/ld on Linux:
 
 ```
 $ ldd form/form-cli
@@ -29,22 +30,23 @@ c-bootstrap closure.
 
 The SessionStart hook [`scripts/ensure_form_cli_native.sh`](../../scripts/ensure_form_cli_native.sh)
 warms it once in the background and caches it. A present binary is an instant
-no-op; a missing one builds (~1 min, one time) when the build toolchain is here,
-or prints a quiet note when it isn't. (Its sibling
-[`ensure_form_cli_kernel.sh`](../../scripts/ensure_form_cli_kernel.sh) warms the Go
-*routing* kernel that `form-cli ask` grounds on — a different artifact.)
+no-op; a missing or stale one is copied from the committed stamped platform
+binary when the stamp matches. `form-cli ask` does **not** use the Go routing
+kernel or an HTTP local oracle; it routes through the native fkwu grounded-RAG
+verb.
 
 Build it by hand any time:
 
 ```bash
-cd form && ./build-form-cli.sh          # -> form/form-cli, self-contained
+cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh  # -> form/form-cli, self-contained when the platform stamp is current
 echo ping | ./form-cli                  # -> pong   (no toolchain present)
 ./form-cli                              # interactive REPL on a real tty
 ```
 
-The **build** needs clang + the Go flattener once (emit Form→C, compile C→native).
-The **run** needs neither. That gap — build-time clang vs the clang-free `form-asm`
-lane — is the pending rung, named honestly below.
+The **standard build** needs only the committed stamped artifact. Maintainer-only
+regeneration may still use `bin-go` and clang as off-receipt carriers to refresh
+the table/C/platform binary until the self-host flatten/emit and form-macho lanes
+cover the whole artifact. The **run** needs neither.
 
 ## Use it
 
@@ -60,9 +62,12 @@ printf 'source\n'   | ./form-cli     # print its entire Form source (rebuild fro
 printf 'native-host linux 1 0 1 1 528 3 12 hi\n' | ./form-cli   # host-lifecycle recipe
 ```
 
-Verbs today: `ping ask native-host help about kernel source recreate verify version
-quit`. `ask <question>` answers from a local oracle when one is reachable. This is
-the **sovereign** surface — small, but every byte of it is Form running native.
+Verbs today: `ping ask grounded fnri receipt native-host help about kernel source
+recreate verify diagnose version quit`. `ask <question>` answers from the local
+fkwu grounded-RAG lane and returns the attributed grounded cell plus the current
+synthesis-lane status. It does not POST to Ollama, `localhost:11434`, or any HTTP
+oracle. This is the **sovereign** surface — small, but every byte of it is Form
+running native.
 
 ## No bridge — bash and python are grammars
 
@@ -84,9 +89,9 @@ The two binaries called form-cli stand at different points on one path —
 
 | | `form/form-cli` | `bin/form-cli` |
 |---|---|---|
-| what | the c-bootstrap native binary (this guide) | today's launcher: bash + python scripts |
+| what | the c-bootstrap native binary (this guide) | thin launcher: prefers native fkwu for `ask`/REPL, keeps legacy helper verbs as explicit scripts |
 | runs on | fkwu, toolchain-free, JIT-native | python/go processes |
-| relation to grammars | *runs* grammar source as recipes | *is* bash/python source — exactly what the shell/python grammars parse and run |
+| relation to grammars | *runs* grammar source as recipes | wrapper source is grammar input; local answers are delegated to native fkwu |
 
 `bin/form-cli`'s bash/python source is **input to the grammars we already have**. The
 move is "run the existing script through its grammar" — so the surface comes home as
@@ -108,8 +113,8 @@ So when you would reach for a one-off python/bash/powershell tool, ask:
 
 1. **Is the body's answer enough?** Structural questions (NodeID, equivalence,
    shape) go to the substrate; grounded questions go to `form-cli ask` — the
-   form-first gate ([`form-first-reasoning.form`](form-first-reasoning.form)). A
-   grounded hit costs no rented compute.
+   fkwu grounded-RAG gate ([`form-first-reasoning.form`](form-first-reasoning.form)).
+   A grounded hit costs no rented compute and carries a grounded id.
 2. **Does the body already have the grammar?** Shell (four-way) and python
    (first-breath) are home; a script in either *is* runnable as a recipe through
    `fsh` / the python evaluator. Run it through the grammar rather than shelling out.
@@ -123,10 +128,17 @@ So when you would reach for a one-off python/bash/powershell tool, ask:
 
 This is a real step *toward* tool-sovereignty, not a claim of having arrived:
 
-- **Runtime is sovereign; build is not yet.** `form/form-cli` and `fkwu` run
-  toolchain-free, but the one-time build still uses clang (emit C → native) and the
-  Go flattener (Form → node-table). The clang-free `form-asm` lane (Form → asm
-  bytes) is the pending rung that closes this.
+- **Runtime is sovereign; regeneration is not yet.** `form/form-cli` and `fkwu`
+  run toolchain-free. The normal standard lane copies a stamped committed platform
+  binary. Maintainer regeneration still uses off-receipt carriers (`bin-go` to
+  flatten/emit and clang to link the platform artifact) when the stamp is stale.
+  The self-host flatten/emit and clang-free `form-asm`/`form-macho` lane are the
+  pending rungs that close this completely.
+- **Grounded answer is native; prose synthesis is pending.** `form-cli ask`
+  currently returns local fkwu RAG grounding. Full natural-language synthesis over
+  GGUF weights through the fkwu+Metal/block-join lane is the next composition, not
+  an excuse to route local answers through HTTP. Verify the floor with
+  `form-cli synthesis-status` or `scripts/validate_form_cli_local_receipts.sh`.
 - **Grammar coverage is the real frontier, not a bridge.** The shell grammar is
   four-way proven for parse/exec/cell and runs bash-shaped scripts native; its
   native builtins are `echo cat grep wc head tail seq rev sort uniq tr nl test awk`,
@@ -160,8 +172,12 @@ This is a real step *toward* tool-sovereignty, not a claim of having arrived:
   ([`form-cli-fourth-kernel-baseline.md`](form-cli-fourth-kernel-baseline.md)) reads
   the body's *ideas* as north-star and *proof/altitude* as lagging in the
   grammar/compiler spine — deepening each grammar (and its JIT lowering) is the path.
-- **Platforms pending.** Observed on linux/x86-64 here; mac/windows/android device
-  runs are the standard receipt's open rows.
+- **Startup memory is present.** Agent startup expects the local RAG index under
+  `~/.coherence-network/rag-index/` and production database reach through the
+  configured file-backed carriers described in
+  [`docs/PRODUCTION-SUBSTRATE.md`](../PRODUCTION-SUBSTRATE.md). Missing local index
+  or DB config is a setup failure to report, not a reason to fall back to an
+  ungrounded HTTP oracle.
 
 Pending is honest, not failure. The binary is real, warmed, and yours; the gaps are
 the roadmap.

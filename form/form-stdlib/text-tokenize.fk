@@ -8,7 +8,8 @@
 ; needed). The scan accumulates the current word as a string and flushes it,
 ; space-joined, when a non-letter (or the end) breaks it — words shorter than
 ; minlen are dropped. Result is a single space-joined string (no cons needed);
-; a caller splits on spaces. char_at and ord both cross four-way.
+; a caller splits on spaces. The scanner uses one-byte substring + ord so the
+; fkwu byte-return edge of `char_at` cannot change the text shape.
 
 (let TK-LOWERS (list "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n"
                      "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"))
@@ -35,7 +36,7 @@
     (if (ge i n)
         (tk-flush out cur minlen)
         (do
-            (let c (char_at text i))
+            (let c (substring text i (add i 1)))
             (if (eq (tk-alpha? c) 1)
                 (tk-scan text (add i 1) n (str_concat cur (tk-low c)) out minlen)
                 (tk-scan text (add i 1) n "" (tk-flush out cur minlen) minlen)))))

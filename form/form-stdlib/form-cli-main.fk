@@ -4,7 +4,8 @@
 ; the persistent fkwu-server's per-request buffer — see form-kernel-go/fkwu_bridge.go).
 ; fc-read walks it byte-by-byte via input_byte (walker tag 17), and the dispatch
 ; (fc-respond, four-way proven by tests/form-cli-band.fk) returns the response
-; string, which fkwu prints natively through fk_pv_root/fk_psv.
+; string, which this entry writes natively through print_str. The universal
+; walker still prints the root value after the effect; tests read the first line.
 ;
 ; This entry is fkwu-native: input_byte is the staged-input op the emitted walker
 ; carries (tag 17); it is not registered in the three host walkers, so this runs on
@@ -25,4 +26,4 @@
                     (fc-read (add i 1) (str_concat acc (byte_to_str b)))))))
     (defn fc-command () (fc-read 0 ""))
 
-    (fc-respond (fc-command)))
+    (print_str (fc-respond (fc-command))))

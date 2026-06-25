@@ -26,23 +26,24 @@
         (if (eq (len xs) 0) (cons x (empty))
             (cons (head xs) (re-snoc (tail xs) x))))
 
-    ; --- split a space-joined string into a word list, scanning char by char. ---
+    ; --- split a space-joined string into a word list, scanning one-byte substrings. ---
     ; flush the current word on each single space (and at the end); skip blanks.
     (defn re-split-scan (s i n cur out)
         (if (ge i n)
             (if (str_eq cur "") out (re-snoc out cur))
-            (if (str_eq (char_at s i) " ")
+            (do (let c (substring s i (add i 1)))
+            (if (str_eq c " ")
                 (re-split-scan s (add i 1) n "" (if (str_eq cur "") out (re-snoc out cur)))
-                (re-split-scan s (add i 1) n (str_concat cur (char_at s i)) out))))
+                (re-split-scan s (add i 1) n (str_concat cur c) out)))))
     (defn re-split (s) (re-split-scan s 0 (str_len s) "" (empty)))
 
     ; --- polynomial hash of a word: h = h*31 + ord(char), mod prime each step so ---
-    ; it stays bounded and non-negative on every kernel (only add/mul/mod/ord/char_at).
+    ; it stays bounded and non-negative on every kernel (only add/mul/mod/ord/substring).
     (defn re-prime () 1000003)
     (defn re-hash-fold (w i n h)
         (if (ge i n) h
             (re-hash-fold w (add i 1) n
-                (mod (add (mul h 31) (ord (char_at w i))) (re-prime)))))
+                (mod (add (mul h 31) (ord (substring w i (add i 1)))) (re-prime)))))
     (defn re-hash (w) (re-hash-fold w 0 (str_len w) 0))
 
     ; --- which dim-bucket a word lands in. ---

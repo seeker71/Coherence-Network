@@ -3,7 +3,7 @@
 
 NO ask logic lives here. The decisions are PROVEN Form recipes run by the kernel:
   - form-cli-repl.fk         launch mode (interactive / one-shot / help) + per-line routing
-  - form-cli-ask.fk          the whole ask flow (local oracle -> judge -> sufficiency -> escalate),
+  - form-cli-ask.fk          the ask flow (fkwu grounded RAG -> sufficiency -> optional escalate),
                              run via scripts/form_cli_ask.sh — the kernel is the runtime
 This file only reads stdin lines, asks the kernel how to route each one, and dispatches:
 '(expr)' evaluates on the kernel, '/cmd' is a meta-command, anything else is handed to the Form ask.
@@ -41,7 +41,7 @@ def eval_form(expr):
 
 
 def repl(a):
-    print("form-cli — interactive (local-first, escalates to the oracle when local isn't enough)")
+    print("form-cli — interactive (fkwu grounded first, escalates only on a local miss)")
     print("  type a question · '(expr)' evals on the kernel · /help · /exit\n")
     while True:
         try:

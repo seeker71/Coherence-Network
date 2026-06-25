@@ -4,12 +4,12 @@
 #
 # The mind comes home one query at a time. Before spending a rented
 # frontier mind, ask the body it already is: the content-addressed
-# substrate that holds what we have grounded. A grounded hit is answered
-# from the sovereign body at near-zero cost; a miss climbs an escalation
-# ladder whose first rungs stay on owned ground — substrate, then a
-# Form-native model, then a host-local on-device model that reasons with
-# nothing leaving the device — and only its LAST rung is the rented
-# frontier. This is lc-cognitive-sovereignty as a runtime loop, not a doc.
+# substrate and local RAG index that hold what we have grounded. A grounded
+# hit is answered from the sovereign body at near-zero cost; a miss climbs an
+# escalation ladder whose first rungs stay on owned ground — substrate, then
+# the fkwu+Metal model lane as it composes into prose generation — and only
+# its LAST rung is the rented frontier. This is lc-cognitive-sovereignty as a
+# runtime loop, not a doc.
 #
 # Substance: a reasoning DISCIPLINE with two carriers. Its DECISION is a
 # four-way-proven recipe (form-first-router.fk -> 511 on Go/Rust/TS/fkwu);
@@ -53,33 +53,36 @@
 
   ; the escalation ladder — a miss climbs rung by rung, each asked only when the one
   ; below was not enough, so the rented frontier is the LAST resort, not the reflex.
-  ; rung-3 is the oracle come home: a host-local model that reasons with NOTHING leaving
-  ; the device — sovereign-in-egress. It is a bridge (a frozen binary, not a recipe), so
-  ; it composts toward rung-2 as the champion/challenger flywheel retires it per class.
+  ; `form-cli ask` no longer uses a host-local HTTP LLM as its local oracle. Host-local
+  ; model processes can remain explicit teachers/reviewers, but the default answer lane
+  ; is fkwu grounded RAG until fkwu+Metal/GGUF prose generation is wired.
   (escalation-ladder
-    (rung-1 substrate         (kind form-native-recipe)          (sovereignty full)   (cost near-zero))
-    (rung-2 form-native-model (kind recipe-data where-proven)    (sovereignty full)   (cost local))
-    (rung-3 host-local-llm    (kind bridge non-native on-device) (sovereignty egress) (cost local))
+    (rung-1 substrate-rag     (kind fkwu-grounded-retrieval)     (sovereignty full)   (cost near-zero))
+    (rung-2 form-native-model (kind fkwu-metal-gguf pending-prose) (sovereignty full)  (cost local))
+    (rung-3 host-local-teacher (kind explicit-bridge reviewer)   (sovereignty egress) (cost local))
     (rung-4 rented-frontier   (kind beyond-on-device only)       (sovereignty none)   (cost rented)))
 
   ; the discipline that keeps the gate honest
   (honesty
     (never  dress-a-remote-guess-as-a-substrate-hit)
-    (never  dress-an-on-device-answer-as-a-substrate-hit)  ; rung-3 reasons; it does not ground
+    (never  dress-an-on-device-teacher-answer-as-a-substrate-hit)  ; rung-3 reviews/teaches; it does not ground
+    (never  route-the-local-answer-through-http-and-call-it-native)
     (a-hit  carries-its-nodeid-or-it-is-a-miss)
     (always name-which-rung-was-reached))
 
   ; how the body answers under each environment's reach
   (backend
-    (native-router (form-cli ask)                          ; body-first, four-way sufficiency gate
+    (native-router (form-cli ask)                          ; body-first, fkwu grounded RAG
                    (engine fkwu)                            ; c-bootstrapped universal kernel + self-JIT
                    (entry    form-cli-main.fk)              ; native form-cli on emitted walker
+                   (answer   rag-ask.fk)                    ; local index retrieval; no localhost:11434, no http-fetch
+                   (synthesis pending-fkwu-metal-gguf)       ; prose generation lane, not an HTTP substitute
                    (shell    fsh-main.fk)                   ; form shell — BMF cursor, search/eval/orchestration
                    (code     "BML and .fk domain grammars")  ; form code — authoring, proof bands, lattice reads
                    (gate form-cli-sufficiency.fk))
     (local-lattice (sovereign offline)                     ; the DEFAULT — the structural layer the router reads
-                   (ready-by "scripts/form_first_offline_setup.sh")  ; ingests the repo's own content; offline, no allowlist
-                   (scope "concepts by default; FORM_FIRST_INGEST=all for the whole body"))
+                   (ready-by "scripts/form_first_offline_setup.sh plus ~/.coherence-network/rag-index")  ; ingests the repo's own content; offline, no allowlist
+                   (scope "local content RAG by default; production DB through file-backed carriers when configured"))
     (public-door   (our-body networked)
                    (at "https://api.coherencycoin.com/api/substrate"))
     (adaptive      try-native-router-then-lattice-then-miss))

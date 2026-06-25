@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Honest base-vs-tuned eval for the Form-knowledge fine-tune.
+"""Honest base-vs-tuned eval for the Form-knowledge teacher fine-tune.
 
 Asks a held-out set of Form questions to two ollama models (the base and the
-fine-tuned form model) over the SAME /api/generate wire that form-cli ask uses,
-and scores each answer by deterministic keyphrase coverage: each question has a
-set of required facts (any-of groups) drawn from the body. An answer scores the
+fine-tuned form model) over Ollama's /api/generate teacher wire, and scores each
+answer by deterministic keyphrase coverage: each question has a set of required
+facts (any-of groups) drawn from the body. An answer scores the
 fraction of fact-groups it covers. This is deterministic and reproducible -- no
 LLM judge, no fabricated numbers.
+
+This is not the `form-cli ask` runtime path. `form-cli ask` is native fkwu
+grounded RAG and must not be evaluated as an Ollama/HTTP local oracle.
 
 The eval questions are NOT in the training corpus (they are paraphrases / new
 angles on body facts), so this measures generalization, not memorization.
@@ -73,10 +76,10 @@ EVAL: list[dict] = [
      "facts": [["divergen", "different answer", "wrong"],
                ["unsupported", "op family", "lacks", "3-kernel", "limitation"],
                ["hard gate", "before merge", "correctness", "named gap"]]},
-    {"q": "How does form-cli ask reach the local oracle?",
-     "facts": [["http-fetch", "http_fetch", "sock_request", "socket"],
-               ["11434", "/api/generate", "ollama", "localhost"],
-               ["json", "response", "parse"]]},
+    {"q": "How does form-cli ask answer locally now?",
+     "facts": [["fkwu", "native"],
+               ["rag", "grounded", "index"],
+               ["no http", "not ollama", "no localhost", "not localhost", "no 11434", "not http-fetch"]]},
     {"q": "What is the proof floor for a new Form band?",
      "facts": [["go", "rust", "typescript"],
                ["fkwu", "fourth arm", "four-way", "four way"]]},

@@ -2,10 +2,10 @@
 # build-form-cli.sh — produce the standalone native form-cli binary.
 #
 # Build-time honest floor (2026-06-24):
-#   FLATTEN — committed bootstrap/form-cli-table.txt OR fkwu+T_flat self-host (no Go)
-#   EMIT    — committed bootstrap/form-cli-emitted.c (no Go on receipt path)
-#   LINK    — clang compiles C (pending: form-macho universal walker); skipped in FORM_STANDARD_LANE
-# Maintainer regen (bin-go allowed off-receipt): scripts/regen_form_cli_bootstrap.sh
+#   STANDARD — copy the committed platform binary when the source stamp matches
+#              (no Go, no clang, no shell in the receipt path).
+#   REGEN    — maintainer-only bootstrap artifacts refresh the table/C/platform
+#              binaries. Runtime remains the standalone fkwu binary.
 # Runtime: the resulting form-cli runs toolchain-free.
 #
 #   ./build-form-cli.sh            # -> form/form-cli
@@ -51,9 +51,9 @@ trap 'rm -rf "$W"' EXIT
 # the emit chain (plain Form) + the flatten chain.
 EMIT_CHAIN="$S/minimal-surface.fk $S/hati-os-kernel.fk $S/host-io-fs-fkwu-emit.fk $S/fkc-table-serialize.fk $S/hati-os-kernel-emit.fk"
 FLAT_CHAIN="$EMIT_CHAIN $S/form-parse.fk $S/form-flatten.fk"
-# The ask lane routes through http-fetch over the socket host-call floor for
-# plaintext HTTP, so it must be defined before the dispatcher that routes to it.
-MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/resource-port.fk\") (read_file \"$S/bml-native-interface-package-import.fk\") (read_file \"$S/hati-os-targets.fk\") (read_file \"$S/form-native-resource-interfaces.fk\") (read_file \"$S/form-fs.fk\") (read_file \"$S/storage-port.fk\") (read_file \"$S/host-kernel-carrier.fk\") (read_file \"$S/fnri-standin.fk\") (read_file \"$S/fnri-receipt.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/line-grammar.fk\") (read_file \"$S/voice-traits.fk\") (read_file \"$S/nearest-shape.fk\") (read_file \"$S/co-learning.fk\") (read_file \"$S/co-learning-stream.fk\") (read_file \"$S/mesh-dispatch.fk\") (read_file \"$S/surprise-salience.fk\") (read_file \"$S/host-sense-organ.fk\") (read_file \"$S/speech-organ.fk\") (read_file \"$S/native-host-instance.fk\") (read_file \"$S/text-tokenize.fk\") (read_file \"$S/rag-embed.fk\") (read_file \"$S/rag-index-codec.fk\") (read_file \"$S/rag-retrieve.fk\") (read_file \"$S/rag-ask.fk\") (read_file \"$S/form-cli.fk\"))"
+# Keep the ask support modules before the dispatcher; default ask receipts stay
+# local through fkwu RAG while http-client remains available to legacy carriers.
+MODS="(list (read_file \"$S/fourth-shim.fk\") (read_file \"$S/core.fk\") (read_file \"$S/resource-port.fk\") (read_file \"$S/bml-native-interface-package-import.fk\") (read_file \"$S/hati-os-targets.fk\") (read_file \"$S/form-native-resource-interfaces.fk\") (read_file \"$S/form-fs.fk\") (read_file \"$S/storage-port.fk\") (read_file \"$S/host-kernel-carrier.fk\") (read_file \"$S/fnri-standin.fk\") (read_file \"$S/fnri-receipt.fk\") (read_file \"$S/http-client.fk\") (read_file \"$S/line-grammar.fk\") (read_file \"$S/voice-traits.fk\") (read_file \"$S/nearest-shape.fk\") (read_file \"$S/co-learning.fk\") (read_file \"$S/co-learning-stream.fk\") (read_file \"$S/mesh-dispatch.fk\") (read_file \"$S/surprise-salience.fk\") (read_file \"$S/host-sense-organ.fk\") (read_file \"$S/speech-organ.fk\") (read_file \"$S/native-host-instance.fk\") (read_file \"$S/text-tokenize.fk\") (read_file \"$S/rag-embed.fk\") (read_file \"$S/rag-index-codec.fk\") (read_file \"$S/rag-retrieve.fk\") (read_file \"$S/rag-ask.fk\") (read_file \"$S/form-cli-ask.fk\") (read_file \"$S/form-cli.fk\"))"
 BAND="(read_file \"$S/form-cli-repl.fk\")"
 
 # Prefer fkwu self-host flatten (no Go) when T_flat + cached fkwu are warm.
@@ -62,11 +62,12 @@ FORM_CLI_SRCS=(
     "$S/resource-port.fk" "$S/bml-native-interface-package-import.fk" "$S/hati-os-targets.fk"
     "$S/form-native-resource-interfaces.fk" "$S/form-fs.fk" "$S/storage-port.fk"
     "$S/host-kernel-carrier.fk" "$S/fnri-standin.fk" "$S/fnri-receipt.fk"
-    "$S/http-client.fk" "$S/form-cli-ask.fk" "$S/voice-traits.fk"
+    "$S/http-client.fk" "$S/voice-traits.fk"
     "$S/nearest-shape.fk" "$S/co-learning.fk" "$S/co-learning-stream.fk"
     "$S/mesh-dispatch.fk" "$S/surprise-salience.fk" "$S/host-sense-organ.fk"
     "$S/speech-organ.fk" "$S/native-host-instance.fk"
     "$S/text-tokenize.fk" "$S/rag-embed.fk" "$S/rag-index-codec.fk" "$S/rag-retrieve.fk" "$S/rag-ask.fk"
+    "$S/form-cli-ask.fk"
     "$S/form-cli.fk"
     "$S/form-cli-repl.fk"
 )
@@ -136,7 +137,7 @@ grep -q fk_prog "$W/form-cli.c" || { echo "emit missing baked program"; exit 1; 
 #    print it and you can rebuild from the binary alone. It's the file-marked
 #    concatenation of every recipe the build reads plus this script, appended as a
 #    byte array (escape-free) and read at runtime by self_source (walker tag 117).
-SOURCES="minimal-surface hati-os-kernel fkc-table-serialize hati-os-kernel-emit form-parse form-flatten core fourth-shim resource-port bml-native-interface-package-import hati-os-targets form-native-resource-interfaces http-client form-cli-ask line-grammar voice-traits nearest-shape co-learning co-learning-stream mesh-dispatch surprise-salience host-sense-organ speech-organ native-host-instance form-cli form-cli-main form-cli-repl"
+SOURCES="minimal-surface hati-os-kernel fkc-table-serialize hati-os-kernel-emit form-parse form-flatten core fourth-shim resource-port bml-native-interface-package-import hati-os-targets form-native-resource-interfaces form-fs storage-port host-kernel-carrier fnri-standin fnri-receipt line-grammar voice-traits nearest-shape co-learning co-learning-stream mesh-dispatch surprise-salience host-sense-organ speech-organ native-host-instance text-tokenize rag-embed rag-index-codec rag-retrieve rag-ask form-cli-ask form-cli form-cli-main form-cli-repl"
 {
   for f in $SOURCES; do printf ';;;; ==== FILE: %s/%s.fk ====\n' "$S" "$f"; cat "$S/$f.fk"; done
   printf ';;;; ==== FILE: build-form-cli.sh ====\n'; cat "$(basename "$0")"
