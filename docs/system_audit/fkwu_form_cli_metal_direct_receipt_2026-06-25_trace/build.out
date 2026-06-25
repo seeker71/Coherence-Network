@@ -1,0 +1,10 @@
+  flatten: bootstrap table (no Go)
+  emit: bootstrap (no Go)
+/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T/tmp.vS5H23nVsS/form-cli.c:126:194: warning: passing 'int *' to parameter of type 'unsigned int *' converts between pointers to integer types with different sign [-Wpointer-sign]
+  126 | static long long fk_socket_port_native(long long h) { fk_os_socket_t s = fk_sock_lookup(h, 1); if (!fk_os_socket_ok(s)) { return -1; } struct fk_sockaddr4 a; int n = 16; if (getsockname(s, &a, &n) < 0) { return -1; } return (((long long)a.p[0]) << 8) + (long long)a.p[1]; }
+      |                                                                                                                                                                                                  ^~
+/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T/tmp.vS5H23nVsS/form-cli.c:79:47: note: passing argument to parameter here
+   79 | extern int getsockname(int,void*,unsigned int*);
+      |                                               ^
+1 warning generated.
+built /Users/ursmuff/.claude-worktrees/Coherence-Network/form-metal-direct-bridge-20260625/.cache/body-test-receipts/fkwu-form-cli-metal-direct-20260625T165858Z/artifact/form-cli-metal-direct  (  718616 bytes, self-contained — runs with no Go/clang/table; carries 410826B of its own source)
