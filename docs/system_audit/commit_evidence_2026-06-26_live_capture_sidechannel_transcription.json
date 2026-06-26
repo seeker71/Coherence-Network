@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/live-recording-sidechannel-20260626",
+  "commit_scope": "Make the satsang Mac app keep live room capture as the primary microphone stream while macOS Speech Recognition attaches only as a concurrent transcription side channel fed during capture, never as a before-recording or after-recording pass.",
+  "files_owned": [
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/system_audit/commit_evidence_2026-06-26_live_capture_sidechannel_transcription.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-listen-route.fk",
+    "form/form-stdlib/tests/satsang-listen-route-band.fk",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form-cli ask \"satsang mac app live room recording primary stream speech recognition concurrent side channel during capture not before or after recording pass\"",
+      "swift test --package-path experiments/satsang-mac-app",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance",
+      "scripts/build_satsang_mac_app.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness"
+    ],
+    "fourth_arm": "satsang-guidance-event-band.fk -> 255, satsang-host-boundary-band.fk -> 131071, satsang-listen-route-band.fk -> 255, satsang-room-memory-band.fk -> 255; each crossed four-way with fkwu + pre-flattened tables; 0 divergent",
+    "summary": "Startup gates and wellness passed. The Form ask used the native form-cli path but had no grounded/sufficient local RAG hit for this exact capture-side-channel correction; the local model-cell witness was observed. Swift package tests passed with 11 XCTest cases, including route receipt assertions for primary-live-room-capture-receipt and speech-side-channel-during-live-capture. The GUI product and .app bundle built locally. The listen-route Form proof now names primary live capture plus transcription side channel while preserving remote-last sufficiency routing."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy yet; this is a local macOS app carrier change awaiting PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI and PR checks pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "satsang-mac-guidance-app"
+  ],
+  "task_ids": [
+    "live-capture-sidechannel-transcription-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "trust-boundary"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "form-proof",
+        "local-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift",
+    "form/form-stdlib/satsang-listen-route.fk",
+    "form/form-stdlib/tests/satsang-listen-route-band.fk",
+    "specs/satsang-mac-guidance-app.md",
+    "docs/coherence-substrate/satsang-guidance-event.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/system_audit/commit_evidence_2026-06-26_live_capture_sidechannel_transcription.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-listen-route.fk",
+    "form/form-stdlib/tests/satsang-listen-route-band.fk",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "The Mac carrier now keeps the AVAudioEngine input tap as the single live capture path. Speech Recognition receives buffers from that already-open tap as a side channel; no-speech cycles restart the recognition task without stopping the live capture stream.",
+    "expected_behavior_delta": "Starting live transcription no longer replaces the metering-only capture tap with a separate Speech tap. Stop still ends both the side channel and live capture explicitly. Route receipts and Form proof now name the primary capture plus side-channel transcription boundary.",
+    "public_endpoints": [
+      "n/a-local-macos-app"
+    ],
+    "test_flows": [
+      "swift test --package-path experiments/satsang-mac-app -> 11 tests passed",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
+      "scripts/build_satsang_mac_app.sh -> experiments/satsang-mac-app/dist/Satsang Guidance.app",
+      "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-host-boundary-band.fk -> 131071 four-way",
+      "cd form && ./validate.sh ... satsang-listen-route-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-room-memory-band.fk -> 255 four-way"
+    ]
+  }
+}

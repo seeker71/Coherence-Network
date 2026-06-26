@@ -60,7 +60,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                 resourceInterface: resourceInterface,
                 resourceDoors: [
                     HostResourceDoor(kind: "audio-input", state: "declared", carrier: "macos-avfoundation", detail: "AVAudioEngine input node"),
-                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "macos-speech", detail: "SFSpeechRecognizer"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "macos-speech", detail: "SFSpeechRecognizer side channel fed during live capture"),
                     HostResourceDoor(kind: "file-read", state: "declared", carrier: "macos-foundation-filemanager", detail: "FileManager/Data"),
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "macos-foundation-filehandle", detail: "FileHandle append"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "macos-foundation-data-atomic", detail: "Data.write atomic"),
@@ -73,7 +73,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                 resourceInterface: resourceInterface,
                 resourceDoors: [
                     HostResourceDoor(kind: "audio-input", state: "declared", carrier: "windows-wasapi-capture", detail: "WASAPI shared input"),
-                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "windows-speechrecognizer", detail: "Windows speech recognition"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "windows-speechrecognizer", detail: "Windows speech recognition side channel fed during live capture"),
                     HostResourceDoor(kind: "file-read", state: "declared", carrier: "windows-known-folder-filesystem", detail: "LocalAppData file read"),
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "windows-known-folder-filesystem", detail: "LocalAppData append"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "windows-replacefile-atomic", detail: "atomic replace"),
@@ -86,7 +86,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                 resourceInterface: resourceInterface,
                 resourceDoors: [
                     HostResourceDoor(kind: "audio-input", state: "declared", carrier: "android-audiorecord", detail: "AudioRecord with RECORD_AUDIO"),
-                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "android-speechrecognizer", detail: "android.speech.SpeechRecognizer"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "android-speechrecognizer", detail: "android.speech.SpeechRecognizer side channel fed during live capture"),
                     HostResourceDoor(kind: "file-read", state: "declared", carrier: "android-app-private-files", detail: "Context.filesDir read"),
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "android-app-private-files", detail: "Context.filesDir append"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "android-atomic-file", detail: "AtomicFile or rename"),

@@ -11,11 +11,14 @@
 ;   transcript JSONL, listens to the room microphone after explicit Start
 ;   Listening, lets the holder edit utterances, and writes the request to
 ;   ~/.coherence-network/satsang-guidance/events.jsonl plus the latest JSON and
-;   .form receipt. No external receiver is invoked by the GUI. No-speech
-;   intervals restart recognition and the visible mic level shows whether the
-;   room is reaching the input device. The mic meter comes alive separately from
-;   Speech Recognition authorization so permission delay is visible instead of
-;   silent. On Send, the GUI asks the local Form CLI first and records the
+;   .form receipt. No external receiver is invoked by the GUI. Live room capture
+;   is the primary stream; Speech Recognition is a concurrent transcription side
+;   channel fed during that capture, not a before/after pass over stored audio.
+;   No-speech intervals restart only the recognition side channel and the visible
+;   mic level shows whether the room is reaching the input device. The mic meter
+;   comes alive separately from Speech Recognition authorization so permission
+;   delay is visible instead of silent. On Send, the GUI asks the local Form CLI
+;   first and records the
 ;   body/RAG sufficiency receipt in the JSON and .form event; a remote oracle is
 ;   only requested as an explicit insufficient-local route, not called by the GUI.
 ;   The Send path also writes a local trusted room-memory receipt under

@@ -35,7 +35,7 @@ final class RoomTranscriber: @unchecked Sendable {
                 kind: "speech-transcript",
                 state: speechDoorState(speechStatus, available: speechAvailable),
                 carrier: "macos-speech",
-                detail: "\(speechStatusName(speechStatus));available=\(speechAvailable ? "1" : "0")"
+                detail: "side-channel-during-live-capture;\(speechStatusName(speechStatus));available=\(speechAvailable ? "1" : "0")"
             ),
         ]
     }
@@ -69,7 +69,8 @@ final class RoomTranscriber: @unchecked Sendable {
             if commitPartial {
                 self.commitPartialIfNeeded()
             }
-            self.stopRecognition()
+            self.stopSpeechSideChannel()
+            self.stopLiveCapture()
             self.emitPartial("")
             self.emitLevel(0)
             self.emitState(false, "Listening stopped")
@@ -79,7 +80,7 @@ final class RoomTranscriber: @unchecked Sendable {
     private func beginWithMicrophoneAccess() {
         workQueue.async {
             self.keepListening = true
-            self.startMeteringOnly()
+            self.startLiveCapture()
             self.requestSpeechAuthorization()
         }
     }
@@ -89,7 +90,7 @@ final class RoomTranscriber: @unchecked Sendable {
         case .authorized:
             startRecognition()
         case .notDetermined:
-            emitState(true, "Room mic is active; requesting speech recognition permission")
+            emitState(true, "Live room capture is active; requesting Speech side-channel permission")
             SFSpeechRecognizer.requestAuthorization { [weak self] speechStatus in
                 guard let self else { return }
                 self.workQueue.async {
@@ -99,14 +100,14 @@ final class RoomTranscriber: @unchecked Sendable {
             workQueue.asyncAfter(deadline: .now() + 6.0) { [weak self] in
                 guard let self, self.keepListening else { return }
                 guard SFSpeechRecognizer.authorizationStatus() == .notDetermined else { return }
-                self.emitState(true, "Room mic is active; waiting for speech recognition permission")
+                self.emitState(true, "Live room capture is active; waiting for Speech side-channel permission")
             }
         case .denied:
-            emitState(true, "Room mic is active; Speech Recognition permission is denied.")
+            emitState(true, "Live room capture is active; Speech side-channel permission is denied.")
         case .restricted:
-            emitState(true, "Room mic is active; Speech Recognition is restricted on this Mac.")
+            emitState(true, "Live room capture is active; Speech side-channel is restricted on this Mac.")
         @unknown default:
-            emitState(true, "Room mic is active; Speech Recognition permission is unavailable.")
+            emitState(true, "Live room capture is active; Speech side-channel permission is unavailable.")
         }
     }
 
@@ -115,56 +116,17 @@ final class RoomTranscriber: @unchecked Sendable {
         if speechStatus == .authorized {
             startRecognition()
         } else {
-            emitState(true, "Room mic is active; Speech Recognition permission is \(Self.speechStatusName(speechStatus)).")
+            emitState(true, "Live room capture is active; Speech side-channel permission is \(Self.speechStatusName(speechStatus)).")
         }
     }
 
-    private func startMeteringOnly() {
-        stopRecognition()
-
-        let inputNode = audioEngine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
-        guard format.sampleRate > 0 else {
-            emitState(false, "No microphone input format is available.")
+    private func startLiveCapture() {
+        guard !inputTapInstalled else {
+            if !audioEngine.isRunning {
+                startAudioEngine()
+            }
             return
         }
-
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            self?.reportLevel(buffer)
-        }
-        inputTapInstalled = true
-
-        audioEngine.prepare()
-        do {
-            try audioEngine.start()
-            emitState(true, "Room mic is active; preparing speech recognition")
-        } catch {
-            stopRecognition()
-            emitState(false, "Microphone start failed: \(error.localizedDescription)")
-        }
-    }
-
-    private func startRecognition() {
-        stopRecognition()
-
-        guard let speechRecognizer else {
-            emitState(false, "Speech recognizer is unavailable for this locale.")
-            return
-        }
-        guard speechRecognizer.isAvailable else {
-            emitState(false, "Speech recognizer is not available right now.")
-            return
-        }
-
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.taskHint = .dictation
-        if #available(macOS 13.0, *) {
-            request.addsPunctuation = true
-        }
-        recognitionRequest = request
-        lastPartialText = ""
-
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
         guard format.sampleRate > 0 else {
@@ -178,26 +140,56 @@ final class RoomTranscriber: @unchecked Sendable {
         }
         inputTapInstalled = true
 
+        startAudioEngine()
+    }
+
+    private func startAudioEngine() {
         audioEngine.prepare()
         do {
             try audioEngine.start()
+            emitState(true, "Live room capture is active; preparing Speech side channel")
         } catch {
-            stopRecognition()
+            stopSpeechSideChannel()
+            stopLiveCapture()
             emitState(false, "Microphone start failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func startRecognition() {
+        guard keepListening else { return }
+        guard recognitionRequest == nil, recognitionTask == nil else { return }
+        guard inputTapInstalled, audioEngine.isRunning else {
+            startLiveCapture()
+            guard inputTapInstalled, audioEngine.isRunning else { return }
+            return startRecognition()
+        }
+
+        guard let speechRecognizer else {
+            emitState(true, "Live room capture is active; Speech side channel is unavailable for this locale.")
             return
         }
+        guard speechRecognizer.isAvailable else {
+            emitState(true, "Live room capture is active; Speech side channel is not available right now.")
+            return
+        }
+
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.taskHint = .dictation
+        if #available(macOS 13.0, *) {
+            request.addsPunctuation = true
+        }
+        recognitionRequest = request
+        lastPartialText = ""
 
         recognitionTask = speechRecognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
             if let result {
                 let text = result.bestTranscription.formattedString
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                self.lastPartialText = text
-                self.emitPartial(text)
-                if result.isFinal {
-                    self.emitUtterance(text)
-                    self.lastPartialText = ""
-                    self.emitPartial("")
+                let isFinal = result.isFinal
+                self.workQueue.async {
+                    self.handleRecognitionResult(text: text, isFinal: isFinal)
                 }
             }
             if let error {
@@ -207,12 +199,26 @@ final class RoomTranscriber: @unchecked Sendable {
             }
         }
 
-        emitState(true, "Listening to room mic")
+        emitState(true, "Live room capture is active; Speech side channel is transcribing")
+    }
+
+    private func handleRecognitionResult(text: String, isFinal: Bool) {
+        guard keepListening || recognitionRequest != nil || recognitionTask != nil else { return }
+        lastPartialText = text
+        emitPartial(text)
+        if isFinal {
+            emitUtterance(text)
+            lastPartialText = ""
+            emitPartial("")
+            recognitionRequest = nil
+            recognitionTask = nil
+            restartSpeechSideChannelSoon(message: "Live room capture is active; Speech side channel cycling")
+        }
     }
 
     private func handleRecognitionError(_ error: Error) {
         commitPartialIfNeeded()
-        stopRecognition()
+        stopSpeechSideChannel()
         emitPartial("")
 
         guard keepListening else {
@@ -221,19 +227,26 @@ final class RoomTranscriber: @unchecked Sendable {
             return
         }
 
-        emitState(true, "Listening to room mic, waiting for speech")
+        restartSpeechSideChannelSoon(message: "Live room capture is active; Speech side channel waiting for speech")
+    }
+
+    private func restartSpeechSideChannelSoon(message: String) {
+        guard keepListening else { return }
+        emitState(true, message)
         workQueue.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             guard let self, self.keepListening else { return }
             self.startRecognition()
         }
     }
 
-    private func stopRecognition() {
+    private func stopSpeechSideChannel() {
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         recognitionTask = nil
         recognitionRequest = nil
+    }
 
+    private func stopLiveCapture() {
         if audioEngine.isRunning {
             audioEngine.stop()
         }

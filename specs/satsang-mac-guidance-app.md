@@ -23,11 +23,13 @@ source:
   - file: form/form-stdlib/satsang-host-boundary.fk
     symbols: [shb-app-runtime-allowed?, shb-runtime-forbidden?, shb-resource-kind?, shb-platform-target?, shb-boundary-ok?, shb-receipt]
   - file: form/form-stdlib/satsang-listen-route.fk
-    symbols: [slr-decision, slr-remote-oracle?, slr-receipt]
+    symbols: [slr-decision, slr-remote-oracle?, slr-live-capture-receipt?, slr-side-channel-transcribe?, slr-receipt]
   - file: form/form-stdlib/satsang-room-memory.fk
     symbols: [srm-mic-exclusive-carrier?, srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
+  - "Live room capture is the primary stream; speech transcription is only a side channel fed during that capture"
+  - "Speech Recognition is never a before-recording or after-recording pass over stored audio"
   - "No-speech intervals do not stop the active room listener"
   - "A live microphone level shows whether the room is reaching the app"
   - "Microphone activity is visible separately from Speech Recognition authorization"
@@ -72,11 +74,14 @@ transcript files, and writes a local protocol event queue.
 - [x] The GUI loads detected transcript lines from a JSONL or JSON-array file.
 - [x] The GUI starts/stops native macOS microphone transcription with explicit
       user action.
-- [x] The GUI keeps listening through no-speech intervals by restarting the
-      speech recognition pass.
+- [x] The GUI keeps listening through no-speech intervals by restarting only the
+      speech recognition side channel.
 - [x] The GUI shows a live microphone level while listening.
 - [x] The GUI starts microphone metering separately from Speech Recognition
       authorization so permission delays do not leave a silent requesting state.
+- [x] The GUI keeps one live capture tap open and feeds Speech Recognition as a
+      concurrent side channel during capture, never as a before/after recording
+      pass.
 - [x] Live microphone partials appear as editable `room mic` transcript rows.
 - [x] The GUI allows editing individual utterances before sending.
 - [x] Manual and live rows survive transcript-file reloads.
@@ -108,13 +113,14 @@ transcript files, and writes a local protocol event queue.
       those same resource doors.
 - [x] A Form proof names the valid event/protocol boundary.
 - [x] A Form proof names the generic host ABI and detected resource-door boundary.
-- [x] A Form proof names the remote-last listen/transcribe route boundary.
+- [x] A Form proof names the remote-last listen/transcribe route boundary with
+      primary live capture and side-channel transcription.
 
 ## Files
 
 - `experiments/satsang-mac-app/Package.swift` - Swift package.
 - `experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift` - SwiftUI GUI.
-- `experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift` - native room microphone transcription.
+- `experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift` - native room microphone capture with speech transcription as a side channel.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift` - transcript parser.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift` - local session index, speaker-profile, and prior-context memory store.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift` - transcript reload merge policy.
@@ -153,6 +159,9 @@ transcript files, and writes a local protocol event queue.
   in listening state instead of closing on `No speech detected`.
 - Manual validation: if Speech Recognition permission is still pending or
   denied, confirm the app still shows microphone activity and an explicit status.
+- Manual validation: while Speech Recognition attaches, cycles, or waits through
+  silence, confirm the live mic level remains active and the listener does not
+  restart the capture stream.
 
 ## Verification
 
@@ -185,8 +194,8 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - The app does not replace turn-taking learning; it records that the turn was
   offered or manually invoked.
 - macOS microphone permission must be accepted before the app can listen to the
-  room; Speech Recognition permission must be accepted before live room
-  transcription can run.
+  room; Speech Recognition permission must be accepted before the transcription
+  side channel can attach to the already-open live capture stream.
 - The listener can only transcribe audio that reaches the selected macOS input
   device; system speaker playback may not loop back into the microphone.
 - The local Form/RAG lookup depends on a repo-local `form/form-cli` binary or a

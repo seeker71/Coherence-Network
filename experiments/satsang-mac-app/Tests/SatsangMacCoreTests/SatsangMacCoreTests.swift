@@ -62,6 +62,8 @@ final class SatsangMacCoreTests: XCTestCase {
         let form = try String(contentsOf: result.latestFormURL)
         XCTAssertTrue(form.contains("(target \"sema\")"))
         XCTAssertTrue(form.contains("(host-boundary-kind \"form-native-host-boundary\")"))
+        XCTAssertTrue(form.contains("(listen-receipt \"primary-live-room-capture-receipt\")"))
+        XCTAssertTrue(form.contains("(transcribe-route \"speech-side-channel-during-live-capture\")"))
         XCTAssertTrue(form.contains("(host-resource-interface \"host-os-generic-resource-interface\")"))
         XCTAssertTrue(form.contains("(host-resource-door-count 6)"))
         XCTAssertTrue(form.contains("(host-resource-door-summary \"audio-input:declared:host-os-generic-resource-interface"))
@@ -87,6 +89,8 @@ final class SatsangMacCoreTests: XCTestCase {
 
         XCTAssertEqual(localReceipt.decision, "use-form-native-rag-llm")
         XCTAssertFalse(localReceipt.remoteOracleRequested)
+        XCTAssertEqual(localReceipt.listenReceipt, "primary-live-room-capture-receipt")
+        XCTAssertEqual(localReceipt.transcribeRoute, "speech-side-channel-during-live-capture")
 
         let missReceipt = FormNativeRouteReceipt(bodyLookup: body, ragLookup: .formCLIOutput("cell"))
         XCTAssertEqual(missReceipt.decision, "request-remote-llm-oracle")

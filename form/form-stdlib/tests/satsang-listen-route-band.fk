@@ -10,7 +10,7 @@
 ;   16  weak RAG after body miss requests remote oracle
 ;   32  weak RAG receipt labels escalate-remote
 ;   64  empty local output with retry left retries native RAG
-;   128 route receipt names listen/transcribe/request shape
+;   128 route receipt names primary live capture + transcription side channel
 (do
     (let strong (fsuf-signals 1 1 82 72 72 0))
     (let weak (fsuf-signals 1 1 20 72 72 0))
@@ -27,8 +27,8 @@
     (let c4 (if (str_eq (slr-decision 1 0 1 weak) "request-remote-llm-oracle") 16 0))
     (let c5 (if (str_eq (slr-rec-verdict remote-rec) "escalate-remote") 32 0))
     (let c6 (if (str_eq (slr-decision 1 0 0 empty-retry) "retry-form-native-rag") 64 0))
-    (let c7 (if (and (str_eq (slr-rec-listen body-rec) "form-native-listen-receipt")
-                     (and (str_eq (slr-rec-transcribe rag-rec) "local-stt-form-receipt")
+    (let c7 (if (and (eq (slr-live-capture-receipt? (slr-rec-listen body-rec)) 1)
+                     (and (eq (slr-side-channel-transcribe? (slr-rec-transcribe rag-rec)) 1)
                           (str_eq (slr-rec-request body-rec) "satsang-guidance-request"))) 128 0))
 
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
