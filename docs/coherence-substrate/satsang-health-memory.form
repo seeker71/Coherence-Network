@@ -1,0 +1,23 @@
+# Satsang Health Memory
+
+Health memory is a consented local context lane for wearable samples that the
+holder explicitly imports from the iPhone health store.
+
+The first native carrier is iOS HealthKit. Oura, Oz/O2, Wellue, ViHealth, and
+other oxygen or ring sources enter through Apple Health when the holder grants
+read access for the selected categories. The app stores imported samples in the
+local health-memory folder and makes only compact summaries available to the
+guidance request.
+
+The trust receipt is the boundary:
+
+- capture boundary: explicit import
+- source carrier: iOS HealthKit source-filtered samples
+- storage carrier: local JSON/Form files
+- retrieval scope: same-holder local health memory
+- analysis boundary: reference memory, reasoning, and analysis; not diagnosis
+- hidden capture: false
+- later context: allowed after explicit import
+
+The Form proof is `form/form-stdlib/satsang-health-memory.fk`, with
+`form/form-stdlib/tests/satsang-health-memory-band.fk` as the fourth-arm band.

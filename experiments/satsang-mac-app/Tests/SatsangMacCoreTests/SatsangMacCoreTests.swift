@@ -52,6 +52,13 @@ final class SatsangMacCoreTests: XCTestCase {
                 speakerCount: 1,
                 speakerSummary: "Voz 1[speaker-1] turns=2",
                 recentExchangeSummary: "Voz 1: prior exchange"
+            ),
+            healthContext: TrustedHealthMemoryContext(
+                priorImportCount: 1,
+                recentSampleCount: 2,
+                sourceSummary: "Oura=1; Wellue=1",
+                metricSummary: "heart-rate=1; spo2=1",
+                recentObservationSummary: "spo2=97.00 % from Wellue"
             )
         )
 
@@ -65,17 +72,23 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(form.contains("(listen-receipt \"primary-live-room-capture-receipt\")"))
         XCTAssertTrue(form.contains("(transcribe-route \"speech-side-channel-during-live-capture\")"))
         XCTAssertTrue(form.contains("(host-resource-interface \"host-os-generic-resource-interface\")"))
-        XCTAssertTrue(form.contains("(host-resource-door-count 6)"))
+        XCTAssertTrue(form.contains("(host-resource-door-count 7)"))
         XCTAssertTrue(form.contains("(host-resource-door-summary \"audio-input:declared:host-os-generic-resource-interface"))
+        XCTAssertTrue(form.contains("health-samples:declared:host-os-generic-resource-interface"))
         XCTAssertTrue(form.contains("(host-platform-carrier-count 4)"))
         XCTAssertTrue(form.contains("windows:windows-minimal-host-carrier"))
         XCTAssertTrue(form.contains("android:android-minimal-host-carrier"))
         XCTAssertTrue(form.contains("ios:iphone-minimal-host-carrier"))
+        XCTAssertTrue(form.contains("ios-healthkit"))
         XCTAssertTrue(form.contains("(forbidden-runtime-carriers \"python,go,rust,typescript\")"))
         XCTAssertTrue(form.contains("(remote-oracle-requested 1)"))
         XCTAssertTrue(form.contains("(trusted-room-memory-context"))
         XCTAssertTrue(form.contains("(prior-session-count 1)"))
         XCTAssertTrue(form.contains("(hidden-capture 0)"))
+        XCTAssertTrue(form.contains("(trusted-health-memory-context"))
+        XCTAssertTrue(form.contains("(prior-import-count 1)"))
+        XCTAssertTrue(form.contains("(source-carrier \"ios-healthkit-source-filter\")"))
+        XCTAssertTrue(form.contains("(analysis-boundary \"reference-memory-reasoning-analysis-not-diagnosis\")"))
         XCTAssertTrue(form.contains("speaker-1"))
         XCTAssertTrue(form.contains("hello edited"))
     }
@@ -176,8 +189,8 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertEqual(receipt.kind, "satsang-native-tabbed-app")
         XCTAssertEqual(receipt.singleAppBody, "form-native-satsang-guidance-body")
         XCTAssertEqual(receipt.defaultMode, "room")
-        XCTAssertEqual(receipt.modes, ["room", "guidance", "memory", "learning", "resources", "settings"])
-        XCTAssertEqual(SatsangNativeAppMode.allCases.map(\.title), ["Room", "Guidance", "Memory", "Learning", "Resources", "Settings"])
+        XCTAssertEqual(receipt.modes, ["room", "guidance", "memory", "health", "learning", "resources", "settings"])
+        XCTAssertEqual(SatsangNativeAppMode.allCases.map(\.title), ["Room", "Guidance", "Memory", "Health", "Learning", "Resources", "Settings"])
     }
 
     func testTrustedRoomMemoryStoresSessionAndFeedsLaterContext() throws {
@@ -247,6 +260,57 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(next.formEnvelope.contains("(prior-session-count 1)"))
         XCTAssertTrue(next.formEnvelope.contains("first exchange"))
         XCTAssertTrue(next.formEnvelope.contains(firstProfile ?? "missing"))
+    }
+
+    func testTrustedHealthMemoryStoresWearableSamplesAndFeedsLaterContext() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = TrustedHealthMemoryStore(rootURL: dir)
+        let snapshot = TrustedHealthMemorySnapshot(
+            id: "health-1",
+            createdAt: "2026-06-26T18:00:00Z",
+            sourceHints: ["Oura", "O2"],
+            samples: [
+                TrustedHealthSample(
+                    id: "s1",
+                    kind: "heart-rate",
+                    value: 61,
+                    unit: "count/min",
+                    startDate: "2026-06-26T17:59:00Z",
+                    endDate: "2026-06-26T18:00:00Z",
+                    sourceName: "Oura",
+                    sourceBundleIdentifier: "com.ouraring.oura"
+                ),
+                TrustedHealthSample(
+                    id: "s2",
+                    kind: "spo2",
+                    value: 97,
+                    unit: "%",
+                    startDate: "2026-06-26T17:50:00Z",
+                    endDate: "2026-06-26T18:00:00Z",
+                    sourceName: "Wellue O2",
+                    sourceBundleIdentifier: "com.viatom.vihealth",
+                    metadata: ["stage": "sleep"]
+                )
+            ]
+        )
+
+        XCTAssertEqual(try store.context().priorImportCount, 0)
+        let result = try store.record(snapshot)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.importURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.indexURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.sampleLogURL.path))
+
+        let context = try store.context()
+        XCTAssertEqual(context.priorImportCount, 1)
+        XCTAssertEqual(context.recentSampleCount, 2)
+        XCTAssertTrue(context.sourceSummary.contains("Oura=1"))
+        XCTAssertTrue(context.sourceSummary.contains("Wellue O2=1"))
+        XCTAssertTrue(context.metricSummary.contains("heart-rate=1"))
+        XCTAssertTrue(context.metricSummary.contains("spo2=1"))
+        XCTAssertTrue(context.recentObservationSummary.contains("spo2=97.00 % from Wellue O2"))
+        XCTAssertEqual(context.trustReceipt.captureBoundary, "explicit-import")
+        XCTAssertFalse(context.trustReceipt.hiddenCapture)
+        XCTAssertTrue(TrustedHealthMemoryStore.formEnvelope(context).contains("(trusted-health-memory-context"))
     }
 
     func testDetectedHostResourceDoorsStayGeneric() {

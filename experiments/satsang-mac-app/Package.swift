@@ -17,6 +17,7 @@ let package = Package(
             dependencies: ["SatsangMacCore"],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
+                .linkedFramework("HealthKit", .when(platforms: [.iOS])),
                 .linkedFramework("Speech"),
             ]
         ),
@@ -29,6 +30,7 @@ let package = Package(
             dependencies: ["SatsangGuidanceKit"],
             linkerSettings: [
                 .linkedFramework("AVFoundation"),
+                .linkedFramework("HealthKit", .when(platforms: [.iOS])),
                 .linkedFramework("Speech"),
             ]
         ),
