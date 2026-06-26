@@ -33,9 +33,9 @@ run_receipt() {
 echo "── form-cli local receipts ──"
 
 ask_out="$("$ROOT/bin/form-cli" ask "$QUERY" 2>&1)"
-if printf '%s' "$ask_out" | grep -q '^grounded:' &&
-   printf '%s' "$ask_out" | grep -q '^local-lane:fkwu-rag-grounded' &&
-   printf '%s' "$ask_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm'; then
+if grep -q '^grounded:' <<<"$ask_out" &&
+   grep -q '^local-lane:fkwu-rag-grounded' <<<"$ask_out" &&
+   grep -q '^synthesis-lane:fkwu-rag-grounded' <<<"$ask_out"; then
     ok "native fkwu ask grounded locally for query: $QUERY"
     printf '%s\n' "$ask_out" | sed 's/^/     /'
 else
@@ -47,11 +47,11 @@ model_probe="local receipt grounded inference probe $(date -u +%Y%m%dT%H%M%SZ)"
 "$ROOT/bin/form-cli" ask "$model_probe" >/dev/null 2>&1
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
-if printf '%s' "$synth_out" | grep -q '^synthesis-lane:grounded-fkwu-model-answer' &&
-   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' &&
-   printf '%s' "$synth_out" | grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' &&
-   printf '%s' "$synth_out" | grep -q '^missing:full-real-llama-gguf-token-generation' &&
-   printf '%s' "$synth_out" | grep -q '^prose-generation:decoded-grounded-answer'; then
+if grep -q '^synthesis-lane:grounded-fkwu-model-answer' <<<"$synth_out" &&
+   grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^missing:full-real-llama-gguf-token-generation' <<<"$synth_out" &&
+   grep -q '^prose-generation:decoded-grounded-answer' <<<"$synth_out"; then
     ok "synthesis lane receipt binds grounded decoded answer and names full real generation"
     printf '%s\n' "$synth_out" | sed 's/^/     /'
 else

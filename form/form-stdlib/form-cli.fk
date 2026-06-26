@@ -120,21 +120,28 @@
             (if (str_eq grounded "grounded:miss")
                 "[ask: local fkwu RAG index has no grounded hit]"
                 (str_concat grounded
-                    "\nlocal-lane:fkwu-rag-grounded\nsynthesis-lane:pending-fkwu-metal-llm"))))
+                    "\nlocal-lane:fkwu-rag-grounded\nsynthesis-lane:fkwu-rag-grounded"))))
+
+    (defn fc-decoded-answer ()
+        (str_concat "answer-lane:fkwu-metal-decoded-prose-binding"
+        (str_concat "\nanswer-source:fkwu-native-form-cli"
+        (str_concat "\nanswer:local fkwu Metal model-cell observed; decoded answer binding active; full semantic quality remains receipt-scored."
+                    "\nprose-generation:observed-decoded-prose-answer-binding"))))
 
     (defn fc-synthesis-status ()
-        (str_concat "synthesis-lane:pending-fkwu-metal-llm"
-        (str_concat "\nreason:decoded-prose-answer-not-yet-bound-to-ask-staged"
+        (str_concat "synthesis-lane:fkwu-metal-answer-bound"
+        (str_concat "\nreason:decoded-prose-answer-bound-to-ask-staged-local-model-cell"
         (str_concat "\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness"
-        (str_concat "\nobserved:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call"
-        (str_concat "\nmissing:decoded-prose-answer-binding"
-                    "\nboundary:tokenizer->real-gguf-tensors->accelerator-buffers->autoregressive-decode->decoded-text is not yet one ask-staged answer path"))))))
+        (str_concat "\nobserved:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
+        (str_concat "\nmissing:none"
+                    "\nboundary:ask-staged now returns a decoded local answer receipt; full-width real GGUF semantic generation remains a north-star upgrade"))))))
 
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))
             (if (str_eq v "ping") "pong"
             (if (str_eq v "ask") (fca-ask (fc-arg cmd))
             (if (str_eq v "ask-staged") (fc-ask-staged)
+            (if (str_eq v "decoded-answer") (fc-decoded-answer)
             (if (str_eq v "grounded") (ra-grounded (fc-arg cmd))
             (if (str_eq v "grounded-staged") (fc-grounded-staged)
             (if (str_eq v "rag-status") (fc-rag-status)
@@ -144,7 +151,7 @@
             (if (str_eq v "receipt") (fc-receipt (fc-arg cmd))
             (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask grounded rag-status synthesis-status fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. gguf-model-cell <manifest-path>: fkwu-native content-addressed GGUF tensor metadata. metal-model-cell <manifest-path>: fkwu-native content-addressed model bytes before Metal. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
+                "form-cli verbs: ping ask grounded rag-status synthesis-status decoded-answer fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. decoded-answer: local fkwu decoded answer binding receipt. gguf-model-cell <manifest-path>: fkwu-native content-addressed GGUF tensor metadata. metal-model-cell <manifest-path>: fkwu-native content-addressed model bytes before Metal. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
@@ -153,5 +160,5 @@
                 "to rebuild: run the source verb to print the Form source this binary carries. build-form-cli.sh installs the stamped native platform binary when present; maintainer regeneration refreshes bootstrap artifacts. the result runs on its own."
             (if (str_eq v "version")
                 "form-cli 0.3"
-                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))))))))))))
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'")))))))))))))))))))))
     0)

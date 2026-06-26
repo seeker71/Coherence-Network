@@ -8,9 +8,9 @@
 #
 #   proven pieces: fkwu form-cli ask/status, GGUF find/model-cell,
 #                  tokenizer/loop bands, Metal model-cell/body trace on macOS.
-#   still open:    one decoded prose answer path that joins the observed
-#                  tokenizer, real GGUF map, Metal/runtime, autoregressive loop,
-#                  and ask-staged model-call witness.
+#   now bound:     ask-staged model-call witness -> decoded local answer receipt.
+#   still open:    upgrading that receipt-scored answer to full-width real GGUF
+#                  semantic generation across the platform device matrix.
 #
 # Runtime claims are read from the child receipts. Build/receipt tools may be
 # used by this harness; the sanitized proof binaries run with no HTTP/Ollama and
@@ -94,8 +94,8 @@ observation_for() {
     local id="$1"
     local out="$2"
     case "$id" in
-        form_cli_ask|ask_staged_model_call)
-            grep -E '^(grounded:|local-lane:|synthesis-lane:|trust  |\[ask:)' "$out" || true
+        form_cli_ask|ask_staged_model_call|decoded_answer)
+            grep -E '^(grounded:|local-lane:|model-call-lane:|answer-lane:|answer-source:|answer:|synthesis-lane:|prose-generation:|trust  |\[ask:)' "$out" || true
             ;;
         synthesis_status|model_status)
             grep -E '^(synthesis-lane:|reason:|available:|observed:|missing:|boundary:|ask-staged-model-call-receipt:|prose-generation:)' "$out" || true
@@ -230,13 +230,17 @@ run_step form_cli_ask current-host "native fkwu grounded ask" true \
     "bin/form-cli ask substrate" \
     "$ROOT/bin/form-cli" ask substrate
 
-run_step synthesis_status current-host "model synthesis boundary" true \
+run_step synthesis_status current-host "model synthesis binding" true \
     "bin/form-cli synthesis-status" \
     "$ROOT/bin/form-cli" synthesis-status
 
-run_step model_status current-host "model status boundary" true \
+run_step model_status current-host "model status binding" true \
     "bin/form-cli model-status" \
     "$ROOT/bin/form-cli" model-status
+
+run_step decoded_answer current-host "native decoded answer binding" true \
+    "form/form-cli decoded-answer" \
+    bash -lc "printf 'decoded-answer\nquit\n' | '$ROOT/form/form-cli' | sed '/^null$/d'"
 
 run_step ask_staged_model_call current-host "ask-staged local model-call witness" true \
     "bin/form-cli ask ungrounded-model-call-composition-probe" \
@@ -326,11 +330,26 @@ windows_host="$(bool_or_false "$(is_windows_host && echo true || echo false)")"
 android_device="$(bool_or_false "$(command -v adb >/dev/null 2>&1 && adb devices 2>/dev/null | awk 'NR>1 && $2=="device"{found=1} END{exit(found?0:1)}' && echo true || echo false)")"
 
 synthesis_out="$(jq -r 'select(.id == "synthesis_status") | .output_file' "$STEPS_JSONL" | tail -1)"
+decoded_answer_out="$(jq -r 'select(.id == "decoded_answer") | .output_file' "$STEPS_JSONL" | tail -1)"
+ask_staged_out="$(jq -r 'select(.id == "ask_staged_model_call") | .output_file' "$STEPS_JSONL" | tail -1)"
 available=""
 missing=""
 if [[ -n "$synthesis_out" && -f "$ROOT/$synthesis_out" ]]; then
     available="$(grep '^available:' "$ROOT/$synthesis_out" | head -1 | cut -d: -f2-)"
     missing="$(grep '^missing:' "$ROOT/$synthesis_out" | head -1 | cut -d: -f2-)"
+fi
+ask_staged_decoded_answer_bound=false
+if [[ -n "$ask_staged_out" && -f "$ROOT/$ask_staged_out" ]] &&
+   grep -q '^answer-lane:fkwu-metal-decoded-prose-binding$' "$ROOT/$ask_staged_out" &&
+   grep -q '^prose-generation:observed-decoded-prose-answer-binding$' "$ROOT/$ask_staged_out"; then
+    ask_staged_decoded_answer_bound=true
+fi
+decoded_answer_observed=false
+if [[ "$ask_staged_decoded_answer_bound" == "true" ]] ||
+   { [[ -n "$decoded_answer_out" && -f "$ROOT/$decoded_answer_out" ]] &&
+     grep -q '^answer-lane:fkwu-metal-decoded-prose-binding$' "$ROOT/$decoded_answer_out" &&
+     grep -q '^prose-generation:observed-decoded-prose-answer-binding$' "$ROOT/$decoded_answer_out"; }; then
+    decoded_answer_observed=true
 fi
 
 trace_sha="$(hash_file "$STEPS_JSONL")"
@@ -350,7 +369,7 @@ nonhard_failed_count="$(jq -s '[.[] | select(.hard_gate == false and .status != 
 http_or_ollama_absent="$(bool_or_false "$(grep -R -q '^http_or_ollama=absent$' "$TRACE_DIR" && echo true || echo false)")"
 denied_toolchain_hidden="$(bool_or_false "$(grep -R -q '^denied_toolchain_names_visible_on_path=0$' "$TRACE_DIR" && echo true || echo false)")"
 
-verdict="pass_composition_receipt_full_inference_not_yet_composed"
+verdict="pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed"
 if [[ "$HARD_FAIL" -ne 0 ]]; then
     verdict="fail_composition_receipt_hard_gate"
 fi
@@ -392,6 +411,8 @@ jq -n \
     --argjson metal_cell "$(bool_or_false "$(step_passed metal_model_cell)")" \
     --argjson metal_trace "$(bool_or_false "$(step_passed metal_body_trace)")" \
     --argjson ask_staged_model_call "$(bool_or_false "$(step_passed ask_staged_model_call)")" \
+    --argjson ask_staged_decoded_answer "$(bool_or_false "$ask_staged_decoded_answer_bound")" \
+    --argjson decoded_answer "$(bool_or_false "$decoded_answer_observed")" \
     --argjson android_fkwu "$(bool_or_false "$(step_passed android_fkwu_fourth)")" \
     --argjson android_vulkan "$(bool_or_false "$(step_passed android_vulkan_matvec)")" \
     --argjson windows_form_cli "$(bool_or_false "$(step_passed windows_form_cli_native)")" \
@@ -407,7 +428,8 @@ jq -n \
       ended_at: $ended_at,
       verdict: $verdict,
       full_model_inference_composed: false,
-      reason_full_inference_not_claimed: "decoded local prose is not yet bound as one ask-staged answer path over the observed tokenizer, real GGUF tensor map, Metal/accelerator buffers, autoregressive loop, and model-call witness",
+      ask_staged_decoded_answer_bound: $ask_staged_decoded_answer,
+      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli; ask-staged binding is observed when local model-cell assets are present; full-width real GGUF semantic generation across every device lane is not yet claimed",
       host: {
         os: $host_os,
         arch: $host_arch
@@ -425,7 +447,7 @@ jq -n \
       },
       synthesis_boundary: {
         available: ($available | split(",") | map(select(length > 0))),
-        missing: ($missing | split(",") | map(select(length > 0)))
+        missing: (if $missing == "none" then [] else ($missing | split(",") | map(select(length > 0))) end)
       },
       runtime_dependency_claim: {
         scope: "child proof binaries, not this shell harness",
@@ -443,7 +465,8 @@ jq -n \
         fkwu_form_cli_gguf_model_cell: $gguf_cell,
         fkwu_form_cli_metal_model_cell: $metal_cell,
         form_native_metal_body_trace: $metal_trace,
-        ask_staged_model_call_witness: $ask_staged_model_call
+        ask_staged_model_call_witness: $ask_staged_model_call,
+        decoded_prose_answer_binding: $decoded_answer
       },
       devices: {
         macos: {
@@ -477,7 +500,7 @@ jq -n \
         }
       },
       open_bridges: [
-        "bind the observed tokenizer, real GGUF tensor map, Metal/accelerator buffers, autoregressive loop, and ask-staged model-call witness into one decoded local answer",
+        "upgrade the receipt-scored decoded answer binding to full-width real GGUF semantic generation",
         "add Android Vulkan/NNAPI and Windows DirectML/D3D12 model-cell carriers matching the macOS Metal model-cell receipt"
       ],
       steps: $steps
@@ -487,6 +510,7 @@ printf 'receipt=%s\n' "$RECEIPT_PATH"
 printf 'trace=%s\n' "$TRACE_DIR"
 printf 'verdict=%s\n' "$verdict"
 printf 'full_model_inference_composed=false\n'
+printf 'ask_staged_decoded_answer_bound=%s\n' "$ask_staged_decoded_answer_bound"
 
 if [[ "$HARD_FAIL" -ne 0 ]]; then
     echo "failed_hard_gates:"

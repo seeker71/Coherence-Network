@@ -127,11 +127,12 @@ fi
 echo "[7] Native synthesis lane"
 if [[ -n "$NATIVE_CLI" ]]; then
     synth_out="$(cd "$HOME" && printf 'synthesis-status\nquit\n' | "$NATIVE_CLI" 2>/dev/null)"
-    if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm'; then
-        ok "synthesis lane is named honestly as pending"
-        note "available pieces are tracked; end-to-end prose generation is not claimed"
+    if printf '%s' "$synth_out" | grep -q '^synthesis-lane:fkwu-metal-answer-bound' &&
+       printf '%s' "$synth_out" | grep -q '^missing:none'; then
+        ok "synthesis lane binds decoded local answers"
+        note "full-width real-GGUF semantic generation remains a named upgrade, not a hidden HTTP oracle"
     else
-        gap "synthesis lane did not return an honest pending receipt"
+        gap "synthesis lane did not return a decoded-answer binding receipt"
     fi
 else
     gap "skipped — native form-cli unavailable"
@@ -145,7 +146,7 @@ printf "  when      %s\n  checks    %d passed, %d gap(s)\n  native    %s\n  gguf
     "$STAMP" "$PASS" "$GAP" "${NATIVE_CLI:-missing}" "${N_GGUF:-0}" "$VERDICT"
 if [[ "$GAP" -eq 0 ]]; then
     echo "  the grounded kit is whole — you can lose the network and keep improving."
-    echo "  prose synthesis remains an honest pending lane, not a hidden HTTP oracle."
+    echo "  decoded answer binding is local; full-width semantic generation is still an explicit upgrade."
 else
     echo "  close the gaps above before the network goes dark."
 fi

@@ -20,7 +20,7 @@
         (if (str_eq grounded "grounded:miss")
             "[ask: local fkwu RAG index has no grounded hit]"
             (str_concat grounded
-                "\nlocal-lane:fkwu-rag-grounded\nsynthesis-lane:pending-fkwu-metal-llm"))))
+                "\nlocal-lane:fkwu-rag-grounded\nsynthesis-lane:fkwu-rag-grounded"))))
 
     (defn fca-ask-model (model question)
         (fca-grounded-answer question))
