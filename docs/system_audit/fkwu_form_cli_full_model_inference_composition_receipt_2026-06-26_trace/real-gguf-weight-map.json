@@ -1,0 +1,287 @@
+{
+  "filename": "sha256-871071a269d0df9630fa0e14038bb9687052c656f27f27bdcd31f2556165e451",
+  "header": {
+    "magic": 1179993927,
+    "metadata_kv_count": 27,
+    "tensor_count": 255,
+    "version": 3
+  },
+  "metadata": {
+    "alignment": 32,
+    "architecture": "llama",
+    "basename": null,
+    "llama_block_count": 28,
+    "llama_context_length": 131072,
+    "llama_embedding_length": 3072,
+    "llama_head_count": 24,
+    "llama_head_count_kv": 8,
+    "name": null,
+    "size_label": null,
+    "tokenizer_array_counts": {
+      "tokenizer.ggml.merges": 280147,
+      "tokenizer.ggml.scores": 128256,
+      "tokenizer.ggml.token_type": 128256,
+      "tokenizer.ggml.tokens": 128256
+    },
+    "tokenizer_bos_token_id": 128000,
+    "tokenizer_eos_token_id": 128009,
+    "tokenizer_keys": [
+      "tokenizer.ggml.add_bos_token",
+      "tokenizer.ggml.add_eos_token",
+      "tokenizer.ggml.bos_token_id",
+      "tokenizer.ggml.eos_token_id",
+      "tokenizer.ggml.merges",
+      "tokenizer.ggml.model",
+      "tokenizer.ggml.pre",
+      "tokenizer.ggml.scores",
+      "tokenizer.ggml.token_type",
+      "tokenizer.ggml.tokens"
+    ],
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "llama-bpe"
+  },
+  "path": "<local-gguf-blob>",
+  "receipt_kind": "gguf-full-weight-map-receipt",
+  "size_bytes": 2019886272,
+  "tensor_map": {
+    "aligned_offsets": true,
+    "alignment": 32,
+    "count_header": 255,
+    "count_observed": 255,
+    "first_by_data_offset": [
+      {
+        "absolute_end": 10116032,
+        "absolute_start": 8346560,
+        "byte_length_by_next_offset": 1769472,
+        "data_offset": 0,
+        "dims": [
+          3072,
+          1024
+        ],
+        "index": 0,
+        "name": "blk.0.attn_k.weight",
+        "type": "Q4_K"
+      },
+      {
+        "absolute_end": 10128320,
+        "absolute_start": 10116032,
+        "byte_length_by_next_offset": 12288,
+        "data_offset": 1769472,
+        "dims": [
+          3072
+        ],
+        "index": 1,
+        "name": "blk.0.attn_norm.weight",
+        "type": "F32"
+      },
+      {
+        "absolute_end": 15436736,
+        "absolute_start": 10128320,
+        "byte_length_by_next_offset": 5308416,
+        "data_offset": 1781760,
+        "dims": [
+          3072,
+          3072
+        ],
+        "index": 2,
+        "name": "blk.0.attn_output.weight",
+        "type": "Q4_K"
+      },
+      {
+        "absolute_end": 20745152,
+        "absolute_start": 15436736,
+        "byte_length_by_next_offset": 5308416,
+        "data_offset": 7090176,
+        "dims": [
+          3072,
+          3072
+        ],
+        "index": 3,
+        "name": "blk.0.attn_q.weight",
+        "type": "Q4_K"
+      },
+      {
+        "absolute_end": 23325632,
+        "absolute_start": 20745152,
+        "byte_length_by_next_offset": 2580480,
+        "data_offset": 12398592,
+        "dims": [
+          3072,
+          1024
+        ],
+        "index": 4,
+        "name": "blk.0.attn_v.weight",
+        "type": "Q6_K"
+      },
+      {
+        "absolute_end": 43969472,
+        "absolute_start": 23325632,
+        "byte_length_by_next_offset": 20643840,
+        "data_offset": 14979072,
+        "dims": [
+          8192,
+          3072
+        ],
+        "index": 5,
+        "name": "blk.0.ffn_down.weight",
+        "type": "Q6_K"
+      },
+      {
+        "absolute_end": 58125248,
+        "absolute_start": 43969472,
+        "byte_length_by_next_offset": 14155776,
+        "data_offset": 35622912,
+        "dims": [
+          3072,
+          8192
+        ],
+        "index": 6,
+        "name": "blk.0.ffn_gate.weight",
+        "type": "Q4_K"
+      },
+      {
+        "absolute_end": 58137536,
+        "absolute_start": 58125248,
+        "byte_length_by_next_offset": 12288,
+        "data_offset": 49778688,
+        "dims": [
+          3072
+        ],
+        "index": 7,
+        "name": "blk.0.ffn_norm.weight",
+        "type": "F32"
+      }
+    ],
+    "last_by_data_offset": [
+      {
+        "absolute_end": 1647700928,
+        "absolute_start": 1645120448,
+        "byte_length_by_next_offset": 2580480,
+        "data_offset": 1636773888,
+        "dims": [
+          3072,
+          1024
+        ],
+        "index": 247,
+        "name": "blk.27.attn_v.weight",
+        "type": "Q6_K"
+      },
+      {
+        "absolute_end": 1668344768,
+        "absolute_start": 1647700928,
+        "byte_length_by_next_offset": 20643840,
+        "data_offset": 1639354368,
+        "dims": [
+          8192,
+          3072
+        ],
+        "index": 248,
+        "name": "blk.27.ffn_down.weight",
+        "type": "Q6_K"
+      },
+      {
+        "absolute_end": 1682500544,
+        "absolute_start": 1668344768,
+        "byte_length_by_next_offset": 14155776,
+        "data_offset": 1659998208,
+        "dims": [
+          3072,
+          8192
+        ],
+        "index": 249,
+        "name": "blk.27.ffn_gate.weight",
+        "type": "Q4_K"
+      },
+      {
+        "absolute_end": 1682512832,
+        "absolute_start": 1682500544,
+        "byte_length_by_next_offset": 12288,
+        "data_offset": 1674153984,
+        "dims": [
+          3072
+        ],
+        "index": 250,
+        "name": "blk.27.ffn_norm.weight",
+        "type": "F32"
+      },
+      {
+        "absolute_end": 1696668608,
+        "absolute_start": 1682512832,
+        "byte_length_by_next_offset": 14155776,
+        "data_offset": 1674166272,
+        "dims": [
+          3072,
+          8192
+        ],
+        "index": 251,
+        "name": "blk.27.ffn_up.weight",
+        "type": "Q4_K"
+      },
+      {
+        "absolute_end": 1696680896,
+        "absolute_start": 1696668608,
+        "byte_length_by_next_offset": 12288,
+        "data_offset": 1688322048,
+        "dims": [
+          3072
+        ],
+        "index": 252,
+        "name": "output_norm.weight",
+        "type": "F32"
+      },
+      {
+        "absolute_end": 1696681152,
+        "absolute_start": 1696680896,
+        "byte_length_by_next_offset": 256,
+        "data_offset": 1688334336,
+        "dims": [
+          64
+        ],
+        "index": 253,
+        "name": "rope_freqs.weight",
+        "type": "F32"
+      },
+      {
+        "absolute_end": 2019886272,
+        "absolute_start": 1696681152,
+        "byte_length_by_next_offset": 323205120,
+        "data_offset": 1688334592,
+        "dims": [
+          3072,
+          128256
+        ],
+        "index": 254,
+        "name": "token_embd.weight",
+        "type": "Q6_K"
+      }
+    ],
+    "metadata_start": 24,
+    "missing_required_tensors": [],
+    "nondecreasing_offsets": true,
+    "ranges_within_file": true,
+    "required_tensors": [
+      "rope_freqs.weight",
+      "token_embd.weight",
+      "blk.0.attn_norm.weight",
+      "blk.0.attn_q.weight",
+      "blk.0.attn_k.weight",
+      "blk.0.attn_v.weight",
+      "blk.0.attn_output.weight",
+      "blk.0.ffn_norm.weight",
+      "blk.0.ffn_gate.weight",
+      "blk.0.ffn_up.weight",
+      "blk.0.ffn_down.weight",
+      "output_norm.weight"
+    ],
+    "tensor_data_start": 8346560,
+    "tensor_table_end": 8346552,
+    "tensor_table_start": 8331422,
+    "type_counts": {
+      "F32": 58,
+      "Q4_K": 168,
+      "Q6_K": 29
+    },
+    "unique_offsets": true
+  },
+  "verdict": "pass"
+}

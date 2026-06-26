@@ -32,7 +32,24 @@ need() {
 }
 
 need jq
-need shasum
+
+need_hash_tool() {
+    if command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; then
+        return 0
+    fi
+    echo "missing required trace harness tool: shasum or sha256sum" >&2
+    exit 2
+}
+
+hash_file() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{print $1}'
+    else
+        sha256sum "$1" | awk '{print $1}'
+    fi
+}
+
+need_hash_tool
 
 json_escape() {
     jq -Rs . <<<"${1:-}"
@@ -47,6 +64,17 @@ relpath() {
     fi
 }
 
+sanitize_trace_file() {
+    local src="$1"
+    local dst="$2"
+    LC_ALL=C sed -E \
+        -e "s|$ROOT|<repo>|g" \
+        -e "s|$HOME|<home>|g" \
+        -e 's|/private/var/folders/[^[:space:]:]+|<tmp>|g' \
+        -e 's|/var/folders/[^[:space:]:]+|<tmp>|g' \
+        "$src" > "$dst"
+}
+
 step_index=0
 run_step() {
     step_index=$((step_index + 1))
@@ -54,16 +82,19 @@ run_step() {
     local kind="$2"
     local cmd="$3"
     local out="$TRACE_DIR/$(printf '%02d' "$step_index")_${id}.out"
+    local raw="$out.raw"
     local started ended status sha observation out_rel
 
     started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     (
         cd "$ROOT" || exit 2
         eval "$cmd"
-    ) >"$out" 2>&1
+    ) >"$raw" 2>&1
     status=$?
+    sanitize_trace_file "$raw" "$out"
+    rm -f "$raw"
     ended="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    sha="$(shasum -a 256 "$out" | awk '{print $1}')"
+    sha="$(hash_file "$out")"
     out_rel="$(relpath "$out")"
 
     case "$id" in
@@ -134,7 +165,7 @@ ended_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 steps_count="$(jq -s 'length' "$STEPS_JSONL")"
 passed_count="$(jq -s '[.[] | select(.passed == true)] | length' "$STEPS_JSONL")"
 failed_count="$(jq -s '[.[] | select(.passed == false)] | length' "$STEPS_JSONL")"
-trace_sha="$(shasum -a 256 "$STEPS_JSONL" | awk '{print $1}')"
+trace_sha="$(hash_file "$STEPS_JSONL")"
 trace_dir_rel="$(relpath "$TRACE_DIR")"
 steps_jsonl_rel="$(relpath "$STEPS_JSONL")"
 
