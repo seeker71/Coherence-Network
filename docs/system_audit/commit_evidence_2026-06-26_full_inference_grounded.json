@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/full-inference-grounded-20260626",
+  "commit_scope": "Bind a decoded grounded answer to the observed form-cli ask-staged fkwu+Metal model-cell receipt while keeping full real Llama GGUF token generation explicitly pending.",
+  "files_owned": [
+    "bin/form-cli",
+    "scripts/form_cli_ask_staged_model_call.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh",
+    "docs/system_audit/commit_evidence_2026-06-26_full_inference_grounded.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bin/form-cli ask \"full inference grounded please\" -> model-call-observed:true, inference-lane:form-cli-grounded-decoded-answer, decoded-answer present, full-real-llama-gguf-generation:pending",
+      "bin/form-cli model-status -> synthesis-lane:grounded-fkwu-model-answer, observed decoded-prose-answer-binding, missing full-real-llama-gguf-token-generation",
+      "scripts/validate_form_cli_model_lane_gap_receipts.sh .cache/body-test-receipts/current-grounded-inference-lane.json -> PASS",
+      "scripts/validate_form_cli_local_receipts.sh substrate -> PASS",
+      "bash -n bin/form-cli scripts/form_cli_ask_staged_model_call.sh scripts/validate_form_cli_model_lane_gap_receipts.sh scripts/validate_form_cli_local_receipts.sh -> pass"
+    ],
+    "results": [
+      "form-cli ask now emits a single observable trace for local RAG miss, fkwu+Metal model-cell witness, grounded decoded answer, and remaining full-real-generation gap.",
+      "model-status now reflects the current ask-staged model-call receipt and moves the missing row from decoded-prose-answer-binding to full-real-llama-gguf-token-generation.",
+      "The model-lane receipt still proves tokenizer bands, full real GGUF tensor map, Form autoregressive loop band, and Metal GQA decode loop witness before declaring the grounded answer bound."
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "commands": [
+      "PR #3682 validate-thread-process -> pass in 18s",
+      "PR #3682 GitGuardian Security Checks -> pass in 1s",
+      "PR #3682 windows-floor -> pass in 13m11s at https://github.com/seeker71/Coherence-Network/actions/runs/28248565875/job/83693886862"
+    ],
+    "notes": "Windows floor reached and passed the model inference composition receipt step on the Windows runner."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "reason": "No public deploy surface changed; this is a local form-cli receipt and validation contract change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "reason": "Local receipt proof passes and PR #3682 CI checks passed."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell",
+    "full-model-inference-composition-receipt",
+    "grounded-decoded-answer-binding"
+  ],
+  "task_ids": [
+    "task-2026-06-26-full-inference-grounded"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "receipt-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Current ask-staged receipt: /Users/ursmuff/.coherence-network/ask-staged-model-call/current-receipt.json",
+    "Grounded inference lane receipt: .cache/body-test-receipts/current-grounded-inference-lane.json",
+    "Combined local receipt run: scripts/validate_form_cli_local_receipts.sh substrate",
+    "Honest non-claim: full real Llama GGUF tokenizer -> tensor bytes -> autoregressive token generation remains pending."
+  ],
+  "change_files": [
+    "bin/form-cli",
+    "docs/system_audit/commit_evidence_2026-06-26_full_inference_grounded.json",
+    "scripts/form_cli_ask_staged_model_call.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "change_intent": "process_only",
+  "body_trace": {
+    "ask_trace": "bin/form-cli ask \"full inference grounded please\"",
+    "receipt": ".cache/body-test-receipts/current-grounded-inference-lane.json",
+    "receipt_verdict": "observed-grounded-decoded-answer-full-real-llama-pending",
+    "observed": [
+      "fkwu RAG miss",
+      "fkwu+Metal model-cell witness",
+      "decoded-prose-answer-binding",
+      "tokenizer carrier bands",
+      "full real GGUF tensor map",
+      "Form autoregressive loop band",
+      "Metal GQA decode loop witness"
+    ],
+    "missing": [
+      "full-real-llama-gguf-token-generation"
+    ]
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "native/local proof commands produced the form-cli trace, fkwu model-cell receipt, Form validate.sh bands with fkwu fourth-arm evidence, GGUF map witness, and Metal runtime observations",
+    "rented_oracle_share": "the orchestration, patch design, evidence wording, and summary were produced by the rented frontier model after form-cli ask returned a native miss",
+    "trust_matrix": {
+      "path": "native-first miss -> rented implementation orchestration -> native/local receipt proof",
+      "grounded": "receipt artifacts and command outputs are grounded; initial form-cli ask was not grounded in RAG",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for grounded decoded answer receipt, not sufficient for full real Llama GGUF token generation",
+      "observed": false
+    }
+  }
+}
