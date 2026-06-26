@@ -45,7 +45,9 @@ fi
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm' &&
    printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step' &&
-   printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call'; then
+   { printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call' ||
+     { printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding' &&
+       printf '%s' "$synth_out" | grep -q '^available-observed:ask-staged-model-call-witness'; }; }; then
     ok "synthesis lane receipt names available pieces and missing composition"
     printf '%s\n' "$synth_out" | sed 's/^/     /'
 else

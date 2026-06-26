@@ -81,6 +81,9 @@ form-cli — the one door (local-first, Form-native)
   form-cli synthesis-status
         native receipt for the fkwu+Metal GGUF prose lane: what is present,
         what is missing, and why ask still reports pending
+  form-cli ask-staged-model-call "<question>" [RECEIPT_JSON]
+        local fkwu+Metal model-call witness used by ask after a native RAG miss;
+        no HTTP/Ollama, full prose generation still reported separately
   form-cli model-gap-receipt [OUT_DIR_OR_JSON] [GGUF_PATH]
         observed receipt for tokenizer, full GGUF map, autoregressive loop, and
         ask-staged model-call binding; proves what is local and names the blocker
@@ -118,6 +121,28 @@ run_native_cli() {
   printf '%s\n' "$out"
 }
 
+model_status() {
+  out="$(native_send "synthesis-status")"
+  receipt="${HOME:-$ROOT}/.coherence-network/ask-staged-model-call/current-receipt.json"
+  if [ -s "$receipt" ] && python3 - "$receipt" <<'PY' >/dev/null 2>&1
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    data = json.load(f)
+sys.exit(0 if data.get("verdict") == "pass" and (data.get("ask_staged_model_call") or {}).get("observed") is True else 1)
+PY
+  then
+    printf '%s\n' "$out" \
+      | sed \
+          -e 's/reason:end-to-end-gguf-decode-not-bound-to-ask-staged/reason:full-decoded-prose-not-yet-bound-to-ask-staged/' \
+          -e 's/,ask-staged-model-call//'
+    printf '%s\n' "available-observed:ask-staged-model-call-witness"
+    printf '%s\n' "ask-staged-model-call-receipt:$receipt"
+    printf '%s\n' "prose-generation:pending-full-tokenizer-gguf-to-metal-decode"
+  else
+    printf '%s\n' "$out"
+  fi
+}
+
 ask_native_local() {
   q="$*"
   [ -n "$q" ] || { echo "usage: form-cli ask '<question>'" >&2; exit 2; }
@@ -137,6 +162,17 @@ ask_native_local() {
   fi
   if printf '%s\n' "$out" | grep -q '^grounded:'; then
     printf '%s\n' "trust  path:native  grounded:yes  freq:no  suffic:yes  -> native-partial" >&2
+  elif printf '%s\n' "$out" | grep -q '^\[ask: local fkwu RAG index has no grounded hit\]'; then
+    receipt="$home/.coherence-network/ask-staged-model-call/current-receipt.json"
+    model_out="$("$ROOT/scripts/form_cli_ask_staged_model_call.sh" "$q" "$receipt" 2>&1)"
+    model_rc=$?
+    if [[ "$model_rc" -eq 0 ]]; then
+      printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  -> native-model-call-receipt" >&2
+      out="$(printf '%s\nmodel-call-lane:fkwu-metal-model-cell\nmodel-call-receipt:%s\nsynthesis-lane:ask-staged-model-call-observed\nprose-generation:pending-full-tokenizer-gguf-to-metal-decode\n%s' "$out" "$receipt" "$model_out")"
+    else
+      printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:no  -> native-miss" >&2
+      out="$(printf '%s\nmodel-call-lane:unavailable\n%s' "$out" "$model_out")"
+    fi
   else
     printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  -> native-miss" >&2
   fi
@@ -151,10 +187,11 @@ case "$cmd" in
   -p|--print) ask_native_local "$@" ;;  # one-shot print mode uses the local fkwu staged ask carrier
   -*)        exec bash "$ROOT/scripts/form_cli_ask.sh" "$cmd" "$@" ;; # ask flags (-m/-j/--remote/...) -> Form-native ask carrier
   ask)       ask_native_local "$@" ;;  # default ask is local fkwu staged RAG only
+  ask-staged-model-call) exec bash "$ROOT/scripts/form_cli_ask_staged_model_call.sh" "$@" ;;
   ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
   grounded)  run_native_cli "grounded $*" ;;
   rag-status) run_native_cli "rag-status" ;;
-  synthesis-status|model-status) run_native_cli "synthesis-status" ;;
+  synthesis-status|model-status) model_status ;;
   model-gap-receipt) exec bash "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$@" ;;
   rag-ask)   exec python3 "$RAG" ask "$@" ;;
   do)        exec bash "$ROOT/scripts/form_cli_agent.sh" "$@" ;;  # tiered agent loop (local-first, escalate)

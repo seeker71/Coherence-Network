@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/ask-staged-model-call-d617",
+  "commit_scope": "Close the ask-staged-model-call gap by binding form-cli ask misses to a local fkwu+Metal model-cell witness and recording the observed receipt.",
+  "files_owned": [
+    "MANIFEST.md",
+    "bin/form-cli",
+    "docs/system_audit/commit_evidence_2026-06-26_ask_staged_model_call_witness.json",
+    "scripts/INDEX.md",
+    "scripts/form_cli_ask_staged_model_call.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bin/form-cli ask \"ask staged model call binding witness <timestamp>\"",
+      "scripts/form_cli_ask_staged_model_call.sh \"ask staged direct witness\" .cache/body-test-receipts/current-ask-staged-model-call-receipt.json",
+      "bin/form-cli model-gap-receipt .cache/body-test-receipts/current-model-lane-gap-receipt.json",
+      "scripts/validate_form_cli_local_receipts.sh substrate",
+      "bin/form-cli model-status",
+      "bin/form-cli preflight",
+      "bash -n bin/form-cli scripts/validate_form_cli_local_receipts.sh scripts/validate_form_cli_model_lane_gap_receipts.sh scripts/form_cli_ask_staged_model_call.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "make wellness",
+      "git diff --check"
+    ],
+    "observed_outputs": [
+      "bin/form-cli ask ungrounded probe -> trust path:native grounded:no suffic:no model-call:yes; model-call-lane:fkwu-metal-model-cell; verdict:pass; prose-generation:pending.",
+      "scripts/form_cli_ask_staged_model_call.sh -> receipt .cache/body-test-receipts/current-ask-staged-model-call-receipt.json; verdict:pass; model-call-observed:true.",
+      "bin/form-cli model-gap-receipt -> verdict:observed-ask-staged-model-call-bound; ask_staged_model_call:pass.",
+      "bin/form-cli model-status -> available-observed:ask-staged-model-call-witness; missing list no longer includes ask-staged-model-call; full decoded prose remains pending.",
+      "scripts/validate_form_cli_local_receipts.sh substrate -> PASS: local grounded ask and pending synthesis receipts are honest.",
+      "bin/form-cli preflight -> 9 passed, 0 gaps, READY.",
+      "make wellness -> specs/INDEX.md aligned; deploy aligned; kernel-native surface breathing.",
+      "git diff --check -> no whitespace errors."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-cli-proof-scripts",
+    "notes": "Public verification follows merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; evidence validation, rebase, guard, PR, CI, merge, and deploy verification remain."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-cli-local-rag",
+    "fkwu-native-metal-model-cell",
+    "coherence-substrate-form-stdlib"
+  ],
+  "task_ids": [
+    "task-2026-06-26-ask-staged-model-call-witness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "process_only",
+  "evidence_refs": [
+    "The form-cli ask surface now invokes scripts/form_cli_ask_staged_model_call.sh after native ask-staged returns a local RAG miss.",
+    "The model-call witness runs scripts/fkwu_form_cli_metal_model_cell_receipt.sh and requires a passing fkwu form-cli Metal model-cell receipt with model bytes SHA-256 verified in Form, Metal device observed, sanitized runtime PATH, and http_or_ollama_absent.",
+    "The model-gap receipt now reports ask_staged_model_call:pass while preserving full decoded prose as pending-full-tokenizer-gguf-to-metal-decode.",
+    "The model-status shell surface is receipt-aware: after the local witness exists it removes ask-staged-model-call from missing and reports available-observed:ask-staged-model-call-witness."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "bin/form-cli",
+    "scripts/INDEX.md",
+    "scripts/form_cli_ask_staged_model_call.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ]
+}

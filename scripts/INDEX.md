@@ -110,6 +110,7 @@
 | [form_cli_agent.sh](form_cli_agent.sh) | form_cli_agent.sh — thin WITNESS: the kernel runs the TIERED agent loop (form-native-run.fk). |
 | [form_cli_ask.sh](form_cli_ask.sh) | form_cli_ask.sh — thin WITNESS for `form-cli ask+`. The body is Form: the kernel |
 | [form_cli_ask_smart.py](form_cli_ask_smart.py) | form_cli_ask_smart.py — thin REPL CARRIER. The form-cli interactive shell. |
+| [form_cli_ask_staged_model_call.sh](form_cli_ask_staged_model_call.sh) | form_cli_ask_staged_model_call.sh — local model-call witness for ask-staged RAG misses. |
 | [form_cli_asm.sh](form_cli_asm.sh) | form_cli_asm.sh — interrogate LLVM offline: how does clang lower / optimize this? |
 | [form_cli_capture.sh](form_cli_capture.sh) | form_cli_capture.sh — capture agent turns as training samples for the form-cli. |
 | [form_cli_close_gap.sh](form_cli_close_gap.sh) | form_cli_close_gap.sh — close a Form recipe gap OFFLINE with a local oracle. |
