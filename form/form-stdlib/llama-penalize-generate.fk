@@ -1,0 +1,60 @@
+; llama-penalize-generate.fk — the llama (decoder-only, GQA) autoregressive PENALIZED-SAMPLED loop:
+; the sampled decode loop with a MEMORY of what it just emitted, so a local llama stops looping.
+; Wires the four-way token repetition penalties (penalties.fk, #3677) into the four-way sampled
+; generation loop (llama-sample-generate.fk, #3654) — the named next stone from #3677's own receipt.
+;
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/trig.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk form-stdlib/sampling.fk form-stdlib/penalties.fk form-stdlib/llama-sample-generate.fk
+;
+; The sampled loop (lg-generate-sampled, #3654) shapes the logits (temperature -> softmax -> top-k) and
+; DRAWS each token with a seeded MINSTD PRNG, but it carries NO memory: nothing discourages emitting the
+; same token forever, so an unshaped local llama degenerates into a loop (the greedy/peaked baseline on
+; the band fixture is [0,1,1,1,1] — token 1 repeated). Serving's first defense is the penalty pass
+; llama.cpp applies to the LOGITS BEFORE temperature (penalties.fk's pen-apply, == llama_sampler_penalties_apply):
+; for each token id whose count in the last-n window is > 0, push its logit down (repeat/freq/present).
+; No new arithmetic here; a pure composition that inserts pen-apply over the last-n window of the running
+; ids, before the existing four-way filter+draw:
+;
+;   logits : lg-logits (lgqa-stack-causal (embed ids) ...)        ; the SAME stack+unembed as greedy
+;   penal  : pen-apply logits (pen-last-n ids win) pr pf pp        ; penalties.fk, over the last-n window
+;   shape  : probs = smp-topk-mask (smp-softmax (smp-temperature penal t)) k
+;   draw   : st2 = smp-minstd state ; next = smp-sample probs (smp-uniform st2)
+;   repeat, appending next and threading st2 (advance the PRNG ONCE per step — the smp-draw-seq rule).
+;
+; The LOAD-BEARING law, composing what is already four-way (core-abstraction-first): the penalty
+; (penalty_repeat=1, penalty_freq=0, penalty_present=0) is the IDENTITY — pen-apply leaves every logit
+; untouched — so the penalized loop reduces EXACTLY to lg-generate-sampled (#3654); and with k=1 that
+; further reduces to the greedy loop lg-generate (#3649). A window of win=0 is the empty window: no token
+; is counted, so even big knobs are identity. The unpenalized loop is the (1,0,0) special case, NOT a
+; parallel path. These reductions ground the whole penalized stack+logits+penalty+filter+selection by
+; EQUIVALENCE to loops already proven four-way; the genuine penalty path (the loop breaks [0,1,1,1,1]) is
+; grounded against the independent libm+llama.cpp reference scripts/llama_penalize_generate_reference.py.
+;
+; Lives at the reusable decoder-engine altitude (any token_embd / layer list / unembed penalizes the same
+; way; this instance is the real llama3 stack). fp64 lane; deterministic and reproducible from the seed.
+; Proven four-way by tests/llama-penalize-generate-band.fk.
+; teaching: lc-cognitive-sovereignty
+
+; --- the shaped distribution at the current ids, WITH the penalty pass: stack -> final RMSNorm ->
+;     unembed -> pen-apply (over the last-n window) -> temperature -> softmax -> top-k mask. The same
+;     logits as lgs-probs, with penalties.fk's pen-apply inserted before temperature (the llama.cpp order). ---
+(defn lgsp-probs (ids tok layers gf unembed eps scale n_q n_kv HD c t k pr pf pp win)
+  (smp-topk-mask
+    (smp-softmax
+      (smp-temperature
+        (pen-apply
+          (lg-logits (lgqa-stack-causal (lg-embed tok ids) layers eps scale n_q n_kv HD c) gf unembed eps)
+          (pen-last-n ids win) pr pf pp)
+        t))
+    k))
+
+; --- the autoregressive PENALIZED-SAMPLED loop: thread (ids, PRNG state). Penalize the logits over the
+;     last-n window of the running ids, shape, advance the PRNG ONCE per step (the smp-draw-seq rule),
+;     draw the next token, append, recurse. Identity penalty (1.0 0.0 0.0) == lg-generate-sampled. ---
+(defn lg-generate-penalized (ids tok layers gf unembed eps scale n_q n_kv HD c t k pr pf pp win state steps)
+  (if (eq steps 0) ids
+      (do
+        (let st2 (smp-minstd state))
+        (let nxt (smp-sample (lgsp-probs ids tok layers gf unembed eps scale n_q n_kv HD c t k pr pf pp win)
+                             (smp-uniform st2)))
+        (lg-generate-penalized (lg-snoc ids nxt) tok layers gf unembed eps scale n_q n_kv HD c t k pr pf pp win
+                             st2 (sub steps 1)))))
