@@ -3,11 +3,12 @@
 Health memory is a consented local context lane for wearable samples that the
 holder explicitly imports from the iPhone health store.
 
-The first native carrier is iOS HealthKit. Oura, Oz/O2, Wellue, ViHealth, and
-other oxygen or ring sources enter through Apple Health when the holder grants
-read access for the selected categories. The app stores imported samples in the
-local health-memory folder and makes only compact summaries available to the
-guidance request.
+The first native carrier is iOS HealthKit. The built-in essential profiles are
+Oura Ring 4 through the Oura Apple Health integration and Wellue O2Ring S
+through ViHealth Apple Health sharing. Other oxygen or ring sources enter
+through Apple Health when the holder grants read access for the selected
+categories. The app stores imported samples in the local health-memory folder
+and makes only compact summaries available to the guidance request.
 
 The trust receipt is the boundary:
 

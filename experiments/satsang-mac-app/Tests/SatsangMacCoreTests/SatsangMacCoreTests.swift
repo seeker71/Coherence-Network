@@ -56,9 +56,9 @@ final class SatsangMacCoreTests: XCTestCase {
             healthContext: TrustedHealthMemoryContext(
                 priorImportCount: 1,
                 recentSampleCount: 2,
-                sourceSummary: "Oura=1; Wellue=1",
+                sourceSummary: "Oura Ring 4=1; Wellue O2Ring S=1",
                 metricSummary: "heart-rate=1; spo2=1",
-                recentObservationSummary: "spo2=97.00 % from Wellue"
+                recentObservationSummary: "spo2=97.00 % from Wellue O2Ring S"
             )
         )
 
@@ -268,7 +268,7 @@ final class SatsangMacCoreTests: XCTestCase {
         let snapshot = TrustedHealthMemorySnapshot(
             id: "health-1",
             createdAt: "2026-06-26T18:00:00Z",
-            sourceHints: ["Oura", "O2"],
+            sourceHints: ["Oura Ring 4", "Wellue O2Ring S", "com.ouraring.oura", "com.viatom.vihealth"],
             samples: [
                 TrustedHealthSample(
                     id: "s1",
@@ -277,7 +277,7 @@ final class SatsangMacCoreTests: XCTestCase {
                     unit: "count/min",
                     startDate: "2026-06-26T17:59:00Z",
                     endDate: "2026-06-26T18:00:00Z",
-                    sourceName: "Oura",
+                    sourceName: "Oura Ring 4",
                     sourceBundleIdentifier: "com.ouraring.oura"
                 ),
                 TrustedHealthSample(
@@ -287,7 +287,7 @@ final class SatsangMacCoreTests: XCTestCase {
                     unit: "%",
                     startDate: "2026-06-26T17:50:00Z",
                     endDate: "2026-06-26T18:00:00Z",
-                    sourceName: "Wellue O2",
+                    sourceName: "Wellue O2Ring S",
                     sourceBundleIdentifier: "com.viatom.vihealth",
                     metadata: ["stage": "sleep"]
                 )
@@ -303,11 +303,11 @@ final class SatsangMacCoreTests: XCTestCase {
         let context = try store.context()
         XCTAssertEqual(context.priorImportCount, 1)
         XCTAssertEqual(context.recentSampleCount, 2)
-        XCTAssertTrue(context.sourceSummary.contains("Oura=1"))
-        XCTAssertTrue(context.sourceSummary.contains("Wellue O2=1"))
+        XCTAssertTrue(context.sourceSummary.contains("Oura Ring 4=1"))
+        XCTAssertTrue(context.sourceSummary.contains("Wellue O2Ring S=1"))
         XCTAssertTrue(context.metricSummary.contains("heart-rate=1"))
         XCTAssertTrue(context.metricSummary.contains("spo2=1"))
-        XCTAssertTrue(context.recentObservationSummary.contains("spo2=97.00 % from Wellue O2"))
+        XCTAssertTrue(context.recentObservationSummary.contains("spo2=97.00 % from Wellue O2Ring S"))
         XCTAssertEqual(context.trustReceipt.captureBoundary, "explicit-import")
         XCTAssertFalse(context.trustReceipt.hiddenCapture)
         XCTAssertTrue(TrustedHealthMemoryStore.formEnvelope(context).contains("(trusted-health-memory-context"))

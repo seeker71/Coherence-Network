@@ -23,15 +23,63 @@ enum WearableHealthImportError: Error, LocalizedError {
 }
 
 final class WearableHealthImporter {
-    static let defaultSourceHints = [
-        "Oura",
-        "Oz",
-        "O2",
-        "Wellue",
-        "ViHealth",
-        "oxygen",
-        "oximeter",
+    struct SourceProfile: Equatable {
+        var displayName: String
+        var sourceHints: [String]
+        var essentialSampleKinds: [String]
+    }
+
+    static let essentialSourceProfiles = [
+        SourceProfile(
+            displayName: "Oura Ring 4",
+            sourceHints: [
+                "Oura Ring 4",
+                "Oura",
+                "com.ouraring.oura",
+            ],
+            essentialSampleKinds: [
+                "sleep-analysis",
+                "heart-rate",
+                "resting-heart-rate",
+                "hrv-sdnn",
+                "respiratory-rate",
+                "steps",
+                "active-energy",
+            ]
+        ),
+        SourceProfile(
+            displayName: "Wellue O2Ring S",
+            sourceHints: [
+                "Wellue O2Ring S",
+                "O2RingS",
+                "O2Ring-S",
+                "O2Ring",
+                "Wellue",
+                "Viatom",
+                "ViHealth",
+                "com.viatom.vihealth",
+                "Oz",
+                "O2",
+                "oxygen",
+                "oximeter",
+            ],
+            essentialSampleKinds: [
+                "spo2",
+                "heart-rate",
+                "sleep-analysis",
+            ]
+        ),
     ]
+
+    static let defaultSourceHints = Array(
+        Set(essentialSourceProfiles.flatMap(\.sourceHints))
+    ).sorted()
+
+    static var essentialSourceSummary: String {
+        essentialSourceProfiles
+            .map { "\($0.displayName): \($0.essentialSampleKinds.joined(separator: ", "))" }
+            .joined(separator: "; ")
+    }
 
     static func detectResourceDoors() -> [HostResourceDoor] {
         #if canImport(HealthKit) && os(iOS)
@@ -156,7 +204,7 @@ private extension WearableHealthImporter {
     }
 
     func requestAuthorization(healthStore: HKHealthStore, readTypes: Set<HKObjectType>) async throws {
-        try await withCheckedThrowingContinuation { continuation in
+        let _: Void = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
             healthStore.requestAuthorization(toShare: Set<HKSampleType>(), read: readTypes) { success, error in
                 if let error {
                     continuation.resume(throwing: error)
@@ -329,13 +377,14 @@ private extension WearableHealthImporter {
 
     static func sleepStageName(_ value: Int) -> String {
         if value == HKCategoryValueSleepAnalysis.inBed.rawValue { return "in-bed" }
-        if value == HKCategoryValueSleepAnalysis.asleep.rawValue { return "asleep" }
         if value == HKCategoryValueSleepAnalysis.awake.rawValue { return "awake" }
         if #available(iOS 16.0, *) {
             if value == HKCategoryValueSleepAnalysis.asleepCore.rawValue { return "asleep-core" }
             if value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue { return "asleep-deep" }
             if value == HKCategoryValueSleepAnalysis.asleepREM.rawValue { return "asleep-rem" }
             if value == HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue { return "asleep-unspecified" }
+        } else if value == 1 {
+            return "asleep"
         }
         return "sleep-stage-\(value)"
     }

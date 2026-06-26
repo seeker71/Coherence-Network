@@ -77,8 +77,11 @@ sidecar must share the already-open listening stream. The memory proof lives in
 `form/form-stdlib/satsang-room-memory.fk`.
 
 The Health tab imports wearable samples from iPhone HealthKit after Health
-permission is granted. The default source filter covers Oura, Oz/O2, Wellue,
-ViHealth, oxygen, and oximeter sources. Imported samples are written to local
+permission is granted. The built-in essential source profiles are Oura Ring 4
+through the Oura Apple Health integration and Wellue O2Ring S through ViHealth
+Apple Health sharing. The editable source filter also covers Oura, Oura bundle
+ids, Wellue, O2RingS/O2Ring-S/O2Ring, Viatom, ViHealth, ViHealth bundle ids,
+Oz/O2, oxygen, and oximeter sources. Imported samples are written to local
 health memory and summarized into later guidance context. The health-memory
 proof lives in `form/form-stdlib/satsang-health-memory.fk`.
 
@@ -93,11 +96,11 @@ transcription, and health samples, plus the cross-platform carrier matrix for
 those same doors.
 Python, Go, Rust, and TypeScript are not app-boundary runtimes for this carrier.
 Windows and Android are carrier mappings in this package, not full GUI apps yet.
-The iPhone target is native SwiftUI source; a device-signed archive still needs
-an Apple team/profile plus installed iOS SDK support. The permission metadata
-template lives at `Support/SatsangGuidancePhone/Info.plist`, and iOS routes the
-Form process door through an embedded runtime adapter rather than arbitrary
-subprocess spawning.
+The iPhone target is native SwiftUI source; installing to a physical phone needs
+a connected trusted iPhone plus an Apple team/profile for signing. The permission
+metadata template lives at `Support/SatsangGuidancePhone/Info.plist`, and iOS
+routes the Form process door through an embedded runtime adapter rather than
+arbitrary subprocess spawning.
 The HealthKit entitlement template lives at
 `Support/SatsangGuidancePhone/SatsangGuidancePhone.entitlements`.
 
