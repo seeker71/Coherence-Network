@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 375
+**Total files**: 378
 
 | File | Purpose |
 |---|---|
@@ -94,6 +94,7 @@
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
 | [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness / resolve / know via fkwu (fc-fnri direct, proven source). |
+| [fkwu_form_cli_full_model_inference_composition_receipt.sh](fkwu_form_cli_full_model_inference_composition_receipt.sh) | fkwu_form_cli_full_model_inference_composition_receipt.sh |
 | [fkwu_form_cli_gguf_model_cell_receipt.sh](fkwu_form_cli_gguf_model_cell_receipt.sh) | fkwu_form_cli_gguf_model_cell_receipt.sh -- prove form-cli can verify a |
 | [fkwu_form_cli_metal_direct_receipt.sh](fkwu_form_cli_metal_direct_receipt.sh) | fkwu_form_cli_metal_direct_receipt.sh |
 | [fkwu_form_cli_metal_matvec_receipt.sh](fkwu_form_cli_metal_matvec_receipt.sh) | fkwu_form_cli_metal_matvec_receipt.sh |
@@ -253,6 +254,7 @@
 | [offline_nl_training_runbook.sh](offline_nl_training_runbook.sh) | offline_nl_training_runbook.sh — the terminal teacher AND runner for training our |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
+| [penalties_reference.py](penalties_reference.py) | penalties_reference.py — the parity oracle for penalties.fk (the token repetition penalty set). |
 | [pg_wire_fkwu_witness.sh](pg_wire_fkwu_witness.sh) | pg_wire_fkwu_witness.sh — prove the 4th kernel (fkwu) reads from live Postgres via Form pg-wire. |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
 | [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |

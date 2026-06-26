@@ -1,0 +1,126 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/no-macos-biometric-voice-20260626",
+  "commit_scope": "Correct the satsang room-memory speaker continuity contract so it refuses macOS biometric or exclusive-mic speaker-identification carriers and records only non-interrupting continuity from transcript-supplied ids, visible speaker labels, or a future passive sidecar sharing the already-open listening stream.",
+  "files_owned": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_no_macos_biometric_voice.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-room-memory.fk",
+    "form/form-stdlib/tests/satsang-room-memory-band.fk",
+    "scripts/INDEX.md",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form-cli ask \"Satsang trusted room memory correction: reject macOS biometric voice identification that could interrupt listening; keep non-interrupting transcript voice_id speaker_id and channel-label continuity. Which local body surfaces should be patched?\"",
+      "swift test --package-path experiments/satsang-mac-app",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance",
+      "scripts/build_satsang_mac_app.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-26_no_macos_biometric_voice.json",
+      "git diff --check",
+      "make wellness"
+    ],
+    "fourth_arm": "satsang-guidance-event-band.fk -> 255, satsang-host-boundary-band.fk -> 131071, satsang-listen-route-band.fk -> 255, satsang-room-memory-band.fk -> 255; each crossed four-way with fkwu + pre-flattened tables; 0 divergent",
+    "summary": "Startup gates passed. The Form ask returned no grounded/sufficient local RAG hit for this exact correction, so the patch is source-guided. Swift package tests passed with 11 XCTest cases, including a receipt assertion that new trusted-room memory records use transcript-voice-id-or-speaker-label and not macos-biometric-voice-id. The GUI product and .app bundle built locally. The Form room-memory proof now accepts non-interrupting transcript/channel/passive shared-stream continuity and rejects macOS biometric, voiceprint identity, and exclusive-mic biometric carriers."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy yet; local macOS experiment awaits PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI and PR checks pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "satsang-mac-guidance-app"
+  ],
+  "task_ids": [
+    "no-macos-biometric-voice-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "trust-boundary"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "form-proof",
+        "local-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/satsang-room-memory.fk",
+    "form/form-stdlib/tests/satsang-room-memory-band.fk",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_no_macos_biometric_voice.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-room-memory.fk",
+    "form/form-stdlib/tests/satsang-room-memory-band.fk",
+    "scripts/INDEX.md",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "Local app/core proof shows the satsang room-memory receipt keeps speaker continuity on non-interrupting carriers and refuses mic-exclusive biometric identity carriers.",
+    "expected_behavior_delta": "New room-memory receipts name transcript voice-id/speaker-label continuity instead of an identity carrier. The Form proof rejects macOS biometric voice identification, generic voiceprint identity, and exclusive-mic biometric carriers so always-present room listening remains uninterrupted.",
+    "public_endpoints": [
+      "n/a-local-macos-app"
+    ],
+    "test_flows": [
+      "swift test --package-path experiments/satsang-mac-app -> 11 tests passed",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
+      "scripts/build_satsang_mac_app.sh -> experiments/satsang-mac-app/dist/Satsang Guidance.app",
+      "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-host-boundary-band.fk -> 131071 four-way",
+      "cd form && ./validate.sh ... satsang-listen-route-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-room-memory-band.fk -> 255 four-way"
+    ]
+  }
+}
