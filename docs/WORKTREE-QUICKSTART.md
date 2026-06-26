@@ -141,16 +141,55 @@ Optional remote/deploy gate check:
 python3 scripts/worktree_pr_guard.py --mode all --branch "$(git rev-parse --abbrev-ref HEAD)"
 ```
 
-## Commit + PR
+## Commit
 
 ```bash
 git add <files>
 git commit -m "<message>"
+```
+
+## Land Current Branch (fast path)
+
+After the branch is committed with its evidence file, use the current-branch
+landing wrapper instead of hand-driving rebase, PR polling, merge, and cleanup:
+
+```bash
+python3 scripts/land_current_branch.py --merge
+```
+
+What it owns:
+
+- clean named worktree branch check,
+- `git fetch origin main && git rebase origin/main`,
+- changed commit-evidence validation,
+- local PR guard and stale PR follow-through guard,
+- push / force-with-lease push,
+- PR create/read,
+- check wait with bounded auto-rebase when `main` advances,
+- GitHub API merge,
+- GitHub API remote branch deletion,
+- post-merge PR state and tree parity readback.
+
+The default merge method is `rebase`, matching the manual fallback below. Use
+`--merge-method squash` only when the branch should intentionally compress
+multiple local commits.
+
+For runtime/deploy-impactful branches, add the deploy settle step:
+
+```bash
+python3 scripts/land_current_branch.py --merge --settle-deploy
+```
+
+Use `--dry-run` to print the exact high-level path without mutating anything.
+
+## Manual PR Fallback
+
+```bash
 git push -u origin codex/<thread-name>
 gh pr create --base main --head codex/<thread-name> --title "<title>" --body "<body>"
 ```
 
-## Merge (after checks)
+## Manual Merge Fallback (after checks)
 
 Use rebase merge:
 
