@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.models.agent import AgentTaskCreate, AgentTaskUpdate, TaskType, TaskStatus
+from app.models.agent import AgentTaskCreate, TaskType, TaskStatus
 
 log = logging.getLogger(__name__)
 
@@ -454,7 +454,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     # R3: dedup gate — check phase history before creating next-phase task.
     # Supports skip-ahead: if next_phase is already completed, try the one after.
     from app.services import agent_service
-    from app.services.task_dedup_service import check_idea_phase_history, build_skip_context, PHASE_SEQUENCE
+    from app.services.task_dedup_service import check_idea_phase_history, build_skip_context
 
     skipped_phases: list[str] = []
     phase_map = _next_phase_map()
@@ -569,15 +569,14 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
         direction = (
             f"Deploy '{idea_name}' ({idea_id}) to production.\n\n"
             f"Steps:\n"
-            f"1. Merge the feature branch to main: gh pr merge --squash --admin\n"
-            f"2. SSH deploy: ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 "
-            f"'cd /docker/coherence-network/repo && git pull origin main && "
-            f"cd /docker/coherence-network && docker compose build --no-cache api web && "
-            f"docker compose up -d api web'\n"
+            f"1. From the feature worktree, run: python3 scripts/land_current_branch.py --merge --settle-deploy\n"
+            f"2. If you are not in the feature worktree, use the API merge fallback in "
+            f"docs/WORKTREE-QUICKSTART.md, then run: ./scripts/settle_public_deploy.sh "
+            f"https://api.coherencycoin.com https://coherencycoin.com\n"
             f"3. Health check: curl -s https://api.coherencycoin.com/api/health\n\n"
             f"Pass gate: health check must return HTTP 200 with status ok.\n"
             f"On merge failure: output DEPLOY_FAILED: merge conflict — <details>.\n"
-            f"On SSH/build failure: output DEPLOY_FAILED: <error>.\n"
+            f"On deploy settle failure: output DEPLOY_FAILED: <error>.\n"
             f"On success: output DEPLOY_PASSED: SHA <sha> live at coherencycoin.com.\n"
         )
     elif next_phase == "verify-production":
@@ -1252,14 +1251,14 @@ def handle_decision(task: dict[str, Any], decision: str) -> dict[str, Any] | Non
                 graph_service.update_node(idea_id, properties={"confidence": max(0.1, current_conf * 0.5)})
                 log.info("DEPRIORITIZED idea=%s confidence %.2f → %.2f", idea_id, current_conf, current_conf * 0.5)
             # Mark task completed (it's been handled by deprioritizing)
-            agent_service.update_task(task.get("id", ""), status=TaskStatus.COMPLETED, output=f"Deprioritized: confidence halved.")
+            agent_service.update_task(task.get("id", ""), status=TaskStatus.COMPLETED, output="Deprioritized: confidence halved.")
         except Exception:
             log.warning("DECISION C failed for %s", idea_id, exc_info=True)
 
     elif choice == "D":
         # Skip phase and advance
         try:
-            agent_service.update_task(task.get("id", ""), status=TaskStatus.COMPLETED, output=f"Phase skipped by human decision.")
+            agent_service.update_task(task.get("id", ""), status=TaskStatus.COMPLETED, output="Phase skipped by human decision.")
             # Trigger auto-advance from the now-completed task
             task_copy = dict(task)
             task_copy["status"] = "completed"

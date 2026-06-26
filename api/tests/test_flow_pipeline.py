@@ -12,14 +12,12 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from unittest.mock import patch
 
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.services import pipeline_advance_service as pas
-from app.services import pipeline_advance_service
-from app.models.agent import TaskType, TaskStatus
+from app.models.agent import TaskType
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
@@ -159,6 +157,11 @@ class TestCodeReviewGate:
         assert result is not None
         assert len(created) == 1
         assert created[0]["task_type"] == "deploy"
+        direction = created[0]["direction"]
+        assert "python3 scripts/land_current_branch.py --merge --settle-deploy" in direction
+        assert "./scripts/settle_public_deploy.sh" in direction
+        assert "gh pr merge" not in direction
+        assert "ssh -i" not in direction
 
     def test_code_review_approved_advances(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """CODE_REVIEW_PASSED + APPROVED also triggers advancement."""
@@ -407,7 +410,7 @@ class TestFullChain:
             output="VERIFY_PASSED: All scenarios pass. /api/health 200, /api/ideas 200.",
             idea_id="idea-full-chain",
         )
-        r3 = pas.maybe_advance(verify_task)
+        pas.maybe_advance(verify_task)
         # verify-production advances to reflect
         assert idea_updates.get("idea-full-chain") == "validated"
 

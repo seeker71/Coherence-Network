@@ -185,14 +185,12 @@ def _is_merge_ready(detail: dict[str, Any]) -> tuple[bool, str]:
 def _merge_pr(repo: str, number: int, method: str) -> None:
     _run_gh(
         [
-            "pr",
-            "merge",
-            str(number),
-            "--repo",
-            repo,
-            f"--{method}",
-            "--delete-branch=false",
-            "--auto=false",
+            "api",
+            "-X",
+            "PUT",
+            f"repos/{repo}/pulls/{number}/merge",
+            "-f",
+            f"merge_method={method}",
         ]
     )
 

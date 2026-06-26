@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/streamline-form-cli-landing-d617",
+  "commit_scope": "Compress the regular current-branch ship path into one wrapper that owns rebase, evidence validation, local guard, PR follow-through, check waiting, API merge, branch cleanup, and optional deploy settling.",
+  "files_owned": [
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/app/services/pipeline_advance_service.py",
+    "api/tests/test_agent_control_plane.py",
+    "api/tests/test_flow_pipeline.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-06-26_current_branch_landing_fast_path.json",
+    "MANIFEST.md",
+    "scripts/check_pr_followthrough.py",
+    "scripts/INDEX.md",
+    "scripts/land_current_branch.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 -m py_compile scripts/land_current_branch.py scripts/check_pr_followthrough.py api/app/services/agent_service_pipeline_status.py api/app/services/pipeline_advance_service.py api/tests/test_agent_control_plane.py api/tests/test_flow_pipeline.py",
+      "python3 scripts/land_current_branch.py --dry-run --merge -> would run current branch rebase, evidence validation, local PR guard, follow-through guard, push, PR create/read, check wait, API rebase merge, API branch delete",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-26_current_branch_landing_fast_path.json",
+      "git diff --check",
+      "python3 -m ruff check scripts/land_current_branch.py scripts/check_pr_followthrough.py api/app/services/agent_service_pipeline_status.py api/app/services/pipeline_advance_service.py api/tests/test_agent_control_plane.py api/tests/test_flow_pipeline.py",
+      "cd api && python3 -m pytest -q tests/test_agent_control_plane.py tests/test_flow_pipeline.py -> 23 passed, 5 warnings",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ],
+    "results": [
+      "The landing wrapper compiles and dry-runs from the current branch without mutating the worktree.",
+      "The default merge method follows the documented API rebase merge path.",
+      "Dogfood caught the common branch-created-from-origin/main case; push now targets origin HEAD:<current-branch> unless the upstream already matches the current branch.",
+      "The stale PR auto-merge helper and API follow-through blocker now use the GitHub merge API instead of local gh pr merge checkout/cleanup.",
+      "The deploy phase prompt now points at the current-branch lander and deploy settle path instead of manual SSH deployment."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Runtime control-plane text changed; public deploy validation is pending merge/deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Control-plane follow-through and deploy task directions recommend the one-command current-branch/API landing path instead of local gh pr merge or manual SSH deployment.",
+    "public_endpoints": [
+      "/api/agent/status-report",
+      "/api/agent/tasks"
+    ],
+    "test_flows": [
+      "stale green PR blocker returns GitHub API merge/delete command",
+      "code-review auto-advance creates deploy task whose direction uses land_current_branch.py --merge --settle-deploy"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passes. Remote CI and deploy proof are pending until this process-only branch is committed, pushed, and landed."
+  },
+  "idea_ids": [
+    "agent-pipeline",
+    "operational-clarity",
+    "form-first-shipping"
+  ],
+  "spec_ids": [
+    "worktree-current-branch-landing",
+    "commit-evidence-contract",
+    "pr-followthrough-contract"
+  ],
+  "task_ids": [
+    "task-2026-06-26-current-branch-landing-fast-path"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "process-strain-signal",
+        "receipt-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Previous loop strain observed in PR #3683: manual check polling, rebase churn, local gh pr merge cleanup failure, and post-rebase evidence rewrite.",
+    "New fast path: scripts/land_current_branch.py --merge",
+    "API-only merge path: gh api -X PUT repos/<repo>/pulls/<number>/merge -f merge_method=<method>",
+    "Control-plane blocker now emits API-only merge/delete commands for stale green PRs.",
+    "Pipeline deploy phase now points to scripts/land_current_branch.py --merge --settle-deploy.",
+    "Manual fallback remains documented in docs/WORKTREE-QUICKSTART.md."
+  ],
+  "change_files": [
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/app/services/pipeline_advance_service.py",
+    "api/tests/test_agent_control_plane.py",
+    "api/tests/test_flow_pipeline.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-06-26_current_branch_landing_fast_path.json",
+    "MANIFEST.md",
+    "scripts/check_pr_followthrough.py",
+    "scripts/INDEX.md",
+    "scripts/land_current_branch.py"
+  ],
+  "change_intent": "runtime_fix"
+}

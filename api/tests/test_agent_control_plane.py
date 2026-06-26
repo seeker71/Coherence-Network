@@ -81,8 +81,11 @@ def test_followthrough_blocker_from_stale_green_pr_recommends_merge() -> None:
     assert blocker is not None
     assert blocker["kind"] == "stale_pr"
     assert blocker["url"] == "https://github.com/seeker71/Coherence-Network/pull/1260"
-    assert blocker["reason"] == "merge or close stale green PR"
-    assert "gh pr merge 1260" in blocker["command"]
+    assert blocker["reason"] == "merge or close stale green PR through the GitHub API"
+    assert "gh api -X PUT repos/seeker71/Coherence-Network/pulls/1260/merge" in blocker["command"]
+    assert "merge_method=rebase" in blocker["command"]
+    assert "git/refs/heads/codex/grok-lineage-events-20260427" in blocker["command"]
+    assert "gh pr merge" not in blocker["command"]
 
 
 def test_pipeline_status_surfaces_vitality_and_hardened_tissue(monkeypatch) -> None:
@@ -143,9 +146,12 @@ def test_pipeline_status_surfaces_vitality_and_hardened_tissue(monkeypatch) -> N
                     {
                         "kind": "stale_pr",
                         "url": "https://github.com/seeker71/Coherence-Network/pull/1260",
-                        "command": "gh pr merge 1260 --repo seeker71/Coherence-Network --merge",
+                        "command": (
+                            "gh api -X PUT repos/seeker71/Coherence-Network/pulls/1260/merge "
+                            "-f merge_method=rebase"
+                        ),
                         "owner": "codex",
-                        "reason": "merge or close stale green PR",
+                        "reason": "merge or close stale green PR through the GitHub API",
                     }
                 ],
             },
