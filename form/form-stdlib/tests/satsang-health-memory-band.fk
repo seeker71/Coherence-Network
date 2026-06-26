@@ -3,7 +3,7 @@
 ; satsang-health-memory-band — wearable samples enter local health memory only
 ; by explicit import, with source filters and non-diagnostic analysis boundary.
 ;
-; Verdict 255:
+; Verdict 1023:
 ;   1   explicit import is accepted
 ;   2   iOS HealthKit is an accepted source carrier
 ;   4   Oura source filter is accepted
@@ -12,6 +12,8 @@
 ;   32  SpO2 metric is accepted
 ;   64  hidden capture is rejected by trust receipt
 ;   128 receipt can feed later context under analysis-not-diagnosis boundary
+;   256 Oura Ring 4 source filter is accepted
+;   512 Wellue O2Ring S via ViHealth Apple Health carrier is accepted
 (do
     (let receipt (shm-receipt "explicit-import"
                               "ios-healthkit"
@@ -35,5 +37,9 @@
                                    "reference-memory-reasoning-analysis-not-diagnosis") 0) 64 0))
     (let c7 (if (and (eq (shm-rec-ok? receipt) 1)
                      (eq (shm-rec-hidden receipt) 0)) 128 0))
+    (let c8 (if (eq (shm-source-filter? "oura-ring-4") 1) 256 0))
+    (let c9 (if (and (eq (shm-source-filter? "wellue-o2ring-s") 1)
+                     (and (eq (shm-source-filter? "o2rings") 1)
+                          (eq (shm-source-carrier? "wellue-vihealth-apple-health") 1))) 512 0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))

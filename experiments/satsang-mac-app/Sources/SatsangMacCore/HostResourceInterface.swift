@@ -129,7 +129,12 @@ public struct FoundationHostResourceInterface: HostResourceInterface {
     public init() {}
 
     public var homeDirectory: URL {
+        #if os(iOS) || os(tvOS) || os(watchOS)
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        #else
         FileManager.default.homeDirectoryForCurrentUser
+        #endif
     }
 
     public var currentDirectory: URL {
