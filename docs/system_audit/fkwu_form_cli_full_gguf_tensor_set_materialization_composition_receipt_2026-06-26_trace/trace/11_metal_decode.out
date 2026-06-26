@@ -1,0 +1,9 @@
+emitted decode-step MSL: 6416 bytes  |  full causal MSL: 7023 bytes (every byte authored by the Form recipe)
+Form recipe lblk-block-causal (fp64, four-way proven) y*1e6: 1893731 -66971 762083 2285373 -1069281 365812 1648117 -1118617 210687 1445908 -1368373 -5072
+── running the KV-cached decode loop on the M4 Max GPU ──
+decode loop: 3 dispatches over one persistent KV cache, 0.959 ms total
+  y_full   (full causal recompute, one dispatch) = [1.893731, -0.066971, 0.762083, 2.285373, -1.069281, 0.365812, 1.648117, -1.118617, 0.210686, 1.445908, -1.368373, -0.005072]
+  y_decode (KV-cached loop, 3 dispatches)        = [1.893731, -0.066971, 0.762083, 2.285373, -1.069281, 0.365812, 1.648117, -1.118617, 0.210686, 1.445908, -1.368373, -0.005072]
+EQUIVALENCE (decode loop vs full causal recompute on the GPU): ✓ BIT-FOR-BIT identical — the KV cache reproduces the recompute exactly on silicon
+RECIPE (GPU fp32 decode vs fp64 lblk-block-causal *1e6): max|Δ|=0.5  ✓ tracks the proven four-way recipe within fp32 epsilon
+✓ the KV-CACHED DECODE STEP runs on the M4 Max GPU — autoregressive generation on silicon, the cache bit-identical to the full causal recompute, tracking the proven recipe

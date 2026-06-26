@@ -131,7 +131,7 @@ observed_grounded_answer = (
 )
 status_names_full_real_gap = (
     read_rc("model_status") == 0
-    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
+    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
     and "missing:full-real-llama-gguf-token-generation" in status
 )
 ask_names_full_real_gap = "full-real-llama-gguf-generation:pending" in ask
@@ -174,8 +174,8 @@ receipt = {
         "real_gguf_architecture": ((gguf_map.get("metadata") or {}).get("architecture")),
     },
     "blocked_requirements": [] if claim_allowed else [
-        "materialize the full-width Llama tensor set into the fkwu-controlled model-cell path; the first named full-file tensor slice is now witnessed",
-        "dequant and place the full-width Llama tensor set into Metal/accelerator buffers",
+        "promote the witnessed required tensor-set byte-window materialization into complete full-width Llama tensor payload staging in the fkwu-controlled model-cell path",
+        "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
         "run the full multi-layer GQA autoregressive loop over those real tensors",
         "project logits over the real vocabulary, select token IDs, and decode through the real tokenizer arrays",
         "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle",

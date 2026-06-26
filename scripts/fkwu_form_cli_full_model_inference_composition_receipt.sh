@@ -110,6 +110,9 @@ observation_for() {
         full_gguf_tensor_slice_math)
             grep -E '^(gguf_tensor_slice_verified|gguf_tensor_name|gguf_tensor_type|gguf_tensor_absolute_start|gguf_tensor_slice_read_len|q6k_|PASS|FAIL)' "$out" || true
             ;;
+        full_gguf_tensor_set_materialization)
+            grep -E '^(gguf_tensor_set_verified|gguf_tensor_set_scope|gguf_tensor_set_row_count|gguf_tensor_set_pass_count|gguf_tensor_set_bytes_read|gguf_tensor_set_aggregate_|gguf_tensor_set_single_command_rows_supported|gguf_tensor_set_accelerator_buffers|PASS|FAIL)' "$out" || true
+            ;;
         metal_model_cell)
             grep -E '^(model_cell_verified|runtime_path_sanitized|denied_toolchain_names_visible_on_path|http_or_ollama|metal_owner|metal_device|gpu_y|max_delta|PASS)' "$out" || true
             ;;
@@ -305,10 +308,14 @@ if is_windows_host && ! step_passed_now real_gguf_weight_map; then
     # GitHub's Windows floor proves the native fkwu/form-cli body, but it does
     # not carry the user's local multi-GB GGUF blob. Keep that row honest.
     skip_step full_gguf_tensor_slice_math current-host "fkwu form-cli full GGUF named tensor-slice math" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the full-GGUF tensor-slice witness"
+    skip_step full_gguf_tensor_set_materialization current-host "fkwu form-cli full GGUF required tensor-set materialization" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the full-GGUF tensor-set witness"
 else
     run_step full_gguf_tensor_slice_math current-host "fkwu form-cli full GGUF named tensor-slice math" true \
         "scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh <trace>/full-gguf-tensor-slice-math/receipt.json" \
         "$ROOT/scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh" "$TRACE_DIR/full-gguf-tensor-slice-math/receipt.json"
+    run_step full_gguf_tensor_set_materialization current-host "fkwu form-cli full GGUF required tensor-set materialization" true \
+        "scripts/fkwu_form_cli_full_gguf_tensor_set_materialization_receipt.sh <trace>/full-gguf-tensor-set-materialization/receipt.json" \
+        "$ROOT/scripts/fkwu_form_cli_full_gguf_tensor_set_materialization_receipt.sh" "$TRACE_DIR/full-gguf-tensor-set-materialization/receipt.json"
 fi
 
 if is_macos_host && command -v swiftc >/dev/null 2>&1; then
@@ -451,6 +458,7 @@ jq -n \
     --argjson full_generation_claim_gate "$(bool_or_false "$(step_passed full_real_llama_generation_claim)")" \
     --argjson gguf_cell "$(bool_or_false "$(step_passed gguf_model_cell)")" \
     --argjson full_gguf_tensor_slice_math "$(bool_or_false "$(step_passed full_gguf_tensor_slice_math)")" \
+    --argjson full_gguf_tensor_set_materialization "$(bool_or_false "$(step_passed full_gguf_tensor_set_materialization)")" \
     --argjson metal_cell "$(bool_or_false "$(step_passed metal_model_cell)")" \
     --argjson metal_trace "$(bool_or_false "$(step_passed metal_body_trace)")" \
     --argjson ask_staged_model_call "$(bool_or_false "$(step_passed ask_staged_model_call)")" \
@@ -472,7 +480,7 @@ jq -n \
       verdict: $verdict,
       full_model_inference_composed: false,
       ask_staged_decoded_answer_bound: $ask_staged_decoded_answer,
-      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli and the claim gate passes as a blocker, but the answer is not yet produced by full real Llama GGUF tokenizer arrays, real tensor bytes, accelerator buffers, autoregressive token IDs, and decoded token text in one native form-cli path",
+      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli and the claim gate passes as a blocker, but the answer is not yet produced by full real Llama GGUF tokenizer arrays, complete tensor payloads in accelerator buffers, autoregressive token IDs, and decoded token text in one native form-cli path",
       host: {
         os: $host_os,
         arch: $host_arch
@@ -509,6 +517,7 @@ jq -n \
         full_real_llama_generation_claim_gate: $full_generation_claim_gate,
         fkwu_form_cli_gguf_model_cell: $gguf_cell,
         fkwu_form_cli_full_gguf_named_tensor_slice_math: $full_gguf_tensor_slice_math,
+        fkwu_form_cli_full_gguf_required_tensor_set_materialization: $full_gguf_tensor_set_materialization,
         fkwu_form_cli_metal_model_cell: $metal_cell,
         form_native_metal_body_trace: $metal_trace,
         ask_staged_model_call_witness: $ask_staged_model_call,
@@ -521,6 +530,7 @@ jq -n \
           fkwu_form_cli_native: (if $mac_host then $form_cli_ask else false end),
           gguf_model_cell: (if $mac_host then $gguf_cell else false end),
           full_gguf_tensor_slice_math: (if $mac_host then $full_gguf_tensor_slice_math else false end),
+          full_gguf_tensor_set_materialization: (if $mac_host then $full_gguf_tensor_set_materialization else false end),
           metal_model_cell: (if $mac_host then $metal_cell else false end),
           metal_body_trace: (if $mac_host then $metal_trace else false end),
           full_model_inference: false
@@ -539,6 +549,7 @@ jq -n \
           fkwu_form_cli_native: (if $windows_host then $windows_form_cli else false end),
           gguf_model_cell: (if $windows_host then $gguf_cell else false end),
           full_gguf_tensor_slice_math: (if $windows_host then $full_gguf_tensor_slice_math else false end),
+          full_gguf_tensor_set_materialization: (if $windows_host then $full_gguf_tensor_set_materialization else false end),
           directml_d3d12_model_cell: false,
           http_or_ollama_absent_in_child_runtime: (if $windows_host then $http_or_ollama_absent else false end),
           denied_go_rust_python_shell_clang_hidden_on_child_runtime_path: (if $windows_host then $denied_toolchain_hidden else false end),
@@ -549,8 +560,8 @@ jq -n \
       },
       open_bridges: [
         "upgrade the receipt-scored decoded answer binding to full-width real GGUF semantic generation",
-        "materialize the full-width Llama tensor set into the fkwu-controlled model-cell path, not only the current named tensor math witness",
-        "dequant and place the full-width Llama tensor set into Metal/accelerator buffers",
+        "promote required tensor-set byte-window materialization to complete full-width tensor payload staging",
+        "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
         "run the full multi-layer GQA autoregressive loop over those real tensors",
         "project logits over the real vocabulary, select token IDs, and decode through the real tokenizer arrays",
         "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle",

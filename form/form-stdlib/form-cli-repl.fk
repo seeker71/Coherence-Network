@@ -122,7 +122,9 @@
     ; proves the same content address gate for GGUF bytes, then parses tensor
     ; metadata through the GGUF reader shape mirrored inside this fkwu program.
     ; 'gguf-tensor-slice-math' reads one content-addressed real GGUF tensor
-    ; byte window and runs Q6_K Form math over that slice.
+    ; byte window and runs Q6_K Form math over that slice. 'gguf-tensor-set-cell'
+    ; reads a required-tensor row set from the same full GGUF through fkwu
+    ; read_file_slice and verifies each row's content hash in Form.
     ; Everything else routes to fc-respond, the four-way-proven brain.
     (defn fc-native (line)
         (if (str_eq (fc-verb line) "source") (self_source)
@@ -135,8 +137,9 @@
                         (if (str_eq (fc-verb line) "metal-matvec") (fc-metal-matvec (fc-arg line))
                             (if (str_eq (fc-verb line) "metal-model-cell") (fc-metal-model-cell (fc-arg line))
                             (if (str_eq (fc-verb line) "gguf-model-cell") (fc-gguf-model-cell (fc-arg line))
+                            (if (str_eq (fc-verb line) "gguf-tensor-set-cell") (fc-gguf-tensor-set-cell (fc-arg line))
                             (if (str_eq (fc-verb line) "gguf-tensor-slice-math") (fc-gguf-tensor-slice-math (fc-arg line))
-                                (fc-respond line))))))))))
+                                (fc-respond line)))))))))))
     ; one self-recursive loop: prompt (only on a real tty), read a line, and
     ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
     ; let (an effect op) so it fires exactly once per turn, not once per use.

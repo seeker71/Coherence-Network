@@ -336,6 +336,7 @@ def receipt_for(path: Path) -> dict[str, Any]:
     tensor_sample_keys = (
         "index",
         "name",
+        "ggml_type",
         "type",
         "dims",
         "data_offset",

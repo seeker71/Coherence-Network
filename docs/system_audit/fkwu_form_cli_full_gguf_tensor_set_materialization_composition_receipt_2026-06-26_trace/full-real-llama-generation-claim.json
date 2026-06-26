@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "ask_full_real_claim": "docs/system_audit/fkwu_form_cli_full_gguf_tensor_set_materialization_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/ask_full_real_claim.out",
+    "model_status": "docs/system_audit/fkwu_form_cli_full_gguf_tensor_set_materialization_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/model_status.out",
+    "real_gguf_weight_map": "docs/system_audit/fkwu_form_cli_full_gguf_tensor_set_materialization_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/real-gguf-weight-map.json",
+    "trace_dir": "docs/system_audit/fkwu_form_cli_full_gguf_tensor_set_materialization_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace"
+  },
+  "blocked_requirements": [
+    "promote the witnessed required tensor-set byte-window materialization into complete full-width Llama tensor payload staging in the fkwu-controlled model-cell path",
+    "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
+    "run the full multi-layer GQA autoregressive loop over those real tensors",
+    "project logits over the real vocabulary, select token IDs, and decode through the real tokenizer arrays",
+    "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle"
+  ],
+  "claim_allowed": false,
+  "git_branch": "codex/full-gguf-tensor-set-materialization-20260626",
+  "git_commit": "6c9df2897",
+  "hard_failures": [],
+  "observed_components": {
+    "ask_staged_model_call_and_grounded_decoded_answer": true,
+    "ask_trace_names_full_real_generation_gap": true,
+    "model_status_names_full_real_generation_gap": true,
+    "real_gguf_architecture": "llama",
+    "real_gguf_tensor_count": 255,
+    "real_gguf_weight_map_observed": true
+  },
+  "receipt_kind": "form-cli-full-real-llama-generation-claim-receipt",
+  "trace_id": "full-real-llama-generation-claim-fkwu_form_cli_full_gguf_tensor_set_materialization_composition_receipt_2026-06-26_trace",
+  "verdict": "blocked_full_real_llama_generation_pending"
+}
