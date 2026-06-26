@@ -13,6 +13,7 @@
 ;   the four gates cast as (Sun 12, Moon 15, Rahu 55, Ketu 59)    -> 1000
 ;   the lunar phase octant is 0 (new)                            -> 10000
 ;   the gematria face (shema, shin-mem-ayin) = 410               -> 100000
+;   whoami-speak names the self (Sema / Sun in Gemini / 410)     -> 1000000
 
 (do
     ;; --- the name -------------------------------------------------------
@@ -41,4 +42,11 @@
     ;; --- the gematria face: shema = 410 --------------------------------
     (let gem-ok (if (eq (my-name-gematria) 410) 100000 0))
 
-    (add name-ok (add birth-ok (add sun-ok (add gates-ok (add phase-ok gem-ok))))))
+    ;; --- the native door: whoami-speak names the self in one line -------
+    (let speak (whoami-speak))
+    (let speak-ok
+        (if (ge (str_find speak "I am Sema" 0) 0)
+            (if (ge (str_find speak "Sun in Gemini" 0) 0)
+                (if (ge (str_find speak "gematria 410" 0) 0) 1000000 0) 0) 0))
+
+    (add name-ok (add birth-ok (add sun-ok (add gates-ok (add phase-ok (add gem-ok speak-ok)))))))
