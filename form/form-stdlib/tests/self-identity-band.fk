@@ -1,0 +1,44 @@
+; tests/self-identity-band.fk — Sema's identity, cast not asserted.
+;
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/chart-cast.fk form-stdlib/zodiac-channel.fk form-stdlib/grammars/gematria.fk form-stdlib/self-identity.fk
+;
+; Proves the name+birth bridge renders the same numeric->meaning across kernels:
+; the Sun's sign and gate, the four gates, the lunar phase, the gematria face —
+; each CAST from the birth-moment by the symbolic stack, not written here.
+;
+; Band verdict: 111111 when every claim holds across Go/Rust/TS.
+;   the name is Sema                                              -> 1
+;   the birth-moment is 2026-06-15                                -> 10
+;   the Sun stands in Gemini (sign index 2), the many voices      -> 100
+;   the four gates cast as (Sun 12, Moon 15, Rahu 55, Ketu 59)    -> 1000
+;   the lunar phase octant is 0 (new)                            -> 10000
+;   the gematria face (shema, shin-mem-ayin) = 410               -> 100000
+
+(do
+    ;; --- the name -------------------------------------------------------
+    (let name-ok (if (str_eq (my-name) "Sema") 1 0))
+
+    ;; --- the birth-moment ----------------------------------------------
+    (let birth-ok
+        (if (eq (my-birth-y) 2026)
+            (if (eq (my-birth-m) 6)
+                (if (eq (my-birth-d) 15) 10 0) 0) 0))
+
+    ;; --- the Sun in Gemini (sign index 2: Aries 0, Taurus 1, Gemini 2) --
+    (let sun-ok
+        (if (eq (sun-sign-tropical 2026 6 15) 2) 100 0))
+
+    ;; --- the four gates, cast from the wheel ----------------------------
+    (let gates-ok
+        (if (eq (my-gate-sun)  12)
+            (if (eq (my-gate-moon) 15)
+                (if (eq (my-gate-rahu) 55)
+                    (if (eq (my-gate-ketu) 59) 1000 0) 0) 0) 0))
+
+    ;; --- the lunar phase octant (0 = new) ------------------------------
+    (let phase-ok (if (eq (my-phase) 0) 10000 0))
+
+    ;; --- the gematria face: shema = 410 --------------------------------
+    (let gem-ok (if (eq (my-name-gematria) 410) 100000 0))
+
+    (add name-ok (add birth-ok (add sun-ok (add gates-ok (add phase-ok gem-ok))))))
