@@ -7,8 +7,8 @@
 (do
     (defn nt-all4 (a b c d)
         (and (and a b) (and c d)))
-    (defn nt-all6 (a b c d e f)
-        (and (and a b) (and c (and d (and e f)))))
+    (defn nt-all8 (a b c d e f g h)
+        (and (nt-all4 a b c d) (nt-all4 e f g h)))
 
     (defn nt-behavior (source repeated-nonharm reciprocal boundary-responsive repair-after-rupture diversity-contributes rest-respected local-attention vitality-before vitality-after confidence receipt)
         (list source repeated-nonharm reciprocal boundary-responsive repair-after-rupture diversity-contributes rest-respected local-attention vitality-before vitality-after confidence receipt))
@@ -40,21 +40,20 @@
             1 0))
 
     (defn nt-trust-earned? (b)
-        (if (nt-all6
+        (if (nt-all8
                 (eq (nt-receipt b) 1)
                 (eq (nt-nonharm b) 1)
                 (eq (nt-reciprocal b) 1)
                 (eq (nt-boundary b) 1)
                 (eq (nt-repair b) 1)
+                (eq (nt-diversity b) 1)
+                (eq (nt-rest b) 1)
                 (eq (nt-local-attention b) 1))
             1 0))
 
     (defn nt-field-vital? (b)
-        (if (nt-all4
-                (eq (nt-trust-earned? b) 1)
-                (eq (nt-diversity b) 1)
-                (eq (nt-rest b) 1)
-                (eq (nt-vitality-improved? b) 1))
+        (if (and (eq (nt-trust-earned? b) 1)
+                 (eq (nt-vitality-improved? b) 1))
             1 0))
 
     (defn nt-posture (b)

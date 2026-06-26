@@ -2,7 +2,7 @@
 ;
 ; nature-trust-band - nature-taught trust behavior crosses four-way.
 ;
-; Verdict 4095 when every lesson lands:
+; Verdict 16383 when every lesson lands:
 ;   1    reciprocal mycelial behavior earns trust
 ;   2    whole-field vitality improves with confidence
 ;   4    diversity/rest/vitality make the field vital
@@ -15,6 +15,8 @@
 ;   512  missing diversity blocks field vitality
 ;   1024 missing rest blocks field vitality
 ;   2048 all seven nature behavior signals are counted
+;   4096 missing diversity waits rather than watches
+;   8192 missing rest waits rather than watches
 
 (do
     (let mycelium (nt-behavior "mycelium" 1 1 1 1 1 1 1 61 78 84 1))
@@ -36,5 +38,7 @@
     (let c9 (if (eq (nt-field-vital? monoculture) 0) 512 0))
     (let c10 (if (eq (nt-field-vital? no-rest) 0) 1024 0))
     (let c11 (if (eq (nt-trust-behavior-count mycelium) 7) 2048 0))
+    (let c12 (if (str_eq (nt-posture monoculture) "wait") 4096 0))
+    (let c13 (if (str_eq (nt-posture no-rest) "wait") 8192 0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 c13))))))))))))))
