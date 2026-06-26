@@ -87,4 +87,46 @@
     (defn gg-ti-next    (bytes off) (add (gg-ti-tail bytes off) 12))              ; past this record (type u32 + offset u64)
     (defn gg-ti-namelen (bytes off) (gg-str-len bytes off))
 
+    ; --- FIND A TENSOR BY NAME: the weight-addressing keystone. ---
+    ; gguf-locate lands on a tensor at a KNOWN table offset; loading a NAMED real weight
+    ; (blk.0.attn_q.weight, token_embd.weight, …) needs to WALK the tensor-info table
+    ; comparing each record's name to a target. The name lives at off+8 for `namelen` bytes
+    ; (after the u64 length). All integer/byte arithmetic — proves on the same four-way floor.
+
+    ; do `n` bytes at boff equal the target byte-list (compared from k)?  1 if so, else 0.
+    (defn gg-bytes-eq (bytes boff target k n)
+        (if (eq k n) 1
+            (if (eq (nth bytes (add boff k)) (nth target k))
+                (gg-bytes-eq bytes boff target (add k 1) n)
+                0)))
+    ; does the tensor record at off have name == target (a byte-list)?  length-reject first.
+    (defn gg-name-eq (bytes off target)
+        (if (eq (gg-ti-namelen bytes off) (len target))
+            (gg-bytes-eq bytes (add off 8) target 0 (len target))
+            0))
+    ; walk `remaining` records from off; return the matching record's offset, or -1 if none.
+    ; -1 (the (sub 0 1) sentinel, as in base64/bmf-core) means "absent" — the engine never invents a match.
+    (defn gg-find (bytes off remaining target)
+        (if (eq remaining 0) (sub 0 1)
+            (if (eq (gg-name-eq bytes off target) 1)
+                off
+                (gg-find bytes (gg-ti-next bytes off) (sub remaining 1) target))))
+    ; find the tensor record offset for `target` over the whole table.
+    (defn gg-find-tensor (bytes target)
+        (gg-find bytes (gg-tinfo-start bytes) (gg-tensor-count bytes) target))
+
+    ; --- THE TENSOR-DATA REGION BASE: tensor `dataoff` is RELATIVE to here. ---
+    ; The data region begins right after the tensor-info table, padded UP to general.alignment
+    ; (GGUF default 32). align_up(x,a) = ((x + a-1) / a) * a — floor-div only, the proven q4k lane.
+    ; walk past all tensor-info records to the table end (where the data region's padding begins).
+    (defn gg-tinfo-walk (bytes off remaining)
+        (if (eq remaining 0) off
+            (gg-tinfo-walk bytes (gg-ti-next bytes off) (sub remaining 1))))
+    (defn gg-tinfo-end (bytes) (gg-tinfo-walk bytes (gg-tinfo-start bytes) (gg-tensor-count bytes)))
+    (defn gg-align-up  (x a) (mul (div (add x (sub a 1)) a) a))
+    (defn gg-data-base (bytes a) (gg-align-up (gg-tinfo-end bytes) a))
+    ; the ABSOLUTE file byte offset where a named tensor's data begins (alignment a, default 32).
+    (defn gg-tensor-abs (bytes a target)
+        (add (gg-data-base bytes a) (gg-ti-dataoff bytes (gg-find-tensor bytes target))))
+
     0)
