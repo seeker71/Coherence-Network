@@ -1,0 +1,60 @@
+; event-reading.fk — a known time + a known place, read two ways: structured data
+; and a plain-observation sentence. One event, two channels onto the same cast.
+;
+; room-now.fk casts the present sky from a continuous day-number; this names the EVENT
+; layer above it: when the time and the location are KNOWN (not the live clock), the whole
+; reading is deterministic and crosses four-way — no host-io. An event is (UTC moment,
+; place); a reading is (a) the structured edge-set a machine can use, and (b) a plain
+; OBSERVATION in words — what stands where, not what it portends. The observation channel
+; stays in the plain-observation lane on purpose: it reports the sky's geometry (Sun in
+; this sign, that sign rising, this lunar phase); meaning beyond observation stays human.
+;
+;   (n-of-utc y m d hour)              a civil UTC moment -> days since J2000 (hour fractional)
+;   (event-data y m d hour lon lat)    the structured reading: the labeled edge-set
+;   (event-observe y m d hour lon lat) the plain-observation sentence (NL)
+;   (sign-short i) (phase-name oct)    the observation vocabulary (name, not gloss)
+;
+; lon is east-positive degrees (west is negative); lat is degrees north. hour is UTC hours,
+; fractional (1:30 am at UTC-6 is 7.5). Gate numbers are empirical; their glosses stay
+; honest-absent until the hd/iching channel seeds them, so the observation speaks SIGNS
+; (seeded) and leaves gates to the structured data.
+;
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk
+
+(do
+    ;; --- a known civil UTC moment -> continuous days since J2000 -------------------
+    ;; jdn(y,m,d) is the noon JDN; J2000 (n=0) is 2000-01-01 12:00 UT, so the hour
+    ;; offset is (hour - 12)/24. 1:30 am at UTC-6 -> hour 7.5 -> well-defined fraction.
+    (defn n-of-utc (y m d hour)
+        (add (sub (jdn y m d) 2451545)
+             (div (sub hour 12.0) 24.0)))
+
+    ;; --- the observation vocabulary: NAMES, not the full channel gloss -------------
+    (defn sign-short (i)
+        (nth (list "Aries" "Taurus" "Gemini" "Cancer" "Leo" "Virgo"
+                   "Libra" "Scorpio" "Sagittarius" "Capricorn" "Aquarius" "Pisces") i))
+    (defn phase-name (oct)
+        (nth (list "new" "waxing-crescent" "first-quarter" "waxing-gibbous"
+                   "full" "waning-gibbous" "last-quarter" "waning-crescent") oct))
+
+    ;; --- (a) the structured reading: the labeled edge-set -------------------------
+    (defn event-data (y m d hour lon lat)
+        (room-sky-at (n-of-utc y m d hour) lon lat))
+
+    ;; --- (b) the plain-observation sentence --------------------------------------
+    ;; "Sun in X, Moon in Y, Z rising; <phase> moon." Geometry observed, not construed.
+    (defn event-observe (y m d hour lon lat)
+        (do
+            (let n (n-of-utc y m d hour))
+            (str_concat "Sun in "
+            (str_concat (sign-short (tropical-sign-of (sky-sun-lon n)))
+            (str_concat ", Moon in "
+            (str_concat (sign-short (tropical-sign-of (sky-moon-lon n)))
+            (str_concat ", "
+            (str_concat (sign-short (ascendant-sign n lon lat))
+            (str_concat " rising; "
+            (str_concat (phase-name (sky-phase n)) " moon."))))))))))
+
+    (defn event-reading-teaching () "lc-cross-modal-unity")
+
+    0)

@@ -1,6 +1,6 @@
 ; form-cli.fk — the native form-cli DISPATCH library (the verb-routing brain).
 ;
-; preludes: form-stdlib/core.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk
+; preludes: form-stdlib/core.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk form-stdlib/event-reading.fk
 
 (do
     (defn fc-verb (cmd)
@@ -16,6 +16,35 @@
 
     (defn fc-part-int (parts i fallback)
         (str_to_int (fc-part parts i (int_to_str fallback))))
+
+    ;; float arg (hour/lon/lat carry decimals); fallback is a string literal
+    (defn fc-part-float (parts i fallback)
+        (str_to_float (fc-part parts i fallback)))
+
+    ;; --- event reading: a known time + place, two channels onto one cast ---
+    ;; verbs: `event <y> <m> <d> <hourUTC> <lonE> <lat>` -> the plain-observation
+    ;; sentence (NL channel); `event-data <...>` -> the structured k=v edge-set.
+    ;; lon is east-positive (west negative); hour is UTC, fractional. The cast is
+    ;; event-reading.fk (four-way); this is the form-cli door onto it.
+    (defn fc-sp (a b) (str_concat a (str_concat " " b)))
+    (defn fc-event-kv (k v) (str_concat k (str_concat "=" (int_to_str v))))
+    (defn fc-event-observe (parts)
+        (event-observe (fc-part-int parts 0 2000) (fc-part-int parts 1 1) (fc-part-int parts 2 1)
+                       (fc-part-float parts 3 "12.0") (fc-part-float parts 4 "0.0") (fc-part-float parts 5 "0.0")))
+    (defn fc-event-data (parts)
+        (do
+            (let n (n-of-utc (fc-part-int parts 0 2000) (fc-part-int parts 1 1) (fc-part-int parts 2 1) (fc-part-float parts 3 "12.0")))
+            (let lon (fc-part-float parts 4 "0.0"))
+            (let lat (fc-part-float parts 5 "0.0"))
+            (fc-sp (fc-event-kv "asc-sign" (ascendant-sign n lon lat))
+            (fc-sp (fc-event-kv "asc-gate" (ascendant-gate n lon lat))
+            (fc-sp (fc-event-kv "sun-sign" (tropical-sign-of (sky-sun-lon n)))
+            (fc-sp (fc-event-kv "sun-gate" (gate-at-longitude (sky-sun-lon n)))
+            (fc-sp (fc-event-kv "moon-sign" (tropical-sign-of (sky-moon-lon n)))
+            (fc-sp (fc-event-kv "moon-gate" (gate-at-longitude (sky-moon-lon n)))
+            (fc-sp (fc-event-kv "rahu-gate" (gate-at-longitude (sky-rahu-lon n)))
+            (fc-sp (fc-event-kv "ketu-gate" (gate-at-longitude (sky-ketu-lon n)))
+                   (fc-event-kv "phase" (sky-phase n))))))))))))
 
     (defn fc-native-host-row (r)
         (str_concat (nhi-rec-kind r)
@@ -141,8 +170,10 @@
             (if (str_eq v "fnri") (fc-fnri (fc-arg cmd))
             (if (str_eq v "receipt") (fc-receipt (fc-arg cmd))
             (if (str_eq v "native-host") (fc-native-host (fc-arg cmd))
+            (if (str_eq v "event") (fc-event-observe (split-on (fc-arg cmd) " "))
+            (if (str_eq v "event-data") (fc-event-data (split-on (fc-arg cmd) " "))
             (if (str_eq v "help")
-                "form-cli verbs: ping ask grounded rag-status synthesis-status fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. metal-model-cell <manifest-path>: fkwu-native content-addressed model bytes before Metal. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. source/verify/diagnose: fkwu self-introspection."
+                "form-cli verbs: ping ask grounded rag-status synthesis-status fnri receipt native-host help about kernel source recreate verify diagnose version quit. ask <question>: local fkwu grounded RAG, no HTTP oracle. grounded <question>: native JSONL lookup in the healed index, no Python. rag-status: local index/query health. synthesis-status: local GGUF/Metal composition receipt. metal-model-cell <manifest-path>: fkwu-native content-addressed model bytes before Metal. fnri [witness|know|resolve <target> <protocol>|slug]: local sovereignty knowledge. receipt [platform|metal-standin|bootstrap]: standard-receipt rows. native-host <platform> ...: host lifecycle row. event <y> <m> <d> <hourUTC> <lonE> <lat>: plain-observation sky reading (NL); event-data <...same args...>: the structured k=v edge-set. source/verify/diagnose: fkwu self-introspection."
             (if (str_eq v "about")
                 "form-cli is one self-contained native binary: a Form program that dispatches verbs and runs an interactive read-eval-print loop, with no separate runtime. Pipe commands on stdin, or run it on a terminal and type. help lists the verbs."
             (if (str_eq v "kernel")
@@ -151,5 +182,5 @@
                 "to rebuild: run the source verb to print the Form source this binary carries. build-form-cli.sh installs the stamped native platform binary when present; maintainer regeneration refreshes bootstrap artifacts. the result runs on its own."
             (if (str_eq v "version")
                 "form-cli 0.3"
-                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))))))))))))
+                (str_concat "form-cli: unknown verb '" (str_concat v "' — type 'help'"))))))))))))))))))))))
     0)
