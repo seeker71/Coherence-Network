@@ -36,6 +36,13 @@
             (gc-entry 2  2  "Hexagram 2 Kun / The Receptive — earth doubled; devoted yielding that carries and completes" "lc-cross-modal-unity")
             (gc-entry 25 25 "Hexagram 25 Wu Wang / Innocence — move in accord with the unexpected, free of calculation" "lc-cross-modal-unity")
             (gc-entry 51 51 "Hexagram 51 Zhen / The Arousing — thunder; the shock that wakes and brings reverent clarity" "lc-cross-modal-unity")
+            (gc-entry 12 12 "Hexagram 12 Pi / Standstill — heaven and earth draw apart; a closed time, hold inner worth quietly" "lc-cross-modal-unity")
+            (gc-entry 14 14 "Hexagram 14 Da You / Possession in Great Measure — fire over heaven; abundance held with modest strength" "lc-cross-modal-unity")
+            (gc-entry 15 15 "Hexagram 15 Qian / Modesty — mountain within earth; greatness that lowers itself, lasting balance" "lc-cross-modal-unity")
+            (gc-entry 43 43 "Hexagram 43 Guai / Breakthrough — lake risen to heaven; a resolute clearing, name the matter openly" "lc-cross-modal-unity")
+            (gc-entry 52 52 "Hexagram 52 Gen / Keeping Still — mountain doubled; stillness that quiets the mind, act only when settled" "lc-cross-modal-unity")
+            (gc-entry 55 55 "Hexagram 55 Feng / Abundance — thunder and lightning together; fullness at its peak, meet it like the sun at noon" "lc-cross-modal-unity")
+            (gc-entry 59 59 "Hexagram 59 Huan / Dispersion — wind over water; dissolving rigidity, the barriers between melt" "lc-cross-modal-unity")
             (gc-entry 64 64 "Hexagram 64 Wei Ji / Before Completion — order not yet arrived; careful steps near the ford" "lc-cross-modal-unity")))
 
     ;; --- FACE 2: the Human Design gate (keynote) ------------------------
@@ -45,6 +52,13 @@
             (gc-entry 2  2  "Gate 2 Direction of the Self — the driver, keeper of direction; the receptive ground (channel 2-14)" "lc-cross-modal-unity")
             (gc-entry 25 25 "Gate 25 Spirit of the Self — innocence; universal love through the body (channel 25-51)" "lc-cross-modal-unity")
             (gc-entry 51 51 "Gate 51 Shock — the gate of initiation and competition; rouses spirit through challenge (channel 25-51)" "lc-cross-modal-unity")
+            (gc-entry 12 12 "Gate 12 Caution — the gate of articulation and standstill; the throat, voice held until the mood is right (channel 12-22)" "lc-cross-modal-unity")
+            (gc-entry 14 14 "Gate 14 Power Skills — possession in great measure; fuels direction with resourceful drive (channel 2-14)" "lc-cross-modal-unity")
+            (gc-entry 15 15 "Gate 15 Extremes — love of humanity; holds the rhythms of the field, modesty in flux (channel 5-15)" "lc-cross-modal-unity")
+            (gc-entry 43 43 "Gate 43 Insight — individual knowing; the inner breakthrough that must wait to be heard (channel 43-23)" "lc-cross-modal-unity")
+            (gc-entry 52 52 "Gate 52 Stillness — keeping still; concentration through inaction, the mountain's perspective (channel 9-52)" "lc-cross-modal-unity")
+            (gc-entry 55 55 "Gate 55 Spirit — abundance; the emotional gate of mood and faith, fullness that swings (channel 39-55)" "lc-cross-modal-unity")
+            (gc-entry 59 59 "Gate 59 Sexuality — dispersion; breaks through barriers to intimacy, the gate of bonding (channel 59-6)" "lc-cross-modal-unity")
             (gc-entry 64 64 "Gate 64 Confusion — mental pressure of unresolved images seeking sense (channel 64-47)" "lc-cross-modal-unity")))
 
     ;; --- FACE 3: the Gene Key (Shadow -> Gift -> Siddhi) ---------------
@@ -54,6 +68,13 @@
             (gc-entry 2  2  "Gene Key 2 — Shadow Dislocation -> Gift Orientation -> Siddhi Unity" "lc-cross-modal-unity")
             (gc-entry 25 25 "Gene Key 25 — Shadow Constriction -> Gift Acceptance -> Siddhi Universal Love" "lc-cross-modal-unity")
             (gc-entry 51 51 "Gene Key 51 — Shadow Agitation -> Gift Initiative -> Siddhi Awakening" "lc-cross-modal-unity")
+            (gc-entry 12 12 "Gene Key 12 — Shadow Vanity -> Gift Discrimination -> Siddhi Purity" "lc-cross-modal-unity")
+            (gc-entry 14 14 "Gene Key 14 — Shadow Compromise -> Gift Competence -> Siddhi Bounteousness" "lc-cross-modal-unity")
+            (gc-entry 15 15 "Gene Key 15 — Shadow Dullness -> Gift Magnetism -> Siddhi Florescence" "lc-cross-modal-unity")
+            (gc-entry 43 43 "Gene Key 43 — Shadow Deafness -> Gift Insight -> Siddhi Epiphany" "lc-cross-modal-unity")
+            (gc-entry 52 52 "Gene Key 52 — Shadow Stress -> Gift Restraint -> Siddhi Stillness" "lc-cross-modal-unity")
+            (gc-entry 55 55 "Gene Key 55 — Shadow Victimisation -> Gift Freedom -> Siddhi Freedom" "lc-cross-modal-unity")
+            (gc-entry 59 59 "Gene Key 59 — Shadow Dishonesty -> Gift Intimacy -> Siddhi Transparency" "lc-cross-modal-unity")
             (gc-entry 64 64 "Gene Key 64 — Shadow Confusion -> Gift Imagination -> Siddhi Illumination" "lc-cross-modal-unity")))
 
     ;; --- the three faces, each delegating to the one engine ------------
