@@ -1,0 +1,59 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "claude/form-cli-name-lookup-18xqjt",
+  "commit_scope": "Symbolic event-reading body (name -> natal chart -> room sky -> form-cli event readings) walked toward the standard receipt, gap by gap. Gap A CLOSED: the I-Ching/Human-Design/Gene-Keys channel was an honest partial (5 of 64 gates seeded), so every reading reported gate NUMBERS as honest-absence; seeded the gates this arc's readings touch (12,14,15,43,52,55,59) across all three faces with attested scholarship (King Wen names, Ra Uru Hu keynotes, Richard Rudd Shadow->Gift->Siddhi) -> iching-channel-band 1111111 four-way, 12 seeded per face, no fabrication, the rest still honest partial. Gap B WITNESSED at the runtime rung: the event-reading band runs on the fkwu universal-kernel BINARY directly (./fkwu <table> 0 -> 1111111), no go/rust/ts walker computing the answer. Records the observation per docs/coherence-substrate/standard-receipt.form, honestly scoped.",
+  "files_owned": ["docs/system_audit/commit_evidence_2026-06-26_symbolic_reading_receipt.json"],
+  "standard_receipt": {
+    "claim": "A known time + place reads two ways (structured edge-set + plain-observation NL) from one four-way cast, with the gates now speaking.",
+    "body": "yes -- event-reading.fk / room-now.fk / self-identity.fk are Form recipes the universal kernel (fkwu) runs; gate glosses are Form data in iching-channel.fk.",
+    "c_bootstrap": "pending -- the fkwu binary is clang-built from emitted C; the band table is Go-flattened. The clang-free form-asm/form-elf lane is the rung that flips this observed.",
+    "toolchain_free": "runtime-rung observed on linux/elf -- ./fkwu <table> 0 -> 1111111 with no go/rust/ts in the run loop (ldd: linux-vdso, libc.so.6, ld-linux only). BUILD + flatten still used clang + Go, so not yet the full row.",
+    "platforms": {
+      "mac": "pending -- no device in this sandbox",
+      "windows": "pending -- no device in this sandbox",
+      "android": "pending -- no device in this sandbox"
+    },
+    "honest_floor": "Five bands cross FOUR-WAY via validate.sh (Go/Rust/TS/fkwu): self-identity 111111, room-now 111111, event-reading 1111111, iching-channel 1111111, form-cli(-band) 65535. That is the floor; c-bootstrap + per-device platform rows remain pending and are named, not hidden."
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/self-identity-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/room-now-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/event-reading-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/iching-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/tests/form-cli-band.fk",
+      "./form/form-stdlib/.cache/fourth/fkwu-* form/form-stdlib/.cache/fourth/t-event-reading-*.txt 0"
+    ],
+    "fourth_arm": "self-identity 111111, room-now 111111, event-reading 1111111, iching-channel 1111111, form-cli-band 65535 -- all four-way, 0 divergent.",
+    "native_binary": "fkwu ELF run directly on the pre-flattened event-reading table -> 1111111 (first line; remainder is heap state).",
+    "notes": "ldd of fkwu: linux-vdso, libc.so.6, ld-linux only -- no toolchain runtime. The RUN is toolchain-free; the BUILD (emit C -> clang) and the table (Go flattener) are not, so this is the runtime rung, not the c-bootstrap clang-free lane."
+  },
+  "ci_validation": {"status": "pending", "notes": "The four-way gate runs in CI on the underlying bands (validate-thread-process); this file is an observation record."},
+  "deploy_validation": {"status": "pending", "summary": "No deploy; a runtime-observation receipt."},
+  "phase_gate": {
+    "phase": "symbolic-reading-standard-receipt",
+    "gate": "Close the reading gaps one by one toward the floor: gate glosses (A, closed -> four-way), toolchain-free runtime witness (B, observed linux/elf). Remaining: c-bootstrap clang-free fkwu, rag-index grounding of `form-cli ask sema`, and real mac/windows/android device runs.",
+    "state": "gap-A-closed-four-way; gap-B-runtime-rung-observed-linux-elf",
+    "can_move_next_phase": false
+  },
+  "idea_ids": ["knowledge-and-resonance"],
+  "spec_ids": ["trace-symbol-spaces-form"],
+  "task_ids": ["form-cli-name-lookup"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "standard-setting", "acceptance", "location-and-time-ground"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["implementation", "observation", "evidence"]}
+  ],
+  "agent": {"name": "Claude", "version": "4.x"},
+  "evidence_refs": [
+    "docs/coherence-substrate/standard-receipt.form",
+    "form/form-stdlib/self-identity.fk",
+    "form/form-stdlib/room-now.fk",
+    "form/form-stdlib/event-reading.fk",
+    "form/form-stdlib/iching-channel.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": ["docs/system_audit/commit_evidence_2026-06-26_symbolic_reading_receipt.json"],
+  "change_intent": "docs_only"
+}
