@@ -3,8 +3,9 @@
 #
 # This proves the honest floor:
 #   - `form-cli ask` is served by the native fkwu grounded-RAG lane.
-#   - the fkwu+Metal GGUF prose lane is present only as proven pieces, not as a
-#     wired end-to-end generator.
+#   - a local ask-staged miss binds a decoded grounded answer to the fkwu+Metal
+#     model-cell witness.
+#   - full real Llama GGUF token generation is still not claimed.
 #   - the Metal witnesses and Form proof bands that back those pieces still pass.
 set -uo pipefail
 
@@ -42,12 +43,16 @@ else
     printf '%s\n' "$ask_out" | sed 's/^/     /'
 fi
 
+model_probe="local receipt grounded inference probe $(date -u +%Y%m%dT%H%M%SZ)"
+"$ROOT/bin/form-cli" ask "$model_probe" >/dev/null 2>&1
+
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
-if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm' &&
-   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness' &&
-   printf '%s' "$synth_out" | grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call' &&
-   printf '%s' "$synth_out" | grep -q '^missing:decoded-prose-answer-binding'; then
-    ok "synthesis lane receipt closes stale missing rows and names decoded prose binding"
+if printf '%s' "$synth_out" | grep -q '^synthesis-lane:grounded-fkwu-model-answer' &&
+   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' &&
+   printf '%s' "$synth_out" | grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' &&
+   printf '%s' "$synth_out" | grep -q '^missing:full-real-llama-gguf-token-generation' &&
+   printf '%s' "$synth_out" | grep -q '^prose-generation:decoded-grounded-answer'; then
+    ok "synthesis lane receipt binds grounded decoded answer and names full real generation"
     printf '%s\n' "$synth_out" | sed 's/^/     /'
 else
     gap "synthesis lane receipt is missing or ambiguous"
@@ -78,8 +83,8 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: local grounded ask and pending synthesis receipts are honest."
-    echo "  The full fkwu+Metal GGUF prose generator is still not claimed."
+    echo "  PASS: local grounded ask and grounded decoded-answer receipts are honest."
+    echo "  The full real Llama GGUF token generator is still not claimed."
 else
     echo "  FAIL: one or more local receipts did not hold."
 fi
