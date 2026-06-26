@@ -13,7 +13,7 @@
       "windows": "pending -- no device in this sandbox",
       "android": "pending -- no device in this sandbox"
     },
-    "honest_floor": "Five bands cross FOUR-WAY via validate.sh (Go/Rust/TS/fkwu): self-identity 111111, room-now 111111, event-reading 1111111, iching-channel 1111111, form-cli(-band) 65535. That is the floor; c-bootstrap + per-device platform rows remain pending and are named, not hidden."
+    "honest_floor": "Five bands cross FOUR-WAY via validate.sh (Go/Rust/TS/fkwu): self-identity 1111111, room-now 111111, event-reading 1111111, iching-channel 1111111, form-cli(-band) 262143. Gap C (native identity door) also closed: form-cli whoami / ask-sema ground in self-identity.fk, no python rag-index. That is the floor; c-bootstrap + per-device platform rows remain pending and are named, not hidden."
   },
   "local_validation": {
     "status": "pass",
@@ -33,8 +33,8 @@
   "deploy_validation": {"status": "pending", "summary": "No deploy; a runtime-observation receipt."},
   "phase_gate": {
     "phase": "symbolic-reading-standard-receipt",
-    "gate": "Close the reading gaps one by one toward the floor: gate glosses (A, closed -> four-way), toolchain-free runtime witness (B, observed linux/elf). Remaining: c-bootstrap clang-free fkwu, rag-index grounding of `form-cli ask sema`, and real mac/windows/android device runs.",
-    "state": "gap-A-closed-four-way; gap-B-runtime-rung-observed-linux-elf",
+    "gate": "Close the reading gaps one by one toward the floor: gate glosses (A, closed -> four-way), toolchain-free runtime witness (B, observed linux/elf), native identity door (C, closed -> four-way; form-cli whoami / ask-sema, no python). Remaining: c-bootstrap clang-free fkwu (body-wide rung) and real mac/windows/android device runs (no devices in this sandbox).",
+    "state": "gap-A-closed-four-way; gap-B-runtime-rung-observed-linux-elf; gap-C-closed-four-way",
     "can_move_next_phase": false
   },
   "idea_ids": ["knowledge-and-resonance"],
