@@ -345,6 +345,12 @@ def receipt_for(path: Path) -> dict[str, Any]:
     )
     first = [{key: row[key] for key in tensor_sample_keys} for row in by_offset[:8]]
     last = [{key: row[key] for key in tensor_sample_keys} for row in by_offset[-8:]]
+    focus_names = list(dict.fromkeys([*required, "output.weight"]))
+    focus_tensors = {
+        str(row["name"]): {key: row[key] for key in tensor_sample_keys}
+        for row in tensors
+        if str(row["name"]) in focus_names
+    }
 
     pass_conditions = [
         int(header["tensor_count"]) == len(tensors),
@@ -402,6 +408,7 @@ def receipt_for(path: Path) -> dict[str, Any]:
             "missing_required_tensors": missing_required,
             "first_by_data_offset": first,
             "last_by_data_offset": last,
+            "focus_tensors": focus_tensors,
         },
     }
 

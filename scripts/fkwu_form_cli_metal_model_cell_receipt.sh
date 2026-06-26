@@ -66,7 +66,7 @@ printf '\002\000\000\000\003\000\000\000\000\000\200\077\000\000\000\100\000\000
 model_bytes="$(wc -c < "$model_bin" | tr -d ' ')"
 msl_bytes="$(wc -c < "$WORK/matvec.metal" | tr -d ' ')"
 model_sha="$(shasum -a 256 "$model_bin" | awk '{print $1}')"
-od -An -tx1 -v "$model_bin" | tr -s ' ' | sed 's/^ //; s/ $//' > "$WORK/model.hex"
+od -An -tx1 -v "$model_bin" | tr -s ' ' | sed -E 's/^ //; s/ $//; /^[[:blank:]]*$/d' > "$WORK/model.hex"
 cat > "$WORK/model-layout.txt" <<'EOF'
 little-endian model bytes
 u32 rows = 2
@@ -98,10 +98,10 @@ artifact="$ARTIFACT_DIR/form-cli-metal-model-cell"
     FORM_CLI_EXTRA_LDFLAGS="-framework Foundation -framework Metal" \
     ./build-form-cli.sh "$artifact"
 ) > "$ARTIFACT_DIR/build.raw" 2>&1
-LC_ALL=C sed -E "s|$ROOT|<repo>|g; s|/var/folders/[^:[:space:]]+|<tmp>|g" "$ARTIFACT_DIR/build.raw" > "$WORK/build.out"
+LC_ALL=C sed -E "s|$ROOT|<repo>|g; s|/var/folders/[^:[:space:]]+|<tmp>|g; s/[[:blank:]]+$//" "$ARTIFACT_DIR/build.raw" > "$WORK/build.out"
 
 otool -L "$artifact" > "$ARTIFACT_DIR/linked-libraries.raw"
-LC_ALL=C sed -E "s|$artifact|<compiled-artifact>|g; s|$ROOT|<repo>|g" "$ARTIFACT_DIR/linked-libraries.raw" > "$WORK/linked-libraries.out"
+LC_ALL=C sed -E "s|$artifact|<compiled-artifact>|g; s|$ROOT|<repo>|g; s/^ +\t/\t/; s/[[:blank:]]+$//" "$ARTIFACT_DIR/linked-libraries.raw" > "$WORK/linked-libraries.out"
 
 mkdir -p "$WORK/empty-bin" "$WORK/home" "$WORK/tmp"
 env -i PATH="$WORK/empty-bin" HOME="$WORK/home" TMPDIR="$WORK/tmp" "$artifact" > "$WORK/runtime.out" 2>&1 <<EOF

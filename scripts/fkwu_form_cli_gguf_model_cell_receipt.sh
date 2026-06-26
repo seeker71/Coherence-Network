@@ -89,7 +89,7 @@ Expected:
   tensor_type=12
   tensor_data_offset=0
 LAYOUT
-od -An -tx1 -v "$gguf_bin" > "$WORK/mini-gguf.hex"
+od -An -tx1 -v "$gguf_bin" | sed -E 's/[[:blank:]]+$//; /^[[:blank:]]*$/d' > "$WORK/mini-gguf.hex"
 
 artifact="$ARTIFACT_DIR/form-cli-gguf-model-cell"
 (

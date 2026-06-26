@@ -48,8 +48,8 @@ model_probe="local receipt grounded inference probe $(date -u +%Y%m%dT%H%M%SZ)"
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if grep -q '^synthesis-lane:grounded-fkwu-model-answer' <<<"$synth_out" &&
-   grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
-   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
    grep -q '^missing:full-real-llama-gguf-token-generation' <<<"$synth_out" &&
    grep -q '^prose-generation:decoded-grounded-answer' <<<"$synth_out"; then
     ok "synthesis lane receipt binds grounded decoded answer and names full real generation"
@@ -73,6 +73,8 @@ run_receipt "form-cli model-lane gap receipt" \
     "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$ROOT/.cache/body-test-receipts/current-model-lane-gap-receipt.json"
 run_receipt "fkwu form-cli GGUF model-cell receipt" \
     "$ROOT/scripts/fkwu_form_cli_gguf_model_cell_receipt.sh" "$ROOT/.cache/body-test-receipts/current-gguf-model-cell-receipt.json"
+run_receipt "fkwu form-cli full GGUF tensor-slice math receipt" \
+    "$ROOT/scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh" "$ROOT/.cache/body-test-receipts/current-full-gguf-tensor-slice-math-receipt.json"
 
 if [[ "$(uname -s)" == "Darwin" ]] && command -v swiftc >/dev/null 2>&1; then
     run_receipt "Metal matvec witness" "$ROOT/scripts/metal_matvec_audit.sh" 16 16 1

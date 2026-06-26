@@ -148,8 +148,14 @@
 ;        ✓ D₅ — real-gguf-tensor-math.fk (1023): byte buffer + tensor name now resolves the GGUF
 ;        tensor-info record, computes the aligned absolute data offset, dequants the named Q6_K block,
 ;        and feeds the resulting real llama3.2:3b token_embd.weight bytes through dot/matvec math.
-;        This closes the former "find/load/math beside each other" gap. Adjacent: materialize the
-;        full-width tensor set into the fkwu-controlled model-cell path.
+;        This closes the former "find/load/math beside each other" gap.
+;        ✓ D₆ — fkwu form-cli full-GGUF tensor-slice math: a real 2.0GB GGUF weight map now selects the
+;        named token_embd.weight row; form-cli reads the content-addressed 210-byte Q6_K window directly
+;        from the full file with read_file_slice, hashes it inside fkwu, and runs Q6_K Form dequant/dot
+;        math against slice-specific checkpoints. Evidence:
+;        docs/system_audit/fkwu_form_cli_full_gguf_tensor_slice_math_receipt_2026-06-26.json and the
+;        full composition receipt of the same date. Adjacent: materialize the full-width tensor set into
+;        the fkwu-controlled model-cell path.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL

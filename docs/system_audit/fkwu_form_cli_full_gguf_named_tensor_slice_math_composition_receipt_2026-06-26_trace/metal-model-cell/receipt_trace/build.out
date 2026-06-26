@@ -1,0 +1,10 @@
+  flatten: bootstrap table (no Go)
+  emit: bootstrap (no Go)
+<tmp>:129:194: warning: passing 'int *' to parameter of type 'unsigned int *' converts between pointers to integer types with different sign [-Wpointer-sign]
+  129 | static long long fk_socket_port_native(long long h) { fk_os_socket_t s = fk_sock_lookup(h, 1); if (!fk_os_socket_ok(s)) { return -1; } struct fk_sockaddr4 a; int n = 16; if (getsockname(s, &a, &n) < 0) { return -1; } return (((long long)a.p[0]) << 8) + (long long)a.p[1]; }
+      |                                                                                                                                                                                                  ^~
+<tmp>:82:47: note: passing argument to parameter here
+   82 | extern int getsockname(int,void*,unsigned int*);
+      |                                               ^
+1 warning generated.
+built <repo>/.cache/body-test-receipts/fkwu-form-cli-metal-model-cell-20260626T192741Z/artifact/form-cli-metal-model-cell  (  867368 bytes, self-contained — runs with no Go/clang/table; carries 470892B of its own source)

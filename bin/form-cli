@@ -91,6 +91,9 @@ form-cli — the one door (local-first, Form-native)
   form-cli model-gap-receipt [OUT_DIR_OR_JSON] [GGUF_PATH]
         observed receipt for tokenizer, full GGUF map, autoregressive loop, and
         ask-staged model-call binding; proves what is local and names the blocker
+  form-cli gguf-tensor-slice-math <MANIFEST>
+        native fkwu receipt: read one content-addressed real GGUF tensor byte
+        slice through form-cli and run Q6_K Form math over it
   form-cli roadmap
         list the floor->north-star steps (roadmap.fk) and the next one to build
   form-cli asm "<C>" [--ir|--opt|--x86|--passes]
@@ -145,8 +148,8 @@ PY
   if [ "$prose_state" = "decoded" ]; then
     printf '%s\n' "synthesis-lane:grounded-fkwu-model-answer"
     printf '%s\n' "reason:decoded-prose-answer-bound-to-ask-staged-receipt"
-    printf '%s\n' "available:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding"
-    printf '%s\n' "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
+    printf '%s\n' "available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding"
+    printf '%s\n' "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
     printf '%s\n' "missing:full-real-llama-gguf-token-generation"
     printf '%s\n' "boundary:decoded answer is grounded to the local fkwu+Metal model-cell witness; full real Llama GGUF token generation remains pending"
     printf '%s\n' "ask-staged-model-call-receipt:$receipt"
@@ -158,11 +161,11 @@ PY
         | sed \
             -e 's/reason:end-to-end-gguf-decode-not-bound-to-ask-staged/reason:decoded-prose-answer-not-yet-bound-to-ask-staged/' \
             -e 's/reason:full-decoded-prose-not-yet-bound-to-ask-staged/reason:decoded-prose-answer-not-yet-bound-to-ask-staged/' \
-            -e 's/^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step$/available:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness/' \
-            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call$/observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
+            -e 's/^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step$/available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness/' \
+            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call$/observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
 missing:decoded-prose-answer-binding\
 boundary:tokenizer->real-gguf-tensors->accelerator-buffers->autoregressive-decode->decoded-text is not yet one ask-staged answer path/' \
-            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding$/observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
+            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding$/observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
 missing:decoded-prose-answer-binding\
 boundary:tokenizer->real-gguf-tensors->accelerator-buffers->autoregressive-decode->decoded-text is not yet one ask-staged answer path/')"
     fi
@@ -228,6 +231,9 @@ case "$cmd" in
   grounded)  run_native_cli "grounded $*" ;;
   rag-status) run_native_cli "rag-status" ;;
   synthesis-status|model-status) model_status ;;
+  gguf-tensor-slice-math)
+    [ -n "${1:-}" ] || { echo "usage: form-cli gguf-tensor-slice-math <manifest-path>" >&2; exit 2; }
+    run_native_cli "gguf-tensor-slice-math $1" ;;
   model-gap-receipt) exec bash "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$@" ;;
   land)      exec bash "$ROOT/scripts/land_current_branch.sh" "$@" ;;
   rag-ask)   exec python3 "$RAG" ask "$@" ;;

@@ -1,0 +1,59 @@
+{
+  "trace_id": "fkwu-full-gguf-tensor-slice-math-20260626T192740Z",
+  "receipt_kind": "fkwu-form-cli-full-gguf-tensor-slice-math-receipt",
+  "thread_branch": "codex/full-gguf-named-tensor-math-20260626",
+  "git_commit": "bdfba0fcf832f2e9e3bae4e55b580f2f109ff61e",
+  "runtime": {
+    "owner": "fkwu-form-cli",
+    "verb": "gguf-tensor-slice-math",
+    "path_sanitized": true,
+    "denied_toolchain_names_visible_on_path": 0,
+    "http_or_ollama": "absent"
+  },
+  "artifacts": {
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-full-gguf-tensor-slice-math-20260626T192740Z/artifact/form-cli-full-gguf-tensor-slice-math",
+    "runtime_out": "docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-gguf-tensor-slice-math/receipt_trace/runtime.out",
+    "build_out": "docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-gguf-tensor-slice-math/receipt_trace/build.out",
+    "gguf_weight_map_out": "docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-gguf-tensor-slice-math/receipt_trace/gguf-weight-map.out",
+    "manifest_trace": "docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-gguf-tensor-slice-math/receipt_trace/gguf-tensor-slice-manifest.txt",
+    "tensor_slice_source": "docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-gguf-tensor-slice-math/receipt_trace/tensor-slice-source.json",
+    "tensor_slice_hex": "docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-gguf-tensor-slice-math/receipt_trace/tensor-slice.hex"
+  },
+  "observed": {
+    "full_real_gguf_file_observed": true,
+    "tensor_name": "token_embd.weight",
+    "tensor_index": 254,
+    "tensor_type": 14,
+    "tensor_dim0": 3072,
+    "tensor_absolute_start": 1696681152,
+    "tensor_slice_len": 210,
+    "tensor_slice_read_len": 210,
+    "gguf_file_size_expected": 2019886272,
+    "gguf_file_size_observed": 2019886272,
+    "tensor_slice_sha256": "3dfa790b7854b8f797bb38a983f294a810b84d99c46daec98c954c8420e75220",
+    "tensor_slice_expected_sha256": "3dfa790b7854b8f797bb38a983f294a810b84d99c46daec98c954c8420e75220",
+    "q6k_sample0_micro": 9570,
+    "q6k_sample31_micro": -14700,
+    "q6k_sample255_micro": -22922,
+    "q6k_dot1_micro": 9570,
+    "q6k_dot4_micro": 58889,
+    "q6k_expected_sample0_micro": 9570,
+    "q6k_expected_sample31_micro": -14700,
+    "q6k_expected_sample255_micro": -22922,
+    "q6k_expected_dot1_micro": 9570,
+    "q6k_expected_dot4_micro": 58889,
+    "q6k_full_load_len": 256,
+    "verdict": "PASS fkwu-form-cli-full-gguf-tensor-slice-math"
+  },
+  "path_claim": {
+    "proven_now": "a named tensor row from the full real GGUF map feeds a content-addressed byte window into fkwu form-cli; form-cli reads the slice with read_file_slice and runs Q6_K Form dequant/dot math",
+    "not_claimed": [
+      "the whole real Llama tensor set is loaded into accelerator buffers",
+      "full real Llama autoregressive token generation",
+      "logit projection over the real vocabulary",
+      "decoded tokens from the real tokenizer arrays",
+      "Android Vulkan or Windows DirectML/D3D12 execution"
+    ]
+  },
+  "trace_sha256": "4416414bd33481921e28ce085313f869511488e4e105d4786bb373556dfdf772"
+}

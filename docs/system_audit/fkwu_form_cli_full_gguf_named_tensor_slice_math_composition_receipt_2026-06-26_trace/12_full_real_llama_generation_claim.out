@@ -1,0 +1,6 @@
+receipt:docs/system_audit/fkwu_form_cli_full_gguf_named_tensor_slice_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim.json
+verdict:blocked_full_real_llama_generation_pending
+claim-allowed:false
+grounded-decoded-answer:true
+full-real-llama-gguf-generation:pending
+blocked-requirements:5
