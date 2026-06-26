@@ -44,8 +44,8 @@ fi
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm' &&
-   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step' &&
-   printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map,autoregressive-loop-binding,ask-staged-model-call'; then
+   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step' &&
+   printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call'; then
     ok "synthesis lane receipt names available pieces and missing composition"
     printf '%s\n' "$synth_out" | sed 's/^/     /'
 else
@@ -63,6 +63,8 @@ run_receipt "Metal emitter band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk"
 run_receipt "form-cli model-lane gap receipt" \
     "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$ROOT/.cache/body-test-receipts/current-model-lane-gap-receipt.json"
+run_receipt "fkwu form-cli GGUF model-cell receipt" \
+    "$ROOT/scripts/fkwu_form_cli_gguf_model_cell_receipt.sh" "$ROOT/.cache/body-test-receipts/current-gguf-model-cell-receipt.json"
 
 if [[ "$(uname -s)" == "Darwin" ]] && command -v swiftc >/dev/null 2>&1; then
     run_receipt "Metal matvec witness" "$ROOT/scripts/metal_matvec_audit.sh" 16 16 1
