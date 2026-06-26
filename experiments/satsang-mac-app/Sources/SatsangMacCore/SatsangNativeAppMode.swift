@@ -4,6 +4,7 @@ public enum SatsangNativeAppMode: String, CaseIterable, Codable, Identifiable, S
     case room
     case guidance
     case memory
+    case health
     case learning
     case resources
     case settings
@@ -18,6 +19,8 @@ public enum SatsangNativeAppMode: String, CaseIterable, Codable, Identifiable, S
             return "Guidance"
         case .memory:
             return "Memory"
+        case .health:
+            return "Health"
         case .learning:
             return "Learning"
         case .resources:

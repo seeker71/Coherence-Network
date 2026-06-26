@@ -1,0 +1,154 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/iphone-health-wearables-20260626",
+  "commit_scope": "Add an explicit iPhone HealthKit wearable import path to the shared satsang native app, storing Oura/Oz/O2-style source-filtered samples in local trusted health memory and feeding compact health context into the Form/RAG guidance request.",
+  "files_owned": [
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-health-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_iphone_health_wearable_memory.json",
+    "experiments/satsang-mac-app/Package.swift",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedHealthMemory.swift",
+    "experiments/satsang-mac-app/Support/SatsangGuidancePhone/Info.plist",
+    "experiments/satsang-mac-app/Support/SatsangGuidancePhone/SatsangGuidancePhone.entitlements",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-health-memory.fk",
+    "form/form-stdlib/satsang-host-boundary.fk",
+    "form/form-stdlib/tests/satsang-health-memory-band.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form-cli ask \"iPhone HealthKit Oura ring Oz sensor wearable health memory native app integration source carrier resource door\"",
+      "swift test --package-path experiments/satsang-mac-app",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone",
+      "scripts/build_satsang_mac_app.sh",
+      "xcodebuild -scheme SatsangGuidancePhone -destination 'generic/platform=iOS' -derivedDataPath .build/xcode-derived build",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md",
+      "git diff --check",
+      "make wellness"
+    ],
+    "fourth_arm": "satsang-guidance-event-band.fk -> 255, satsang-host-boundary-band.fk -> 2097151, satsang-listen-route-band.fk -> 255, satsang-room-memory-band.fk -> 255, satsang-health-memory-band.fk -> 255; each focused output included 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '0 divergent'.",
+    "summary": "Startup gate passed on a fresh worktree. form-cli ask used the native route but had no grounded/sufficient local RAG hit for this exact HealthKit wearable-memory shape, then observed the fkwu+Metal model-cell witness. Swift tests passed with 13 XCTest cases, including trusted health memory and the seven-mode app receipt. Both Swift package app products built, and scripts/build_satsang_mac_app.sh produced the packaged macOS app. Generic iOS build remains blocked on this host because iOS 26.2 platform support is not installed; the iOS HealthKit code path is source-present but not device-compiled here."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy yet; this is a local native app carrier/source change awaiting PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local source and Form proof passed; CI, PR checks, and signed iPhone/device HealthKit validation are pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "satsang-mac-guidance-app"
+  ],
+  "task_ids": [
+    "iphone-health-wearables-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "health-memory-boundary"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "form-proof",
+        "local-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedHealthMemory.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "form/form-stdlib/satsang-health-memory.fk",
+    "form/form-stdlib/tests/satsang-health-memory-band.fk",
+    "form/form-stdlib/satsang-host-boundary.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
+    "specs/satsang-mac-guidance-app.md",
+    "docs/coherence-substrate/satsang-health-memory.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-health-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_iphone_health_wearable_memory.json",
+    "experiments/satsang-mac-app/Package.swift",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedHealthMemory.swift",
+    "experiments/satsang-mac-app/Support/SatsangGuidancePhone/Info.plist",
+    "experiments/satsang-mac-app/Support/SatsangGuidancePhone/SatsangGuidancePhone.entitlements",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-health-memory.fk",
+    "form/form-stdlib/satsang-host-boundary.fk",
+    "form/form-stdlib/tests/satsang-health-memory-band.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "The shared native app now has a Health tab. On iPhone, the tab routes through HealthKit read authorization, filters sources such as Oura and Oz/O2-style oxygen apps, writes imported samples into local trusted health memory, and includes compact health context in the later guidance request.",
+    "expected_behavior_delta": "The previous native app had room memory only. The app now has health memory as a separate explicit-import lane, a health-samples host resource door, and Form proof for the consent, source, and analysis boundary.",
+    "public_endpoints": [
+      "n/a-local-native-app"
+    ],
+    "test_flows": [
+      "swift test --package-path experiments/satsang-mac-app -> 13 tests passed",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone -> product built",
+      "scripts/build_satsang_mac_app.sh -> experiments/satsang-mac-app/dist/Satsang Guidance.app",
+      "xcodebuild -scheme SatsangGuidancePhone -destination 'generic/platform=iOS' -> blocked because iOS 26.2 platform support is not installed",
+      "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-host-boundary-band.fk -> 2097151 four-way",
+      "cd form && ./validate.sh ... satsang-listen-route-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-room-memory-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-health-memory-band.fk -> 255 four-way",
+      "python3 scripts/generate_repo_indexes.py --check -> all indexes up to date",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md -> passed",
+      "git diff --check -> passed",
+      "make wellness -> passed; source maps aligned and edited durable docs speak from what IS"
+    ]
+  }
+}

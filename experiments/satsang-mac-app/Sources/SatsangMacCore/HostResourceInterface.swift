@@ -76,6 +76,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "macos-foundation-filehandle", detail: "FileHandle append"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "macos-foundation-data-atomic", detail: "Data.write atomic"),
                     HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "macos-foundation-process", detail: "Process with pipes"),
+                    HostResourceDoor(kind: "health-samples", state: "declared", carrier: "macos-healthkit-unavailable", detail: "iPhone HealthKit carrier records direct wearable samples"),
                 ]
             ),
             HostPlatformCarrier(
@@ -89,6 +90,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "windows-known-folder-filesystem", detail: "LocalAppData append"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "windows-replacefile-atomic", detail: "atomic replace"),
                     HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "windows-createprocess-stdin-stdout", detail: "CreateProcessW pipes"),
+                    HostResourceDoor(kind: "health-samples", state: "declared", carrier: "windows-health-export-import", detail: "bounded local import/export carrier until a native health store exists"),
                 ]
             ),
             HostPlatformCarrier(
@@ -102,6 +104,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "android-app-private-files", detail: "Context.filesDir append"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "android-atomic-file", detail: "AtomicFile or rename"),
                     HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "android-packaged-form-cli-process", detail: "packaged native form-cli with bounded pipes"),
+                    HostResourceDoor(kind: "health-samples", state: "declared", carrier: "android-health-connect", detail: "Health Connect read door after explicit permission"),
                 ]
             ),
             HostPlatformCarrier(
@@ -115,6 +118,7 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                     HostResourceDoor(kind: "file-append", state: "declared", carrier: "ios-app-sandbox-files", detail: "FileHandle append in app container"),
                     HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "ios-foundation-data-atomic", detail: "Data.write atomic in app container"),
                     HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "ios-embedded-form-cli-adapter", detail: "same protocol via embedded Form runtime adapter; arbitrary subprocess unavailable"),
+                    HostResourceDoor(kind: "health-samples", state: "declared", carrier: "ios-healthkit", detail: "HealthKit read door for Oura/Oz/O2 wearable samples after explicit permission"),
                 ]
             ),
         ]
@@ -244,7 +248,8 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
             "file-read",
             "file-append",
             "file-write-atomic",
-            "process-stdin-stdout"
+            "process-stdin-stdout",
+            "health-samples"
         ],
         resourceDoors: [HostResourceDoor]? = nil,
         platformCarriers: [HostPlatformCarrier]? = nil,
