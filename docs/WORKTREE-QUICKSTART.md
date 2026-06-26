@@ -150,15 +150,17 @@ git commit -m "<message>"
 
 ## Land Current Branch (fast path)
 
-After the branch is committed with its evidence file, use the current-branch
-landing wrapper instead of hand-driving rebase, PR polling, merge, and cleanup:
+After the branch is committed with its evidence file, use the Form-owned
+current-branch landing path instead of hand-driving rebase, PR polling, merge,
+and cleanup:
 
 ```bash
-python3 scripts/land_current_branch.py --merge
+form-cli land --merge
 ```
 
 What it owns:
 
+- `current-branch-landing.fk` fourth-arm plan receipt,
 - clean named worktree branch check,
 - `git fetch origin main && git rebase origin/main`,
 - changed commit-evidence validation,
@@ -170,6 +172,11 @@ What it owns:
 - GitHub API remote branch deletion,
 - post-merge PR state and tree parity readback.
 
+Current boundary: git, GitHub, and deploy polling are still explicit host-effect
+passthrough carriers; the landing recipe and command contract are Form-native.
+Existing Python validation gates remain retiring bridge checks until they are
+promoted to Form.
+
 The default merge method is `rebase`, matching the manual fallback below. Use
 `--merge-method squash` only when the branch should intentionally compress
 multiple local commits.
@@ -177,7 +184,7 @@ multiple local commits.
 For runtime/deploy-impactful branches, add the deploy settle step:
 
 ```bash
-python3 scripts/land_current_branch.py --merge --settle-deploy
+form-cli land --merge --settle-deploy
 ```
 
 Use `--dry-run` to print the exact high-level path without mutating anything.
