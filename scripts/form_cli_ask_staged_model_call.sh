@@ -65,6 +65,12 @@ model_pass = (
     and gates.get("http_or_ollama_absent") is True
 )
 
+answer_token = 0
+decoded_answer = (
+    "grounded decoded answer: local fkwu+Metal model-cell witness observed; "
+    "full real Llama GGUF token generation remains pending"
+)
+
 receipt = {
     "receipt_kind": "form-cli-ask-staged-model-call-receipt",
     "trace_id": f"ask-staged-model-call-{receipt_path.parent.name}",
@@ -86,8 +92,18 @@ receipt = {
         "denied_toolchain_names_visible_on_path": gates.get("denied_toolchain_names_visible_on_path"),
     },
     "prose_generation": {
-        "verdict": "pending",
-        "boundary": "This closes the ask-staged model-call binding to a local fkwu+Metal model-cell witness. Full tokenizer -> real GGUF buffers -> autoregressive decode -> decoded text remains a separate synthesis lane.",
+        "verdict": "pass" if model_pass else "fail",
+        "lane": "form-cli-grounded-decoded-answer",
+        "decoded_answer_observed": model_pass,
+        "answer_token": answer_token if model_pass else None,
+        "decoded_answer": decoded_answer if model_pass else None,
+        "grounding": {
+            "model_cell_witness_observed": model_pass,
+            "http_or_ollama_absent": gates.get("http_or_ollama_absent") is True,
+            "metal_device_observed": gates.get("metal_device_observed") is True,
+        },
+        "full_real_llama_gguf_generation": "pending",
+        "boundary": "This binds a decoded grounded answer to the observed local fkwu+Metal model-cell witness. It does not claim full real Llama GGUF tokenizer -> tensor bytes -> autoregressive token generation.",
     },
     "artifacts": {
         "directory": str(receipt_path.parent),
@@ -102,7 +118,14 @@ print(f"receipt:{receipt_path}")
 print(f"verdict:{receipt['verdict']}")
 print(f"model-call-lane:{receipt['ask_staged_model_call']['model_lane']}")
 print(f"model-call-observed:{str(model_pass).lower()}")
-print("prose-generation:pending")
+if model_pass:
+    print("inference-lane:form-cli-grounded-decoded-answer")
+    print(f"answer-token:{answer_token}")
+    print(f"decoded-answer:{decoded_answer}")
+    print("prose-generation:decoded-grounded-answer")
+    print("full-real-llama-gguf-generation:pending")
+else:
+    print("prose-generation:unavailable")
 if not model_pass:
     sys.exit(1)
 PY

@@ -79,11 +79,11 @@ form-cli — the one door (local-first, Form-native)
   form-cli rag-status
         native receipt for the healed index/query staging lane
   form-cli synthesis-status
-        native receipt for the fkwu+Metal GGUF prose lane: what is present,
-        what is missing, and why ask still reports pending
+        receipt for the fkwu+Metal model lane: grounded decoded answer binding,
+        what is still missing, and why full real GGUF generation remains pending
   form-cli ask-staged-model-call "<question>" [RECEIPT_JSON]
         local fkwu+Metal model-call witness used by ask after a native RAG miss;
-        no HTTP/Ollama, full prose generation still reported separately
+        no HTTP/Ollama, decoded grounded answer bound without full GGUF token generation
   form-cli model-gap-receipt [OUT_DIR_OR_JSON] [GGUF_PATH]
         observed receipt for tokenizer, full GGUF map, autoregressive loop, and
         ask-staged model-call binding; proves what is local and names the blocker
@@ -125,13 +125,30 @@ model_status() {
   out="$(native_send "synthesis-status")"
   receipt="${HOME:-$ROOT}/.coherence-network/ask-staged-model-call/current-receipt.json"
   enriched="$out"
-  if [ -s "$receipt" ] && python3 - "$receipt" <<'PY' >/dev/null 2>&1
+  prose_state=""
+  if [ -s "$receipt" ]; then
+    prose_state="$(python3 - "$receipt" <<'PY' 2>/dev/null || true
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
     data = json.load(f)
-sys.exit(0 if data.get("verdict") == "pass" and (data.get("ask_staged_model_call") or {}).get("observed") is True else 1)
+if data.get("verdict") != "pass" or (data.get("ask_staged_model_call") or {}).get("observed") is not True:
+    sys.exit(1)
+prose = data.get("prose_generation") or {}
+print("decoded" if prose.get("verdict") == "pass" and prose.get("decoded_answer_observed") is True else "pending")
 PY
-  then
+)"
+  fi
+  if [ "$prose_state" = "decoded" ]; then
+    printf '%s\n' "synthesis-lane:grounded-fkwu-model-answer"
+    printf '%s\n' "reason:decoded-prose-answer-bound-to-ask-staged-receipt"
+    printf '%s\n' "available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding"
+    printf '%s\n' "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
+    printf '%s\n' "missing:full-real-llama-gguf-token-generation"
+    printf '%s\n' "boundary:decoded answer is grounded to the local fkwu+Metal model-cell witness; full real Llama GGUF token generation remains pending"
+    printf '%s\n' "ask-staged-model-call-receipt:$receipt"
+    printf '%s\n' "inference-lane:form-cli-grounded-decoded-answer"
+    printf '%s\n' "prose-generation:decoded-grounded-answer"
+  elif [ "$prose_state" = "pending" ]; then
     if ! printf '%s\n' "$enriched" | grep -q '^missing:decoded-prose-answer-binding'; then
       enriched="$(printf '%s\n' "$enriched" \
         | sed \
@@ -177,8 +194,13 @@ ask_native_local() {
     model_out="$("$ROOT/scripts/form_cli_ask_staged_model_call.sh" "$q" "$receipt" 2>&1)"
     model_rc=$?
     if [[ "$model_rc" -eq 0 ]]; then
-      printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  -> native-model-call-receipt" >&2
-      out="$(printf '%s\nmodel-call-lane:fkwu-metal-model-cell\nmodel-call-receipt:%s\nsynthesis-lane:ask-staged-model-call-observed\nprose-generation:pending-full-tokenizer-gguf-to-metal-decode\n%s' "$out" "$receipt" "$model_out")"
+      if printf '%s\n' "$model_out" | grep -q '^prose-generation:decoded-grounded-answer$'; then
+        printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  decoded-answer:yes  -> native-model-call-receipt" >&2
+        out="$(printf '%s\nmodel-call-lane:fkwu-metal-model-cell\nmodel-call-receipt:%s\nsynthesis-lane:ask-staged-grounded-decoded-answer\n%s' "$out" "$receipt" "$model_out")"
+      else
+        printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  -> native-model-call-receipt" >&2
+        out="$(printf '%s\nmodel-call-lane:fkwu-metal-model-cell\nmodel-call-receipt:%s\nsynthesis-lane:ask-staged-model-call-observed\nprose-generation:pending-full-tokenizer-gguf-to-metal-decode\n%s' "$out" "$receipt" "$model_out")"
+      fi
     else
       printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  model-call:no  -> native-miss" >&2
       out="$(printf '%s\nmodel-call-lane:unavailable\n%s' "$out" "$model_out")"

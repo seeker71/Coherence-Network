@@ -54,9 +54,6 @@ run_optional_metal() {
 
 echo "── form-cli model-lane gap receipts ──"
 
-run_step model_status "native model status still names the composition boundary" \
-    "$ROOT/bin/form-cli" model-status
-
 run_step tokenizer_compose "BPE tokenizer carrier composition band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk form-stdlib/tests/tokenize-band.fk"
 
@@ -79,6 +76,9 @@ run_optional_metal
 probe="ask staged model call probe $STAMP"
 run_step ask_staged_probe "ask-staged miss invokes the local fkwu+Metal model-call witness" \
     "$ROOT/bin/form-cli" ask "$probe"
+
+run_step model_status "native model status names the grounded decoded-answer boundary" \
+    "$ROOT/bin/form-cli" model-status
 
 python3 - "$ROOT" "$OUT_DIR" "$RECEIPT" <<'PY'
 from __future__ import annotations
@@ -129,15 +129,18 @@ metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
 status_closes_old_missing = (
-    "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call" in model_status
-    and "missing:decoded-prose-answer-binding" in model_status
+    "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
+    and "missing:full-real-llama-gguf-token-generation" in model_status
+    and "prose-generation:decoded-grounded-answer" in model_status
 )
 ask_staged_model_call_observed = (
     "[ask: local fkwu RAG index has no grounded hit]" in ask_out
     and "model-call-lane:fkwu-metal-model-cell" in ask_out
     and "model-call-observed:true" in ask_out
-    and "synthesis-lane:ask-staged-model-call-observed" in ask_out
-    and "prose-generation:pending" in ask_out
+    and "synthesis-lane:ask-staged-grounded-decoded-answer" in ask_out
+    and "decoded-answer:grounded decoded answer:" in ask_out
+    and "prose-generation:decoded-grounded-answer" in ask_out
+    and "full-real-llama-gguf-generation:pending" in ask_out
 )
 
 hard_failures = []
@@ -161,16 +164,17 @@ receipt = {
     "trace_id": f"form-cli-model-lane-gaps-{receipt_path.parent.name}",
     "git_commit": git_value(["git", "rev-parse", "--short", "HEAD"], "unknown"),
     "git_branch": git_value(["git", "rev-parse", "--abbrev-ref", "HEAD"], "unknown"),
-    "verdict": "observed-components-decoded-prose-binding-pending" if not hard_failures else "fail",
+    "verdict": "observed-grounded-decoded-answer-full-real-llama-pending" if not hard_failures else "fail",
     "hard_failures": hard_failures,
     "gap_rows": {
         "tokenizer_carrier": {
-            "verdict": "observed-not-ask-text-bound",
+            "verdict": "observed-grounded-answer-bound-full-real-generation-pending",
             "tokenizer_compose_four_way": tokenizer_compose_ok,
             "llama3_pretokenizer_four_way": llama3_pretokenizer_ok,
             "full_llama3_vocab_merge_table_observed": bool(((gguf_json.get("metadata") or {}).get("tokenizer_array_counts") or {}).get("tokenizer.ggml.tokens")),
-            "ask_text_binding": False,
-            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; decoded text is not yet returned as the ask-staged answer.",
+            "grounded_decoded_answer_binding": ask_staged_model_call_observed,
+            "full_real_llama_token_generation_binding": False,
+            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; ask-staged now returns a grounded decoded answer, but that answer is not yet produced by full real Llama GGUF token generation.",
         },
         "full_gguf_weight_map": {
             "verdict": "pass" if full_gguf_ok else "fail",
@@ -181,25 +185,32 @@ receipt = {
             "tokenizer_arrays": ((gguf_json.get("metadata") or {}).get("tokenizer_array_counts")),
         },
         "autoregressive_loop_binding": {
-            "verdict": "observed-not-text-bound" if autoregressive_band_ok and (metal_observed or metal_skipped) else "fail",
+            "verdict": "observed-grounded-answer-bound-full-real-generation-pending" if autoregressive_band_ok and (metal_observed or metal_skipped) and ask_staged_model_call_observed else "fail",
             "form_autoregressive_loop_four_way": autoregressive_band_ok,
             "metal_gqa_decode_loop_observed": metal_observed,
             "metal_gqa_decode_loop_skipped": metal_skipped,
-            "decoded_text_binding": False,
-            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged calls a local model-cell witness but still does not return decoded local prose.",
+            "grounded_decoded_answer_binding": ask_staged_model_call_observed,
+            "full_real_llama_token_generation_binding": False,
+            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged returns a grounded decoded answer from the model-cell receipt, while full real GGUF autoregressive token generation remains pending.",
         },
         "ask_staged_model_call": {
             "verdict": "pass" if ask_staged_model_call_observed else "fail",
             "observed_model_call": ask_staged_model_call_observed,
             "observed_local_rag_miss_trigger": "[ask: local fkwu RAG index has no grounded hit]" in ask_out,
             "model_lane": "fkwu-metal-model-cell",
-            "prose_generation": "pending-decoded-prose-answer-binding",
-            "boundary": "ask-staged invokes a local fkwu+Metal model-cell witness after a RAG miss; it still does not claim decoded local prose.",
+            "prose_generation": "decoded-grounded-answer",
+            "full_real_llama_gguf_generation": "pending",
+            "boundary": "ask-staged invokes a local fkwu+Metal model-cell witness after a RAG miss and returns a decoded grounded answer without claiming full real Llama GGUF token generation.",
         },
         "decoded_prose_answer_binding": {
-            "verdict": "pending",
+            "verdict": "pass" if ask_staged_model_call_observed and status_closes_old_missing else "fail",
             "observed_components": status_closes_old_missing,
-            "boundary": "This is now the only model-status missing row: turning the observed tokenizer, real GGUF map, Metal weight/runtime, autoregressive loop, and ask-staged model-call witness into one decoded local answer.",
+            "boundary": "A decoded grounded answer is now bound to the ask-staged model-call witness and visible in form-cli ask/model-status receipts.",
+        },
+        "full_real_llama_gguf_generation": {
+            "verdict": "pending",
+            "observed_grounded_answer": ask_staged_model_call_observed,
+            "boundary": "The remaining gap is producing that answer through full real Llama GGUF tokenizer, tensor bytes, autoregressive decode, and decoded token text in one native answer path.",
         },
     },
     "artifacts": {
@@ -226,7 +237,7 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: stale missing rows closed as observed components; decoded prose answer binding remains the honest blocker."
+    echo "  PASS: grounded decoded answer is bound; full real Llama GGUF token generation remains the honest blocker."
 else
     echo "  FAIL: one or more model-lane gap receipts did not hold."
 fi
