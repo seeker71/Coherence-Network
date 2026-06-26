@@ -22,7 +22,7 @@ runtime_path_sanitized=true
 denied_toolchain_names_visible_on_path=0
 metal_device=Apple M4 Max
 embedded_msl_bytes=7259
-dispatch_ms=3.954
+dispatch_ms=3.370
 gpu_y_x1e6_round=[2147164,241870,1179734,2527995,-1198924,395649,1838649,-1119522]
 max_recipe_delta_x1e6=0.431
 PASS standalone-metal-gqa-llama-block-runtime

@@ -1,5 +1,5 @@
 receipt=<repo>/docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt.json
-trace_id=fkwu-form-cli-gguf-model-cell-20260626T080214Z
+trace_id=fkwu-form-cli-gguf-model-cell-20260626T145826Z
 gguf_cell_sha256=7fa5972f62d982daf9fa41b842e2fe0548eb1b3aba4a5e7378afd307fe655b63
 gguf_cell_verified=true
 gguf_cell_source=content-addressed-manifest
