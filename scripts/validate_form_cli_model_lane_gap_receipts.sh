@@ -77,7 +77,7 @@ run_step autoregressive_loop_band "Form autoregressive generation loop band" \
 run_optional_metal
 
 probe="ask staged model call probe $STAMP"
-run_step ask_staged_probe "ask-staged remains bounded to local RAG, not a hidden model call" \
+run_step ask_staged_probe "ask-staged miss invokes the local fkwu+Metal model-call witness" \
     "$ROOT/bin/form-cli" ask "$probe"
 
 python3 - "$ROOT" "$OUT_DIR" "$RECEIPT" <<'PY'
@@ -128,9 +128,12 @@ metal_observed = metal_rc == 0
 metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
-ask_staged_pending = (
+ask_staged_model_call_observed = (
     "[ask: local fkwu RAG index has no grounded hit]" in ask_out
-    and "end-to-end-gguf-decode-not-bound-to-ask-staged" in model_status
+    and "model-call-lane:fkwu-metal-model-cell" in ask_out
+    and "model-call-observed:true" in ask_out
+    and "synthesis-lane:ask-staged-model-call-observed" in ask_out
+    and "prose-generation:pending" in ask_out
 )
 
 hard_failures = []
@@ -144,15 +147,15 @@ for name, ok in [
         hard_failures.append(name)
 if metal_rc not in (0, 2):
     hard_failures.append("metal_gqa_autoregressive_loop")
-if not ask_staged_pending:
-    hard_failures.append("ask_staged_pending_contract")
+if not ask_staged_model_call_observed:
+    hard_failures.append("ask_staged_model_call_contract")
 
 receipt = {
     "receipt_kind": "form-cli-model-lane-gap-receipt",
     "trace_id": f"form-cli-model-lane-gaps-{receipt_path.parent.name}",
     "git_commit": git_value(["git", "rev-parse", "--short", "HEAD"], "unknown"),
     "git_branch": git_value(["git", "rev-parse", "--abbrev-ref", "HEAD"], "unknown"),
-    "verdict": "observed-partial-ask-staged-pending" if not hard_failures else "fail",
+    "verdict": "observed-ask-staged-model-call-bound" if not hard_failures else "fail",
     "hard_failures": hard_failures,
     "gap_rows": {
         "tokenizer_carrier": {
@@ -176,13 +179,15 @@ receipt = {
             "metal_gqa_decode_loop_observed": metal_observed,
             "metal_gqa_decode_loop_skipped": metal_skipped,
             "ask_staged_decoder_binding": False,
-            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged still does not call tokenizer->weights->decode->text.",
+            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged now calls a local model-cell witness but not the full tokenizer->weights->decode->text pipeline.",
         },
         "ask_staged_model_call": {
-            "verdict": "pending",
-            "observed_model_call": False,
-            "observed_local_rag_only": ask_staged_pending,
-            "boundary": "ask-staged currently returns grounded RAG or local miss only; no hidden HTTP/Ollama fallback and no decoded local model answer.",
+            "verdict": "pass" if ask_staged_model_call_observed else "fail",
+            "observed_model_call": ask_staged_model_call_observed,
+            "observed_local_rag_miss_trigger": "[ask: local fkwu RAG index has no grounded hit]" in ask_out,
+            "model_lane": "fkwu-metal-model-cell",
+            "prose_generation": "pending-full-tokenizer-gguf-to-metal-decode",
+            "boundary": "ask-staged now invokes a local fkwu+Metal model-cell witness after a RAG miss; it still does not claim decoded local prose.",
         },
     },
     "artifacts": {
@@ -209,7 +214,7 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: gap receipt observed; ask-staged model call remains the honest blocker."
+    echo "  PASS: ask-staged model-call binding observed; full decoded prose remains the honest blocker."
 else
     echo "  FAIL: one or more model-lane gap receipts did not hold."
 fi
