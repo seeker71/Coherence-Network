@@ -121,8 +121,8 @@ public struct FormNativeRouteReceipt: Codable, Equatable, Sendable {
     public var remoteOracle: String
 
     public init(
-        listenReceipt: String = "form-native-listen-receipt",
-        transcribeRoute: String = "local-stt-form-receipt",
+        listenReceipt: String = "primary-live-room-capture-receipt",
+        transcribeRoute: String = "speech-side-channel-during-live-capture",
         formRequestKind: String = "satsang-guidance-request",
         hostBoundary: FormHostBoundaryReceipt = FormHostBoundaryReceipt(),
         bodyLookup: FormNativeLookupSignal,

@@ -2,10 +2,11 @@
 
 SwiftUI desktop carrier for a satsang guidance session.
 
-It listens to the room microphone after `Start Listening` is pressed, turns live
-speech into editable transcript lines, can also follow a local transcript file,
-shows every line that will be sent, and writes a `satsang-guidance-request`
-event for Sema or another invoked presence.
+It listens to the room microphone after `Start Listening` is pressed, keeps that
+live capture as the primary stream, turns concurrent side-channel speech
+transcription into editable transcript lines, can also follow a local transcript
+file, shows every line that will be sent, and writes a
+`satsang-guidance-request` event for Sema or another invoked presence.
 
 Default transcript:
 
@@ -74,9 +75,11 @@ not call the remote oracle itself.
 
 The first use of `Start Listening` asks macOS for microphone and speech
 recognition permission. The microphone meter starts as soon as microphone access
-is available, then Speech Recognition attaches transcription when authorized.
-Partial speech appears in the transcript list as `room mic`; pressing `Stop
-Listening` commits the current partial line. If macOS reports a no-speech
-interval, the listener stays open and restarts the recognition pass. The header
-shows a live microphone level while listening, so the holder can see whether the
-room is reaching the mic even while Speech permission is still pending.
+is available. Speech Recognition then attaches as a side channel fed by the
+already-open live capture tap; it is not a before-recording or after-recording
+pass over stored audio. Partial speech appears in the transcript list as `room
+mic`; pressing `Stop Listening` commits the current partial line. If macOS
+reports a no-speech interval, the listener keeps the capture stream open and
+restarts only the recognition side channel. The header shows a live microphone
+level while listening, so the holder can see whether the room is reaching the
+mic even while Speech permission is still pending.
