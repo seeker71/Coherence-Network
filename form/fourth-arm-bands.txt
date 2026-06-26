@@ -335,7 +335,7 @@ mesh-relay fks 127
 mesh-seed fks 4095
 organism-mesh fks 4095
 mesh-cell-design fks 8191
-nature-trust fks 4095
+nature-trust fks 16383
 cell-organ-layer fks 4095
 node-exchange fks 4095
 mesh-parallel-life fks 1048575

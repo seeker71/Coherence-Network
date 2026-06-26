@@ -71,9 +71,11 @@ The recipe reads a behavior row through seven signals:
 - respect for rest
 - local attention
 
-Those signals are not enough by themselves. The field also asks whether
-whole-field vitality actually improved with confidence and receipt. The
-posture then becomes simple:
+The executable row also carries a `receipt`: an attributed contact trace
+that says this behavior was observed in relationship, not merely claimed
+as an identity. Those signals and the receipt earn trust. The field then
+asks whether whole-field vitality actually improved with confidence. The
+posture becomes simple:
 
 - `open` when trust is earned and the field becomes more vital
 - `watch` when behavior is trustworthy but vitality has not yet proven
