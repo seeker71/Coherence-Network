@@ -128,10 +128,12 @@ Current-branch landing follows that boundary. The regular path is
 `form-cli land --merge [--settle-deploy]`: the plan, command contract, and PR
 readiness state live in
 [`current-branch-landing.fk`](../../form/form-stdlib/current-branch-landing.fk)
-and cross the fourth arm (`current-branch-landing` -> `8191`). Git, GitHub API,
-deploy polling, and the older Python validation gates remain explicit
-host-effect passthrough until those carriers are promoted; Python is not the
-orchestrator.
+and cross the fourth arm (`current-branch-landing` -> `16383`). The cached native
+`form-cli` also exposes `land-readiness`, so the wait loop asks Form to classify
+ready / waiting / blocked / needs-rebase from raw GitHub fields, including the
+bounded stale-check refresh window immediately after push. Git, GitHub API,
+deploy polling, and the older Python validation gates remain explicit host-effect
+passthrough until those carriers are promoted; Python is not the orchestrator.
 
 ## Honest floor (so the practice isn't a placeholder)
 
