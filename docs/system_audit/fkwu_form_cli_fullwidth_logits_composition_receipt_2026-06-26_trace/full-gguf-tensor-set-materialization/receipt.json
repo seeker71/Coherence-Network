@@ -1,0 +1,65 @@
+{
+  "artifacts": {
+    "build_out": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/build.out",
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-full-gguf-tensor-set-materialization-20260626T223522Z/artifact/form-cli-full-gguf-tensor-set-materialization",
+    "gguf_weight_map_out": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/gguf-weight-map.out",
+    "manifest_trace": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/gguf-tensor-set-manifest.txt",
+    "row_manifest_trace": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/gguf-tensor-set-row-manifests.txt",
+    "runtime_out": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/runtime.out",
+    "tensor_set_source": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/tensor-set-source.json",
+    "tensor_set_windows_hex": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/full-gguf-tensor-set-materialization/receipt_trace/tensor-set-windows.hex"
+  },
+  "git_commit": "9ea007c6aca5f4d526399b88552ca9a104833dc2",
+  "observed": {
+    "accelerator_buffers": "false",
+    "full_real_gguf_file_observed": true,
+    "gguf_file_size_expected": 2019886272,
+    "gguf_file_size_observed": 2019886272,
+    "pass_count": 12,
+    "required_tensor_names": [
+      "rope_freqs.weight",
+      "token_embd.weight",
+      "blk.0.attn_norm.weight",
+      "blk.0.attn_q.weight",
+      "blk.0.attn_k.weight",
+      "blk.0.attn_v.weight",
+      "blk.0.attn_output.weight",
+      "blk.0.ffn_norm.weight",
+      "blk.0.ffn_gate.weight",
+      "blk.0.ffn_up.weight",
+      "blk.0.ffn_down.weight",
+      "output_norm.weight"
+    ],
+    "row_count": 12,
+    "scope": "required-llama-tensor-byte-windows",
+    "single_command_rows_supported": "false",
+    "tensor_set_expected_sha256": "34837bbf9712e8e808cc1c6926590c849f3d7c9fa615de197542db0c63d5fa05",
+    "tensor_set_sha256": "34837bbf9712e8e808cc1c6926590c849f3d7c9fa615de197542db0c63d5fa05",
+    "total_window_bytes": 768,
+    "unique_tensor_count": 12,
+    "verdict": "PASS fkwu-form-cli-full-gguf-tensor-set-materialization"
+  },
+  "path_claim": {
+    "not_claimed": [
+      "one single fkwu command materializes multiple tensor rows; current fkwu command is guarded to one row per invocation",
+      "complete real Llama tensor payloads staged into one model-cell buffer",
+      "the whole real Llama tensor set loaded into accelerator buffers",
+      "full real Llama autoregressive token generation",
+      "logit projection over the real vocabulary",
+      "decoded tokens from the real tokenizer arrays",
+      "Android Vulkan or Windows DirectML/D3D12 execution"
+    ],
+    "proven_now": "required Llama tensor-set byte windows from the full real GGUF feed content-addressed row manifests into fkwu form-cli; form-cli computes each row digest in Form, reads each row with read_file_slice, verifies every row hash in Form, and the receipt aggregates the required set"
+  },
+  "receipt_kind": "fkwu-form-cli-full-gguf-tensor-set-materialization-receipt",
+  "runtime": {
+    "denied_toolchain_names_visible_on_path": 0,
+    "http_or_ollama": "absent",
+    "owner": "fkwu-form-cli",
+    "path_sanitized": true,
+    "verb": "gguf-tensor-set-cell"
+  },
+  "thread_branch": "codex/full-width-model-logits-20260626",
+  "trace_id": "fkwu-full-gguf-tensor-set-materialization-20260626T223522Z",
+  "trace_sha256": "c13457278ed58e16987e96ad2ebebacec31f791a1ebd3b3305b5a5be09435d0f"
+}

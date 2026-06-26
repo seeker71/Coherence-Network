@@ -1,0 +1,14 @@
+emitted GLSL: 1136 bytes, sha256 e8d33e895acda4a4160dd1e824a8a5d5919a32ba4bd57055407473f20b1aec51 — every byte authored by fglsl-matvec
+  byte-identical to the canonical proven matvec.comp — the recipe IS the shader
+minted SPIR-V: 2348 bytes, sha256 9113db3273206e872a88eb2f475052e1aa7b3b4abf7889869f3456e64d406374
+cross-compiled the host carrier for aarch64-android (aarch64-linux-android30-clang)
+
+witness on device R5CW20DK17A (SM-S918U1), 16x16 Form-emitted matvec on the Adreno GPU:
+  device=Adreno (TM) 740 (Vulkan)
+  kernel=form_matvec module=matvec.spv (2348 bytes SPIR-V)
+  parity_bitexact_rows=16/16 max_abs_diff=0
+  runtime_deps=libvulkan.so only (Form-minted SPIR-V; no nvcc/nvrtc/go/python/rust/shell/clang) -- same .spv runs on Adreno/Mali
+  ok — Form-minted SPIR-V matvec ran on the Vulkan driver alone, bit-exact to the recipe (Android-portable)
+
+conditions: emit (form-kernel-go) -> SPIR-V (glslangValidator vulkan1.1) -> aarch64-android (NDK) -> adb dispatch on the device's Vulkan driver alone (libvulkan.so), parity = the harness's own CPU right-fold (j DOWN, mul then add, val(n)=n/256), precise -> NoContraction so no FMA re-fusion
+ok — the Form-emitted GLSL matvec ran on the real Adreno GPU, bit-exact to the recipe; emitter is form-stdlib/form-glsl.fk (fglsl-matvec)

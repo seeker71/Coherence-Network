@@ -165,12 +165,18 @@ jobs:
             .receipt_kind == "fkwu-form-cli-full-model-inference-composition-receipt"
             and (
               (
-                .verdict == "pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed"
+                .verdict == "pass_composition_receipt_fullwidth_logits_bound_full_real_generation_pending"
                 and .ask_staged_decoded_answer_bound == true
+                and .fullwidth_model_logits_bound == true
               )
               or (
-                .verdict == "pass_composition_receipt_honest_floor_full_width_not_yet_composed"
+                .verdict == "pass_composition_receipt_fullwidth_logits_bound_decoded_answer_pending"
                 and .ask_staged_decoded_answer_bound == false
+                and .fullwidth_model_logits_bound == true
+              )
+              or (
+                .verdict == "pass_composition_receipt_honest_floor_fullwidth_logits_pending"
+                and .fullwidth_model_logits_bound == false
               )
             )
             and .full_model_inference_composed == false

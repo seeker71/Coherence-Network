@@ -1,0 +1,48 @@
+{
+  "receipt_kind": "fkwu-form-cli-gguf-semantic-token-generation-receipt",
+  "trace_id": "fkwu-gguf-semantic-token-generation-20260626T223524Z",
+  "thread_branch": "codex/full-width-model-logits-20260626",
+  "git_commit": "9ea007c6aca5f4d526399b88552ca9a104833dc2",
+  "verdict": "pass",
+  "observed": {
+    "semantic_token_generation": true,
+    "semantic_generation_scope": "single-token-real-gguf-tokenizer-decode",
+    "real_gguf_tokenizer_string_row": true,
+    "greedy_argmax_in_form": true,
+    "full_model_logits": false,
+    "full_vocabulary_logits": false,
+    "accelerator_buffers": false,
+    "full_real_llama_gguf_generation": false,
+    "selected_token_id": 9906,
+    "token_array_index": 9906,
+    "tokenizer_token_count": 128256,
+    "token_entry_start": 6365077,
+    "token_text_start": 6365085,
+    "token_text_len": 5,
+    "candidate_count": 4,
+    "argmax_token_id": 9906,
+    "selected_logit_micro": 42000,
+    "decoded_token_text": "Hello",
+    "semantic_generation_sha256": "1d8486d416cfc07fd99a2b1dfb98c038f4e6a3c7bb673a4c5661de2fb02c403b",
+    "semantic_generation_expected_sha256": "1d8486d416cfc07fd99a2b1dfb98c038f4e6a3c7bb673a4c5661de2fb02c403b",
+    "token_text_sha256": "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969",
+    "token_text_expected_sha256": "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969"
+  },
+  "runtime_dependency_claim": {
+    "scope": "child fkwu form-cli runtime, not this shell harness",
+    "runtime_path_sanitized": true,
+    "http_or_ollama": "absent",
+    "denied_go_rust_python_shell_clang_visible_on_path": 0
+  },
+  "artifacts": {
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-gguf-semantic-token-generation-20260626T223524Z/artifact/form-cli-gguf-semantic-token-generation",
+    "runtime_out": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace/runtime.out",
+    "build_out": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace/build.out",
+    "gguf_weight_map_out": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace/gguf-weight-map.out",
+    "manifest_trace": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace/gguf-semantic-token-manifest.txt",
+    "semantic_source": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace/semantic-token-source.json",
+    "token_hex": "docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace/semantic-token.hex"
+  },
+  "trace_sha256": "cc2be26aba5dd87aa0cbc9332c3b8ef5064ca0c5e03617b02ffc595c60bc6ed4",
+  "boundary": "This proves one semantic token decoded from real GGUF tokenizer bytes after Form argmax over receipt logits. It does not prove full model logits, full-vocabulary projection, complete tensor buffers, or full real Llama GGUF token generation."
+}

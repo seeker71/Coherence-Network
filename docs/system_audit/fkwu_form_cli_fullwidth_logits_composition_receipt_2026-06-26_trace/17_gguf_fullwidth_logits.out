@@ -1,0 +1,7 @@
+receipt: <repo>/docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-fullwidth-logits/receipt.json
+trace: <repo>/docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/gguf-fullwidth-logits/receipt_trace
+full_width_logit_count=128256
+full_width_argmax_token_id=29574
+full_width_selected_logit_micro=236206
+decoded_token_text=acre
+verdict: PASS fkwu-form-cli-gguf-fullwidth-logits

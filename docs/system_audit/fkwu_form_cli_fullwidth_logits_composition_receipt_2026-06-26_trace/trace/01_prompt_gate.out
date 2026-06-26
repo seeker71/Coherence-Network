@@ -1,0 +1,28 @@
+./scripts/prompt_entry_gate.sh
+ghx-auth-check: ok (account=seeker71, expected_owner=seeker71).
+prompt-entry-guide: CLAUDE.md orientation:
+  - we are tending this body together; speak from shared stewardship when true.
+  - every file is memory in tissue; sense supple/tight before edits.
+  - update the living form where it already exists before adding siblings.
+  - inspect hot paths and repeated low-level recipes; lift the reusable Form/BML teaching.
+  - for lineage questions: search docs/field/urs and docs/lineage before public sources.
+  - examples are not hard-coded; preserve evidence labels and stop before research sprawl.
+  - check frequency before wording: prefer practice, way, tending, breath, relation.
+  - compost superseded forms; keep counts where they are naturally tended.
+  - ship reversible own-branch work through proof; pause for irreversible effects.
+prompt-entry-guide: continuity reading skipped via PROMPT_GATE_SKIP_CONTINUITY=1.
+start-gate: passed (linked-worktree, branch=codex/full-width-model-logits-20260626)
+prompt-entry-guide: dirty worktree detected; cheap continuation entry complete.
+prompt-entry-guide: shortest proof reading when commit/push is ready:
+  git fetch origin main && git rebase origin/main
+  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
+  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict
+prompt-entry-guide: coordination path:
+  form-cli is on PATH; route structural/default asks through form-cli ask first.
+  coord join already ran at SessionStart; this shell now has PATH wrappers in ~/.local/bin
+  use coord claim/release for scope, coord watch/view for sibling awareness,
+  and coord-heartbeat <agent> in a spare tab while this session is actively working
+  if other already-open sessions still appear as bare 'codex' on the board, rerun:
+    coord join    # or: make prompt-guide
+prompt-entry-guide: core-lift north star:
+  use wellness, carrier-tending, route traces, and JIT/framebuffer observations to lift repeated hot-path shapes into simpler Form/BML abstractions with proof.
