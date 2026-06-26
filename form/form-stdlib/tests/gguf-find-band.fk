@@ -1,0 +1,50 @@
+; preludes: form-stdlib/gguf-read.fk
+;
+; gguf-find-band — the weight-addressing keystone, made falsifiable on a hand-built TWO-tensor mini-GGUF.
+; gguf-locate-band lands on a tensor at a KNOWN table offset; this proves FINDING a tensor BY NAME
+; (discriminating between records, never inventing a match) and resolving its RELATIVE dataoffset to an
+; ABSOLUTE file offset through the alignment-padded data-region base. This is the step between
+; "located a known tensor" and "load a NAMED real weight" (blk.0.attn_q.weight over the real 2GB file).
+; Logic proven four-way here on a tiny crafted file; a carrier witnesses it on real llama3.2:3b.
+;
+; The mini-GGUF (hand-counted offsets):
+;   header(0..23): GGUF v3, tensor_count=2, kv_count=2
+;   KV "a"=u32(42)            @24   (next @41)
+;   KV "b"=array<u32>[7,8]    @41   (next, tensor table, @74)
+;   tensor "wq": ndims=1 dims=[256] type=12(Q4_K) dataoff=0    record @74  (next @108)
+;   tensor "wk": ndims=1 dims=[128] type=12(Q4_K) dataoff=128  record @108 (table end @142)
+;   data-region base @ align_up(142, 32) = 160  →  "wq" data @160, "wk" data @160+128=288.
+;
+; Verdict 255 when every claim lands:
+;   1    find "wq"  → record @74              (lands on the first record)
+;   2    find "wk"  → record @108             (DISCRIMINATES — not just the first record)
+;   4    find "wz"  → -1                       (absent name; never invents a match)
+;   8    table end  → 142                      (walk past BOTH records)
+;   16   data-base(align 32) → 160             (alignment padding 142→160 fires when needed)
+;   32   abs("wq")  → 160                       (base + relative dataoff 0)
+;   64   abs("wk")  → 288                       (base + relative dataoff 128)
+;   128  align_up(128,32) → 128                 (an exact multiple is unchanged — padding only when needed)
+(do
+    (let g (list
+        ; header: GGUF, v3, tensor_count=2, kv_count=2
+        71 71 85 70  3 0 0 0  2 0 0 0 0 0 0 0  2 0 0 0 0 0 0 0
+        ; KV "a": keylen=1, 'a'(97), vtype=4(u32), value=42
+        1 0 0 0 0 0 0 0  97  4 0 0 0  42 0 0 0
+        ; KV "b": keylen=1, 'b'(98), vtype=9(array), elemtype=4(u32), count=2, [7, 8]
+        1 0 0 0 0 0 0 0  98  9 0 0 0  4 0 0 0  2 0 0 0 0 0 0 0  7 0 0 0  8 0 0 0
+        ; tensor "wq": namelen=2, 'w'(119) 'q'(113), n_dims=1, dims=[256], type=12(Q4_K), dataoff=0
+        2 0 0 0 0 0 0 0  119 113  1 0 0 0  0 1 0 0 0 0 0 0  12 0 0 0  0 0 0 0 0 0 0 0
+        ; tensor "wk": namelen=2, 'w'(119) 'k'(107), n_dims=1, dims=[128], type=12(Q4_K), dataoff=128
+        2 0 0 0 0 0 0 0  119 107  1 0 0 0  128 0 0 0 0 0 0 0  12 0 0 0  128 0 0 0 0 0 0 0))
+    (let wq (list 119 113))
+    (let wk (list 119 107))
+    (let wz (list 119 122))
+    (let c0 (if (eq (gg-find-tensor g wq) 74)            1 0))
+    (let c1 (if (eq (gg-find-tensor g wk) 108)           2 0))
+    (let c2 (if (eq (gg-find-tensor g wz) (sub 0 1))     4 0))
+    (let c3 (if (eq (gg-tinfo-end g) 142)                8 0))
+    (let c4 (if (eq (gg-data-base g 32) 160)            16 0))
+    (let c5 (if (eq (gg-tensor-abs g 32 wq) 160)        32 0))
+    (let c6 (if (eq (gg-tensor-abs g 32 wk) 288)        64 0))
+    (let c7 (if (eq (gg-align-up 128 32) 128)          128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
