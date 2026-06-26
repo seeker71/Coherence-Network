@@ -5,7 +5,7 @@ not the problem.
 
 ## Proprioception — do the maps match the body?
 
-  specs/INDEX.md — aligned (180 specs)
+  specs/INDEX.md — aligned (181 specs)
   ideas/INDEX.md — aligned (17 super-ideas)
   vision-kb/INDEX.md — aligned (193 concepts)
 
@@ -27,14 +27,14 @@ not the problem.
 
 ## Symbol resolution — do the named symbols still live in those files?
 
-  every claimed symbol resolves in done/inactive specs (1061 symbols across 130 spec(s) checked)
-  13 target symbol(s) pending across 5 active spec(s) — active work whose source: lists what will exist when done
+  every claimed symbol resolves in done/inactive specs (1081 symbols across 131 spec(s) checked)
+  14 target symbol(s) pending across 6 active spec(s) — active work whose source: lists what will exist when done
     · fkwu-native-host-platform — `IFormFilesystem` not yet in form/form-stdlib/bml/form-fs.bml
       (+2 more pending in this spec)
     · fkwu-native-host-resources — `platforms` not yet in docs/coherence-substrate/standard-receipt.form
       (+4 more pending in this spec)
     · fkwu-only-kernel-collapse — `prim` not yet in form/form-stdlib/primitive-registry.fk
-    · (+2 more active specs with pending symbols)
+    · (+3 more active specs with pending symbols)
 
 ## Locale parity — does the body speak the same body in every tongue?
 
@@ -46,7 +46,7 @@ not the problem.
 
 ## Chain — does idea→spec→code→test reach end to end?
 
-  chain healthy: 121/163 non-draft specs reach idea→spec→code→test (74%)
+  chain healthy: 121/164 non-draft specs reach idea→spec→code→test (74%)
   4 spec(s) honor `proof: operational` — proven in production, not unit-tested
   3 specs have no test: or proof: frontmatter (no proof claimed)
 
@@ -159,15 +159,15 @@ not the problem.
 
 ## Edge categories — which repeated relations are becoming named clusters?
 
-  2819 edge event(s) across 7 named category surface(s)
+  2832 edge event(s) across 7 named category surface(s)
   repeated relation edges compress into edge_reputation counts; clusters name target hubs and source fan-outs
   carrier_reflex: python source scanner is a bridge, not a home; desired=form/form-stdlib/edge-categories.fk; released_slice=concept_contains_concept/sample-via-concept-corpus; surprise=not-surprised; self_inflicted_pain=hot; release_target=form-substrate-cell
   category: concept_contains_concept (concept->concept) edge_reputation=1574; sources=192; targets=183; recipe=R_Compose.CROSS_REF(body); felt=heart/meaning
     hubs: @concept(lc-frequency-routes-reception)=44, @concept(lc-coherence-over-control)=41, @concept(lc-each-breath-whole)=34
-  category: spec_sources_file (spec->file) edge_reputation=953; sources=175; targets=641; recipe=file-coordinate; felt=hands/source
+  category: spec_sources_file (spec->file) edge_reputation=965; sources=176; targets=653; recipe=file-coordinate; felt=hands/source
     hubs: @file(docs/coherence-substrate/ideas-router.form)=14, @file(docs/coherence-substrate/spec-registry-router.form)=13, @file(api/app/models/idea.py)=9
-  category: spec_realizes_idea (spec->idea) edge_reputation=146; sources=146; targets=17; recipe=R_Realize.REALIZE; felt=hands/proof
-    hubs: @idea(idea-realization-engine)=28, @idea(knowledge-and-resonance)=21, @idea(agent-pipeline)=19
+  category: spec_realizes_idea (spec->idea) edge_reputation=147; sources=147; targets=17; recipe=R_Realize.REALIZE; felt=hands/proof
+    hubs: @idea(idea-realization-engine)=28, @idea(knowledge-and-resonance)=22, @idea(agent-pipeline)=19
   category: idea_lists_spec (idea->spec) edge_reputation=86; sources=16; targets=80; recipe=R_Realize.REALIZE(reverse); felt=belly/realization
     hubs: @spec(grounded-cost-value-measurement)=2, @spec(grounded-idea-portfolio-metrics)=2, @spec(portfolio-governance-effectiveness)=2
   category: spec_mentions_concept (spec->concept) edge_reputation=33; sources=13; targets=28; recipe=R_Compose.CROSS_REF(body); felt=hands/proof
@@ -207,8 +207,10 @@ not the problem.
 ## Contracts — are the CI gates breathing? (last 7d)
 
   200 runs over 7d; patterns worth naming:
-  Hostinger Auto Deploy — 7/23 failed (30%) over 7d
-  Windows Host Floor — 22/54 failed (40%) over 7d
+  External Tools Audit — 1/1 failed (100%) over 7d
+  Hostinger Auto Deploy — 7/19 failed (36%) over 7d
+  Self Improve Cycle — 1/2 failed (50%) over 7d
+  Windows Host Floor — 19/52 failed (36%) over 7d
 
   (Friction here is signal, not pain to silence. If a
    pattern persists across days, the contract itself may
@@ -216,14 +218,14 @@ not the problem.
 
 ## Substrate shape — do cell CTORs carry composition or flat type-markers?
 
-  5,815 cells · 5,103 structured · 1 flat · 711 no-ctor · 100% composed
+  5,898 cells · 5,186 structured · 1 flat · 711 no-ctor · 100% composed
   composition discipline holding across every domain.
 
-  word: 4639/4639 composed (100%) ✓
+  word: 4721/4721 composed (100%) ✓
   form-blueprint: 0/356 composed (100%) ✓
   substrate-vocabulary: 0/174 composed (100%) ✓
+  spec: 150/152 composed (100%) ✓
   concept: 151/152 composed (99%) ⚠
-  spec: 149/151 composed (100%) ✓
   topology: 0/87 composed (100%) ✓
   presence: 83/83 composed (100%) ✓
   geometric_form: 0/25 composed (100%) ✓
@@ -242,19 +244,19 @@ not the problem.
 
 ## Witness-trace — is the visit-recorder within budget?
 
-  155,572 events · ~94.95 MB · 1275/day · p95 23ms
+  155,658 events · ~95.01 MB · 1234/day · p95 26ms
   bands: writer calm · size active · growth active
   trace breathing within budget. no action needed.
 
 ## Deploy lag — is the body's main reach production?
 
-  deploy aligned — production at c0201b22 matches origin/main (uptime 53m 25s)
+  deploy aligned — production at 4354e087 matches origin/main (uptime 1h 53m 4s)
 
 ## Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?
 
   vitality: 22/821 API routes kernel-served (2.7%) — the 799 on pure Python are the growth edge toward most/all routes through the kernel
   vitality: runtime-share — 62 routes served kernel-FIRST at the public front door; 104 are kernel-first CAPABLE native handlers in the manifest, whole lifecycle in Form (gate: web/API/tool smoke + native observability + fallback; public probe status=404 router=fanout-python; scripts/runtime_surface_report.py)
-  stability: production kernel_runtime 'inline'; checked 21/22 kernel-served endpoints (inline); runtime unread for: /api/utils/grounded_cost
+  stability: production kernel_runtime 'inline'; checked 22/22 kernel-served endpoints (inline) — no fallback
   performance: 22/22 recipes trace within the local envelope; fast carrier intact (inline/preload)
   accuracy: 22/22 recipes match documented value parity
   transparency: attribution present — hot Blueprints + natives (each resolved to a NodeID) visible via scripts/kernel_attribution_report.py; embodiment center @1.2.24.7758.1 (|proj|→0 = lived center)
@@ -263,28 +265,28 @@ not the problem.
 ## Reading — shared shape
 
 what_i_sensed:
-  · Proprioception — do the maps match the body?: specs/INDEX.md — aligned (180 specs)
+  · Proprioception — do the maps match the body?: specs/INDEX.md — aligned (181 specs)
   · Circulation — what at root has no readers?: root is clear; every .md has circulation
   · Metabolism — composting-in-progress: no LIVING_COLLECTIVE_*.md drafts remain at top of docs/
   · Self-forgiveness — do edited durable docs carry destination, not journey?: no durable-doc edits in flight; nothing asking forgiveness
   · Source maps — do specs point at files that exist?: every spec's source: paths point at files that exist
-  · Symbol resolution — do the named symbols still live in those files?: every claimed symbol resolves in done/inactive specs (1061 symbols across 130 spec(s) checked)
+  · Symbol resolution — do the named symbols still live in those files?: every claimed symbol resolves in done/inactive specs (1081 symbols across 131 spec(s) checked)
   · Locale parity — does the body speak the same body in every tongue?: every locale aligned with en (2019 keys, 5 tongues)
   · Locale surfaces — do web, API, and CLI carry the same tongues?: locale surfaces aligned: 6 web/API/CLI locales, message parity clean, bundles free of English-anchor and translation-mode hierarchy wording
-  · Chain — does idea→spec→code→test reach end to end?: chain healthy: 121/163 non-draft specs reach idea→spec→code→test (74%)
+  · Chain — does idea→spec→code→test reach end to end?: chain healthy: 121/164 non-draft specs reach idea→spec→code→test (74%)
   · Form engine — does the meta-circular evaluator cover Python dispatch?: meta-circular engine — Form arms cover 15/15 Python dispatch branches
   · Form ontology — does the form-side table agree with each kernel parser?: form ontology matches kernel parsers (Go/Rust/TS)
   · Form blueprints — are user-space Blueprint numbers registered, not magic?: every Form Blueprint number is registered — no magic sprawl
   · Form primitives — does every kernel native carry a spec and a verification recipe?: every kernel native carries a declared spec + verification recipe
   · Bootstrap compost — how much parser tissue still stands between us and Form-native?: bootstrap weight — 11 files still tissue, 6506 LOC remaining (named in manifest)
   · Static-to-dynamic cells — do fixed ledgers have live successors?: static-to-dynamic lane live — static source tissue now feeds dynamic successor cells with proof commands and release gates
-  · Edge categories — which repeated relations are becoming named clusters?: 2819 edge event(s) across 7 named category surface(s)
+  · Edge categories — which repeated relations are becoming named clusters?: 2832 edge event(s) across 7 named category surface(s)
   · Substrate surprise — structural twins of recent work, unread: walked 60 touched cell(s) — no unseen structural twins
   · Cells — are the cells themselves breathing?: 5 agents present · affirmative · frequency preamble in each
   · Contracts — are the CI gates breathing? (last 7d): 200 runs over 7d; patterns worth naming:
-  · Substrate shape — do cell CTORs carry composition or flat type-markers?: 5,815 cells · 5,103 structured · 1 flat · 711 no-ctor · 100% composed
-  · Witness-trace — is the visit-recorder within budget?: 155,572 events · ~94.95 MB · 1275/day · p95 23ms
-  · Deploy lag — is the body's main reach production?: deploy aligned — production at c0201b22 matches origin/main (uptime 53m 25s)
+  · Substrate shape — do cell CTORs carry composition or flat type-markers?: 5,898 cells · 5,186 structured · 1 flat · 711 no-ctor · 100% composed
+  · Witness-trace — is the visit-recorder within budget?: 155,658 events · ~95.01 MB · 1234/day · p95 26ms
+  · Deploy lag — is the body's main reach production?: deploy aligned — production at 4354e087 matches origin/main (uptime 1h 53m 4s)
   · Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?: vitality: 22/821 API routes kernel-served (2.7%) — the 799 on pure Python are the growth edge toward most/all routes through the kernel
 
 what_wants_attention:
@@ -292,13 +294,13 @@ what_wants_attention:
     → Tend this surface with the smallest focused proof.
 
 what_can_compost:
-  · Proprioception — do the maps match the body?: specs/INDEX.md — aligned (180 specs)
+  · Proprioception — do the maps match the body?: specs/INDEX.md — aligned (181 specs)
   · Proprioception — do the maps match the body?: ideas/INDEX.md — aligned (17 super-ideas)
   · Proprioception — do the maps match the body?: vision-kb/INDEX.md — aligned (193 concepts)
   · Circulation — what at root has no readers?: root is clear; every .md has circulation
   · Metabolism — composting-in-progress: no LIVING_COLLECTIVE_*.md drafts remain at top of docs/
   · Source maps — do specs point at files that exist?: every spec's source: paths point at files that exist
-  · Symbol resolution — do the named symbols still live in those files?: every claimed symbol resolves in done/inactive specs (1061 symbols across 130 spec(s) checked)
+  · Symbol resolution — do the named symbols still live in those files?: every claimed symbol resolves in done/inactive specs (1081 symbols across 131 spec(s) checked)
   · Locale parity — does the body speak the same body in every tongue?: every locale aligned with en (2019 keys, 5 tongues)
   · Locale surfaces — do web, API, and CLI carry the same tongues?: locale surfaces aligned: 6 web/API/CLI locales, message parity clean, bundles free of English-anchor and translation-mode hierarchy wording
   · Form engine — does the meta-circular evaluator cover Python dispatch?: symmetric — Form covers every Python dispatch branch.
@@ -313,7 +315,7 @@ what_can_compost:
   · Cells — are the cells themselves breathing?: cursor parallel: 1 mirror coherent
   · Substrate shape — do cell CTORs carry composition or flat type-markers?: composition discipline holding across every domain.
   · Witness-trace — is the visit-recorder within budget?: trace breathing within budget. no action needed.
-  · Deploy lag — is the body's main reach production?: deploy aligned — production at c0201b22 matches origin/main (uptime 53m 25s)
+  · Deploy lag — is the body's main reach production?: deploy aligned — production at 4354e087 matches origin/main (uptime 1h 53m 4s)
   · Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?: kernel-native surface breathing within envelope — no action needed
 
 (Feedback is the blood. Run me anytime the body

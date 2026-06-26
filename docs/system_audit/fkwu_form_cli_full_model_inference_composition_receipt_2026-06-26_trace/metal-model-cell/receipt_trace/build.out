@@ -7,4 +7,4 @@
    82 | extern int getsockname(int,void*,unsigned int*);
       |                                               ^
 1 warning generated.
-built <repo>/.cache/body-test-receipts/fkwu-form-cli-metal-model-cell-20260626T080215Z/artifact/form-cli-metal-model-cell  (  784808 bytes, self-contained — runs with no Go/clang/table; carries 442555B of its own source)
+built <repo>/.cache/body-test-receipts/fkwu-form-cli-metal-model-cell-20260626T145826Z/artifact/form-cli-metal-model-cell  (  784808 bytes, self-contained — runs with no Go/clang/table; carries 442555B of its own source)
