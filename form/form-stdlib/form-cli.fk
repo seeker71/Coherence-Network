@@ -124,9 +124,11 @@
 
     (defn fc-synthesis-status ()
         (str_concat "synthesis-lane:pending-fkwu-metal-llm"
-        (str_concat "\nreason:end-to-end-gguf-decode-not-bound-to-ask-staged"
-        (str_concat "\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step"
-                    "\nmissing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call"))))
+        (str_concat "\nreason:decoded-prose-answer-not-yet-bound-to-ask-staged"
+        (str_concat "\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness"
+        (str_concat "\nobserved:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call"
+        (str_concat "\nmissing:decoded-prose-answer-binding"
+                    "\nboundary:tokenizer->real-gguf-tensors->accelerator-buffers->autoregressive-decode->decoded-text is not yet one ask-staged answer path"))))))
 
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))

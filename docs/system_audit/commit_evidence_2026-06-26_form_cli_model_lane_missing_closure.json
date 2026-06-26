@@ -1,0 +1,133 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/close-local-prose-gaps-d617",
+  "commit_scope": "Close the stale form-cli model-lane missing rows by promoting observed tokenizer, GGUF map, Metal weight/runtime, autoregressive loop, and ask-staged model-call receipts into synthesis-status while leaving decoded prose answer binding as the only missing row.",
+  "files_owned": [
+    "bin/form-cli",
+    "docs/system_audit/commit_evidence_2026-06-26_form_cli_model_lane_missing_closure.json",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bin/form-cli ask \"what remains missing after ask-staged-model-call witness: tokenizer carrier full GGUF Metal autoregressive decoded text binding\"",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk",
+      "bash -n bin/form-cli scripts/validate_form_cli_local_receipts.sh scripts/validate_form_cli_model_lane_gap_receipts.sh scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+      "scripts/regen_form_cli_bootstrap.sh",
+      "scripts/regen_standard_lane_binaries.sh",
+      "tmp=\"$(mktemp -d)\"; (cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh \"$tmp/form-cli\") && printf 'synthesis-status\\nquit\\n' | \"$tmp/form-cli\"; rm -rf \"$tmp\"",
+      "scripts/form_cli_ask_staged_model_call.sh \"ask staged model call after bootstrap refresh\" .cache/body-test-receipts/current-ask-staged-model-call-receipt.json",
+      "bin/form-cli model-status",
+      "bin/form-cli model-gap-receipt .cache/body-test-receipts/current-model-lane-gap-receipt.json",
+      "scripts/validate_form_cli_local_receipts.sh substrate",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/body-test-receipts/current-full-model-inference-composition-receipt.json",
+      "bin/form-cli preflight"
+    ],
+    "observed_outputs": [
+      "Form-first query returned native miss plus model-call receipt path, preserving the pending synthesis boundary.",
+      "form-cli-band -> 16383 four-way, 1 ok, 0 divergent.",
+      "standard lane smoke copied bootstrap/darwin-arm64 with no clang and synthesis-status reported observed components plus missing:decoded-prose-answer-binding.",
+      "bin/form-cli model-status -> observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call; missing:decoded-prose-answer-binding.",
+      "model-gap-receipt -> verdict:observed-components-decoded-prose-binding-pending; ask_staged_model_call:pass; decoded_prose_answer_binding:pending.",
+      "validate_form_cli_local_receipts.sh substrate -> PASS: local grounded ask and pending synthesis receipts are honest.",
+      "full composition receipt -> pass_composition_receipt_full_inference_not_yet_composed; synthesis_boundary.missing=[decoded-prose-answer-binding]; all observed composition gates true on this Mac host.",
+      "bin/form-cli preflight -> 9 passed, 0 gaps, READY."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR CI, including Windows Host Floor for the regenerated form-cli source."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-cli model-status and synthesis-status no longer report tokenizer-carrier, full-gguf-weight-map-to-metal, autoregressive-loop-binding, or ask-staged-model-call as missing once local receipts observe those components; the only remaining model-lane blocker is decoded-prose-answer-binding.",
+    "public_endpoints": [
+      "local CLI: bin/form-cli synthesis-status",
+      "local CLI: bin/form-cli model-status",
+      "local CLI: bin/form-cli model-gap-receipt",
+      "local CLI: bin/form-cli preflight"
+    ],
+    "test_flows": [
+      "four-way form-cli-band validates synthesis-status at 16383 with observed model-lane pieces and missing:decoded-prose-answer-binding",
+      "standard-lane bootstrap smoke copies bootstrap/darwin-arm64 without clang and emits the narrowed synthesis-status",
+      "model-gap receipt validates tokenizer carrier, GGUF weight map, autoregressive loop, and ask-staged model call as observed while decoded prose answer binding remains pending",
+      "full composition receipt keeps full_model_inference_composed=false and records synthesis_boundary.missing=[decoded-prose-answer-binding]"
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-cli-proof-scripts",
+    "notes": "This is a CLI/Form/bootstrap artifact change; public deploy verification follows merge if deploy path filters trigger."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; evidence validation, rebase, guard, PR, CI, merge, and post-merge verification remain."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-cli-local-rag",
+    "fkwu-native-metal-model-cell",
+    "coherence-substrate-form-stdlib"
+  ],
+  "task_ids": [
+    "task-2026-06-26-form-cli-model-lane-missing-closure"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "runtime_fix",
+  "evidence_refs": [
+    "The old missing rows tokenizer-carrier, full-gguf-weight-map-to-metal, autoregressive-loop-binding, and ask-staged-model-call are no longer emitted as model-status missing rows.",
+    "The status surface now reports observed components and narrows the remaining synthesis gap to decoded-prose-answer-binding.",
+    "The full composition receipt now includes ask_staged_model_call_witness=true and keeps full_model_inference_composed=false.",
+    "The standard-lane bootstrap artifacts were regenerated so c-bootstrapped form-cli carries the updated synthesis-status without a runtime compiler/toolchain path."
+  ],
+  "change_files": [
+    "bin/form-cli",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ]
+}
