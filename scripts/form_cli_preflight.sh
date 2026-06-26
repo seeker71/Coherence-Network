@@ -130,7 +130,7 @@ if [[ -n "$NATIVE_CLI" ]]; then
     if printf '%s' "$synth_out" | grep -q '^synthesis-lane:fkwu-metal-answer-bound' &&
        printf '%s' "$synth_out" | grep -q '^missing:full-real-llama-gguf-token-generation'; then
         ok "synthesis lane binds decoded local answers"
-        note "named GGUF tensor math is witnessed; full real Llama token generation remains a named upgrade, not a hidden HTTP oracle"
+        note "named GGUF tensor math, tensor-set materialization, and semantic-token decode are witnessed; full real Llama token generation remains a named upgrade, not a hidden HTTP oracle"
     else
         gap "synthesis lane did not return a decoded-answer binding receipt"
     fi
@@ -146,7 +146,7 @@ printf "  when      %s\n  checks    %d passed, %d gap(s)\n  native    %s\n  gguf
     "$STAMP" "$PASS" "$GAP" "${NATIVE_CLI:-missing}" "${N_GGUF:-0}" "$VERDICT"
 if [[ "$GAP" -eq 0 ]]; then
     echo "  the grounded kit is whole — you can lose the network and keep improving."
-    echo "  decoded answer binding is local; full-width semantic generation is still an explicit upgrade."
+    echo "  decoded answer binding and semantic-token decode are local; full-width model-logit generation is still an explicit upgrade."
 else
     echo "  close the gaps above before the network goes dark."
 fi

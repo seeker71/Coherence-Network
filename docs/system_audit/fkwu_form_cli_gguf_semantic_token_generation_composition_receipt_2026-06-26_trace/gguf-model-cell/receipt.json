@@ -1,0 +1,50 @@
+{
+  "trace_id": "fkwu-form-cli-gguf-model-cell-20260626T214616Z",
+  "receipt_kind": "fkwu-form-cli-gguf-model-cell-receipt",
+  "thread_branch": "codex/full-semantic-generation-20260626",
+  "git_commit": "ab4e6faaca3dbf79ceffca925d8af723301aaf3a",
+  "runtime": {
+    "owner": "fkwu-form-cli",
+    "verb": "gguf-model-cell",
+    "path_sanitized": true,
+    "denied_toolchain_names_visible_on_path": 0,
+    "http_or_ollama": "absent"
+  },
+  "artifacts": {
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-form-cli-gguf-model-cell-20260626T214616Z/artifact/form-cli-gguf-model-cell",
+    "gguf_artifact": ".cache/body-test-receipts/fkwu-form-cli-gguf-model-cell-20260626T214616Z/artifact/mini.gguf",
+    "manifest_trace": "docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/gguf-cell-manifest.txt",
+    "runtime_out": "docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/runtime.out",
+    "build_out": "docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/build.out",
+    "model_layout": "docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/model-layout.txt",
+    "mini_gguf_hex": "docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/mini-gguf.hex"
+  },
+  "observed": {
+    "gguf_cell_verified": true,
+    "gguf_cell_source": "content-addressed-manifest",
+    "gguf_cell_format": "gguf-v3-tensor-info",
+    "gguf_cell_sha256": "7fa5972f62d982daf9fa41b842e2fe0548eb1b3aba4a5e7378afd307fe655b63",
+    "gguf_magic_ok": 1,
+    "gguf_version": 3,
+    "gguf_tensor_count": 1,
+    "gguf_kv_count": 2,
+    "gguf_tensor_index": 0,
+    "gguf_tensor_info_offset": 74,
+    "gguf_tensor_ndims": 1,
+    "gguf_tensor_dim0": 256,
+    "gguf_tensor_type": 12,
+    "gguf_tensor_data_offset": 0,
+    "verdict": "PASS fkwu-form-cli-gguf-model-cell"
+  },
+  "path_claim": {
+    "desired_path": "form-cli REPL -> fkwu Form SHA-256 GGUF manifest gate -> GGUF tensor metadata parse mirroring gguf-read.fk",
+    "proven_now": "content-addressed GGUF bytes are verified in Form and their first tensor-info record is parsed inside the fkwu form-cli app",
+    "not_claimed": [
+      "full real Llama GGUF metadata walk through variable-width tokenizer arrays",
+      "full GGUF weight map materialized into Metal buffers",
+      "tokenizer plus full-width autoregressive decode",
+      "Android Vulkan or Windows DirectML/D3D12 execution"
+    ]
+  },
+  "trace_sha256": "61bc8732254e6cb902e55aaae56f333bbbf97806c86811e1eb9728c0ca37a2fc"
+}

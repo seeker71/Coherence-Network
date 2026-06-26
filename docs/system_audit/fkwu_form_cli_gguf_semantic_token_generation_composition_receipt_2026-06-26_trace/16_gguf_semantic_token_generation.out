@@ -1,0 +1,9 @@
+receipt=<repo>/docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt.json
+trace=<repo>/docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_composition_receipt_2026-06-26_trace/gguf-semantic-token-generation/receipt_trace
+semantic_token_generation_verified=true
+decoded_token_text=Hello
+selected_token_id=9906
+full_model_logits=false
+full_vocabulary_logits=false
+http_or_ollama=absent
+denied_toolchain_names_visible_on_path=0
