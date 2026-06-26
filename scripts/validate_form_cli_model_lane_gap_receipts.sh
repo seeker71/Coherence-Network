@@ -128,6 +128,10 @@ metal_observed = metal_rc == 0
 metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
+status_closes_old_missing = (
+    "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call" in model_status
+    and "missing:decoded-prose-answer-binding" in model_status
+)
 ask_staged_model_call_observed = (
     "[ask: local fkwu RAG index has no grounded hit]" in ask_out
     and "model-call-lane:fkwu-metal-model-cell" in ask_out
@@ -149,21 +153,24 @@ if metal_rc not in (0, 2):
     hard_failures.append("metal_gqa_autoregressive_loop")
 if not ask_staged_model_call_observed:
     hard_failures.append("ask_staged_model_call_contract")
+if not status_closes_old_missing:
+    hard_failures.append("model_status_closure_contract")
 
 receipt = {
     "receipt_kind": "form-cli-model-lane-gap-receipt",
     "trace_id": f"form-cli-model-lane-gaps-{receipt_path.parent.name}",
     "git_commit": git_value(["git", "rev-parse", "--short", "HEAD"], "unknown"),
     "git_branch": git_value(["git", "rev-parse", "--abbrev-ref", "HEAD"], "unknown"),
-    "verdict": "observed-ask-staged-model-call-bound" if not hard_failures else "fail",
+    "verdict": "observed-components-decoded-prose-binding-pending" if not hard_failures else "fail",
     "hard_failures": hard_failures,
     "gap_rows": {
         "tokenizer_carrier": {
-            "verdict": "partial",
+            "verdict": "observed-not-ask-text-bound",
             "tokenizer_compose_four_way": tokenizer_compose_ok,
             "llama3_pretokenizer_four_way": llama3_pretokenizer_ok,
-            "full_llama3_vocab_merge_table_bound_to_ask": False,
-            "boundary": "Tokenizer algorithms are proven locally; the full Llama 3 vocab/merge carrier is not yet the ask-staged prose input path.",
+            "full_llama3_vocab_merge_table_observed": bool(((gguf_json.get("metadata") or {}).get("tokenizer_array_counts") or {}).get("tokenizer.ggml.tokens")),
+            "ask_text_binding": False,
+            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; decoded text is not yet returned as the ask-staged answer.",
         },
         "full_gguf_weight_map": {
             "verdict": "pass" if full_gguf_ok else "fail",
@@ -174,20 +181,25 @@ receipt = {
             "tokenizer_arrays": ((gguf_json.get("metadata") or {}).get("tokenizer_array_counts")),
         },
         "autoregressive_loop_binding": {
-            "verdict": "observed-not-ask-bound" if autoregressive_band_ok and (metal_observed or metal_skipped) else "fail",
+            "verdict": "observed-not-text-bound" if autoregressive_band_ok and (metal_observed or metal_skipped) else "fail",
             "form_autoregressive_loop_four_way": autoregressive_band_ok,
             "metal_gqa_decode_loop_observed": metal_observed,
             "metal_gqa_decode_loop_skipped": metal_skipped,
-            "ask_staged_decoder_binding": False,
-            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged now calls a local model-cell witness but not the full tokenizer->weights->decode->text pipeline.",
+            "decoded_text_binding": False,
+            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged calls a local model-cell witness but still does not return decoded local prose.",
         },
         "ask_staged_model_call": {
             "verdict": "pass" if ask_staged_model_call_observed else "fail",
             "observed_model_call": ask_staged_model_call_observed,
             "observed_local_rag_miss_trigger": "[ask: local fkwu RAG index has no grounded hit]" in ask_out,
             "model_lane": "fkwu-metal-model-cell",
-            "prose_generation": "pending-full-tokenizer-gguf-to-metal-decode",
-            "boundary": "ask-staged now invokes a local fkwu+Metal model-cell witness after a RAG miss; it still does not claim decoded local prose.",
+            "prose_generation": "pending-decoded-prose-answer-binding",
+            "boundary": "ask-staged invokes a local fkwu+Metal model-cell witness after a RAG miss; it still does not claim decoded local prose.",
+        },
+        "decoded_prose_answer_binding": {
+            "verdict": "pending",
+            "observed_components": status_closes_old_missing,
+            "boundary": "This is now the only model-status missing row: turning the observed tokenizer, real GGUF map, Metal weight/runtime, autoregressive loop, and ask-staged model-call witness into one decoded local answer.",
         },
     },
     "artifacts": {
@@ -214,7 +226,7 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: ask-staged model-call binding observed; full decoded prose remains the honest blocker."
+    echo "  PASS: stale missing rows closed as observed components; decoded prose answer binding remains the honest blocker."
 else
     echo "  FAIL: one or more model-lane gap receipts did not hold."
 fi

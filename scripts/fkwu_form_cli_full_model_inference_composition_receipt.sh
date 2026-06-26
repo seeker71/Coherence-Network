@@ -8,8 +8,9 @@
 #
 #   proven pieces: fkwu form-cli ask/status, GGUF find/model-cell,
 #                  tokenizer/loop bands, Metal model-cell/body trace on macOS.
-#   still open:    tokenizer carrier -> real GGUF tensor map -> Metal buffers
-#                  -> autoregressive ask-staged model call.
+#   still open:    one decoded prose answer path that joins the observed
+#                  tokenizer, real GGUF map, Metal/runtime, autoregressive loop,
+#                  and ask-staged model-call witness.
 #
 # Runtime claims are read from the child receipts. Build/receipt tools may be
 # used by this harness; the sanitized proof binaries run with no HTTP/Ollama and
@@ -93,11 +94,11 @@ observation_for() {
     local id="$1"
     local out="$2"
     case "$id" in
-        form_cli_ask)
+        form_cli_ask|ask_staged_model_call)
             grep -E '^(grounded:|local-lane:|synthesis-lane:|trust  |\[ask:)' "$out" || true
             ;;
         synthesis_status|model_status)
-            grep -E '^(synthesis-lane:|reason:|available:|missing:)' "$out" || true
+            grep -E '^(synthesis-lane:|reason:|available:|observed:|missing:|boundary:|ask-staged-model-call-receipt:|prose-generation:)' "$out" || true
             ;;
         gguf_model_cell)
             grep -E '^(gguf_cell_verified|gguf_magic_ok|gguf_tensor_count|gguf_tensor_info_offset|gguf_tensor_type|PASS)' "$out" || true
@@ -236,6 +237,10 @@ run_step synthesis_status current-host "model synthesis boundary" true \
 run_step model_status current-host "model status boundary" true \
     "bin/form-cli model-status" \
     "$ROOT/bin/form-cli" model-status
+
+run_step ask_staged_model_call current-host "ask-staged local model-call witness" true \
+    "bin/form-cli ask ungrounded-model-call-composition-probe" \
+    "$ROOT/bin/form-cli" ask "ungrounded model call composition probe $STAMP"
 
 run_step gguf_find_four_way current-host "GGUF find-by-name and absolute offset four-way" true \
     "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk" \
@@ -382,6 +387,7 @@ jq -n \
     --argjson gguf_cell "$(bool_or_false "$(step_passed gguf_model_cell)")" \
     --argjson metal_cell "$(bool_or_false "$(step_passed metal_model_cell)")" \
     --argjson metal_trace "$(bool_or_false "$(step_passed metal_body_trace)")" \
+    --argjson ask_staged_model_call "$(bool_or_false "$(step_passed ask_staged_model_call)")" \
     --argjson android_fkwu "$(bool_or_false "$(step_passed android_fkwu_fourth)")" \
     --argjson android_vulkan "$(bool_or_false "$(step_passed android_vulkan_matvec)")" \
     --argjson windows_form_cli "$(bool_or_false "$(step_passed windows_form_cli_native)")" \
@@ -397,7 +403,7 @@ jq -n \
       ended_at: $ended_at,
       verdict: $verdict,
       full_model_inference_composed: false,
-      reason_full_inference_not_claimed: "ask-staged is not yet bound to tokenizer -> real GGUF tensor bytes -> Metal/accelerator buffers -> autoregressive decode -> decoded local answer",
+      reason_full_inference_not_claimed: "decoded local prose is not yet bound as one ask-staged answer path over the observed tokenizer, real GGUF tensor map, Metal/accelerator buffers, autoregressive loop, and model-call witness",
       host: {
         os: $host_os,
         arch: $host_arch
@@ -430,7 +436,8 @@ jq -n \
         optional_real_gguf_weight_map_skipped: $real_gguf_skipped,
         fkwu_form_cli_gguf_model_cell: $gguf_cell,
         fkwu_form_cli_metal_model_cell: $metal_cell,
-        form_native_metal_body_trace: $metal_trace
+        form_native_metal_body_trace: $metal_trace,
+        ask_staged_model_call_witness: $ask_staged_model_call
       },
       devices: {
         macos: {
@@ -459,9 +466,7 @@ jq -n \
         }
       },
       open_bridges: [
-        "bind the full Llama tokenizer/vocab carrier to ask-staged prose input",
-        "read and dequant named real GGUF tensor bytes through the fkwu-owned cell path into accelerator buffers",
-        "connect the proven autoregressive loop to the model-cell/Metal decode carrier as the form-cli answer path",
+        "bind the observed tokenizer, real GGUF tensor map, Metal/accelerator buffers, autoregressive loop, and ask-staged model-call witness into one decoded local answer",
         "add Android Vulkan/NNAPI and Windows DirectML/D3D12 model-cell carriers matching the macOS Metal model-cell receipt"
       ],
       steps: $steps

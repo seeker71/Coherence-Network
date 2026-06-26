@@ -44,11 +44,10 @@ fi
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm' &&
-   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step' &&
-   { printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call' ||
-     { printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding' &&
-       printf '%s' "$synth_out" | grep -q '^available-observed:ask-staged-model-call-witness'; }; }; then
-    ok "synthesis lane receipt names available pieces and missing composition"
+   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness' &&
+   printf '%s' "$synth_out" | grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call' &&
+   printf '%s' "$synth_out" | grep -q '^missing:decoded-prose-answer-binding'; then
+    ok "synthesis lane receipt closes stale missing rows and names decoded prose binding"
     printf '%s\n' "$synth_out" | sed 's/^/     /'
 else
     gap "synthesis lane receipt is missing or ambiguous"
