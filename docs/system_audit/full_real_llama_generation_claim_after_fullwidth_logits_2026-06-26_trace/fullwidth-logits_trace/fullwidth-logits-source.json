@@ -1,0 +1,83 @@
+{
+  "boundary": "full-width token-embedding projection logits are observed; full hidden-state 28-layer Llama generation remains pending",
+  "canonical_sha256_material": "gguf-fullwidth-logits-cell-v1 <local-gguf-blob> 2019886272 128256 29574 236206 29574 6652170 4 9687f37a648e57bbab7e99d593669cc7adf68bd2a26edbc589137f2f5e118a50 token_embd.weight 254 14 1696681152 2520 210 token_embd_q6k_dot4_fullwidth",
+  "claim": "fkwu/Form walks every token_embd.weight row in the real GGUF and computes a full-width projection argmax",
+  "gguf_header": {
+    "metadata_kv_count": 27,
+    "tensor_count": 255,
+    "version": 3
+  },
+  "gguf_path": "<local-gguf-blob>",
+  "gguf_size_bytes": 2019886272,
+  "manifest_sha256": "b7bdfaf8a0569ed07e6682e6066552b94bddca2c6c2d0d70059ec41e2115cb66",
+  "projection": {
+    "argmax_logit_micro": 236206,
+    "argmax_token_id": 29574,
+    "formula": "round(1*w0 + -0.5*w1 + 0.5*w2 + 2*w3) * 1e6",
+    "name": "token_embd_q6k_dot4_fullwidth",
+    "samples": [
+      {
+        "logit_micro": 58889,
+        "token_id": 0
+      },
+      {
+        "logit_micro": 14917,
+        "token_id": 1
+      },
+      {
+        "logit_micro": 13542,
+        "token_id": 2
+      },
+      {
+        "logit_micro": -5725,
+        "token_id": 3
+      },
+      {
+        "logit_micro": 29624,
+        "token_id": 4
+      },
+      {
+        "logit_micro": 43053,
+        "token_id": 5
+      },
+      {
+        "logit_micro": 45633,
+        "token_id": 6
+      },
+      {
+        "logit_micro": 49793,
+        "token_id": 7
+      }
+    ],
+    "vocab_width": 128256
+  },
+  "selected_token": {
+    "token_array_index": 29574,
+    "token_entry_start": 6652170,
+    "token_hex": "61637265",
+    "token_id": 29574,
+    "token_len": 4,
+    "token_sha256": "9687f37a648e57bbab7e99d593669cc7adf68bd2a26edbc589137f2f5e118a50",
+    "token_text": "acre",
+    "token_text_start": 6652178
+  },
+  "source_tensor": {
+    "absolute_start": 1696681152,
+    "byte_length_by_next_offset": 323205120,
+    "dims": [
+      3072,
+      128256
+    ],
+    "ggml_type": 14,
+    "index": 254,
+    "name": "token_embd.weight",
+    "q6k_block_len": 210,
+    "row_stride_bytes": 2520,
+    "type": "Q6_K"
+  },
+  "tokenizer_array": {
+    "count": 128256,
+    "key": "tokenizer.ggml.tokens",
+    "metadata_value_offset": 6231958
+  }
+}

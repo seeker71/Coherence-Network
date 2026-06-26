@@ -65,11 +65,15 @@ if [[ -n "$GGUF_PATH" ]]; then
         python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$OUT_DIR/gguf_weight_map.json" "$GGUF_PATH"
     run_step gguf_semantic_token_generation "fkwu form-cli real GGUF semantic-token generation receipt" \
         "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$OUT_DIR/gguf_semantic_token_generation.json" "$GGUF_PATH"
+    run_step gguf_fullwidth_logits "fkwu form-cli full-width GGUF model-logit generation receipt" \
+        "$ROOT/scripts/fkwu_form_cli_gguf_fullwidth_logits_receipt.sh" "$OUT_DIR/gguf_fullwidth_logits.json" "$GGUF_PATH"
 else
     run_step full_gguf_weight_map "full real GGUF metadata + tensor weight map receipt" \
         python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$OUT_DIR/gguf_weight_map.json"
     run_step gguf_semantic_token_generation "fkwu form-cli real GGUF semantic-token generation receipt" \
         "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$OUT_DIR/gguf_semantic_token_generation.json"
+    run_step gguf_fullwidth_logits "fkwu form-cli full-width GGUF model-logit generation receipt" \
+        "$ROOT/scripts/fkwu_form_cli_gguf_fullwidth_logits_receipt.sh" "$OUT_DIR/gguf_fullwidth_logits.json"
 fi
 
 run_step autoregressive_loop_band "Form autoregressive generation loop band" \
@@ -131,6 +135,20 @@ semantic_path = out_dir / "gguf_semantic_token_generation.json"
 if semantic_path.exists():
     semantic_json = json.loads(semantic_path.read_text(encoding="utf-8"))
 semantic_token_generation_ok = rc("gguf_semantic_token_generation") == 0 and semantic_json.get("verdict") == "pass"
+fullwidth_json = {}
+fullwidth_path = out_dir / "gguf_fullwidth_logits.json"
+if fullwidth_path.exists():
+    fullwidth_json = json.loads(fullwidth_path.read_text(encoding="utf-8"))
+fullwidth_observed = fullwidth_json.get("observed") or {}
+fullwidth_logits_ok = (
+    rc("gguf_fullwidth_logits") == 0
+    and fullwidth_json.get("verdict") == "PASS fkwu-form-cli-gguf-fullwidth-logits"
+    and fullwidth_observed.get("full_width_model_logit_generation_verified") is True
+    and fullwidth_observed.get("full_width_logits_generated_in_form") is True
+    and fullwidth_observed.get("full_width_model_logits") is True
+    and fullwidth_observed.get("full_vocabulary_logits") is True
+    and fullwidth_observed.get("full_model_logits") is False
+)
 autoregressive_band_ok = rc("autoregressive_loop_band") == 0
 metal_rc = rc("metal_gqa_autoregressive_loop")
 metal_observed = metal_rc == 0
@@ -138,7 +156,7 @@ metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
 status_closes_old_missing = (
-    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
+    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
     and "missing:full-real-llama-gguf-token-generation" in model_status
     and "prose-generation:decoded-grounded-answer" in model_status
 )
@@ -158,6 +176,7 @@ for name, ok in [
     ("llama3_pretokenizer", llama3_pretokenizer_ok),
     ("full_gguf_weight_map", full_gguf_ok),
     ("gguf_semantic_token_generation", semantic_token_generation_ok),
+    ("gguf_fullwidth_logits", fullwidth_logits_ok),
     ("autoregressive_loop_band", autoregressive_band_ok),
 ]:
     if not ok:
@@ -174,7 +193,7 @@ receipt = {
     "trace_id": f"form-cli-model-lane-gaps-{receipt_path.parent.name}",
     "git_commit": git_value(["git", "rev-parse", "--short", "HEAD"], "unknown"),
     "git_branch": git_value(["git", "rev-parse", "--abbrev-ref", "HEAD"], "unknown"),
-    "verdict": "observed-grounded-decoded-answer-full-real-llama-pending" if not hard_failures else "fail",
+    "verdict": "observed-grounded-decoded-answer-fullwidth-logits-full-real-llama-pending" if not hard_failures else "fail",
     "hard_failures": hard_failures,
     "gap_rows": {
         "tokenizer_carrier": {
@@ -183,9 +202,10 @@ receipt = {
             "llama3_pretokenizer_four_way": llama3_pretokenizer_ok,
             "full_llama3_vocab_merge_table_observed": bool(((gguf_json.get("metadata") or {}).get("tokenizer_array_counts") or {}).get("tokenizer.ggml.tokens")),
             "real_gguf_semantic_token_generation": semantic_token_generation_ok,
+            "full_width_model_logit_generation": fullwidth_logits_ok,
             "grounded_decoded_answer_binding": ask_staged_model_call_observed,
             "full_real_llama_token_generation_binding": False,
-            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; one tokenizer string row is selected by Form argmax and decoded by fkwu, and ask-staged returns a grounded decoded answer; full real Llama GGUF model-token generation remains pending.",
+            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; one tokenizer string row is selected by Form argmax and decoded by fkwu; a full-width GGUF token-embedding logit row is generated by Form; ask-staged returns a grounded decoded answer; full real Llama GGUF model-token generation remains pending.",
         },
         "full_gguf_weight_map": {
             "verdict": "pass" if full_gguf_ok else "fail",
@@ -196,15 +216,26 @@ receipt = {
             "focus_tensors": ((gguf_json.get("tensor_map") or {}).get("focus_tensors")),
             "tokenizer_arrays": ((gguf_json.get("metadata") or {}).get("tokenizer_array_counts")),
         },
+        "full_width_model_logits": {
+            "verdict": "pass" if fullwidth_logits_ok else "fail",
+            "observed": fullwidth_logits_ok,
+            "full_width_logit_count": fullwidth_observed.get("full_width_logit_count"),
+            "argmax_token_id": fullwidth_observed.get("full_width_argmax_token_id"),
+            "decoded_token_text": fullwidth_observed.get("decoded_token_text"),
+            "source_tensor": fullwidth_json.get("source_tensor"),
+            "receipt": str(fullwidth_path),
+            "boundary": "The full vocabulary width is scanned inside fkwu/Form over token_embd.weight Q6_K projection logits; this is not yet full hidden-state Llama logits.",
+        },
         "autoregressive_loop_binding": {
             "verdict": "observed-grounded-answer-bound-full-real-generation-pending" if autoregressive_band_ok and (metal_observed or metal_skipped) and ask_staged_model_call_observed else "fail",
             "form_autoregressive_loop_four_way": autoregressive_band_ok,
             "metal_gqa_decode_loop_observed": metal_observed,
             "metal_gqa_decode_loop_skipped": metal_skipped,
             "real_gguf_semantic_token_generation": semantic_token_generation_ok,
+            "full_width_model_logit_generation": fullwidth_logits_ok,
             "grounded_decoded_answer_binding": ask_staged_model_call_observed,
             "full_real_llama_token_generation_binding": False,
-            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; a real GGUF tokenizer token is decoded by fkwu after Form argmax, while full real GGUF autoregressive model-token generation remains pending.",
+            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; a real GGUF tokenizer token is decoded by fkwu after Form argmax, and a full-width token-embedding logit row is now generated by Form, while full real GGUF autoregressive model-token generation remains pending.",
         },
         "ask_staged_model_call": {
             "verdict": "pass" if ask_staged_model_call_observed else "fail",
@@ -224,7 +255,8 @@ receipt = {
             "verdict": "pending",
             "observed_grounded_answer": ask_staged_model_call_observed,
             "observed_semantic_token_generation": semantic_token_generation_ok,
-            "boundary": "The remaining gap is producing answer text from full real Llama GGUF model logits over complete tensor payloads and the full vocabulary in one native answer path.",
+            "observed_full_width_model_logit_generation": fullwidth_logits_ok,
+            "boundary": "The remaining gap is producing answer text from full real Llama GGUF hidden-state logits over complete tensor payloads in one native answer path.",
         },
     },
     "artifacts": {
@@ -233,6 +265,7 @@ receipt = {
         "ask_staged_probe": str(out_dir / "ask_staged_probe.out"),
         "gguf_weight_map": str(gguf_path),
         "gguf_semantic_token_generation": str(semantic_path),
+        "gguf_fullwidth_logits": str(fullwidth_path),
     },
 }
 
@@ -252,7 +285,7 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: grounded decoded answer is bound; full real Llama GGUF token generation remains the honest blocker."
+    echo "  PASS: grounded decoded answer and full-width logit generation are bound; full real Llama GGUF token generation remains the honest blocker."
 else
     echo "  FAIL: one or more model-lane gap receipts did not hold."
 fi

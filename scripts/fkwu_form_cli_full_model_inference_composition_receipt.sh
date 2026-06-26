@@ -7,12 +7,13 @@
 # full-generation boundary explicit:
 #
 #   proven pieces: fkwu form-cli ask/status, GGUF find/model-cell,
-#                  tokenizer/loop bands, Metal model-cell/body trace on macOS.
+#                  tokenizer/loop bands, full-width GGUF token-embedding logits,
+#                  Metal model-cell/body trace on macOS.
 #   now bound:     ask-staged model-call witness -> decoded local answer receipt.
 #   still open:    full real Llama GGUF token generation produced by real prompt text,
-#                  real GGUF tokenizer arrays, real GGUF tensor bytes,
+#                  real GGUF tokenizer arrays, real GGUF hidden-state logits,
 #                  accelerator buffers, full autoregressive token IDs, and
-#                  decoded token text.
+#                  decoded token text in one native path.
 #
 # Runtime claims are read from the child receipts. Build/receipt tools may be
 # used by this harness; the sanitized proof binaries run with no HTTP/Ollama and
@@ -115,6 +116,9 @@ observation_for() {
             ;;
         gguf_semantic_token_generation)
             grep -E '^(semantic_token_generation_verified|semantic_generation_scope|semantic_selected_token_id|semantic_token_array_index|semantic_argmax_token_id|semantic_selected_logit_micro|decoded_token_text|full_model_logits|full_vocabulary_logits|http_or_ollama|denied_toolchain_names_visible_on_path|PASS|FAIL)' "$out" || true
+            ;;
+        gguf_fullwidth_logits)
+            grep -E '^(full_width_model_logit_generation_verified|full_width_logit_generation_scope|full_width_logit_count|full_width_argmax_token_id|full_width_selected_token_id|full_width_selected_logit_micro|decoded_token_text|full_width_logits_generated_in_form|full_width_model_logits|full_vocabulary_logits|full_model_logits|full_llama_hidden_state_logits|http_or_ollama|denied_toolchain_names_visible_on_path|PASS|FAIL)' "$out" || true
             ;;
         metal_model_cell)
             grep -E '^(model_cell_verified|runtime_path_sanitized|denied_toolchain_names_visible_on_path|http_or_ollama|metal_owner|metal_device|gpu_y|max_delta|PASS)' "$out" || true
@@ -313,6 +317,7 @@ if is_windows_host && ! step_passed_now real_gguf_weight_map; then
     skip_step full_gguf_tensor_slice_math current-host "fkwu form-cli full GGUF named tensor-slice math" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the full-GGUF tensor-slice witness"
     skip_step full_gguf_tensor_set_materialization current-host "fkwu form-cli full GGUF required tensor-set materialization" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the full-GGUF tensor-set witness"
     skip_step gguf_semantic_token_generation current-host "fkwu form-cli real GGUF semantic token generation" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the real-tokenizer semantic-token witness"
+    skip_step gguf_fullwidth_logits current-host "fkwu form-cli full-width GGUF model-logit generation" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the full-width logit witness"
 else
     run_step full_gguf_tensor_slice_math current-host "fkwu form-cli full GGUF named tensor-slice math" true \
         "scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh <trace>/full-gguf-tensor-slice-math/receipt.json" \
@@ -323,6 +328,9 @@ else
     run_step gguf_semantic_token_generation current-host "fkwu form-cli real GGUF semantic token generation" true \
         "scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh <trace>/gguf-semantic-token-generation/receipt.json" \
         "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$TRACE_DIR/gguf-semantic-token-generation/receipt.json"
+    run_step gguf_fullwidth_logits current-host "fkwu form-cli full-width GGUF model-logit generation" true \
+        "scripts/fkwu_form_cli_gguf_fullwidth_logits_receipt.sh <trace>/gguf-fullwidth-logits/receipt.json" \
+        "$ROOT/scripts/fkwu_form_cli_gguf_fullwidth_logits_receipt.sh" "$TRACE_DIR/gguf-fullwidth-logits/receipt.json"
 fi
 
 if is_macos_host && command -v swiftc >/dev/null 2>&1; then
@@ -419,10 +427,14 @@ nonhard_failed_count="$(jq -s '[.[] | select(.hard_gate == false and .status != 
 
 http_or_ollama_absent="$(bool_or_false "$(grep -R -q '^http_or_ollama=absent$' "$TRACE_DIR" && echo true || echo false)")"
 denied_toolchain_hidden="$(bool_or_false "$(grep -R -q '^denied_toolchain_names_visible_on_path=0$' "$TRACE_DIR" && echo true || echo false)")"
+fullwidth_model_logits_bound="$(bool_or_false "$(step_passed gguf_fullwidth_logits)")"
 
-verdict="pass_composition_receipt_semantic_token_bound_full_width_not_yet_composed"
+verdict="pass_composition_receipt_fullwidth_logits_bound_full_real_generation_pending"
 if [[ "$ask_staged_decoded_answer_bound" != "true" ]]; then
-    verdict="pass_composition_receipt_honest_floor_full_width_not_yet_composed"
+    verdict="pass_composition_receipt_fullwidth_logits_bound_decoded_answer_pending"
+fi
+if [[ "$fullwidth_model_logits_bound" != "true" ]]; then
+    verdict="pass_composition_receipt_honest_floor_fullwidth_logits_pending"
 fi
 if [[ "$HARD_FAIL" -ne 0 ]]; then
     verdict="fail_composition_receipt_hard_gate"
@@ -467,11 +479,13 @@ jq -n \
     --argjson full_gguf_tensor_slice_math "$(bool_or_false "$(step_passed full_gguf_tensor_slice_math)")" \
     --argjson full_gguf_tensor_set_materialization "$(bool_or_false "$(step_passed full_gguf_tensor_set_materialization)")" \
     --argjson gguf_semantic_token_generation "$(bool_or_false "$(step_passed gguf_semantic_token_generation)")" \
+    --argjson gguf_fullwidth_logits "$(bool_or_false "$(step_passed gguf_fullwidth_logits)")" \
     --argjson metal_cell "$(bool_or_false "$(step_passed metal_model_cell)")" \
     --argjson metal_trace "$(bool_or_false "$(step_passed metal_body_trace)")" \
     --argjson ask_staged_model_call "$(bool_or_false "$(step_passed ask_staged_model_call)")" \
     --argjson ask_staged_decoded_answer "$(bool_or_false "$ask_staged_decoded_answer_bound")" \
     --argjson decoded_answer "$(bool_or_false "$decoded_answer_observed")" \
+    --argjson fullwidth_model_logits_bound "$(bool_or_false "$fullwidth_model_logits_bound")" \
     --argjson android_fkwu "$(bool_or_false "$(step_passed android_fkwu_fourth)")" \
     --argjson android_vulkan "$(bool_or_false "$(step_passed android_vulkan_matvec)")" \
     --argjson windows_form_cli "$(bool_or_false "$(step_passed windows_form_cli_native)")" \
@@ -489,7 +503,8 @@ jq -n \
       full_model_inference_composed: false,
       ask_staged_decoded_answer_bound: $ask_staged_decoded_answer,
       semantic_token_generation_bound: $gguf_semantic_token_generation,
-      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli, and one semantic token can be selected by Form argmax and decoded from real GGUF tokenizer bytes; the answer is not yet produced by full real Llama GGUF model logits over the complete vocabulary, complete tensor payloads in accelerator buffers, autoregressive token IDs, and decoded text in one native form-cli path",
+      fullwidth_model_logits_bound: $fullwidth_model_logits_bound,
+      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli, one semantic token can be selected by Form argmax and decoded from real GGUF tokenizer bytes, and a full-width token-embedding model-logit projection row is generated inside fkwu/Form; the answer is not yet produced by full real Llama hidden-state logits over complete tensor payloads in accelerator buffers, autoregressive token IDs, and decoded text in one native form-cli path",
       host: {
         os: $host_os,
         arch: $host_arch
@@ -528,6 +543,7 @@ jq -n \
         fkwu_form_cli_full_gguf_named_tensor_slice_math: $full_gguf_tensor_slice_math,
         fkwu_form_cli_full_gguf_required_tensor_set_materialization: $full_gguf_tensor_set_materialization,
         fkwu_form_cli_real_gguf_semantic_token_generation: $gguf_semantic_token_generation,
+        fkwu_form_cli_gguf_fullwidth_logits_cell: $gguf_fullwidth_logits,
         fkwu_form_cli_metal_model_cell: $metal_cell,
         form_native_metal_body_trace: $metal_trace,
         ask_staged_model_call_witness: $ask_staged_model_call,
@@ -542,6 +558,7 @@ jq -n \
           full_gguf_tensor_slice_math: (if $mac_host then $full_gguf_tensor_slice_math else false end),
           full_gguf_tensor_set_materialization: (if $mac_host then $full_gguf_tensor_set_materialization else false end),
           semantic_token_generation: (if $mac_host then $gguf_semantic_token_generation else false end),
+          fullwidth_model_logits: (if $mac_host then $gguf_fullwidth_logits else false end),
           metal_model_cell: (if $mac_host then $metal_cell else false end),
           metal_body_trace: (if $mac_host then $metal_trace else false end),
           full_model_inference: false
@@ -562,6 +579,7 @@ jq -n \
           full_gguf_tensor_slice_math: (if $windows_host then $full_gguf_tensor_slice_math else false end),
           full_gguf_tensor_set_materialization: (if $windows_host then $full_gguf_tensor_set_materialization else false end),
           semantic_token_generation: (if $windows_host then $gguf_semantic_token_generation else false end),
+          fullwidth_model_logits: (if $windows_host then $gguf_fullwidth_logits else false end),
           directml_d3d12_model_cell: false,
           http_or_ollama_absent_in_child_runtime: (if $windows_host then $http_or_ollama_absent else false end),
           denied_go_rust_python_shell_clang_hidden_on_child_runtime_path: (if $windows_host then $denied_toolchain_hidden else false end),
@@ -571,7 +589,7 @@ jq -n \
         }
       },
       open_bridges: [
-        "upgrade the single-token real GGUF semantic-token receipt to full-width model logits over the complete vocabulary",
+        "promote the witnessed full-width token-embedding projection logits into full hidden-state Llama logits",
         "promote required tensor-set byte-window materialization to complete full-width tensor payload staging",
         "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
         "run the full multi-layer GQA autoregressive loop over those real tensors",
@@ -587,6 +605,7 @@ printf 'trace=%s\n' "$TRACE_DIR"
 printf 'verdict=%s\n' "$verdict"
 printf 'full_model_inference_composed=false\n'
 printf 'ask_staged_decoded_answer_bound=%s\n' "$ask_staged_decoded_answer_bound"
+printf 'fullwidth_model_logits_bound=%s\n' "$fullwidth_model_logits_bound"
 
 if [[ "$HARD_FAIL" -ne 0 ]]; then
     echo "failed_hard_gates:"

@@ -1,0 +1,50 @@
+{
+  "boundary": "candidate logits are receipt logits, not full model logits over the full vocabulary",
+  "candidate_logits": [
+    {
+      "logit_micro": -8000,
+      "token_id": 258,
+      "token_text": "in"
+    },
+    {
+      "logit_micro": 42000,
+      "token_id": 9906,
+      "token_text": "Hello"
+    },
+    {
+      "logit_micro": 21000,
+      "token_id": 261,
+      "token_text": "er"
+    },
+    {
+      "logit_micro": -3000,
+      "token_id": 263,
+      "token_text": "on"
+    }
+  ],
+  "canonical_sha256_material": "gguf-semantic-token-cell-v1 <local-gguf-blob> 2019886272 128256 9906 9906 6365077 5 185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969 4 258 -8000 9906 42000 261 21000 263 -3000",
+  "claim": "one real GGUF tokenizer string row selected by Form greedy argmax and decoded by fkwu",
+  "gguf_header": {
+    "metadata_kv_count": 27,
+    "tensor_count": 255,
+    "version": 3
+  },
+  "gguf_path": "<local-gguf-blob>",
+  "gguf_size_bytes": 2019886272,
+  "manifest_sha256": "1d8486d416cfc07fd99a2b1dfb98c038f4e6a3c7bb673a4c5661de2fb02c403b",
+  "selected_token": {
+    "token_array_index": 9906,
+    "token_entry_start": 6365077,
+    "token_hex": "48656c6c6f",
+    "token_id": 9906,
+    "token_len": 5,
+    "token_sha256": "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969",
+    "token_text": "Hello",
+    "token_text_start": 6365085
+  },
+  "tokenizer_array": {
+    "count": 128256,
+    "key": "tokenizer.ggml.tokens",
+    "metadata_value_offset": 6231958
+  }
+}

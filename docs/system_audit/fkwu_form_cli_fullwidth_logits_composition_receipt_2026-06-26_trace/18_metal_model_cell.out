@@ -1,0 +1,22 @@
+model_cell_verified=true
+model_cell_source=content-addressed-manifest
+model_cell_format=f32-matvec-v1
+model_cell_sha256=3836efd8c75b6322609b96a9b1894cd727586ce30f673a1d72502c2751b77c70
+runtime_path_sanitized=true
+denied_toolchain_names_visible_on_path=0
+http_or_ollama=absent
+metal_owner=fkwu-form-cli
+metal_linked=true
+metal_api=metal_matvec_f32
+metal_device=Apple M4 Max
+compiled_kernel=form_fkwu_generic_matvec_f32
+msl_bytes_loaded=451
+model_bytes_loaded=44
+rows=2
+cols=3
+dispatch_ms=2.945
+gpu_y=[-0.250000,5.000000]
+expected_y=[-0.250000,5.000000]
+max_delta=0.000000000
+PASS fkwu-form-cli-metal-matvec-f32
+<repo>/docs/system_audit/fkwu_form_cli_fullwidth_logits_composition_receipt_2026-06-26_trace/metal-model-cell/receipt.json
