@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 382
+**Total files**: 385
 
 | File | Purpose |
 |---|---|
@@ -94,9 +94,12 @@
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [fkwu_awk.sh](fkwu_awk.sh) | fkwu_awk.sh — run a native awk query over a file ON FKWU (the c-bootstrap |
 | [fkwu_fnri.sh](fkwu_fnri.sh) | fkwu_fnri.sh — fnri witness / resolve / know via fkwu (fc-fnri direct, proven source). |
+| [fkwu_form_cli_full_gguf_tensor_set_materialization_receipt.sh](fkwu_form_cli_full_gguf_tensor_set_materialization_receipt.sh) | fkwu_form_cli_full_gguf_tensor_set_materialization_receipt.sh -- prove a |
 | [fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh](fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh) | fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh -- prove a named tensor |
 | [fkwu_form_cli_full_model_inference_composition_receipt.sh](fkwu_form_cli_full_model_inference_composition_receipt.sh) | fkwu_form_cli_full_model_inference_composition_receipt.sh |
+| [fkwu_form_cli_gguf_fullwidth_logits_receipt.sh](fkwu_form_cli_gguf_fullwidth_logits_receipt.sh) | fkwu_form_cli_gguf_fullwidth_logits_receipt.sh -- prove fkwu/Form can |
 | [fkwu_form_cli_gguf_model_cell_receipt.sh](fkwu_form_cli_gguf_model_cell_receipt.sh) | fkwu_form_cli_gguf_model_cell_receipt.sh -- prove form-cli can verify a |
+| [fkwu_form_cli_gguf_semantic_token_generation_receipt.sh](fkwu_form_cli_gguf_semantic_token_generation_receipt.sh) | fkwu_form_cli_gguf_semantic_token_generation_receipt.sh -- prove one real |
 | [fkwu_form_cli_metal_direct_receipt.sh](fkwu_form_cli_metal_direct_receipt.sh) | fkwu_form_cli_metal_direct_receipt.sh |
 | [fkwu_form_cli_metal_matvec_receipt.sh](fkwu_form_cli_metal_matvec_receipt.sh) | fkwu_form_cli_metal_matvec_receipt.sh |
 | [fkwu_form_cli_metal_model_cell_receipt.sh](fkwu_form_cli_metal_model_cell_receipt.sh) | fkwu_form_cli_metal_model_cell_receipt.sh |
