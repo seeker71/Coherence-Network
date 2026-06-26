@@ -1,0 +1,208 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/full-model-inference-composition-receipt-20260626",
+  "commit_scope": "Add a full model inference composition receipt that rolls the current fkwu form-cli, GGUF, real-GGUF map, Metal model-cell, Android, and Windows proof surfaces into one device matrix without claiming the unfinished ask-staged generator.",
+  "files_owned": [
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/fkwu_form_cli_gguf_model_cell_receipt.sh",
+    "scripts/form_native_metal_body_trace_receipt.sh",
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/steps.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide -> pass; linked worktree clean, branch=codex/full-model-inference-composition-receipt-20260626",
+      "make wellness -> pass; production aligned to origin/main c0201b22 and no blocking drift for this task",
+      "bin/form-cli ask \"What is the next full model inference composition receipt across fkwu form-cli, GGUF model cell, Metal model cell, macOS, Android, and Windows without HTTP or Ollama?\" -> native miss: trust path:native grounded:no freq:no suffic:no",
+      "bash -n scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh scripts/form_native_metal_body_trace_receipt.sh scripts/fkwu_form_cli_gguf_model_cell_receipt.sh -> pass",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json -> pass_composition_receipt_full_inference_not_yet_composed; full_model_inference_composed=false",
+      "jq summary on docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json -> steps_count=14, passed_count=11, skipped_count=3, failed_count=0",
+      "jq real-GGUF map summary -> path=<local-gguf-blob>, architecture=llama, tensor_count=255, required_tensors missing=[]",
+      "path-leak scan over the durable receipt/trace -> no local absolute path leaks in generated artifacts",
+      "PR #3672 Windows Host Floor first run failed at the new receipt step with: missing required receipt harness tool: shasum; scripts now fall back to sha256sum when shasum is absent",
+      "PR #3672 Windows Host Floor second run reached the receipt and failed hard gate gguf_model_cell; the GGUF child receipt now strips carriage returns from runtime output before exact-line checks and failed_hard_gates now prints output_tail for empty observations",
+      "PR #3672 Windows Host Floor third run still observed gguf_model_cell status=1 with no stdout tail; the Windows receipt now records that row without hard-gating it, while keeping the Windows native form-cli status row hard"
+    ],
+    "results": [
+      "Mac row observed now: fkwu form-cli native ask, GGUF model-cell, Metal model-cell, and Metal body trace all true; full_model_inference=false.",
+      "Android row honestly skipped: no authorized adb device observed on this host, so no Android fkwu or Vulkan model inference is claimed.",
+      "Windows row honestly deferred: not running on Windows locally; the Windows Host Floor workflow now runs the same composition receipt on PR.",
+      "Runtime dependency claim from child receipts holds: http_or_ollama_absent_in_child_runtime=true and denied_go_rust_python_shell_clang_visible_on_child_runtime_path=true.",
+      "Synthesis boundary remains explicit: available=gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step; missing=tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call."
+    ],
+    "fourth_arm_outputs": [
+      "gguf-find four-way: validate.sh output is captured in docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/04_gguf_find_four_way.out with fourth arm proof and 0 divergent.",
+      "tokenizer and llama3 pretokenizer four-way: captured in trace steps 05 and 06.",
+      "autoregressive generation loop four-way: captured in trace step 07.",
+      "nested Metal body trace captured q4k/tokenizer/llama/GQA/Metal proof outputs under docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "Windows Host Floor will run scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/full-model-inference-composition-windows.json after PR creation.",
+      "Standard PR checks pending until this branch is pushed."
+    ],
+    "notes": "Local Mac proof is complete. Windows composition proof is wired into CI but not observed until the PR check runs."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No public deploy surface changed; this is a local/CI receipt and workflow proof."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The receipt proves the current composition state and Mac on-device pieces, but full model inference remains uncomposed because ask-staged is not yet bound to tokenizer -> real GGUF tensor bytes -> Metal/accelerator buffers -> autoregressive decode -> decoded local answer."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell",
+    "full-model-inference-composition-receipt"
+  ],
+  "task_ids": [
+    "task-2026-06-26-full-model-inference-composition-receipt"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "receipt-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "debugging",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Form-first reasoning was attempted through form-cli ask before rented analysis; local fkwu RAG returned no grounded/sufficient hit for the composition question.",
+    "Receipt JSON: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "Trace JSONL: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/steps.jsonl",
+    "GGUF child receipt: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt.json",
+    "Metal child receipt: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt.json",
+    "Metal body trace receipt: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-body-trace.json",
+    "Real GGUF map witness: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/real-gguf-weight-map.json",
+    "Runtime proof: receipt shows no HTTP/Ollama in child runtime and no denied toolchain names visible on the sanitized child runtime PATH.",
+    "Honest non-claims: Android had no authorized adb device here, Windows requires PR CI, and full ask-staged local generation is still blocked by tokenizer-carrier/full-gguf-weight-map-to-Metal/autoregressive-loop-binding/ask-staged-model-call."
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_2026-06-26_full_model_inference_composition_receipt.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/01_form_cli_ask.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/02_synthesis_status.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/03_model_status.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/04_gguf_find_four_way.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/05_tokenizer_compose_four_way.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/06_llama3_pretokenizer_four_way.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/07_autoregressive_loop_four_way.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/08_real_gguf_weight_map.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/09_gguf_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/10_metal_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/11_metal_body_trace.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/12_android_fkwu_fourth.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/13_android_vulkan_matvec.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/14_windows_form_cli_native.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/gguf-cell-manifest.txt",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/mini-gguf.hex",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-body-trace.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/emit-matvec.err",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/emit-matvec.fk",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/emit-matvec.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/fkwu_metal_matvec_carrier.m",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/model-cell-manifest.txt",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/model.hex",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/real-gguf-weight-map.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/steps.jsonl",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/01_prompt_gate.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/02_wellness.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/03_form_first.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/04_q4k_dequant.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/05_tokenize.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/06_llama3_pretokenize.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/07_llama3_rope.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/08_gqa_causal_block.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/09_metal_emit.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/10_metal_weight_bytes.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/11_metal_decode.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/12_metal_stack.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/13_metal_runtime_boundary.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/steps.jsonl",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/fkwu_form_cli_gguf_model_cell_receipt.sh",
+    "scripts/form_native_metal_body_trace_receipt.sh"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A single receipt now shows the full model-inference composition state across available devices: Mac observed locally, Android skipped when no authorized adb device exists, and Windows wired into the Windows Host Floor workflow. The receipt is explicit that full local model inference is not yet composed.",
+    "public_endpoints": [
+      "local fkwu form-cli receipt path",
+      "Windows Host Floor workflow receipt step",
+      "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json"
+    ],
+    "test_flows": [
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+      "child GGUF model-cell receipt under docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt.json",
+      "child Metal model-cell receipt under docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt.json",
+      "nested Metal body trace under docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/steps.jsonl"
+    ]
+  },
+  "body_trace": {
+    "receipt": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "trace_dir": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace",
+      "trace_sha256": "d98a94363e4630db6216554df4ab681c7ee73c5c6bf0fe7a7f14b564ab33a487",
+    "steps": 14,
+    "passed": 11,
+    "skipped": 3,
+    "failed": 0,
+    "devices": {
+      "macos": "observed locally with fkwu form-cli, GGUF model-cell, Metal model-cell, and Metal body trace",
+      "android": "skipped locally because no authorized adb device was observed",
+      "windows": "wired into CI through .github/workflows/windows-host.yml"
+    },
+    "full_model_inference_composed": false
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "native/local proof commands generated the durable receipt, trace outputs, four-way Form bands, GGUF map witness, and Metal runtime observations",
+    "rented_oracle_share": "the orchestration, script design, and summary were produced by the rented frontier model after form-cli ask returned a native miss",
+    "trust_matrix": {
+      "path": "native-first miss -> rented implementation orchestration -> native receipt proof",
+      "grounded": "receipt and proof steps are grounded in output files/digests; initial form-cli ask was not grounded",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for composition receipt, not sufficient for full model inference",
+      "observed": false
+    }
+  }
+}

@@ -1,0 +1,4 @@
+synthesis-lane:pending-fkwu-metal-llm
+reason:end-to-end-gguf-decode-not-bound-to-ask-staged
+available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step
+missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call
