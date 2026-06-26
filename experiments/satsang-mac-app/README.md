@@ -19,6 +19,15 @@ Default event queue:
 ~/.coherence-network/satsang-guidance/events.jsonl
 ```
 
+Trusted room memory is stored locally beside the transcript:
+
+```text
+~/.coherence-network/agent-room-memory/session-index.jsonl
+~/.coherence-network/agent-room-memory/speaker-profiles.json
+~/.coherence-network/agent-room-memory/sessions/
+~/.coherence-network/agent-room-memory/latest-context.form
+```
+
 Run from the repo root:
 
 ```zsh
@@ -37,6 +46,14 @@ event, a latest JSON receipt, and a latest `.form` envelope directly. The Form
 protocol proofs live in `form/form-stdlib/satsang-guidance-event.fk`,
 `form/form-stdlib/satsang-host-boundary.fk`, and
 `form/form-stdlib/satsang-listen-route.fk`.
+
+Pressing Send also records the offered exchange in the local trusted room memory
+store. Later sends include a compact prior-context summary and speaker-profile
+summary in the guidance request. A transcript producer's `voice_id` /
+`speaker_id` becomes stable speaker continuity across sessions; when no voice id
+exists, the app falls back to the visible speaker label and records that as
+channel continuity, not verified identity. The memory proof lives in
+`form/form-stdlib/satsang-room-memory.fk`.
 
 The app boundary is intentionally small. Shared routing and sufficiency logic is
 Form-native; Swift is the current macOS host carrier for GUI, microphone, speech,

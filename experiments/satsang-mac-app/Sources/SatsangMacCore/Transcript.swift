@@ -8,6 +8,8 @@ public struct TranscriptUtterance: Codable, Equatable, Identifiable, Sendable {
     public var text: String
     public var source: String
     public var confidence: Double?
+    public var voiceID: String?
+    public var speakerProfileID: String?
 
     public init(
         id: String,
@@ -16,7 +18,9 @@ public struct TranscriptUtterance: Codable, Equatable, Identifiable, Sendable {
         detectedText: String,
         text: String? = nil,
         source: String = "local-transcript",
-        confidence: Double? = nil
+        confidence: Double? = nil,
+        voiceID: String? = nil,
+        speakerProfileID: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -25,6 +29,8 @@ public struct TranscriptUtterance: Codable, Equatable, Identifiable, Sendable {
         self.text = text ?? detectedText
         self.source = source
         self.confidence = confidence
+        self.voiceID = voiceID
+        self.speakerProfileID = speakerProfileID
     }
 
     public var wasEdited: Bool {
@@ -63,8 +69,11 @@ public enum TranscriptParser {
         let timestamp = firstString(row, keys: ["timestamp", "ts", "time", "created_at", "createdAt"])
             ?? firstNumber(row, keys: ["timestamp", "ts", "time"]).map(timestampString)
             ?? ISO8601DateFormatter().string(from: Date())
-        let speaker = firstString(row, keys: ["speaker", "speaker_id", "voice", "voice_id", "label", "name"])
+        let voiceID = firstString(row, keys: ["voice_id", "voice", "speaker_id", "speaker_fingerprint", "speakerFingerprint"])
+        let speaker = firstString(row, keys: ["speaker", "label", "name"])
+            ?? voiceID
             ?? "unknown"
+        let speakerProfileID = firstString(row, keys: ["speaker_profile_id", "speakerProfileID", "profile_id"])
         let source = firstString(row, keys: ["source", "path", "carrier"]) ?? "local-transcript"
         let confidence = firstNumber(row, keys: ["confidence", "conf", "speechiness"])
         let id = firstString(row, keys: ["id", "uuid", "turn_id"])
@@ -76,7 +85,9 @@ public enum TranscriptParser {
             speaker: speaker,
             detectedText: detected,
             source: source,
-            confidence: confidence
+            confidence: confidence,
+            voiceID: voiceID,
+            speakerProfileID: speakerProfileID
         )
     }
 

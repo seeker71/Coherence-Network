@@ -1,0 +1,60 @@
+; satsang-room-memory.fk — local trusted exchange memory for room sessions.
+;
+; The carrier may write JSON files, but the protocol boundary is Form:
+; session memory is recorded only after explicit Send, stored in the holder's
+; local room-memory surface, and fed back as later context without pretending a
+; channel label is verified biometric identity. A repeated voice_id or speaker
+; profile can carry continuity; names remain editable claims.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn srm-capture-boundary? (boundary)
+        (if (str_eq boundary "explicit-send") 1 0))
+
+    (defn srm-storage-carrier? (carrier)
+        (if (str_eq carrier "local-json-file") 1
+            (if (str_eq carrier "local-segmented-file") 1 0)))
+
+    (defn srm-voice-match-carrier? (carrier)
+        (if (str_eq carrier "voice-id-or-speaker-label") 1
+            (if (str_eq carrier "channel-label-only") 1
+                (if (str_eq carrier "voiceprint") 1 0))))
+
+    (defn srm-verified-identity? (carrier consent)
+        (if (and (str_eq carrier "voiceprint") (eq consent 1)) 1 0))
+
+    (defn srm-trust-ok? (boundary storage voice-carrier hidden feeds)
+        (if (and (eq (srm-capture-boundary? boundary) 1)
+                 (and (eq (srm-storage-carrier? storage) 1)
+                      (and (eq (srm-voice-match-carrier? voice-carrier) 1)
+                           (and (eq hidden 0) (eq feeds 1)))))
+            1 0))
+
+    (defn srm-speaker-match? (previous current boundary)
+        (if (and (str_eq previous current)
+                 (eq (srm-capture-boundary? boundary) 1))
+            1 0))
+
+    (defn srm-context-ready? (prior-sessions speaker-count hidden)
+        (if (and (gt prior-sessions 0)
+                 (and (gt speaker-count 0) (eq hidden 0)))
+            1 0))
+
+    ; Receipt layout:
+    ; (satsang-room-memory boundary storage voice-carrier hidden feeds prior speakers ready)
+    (defn srm-receipt (boundary storage voice-carrier hidden feeds prior-sessions speaker-count)
+        (list "satsang-room-memory"
+              boundary
+              storage
+              voice-carrier
+              hidden
+              feeds
+              prior-sessions
+              speaker-count
+              (srm-context-ready? prior-sessions speaker-count hidden)))
+
+    (defn srm-rec-kind    (r) (nth r 0))
+    (defn srm-rec-ready?  (r) (nth r 8))
+
+    0)

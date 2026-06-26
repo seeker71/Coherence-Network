@@ -1,0 +1,24 @@
+; preludes: form-stdlib/core.fk form-stdlib/satsang-room-memory.fk
+;
+; satsang-room-memory-band — explicit local room memory, no hidden capture.
+;
+; Verdict 255:
+;   1   explicit Send is the valid capture boundary
+;   2   hidden capture is rejected
+;   4   local JSON file is a valid storage carrier
+;   8   remote silent storage is rejected
+;   16  voice-id/speaker-label is a valid continuity carrier
+;   32  channel-only audio is not verified identity
+;   64  the same speaker profile matches only under explicit boundary
+;   128 prior sessions + speakers make later context ready
+(do
+    (let rec (srm-receipt "explicit-send" "local-json-file" "voice-id-or-speaker-label" 0 1 2 1))
+    (let c0 (if (eq (srm-capture-boundary? "explicit-send") 1) 1 0))
+    (let c1 (if (eq (srm-trust-ok? "explicit-send" "local-json-file" "voice-id-or-speaker-label" 1 1) 0) 2 0))
+    (let c2 (if (eq (srm-storage-carrier? "local-json-file") 1) 4 0))
+    (let c3 (if (eq (srm-storage-carrier? "remote-silent-store") 0) 8 0))
+    (let c4 (if (eq (srm-voice-match-carrier? "voice-id-or-speaker-label") 1) 16 0))
+    (let c5 (if (eq (srm-verified-identity? "channel-label-only" 1) 0) 32 0))
+    (let c6 (if (eq (srm-speaker-match? "speaker-a" "speaker-a" "explicit-send") 1) 64 0))
+    (let c7 (if (eq (srm-rec-ready? rec) 1) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
