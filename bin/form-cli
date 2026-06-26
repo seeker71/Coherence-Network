@@ -152,6 +152,7 @@ PY
     printf '%s\n' "ask-staged-model-call-receipt:$receipt"
     printf '%s\n' "inference-lane:form-cli-grounded-decoded-answer"
     printf '%s\n' "prose-generation:decoded-grounded-answer"
+    printf '%s\n' "full-real-llama-gguf-generation:pending"
   elif [ "$prose_state" = "pending" ]; then
     if ! printf '%s\n' "$enriched" | grep -q '^missing:decoded-prose-answer-binding'; then
       enriched="$(printf '%s\n' "$enriched" \

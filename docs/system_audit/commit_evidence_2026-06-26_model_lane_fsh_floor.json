@@ -1,0 +1,163 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/nature-trust-core-20260626",
+  "commit_scope": "Move the form-cli model-lane receipt decision floor into a Form-shell cell and make full real Llama GGUF token generation a witnessed pending floor.",
+  "files_owned": [
+    "bin/form-cli",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "docs/system_audit/commit_evidence_2026-06-26_model_lane_fsh_floor.json",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/model-lane-receipt-shell.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/model-lane-receipt-shell-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form-cli ask \"Can we move the native thought receipt bash carrier into fsh, and make full-real-llama-gguf-generation pending a witnessed floor observation? What existing Form surfaces should carry it?\" -> native RAG miss, local model-call receipt observed, full-real-llama-gguf-generation:pending",
+      "make prompt-guide -> pass; linked worktree clean, branch=codex/nature-trust-core-20260626",
+      "make wellness -> pass; no blocking drift for this task",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk -> 16383; fourth arm 1 ok, 0 divergent",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/model-lane-receipt-shell.fk form-stdlib/tests/model-lane-receipt-shell-band.fk -> 255; fourth arm 1 ok, 0 divergent",
+      "scripts/regen_form_cli_bootstrap.sh -> pass; form-cli-emitted.c refreshed, stamp=baa66e50475c5be9",
+      "scripts/regen_standard_lane_binaries.sh -> pass; form-cli-darwin-arm64 refreshed, stamp=baa66e50475c5be9",
+      "bin/form-cli synthesis-status -> observed decoded-prose-answer-binding and full-real-llama-gguf-generation:pending",
+      "scripts/validate_form_cli_model_lane_gap_receipts.sh .cache/body-test-receipts/current-model-lane-gap-receipt.json -> PASS; model_lane_receipt_shell_floor:pass; full_real_llama_gguf_generation:pending",
+      "scripts/validate_form_cli_local_receipts.sh substrate -> PASS; local grounded ask and grounded decoded-answer receipts are honest",
+      "git diff --check -> pass"
+    ],
+    "results": [
+      "form-cli synthesis/model status now reports decoded-prose-answer-binding as observed and full-real-llama-gguf-token-generation as the missing row.",
+      "model-lane-receipt-shell.fk lowers the receipt floor into an fsh cell: host commands are passthrough, while the score verdict is native Form-shell test/echo.",
+      "The model-lane receipt script now runs the fsh floor band before writing a pass verdict.",
+      "The runtime form-cli bootstrap was refreshed so the installed binary matches the proved Form source."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks pending after push."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No public deploy surface changed; this is local form-cli/bootstrap/Form receipt floor work."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR CI has not been observed for this slice yet."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell",
+    "grounded-decoded-answer-binding"
+  ],
+  "task_ids": [
+    "task-2026-06-26-model-lane-fsh-floor"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraint: fsh over bash",
+        "constraint: pending with witnessed observation"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Current ask-staged receipt: /Users/ursmuff/.coherence-network/ask-staged-model-call/current-receipt.json",
+    "Current model-lane receipt: .cache/body-test-receipts/current-model-lane-gap-receipt.json",
+    "Form fsh floor: form/form-stdlib/model-lane-receipt-shell.fk",
+    "Four-way proof: form/form-stdlib/tests/model-lane-receipt-shell-band.fk",
+    "Honest non-claim: full real Llama GGUF tokenizer -> tensor bytes -> autoregressive token generation remains pending."
+  ],
+  "change_files": [
+    "bin/form-cli",
+    "docs/coherence-substrate/form-first-reasoning.form",
+    "docs/system_audit/commit_evidence_2026-06-26_model_lane_fsh_floor.json",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/model-lane-receipt-shell.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/model-lane-receipt-shell-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-cli model status and model-lane receipts report decoded-prose-answer-binding as observed while preserving full-real-llama-gguf-token-generation as the witnessed pending blocker.",
+    "public_endpoints": [
+      "local:bin/form-cli synthesis-status",
+      "local:bin/form-cli ask <rag-miss-query>",
+      "local:scripts/validate_form_cli_model_lane_gap_receipts.sh",
+      "local:scripts/validate_form_cli_local_receipts.sh"
+    ],
+    "test_flows": [
+      "form-cli synthesis-status -> observed decoded-prose-answer-binding + full-real-llama-gguf-generation:pending",
+      "form-cli ask RAG-miss -> ask-staged fkwu+Metal model-call witness -> decoded grounded answer receipt",
+      "model-lane receipt script -> tokenizer/GGUF/autoregressive/Metal witnesses -> model-lane fsh floor -> pending full real token-generation row",
+      "local receipts wrapper -> grounded ask + model status + model-lane gap receipt + GGUF/Metal witnesses"
+    ]
+  },
+  "body_trace": {
+    "ask_trace": "bin/form-cli ask \"ask staged model call probe\"",
+    "receipt_verdict": "observed-grounded-decoded-answer-full-real-llama-pending",
+    "observed": [
+      "fkwu RAG miss",
+      "fkwu+Metal model-cell witness",
+      "decoded-prose-answer-binding",
+      "tokenizer carrier bands",
+      "full real GGUF tensor map",
+      "Form autoregressive loop band",
+      "Metal GQA decode loop witness",
+      "model-lane receipt fsh floor"
+    ],
+    "missing": [
+      "full-real-llama-gguf-token-generation"
+    ]
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "native/local proof commands produced the fkwu model-cell receipt, Form validate.sh bands with fkwu fourth-arm evidence, GGUF map witness, Metal runtime observations, and the fsh receipt-floor proof",
+    "rented_oracle_share": "the orchestration, patch design, evidence wording, and summary were produced by the rented frontier model after form-cli ask returned no grounded documentation hit for this exact integration",
+    "trust_matrix": {
+      "path": "native-first miss -> rented implementation orchestration -> native/local receipt proof",
+      "grounded": "receipt artifacts and command outputs are grounded; initial form-cli ask was not grounded in RAG",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for witnessed decoded-answer floor, not sufficient for full real Llama GGUF token generation",
+      "observed": false
+    }
+  }
+}

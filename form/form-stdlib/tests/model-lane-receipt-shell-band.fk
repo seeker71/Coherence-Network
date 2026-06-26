@@ -1,0 +1,25 @@
+; model-lane-receipt-shell-band.fk — proves the model-lane receipt floor is an
+; fsh cell and that the witnessed pending generation state is the accepted floor.
+; Verdict = 255.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/model-lane-receipt-shell.fk
+
+(do
+    (let status (fc-respond "synthesis-status"))
+    (let receipt "{\"receipt_kind\": \"form-cli-ask-staged-model-call-receipt\", \"ask_staged_model_call\": {\"observed\": true, \"model_lane\": \"fkwu-metal-model-cell\", \"model_cell_sha256_verified_in_form\": true, \"metal_device_observed\": true}, \"prose_generation\": {\"decoded_answer_observed\": true, \"full_real_llama_gguf_generation\": \"pending\"}}")
+    (let cell (mlrs-cell))
+    (let plan (mlrs-plan))
+
+    (let c1 (if (eq (mlrs-status-score status) 127) 1 0))
+    (let c2 (if (eq (mlrs-receipt-score receipt) 127) 2 0))
+    (let c3 (if (eq (mlrs-floor-score status receipt) 127) 4 0))
+    (let c4 (if (str_eq (mlrs-verdict "127") "PASS\n") 8 0))
+    (let c5 (if (str_eq (mlrs-verdict "63") "FAIL\n") 16 0))
+    (let c6 (if (str_eq (sh-cell-domain cell) "fsh") 32 0))
+    (let c7 (if (and (mlrs-plan-has-kind-name? plan "native" "test")
+                     (mlrs-plan-has-kind-name? plan "native" "echo")) 64 0))
+    (let c8 (if (and (mlrs-plan-has-kind-name? plan "passthrough" "form-cli")
+                     (and (mlrs-plan-has-kind-name? plan "passthrough" "model-gap-receipt")
+                          (mlrs-plan-has-redir? plan "__redir__"))) 128 0))
+
+    (sum (list c1 c2 c3 c4 c5 c6 c7 c8)))
