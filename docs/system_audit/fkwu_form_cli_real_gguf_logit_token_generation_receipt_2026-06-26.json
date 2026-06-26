@@ -1,0 +1,47 @@
+{
+  "receipt_kind": "fkwu-form-cli-real-gguf-logit-token-generation-receipt",
+  "trace_id": "fkwu-real-gguf-logit-token-generation-20260626T224903Z",
+  "thread_branch": "codex/full-real-llama-generation-d617",
+  "git_commit": "9ea007c6aca5f4d526399b88552ca9a104833dc2",
+  "verdict": "pass",
+  "observed": {
+    "real_gguf_logit_token_generation": true,
+    "real_logit_generation_scope": "candidate-token-real-gguf-token-embedding-dot",
+    "real_token_embedding_rows": true,
+    "real_q6k_embedding_prefix_dot_in_form": true,
+    "real_logits": true,
+    "full_model_logits": false,
+    "full_vocabulary_logits": false,
+    "accelerator_buffers": false,
+    "full_real_llama_gguf_generation": false,
+    "tokenizer_token_count": 128256,
+    "embedding_dim": 1024,
+    "token_embedding_row_bytes": 840,
+    "prompt_token_id": 9906,
+    "candidate_count": 4,
+    "candidate_pass_count": 4,
+    "argmax_token_id": 9399,
+    "argmax_candidate_index": 1,
+    "selected_logit_micro": 34030,
+    "decoded_token_text": "answer",
+    "real_logit_generation_sha256": "6379162b97129fc07ac3e63c8df59acbfb630d5664d6bfafc51d3bef4dbfbb66",
+    "real_logit_generation_expected_sha256": "6379162b97129fc07ac3e63c8df59acbfb630d5664d6bfafc51d3bef4dbfbb66"
+  },
+  "runtime_dependency_claim": {
+    "scope": "child fkwu form-cli runtime, not this shell harness",
+    "runtime_path_sanitized": true,
+    "http_or_ollama": "absent",
+    "denied_go_rust_python_shell_clang_visible_on_path": 0
+  },
+  "artifacts": {
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-real-gguf-logit-token-generation-20260626T224903Z/artifact/form-cli-real-gguf-logit-token-generation",
+    "runtime_out": "docs/system_audit/fkwu_form_cli_real_gguf_logit_token_generation_receipt_2026-06-26_trace/runtime.out",
+    "build_out": "docs/system_audit/fkwu_form_cli_real_gguf_logit_token_generation_receipt_2026-06-26_trace/build.out",
+    "gguf_weight_map_out": "docs/system_audit/fkwu_form_cli_real_gguf_logit_token_generation_receipt_2026-06-26_trace/gguf-weight-map.out",
+    "manifest_trace": "docs/system_audit/fkwu_form_cli_real_gguf_logit_token_generation_receipt_2026-06-26_trace/gguf-real-logit-token-manifest.txt",
+    "real_logit_source": "docs/system_audit/fkwu_form_cli_real_gguf_logit_token_generation_receipt_2026-06-26_trace/real-logit-token-source.json",
+    "token_hex": "docs/system_audit/fkwu_form_cli_real_gguf_logit_token_generation_receipt_2026-06-26_trace/real-logit-token.hex"
+  },
+  "trace_sha256": "4fa4223d678a0bd621166dc81083471cc348ba7cd941612ec99189fde23ec6a6",
+  "boundary": "This proves one token selected by Form logits over a native-safe 1024-dimension prefix of real GGUF token_embd.weight Q6_K candidate rows and decoded from real tokenizer bytes. It does not prove the full 3072-dimension embedding row, a full transformer hidden-state projection, full-vocabulary logits, complete accelerator tensor buffers, or full real Llama GGUF autoregressive generation."
+}

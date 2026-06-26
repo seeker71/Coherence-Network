@@ -65,11 +65,15 @@ if [[ -n "$GGUF_PATH" ]]; then
         python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$OUT_DIR/gguf_weight_map.json" "$GGUF_PATH"
     run_step gguf_semantic_token_generation "fkwu form-cli real GGUF semantic-token generation receipt" \
         "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$OUT_DIR/gguf_semantic_token_generation.json" "$GGUF_PATH"
+    run_step gguf_real_logit_token_generation "fkwu form-cli real GGUF logit-token generation receipt" \
+        "$ROOT/scripts/fkwu_form_cli_real_gguf_logit_token_generation_receipt.sh" "$OUT_DIR/gguf_real_logit_token_generation.json" "$GGUF_PATH"
 else
     run_step full_gguf_weight_map "full real GGUF metadata + tensor weight map receipt" \
         python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$OUT_DIR/gguf_weight_map.json"
     run_step gguf_semantic_token_generation "fkwu form-cli real GGUF semantic-token generation receipt" \
         "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$OUT_DIR/gguf_semantic_token_generation.json"
+    run_step gguf_real_logit_token_generation "fkwu form-cli real GGUF logit-token generation receipt" \
+        "$ROOT/scripts/fkwu_form_cli_real_gguf_logit_token_generation_receipt.sh" "$OUT_DIR/gguf_real_logit_token_generation.json"
 fi
 
 run_step autoregressive_loop_band "Form autoregressive generation loop band" \
@@ -131,6 +135,11 @@ semantic_path = out_dir / "gguf_semantic_token_generation.json"
 if semantic_path.exists():
     semantic_json = json.loads(semantic_path.read_text(encoding="utf-8"))
 semantic_token_generation_ok = rc("gguf_semantic_token_generation") == 0 and semantic_json.get("verdict") == "pass"
+real_logit_json = {}
+real_logit_path = out_dir / "gguf_real_logit_token_generation.json"
+if real_logit_path.exists():
+    real_logit_json = json.loads(real_logit_path.read_text(encoding="utf-8"))
+real_logit_token_generation_ok = rc("gguf_real_logit_token_generation") == 0 and real_logit_json.get("verdict") == "pass"
 autoregressive_band_ok = rc("autoregressive_loop_band") == 0
 metal_rc = rc("metal_gqa_autoregressive_loop")
 metal_observed = metal_rc == 0
@@ -138,7 +147,7 @@ metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
 status_closes_old_missing = (
-    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
+    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,real-gguf-logit-token-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
     and "missing:full-real-llama-gguf-token-generation" in model_status
     and "prose-generation:decoded-grounded-answer" in model_status
 )
@@ -158,6 +167,7 @@ for name, ok in [
     ("llama3_pretokenizer", llama3_pretokenizer_ok),
     ("full_gguf_weight_map", full_gguf_ok),
     ("gguf_semantic_token_generation", semantic_token_generation_ok),
+    ("gguf_real_logit_token_generation", real_logit_token_generation_ok),
     ("autoregressive_loop_band", autoregressive_band_ok),
 ]:
     if not ok:
@@ -174,7 +184,7 @@ receipt = {
     "trace_id": f"form-cli-model-lane-gaps-{receipt_path.parent.name}",
     "git_commit": git_value(["git", "rev-parse", "--short", "HEAD"], "unknown"),
     "git_branch": git_value(["git", "rev-parse", "--abbrev-ref", "HEAD"], "unknown"),
-    "verdict": "observed-grounded-decoded-answer-full-real-llama-pending" if not hard_failures else "fail",
+    "verdict": "observed-real-logit-token-grounded-decoded-answer-full-real-llama-pending" if not hard_failures else "fail",
     "hard_failures": hard_failures,
     "gap_rows": {
         "tokenizer_carrier": {
@@ -183,9 +193,10 @@ receipt = {
             "llama3_pretokenizer_four_way": llama3_pretokenizer_ok,
             "full_llama3_vocab_merge_table_observed": bool(((gguf_json.get("metadata") or {}).get("tokenizer_array_counts") or {}).get("tokenizer.ggml.tokens")),
             "real_gguf_semantic_token_generation": semantic_token_generation_ok,
+            "real_gguf_logit_token_generation": real_logit_token_generation_ok,
             "grounded_decoded_answer_binding": ask_staged_model_call_observed,
             "full_real_llama_token_generation_binding": False,
-            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; one tokenizer string row is selected by Form argmax and decoded by fkwu, and ask-staged returns a grounded decoded answer; full real Llama GGUF model-token generation remains pending.",
+            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; one tokenizer string row is selected by Form argmax and decoded by fkwu; a native-safe 1024-dimension prefix of real token_embd Q6_K rows produces candidate logits in Form; ask-staged returns a grounded decoded answer; full real Llama GGUF model-token generation remains pending.",
         },
         "full_gguf_weight_map": {
             "verdict": "pass" if full_gguf_ok else "fail",
@@ -202,9 +213,10 @@ receipt = {
             "metal_gqa_decode_loop_observed": metal_observed,
             "metal_gqa_decode_loop_skipped": metal_skipped,
             "real_gguf_semantic_token_generation": semantic_token_generation_ok,
+            "real_gguf_logit_token_generation": real_logit_token_generation_ok,
             "grounded_decoded_answer_binding": ask_staged_model_call_observed,
             "full_real_llama_token_generation_binding": False,
-            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; a real GGUF tokenizer token is decoded by fkwu after Form argmax, while full real GGUF autoregressive model-token generation remains pending.",
+            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; a real GGUF tokenizer token is decoded by fkwu after Form argmax, and candidate token logits can be computed from a native-safe 1024-dimension prefix of real token_embd Q6_K rows in Form, while full real GGUF autoregressive model-token generation remains pending.",
         },
         "ask_staged_model_call": {
             "verdict": "pass" if ask_staged_model_call_observed else "fail",
@@ -224,7 +236,8 @@ receipt = {
             "verdict": "pending",
             "observed_grounded_answer": ask_staged_model_call_observed,
             "observed_semantic_token_generation": semantic_token_generation_ok,
-            "boundary": "The remaining gap is producing answer text from full real Llama GGUF model logits over complete tensor payloads and the full vocabulary in one native answer path.",
+            "observed_real_logit_token_generation": real_logit_token_generation_ok,
+            "boundary": "The remaining gap is producing answer text from a full multi-layer real Llama GGUF forward pass with final logits over the full vocabulary in one native answer path; the current real-logit receipt is a 1024-dimension token-embedding prefix proof.",
         },
     },
     "artifacts": {
@@ -233,6 +246,7 @@ receipt = {
         "ask_staged_probe": str(out_dir / "ask_staged_probe.out"),
         "gguf_weight_map": str(gguf_path),
         "gguf_semantic_token_generation": str(semantic_path),
+        "gguf_real_logit_token_generation": str(real_logit_path),
     },
 }
 
@@ -252,7 +266,7 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: grounded decoded answer is bound; full real Llama GGUF token generation remains the honest blocker."
+    echo "  PASS: real GGUF logit-token generation and grounded decoded answer are bound; full real Llama GGUF token generation remains the honest blocker."
 else
     echo "  FAIL: one or more model-lane gap receipts did not hold."
 fi
