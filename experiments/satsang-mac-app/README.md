@@ -52,7 +52,9 @@ store. Later sends include a compact prior-context summary and speaker-profile
 summary in the guidance request. A transcript producer's `voice_id` /
 `speaker_id` becomes stable speaker continuity across sessions; when no voice id
 exists, the app falls back to the visible speaker label and records that as
-channel continuity, not verified identity. The memory proof lives in
+channel continuity, not verified identity. The app does not open a separate
+macOS biometric speaker-identification lane; any future acoustic continuity
+sidecar must share the already-open listening stream. The memory proof lives in
 `form/form-stdlib/satsang-room-memory.fk`.
 
 The app boundary is intentionally small. Shared routing and sufficiency logic is

@@ -13,7 +13,7 @@ public struct TrustedRoomMemoryTrustReceipt: Codable, Equatable, Sendable {
         captureBoundary: String = "explicit-send",
         storageCarrier: String = "local-json-file",
         retrievalScope: String = "same-holder-local-room-memory",
-        voiceMatchCarrier: String = "voice-id-or-speaker-label",
+        voiceMatchCarrier: String = "transcript-voice-id-or-speaker-label",
         hiddenCapture: Bool = false,
         canFeedLaterContext: Bool = true
     ) {
@@ -209,7 +209,7 @@ public final class TrustedRoomMemoryStore: @unchecked Sendable {
         let now = ISO8601DateFormatter().string(from: Date())
         let receipt = TrustedRoomMemoryTrustReceipt(
             voiceMatchCarrier: profiled.contains { ($0.voiceID ?? "").isEmpty == false }
-                ? "voice-id-or-speaker-label"
+                ? "transcript-voice-id-or-speaker-label"
                 : "channel-label-only"
         )
         var speakers = try loadSpeakers()

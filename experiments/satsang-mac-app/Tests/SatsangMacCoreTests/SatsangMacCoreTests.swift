@@ -181,6 +181,12 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: result.sessionURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: result.indexURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: result.speakersURL.path))
+        let recordedSession = try JSONDecoder().decode(
+            TrustedRoomMemorySessionRecord.self,
+            from: Data(contentsOf: result.sessionURL)
+        )
+        XCTAssertEqual(recordedSession.trustReceipt.voiceMatchCarrier, "transcript-voice-id-or-speaker-label")
+        XCTAssertNotEqual(recordedSession.trustReceipt.voiceMatchCarrier, "macos-biometric-voice-id")
 
         let context = try store.context()
         XCTAssertEqual(context.priorSessionCount, 1)

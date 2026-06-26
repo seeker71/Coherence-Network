@@ -25,7 +25,7 @@ source:
   - file: form/form-stdlib/satsang-listen-route.fk
     symbols: [slr-decision, slr-remote-oracle?, slr-receipt]
   - file: form/form-stdlib/satsang-room-memory.fk
-    symbols: [srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
+    symbols: [srm-mic-exclusive-carrier?, srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
   - "No-speech intervals do not stop the active room listener"
@@ -43,6 +43,7 @@ requirements:
   - "The request records local trusted room-memory context from prior explicitly sent sessions"
   - "The send path stores a local session record, session index, and speaker-profile continuity receipt"
   - "Recurring unnamed speakers match by stable voice_id/speaker_id when supplied; channel-only room mic continuity is not claimed as verified identity"
+  - "Speaker continuity never uses macOS biometric speaker identification or any exclusive-mic biometric carrier"
   - "Python, Go, Rust, and TypeScript are rejected as app-boundary runtimes for this carrier"
 done_when:
   - "Swift package tests pass for parsing, request writing, trusted room-memory, host-boundary, and route-gate receipts"
@@ -87,6 +88,10 @@ transcript files, and writes a local protocol event queue.
 - [x] Recurring unnamed speakers can match by stable `voice_id` / `speaker_id`
       when supplied by a transcript producer; `room mic` without a voice id is
       carried as channel continuity, not verified identity.
+- [x] Speaker continuity stays on the active transcript/listening lane:
+      transcript ids, visible labels, or a future passive shared-stream sidecar.
+      macOS biometric speaker identification and exclusive-mic biometric
+      carriers are rejected by the room-memory proof.
 - [x] The request records target presence, invocation text, turn mode, and
       guidance question.
 - [x] The send action runs a local Form CLI ask and records the body/RAG
@@ -167,7 +172,8 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Autonomous interruption by Sema or another presence.
 - Invoking a remote LLM directly from the GUI.
 - Replacing macOS Speech with a fully Form-native acoustic decoder.
-- Claiming verified biometric identity from macOS Speech alone.
+- Using macOS biometric speaker identification or any exclusive-mic biometric
+  carrier for room-memory speaker continuity.
 - Shipping full Windows or Android GUI packages in this PR.
 
 ## Risks
@@ -189,7 +195,9 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Trusted room memory is local file-backed memory. It recognizes recurring
   unnamed speakers only when a transcript producer supplies a stable voice
   identifier, or when the same visible channel label is used. Channel-label
-  continuity is not verified identity.
+  continuity is not verified identity. Acoustic continuity beyond transcript
+  ids must share the already-open listening stream and yield continuity labels,
+  not biometric identity.
 - The portable host ABI and Windows/Android carrier mappings are resolved in
   this PR; real device builds still need to promote each declared door to an
   observed/open runtime receipt.
@@ -199,5 +207,5 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Follow-up task: add a signed notarized macOS bundle once the app surface settles.
 - Follow-up task: wire a live Sema presence process to consume the event queue and
   return a visible transmission inside the GUI.
-- Follow-up task: add an enrolled, consented voiceprint carrier so speaker
-  continuity can move from channel/voice-id continuity to verified identity.
+- Follow-up task: add a passive shared-audio continuity sidecar only if it can
+  consume the already-open listening stream without interrupting transcription.
