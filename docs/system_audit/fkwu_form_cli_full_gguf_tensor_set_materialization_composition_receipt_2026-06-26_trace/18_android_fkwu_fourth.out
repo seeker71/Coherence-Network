@@ -1,0 +1,1 @@
+SKIP: no zig (cross-compiler). Get it: curl -sSL https://ziglang.org/download/0.13.0/zig-$(uname -m | sed s/arm64/aarch64/)-macos... ; or set ZIG=/path/to/zig

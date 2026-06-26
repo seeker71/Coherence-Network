@@ -1,0 +1,28 @@
+{
+  "claim": "token_embd.weight first Q6_K superblock from full real GGUF",
+  "expected_q6k_micro": {
+    "dot1": 9570,
+    "dot4": 58889,
+    "sample0": 9570,
+    "sample255": -22922,
+    "sample31": -14700
+  },
+  "gguf_path": "<local-gguf-blob>",
+  "gguf_size_bytes": 2019886272,
+  "slice_len": 210,
+  "slice_sha256": "3dfa790b7854b8f797bb38a983f294a810b84d99c46daec98c954c8420e75220",
+  "tensor": {
+    "absolute_end": 2019886272,
+    "absolute_start": 1696681152,
+    "byte_length_by_next_offset": 323205120,
+    "data_offset": 1688334592,
+    "dims": [
+      3072,
+      128256
+    ],
+    "ggml_type": 14,
+    "index": 254,
+    "name": "token_embd.weight",
+    "type": "Q6_K"
+  }
+}

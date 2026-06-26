@@ -234,7 +234,7 @@ jq -n \
             max_delta: $max_delta
         },
         open_bridges: [
-            "full GGUF tensor map into this content-addressed model-cell path",
+            "complete full GGUF tensor payload staging into this content-addressed model-cell path; required tensor-set byte windows are witnessed separately",
             "full-width Llama 3.2 tokenizer -> 28-layer GQA decode -> logits/argmax -> decoded token without Ollama",
             "Android Vulkan and Windows DirectML/D3D12 generic carrier receipts matching the macOS Metal generic carrier"
         ]
