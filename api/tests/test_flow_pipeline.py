@@ -158,7 +158,7 @@ class TestCodeReviewGate:
         assert len(created) == 1
         assert created[0]["task_type"] == "deploy"
         direction = created[0]["direction"]
-        assert "python3 scripts/land_current_branch.py --merge --settle-deploy" in direction
+        assert "form-cli land --merge --settle-deploy" in direction
         assert "./scripts/settle_public_deploy.sh" in direction
         assert "gh pr merge" not in direction
         assert "ssh -i" not in direction

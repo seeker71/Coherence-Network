@@ -569,7 +569,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
         direction = (
             f"Deploy '{idea_name}' ({idea_id}) to production.\n\n"
             f"Steps:\n"
-            f"1. From the feature worktree, run: python3 scripts/land_current_branch.py --merge --settle-deploy\n"
+            f"1. From the feature worktree, run: form-cli land --merge --settle-deploy\n"
             f"2. If you are not in the feature worktree, use the API merge fallback in "
             f"docs/WORKTREE-QUICKSTART.md, then run: ./scripts/settle_public_deploy.sh "
             f"https://api.coherencycoin.com https://coherencycoin.com\n"
