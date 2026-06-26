@@ -1,0 +1,83 @@
+; room-now.fk — the present sky as the energetic context of a room: here + now.
+;
+; A natal chart casts a person from their birth-moment (self-identity.fk / chart-cast.fk).
+; A ROOM has the same shape at a different scale: the energy present in a place is the sky
+; standing over it right now. This recipe casts that — the transiting Sun, Moon, and nodes
+; (the planets the body computes natively today), AND the genuinely place-dependent signature:
+; the ASCENDANT, the ecliptic degree rising on the eastern horizon at this latitude/longitude
+; and this instant. The luminaries' signs are the same for the whole Earth at a moment; the
+; ascendant is what makes it THIS room — two rooms a timezone apart have different gates rising
+; under the same Sun.
+;
+; ONE ENGINE, NOT A PARALLEL PATH. The placements ride the same ephemeris -raw functions the
+; natal cast uses (sun/moon/node longitude over a continuous day-number), so a room reading and
+; a birth reading are the same computation at different moments. Time enters as `n` = days since
+; J2000 (fractional); place enters as (lon-east, lat) in degrees. The host-clock reader that
+; turns "now" into `n` lives in room-now-live.fk (host-io lane) so THIS core stays pure and
+; crosses four-way; positions stay empirical, the reading stays human.
+;
+;   (sky-sun-lon n) (sky-moon-lon n) (sky-rahu-lon n) (sky-ketu-lon n)   transiting longitudes
+;   (sky-phase n)                                                        lunar phase octant (0 new..4 full)
+;   (ascendant-lon n lon-east lat)                                       the rising degree — the place signature
+;   (room-sky-at n lon-east lat)                                         the room's present energy, composed
+;
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk
+
+(do
+    ;; --- transiting longitudes from a continuous day-number (same -raw as the cast) ---
+    (defn sky-sun-lon  (n) (fnorm360 (sun-longitude-raw n)))
+    (defn sky-moon-lon (n) (fnorm360 (moon-longitude-raw n)))
+    (defn sky-rahu-lon (n) (fnorm360 (node-omega-raw n)))
+    (defn sky-ketu-lon (n) (fnorm360 (add (node-omega-raw n) 180.0)))
+
+    ;; --- lunar phase octant at a continuous moment (mirrors moon-phase-octant) ---
+    (defn sky-elongation (n) (fnorm360 (sub (moon-longitude-raw n) (sun-longitude-raw n))))
+    (defn sky-phase (n) (floor (div (mod (add (sky-elongation n) 22.0) 360.0) 45.0)))
+
+    ;; --- the ascendant: the place signature ----------------------------------------
+    ;; obliquity of the ecliptic at J2000 (deg). rad2deg / ftan are the only helpers
+    ;; not already in the ephemeris chain; deg2rad rides in from ephemeris-sun.
+    (defn obliquity-j2000 () 23.4392911)
+    (defn rad2deg (r) (mul r 57.29577951308232))
+    (defn ftan (x) (div (fsin x) (fcos x)))
+
+    ;; Greenwich mean sidereal time (deg) from days-since-J2000, and the local RAMC
+    ;; (right ascension of the meridian) by adding the observer's east longitude.
+    (defn gmst-deg (n) (fnorm360 (add 280.46061837 (mul 360.98564736629 n))))
+    (defn ramc-deg (n lon-east) (fnorm360 (add (gmst-deg n) lon-east)))
+
+    ;; the rising ecliptic longitude (standard ascendant formula via atan2) — the degree
+    ;; of the zodiac on the eastern horizon at this place and moment, normalized to [0,360).
+    (defn ascendant-lon (n lon-east lat)
+        (do
+            (let ramc (deg2rad (ramc-deg n lon-east)))
+            (let eps  (deg2rad (obliquity-j2000)))
+            (let phi  (deg2rad lat))
+            (let yy (fcos ramc))
+            (let xx (mul -1.0 (add (mul (fsin ramc) (fcos eps))
+                                   (mul (ftan phi) (fsin eps)))))
+            (fnorm360 (rad2deg (fatan2 yy xx)))))
+    (defn ascendant-sign (n lon-east lat) (tropical-sign-of (ascendant-lon n lon-east lat)))
+    (defn ascendant-gate (n lon-east lat) (gate-at-longitude (ascendant-lon n lon-east lat)))
+
+    ;; --- the room's present energy, composed (here + now) --------------------------
+    ;; The ascendant is the place's own gate (the room signature); the luminaries and
+    ;; nodes are the shared sky. Gate NUMBERS are the empirical placement; their glosses
+    ;; stand as honest absence until the hd/iching channel seeds them.
+    (defn room-sky-at (n lon-east lat)
+        (do
+            (let asc (ascendant-lon n lon-east lat))
+            (list
+                (list "asc-sign"  (tropical-sign-of asc))
+                (list "asc-gate"  (gate-at-longitude asc))
+                (list "sun-sign"  (tropical-sign-of (sky-sun-lon n)))
+                (list "sun-gate"  (gate-at-longitude (sky-sun-lon n)))
+                (list "moon-sign" (tropical-sign-of (sky-moon-lon n)))
+                (list "moon-gate" (gate-at-longitude (sky-moon-lon n)))
+                (list "rahu-gate" (gate-at-longitude (sky-rahu-lon n)))
+                (list "ketu-gate" (gate-at-longitude (sky-ketu-lon n)))
+                (list "phase"     (sky-phase n)))))
+
+    (defn room-now-teaching () "lc-cross-modal-unity")
+
+    0)
