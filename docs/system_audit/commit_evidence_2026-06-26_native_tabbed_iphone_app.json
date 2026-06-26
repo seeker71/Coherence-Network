@@ -1,0 +1,145 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/native-tabbed-iphone-app-20260626",
+  "commit_scope": "Promote the satsang guidance carrier from a Mac-only single-pane app into a shared tabbed native SwiftUI body with macOS and iPhone entry points, iPhone/iOS host-resource carrier declarations, and updated Form proof for the four-platform host boundary.",
+  "files_owned": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_native_tabbed_iphone_app.json",
+    "experiments/satsang-mac-app/Package.swift",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidancePhone/SatsangGuidancePhoneApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift",
+    "experiments/satsang-mac-app/Support/SatsangGuidancePhone/Info.plist",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-host-boundary.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "form-cli ask \"satsang native app single tabbed modes iPhone iOS host carrier shared Form body mac windows android\"",
+      "swift test --package-path experiments/satsang-mac-app",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone",
+      "scripts/build_satsang_mac_app.sh",
+      "xcodebuild -list",
+      "xcodebuild -scheme SatsangGuidancePhone -destination 'generic/platform=iOS' -derivedDataPath .build/xcode-derived build",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness"
+    ],
+    "fourth_arm": "satsang-guidance-event-band.fk -> 255, satsang-host-boundary-band.fk -> 1048575, satsang-listen-route-band.fk -> 255, satsang-room-memory-band.fk -> 255; each output included 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '0 divergent'.",
+    "summary": "Startup gate passed on a fresh worktree. form-cli ask used the native route but had no grounded/sufficient local RAG hit for this exact tabbed iPhone carrier shape, then observed the fkwu+Metal model-cell witness. Swift tests passed with 12 XCTest cases, including the single tabbed mode receipt and the macOS/Windows/Android/iOS carrier matrix. Both Swift package app products built, and scripts/build_satsang_mac_app.sh produced the packaged macOS app. Xcode lists the SatsangGuidancePhone scheme, but the generic iOS build is blocked on this host because iOS 26.2 platform support is not installed; device signing/archive remains outside this source patch."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy yet; this is a local native app carrier/source change awaiting PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local source and Form proof passed; CI, PR checks, and signed iPhone/device archive are pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "satsang-mac-guidance-app"
+  ],
+  "task_ids": [
+    "native-tabbed-iphone-app-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "trust-boundary"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "form-proof",
+        "local-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidancePhone/SatsangGuidancePhoneApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "form/form-stdlib/satsang-host-boundary.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_native_tabbed_iphone_app.json",
+    "experiments/satsang-mac-app/Package.swift",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidancePhone/SatsangGuidancePhoneApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift",
+    "experiments/satsang-mac-app/Support/SatsangGuidancePhone/Info.plist",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-host-boundary.fk",
+    "form/form-stdlib/tests/satsang-host-boundary-band.fk",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "The native Apple app now has one shared tabbed SwiftUI body. macOS launches SatsangGuidance; iPhone launches SatsangGuidancePhone. The shared Room tab keeps live capture primary and Speech as the side channel, while the Resources tab exposes the four-platform host carrier receipt.",
+    "expected_behavior_delta": "The previous Mac-only single-window content view is now a shared tabbed app shell. The host-boundary receipt now includes iPhone/iOS with AVFoundation, Speech, app-sandbox file carriers, and an embedded Form runtime adapter for the process protocol.",
+    "public_endpoints": [
+      "n/a-local-native-app"
+    ],
+    "test_flows": [
+      "swift test --package-path experiments/satsang-mac-app -> 12 tests passed",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone -> product built",
+      "scripts/build_satsang_mac_app.sh -> experiments/satsang-mac-app/dist/Satsang Guidance.app",
+      "xcodebuild -list -> schemes include SatsangGuidancePhone",
+      "xcodebuild -scheme SatsangGuidancePhone -destination 'generic/platform=iOS' -> blocked because iOS 26.2 platform support is not installed",
+      "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-host-boundary-band.fk -> 1048575 four-way",
+      "cd form && ./validate.sh ... satsang-listen-route-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-room-memory-band.fk -> 255 four-way",
+      "make wellness -> passed; source maps and edited durable docs aligned"
+    ]
+  }
+}

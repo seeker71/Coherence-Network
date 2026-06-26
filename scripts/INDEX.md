@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 379
+**Total files**: 380
 
 | File | Purpose |
 |---|---|
@@ -349,6 +349,7 @@
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |
+| [validate_form_cli_full_real_llama_generation_claim.sh](validate_form_cli_full_real_llama_generation_claim.sh) | validate_form_cli_full_real_llama_generation_claim.sh |
 | [validate_form_cli_local_receipts.sh](validate_form_cli_local_receipts.sh) | validate_form_cli_local_receipts.sh — local receipts for the form-cli ask lane. |
 | [validate_form_cli_model_lane_gap_receipts.sh](validate_form_cli_model_lane_gap_receipts.sh) | validate_form_cli_model_lane_gap_receipts.sh — observed receipts for the form-cli model-lane gaps. |
 | [validate_local_api_matrix.py](validate_local_api_matrix.py) | Validate local API-backed page contracts and timing against a running API. |
