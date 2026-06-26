@@ -2,9 +2,9 @@
 ;
 ; The carrier may write JSON files, but the protocol boundary is Form:
 ; session memory is recorded only after explicit Send, stored in the holder's
-; local room-memory surface, and fed back as later context without pretending a
-; channel label is verified biometric identity. A repeated voice_id or speaker
-; profile can carry continuity; names remain editable claims.
+; local room-memory surface, and fed back as later context. Continuity is carried
+; by transcript-supplied ids, visible labels, or a passive shared-stream sidecar.
+; Mic-exclusive biometric speaker-id carriers stay outside this floor.
 ;
 ; preludes: form-stdlib/core.fk
 
@@ -16,13 +16,16 @@
         (if (str_eq carrier "local-json-file") 1
             (if (str_eq carrier "local-segmented-file") 1 0)))
 
-    (defn srm-voice-match-carrier? (carrier)
-        (if (str_eq carrier "voice-id-or-speaker-label") 1
-            (if (str_eq carrier "channel-label-only") 1
+    (defn srm-mic-exclusive-carrier? (carrier)
+        (if (str_eq carrier "macos-biometric-voice-id") 1
+            (if (str_eq carrier "exclusive-mic-biometric") 1
                 (if (str_eq carrier "voiceprint") 1 0))))
 
-    (defn srm-verified-identity? (carrier consent)
-        (if (and (str_eq carrier "voiceprint") (eq consent 1)) 1 0))
+    (defn srm-voice-match-carrier? (carrier)
+        (if (eq (srm-mic-exclusive-carrier? carrier) 1) 0
+            (if (str_eq carrier "transcript-voice-id-or-speaker-label") 1
+                (if (str_eq carrier "channel-label-only") 1
+                    (if (str_eq carrier "passive-shared-audio-sidecar") 1 0)))))
 
     (defn srm-trust-ok? (boundary storage voice-carrier hidden feeds)
         (if (and (eq (srm-capture-boundary? boundary) 1)

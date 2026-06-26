@@ -21,8 +21,9 @@
 ;   The Send path also writes a local trusted room-memory receipt under
 ;   ~/.coherence-network/agent-room-memory and includes prior-session context in
 ;   the request. Speaker continuity is keyed by transcript voice_id / speaker_id
-;   when present, or by visible channel label when not; channel-only continuity
-;   is not presented as verified identity.
+;   when present, or by visible channel label when not. Acoustic continuity can
+;   only arrive through a passive sidecar sharing the already-open listening
+;   stream; macOS biometric speaker identification is outside the carrier.
 ;   File, process, audio-input, and speech-transcript resources cross one
 ;   generic host OS resource-door receipt in the Swift core. The receipt carries
 ;   resolved macOS, Windows, and Android carrier mappings for every resource

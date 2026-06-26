@@ -21,15 +21,18 @@
 ;   that stable value keys the speaker profile. If no voice_id exists, the app
 ;   falls back to the visible speaker label, such as room mic. That fallback is
 ;   channel continuity, not verified identity. Names stay editable claims.
-;   Verified identity requires an enrolled, consented voiceprint carrier and is
-;   outside this floor.
+;   A future acoustic continuity sidecar shares the already-open listening stream
+;   and yields continuity labels only. macOS biometric speaker identification,
+;   voiceprint identity, and exclusive-mic biometric carriers are outside this
+;   floor because uninterrupted listening is the primary carrier.
 ;
 ; Body:
 ;   form/form-stdlib/satsang-room-memory.fk decides the trust boundary:
 ;   explicit Send is the capture boundary; local JSON/segmented file is an
-;   accepted storage carrier; hidden capture is rejected; voice-id/speaker-label
-;   and channel-only continuity are allowed but channel-only is not verified
-;   identity; prior sessions plus speakers can feed later context.
+;   accepted storage carrier; hidden capture is rejected; transcript id,
+;   channel-label, and passive shared-stream continuity are allowed; mic-exclusive
+;   biometric speaker-id carriers are rejected; prior sessions plus speakers can
+;   feed later context.
 ;   Proof: form/form-stdlib/tests/satsang-room-memory-band.fk -> 255 four-way.
 ;
 ; Boundary:
