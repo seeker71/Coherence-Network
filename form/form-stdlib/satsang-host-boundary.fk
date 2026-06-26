@@ -1,8 +1,10 @@
 ; satsang-host-boundary.fk — app logic in Form, host code as a minimal ABI carrier.
 ;
 ; The shared satsang guidance body belongs in Form. Platform apps may carry the
-; smallest OS adapter needed for microphone, speech, file, and process resources,
-; but Python, Go, Rust, and TypeScript are not app-boundary runtimes.
+; smallest OS adapter needed for microphone, speech, file, and process resources.
+; macOS and iPhone are SwiftUI carriers now; Windows and Android are resolved
+; host-carrier doors pending real GUI packaging. Python, Go, Rust, and TypeScript
+; are not app-boundary runtimes.
 ;
 ; preludes: form-stdlib/core.fk
 
@@ -28,7 +30,13 @@
     (defn shb-platform-target? (platform)
         (if (str_eq platform "macos") 1
             (if (str_eq platform "windows") 1
-                (if (str_eq platform "android") 1 0))))
+                (if (str_eq platform "android") 1
+                    (if (str_eq platform "ios") 1
+                        (if (str_eq platform "iphone") 1 0))))))
+
+    (defn shb-ios-platform? (platform)
+        (if (str_eq platform "ios") 1
+            (if (str_eq platform "iphone") 1 0)))
 
     (defn shb-door-state? (state)
         (if (str_eq state "open") 1
@@ -45,12 +53,14 @@
     (defn shb-host-carrier? (carrier)
         (if (str_eq carrier "swift-minimal-host-carrier") 1
             (if (str_eq carrier "windows-minimal-host-carrier") 1
-                (if (str_eq carrier "android-minimal-host-carrier") 1 0))))
+                (if (str_eq carrier "android-minimal-host-carrier") 1
+                    (if (str_eq carrier "iphone-minimal-host-carrier") 1 0)))))
 
     (defn shb-platform-host-carrier (platform)
         (if (str_eq platform "macos") "swift-minimal-host-carrier"
             (if (str_eq platform "windows") "windows-minimal-host-carrier"
-                (if (str_eq platform "android") "android-minimal-host-carrier" ""))))
+                (if (str_eq platform "android") "android-minimal-host-carrier"
+                    (if (eq (shb-ios-platform? platform) 1) "iphone-minimal-host-carrier" "")))))
 
     (defn shb-carrier-for (platform kind)
         (if (str_eq platform "macos")
@@ -74,7 +84,14 @@
                                 (if (str_eq kind "file-append") "android-app-private-files"
                                     (if (str_eq kind "file-write-atomic") "android-atomic-file"
                                         (if (str_eq kind "process-stdin-stdout") "android-packaged-form-cli-process" ""))))))
-                    ""))))
+                    (if (eq (shb-ios-platform? platform) 1)
+                        (if (str_eq kind "audio-input") "ios-avfoundation"
+                            (if (str_eq kind "speech-transcript") "ios-speech"
+                                (if (str_eq kind "file-read") "ios-app-sandbox-files"
+                                    (if (str_eq kind "file-append") "ios-app-sandbox-files"
+                                        (if (str_eq kind "file-write-atomic") "ios-foundation-data-atomic"
+                                            (if (str_eq kind "process-stdin-stdout") "ios-embedded-form-cli-adapter" ""))))))
+                        "")))))
 
     (defn shb-carrier-resolved? (platform kind)
         (if (and (eq (shb-platform-target? platform) 1)

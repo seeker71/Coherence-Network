@@ -28,13 +28,13 @@ final class RoomTranscriber: @unchecked Sendable {
             HostResourceDoor(
                 kind: "audio-input",
                 state: microphoneDoorState(microphoneStatus),
-                carrier: "macos-avfoundation",
+                carrier: audioCarrier,
                 detail: microphoneStatusName(microphoneStatus)
             ),
             HostResourceDoor(
                 kind: "speech-transcript",
                 state: speechDoorState(speechStatus, available: speechAvailable),
-                carrier: "macos-speech",
+                carrier: speechCarrier,
                 detail: "side-channel-during-live-capture;\(speechStatusName(speechStatus));available=\(speechAvailable ? "1" : "0")"
             ),
         ]
@@ -55,9 +55,9 @@ final class RoomTranscriber: @unchecked Sendable {
                 }
             }
         case .denied:
-            emitState(false, "Microphone permission is denied. Allow Satsang Guidance in System Settings > Privacy & Security > Microphone.")
+            emitState(false, "Microphone permission is denied. Allow Satsang Guidance in \(Self.microphoneSettingsName).")
         case .restricted:
-            emitState(false, "Microphone permission is restricted on this Mac.")
+            emitState(false, "Microphone permission is restricted on this \(Self.platformDisplayName).")
         @unknown default:
             emitState(false, "Microphone permission is unavailable.")
         }
@@ -105,7 +105,7 @@ final class RoomTranscriber: @unchecked Sendable {
         case .denied:
             emitState(true, "Live room capture is active; Speech side-channel permission is denied.")
         case .restricted:
-            emitState(true, "Live room capture is active; Speech side-channel is restricted on this Mac.")
+            emitState(true, "Live room capture is active; Speech side-channel is restricted on this \(Self.platformDisplayName).")
         @unknown default:
             emitState(true, "Live room capture is active; Speech side-channel permission is unavailable.")
         }
@@ -144,8 +144,9 @@ final class RoomTranscriber: @unchecked Sendable {
     }
 
     private func startAudioEngine() {
-        audioEngine.prepare()
         do {
+            try configureAudioSessionIfNeeded()
+            audioEngine.prepare()
             try audioEngine.start()
             emitState(true, "Live room capture is active; preparing Speech side channel")
         } catch {
@@ -176,7 +177,7 @@ final class RoomTranscriber: @unchecked Sendable {
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
         request.taskHint = .dictation
-        if #available(macOS 13.0, *) {
+        if #available(iOS 16.0, macOS 13.0, *) {
             request.addsPunctuation = true
         }
         recognitionRequest = request
@@ -254,6 +255,21 @@ final class RoomTranscriber: @unchecked Sendable {
             audioEngine.inputNode.removeTap(onBus: 0)
             inputTapInstalled = false
         }
+        deactivateAudioSessionIfNeeded()
+    }
+
+    private func configureAudioSessionIfNeeded() throws {
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetooth, .defaultToSpeaker])
+        try session.setActive(true, options: [])
+        #endif
+    }
+
+    private func deactivateAudioSessionIfNeeded() {
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+        #endif
     }
 
     private func commitPartialIfNeeded() {
@@ -381,5 +397,37 @@ final class RoomTranscriber: @unchecked Sendable {
         @unknown default:
             return "unknown"
         }
+    }
+
+    private static var audioCarrier: String {
+        #if os(iOS)
+        return "ios-avfoundation"
+        #else
+        return "macos-avfoundation"
+        #endif
+    }
+
+    private static var speechCarrier: String {
+        #if os(iOS)
+        return "ios-speech"
+        #else
+        return "macos-speech"
+        #endif
+    }
+
+    private static var platformDisplayName: String {
+        #if os(iOS)
+        return "iPhone"
+        #else
+        return "Mac"
+        #endif
+    }
+
+    private static var microphoneSettingsName: String {
+        #if os(iOS)
+        return "Settings > Privacy & Security > Microphone"
+        #else
+        return "System Settings > Privacy & Security > Microphone"
+        #endif
     }
 }

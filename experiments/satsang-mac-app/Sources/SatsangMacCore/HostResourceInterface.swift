@@ -1,5 +1,16 @@
 import Foundation
 
+public enum HostResourceError: Error, LocalizedError, Sendable {
+    case processExecutionUnsupported(platform: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .processExecutionUnsupported(let platform):
+            return "Process stdin/stdout execution is not available on \(platform)."
+        }
+    }
+}
+
 public protocol HostResourceInterface: Sendable {
     var homeDirectory: URL { get }
     var currentDirectory: URL { get }
@@ -93,6 +104,19 @@ public struct HostPlatformCarrier: Codable, Equatable, Sendable {
                     HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "android-packaged-form-cli-process", detail: "packaged native form-cli with bounded pipes"),
                 ]
             ),
+            HostPlatformCarrier(
+                platform: "ios",
+                hostCarrier: "iphone-minimal-host-carrier",
+                resourceInterface: resourceInterface,
+                resourceDoors: [
+                    HostResourceDoor(kind: "audio-input", state: "declared", carrier: "ios-avfoundation", detail: "AVAudioEngine with AVAudioSession record permission"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "ios-speech", detail: "SFSpeechRecognizer side channel fed during live capture"),
+                    HostResourceDoor(kind: "file-read", state: "declared", carrier: "ios-app-sandbox-files", detail: "FileManager/Data in app container"),
+                    HostResourceDoor(kind: "file-append", state: "declared", carrier: "ios-app-sandbox-files", detail: "FileHandle append in app container"),
+                    HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "ios-foundation-data-atomic", detail: "Data.write atomic in app container"),
+                    HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "ios-embedded-form-cli-adapter", detail: "same protocol via embedded Form runtime adapter; arbitrary subprocess unavailable"),
+                ]
+            ),
         ]
     }
 }
@@ -143,6 +167,9 @@ public struct FoundationHostResourceInterface: HostResourceInterface {
     }
 
     public func runExecutable(at url: URL, workingDirectory: URL, standardInput: String) throws -> String {
+        #if os(iOS)
+        throw HostResourceError.processExecutionUnsupported(platform: "iOS")
+        #else
         let process = Process()
         let input = Pipe()
         let output = Pipe()
@@ -159,6 +186,7 @@ public struct FoundationHostResourceInterface: HostResourceInterface {
 
         let data = output.fileHandleForReading.readDataToEndOfFile()
         return String(decoding: data, as: UTF8.self)
+        #endif
     }
 
     public func detectResourceDoors(transcriptURL: URL, queueURL: URL, formCLIURL: URL?) -> [HostResourceDoor] {
@@ -209,7 +237,7 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
         sharedLogic: String = "form-native-shared-logic",
         hostCarrier: String = "swift-minimal-host-carrier",
         resourceInterface: String = "host-os-generic-resource-interface",
-        platformTargets: [String] = ["macos", "windows", "android"],
+        platformTargets: [String] = ["macos", "windows", "android", "ios"],
         allowedResourceKinds: [String] = [
             "audio-input",
             "speech-transcript",
@@ -244,7 +272,8 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
         let hostCarriers = Set([
             "swift-minimal-host-carrier",
             "windows-minimal-host-carrier",
-            "android-minimal-host-carrier"
+            "android-minimal-host-carrier",
+            "iphone-minimal-host-carrier"
         ])
         return appBoundaryRuntimes.allSatisfy { allowed.contains($0) }
             && forbiddenRuntimeCarriers.allSatisfy { !appBoundaryRuntimes.contains($0) }
