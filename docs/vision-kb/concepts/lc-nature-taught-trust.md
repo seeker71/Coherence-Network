@@ -59,7 +59,7 @@ it is to stop interfering with the life already trying to circulate.
 This teaching is executable in the Form body as
 [`nature-trust.fk`](../../../form/form-stdlib/nature-trust.fk), proven
 by [`nature-trust-band.fk`](../../../form/form-stdlib/tests/nature-trust-band.fk)
-at verdict `4095` across Go, Rust, TypeScript, and fkwu.
+at verdict `16383` across Go, Rust, TypeScript, and fkwu.
 
 The recipe reads a behavior row through seven signals:
 
