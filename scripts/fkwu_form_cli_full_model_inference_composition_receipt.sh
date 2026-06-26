@@ -339,6 +339,8 @@ steps_count="$(jq -s 'length' "$STEPS_JSONL")"
 passed_count="$(jq -s '[.[] | select(.passed == true)] | length' "$STEPS_JSONL")"
 skipped_count="$(jq -s '[.[] | select(.skipped == true)] | length' "$STEPS_JSONL")"
 failed_count="$(jq -s '[.[] | select(.status != 0 and .skipped == false)] | length' "$STEPS_JSONL")"
+hard_failed_count="$(jq -s '[.[] | select(.hard_gate == true and .status != 0 and .skipped == false)] | length' "$STEPS_JSONL")"
+nonhard_failed_count="$(jq -s '[.[] | select(.hard_gate == false and .status != 0 and .skipped == false)] | length' "$STEPS_JSONL")"
 
 http_or_ollama_absent="$(bool_or_false "$(grep -R -q '^http_or_ollama=absent$' "$TRACE_DIR" && echo true || echo false)")"
 denied_toolchain_hidden="$(bool_or_false "$(grep -R -q '^denied_toolchain_names_visible_on_path=0$' "$TRACE_DIR" && echo true || echo false)")"
@@ -369,6 +371,8 @@ jq -n \
     --argjson passed_count "$passed_count" \
     --argjson skipped_count "$skipped_count" \
     --argjson failed_count "$failed_count" \
+    --argjson hard_failed_count "$hard_failed_count" \
+    --argjson nonhard_failed_count "$nonhard_failed_count" \
     --argjson mac_host "$mac_host" \
     --argjson windows_host "$windows_host" \
     --argjson android_device "$android_device" \
@@ -409,7 +413,9 @@ jq -n \
         steps_count: $steps_count,
         passed_count: $passed_count,
         skipped_count: $skipped_count,
-        failed_count: $failed_count
+        failed_count: $failed_count,
+        hard_failed_count: $hard_failed_count,
+        nonhard_failed_count: $nonhard_failed_count
       },
       synthesis_boundary: {
         available: ($available | split(",") | map(select(length > 0))),
@@ -436,10 +442,10 @@ jq -n \
         macos: {
           current_host: $mac_host,
           observed_now: $mac_host,
-          fkwu_form_cli_native: $form_cli_ask,
-          gguf_model_cell: $gguf_cell,
-          metal_model_cell: $metal_cell,
-          metal_body_trace: $metal_trace,
+          fkwu_form_cli_native: (if $mac_host then $form_cli_ask else false end),
+          gguf_model_cell: (if $mac_host then $gguf_cell else false end),
+          metal_model_cell: (if $mac_host then $metal_cell else false end),
+          metal_body_trace: (if $mac_host then $metal_trace else false end),
           full_model_inference: false
         },
         android: {
@@ -451,9 +457,14 @@ jq -n \
         },
         windows: {
           current_host: $windows_host,
-          observed_now: $windows_form_cli,
+          observed_now: $windows_host,
           ci_workflow: ".github/workflows/windows-host.yml",
-          fkwu_form_cli_native: $windows_form_cli,
+          fkwu_form_cli_native: (if $windows_host then $windows_form_cli else false end),
+          gguf_model_cell: (if $windows_host then $gguf_cell else false end),
+          directml_d3d12_model_cell: false,
+          http_or_ollama_absent_in_child_runtime: (if $windows_host then $http_or_ollama_absent else false end),
+          denied_go_rust_python_shell_clang_hidden_on_child_runtime_path: (if $windows_host then $denied_toolchain_hidden else false end),
+          dependency_runtime_claim_proven: (if $windows_host then ($http_or_ollama_absent and $denied_toolchain_hidden) else false end),
           full_model_inference: false,
           note: "On non-Windows hosts this row is observed by the Windows Host Floor PR workflow."
         }

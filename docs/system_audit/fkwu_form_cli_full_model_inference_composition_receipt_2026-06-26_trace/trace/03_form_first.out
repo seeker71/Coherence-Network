@@ -1,2 +1,11 @@
-trust  path:native  grounded:no  freq:no  suffic:no  -> native-miss
+trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  -> native-model-call-receipt
 [ask: local fkwu RAG index has no grounded hit]
+model-call-lane:fkwu-metal-model-cell
+model-call-receipt:<home>/.coherence-network/ask-staged-model-call/current-receipt.json
+synthesis-lane:ask-staged-model-call-observed
+prose-generation:pending-full-tokenizer-gguf-to-metal-decode
+receipt:<home>/.coherence-network/ask-staged-model-call/current-receipt.json
+verdict:pass
+model-call-lane:fkwu-metal-model-cell
+model-call-observed:true
+prose-generation:pending

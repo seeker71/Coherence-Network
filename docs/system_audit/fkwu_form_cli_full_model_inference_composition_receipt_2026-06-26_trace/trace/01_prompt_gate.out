@@ -11,7 +11,7 @@ prompt-entry-guide: CLAUDE.md orientation:
   - compost superseded forms; keep counts where they are naturally tended.
   - ship reversible own-branch work through proof; pause for irreversible effects.
 prompt-entry-guide: continuity reading skipped via PROMPT_GATE_SKIP_CONTINUITY=1.
-start-gate: passed (linked-worktree, branch=codex/full-model-inference-composition-receipt-20260626)
+start-gate: passed (linked-worktree, branch=codex/windows-composition-receipt-tighten-20260626)
 prompt-entry-guide: dirty worktree detected; cheap continuation entry complete.
 prompt-entry-guide: shortest proof reading when commit/push is ready:
   git fetch origin main && git rebase origin/main

@@ -8,8 +8,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:11Z",
-  "ended_at": "2026-06-26T08:02:11Z",
+  "started_at": "2026-06-26T14:58:23Z",
+  "ended_at": "2026-06-26T14:58:23Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/01_form_cli_ask.out",
   "output_sha256": "78ce813f202ef5e9cf80c34733d3f09080226d858f0d522a971ad2ea7033d1f1",
   "observation": "trust  path:native  grounded:yes  freq:no  suffic:yes  -> native-partial\ngrounded:form/form-stdlib/adler32.fk\nlocal-lane:fkwu-rag-grounded\nsynthesis-lane:pending-fkwu-metal-llm"
@@ -24,11 +24,11 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:11Z",
-  "ended_at": "2026-06-26T08:02:11Z",
+  "started_at": "2026-06-26T14:58:23Z",
+  "ended_at": "2026-06-26T14:58:23Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/02_synthesis_status.out",
-  "output_sha256": "1681b1d254d6c6f790c29a07a47924975000f70fe3bb53b34ece4631cd5e8408",
-  "observation": "synthesis-lane:pending-fkwu-metal-llm\nreason:end-to-end-gguf-decode-not-bound-to-ask-staged\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step\nmissing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call"
+  "output_sha256": "fc7fb83b037fe4fdee0e4f650d3d26d3ae8456ed4a7cc66fbed339a443d12a4e",
+  "observation": "synthesis-lane:pending-fkwu-metal-llm\nreason:full-decoded-prose-not-yet-bound-to-ask-staged\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step\nmissing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding"
 }
 {
   "index": 3,
@@ -40,11 +40,11 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:11Z",
-  "ended_at": "2026-06-26T08:02:11Z",
+  "started_at": "2026-06-26T14:58:23Z",
+  "ended_at": "2026-06-26T14:58:23Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/03_model_status.out",
-  "output_sha256": "1681b1d254d6c6f790c29a07a47924975000f70fe3bb53b34ece4631cd5e8408",
-  "observation": "synthesis-lane:pending-fkwu-metal-llm\nreason:end-to-end-gguf-decode-not-bound-to-ask-staged\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step\nmissing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call"
+  "output_sha256": "fc7fb83b037fe4fdee0e4f650d3d26d3ae8456ed4a7cc66fbed339a443d12a4e",
+  "observation": "synthesis-lane:pending-fkwu-metal-llm\nreason:full-decoded-prose-not-yet-bound-to-ask-staged\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step\nmissing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding"
 }
 {
   "index": 4,
@@ -56,8 +56,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:12Z",
-  "ended_at": "2026-06-26T08:02:12Z",
+  "started_at": "2026-06-26T14:58:23Z",
+  "ended_at": "2026-06-26T14:58:23Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/04_gguf_find_four_way.out",
   "output_sha256": "95b18484f005926eebe16e56bd49daa680a3cc310b7b00a3375ff4bd323e49f1",
   "observation": "  fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)\n  1 ok, 0 divergent — kernels agree on every sample."
@@ -72,8 +72,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:12Z",
-  "ended_at": "2026-06-26T08:02:13Z",
+  "started_at": "2026-06-26T14:58:23Z",
+  "ended_at": "2026-06-26T14:58:24Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/05_tokenizer_compose_four_way.out",
   "output_sha256": "506383aea52ffaf7f7da9b5884566e3294425279f4f4f9a4056fd3d5390fc3b6",
   "observation": "  fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)\n  1 ok, 0 divergent — kernels agree on every sample."
@@ -88,8 +88,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:13Z",
-  "ended_at": "2026-06-26T08:02:13Z",
+  "started_at": "2026-06-26T14:58:24Z",
+  "ended_at": "2026-06-26T14:58:24Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/06_llama3_pretokenizer_four_way.out",
   "output_sha256": "f0b34a348205a2fd28ad07f9fdf1b35f766fe5ac02a32370d9ea41b1f2be6742",
   "observation": "  fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)\n  1 ok, 0 divergent — kernels agree on every sample."
@@ -104,8 +104,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:13Z",
-  "ended_at": "2026-06-26T08:02:14Z",
+  "started_at": "2026-06-26T14:58:24Z",
+  "ended_at": "2026-06-26T14:58:26Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/07_autoregressive_loop_four_way.out",
   "output_sha256": "e1dfe24efd69251bd62127abaac94a6b114aee5462918c8c9c1822ef4b75ebb5",
   "observation": "  fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)\n  1 ok, 0 divergent — kernels agree on every sample."
@@ -120,8 +120,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": false,
-  "started_at": "2026-06-26T08:02:14Z",
-  "ended_at": "2026-06-26T08:02:14Z",
+  "started_at": "2026-06-26T14:58:26Z",
+  "ended_at": "2026-06-26T14:58:26Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/08_real_gguf_weight_map.out",
   "output_sha256": "bc14bd3b1a79fb5aa45227a16e6382583e90ac78d2535e889986869b34746ed8",
   "observation": "receipt: gguf-full-weight-map-receipt verdict=pass\nfile: sha256-871071a269d0df9630fa0e14038bb9687052c656f27f27bdcd31f2556165e451 bytes=2019886272\nheader: v=3 n_tensors=255 n_kv=27 architecture=llama\ntensor-map: walked=255 data_start=8346560 alignment=32 ranges_within_file=1 aligned_offsets=1\ntypes: {\"F32\": 58, \"Q4_K\": 168, \"Q6_K\": 29}\ntokenizer-arrays: {\"tokenizer.ggml.merges\": 280147, \"tokenizer.ggml.scores\": 128256, \"tokenizer.ggml.token_type\": 128256, \"tokenizer.ggml.tokens\": 128256}\nrequired-tensors: ok"
@@ -136,10 +136,10 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:14Z",
-  "ended_at": "2026-06-26T08:02:15Z",
+  "started_at": "2026-06-26T14:58:26Z",
+  "ended_at": "2026-06-26T14:58:26Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/09_gguf_model_cell.out",
-  "output_sha256": "13accc396adf04bd90f0c7f9b91662df56b1c9ddcc5950553847eb0667998452",
+  "output_sha256": "cbcc3f415be716d44d85ee4ceefb1bd6209136d64da8f69e6d221df2e88d6c53",
   "observation": "gguf_cell_verified=true\ngguf_magic_ok=1\ngguf_tensor_count=1\ngguf_tensor_info_offset=74\ngguf_tensor_type=12"
 }
 {
@@ -152,10 +152,10 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:15Z",
-  "ended_at": "2026-06-26T08:02:16Z",
+  "started_at": "2026-06-26T14:58:26Z",
+  "ended_at": "2026-06-26T14:58:28Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/10_metal_model_cell.out",
-  "output_sha256": "5548963e3dff43c6a37386a5eb128f4c48ecf245d6905fbff11611de72132980",
+  "output_sha256": "b6f602a3e4636531037b3c81c946aee8dcf0f9042131a13d502e6f5abd1c04be",
   "observation": "model_cell_verified=true\nruntime_path_sanitized=true\ndenied_toolchain_names_visible_on_path=0\nhttp_or_ollama=absent\nmetal_owner=fkwu-form-cli\nmetal_device=Apple M4 Max\ngpu_y=[-0.250000,5.000000]\nmax_delta=0.000000000\nPASS fkwu-form-cli-metal-matvec-f32"
 }
 {
@@ -168,8 +168,8 @@
   "passed": true,
   "skipped": false,
   "hard_gate": true,
-  "started_at": "2026-06-26T08:02:16Z",
-  "ended_at": "2026-06-26T08:02:48Z",
+  "started_at": "2026-06-26T14:58:28Z",
+  "ended_at": "2026-06-26T14:58:55Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/11_metal_body_trace.out",
   "output_sha256": "12b04fc12ec582f401eee11efe3068852b05f56e2721fc3c37c7b712892270de",
   "observation": ""
@@ -184,8 +184,8 @@
   "passed": false,
   "skipped": true,
   "hard_gate": false,
-  "started_at": "2026-06-26T08:02:48Z",
-  "ended_at": "2026-06-26T08:02:48Z",
+  "started_at": "2026-06-26T14:58:55Z",
+  "ended_at": "2026-06-26T14:58:55Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/12_android_fkwu_fourth.out",
   "output_sha256": "e1d43d606bd93ae6cc68a1e1580a133a278931795cc16f462eeb607ac207a695",
   "observation": "SKIP no authorized adb device observed"
@@ -200,8 +200,8 @@
   "passed": false,
   "skipped": true,
   "hard_gate": false,
-  "started_at": "2026-06-26T08:02:48Z",
-  "ended_at": "2026-06-26T08:02:48Z",
+  "started_at": "2026-06-26T14:58:55Z",
+  "ended_at": "2026-06-26T14:58:55Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/13_android_vulkan_matvec.out",
   "output_sha256": "e1d43d606bd93ae6cc68a1e1580a133a278931795cc16f462eeb607ac207a695",
   "observation": "SKIP no authorized adb device observed"
@@ -216,8 +216,8 @@
   "passed": false,
   "skipped": true,
   "hard_gate": false,
-  "started_at": "2026-06-26T08:02:48Z",
-  "ended_at": "2026-06-26T08:02:48Z",
+  "started_at": "2026-06-26T14:58:55Z",
+  "ended_at": "2026-06-26T14:58:55Z",
   "output_file": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/14_windows_form_cli_native.out",
   "output_sha256": "c2da1207331f0914cdbe5a16e222ae14ba695e00808d1514d77cea95fbe5cd67",
   "observation": "SKIP not running on Windows; PR workflow observes this row"

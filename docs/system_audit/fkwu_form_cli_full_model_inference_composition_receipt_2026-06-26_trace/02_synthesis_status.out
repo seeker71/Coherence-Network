@@ -1,4 +1,7 @@
 synthesis-lane:pending-fkwu-metal-llm
-reason:end-to-end-gguf-decode-not-bound-to-ask-staged
+reason:full-decoded-prose-not-yet-bound-to-ask-staged
 available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step
-missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call
+missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding
+available-observed:ask-staged-model-call-witness
+ask-staged-model-call-receipt:<home>/.coherence-network/ask-staged-model-call/current-receipt.json
+prose-generation:pending-full-tokenizer-gguf-to-metal-decode
