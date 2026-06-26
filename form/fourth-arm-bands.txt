@@ -976,6 +976,7 @@ shell-awk fks 127
 shell-cell fks 15
 live-room-shell fks 63
 file-io-shell fks 255
+model-lane-receipt-shell fks 255
 form-native-resource-interfaces fks 32767
 fnri-dispatch-carrier fks 1023
 fnri-host-io fks 15

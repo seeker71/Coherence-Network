@@ -80,6 +80,9 @@ run_step ask_staged_probe "ask-staged miss invokes the local fkwu+Metal model-ca
 run_step model_status "native model status names the grounded decoded-answer boundary" \
     "$ROOT/bin/form-cli" model-status
 
+run_step model_lane_receipt_shell_band "Form-shell model-lane receipt floor" \
+    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/model-lane-receipt-shell.fk form-stdlib/tests/model-lane-receipt-shell-band.fk"
+
 python3 - "$ROOT" "$OUT_DIR" "$RECEIPT" <<'PY'
 from __future__ import annotations
 
@@ -133,6 +136,7 @@ status_closes_old_missing = (
     and "missing:full-real-llama-gguf-token-generation" in model_status
     and "prose-generation:decoded-grounded-answer" in model_status
 )
+model_lane_receipt_shell_ok = rc("model_lane_receipt_shell_band") == 0
 ask_staged_model_call_observed = (
     "[ask: local fkwu RAG index has no grounded hit]" in ask_out
     and "model-call-lane:fkwu-metal-model-cell" in ask_out
@@ -158,6 +162,8 @@ if not ask_staged_model_call_observed:
     hard_failures.append("ask_staged_model_call_contract")
 if not status_closes_old_missing:
     hard_failures.append("model_status_closure_contract")
+if not model_lane_receipt_shell_ok:
+    hard_failures.append("model_lane_receipt_shell_floor")
 
 receipt = {
     "receipt_kind": "form-cli-model-lane-gap-receipt",
@@ -206,6 +212,12 @@ receipt = {
             "verdict": "pass" if ask_staged_model_call_observed and status_closes_old_missing else "fail",
             "observed_components": status_closes_old_missing,
             "boundary": "A decoded grounded answer is now bound to the ask-staged model-call witness and visible in form-cli ask/model-status receipts.",
+        },
+        "model_lane_receipt_shell_floor": {
+            "verdict": "pass" if model_lane_receipt_shell_ok else "fail",
+            "carrier": "form/form-stdlib/model-lane-receipt-shell.fk",
+            "proof": "form/form-stdlib/tests/model-lane-receipt-shell-band.fk",
+            "boundary": "The host receipt script remains a carrier; the status/receipt verdict floor is native fsh/Form.",
         },
         "full_real_llama_gguf_generation": {
             "verdict": "pending",

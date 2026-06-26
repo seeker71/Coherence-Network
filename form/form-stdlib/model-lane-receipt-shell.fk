@@ -1,0 +1,72 @@
+; model-lane-receipt-shell.fk — fsh floor for the ask-staged model-cell receipt.
+;
+; The host carrier can still gather child receipts and write JSON, but the
+; decision floor lives here: decoded grounded answer binding is observed, and
+; full real Llama GGUF token generation remains pending. The fsh cell follows the
+; file-io-shell pattern: host calls are labelled passthrough; the verdict gate is
+; native `test`/`echo` in Form shell.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/shell-grammar.fk form-stdlib/voice-traits.fk form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/voice-diarize.fk form-stdlib/shell-exec.fk form-stdlib/shell-lower.fk
+
+(do
+    (defn mlrs-contains? (s needle) (not (lt (str_find s needle 0) 0)))
+    (defn mlrs-expect () "127")
+
+    (defn mlrs-status-score (s)
+        (sum (list
+            (if (mlrs-contains? s "synthesis-lane:grounded-fkwu-model-answer") 1 0)
+            (if (mlrs-contains? s "available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding") 2 0)
+            (if (mlrs-contains? s "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding") 4 0)
+            (if (mlrs-contains? s "missing:full-real-llama-gguf-token-generation") 8 0)
+            (if (mlrs-contains? s "prose-generation:decoded-grounded-answer") 16 0)
+            (if (mlrs-contains? s "full-real-llama-gguf-generation:pending") 32 0)
+            (if (mlrs-contains? s "full real Llama GGUF token generation remains pending") 64 0))))
+
+    (defn mlrs-receipt-score (s)
+        (sum (list
+            (if (mlrs-contains? s "\"receipt_kind\": \"form-cli-ask-staged-model-call-receipt\"") 1 0)
+            (if (mlrs-contains? s "\"observed\": true") 2 0)
+            (if (mlrs-contains? s "\"model_lane\": \"fkwu-metal-model-cell\"") 4 0)
+            (if (mlrs-contains? s "\"model_cell_sha256_verified_in_form\": true") 8 0)
+            (if (mlrs-contains? s "\"metal_device_observed\": true") 16 0)
+            (if (mlrs-contains? s "\"decoded_answer_observed\": true") 32 0)
+            (if (mlrs-contains? s "\"full_real_llama_gguf_generation\": \"pending\"") 64 0))))
+
+    (defn mlrs-floor-score (status receipt)
+        (if (and (eq (mlrs-status-score status) 127)
+                 (eq (mlrs-receipt-score receipt) 127))
+            127 0))
+
+    (defn mlrs-verdict-src (w)
+        (str_concat "test " (str_concat w
+            (str_concat " -eq " (str_concat (mlrs-expect)
+                " && echo PASS || echo FAIL")))))
+    (defn mlrs-verdict (w) (sh-out (mlrs-verdict-src w)))
+    (defn mlrs-verdict-code (w) (if (eq (sh-exit (str_concat "test " (str_concat w (str_concat " -eq " (mlrs-expect))))) 0) 1 0))
+
+    (defn mlrs-floor-row (status receipt)
+        (if (eq (mlrs-floor-score status receipt) 127)
+            "path:native-model-cell observed:yes decoded:grounded-answer full-generation:pending fallback:rented-frontier"
+            "path:native-model-cell observed:no decoded:unverified full-generation:unverified fallback:blocked"))
+
+    (defn mlrs-fsh-source ()
+        "form-cli synthesis-status > model-status.txt ; form-cli ask model-call-probe > ask-staged.txt ; model-gap-receipt > model-lane-receipt.json ; test $W -eq 127 && echo PASS || echo FAIL")
+    (defn mlrs-cell () (sh-lower "model-lane-receipt-floor" (mlrs-fsh-source)))
+    (defn mlrs-plan () (sh-plan (sh-cell-ctor (mlrs-cell))))
+
+    (defn mlrs-plan-has-kind-name? (steps kind name)
+        (if (nil? steps) false
+            (if (and (str_eq (sh-step-kind (head steps)) kind)
+                     (str_eq (sh-step-name (head steps)) name))
+                true
+                (mlrs-plan-has-kind-name? (tail steps) kind name))))
+    (defn mlrs-redirs-has? (redirs tag)
+        (if (nil? redirs) false
+            (if (str_eq (head (head redirs)) tag) true
+                (mlrs-redirs-has? (tail redirs) tag))))
+    (defn mlrs-plan-has-redir? (steps tag)
+        (if (nil? steps) false
+            (if (mlrs-redirs-has? (sh-step-redirs (head steps)) tag) true
+                (mlrs-plan-has-redir? (tail steps) tag))))
+
+    0)

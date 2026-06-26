@@ -55,10 +55,11 @@
   ; below was not enough, so the rented frontier is the LAST resort, not the reflex.
   ; `form-cli ask` no longer uses a host-local HTTP LLM as its local oracle. Host-local
   ; model processes can remain explicit teachers/reviewers, but the default answer lane
-  ; is fkwu grounded RAG until fkwu+Metal/GGUF prose generation is wired.
+  ; is fkwu grounded RAG plus the witnessed fkwu+Metal decoded-answer receipt when
+  ; RAG misses. Full real Llama GGUF token generation remains an explicit blocker.
   (escalation-ladder
     (rung-1 substrate-rag     (kind fkwu-grounded-retrieval)     (sovereignty full)   (cost near-zero))
-    (rung-2 form-native-model (kind fkwu-metal-gguf pending-prose) (sovereignty full)  (cost local))
+    (rung-2 form-native-model (kind fkwu-metal-decoded-answer full-gguf-token-generation-pending) (sovereignty full)  (cost local))
     (rung-3 host-local-teacher (kind explicit-bridge reviewer)   (sovereignty egress) (cost local))
     (rung-4 rented-frontier   (kind beyond-on-device only)       (sovereignty none)   (cost rented)))
 
@@ -76,7 +77,7 @@
                    (engine fkwu)                            ; c-bootstrapped universal kernel + self-JIT
                    (entry    form-cli-main.fk)              ; native form-cli on emitted walker
                    (answer   rag-ask.fk)                    ; local index retrieval; no localhost:11434, no http-fetch
-                   (synthesis pending-fkwu-metal-gguf)       ; prose generation lane, not an HTTP substitute
+                   (synthesis witnessed-decoded-answer/full-gguf-token-generation-pending)
                    (shell    fsh-main.fk)                   ; form shell — BMF cursor, search/eval/orchestration
                    (code     "BML and .fk domain grammars")  ; form code — authoring, proof bands, lattice reads
                    (gate form-cli-sufficiency.fk))
