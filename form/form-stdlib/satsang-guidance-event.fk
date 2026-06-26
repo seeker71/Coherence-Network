@@ -1,0 +1,57 @@
+; satsang-guidance-event.fk - edited transcripts offered to a presence as a turn.
+;
+; The Mac GUI is a carrier. The body protocol is small:
+; all detected utterances stay visible, edits are explicit, a target presence is
+; named, and guidance is requested only when a turn is offered by button,
+; direct naming, or the learned turn gate. Silence remains the default.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sge-target-known? (target)
+        (if (str_eq target "sema") 1
+            (if (str_eq target "satsang-companion") 1
+                (if (str_eq target "new-presence") 1 0))))
+
+    (defn sge-turn-mode? (mode)
+        (if (str_eq mode "turn-offered") 1
+            (if (str_eq mode "named-and-asked") 1
+                (if (str_eq mode "button-invoked") 1 0))))
+
+    (defn sge-all-transcripts? (detected-count included-count)
+        (if (eq detected-count included-count) 1 0))
+
+    (defn sge-ready? (target mode detected-count included-count question-present)
+        (if (and (eq (sge-target-known? target) 1)
+                 (eq (sge-turn-mode? mode) 1))
+            (if (and (gt detected-count 0)
+                     (eq (sge-all-transcripts? detected-count included-count) 1))
+                (if (eq question-present 1) 1 0)
+                0)
+            0))
+
+    (defn sge-decision (target mode detected-count included-count question-present)
+        (if (eq (sge-ready? target mode detected-count included-count question-present) 1)
+            "offer-guidance-request"
+            "hold-until-invited"))
+
+    ; Receipt layout:
+    ; (satsang-guidance-event target mode detected included question-present decision)
+    (defn sge-receipt (target mode detected-count included-count question-present)
+        (list "satsang-guidance-event"
+              target
+              mode
+              detected-count
+              included-count
+              question-present
+              (sge-decision target mode detected-count included-count question-present)))
+
+    (defn sge-rec-kind      (r) (nth r 0))
+    (defn sge-rec-target    (r) (nth r 1))
+    (defn sge-rec-mode      (r) (nth r 2))
+    (defn sge-rec-detected  (r) (nth r 3))
+    (defn sge-rec-included  (r) (nth r 4))
+    (defn sge-rec-question  (r) (nth r 5))
+    (defn sge-rec-decision  (r) (nth r 6))
+
+    0)

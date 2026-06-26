@@ -1,0 +1,34 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk
+;
+; satsang-listen-route-band — remote LLM oracle is behind native sufficiency.
+;
+; Verdict 255:
+;   1   body-sufficient route uses Form-native body
+;   2   body-sufficient route does not request remote
+;   4   grounded sufficient RAG route uses native RAG/local LLM
+;   8   grounded sufficient RAG route does not request remote
+;   16  weak RAG after body miss requests remote oracle
+;   32  weak RAG receipt labels escalate-remote
+;   64  empty local output with retry left retries native RAG
+;   128 route receipt names listen/transcribe/request shape
+(do
+    (let strong (fsuf-signals 1 1 82 72 72 0))
+    (let weak (fsuf-signals 1 1 20 72 72 0))
+    (let empty-retry (fsuf-signals 0 1 0 72 72 1))
+
+    (let body-rec (slr-receipt 1 1 0 1 1 20 72 72 0))
+    (let rag-rec (slr-receipt 1 0 1 1 1 82 72 72 0))
+    (let remote-rec (slr-receipt 1 0 1 1 1 20 72 72 0))
+
+    (let c0 (if (str_eq (slr-decision 1 1 0 weak) "use-form-native-body") 1 0))
+    (let c1 (if (eq (slr-remote-oracle? 1 1 0 weak) 0) 2 0))
+    (let c2 (if (str_eq (slr-decision 1 0 1 strong) "use-form-native-rag-llm") 4 0))
+    (let c3 (if (eq (slr-remote-oracle? 1 0 1 strong) 0) 8 0))
+    (let c4 (if (str_eq (slr-decision 1 0 1 weak) "request-remote-llm-oracle") 16 0))
+    (let c5 (if (str_eq (slr-rec-verdict remote-rec) "escalate-remote") 32 0))
+    (let c6 (if (str_eq (slr-decision 1 0 0 empty-retry) "retry-form-native-rag") 64 0))
+    (let c7 (if (and (str_eq (slr-rec-listen body-rec) "form-native-listen-receipt")
+                     (and (str_eq (slr-rec-transcribe rag-rec) "local-stt-form-receipt")
+                          (str_eq (slr-rec-request body-rec) "satsang-guidance-request"))) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
