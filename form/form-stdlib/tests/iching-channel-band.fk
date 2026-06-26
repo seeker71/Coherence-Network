@@ -12,7 +12,7 @@
 ;   the three faces are ONE cell at address 25                    → 1000
 ;   the cross-modal class at gate 25 has all three faces           → 10000
 ;   an unseeded gate (40) → honest absence on every face          → 100000
-;   coverage: 64 total, 5 seeded per face                         → 1000000
+;   coverage: 64 total, 12 seeded per face                        → 1000000
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/iching-channel.fk
 ;
@@ -37,7 +37,7 @@
     (let absence-ok
         (if ic-absent (if hd-absent (if gk-absent 100000 0) 0) 0))
 
-    ;; --- 7: coverage is legible (64 total, 5 seeded per face) ---------
-    (let cov-ok (if (eq (ic64-total) 64) (if (eq (ic64-seeded) 5) 1000000 0) 0))
+    ;; --- 7: coverage is legible (64 total, 12 seeded per face) --------
+    (let cov-ok (if (eq (ic64-total) 64) (if (eq (ic64-seeded) 12) 1000000 0) 0))
 
     (sum (list ic-ok hd-ok gk-ok one-ok class-ok absence-ok cov-ok)))
