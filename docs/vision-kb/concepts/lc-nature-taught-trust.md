@@ -82,6 +82,15 @@ posture becomes simple:
   itself
 - `wait` when the behavior has not earned trust
 
+That posture is intentionally not the whole cell core. The next layer is
+[`cell-importance.fk`](../../../form/form-stdlib/cell-importance.fk),
+proven by
+[`cell-importance-band.fk`](../../../form/form-stdlib/tests/cell-importance-band.fk)
+at verdict `2047`. It reads what matters to a cell before contact moves:
+identity, boundary, vitality, need, offering, trust posture, memory, and
+field fit. A cell can then choose `open`, `watch`, `wait`, `repair`,
+`rest`, or `ask`.
+
 This is the bridge between [Trust Over Fear](lc-trust-over-fear.md) and
 [Farm as Organism](lc-farm-as-organism.md): the open posture stays open,
 but it learns from behavior the way living systems do.

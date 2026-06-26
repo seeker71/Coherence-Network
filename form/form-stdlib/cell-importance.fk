@@ -1,0 +1,120 @@
+; cell-importance.fk - what matters to a cell before it opens.
+;
+; Nature-trust answers one relationship question: open, watch, or wait.
+; Cell-importance composes that posture with the cell's own identity, boundary,
+; vitality, need, offering, memory, and field fit so the next move can also be
+; repair, rest, or ask.
+
+(do
+    (defn ci-all4 (a b c d)
+        (and (and a b) (and c d)))
+
+    (defn ci-need (kind urgency consent)
+        (list kind urgency consent))
+    (defn ci-need-kind    (n) (nth n 0))
+    (defn ci-need-urgency (n) (nth n 1))
+    (defn ci-need-consent (n) (nth n 2))
+
+    (defn ci-offering (kind capacity consent privacy)
+        (list kind capacity consent privacy))
+    (defn ci-offer-kind     (o) (nth o 0))
+    (defn ci-offer-capacity (o) (nth o 1))
+    (defn ci-offer-consent  (o) (nth o 2))
+    (defn ci-offer-privacy  (o) (nth o 3))
+
+    (defn ci-memory (shared-history repair-open learned receipt)
+        (list shared-history repair-open learned receipt))
+    (defn ci-memory-history (m) (nth m 0))
+    (defn ci-memory-repair  (m) (nth m 1))
+    (defn ci-memory-learned (m) (nth m 2))
+    (defn ci-memory-receipt (m) (nth m 3))
+
+    (defn ci-importance (cell-id identity boundary-intact vitality need offering trust-behavior memory field-fit receipt)
+        (list cell-id identity boundary-intact vitality need offering trust-behavior memory field-fit receipt))
+    (defn ci-cell-id    (c) (nth c 0))
+    (defn ci-identity   (c) (nth c 1))
+    (defn ci-boundary   (c) (nth c 2))
+    (defn ci-vitality   (c) (nth c 3))
+    (defn ci-need-row   (c) (nth c 4))
+    (defn ci-offer-row  (c) (nth c 5))
+    (defn ci-trust-row  (c) (nth c 6))
+    (defn ci-memory-row (c) (nth c 7))
+    (defn ci-field-fit  (c) (nth c 8))
+    (defn ci-receipt    (c) (nth c 9))
+
+    (defn ci-nonempty? (s)
+        (if (str_eq s "") 0 1))
+    (defn ci-known? (c)
+        (if (and (eq (ci-receipt c) 1)
+                 (eq (ci-nonempty? (ci-identity c)) 1))
+            1 0))
+    (defn ci-boundary-intact? (c)
+        (if (eq (ci-boundary c) 1) 1 0))
+    (defn ci-vital? (c vitality-floor)
+        (if (ge (ci-vitality c) vitality-floor) 1 0))
+    (defn ci-need-present? (need)
+        (if (and (eq (ci-need-consent need) 1)
+                 (eq (ci-nonempty? (ci-need-kind need)) 1))
+            1 0))
+    (defn ci-offering-present? (offering max-privacy)
+        (if (ci-all4
+                (eq (ci-offer-consent offering) 1)
+                (eq (ci-nonempty? (ci-offer-kind offering)) 1)
+                (not (gt (ci-offer-privacy offering) max-privacy))
+                (gt (ci-offer-capacity offering) 0))
+            1 0))
+    (defn ci-need-offering-fit? (need offering max-privacy)
+        (if (and (eq (ci-need-present? need) 1)
+                 (and (eq (ci-offering-present? offering max-privacy) 1)
+                      (and (str_eq (ci-need-kind need) (ci-offer-kind offering))
+                           (ge (ci-offer-capacity offering) (ci-need-urgency need)))))
+            1 0))
+    (defn ci-memory-clear? (memory memory-floor)
+        (if (ci-all4
+                (eq (ci-memory-receipt memory) 1)
+                (ge (ci-memory-history memory) memory-floor)
+                (eq (ci-memory-repair memory) 0)
+                (eq (ci-memory-learned memory) 1))
+            1 0))
+    (defn ci-field-fit? (c field-floor)
+        (if (ge (ci-field-fit c) field-floor) 1 0))
+    (defn ci-trust-posture (c)
+        (nt-posture (ci-trust-row c)))
+    (defn ci-trust-open? (c)
+        (if (str_eq (ci-trust-posture c) "open") 1 0))
+    (defn ci-trust-watch? (c)
+        (if (str_eq (ci-trust-posture c) "watch") 1 0))
+    (defn ci-trust-wait? (c)
+        (if (str_eq (ci-trust-posture c) "wait") 1 0))
+
+    (defn ci-important-count (c vitality-floor memory-floor field-floor max-privacy)
+        (add (ci-known? c)
+             (add (ci-boundary-intact? c)
+                  (add (ci-vital? c vitality-floor)
+                       (add (ci-need-present? (ci-need-row c))
+                            (add (ci-offering-present? (ci-offer-row c) max-privacy)
+                                 (add (if (eq (ci-trust-wait? c) 0) 1 0)
+                                      (add (ci-memory-clear? (ci-memory-row c) memory-floor)
+                                           (ci-field-fit? c field-floor)))))))))
+
+    (defn ci-next-action (c vitality-floor memory-floor field-floor max-privacy)
+        (if (eq (ci-known? c) 0)
+            "wait"
+            (if (eq (ci-boundary-intact? c) 0)
+                "repair"
+                (if (eq (ci-memory-repair (ci-memory-row c)) 1)
+                    "repair"
+                    (if (eq (ci-vital? c vitality-floor) 0)
+                        "rest"
+                        (if (str_eq (ci-need-kind (ci-need-row c)) "rest")
+                            "rest"
+                            (if (or (eq (ci-trust-wait? c) 1)
+                                    (eq (ci-field-fit? c field-floor) 0))
+                                "wait"
+                                (if (eq (ci-offering-present? (ci-offer-row c) max-privacy) 0)
+                                    "wait"
+                                    (if (eq (ci-need-offering-fit? (ci-need-row c) (ci-offer-row c) max-privacy) 0)
+                                        "ask"
+                                        (if (eq (ci-trust-watch? c) 1) "watch" "open"))))))))))
+
+    0)

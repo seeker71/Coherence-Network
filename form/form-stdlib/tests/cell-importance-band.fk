@@ -1,0 +1,56 @@
+; preludes: form-stdlib/core.fk form-stdlib/nature-trust.fk form-stdlib/cell-importance.fk
+;
+; cell-importance-band - what matters to a cell composes nature trust.
+;
+; Verdict 2047 when every claim lands:
+;   1    a receipted cell with identity is known
+;   2    a vital bounded cell with open trust opens
+;   4    the healthy cell carries all eight importance signals
+;   8    trustworthy but vitality-unproven relationship watches
+;   16   low cell vitality rests
+;   32   broken boundary repairs
+;   64   open memory repair repairs
+;   128  unmet need asks
+;   256  poor field fit waits
+;   512  relationship trust wait waits
+;   1024 over-private offering waits
+
+(do
+    (let trust-open (nt-behavior "mycelium" 1 1 1 1 1 1 1 60 80 82 1))
+    (let trust-watch (nt-behavior "watchful-pack" 1 1 1 1 1 1 1 70 71 60 1))
+    (let trust-wait (nt-behavior "extractive" 0 0 0 0 0 0 1 70 72 90 1))
+
+    (let need-signal (ci-need "temperature-summary" 60 1))
+    (let need-rest (ci-need "rest" 10 1))
+    (let offer-signal (ci-offering "temperature-summary" 80 1 1))
+    (let offer-low (ci-offering "temperature-summary" 20 1 1))
+    (let offer-private (ci-offering "temperature-summary" 80 1 3))
+    (let offer-rest (ci-offering "rest" 20 1 1))
+
+    (let memory-ok (ci-memory 80 0 1 1))
+    (let memory-repair (ci-memory 80 1 1 1))
+
+    (let healthy (ci-importance "cell-1" "sensor" 1 80 need-signal offer-signal trust-open memory-ok 80 1))
+    (let watchful (ci-importance "cell-2" "sensor" 1 80 need-signal offer-signal trust-watch memory-ok 80 1))
+    (let tired (ci-importance "cell-3" "sensor" 1 40 need-signal offer-signal trust-open memory-ok 80 1))
+    (let broken-boundary (ci-importance "cell-4" "sensor" 0 80 need-signal offer-signal trust-open memory-ok 80 1))
+    (let repairing (ci-importance "cell-5" "sensor" 1 80 need-signal offer-signal trust-open memory-repair 80 1))
+    (let asking (ci-importance "cell-6" "sensor" 1 80 need-signal offer-low trust-open memory-ok 80 1))
+    (let low-field (ci-importance "cell-7" "sensor" 1 80 need-signal offer-signal trust-open memory-ok 40 1))
+    (let waiting (ci-importance "cell-8" "sensor" 1 80 need-signal offer-signal trust-wait memory-ok 80 1))
+    (let private (ci-importance "cell-9" "sensor" 1 80 need-signal offer-private trust-open memory-ok 80 1))
+    (let resting (ci-importance "cell-10" "sensor" 1 80 need-rest offer-rest trust-open memory-ok 80 1))
+
+    (let c0 (if (eq (ci-known? healthy) 1) 1 0))
+    (let c1 (if (str_eq (ci-next-action healthy 60 60 60 2) "open") 2 0))
+    (let c2 (if (eq (ci-important-count healthy 60 60 60 2) 8) 4 0))
+    (let c3 (if (str_eq (ci-next-action watchful 60 60 60 2) "watch") 8 0))
+    (let c4 (if (str_eq (ci-next-action tired 60 60 60 2) "rest") 16 0))
+    (let c5 (if (str_eq (ci-next-action broken-boundary 60 60 60 2) "repair") 32 0))
+    (let c6 (if (str_eq (ci-next-action repairing 60 60 60 2) "repair") 64 0))
+    (let c7 (if (str_eq (ci-next-action asking 60 60 60 2) "ask") 128 0))
+    (let c8 (if (str_eq (ci-next-action low-field 60 60 60 2) "wait") 256 0))
+    (let c9 (if (str_eq (ci-next-action waiting 60 60 60 2) "wait") 512 0))
+    (let c10 (if (str_eq (ci-next-action private 60 60 60 2) "wait") 1024 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))
