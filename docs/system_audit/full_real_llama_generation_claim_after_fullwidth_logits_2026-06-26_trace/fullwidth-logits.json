@@ -1,0 +1,54 @@
+{
+  "receipt_kind": "fkwu-form-cli-gguf-fullwidth-logits-receipt",
+  "trace_id": "fkwu-gguf-fullwidth-logits-20260626T223635Z",
+  "branch": "codex/full-width-model-logits-20260626",
+  "commit": "9ea007c6aca5f4d526399b88552ca9a104833dc2",
+  "trace_sha256": "e7f26c0abab698608c59f03a4043d4ab7c6f9f1979cb8d008012aed173843b9e",
+  "runtime": {
+    "verb": "gguf-fullwidth-logits-cell",
+    "artifact": ".cache/body-test-receipts/fkwu-gguf-fullwidth-logits-20260626T223635Z/artifact/form-cli-gguf-fullwidth-logits",
+    "runtime_path_sanitized": true,
+    "http_or_ollama": "absent",
+    "denied_toolchain_names_visible_on_path": 0
+  },
+  "observed": {
+    "full_width_model_logit_generation_verified": true,
+    "full_width_logits_generated_in_form": true,
+    "full_width_model_logits": true,
+    "full_vocabulary_logits": true,
+    "full_model_logits": false,
+    "full_llama_hidden_state_logits": false,
+    "full_width_logit_accelerator_buffers": false,
+    "full_width_logit_count": 128256,
+    "full_width_argmax_token_id": 29574,
+    "full_width_selected_token_id": 29574,
+    "full_width_selected_logit_micro": 236206,
+    "full_width_expected_selected_logit_micro": 236206,
+    "decoded_token_text": "acre",
+    "full_width_logit_generation_sha256": "b7bdfaf8a0569ed07e6682e6066552b94bddca2c6c2d0d70059ec41e2115cb66",
+    "full_width_logit_generation_expected_sha256": "b7bdfaf8a0569ed07e6682e6066552b94bddca2c6c2d0d70059ec41e2115cb66",
+    "full_width_token_text_sha256": "9687f37a648e57bbab7e99d593669cc7adf68bd2a26edbc589137f2f5e118a50",
+    "full_width_token_text_expected_sha256": "9687f37a648e57bbab7e99d593669cc7adf68bd2a26edbc589137f2f5e118a50"
+  },
+  "source_tensor": {
+    "name": "token_embd.weight",
+    "index": 254,
+    "ggml_type": 14,
+    "absolute_start": 1696681152,
+    "row_stride_bytes": 2520,
+    "q6k_block_len": 210
+  },
+  "traces": {
+    "runtime_out": "docs/system_audit/full_real_llama_generation_claim_after_fullwidth_logits_2026-06-26_trace/fullwidth-logits_trace/runtime.out",
+    "build_out": "docs/system_audit/full_real_llama_generation_claim_after_fullwidth_logits_2026-06-26_trace/fullwidth-logits_trace/build.out",
+    "gguf_weight_map_out": "docs/system_audit/full_real_llama_generation_claim_after_fullwidth_logits_2026-06-26_trace/fullwidth-logits_trace/gguf-weight-map.out",
+    "manifest": "docs/system_audit/full_real_llama_generation_claim_after_fullwidth_logits_2026-06-26_trace/fullwidth-logits_trace/gguf-fullwidth-logits-manifest.txt",
+    "source": "docs/system_audit/full_real_llama_generation_claim_after_fullwidth_logits_2026-06-26_trace/fullwidth-logits_trace/fullwidth-logits-source.json",
+    "token_hex": "docs/system_audit/full_real_llama_generation_claim_after_fullwidth_logits_2026-06-26_trace/fullwidth-logits_trace/fullwidth-token.hex"
+  },
+  "claim_boundary": {
+    "closed": "full-width token-embedding projection argmax generated inside fkwu/Form over the complete GGUF vocabulary",
+    "still_pending": "full hidden-state 28-layer Llama decode logits and Metal accelerator-buffer placement"
+  },
+  "verdict": "PASS fkwu-form-cli-gguf-fullwidth-logits"
+}
