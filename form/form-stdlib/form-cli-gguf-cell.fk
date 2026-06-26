@@ -179,6 +179,163 @@
         (expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len)
         (fc-gguf-tensor-slice-report 0 expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len 0 0 0 0 0 0 0 0 0 0 0))
 
+    (defn fc-gg-sp (a b)
+        (str_concat a (str_concat " " b)))
+
+    (defn fc-gg-ts-row-base (i)
+        (add 5 (mul i 7)))
+
+    (defn fc-gg-ts-field (parts i k fallback)
+        (fc-part parts (add (fc-gg-ts-row-base i) k) fallback))
+
+    (defn fc-gg-ts-row-label (parts i) (fc-gg-ts-field parts i 0 ""))
+    (defn fc-gg-ts-row-index-str (parts i) (fc-gg-ts-field parts i 1 "0"))
+    (defn fc-gg-ts-row-type-str (parts i) (fc-gg-ts-field parts i 2 "0"))
+    (defn fc-gg-ts-row-dim0-str (parts i) (fc-gg-ts-field parts i 3 "0"))
+    (defn fc-gg-ts-row-start-str (parts i) (fc-gg-ts-field parts i 4 "0"))
+    (defn fc-gg-ts-row-len-str (parts i) (fc-gg-ts-field parts i 5 "0"))
+    (defn fc-gg-ts-row-sha (parts i) (fc-gg-ts-field parts i 6 ""))
+
+    (defn fc-gg-ts-row-start (parts i) (str_to_int (fc-gg-ts-row-start-str parts i)))
+    (defn fc-gg-ts-row-len (parts i) (str_to_int (fc-gg-ts-row-len-str parts i)))
+
+    (defn fc-gg-ts-row-canonical (parts i)
+        (fc-gg-sp
+            (fc-gg-sp
+            (fc-gg-sp
+            (fc-gg-sp
+            (fc-gg-sp
+            (fc-gg-sp (fc-gg-ts-row-label parts i)
+                       (fc-gg-ts-row-index-str parts i))
+                       (fc-gg-ts-row-type-str parts i))
+                       (fc-gg-ts-row-dim0-str parts i))
+                       (fc-gg-ts-row-start-str parts i))
+                       (fc-gg-ts-row-len-str parts i))
+                       (fc-gg-ts-row-sha parts i)))
+
+    (defn fc-gg-ts-canonical-loop (parts i count acc)
+        (if (ge i count) acc
+            (fc-gg-ts-canonical-loop
+                parts
+                (add i 1)
+                count
+                (fc-gg-sp acc (fc-gg-ts-row-canonical parts i)))))
+
+    (defn fc-gg-ts-canonical (gguf-path file-size-str row-count-str parts row-count)
+        (fc-gg-ts-canonical-loop
+            parts
+            0
+            row-count
+            (fc-gg-sp
+                (fc-gg-sp
+                    (fc-gg-sp "gguf-tensor-set-cell-v1" gguf-path)
+                    file-size-str)
+                row-count-str)))
+
+    (defn fc-gg-ts-row-ok (gguf-path actual-file-size expected-file-size parts i)
+        (do
+            (let label (fc-gg-ts-row-label parts i))
+            (let expected-sha (fc-gg-ts-row-sha parts i))
+            (let absolute-start (fc-gg-ts-row-start parts i))
+            (let slice-len (fc-gg-ts-row-len parts i))
+            (let absolute-end (add absolute-start slice-len))
+            (let range-ok (if (and (ge absolute-start 0)
+                              (and (gt slice-len 0)
+                                   (ge expected-file-size absolute-end))) 1 0))
+            (if (or (or (str_eq label "") (str_eq expected-sha ""))
+                    (or (eq range-ok 0) (not (eq actual-file-size expected-file-size))))
+                0
+                (do
+                    (let slice-raw (read_file_slice gguf-path absolute-start slice-len))
+                    (let actual-len (str_len slice-raw))
+                    (let actual-sha (fc-gg-cell-digest slice-raw))
+                    (if (and (eq actual-len slice-len)
+                             (str_eq actual-sha expected-sha)) 1 0)))))
+
+    (defn fc-gg-ts-pass-loop (gguf-path actual-file-size expected-file-size parts i count acc)
+        (if (ge i count) acc
+            (fc-gg-ts-pass-loop
+                gguf-path
+                actual-file-size
+                expected-file-size
+                parts
+                (add i 1)
+                count
+                (add acc (fc-gg-ts-row-ok gguf-path actual-file-size expected-file-size parts i)))))
+
+    (defn fc-gg-ts-total-bytes-loop (parts i count acc)
+        (if (ge i count) acc
+            (fc-gg-ts-total-bytes-loop
+                parts
+                (add i 1)
+                count
+                (add acc (fc-gg-ts-row-len parts i)))))
+
+    (defn fc-gg-ts-names-loop (parts i count acc)
+        (if (ge i count) acc
+            (do
+                (let label (fc-gg-ts-row-label parts i))
+                (fc-gg-ts-names-loop
+                    parts
+                    (add i 1)
+                    count
+                    (if (str_eq acc "") label (str_concat acc (str_concat "," label)))))))
+
+    (defn fc-gguf-tensor-set-report
+        (ok expected-set-sha actual-set-sha gguf-path row-count pass-count total-bytes file-size actual-file-size names)
+        (do
+            (let out0 (fc-kv-line "gguf_tensor_set_verified" (fc-gg-bool ok)))
+            (let out1 (str_concat out0 (fc-kv-line "gguf_tensor_set_source" "content-addressed-full-gguf-required-tensor-set-manifest")))
+            (let out2 (str_concat out1 (fc-kv-line "gguf_tensor_set_materialization_source" "fkwu-read_file_slice-content-addressed-row-set")))
+            (let out3 (str_concat out2 (fc-kv-line "gguf_tensor_set_scope" "required-llama-tensor-byte-windows")))
+            (let out4 (str_concat out3 (fc-kv-line "gguf_tensor_set_sha256" actual-set-sha)))
+            (let out5 (str_concat out4 (fc-kv-line "gguf_tensor_set_expected_sha256" expected-set-sha)))
+            (let out6 (str_concat out5 (fc-kv-line "gguf_tensor_set_path" gguf-path)))
+            (let out7 (str_concat out6 (fc-kv-line "gguf_tensor_set_row_count" (int_to_str row-count))))
+            (let out8 (str_concat out7 (fc-kv-line "gguf_tensor_set_pass_count" (int_to_str pass-count))))
+            (let out9 (str_concat out8 (fc-kv-line "gguf_tensor_set_bytes_read" (int_to_str total-bytes))))
+            (let out10 (str_concat out9 (fc-kv-line "gguf_tensor_set_file_size_expected" (int_to_str file-size))))
+            (let out11 (str_concat out10 (fc-kv-line "gguf_tensor_set_file_size_observed" (int_to_str actual-file-size))))
+            (let out12 (str_concat out11 (fc-kv-line "gguf_tensor_set_rows" names)))
+            (let out13 (str_concat out12 (fc-kv-line "gguf_tensor_set_accelerator_buffers" "false")))
+            (str_concat out13
+                (if (eq ok 1)
+                    "PASS fkwu-form-cli-full-gguf-tensor-set-materialization"
+                    "FAIL fkwu-form-cli-full-gguf-tensor-set-materialization"))))
+
+    (defn fc-gguf-tensor-set-cell (arg)
+        (if (str_eq arg "")
+            "usage: gguf-tensor-set-cell <manifest-path>"
+            (do
+                (let manifest (fc-gg-strip-eol (read_file arg)))
+                (let parts (split-on manifest " "))
+                (let kind (fc-part parts 0 ""))
+                (let expected-set-sha (fc-part parts 1 ""))
+                (let gguf-path (fc-part parts 2 ""))
+                (let file-size-str (fc-part parts 3 "0"))
+                (let row-count-str (fc-part parts 4 "0"))
+                (let file-size (str_to_int file-size-str))
+                (let row-count (str_to_int row-count-str))
+                (if (or (or (str_eq kind "") (str_eq expected-set-sha ""))
+                        (or (str_eq gguf-path "") (not (gt row-count 0))))
+                    "FAIL gguf-tensor-set manifest expected: gguf-tensor-set-cell-v1 <set-sha256> <gguf-path> <file-size> <row-count> (<row-label> <tensor-index> <tensor-type> <dim0> <absolute-start> <slice-len> <slice-sha256>)+"
+                    (if (gt row-count 1)
+                        "FAIL gguf-tensor-set row_count currently limited to 1 in this fkwu command; aggregate receipts call the native verb once per required tensor row"
+                    (if (str_eq kind "gguf-tensor-set-cell-v1")
+                        (do
+                            (let actual-file-size (file_size gguf-path))
+                            (let canonical (fc-gg-ts-canonical gguf-path file-size-str row-count-str parts row-count))
+                            (let actual-set-sha (fc-gg-cell-digest canonical))
+                            (let pass-count (fc-gg-ts-pass-loop gguf-path actual-file-size file-size parts 0 row-count 0))
+                            (let total-bytes (fc-gg-ts-total-bytes-loop parts 0 row-count 0))
+                            (let names (fc-gg-ts-names-loop parts 0 row-count ""))
+                            (let ok (if (and (str_eq expected-set-sha actual-set-sha)
+                                         (and (eq actual-file-size file-size)
+                                         (and (eq pass-count row-count)
+                                              (gt row-count 0)))) 1 0))
+                            (fc-gguf-tensor-set-report ok expected-set-sha actual-set-sha gguf-path row-count pass-count total-bytes file-size actual-file-size names))
+                        (str_concat "FAIL gguf-tensor-set manifest kind=" kind)))))))
+
     (defn fc-gguf-tensor-slice-math (arg)
         (if (str_eq arg "")
             "usage: gguf-tensor-slice-math <manifest-path>"
