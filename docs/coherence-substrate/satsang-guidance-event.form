@@ -62,7 +62,7 @@
 ;   form/form-stdlib/tests/satsang-room-memory-band.fk -> 255.
 ;   form/form-stdlib/satsang-health-memory.fk names explicit local health memory,
 ;   source-filtered HealthKit import, no-hidden-capture, and analysis boundary.
-;   Proof: form/form-stdlib/tests/satsang-health-memory-band.fk -> 255.
+;   Proof: form/form-stdlib/tests/satsang-health-memory-band.fk -> 1023.
 ;
 ; Boundary:
 ;   The event is an offer, not an interruption. The GUI does not decide that a

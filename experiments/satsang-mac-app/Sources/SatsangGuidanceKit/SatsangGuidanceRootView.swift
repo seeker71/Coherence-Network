@@ -653,7 +653,7 @@ public struct SatsangGuidanceRootView: View {
                 Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
                     GridRow {
                         Text("Sources")
-                        TextField("Oura, Oz, O2, Wellue", text: $model.healthSourceHints)
+                        TextField("Oura Ring 4, Wellue O2Ring S", text: $model.healthSourceHints)
                     }
                     GridRow {
                         Text("Days")
@@ -661,6 +661,8 @@ public struct SatsangGuidanceRootView: View {
                     }
                 }
                 .textFieldStyle(.roundedBorder)
+
+                metricRow("Essential sources", WearableHealthImporter.essentialSourceSummary)
 
                 HStack {
                     Button { model.importHealthSamples() } label: {

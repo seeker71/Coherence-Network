@@ -261,7 +261,7 @@ final class RoomTranscriber: @unchecked Sendable {
     private func configureAudioSessionIfNeeded() throws {
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetooth, .defaultToSpeaker])
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.allowBluetoothHFP, .defaultToSpeaker])
         try session.setActive(true, options: [])
         #endif
     }
