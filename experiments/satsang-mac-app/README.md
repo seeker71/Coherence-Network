@@ -3,7 +3,7 @@
 SwiftUI native carrier for a satsang guidance session.
 
 The macOS app and iPhone app share one tabbed SwiftUI body: Room, Guidance,
-Memory, Learning, Resources, and Settings. The Room mode listens to the room
+Memory, Health, Learning, Resources, and Settings. The Room mode listens to the room
 microphone after `Start Listening` is pressed, keeps that live capture as the
 primary stream, turns concurrent side-channel speech transcription into editable
 transcript lines, can also follow a local transcript file, shows every line that
@@ -29,6 +29,15 @@ Trusted room memory is stored locally beside the transcript:
 ~/.coherence-network/agent-room-memory/speaker-profiles.json
 ~/.coherence-network/agent-room-memory/sessions/
 ~/.coherence-network/agent-room-memory/latest-context.form
+```
+
+Trusted health memory is stored locally after an explicit Health import:
+
+```text
+~/.coherence-network/health-memory/import-index.jsonl
+~/.coherence-network/health-memory/samples.jsonl
+~/.coherence-network/health-memory/imports/
+~/.coherence-network/health-memory/latest-context.form
 ```
 
 Run from the repo root:
@@ -67,14 +76,21 @@ macOS biometric speaker-identification lane; any future acoustic continuity
 sidecar must share the already-open listening stream. The memory proof lives in
 `form/form-stdlib/satsang-room-memory.fk`.
 
+The Health tab imports wearable samples from iPhone HealthKit after Health
+permission is granted. The default source filter covers Oura, Oz/O2, Wellue,
+ViHealth, oxygen, and oximeter sources. Imported samples are written to local
+health memory and summarized into later guidance context. The health-memory
+proof lives in `form/form-stdlib/satsang-health-memory.fk`.
+
 The app boundary is intentionally small. Shared routing and sufficiency logic is
 Form-native; Swift is the current Apple host carrier for GUI, microphone, speech,
-file, and process resources. The request receipt names a generic host OS
+file, process, and health resources. The request receipt names a generic host OS
 resource interface with resolved macOS, Windows, Android, and iPhone/iOS carrier
 mappings.
 Each Send receipt includes detected host resource doors for file read, file
 append, atomic file write, process stdin/stdout, audio input, and speech
-transcription, plus the cross-platform carrier matrix for those same doors.
+transcription, and health samples, plus the cross-platform carrier matrix for
+those same doors.
 Python, Go, Rust, and TypeScript are not app-boundary runtimes for this carrier.
 Windows and Android are carrier mappings in this package, not full GUI apps yet.
 The iPhone target is native SwiftUI source; a device-signed archive still needs
@@ -82,6 +98,8 @@ an Apple team/profile plus installed iOS SDK support. The permission metadata
 template lives at `Support/SatsangGuidancePhone/Info.plist`, and iOS routes the
 Form process door through an embedded runtime adapter rather than arbitrary
 subprocess spawning.
+The HealthKit entitlement template lives at
+`Support/SatsangGuidancePhone/SatsangGuidancePhone.entitlements`.
 
 Before Send writes the event, the app asks the repo-local native `form-cli`
 for a local body/RAG answer. The resulting route receipt is stored inside the

@@ -8,5 +8,7 @@
 	<string>Room listening uses the microphone after Start Listening is pressed.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Speech recognition turns live room audio into editable transcript lines.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Health import reads wearable samples you choose to share for local memory and guidance context.</string>
 </dict>
 </plist>

@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/satsang-health-memory.fk
+;
+; satsang-health-memory-band — wearable samples enter local health memory only
+; by explicit import, with source filters and non-diagnostic analysis boundary.
+;
+; Verdict 255:
+;   1   explicit import is accepted
+;   2   iOS HealthKit is an accepted source carrier
+;   4   Oura source filter is accepted
+;   8   Oz/O2 source filter is accepted
+;   16  heart-rate metric is accepted
+;   32  SpO2 metric is accepted
+;   64  hidden capture is rejected by trust receipt
+;   128 receipt can feed later context under analysis-not-diagnosis boundary
+(do
+    (let receipt (shm-receipt "explicit-import"
+                              "ios-healthkit"
+                              "spo2"
+                              0
+                              1
+                              "reference-memory-reasoning-analysis-not-diagnosis"))
+
+    (let c0 (if (eq (shm-import-boundary? "explicit-import") 1) 1 0))
+    (let c1 (if (eq (shm-source-carrier? "ios-healthkit") 1) 2 0))
+    (let c2 (if (eq (shm-source-filter? "oura") 1) 4 0))
+    (let c3 (if (and (eq (shm-source-filter? "oz") 1)
+                     (eq (shm-source-filter? "o2") 1)) 8 0))
+    (let c4 (if (eq (shm-metric-kind? "heart-rate") 1) 16 0))
+    (let c5 (if (eq (shm-metric-kind? "spo2") 1) 32 0))
+    (let c6 (if (eq (shm-trust-ok? "explicit-import"
+                                   "ios-healthkit"
+                                   "spo2"
+                                   1
+                                   1
+                                   "reference-memory-reasoning-analysis-not-diagnosis") 0) 64 0))
+    (let c7 (if (and (eq (shm-rec-ok? receipt) 1)
+                     (eq (shm-rec-hidden receipt) 0)) 128 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))

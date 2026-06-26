@@ -8,7 +8,7 @@
 ;
 ; Carrier:
 ;   experiments/satsang-mac-app - shared SwiftUI native app. macOS and iPhone
-;   entry points share one tabbed body: Room, Guidance, Memory, Learning,
+;   entry points share one tabbed body: Room, Guidance, Memory, Health, Learning,
 ;   Resources, and Settings. The app tails the local transcript JSONL, listens to
 ;   the room microphone after explicit Start Listening, lets the holder edit
 ;   utterances, and writes the request to ~/.coherence-network/satsang-guidance/
@@ -29,8 +29,12 @@
 ;   when present, or by visible channel label when not. Acoustic continuity can
 ;   only arrive through a passive sidecar sharing the already-open listening
 ;   stream; macOS biometric speaker identification is outside the carrier.
-;   File, process, audio-input, and speech-transcript resources cross one
-;   generic host OS resource-door receipt in the Swift core. The receipt carries
+;   The Health tab imports iPhone HealthKit wearable samples after explicit
+;   permission and source filtering, then writes local health-memory context under
+;   ~/.coherence-network/health-memory for later reference, memory, reasoning,
+;   and analysis. File, process, audio-input, speech-transcript, and
+;   health-samples resources cross one generic host OS resource-door receipt in
+;   the Swift core. The receipt carries
 ;   resolved macOS, Windows, Android, and iPhone/iOS carrier mappings for every
 ;   resource kind; live state is detected on Apple hosts today, while
 ;   Windows/Android device packages still promote declared doors to observed/open
@@ -52,10 +56,13 @@
 ;   form/form-stdlib/satsang-host-boundary.fk names the generic host ABI,
 ;   detected resource doors, resolved platform carriers, and forbidden
 ;   app-boundary runtimes. Proof:
-;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 1048575.
+;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 2097151.
 ;   form/form-stdlib/satsang-room-memory.fk names explicit local session memory,
 ;   speaker continuity, no-hidden-capture, and later context. Proof:
 ;   form/form-stdlib/tests/satsang-room-memory-band.fk -> 255.
+;   form/form-stdlib/satsang-health-memory.fk names explicit local health memory,
+;   source-filtered HealthKit import, no-hidden-capture, and analysis boundary.
+;   Proof: form/form-stdlib/tests/satsang-health-memory-band.fk -> 255.
 ;
 ; Boundary:
 ;   The event is an offer, not an interruption. The GUI does not decide that a

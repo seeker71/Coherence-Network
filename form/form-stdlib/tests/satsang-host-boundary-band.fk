@@ -3,7 +3,7 @@
 ; satsang-host-boundary-band — shared Form body, minimal host ABI, no app
 ; boundary Python/Go/Rust/TypeScript.
 ;
-; Verdict 1048575:
+; Verdict 2097151:
 ;   1   Form is an allowed app runtime
 ;   2   Swift is only the minimal host carrier
 ;   4   Python is forbidden at the app boundary
@@ -24,6 +24,7 @@
 ;   65536 Windows process door is CreateProcess stdin/stdout
 ;   262144 iPhone/iOS carrier matrix resolves every resource door
 ;   524288 iPhone speech carrier is the native Speech side channel
+;   1048576 iPhone health samples use HealthKit
 (do
     (let rec (shb-receipt "swift-minimal-host-carrier" "process-stdin-stdout" "macos"))
     (let audio-door (shb-door-receipt "audio-input" "open" "macos-avfoundation"))
@@ -52,5 +53,6 @@
     (let c17 (if (eq (shb-platform-target? "ios") 1) 131072 0))
     (let c18 (if (eq (shb-platform-carriers-complete? "ios") 1) 262144 0))
     (let c19 (if (str_eq (shb-carrier-for "ios" "speech-transcript") "ios-speech") 524288 0))
+    (let c20 (if (str_eq (shb-carrier-for "ios" "health-samples") "ios-healthkit") 1048576 0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20)))

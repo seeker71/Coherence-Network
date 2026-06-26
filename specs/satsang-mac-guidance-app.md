@@ -10,12 +10,16 @@ source:
     symbols: [SatsangGuidanceRootView, SatsangHostShell, AppModel]
   - file: experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift
     symbols: [RoomTranscriber]
+  - file: experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift
+    symbols: [WearableHealthImporter]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift
     symbols: [SatsangNativeAppMode, SatsangNativeAppModeReceipt]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift
     symbols: [TranscriptUtterance, TranscriptParser]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift
     symbols: [TrustedRoomMemoryStore, TrustedRoomMemoryContext, TrustedRoomSpeakerProfile, TrustedRoomMemorySessionRecord]
+  - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedHealthMemory.swift
+    symbols: [TrustedHealthMemoryStore, TrustedHealthMemoryContext, TrustedHealthSample, TrustedHealthMemorySnapshot]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift
     symbols: [TranscriptMerger]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift
@@ -32,10 +36,15 @@ source:
     symbols: [slr-decision, slr-remote-oracle?, slr-live-capture-receipt?, slr-side-channel-transcribe?, slr-receipt]
   - file: form/form-stdlib/satsang-room-memory.fk
     symbols: [srm-mic-exclusive-carrier?, srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
+  - file: form/form-stdlib/satsang-health-memory.fk
+    symbols: [shm-import-boundary?, shm-source-carrier?, shm-metric-kind?, shm-source-filter?, shm-trust-ok?, shm-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
   - "iPhone native SwiftUI GUI is present as a first-class app target"
-  - "Mac and iPhone carriers share one tabbed native app body with Room, Guidance, Memory, Learning, Resources, and Settings modes"
+  - "Mac and iPhone carriers share one tabbed native app body with Room, Guidance, Memory, Health, Learning, Resources, and Settings modes"
+  - "The shared native app body includes a Health mode for explicit iPhone wearable import"
+  - "The iPhone carrier reads HealthKit samples after Health permission and source filtering for Oura, Oz/O2, Wellue, ViHealth, oxygen, or oximeter sources"
+  - "Imported health samples are stored in local health memory and summarized into later guidance context"
   - "Live room capture is the primary stream; speech transcription is only a side channel fed during that capture"
   - "Speech Recognition is never a before-recording or after-recording pass over stored audio"
   - "No-speech intervals do not stop the active room listener"
@@ -48,18 +57,19 @@ requirements:
   - "The send path records Form-native body/RAG lookup before any remote oracle request"
   - "Remote LLM oracle routing is only an explicit request when the native sufficiency gate fails"
   - "Shared app logic is declared Form-native and host access crosses a generic host OS resource interface"
-  - "The request records detected host resource doors for file, process, audio-input, and speech-transcript access"
+  - "The request records detected host resource doors for file, process, audio-input, speech-transcript, and health-samples access"
   - "The request records resolved macOS, Windows, Android, and iPhone/iOS carrier mappings for every host resource door"
   - "The request records local trusted room-memory context from prior explicitly sent sessions"
   - "The send path stores a local session record, session index, and speaker-profile continuity receipt"
+  - "The health import path stores a local import record, sample log, and latest health-memory context receipt"
   - "Recurring unnamed speakers match by stable voice_id/speaker_id when supplied; channel-only room mic continuity is not claimed as verified identity"
   - "Speaker continuity never uses macOS biometric speaker identification or any exclusive-mic biometric carrier"
   - "Python, Go, Rust, and TypeScript are rejected as app-boundary runtimes for this carrier"
 done_when:
-  - "Swift package tests pass for parsing, request writing, trusted room-memory, host-boundary, and route-gate receipts"
+  - "Swift package tests pass for parsing, request writing, trusted room-memory, trusted health-memory, host-boundary, and route-gate receipts"
   - "Swift package builds the GUI executable"
-  - "satsang-guidance-event, satsang-listen-route, and satsang-room-memory Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 1048575"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk"
+  - "satsang-guidance-event, satsang-listen-route, satsang-room-memory, and satsang-health-memory Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 2097151"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
   - "The GUI edits local event payloads only; speech capture starts only from explicit user action"
@@ -73,17 +83,18 @@ constraints:
 
 This spec creates the native satsang companion app surface. macOS and iPhone
 share one SwiftUI/Form-native body with tabs for Room, Guidance, Memory,
-Learning, Resources, and Settings. Room speech and detected transcript files are
-visible, editable, and sent as an explicit guidance request to Sema or another
-invoked presence only when a turn is offered. The carrier listens only after
-explicit user action, reads local transcript files, and writes a local protocol
-event queue.
+Health, Learning, Resources, and Settings. Room speech and detected transcript
+files are visible, editable, and sent as an explicit guidance request to Sema or
+another invoked presence only when a turn is offered. The carrier listens only
+after explicit user action, reads local transcript files, imports iPhone
+HealthKit wearable samples after explicit permission, and writes local protocol
+memory.
 
 ## Requirements
 
 - [x] The GUI loads detected transcript lines from a JSONL or JSON-array file.
 - [x] The GUI is a single tabbed native app surface with Room, Guidance,
-      Memory, Learning, Resources, and Settings modes.
+      Memory, Health, Learning, Resources, and Settings modes.
 - [x] The GUI starts/stops native macOS microphone transcription with explicit
       user action.
 - [x] The iPhone SwiftUI app target uses the same shared GUI/body and has the
@@ -105,6 +116,14 @@ event queue.
       speaker profiles, and latest context receipt after explicit Send.
 - [x] Later sends include prior-session context and speaker-profile summary in
       the request.
+- [x] The iPhone Health mode requests HealthKit read permission and imports
+      source-filtered wearable samples into local health memory.
+- [x] The source filter defaults cover Oura, Oz/O2, Wellue, ViHealth, oxygen,
+      and oximeter sources while allowing the holder to edit the source list.
+- [x] Imported health memory writes a local import record, sample log, JSON
+      context, and Form context.
+- [x] Later sends include compact health-memory context in the local Form/RAG
+      request.
 - [x] Recurring unnamed speakers can match by stable `voice_id` / `speaker_id`
       when supplied by a transcript producer; `room mic` without a voice id is
       carried as channel continuity, not verified identity.
@@ -122,8 +141,8 @@ event queue.
       host OS resource interface, Swift as the minimal host carrier, and
       Python/Go/Rust/TypeScript forbidden at the app boundary.
 - [x] The request records detected host resource doors for file read, file
-      append, atomic file write, process stdin/stdout, audio input, and speech
-      transcription.
+      append, atomic file write, process stdin/stdout, audio input, speech
+      transcription, and health samples.
 - [x] The request records a complete macOS/Windows/Android/iPhone carrier
       matrix for those same resource doors.
 - [x] A Form proof names the valid event/protocol boundary.
@@ -139,9 +158,11 @@ event queue.
 - `experiments/satsang-mac-app/Support/SatsangGuidancePhone/Info.plist` - iPhone permission metadata template.
 - `experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift` - shared tabbed SwiftUI GUI.
 - `experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift` - native Apple room microphone capture with speech transcription as a side channel.
+- `experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift` - conditional iPhone HealthKit importer for source-filtered wearable samples.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift` - shared tab/mode receipt.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift` - transcript parser.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift` - local session index, speaker-profile, and prior-context memory store.
+- `experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedHealthMemory.swift` - local health import index, sample log, and prior-context memory store.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift` - transcript reload merge policy.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift` - event writer.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift` - local Form/RAG route receipt writer.
@@ -156,8 +177,11 @@ event queue.
 - `form/form-stdlib/tests/satsang-listen-route-band.fk` - remote-last route proof.
 - `form/form-stdlib/satsang-room-memory.fk` - explicit local trusted room-memory protocol.
 - `form/form-stdlib/tests/satsang-room-memory-band.fk` - trusted room-memory proof.
+- `form/form-stdlib/satsang-health-memory.fk` - explicit local trusted health-memory protocol.
+- `form/form-stdlib/tests/satsang-health-memory-band.fk` - trusted health-memory proof.
 - `docs/coherence-substrate/satsang-guidance-event.form` - teaching.
 - `docs/coherence-substrate/satsang-room-memory.form` - room-memory teaching.
+- `docs/coherence-substrate/satsang-health-memory.form` - health-memory teaching.
 
 ## Acceptance Tests
 
@@ -165,9 +189,10 @@ event queue.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidance` passes.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone` passes.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `1048575`.
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `2097151`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk` returns `255`.
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk` returns `255`.
 - Manual validation: launch the app, press Start Listening, allow macOS
   microphone/speech prompts, speak into the room, edit a transcript line, press
   Send, and see a JSON/Form event under
@@ -182,6 +207,9 @@ event queue.
 - Manual validation: while Speech Recognition attaches, cycles, or waits through
   silence, confirm the live mic level remains active and the listener does not
   restart the capture stream.
+- Manual validation: on an iPhone with HealthKit data from Oura or an Oz/O2
+  source, open Health mode, press Import, grant Health permission, and confirm
+  local files appear under `~/.coherence-network/health-memory/`.
 
 ## Verification
 
@@ -194,6 +222,7 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk
 python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md
 ```
 
@@ -201,6 +230,7 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 
 - Autonomous interruption by Sema or another presence.
 - Invoking a remote LLM directly from the GUI.
+- Direct Oura Cloud OAuth or direct Oz/O2 Bluetooth pairing in this PR.
 - Replacing macOS Speech with a fully Form-native acoustic decoder.
 - Using macOS biometric speaker identification or any exclusive-mic biometric
   carrier for room-memory speaker continuity.
@@ -237,12 +267,18 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
   support outside this source patch. iOS cannot spawn arbitrary subprocesses, so
   the process stdin/stdout resource door is declared as an embedded Form runtime
   adapter until fkwu is packaged in-process.
+- HealthKit only returns data types and sources the holder grants. Oura can
+  reach this lane through its Apple Health export; Oz/O2 devices reach it when
+  their companion app writes compatible Apple Health samples. Device-specific
+  Bluetooth or vendor-cloud routes require their own consent and protocol work.
 
 ## Known Gaps and Follow-up Tasks
 
 - Follow-up task: add a signed notarized macOS bundle once the app surface settles.
 - Follow-up task: add a signed iPhone archive/TestFlight lane once the Apple
   team/profile is available.
+- Follow-up task: add direct Oura OAuth and direct Oz/O2 Bluetooth carriers when
+  the holder wants source-native data beyond Apple Health.
 - Follow-up task: wire a live Sema presence process to consume the event queue and
   return a visible transmission inside the GUI.
 - Follow-up task: add a passive shared-audio continuity sidecar only if it can
