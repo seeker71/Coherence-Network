@@ -1,7 +1,7 @@
 {
   "date": "2026-06-26",
   "thread_branch": "codex/nature-trust-core-20260626",
-  "commit_scope": "Embody nature-taught trust as a core concept plus an executable Form recipe. The new nature-trust cell reads behavior the way living systems do: repeated non-harm, reciprocity, boundary response, repair, diversity, rest, local attention, and whole-field vitality after contact. The human concept layer links the teaching into trust-over-fear, farm-as-organism, circulation, and field-edge.",
+  "commit_scope": "Embody nature-taught trust as a core concept plus executable Form recipes. The nature-trust cell reads relationship behavior the way living systems do: repeated non-harm, reciprocity, boundary response, repair, diversity, rest, local attention, and whole-field vitality after contact. The cell-importance layer composes that trust posture with identity, boundary, vitality, need, offering, memory, and field fit so a cell can open, watch, wait, repair, rest, or ask.",
   "files_owned": [
     "docs/system_audit/commit_evidence_20260626_nature_trust_core.json"
   ],
@@ -11,10 +11,12 @@
   ],
   "spec_ids": [
     "knowledge-resonance-engine",
-    "form-stdlib-nature-trust"
+    "form-stdlib-nature-trust",
+    "form-stdlib-cell-importance"
   ],
   "task_ids": [
-    "task-2026-06-26-nature-trust-core"
+    "task-2026-06-26-nature-trust-core",
+    "task-2026-06-26-cell-importance-core"
   ],
   "contributors": [
     {
@@ -46,6 +48,7 @@
     "Grok critique identified that diversity/rest should gate trust-earned rather than only field vitality; the recipe and band now make missing diversity/rest resolve to wait rather than watch.",
     "The Nature-Taught Trust concept page names the current nature-trust-band verdict as 16383, matching the executable fourth-arm proof.",
     "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nature-trust.fk form-stdlib/tests/nature-trust-band.fk -> '✓ core.fk+nature-trust.fk+nature-trust-band.fk  → 16383' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' with '1 ok, 0 divergent'.",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nature-trust.fk form-stdlib/cell-importance.fk form-stdlib/tests/cell-importance-band.fk -> '✓ core.fk+nature-trust.fk+cell-importance.fk+cell-importance-band.fk  → 2047' and 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' with '1 ok, 0 divergent'.",
     "python3 scripts/wellness_check.py -> exit 0; vision-kb/INDEX.md aligned at 194 concepts; edited durable docs speak from what IS; no unseen structural twins.",
     "python3 scripts/generate_repo_indexes.py --check -> All indexes up to date.",
     "git diff --check -> exit 0."
@@ -61,7 +64,9 @@
     "docs/vision-kb/concepts/lc-nature-taught-trust.md",
     "docs/vision-kb/concepts/lc-trust-over-fear.md",
     "form/fourth-arm-bands.txt",
+    "form/form-stdlib/cell-importance.fk",
     "form/form-stdlib/nature-trust.fk",
+    "form/form-stdlib/tests/cell-importance-band.fk",
     "form/form-stdlib/tests/nature-trust-band.fk",
     "scripts/INDEX.md"
   ],
@@ -70,11 +75,12 @@
     "status": "pass",
     "commands": [
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nature-trust.fk form-stdlib/tests/nature-trust-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nature-trust.fk form-stdlib/cell-importance.fk form-stdlib/tests/cell-importance-band.fk",
       "python3 scripts/wellness_check.py",
       "python3 scripts/generate_repo_indexes.py --check",
       "git diff --check"
     ],
-    "notes": "The nature-trust Form recipe and band prove four-way locally at verdict 16383. The proof now encodes: fail any behavior signal -> wait; pass behavior without vitality -> watch; pass behavior and vitality -> open. Wellness passes with the new concept counted and circulated."
+    "notes": "The nature-trust Form recipe and band prove four-way locally at verdict 16383. The cell-importance recipe and band prove four-way locally at verdict 2047. The proof now encodes: fail any behavior signal -> wait; pass behavior without vitality -> watch; pass behavior and vitality -> open; then compose the trust posture with cell identity, boundary, vitality, need, offering, memory, and field fit to choose open/watch/wait/repair/rest/ask. Wellness passes with the concept counted and circulated."
   },
   "ci_validation": {
     "status": "pending",
@@ -92,12 +98,13 @@
   },
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "The body now carries nature-taught trust as an executable Form recipe and as a vision KB concept. A behavior row can resolve to open/watch/wait from trust evidence and whole-field vitality. Missing diversity or rest waits rather than watches, and the teaching is findable from the trust, farm, circulation, and field-edge concepts.",
+    "expected_behavior_delta": "The body now carries nature-taught trust as an executable Form recipe and as a vision KB concept. A behavior row can resolve to open/watch/wait from trust evidence and whole-field vitality. Missing diversity or rest waits rather than watches. Cell importance then applies that posture to a cell's own identity, boundary, vitality, need, offering, memory, and field fit so the next move can also be repair, rest, or ask.",
     "public_endpoints": [
-      "No public HTTP endpoint; local Form stdlib recipe form/form-stdlib/nature-trust.fk and concept docs/vision-kb/concepts/lc-nature-taught-trust.md."
+      "No public HTTP endpoint; local Form stdlib recipes form/form-stdlib/nature-trust.fk and form/form-stdlib/cell-importance.fk plus concept docs/vision-kb/concepts/lc-nature-taught-trust.md."
     ],
     "test_flows": [
       "Focused four-way Form proof: nature-trust-band -> 16383, fourth arm four-way, 0 divergent.",
+      "Focused four-way Form proof: cell-importance-band -> 2047, fourth arm four-way, 0 divergent.",
       "Vision KB wellness: INDEX aligned at 194 concepts and root circulation clear.",
       "Repository index check: generated indexes up to date."
     ]
