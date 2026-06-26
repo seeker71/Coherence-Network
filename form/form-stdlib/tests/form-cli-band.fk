@@ -2,8 +2,8 @@
 ;
 ; form-cli-band — native form-cli dispatch + fnri catalog on fkwu (source walk).
 ; Verdict 16383 = 4095 dispatch/fnri + 4096 ask reaches grounded lane
-; + 8192 synthesis-status names the observed model-lane pieces and the single
-; remaining decoded-prose binding.
+; + 8192 synthesis-status names the observed model-lane pieces and the decoded
+; answer binding.
 
 (do
     (let c0 (if (str_eq (fc-respond "ping") "pong") 1 0))
@@ -21,8 +21,9 @@
     (let c11 (if (str_eq (fc-respond "fnri know standard-receipt") "docs/coherence-substrate/standard-receipt.form") 2048 0))
     (let c12 (if (str_eq (fc-respond "ask standard receipt") "[ask: local fkwu RAG index has no grounded hit]") 4096 0))
     (let synth (fc-respond "synthesis-status"))
-    (let c13 (if (and (not (lt (str_find synth "pending-fkwu-metal-llm" 0) 0))
+    (let c13 (if (and (not (lt (str_find synth "fkwu-metal-answer-bound" 0) 0))
                       (and (not (lt (str_find synth "available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness" 0) 0))
-                      (and (not (lt (str_find synth "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call" 0) 0))
-                           (not (lt (str_find synth "missing:decoded-prose-answer-binding" 0) 0))))) 8192 0))
+                      (and (not (lt (str_find synth "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" 0) 0))
+                      (and (not (lt (str_find synth "missing:none" 0) 0))
+                           (not (lt (str_find (fc-respond "decoded-answer") "prose-generation:observed-decoded-prose-answer-binding" 0) 0)))))) 8192 0))
     (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))
