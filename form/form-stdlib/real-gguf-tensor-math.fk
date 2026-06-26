@@ -1,0 +1,50 @@
+; real-gguf-tensor-math.fk — named GGUF tensor bytes enter native math.
+;
+; This cell composes the pieces that were previously proven beside each other:
+; gguf-read can find a named tensor and resolve its absolute data offset,
+; weight-load can dequant a Q4_K/Q6_K block from bytes, and block-join can feed
+; dequantized weights into dot/matvec math. The new surface is the direct join:
+; byte buffer + tensor name -> tensor bytes -> dequant/load -> math.
+;
+; Host file I/O is still outside this pure recipe. A carrier may fill `bytes`
+; from a real GGUF file, but every structural and numeric decision below is Form.
+;
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q4k-dequant.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/block-join.fk
+;
+; Proven by: form-stdlib/tests/real-gguf-tensor-math-band.fk
+
+(do
+    (defn rgtm-tensor-record (bytes target)
+        (gg-find-tensor bytes target))
+
+    (defn rgtm-tensor-data-abs-a (bytes alignment target)
+        (gg-tensor-abs bytes alignment target))
+
+    (defn rgtm-tensor-data-abs (bytes target)
+        (rgtm-tensor-data-abs-a bytes 32 target))
+
+    (defn rgtm-tensor-type (bytes target)
+        (gg-ti-type bytes (rgtm-tensor-record bytes target)))
+
+    (defn rgtm-tensor-dim0 (bytes target)
+        (gg-ti-dim0 bytes (rgtm-tensor-record bytes target)))
+
+    (defn rgtm-load-q6k (bytes target)
+        (wl-load-q6k bytes (rgtm-tensor-data-abs bytes target)))
+
+    (defn rgtm-q6k-at (bytes target i)
+        (wl-q6k-at bytes (rgtm-tensor-data-abs bytes target) i))
+
+    (defn rgtm-dot-q6k-row-n (bytes target n x)
+        (bj-dot-row-n bytes (rgtm-tensor-data-abs bytes target) n x))
+
+    (defn rgtm-matvec-q6k-row (bytes target x)
+        (bj-matvec-q6k-row bytes (rgtm-tensor-data-abs bytes target) x))
+
+    (defn rgtm-load-q4k (bytes target)
+        (wl-load-q4k bytes (rgtm-tensor-data-abs bytes target)))
+
+    (defn rgtm-q4k-at (bytes target i)
+        (wl-q4k-at bytes (rgtm-tensor-data-abs bytes target) i))
+
+    0)

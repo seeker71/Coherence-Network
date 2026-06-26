@@ -1036,6 +1036,7 @@ block-join fks 255
 block-join-causal fks 15
 block-join-gqa-causal fks 15
 block-join-asm fks 255
+real-gguf-tensor-math fks 1023
 form-glsl fks 7
 form-llama-champion-lane fks 255
 satsang-room-memory fks 255
