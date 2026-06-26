@@ -18,6 +18,11 @@
 ;   silent. On Send, the GUI asks the local Form CLI first and records the
 ;   body/RAG sufficiency receipt in the JSON and .form event; a remote oracle is
 ;   only requested as an explicit insufficient-local route, not called by the GUI.
+;   The Send path also writes a local trusted room-memory receipt under
+;   ~/.coherence-network/agent-room-memory and includes prior-session context in
+;   the request. Speaker continuity is keyed by transcript voice_id / speaker_id
+;   when present, or by visible channel label when not; channel-only continuity
+;   is not presented as verified identity.
 ;   File, process, audio-input, and speech-transcript resources cross one
 ;   generic host OS resource-door receipt in the Swift core. The receipt carries
 ;   resolved macOS, Windows, and Android carrier mappings for every resource
@@ -40,6 +45,9 @@
 ;   detected resource doors, resolved platform carriers, and forbidden
 ;   app-boundary runtimes. Proof:
 ;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 131071.
+;   form/form-stdlib/satsang-room-memory.fk names explicit local session memory,
+;   speaker continuity, no-hidden-capture, and later context. Proof:
+;   form/form-stdlib/tests/satsang-room-memory-band.fk -> 255.
 ;
 ; Boundary:
 ;   The event is an offer, not an interruption. The GUI does not decide that a

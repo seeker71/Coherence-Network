@@ -27,12 +27,14 @@ final class AppModel: ObservableObject {
     @Published var utterances: [TranscriptUtterance] = []
     @Published var selectedID: TranscriptUtterance.ID?
     @Published var routeSummary: String = "Form route: waiting for request"
+    @Published var memoryContextSummary: String = "Trusted memory: waiting for Send"
     @Published var status: String = "Ready"
 
     private let defaultTranscriptPath: String
     private let defaultQueuePath: String
     private let repositoryRoot: URL?
     private let hostResources: FoundationHostResourceInterface
+    private let roomMemoryStore: TrustedRoomMemoryStore
     private var timer: Timer?
     private let roomTranscriber = RoomTranscriber()
 
@@ -42,6 +44,10 @@ final class AppModel: ObservableObject {
         let home = hostResources.homeDirectory
         defaultTranscriptPath = home.appendingPathComponent(".coherence-network/agent-room-memory/transcript.jsonl").path
         defaultQueuePath = home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
+        roomMemoryStore = TrustedRoomMemoryStore(
+            rootURL: home.appendingPathComponent(".coherence-network/agent-room-memory"),
+            host: hostResources
+        )
         repositoryRoot = Self.resolveRepositoryRoot(home: home, host: hostResources)
         transcriptPath = defaultTranscriptPath
         queuePath = defaultQueuePath
@@ -137,7 +143,10 @@ final class AppModel: ObservableObject {
 
     func send() {
         commitLiveDraftIfNeeded()
-        let routeReceipt = makeRouteReceipt()
+        utterances = roomMemoryStore.utterancesWithSpeakerProfiles(utterances)
+        let memoryContext = loadMemoryContext()
+        memoryContextSummary = memoryContext.summaryLine
+        let routeReceipt = makeRouteReceipt(memoryContext: memoryContext)
         routeSummary = routeReceipt.summary
         let request = GuidanceRequest(
             sessionTitle: sessionTitle,
@@ -146,7 +155,8 @@ final class AppModel: ObservableObject {
             turnMode: turnMode,
             guidanceQuestion: guidanceQuestion,
             utterances: utterances,
-            routeReceipt: routeReceipt
+            routeReceipt: routeReceipt,
+            memoryContext: memoryContext
         )
         do {
             let sender = GuidanceRequestSender(
@@ -154,7 +164,9 @@ final class AppModel: ObservableObject {
                 host: hostResources
             )
             let result = try sender.send(request)
-            status = "Sent \(request.utterances.count) lines to \(targetPresence). \(routeReceipt.summary). Form envelope: \(result.latestFormURL.path)"
+            let memoryResult = try roomMemoryStore.record(request)
+            memoryContextSummary = "\(memoryContext.summaryLine); \(memoryResult.summary)"
+            status = "Sent \(request.utterances.count) lines to \(targetPresence). \(routeReceipt.summary). \(memoryResult.summary). Form envelope: \(result.latestFormURL.path)"
         } catch {
             status = "Send failed: \(error.localizedDescription)"
         }
@@ -211,13 +223,27 @@ final class AppModel: ObservableObject {
         return path
     }
 
-    private func makeRouteReceipt() -> FormNativeRouteReceipt {
+    private func makeRouteReceipt(memoryContext: TrustedRoomMemoryContext) -> FormNativeRouteReceipt {
         let bodySources = formBodySources()
         let body = FormNativeLookupSignal.bodyProtocol(sourceIDs: bodySources, sufficient: false)
         let formCLIURL = repositoryRoot.flatMap { resolveFormCLI(repositoryRoot: $0) }
         let hostBoundary = makeHostBoundary(formCLIURL: formCLIURL)
-        let rag = formNativeAskSignal(formCLIURL: formCLIURL)
+        let rag = formNativeAskSignal(formCLIURL: formCLIURL, memoryContext: memoryContext)
         return FormNativeRouteReceipt(hostBoundary: hostBoundary, bodyLookup: body, ragLookup: rag)
+    }
+
+    private func loadMemoryContext() -> TrustedRoomMemoryContext {
+        do {
+            return try roomMemoryStore.context()
+        } catch {
+            return TrustedRoomMemoryContext(
+                priorSessionCount: 0,
+                priorTurnCount: 0,
+                speakerCount: 0,
+                speakerSummary: "memory read failed",
+                recentExchangeSummary: error.localizedDescription
+            )
+        }
     }
 
     private func formBodySources() -> [String] {
@@ -225,8 +251,10 @@ final class AppModel: ObservableObject {
         let candidates = [
             "form/form-stdlib/satsang-guidance-event.fk",
             "form/form-stdlib/form-cli-sufficiency.fk",
+            "form/form-stdlib/satsang-room-memory.fk",
             "form/form-stdlib/rag-ask.fk",
             "docs/coherence-substrate/satsang-guidance-event.form",
+            "docs/coherence-substrate/satsang-room-memory.form",
             "docs/coherence-substrate/form-first-reasoning.form"
         ]
         return candidates.filter {
@@ -243,14 +271,18 @@ final class AppModel: ObservableObject {
         return FormHostBoundaryReceipt(resourceDoors: fileProcessDoors + RoomTranscriber.detectResourceDoors())
     }
 
-    private func formNativeAskSignal(formCLIURL: URL?) -> FormNativeLookupSignal {
+    private func formNativeAskSignal(formCLIURL: URL?, memoryContext: TrustedRoomMemoryContext) -> FormNativeLookupSignal {
         guard let repositoryRoot else {
             return .unavailable("form-native-rag-local-llm", reason: "repository root not found")
         }
         guard let formCLIURL else {
             return .unavailable("form-native-rag-local-llm", reason: "form-cli executable not found")
         }
-        let query = [guidanceQuestion, transcriptText]
+        let memoryText = [
+            memoryContext.speakerSummary,
+            memoryContext.recentExchangeSummary
+        ].joined(separator: "\n")
+        let query = [guidanceQuestion, memoryText, transcriptText]
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let runner = FormNativeLookupRunner(
@@ -298,7 +330,7 @@ final class AppModel: ObservableObject {
         }
 
         let now = ISO8601DateFormatter().string(from: Date())
-        let draft = TranscriptUtterance(
+        var draft = TranscriptUtterance(
             id: "live-draft",
             timestamp: now,
             speaker: "room mic",
@@ -306,6 +338,7 @@ final class AppModel: ObservableObject {
             text: trimmed,
             source: "live-mic-partial"
         )
+        draft.speakerProfileID = TrustedRoomMemoryStore.speakerProfileID(for: draft)
         if let index = utterances.firstIndex(where: { $0.id == draft.id }) {
             utterances[index] = draft
         } else {
@@ -317,7 +350,9 @@ final class AppModel: ObservableObject {
     private func commitLiveUtterance(_ utterance: TranscriptUtterance) {
         utterances.removeAll { $0.id == "live-draft" }
         if !utterances.contains(where: { $0.id == utterance.id }) {
-            utterances.append(utterance)
+            var profiled = utterance
+            profiled.speakerProfileID = profiled.speakerProfileID ?? TrustedRoomMemoryStore.speakerProfileID(for: profiled)
+            utterances.append(profiled)
         }
         partialTranscript = ""
         selectedID = utterance.id
@@ -443,6 +478,11 @@ struct ContentView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.orange)
                         }
+                        if let speakerProfileID = utterance.speakerProfileID {
+                            Text(speakerProfileID)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding(.vertical, 4)
                     .tag(utterance.id)
@@ -500,6 +540,9 @@ struct ContentView: View {
             Text(model.routeSummary)
                 .font(.footnote)
                 .foregroundStyle(model.routeSummary.contains("remote oracle") ? .orange : .secondary)
+            Text(model.memoryContextSummary)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
 
             Text("All transcript lines in this request")
                 .font(.headline)

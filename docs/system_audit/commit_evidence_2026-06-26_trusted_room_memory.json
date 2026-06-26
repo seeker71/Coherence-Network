@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/trusted-room-memory-20260626",
+  "commit_scope": "Add trusted local room-memory continuity to the satsang Mac guidance app: transcript rows preserve voice IDs, Send attaches prior local context to the Form/RAG route and guidance request, the app writes local session/index/speaker-profile/latest-context receipts after explicit Send, recurring unnamed speakers match by stable voice_id/speaker_id when supplied, and channel-only room mic continuity is recorded without claiming verified identity.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_trusted_room_memory.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-room-memory.fk",
+    "form/form-stdlib/tests/satsang-room-memory-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "./scripts/form-cli-run.sh ask \"For trusted room memory after satsang Mac app merge: what local body surface should close next so multi-speaker sessions persist, index, recognize recurring unnamed voices, and feed later context without fear-based hidden capture?\"",
+      "swift test --package-path experiments/satsang-mac-app",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk"
+    ],
+    "fourth_arm": "satsang-guidance-event-band.fk -> 255, satsang-host-boundary-band.fk -> 131071, satsang-listen-route-band.fk -> 255, satsang-room-memory-band.fk -> 255; each crossed four-way with fkwu + pre-flattened tables; 0 divergent",
+    "summary": "Swift package tests passed with 11 XCTest cases. New coverage proves voice_id parsing, stable speaker profile IDs across sessions, local session/index/speaker-profile/latest-context files, and prior context in the Form request envelope. The local fkwu RAG ask returned no grounded hit for the planning query, so implementation proceeded through oracle reasoning while routing and proof remained body-first."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy yet; local macOS experiment awaits PR checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI and PR checks pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "satsang-mac-guidance-app"
+  ],
+  "task_ids": [
+    "trusted-room-memory-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "trust-boundary"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "form-proof",
+        "local-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "form/form-stdlib/satsang-room-memory.fk",
+    "form/form-stdlib/tests/satsang-room-memory-band.fk",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-room-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_trusted_room_memory.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-room-memory.fk",
+    "form/form-stdlib/tests/satsang-room-memory-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "Local app/core proof shows that explicit Send can carry prior trusted room memory into the guidance request and then persist the offered exchange as local session memory. Recurring speakers with stable voice_id/speaker_id map to the same speaker profile across sessions; channel-only live mic rows remain continuity labels, not verified identity.",
+    "expected_behavior_delta": "A later satsang guidance request can include compact local context from prior explicitly sent sessions, plus speaker-profile continuity, before deciding whether local Form/RAG is sufficient. The app stores transcript/session memory locally and visibly after Send rather than silently capturing hidden room history.",
+    "public_endpoints": [
+      "n/a-local-macos-app"
+    ],
+    "test_flows": [
+      "swift test --package-path experiments/satsang-mac-app -> 11 tests passed",
+      "cd form && ./validate.sh ... satsang-guidance-event-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-host-boundary-band.fk -> 131071 four-way",
+      "cd form && ./validate.sh ... satsang-listen-route-band.fk -> 255 four-way",
+      "cd form && ./validate.sh ... satsang-room-memory-band.fk -> 255 four-way"
+    ]
+  }
+}

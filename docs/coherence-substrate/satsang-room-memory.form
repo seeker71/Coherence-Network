@@ -1,0 +1,38 @@
+; satsang-room-memory.form - trusted local memory for room exchanges.
+;
+; A satsang companion remembers only what was explicitly offered. The Mac GUI
+; records a room-memory session after Send: the edited utterances, speaker
+; profile continuity, target presence, turn mode, and a trust receipt. Later
+; sends read the same local memory surface and include a compact prior-context
+; summary in the guidance request.
+;
+; Carrier:
+;   experiments/satsang-mac-app writes under
+;   ~/.coherence-network/agent-room-memory/:
+;     session-index.jsonl        # append-only local index of offered sessions
+;     speaker-profiles.json      # stable speaker profile rows
+;     sessions/<request-id>.json # full offered exchange
+;     latest-context.json/form   # compact context available to the next turn
+;   The write happens after explicit Send. Live microphone partials remain
+;   visible rows in the GUI before Send; they are not hidden memory.
+;
+; Speaker continuity:
+;   If an utterance carries voice_id / speaker_id from a transcript producer,
+;   that stable value keys the speaker profile. If no voice_id exists, the app
+;   falls back to the visible speaker label, such as room mic. That fallback is
+;   channel continuity, not verified identity. Names stay editable claims.
+;   Verified identity requires an enrolled, consented voiceprint carrier and is
+;   outside this floor.
+;
+; Body:
+;   form/form-stdlib/satsang-room-memory.fk decides the trust boundary:
+;   explicit Send is the capture boundary; local JSON/segmented file is an
+;   accepted storage carrier; hidden capture is rejected; voice-id/speaker-label
+;   and channel-only continuity are allowed but channel-only is not verified
+;   identity; prior sessions plus speakers can feed later context.
+;   Proof: form/form-stdlib/tests/satsang-room-memory-band.fk -> 255 four-way.
+;
+; Boundary:
+;   This is a trusted memory receipt, not a surveillance feature. It stores the
+;   transcript that the holder offered, keeps the storage local, and tells the
+;   next request what was carried forward.
