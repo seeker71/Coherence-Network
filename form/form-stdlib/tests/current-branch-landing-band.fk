@@ -1,6 +1,6 @@
 ; current-branch-landing-band.fk — proves the current branch landing command contract.
 ;
-; Expected verdict = 8191.
+; Expected verdict = 16383.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/current-branch-landing.fk
 
@@ -18,8 +18,9 @@
     (let e11 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 3 1 0 false) "blocked") 1024 0))
     (let e12 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 0 0 0 false) "waiting") 2048 0))
     (let e13 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 0 0 0 true) "ready") 4096 0))
+    (let e14 (if (str_eq (cbl-readiness-after-push "OPEN" false "" "CLEAN" 3 1 0 false true) "waiting") 8192 0))
 
-    ; expected total: 8191
+    ; expected total: 16383
     (add (add e1 (add e2 (add e3 (add e4 (add e5 (add e6 (add e7 e8)))))))
-         (add e9 (add e10 (add e11 (add e12 e13)))))
+         (add e9 (add e10 (add e11 (add e12 (add e13 e14))))))
 )

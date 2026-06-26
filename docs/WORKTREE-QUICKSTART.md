@@ -167,15 +167,18 @@ What it owns:
 - local PR guard and stale PR follow-through guard,
 - push / force-with-lease push,
 - PR create/read,
-- check wait with bounded auto-rebase when `main` advances,
+- check wait with native `form-cli land-readiness` classification and bounded
+  auto-rebase when `main` advances,
+- stale failed-check refresh after push as a native `waiting` decision from
+  `land-readiness`,
 - GitHub API merge,
 - GitHub API remote branch deletion,
 - post-merge PR state and tree parity readback.
 
-Current boundary: git, GitHub, and deploy polling are still explicit host-effect
-passthrough carriers; the landing recipe and command contract are Form-native.
-Existing Python validation gates remain retiring bridge checks until they are
-promoted to Form.
+Current boundary: git, GitHub, and deploy polling are explicit host-effect
+passthrough carriers. The landing recipe, command contract, and PR readiness
+decision are Form-native. Existing Python validation gates remain retiring
+bridge checks until they are promoted to Form.
 
 The default merge method is `rebase`, matching the manual fallback below. Use
 `--merge-method squash` only when the branch should intentionally compress
