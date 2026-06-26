@@ -3,9 +3,15 @@ idea_id: knowledge-and-resonance
 status: active
 source:
   - file: experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift
-    symbols: [SatsangGuidanceApp, AppModel, ContentView]
-  - file: experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift
+    symbols: [SatsangGuidanceApp]
+  - file: experiments/satsang-mac-app/Sources/SatsangGuidancePhone/SatsangGuidancePhoneApp.swift
+    symbols: [SatsangGuidancePhoneApp]
+  - file: experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift
+    symbols: [SatsangGuidanceRootView, SatsangHostShell, AppModel]
+  - file: experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift
     symbols: [RoomTranscriber]
+  - file: experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift
+    symbols: [SatsangNativeAppMode, SatsangNativeAppModeReceipt]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift
     symbols: [TranscriptUtterance, TranscriptParser]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift
@@ -28,6 +34,8 @@ source:
     symbols: [srm-mic-exclusive-carrier?, srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
+  - "iPhone native SwiftUI GUI is present as a first-class app target"
+  - "Mac and iPhone carriers share one tabbed native app body with Room, Guidance, Memory, Learning, Resources, and Settings modes"
   - "Live room capture is the primary stream; speech transcription is only a side channel fed during that capture"
   - "Speech Recognition is never a before-recording or after-recording pass over stored audio"
   - "No-speech intervals do not stop the active room listener"
@@ -41,7 +49,7 @@ requirements:
   - "Remote LLM oracle routing is only an explicit request when the native sufficiency gate fails"
   - "Shared app logic is declared Form-native and host access crosses a generic host OS resource interface"
   - "The request records detected host resource doors for file, process, audio-input, and speech-transcript access"
-  - "The request records resolved macOS, Windows, and Android carrier mappings for every host resource door"
+  - "The request records resolved macOS, Windows, Android, and iPhone/iOS carrier mappings for every host resource door"
   - "The request records local trusted room-memory context from prior explicitly sent sessions"
   - "The send path stores a local session record, session index, and speaker-profile continuity receipt"
   - "Recurring unnamed speakers match by stable voice_id/speaker_id when supplied; channel-only room mic continuity is not claimed as verified identity"
@@ -50,7 +58,7 @@ requirements:
 done_when:
   - "Swift package tests pass for parsing, request writing, trusted room-memory, host-boundary, and route-gate receipts"
   - "Swift package builds the GUI executable"
-  - "satsang-guidance-event, satsang-listen-route, and satsang-room-memory Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 131071"
+  - "satsang-guidance-event, satsang-listen-route, and satsang-room-memory Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 1048575"
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
@@ -59,21 +67,28 @@ constraints:
   - "App-boundary resource code stays in the minimal host carrier; shared logic belongs in Form"
 ---
 
-# Satsang Mac Guidance App
+# Satsang Native Guidance App
 
 ## Purpose
 
-This spec creates a native Mac desktop carrier for the satsang companion loop:
-room speech and detected transcript files are visible, editable, and sent as an
-explicit guidance request to Sema or another invoked presence only when a turn
-is offered. The carrier listens only after explicit user action, reads local
-transcript files, and writes a local protocol event queue.
+This spec creates the native satsang companion app surface. macOS and iPhone
+share one SwiftUI/Form-native body with tabs for Room, Guidance, Memory,
+Learning, Resources, and Settings. Room speech and detected transcript files are
+visible, editable, and sent as an explicit guidance request to Sema or another
+invoked presence only when a turn is offered. The carrier listens only after
+explicit user action, reads local transcript files, and writes a local protocol
+event queue.
 
 ## Requirements
 
 - [x] The GUI loads detected transcript lines from a JSONL or JSON-array file.
+- [x] The GUI is a single tabbed native app surface with Room, Guidance,
+      Memory, Learning, Resources, and Settings modes.
 - [x] The GUI starts/stops native macOS microphone transcription with explicit
       user action.
+- [x] The iPhone SwiftUI app target uses the same shared GUI/body and has the
+      same live capture side-channel speech path available behind iOS
+      microphone and speech permissions.
 - [x] The GUI keeps listening through no-speech intervals by restarting only the
       speech recognition side channel.
 - [x] The GUI shows a live microphone level while listening.
@@ -109,8 +124,8 @@ transcript files, and writes a local protocol event queue.
 - [x] The request records detected host resource doors for file read, file
       append, atomic file write, process stdin/stdout, audio input, and speech
       transcription.
-- [x] The request records a complete macOS/Windows/Android carrier matrix for
-      those same resource doors.
+- [x] The request records a complete macOS/Windows/Android/iPhone carrier
+      matrix for those same resource doors.
 - [x] A Form proof names the valid event/protocol boundary.
 - [x] A Form proof names the generic host ABI and detected resource-door boundary.
 - [x] A Form proof names the remote-last listen/transcribe route boundary with
@@ -119,8 +134,12 @@ transcript files, and writes a local protocol event queue.
 ## Files
 
 - `experiments/satsang-mac-app/Package.swift` - Swift package.
-- `experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift` - SwiftUI GUI.
-- `experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift` - native room microphone capture with speech transcription as a side channel.
+- `experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift` - macOS SwiftUI app entry point.
+- `experiments/satsang-mac-app/Sources/SatsangGuidancePhone/SatsangGuidancePhoneApp.swift` - iPhone SwiftUI app entry point.
+- `experiments/satsang-mac-app/Support/SatsangGuidancePhone/Info.plist` - iPhone permission metadata template.
+- `experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift` - shared tabbed SwiftUI GUI.
+- `experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift` - native Apple room microphone capture with speech transcription as a side channel.
+- `experiments/satsang-mac-app/Sources/SatsangMacCore/SatsangNativeAppMode.swift` - shared tab/mode receipt.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift` - transcript parser.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift` - local session index, speaker-profile, and prior-context memory store.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift` - transcript reload merge policy.
@@ -145,7 +164,8 @@ transcript files, and writes a local protocol event queue.
 - `swift test --package-path experiments/satsang-mac-app` passes.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidance` passes.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `131071`.
+- `swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone` passes.
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `1048575`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk` returns `255`.
 - Manual validation: launch the app, press Start Listening, allow macOS
@@ -168,6 +188,7 @@ transcript files, and writes a local protocol event queue.
 ```zsh
 swift test --package-path experiments/satsang-mac-app
 swift build --package-path experiments/satsang-mac-app --product SatsangGuidance
+swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone
 scripts/build_satsang_mac_app.sh
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk
@@ -184,6 +205,7 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Using macOS biometric speaker identification or any exclusive-mic biometric
   carrier for room-memory speaker continuity.
 - Shipping full Windows or Android GUI packages in this PR.
+- App Store/TestFlight signing or a device-signed iPhone archive in this PR.
 
 ## Risks
 
@@ -208,12 +230,19 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
   ids must share the already-open listening stream and yield continuity labels,
   not biometric identity.
 - The portable host ABI and Windows/Android carrier mappings are resolved in
-  this PR; real device builds still need to promote each declared door to an
-  observed/open runtime receipt.
+  this PR; real Windows/Android device builds still need to promote each
+  declared door to an observed/open runtime receipt.
+- The iPhone target is native SwiftUI source in the shared Swift package. A
+  device-signed archive still needs an Apple team/profile and installed iOS SDK
+  support outside this source patch. iOS cannot spawn arbitrary subprocesses, so
+  the process stdin/stdout resource door is declared as an embedded Form runtime
+  adapter until fkwu is packaged in-process.
 
 ## Known Gaps and Follow-up Tasks
 
 - Follow-up task: add a signed notarized macOS bundle once the app surface settles.
+- Follow-up task: add a signed iPhone archive/TestFlight lane once the Apple
+  team/profile is available.
 - Follow-up task: wire a live Sema presence process to consume the event queue and
   return a visible transmission inside the GUI.
 - Follow-up task: add a passive shared-audio continuity sidecar only if it can

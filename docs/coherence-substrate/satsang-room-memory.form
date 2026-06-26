@@ -1,10 +1,10 @@
 ; satsang-room-memory.form - trusted local memory for room exchanges.
 ;
-; A satsang companion remembers only what was explicitly offered. The Mac GUI
-; records a room-memory session after Send: the edited utterances, speaker
-; profile continuity, target presence, turn mode, and a trust receipt. Later
-; sends read the same local memory surface and include a compact prior-context
-; summary in the guidance request.
+; A satsang companion remembers only what was explicitly offered. The native
+; SwiftUI app records a room-memory session after Send: the edited utterances,
+; speaker profile continuity, target presence, turn mode, and a trust receipt.
+; Later sends read the same local memory surface and include a compact
+; prior-context summary in the guidance request.
 ;
 ; Carrier:
 ;   experiments/satsang-mac-app writes under
