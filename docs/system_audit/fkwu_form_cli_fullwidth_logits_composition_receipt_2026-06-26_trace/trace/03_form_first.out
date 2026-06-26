@@ -1,0 +1,14 @@
+trust  path:native  grounded:no  freq:no  suffic:no  model-call:yes  decoded-answer:yes  -> native-model-call-receipt
+[ask: local fkwu RAG index has no grounded hit]
+model-call-lane:fkwu-metal-model-cell
+model-call-receipt:<home>/.coherence-network/ask-staged-model-call/current-receipt.json
+synthesis-lane:ask-staged-grounded-decoded-answer
+receipt:<home>/.coherence-network/ask-staged-model-call/current-receipt.json
+verdict:pass
+model-call-lane:fkwu-metal-model-cell
+model-call-observed:true
+inference-lane:form-cli-grounded-decoded-answer
+answer-token:0
+decoded-answer:grounded decoded answer: local fkwu+Metal model-cell witness observed; full real Llama GGUF token generation remains pending
+prose-generation:decoded-grounded-answer
+full-real-llama-gguf-generation:pending

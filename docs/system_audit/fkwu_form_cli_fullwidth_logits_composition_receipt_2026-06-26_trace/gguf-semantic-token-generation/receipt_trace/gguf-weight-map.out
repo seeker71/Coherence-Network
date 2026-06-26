@@ -1,0 +1,7 @@
+receipt: gguf-full-weight-map-receipt verdict=pass
+file: sha256-871071a269d0df9630fa0e14038bb9687052c656f27f27bdcd31f2556165e451 bytes=2019886272
+header: v=3 n_tensors=255 n_kv=27 architecture=llama
+tensor-map: walked=255 data_start=8346560 alignment=32 ranges_within_file=1 aligned_offsets=1
+types: {"F32": 58, "Q4_K": 168, "Q6_K": 29}
+tokenizer-arrays: {"tokenizer.ggml.merges": 280147, "tokenizer.ggml.scores": 128256, "tokenizer.ggml.token_type": 128256, "tokenizer.ggml.tokens": 128256}
+required-tensors: ok

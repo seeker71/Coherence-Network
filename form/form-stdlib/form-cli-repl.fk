@@ -128,6 +128,9 @@
     ; 'gguf-semantic-token-cell' reads one real tokenizer string row from the
     ; full GGUF, selects a token from manifest logits using Form argmax, and
     ; emits the decoded token text without HTTP/Ollama.
+    ; 'gguf-fullwidth-logits-cell' walks the full tokenizer width through
+    ; real GGUF token-embedding rows, computes the Q6_K dot4 projection in
+    ; Form, then decodes the argmax token.
     ; Everything else routes to fc-respond, the four-way-proven brain.
     (defn fc-native (line)
         (if (str_eq (fc-verb line) "source") (self_source)
@@ -142,8 +145,9 @@
                             (if (str_eq (fc-verb line) "gguf-model-cell") (fc-gguf-model-cell (fc-arg line))
                             (if (str_eq (fc-verb line) "gguf-tensor-set-cell") (fc-gguf-tensor-set-cell (fc-arg line))
                             (if (str_eq (fc-verb line) "gguf-semantic-token-cell") (fc-gguf-semantic-token-cell (fc-arg line))
+                            (if (str_eq (fc-verb line) "gguf-fullwidth-logits-cell") (fc-gguf-fullwidth-logits-cell (fc-arg line))
                             (if (str_eq (fc-verb line) "gguf-tensor-slice-math") (fc-gguf-tensor-slice-math (fc-arg line))
-                                (fc-respond line))))))))))))
+                                (fc-respond line)))))))))))))
     ; one self-recursive loop: prompt (only on a real tty), read a line, and
     ; either stop (EOF / quit / exit) or respond and loop. read_line is a stored
     ; let (an effect op) so it fires exactly once per turn, not once per use.

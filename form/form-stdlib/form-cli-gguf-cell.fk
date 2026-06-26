@@ -498,6 +498,260 @@
                                     (fc-gguf-semantic-token-report ok expected-sha actual-sha gguf-path file-size actual-file-size token-count selected-token-id token-index token-entry-start token-text-start token-len declared-token-len actual-token-len token-sha actual-token-sha candidate-count argmax-token-id selected-logit token-raw))))
                         (str_concat "FAIL gguf-semantic-token manifest kind=" kind))))))
 
+    (defn fc-gg-str-u16-le (s off)
+        (add (str-byte-at s off)
+             (mul 256 (str-byte-at s (add off 1)))))
+
+    (defn fc-gg-q6k-str-nib (s i)
+        (if (eq (div (q6k-g i) 2) 0)
+            (q6k-mod (str-byte-at s (q6k-qlidx i)) 16)
+            (div (str-byte-at s (q6k-qlidx i)) 16)))
+
+    (defn fc-gg-q6k-str-hi (s i)
+        (q6k-mod
+            (div (str-byte-at s (add 128 (add (mul (q6k-h i) 32) (q6k-l i))))
+                 (q6k-pow4 (q6k-g i)))
+            4))
+
+    (defn fc-gg-q6k-str-q (s i)
+        (sub (add (fc-gg-q6k-str-nib s i)
+                  (mul (fc-gg-q6k-str-hi s i) 16))
+             32))
+
+    (defn fc-gg-q6k-str-scale (s i)
+        (q6k-s8
+            (str-byte-at s
+                (add 192
+                    (add (mul (q6k-h i) 8)
+                         (add (q6k-is i) (mul 2 (q6k-g i))))))))
+
+    (defn fc-gg-q6k-str-at (s i)
+        (mul (mul (fd-f16 (fc-gg-str-u16-le s 208))
+                  (fc-gg-q6k-str-scale s i))
+             (fc-gg-q6k-str-q s i)))
+
+    (defn fc-gg-q6k-dot4-str (s)
+        (add (mul (fc-gg-q6k-str-at s 0) 1.0)
+        (add (mul (fc-gg-q6k-str-at s 1) -0.5)
+        (add (mul (fc-gg-q6k-str-at s 2) 0.5)
+             (mul (fc-gg-q6k-str-at s 3) 2.0)))))
+
+    (defn fc-gg-fw-source-logit
+        (gguf-path source-start row-stride block-len token-id)
+        (do
+            (let block (read_file_slice gguf-path
+                           (add source-start (mul token-id row-stride))
+                           block-len))
+            (fc-gg-micro (fc-gg-q6k-dot4-str block))))
+
+    (defn fc-gg-fw-chunk-best-loop
+        (gguf-path source-start row-stride block-len i end best-id best-logit)
+        (if (ge i end) (list best-id best-logit)
+            (do
+                (let v (fc-gg-fw-source-logit gguf-path source-start row-stride block-len i))
+                (if (gt v best-logit)
+                    (fc-gg-fw-chunk-best-loop gguf-path source-start row-stride block-len (add i 1) end i v)
+                    (fc-gg-fw-chunk-best-loop gguf-path source-start row-stride block-len (add i 1) end best-id best-logit)))))
+
+    (defn fc-gg-fw-best-pair-loop
+        (gguf-path source-start row-stride block-len start count chunk-size best-id best-logit)
+        (if (ge start count) (list best-id best-logit)
+            (do
+                (let chunk-end
+                    (if (lt (add start chunk-size) count)
+                        (add start chunk-size)
+                        count))
+                (let pair (fc-gg-fw-chunk-best-loop
+                              gguf-path source-start row-stride block-len
+                              start chunk-end best-id best-logit))
+                (fc-gg-fw-best-pair-loop
+                    gguf-path source-start row-stride block-len
+                    chunk-end count chunk-size
+                    (nth pair 0) (nth pair 1)))))
+
+    (defn fc-gg-fw-best-pair-range
+        (gguf-path source-start row-stride block-len start end)
+        (if (not (gt (sub end start) 16))
+            (fc-gg-fw-chunk-best-loop
+                gguf-path source-start row-stride block-len
+                (add start 1) end start
+                (fc-gg-fw-source-logit gguf-path source-start row-stride block-len start))
+            (do
+                (let mid (div (add start end) 2))
+                (let left (fc-gg-fw-best-pair-range
+                              gguf-path source-start row-stride block-len
+                              start mid))
+                (let right (fc-gg-fw-best-pair-range
+                               gguf-path source-start row-stride block-len
+                               mid end))
+                (if (gt (nth right 1) (nth left 1)) right left))))
+
+    (defn fc-gg-fw-best-id
+        (gguf-path source-start row-stride block-len count)
+        (nth
+            (fc-gg-fw-best-pair-range
+                gguf-path source-start row-stride block-len
+                0 count)
+            0))
+
+    (defn fc-gg-fw-canonical
+        (gguf-path file-size-str token-count-str selected-id-str selected-logit-str token-index-str token-entry-start-str token-len-str token-sha tensor-name tensor-index-str tensor-type-str tensor-start-str row-stride-str block-len-str projection-name)
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp "gguf-fullwidth-logits-cell-v1" gguf-path)
+                   file-size-str)
+                   token-count-str)
+                   selected-id-str)
+                   selected-logit-str)
+                   token-index-str)
+                   token-entry-start-str)
+                   token-len-str)
+                   token-sha)
+                   tensor-name)
+                   tensor-index-str)
+                   tensor-type-str)
+                   tensor-start-str)
+                   row-stride-str)
+                   block-len-str)
+                   projection-name))
+
+    (defn fc-gguf-fullwidth-logits-report
+        (ok expected-sha actual-sha gguf-path file-size actual-file-size token-count selected-token-id expected-selected-logit selected-logit token-index token-entry-start token-text-start token-len declared-token-len actual-token-len token-sha actual-token-sha tensor-name tensor-index tensor-type tensor-start row-stride block-len source-end argmax-token-id token-text)
+        (do
+            (let out0 (fc-kv-line "full_width_model_logit_generation_verified" (fc-gg-bool ok)))
+            (let out1 (str_concat out0 (fc-kv-line "full_width_logit_generation_source" "fkwu-read_file_slice-real-gguf-token-embedding-q6k-dot4")))
+            (let out2 (str_concat out1 (fc-kv-line "full_width_logit_generation_scope" "full-vocabulary-real-gguf-token-embedding-projection")))
+            (let out3 (str_concat out2 (fc-kv-line "full_width_logit_generation_sha256" actual-sha)))
+            (let out4 (str_concat out3 (fc-kv-line "full_width_logit_generation_expected_sha256" expected-sha)))
+            (let out5 (str_concat out4 (fc-kv-line "full_width_logit_generation_path" gguf-path)))
+            (let out6 (str_concat out5 (fc-kv-line "full_width_logit_file_size_expected" (int_to_str file-size))))
+            (let out7 (str_concat out6 (fc-kv-line "full_width_logit_file_size_observed" (int_to_str actual-file-size))))
+            (let out8 (str_concat out7 (fc-kv-line "full_width_logit_count" (int_to_str token-count))))
+            (let out9 (str_concat out8 (fc-kv-line "full_width_logit_tensor_name" tensor-name)))
+            (let out10 (str_concat out9 (fc-kv-line "full_width_logit_tensor_index" (int_to_str tensor-index))))
+            (let out11 (str_concat out10 (fc-kv-line "full_width_logit_tensor_type" (int_to_str tensor-type))))
+            (let out12 (str_concat out11 (fc-kv-line "full_width_logit_tensor_start" (int_to_str tensor-start))))
+            (let out13 (str_concat out12 (fc-kv-line "full_width_logit_row_stride" (int_to_str row-stride))))
+            (let out14 (str_concat out13 (fc-kv-line "full_width_logit_block_len" (int_to_str block-len))))
+            (let out15 (str_concat out14 (fc-kv-line "full_width_logit_source_end" (int_to_str source-end))))
+            (let out16 (str_concat out15 (fc-kv-line "full_width_argmax_token_id" (int_to_str argmax-token-id))))
+            (let out17 (str_concat out16 (fc-kv-line "full_width_selected_token_id" (int_to_str selected-token-id))))
+            (let out18 (str_concat out17 (fc-kv-line "full_width_selected_logit_micro" (int_to_str selected-logit))))
+            (let out19 (str_concat out18 (fc-kv-line "full_width_expected_selected_logit_micro" (int_to_str expected-selected-logit))))
+            (let out20 (str_concat out19 (fc-kv-line "full_width_token_array_index" (int_to_str token-index))))
+            (let out21 (str_concat out20 (fc-kv-line "full_width_token_entry_start" (int_to_str token-entry-start))))
+            (let out22 (str_concat out21 (fc-kv-line "full_width_token_text_start" (int_to_str token-text-start))))
+            (let out23 (str_concat out22 (fc-kv-line "full_width_token_text_len" (int_to_str token-len))))
+            (let out24 (str_concat out23 (fc-kv-line "full_width_token_declared_len" (int_to_str declared-token-len))))
+            (let out25 (str_concat out24 (fc-kv-line "full_width_token_read_len" (int_to_str actual-token-len))))
+            (let out26 (str_concat out25 (fc-kv-line "full_width_token_text_sha256" actual-token-sha)))
+            (let out27 (str_concat out26 (fc-kv-line "full_width_token_text_expected_sha256" token-sha)))
+            (let out28 (str_concat out27 (fc-kv-line "decoded_token_text" token-text)))
+            (let out29 (str_concat out28 (fc-kv-line "full_width_logits_generated_in_form" "true")))
+            (let out30 (str_concat out29 (fc-kv-line "full_width_model_logits" "true")))
+            (let out31 (str_concat out30 (fc-kv-line "full_vocabulary_logits" "true")))
+            (let out32 (str_concat out31 (fc-kv-line "full_model_logits" "false")))
+            (let out33 (str_concat out32 (fc-kv-line "full_llama_hidden_state_logits" "false")))
+            (let out34 (str_concat out33 (fc-kv-line "full_width_logit_accelerator_buffers" "false")))
+            (str_concat out34
+                (if (eq ok 1)
+                    "PASS fkwu-form-cli-gguf-fullwidth-logits"
+                    "FAIL fkwu-form-cli-gguf-fullwidth-logits"))))
+
+    (defn fc-gguf-fullwidth-logits-cell (arg)
+        (if (str_eq arg "")
+            "usage: gguf-fullwidth-logits-cell <manifest-path>"
+            (do
+                (let manifest (fc-gg-strip-eol (read_file arg)))
+                (let parts (split-on manifest " "))
+                (let kind (fc-part parts 0 ""))
+                (let expected-sha (fc-part parts 1 ""))
+                (let gguf-path (fc-part parts 2 ""))
+                (let file-size-str (fc-part parts 3 "0"))
+                (let token-count-str (fc-part parts 4 "0"))
+                (let selected-id-str (fc-part parts 5 "0"))
+                (let selected-logit-str (fc-part parts 6 "0"))
+                (let token-index-str (fc-part parts 7 "0"))
+                (let token-entry-start-str (fc-part parts 8 "0"))
+                (let token-len-str (fc-part parts 9 "0"))
+                (let token-sha (fc-part parts 10 ""))
+                (let tensor-name (fc-part parts 11 ""))
+                (let tensor-index-str (fc-part parts 12 "0"))
+                (let tensor-type-str (fc-part parts 13 "0"))
+                (let tensor-start-str (fc-part parts 14 "0"))
+                (let row-stride-str (fc-part parts 15 "0"))
+                (let block-len-str (fc-part parts 16 "0"))
+                (let projection-name (fc-part parts 17 ""))
+                (let file-size (str_to_int file-size-str))
+                (let token-count (str_to_int token-count-str))
+                (let selected-token-id (str_to_int selected-id-str))
+                (let expected-selected-logit (str_to_int selected-logit-str))
+                (let token-index (str_to_int token-index-str))
+                (let token-entry-start (str_to_int token-entry-start-str))
+                (let token-len (str_to_int token-len-str))
+                (let tensor-index (str_to_int tensor-index-str))
+                (let tensor-type (str_to_int tensor-type-str))
+                (let tensor-start (str_to_int tensor-start-str))
+                (let row-stride (str_to_int row-stride-str))
+                (let block-len (str_to_int block-len-str))
+                (if (or (or (str_eq kind "") (str_eq expected-sha ""))
+                        (or (str_eq gguf-path "") (or (str_eq token-sha "") (or (str_eq tensor-name "") (str_eq projection-name "")))))
+                    "FAIL gguf-fullwidth-logits manifest expected: gguf-fullwidth-logits-cell-v1 <sha256> <gguf-path> <file-size> <token-count> <selected-token-id> <selected-logit-micro> <token-array-index> <token-entry-start> <token-len> <token-sha256> <tensor-name> <tensor-index> <tensor-type> <tensor-start> <row-stride> <block-len> <projection-name>"
+                    (if (str_eq kind "gguf-fullwidth-logits-cell-v1")
+                        (do
+                            (let actual-file-size (file_size gguf-path))
+                            (let canonical (fc-gg-fw-canonical gguf-path file-size-str token-count-str selected-id-str selected-logit-str token-index-str token-entry-start-str token-len-str token-sha tensor-name tensor-index-str tensor-type-str tensor-start-str row-stride-str block-len-str projection-name))
+                            (let actual-sha (fc-gg-cell-digest canonical))
+                            (let token-text-start (add token-entry-start 8))
+                            (let token-end (add token-text-start token-len))
+                            (let source-end (add tensor-start (add (mul (sub token-count 1) row-stride) block-len)))
+                            (let prelim-ok
+                                (if (and (str_eq expected-sha actual-sha)
+                                    (and (eq actual-file-size file-size)
+                                    (and (gt token-count 0)
+                                    (and (ge selected-token-id 0)
+                                    (and (lt selected-token-id token-count)
+                                    (and (eq selected-token-id token-index)
+                                    (and (ge token-entry-start 0)
+                                    (and (gt token-len 0)
+                                    (and (ge file-size token-end)
+                                    (and (eq tensor-type 14)
+                                    (and (ge tensor-start 0)
+                                    (and (ge row-stride block-len)
+                                    (and (eq block-len 210)
+                                         (ge file-size source-end)))))))))))))) 1 0))
+                            (if (eq prelim-ok 0)
+                                (fc-gguf-fullwidth-logits-report 0 expected-sha actual-sha gguf-path file-size actual-file-size token-count selected-token-id expected-selected-logit 0 token-index token-entry-start token-text-start token-len 0 0 token-sha "" tensor-name tensor-index tensor-type tensor-start row-stride block-len source-end 0 "")
+                                (do
+                                    (let len-raw (read_file_slice gguf-path token-entry-start 8))
+                                    (let token-raw (read_file_slice gguf-path token-text-start token-len))
+                                    (let len-bytes (fc-gg-string-bytes len-raw))
+                                    (let declared-token-len (fc-gg-u64 len-bytes 0))
+                                    (let actual-token-len (str_len token-raw))
+                                    (let actual-token-sha (fc-gg-cell-digest token-raw))
+                                    (let argmax-token-id (fc-gg-fw-best-id gguf-path tensor-start row-stride block-len token-count))
+                                    (let selected-logit (fc-gg-fw-source-logit gguf-path tensor-start row-stride block-len selected-token-id))
+                                    (let ok (if (and (eq declared-token-len token-len)
+                                                (and (eq actual-token-len token-len)
+                                                (and (str_eq actual-token-sha token-sha)
+                                                (and (eq argmax-token-id selected-token-id)
+                                                     (eq selected-logit expected-selected-logit))))) 1 0))
+                                    (fc-gguf-fullwidth-logits-report ok expected-sha actual-sha gguf-path file-size actual-file-size token-count selected-token-id expected-selected-logit selected-logit token-index token-entry-start token-text-start token-len declared-token-len actual-token-len token-sha actual-token-sha tensor-name tensor-index tensor-type tensor-start row-stride block-len source-end argmax-token-id token-raw))))
+                        (str_concat "FAIL gguf-fullwidth-logits manifest kind=" kind))))))
+
     (defn fc-gguf-tensor-slice-math (arg)
         (if (str_eq arg "")
             "usage: gguf-tensor-slice-math <manifest-path>"

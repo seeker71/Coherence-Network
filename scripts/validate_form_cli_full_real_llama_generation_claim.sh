@@ -68,6 +68,9 @@ run_capture model_status \
 run_capture real_gguf_weight_map \
     python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$TRACE_DIR/real-gguf-weight-map.json"
 
+run_capture real_gguf_fullwidth_logits \
+    "$ROOT/scripts/fkwu_form_cli_gguf_fullwidth_logits_receipt.sh" "$TRACE_DIR/fullwidth-logits.json"
+
 sanitize_trace_tree
 
 python3 - "$ROOT" "$TRACE_DIR" "$RECEIPT_PATH" <<'PY'
@@ -131,7 +134,7 @@ observed_grounded_answer = (
 )
 status_names_full_real_gap = (
     read_rc("model_status") == 0
-    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
+    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
     and "missing:full-real-llama-gguf-token-generation" in status
 )
 status_names_semantic_token_generation = (
@@ -140,6 +143,21 @@ status_names_semantic_token_generation = (
 )
 ask_names_full_real_gap = "full-real-llama-gguf-generation:pending" in ask
 real_gguf_map_observed = read_rc("real_gguf_weight_map") == 0 and gguf_map.get("verdict") == "pass"
+fullwidth_path = trace_dir / "fullwidth-logits.json"
+fullwidth_json = {}
+if fullwidth_path.exists():
+    try:
+        fullwidth_json = json.loads(fullwidth_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        fullwidth_json = {}
+fullwidth_observed = fullwidth_json.get("observed") or {}
+real_gguf_fullwidth_logits_observed = (
+    read_rc("real_gguf_fullwidth_logits") == 0
+    and fullwidth_json.get("verdict") == "PASS fkwu-form-cli-gguf-fullwidth-logits"
+    and fullwidth_observed.get("full_width_model_logit_generation_verified") is True
+    and fullwidth_observed.get("full_width_logits_generated_in_form") is True
+    and fullwidth_observed.get("full_vocabulary_logits") is True
+)
 
 claim_allowed = (
     observed_grounded_answer
@@ -173,8 +191,13 @@ receipt = {
         "ask_staged_model_call_and_grounded_decoded_answer": observed_grounded_answer,
         "model_status_names_full_real_generation_gap": status_names_full_real_gap,
         "model_status_names_semantic_token_generation": status_names_semantic_token_generation,
+        "model_status_names_fullwidth_logit_generation": "full-width-model-logit-generation" in status,
         "ask_trace_names_full_real_generation_gap": ask_names_full_real_gap,
         "real_gguf_weight_map_observed": real_gguf_map_observed,
+        "real_gguf_fullwidth_logits_observed": real_gguf_fullwidth_logits_observed,
+        "real_gguf_fullwidth_logit_count": fullwidth_observed.get("full_width_logit_count"),
+        "real_gguf_fullwidth_argmax_token_id": fullwidth_observed.get("full_width_argmax_token_id"),
+        "real_gguf_fullwidth_decoded_token_text": fullwidth_observed.get("decoded_token_text"),
         "real_gguf_tensor_count": ((gguf_map.get("tensor_map") or {}).get("count_observed")),
         "real_gguf_architecture": ((gguf_map.get("metadata") or {}).get("architecture")),
     },
@@ -182,7 +205,7 @@ receipt = {
         "promote the witnessed required tensor-set byte-window materialization into complete full-width Llama tensor payload staging in the fkwu-controlled model-cell path",
         "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
         "run the full multi-layer GQA autoregressive loop over those real tensors",
-        "replace the single-token semantic decode receipt with model logits over the full real vocabulary, token ID selection, and decode through the real tokenizer arrays",
+        "promote the witnessed full-width token-embedding projection logits into full hidden-state Llama logits over the full real vocabulary",
         "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle",
     ],
     "artifacts": {
@@ -190,6 +213,7 @@ receipt = {
         "ask_full_real_claim": rel(trace_dir / "ask_full_real_claim.out"),
         "model_status": rel(trace_dir / "model_status.out"),
         "real_gguf_weight_map": rel(gguf_map_path),
+        "real_gguf_fullwidth_logits": rel(fullwidth_path),
     },
 }
 
