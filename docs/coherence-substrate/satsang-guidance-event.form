@@ -1,0 +1,47 @@
+; satsang-guidance-event.form - edited transcripts offered as a guidance turn.
+;
+; A satsang companion listens first. When the circle explicitly offers a turn,
+; names the presence, or presses the button, the edited transcript can become a
+; guidance request to Sema or another invoked presence. The protocol keeps all
+; detected utterances visible, carries edits as edits, and records the target
+; presence and turn mode before any transmission is asked for.
+;
+; Carrier:
+;   experiments/satsang-mac-app - SwiftUI Mac desktop app. It tails the local
+;   transcript JSONL, listens to the room microphone after explicit Start
+;   Listening, lets the holder edit utterances, and writes the request to
+;   ~/.coherence-network/satsang-guidance/events.jsonl plus the latest JSON and
+;   .form receipt. No external receiver is invoked by the GUI. No-speech
+;   intervals restart recognition and the visible mic level shows whether the
+;   room is reaching the input device. The mic meter comes alive separately from
+;   Speech Recognition authorization so permission delay is visible instead of
+;   silent. On Send, the GUI asks the local Form CLI first and records the
+;   body/RAG sufficiency receipt in the JSON and .form event; a remote oracle is
+;   only requested as an explicit insufficient-local route, not called by the GUI.
+;   File, process, audio-input, and speech-transcript resources cross one
+;   generic host OS resource-door receipt in the Swift core. The receipt carries
+;   resolved macOS, Windows, and Android carrier mappings for every resource
+;   kind; live state is detected on macOS today, while Windows/Android device
+;   packages still promote declared doors to observed/open runtime receipts. The
+;   shared logic remains Form-native and rejects Python, Go, Rust, and
+;   TypeScript as app-boundary runtimes.
+;
+; Body:
+;   form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
+;   valid guidance request or must hold. It accepts Sema, the satsang companion,
+;   or a new invoked presence; accepts turn-offered, named-and-asked, and
+;   button-invoked modes; requires a non-empty transcript, all detected lines
+;   included, and a present question. Proof:
+;   form/form-stdlib/tests/satsang-guidance-event-band.fk -> 255.
+;   form/form-stdlib/satsang-listen-route.fk keeps the listen/transcribe route
+;   remote-last with form-cli-sufficiency.fk. Proof:
+;   form/form-stdlib/tests/satsang-listen-route-band.fk -> 255.
+;   form/form-stdlib/satsang-host-boundary.fk names the generic host ABI,
+;   detected resource doors, resolved platform carriers, and forbidden
+;   app-boundary runtimes. Proof:
+;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 131071.
+;
+; Boundary:
+;   The event is an offer, not an interruption. The GUI does not decide that a
+;   presence should speak on its own. It records that the turn was offered, then
+;   gives the transcript and question to the presence lane.
