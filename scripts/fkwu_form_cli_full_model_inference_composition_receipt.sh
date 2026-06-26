@@ -255,6 +255,10 @@ run_step gguf_find_four_way current-host "GGUF find-by-name and absolute offset 
     "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk"
 
+run_step real_gguf_tensor_math_four_way current-host "named real GGUF tensor bytes into native math four-way" true \
+    "cd form && ./validate.sh ... real-gguf-tensor-math-band.fk" \
+    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk form-stdlib/tests/real-gguf-tensor-math-band.fk"
+
 run_step tokenizer_compose_four_way current-host "BPE tokenizer carrier four-way" true \
     "cd form && ./validate.sh ... tokenize-band.fk" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/pretokenize.fk form-stdlib/byte-to-symbol.fk form-stdlib/bpe-tokenizer.fk form-stdlib/tokenize.fk form-stdlib/tests/tokenize-band.fk"
@@ -348,10 +352,15 @@ if [[ -n "$synthesis_out" && -f "$ROOT/$synthesis_out" ]]; then
     missing="$(grep '^missing:' "$ROOT/$synthesis_out" | head -1 | cut -d: -f2-)"
 fi
 ask_staged_decoded_answer_bound=false
-if [[ -n "$ask_staged_out" && -f "$ROOT/$ask_staged_out" ]] &&
-   grep -q '^answer-lane:fkwu-metal-decoded-prose-binding$' "$ROOT/$ask_staged_out" &&
-   grep -q '^prose-generation:observed-decoded-prose-answer-binding$' "$ROOT/$ask_staged_out"; then
-    ask_staged_decoded_answer_bound=true
+if [[ -n "$ask_staged_out" && -f "$ROOT/$ask_staged_out" ]]; then
+    if grep -q '^answer-lane:fkwu-metal-decoded-prose-binding$' "$ROOT/$ask_staged_out" &&
+       grep -q '^prose-generation:observed-decoded-prose-answer-binding$' "$ROOT/$ask_staged_out"; then
+        ask_staged_decoded_answer_bound=true
+    elif grep -q '^model-call-observed:true$' "$ROOT/$ask_staged_out" &&
+         grep -q '^inference-lane:form-cli-grounded-decoded-answer$' "$ROOT/$ask_staged_out" &&
+         grep -q '^prose-generation:decoded-grounded-answer$' "$ROOT/$ask_staged_out"; then
+        ask_staged_decoded_answer_bound=true
+    fi
 fi
 decoded_answer_observed=false
 if [[ "$ask_staged_decoded_answer_bound" == "true" ]] ||
@@ -411,6 +420,7 @@ jq -n \
     --argjson android_device "$android_device" \
     --argjson form_cli_ask "$(bool_or_false "$(step_passed form_cli_ask)")" \
     --argjson gguf_find "$(bool_or_false "$(step_passed gguf_find_four_way)")" \
+    --argjson real_gguf_tensor_math "$(bool_or_false "$(step_passed real_gguf_tensor_math_four_way)")" \
     --argjson tokenizer "$(bool_or_false "$(step_passed tokenizer_compose_four_way)")" \
     --argjson pretokenizer "$(bool_or_false "$(step_passed llama3_pretokenizer_four_way)")" \
     --argjson autoregressive_loop "$(bool_or_false "$(step_passed autoregressive_loop_four_way)")" \
@@ -467,6 +477,7 @@ jq -n \
       composition_gates: {
         native_fkwu_ask_grounded: $form_cli_ask,
         gguf_find_by_name_absolute_offset_four_way: $gguf_find,
+        named_real_gguf_tensor_math_four_way: $real_gguf_tensor_math,
         tokenizer_carrier_four_way: $tokenizer,
         llama3_pretokenizer_four_way: $pretokenizer,
         autoregressive_generation_loop_four_way: $autoregressive_loop,
@@ -512,7 +523,7 @@ jq -n \
       },
       open_bridges: [
         "upgrade the receipt-scored decoded answer binding to full-width real GGUF semantic generation",
-        "materialize named real GGUF tensors into the fkwu-controlled model-cell path, not only a metadata map",
+        "materialize the full-width Llama tensor set into the fkwu-controlled model-cell path, not only the current named tensor math witness",
         "dequant and place the full-width Llama tensor set into Metal/accelerator buffers",
         "run the full multi-layer GQA autoregressive loop over those real tensors",
         "project logits over the real vocabulary, select token IDs, and decode through the real tokenizer arrays",

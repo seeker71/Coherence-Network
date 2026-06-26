@@ -131,10 +131,10 @@
     (defn fc-synthesis-status ()
         (str_concat "synthesis-lane:fkwu-metal-answer-bound"
         (str_concat "\nreason:decoded-prose-answer-bound-to-ask-staged-local-model-cell"
-        (str_concat "\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness"
-        (str_concat "\nobserved:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
-        (str_concat "\nmissing:none"
-                    "\nboundary:ask-staged now returns a decoded local answer receipt; full-width real GGUF semantic generation remains a north-star upgrade"))))))
+        (str_concat "\navailable:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding"
+        (str_concat "\nobserved:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
+        (str_concat "\nmissing:full-real-llama-gguf-token-generation"
+                    "\nboundary:ask-staged now returns a decoded local answer receipt; named real GGUF tensor bytes now enter native math; full real Llama GGUF token generation remains pending"))))))
 
     (defn fc-respond (cmd)
         (do (let v (fc-verb cmd))

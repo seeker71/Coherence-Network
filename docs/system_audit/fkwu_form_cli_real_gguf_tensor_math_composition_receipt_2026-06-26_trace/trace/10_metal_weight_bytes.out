@@ -1,0 +1,35 @@
+build_phase:
+  emitted_msl_bytes=444
+  model_weight_bytes=<tmp>
+  artifact=<tmp>
+linked_libraries:
+  <tmp>:
+	/System/Library/Frameworks/Metal.framework/Versions/A/Metal (compatibility version 1.0.0, current version 370.64.2)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4201.0.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0, weak)
+	/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 56.0.0, weak)
+	/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)
+	/usr/lib/swift/libswiftMetal.dylib (compatibility version 1.0.0, current version 370.64.2, weak)
+	/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 951.1.0, weak)
+	/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 105.0.14, weak)
+	/usr/lib/swift/libswift_Builtin_float.dylib (compatibility version 1.0.0, current version 0.0.0, weak)
+runtime_phase:
+  env=-i PATH=<empty-bin> HOME=<temp-home> TMPDIR=<temp-tmp>
+runtime_path_sanitized=true
+denied_toolchain_names_visible_on_path=0
+http_or_ollama=absent
+metal_device=Apple M4 Max
+embedded_msl_bytes=444
+model_bytes_loaded=44
+weight_bytes_loaded=24
+input_bytes_loaded=12
+rows=2
+cols=3
+dispatch_ms=3.074
+gpu_y=[-0.250000,5.000000]
+expected_y=[-0.250000,5.000000]
+max_delta=0.000000000
+PASS form-native-metal-weight-bytes-runtime
