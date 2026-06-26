@@ -81,6 +81,9 @@ form-cli — the one door (local-first, Form-native)
   form-cli synthesis-status
         native receipt for the fkwu+Metal GGUF prose lane: what is present,
         what is missing, and why ask still reports pending
+  form-cli model-gap-receipt [OUT_DIR_OR_JSON] [GGUF_PATH]
+        observed receipt for tokenizer, full GGUF map, autoregressive loop, and
+        ask-staged model-call binding; proves what is local and names the blocker
   form-cli roadmap
         list the floor->north-star steps (roadmap.fk) and the next one to build
   form-cli asm "<C>" [--ir|--opt|--x86|--passes]
@@ -152,6 +155,7 @@ case "$cmd" in
   grounded)  run_native_cli "grounded $*" ;;
   rag-status) run_native_cli "rag-status" ;;
   synthesis-status|model-status) run_native_cli "synthesis-status" ;;
+  model-gap-receipt) exec bash "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$@" ;;
   rag-ask)   exec python3 "$RAG" ask "$@" ;;
   do)        exec bash "$ROOT/scripts/form_cli_agent.sh" "$@" ;;  # tiered agent loop (local-first, escalate)
   stats)     exec python3 "$ROOT/scripts/form_cli_stats.py" "$@" ;;

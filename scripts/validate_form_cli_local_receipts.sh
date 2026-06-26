@@ -61,6 +61,8 @@ run_receipt "cached generation semantics band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-decoder.fk form-stdlib/transformer-generate.fk form-stdlib/transformer-generate-cached.fk form-stdlib/tests/transformer-generate-cached-band.fk"
 run_receipt "Metal emitter band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk"
+run_receipt "form-cli model-lane gap receipt" \
+    "$ROOT/scripts/validate_form_cli_model_lane_gap_receipts.sh" "$ROOT/.cache/body-test-receipts/current-model-lane-gap-receipt.json"
 
 if [[ "$(uname -s)" == "Darwin" ]] && command -v swiftc >/dev/null 2>&1; then
     run_receipt "Metal matvec witness" "$ROOT/scripts/metal_matvec_audit.sh" 16 16 1
