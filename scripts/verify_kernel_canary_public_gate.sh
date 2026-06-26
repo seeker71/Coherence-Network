@@ -223,7 +223,7 @@ PY
 echo "kernel-canary-public-gate: probing ${API_URL}/api/ideas"
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
-  payload="$(printf '{"id":"idea-public-canary-%s-%s","name":"Public Canary","description":"header-gated public canary","manifestation_status":"partial"}' "$RUN_ID" "$attempt")"
+  payload="$(printf '{"id":"idea-public-canary-%s-%s","name":"Public Canary","description":"header-gated public canary","potential_value":1,"estimated_cost":1,"manifestation_status":"partial"}' "$RUN_ID" "$attempt")"
   headers_file="$TMP_DIR/public-gate.headers"
   body_file="$TMP_DIR/public-gate.body"
   status="$(
@@ -261,7 +261,7 @@ done
 for attempt in $(seq 1 "$ATTEMPTS"); do
   default_headers="$TMP_DIR/default.headers"
   default_body="$TMP_DIR/default.body"
-  default_payload="$(printf '{"id":"idea-public-default-%s-%s","name":"Public Native Default","description":"no-header native default invitation","manifestation_status":"partial"}' "$RUN_ID" "$attempt")"
+  default_payload="$(printf '{"id":"idea-public-default-%s-%s","name":"Public Native Default","description":"no-header native default invitation","potential_value":1,"estimated_cost":1,"manifestation_status":"partial"}' "$RUN_ID" "$attempt")"
   default_status="$(
     curl -sS -D "$default_headers" -o "$default_body" -w "%{http_code}" \
       --max-time "$CURL_MAX_TIME" \

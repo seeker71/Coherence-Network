@@ -36,7 +36,7 @@
 #   curl -i -X POST https://api.coherencycoin.com/api/ideas \
 #     -H 'Content-Type: application/json' \
 #     -H 'X-Form-Native-Public-Gate: 1' \
-#     -d '{"id":"idea-public-canary","name":"Public Canary","description":"gate","manifestation_status":"partial"}'
+#     -d '{"id":"idea-public-canary","name":"Public Canary","description":"gate","potential_value":1,"estimated_cost":1,"manifestation_status":"partial"}'
 #   # Expected: 202 + X-Form-Router: native-kernel + decision_receipt.
 #   # No-header POST /api/ideas also routes to native-kernel as the default
 #   # invitation. Add X-Form-Python-Fallback: 1 to explicitly fan out.

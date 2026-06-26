@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/kernel-canary-idea-payload-20260626",
+  "commit_scope": "Repair the public kernel canary idea-create payload after Hostinger Auto Deploy reached production for 7813ee54 but failed the kernel public canary because POST /api/ideas no longer accepted payloads missing potential_value and estimated_cost.",
+  "files_owned": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-26_kernel_canary_idea_payload.json",
+    "scripts/verify_kernel_canary_public_gate.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form-cli ask \"Hostinger deploy failed kernel public canary because POST /api/ideas returned 422 missing potential_value and estimated_cost. Which deploy canary payload or Form/API contract should be patched?\"",
+      "bash -n scripts/verify_kernel_canary_public_gate.sh deploy/hostinger/auto-deploy.sh",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py",
+      "scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com",
+      "scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+      "git diff --check"
+    ],
+    "summary": "Startup and wellness passed. The Form ask had no grounded/sufficient hit for the exact canary payload failure. Shell syntax passed; focused native mutation public-gate pytest passed 8 tests; public canary verification passed against https://api.coherencycoin.com after adding required potential_value and estimated_cost fields to the treatment and default idea-create payloads."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The repaired local canary script passed against the already deployed public system. Hostinger Auto Deploy must rerun after this fix lands so the workflow uses the repaired script."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local/public canary proof passed; CI and post-merge deploy rerun are pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "native-mutation-public-gate"
+  ],
+  "task_ids": [
+    "kernel-canary-idea-payload-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "deploy-failure-observation"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "local-validation",
+        "public-canary-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "Hostinger Auto Deploy run 28247241110 failed Verify kernel public canary with 422 missing potential_value and estimated_cost"
+  ],
+  "change_files": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-26_kernel_canary_idea_payload.json",
+    "scripts/verify_kernel_canary_public_gate.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "summary": "The repaired canary script now sends schema-valid idea-create payloads and passed against production: public-gate treatment reached 202/native-kernel, no-header default reached 202/native-kernel, attention runtime reached native-kernel, and explicit fallback remained fanout-python.",
+    "expected_behavior_delta": "Future Hostinger Auto Deploy kernel public canary runs no longer fail at FastAPI/Pydantic validation before the request can reach the native-kernel treatment path.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ideas",
+      "https://api.coherencycoin.com/api/attention/kernel-runtime"
+    ],
+    "test_flows": [
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py -> 8 passed",
+      "scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com -> PASS"
+    ]
+  }
+}
