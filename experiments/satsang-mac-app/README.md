@@ -42,8 +42,10 @@ The app boundary is intentionally small. Shared routing and sufficiency logic is
 Form-native; Swift is the current macOS host carrier for GUI, microphone, speech,
 file, and process resources. The request receipt names a generic host OS
 resource interface intended to be carried by equivalent Windows and Android host
-adapters. Python, Go, Rust, and TypeScript are not app-boundary runtimes for this
-carrier.
+adapters. Each Send receipt includes detected host resource doors for file read,
+file append, atomic file write, process stdin/stdout, audio input, and speech
+transcription. Python, Go, Rust, and TypeScript are not app-boundary runtimes for
+this carrier.
 
 Before Send writes the event, the app asks the repo-local native `form-cli`
 for a local body/RAG answer. The resulting route receipt is stored inside the

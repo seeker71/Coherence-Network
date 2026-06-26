@@ -3,7 +3,7 @@
 ; satsang-host-boundary-band — shared Form body, minimal host ABI, no app
 ; boundary Python/Go/Rust/TypeScript.
 ;
-; Verdict 1023:
+; Verdict 4095:
 ;   1   Form is an allowed app runtime
 ;   2   Swift is only the minimal host carrier
 ;   4   Python is forbidden at the app boundary
@@ -14,8 +14,11 @@
 ;   128 macOS is a target platform
 ;   256 Windows is a target platform
 ;   512 Android is a target platform
+;   1024 detected audio-input door is valid
+;   2048 unknown resource kind is rejected as a detected door
 (do
     (let rec (shb-receipt "swift-minimal-host-carrier" "process-stdin-stdout" "macos"))
+    (let audio-door (shb-door-receipt "audio-input" "open" "macos-avfoundation"))
 
     (let c0 (if (eq (shb-app-runtime-allowed? "form") 1) 1 0))
     (let c1 (if (eq (shb-app-runtime-allowed? "swift-minimal-host-carrier") 1) 2 0))
@@ -31,5 +34,7 @@
     (let c9 (if (and (eq (shb-platform-target? "android") 1)
                      (and (eq (shb-rec-ok? rec) 1)
                           (eq (shb-rec-forbidden? rec) 0))) 512 0))
+    (let c10 (if (eq (shb-door-rec-ok? audio-door) 1) 1024 0))
+    (let c11 (if (eq (shb-door-ok? "platform-private-api" "open") 0) 2048 0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

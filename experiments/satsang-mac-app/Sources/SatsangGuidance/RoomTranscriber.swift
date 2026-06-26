@@ -19,6 +19,27 @@ final class RoomTranscriber: @unchecked Sendable {
     private var inputTapInstalled = false
     private var lastLevelEmit = Date.distantPast
 
+    static func detectResourceDoors() -> [HostResourceDoor] {
+        let microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        let speechStatus = SFSpeechRecognizer.authorizationStatus()
+        let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en_US"))
+        let speechAvailable = speechRecognizer?.isAvailable == true
+        return [
+            HostResourceDoor(
+                kind: "audio-input",
+                state: microphoneDoorState(microphoneStatus),
+                carrier: "macos-avfoundation",
+                detail: microphoneStatusName(microphoneStatus)
+            ),
+            HostResourceDoor(
+                kind: "speech-transcript",
+                state: speechDoorState(speechStatus, available: speechAvailable),
+                carrier: "macos-speech",
+                detail: "\(speechStatusName(speechStatus));available=\(speechAvailable ? "1" : "0")"
+            ),
+        ]
+    }
+
     func start() {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
@@ -303,6 +324,47 @@ final class RoomTranscriber: @unchecked Sendable {
             return "restricted"
         case .notDetermined:
             return "not determined"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    private static func microphoneStatusName(_ status: AVAuthorizationStatus) -> String {
+        switch status {
+        case .authorized:
+            return "authorized"
+        case .denied:
+            return "denied"
+        case .restricted:
+            return "restricted"
+        case .notDetermined:
+            return "not determined"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    private static func microphoneDoorState(_ status: AVAuthorizationStatus) -> String {
+        switch status {
+        case .authorized:
+            return "open"
+        case .denied, .restricted:
+            return "unavailable"
+        case .notDetermined:
+            return "unknown"
+        @unknown default:
+            return "unknown"
+        }
+    }
+
+    private static func speechDoorState(_ status: SFSpeechRecognizerAuthorizationStatus, available: Bool) -> String {
+        switch status {
+        case .authorized:
+            return available ? "open" : "unavailable"
+        case .denied, .restricted:
+            return "unavailable"
+        case .notDetermined:
+            return "unknown"
         @unknown default:
             return "unknown"
         }

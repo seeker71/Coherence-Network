@@ -11,6 +11,21 @@ public protocol HostResourceInterface: Sendable {
     func appendLine(_ data: Data, to url: URL) throws
     func createDirectory(at url: URL) throws
     func runExecutable(at url: URL, workingDirectory: URL, standardInput: String) throws -> String
+    func detectResourceDoors(transcriptURL: URL, queueURL: URL, formCLIURL: URL?) -> [HostResourceDoor]
+}
+
+public struct HostResourceDoor: Codable, Equatable, Sendable {
+    public var kind: String
+    public var state: String
+    public var carrier: String
+    public var detail: String
+
+    public init(kind: String, state: String, carrier: String, detail: String = "") {
+        self.kind = kind
+        self.state = state
+        self.carrier = carrier
+        self.detail = detail
+    }
 }
 
 public struct FoundationHostResourceInterface: HostResourceInterface {
@@ -76,6 +91,37 @@ public struct FoundationHostResourceInterface: HostResourceInterface {
         let data = output.fileHandleForReading.readDataToEndOfFile()
         return String(decoding: data, as: UTF8.self)
     }
+
+    public func detectResourceDoors(transcriptURL: URL, queueURL: URL, formCLIURL: URL?) -> [HostResourceDoor] {
+        let formCLIDetail = formCLIURL?.path ?? "form-cli-not-found"
+        let formCLIState = formCLIURL.map { isExecutableFile(at: $0) ? "open" : "unavailable" } ?? "unavailable"
+        return [
+            HostResourceDoor(
+                kind: "file-read",
+                state: fileExists(at: transcriptURL) ? "open" : "not-present",
+                carrier: "host-filesystem",
+                detail: transcriptURL.path
+            ),
+            HostResourceDoor(
+                kind: "file-append",
+                state: "available",
+                carrier: "host-filesystem",
+                detail: queueURL.path
+            ),
+            HostResourceDoor(
+                kind: "file-write-atomic",
+                state: "available",
+                carrier: "host-filesystem",
+                detail: queueURL.deletingLastPathComponent().path
+            ),
+            HostResourceDoor(
+                kind: "process-stdin-stdout",
+                state: formCLIState,
+                carrier: "host-process",
+                detail: formCLIDetail
+            ),
+        ]
+    }
 }
 
 public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
@@ -85,6 +131,7 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
     public var resourceInterface: String
     public var platformTargets: [String]
     public var allowedResourceKinds: [String]
+    public var resourceDoors: [HostResourceDoor]
     public var appBoundaryRuntimes: [String]
     public var forbiddenRuntimeCarriers: [String]
 
@@ -101,6 +148,7 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
             "file-write-atomic",
             "process-stdin-stdout"
         ],
+        resourceDoors: [HostResourceDoor]? = nil,
         appBoundaryRuntimes: [String] = ["form", "swift-minimal-host-carrier"],
         forbiddenRuntimeCarriers: [String] = ["python", "go", "rust", "typescript"]
     ) {
@@ -110,13 +158,24 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
         self.resourceInterface = resourceInterface
         self.platformTargets = platformTargets
         self.allowedResourceKinds = allowedResourceKinds
+        self.resourceDoors = resourceDoors ?? allowedResourceKinds.map {
+            HostResourceDoor(kind: $0, state: "declared", carrier: resourceInterface)
+        }
         self.appBoundaryRuntimes = appBoundaryRuntimes
         self.forbiddenRuntimeCarriers = forbiddenRuntimeCarriers
     }
 
     public var usesOnlyAllowedAppRuntimes: Bool {
         let allowed = Set(["form", "swift-minimal-host-carrier"])
+        let allowedResources = Set(allowedResourceKinds)
         return appBoundaryRuntimes.allSatisfy { allowed.contains($0) }
             && forbiddenRuntimeCarriers.allSatisfy { !appBoundaryRuntimes.contains($0) }
+            && resourceDoors.allSatisfy { allowedResources.contains($0.kind) }
+    }
+
+    public var doorSummary: String {
+        resourceDoors
+            .map { "\($0.kind):\($0.state):\($0.carrier)" }
+            .joined(separator: ",")
     }
 }

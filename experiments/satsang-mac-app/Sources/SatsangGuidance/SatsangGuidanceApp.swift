@@ -214,8 +214,10 @@ final class AppModel: ObservableObject {
     private func makeRouteReceipt() -> FormNativeRouteReceipt {
         let bodySources = formBodySources()
         let body = FormNativeLookupSignal.bodyProtocol(sourceIDs: bodySources, sufficient: false)
-        let rag = formNativeAskSignal()
-        return FormNativeRouteReceipt(bodyLookup: body, ragLookup: rag)
+        let formCLIURL = repositoryRoot.flatMap { resolveFormCLI(repositoryRoot: $0) }
+        let hostBoundary = makeHostBoundary(formCLIURL: formCLIURL)
+        let rag = formNativeAskSignal(formCLIURL: formCLIURL)
+        return FormNativeRouteReceipt(hostBoundary: hostBoundary, bodyLookup: body, ragLookup: rag)
     }
 
     private func formBodySources() -> [String] {
@@ -232,11 +234,20 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func formNativeAskSignal() -> FormNativeLookupSignal {
+    private func makeHostBoundary(formCLIURL: URL?) -> FormHostBoundaryReceipt {
+        let fileProcessDoors = hostResources.detectResourceDoors(
+            transcriptURL: URL(fileURLWithPath: expanded(transcriptPath)),
+            queueURL: URL(fileURLWithPath: expanded(queuePath)),
+            formCLIURL: formCLIURL
+        )
+        return FormHostBoundaryReceipt(resourceDoors: fileProcessDoors + RoomTranscriber.detectResourceDoors())
+    }
+
+    private func formNativeAskSignal(formCLIURL: URL?) -> FormNativeLookupSignal {
         guard let repositoryRoot else {
             return .unavailable("form-native-rag-local-llm", reason: "repository root not found")
         }
-        guard let formCLIURL = resolveFormCLI(repositoryRoot: repositoryRoot) else {
+        guard let formCLIURL else {
             return .unavailable("form-native-rag-local-llm", reason: "form-cli executable not found")
         }
         let query = [guidanceQuestion, transcriptText]

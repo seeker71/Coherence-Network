@@ -30,6 +30,18 @@
             (if (str_eq platform "windows") 1
                 (if (str_eq platform "android") 1 0))))
 
+    (defn shb-door-state? (state)
+        (if (str_eq state "open") 1
+            (if (str_eq state "available") 1
+                (if (str_eq state "not-present") 1
+                    (if (str_eq state "unavailable") 1
+                        (if (str_eq state "unknown") 1
+                            (if (str_eq state "declared") 1 0)))))))
+
+    (defn shb-door-ok? (kind state)
+        (if (and (eq (shb-resource-kind? kind) 1)
+                 (eq (shb-door-state? state) 1)) 1 0))
+
     (defn shb-boundary-ok? (runtime resource platform)
         (if (and (eq (shb-app-runtime-allowed? runtime) 1)
                  (and (eq (shb-resource-kind? resource) 1)
@@ -45,6 +57,13 @@
               (shb-boundary-ok? runtime resource platform)
               (shb-runtime-forbidden? runtime)))
 
+    (defn shb-door-receipt (kind state carrier)
+        (list "host-resource-door"
+              kind
+              state
+              carrier
+              (shb-door-ok? kind state)))
+
     (defn shb-rec-kind       (r) (nth r 0))
     (defn shb-rec-shared     (r) (nth r 1))
     (defn shb-rec-runtime    (r) (nth r 2))
@@ -53,5 +72,10 @@
     (defn shb-rec-platform   (r) (nth r 5))
     (defn shb-rec-ok?        (r) (nth r 6))
     (defn shb-rec-forbidden? (r) (nth r 7))
+
+    (defn shb-door-rec-kind    (r) (nth r 1))
+    (defn shb-door-rec-state   (r) (nth r 2))
+    (defn shb-door-rec-carrier (r) (nth r 3))
+    (defn shb-door-rec-ok?     (r) (nth r 4))
 
     0)
