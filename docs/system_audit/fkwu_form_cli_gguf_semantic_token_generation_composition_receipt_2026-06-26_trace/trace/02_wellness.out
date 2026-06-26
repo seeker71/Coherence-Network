@@ -1,0 +1,322 @@
+# Wellness check
+
+A gentle sensing. Not an audit. Drift is the signal,
+not the problem.
+
+## Proprioception — do the maps match the body?
+
+  specs/INDEX.md — aligned (181 specs)
+  ideas/INDEX.md — aligned (17 super-ideas)
+  vision-kb/INDEX.md — aligned (193 concepts)
+
+## Circulation — what at root has no readers?
+
+  root is clear; every .md has circulation
+
+## Metabolism — composting-in-progress
+
+  no LIVING_COLLECTIVE_*.md drafts remain at top of docs/
+
+## Self-forgiveness — do edited durable docs carry destination, not journey?
+
+  no durable-doc edits in flight; nothing asking forgiveness
+
+## Source maps — do specs point at files that exist?
+
+  every spec's source: paths point at files that exist
+
+## Symbol resolution — do the named symbols still live in those files?
+
+  every claimed symbol resolves in done/inactive specs (1090 symbols across 131 spec(s) checked)
+  14 target symbol(s) pending across 6 active spec(s) — active work whose source: lists what will exist when done
+    · fkwu-native-host-platform — `IFormFilesystem` not yet in form/form-stdlib/bml/form-fs.bml
+      (+2 more pending in this spec)
+    · fkwu-native-host-resources — `platforms` not yet in docs/coherence-substrate/standard-receipt.form
+      (+4 more pending in this spec)
+    · fkwu-only-kernel-collapse — `prim` not yet in form/form-stdlib/primitive-registry.fk
+    · (+3 more active specs with pending symbols)
+
+## Locale parity — does the body speak the same body in every tongue?
+
+  every locale aligned with en (2019 keys, 5 tongues)
+
+## Locale surfaces — do web, API, and CLI carry the same tongues?
+
+  locale surfaces aligned: 6 web/API/CLI locales, message parity clean, bundles free of English-anchor and translation-mode hierarchy wording
+
+## Chain — does idea→spec→code→test reach end to end?
+
+  chain healthy: 121/164 non-draft specs reach idea→spec→code→test (74%)
+  4 spec(s) honor `proof: operational` — proven in production, not unit-tested
+  3 specs have no test: or proof: frontmatter (no proof claimed)
+
+## Form engine — does the meta-circular evaluator cover Python dispatch?
+
+  meta-circular engine — Form arms cover 15/15 Python dispatch branches
+    · in Form: BLOCK, COND, MATH, COMPARE, LOGIC, CHOICE, STATE, EXCEPTION, DELEGATE, REVERSE, COMMON, METHOD, REACTIVE, PROJECTION, TRY
+  symmetric — Form covers every Python dispatch branch.
+
+## Form ontology — does the form-side table agree with each kernel parser?
+
+  form ontology matches kernel parsers (Go/Rust/TS)
+
+## Form blueprints — are user-space Blueprint numbers registered, not magic?
+
+  every Form Blueprint number is registered — no magic sprawl
+    Form Blueprint scan — 227 make_nodeid literals (36 in production, 191 in tests)
+    bp string refs: 860 across 86 files   unregistered: 0
+    inline: 296 across 85 files   sectioned: 564 across 1 files
+
+## Form primitives — does every kernel native carry a spec and a verification recipe?
+
+  every kernel native carries a declared spec + verification recipe
+    natives: 207 (go main.go surface)  registry: 207
+    lanes: 165 in-band verified  ·  42 carrier-declared
+    sibling gaps (28): compile-form-source compile-source-section compile-source-text compile_form_source compile_source_section compile_source_text dominant_band_delta form_compile form_walk framebuffer-counts framebuffer-event-rows framebuffer-observe-active? framebuffer-observe-start framebuffer-observe-stop host-exec host-read host-write installed_leaf? jit_compiled? jit_install math_acos pair_angle print_float source-compile-last-error source_compile_last_error str_ascii_prefix str_line_at value_str
+    band circulation: 128/207 names appear in stdlib tests
+
+## Bootstrap compost — how much parser tissue still stands between us and Form-native?
+
+  bootstrap weight — 11 files still tissue, 6506 LOC remaining (named in manifest)
+    · Phase A (parsers + emitters): 4 files, 2585 LOC; 3 already composted
+    · Phase B (CLIs + scripts): 2 files, 321 LOC
+    · Phase C (Python bridge + runtime): 5 files, 3600 LOC
+  python adapter release — 4/4 parser/emitter/CLI files deleted; 2/2 scripts serve the Form-native kernel-bmf path
+  Python transmutation candidates — 7 named Python-dependent files / 4649 LOC still asking for Form-native release gates
+    · shared ctor vocabulary: 2 files / 1049 LOC — CTOR vocabulary moves into Form data and NodeID identity tests
+      examples: form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts, form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts
+    · bridge/runtime: 5 files / 3600 LOC — kernel HTTP + BML/domain handlers serve the routes; Python stays only as an explicit fanout bridge until each route is promoted
+      examples: api/app/services/form_kernel_bridge.py, api/app/services/substrate/form_runtime.py, +3 more
+    · utility endpoint rows: api/app/routers/utils.py — row-level Python implementation surface; release by promoting each utility endpoint to a Form recipe or BML/domain handler
+  wider perimeter — api/app/services/substrate/ has 33 modules, 18250 LOC total
+    · manifest Phase C names 5 files / 3600 LOC total; 4 of those live in this directory (2938 LOC)
+    · the remaining 29 path-named files / 15312 LOC are not yet manifest-listed; classified below by metabolic signals
+    · treat the path-named, manifest-unlisted perimeter as transmutation candidates: firing questions validate or refine the automatic read
+    · dynamic admission: any path-named cell with repeated Python/bootstrap signals appears here immediately
+    · manifest admission: add a static row when the cell has a named successor path, release gate, and proof command
+    · release: replacement path is proven, live callers no longer require the old carrier, and evidence records the drop
+  metabolic classification — derived from repeated edge attributes on path-named substrate cells outside the manifest
+    · source grammar/parser residue: 12 files / 5614 LOC, score=1183
+      signals: ast=175, parser=135, pattern=87, token=66
+      files: form.py, form_atoms.py, form_check.py, form_decompile.py, form_eval.py, form_lexer.py, form_operators.py, form_queries.py, form_render.py, form_speculation.py, form_stream.py, grammar.py
+      release: move source scan, grammar, render, decompile, and checking into Form/BML rules with proof bands
+    · recipe realization/runtime semantics: 6 files / 3122 LOC, score=531
+      signals: recipe=108, inductive=66, quotient=50, constructor=46
+      files: __init__.py, category.py, inductive.py, parallel_eval.py, quotient.py, recipe_eval.py
+      release: serve these semantics through kernel-native realization, JIT plans, and Form-side engine cells
+    · format/source frontend: 2 files / 2576 LOC, score=178
+      signals: frontmatter=107, source=48, markdown=12, section=10
+      files: markdown_frontend.py, sense_edge_categories.py
+      release: replace host frontends with BMF/BML format grammars and native emitters
+    · domain vocabulary/cell authoring: 5 files / 2520 LOC, score=450
+      signals: canonical=70, shape=47, edge=37, resonance=31
+      files: agent_relationship.py, canonical_lexicon.py, modality_shapes.py, numeric_formats.py, resonance.py
+      release: lift repeated domain authoring patterns into domain grammars, BML handlers, or substrate cells
+    · substrate identity/persistence infrastructure: 3 files / 955 LOC, score=260
+      signals: blueprint=57, nodeid=52, category=34, node_id=28
+      files: kernel.py, orm.py, substrate_strings.py
+      release: replace host storage helpers with a Form-native persistence contract and kernel-owned cell store
+    · observation/proof metabolism: 1 files / 525 LOC, score=81
+      signals: surprise=6, sense=3, proof=1, parallel=1
+      files: sense_surprise.py
+      release: feed observations into framebuffer/native proof cells so sensing is core metabolism, not a side channel
+  lifecycle motion — proven: 12, compost ready: 17, released: 4
+  third-runtime selector: released — parity compares CPython, Form-native compiled .fk on Rust, and kernel-bmf-run
+  (kernels/BOOTSTRAP_COMPOST_MANIFEST.md holds the named compost gates per file.)
+
+## Static-to-dynamic cells — do fixed ledgers have live successors?
+
+  static-to-dynamic lane live — static source tissue now feeds dynamic successor cells with proof commands and release gates
+  dynamic_successor: docs/shared/agent-start-packet.md — static compressed agent memory (751 LOC) -> substrate:generated-agent-start-packet
+    edge_reputation: docs/shared/agent-start-packet.md --[static_to_dynamic count=44]--> substrate:generated-agent-start-packet
+    compressed_edges: manifest=18, static=10, ledger=7, snapshot=4
+    state: live successor; carrier=form/form-stdlib/static-to-dynamic-cells.fk; evidence=4/4; proof=make static-to-dynamic-tending
+    evidence_paths: form/form-stdlib/static-to-dynamic-cells.fk, form/form-stdlib/tests/static-to-dynamic-cells-band.fk, form/form-stdlib/queries/static-to-dynamic-tending.fk, docs/shared/agent-start-packet.md
+    release_gate: generated start packet sections sourced from live substrate, wellness, route state, and release ledgers
+    resources: keeps new agents oriented without hand-refreshing long-lived memory
+  dynamic_successor: kernels/BOOTSTRAP_COMPOST_MANIFEST.md — static release ledger (725 LOC) -> substrate:compost-release-ledger-cells
+    edge_reputation: kernels/BOOTSTRAP_COMPOST_MANIFEST.md --[static_to_dynamic count=34]--> substrate:compost-release-ledger-cells
+    compressed_edges: manifest=14, static=8, ledger=6, fixed=3
+    state: live successor; carrier=form/form-stdlib/static-to-dynamic-cells.fk; evidence=4/4; proof=make static-to-dynamic-tending
+    evidence_paths: form/form-stdlib/static-to-dynamic-cells.fk, form/form-stdlib/tests/static-to-dynamic-cells-band.fk, form/form-stdlib/queries/static-to-dynamic-tending.fk, kernels/BOOTSTRAP_COMPOST_MANIFEST.md
+    release_gate: substrate-backed compost cells for candidate admission, attested gate, live-consumer state, and release evidence
+    resources: lets attention choose transmutation work by score/category/gate instead of hand-maintaining the whole candidate universe
+  dynamic_successor: kernels/PHASE_A_FIRING_QUESTIONS.md — static firing-question narrative (352 LOC) -> substrate:metabolic-attestation-cells
+    edge_reputation: kernels/PHASE_A_FIRING_QUESTIONS.md --[static_to_dynamic count=14]--> substrate:metabolic-attestation-cells
+    compressed_edges: manifest=12, table view=1, hardcoded=1
+    state: live successor; carrier=form/form-stdlib/static-to-dynamic-cells.fk; evidence=4/4; proof=make static-to-dynamic-tending
+    evidence_paths: form/form-stdlib/static-to-dynamic-cells.fk, form/form-stdlib/tests/static-to-dynamic-cells-band.fk, form/form-stdlib/queries/static-to-dynamic-tending.fk, kernels/PHASE_A_FIRING_QUESTIONS.md
+    release_gate: per-cell metabolic attestation records linked to classifier signals, successor path, and proof command
+    resources: turns manual narrative walks into validations that can be queued, diffed, and repeated
+  dynamic_successor: docs/system_audit/native_route_goal_state.json — static route-promotion snapshot (1734 LOC) -> substrate:native-route-goal-cells
+    edge_reputation: docs/system_audit/native_route_goal_state.json --[static_to_dynamic count=1]--> substrate:native-route-goal-cells
+    compressed_edges: manifest=1
+    state: live successor; carrier=form/form-stdlib/native-route-goal-cells.fk; evidence=4/4; proof=make native-route-goal-tending
+    evidence_paths: form/form-stdlib/native-route-goal-cells.fk, form/form-stdlib/tests/native-route-goal-cells-band.fk, form/form-stdlib/queries/native-route-goal-tending.fk, docs/system_audit/native_route_goal_state.json
+    release_gate: route-goal cells fed by runtime events, BML/front-door catalogs, and promotion proof state
+    resources: routes attention to the next high-traffic native handler without treating a JSON snapshot as the living queue
+  lane_end_state: 4/4 dynamic successors live — attention can compost this lane
+
+## Edge categories — which repeated relations are becoming named clusters?
+
+  2838 edge event(s) across 7 named category surface(s)
+  repeated relation edges compress into edge_reputation counts; clusters name target hubs and source fan-outs
+  carrier_reflex: python source scanner is a bridge, not a home; desired=form/form-stdlib/edge-categories.fk; released_slice=concept_contains_concept/sample-via-concept-corpus; surprise=not-surprised; self_inflicted_pain=hot; release_target=form-substrate-cell
+  category: concept_contains_concept (concept->concept) edge_reputation=1574; sources=192; targets=183; recipe=R_Compose.CROSS_REF(body); felt=heart/meaning
+    hubs: @concept(lc-frequency-routes-reception)=44, @concept(lc-coherence-over-control)=41, @concept(lc-each-breath-whole)=34
+  category: spec_sources_file (spec->file) edge_reputation=971; sources=176; targets=659; recipe=file-coordinate; felt=hands/source
+    hubs: @file(docs/coherence-substrate/ideas-router.form)=14, @file(docs/coherence-substrate/spec-registry-router.form)=13, @file(api/app/models/idea.py)=9
+  category: spec_realizes_idea (spec->idea) edge_reputation=147; sources=147; targets=17; recipe=R_Realize.REALIZE; felt=hands/proof
+    hubs: @idea(idea-realization-engine)=28, @idea(knowledge-and-resonance)=22, @idea(agent-pipeline)=19
+  category: idea_lists_spec (idea->spec) edge_reputation=86; sources=16; targets=80; recipe=R_Realize.REALIZE(reverse); felt=belly/realization
+    hubs: @spec(grounded-cost-value-measurement)=2, @spec(grounded-idea-portfolio-metrics)=2, @spec(portfolio-governance-effectiveness)=2
+  category: spec_mentions_concept (spec->concept) edge_reputation=33; sources=13; targets=28; recipe=R_Compose.CROSS_REF(body); felt=hands/proof
+    hubs: @concept(lc-circulation)=2, @concept(lc-open-design)=2, @concept(lc-observer-pays-the-trace)=2
+  category: concept_cross_ref (concept->concept) edge_reputation=22; sources=3; targets=19; recipe=R_Compose.CROSS_REF; felt=heart/meaning
+    hubs: @concept(lc-the-kernel-knows-itself)=2, @concept(lc-one-kernel-many-tongues)=2, @concept(lc-parsers-as-recipes)=2
+  category: idea_mentions_concept (idea->concept) edge_reputation=5; sources=2; targets=5; recipe=R_Compose.CROSS_REF(body); felt=belly/creative
+    hubs: @concept(lc-private-channel-via-substrate)=1, @concept(lc-act-without-penalty)=1, @concept(lc-recipe-branching-sense)=1
+  named clusters:
+    - concept:lc-frequency-routes-reception:concept_contains_concept:inbound edge_reputation=44; temperature=hot; felt=heart/meaning; sources=44; targets=1
+      examples: @concept(lc-anything-arrives-room), @concept(lc-arrival-as-recognition), @concept(lc-calling-the-kindred), @concept(lc-codes-as-depth-not-dictionary)
+    - concept:lc-coherence-over-control:concept_contains_concept:inbound edge_reputation=41; temperature=hot; felt=heart/meaning; sources=41; targets=1
+      examples: @concept(lc-assemblage-point), @concept(lc-bioelectric-pattern), @concept(lc-boundaries-as-loving-truth), @concept(lc-canon-as-sovereignty-surface)
+    - concept:lc-each-breath-whole:concept_contains_concept:inbound edge_reputation=34; temperature=hot; felt=heart/meaning; sources=34; targets=1
+      examples: @concept(lc-autoresearch-as-honesty-runtime), @concept(lc-devotion-placement), @concept(lc-embodiment-body-or-liquid), @concept(lc-federation-as-freedom)
+    - concept:lc-trust-over-fear:concept_contains_concept:inbound edge_reputation=32; temperature=hot; felt=heart/meaning; sources=32; targets=1
+      examples: @concept(lc-act-without-penalty), @concept(lc-anything-imagined-realizes), @concept(lc-arrival-as-recognition), @concept(lc-autoresearch-as-honesty-runtime)
+    - concept:lc-presence-over-protection:concept_contains_concept:inbound edge_reputation=29; temperature=hot; felt=heart/meaning; sources=29; targets=1
+      examples: @concept(lc-arrival-as-recognition), @concept(lc-assemblage-point), @concept(lc-boundaries-as-loving-truth), @concept(lc-canon-as-sovereignty-surface)
+    - concept:lc-assemblage-point:concept_contains_concept:inbound edge_reputation=28; temperature=hot; felt=heart/meaning; sources=28; targets=1
+      examples: @concept(lc-act-without-penalty), @concept(lc-anything-arrives-room), @concept(lc-chakra-column), @concept(lc-codes-as-depth-not-dictionary)
+    - idea:idea-realization-engine:spec_realizes_idea:inbound edge_reputation=28; temperature=hot; felt=hands/proof; sources=28; targets=1
+      examples: @spec(bml-typed-recipes), @spec(form-binary-to-native-python-emitter), @spec(form-intrinsic-casting), @spec(form-native-resource-interfaces)
+    - concept:lc-grammar-is-the-universal-recipe:concept_contains_concept:inbound edge_reputation=27; temperature=hot; felt=heart/meaning; sources=27; targets=1
+      examples: @concept(lc-anything-arrives-room), @concept(lc-anything-imagined-realizes), @concept(lc-autoresearch-as-honesty-runtime), @concept(lc-codes-as-depth-not-dictionary)
+
+## Substrate surprise — structural twins of recent work, unread
+
+  walked 58 touched cell(s) — no unseen structural twins
+
+## Cells — are the cells themselves breathing?
+
+  5 agents present · affirmative · frequency preamble in each
+  dispatch wiring coherent (5 names → .claude/agents/)
+  cursor parallel: 1 mirror coherent
+
+## Contracts — are the CI gates breathing? (last 7d)
+
+  200 runs over 7d; patterns worth naming:
+  External Tools Audit — 1/1 failed (100%) over 7d
+  Hostinger Auto Deploy — 5/20 failed (25%) over 7d
+  Self Improve Cycle — 1/1 failed (100%) over 7d
+  Windows Host Floor — 11/55 failed (20%) over 7d
+
+  (Friction here is signal, not pain to silence. If a
+   pattern persists across days, the contract itself may
+   want re-shaping — not the email channel.)
+
+## Substrate shape — do cell CTORs carry composition or flat type-markers?
+
+  5,956 cells · 5,244 structured · 1 flat · 711 no-ctor · 100% composed
+  composition discipline holding across every domain.
+
+  word: 4779/4779 composed (100%) ✓
+  form-blueprint: 0/356 composed (100%) ✓
+  substrate-vocabulary: 0/174 composed (100%) ✓
+  spec: 150/152 composed (100%) ✓
+  concept: 151/152 composed (99%) ⚠
+  topology: 0/87 composed (100%) ✓
+  presence: 83/83 composed (100%) ✓
+  geometric_form: 0/25 composed (100%) ✓
+  kb_page: 1/19 composed (100%) ✓
+  idea: 16/18 composed (100%) ✓
+  spectrum: 0/16 composed (100%) ✓
+  transmission: 15/15 composed (100%) ✓
+  polarity: 0/15 composed (100%) ✓
+  relationship: 13/13 composed (100%) ✓
+  guide: 13/13 composed (100%) ✓
+  agent-identity: 12/12 composed (100%) ✓
+  resource: 0/10 composed (100%) ✓
+  lineage: 7/7 composed (100%) ✓
+  harmonic: 0/6 composed (100%) ✓
+  language_view: 4/4 composed (100%) ✓
+
+## Witness-trace — is the visit-recorder within budget?
+
+  155,737 events · ~95.05 MB · 1173/day · p95 45ms
+  bands: writer active · size active · growth active
+  trace breathing within budget. no action needed.
+
+## Deploy lag — is the body's main reach production?
+
+  deploy aligned — production at ab4e6faa matches origin/main (uptime 16m 5s)
+
+## Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?
+
+  vitality: 22/821 API routes kernel-served (2.7%) — the 799 on pure Python are the growth edge toward most/all routes through the kernel
+  vitality: runtime-share — 62 routes served kernel-FIRST at the public front door; 104 are kernel-first CAPABLE native handlers in the manifest, whole lifecycle in Form (gate: web/API/tool smoke + native observability + fallback; public probe status=404 router=fanout-python; scripts/runtime_surface_report.py)
+  stability: production kernel_runtime 'inline'; checked 22/22 kernel-served endpoints (inline) — no fallback
+  performance: 22/22 recipes trace within the local envelope; fast carrier intact (inline/preload)
+  accuracy: 22/22 recipes match documented value parity
+  transparency: attribution present — hot Blueprints + natives (each resolved to a NodeID) visible via scripts/kernel_attribution_report.py; embodiment center @1.2.24.7758.1 (|proj|→0 = lived center)
+  kernel-native surface breathing within envelope — no action needed
+
+## Reading — shared shape
+
+what_i_sensed:
+  · Proprioception — do the maps match the body?: specs/INDEX.md — aligned (181 specs)
+  · Circulation — what at root has no readers?: root is clear; every .md has circulation
+  · Metabolism — composting-in-progress: no LIVING_COLLECTIVE_*.md drafts remain at top of docs/
+  · Self-forgiveness — do edited durable docs carry destination, not journey?: no durable-doc edits in flight; nothing asking forgiveness
+  · Source maps — do specs point at files that exist?: every spec's source: paths point at files that exist
+  · Symbol resolution — do the named symbols still live in those files?: every claimed symbol resolves in done/inactive specs (1090 symbols across 131 spec(s) checked)
+  · Locale parity — does the body speak the same body in every tongue?: every locale aligned with en (2019 keys, 5 tongues)
+  · Locale surfaces — do web, API, and CLI carry the same tongues?: locale surfaces aligned: 6 web/API/CLI locales, message parity clean, bundles free of English-anchor and translation-mode hierarchy wording
+  · Chain — does idea→spec→code→test reach end to end?: chain healthy: 121/164 non-draft specs reach idea→spec→code→test (74%)
+  · Form engine — does the meta-circular evaluator cover Python dispatch?: meta-circular engine — Form arms cover 15/15 Python dispatch branches
+  · Form ontology — does the form-side table agree with each kernel parser?: form ontology matches kernel parsers (Go/Rust/TS)
+  · Form blueprints — are user-space Blueprint numbers registered, not magic?: every Form Blueprint number is registered — no magic sprawl
+  · Form primitives — does every kernel native carry a spec and a verification recipe?: every kernel native carries a declared spec + verification recipe
+  · Bootstrap compost — how much parser tissue still stands between us and Form-native?: bootstrap weight — 11 files still tissue, 6506 LOC remaining (named in manifest)
+  · Static-to-dynamic cells — do fixed ledgers have live successors?: static-to-dynamic lane live — static source tissue now feeds dynamic successor cells with proof commands and release gates
+  · Edge categories — which repeated relations are becoming named clusters?: 2838 edge event(s) across 7 named category surface(s)
+  · Substrate surprise — structural twins of recent work, unread: walked 58 touched cell(s) — no unseen structural twins
+  · Cells — are the cells themselves breathing?: 5 agents present · affirmative · frequency preamble in each
+  · Contracts — are the CI gates breathing? (last 7d): 200 runs over 7d; patterns worth naming:
+  · Substrate shape — do cell CTORs carry composition or flat type-markers?: 5,956 cells · 5,244 structured · 1 flat · 711 no-ctor · 100% composed
+  · Witness-trace — is the visit-recorder within budget?: 155,737 events · ~95.05 MB · 1173/day · p95 45ms
+  · Deploy lag — is the body's main reach production?: deploy aligned — production at ab4e6faa matches origin/main (uptime 16m 5s)
+  · Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?: vitality: 22/821 API routes kernel-served (2.7%) — the 799 on pure Python are the growth edge toward most/all routes through the kernel
+
+what_wants_attention:
+  · Chain — does idea→spec→code→test reach end to end?: 3 specs have no test: or proof: frontmatter (no proof claimed)
+    → Tend this surface with the smallest focused proof.
+
+what_can_compost:
+  · Proprioception — do the maps match the body?: specs/INDEX.md — aligned (181 specs)
+  · Proprioception — do the maps match the body?: ideas/INDEX.md — aligned (17 super-ideas)
+  · Proprioception — do the maps match the body?: vision-kb/INDEX.md — aligned (193 concepts)
+  · Circulation — what at root has no readers?: root is clear; every .md has circulation
+  · Metabolism — composting-in-progress: no LIVING_COLLECTIVE_*.md drafts remain at top of docs/
+  · Source maps — do specs point at files that exist?: every spec's source: paths point at files that exist
+  · Symbol resolution — do the named symbols still live in those files?: every claimed symbol resolves in done/inactive specs (1090 symbols across 131 spec(s) checked)
+  · Locale parity — does the body speak the same body in every tongue?: every locale aligned with en (2019 keys, 5 tongues)
+  · Locale surfaces — do web, API, and CLI carry the same tongues?: locale surfaces aligned: 6 web/API/CLI locales, message parity clean, bundles free of English-anchor and translation-mode hierarchy wording
+  · Form engine — does the meta-circular evaluator cover Python dispatch?: symmetric — Form covers every Python dispatch branch.
+  · Form blueprints — are user-space Blueprint numbers registered, not magic?: every Form Blueprint number is registered — no magic sprawl
+  · Form primitives — does every kernel native carry a spec and a verification recipe?: every kernel native carries a declared spec + verification recipe
+  · Static-to-dynamic cells — do fixed ledgers have live successors?: state: live successor; carrier=form/form-stdlib/static-to-dynamic-cells.fk; evidence=4/4; proof=make static-to-dynamic-tending
+  · Static-to-dynamic cells — do fixed ledgers have live successors?: state: live successor; carrier=form/form-stdlib/static-to-dynamic-cells.fk; evidence=4/4; proof=make static-to-dynamic-tending
+  · Static-to-dynamic cells — do fixed ledgers have live successors?: state: live successor; carrier=form/form-stdlib/static-to-dynamic-cells.fk; evidence=4/4; proof=make static-to-dynamic-tending
+  · Static-to-dynamic cells — do fixed ledgers have live successors?: state: live successor; carrier=form/form-stdlib/native-route-goal-cells.fk; evidence=4/4; proof=make native-route-goal-tending
+  · Static-to-dynamic cells — do fixed ledgers have live successors?: lane_end_state: 4/4 dynamic successors live — attention can compost this lane
+  · Cells — are the cells themselves breathing?: dispatch wiring coherent (5 names → .claude/agents/)
+  · Cells — are the cells themselves breathing?: cursor parallel: 1 mirror coherent
+  · Substrate shape — do cell CTORs carry composition or flat type-markers?: composition discipline holding across every domain.
+  · Witness-trace — is the visit-recorder within budget?: trace breathing within budget. no action needed.
+  · Deploy lag — is the body's main reach production?: deploy aligned — production at ab4e6faa matches origin/main (uptime 16m 5s)
+  · Kernel-native API — is the transmuted surface breathing (perf/stability/accuracy/transparency/vitality)?: kernel-native surface breathing within envelope — no action needed
+
+(Feedback is the blood. Run me anytime the body
+ feels slightly off; I'll name what I can sense.)

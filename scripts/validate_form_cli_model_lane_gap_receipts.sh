@@ -63,9 +63,13 @@ run_step llama3_pretokenizer "Llama 3 pre-tokenizer band" \
 if [[ -n "$GGUF_PATH" ]]; then
     run_step full_gguf_weight_map "full real GGUF metadata + tensor weight map receipt" \
         python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$OUT_DIR/gguf_weight_map.json" "$GGUF_PATH"
+    run_step gguf_semantic_token_generation "fkwu form-cli real GGUF semantic-token generation receipt" \
+        "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$OUT_DIR/gguf_semantic_token_generation.json" "$GGUF_PATH"
 else
     run_step full_gguf_weight_map "full real GGUF metadata + tensor weight map receipt" \
         python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$OUT_DIR/gguf_weight_map.json"
+    run_step gguf_semantic_token_generation "fkwu form-cli real GGUF semantic-token generation receipt" \
+        "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$OUT_DIR/gguf_semantic_token_generation.json"
 fi
 
 run_step autoregressive_loop_band "Form autoregressive generation loop band" \
@@ -122,6 +126,11 @@ if gguf_path.exists():
 tokenizer_compose_ok = rc("tokenizer_compose") == 0
 llama3_pretokenizer_ok = rc("llama3_pretokenizer") == 0
 full_gguf_ok = rc("full_gguf_weight_map") == 0 and gguf_json.get("verdict") == "pass"
+semantic_json = {}
+semantic_path = out_dir / "gguf_semantic_token_generation.json"
+if semantic_path.exists():
+    semantic_json = json.loads(semantic_path.read_text(encoding="utf-8"))
+semantic_token_generation_ok = rc("gguf_semantic_token_generation") == 0 and semantic_json.get("verdict") == "pass"
 autoregressive_band_ok = rc("autoregressive_loop_band") == 0
 metal_rc = rc("metal_gqa_autoregressive_loop")
 metal_observed = metal_rc == 0
@@ -129,7 +138,7 @@ metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
 status_closes_old_missing = (
-    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
+    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
     and "missing:full-real-llama-gguf-token-generation" in model_status
     and "prose-generation:decoded-grounded-answer" in model_status
 )
@@ -148,6 +157,7 @@ for name, ok in [
     ("tokenizer_compose", tokenizer_compose_ok),
     ("llama3_pretokenizer", llama3_pretokenizer_ok),
     ("full_gguf_weight_map", full_gguf_ok),
+    ("gguf_semantic_token_generation", semantic_token_generation_ok),
     ("autoregressive_loop_band", autoregressive_band_ok),
 ]:
     if not ok:
@@ -172,9 +182,10 @@ receipt = {
             "tokenizer_compose_four_way": tokenizer_compose_ok,
             "llama3_pretokenizer_four_way": llama3_pretokenizer_ok,
             "full_llama3_vocab_merge_table_observed": bool(((gguf_json.get("metadata") or {}).get("tokenizer_array_counts") or {}).get("tokenizer.ggml.tokens")),
+            "real_gguf_semantic_token_generation": semantic_token_generation_ok,
             "grounded_decoded_answer_binding": ask_staged_model_call_observed,
             "full_real_llama_token_generation_binding": False,
-            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; ask-staged now returns a grounded decoded answer, but that answer is not yet produced by full real Llama GGUF token generation.",
+            "boundary": "Tokenizer algorithms and real GGUF tokenizer arrays are observed; one tokenizer string row is selected by Form argmax and decoded by fkwu, and ask-staged returns a grounded decoded answer; full real Llama GGUF model-token generation remains pending.",
         },
         "full_gguf_weight_map": {
             "verdict": "pass" if full_gguf_ok else "fail",
@@ -190,9 +201,10 @@ receipt = {
             "form_autoregressive_loop_four_way": autoregressive_band_ok,
             "metal_gqa_decode_loop_observed": metal_observed,
             "metal_gqa_decode_loop_skipped": metal_skipped,
+            "real_gguf_semantic_token_generation": semantic_token_generation_ok,
             "grounded_decoded_answer_binding": ask_staged_model_call_observed,
             "full_real_llama_token_generation_binding": False,
-            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; ask-staged returns a grounded decoded answer from the model-cell receipt, while full real GGUF autoregressive token generation remains pending.",
+            "boundary": "The loop and Metal GQA decode witness are local proof surfaces; a real GGUF tokenizer token is decoded by fkwu after Form argmax, while full real GGUF autoregressive model-token generation remains pending.",
         },
         "ask_staged_model_call": {
             "verdict": "pass" if ask_staged_model_call_observed else "fail",
@@ -211,7 +223,8 @@ receipt = {
         "full_real_llama_gguf_generation": {
             "verdict": "pending",
             "observed_grounded_answer": ask_staged_model_call_observed,
-            "boundary": "The remaining gap is producing that answer through full real Llama GGUF tokenizer, tensor bytes, autoregressive decode, and decoded token text in one native answer path.",
+            "observed_semantic_token_generation": semantic_token_generation_ok,
+            "boundary": "The remaining gap is producing answer text from full real Llama GGUF model logits over complete tensor payloads and the full vocabulary in one native answer path.",
         },
     },
     "artifacts": {
@@ -219,6 +232,7 @@ receipt = {
         "model_status": str(out_dir / "model_status.out"),
         "ask_staged_probe": str(out_dir / "ask_staged_probe.out"),
         "gguf_weight_map": str(gguf_path),
+        "gguf_semantic_token_generation": str(semantic_path),
     },
 }
 
