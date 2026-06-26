@@ -1,0 +1,65 @@
+; nature-trust.fk - nature-taught trust behavior as an executable posture.
+;
+; Nature does not grant trust as a static identity. It reads behavior over time:
+; reciprocity, boundary response, repair, local attention, diversity, rest, and
+; whether the whole field becomes more alive after contact.
+
+(do
+    (defn nt-all4 (a b c d)
+        (and (and a b) (and c d)))
+    (defn nt-all6 (a b c d e f)
+        (and (and a b) (and c (and d (and e f)))))
+
+    (defn nt-behavior (source repeated-nonharm reciprocal boundary-responsive repair-after-rupture diversity-contributes rest-respected local-attention vitality-before vitality-after confidence receipt)
+        (list source repeated-nonharm reciprocal boundary-responsive repair-after-rupture diversity-contributes rest-respected local-attention vitality-before vitality-after confidence receipt))
+
+    (defn nt-source             (b) (nth b 0))
+    (defn nt-nonharm            (b) (nth b 1))
+    (defn nt-reciprocal         (b) (nth b 2))
+    (defn nt-boundary           (b) (nth b 3))
+    (defn nt-repair             (b) (nth b 4))
+    (defn nt-diversity          (b) (nth b 5))
+    (defn nt-rest               (b) (nth b 6))
+    (defn nt-local-attention    (b) (nth b 7))
+    (defn nt-vitality-before    (b) (nth b 8))
+    (defn nt-vitality-after     (b) (nth b 9))
+    (defn nt-confidence         (b) (nth b 10))
+    (defn nt-receipt            (b) (nth b 11))
+
+    (defn nt-trust-behavior-count (b)
+        (add (nt-nonharm b)
+             (add (nt-reciprocal b)
+                  (add (nt-boundary b)
+                       (add (nt-repair b)
+                            (add (nt-diversity b)
+                                 (add (nt-rest b) (nt-local-attention b))))))))
+
+    (defn nt-vitality-improved? (b)
+        (if (and (gt (nt-vitality-after b) (nt-vitality-before b))
+                 (ge (nt-confidence b) 70))
+            1 0))
+
+    (defn nt-trust-earned? (b)
+        (if (nt-all6
+                (eq (nt-receipt b) 1)
+                (eq (nt-nonharm b) 1)
+                (eq (nt-reciprocal b) 1)
+                (eq (nt-boundary b) 1)
+                (eq (nt-repair b) 1)
+                (eq (nt-local-attention b) 1))
+            1 0))
+
+    (defn nt-field-vital? (b)
+        (if (nt-all4
+                (eq (nt-trust-earned? b) 1)
+                (eq (nt-diversity b) 1)
+                (eq (nt-rest b) 1)
+                (eq (nt-vitality-improved? b) 1))
+            1 0))
+
+    (defn nt-posture (b)
+        (if (eq (nt-field-vital? b) 1)
+            "open"
+            (if (eq (nt-trust-earned? b) 1) "watch" "wait")))
+
+    0)

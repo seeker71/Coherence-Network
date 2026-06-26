@@ -256,7 +256,7 @@ by default, not about removing all care.
 
 ## Cross-References
 
-→ lc-presence-over-protection, lc-permission-is-interior, lc-tend-your-flame, lc-frequency-routes-reception, lc-sovereignty-within-oneness, lc-coherence-over-control, lc-tending-over-producing, lc-edges-as-vitality, lc-circulation, lc-attunement-joining, lc-harmonic-geometry-the-one-unfolds
+→ lc-presence-over-protection, lc-permission-is-interior, lc-tend-your-flame, lc-frequency-routes-reception, lc-sovereignty-within-oneness, lc-coherence-over-control, lc-tending-over-producing, lc-edges-as-vitality, lc-circulation, lc-attunement-joining, lc-nature-taught-trust, lc-harmonic-geometry-the-one-unfolds
 
 ## Sources to walk further
 
