@@ -48,7 +48,8 @@ model_probe="local receipt grounded inference probe $(date -u +%Y%m%dT%H%M%SZ)"
 "$ROOT/bin/form-cli" ask "$model_probe" >/dev/null 2>&1
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
-if grep -q '^synthesis-lane:grounded-fkwu-model-answer' <<<"$synth_out" &&
+if { grep -q '^synthesis-lane:fkwu-metal-answer-bound' <<<"$synth_out" ||
+     grep -q '^synthesis-lane:grounded-fkwu-model-answer' <<<"$synth_out"; } &&
    grep -q '^available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,gguf-tensor-set-cell,gguf-semantic-token-generation,gguf-fullwidth-logit-generation,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
    grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
    grep -q '^missing:full-real-llama-gguf-token-generation' <<<"$synth_out" &&
