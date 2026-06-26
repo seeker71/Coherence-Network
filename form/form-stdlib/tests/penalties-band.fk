@@ -1,0 +1,74 @@
+; preludes: form-stdlib/core.fk form-stdlib/penalties.fk
+;
+; penalties-band — the token repetition penalty set (penalties.fk) as Form, proven four-way
+; (Go/Rust/TS/fkwu): every value is reduced to an integer at 1e-6 and pinned by EQUALITY, so the
+; native result is the recipe's result bit-for-bit, not merely within epsilon. The expected integers
+; were EMITTED FROM the libm+llama.cpp reference scripts/penalties_reference.py (which mirrors
+; llama_sampler_penalties_apply) — the band grounds the penalty math against an authority OUTSIDE our
+; own folds, then freezes it; each value is hand-checked below.
+;
+; Fixtures:
+;   L = [1.0, 2.0, 0.0, -0.5, 0.5]   logits for token ids 0..4: positive (divide branch), exactly-zero
+;                                    (<=0 → multiply branch), and negative — every repeat branch covered
+;   H = [1, 1, 3, 2]                 the generated window: id1 twice (count 2 → freq scales), id2 once
+;                                    (the logit-0 boundary), id3 once; ids 0 and 4 absent (count 0)
+;   (pr, pf, pp) = (1.2, 0.1, 0.05)  repeat / frequency / presence knobs, all three active
+;
+; Verdict 63 when every claim lands:
+;   1   counts of ids 0..4 in H        = [0, 2, 1, 1, 0]                       (the occurrence fold)
+;   2   pen-apply(L,H, 1,0,0)          = [1.0, 2.0, 0.0, -0.5, 0.5] == L       (IDENTITY: penalties off)
+;   4   pen-apply(L,H, 1.2,0,0)        = [1.0, 1.666667, 0.0, -0.6, 0.5]       (pure repeat: /1.2, *1.2)
+;   8   pen-apply(L,H, 1.2,0.1,0.05)   = [1.0, 1.416667, -0.15, -0.75, 0.5]    (full trio)
+;   16  last-n(H,2)=[3,2]  AND  last-n(H,9)=H                                  (window select + n>=len)
+;   32  pen-apply(L, last-n(H,2), 1.2,0.1,0.05) = [1.0, 2.0, -0.15, -0.75, 0.5] (id1 windowed out → untouched)
+(do
+    ; --- value reducer: a vec → flat list of (round (x·1e6)) integers ---
+    (defn pb-ints (v)
+      (if (eq (len v) 0) (empty) (cons (round (mul (head v) 1000000.0)) (pb-ints (tail v)))))
+    ; exact integer-list equality
+    (defn pb-ieq (a b)
+      (if (eq (len a) 0) (eq (len b) 0)
+          (if (eq (len b) 0) false
+              (if (eq (head a) (head b)) (pb-ieq (tail a) (tail b)) false))))
+    ; count vector: pen-count over ids 0..n-1 (mirrors pen-idx's idx walk)
+    (defn pb-counts (ids n idx)
+      (if (eq idx n) (empty) (cons (pen-count ids idx) (pb-counts ids n (add idx 1)))))
+
+    ; --- fixtures ---
+    (let L (list 1.0 2.0 0.0 -0.5 0.5))
+    (let H (list 1 1 3 2))
+
+    ; --- claim 0: occurrence counts ---
+    (let counts (pb-counts H 5 0))
+    (let counts-want (list 0 2000000 1000000 1000000 0))
+
+    ; --- claim 1: identity (penalties off) ---
+    (let ident (pen-apply L H 1.0 0.0 0.0))
+    (let ident-want (list 1000000 2000000 0 -500000 500000))
+
+    ; --- claim 2: pure repetition penalty ---
+    (let rep (pen-apply L H 1.2 0.0 0.0))
+    (let rep-want (list 1000000 1666667 0 -600000 500000))
+
+    ; --- claim 3: the full trio ---
+    (let full (pen-apply L H 1.2 0.1 0.05))
+    (let full-want (list 1000000 1416667 -150000 -750000 500000))
+
+    ; --- claim 4: penalty window selection ---
+    (let win2 (pen-last-n H 2))
+    (let win2-want (list 3 2))
+    (let winAll (pen-last-n H 9))
+
+    ; --- claim 5: full trio over the last-2 window (id1 no longer in window → untouched) ---
+    (let fullw (pen-apply L win2 1.2 0.1 0.05))
+    (let fullw-want (list 1000000 2000000 -150000 -750000 500000))
+
+    ; --- claims ---
+    (let c0 (if (pb-ieq (pb-ints counts) counts-want) 1 0))
+    (let c1 (if (pb-ieq (pb-ints ident) ident-want) 2 0))
+    (let c2 (if (pb-ieq (pb-ints rep) rep-want) 4 0))
+    (let c3 (if (pb-ieq (pb-ints full) full-want) 8 0))
+    (let c4 (if (if (pb-ieq win2 win2-want) (pb-ieq winAll H) false) 16 0))
+    (let c5 (if (pb-ieq (pb-ints fullw) fullw-want) 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

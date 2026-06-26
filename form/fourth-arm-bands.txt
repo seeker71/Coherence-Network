@@ -894,6 +894,7 @@ multi-layer-stack fks 255
 gqa-multi-layer-stack fks 255
 llama-generate fks 255
 sampling fks 65535
+penalties fks 63
 llama-sample-generate fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each

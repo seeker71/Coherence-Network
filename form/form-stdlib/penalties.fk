@@ -1,0 +1,62 @@
+; penalties.fk — token repetition penalties for serving: the llama.cpp penalty set
+;   (repetition + frequency + presence), applied to LOGITS before temperature/softmax.
+;
+; preludes: form-stdlib/core.fk
+;
+; The sampled generation loop (llama-sample-generate.fk, lg-generate-sampled) draws a token each step
+; but has no memory: nothing discourages it from emitting the same token forever, so an unshaped local
+; llama degenerates into a loop. Serving's first defense is the penalty pass llama.cpp applies to the
+; logits BEFORE the distribution is shaped (llama_sampler_penalties_apply). For each token id whose
+; occurrence count in the penalty window (the last-n generated ids) is > 0, push its logit down:
+;
+;   count = occurrences of token id i in the window
+;   if count > 0:
+;     repeat:  logit = (logit <= 0) ? logit * penalty_repeat : logit / penalty_repeat
+;     freq:    logit -= count * penalty_freq
+;     present: logit -= penalty_present
+;
+; Three knobs, each a published sampler: penalty_repeat>=1 sharpens the push and is the CTRL penalty
+; (Keskar 2019 / HF RepetitionPenaltyLogitsProcessor); penalty_freq scales the push with the count
+; (OpenAI frequency_penalty); penalty_present is a flat one-time subtract (OpenAI presence_penalty).
+; penalty_repeat=1, penalty_freq=0, penalty_present=0 is the IDENTITY — penalties off, llama.cpp's
+; defaults, and the law that grounds this stone: the unpenalized loop is the (1,0,0) special case, not
+; a parallel path.
+;
+; The token id IS the logit's position: position i in the logits list is token id i, so count[i] is
+; just "how many times does i appear in the window ids". Pure fp64 + integer counting, list-walk
+; recursion — the q4k-dequant arithmetic floor, no new primitive (no bitwise, no sort). The count
+; accumulates as a float (1.0/0.0) so count*penalty_freq never mixes int and float — same discipline as
+; sampling.fk / transformer-numerics.fk. Proven four-way by tests/penalties-band.fk against the
+; libm+llama.cpp reference scripts/penalties_reference.py.
+; teaching: lc-cognitive-sovereignty
+
+; --- count occurrences of token id `id` in the window list (float fold, no int/float mixing later). ---
+(defn pen-count (ids id)
+  (if (eq (len ids) 0) 0.0
+      (add (if (eq (head ids) id) 1.0 0.0) (pen-count (tail ids) id))))
+
+; --- apply the three penalties to ONE logit given its window count. count==0 leaves the logit alone
+;     (the untouched-token case); count>0 takes the divide/multiply repeat branch on the sign of the
+;     logit (<=0 multiplies, matching llama.cpp), then subtracts the freq+present push. ---
+(defn pen-one (logit count pr pf pp)
+  (if (gt count 0.0)
+      (sub (if (le logit 0.0) (mul logit pr) (div logit pr))
+           (add (mul count pf) pp))
+      logit))
+
+; --- walk the logits; position idx is token id idx, so count its occurrences in the window ids. ---
+(defn pen-idx (logits idx ids pr pf pp)
+  (if (eq (len logits) 0) (empty)
+      (cons (pen-one (head logits) (pen-count ids idx) pr pf pp)
+            (pen-idx (tail logits) (add idx 1) ids pr pf pp))))
+
+; --- the penalty pass: penalized logits for the whole vocabulary slice. (1.0 0.0 0.0) == identity. ---
+(defn pen-apply (logits ids pr pf pp) (pen-idx logits 0 ids pr pf pp))
+
+; --- penalty window: keep only the last-n generated ids (llama.cpp penalty_last_n). n>=len → whole. ---
+(defn pen-drop (xs n)
+  (if (eq n 0) xs
+      (if (eq (len xs) 0) (empty)
+          (pen-drop (tail xs) (sub n 1)))))
+(defn pen-last-n (xs n)
+  (if (ge n (len xs)) xs (pen-drop xs (sub (len xs) n))))
