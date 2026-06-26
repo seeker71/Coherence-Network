@@ -213,7 +213,7 @@
 | [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
 | [kernel_memory_witness.sh](kernel_memory_witness.sh) | kernel_memory_witness.sh — a host guardian (carrier tissue, not Form logic). |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
-| [land_current_branch.py](land_current_branch.py) | Land the current Codex worktree branch through proof, PR, and API merge. |
+| [land_current_branch.sh](land_current_branch.sh) | Land the current Codex worktree branch through the Form-owned landing plan. |
 | [live_audio_copresence_receipt.sh](live_audio_copresence_receipt.sh) | live_audio_copresence_receipt.sh — live speaker→microphone FSK nonce receipt. |
 | [live_speech_loop_receipt.sh](live_speech_loop_receipt.sh) | live_speech_loop_receipt.sh - known text played over speaker, heard by live mics. |
 | [llama_block0_join_carrier.py](llama_block0_join_carrier.py) | scripts/llama_block0_join_carrier.py — gap D₄: independent numpy-free reference vs Form |

@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/form-native-landing-d617",
+  "commit_scope": "Move current-branch landing out of the Python orchestrator and into a Form-owned plan, proof band, form-cli entrypoint, and explicit host-effect carrier.",
+  "files_owned": [
+    "api/app/services/pipeline_advance_service.py",
+    "api/tests/test_flow_pipeline.py",
+    "bin/form-cli",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-26_form_native_current_branch_landing.json",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/current-branch-landing.fk",
+    "form/form-stdlib/tests/current-branch-landing-band.fk",
+    "scripts/INDEX.md",
+    "scripts/land_current_branch.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash form/validate.sh form-stdlib/core.fk form-stdlib/current-branch-landing.fk form-stdlib/tests/current-branch-landing-band.fk -> 8191; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)",
+      "bin/form-cli land --dry-run --merge --settle-deploy -> prints form-native-plan, trust path:native grounded:yes freq:yes suffic:yes, fourth-arm Form band, and the non-mutating landing plan",
+      "bash -n scripts/land_current_branch.sh bin/form-cli",
+      "gh pr view 3687 --repo seeker71/Coherence-Network --json state,isDraft,mergeStateStatus,reviewDecision,statusCheckRollup --jq '<readiness expression with unit separator>' -> preserves empty review/failed fields for shell parsing",
+      "git diff --check",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "cd api && python3 -m pytest -q tests/test_flow_pipeline.py -> 20 passed, 5 warnings",
+      "cd api && python3 -m ruff check app/services/pipeline_advance_service.py tests/test_flow_pipeline.py -> All checks passed",
+      "make wellness -> pass; deploy lag noted production one commit behind origin/main at read time"
+    ],
+    "results": [
+      "current-branch-landing.fk owns command derivation, entry command, host-effect boundary receipt, deploy settle command, push behavior, API merge/delete commands, and PR readiness state classification.",
+      "current-branch-landing-band.fk crosses the fourth arm with verdict 8191.",
+      "form-cli land is the taught entrypoint; the deleted Python lander no longer carries the regular path.",
+      "Dogfood caught an empty-field tab parsing bug in the shell carrier; PR readiness parsing now uses ASCII unit separators.",
+      "Remaining git, GitHub API, deploy polling, and Python validation gates are named explicit host-effect or retiring bridge carriers."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Runtime pipeline prompt text changed; public deploy validation is pending merge/deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Deploy-phase task directions now recommend form-cli land --merge --settle-deploy, and the command dry-run shows the Form-native plan receipt before host-effect steps.",
+    "public_endpoints": [
+      "/api/agent/status-report",
+      "/api/agent/tasks"
+    ],
+    "test_flows": [
+      "code-review auto-advance creates deploy task whose direction uses form-cli land --merge --settle-deploy",
+      "current branch landing dry-run proves the Form band and prints the bounded non-mutating plan"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passes. Remote CI and deploy proof are pending until this branch is committed, pushed, and landed."
+  },
+  "idea_ids": [
+    "agent-pipeline",
+    "operational-clarity",
+    "form-first-shipping"
+  ],
+  "spec_ids": [
+    "worktree-current-branch-landing",
+    "form-first-shipping",
+    "commit-evidence-contract",
+    "pr-followthrough-contract"
+  ],
+  "task_ids": [
+    "task-2026-06-26-form-native-current-branch-landing"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "process-strain-signal",
+        "form-native-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "trust_matrix": {
+    "form_first_query": "path:native grounded:no freq:no suffic:no model-call:yes decoded-answer:yes -> native-model-call-receipt",
+    "implementation_proof": "path:native grounded:yes freq:yes suffic:yes -> current-branch-landing fourth-arm band",
+    "host_effects": "git, gh, deploy polling, and existing Python validation gates are explicit passthrough/retiring-bridge carriers"
+  },
+  "evidence_refs": [
+    "User challenged the Python landing wrapper as the wrong destination carrier.",
+    "New Form plan: form/form-stdlib/current-branch-landing.fk.",
+    "New fourth-arm proof: form/form-stdlib/tests/current-branch-landing-band.fk -> 8191.",
+    "New entrypoint: form-cli land --merge --settle-deploy.",
+    "Dogfood PR #3687 exposed tab-field collapse in shell read; fixed by joining gh --jq fields with unit separators.",
+    "Python orchestrator removed: scripts/land_current_branch.py deleted.",
+    "Host effects remain explicit in scripts/land_current_branch.sh until fsh host-effect coverage can execute git/GitHub/deploy carriers directly."
+  ],
+  "change_files": [
+    "api/app/services/pipeline_advance_service.py",
+    "api/tests/test_flow_pipeline.py",
+    "bin/form-cli",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-26_form_native_current_branch_landing.json",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/current-branch-landing.fk",
+    "form/form-stdlib/tests/current-branch-landing-band.fk",
+    "scripts/INDEX.md",
+    "scripts/land_current_branch.sh",
+    "scripts/land_current_branch.py"
+  ],
+  "change_intent": "runtime_fix"
+}

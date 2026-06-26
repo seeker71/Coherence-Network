@@ -1,0 +1,25 @@
+; current-branch-landing-band.fk — proves the current branch landing command contract.
+;
+; Expected verdict = 8191.
+;
+; preludes: form-stdlib/core.fk form-stdlib/current-branch-landing.fk
+
+(do
+    (let e1 (if (str_eq (cbl-entry-command true) "form-cli land --merge --settle-deploy") 1 0))
+    (let e2 (if (str_eq (cbl-entry-command false) "form-cli land --merge") 2 0))
+    (let e3 (if (str_eq (cbl-push-command "codex/x" "origin/codex/x") "git push --force-with-lease origin HEAD:codex/x") 4 0))
+    (let e4 (if (str_eq (cbl-push-command "codex/x" "origin/main") "git push -u origin HEAD:codex/x") 8 0))
+    (let e5 (if (str_eq (cbl-api-merge-command "seeker71/Coherence-Network" "123" "rebase") "gh api -X PUT repos/seeker71/Coherence-Network/pulls/123/merge -f merge_method=rebase") 16 0))
+    (let e6 (if (str_eq (cbl-api-delete-command "seeker71/Coherence-Network" "codex/x") "gh api -X DELETE repos/seeker71/Coherence-Network/git/refs/heads/codex/x") 32 0))
+    (let e7 (if (str_eq (cbl-deploy-settle-command "https://api.coherencycoin.com" "https://coherencycoin.com") "bash scripts/settle_public_deploy.sh https://api.coherencycoin.com https://coherencycoin.com") 64 0))
+    (let e8 (if (str_eq (cbl-host-effect-boundary) "carrier:form-native-plan; host-effects:explicit-git-gh-network-passthrough; retiring-bridge:python-orchestrator") 128 0))
+    (let e9 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 3 0 0 false) "ready") 256 0))
+    (let e10 (if (str_eq (cbl-readiness "OPEN" false "" "BEHIND" 3 0 0 false) "needs_rebase") 512 0))
+    (let e11 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 3 1 0 false) "blocked") 1024 0))
+    (let e12 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 0 0 0 false) "waiting") 2048 0))
+    (let e13 (if (str_eq (cbl-readiness "OPEN" false "" "CLEAN" 0 0 0 true) "ready") 4096 0))
+
+    ; expected total: 8191
+    (add (add e1 (add e2 (add e3 (add e4 (add e5 (add e6 (add e7 e8)))))))
+         (add e9 (add e10 (add e11 (add e12 e13)))))
+)

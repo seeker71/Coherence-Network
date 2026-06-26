@@ -1,0 +1,56 @@
+; current-branch-landing.fk — Form-owned recipe for the current branch land path.
+;
+; This cell owns the shape: prove, push, PR, wait, API merge, branch cleanup,
+; and optional deploy settle. Host git/GitHub/network effects remain explicit
+; passthrough carriers until fsh host-effect coverage grows.
+
+(do
+    (defn cbl-cat3 (a b c) (str_concat a (str_concat b c)))
+    (defn cbl-cat4 (a b c d) (str_concat a (str_concat b (str_concat c d))))
+    (defn cbl-cat5 (a b c d e) (str_concat a (str_concat b (str_concat c (str_concat d e)))))
+
+    (defn cbl-local-proof-command ()
+        "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence && python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main && python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict")
+
+    (defn cbl-push-command (branch upstream)
+        (if (str_eq upstream (str_concat "origin/" branch))
+            (cbl-cat3 "git push --force-with-lease origin HEAD:" branch "")
+            (cbl-cat3 "git push -u origin HEAD:" branch "")))
+
+    (defn cbl-api-merge-command (repo pr-number merge-method)
+        (cbl-cat5 "gh api -X PUT repos/" repo "/pulls/" pr-number
+                  (str_concat "/merge -f merge_method=" merge-method)))
+
+    (defn cbl-api-delete-command (repo branch)
+        (cbl-cat4 "gh api -X DELETE repos/" repo "/git/refs/heads/" branch))
+
+    (defn cbl-deploy-settle-command (api-url web-url)
+        (cbl-cat5 "bash scripts/settle_public_deploy.sh " api-url " " web-url ""))
+
+    (defn cbl-entry-command (settle?)
+        (if settle?
+            "form-cli land --merge --settle-deploy"
+            "form-cli land --merge"))
+
+    (defn cbl-host-effect-boundary ()
+        "carrier:form-native-plan; host-effects:explicit-git-gh-network-passthrough; retiring-bridge:python-orchestrator")
+
+    (defn cbl-plan-receipt ()
+        "current-branch-landing:plan-native; proof:four-way-band; effects:host-passthrough; entry:form-cli land")
+
+    (defn cbl-checks-green? (check-count failed-count pending-count allow-empty?)
+        (if (gt failed-count 0) false
+            (if (gt pending-count 0) false
+                (if (gt check-count 0) true allow-empty?))))
+
+    (defn cbl-readiness (pr-state draft? review-decision merge-state check-count failed-count pending-count allow-empty?)
+        (if (not (str_eq pr-state "OPEN")) "blocked"
+            (if draft? "blocked"
+                (if (str_eq review-decision "CHANGES_REQUESTED") "blocked"
+                    (if (gt failed-count 0) "blocked"
+                        (if (or (str_eq merge-state "DIRTY") (str_eq merge-state "BEHIND")) "needs_rebase"
+                            (if (and (str_eq merge-state "CLEAN")
+                                     (cbl-checks-green? check-count failed-count pending-count allow-empty?))
+                                "ready"
+                                "waiting")))))))
+)
