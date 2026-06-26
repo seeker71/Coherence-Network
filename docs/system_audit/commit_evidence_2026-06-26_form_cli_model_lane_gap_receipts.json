@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/form-cli-gap-receipts-d617",
+  "commit_scope": "Add an observed form-cli model-lane gap receipt that distinguishes the locally proven tokenizer, GGUF map, and autoregressive-loop surfaces from the still-pending ask-staged model call.",
+  "files_owned": [
+    "MANIFEST.md",
+    "bin/form-cli",
+    "docs/system_audit/commit_evidence_2026-06-26_form_cli_model_lane_gap_receipts.json",
+    "scripts/INDEX.md",
+    "scripts/gguf_weight_map_receipt.py",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh",
+    "specs/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/gguf_weight_map_receipt.py",
+      "python3 scripts/gguf_weight_map_receipt.py --json .cache/body-test-receipts/gguf-weight-map-test.json",
+      "bin/form-cli model-gap-receipt .cache/body-test-receipts/current-model-lane-gap-receipt.json",
+      "python3 scripts/generate_repo_indexes.py",
+      "scripts/validate_form_cli_local_receipts.sh substrate",
+      "bin/form-cli preflight",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-26_form_cli_model_lane_gap_receipts.json --base origin/main"
+    ],
+    "observed_outputs": [
+      "make wellness -> specs/INDEX.md aligned after regeneration; deploy aligned; kernel-native surface breathing.",
+      "gguf_weight_map_receipt.py -> verdict=pass; llama GGUF v3; 255 tensors; 27 metadata KVs; tensor ranges within file; aligned offsets; tokenizer arrays present.",
+      "bin/form-cli model-gap-receipt -> verdict:observed-partial-ask-staged-pending.",
+      "tokenizer_carrier -> partial: BPE tokenizer composition and Llama 3 pre-tokenizer bands pass; full Llama 3 vocab/merge table is not yet bound to ask-staged.",
+      "full_gguf_weight_map -> pass: full real GGUF metadata and tensor map receipt observed.",
+      "autoregressive_loop_binding -> observed-not-ask-bound: Form llama-generate band passes and Metal GQA decode loop is bit-for-bit equivalent to full causal recompute.",
+      "ask_staged_model_call -> pending: ask-staged returns local RAG miss for an ungrounded probe and does not call a hidden HTTP/Ollama/local decoder.",
+      "scripts/validate_form_cli_local_receipts.sh substrate -> PASS: local grounded ask and pending synthesis receipts are honest.",
+      "bin/form-cli preflight -> 9 passed, 0 gaps, READY; prose synthesis remains an honest pending lane.",
+      "git diff --check -> no whitespace errors."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-cli-proof-scripts",
+    "notes": "No public runtime deploy needed for the local receipt scripts before PR merge; public verification follows merge if deployment moves."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; rebase, guard, PR, CI, merge, and deploy verification remain."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "coherence-substrate-form-stdlib",
+    "form-cli-local-rag",
+    "fkwu-native-metal-model-cell"
+  ],
+  "task_ids": [
+    "task-2026-06-26-form-cli-model-lane-gap-receipts"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "process_only",
+  "evidence_refs": [
+    "The new GGUF receipt walks a real local multi-GB GGUF with file seeking, not full weight loading, and records tensor byte ranges from the complete tensor-info table.",
+    "The new form-cli model-gap receipt runs the tokenizer composition band, Llama 3 pre-tokenizer band, real GGUF map witness, Form autoregressive generation band, Metal GQA autoregressive decode witness, and an ask-staged local-only probe.",
+    "The receipt intentionally preserves ask-staged-model-call as pending because the native ask-staged path still returns grounded RAG or local miss only.",
+    "scripts/INDEX.md, specs/INDEX.md, and MANIFEST.md were regenerated so the new scripts and previously stale spec count are visible in the repo maps."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "bin/form-cli",
+    "scripts/INDEX.md",
+    "scripts/gguf_weight_map_receipt.py",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh",
+    "specs/INDEX.md"
+  ]
+}
