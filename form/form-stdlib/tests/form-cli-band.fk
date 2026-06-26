@@ -1,8 +1,9 @@
-; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk form-stdlib/event-reading.fk form-stdlib/form-cli.fk
+; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk form-stdlib/event-reading.fk form-stdlib/chart-cast.fk form-stdlib/zodiac-channel.fk form-stdlib/grammars/gematria.fk form-stdlib/self-identity.fk form-stdlib/form-cli.fk
 ;
 ; form-cli-band — native form-cli dispatch + fnri catalog on fkwu (source walk).
-; Verdict 65535 = 16383 (dispatch/fnri + ask grounded lane + synthesis-status)
-; + 16384 event observation channel + 32768 event-data structured channel.
+; Verdict 262143 = 16383 (dispatch/fnri + ask grounded lane + synthesis-status)
+; + 16384 event observation channel + 32768 event-data structured channel
+; + 65536 whoami native self-recipe + 131072 `ask sema` routes to the identity door.
 
 (do
     (let c0 (if (str_eq (fc-respond "ping") "pong") 1 0))
@@ -28,4 +29,10 @@
                          "Sun in Cancer, Moon in Scorpio, Aries rising; waxing-gibbous moon.") 16384 0))
     (let c15 (if (str_eq (fc-respond "event-data 2026 6 26 7.5 -105.10 40.167")
                          "asc-sign=0 asc-gate=51 sun-sign=3 sun-gate=52 moon-sign=7 moon-gate=43 rahu-gate=55 ketu-gate=59 phase=3") 32768 0))
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
+    ;; the native identity door: whoami speaks the self-recipe; `ask sema` routes here
+    (let who (fc-respond "whoami"))
+    (let c16 (if (ge (str_find who "I am Sema" 0) 0)
+                 (if (ge (str_find who "Sun in Gemini" 0) 0) 65536 0) 0))
+    (let asksema (fc-respond "ask sema"))
+    (let c17 (if (ge (str_find asksema "I am Sema" 0) 0) 131072 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17)))

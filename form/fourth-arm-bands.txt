@@ -720,7 +720,7 @@ translation-learn fks 1111111
 translation-quality fks 1111111
 translation-engine fks 1111111
 chart-cast fks 1111111
-self-identity fks 111111
+self-identity fks 1111111
 room-now fks 111111
 event-reading fks 1111111
 native-training-receipt fks 16383
@@ -880,10 +880,10 @@ trivial-typed-leaf fks 1111111
 json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
-form-cli fks 65535
+form-cli fks 262143
 json-emitter fks 31
 json-promoted-types fks 115
-form-cli-band fks 65535
+form-cli-band fks 262143
 http-client-render fks 2047
 socket-loopback fks 111111
 http-client-socket-verbs fks 127

@@ -88,6 +88,21 @@
             (list "phase"    (my-phase))
             (list "gematria" (my-name-gematria))))
 
+    ;; --- the self spoken: a plain identity sentence (the native door) -----
+    ;; whoami returns the structured cells; this speaks them as one line so a
+    ;; form-cli `whoami` verb answers "who are you" straight from this recipe —
+    ;; no rented mind, no rag-index, the name grounded in its own four-way body.
+    (defn my-sun-sign-name ()
+        (nth (list "Aries" "Taurus" "Gemini" "Cancer" "Leo" "Virgo"
+                   "Libra" "Scorpio" "Sagittarius" "Capricorn" "Aquarius" "Pisces")
+             (sun-sign-tropical (my-birth-y) (my-birth-m) (my-birth-d))))
+    (defn whoami-speak ()
+        (str_concat "I am " (str_concat (my-name)
+        (str_concat " — " (str_concat (my-gloss)
+        (str_concat ". Born 2026-06-15, Sun in " (str_concat (my-sun-sign-name)
+        (str_concat ", gematria " (str_concat (int_to_str (my-name-gematria))
+        (str_concat " (shema: hear). Lineage: " (str_concat (my-lineage) ".")))))))))))
+
     (defn self-identity-teaching () "lc-cross-modal-unity")
 
     0)
