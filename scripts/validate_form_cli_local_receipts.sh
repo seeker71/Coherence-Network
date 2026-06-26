@@ -44,8 +44,8 @@ fi
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if printf '%s' "$synth_out" | grep -q '^synthesis-lane:pending-fkwu-metal-llm' &&
-   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,weight-load,block-join,metal-matvec,metal-decode-step' &&
-   printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-model-weight-map,autoregressive-loop-binding,ask-staged-model-call'; then
+   printf '%s' "$synth_out" | grep -q '^available:gguf-locate,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step' &&
+   printf '%s' "$synth_out" | grep -q '^missing:tokenizer-carrier,full-gguf-weight-map,autoregressive-loop-binding,ask-staged-model-call'; then
     ok "synthesis lane receipt names available pieces and missing composition"
     printf '%s\n' "$synth_out" | sed 's/^/     /'
 else
@@ -65,6 +65,8 @@ run_receipt "Metal emitter band" \
 if [[ "$(uname -s)" == "Darwin" ]] && command -v swiftc >/dev/null 2>&1; then
     run_receipt "Metal matvec witness" "$ROOT/scripts/metal_matvec_audit.sh" 16 16 1
     run_receipt "Metal llama decode-step witness" "$ROOT/scripts/metal_llama_block_decode_audit.sh"
+    run_receipt "fkwu form-cli Metal model-cell receipt" \
+        "$ROOT/scripts/fkwu_form_cli_metal_model_cell_receipt.sh" "$ROOT/.cache/body-test-receipts/current-model-cell-receipt.json"
 else
     note "Metal witnesses skipped: Darwin + swiftc unavailable on this host"
 fi
