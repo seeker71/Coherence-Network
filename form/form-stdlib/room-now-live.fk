@@ -1,0 +1,35 @@
+; room-now-live.fk — read the REAL clock and cast the room's present sky.
+;
+; room-now.fk is the pure four-way core: given a moment `n` (days since J2000) and a
+; place (lon-east, lat), it casts the present sky. This file is the one host-io step that
+; turns "now" into `n` by reading the host clock — the same lane as afferent-live.fk (op 15
+; TIME, the host clock organ, not data). It is honestly NOT four-way: now_unix_ms is a host
+; carrier, so this rides the 3-kernel/host floor while the deterministic cast it calls is
+; proven four-way. Keeping the clock-read out of the core is what lets the core stay pure.
+;
+; J2000.0 (the standard epoch, 2000-01-01 12:00 UT, ephemeris day n=0) is unix 946728000 s,
+; so n_now = (unix_ms_now - 946728000000) / 86400000.  Fractional, so the Moon and the
+; ascendant are hour-accurate, not floored to the day.
+;
+;   (j2000-days-now)              the present moment as fractional days since J2000
+;   (room-energy-now lon lat)     the room's present sky, composed (room-sky-at at now/here)
+;   (sky-sun-sign-now) ...        quick single reads at this instant (geocentric, place-free)
+;
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk
+
+(do
+    ;; the host clock -> fractional days since J2000 (the one impure step)
+    (defn j2000-unix-ms () 946728000000)
+    (defn j2000-days-now () (div (sub (now_unix_ms) (j2000-unix-ms)) 86400000.0))
+
+    ;; the room's present energy, here + now (lon-east, lat in degrees)
+    (defn room-energy-now (lon-east lat) (room-sky-at (j2000-days-now) lon-east lat))
+
+    ;; place-free quick reads of the present sky (the shared, geocentric placements)
+    (defn sky-sun-sign-now  () (tropical-sign-of (sky-sun-lon  (j2000-days-now))))
+    (defn sky-moon-sign-now () (tropical-sign-of (sky-moon-lon (j2000-days-now))))
+    (defn sky-phase-now     () (sky-phase (j2000-days-now)))
+
+    (defn room-now-live-teaching () "lc-cross-modal-unity")
+
+    0)

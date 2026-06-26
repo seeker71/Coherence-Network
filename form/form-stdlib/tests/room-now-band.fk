@@ -1,0 +1,38 @@
+; tests/room-now-band.fk — the present sky as a room's energy: cast, not asserted.
+;
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk
+;
+; Two truths the room reading rests on:
+;   1. the continuous-time core IS the proven cast at the same moment (no second
+;      ephemeris), and
+;   2. PLACE actually changes the reading — the ascendant differs between two
+;      longitudes, which is the whole reason location is context.
+; The fixed moment is J2000-day 9662 (noon UT, 2026-06-15); place is Ubud
+; (lon-east 115.26, lat -8.51).
+;
+; Band verdict: 111111 when every claim holds across Go/Rust/TS(/fkwu).
+;   continuous Sun sign == the proven integer cast (Gemini, 2)      -> 1
+;   continuous Moon sign == the proven integer cast (2)             -> 10
+;   continuous lunar phase == the proven octant (0, new)            -> 100
+;   Ubud ascendant sign is Capricorn (9) at this moment             -> 1000
+;   Ubud ascendant gate is 61                                       -> 10000
+;   PLACE MATTERS: a longitude 90 deg away rises a different sign   -> 100000
+
+(do
+    (let n (ephem-n 2026 6 15))
+
+    ;; 1-3: the continuous core agrees with the proven cast at the same day
+    (let sun-ok  (if (eq (tropical-sign-of (sky-sun-lon n))  (sun-sign-tropical 2026 6 15)) 1 0))
+    (let moon-ok (if (eq (tropical-sign-of (sky-moon-lon n)) (moon-sign-tropical 2026 6 15)) 10 0))
+    (let phase-ok (if (eq (sky-phase n) (moon-phase-octant 2026 6 15)) 100 0))
+
+    ;; 4-5: Ubud's place signature at this moment
+    (let asc-sign-ok (if (eq (ascendant-sign n 115.26 -8.51) 9) 1000 0))
+    (let asc-gate-ok (if (eq (ascendant-gate n 115.26 -8.51) 61) 10000 0))
+
+    ;; 6: location-dependence — 90 deg of longitude rises a different sign
+    (let here  (ascendant-sign n 115.26 -8.51))
+    (let there (ascendant-sign n 25.26 -8.51))
+    (let place-matters-ok (if (eq here there) 0 100000))
+
+    (add sun-ok (add moon-ok (add phase-ok (add asc-sign-ok (add asc-gate-ok place-matters-ok))))))
