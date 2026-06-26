@@ -1,0 +1,24 @@
+; form-cli-repl-control.fk — pure launch/classification helpers for thin carriers.
+;
+; preludes: form-stdlib/core.fk
+;
+; form-cli-repl.fk is the native interactive runtime and intentionally enters the
+; fkwu read_line/isatty loop when loaded. Host-side carriers that only need the
+; launch decision load this file instead, so they never execute fkwu-only IO ops
+; on the Go proof walker.
+
+(do
+    ; mode: 0 = interactive repl, 1 = one-shot answer, 2 = usage.
+    (defn frepl-mode (print-mode tty has-input)
+        (if (eq print-mode 1) 1
+            (if (eq tty 1)
+                (if (eq has-input 1) 1 0)
+                (if (eq has-input 1) 1 2))))
+
+    ; line kind: 0 = Form expression, 1 = meta-command, 2 = question, 3 = blank.
+    (defn frepl-classify (empty starts-expr starts-command)
+        (if (eq empty 1) 3
+            (if (eq starts-expr 1) 0
+                (if (eq starts-command 1) 1 2))))
+
+    0)

@@ -32,11 +32,19 @@ Usage:
   form_cli_rag.py search "query" [-k N] [--no-heal]
 """
 from __future__ import annotations
-import argparse, glob, json, os, sys, urllib.request, zlib
+import argparse
+import glob
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX = os.path.expanduser("~/.coherence-network/rag-index/index.jsonl")
 OLLAMA = "http://localhost:11434"
+OLLAMA_TIMEOUT_SECONDS = 30
 
 # adaptive retrieval bounds — depth is the knee within [K_MIN, K_MAX], not a constant.
 K_MIN, K_MAX = 3, 12
@@ -52,8 +60,13 @@ SOURCES = [
 def _post(path: str, payload: dict) -> dict:
     req = urllib.request.Request(OLLAMA + path,
         data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=OLLAMA_TIMEOUT_SECONDS) as r:
+            return json.loads(r.read())
+    except (TimeoutError, urllib.error.URLError, OSError) as exc:
+        raise RuntimeError(
+            f"ollama request to {path} failed or timed out after {OLLAMA_TIMEOUT_SECONDS}s: {exc}"
+        ) from exc
 
 
 def embed(text: str) -> list[float]:
@@ -123,7 +136,7 @@ def _snippet(path: str) -> str:
         txt = open(path, encoding="utf-8", errors="ignore").read()
     except Exception:
         return ""
-    lines = [l for l in txt.splitlines() if l.strip()]
+    lines = [line for line in txt.splitlines() if line.strip()]
     head = "\n".join(lines[:30])
     sig = _defn_names(txt)
     sig_line = ("\nsignature: " + " ".join(sig[:40])) if sig else ""
@@ -168,7 +181,7 @@ def _embed_cell(cell_id: str, kind: str, path: str) -> dict | None:
 def _load_index(index_path: str) -> list[dict]:
     if not os.path.exists(index_path):
         return []
-    return [json.loads(l) for l in open(index_path) if l.strip()]
+    return [json.loads(line) for line in open(index_path) if line.strip()]
 
 
 def _write_index(index_path: str, entries: list[dict]) -> None:
@@ -267,26 +280,37 @@ def retrieve(query: str, index_path: str, k: int | None) -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    b = sub.add_parser("build"); b.add_argument("--index", default=INDEX)
+    b = sub.add_parser("build")
+    b.add_argument("--index", default=INDEX)
     b.add_argument("--docs", action="append", default=[], help="extra local folder(s) to index, repeatable")
-    h = sub.add_parser("heal"); h.add_argument("--index", default=INDEX)
+    h = sub.add_parser("heal")
+    h.add_argument("--index", default=INDEX)
     h.add_argument("--docs", action="append", default=[])
-    f = sub.add_parser("fresh"); f.add_argument("--index", default=INDEX)
-    s = sub.add_parser("search"); s.add_argument("question")
-    s.add_argument("-k", type=int, default=0); s.add_argument("--index", default=INDEX)
+    f = sub.add_parser("fresh")
+    f.add_argument("--index", default=INDEX)
+    s = sub.add_parser("search")
+    s.add_argument("question")
+    s.add_argument("-k", type=int, default=0)
+    s.add_argument("--index", default=INDEX)
     s.add_argument("--no-heal", action="store_true")
-    c = sub.add_parser("context"); c.add_argument("question")
-    c.add_argument("-k", type=int, default=3); c.add_argument("--index", default=INDEX)
+    c = sub.add_parser("context")
+    c.add_argument("question")
+    c.add_argument("-k", type=int, default=3)
+    c.add_argument("--index", default=INDEX)
     c.add_argument("--no-heal", action="store_true")
-    a = sub.add_parser("ask"); a.add_argument("question")
+    a = sub.add_parser("ask")
+    a.add_argument("question")
     a.add_argument("-k", type=int, default=0)
-    a.add_argument("--index", default=INDEX); a.add_argument("--no-heal", action="store_true")
+    a.add_argument("--index", default=INDEX)
+    a.add_argument("--no-heal", action="store_true")
     args = ap.parse_args()
 
     if args.cmd == "build":
-        build(args.index, args.docs); return 0
+        build(args.index, args.docs)
+        return 0
     if args.cmd == "heal":
-        heal(args.index, args.docs); return 0
+        heal(args.index, args.docs)
+        return 0
     if args.cmd == "fresh":
         heal_cells, orphans = freshness(args.index)
         total = len(_load_index(args.index))
@@ -325,4 +349,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except RuntimeError as exc:
+        print(f"form-cli rag: {exc}", file=sys.stderr)
+        sys.exit(1)
