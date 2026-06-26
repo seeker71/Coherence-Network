@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/form-gguf-model-cell-20260626",
+  "commit_scope": "Add a form-cli GGUF model-cell receipt that runs inside the self-contained fkwu form-cli app: the runtime verifies content-addressed GGUF bytes with Form SHA-256, parses the GGUF v3 header and first tensor-info record, publishes a durable trace, and keeps synthesis-status honest about the remaining prose-generation gaps.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-26_fkwu_form_cli_gguf_model_cell.json",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/runtime.out",
+    "form/form-stdlib/form-cli-gguf-cell.fk",
+    "scripts/fkwu_form_cli_gguf_model_cell_receipt.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide -> pass after removing stale merged sibling worktree /Users/ursmuff/.codex/worktrees/49f9/Coherence-Network for already-merged PR #3650",
+      "make wellness -> pass; existing non-blocking drift noted: specs/INDEX.md count drift, three proof-frontmatter gaps, local API kernel binary absent",
+      "bash -n scripts/fkwu_form_cli_gguf_model_cell_receipt.sh scripts/validate_form_cli_local_receipts.sh form/build-form-cli.sh scripts/regen_form_cli_bootstrap.sh scripts/regen_standard_lane_binaries.sh -> pass",
+      "cd form && ./validate.sh form-stdlib/line-grammar.fk form-stdlib/str-byte-at.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/form-cli.fk form-stdlib/form-cli-gguf-cell.fk /tmp/gguf-model-cell-band.fk -> 1 ok, 0 divergent; fkwu native surface OK",
+      "cd form && ./validate.sh form-stdlib/gguf-read.fk form-stdlib/tests/gguf-locate-band.fk -> 127; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "scripts/regen_form_cli_bootstrap.sh && scripts/regen_standard_lane_binaries.sh -> form-cli-darwin-arm64 stamp=85cd46857b723295; table nf=664 root0=3 row2=12,663,1,0",
+      "cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh .cache/form-cli-standard-test && printf 'ping\\nversion\\ngguf-model-cell\\nsynthesis-status\\nquit\\n' | .cache/form-cli-standard-test -> pong, form-cli 0.3, gguf-model-cell usage, synthesis-status names gguf-model-cell available",
+      "scripts/fkwu_form_cli_gguf_model_cell_receipt.sh docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26.json -> pass; GGUF sha256 7fa5972f62d982daf9fa41b842e2fe0548eb1b3aba4a5e7378afd307fe655b63; gguf_cell_verified=true",
+      "scripts/validate_form_cli_local_receipts.sh -> PASS: native grounded ask, synthesis receipt, form-cli dispatch band, GGUF block-join band, cached generation band, Metal emitter band, GGUF model-cell receipt, Metal matvec witness, Metal llama decode-step witness, Metal model-cell receipt"
+    ],
+    "fourth_arm_outputs": [
+      "gguf-locate-band: 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and 1 ok, 0 divergent",
+      "gguf-model-cell focused band: kernels agree on every sample and fkwu native surface OK",
+      "validate_form_cli_local_receipts.sh: fkwu form-cli GGUF model-cell receipt passed under the standard lane with empty runtime PATH"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "CI not run yet for this branch; expected after PR creation"
+    ],
+    "notes": "Local proof is complete for the Mac fkwu/form-cli lane. CI remains pending until this branch is pushed and PR checks run."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "local fkwu form-cli standard lane on macOS",
+    "notes": "No public HTTP deploy changed. The deployed surface for this task is the local self-contained fkwu form-cli binary and durable receipt trace."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Mac local fkwu form-cli proof is observed, including Metal witnesses. CI, Windows, Android, full tokenizer, full GGUF weight-map-to-Metal, and autoregressive ask binding remain unproven and are not claimed."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell"
+  ],
+  "task_ids": [
+    "task-2026-06-26-fkwu-form-cli-gguf-model-cell"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "receipt-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "debugging",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Form-first reasoning was attempted through form-cli ask before rented analysis; local fkwu RAG returned no grounded hit for the GGUF/model-cell implementation question, so OpenAI GPT-5 Codex acted as the rented reasoning layer while local fkwu carried proof.",
+    "Receipt JSON: docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26.json",
+    "Durable runtime trace: docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/runtime.out",
+    "Durable GGUF fixture hex: docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/mini-gguf.hex",
+    "Runtime proof: receipt shows owner=fkwu-form-cli, verb=gguf-model-cell, denied_toolchain_names_visible_on_path=0, http_or_ollama=absent.",
+    "Observed GGUF values: gguf_version=3, gguf_tensor_count=1, gguf_kv_count=2, gguf_tensor_info_offset=74, gguf_tensor_ndims=1, gguf_tensor_dim0=256, gguf_tensor_type=12, gguf_tensor_data_offset=0.",
+    "Honest non-claims: no full real Llama GGUF variable metadata walk, no full GGUF weight map materialized into Metal buffers, no tokenizer plus full-width autoregressive decode, no Android Vulkan or Windows DirectML/D3D12 execution."
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-26_fkwu_form_cli_gguf_model_cell.json",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/gguf-cell-manifest.txt",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/mini-gguf.hex",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/runtime.out",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli-gguf-cell.fk",
+    "form/form-stdlib/form-cli-repl.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/fkwu_form_cli_gguf_model_cell_receipt.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/validate_form_cli_local_receipts.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-cli now has a native gguf-model-cell verb in the self-contained fkwu app. Given a content-addressed manifest, it verifies the GGUF bytes with Form SHA-256 and reports GGUF v3 tensor metadata without HTTP, Ollama, or a visible toolchain on PATH.",
+    "public_endpoints": [
+      "local fkwu form-cli standard lane: form/form-cli",
+      "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26.json",
+      "docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26_trace/runtime.out"
+    ],
+    "test_flows": [
+      "standard lane smoke: ping/version/gguf-model-cell/synthesis-status through .cache/form-cli-standard-test",
+      "published receipt: scripts/fkwu_form_cli_gguf_model_cell_receipt.sh docs/system_audit/fkwu_form_cli_gguf_model_cell_receipt_2026-06-26.json",
+      "aggregated local receipt: scripts/validate_form_cli_local_receipts.sh"
+    ]
+  }
+}

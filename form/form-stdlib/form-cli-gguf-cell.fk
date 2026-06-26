@@ -1,0 +1,131 @@
+; form-cli-gguf-cell.fk -- content-addressed GGUF tensor metadata receipt for form-cli.
+;
+; This mirrors the proven gguf-read.fk integer reader in the form-cli module
+; graph so the REPL band stays a thin native wrapper.
+;
+; preludes: form-stdlib/core.fk form-stdlib/str-byte-at.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/form-cli.fk
+(do
+    (defn fc-gg-strip-last-byte-if (s code)
+        (do
+            (let n (str_len s))
+            (if (and (gt n 0) (eq (str-byte-at s (sub n 1)) code))
+                (substring s 0 (sub n 1))
+                s)))
+
+    (defn fc-gg-strip-eol (s)
+        (fc-gg-strip-last-byte-if (fc-gg-strip-last-byte-if s 10) 13))
+
+    (defn fc-gg-string-bytes-loop (s i n acc)
+        (if (ge i n) acc
+            (fc-gg-string-bytes-loop
+                s
+                (add i 1)
+                n
+                (append acc (list (str-byte-at s i))))))
+
+    (defn fc-gg-string-bytes (s)
+        (fc-gg-string-bytes-loop s 0 (str_len s) (list)))
+
+    (defn fc-gg-cell-digest (bytes)
+        (hex-encode (sha256 (fc-gg-string-bytes bytes))))
+
+    (defn fc-gg-le (bytes off n)
+        (if (eq n 0) 0
+            (add (nth bytes off)
+                (mul 256 (fc-gg-le bytes (add off 1) (sub n 1))))))
+    (defn fc-gg-u32 (bytes off) (fc-gg-le bytes off 4))
+    (defn fc-gg-u64 (bytes off) (fc-gg-le bytes off 8))
+    (defn fc-gg-magic-ok? (bytes) (if (eq (fc-gg-u32 bytes 0) 1179993927) 1 0))
+    (defn fc-gg-version (bytes) (fc-gg-u32 bytes 4))
+    (defn fc-gg-tensor-count (bytes) (fc-gg-u64 bytes 8))
+    (defn fc-gg-kv-count (bytes) (fc-gg-u64 bytes 16))
+    (defn fc-gg-str-next (bytes off) (add (add off 8) (fc-gg-u64 bytes off)))
+    (defn fc-gg-vtype-size (t)
+        (if (or (eq t 0) (or (eq t 1) (eq t 7))) 1
+            (if (or (eq t 2) (eq t 3)) 2
+                (if (or (eq t 4) (or (eq t 5) (eq t 6))) 4 8))))
+    (defn fc-gg-val-next (bytes off t)
+        (if (eq t 8) (fc-gg-str-next bytes off)
+            (if (eq t 9)
+                (fc-gg-arr-skip bytes (add off 12) (fc-gg-u32 bytes off) (fc-gg-u64 bytes (add off 4)))
+                (add off (fc-gg-vtype-size t)))))
+    (defn fc-gg-arr-skip-var (bytes off et count)
+        (if (eq count 0) off
+            (fc-gg-arr-skip-var bytes (fc-gg-val-next bytes off et) et (sub count 1))))
+    (defn fc-gg-arr-skip (bytes off et count)
+        (if (or (eq et 8) (eq et 9))
+            (fc-gg-arr-skip-var bytes off et count)
+            (add off (mul count (fc-gg-vtype-size et)))))
+    (defn fc-gg-kv-next (bytes off)
+        (fc-gg-val-next bytes (add (fc-gg-str-next bytes off) 4) (fc-gg-u32 bytes (fc-gg-str-next bytes off))))
+    (defn fc-gg-kv-skip (bytes off n)
+        (if (eq n 0) off (fc-gg-kv-skip bytes (fc-gg-kv-next bytes off) (sub n 1))))
+    (defn fc-gg-tinfo-start (bytes) (fc-gg-kv-skip bytes 24 (fc-gg-kv-count bytes)))
+    (defn fc-gg-ti-ndims (bytes off) (fc-gg-u32 bytes (fc-gg-str-next bytes off)))
+    (defn fc-gg-ti-dim (bytes off k) (fc-gg-u64 bytes (add (add (fc-gg-str-next bytes off) 4) (mul k 8))))
+    (defn fc-gg-ti-dim0 (bytes off) (fc-gg-ti-dim bytes off 0))
+    (defn fc-gg-ti-tail (bytes off) (add (add (fc-gg-str-next bytes off) 4) (mul (fc-gg-ti-ndims bytes off) 8)))
+    (defn fc-gg-ti-type (bytes off) (fc-gg-u32 bytes (fc-gg-ti-tail bytes off)))
+    (defn fc-gg-ti-dataoff (bytes off) (fc-gg-u64 bytes (add (fc-gg-ti-tail bytes off) 4)))
+    (defn fc-gg-ti-next (bytes off) (add (fc-gg-ti-tail bytes off) 12))
+    (defn fc-gguf-ti-at (bytes off index)
+        (if (eq index 0) off
+            (fc-gguf-ti-at bytes (fc-gg-ti-next bytes off) (sub index 1))))
+
+    (defn fc-kv-line (key value)
+        (str_concat key (str_concat "=" (str_concat value "\n"))))
+
+    (defn fc-gguf-cell-report (actual-sha bytes tensor-index ti)
+        (do
+            (let out0 (fc-kv-line "gguf_cell_verified" "true"))
+            (let out1 (str_concat out0 (fc-kv-line "gguf_cell_source" "content-addressed-manifest")))
+            (let out2 (str_concat out1 (fc-kv-line "gguf_cell_format" "gguf-v3-tensor-info")))
+            (let out3 (str_concat out2 (fc-kv-line "gguf_cell_sha256" actual-sha)))
+            (let out4 (str_concat out3 (fc-kv-line "gguf_magic_ok" (int_to_str (fc-gg-magic-ok? bytes)))))
+            (let out5 (str_concat out4 (fc-kv-line "gguf_version" (int_to_str (fc-gg-version bytes)))))
+            (let out6 (str_concat out5 (fc-kv-line "gguf_tensor_count" (int_to_str (fc-gg-tensor-count bytes)))))
+            (let out7 (str_concat out6 (fc-kv-line "gguf_kv_count" (int_to_str (fc-gg-kv-count bytes)))))
+            (let out8 (str_concat out7 (fc-kv-line "gguf_tensor_index" (int_to_str tensor-index))))
+            (let out9 (str_concat out8 (fc-kv-line "gguf_tensor_info_offset" (int_to_str ti))))
+            (let out10 (str_concat out9 (fc-kv-line "gguf_tensor_ndims" (int_to_str (fc-gg-ti-ndims bytes ti)))))
+            (let out11 (str_concat out10 (fc-kv-line "gguf_tensor_dim0" (int_to_str (fc-gg-ti-dim0 bytes ti)))))
+            (let out12 (str_concat out11 (fc-kv-line "gguf_tensor_type" (int_to_str (fc-gg-ti-type bytes ti)))))
+            (let out13 (str_concat out12 (fc-kv-line "gguf_tensor_data_offset" (int_to_str (fc-gg-ti-dataoff bytes ti)))))
+            (str_concat out13 "PASS fkwu-form-cli-gguf-model-cell")))
+
+    (defn fc-gguf-model-cell (arg)
+        (if (str_eq arg "")
+            "usage: gguf-model-cell <manifest-path>"
+            (do
+                (let manifest (fc-gg-strip-eol (read_file arg)))
+                (let parts (split-on manifest " "))
+                (let kind (fc-part parts 0 ""))
+                (let expected-sha (fc-part parts 1 ""))
+                (let gguf-path (fc-part parts 2 ""))
+                (let tensor-index (fc-part-int parts 3 0))
+                (if (or (or (str_eq kind "") (str_eq expected-sha ""))
+                        (str_eq gguf-path ""))
+                    "FAIL gguf-cell manifest expected: gguf-cell-v1 <sha256> <gguf-path> <tensor-index>"
+                    (if (str_eq kind "gguf-cell-v1")
+                        (do
+                            (let gguf-raw (read_file gguf-path))
+                            (let actual-sha (fc-gg-cell-digest gguf-raw))
+                            (if (str_eq expected-sha actual-sha)
+                                (if (lt (str_len gguf-raw) 24)
+                                    "FAIL gguf-cell too short"
+                                    (do
+                                        (let gguf-bytes (fc-gg-string-bytes gguf-raw))
+                                        (if (eq (fc-gg-magic-ok? gguf-bytes) 0)
+                                            (str_concat "FAIL gguf-cell magic\ngguf_cell_verified=true\ngguf_cell_sha256=" actual-sha)
+                                            (if (or (lt tensor-index 0) (ge tensor-index (fc-gg-tensor-count gguf-bytes)))
+                                                (str_concat "FAIL gguf-cell tensor index out of range\ngguf_cell_verified=true\ngguf_tensor_count="
+                                                    (str_concat (int_to_str (fc-gg-tensor-count gguf-bytes))
+                                                        (str_concat "\ngguf_tensor_index=" (int_to_str tensor-index))))
+                                                (do
+                                                    (let ti (fc-gguf-ti-at gguf-bytes (fc-gg-tinfo-start gguf-bytes) tensor-index))
+                                                    (fc-gguf-cell-report actual-sha gguf-bytes tensor-index ti))))))
+                                (str_concat "FAIL gguf-cell sha256 mismatch\ngguf_cell_verified=false\ngguf_cell_expected_sha256="
+                                    (str_concat expected-sha
+                                        (str_concat "\ngguf_cell_sha256=" actual-sha)))))
+                        (str_concat "FAIL gguf-cell manifest kind=" kind))))))
+    0)
