@@ -38,6 +38,7 @@ FORM_CLI_SRCS=(
     form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk
     form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk
     form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli.fk
+    form-stdlib/form-cli-gguf-cell.fk
     form-stdlib/form-cli-repl.fk
 )
 want_cli="$(fourth_hash16 "${FORM_CLI_SRCS[@]}")"
