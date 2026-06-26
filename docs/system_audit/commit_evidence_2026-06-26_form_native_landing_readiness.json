@@ -1,0 +1,156 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/form-native-landing-rest-d617",
+  "commit_scope": "Make the non-host current-branch landing decision native by moving PR readiness classification into the cached fkwu form-cli dispatch.",
+  "files_owned": [
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-26_form_native_landing_readiness.json",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/current-branch-landing.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/current-branch-landing-band.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/land_current_branch.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/validate_form_cli_local_receipts.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash form/validate.sh form-stdlib/core.fk form-stdlib/current-branch-landing.fk form-stdlib/tests/current-branch-landing-band.fk -> 16383; fourth arm: 1 band(s) four-way",
+      "bash form/validate.sh form-stdlib/core.fk ... form-stdlib/current-branch-landing.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk -> 65535; fourth arm: 1 band(s) four-way",
+      "bash scripts/regen_form_cli_bootstrap.sh -> form-cli-emitted.c stamp=954d67e495382197",
+      "bash scripts/regen_standard_lane_binaries.sh -> form-cli-darwin-arm64 stamp=954d67e495382197",
+      "bash scripts/ensure_form_cli_native.sh && printf 'land-readiness OPEN 0 none CLEAN 3 0 0 0 0\\nland-readiness OPEN 0 none CLEAN 3 1 0 0 1\\nland-readiness OPEN 0 none BEHIND 3 1 0 0 1\\nquit\\n' | form/form-cli -> ready; waiting; needs_rebase",
+      "gh pr view 3687 raw fields piped into native form/form-cli land-readiness -> native_status=blocked for merged PR",
+      "bash -n scripts/land_current_branch.sh form/build-form-cli.sh scripts/regen_form_cli_bootstrap.sh scripts/regen_standard_lane_binaries.sh",
+      "bin/form-cli land --dry-run --merge --settle-deploy -> proves Form plan and prints non-mutating landing path",
+      "bash scripts/fnri_fkwu_witness.sh -> PASS: fnri form-cli-band 65535",
+      "bash scripts/verify_fnri_windows_standalone.sh -> PASS on mac cross-check; fnri witness 32767",
+      "python3 scripts/generate_repo_indexes.py && python3 scripts/generate_repo_indexes.py --check -> All indexes up to date",
+      "git diff --check",
+      "make wellness -> pass; deploy aligned at origin/main"
+    ],
+    "results": [
+      "form-cli.fk now exposes land-readiness, backed by current-branch-landing.fk, including the post-push refreshing flag.",
+      "scripts/land_current_branch.sh no longer classifies ready/waiting/blocked/needs-rebase in bash; it asks native form-cli for status and only formats the reason around explicit host fields.",
+      "The shell observes whether a failed check appears inside the bounded post-push refresh window; Form classifies that state as waiting and keeps dirty/behind branches as needs_rebase.",
+      "The cached darwin-arm64 form-cli binary and bootstrap stamps were regenerated so runtime form-cli serves the new native verb without Go/clang.",
+      "Windows-floor expectation path updated from form-cli-band 32767 to 65535 after adding post-push refresh coverage.",
+      "GitHub field extraction, GitHub API merge/delete, git push/rebase, deploy polling, and existing Python validation gates remain explicit host-effect or retiring-bridge carriers."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Native CLI bootstrap artifacts and docs changed; public deploy validation pending merge/deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The current-branch lander now delegates PR readiness classification to native form-cli land-readiness while retaining explicit host effects for git, GitHub, and deploy.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/gates/main-head"
+    ],
+    "test_flows": [
+      "native form-cli land-readiness returns ready for open clean green checks",
+      "native form-cli land-readiness returns waiting for a just-pushed stale failed-check rollup",
+      "native form-cli land-readiness returns blocked for an already merged PR",
+      "form-cli land dry-run proves current-branch-landing.fk before host-effect plan"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passes. Remote CI and deploy proof are pending until this branch is committed, pushed, and landed."
+  },
+  "idea_ids": [
+    "form-first-shipping",
+    "tool-sovereignty",
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "worktree-current-branch-landing",
+    "form-cli-c-bootstrap",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "task-2026-06-26-form-native-landing-readiness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "boundary-standard",
+        "form-native-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "trust_matrix": {
+    "form_first_query": "path:native grounded:no freq:no suffic:no model-call:yes decoded-answer:yes -> native-model-call-receipt",
+    "implementation_proof": "path:native grounded:yes freq:yes suffic:yes -> form-cli land-readiness and current-branch-landing fourth-arm bands",
+    "accepted_host_effects": "git, GitHub, and deploy remain explicit host effects",
+    "remaining_retiring_bridge": "existing Python validation gates"
+  },
+  "evidence_refs": [
+    "User accepted git/GitHub/deploy as non-native for now and required the rest to be Form-native.",
+    "current-branch-landing.fk remains the plan/readiness recipe.",
+    "form-cli.fk now exposes native land-readiness.",
+    "scripts/land_current_branch.sh asks native form-cli for status instead of duplicating status classification.",
+    "Native bootstrap artifacts regenerated with stamp 954d67e495382197.",
+    "PR #3694 exposed a stale failed-check rollup immediately after force-push; native readiness now accepts a bounded refreshing flag and returns waiting for that case."
+  ],
+  "change_files": [
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/coherence-substrate/form-cli-c-bootstrap.md",
+    "docs/system_audit/commit_evidence_2026-06-26_form_native_landing_readiness.json",
+    "form/build-form-cli.sh",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/current-branch-landing.fk",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/current-branch-landing-band.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/land_current_branch.sh",
+    "scripts/regen_form_cli_bootstrap.sh",
+    "scripts/regen_standard_lane_binaries.sh",
+    "scripts/validate_form_cli_local_receipts.sh"
+  ],
+  "change_intent": "runtime_fix"
+}

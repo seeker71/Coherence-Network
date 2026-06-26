@@ -11,6 +11,7 @@ TITLE=""
 BODY_FILE=""
 TIMEOUT_SECONDS=1800
 POLL_SECONDS=20
+CHECK_REFRESH_GRACE_SECONDS=60
 MAX_REBASES=2
 SKIP_LOCAL_GATES=0
 SKIP_FOLLOWTHROUGH=0
@@ -22,6 +23,8 @@ SETTLE_DEPLOY=0
 API_URL="https://api.coherencycoin.com"
 WEB_URL="https://coherencycoin.com"
 DRY_RUN=0
+FORM_NATIVE_CLI=""
+LAST_PUSH_EPOCH=0
 
 usage() {
   cat <<'EOF'
@@ -38,6 +41,7 @@ Options:
   --body-file FILE
   --timeout-seconds N
   --poll-seconds N
+  --check-refresh-grace-seconds N
   --max-rebases N
   --skip-local-gates
   --skip-followthrough
@@ -84,6 +88,7 @@ while [ "$#" -gt 0 ]; do
     --body-file) BODY_FILE="${2:-}"; shift 2 ;;
     --timeout-seconds) TIMEOUT_SECONDS="${2:-}"; shift 2 ;;
     --poll-seconds) POLL_SECONDS="${2:-}"; shift 2 ;;
+    --check-refresh-grace-seconds) CHECK_REFRESH_GRACE_SECONDS="${2:-}"; shift 2 ;;
     --max-rebases) MAX_REBASES="${2:-}"; shift 2 ;;
     --skip-local-gates) SKIP_LOCAL_GATES=1; shift ;;
     --skip-followthrough) SKIP_FOLLOWTHROUGH=1; shift ;;
@@ -115,6 +120,9 @@ numeric_or_die() {
 
 numeric_or_die "--timeout-seconds" "$TIMEOUT_SECONDS"
 numeric_or_die "--poll-seconds" "$POLL_SECONDS"
+case "$CHECK_REFRESH_GRACE_SECONDS" in
+  ''|*[!0-9]*) die "--check-refresh-grace-seconds must be a non-negative integer" ;;
+esac
 case "$MAX_REBASES" in
   ''|*[!0-9]*) die "--max-rebases must be a non-negative integer" ;;
 esac
@@ -123,6 +131,26 @@ need git
 need gh
 need bash
 need python3
+
+ensure_native_land_cli() {
+  if [ -n "$FORM_NATIVE_CLI" ] && [ -x "$FORM_NATIVE_CLI" ]; then
+    printf '%s\n' "$FORM_NATIVE_CLI"
+    return
+  fi
+  bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
+  if [ ! -x "$ROOT/form/form-cli" ]; then
+    die "native form-cli unavailable; cannot compute non-host landing readiness in Form"
+  fi
+  FORM_NATIVE_CLI="$ROOT/form/form-cli"
+  printf '%s\n' "$FORM_NATIVE_CLI"
+}
+
+native_land_readiness() {
+  local cmd="$1"
+  local cli
+  cli="$(ensure_native_land_cli)"
+  printf '%s\nquit\n' "$cmd" | "$cli" | sed '/^null$/d' | head -1
+}
 
 form_plan_probe() {
   printf 'form-native-plan: form/form-stdlib/current-branch-landing.fk\n'
@@ -225,6 +253,7 @@ push_current_branch() {
   else
     run git push -u origin "HEAD:$branch"
   fi
+  LAST_PUSH_EPOCH="$(date +%s)"
 }
 
 find_pr() {
@@ -276,14 +305,18 @@ pr_readiness() {
         ((.state // "" | ascii_upcase) == "PENDING")
         or ((.state // "" | ascii_upcase) == "EXPECTED")
       else true end;
+    def failed_list: [.statusCheckRollup[]? | select(check_failed) | check_name];
+    def pending_list: [.statusCheckRollup[]? | select(check_pending) | check_name];
     [
       (.state // "UNKNOWN"),
       (.isDraft | tostring),
       (.reviewDecision // ""),
       (.mergeStateStatus // "UNKNOWN"),
       (.statusCheckRollup // [] | length),
-      ([.statusCheckRollup[]? | select(check_failed) | check_name] | join(",")),
-      ([.statusCheckRollup[]? | select(check_pending) | check_name] | join(","))
+      (failed_list | length),
+      (pending_list | length),
+      (failed_list | join(",")),
+      (pending_list | join(","))
     ] | join("\u001f")'
 }
 
@@ -297,32 +330,54 @@ wait_until_ready() {
   last_message=""
 
   while true; do
-    local line state is_draft review merge_state check_count failed_names pending_names status reason message now
+    local line state is_draft review merge_state check_count failed_count pending_count failed_names pending_names status reason message now refresh_int now_epoch
     line="$(pr_readiness "$repo" "$number")"
-    IFS=$'\037' read -r state is_draft review merge_state check_count failed_names pending_names <<EOF
+    IFS=$'\037' read -r state is_draft review merge_state check_count failed_count pending_count failed_names pending_names <<EOF
 $line
 EOF
     state="$(printf '%s' "$state" | tr '[:lower:]' '[:upper:]')"
     review="$(printf '%s' "$review" | tr '[:lower:]' '[:upper:]')"
     merge_state="$(printf '%s' "$merge_state" | tr '[:lower:]' '[:upper:]')"
+    failed_count="${failed_count:-0}"
+    pending_count="${pending_count:-0}"
 
-    status="waiting"
-    reason="merge_state=${merge_state:-UNKNOWN} checks=pending:${pending_names:-not_reported}"
-    if [ "$state" != "OPEN" ]; then
-      status="blocked"; reason="state=${state:-UNKNOWN}"
-    elif [ "$is_draft" = "true" ]; then
-      status="blocked"; reason="draft=true"
-    elif [ "$review" = "CHANGES_REQUESTED" ]; then
-      status="blocked"; reason="review_decision=CHANGES_REQUESTED"
-    elif [ -n "$failed_names" ]; then
-      status="blocked"; reason="checks_failed:$failed_names"
-    elif [ "$merge_state" = "DIRTY" ] || [ "$merge_state" = "BEHIND" ]; then
-      status="needs_rebase"; reason="merge_state=$merge_state"
-    elif [ "$merge_state" = "CLEAN" ] && { [ -z "$pending_names" ] && { [ "$check_count" -gt 0 ] || [ "$ALLOW_EMPTY_CHECKS" -eq 1 ]; }; }; then
-      status="ready"; reason="merge_state=CLEAN checks=green"
-    elif [ "$check_count" -eq 0 ] && [ "$ALLOW_EMPTY_CHECKS" -eq 0 ]; then
-      status="waiting"; reason="merge_state=${merge_state:-UNKNOWN} checks=pending:checks_not_reported"
+    refresh_int=0
+    now_epoch="$(date +%s)"
+    if [ "$LAST_PUSH_EPOCH" -gt 0 ] && [ "$failed_count" -gt 0 ] && [ "$CHECK_REFRESH_GRACE_SECONDS" -gt 0 ] && [ $((now_epoch - LAST_PUSH_EPOCH)) -lt "$CHECK_REFRESH_GRACE_SECONDS" ]; then
+      refresh_int=1
     fi
+
+    local draft_int review_arg
+    draft_int=0
+    [ "$is_draft" = "true" ] && draft_int=1
+    review_arg="${review:-none}"
+    status="$(native_land_readiness "land-readiness ${state:-UNKNOWN} $draft_int $review_arg ${merge_state:-UNKNOWN} ${check_count:-0} $failed_count $pending_count $ALLOW_EMPTY_CHECKS $refresh_int")"
+    reason="merge_state=${merge_state:-UNKNOWN} checks=pending:${pending_names:-not_reported}"
+    case "$status" in
+      ready) reason="merge_state=CLEAN checks=green" ;;
+      needs_rebase) reason="merge_state=$merge_state" ;;
+      blocked)
+        if [ "$state" != "OPEN" ]; then
+          reason="state=${state:-UNKNOWN}"
+        elif [ "$is_draft" = "true" ]; then
+          reason="draft=true"
+        elif [ "$review" = "CHANGES_REQUESTED" ]; then
+          reason="review_decision=CHANGES_REQUESTED"
+        elif [ "$failed_count" -gt 0 ]; then
+          reason="checks_failed:$failed_names"
+        else
+          reason="blocked"
+        fi
+        ;;
+      waiting)
+        if [ "$refresh_int" -eq 1 ]; then
+          reason="checks_refreshing_after_push:${failed_names:-not_reported}"
+        elif [ "${check_count:-0}" -eq 0 ] && [ "$ALLOW_EMPTY_CHECKS" -eq 0 ]; then
+          reason="merge_state=${merge_state:-UNKNOWN} checks=pending:checks_not_reported"
+        fi
+        ;;
+      *) die "native land-readiness returned unexpected status: $status" ;;
+    esac
 
     message="pr #$number: $status ($reason)"
     if [ "$message" != "$last_message" ]; then
@@ -397,6 +452,7 @@ print_plan() {
     printf 'would: run stale PR follow-through guard\n'
   fi
   printf 'would: push current branch, create/read PR, wait for clean merge state and green checks\n'
+  printf 'would: treat stale failed checks during the %ss post-push refresh window as native waiting\n' "$CHECK_REFRESH_GRACE_SECONDS"
   if [ "$MERGE" -eq 1 ]; then
     printf 'would: merge PR through GitHub API using method=%s\n' "$MERGE_METHOD"
     if [ "$DELETE_BRANCH" -eq 1 ]; then

@@ -40,7 +40,7 @@ FORM_CLI_SRCS=(
     form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk
     form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk
     form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk
-    form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/form-cli.fk
+    form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/current-branch-landing.fk form-stdlib/form-cli.fk
     form-stdlib/form-cli-gguf-cell.fk
     form-stdlib/form-cli-repl.fk
 )

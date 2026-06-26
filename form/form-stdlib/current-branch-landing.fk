@@ -53,4 +53,12 @@
                                      (cbl-checks-green? check-count failed-count pending-count allow-empty?))
                                 "ready"
                                 "waiting")))))))
+
+    (defn cbl-readiness-after-push (pr-state draft? review-decision merge-state check-count failed-count pending-count allow-empty? refreshing?)
+        (if (not (str_eq pr-state "OPEN")) "blocked"
+            (if draft? "blocked"
+                (if (str_eq review-decision "CHANGES_REQUESTED") "blocked"
+                    (if (or (str_eq merge-state "DIRTY") (str_eq merge-state "BEHIND")) "needs_rebase"
+                        (if (and refreshing? (gt failed-count 0)) "waiting"
+                            (cbl-readiness pr-state draft? review-decision merge-state check-count failed-count pending-count allow-empty?)))))))
 )

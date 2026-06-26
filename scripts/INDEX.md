@@ -101,7 +101,7 @@
 | [fkwu_form_cli_metal_matvec_receipt.sh](fkwu_form_cli_metal_matvec_receipt.sh) | fkwu_form_cli_metal_matvec_receipt.sh |
 | [fkwu_form_cli_metal_model_cell_receipt.sh](fkwu_form_cli_metal_model_cell_receipt.sh) | fkwu_form_cli_metal_model_cell_receipt.sh |
 | [fkwu_run.sh](fkwu_run.sh) | fkwu_run.sh — run a Form recipe on the 4th kernel (fkwu) with a staged-input bundle. |
-| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 16383). |
+| [fnri_fkwu_witness.sh](fnri_fkwu_witness.sh) | fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 65535). |
 | [form-cli-run.sh](form-cli-run.sh) | form-cli-run.sh — minimal stdin carrier for form/form-cli (one line, then EOF). |
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |

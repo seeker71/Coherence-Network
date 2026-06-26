@@ -877,7 +877,7 @@ trivial-typed-leaf fks 1111111
 json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
-form-cli fks 31
+form-cli fks 65535
 json-emitter fks 31
 json-promoted-types fks 115
 form-cli-band fks 16383
@@ -971,7 +971,7 @@ form-lower-sim fks 15
 form-lower-fp-stack fks 31
 shell-parse fks 255
 shell-exec fks 511
-current-branch-landing fks 8191
+current-branch-landing fks 16383
 shell-awk fks 127
 shell-cell fks 15
 live-room-shell fks 63
