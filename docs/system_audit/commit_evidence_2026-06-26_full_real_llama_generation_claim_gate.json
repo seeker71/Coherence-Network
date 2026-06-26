@@ -1,0 +1,126 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/full-real-llama-gguf-generation-20260626",
+  "commit_scope": "Add a hard claim gate for full real Llama GGUF token generation and wire it into the full model inference composition receipt so the system cannot claim the unfinished native path.",
+  "files_owned": [
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "docs/system_audit/commit_evidence_2026-06-26_full_real_llama_generation_claim_gate.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide -> pass before edits in worktree codex/full-real-llama-gguf-generation-20260626",
+      "make wellness -> pass before edits with no blocker for this task",
+      "bin/form-cli ask \"What is the smallest next executable path to close full real Llama GGUF token generation: prompt text to tokenizer arrays to real GGUF tensor bytes to Metal buffers to autoregressive token IDs to decoded text in form-cli?\" -> [ask: local fkwu RAG index has no grounded hit]",
+      "bash -n scripts/validate_form_cli_full_real_llama_generation_claim.sh -> pass",
+      "bash -n scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh -> pass",
+      "scripts/validate_form_cli_full_real_llama_generation_claim.sh .cache/body-test-receipts/current-full-real-llama-generation-claim.json -> verdict=blocked_full_real_llama_generation_pending; claim-allowed=false; grounded-decoded-answer=true; full-real-llama-gguf-generation=pending; blocked-requirements=5",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/body-test-receipts/current-full-real-llama-composition-receipt.json -> verdict=pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed; full_model_inference_composed=false; ask_staged_decoded_answer_bound=false",
+      "jq summary on .cache/body-test-receipts/current-full-real-llama-composition-receipt.json -> steps_count=17, passed_count=14, skipped_count=3, failed_count=0, hard_failed_count=0, trace_sha256=71841524f255ffb38bae58ead2b197e5d08f77e0ec48692e6e41cc038e463587",
+      "grep local absolute path scan over current claim and composition receipts/traces -> no /Users/ursmuff, /private/var, or /var/folders matches after sanitization"
+    ],
+    "results": [
+      "The claim gate observed the current grounded decoded-answer lane, the model status gap, and a real Llama GGUF map with architecture=llama and tensor_count=255.",
+      "The claim gate intentionally returned claim_allowed=false with no hard failures because full real Llama GGUF token generation is still pending.",
+      "The full composition receipt now includes composition_gates.decoded_prose_answer_binding=true and composition_gates.full_real_llama_generation_claim_gate=true while still recording synthesis_boundary.missing=[full-real-llama-gguf-token-generation].",
+      "The composition receipt's open bridges now name the exact remaining work: materialize named real GGUF tensors into fkwu, dequant/place full-width tensors into Metal buffers, run the full multi-layer GQA loop, project logits/select token IDs/decode through real tokenizer arrays, and bind decoded text as the form-cli answer without HTTP, Ollama, MLX serving, or proxy oracle.",
+      "The receipt harness remains a shell/Python validation carrier; it does not add a runtime inference dependency to the native child proof path."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks pending until this branch is pushed.",
+      "Windows Host Floor should exercise scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh through the existing workflow once the PR opens."
+    ],
+    "notes": "Local Mac proof is complete for the claim gate and full composition receipt. Android hardware was not attached locally. The first PR #3685 Windows Host Floor run failed because the new claim gate treated an absent grounded decoded-answer lane as ambiguous; the second run showed the same issue for Windows status-shape differences. The gate was corrected so every claim_allowed=false state passes as a blocked cross-device receipt, while future positive claims stay strict. Rerun is pending."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No public deploy surface changed; this is a local receipt/claim-gate improvement."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Full real Llama GGUF token generation is still not implemented or proven as one native form-cli path from prompt text through real tokenizer/tensor bytes, accelerator buffers, autoregressive token IDs, and decoded text."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell",
+    "full-real-llama-gguf-generation-claim-gate"
+  ],
+  "task_ids": [
+    "task-2026-06-26-full-real-llama-generation-claim-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "claim-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Subagent read-only inspection found no existing full real GGUF transformer step; closest pieces are gguf-read.fk, form-cli-gguf-cell.fk, gguf_weight_map_receipt.py, weight-load.fk, block-join.fk, llama-generate.fk, and form_cli_ask_staged_model_call.sh.",
+    "Claim receipt: .cache/body-test-receipts/current-full-real-llama-generation-claim.json",
+    "Claim trace: .cache/body-test-receipts/current-full-real-llama-generation-claim_trace",
+    "Composition receipt: .cache/body-test-receipts/current-full-real-llama-composition-receipt.json",
+    "Composition trace: .cache/body-test-receipts/current-full-real-llama-composition-receipt_trace/steps.jsonl",
+    "Composition trace sha256: 71841524f255ffb38bae58ead2b197e5d08f77e0ec48692e6e41cc038e463587",
+    "Form-first reasoning was attempted through bin/form-cli ask; the body returned no grounded/sufficient hit for the exact full-real-generation closure question."
+  ],
+  "change_files": [
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "docs/system_audit/commit_evidence_2026-06-26_full_real_llama_generation_claim_gate.json"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The body-test composition receipt now has an observable hard claim gate for full real Llama GGUF token generation. It passes as a receipt when the current state is honest, but it returns claim_allowed=false until real tensor bytes drive a full native autoregressive generation path.",
+    "test_flows": [
+      "scripts/validate_form_cli_full_real_llama_generation_claim.sh .cache/body-test-receipts/current-full-real-llama-generation-claim.json",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/body-test-receipts/current-full-real-llama-composition-receipt.json"
+    ]
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "native/local proof commands generated the claim receipt, composition receipt, Form band outputs, GGUF map observation, and Metal model-cell/body trace rows",
+    "rented_oracle_share": "the script design, integration, and evidence synthesis were produced by the rented frontier model after form-cli ask returned a native miss",
+    "trust_matrix": {
+      "path": "native-first miss -> rented implementation orchestration -> native receipt proof",
+      "grounded": "receipts and trace hashes are grounded in local outputs; the initial form-cli ask was ungrounded",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for preventing a false full-generation claim; not sufficient for claiming full model inference",
+      "observed": false
+    }
+  },
+  "coherence_cli_note": {
+    "attempted_commands": [
+      "cc inbox",
+      "cc status"
+    ],
+    "result": "Both commands resolved to the host C compiler alias and failed with clang: error: no such file or directory. The Coherence CLI was therefore not available through cc on this host."
+  }
+}
