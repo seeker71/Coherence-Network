@@ -9,8 +9,10 @@
 #   proven pieces: fkwu form-cli ask/status, GGUF find/model-cell,
 #                  tokenizer/loop bands, Metal model-cell/body trace on macOS.
 #   now bound:     ask-staged model-call witness -> decoded local answer receipt.
-#   still open:    upgrading that receipt-scored answer to full-width real GGUF
-#                  semantic generation across the platform device matrix.
+#   still open:    full real Llama GGUF token generation produced by real prompt text,
+#                  real GGUF tokenizer arrays, real GGUF tensor bytes,
+#                  accelerator buffers, full autoregressive token IDs, and
+#                  decoded token text.
 #
 # Runtime claims are read from the child receipts. Build/receipt tools may be
 # used by this harness; the sanitized proof binaries run with no HTTP/Ollama and
@@ -108,6 +110,9 @@ observation_for() {
             ;;
         real_gguf_weight_map)
             grep -E '^(receipt:|file:|header:|tensor-map:|types:|tokenizer-arrays:|required-tensors:|no real GGUF|SKIP)' "$out" || true
+            ;;
+        full_real_llama_generation_claim)
+            grep -E '^(receipt:|verdict:|claim-allowed:|grounded-decoded-answer:|full-real-llama-gguf-generation:|blocked-requirements:)' "$out" || true
             ;;
         android_*)
             grep -E '^(SKIP|FAIL|ok|  ✓|  ✗|witness on device|conditions:|device:|\{"status")' "$out" || true
@@ -230,6 +235,10 @@ run_step form_cli_ask current-host "native fkwu grounded ask" true \
     "bin/form-cli ask substrate" \
     "$ROOT/bin/form-cli" ask substrate
 
+run_step ask_staged_model_call current-host "ask-staged local model-call witness" true \
+    "bin/form-cli ask ungrounded-model-call-composition-probe" \
+    "$ROOT/bin/form-cli" ask "ungrounded model call composition probe $STAMP"
+
 run_step synthesis_status current-host "model synthesis binding" true \
     "bin/form-cli synthesis-status" \
     "$ROOT/bin/form-cli" synthesis-status
@@ -241,10 +250,6 @@ run_step model_status current-host "model status binding" true \
 run_step decoded_answer current-host "native decoded answer binding" true \
     "form/form-cli decoded-answer" \
     bash -lc "printf 'decoded-answer\nquit\n' | '$ROOT/form/form-cli' | sed '/^null$/d'"
-
-run_step ask_staged_model_call current-host "ask-staged local model-call witness" true \
-    "bin/form-cli ask ungrounded-model-call-composition-probe" \
-    "$ROOT/bin/form-cli" ask "ungrounded model call composition probe $STAMP"
 
 run_step gguf_find_four_way current-host "GGUF find-by-name and absolute offset four-way" true \
     "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/gguf-read.fk form-stdlib/tests/gguf-find-band.fk" \
@@ -269,6 +274,10 @@ if command -v python3 >/dev/null 2>&1; then
 else
     skip_step real_gguf_weight_map current-host "optional real GGUF tensor map witness" "python3 absent in receipt harness; runtime path unaffected"
 fi
+
+run_step full_real_llama_generation_claim current-host "full real Llama GGUF generation claim gate" true \
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh <trace>/full-real-llama-generation-claim.json" \
+    "$ROOT/scripts/validate_form_cli_full_real_llama_generation_claim.sh" "$TRACE_DIR/full-real-llama-generation-claim.json"
 
 gguf_model_cell_hard=true
 if is_windows_host; then
@@ -407,6 +416,7 @@ jq -n \
     --argjson autoregressive_loop "$(bool_or_false "$(step_passed autoregressive_loop_four_way)")" \
     --argjson real_gguf_weight_map "$(bool_or_false "$(step_passed real_gguf_weight_map)")" \
     --argjson real_gguf_skipped "$(bool_or_false "$(step_skipped real_gguf_weight_map)")" \
+    --argjson full_generation_claim_gate "$(bool_or_false "$(step_passed full_real_llama_generation_claim)")" \
     --argjson gguf_cell "$(bool_or_false "$(step_passed gguf_model_cell)")" \
     --argjson metal_cell "$(bool_or_false "$(step_passed metal_model_cell)")" \
     --argjson metal_trace "$(bool_or_false "$(step_passed metal_body_trace)")" \
@@ -429,7 +439,7 @@ jq -n \
       verdict: $verdict,
       full_model_inference_composed: false,
       ask_staged_decoded_answer_bound: $ask_staged_decoded_answer,
-      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli; ask-staged binding is observed when local model-cell assets are present; full-width real GGUF semantic generation across every device lane is not yet claimed",
+      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli and the claim gate passes as a blocker, but the answer is not yet produced by full real Llama GGUF tokenizer arrays, real tensor bytes, accelerator buffers, autoregressive token IDs, and decoded token text in one native form-cli path",
       host: {
         os: $host_os,
         arch: $host_arch
@@ -462,6 +472,7 @@ jq -n \
         autoregressive_generation_loop_four_way: $autoregressive_loop,
         optional_real_gguf_weight_map_observed: $real_gguf_weight_map,
         optional_real_gguf_weight_map_skipped: $real_gguf_skipped,
+        full_real_llama_generation_claim_gate: $full_generation_claim_gate,
         fkwu_form_cli_gguf_model_cell: $gguf_cell,
         fkwu_form_cli_metal_model_cell: $metal_cell,
         form_native_metal_body_trace: $metal_trace,
@@ -501,6 +512,11 @@ jq -n \
       },
       open_bridges: [
         "upgrade the receipt-scored decoded answer binding to full-width real GGUF semantic generation",
+        "materialize named real GGUF tensors into the fkwu-controlled model-cell path, not only a metadata map",
+        "dequant and place the full-width Llama tensor set into Metal/accelerator buffers",
+        "run the full multi-layer GQA autoregressive loop over those real tensors",
+        "project logits over the real vocabulary, select token IDs, and decode through the real tokenizer arrays",
+        "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle",
         "add Android Vulkan/NNAPI and Windows DirectML/D3D12 model-cell carriers matching the macOS Metal model-cell receipt"
       ],
       steps: $steps
