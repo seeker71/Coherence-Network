@@ -43,7 +43,7 @@ requirements:
   - "iPhone native SwiftUI GUI is present as a first-class app target"
   - "Mac and iPhone carriers share one tabbed native app body with Room, Guidance, Memory, Health, Learning, Resources, and Settings modes"
   - "The shared native app body includes a Health mode for explicit iPhone wearable import"
-  - "The iPhone carrier reads HealthKit samples after Health permission and source filtering for Oura, Oz/O2, Wellue, ViHealth, oxygen, or oximeter sources"
+  - "The iPhone carrier reads HealthKit samples after Health permission and source filtering for Oura Ring 4, Oura, Oura bundle ids, Wellue O2Ring S, O2RingS/O2Ring-S/O2Ring, Wellue, Viatom, ViHealth, ViHealth bundle ids, Oz/O2, oxygen, or oximeter sources"
   - "Imported health samples are stored in local health memory and summarized into later guidance context"
   - "Live room capture is the primary stream; speech transcription is only a side channel fed during that capture"
   - "Speech Recognition is never a before-recording or after-recording pass over stored audio"
@@ -68,7 +68,8 @@ requirements:
 done_when:
   - "Swift package tests pass for parsing, request writing, trusted room-memory, trusted health-memory, host-boundary, and route-gate receipts"
   - "Swift package builds the GUI executable"
-  - "satsang-guidance-event, satsang-listen-route, satsang-room-memory, and satsang-health-memory Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 2097151"
+  - "Swift package cross-compiles the iPhone HealthKit branch with the iPhoneOS SDK"
+  - "satsang-guidance-event, satsang-listen-route, and satsang-room-memory Form bands cross four-way with verdict 255; satsang-health-memory crosses four-way with verdict 1023; satsang-host-boundary crosses four-way with verdict 2097151"
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
@@ -118,8 +119,10 @@ memory.
       the request.
 - [x] The iPhone Health mode requests HealthKit read permission and imports
       source-filtered wearable samples into local health memory.
-- [x] The source filter defaults cover Oura, Oz/O2, Wellue, ViHealth, oxygen,
-      and oximeter sources while allowing the holder to edit the source list.
+- [x] The source filter defaults cover Oura Ring 4, Oura, Oura bundle ids,
+      Wellue O2Ring S, O2RingS/O2Ring-S/O2Ring, Wellue, Viatom, ViHealth,
+      ViHealth bundle ids, Oz/O2, oxygen, and oximeter sources while allowing
+      the holder to edit the source list.
 - [x] Imported health memory writes a local import record, sample log, JSON
       context, and Form context.
 - [x] Later sends include compact health-memory context in the local Form/RAG
@@ -189,10 +192,11 @@ memory.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidance` passes.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
 - `swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone` passes.
+- `swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone --sdk "$(xcrun --sdk iphoneos --show-sdk-path)" --triple arm64-apple-ios17.0` passes.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `2097151`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk` returns `255`.
-- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk` returns `255`.
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk` returns `1023`.
 - Manual validation: launch the app, press Start Listening, allow macOS
   microphone/speech prompts, speak into the room, edit a transcript line, press
   Send, and see a JSON/Form event under
@@ -207,9 +211,10 @@ memory.
 - Manual validation: while Speech Recognition attaches, cycles, or waits through
   silence, confirm the live mic level remains active and the listener does not
   restart the capture stream.
-- Manual validation: on an iPhone with HealthKit data from Oura or an Oz/O2
-  source, open Health mode, press Import, grant Health permission, and confirm
-  local files appear under `~/.coherence-network/health-memory/`.
+- Manual validation: on an iPhone with HealthKit data from Oura Ring 4 and
+  Wellue O2Ring S/ViHealth, open Health mode, press Import, grant Health
+  permission, and confirm local files appear under
+  `~/.coherence-network/health-memory/`.
 
 ## Verification
 
@@ -263,14 +268,16 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
   this PR; real Windows/Android device builds still need to promote each
   declared door to an observed/open runtime receipt.
 - The iPhone target is native SwiftUI source in the shared Swift package. A
-  device-signed archive still needs an Apple team/profile and installed iOS SDK
-  support outside this source patch. iOS cannot spawn arbitrary subprocesses, so
-  the process stdin/stdout resource door is declared as an embedded Form runtime
-  adapter until fkwu is packaged in-process.
-- HealthKit only returns data types and sources the holder grants. Oura can
-  reach this lane through its Apple Health export; Oz/O2 devices reach it when
-  their companion app writes compatible Apple Health samples. Device-specific
-  Bluetooth or vendor-cloud routes require their own consent and protocol work.
+  physical install needs a connected trusted iPhone and an Apple team/profile
+  for signing. iOS cannot spawn arbitrary subprocesses, so the process
+  stdin/stdout resource door is declared as an embedded Form runtime adapter
+  until fkwu is packaged in-process.
+- HealthKit only returns data types and sources the holder grants. Oura Ring 4
+  reaches this lane through the Oura Apple Health integration. Wellue O2Ring S
+  reaches this lane through ViHealth Apple Health sharing when enabled, and
+  remains eligible for a later local export-file import path for CSV/binary
+  reports. Device-specific Bluetooth or vendor-cloud routes require their own
+  consent and protocol work.
 
 ## Known Gaps and Follow-up Tasks
 

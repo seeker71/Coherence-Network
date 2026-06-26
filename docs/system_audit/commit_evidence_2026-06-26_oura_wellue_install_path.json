@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/oura-wellue-install-20260626",
+  "commit_scope": "Install-readiness pass for the iPhone health-memory lane: promote Oura Ring 4 and Wellue O2Ring S/ViHealth into explicit source profiles, prove the exact-device health-memory receipt, and cross-compile the iPhone HealthKit branch.",
+  "files_owned": [
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-health-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_oura_wellue_install_path.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-health-memory.fk",
+    "form/form-stdlib/tests/satsang-health-memory-band.fk",
+    "form/fourth-arm-bands.txt",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "form-cli ask \"Oura Ring 4 Wellue O2Ring S iPhone HealthKit ViHealth trusted health memory install source carrier\"",
+      "xcrun devicectl list devices",
+      "swift test --package-path experiments/satsang-mac-app",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone --sdk \"$(xcrun --sdk iphoneos --show-sdk-path)\" --triple arm64-apple-ios17.0",
+      "xcodebuild -scheme SatsangGuidancePhone -destination 'generic/platform=iOS' -derivedDataPath .build/xcode-derived CODE_SIGNING_ALLOWED=NO build",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-health-memory.fk form-stdlib/tests/satsang-health-memory-band.fk",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md"
+    ],
+    "fourth_arm": "satsang-health-memory-band.fk -> 1023; output included 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and '0 divergent'.",
+    "summary": "Startup gate passed in a fresh worktree and the public witness was breathing with no ongoing silences. form-cli ask observed the native fkwu+Metal model-cell lane but had no grounded/sufficient local RAG hit for the exact Oura Ring 4 / Wellue O2Ring S install query. Swift tests passed with 13 XCTest cases. Both native app products built on macOS. The iPhone target cross-compiled against the iPhoneOS SDK at arm64-apple-ios17.0, exercising the HealthKit branch. Xcode app-bundle/device installation remains blocked locally because no iPhone or simulator destination is visible to devicectl/xctrace and no connected trusted device/signing install path is present in this session."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No PR deploy yet; this commit is ready for PR checks after final local gates."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof and iPhoneOS source compile passed; physical iPhone install still needs a connected trusted device and signing profile."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "satsang-mac-guidance-app"
+  ],
+  "task_ids": [
+    "oura-wellue-install-path-2026-06-26"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "wearable-device-selection"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "form-proof",
+        "local-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "form/form-stdlib/satsang-health-memory.fk",
+    "form/form-stdlib/tests/satsang-health-memory-band.fk",
+    "specs/satsang-mac-guidance-app.md",
+    "docs/coherence-substrate/satsang-health-memory.form"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/satsang-guidance-event.form",
+    "docs/coherence-substrate/satsang-health-memory.form",
+    "docs/system_audit/commit_evidence_2026-06-26_oura_wellue_install_path.json",
+    "experiments/satsang-mac-app/README.md",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/RoomTranscriber.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/SatsangGuidanceRootView.swift",
+    "experiments/satsang-mac-app/Sources/SatsangGuidanceKit/WearableHealthImporter.swift",
+    "experiments/satsang-mac-app/Sources/SatsangMacCore/HostResourceInterface.swift",
+    "experiments/satsang-mac-app/Tests/SatsangMacCoreTests/SatsangMacCoreTests.swift",
+    "form/form-stdlib/satsang-health-memory.fk",
+    "form/form-stdlib/tests/satsang-health-memory-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "specs/satsang-mac-guidance-app.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "summary": "The app source is ready for Oura Ring 4 and Wellue O2Ring S/ViHealth HealthKit import and the iPhoneOS HealthKit branch compiles. Physical installation and live HealthKit import could not be completed because no trusted iPhone device is connected.",
+    "expected_behavior_delta": "The Health tab now defaults to exact Oura Ring 4 and Wellue O2Ring S source profiles, writes compatible samples into local trusted health memory, and the Form proof names those exact source filters and carrier path.",
+    "public_endpoints": [
+      "n/a-local-native-app"
+    ],
+    "test_flows": [
+      "swift test --package-path experiments/satsang-mac-app -> 13 tests passed",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidance -> product built",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone -> product built",
+      "swift build --package-path experiments/satsang-mac-app --product SatsangGuidancePhone --sdk \"$(xcrun --sdk iphoneos --show-sdk-path)\" --triple arm64-apple-ios17.0 -> product built",
+      "xcrun devicectl list devices -> No devices found",
+      "xcodebuild -scheme SatsangGuidancePhone -destination 'generic/platform=iOS' ... -> no matching destination; no installable iPhone destination visible",
+      "cd form && ./validate.sh ... satsang-health-memory-band.fk -> 1023 four-way",
+      "python3 scripts/generate_repo_indexes.py --check -> all indexes up to date",
+      "python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md -> passed"
+    ]
+  }
+}

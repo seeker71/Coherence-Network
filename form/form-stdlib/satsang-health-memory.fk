@@ -14,7 +14,9 @@
         (if (str_eq carrier "ios-healthkit") 1
             (if (str_eq carrier "oura-apple-health") 1
                 (if (str_eq carrier "oz-o2-healthkit") 1
-                    (if (str_eq carrier "manual-health-export") 1 0)))))
+                    (if (str_eq carrier "vihealth-apple-health") 1
+                        (if (str_eq carrier "wellue-vihealth-apple-health") 1
+                            (if (str_eq carrier "manual-health-export") 1 0)))))))
 
     (defn shm-metric-kind? (kind)
         (if (str_eq kind "heart-rate") 1
@@ -30,13 +32,18 @@
 
     (defn shm-source-filter? (source)
         (if (str_eq source "oura") 1
-            (if (str_eq source "oz") 1
-                (if (str_eq source "o2") 1
-                    (if (str_eq source "wellue") 1
-                        (if (str_eq source "vihealth") 1
-                            (if (str_eq source "oxygen") 1
-                                (if (str_eq source "oximeter") 1
-                                    (if (str_eq source "all") 1 0)))))))))
+            (if (str_eq source "oura-ring-4") 1
+                (if (str_eq source "oz") 1
+                    (if (str_eq source "o2") 1
+                        (if (str_eq source "wellue") 1
+                            (if (str_eq source "wellue-o2ring-s") 1
+                                (if (str_eq source "o2rings") 1
+                                    (if (str_eq source "o2ring-s") 1
+                                        (if (str_eq source "viatom") 1
+                                            (if (str_eq source "vihealth") 1
+                                                (if (str_eq source "oxygen") 1
+                                                    (if (str_eq source "oximeter") 1
+                                                        (if (str_eq source "all") 1 0))))))))))))))
 
     (defn shm-analysis-boundary? (boundary)
         (if (str_eq boundary "reference-memory-reasoning-analysis-not-diagnosis") 1 0))
