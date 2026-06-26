@@ -131,7 +131,7 @@ observed_grounded_answer = (
 )
 status_names_full_real_gap = (
     read_rc("model_status") == 0
-    and "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
+    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
     and "missing:full-real-llama-gguf-token-generation" in status
 )
 ask_names_full_real_gap = "full-real-llama-gguf-generation:pending" in ask

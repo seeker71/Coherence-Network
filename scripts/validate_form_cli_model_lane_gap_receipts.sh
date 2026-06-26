@@ -129,7 +129,7 @@ metal_skipped = metal_rc == 2
 ask_out = text("ask_staged_probe")
 model_status = text("model_status")
 status_closes_old_missing = (
-    "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
+    "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in model_status
     and "missing:full-real-llama-gguf-token-generation" in model_status
     and "prose-generation:decoded-grounded-answer" in model_status
 )

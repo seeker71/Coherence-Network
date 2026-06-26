@@ -145,8 +145,8 @@ PY
   if [ "$prose_state" = "decoded" ]; then
     printf '%s\n' "synthesis-lane:grounded-fkwu-model-answer"
     printf '%s\n' "reason:decoded-prose-answer-bound-to-ask-staged-receipt"
-    printf '%s\n' "available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding"
-    printf '%s\n' "observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
+    printf '%s\n' "available:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding"
+    printf '%s\n' "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding"
     printf '%s\n' "missing:full-real-llama-gguf-token-generation"
     printf '%s\n' "boundary:decoded answer is grounded to the local fkwu+Metal model-cell witness; full real Llama GGUF token generation remains pending"
     printf '%s\n' "ask-staged-model-call-receipt:$receipt"
@@ -158,11 +158,11 @@ PY
         | sed \
             -e 's/reason:end-to-end-gguf-decode-not-bound-to-ask-staged/reason:decoded-prose-answer-not-yet-bound-to-ask-staged/' \
             -e 's/reason:full-decoded-prose-not-yet-bound-to-ask-staged/reason:decoded-prose-answer-not-yet-bound-to-ask-staged/' \
-            -e 's/^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step$/available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness/' \
-            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call$/observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
+            -e 's/^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step$/available:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness/' \
+            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding,ask-staged-model-call$/observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
 missing:decoded-prose-answer-binding\
 boundary:tokenizer->real-gguf-tensors->accelerator-buffers->autoregressive-decode->decoded-text is not yet one ask-staged answer path/' \
-            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding$/observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
+            -e 's/^missing:tokenizer-carrier,full-gguf-weight-map-to-metal,autoregressive-loop-binding$/observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call\
 missing:decoded-prose-answer-binding\
 boundary:tokenizer->real-gguf-tensors->accelerator-buffers->autoregressive-decode->decoded-text is not yet one ask-staged answer path/')"
     fi

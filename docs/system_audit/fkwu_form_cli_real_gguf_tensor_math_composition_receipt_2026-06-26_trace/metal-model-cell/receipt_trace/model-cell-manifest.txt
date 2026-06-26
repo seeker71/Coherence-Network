@@ -1,0 +1,1 @@
+model-cell-v1 3836efd8c75b6322609b96a9b1894cd727586ce30f673a1d72502c2751b77c70 <model-bytes-artifact> <metal-source> form_fkwu_generic_matvec_f32

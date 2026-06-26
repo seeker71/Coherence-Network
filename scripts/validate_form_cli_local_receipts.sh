@@ -48,8 +48,8 @@ model_probe="local receipt grounded inference probe $(date -u +%Y%m%dT%H%M%SZ)"
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if grep -q '^synthesis-lane:grounded-fkwu-model-answer' <<<"$synth_out" &&
-   grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
-   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^available:gguf-locate,gguf-model-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
    grep -q '^missing:full-real-llama-gguf-token-generation' <<<"$synth_out" &&
    grep -q '^prose-generation:decoded-grounded-answer' <<<"$synth_out"; then
     ok "synthesis lane receipt binds grounded decoded answer and names full real generation"
@@ -63,6 +63,8 @@ run_receipt "form-cli native dispatch band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk"
 run_receipt "GGUF weight-load/block-join band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/llama-block.fk form-stdlib/block-join.fk form-stdlib/tests/block-join-band.fk"
+run_receipt "named real GGUF tensor math band" \
+    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk form-stdlib/tests/real-gguf-tensor-math-band.fk"
 run_receipt "cached generation semantics band" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-decoder.fk form-stdlib/transformer-generate.fk form-stdlib/transformer-generate-cached.fk form-stdlib/tests/transformer-generate-cached-band.fk"
 run_receipt "Metal emitter band" \

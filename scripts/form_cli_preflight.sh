@@ -128,9 +128,9 @@ echo "[7] Native synthesis lane"
 if [[ -n "$NATIVE_CLI" ]]; then
     synth_out="$(cd "$HOME" && printf 'synthesis-status\nquit\n' | "$NATIVE_CLI" 2>/dev/null)"
     if printf '%s' "$synth_out" | grep -q '^synthesis-lane:fkwu-metal-answer-bound' &&
-       printf '%s' "$synth_out" | grep -q '^missing:none'; then
+       printf '%s' "$synth_out" | grep -q '^missing:full-real-llama-gguf-token-generation'; then
         ok "synthesis lane binds decoded local answers"
-        note "full-width real-GGUF semantic generation remains a named upgrade, not a hidden HTTP oracle"
+        note "named GGUF tensor math is witnessed; full real Llama token generation remains a named upgrade, not a hidden HTTP oracle"
     else
         gap "synthesis lane did not return a decoded-answer binding receipt"
     fi
