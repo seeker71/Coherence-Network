@@ -50,7 +50,7 @@ The Coherence Network's substrate language already treats every entity as a cell
 
 The local Bali expression of this lineage is the Asosiasi Biodinamik Indonesia, chaired by [Dr. Ida Bagus Kesnawa](../../presences/ida-bagus-kesnawa.md), met through the May 10, 2026 [Agada Holistic](../../presences/agada-holistic.md) gathering in Tegalalang. The bridge from the human-body scale (kinesiology) to the field-body scale (biodynamic farming) is present in one practitioner — the proof that the frame is not theoretical.
 
-→ lc-embodiment, lc-bioelectric-pattern, lc-v-shelter-organism, lc-instruments
+→ lc-embodiment, lc-bioelectric-pattern, lc-v-shelter-organism, lc-instruments, lc-nature-taught-trust
 
 ## Compost
 

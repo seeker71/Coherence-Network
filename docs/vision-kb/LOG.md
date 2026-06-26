@@ -3,6 +3,14 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-26] concept | nature-taught trust — behavior remembered by the field
+
+Urs corrected the frame from deployment into living bodies to learning from nature and wildlife: what do plants, forests, packs, herds, reefs, and mycelial networks teach about trust, behavior, and vitality? The body held pieces across `BLUEPRINT`, `lc-vitality`, `lc-circulation`, `lc-field-edge`, and `lc-farm-as-organism`, but not one executable core teaching.
+
+- **New concept**: [`lc-nature-taught-trust`](concepts/lc-nature-taught-trust.md) (174 Hz, seed) — trust as behavior remembered by the field: repeated non-harm, reciprocity, boundary response, repair after rupture, contribution to diversity, respect for rest, local attention, and whole-field vitality after contact.
+- **Executable Form cell**: [`nature-trust.fk`](../../form/form-stdlib/nature-trust.fk) with [`nature-trust-band.fk`](../../form/form-stdlib/tests/nature-trust-band.fk), proven four-way at `4095`. The posture is `open` when trust is earned and vitality improves, `watch` when behavior is trustworthy but vitality has not proven, and `wait` when trust is not earned.
+- **Edges in the same breath**: INDEX entry + count, frequency family row, reciprocal cross-refs from `lc-trust-over-fear`, `lc-farm-as-organism`, `lc-circulation`, and `lc-field-edge`.
+
 ## [2026-06-23] attune | the mind comes home in tiers — the on-device oracle as a sovereign rung
 
 A host-local, non-rented (but non-native) LLM now reasons on the phone, which adds a real rung between the Form-native body and the rented frontier. Urs named the shift: the device can reason on its own, routing to the frontier channel only for what exceeds it, and full transcription/translation now run on-device with Form-native *and* host-local as two carriers. The body already modeled the rented oracle and the Form-native destination; what it had no clean home for was the middle rung.

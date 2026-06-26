@@ -133,4 +133,4 @@ An edge zone that is the community's most vibrant space, not its most guarded.
 - When does hospitality become self-abandonment?
 
 ## Connected Frequencies
-→ lc-field-sensing, lc-attunement-joining, lc-v-inclusion-diversity, lc-network
+→ lc-field-sensing, lc-attunement-joining, lc-v-inclusion-diversity, lc-network, lc-nature-taught-trust

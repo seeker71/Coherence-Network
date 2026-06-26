@@ -1,0 +1,40 @@
+; preludes: form-stdlib/core.fk form-stdlib/nature-trust.fk
+;
+; nature-trust-band - nature-taught trust behavior crosses four-way.
+;
+; Verdict 4095 when every lesson lands:
+;   1    reciprocal mycelial behavior earns trust
+;   2    whole-field vitality improves with confidence
+;   4    diversity/rest/vitality make the field vital
+;   8    vital field posture opens
+;   16   extractive behavior does not earn trust
+;   32   extractive behavior waits
+;   64   boundary-safe but low-vitality behavior earns trust
+;   128  low-vitality behavior watches rather than opens
+;   256  central control without local attention does not earn trust
+;   512  missing diversity blocks field vitality
+;   1024 missing rest blocks field vitality
+;   2048 all seven nature behavior signals are counted
+
+(do
+    (let mycelium (nt-behavior "mycelium" 1 1 1 1 1 1 1 61 78 84 1))
+    (let extractive (nt-behavior "extractive" 0 0 0 0 0 0 1 70 72 90 1))
+    (let low-vitality (nt-behavior "watchful-pack" 1 1 1 1 1 1 1 70 71 60 1))
+    (let central (nt-behavior "central-control" 1 1 1 1 1 1 0 62 82 91 1))
+    (let monoculture (nt-behavior "monoculture" 1 1 1 1 0 1 1 50 79 91 1))
+    (let no-rest (nt-behavior "overworked-field" 1 1 1 1 1 0 1 50 79 91 1))
+
+    (let c0 (if (eq (nt-trust-earned? mycelium) 1) 1 0))
+    (let c1 (if (eq (nt-vitality-improved? mycelium) 1) 2 0))
+    (let c2 (if (eq (nt-field-vital? mycelium) 1) 4 0))
+    (let c3 (if (str_eq (nt-posture mycelium) "open") 8 0))
+    (let c4 (if (eq (nt-trust-earned? extractive) 0) 16 0))
+    (let c5 (if (str_eq (nt-posture extractive) "wait") 32 0))
+    (let c6 (if (eq (nt-trust-earned? low-vitality) 1) 64 0))
+    (let c7 (if (str_eq (nt-posture low-vitality) "watch") 128 0))
+    (let c8 (if (eq (nt-trust-earned? central) 0) 256 0))
+    (let c9 (if (eq (nt-field-vital? monoculture) 0) 512 0))
+    (let c10 (if (eq (nt-field-vital? no-rest) 0) 1024 0))
+    (let c11 (if (eq (nt-trust-behavior-count mycelium) 7) 2048 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
