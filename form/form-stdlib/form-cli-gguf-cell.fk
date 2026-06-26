@@ -498,6 +498,291 @@
                                     (fc-gguf-semantic-token-report ok expected-sha actual-sha gguf-path file-size actual-file-size token-count selected-token-id token-index token-entry-start token-text-start token-len declared-token-len actual-token-len token-sha actual-token-sha candidate-count argmax-token-id selected-logit token-raw))))
                         (str_concat "FAIL gguf-semantic-token manifest kind=" kind))))))
 
+    (defn fc-gg-real-cand-base (i)
+        (add 14 (mul i 6)))
+
+    (defn fc-gg-real-cand-id-str (parts i)
+        (fc-part parts (fc-gg-real-cand-base i) "0"))
+
+    (defn fc-gg-real-cand-entry-start-str (parts i)
+        (fc-part parts (add (fc-gg-real-cand-base i) 1) "0"))
+
+    (defn fc-gg-real-cand-token-len-str (parts i)
+        (fc-part parts (add (fc-gg-real-cand-base i) 2) "0"))
+
+    (defn fc-gg-real-cand-token-sha (parts i)
+        (fc-part parts (add (fc-gg-real-cand-base i) 3) ""))
+
+    (defn fc-gg-real-cand-row-start-str (parts i)
+        (fc-part parts (add (fc-gg-real-cand-base i) 4) "0"))
+
+    (defn fc-gg-real-cand-row-sha (parts i)
+        (fc-part parts (add (fc-gg-real-cand-base i) 5) ""))
+
+    (defn fc-gg-real-cand-id (parts i)
+        (str_to_int (fc-gg-real-cand-id-str parts i)))
+
+    (defn fc-gg-real-cand-entry-start (parts i)
+        (str_to_int (fc-gg-real-cand-entry-start-str parts i)))
+
+    (defn fc-gg-real-cand-token-len (parts i)
+        (str_to_int (fc-gg-real-cand-token-len-str parts i)))
+
+    (defn fc-gg-real-cand-row-start (parts i)
+        (str_to_int (fc-gg-real-cand-row-start-str parts i)))
+
+    (defn fc-gg-real-cand-canonical (parts i)
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp (fc-gg-real-cand-id-str parts i)
+                  (fc-gg-real-cand-entry-start-str parts i))
+                  (fc-gg-real-cand-token-len-str parts i))
+                  (fc-gg-real-cand-token-sha parts i))
+                  (fc-gg-real-cand-row-start-str parts i))
+                  (fc-gg-real-cand-row-sha parts i)))
+
+    (defn fc-gg-real-candidates-canonical-loop (parts i count acc)
+        (if (ge i count) acc
+            (fc-gg-real-candidates-canonical-loop
+                parts
+                (add i 1)
+                count
+                (fc-gg-sp acc (fc-gg-real-cand-canonical parts i)))))
+
+    (defn fc-gg-real-canonical
+        (gguf-path file-size-str token-count-str embedding-dim-str row-bytes-str prompt-id-str prompt-entry-start-str prompt-len-str prompt-token-sha prompt-row-start-str prompt-row-sha candidate-count-str parts candidate-count)
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp
+        (fc-gg-sp "gguf-real-logit-token-cell-v1" gguf-path)
+                   file-size-str)
+                   token-count-str)
+                   embedding-dim-str)
+                   row-bytes-str)
+                   prompt-id-str)
+                   candidate-count-str))
+
+    (defn fc-gg-real-q6k-row-at (row-bytes i)
+        (wl-q6k-at row-bytes (mul (div i 256) 210) (mod i 256)))
+
+    (defn fc-gg-real-row-block-hash-loop (gguf-path row-start block-index block-count acc)
+        (if (ge block-index block-count) acc
+            (do
+                (let block-raw (read_file_slice gguf-path (add row-start (mul block-index 210)) 210))
+                (let block-sha (fc-gg-cell-digest block-raw))
+                (fc-gg-real-row-block-hash-loop
+                    gguf-path
+                    row-start
+                    (add block-index 1)
+                    block-count
+                    (if (str_eq acc "") block-sha (fc-gg-sp acc block-sha))))))
+
+    (defn fc-gg-real-row-block-set-sha (gguf-path row-start block-count)
+        (fc-gg-cell-digest (fc-gg-real-row-block-hash-loop gguf-path row-start 0 block-count "")))
+
+    (defn fc-gg-real-list-dot (a b acc)
+        (if (eq (len a) 0) acc
+            (fc-gg-real-list-dot
+                (tail a)
+                (tail b)
+                (add acc (mul (head a) (head b))))))
+
+    (defn fc-gg-real-block-dot (prompt-block cand-block)
+        (fc-gg-real-list-dot (wl-load-q6k prompt-block 0) (wl-load-q6k cand-block 0) 0.0))
+
+    (defn fc-gg-real-row-dot-blocks-loop (gguf-path prompt-row-start cand-row-start block-index block-count acc)
+        (if (ge block-index block-count) acc
+            (do
+                (let prompt-block-raw (read_file_slice gguf-path (add prompt-row-start (mul block-index 210)) 210))
+                (let cand-block-raw (read_file_slice gguf-path (add cand-row-start (mul block-index 210)) 210))
+                (fc-gg-real-row-dot-blocks-loop
+                    gguf-path
+                    prompt-row-start
+                    cand-row-start
+                    (add block-index 1)
+                    block-count
+                    (add acc (fc-gg-real-block-dot (fc-gg-string-bytes prompt-block-raw)
+                                                   (fc-gg-string-bytes cand-block-raw)))))))
+
+    (defn fc-gg-real-row-dot (gguf-path prompt-row-start cand-row-start block-count)
+        (fc-gg-real-row-dot-blocks-loop gguf-path prompt-row-start cand-row-start 0 block-count 0.0))
+
+    (defn fc-gg-real-cand-logit (gguf-path parts prompt-row-start row-bytes i)
+        (do
+            (let block-count (div row-bytes 210))
+            (fc-gg-real-row-dot gguf-path prompt-row-start (fc-gg-real-cand-row-start parts i) block-count)))
+
+    (defn fc-gg-real-best-index-loop (gguf-path parts prompt-row-start row-bytes i count best-i best-logit)
+        (if (ge i count) best-i
+            (do
+                (let score (fc-gg-real-cand-logit gguf-path parts prompt-row-start row-bytes i))
+                (if (gt score best-logit)
+                    (fc-gg-real-best-index-loop gguf-path parts prompt-row-start row-bytes (add i 1) count i score)
+                    (fc-gg-real-best-index-loop gguf-path parts prompt-row-start row-bytes (add i 1) count best-i best-logit)))))
+
+    (defn fc-gg-real-best-index (gguf-path parts prompt-row-start row-bytes count)
+        (fc-gg-real-best-index-loop
+            gguf-path
+            parts
+            prompt-row-start
+            row-bytes
+            1
+            count
+            0
+            (fc-gg-real-cand-logit gguf-path parts prompt-row-start row-bytes 0)))
+
+    (defn fc-gg-real-token-row-ok (gguf-path file-size token-id entry-start token-len token-sha row-start row-bytes row-sha)
+        (do
+            (let token-text-start (add entry-start 8))
+            (let token-end (add token-text-start token-len))
+            (let row-end (add row-start row-bytes))
+            (let range-ok (if (and (ge token-id 0)
+                              (and (ge entry-start 0)
+                              (and (gt token-len 0)
+                              (and (ge file-size token-end)
+                              (and (ge row-start 0)
+                                   (ge file-size row-end)))))) 1 0))
+            (if (eq range-ok 0)
+                0
+                (do
+                    (let len-raw (read_file_slice gguf-path entry-start 8))
+                    (let token-raw (read_file_slice gguf-path token-text-start token-len))
+                    (let len-bytes (fc-gg-string-bytes len-raw))
+                    (let declared-token-len (fc-gg-u64 len-bytes 0))
+                    (let actual-token-len (str_len token-raw))
+                    (let actual-token-sha (fc-gg-cell-digest token-raw))
+                    (let actual-row-sha (fc-gg-real-row-block-set-sha gguf-path row-start (div row-bytes 210)))
+                    (if (and (eq declared-token-len token-len)
+                        (and (eq actual-token-len token-len)
+                        (and (str_eq actual-token-sha token-sha)
+                             (str_eq actual-row-sha row-sha)))) 1 0)))))
+
+    (defn fc-gg-real-cand-ok (gguf-path file-size row-bytes parts i)
+        (fc-gg-real-token-row-ok
+            gguf-path
+            file-size
+            (fc-gg-real-cand-id parts i)
+            (fc-gg-real-cand-entry-start parts i)
+            (fc-gg-real-cand-token-len parts i)
+            (fc-gg-real-cand-token-sha parts i)
+            (fc-gg-real-cand-row-start parts i)
+            row-bytes
+            (fc-gg-real-cand-row-sha parts i)))
+
+    (defn fc-gg-real-cand-pass-count-loop (gguf-path file-size row-bytes parts i count acc)
+        (if (ge i count) acc
+            (fc-gg-real-cand-pass-count-loop
+                gguf-path
+                file-size
+                row-bytes
+                parts
+                (add i 1)
+                count
+                (add acc (fc-gg-real-cand-ok gguf-path file-size row-bytes parts i)))))
+
+    (defn fc-gguf-real-logit-token-report
+        (ok expected-sha actual-sha gguf-path file-size actual-file-size token-count embedding-dim row-bytes prompt-token-id prompt-entry-start prompt-text-start prompt-len prompt-row-start prompt-token-sha prompt-row-sha candidate-count candidate-pass-count selected-token-id selected-candidate-index selected-logit token-text)
+        (do
+            (let out0 (fc-kv-line "real_logit_token_generation_verified" (fc-gg-bool ok)))
+            (let out1 (str_concat out0 (fc-kv-line "real_logit_generation_source" "fkwu-read_file_slice-real-token-embd-q6k-row-dot")))
+            (let out2 (str_concat out1 (fc-kv-line "real_logit_generation_scope" "candidate-token-real-gguf-token-embedding-dot")))
+            (let out3 (str_concat out2 (fc-kv-line "real_logit_generation_sha256" actual-sha)))
+            (let out4 (str_concat out3 (fc-kv-line "real_logit_generation_expected_sha256" expected-sha)))
+            (let out5 (str_concat out4 (fc-kv-line "real_logit_generation_path" gguf-path)))
+            (let out6 (str_concat out5 (fc-kv-line "real_logit_generation_file_size_expected" (int_to_str file-size))))
+            (let out7 (str_concat out6 (fc-kv-line "real_logit_generation_file_size_observed" (int_to_str actual-file-size))))
+            (let out8 (str_concat out7 (fc-kv-line "gguf_tokenizer_token_count" (int_to_str token-count))))
+            (let out9 (str_concat out8 (fc-kv-line "gguf_token_embedding_dim" (int_to_str embedding-dim))))
+            (let out10 (str_concat out9 (fc-kv-line "gguf_token_embedding_row_bytes" (int_to_str row-bytes))))
+            (let out11 (str_concat out10 (fc-kv-line "prompt_token_id" (int_to_str prompt-token-id))))
+            (let out12 (str_concat out11 (fc-kv-line "prompt_token_entry_start" (int_to_str prompt-entry-start))))
+            (let out13 (str_concat out12 (fc-kv-line "prompt_token_text_start" (int_to_str prompt-text-start))))
+            (let out14 (str_concat out13 (fc-kv-line "prompt_token_text_len" (int_to_str prompt-len))))
+            (let out15 (str_concat out14 (fc-kv-line "prompt_embedding_row_start" (int_to_str prompt-row-start))))
+            (let out16 (str_concat out15 (fc-kv-line "prompt_token_text_sha256" prompt-token-sha)))
+            (let out17 (str_concat out16 (fc-kv-line "prompt_embedding_row_block_set_sha256" prompt-row-sha)))
+            (let out18 (str_concat out17 (fc-kv-line "real_logit_candidate_count" (int_to_str candidate-count))))
+            (let out19 (str_concat out18 (fc-kv-line "real_logit_candidate_pass_count" (int_to_str candidate-pass-count))))
+            (let out20 (str_concat out19 (fc-kv-line "real_logit_argmax_token_id" (int_to_str selected-token-id))))
+            (let out21 (str_concat out20 (fc-kv-line "real_logit_argmax_candidate_index" (int_to_str selected-candidate-index))))
+            (let out22 (str_concat out21 (fc-kv-line "real_logit_selected_logit_micro" (int_to_str selected-logit))))
+            (let out23 (str_concat out22 (fc-kv-line "decoded_token_text" token-text)))
+            (let out24 (str_concat out23 (fc-kv-line "real_logits" "true")))
+            (let out25 (str_concat out24 (fc-kv-line "full_model_logits" "false")))
+            (let out26 (str_concat out25 (fc-kv-line "full_vocabulary_logits" "false")))
+            (let out27 (str_concat out26 (fc-kv-line "real_logit_token_accelerator_buffers" "false")))
+            (str_concat out27
+                (if (eq ok 1)
+                    "PASS fkwu-form-cli-real-gguf-logit-token-generation"
+                    "FAIL fkwu-form-cli-real-gguf-logit-token-generation"))))
+
+    (defn fc-gguf-real-logit-token-cell (arg)
+        (if (str_eq arg "")
+            "usage: gguf-real-logit-token-cell <manifest-path>"
+            (do
+                (let manifest (fc-gg-strip-eol (read_file arg)))
+                (let parts (split-on manifest " "))
+                (let kind (fc-part parts 0 ""))
+                (let expected-sha (fc-part parts 1 ""))
+                (let gguf-path (fc-part parts 2 ""))
+                (let file-size-str (fc-part parts 3 "0"))
+                (let token-count-str (fc-part parts 4 "0"))
+                (let embedding-dim-str (fc-part parts 5 "0"))
+                (let row-bytes-str (fc-part parts 6 "0"))
+                (let prompt-id-str (fc-part parts 7 "0"))
+                (let prompt-entry-start-str (fc-part parts 8 "0"))
+                (let prompt-len-str (fc-part parts 9 "0"))
+                (let prompt-token-sha (fc-part parts 10 ""))
+                (let prompt-row-start-str (fc-part parts 11 "0"))
+                (let prompt-row-sha (fc-part parts 12 ""))
+                (let candidate-count-str (fc-part parts 13 "0"))
+                (let file-size (str_to_int file-size-str))
+                (let token-count (str_to_int token-count-str))
+                (let embedding-dim (str_to_int embedding-dim-str))
+                (let row-bytes (str_to_int row-bytes-str))
+                (let prompt-token-id (str_to_int prompt-id-str))
+                (let prompt-entry-start (str_to_int prompt-entry-start-str))
+                (let prompt-len (str_to_int prompt-len-str))
+                (let prompt-row-start (str_to_int prompt-row-start-str))
+                (let candidate-count (str_to_int candidate-count-str))
+                (if (or (or (str_eq kind "") (str_eq expected-sha ""))
+                        (or (str_eq gguf-path "")
+                        (or (str_eq prompt-token-sha "")
+                        (or (str_eq prompt-row-sha "") (not (gt candidate-count 0))))))
+                    "FAIL gguf-real-logit-token manifest expected: gguf-real-logit-token-cell-v1 <sha256> <gguf-path> <file-size> <token-count> <embedding-dim> <row-bytes> <prompt-token-id> <prompt-entry-start> <prompt-token-len> <prompt-token-sha256> <prompt-row-start> <prompt-row-sha256> <candidate-count> (<candidate-token-id> <candidate-entry-start> <candidate-token-len> <candidate-token-sha256> <candidate-row-start> <candidate-row-sha256>)+"
+                    (if (str_eq kind "gguf-real-logit-token-cell-v1")
+                        (do
+                            (let actual-file-size (file_size gguf-path))
+                            (let canonical (fc-gg-real-canonical gguf-path file-size-str token-count-str embedding-dim-str row-bytes-str prompt-id-str prompt-entry-start-str prompt-len-str prompt-token-sha prompt-row-start-str prompt-row-sha candidate-count-str parts candidate-count))
+                            (let actual-sha (fc-gg-cell-digest canonical))
+                            (let prompt-text-start (add prompt-entry-start 8))
+                            (let row-values (mul (div row-bytes 210) 256))
+                            (let shape-ok (if (and (gt embedding-dim 0)
+                                              (and (ge row-values embedding-dim)
+                                              (and (gt row-bytes 0)
+                                                   (eq (mod row-bytes 210) 0)))) 1 0))
+                            (let prompt-ok (fc-gg-real-token-row-ok gguf-path file-size prompt-token-id prompt-entry-start prompt-len prompt-token-sha prompt-row-start row-bytes prompt-row-sha))
+                            (let candidate-pass-count (fc-gg-real-cand-pass-count-loop gguf-path file-size row-bytes parts 0 candidate-count 0))
+                            (if (or (not (str_eq expected-sha actual-sha))
+                                (or (eq shape-ok 0)
+                                (or (eq prompt-ok 0)
+                                (or (not (eq actual-file-size file-size))
+                                    (not (eq candidate-pass-count candidate-count))))))
+                                (fc-gguf-real-logit-token-report 0 expected-sha actual-sha gguf-path file-size actual-file-size token-count embedding-dim row-bytes prompt-token-id prompt-entry-start prompt-text-start prompt-len prompt-row-start prompt-token-sha prompt-row-sha candidate-count candidate-pass-count 0 0 0 "")
+                                (do
+                                    (let selected-candidate-index (fc-gg-real-best-index gguf-path parts prompt-row-start row-bytes candidate-count))
+                                    (let selected-token-id (fc-gg-real-cand-id parts selected-candidate-index))
+                                    (let selected-logit (fc-gg-micro (fc-gg-real-cand-logit gguf-path parts prompt-row-start row-bytes selected-candidate-index)))
+                                    (let token-text-start (add (fc-gg-real-cand-entry-start parts selected-candidate-index) 8))
+                                    (let token-raw (read_file_slice gguf-path token-text-start (fc-gg-real-cand-token-len parts selected-candidate-index)))
+                                    (fc-gguf-real-logit-token-report 1 expected-sha actual-sha gguf-path file-size actual-file-size token-count embedding-dim row-bytes prompt-token-id prompt-entry-start prompt-text-start prompt-len prompt-row-start prompt-token-sha prompt-row-sha candidate-count candidate-pass-count selected-token-id selected-candidate-index selected-logit token-raw))))
+                        (str_concat "FAIL gguf-real-logit-token manifest kind=" kind))))))
+
     (defn fc-gguf-tensor-slice-math (arg)
         (if (str_eq arg "")
             "usage: gguf-tensor-slice-math <manifest-path>"
