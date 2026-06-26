@@ -1,0 +1,42 @@
+; tests/event-reading-band.fk — a known event read two ways, cast not asserted.
+;
+; preludes: form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/room-now.fk form-stdlib/event-reading.fk
+;
+; The event: Longmont CO (lat 40.167 N, lon 105.10 W -> -105.10 east), 1:30 am MDT on
+; 2026-06-26, i.e. 07:30 UTC. Proves both channels off one cast: the structured edge-set
+; AND the plain-observation sentence, with the place signature (ascendant) distinct from
+; the shared sky, and the same hour at a far longitude rising a different sign.
+;
+; Band verdict: 1111111 when every claim holds across Go/Rust/TS(/fkwu).
+;   Sun observed in Cancer (sign 3)                                  -> 1
+;   Moon observed in Scorpio (sign 7)                                -> 10
+;   Longmont ascendant is Aries (sign 0) at this event              -> 100
+;   the structured edge-set agrees with the observation (sun sign)  -> 1000
+;   lunar phase is waxing-gibbous (octant 3)                        -> 10000
+;   the n-of-utc hour offset works: J2000 noon (n=0) at 2000-01-01  -> 100000
+;   PLACE MATTERS: Ubud at the same instant rises a different sign  -> 1000000
+
+(do
+    (let n (n-of-utc 2026 6 26 7.5))
+
+    (let sun-ok  (if (eq (tropical-sign-of (sky-sun-lon n)) 3) 1 0))
+    (let moon-ok (if (eq (tropical-sign-of (sky-moon-lon n)) 7) 10 0))
+    (let asc-ok  (if (eq (ascendant-sign n -105.10 40.167) 0) 100 0))
+
+    ;; structured data and the observation read the same cast: the data's sun-sign entry
+    ;; (2nd field of the 3rd row) is the value the sentence speaks.
+    (let data (event-data 2026 6 26 7.5 -105.10 40.167))
+    (let data-sun (nth (nth data 2) 1))
+    (let agree-ok (if (eq data-sun (tropical-sign-of (sky-sun-lon n))) 1000 0))
+
+    (let phase-ok (if (eq (sky-phase n) 3) 10000 0))
+
+    ;; n-of-utc anchor: 2000-01-01 12:00 UT is exactly J2000 day 0
+    (let anchor-ok (if (eq (n-of-utc 2000 1 1 12.0) 0.0) 100000 0))
+
+    ;; location dependence: Ubud (lon 115.26) rises a different sign than Longmont
+    (let here  (ascendant-sign n -105.10 40.167))
+    (let there (ascendant-sign n 115.26 -8.51))
+    (let place-ok (if (eq here there) 0 1000000))
+
+    (add sun-ok (add moon-ok (add asc-ok (add agree-ok (add phase-ok (add anchor-ok place-ok)))))))
