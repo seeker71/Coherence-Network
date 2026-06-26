@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/form-cli-model-lane-next-d617",
+  "commit_scope": "Close the next form-cli local-model-lane gaps by refreshing stale native c-bootstrap binaries, making ordinary form-cli ask bounded/local-only, and promoting the fkwu Metal model-cell receipt into the local validation contract.",
+  "files_owned": [
+    "bin/form-cli",
+    "docs/system_audit/commit_evidence_2026-06-26_form_cli_local_model_lane_next.json",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/validate_form_cli_local_receipts.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "bin/form-cli model-status",
+      "bin/form-cli ask substrate",
+      "bin/form-cli ask \"what is the next smallest provable step for full end-to-end form-cli fkwu Metal local model inference after local RAG receipts\"",
+      "bin/form-cli ask+ --remote \"printf remote-disabled\" \"what is the next smallest provable step for full end-to-end form-cli fkwu Metal local model inference after local RAG receipts\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk",
+      "scripts/fkwu_form_cli_metal_model_cell_receipt.sh .cache/body-test-receipts/current-model-cell-receipt.json",
+      "scripts/validate_form_cli_local_receipts.sh substrate",
+      "bin/form-cli preflight"
+    ],
+    "observed_outputs": [
+      "bin/form-cli model-status -> available:gguf-locate,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step; missing:tokenizer-carrier,full-gguf-weight-map,autoregressive-loop-binding,ask-staged-model-call",
+      "bin/form-cli ask substrate -> trust path:native, grounded:yes, suffic:yes; grounded:form/form-stdlib/adler32.fk; local-lane:fkwu-rag-grounded",
+      "long local miss -> [ask: local fkwu RAG index has no grounded hit] plus trust path:native grounded:no suffic:no, with no remote wait",
+      "explicit ask+ remote-disabled -> trust path:rented and remote-disabled, proving escalation is now opt-in",
+      "form-cli-band -> 16383 four-way; fkwu + pre-flattened tables agree",
+      "fkwu form-cli Metal model-cell receipt -> model_cell_verified=true, http_or_ollama=absent, metal_owner=fkwu-form-cli, metal_device=Apple M4 Max, PASS fkwu-form-cli-metal-matvec-f32",
+      "bin/form-cli preflight -> 9 passed, 0 gaps, READY; prose synthesis remains an honest pending lane"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI pending after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-cli-carrier-fix",
+    "notes": "This branch changes local CLI carrier behavior and local proof scripts; public deploy validation follows PR merge if required."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; rebase, guard, CI, PR review, merge, and deploy verification remain pending."
+  },
+  "idea_ids": [
+    "coherence-substrate",
+    "form-first-reasoning"
+  ],
+  "spec_ids": [
+    "coherence-substrate-form-stdlib",
+    "form-cli-local-rag",
+    "fkwu-native-metal-model-cell"
+  ],
+  "task_ids": [
+    "task-2026-06-26-form-cli-local-model-lane-next"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "change_intent": "runtime_fix",
+  "evidence_refs": [
+    "Before fix: an existing stale form/form-cli binary made model-status omit the already-proven metal-model-cell lane because ensure_form_cli_native.sh exited on any executable target.",
+    "Before fix: bin/form-cli ask routed through the escalating ask+ shell path by default, so an ungrounded local query could wait on the subscription oracle and look like a pending local model lane.",
+    "After fix: ensure_form_cli_native.sh refreshes from a stamped committed platform bootstrap binary into a temporary output and swaps it into form/form-cli when it differs, preserving the no-Go/no-clang standard lane.",
+    "After fix: bin/form-cli ask and -p stage the query in the home RAG query file and invoke the c-bootstrapped fkwu ask-staged path; ask+ remains the explicit escalation path.",
+    "After fix: validate_form_cli_local_receipts.sh includes the fkwu form-cli Metal model-cell receipt and still refuses to claim full GGUF prose generation."
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Ordinary form-cli ask is now a bounded 100% local fkwu staged-RAG request; explicit ask+ is the only wrapper path that uses a rented oracle. The local model status names the proven fkwu Metal model-cell lane while preserving the pending full-GGUF decode gaps.",
+    "public_endpoints": [
+      "local CLI: bin/form-cli ask",
+      "local CLI: bin/form-cli ask+",
+      "local CLI: bin/form-cli model-status",
+      "local CLI: scripts/validate_form_cli_local_receipts.sh"
+    ],
+    "test_flows": [
+      "stale binary refresh updates model-status to include metal-model-cell",
+      "grounded ask returns native trust and grounded local RAG receipt",
+      "ungrounded ask returns native-miss immediately instead of invoking remote",
+      "explicit ask+ can still mark a rented path when a remote command is passed",
+      "model-cell receipt verifies content-addressed model bytes in Form before Metal dispatch"
+    ]
+  },
+  "change_files": [
+    "bin/form-cli",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "scripts/ensure_form_cli_native.sh",
+    "scripts/validate_form_cli_local_receipts.sh"
+  ]
+}

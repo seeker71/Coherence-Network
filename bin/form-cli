@@ -19,9 +19,7 @@ ROOT="$(cd -P "$(dirname "$src")/.." && pwd)"
 RAG="$ROOT/scripts/form_cli_rag.py"
 
 ensure_native_cli() {
-  if [ ! -x "$ROOT/form/form-cli" ]; then
-    bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
-  fi
+  bash "$ROOT/scripts/ensure_form_cli_native.sh" >/dev/null 2>&1 || true
   tries=0
   while [ ! -x "$ROOT/form/form-cli" ] && [ "$tries" -lt 20 ]; do
     sleep 1
@@ -47,11 +45,11 @@ form-cli — the one door (local-first, Form-native)
   form-cli -p "<question>"          one-shot print mode, same Form-native carrier as ask
   form-cli repl                     native fkwu form-cli REPL
 
-  form-cli ask "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
-        default ask path: Form-native local-first route through form-cli-ask-plus.fk;
-        the four-way sufficiency gate escalates only when local is not enough
+  form-cli ask "<question>"
+        default ask path: Form-native local-only staged RAG through the c-bootstrapped
+        fkwu binary; no hidden HTTP/Ollama/subscription fallback
   form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
-        daily-driver ask: local-first, then the four-way-proven sufficiency gate
+        explicit escalating ask: local-first, then the four-way-proven sufficiency gate
         (form-cli-sufficiency.fk via form-cli-ask-gate.fk) escalates to the
         subscription oracle when local is not enough. Sovereignty-first by default
         (a usable local answer stands; a local failure escalates); --judge-gate adds
@@ -117,14 +115,39 @@ run_native_cli() {
   printf '%s\n' "$out"
 }
 
+ask_native_local() {
+  q="$*"
+  [ -n "$q" ] || { echo "usage: form-cli ask '<question>'" >&2; exit 2; }
+  home="${HOME:-$ROOT}"
+  mkdir -p "$home/.coherence-network" || {
+    echo "form-cli ask: cannot create $home/.coherence-network" >&2
+    exit 3
+  }
+  printf '%s' "$q" > "$home/.coherence-network/rag-query.txt" || {
+    echo "form-cli ask: cannot stage local RAG query" >&2
+    exit 3
+  }
+  out="$(native_send "ask-staged")"
+  if [ -z "$out" ]; then
+    echo "form-cli: native staged ask returned no result; run form-cli index after T_flat is available" >&2
+    exit 4
+  fi
+  if printf '%s\n' "$out" | grep -q '^grounded:'; then
+    printf '%s\n' "trust  path:native  grounded:yes  freq:no  suffic:yes  -> native-partial" >&2
+  else
+    printf '%s\n' "trust  path:native  grounded:no  freq:no  suffic:no  -> native-miss" >&2
+  fi
+  printf '%s\n' "$out"
+}
+
 cmd="${1:-}"; shift 2>/dev/null || true
 case "$cmd" in
   "")        usage ;;
   help|-h|--help) usage ;;
   repl)      b="$(ensure_native_cli)" || exit "$?"; cd "${HOME:-$ROOT}" && exec "$b" ;;
-  -p|--print) exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # one-shot print mode uses the Form-native ask carrier
+  -p|--print) ask_native_local "$@" ;;  # one-shot print mode uses the local fkwu staged ask carrier
   -*)        exec bash "$ROOT/scripts/form_cli_ask.sh" "$cmd" "$@" ;; # ask flags (-m/-j/--remote/...) -> Form-native ask carrier
-  ask)       exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # default asks route through Form-native code
+  ask)       ask_native_local "$@" ;;  # default ask is local fkwu staged RAG only
   ask+)      exec bash "$ROOT/scripts/form_cli_ask.sh" "$@" ;;  # body is form-cli-ask.fk, run by the kernel
   grounded)  run_native_cli "grounded $*" ;;
   rag-status) run_native_cli "rag-status" ;;
