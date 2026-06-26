@@ -1,0 +1,12 @@
+GGUF fixture: header(0..24) + KV scalar "a" + KV array "b" + tensor-info "w".
+Expected:
+  magic=GGUF
+  version=3
+  tensor_count=1
+  kv_count=2
+  tensor_info_offset=74
+  tensor_index=0
+  tensor_ndims=1
+  tensor_dim0=256
+  tensor_type=12
+  tensor_data_offset=0

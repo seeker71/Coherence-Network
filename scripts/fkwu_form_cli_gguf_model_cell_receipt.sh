@@ -26,6 +26,32 @@ fi
 
 mkdir -p "$ARTIFACT_DIR" "$WORK" "$(dirname "$RECEIPT")"
 
+need_hash_tool() {
+    if command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; then
+        return 0
+    fi
+    echo "missing required receipt harness tool: shasum or sha256sum" >&2
+    exit 2
+}
+
+hash_file() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$1" | awk '{print $1}'
+    else
+        sha256sum "$1" | awk '{print $1}'
+    fi
+}
+
+hash_files_digest() {
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$@" | shasum -a 256 | awk '{print $1}'
+    else
+        sha256sum "$@" | sha256sum | awk '{print $1}'
+    fi
+}
+
+need_hash_tool
+
 write_bytes() {
     local out="$1"
     local b oct
@@ -44,7 +70,7 @@ write_bytes "$gguf_bin" \
     1 0 0 0 0 0 0 0  98  9 0 0 0  4 0 0 0  2 0 0 0 0 0 0 0  7 0 0 0  8 0 0 0 \
     1 0 0 0 0 0 0 0  119  1 0 0 0  0 1 0 0 0 0 0 0  12 0 0 0  0 0 0 0 0 0 0 0
 
-gguf_sha="$(shasum -a 256 "$gguf_bin" | awk '{print $1}')"
+gguf_sha="$(hash_file "$gguf_bin")"
 manifest_runtime="$ARTIFACT_DIR/gguf-cell.manifest"
 printf 'gguf-cell-v1 %s %s 0\n' "$gguf_sha" "$gguf_bin" > "$manifest_runtime"
 printf 'gguf-cell-v1 %s <mini-gguf-artifact> 0\n' "$gguf_sha" > "$WORK/gguf-cell-manifest.txt"
@@ -77,10 +103,11 @@ runtime_home="$ARTIFACT_DIR/home"
 runtime_tmp="$ARTIFACT_DIR/tmp"
 mkdir -p "$empty_path" "$runtime_home" "$runtime_tmp"
 
-env -i PATH="$empty_path" HOME="$runtime_home" TMPDIR="$runtime_tmp" "$artifact" > "$WORK/runtime.out" 2>&1 <<EOF
+env -i PATH="$empty_path" HOME="$runtime_home" TMPDIR="$runtime_tmp" "$artifact" > "$WORK/runtime.raw" 2>&1 <<EOF
 gguf-model-cell $manifest_runtime
 quit
 EOF
+tr -d '\r' < "$WORK/runtime.raw" > "$WORK/runtime.out"
 
 grep -q '^gguf_cell_verified=true$' "$WORK/runtime.out"
 grep -q '^gguf_magic_ok=1$' "$WORK/runtime.out"
@@ -111,13 +138,24 @@ extract_value() {
     awk -F= -v key="$key" '$1 == key { print $2; exit }' "$WORK/runtime.out"
 }
 
-trace_sha="$(shasum -a 256 "$WORK/runtime.out" "$WORK/build.out" "$WORK/model-layout.txt" "$WORK/mini-gguf.hex" "$WORK/gguf-cell-manifest.txt" | shasum -a 256 | awk '{print $1}')"
+trace_sha="$(hash_files_digest "$WORK/runtime.out" "$WORK/build.out" "$WORK/model-layout.txt" "$WORK/mini-gguf.hex" "$WORK/gguf-cell-manifest.txt")"
+
+sanitize_trace_file() {
+    local src="$1"
+    local dst="$2"
+    LC_ALL=C sed -E \
+        -e "s|$ROOT|<repo>|g" \
+        -e "s|$HOME|<home>|g" \
+        -e 's|/private/var/folders/[^[:space:]:]+|<tmp>|g' \
+        -e 's|/var/folders/[^[:space:]:]+|<tmp>|g' \
+        "$src" > "$dst"
+}
 
 TRACE_REPORT_DIR="$WORK"
 if [[ -n "$PUBLISH_TRACE_DIR" ]]; then
     mkdir -p "$PUBLISH_TRACE_DIR"
-    cp "$WORK/runtime.out" "$PUBLISH_TRACE_DIR/runtime.out"
-    cp "$WORK/build.out" "$PUBLISH_TRACE_DIR/build.out"
+    sanitize_trace_file "$WORK/runtime.out" "$PUBLISH_TRACE_DIR/runtime.out"
+    sanitize_trace_file "$WORK/build.out" "$PUBLISH_TRACE_DIR/build.out"
     cp "$WORK/model-layout.txt" "$PUBLISH_TRACE_DIR/model-layout.txt"
     cp "$WORK/mini-gguf.hex" "$PUBLISH_TRACE_DIR/mini-gguf.hex"
     cp "$WORK/gguf-cell-manifest.txt" "$PUBLISH_TRACE_DIR/gguf-cell-manifest.txt"
