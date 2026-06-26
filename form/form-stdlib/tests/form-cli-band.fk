@@ -21,5 +21,6 @@
     (let c12 (if (str_eq (fc-respond "ask standard receipt") "[ask: local fkwu RAG index has no grounded hit]") 4096 0))
     (let synth (fc-respond "synthesis-status"))
     (let c13 (if (and (not (lt (str_find synth "pending-fkwu-metal-llm" 0) 0))
-                      (not (lt (str_find synth "missing:tokenizer-carrier" 0) 0))) 8192 0))
+                      (and (not (lt (str_find synth "available:gguf-locate,weight-load,block-join,metal-matvec,metal-model-cell,metal-decode-step" 0) 0))
+                           (not (lt (str_find synth "missing:tokenizer-carrier,full-gguf-weight-map,autoregressive-loop-binding,ask-staged-model-call" 0) 0)))) 8192 0))
     (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13)))

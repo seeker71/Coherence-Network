@@ -6,20 +6,37 @@
 # when stamped — no bin-go, no clang. Maintainer regen:
 # scripts/regen_standard_lane_binaries.sh
 #
-# Idempotent: present binary → instant no-op. Missing binary → bootstrap copy
-# or one-time clang link from committed bootstrap C when platform binary absent.
+# Idempotent: refreshes from the stamped committed bootstrap binary when it is
+# newer/different. Missing bootstrap falls back to the cached target or one-time
+# clang link from committed bootstrap C when the platform binary is absent.
 set -u
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORM_DIR="$ROOT/form"
 TARGET="$FORM_DIR/form-cli"
 LOG="$FORM_DIR/form-stdlib/.cache/form-cli-native-build.log"
 
-[ -x "$TARGET" ] && exit 0
-
 mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
-if (cd "$FORM_DIR" && FORM_STANDARD_LANE=1 ./build-form-cli.sh) >>"$LOG" 2>&1; then
+
+refresh_from_standard_lane() {
+  tmp="$(mktemp "$FORM_DIR/.form-cli-standard.XXXXXX")" || return 1
+  if (cd "$FORM_DIR" && FORM_STANDARD_LANE=1 ./build-form-cli.sh "$tmp") >>"$LOG" 2>&1 && [ -x "$tmp" ]; then
+    if [ ! -x "$TARGET" ] || ! cmp -s "$tmp" "$TARGET"; then
+      mv -f "$tmp" "$TARGET"
+      chmod +x "$TARGET"
+    else
+      rm -f "$tmp"
+    fi
+    return 0
+  fi
+  rm -f "$tmp"
+  return 1
+}
+
+if refresh_from_standard_lane; then
   [ -x "$TARGET" ] && exit 0
 fi
+
+[ -x "$TARGET" ] && exit 0
 
 if ! command -v clang >/dev/null 2>&1; then
   for llvm_bin in "/c/Program Files/LLVM/bin" "/c/Program Files (x86)/LLVM/bin"; do
