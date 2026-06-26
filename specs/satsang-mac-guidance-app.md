@@ -8,6 +8,8 @@ source:
     symbols: [RoomTranscriber]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift
     symbols: [TranscriptUtterance, TranscriptParser]
+  - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift
+    symbols: [TrustedRoomMemoryStore, TrustedRoomMemoryContext, TrustedRoomSpeakerProfile, TrustedRoomMemorySessionRecord]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift
     symbols: [TranscriptMerger]
   - file: experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift
@@ -22,6 +24,8 @@ source:
     symbols: [shb-app-runtime-allowed?, shb-runtime-forbidden?, shb-resource-kind?, shb-platform-target?, shb-boundary-ok?, shb-receipt]
   - file: form/form-stdlib/satsang-listen-route.fk
     symbols: [slr-decision, slr-remote-oracle?, slr-receipt]
+  - file: form/form-stdlib/satsang-room-memory.fk
+    symbols: [srm-trust-ok?, srm-speaker-match?, srm-context-ready?, srm-receipt]
 requirements:
   - "Mac desktop GUI can listen to the room microphone after explicit Start Listening"
   - "No-speech intervals do not stop the active room listener"
@@ -36,12 +40,15 @@ requirements:
   - "Shared app logic is declared Form-native and host access crosses a generic host OS resource interface"
   - "The request records detected host resource doors for file, process, audio-input, and speech-transcript access"
   - "The request records resolved macOS, Windows, and Android carrier mappings for every host resource door"
+  - "The request records local trusted room-memory context from prior explicitly sent sessions"
+  - "The send path stores a local session record, session index, and speaker-profile continuity receipt"
+  - "Recurring unnamed speakers match by stable voice_id/speaker_id when supplied; channel-only room mic continuity is not claimed as verified identity"
   - "Python, Go, Rust, and TypeScript are rejected as app-boundary runtimes for this carrier"
 done_when:
-  - "Swift package tests pass for parsing, request writing, host-boundary, and route-gate receipts"
+  - "Swift package tests pass for parsing, request writing, trusted room-memory, host-boundary, and route-gate receipts"
   - "Swift package builds the GUI executable"
-  - "satsang-guidance-event and satsang-listen-route Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 131071"
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk"
+  - "satsang-guidance-event, satsang-listen-route, and satsang-room-memory Form bands cross four-way with verdict 255; satsang-host-boundary crosses four-way with verdict 131071"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk"
 constraints:
   - "Do not auto-send hidden transcripts; the user presses Send"
   - "The GUI edits local event payloads only; speech capture starts only from explicit user action"
@@ -73,6 +80,13 @@ transcript files, and writes a local protocol event queue.
 - [x] The GUI allows editing individual utterances before sending.
 - [x] Manual and live rows survive transcript-file reloads.
 - [x] The send action includes all loaded transcript lines in the request.
+- [x] The send action writes a local trusted room-memory session record, index,
+      speaker profiles, and latest context receipt after explicit Send.
+- [x] Later sends include prior-session context and speaker-profile summary in
+      the request.
+- [x] Recurring unnamed speakers can match by stable `voice_id` / `speaker_id`
+      when supplied by a transcript producer; `room mic` without a voice id is
+      carried as channel continuity, not verified identity.
 - [x] The request records target presence, invocation text, turn mode, and
       guidance question.
 - [x] The send action runs a local Form CLI ask and records the body/RAG
@@ -97,6 +111,7 @@ transcript files, and writes a local protocol event queue.
 - `experiments/satsang-mac-app/Sources/SatsangGuidance/SatsangGuidanceApp.swift` - SwiftUI GUI.
 - `experiments/satsang-mac-app/Sources/SatsangGuidance/RoomTranscriber.swift` - native room microphone transcription.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/Transcript.swift` - transcript parser.
+- `experiments/satsang-mac-app/Sources/SatsangMacCore/TrustedRoomMemory.swift` - local session index, speaker-profile, and prior-context memory store.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/TranscriptMerger.swift` - transcript reload merge policy.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/GuidanceRequest.swift` - event writer.
 - `experiments/satsang-mac-app/Sources/SatsangMacCore/FormNativeRouting.swift` - local Form/RAG route receipt writer.
@@ -109,7 +124,10 @@ transcript files, and writes a local protocol event queue.
 - `form/form-stdlib/tests/satsang-host-boundary-band.fk` - generic host ABI and detected resource-door proof.
 - `form/form-stdlib/satsang-listen-route.fk` - remote-last listen/transcribe route protocol.
 - `form/form-stdlib/tests/satsang-listen-route-band.fk` - remote-last route proof.
+- `form/form-stdlib/satsang-room-memory.fk` - explicit local trusted room-memory protocol.
+- `form/form-stdlib/tests/satsang-room-memory-band.fk` - trusted room-memory proof.
 - `docs/coherence-substrate/satsang-guidance-event.form` - teaching.
+- `docs/coherence-substrate/satsang-room-memory.form` - room-memory teaching.
 
 ## Acceptance Tests
 
@@ -118,10 +136,14 @@ transcript files, and writes a local protocol event queue.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk` returns `255`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk` returns `131071`.
 - `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk` returns `255`.
+- `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk` returns `255`.
 - Manual validation: launch the app, press Start Listening, allow macOS
   microphone/speech prompts, speak into the room, edit a transcript line, press
   Send, and see a JSON/Form event under
   `~/.coherence-network/satsang-guidance/`.
+- Manual validation: send one session, start a later session with the same
+  `voice_id` / `speaker_id` in the transcript file, and confirm the guidance
+  request includes prior context plus the same speaker profile ID.
 - Manual validation: leave the app listening during silence and confirm it stays
   in listening state instead of closing on `No speech detected`.
 - Manual validation: if Speech Recognition permission is still pending or
@@ -136,6 +158,7 @@ scripts/build_satsang_mac_app.sh
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-guidance-event.fk form-stdlib/tests/satsang-guidance-event-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-host-boundary.fk form-stdlib/tests/satsang-host-boundary-band.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/satsang-listen-route.fk form-stdlib/tests/satsang-listen-route-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/satsang-room-memory.fk form-stdlib/tests/satsang-room-memory-band.fk
 python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.md
 ```
 
@@ -144,6 +167,7 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Autonomous interruption by Sema or another presence.
 - Invoking a remote LLM directly from the GUI.
 - Replacing macOS Speech with a fully Form-native acoustic decoder.
+- Claiming verified biometric identity from macOS Speech alone.
 - Shipping full Windows or Android GUI packages in this PR.
 
 ## Risks
@@ -162,6 +186,10 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - The local Form/RAG lookup depends on a repo-local `form/form-cli` binary or a
   user-local `~/.local/bin/form-cli`. If neither exists, the request records
   that local lookup was unavailable before requesting remote oracle handling.
+- Trusted room memory is local file-backed memory. It recognizes recurring
+  unnamed speakers only when a transcript producer supplies a stable voice
+  identifier, or when the same visible channel label is used. Channel-label
+  continuity is not verified identity.
 - The portable host ABI and Windows/Android carrier mappings are resolved in
   this PR; real device builds still need to promote each declared door to an
   observed/open runtime receipt.
@@ -171,3 +199,5 @@ python3 scripts/validate_spec_quality.py --file specs/satsang-mac-guidance-app.m
 - Follow-up task: add a signed notarized macOS bundle once the app surface settles.
 - Follow-up task: wire a live Sema presence process to consume the event queue and
   return a visible transmission inside the GUI.
+- Follow-up task: add an enrolled, consented voiceprint carrier so speaker
+  continuity can move from channel/voice-id continuity to verified identity.

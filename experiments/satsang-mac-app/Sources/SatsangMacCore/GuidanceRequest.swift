@@ -11,6 +11,7 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
     public var guidanceQuestion: String
     public var utterances: [TranscriptUtterance]
     public var routeReceipt: FormNativeRouteReceipt?
+    public var memoryContext: TrustedRoomMemoryContext?
 
     public init(
         id: String = UUID().uuidString,
@@ -21,7 +22,8 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         turnMode: String,
         guidanceQuestion: String,
         utterances: [TranscriptUtterance],
-        routeReceipt: FormNativeRouteReceipt? = nil
+        routeReceipt: FormNativeRouteReceipt? = nil,
+        memoryContext: TrustedRoomMemoryContext? = nil
     ) {
         self.kind = "satsang-guidance-request"
         self.id = id
@@ -33,6 +35,7 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         self.guidanceQuestion = guidanceQuestion
         self.utterances = utterances
         self.routeReceipt = routeReceipt
+        self.memoryContext = memoryContext
     }
 
     public var editedCount: Int {
@@ -53,9 +56,12 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         if let routeReceipt {
             rows.append(Self.routeEnvelope(routeReceipt))
         }
+        if let memoryContext {
+            rows.append(TrustedRoomMemoryStore.formEnvelope(memoryContext, indent: "  "))
+        }
         rows.append("  (utterances")
         for utterance in utterances {
-            rows.append("    (utterance \"\(Self.escape(utterance.speaker))\" \"\(Self.escape(utterance.timestamp))\" \"\(Self.escape(utterance.text))\")")
+            rows.append("    (utterance \"\(Self.escape(utterance.speaker))\" \"\(Self.escape(utterance.timestamp))\" \"\(Self.escape(utterance.text))\" \"\(Self.escape(utterance.voiceID ?? ""))\" \"\(Self.escape(utterance.speakerProfileID ?? ""))\")")
         }
         rows.append("  ))")
         return rows.joined(separator: "\n") + "\n"

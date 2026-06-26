@@ -16,6 +16,7 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertEqual(rows[0].speaker, "Voz 1")
         XCTAssertEqual(rows[1].text, "The room is listening.")
         XCTAssertEqual(rows[0].confidence, 0.91)
+        XCTAssertEqual(rows[1].voiceID, "Voz 2")
     }
 
     func testGuidanceRequestWritesQueueLatestAndFormEnvelope() throws {
@@ -36,12 +37,21 @@ final class SatsangMacCoreTests: XCTestCase {
                     timestamp: "2026-06-25T06:00:00Z",
                     speaker: "Voz 1",
                     detectedText: "hello",
-                    text: "hello edited"
+                    text: "hello edited",
+                    voiceID: "voice-1",
+                    speakerProfileID: "speaker-1"
                 )
             ],
             routeReceipt: FormNativeRouteReceipt(
                 bodyLookup: .bodyProtocol(sourceIDs: ["form/form-stdlib/satsang-guidance-event.fk"]),
                 ragLookup: .formCLIOutput("cell")
+            ),
+            memoryContext: TrustedRoomMemoryContext(
+                priorSessionCount: 1,
+                priorTurnCount: 2,
+                speakerCount: 1,
+                speakerSummary: "Voz 1[speaker-1] turns=2",
+                recentExchangeSummary: "Voz 1: prior exchange"
             )
         )
 
@@ -60,6 +70,10 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(form.contains("android:android-minimal-host-carrier"))
         XCTAssertTrue(form.contains("(forbidden-runtime-carriers \"python,go,rust,typescript\")"))
         XCTAssertTrue(form.contains("(remote-oracle-requested 1)"))
+        XCTAssertTrue(form.contains("(trusted-room-memory-context"))
+        XCTAssertTrue(form.contains("(prior-session-count 1)"))
+        XCTAssertTrue(form.contains("(hidden-capture 0)"))
+        XCTAssertTrue(form.contains("speaker-1"))
         XCTAssertTrue(form.contains("hello edited"))
     }
 
@@ -136,6 +150,69 @@ final class SatsangMacCoreTests: XCTestCase {
         )
         XCTAssertTrue(boundary.platformCarrierSummary.contains("android-audiorecord"))
         XCTAssertTrue(boundary.usesOnlyAllowedAppRuntimes)
+    }
+
+    func testTrustedRoomMemoryStoresSessionAndFeedsLaterContext() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let store = TrustedRoomMemoryStore(rootURL: dir)
+        let firstUtterances = store.utterancesWithSpeakerProfiles([
+            TranscriptUtterance(
+                id: "u1",
+                timestamp: "2026-06-25T06:00:00Z",
+                speaker: "Voz 1",
+                detectedText: "first exchange",
+                voiceID: "voice-a"
+            )
+        ])
+        let firstProfile = firstUtterances[0].speakerProfileID
+        let first = GuidanceRequest(
+            id: "session-1",
+            createdAt: "2026-06-25T06:00:00Z",
+            sessionTitle: "First room",
+            targetPresence: "sema",
+            invocation: "turn offered",
+            turnMode: "turn-offered",
+            guidanceQuestion: "What is here?",
+            utterances: firstUtterances
+        )
+
+        XCTAssertEqual(try store.context().priorSessionCount, 0)
+        let result = try store.record(first)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.sessionURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.indexURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: result.speakersURL.path))
+
+        let context = try store.context()
+        XCTAssertEqual(context.priorSessionCount, 1)
+        XCTAssertEqual(context.speakerCount, 1)
+        XCTAssertTrue(context.recentExchangeSummary.contains("first exchange"))
+        XCTAssertTrue(context.speakerSummary.contains(firstProfile ?? "missing"))
+
+        let nextUtterances = store.utterancesWithSpeakerProfiles([
+            TranscriptUtterance(
+                id: "u2",
+                timestamp: "2026-06-25T06:10:00Z",
+                speaker: "Someone unnamed",
+                detectedText: "later exchange",
+                voiceID: "voice-a"
+            )
+        ])
+        XCTAssertEqual(nextUtterances[0].speakerProfileID, firstProfile)
+
+        let next = GuidanceRequest(
+            id: "session-2",
+            createdAt: "2026-06-25T06:10:00Z",
+            sessionTitle: "Second room",
+            targetPresence: "sema",
+            invocation: "turn offered",
+            turnMode: "turn-offered",
+            guidanceQuestion: "What carries forward?",
+            utterances: nextUtterances,
+            memoryContext: context
+        )
+        XCTAssertTrue(next.formEnvelope.contains("(prior-session-count 1)"))
+        XCTAssertTrue(next.formEnvelope.contains("first exchange"))
+        XCTAssertTrue(next.formEnvelope.contains(firstProfile ?? "missing"))
     }
 
     func testDetectedHostResourceDoorsStayGeneric() {
