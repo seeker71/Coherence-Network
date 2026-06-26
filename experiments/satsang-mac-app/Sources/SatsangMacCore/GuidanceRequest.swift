@@ -83,6 +83,8 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         rows.append("    (allowed-resource-kinds \"\(escape(receipt.hostBoundary.allowedResourceKinds.joined(separator: ",")))\")")
         rows.append("    (host-resource-door-count \(receipt.hostBoundary.resourceDoors.count))")
         rows.append("    (host-resource-door-summary \"\(escape(receipt.hostBoundary.doorSummary))\")")
+        rows.append("    (host-platform-carrier-count \(receipt.hostBoundary.platformCarriers.count))")
+        rows.append("    (host-platform-carrier-summary \"\(escape(receipt.hostBoundary.platformCarrierSummary))\")")
         rows.append("    (app-boundary-runtimes \"\(escape(receipt.hostBoundary.appBoundaryRuntimes.joined(separator: ",")))\")")
         rows.append("    (forbidden-runtime-carriers \"\(escape(receipt.hostBoundary.forbiddenRuntimeCarriers.joined(separator: ",")))\")")
         rows.append("    (body-lane \"\(escape(receipt.bodyLookup.lane))\")")

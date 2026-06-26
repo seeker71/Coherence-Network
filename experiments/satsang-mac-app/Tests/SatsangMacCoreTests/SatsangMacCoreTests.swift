@@ -55,6 +55,9 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertTrue(form.contains("(host-resource-interface \"host-os-generic-resource-interface\")"))
         XCTAssertTrue(form.contains("(host-resource-door-count 6)"))
         XCTAssertTrue(form.contains("(host-resource-door-summary \"audio-input:declared:host-os-generic-resource-interface"))
+        XCTAssertTrue(form.contains("(host-platform-carrier-count 3)"))
+        XCTAssertTrue(form.contains("windows:windows-minimal-host-carrier"))
+        XCTAssertTrue(form.contains("android:android-minimal-host-carrier"))
         XCTAssertTrue(form.contains("(forbidden-runtime-carriers \"python,go,rust,typescript\")"))
         XCTAssertTrue(form.contains("(remote-oracle-requested 1)"))
         XCTAssertTrue(form.contains("hello edited"))
@@ -107,9 +110,32 @@ final class SatsangMacCoreTests: XCTestCase {
         XCTAssertEqual(boundary.appBoundaryRuntimes, ["form", "swift-minimal-host-carrier"])
         XCTAssertEqual(boundary.forbiddenRuntimeCarriers, ["python", "go", "rust", "typescript"])
         XCTAssertEqual(boundary.resourceDoors.map(\.kind), boundary.allowedResourceKinds)
+        XCTAssertEqual(boundary.platformCarriers.map(\.platform), ["macos", "windows", "android"])
+        XCTAssertTrue(boundary.platformCarriers.allSatisfy { $0.resourceDoors.count == boundary.allowedResourceKinds.count })
         XCTAssertTrue(boundary.platformTargets.contains("macos"))
         XCTAssertTrue(boundary.platformTargets.contains("windows"))
         XCTAssertTrue(boundary.platformTargets.contains("android"))
+    }
+
+    func testWindowsAndAndroidHostCarriersResolveEveryDoor() {
+        let boundary = FormHostBoundaryReceipt()
+        let windows = boundary.platformCarriers.first { $0.platform == "windows" }
+        let android = boundary.platformCarriers.first { $0.platform == "android" }
+
+        XCTAssertEqual(windows?.hostCarrier, "windows-minimal-host-carrier")
+        XCTAssertEqual(android?.hostCarrier, "android-minimal-host-carrier")
+        XCTAssertEqual(windows?.resourceDoors.map(\.kind), boundary.allowedResourceKinds)
+        XCTAssertEqual(android?.resourceDoors.map(\.kind), boundary.allowedResourceKinds)
+        XCTAssertEqual(
+            windows?.resourceDoors.first { $0.kind == "process-stdin-stdout" }?.carrier,
+            "windows-createprocess-stdin-stdout"
+        )
+        XCTAssertEqual(
+            android?.resourceDoors.first { $0.kind == "speech-transcript" }?.carrier,
+            "android-speechrecognizer"
+        )
+        XCTAssertTrue(boundary.platformCarrierSummary.contains("android-audiorecord"))
+        XCTAssertTrue(boundary.usesOnlyAllowedAppRuntimes)
     }
 
     func testDetectedHostResourceDoorsStayGeneric() {

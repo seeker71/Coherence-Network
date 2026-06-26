@@ -28,6 +28,75 @@ public struct HostResourceDoor: Codable, Equatable, Sendable {
     }
 }
 
+public struct HostPlatformCarrier: Codable, Equatable, Sendable {
+    public var platform: String
+    public var hostCarrier: String
+    public var resourceInterface: String
+    public var resourceDoors: [HostResourceDoor]
+
+    public init(
+        platform: String,
+        hostCarrier: String,
+        resourceInterface: String,
+        resourceDoors: [HostResourceDoor]
+    ) {
+        self.platform = platform
+        self.hostCarrier = hostCarrier
+        self.resourceInterface = resourceInterface
+        self.resourceDoors = resourceDoors
+    }
+
+    public var doorSummary: String {
+        resourceDoors
+            .map { "\($0.kind):\($0.carrier)" }
+            .joined(separator: ",")
+    }
+
+    public static func resolvedDefaults(resourceInterface: String = "host-os-generic-resource-interface") -> [HostPlatformCarrier] {
+        [
+            HostPlatformCarrier(
+                platform: "macos",
+                hostCarrier: "swift-minimal-host-carrier",
+                resourceInterface: resourceInterface,
+                resourceDoors: [
+                    HostResourceDoor(kind: "audio-input", state: "declared", carrier: "macos-avfoundation", detail: "AVAudioEngine input node"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "macos-speech", detail: "SFSpeechRecognizer"),
+                    HostResourceDoor(kind: "file-read", state: "declared", carrier: "macos-foundation-filemanager", detail: "FileManager/Data"),
+                    HostResourceDoor(kind: "file-append", state: "declared", carrier: "macos-foundation-filehandle", detail: "FileHandle append"),
+                    HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "macos-foundation-data-atomic", detail: "Data.write atomic"),
+                    HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "macos-foundation-process", detail: "Process with pipes"),
+                ]
+            ),
+            HostPlatformCarrier(
+                platform: "windows",
+                hostCarrier: "windows-minimal-host-carrier",
+                resourceInterface: resourceInterface,
+                resourceDoors: [
+                    HostResourceDoor(kind: "audio-input", state: "declared", carrier: "windows-wasapi-capture", detail: "WASAPI shared input"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "windows-speechrecognizer", detail: "Windows speech recognition"),
+                    HostResourceDoor(kind: "file-read", state: "declared", carrier: "windows-known-folder-filesystem", detail: "LocalAppData file read"),
+                    HostResourceDoor(kind: "file-append", state: "declared", carrier: "windows-known-folder-filesystem", detail: "LocalAppData append"),
+                    HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "windows-replacefile-atomic", detail: "atomic replace"),
+                    HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "windows-createprocess-stdin-stdout", detail: "CreateProcessW pipes"),
+                ]
+            ),
+            HostPlatformCarrier(
+                platform: "android",
+                hostCarrier: "android-minimal-host-carrier",
+                resourceInterface: resourceInterface,
+                resourceDoors: [
+                    HostResourceDoor(kind: "audio-input", state: "declared", carrier: "android-audiorecord", detail: "AudioRecord with RECORD_AUDIO"),
+                    HostResourceDoor(kind: "speech-transcript", state: "declared", carrier: "android-speechrecognizer", detail: "android.speech.SpeechRecognizer"),
+                    HostResourceDoor(kind: "file-read", state: "declared", carrier: "android-app-private-files", detail: "Context.filesDir read"),
+                    HostResourceDoor(kind: "file-append", state: "declared", carrier: "android-app-private-files", detail: "Context.filesDir append"),
+                    HostResourceDoor(kind: "file-write-atomic", state: "declared", carrier: "android-atomic-file", detail: "AtomicFile or rename"),
+                    HostResourceDoor(kind: "process-stdin-stdout", state: "declared", carrier: "android-packaged-form-cli-process", detail: "packaged native form-cli with bounded pipes"),
+                ]
+            ),
+        ]
+    }
+}
+
 public struct FoundationHostResourceInterface: HostResourceInterface {
     public init() {}
 
@@ -132,6 +201,7 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
     public var platformTargets: [String]
     public var allowedResourceKinds: [String]
     public var resourceDoors: [HostResourceDoor]
+    public var platformCarriers: [HostPlatformCarrier]
     public var appBoundaryRuntimes: [String]
     public var forbiddenRuntimeCarriers: [String]
 
@@ -149,6 +219,7 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
             "process-stdin-stdout"
         ],
         resourceDoors: [HostResourceDoor]? = nil,
+        platformCarriers: [HostPlatformCarrier]? = nil,
         appBoundaryRuntimes: [String] = ["form", "swift-minimal-host-carrier"],
         forbiddenRuntimeCarriers: [String] = ["python", "go", "rust", "typescript"]
     ) {
@@ -161,6 +232,7 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
         self.resourceDoors = resourceDoors ?? allowedResourceKinds.map {
             HostResourceDoor(kind: $0, state: "declared", carrier: resourceInterface)
         }
+        self.platformCarriers = platformCarriers ?? HostPlatformCarrier.resolvedDefaults(resourceInterface: resourceInterface)
         self.appBoundaryRuntimes = appBoundaryRuntimes
         self.forbiddenRuntimeCarriers = forbiddenRuntimeCarriers
     }
@@ -168,14 +240,32 @@ public struct FormHostBoundaryReceipt: Codable, Equatable, Sendable {
     public var usesOnlyAllowedAppRuntimes: Bool {
         let allowed = Set(["form", "swift-minimal-host-carrier"])
         let allowedResources = Set(allowedResourceKinds)
+        let platforms = Set(platformTargets)
+        let hostCarriers = Set([
+            "swift-minimal-host-carrier",
+            "windows-minimal-host-carrier",
+            "android-minimal-host-carrier"
+        ])
         return appBoundaryRuntimes.allSatisfy { allowed.contains($0) }
             && forbiddenRuntimeCarriers.allSatisfy { !appBoundaryRuntimes.contains($0) }
             && resourceDoors.allSatisfy { allowedResources.contains($0.kind) }
+            && platformCarriers.allSatisfy {
+                platforms.contains($0.platform)
+                    && hostCarriers.contains($0.hostCarrier)
+                    && $0.resourceInterface == resourceInterface
+                    && $0.resourceDoors.allSatisfy { allowedResources.contains($0.kind) }
+            }
     }
 
     public var doorSummary: String {
         resourceDoors
             .map { "\($0.kind):\($0.state):\($0.carrier)" }
             .joined(separator: ",")
+    }
+
+    public var platformCarrierSummary: String {
+        platformCarriers
+            .map { "\($0.platform):\($0.hostCarrier):\($0.doorSummary)" }
+            .joined(separator: "|")
     }
 }

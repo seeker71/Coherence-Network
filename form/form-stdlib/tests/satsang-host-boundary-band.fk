@@ -3,7 +3,7 @@
 ; satsang-host-boundary-band — shared Form body, minimal host ABI, no app
 ; boundary Python/Go/Rust/TypeScript.
 ;
-; Verdict 4095:
+; Verdict 131071:
 ;   1   Form is an allowed app runtime
 ;   2   Swift is only the minimal host carrier
 ;   4   Python is forbidden at the app boundary
@@ -16,6 +16,11 @@
 ;   512 Android is a target platform
 ;   1024 detected audio-input door is valid
 ;   2048 unknown resource kind is rejected as a detected door
+;   4096 macOS carrier matrix resolves every resource door
+;   8192 Windows carrier matrix resolves every resource door
+;   16384 Android carrier matrix resolves every resource door
+;   32768 Android speech carrier is the native speech recognizer door
+;   65536 Windows process door is CreateProcess stdin/stdout
 (do
     (let rec (shb-receipt "swift-minimal-host-carrier" "process-stdin-stdout" "macos"))
     (let audio-door (shb-door-receipt "audio-input" "open" "macos-avfoundation"))
@@ -36,5 +41,10 @@
                           (eq (shb-rec-forbidden? rec) 0))) 512 0))
     (let c10 (if (eq (shb-door-rec-ok? audio-door) 1) 1024 0))
     (let c11 (if (eq (shb-door-ok? "platform-private-api" "open") 0) 2048 0))
+    (let c12 (if (eq (shb-platform-carriers-complete? "macos") 1) 4096 0))
+    (let c13 (if (eq (shb-platform-carriers-complete? "windows") 1) 8192 0))
+    (let c14 (if (eq (shb-platform-carriers-complete? "android") 1) 16384 0))
+    (let c15 (if (str_eq (shb-carrier-for "android" "speech-transcript") "android-speechrecognizer") 32768 0))
+    (let c16 (if (str_eq (shb-carrier-for "windows" "process-stdin-stdout") "windows-createprocess-stdin-stdout") 65536 0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16)))

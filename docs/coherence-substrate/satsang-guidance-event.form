@@ -19,11 +19,12 @@
 ;   body/RAG sufficiency receipt in the JSON and .form event; a remote oracle is
 ;   only requested as an explicit insufficient-local route, not called by the GUI.
 ;   File, process, audio-input, and speech-transcript resources cross one
-;   generic host OS resource-door receipt in the Swift core; Swift is the
-;   current minimal macOS carrier, while the shared logic remains Form-native
-;   and the receipt rejects Python, Go, Rust, and TypeScript as app-boundary
-;   runtimes. Windows and Android adapters can carry the same resource kinds
-;   without changing the Form/shared body.
+;   generic host OS resource-door receipt in the Swift core. The receipt carries
+;   resolved macOS, Windows, and Android carrier mappings for every resource
+;   kind; live state is detected on macOS today, while Windows/Android device
+;   packages still promote declared doors to observed/open runtime receipts. The
+;   shared logic remains Form-native and rejects Python, Go, Rust, and
+;   TypeScript as app-boundary runtimes.
 ;
 ; Body:
 ;   form/form-stdlib/satsang-guidance-event.fk decides whether the event is a
@@ -36,8 +37,9 @@
 ;   remote-last with form-cli-sufficiency.fk. Proof:
 ;   form/form-stdlib/tests/satsang-listen-route-band.fk -> 255.
 ;   form/form-stdlib/satsang-host-boundary.fk names the generic host ABI,
-;   detected resource doors, and forbidden app-boundary runtimes. Proof:
-;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 4095.
+;   detected resource doors, resolved platform carriers, and forbidden
+;   app-boundary runtimes. Proof:
+;   form/form-stdlib/tests/satsang-host-boundary-band.fk -> 131071.
 ;
 ; Boundary:
 ;   The event is an offer, not an interruption. The GUI does not decide that a
