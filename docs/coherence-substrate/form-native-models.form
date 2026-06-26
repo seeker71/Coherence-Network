@@ -162,8 +162,19 @@
 ;        receipt aggregates the required set. Multi-row single-command materialization is guarded as a
 ;        fkwu command-shape gap, not hidden. Evidence:
 ;        docs/system_audit/fkwu_form_cli_full_gguf_tensor_set_materialization_receipt_2026-06-26.json
-;        and the full composition receipt of the same date. Adjacent: promote byte-window materialization
-;        to complete tensor payload staging, dequant, accelerator buffers, logits, token IDs, and decode.
+;        and the full composition receipt of the same date.
+;        ✓ D₈ — fkwu form-cli real-GGUF semantic-token generation: the tokenizer side now has a native
+;        token decode witness. A content-addressed manifest names one tokenizer.ggml.tokens string entry
+;        inside the full GGUF, a small logits candidate set, and the expected selected token id. form-cli
+;        reads the token string row directly from the GGUF with read_file_slice, checks the string length
+;        prefix and token SHA in Form, runs greedy argmax in Form, and emits decoded_token_text from the
+;        real tokenizer bytes. The receipt explicitly says full_model_logits=false,
+;        full_vocabulary_logits=false, accelerator_buffers=false: this closes "real tokenizer bytes →
+;        selected decoded token" without pretending the full model produced the logits. Evidence:
+;        docs/system_audit/fkwu_form_cli_gguf_semantic_token_generation_receipt_2026-06-26.json and the
+;        full composition receipt of the same date. Adjacent: promote byte-window materialization to
+;        complete tensor payload staging, dequant, accelerator buffers, full-vocabulary logits, and
+;        answer-bound token IDs.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL

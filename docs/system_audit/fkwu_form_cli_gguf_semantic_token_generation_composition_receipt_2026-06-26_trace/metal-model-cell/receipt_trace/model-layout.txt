@@ -1,0 +1,6 @@
+little-endian model bytes
+u32 rows = 2
+u32 cols = 3
+f32 weights row-major = [1.0, 2.0, -1.0, 0.5, -3.0, 4.0]
+f32 input = [2.0, -1.0, 0.25]
+expected right-fold y = [-0.25, 5.0]

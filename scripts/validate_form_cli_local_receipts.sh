@@ -48,8 +48,8 @@ model_probe="local receipt grounded inference probe $(date -u +%Y%m%dT%H%M%SZ)"
 
 synth_out="$("$ROOT/bin/form-cli" synthesis-status 2>&1)"
 if grep -q '^synthesis-lane:grounded-fkwu-model-answer' <<<"$synth_out" &&
-   grep -q '^available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,gguf-tensor-set-cell,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
-   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,gguf-tensor-set-cell,gguf-semantic-token-generation,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding' <<<"$synth_out" &&
+   grep -q '^observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding' <<<"$synth_out" &&
    grep -q '^missing:full-real-llama-gguf-token-generation' <<<"$synth_out" &&
    grep -q '^prose-generation:decoded-grounded-answer' <<<"$synth_out"; then
     ok "synthesis lane receipt binds grounded decoded answer and names full real generation"
@@ -77,6 +77,8 @@ run_receipt "fkwu form-cli full GGUF tensor-slice math receipt" \
     "$ROOT/scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh" "$ROOT/.cache/body-test-receipts/current-full-gguf-tensor-slice-math-receipt.json"
 run_receipt "fkwu form-cli full GGUF tensor-set materialization receipt" \
     "$ROOT/scripts/fkwu_form_cli_full_gguf_tensor_set_materialization_receipt.sh" "$ROOT/.cache/body-test-receipts/current-full-gguf-tensor-set-materialization-receipt.json"
+run_receipt "fkwu form-cli real GGUF semantic-token generation receipt" \
+    "$ROOT/scripts/fkwu_form_cli_gguf_semantic_token_generation_receipt.sh" "$ROOT/.cache/body-test-receipts/current-gguf-semantic-token-generation-receipt.json"
 
 if [[ "$(uname -s)" == "Darwin" ]] && command -v swiftc >/dev/null 2>&1; then
     run_receipt "Metal matvec witness" "$ROOT/scripts/metal_matvec_audit.sh" 16 16 1
@@ -89,7 +91,7 @@ fi
 
 echo "── verdict ──"
 if [[ "$FAIL" -eq 0 ]]; then
-    echo "  PASS: local grounded ask and grounded decoded-answer receipts are honest."
+    echo "  PASS: local grounded ask, semantic-token generation, and grounded decoded-answer receipts are honest."
     echo "  The full real Llama GGUF token generator is still not claimed."
 else
     echo "  FAIL: one or more local receipts did not hold."

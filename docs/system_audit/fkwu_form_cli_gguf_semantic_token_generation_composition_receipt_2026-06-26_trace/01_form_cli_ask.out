@@ -1,0 +1,4 @@
+trust  path:native  grounded:yes  freq:no  suffic:yes  -> native-partial
+grounded:form/form-stdlib/adler32.fk
+local-lane:fkwu-rag-grounded
+synthesis-lane:fkwu-rag-grounded
