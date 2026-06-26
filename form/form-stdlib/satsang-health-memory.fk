@@ -1,0 +1,71 @@
+; satsang-health-memory.fk — explicit local health memory for wearable samples.
+;
+; Health samples enter memory only by explicit import from a user-consented
+; source carrier. The memory can feed later context, reasoning, and analysis;
+; it is not a diagnostic authority and it does not hide background capture.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn shm-import-boundary? (boundary)
+        (if (str_eq boundary "explicit-import") 1 0))
+
+    (defn shm-source-carrier? (carrier)
+        (if (str_eq carrier "ios-healthkit") 1
+            (if (str_eq carrier "oura-apple-health") 1
+                (if (str_eq carrier "oz-o2-healthkit") 1
+                    (if (str_eq carrier "manual-health-export") 1 0)))))
+
+    (defn shm-metric-kind? (kind)
+        (if (str_eq kind "heart-rate") 1
+            (if (str_eq kind "resting-heart-rate") 1
+                (if (str_eq kind "hrv-sdnn") 1
+                    (if (str_eq kind "spo2") 1
+                        (if (str_eq kind "respiratory-rate") 1
+                            (if (str_eq kind "sleep-analysis") 1
+                                (if (str_eq kind "steps") 1
+                                    (if (str_eq kind "active-energy") 1
+                                        (if (str_eq kind "workout") 1
+                                            (if (str_eq kind "body-temperature") 1 0)))))))))))
+
+    (defn shm-source-filter? (source)
+        (if (str_eq source "oura") 1
+            (if (str_eq source "oz") 1
+                (if (str_eq source "o2") 1
+                    (if (str_eq source "wellue") 1
+                        (if (str_eq source "vihealth") 1
+                            (if (str_eq source "oxygen") 1
+                                (if (str_eq source "oximeter") 1
+                                    (if (str_eq source "all") 1 0)))))))))
+
+    (defn shm-analysis-boundary? (boundary)
+        (if (str_eq boundary "reference-memory-reasoning-analysis-not-diagnosis") 1 0))
+
+    (defn shm-trust-ok? (import-boundary source-carrier metric hidden feeds analysis-boundary)
+        (if (and (eq (shm-import-boundary? import-boundary) 1)
+                 (and (eq (shm-source-carrier? source-carrier) 1)
+                      (and (eq (shm-metric-kind? metric) 1)
+                           (and (eq hidden 0)
+                                (and (eq feeds 1)
+                                     (eq (shm-analysis-boundary? analysis-boundary) 1)))))) 1 0))
+
+    (defn shm-receipt (import-boundary source-carrier metric hidden feeds analysis-boundary)
+        (list "satsang-health-memory"
+              import-boundary
+              source-carrier
+              metric
+              hidden
+              feeds
+              analysis-boundary
+              (shm-trust-ok? import-boundary source-carrier metric hidden feeds analysis-boundary)))
+
+    (defn shm-rec-kind      (r) (nth r 0))
+    (defn shm-rec-boundary  (r) (nth r 1))
+    (defn shm-rec-carrier   (r) (nth r 2))
+    (defn shm-rec-metric    (r) (nth r 3))
+    (defn shm-rec-hidden    (r) (nth r 4))
+    (defn shm-rec-feeds     (r) (nth r 5))
+    (defn shm-rec-analysis  (r) (nth r 6))
+    (defn shm-rec-ok?       (r) (nth r 7))
+
+    0)

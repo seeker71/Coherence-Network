@@ -12,6 +12,7 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
     public var utterances: [TranscriptUtterance]
     public var routeReceipt: FormNativeRouteReceipt?
     public var memoryContext: TrustedRoomMemoryContext?
+    public var healthContext: TrustedHealthMemoryContext?
 
     public init(
         id: String = UUID().uuidString,
@@ -23,7 +24,8 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         guidanceQuestion: String,
         utterances: [TranscriptUtterance],
         routeReceipt: FormNativeRouteReceipt? = nil,
-        memoryContext: TrustedRoomMemoryContext? = nil
+        memoryContext: TrustedRoomMemoryContext? = nil,
+        healthContext: TrustedHealthMemoryContext? = nil
     ) {
         self.kind = "satsang-guidance-request"
         self.id = id
@@ -36,6 +38,7 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         self.utterances = utterances
         self.routeReceipt = routeReceipt
         self.memoryContext = memoryContext
+        self.healthContext = healthContext
     }
 
     public var editedCount: Int {
@@ -58,6 +61,9 @@ public struct GuidanceRequest: Codable, Equatable, Sendable {
         }
         if let memoryContext {
             rows.append(TrustedRoomMemoryStore.formEnvelope(memoryContext, indent: "  "))
+        }
+        if let healthContext {
+            rows.append(TrustedHealthMemoryStore.formEnvelope(healthContext, indent: "  "))
         }
         rows.append("  (utterances")
         for utterance in utterances {

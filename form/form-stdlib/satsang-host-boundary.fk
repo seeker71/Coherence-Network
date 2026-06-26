@@ -1,7 +1,8 @@
 ; satsang-host-boundary.fk — app logic in Form, host code as a minimal ABI carrier.
 ;
 ; The shared satsang guidance body belongs in Form. Platform apps may carry the
-; smallest OS adapter needed for microphone, speech, file, and process resources.
+; smallest OS adapter needed for microphone, speech, file, process, and health
+; sample resources.
 ; macOS and iPhone are SwiftUI carriers now; Windows and Android are resolved
 ; host-carrier doors pending real GUI packaging. Python, Go, Rust, and TypeScript
 ; are not app-boundary runtimes.
@@ -25,7 +26,8 @@
                 (if (str_eq kind "file-read") 1
                     (if (str_eq kind "file-append") 1
                         (if (str_eq kind "file-write-atomic") 1
-                            (if (str_eq kind "process-stdin-stdout") 1 0)))))))
+                            (if (str_eq kind "process-stdin-stdout") 1
+                                (if (str_eq kind "health-samples") 1 0))))))))
 
     (defn shb-platform-target? (platform)
         (if (str_eq platform "macos") 1
@@ -69,28 +71,32 @@
                     (if (str_eq kind "file-read") "macos-foundation-filemanager"
                         (if (str_eq kind "file-append") "macos-foundation-filehandle"
                             (if (str_eq kind "file-write-atomic") "macos-foundation-data-atomic"
-                                (if (str_eq kind "process-stdin-stdout") "macos-foundation-process" ""))))))
+                                (if (str_eq kind "process-stdin-stdout") "macos-foundation-process"
+                                    (if (str_eq kind "health-samples") "macos-healthkit-unavailable" "")))))))
             (if (str_eq platform "windows")
                 (if (str_eq kind "audio-input") "windows-wasapi-capture"
                     (if (str_eq kind "speech-transcript") "windows-speechrecognizer"
                         (if (str_eq kind "file-read") "windows-known-folder-filesystem"
                             (if (str_eq kind "file-append") "windows-known-folder-filesystem"
                                 (if (str_eq kind "file-write-atomic") "windows-replacefile-atomic"
-                                    (if (str_eq kind "process-stdin-stdout") "windows-createprocess-stdin-stdout" ""))))))
+                                    (if (str_eq kind "process-stdin-stdout") "windows-createprocess-stdin-stdout"
+                                        (if (str_eq kind "health-samples") "windows-health-export-import" "")))))))
                 (if (str_eq platform "android")
                     (if (str_eq kind "audio-input") "android-audiorecord"
                         (if (str_eq kind "speech-transcript") "android-speechrecognizer"
                             (if (str_eq kind "file-read") "android-app-private-files"
                                 (if (str_eq kind "file-append") "android-app-private-files"
                                     (if (str_eq kind "file-write-atomic") "android-atomic-file"
-                                        (if (str_eq kind "process-stdin-stdout") "android-packaged-form-cli-process" ""))))))
+                                        (if (str_eq kind "process-stdin-stdout") "android-packaged-form-cli-process"
+                                            (if (str_eq kind "health-samples") "android-health-connect" "")))))))
                     (if (eq (shb-ios-platform? platform) 1)
                         (if (str_eq kind "audio-input") "ios-avfoundation"
                             (if (str_eq kind "speech-transcript") "ios-speech"
                                 (if (str_eq kind "file-read") "ios-app-sandbox-files"
                                     (if (str_eq kind "file-append") "ios-app-sandbox-files"
                                         (if (str_eq kind "file-write-atomic") "ios-foundation-data-atomic"
-                                            (if (str_eq kind "process-stdin-stdout") "ios-embedded-form-cli-adapter" ""))))))
+                                            (if (str_eq kind "process-stdin-stdout") "ios-embedded-form-cli-adapter"
+                                                (if (str_eq kind "health-samples") "ios-healthkit" "")))))))
                         "")))))
 
     (defn shb-carrier-resolved? (platform kind)
@@ -106,7 +112,8 @@
                       (and (eq (shb-carrier-resolved? platform "file-read") 1)
                            (and (eq (shb-carrier-resolved? platform "file-append") 1)
                                 (and (eq (shb-carrier-resolved? platform "file-write-atomic") 1)
-                                     (eq (shb-carrier-resolved? platform "process-stdin-stdout") 1)))))) 1 0))
+                                     (and (eq (shb-carrier-resolved? platform "process-stdin-stdout") 1)
+                                          (eq (shb-carrier-resolved? platform "health-samples") 1))))))) 1 0))
 
     (defn shb-boundary-ok? (runtime resource platform)
         (if (and (eq (shb-app-runtime-allowed? runtime) 1)

@@ -41,6 +41,11 @@ final class AppModel: ObservableObject {
     @Published var selectedID: TranscriptUtterance.ID?
     @Published var routeSummary: String = "Form route: waiting for request"
     @Published var memoryContextSummary: String = "Trusted memory: waiting for Send"
+    @Published var healthContextSummary: String = "Health memory: waiting for import"
+    @Published var healthSourceHints: String = WearableHealthImporter.defaultSourceHints.joined(separator: ", ")
+    @Published var healthLookbackDays: Int = 7
+    @Published var healthSamples: [TrustedHealthSample] = []
+    @Published var isImportingHealth: Bool = false
     @Published var status: String = "Ready"
 
     private let defaultTranscriptPath: String
@@ -48,6 +53,7 @@ final class AppModel: ObservableObject {
     private let repositoryRoot: URL?
     private let hostResources: FoundationHostResourceInterface
     private let roomMemoryStore: TrustedRoomMemoryStore
+    private let healthMemoryStore: TrustedHealthMemoryStore
     private var timer: Timer?
     private let roomTranscriber = RoomTranscriber()
 
@@ -59,6 +65,10 @@ final class AppModel: ObservableObject {
         defaultQueuePath = home.appendingPathComponent(".coherence-network/satsang-guidance/events.jsonl").path
         roomMemoryStore = TrustedRoomMemoryStore(
             rootURL: home.appendingPathComponent(".coherence-network/agent-room-memory"),
+            host: hostResources
+        )
+        healthMemoryStore = TrustedHealthMemoryStore(
+            rootURL: home.appendingPathComponent(".coherence-network/health-memory"),
             host: hostResources
         )
         repositoryRoot = Self.resolveRepositoryRoot(home: home, host: hostResources)
@@ -78,10 +88,12 @@ final class AppModel: ObservableObject {
             self?.micLevel = level
         }
         reload()
+        reloadHealthContext(silent: true)
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.followTranscript else { return }
                 self.reload(silent: true)
+                self.reloadHealthContext(silent: true)
             }
         }
     }
@@ -163,8 +175,10 @@ final class AppModel: ObservableObject {
         commitLiveDraftIfNeeded()
         utterances = roomMemoryStore.utterancesWithSpeakerProfiles(utterances)
         let memoryContext = loadMemoryContext()
+        let healthContext = loadHealthContext()
         memoryContextSummary = memoryContext.summaryLine
-        let routeReceipt = makeRouteReceipt(memoryContext: memoryContext)
+        healthContextSummary = healthContext.summaryLine
+        let routeReceipt = makeRouteReceipt(memoryContext: memoryContext, healthContext: healthContext)
         routeSummary = routeReceipt.summary
         let request = GuidanceRequest(
             sessionTitle: sessionTitle,
@@ -174,7 +188,8 @@ final class AppModel: ObservableObject {
             guidanceQuestion: guidanceQuestion,
             utterances: utterances,
             routeReceipt: routeReceipt,
-            memoryContext: memoryContext
+            memoryContext: memoryContext,
+            healthContext: healthContext
         )
         do {
             let sender = GuidanceRequestSender(
@@ -184,7 +199,7 @@ final class AppModel: ObservableObject {
             let result = try sender.send(request)
             let memoryResult = try roomMemoryStore.record(request)
             memoryContextSummary = "\(memoryContext.summaryLine); \(memoryResult.summary)"
-            status = "Sent \(request.utterances.count) lines to \(targetPresence). \(routeReceipt.summary). \(memoryResult.summary). Form envelope: \(result.latestFormURL.path)"
+            status = "Sent \(request.utterances.count) lines to \(targetPresence). \(routeReceipt.summary). \(memoryResult.summary). \(healthContext.summaryLine). Form envelope: \(result.latestFormURL.path)"
         } catch {
             status = "Send failed: \(error.localizedDescription)"
         }
@@ -231,6 +246,34 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func importHealthSamples() {
+        guard !isImportingHealth else { return }
+        isImportingHealth = true
+        status = "Requesting Health access"
+        let daysBack = healthLookbackDays
+        let hints = healthSourceHintList
+        Task {
+            do {
+                let importer = WearableHealthImporter()
+                let samples = try await importer.importRecentSamples(daysBack: daysBack, sourceNameHints: hints)
+                let snapshot = TrustedHealthMemorySnapshot(sourceHints: hints, samples: samples)
+                let result = try healthMemoryStore.record(snapshot)
+                let context = try healthMemoryStore.context()
+                await MainActor.run {
+                    self.healthSamples = samples
+                    self.healthContextSummary = "\(context.summaryLine); \(result.summary)"
+                    self.status = "Imported \(samples.count) health samples. \(result.summary)."
+                    self.isImportingHealth = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.status = "Health import failed: \(error.localizedDescription)"
+                    self.isImportingHealth = false
+                }
+            }
+        }
+    }
+
     private func expanded(_ path: String) -> String {
         if path == "~" { return hostResources.homeDirectory.path }
         if path.hasPrefix("~/") {
@@ -241,12 +284,15 @@ final class AppModel: ObservableObject {
         return path
     }
 
-    private func makeRouteReceipt(memoryContext: TrustedRoomMemoryContext) -> FormNativeRouteReceipt {
+    private func makeRouteReceipt(
+        memoryContext: TrustedRoomMemoryContext,
+        healthContext: TrustedHealthMemoryContext
+    ) -> FormNativeRouteReceipt {
         let bodySources = formBodySources()
         let body = FormNativeLookupSignal.bodyProtocol(sourceIDs: bodySources, sufficient: false)
         let formCLIURL = repositoryRoot.flatMap { resolveFormCLI(repositoryRoot: $0) }
         let hostBoundary = makeHostBoundary(formCLIURL: formCLIURL)
-        let rag = formNativeAskSignal(formCLIURL: formCLIURL, memoryContext: memoryContext)
+        let rag = formNativeAskSignal(formCLIURL: formCLIURL, memoryContext: memoryContext, healthContext: healthContext)
         return FormNativeRouteReceipt(hostBoundary: hostBoundary, bodyLookup: body, ragLookup: rag)
     }
 
@@ -264,15 +310,39 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func loadHealthContext() -> TrustedHealthMemoryContext {
+        do {
+            return try healthMemoryStore.context()
+        } catch {
+            return TrustedHealthMemoryContext(
+                priorImportCount: 0,
+                recentSampleCount: 0,
+                sourceSummary: "health memory read failed",
+                metricSummary: "health memory read failed",
+                recentObservationSummary: error.localizedDescription
+            )
+        }
+    }
+
+    func reloadHealthContext(silent: Bool = false) {
+        let context = loadHealthContext()
+        healthContextSummary = context.summaryLine
+        if !silent, context.recentSampleCount > 0 {
+            status = context.summaryLine
+        }
+    }
+
     private func formBodySources() -> [String] {
         guard let repositoryRoot else { return [] }
         let candidates = [
             "form/form-stdlib/satsang-guidance-event.fk",
             "form/form-stdlib/form-cli-sufficiency.fk",
             "form/form-stdlib/satsang-room-memory.fk",
+            "form/form-stdlib/satsang-health-memory.fk",
             "form/form-stdlib/rag-ask.fk",
             "docs/coherence-substrate/satsang-guidance-event.form",
             "docs/coherence-substrate/satsang-room-memory.form",
+            "docs/coherence-substrate/satsang-health-memory.form",
             "docs/coherence-substrate/form-first-reasoning.form"
         ]
         return candidates.filter {
@@ -286,10 +356,14 @@ final class AppModel: ObservableObject {
             queueURL: URL(fileURLWithPath: expanded(queuePath)),
             formCLIURL: formCLIURL
         )
-        return FormHostBoundaryReceipt(resourceDoors: fileProcessDoors + RoomTranscriber.detectResourceDoors())
+        return FormHostBoundaryReceipt(resourceDoors: fileProcessDoors + RoomTranscriber.detectResourceDoors() + WearableHealthImporter.detectResourceDoors())
     }
 
-    private func formNativeAskSignal(formCLIURL: URL?, memoryContext: TrustedRoomMemoryContext) -> FormNativeLookupSignal {
+    private func formNativeAskSignal(
+        formCLIURL: URL?,
+        memoryContext: TrustedRoomMemoryContext,
+        healthContext: TrustedHealthMemoryContext
+    ) -> FormNativeLookupSignal {
         guard let repositoryRoot else {
             return .unavailable("form-native-rag-local-llm", reason: "repository root not found")
         }
@@ -298,7 +372,10 @@ final class AppModel: ObservableObject {
         }
         let memoryText = [
             memoryContext.speakerSummary,
-            memoryContext.recentExchangeSummary
+            memoryContext.recentExchangeSummary,
+            healthContext.sourceSummary,
+            healthContext.metricSummary,
+            healthContext.recentObservationSummary
         ].joined(separator: "\n")
         let query = [guidanceQuestion, memoryText, transcriptText]
             .joined(separator: "\n")
@@ -337,6 +414,13 @@ final class AppModel: ObservableObject {
 
     private func isLikelyFilePath(_ path: String) -> Bool {
         path.hasPrefix("/") || path.hasPrefix("~/") || path.hasPrefix("./") || path.hasPrefix("../")
+    }
+
+    private var healthSourceHintList: [String] {
+        healthSourceHints
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     private func upsertLiveDraft(_ text: String) {
@@ -406,6 +490,9 @@ public struct SatsangGuidanceRootView: View {
                 memoryTab
                     .tabItem { Label("Memory", systemImage: "archivebox") }
                     .tag(SatsangNativeAppMode.memory)
+                healthTab
+                    .tabItem { Label("Health", systemImage: "heart.text.square") }
+                    .tag(SatsangNativeAppMode.health)
                 learningTab
                     .tabItem { Label("Learning", systemImage: "arrow.triangle.2.circlepath") }
                     .tag(SatsangNativeAppMode.learning)
@@ -552,8 +639,43 @@ public struct SatsangGuidanceRootView: View {
             VStack(alignment: .leading, spacing: 14) {
                 metricRow("Sessions", model.memoryContextSummary)
                 metricRow("Speakers", "\(model.utterances.compactMap(\.speakerProfileID).filter { !$0.isEmpty }.count)")
+                metricRow("Health", model.healthContextSummary)
                 routeSummary
                 transcriptPreview
+            }
+            .padding(16)
+        }
+    }
+
+    private var healthTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+                    GridRow {
+                        Text("Sources")
+                        TextField("Oura, Oz, O2, Wellue", text: $model.healthSourceHints)
+                    }
+                    GridRow {
+                        Text("Days")
+                        Stepper("\(model.healthLookbackDays)", value: $model.healthLookbackDays, in: 1...30)
+                    }
+                }
+                .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Button { model.importHealthSamples() } label: {
+                        Label(model.isImportingHealth ? "Importing" : "Import", systemImage: "heart.text.square")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.isImportingHealth)
+                    Spacer()
+                    Button { model.reloadHealthContext() } label: {
+                        Label("Reload", systemImage: "arrow.clockwise")
+                    }
+                }
+
+                metricRow("Health memory", model.healthContextSummary)
+                healthSampleList
             }
             .padding(16)
         }
@@ -564,6 +686,7 @@ public struct SatsangGuidanceRootView: View {
             VStack(alignment: .leading, spacing: 14) {
                 metricRow("Route", model.routeSummary)
                 metricRow("Memory", model.memoryContextSummary)
+                metricRow("Health", model.healthContextSummary)
                 metricRow("Edited turns", "\(model.utterances.filter(\.wasEdited).count)")
                 metricRow("Transcript turns", "\(model.utterances.count)")
             }
@@ -756,6 +879,40 @@ public struct SatsangGuidanceRootView: View {
             }
             .frame(minHeight: 180)
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(.quaternary))
+        }
+    }
+
+    private var healthSampleList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Latest imported samples")
+                .font(.headline)
+            if model.healthSamples.isEmpty {
+                Text("No samples imported.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(model.healthSamples.suffix(24)) { sample in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(sample.kind)
+                                .font(.caption.weight(.semibold))
+                            Spacer()
+                            Text(sample.endDate)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Text("\(sample.value, specifier: "%.2f") \(sample.unit) · \(sample.sourceName)")
+                            .font(.callout)
+                        if let stage = sample.metadata["stage"] {
+                            Text(stage)
+                                .font(.caption2.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+                }
+            }
         }
     }
 
