@@ -303,5 +303,7 @@ def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     assert "native_invitation_declined" in verify_script
     assert "implicit-native-invitation" in verify_script
     assert "public Traefik no-header default entered native default route" in verify_script
+    assert '"potential_value":1' in verify_script
+    assert '"estimated_cost":1' in verify_script
     assert "fallback_router" in verify_script
     assert "fanout-python" in verify_script
