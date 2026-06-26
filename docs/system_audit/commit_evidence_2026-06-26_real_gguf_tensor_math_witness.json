@@ -1,0 +1,225 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/real-gguf-tensor-math-witness-20260626",
+  "commit_scope": "Add the first real GGUF tensor-math closure stone: a Form cell that resolves a named GGUF tensor to aligned data bytes, dequants real llama3.2:3b Q6_K bytes, feeds native dot/matvec math, and records the witness in form-cli status and the full composition receipt while keeping full token generation unclaimed.",
+  "files_owned": [
+    "bin/form-cli",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-26_real_gguf_tensor_math_witness.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/real-gguf-tensor-math.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/real-gguf-tensor-math-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/form_cli_preflight.sh",
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide -> pass before edits in worktree codex/real-gguf-tensor-math-witness-20260626",
+      "make wellness -> pass before edits with no blocker for this task",
+      "bin/form-cli ask \"Start closure campaign stone 1: implement real GGUF tensor bytes entering fkwu/Form native math, witnessed by receipt. What exact existing files and next patch should be used?\" -> [ask: local fkwu RAG index has no grounded hit]",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk form-stdlib/tests/real-gguf-tensor-math-band.fk -> 1023; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk -> 16383; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent",
+      "scripts/regen_form_cli_bootstrap.sh -> regenerated form-cli table/emitted C stamp=3948f5611bbf2406",
+      "scripts/regen_standard_lane_binaries.sh -> regenerated form-cli-darwin-arm64 stamp=3948f5611bbf2406",
+      "cd form && FORM_STANDARD_LANE=1 ./build-form-cli.sh .cache/form-cli-standard-test -> standard lane copied bootstrap/darwin-arm64 (no clang)",
+      "printf 'synthesis-status\\ndecoded-answer\\nquit\\n' | form/.cache/form-cli-standard-test -> synthesis-status names real-gguf-tensor-math-four-way, observed named-real-gguf-tensor-math, missing full-real-llama-gguf-token-generation; decoded-answer observed",
+      "scripts/form_cli_ask_staged_model_call.sh \"ungrounded model call composition probe after standard regen\" .cache/body-test-receipts/current-ask-staged-model-call-probe.json -> verdict=pass; model-call-observed=true; prose-generation=decoded-grounded-answer",
+      "scripts/validate_form_cli_full_real_llama_generation_claim.sh .cache/body-test-receipts/current-full-real-llama-generation-claim.json -> verdict=blocked_full_real_llama_generation_pending; claim-allowed=false; grounded-decoded-answer=true; full-real-llama-gguf-generation=pending",
+      "scripts/validate_form_cli_model_lane_gap_receipts.sh .cache/body-test-receipts/current-model-lane-gap-receipt.json -> PASS with observed named-real-gguf-tensor-math and full-real-llama-gguf-generation pending",
+      "scripts/validate_form_cli_local_receipts.sh substrate -> PASS: local grounded ask and grounded decoded-answer receipts are honest; named real GGUF tensor math band included",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/body-test-receipts/current-real-gguf-tensor-math-composition.json -> verdict=pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed; full_model_inference_composed=false; ask_staged_decoded_answer_bound=true"
+    ],
+    "observed_outputs": [
+      "real-gguf-tensor-math-band proves byte buffer + tensor name -> tensor-info record offset 41 -> type Q6_K/dim 256 -> aligned data offset 96 -> dequant samples/load length/last value -> dot n=1/dot n=4/matvec parity -> absent tensor negative check, verdict 1023, four-way.",
+      "form-cli status now reports available: real-gguf-tensor-math-four-way, observed: named-real-gguf-tensor-math, and missing: full-real-llama-gguf-token-generation.",
+      "Standard-lane bootstrap copy emits the same status from the refreshed c-bootstrapped form-cli binary with no clang path in that receipt step.",
+      "Full composition receipt has composition_gates.named_real_gguf_tensor_math_four_way=true, optional_real_gguf_weight_map_observed=true, fkwu_form_cli_metal_model_cell=true, decoded_prose_answer_binding=true, full_model_inference_composed=false, and synthesis_boundary.missing=[full-real-llama-gguf-token-generation].",
+      "Full composition trace has 18 steps, 15 passed, 3 skipped for absent Android/current Windows hardware, 0 failed, hard_failed_count=0, trace_sha256=683352f22e845185f95284a35d307171416bc653b12726505ed5cfd9fa373365.",
+      "The receipt harness still uses shell/Python as an outer witness carrier; the child runtime rows record no HTTP/Ollama and sanitized no-toolchain runtime paths for the native proof binaries."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks pending until this branch is pushed.",
+      "Windows Host Floor should observe the updated full composition receipt script after the PR opens."
+    ],
+    "notes": "Local Mac proof is complete. Android hardware was not attached locally. Windows is represented by the existing workflow row and remains skipped on this Mac host until CI runs."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-cli-proof-scripts",
+    "notes": "This is Form/runtime proof tissue and CLI receipt behavior; public web/API deploy verification follows merge only if deploy path filters trigger."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The named real GGUF tensor math gap is closed and witnessed, but full real Llama GGUF token generation is still not implemented as one native path through prompt text, tokenizer arrays, all real tensor bytes, accelerator buffers, autoregressive token IDs, logits, and decoded text."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell",
+    "full-real-llama-gguf-generation-claim-gate"
+  ],
+  "task_ids": [
+    "task-2026-06-26-real-gguf-tensor-math-witness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "witness-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "openai-gpt-5-codex"
+  },
+  "evidence_refs": [
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/steps.jsonl",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/07_real_gguf_tensor_math_four_way.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/03_synthesis_status.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/14_metal_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/12_full_real_llama_generation_claim.out",
+    "Form-first reasoning was attempted through bin/form-cli ask; the body returned no grounded/sufficient hit for the exact closure question before rented orchestration began."
+  ],
+  "change_files": [
+    "bin/form-cli",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-26_real_gguf_tensor_math_witness.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/01_form_cli_ask.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/02_ask_staged_model_call.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/03_synthesis_status.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/04_model_status.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/05_decoded_answer.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/06_gguf_find_four_way.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/07_real_gguf_tensor_math_four_way.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/08_tokenizer_compose_four_way.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/09_llama3_pretokenizer_four_way.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/10_autoregressive_loop_four_way.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/11_real_gguf_weight_map.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/12_full_real_llama_generation_claim.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/13_gguf_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/14_metal_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/15_metal_body_trace.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/16_android_fkwu_fourth.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/17_android_vulkan_matvec.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/18_windows_form_cli_native.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/ask_full_real_claim.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/ask_full_real_claim.rc",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/model_status.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/model_status.rc",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/real-gguf-weight-map.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/real_gguf_weight_map.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/full-real-llama-generation-claim_trace/real_gguf_weight_map.rc",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-body-trace.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/emit-matvec.err",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/emit-matvec.fk",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/emit-matvec.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/fkwu_metal_matvec_carrier.m",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/linked-libraries.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/matvec.metal",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/model-cell-manifest.txt",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/model-layout.txt",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/model.hex",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/real-gguf-weight-map.json",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/steps.jsonl",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/01_prompt_gate.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/02_wellness.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/03_form_first.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/04_q4k_dequant.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/05_tokenize.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/06_llama3_pretokenize.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/07_llama3_rope.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/08_gqa_causal_block.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/09_metal_emit.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/10_metal_weight_bytes.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/11_metal_decode.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/12_metal_stack.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/13_metal_runtime_boundary.out",
+    "docs/system_audit/fkwu_form_cli_real_gguf_tensor_math_composition_receipt_2026-06-26_trace/trace/steps.jsonl",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/real-gguf-tensor-math.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/form-stdlib/tests/real-gguf-tensor-math-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/form_cli_preflight.sh",
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native Form proof surface now composes named GGUF tensor lookup with real Q6_K weight dequant and dot/matvec math, and form-cli/full-composition receipts advertise and enforce that witness while still blocking any full real Llama token-generation claim.",
+    "public_endpoints": [
+      "local native binary: form/form-cli synthesis-status",
+      "local CLI: bin/form-cli synthesis-status",
+      "local receipt: scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+      "local proof band: form/form-stdlib/tests/real-gguf-tensor-math-band.fk",
+      "CI workflow: .github/workflows/windows-host.yml"
+    ],
+    "test_flows": [
+      "four-way real-gguf-tensor-math-band validates named tensor bytes into math at verdict 1023",
+      "four-way form-cli-band validates the updated synthesis-status names at verdict 16383",
+      "standard-lane bootstrap smoke proves the c-bootstrapped form-cli carries the updated status without a compiler in that lane",
+      "local receipt bundle validates grounded ask, model status, named tensor math band, GGUF model-cell, and Metal model-cell witnesses",
+      "full composition receipt records named_real_gguf_tensor_math_four_way=true, decoded_prose_answer_binding=true, full_model_inference_composed=false, and missing=[full-real-llama-gguf-token-generation]"
+    ]
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "Form/fkwu bands, standard-lane form-cli status, GGUF map, Metal model-cell, local receipts, and committed trace artifacts produced the observed proof.",
+    "rented_oracle_share": "The patch design, integration sequencing, and evidence synthesis were produced by the rented frontier model after form-cli ask returned no grounded/sufficient hit for the closure question.",
+    "trust_matrix": {
+      "path": "native-first miss -> rented implementation orchestration -> native Form and receipt proof",
+      "grounded": "new runtime claims are grounded in committed receipt files and four-way Form output; the initial form-cli ask was ungrounded",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for claiming named real GGUF tensor bytes enter native math; insufficient for claiming full model inference",
+      "observed": false
+    }
+  }
+}
