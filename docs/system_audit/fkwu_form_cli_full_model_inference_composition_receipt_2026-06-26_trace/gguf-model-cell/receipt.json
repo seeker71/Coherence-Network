@@ -1,8 +1,8 @@
 {
-  "trace_id": "fkwu-form-cli-gguf-model-cell-20260626T080214Z",
+  "trace_id": "fkwu-form-cli-gguf-model-cell-20260626T145826Z",
   "receipt_kind": "fkwu-form-cli-gguf-model-cell-receipt",
-  "thread_branch": "codex/full-model-inference-composition-receipt-20260626",
-  "git_commit": "e6c16adf46ac0a7fb5425c351a42a6910ef8faa5",
+  "thread_branch": "codex/windows-composition-receipt-tighten-20260626",
+  "git_commit": "1ab9fd080258f817fc30a1f0f5af3ee067b1f35e",
   "runtime": {
     "owner": "fkwu-form-cli",
     "verb": "gguf-model-cell",
@@ -11,8 +11,8 @@
     "http_or_ollama": "absent"
   },
   "artifacts": {
-    "compiled_artifact": ".cache/body-test-receipts/fkwu-form-cli-gguf-model-cell-20260626T080214Z/artifact/form-cli-gguf-model-cell",
-    "gguf_artifact": ".cache/body-test-receipts/fkwu-form-cli-gguf-model-cell-20260626T080214Z/artifact/mini.gguf",
+    "compiled_artifact": ".cache/body-test-receipts/fkwu-form-cli-gguf-model-cell-20260626T145826Z/artifact/form-cli-gguf-model-cell",
+    "gguf_artifact": ".cache/body-test-receipts/fkwu-form-cli-gguf-model-cell-20260626T145826Z/artifact/mini.gguf",
     "manifest_trace": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/gguf-cell-manifest.txt",
     "runtime_out": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/runtime.out",
     "build_out": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/build.out",
@@ -46,5 +46,5 @@
       "Android Vulkan or Windows DirectML/D3D12 execution"
     ]
   },
-  "trace_sha256": "e9ab14cfbd6717023d2e4652405ba483a759fb0b74aef028ca99b6fb400c8e56"
+  "trace_sha256": "0b42ceb5058e4f89035fd3f5e2b1abc20b83094d3f303a395de63fad83575c64"
 }

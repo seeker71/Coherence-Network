@@ -1,0 +1,159 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/windows-composition-receipt-tighten-20260626",
+  "commit_scope": "Tighten the full model inference composition receipt so per-device rows only claim what the observing host actually proved, and make Windows CI validate the known Windows gap explicitly.",
+  "files_owned": [
+    ".github/workflows/windows-host.yml",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/steps.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bin/form-cli ask \"Windows full model inference composition receipt gap: how should the receipt distinguish native form-cli observed, GGUF model-cell not observed, dependency claim not proven, and full inference not composed?\" -> native local RAG miss, staged model-call receipt observed, prose generation still pending",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide -> pass for branch codex/windows-composition-receipt-tighten-20260626 after recording sibling continuity blocker",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json -> verdict=pass_composition_receipt_full_inference_not_yet_composed and full_model_inference_composed=false",
+      "bash -n scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh scripts/fkwu_form_cli_gguf_model_cell_receipt.sh scripts/form_native_metal_body_trace_receipt.sh -> pass",
+      "jq -e local receipt assertions -> pass; hard_failed_count=0, macOS observed_now=true, Windows off-host row remains false",
+      "git diff --check -> pass",
+      "rg path-leak scan over durable receipt/trace -> no /Users, /private/var, or /var/folders paths found"
+    ],
+    "results": [
+      "Receipt observable_trace now separates failed_count, hard_failed_count, and nonhard_failed_count.",
+      "macOS row is conditioned by current_host and still observes fkwu form-cli, GGUF model-cell, Metal model-cell, and Metal body trace locally.",
+      "Windows row now carries gguf_model_cell=false, DirectML/D3D12 model-cell=false, and dependency_runtime_claim_proven=false unless the current host is Windows and proves otherwise.",
+      "Full model inference remains explicitly unclaimed."
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "commands": [
+      "PR #3678 validate-thread-process -> pass in 23s",
+      "PR #3678 GitGuardian Security Checks -> pass in 1s",
+      "PR #3678 Windows Host Floor -> pass in 11m43s at https://github.com/seeker71/Coherence-Network/actions/runs/28246377314/job/83686325484",
+      "Windows Host Floor ran scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/full-model-inference-composition-windows.json and jq-validated receipt kind, verdict, full_model_inference_composed=false, hard_failed_count=0, windows current_host/observed_now/fkwu_form_cli_native=true, windows gguf_model_cell=false, windows dependency_runtime_claim_proven=false, and windows full_model_inference=false"
+    ],
+    "notes": "The Windows workflow proved the tightened matrix shape on the runner without claiming full model inference."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "reason": "No public deploy surface changed; this is a local/CI receipt contract and workflow assertion."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "reason": "Local receipt validation and Windows CI both pass for the tightened device matrix; full local model inference remains a separate open bridge, not a claim of this receipt task."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "observable-body-test-receipts"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "gguf-model-cell",
+    "full-model-inference-composition-receipt",
+    "windows-composition-device-matrix"
+  ],
+  "task_ids": [
+    "task-2026-06-26-windows-composition-receipt-device-matrix"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints",
+        "receipt-standard"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "subagent-019f0313-12d8-77b2-99e0-c7b0b55f1bd6",
+      "contributor_type": "machine",
+      "roles": [
+        "attempted-delegation",
+        "usage-limit-blocked"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    "Merged baseline PR #3672: https://github.com/seeker71/Coherence-Network/pull/3672",
+    "Windows run 28226206577 showed the baseline receipt passed as a non-full-inference receipt, with Windows fkwu native observed but GGUF model-cell and runtime dependency proof not observed.",
+    "Form-first reasoning was attempted through bin/form-cli ask before rented analysis; local fkwu RAG returned no grounded/sufficient hit for this Windows receipt-shaping question.",
+    "Receipt JSON: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "Trace JSONL: docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/steps.jsonl",
+    "Honest non-claims: Android had no authorized adb device here, Windows GGUF model-cell remains a CI-observed gap until proven, and full ask-staged local generation is still blocked by tokenizer-carrier, full-GGUF-weight-map-to-Metal, and autoregressive-loop-binding."
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "docs/system_audit/commit_evidence_2026-06-26_windows_composition_receipt_device_matrix.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/02_synthesis_status.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/03_model_status.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/09_gguf_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/10_metal_model_cell.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/gguf-model-cell/receipt_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-body-trace.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt.json",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/build.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/metal-model-cell/receipt_trace/runtime.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/steps.jsonl",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/01_prompt_gate.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/02_wellness.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/03_form_first.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/10_metal_weight_bytes.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/11_metal_decode.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/12_metal_stack.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/13_metal_runtime_boundary.out",
+    "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace/trace/steps.jsonl",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The receipt remains a non-full-inference composition receipt, while its device matrix now avoids off-host implication and Windows CI validates the exact observed Windows floor/gap state.",
+    "test_flows": [
+      "local macOS receipt regeneration",
+      "Windows Host Floor jq assertions on .cache/full-model-inference-composition-windows.json"
+    ]
+  },
+  "body_trace": {
+    "receipt": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26.json",
+    "trace_dir": "docs/system_audit/fkwu_form_cli_full_model_inference_composition_receipt_2026-06-26_trace",
+    "trace_sha256": "a3e489b5fd9fc037888c6b6a900391726dea9ff7059ae61961a109686d0cd58a",
+    "steps": 14,
+    "passed": 11,
+    "skipped": 3,
+    "failed": 0,
+    "hard_failed": 0,
+    "nonhard_failed": 0,
+    "full_model_inference_composed": false
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "native/local proof commands generated the durable receipt, trace outputs, four-way Form bands, GGUF map witness, and Metal runtime observations",
+    "rented_oracle_share": "the orchestration, script design, schema tightening, and summary were produced by the rented frontier model after form-cli ask returned a native miss",
+    "trust_matrix": {
+      "path": "native-first miss -> rented implementation orchestration -> native receipt proof",
+      "grounded": "receipt and proof steps are grounded in output files/digests; initial form-cli ask was not grounded",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for receipt honesty, not sufficient for full model inference",
+      "observed": false
+    }
+  }
+}

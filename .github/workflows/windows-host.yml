@@ -161,8 +161,18 @@ jobs:
         run: |
           scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/full-model-inference-composition-windows.json
           cat .cache/full-model-inference-composition-windows.json
-          grep -q '"receipt_kind": "fkwu-form-cli-full-model-inference-composition-receipt"' .cache/full-model-inference-composition-windows.json
-          grep -q '"full_model_inference_composed": false' .cache/full-model-inference-composition-windows.json
+          jq -e '
+            .receipt_kind == "fkwu-form-cli-full-model-inference-composition-receipt"
+            and .verdict == "pass_composition_receipt_full_inference_not_yet_composed"
+            and .full_model_inference_composed == false
+            and .observable_trace.hard_failed_count == 0
+            and .devices.windows.current_host == true
+            and .devices.windows.observed_now == true
+            and .devices.windows.fkwu_form_cli_native == true
+            and .devices.windows.gguf_model_cell == false
+            and .devices.windows.dependency_runtime_claim_proven == false
+            and .devices.windows.full_model_inference == false
+          ' .cache/full-model-inference-composition-windows.json
 
       # ---- Publish (manual dispatch only) -------------------------------------
       # Reached only after every proof step above passed, so the uploaded binary
