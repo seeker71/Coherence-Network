@@ -1,0 +1,1 @@
+gguf-cell-v1 7fa5972f62d982daf9fa41b842e2fe0548eb1b3aba4a5e7378afd307fe655b63 <mini-gguf-artifact> 0

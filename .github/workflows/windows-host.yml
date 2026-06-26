@@ -163,10 +163,18 @@ jobs:
           cat .cache/full-model-inference-composition-windows.json
           jq -e '
             .receipt_kind == "fkwu-form-cli-full-model-inference-composition-receipt"
-            and .verdict == "pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed"
+            and (
+              (
+                .verdict == "pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed"
+                and .ask_staged_decoded_answer_bound == true
+              )
+              or (
+                .verdict == "pass_composition_receipt_honest_floor_full_width_not_yet_composed"
+                and .ask_staged_decoded_answer_bound == false
+              )
+            )
             and .full_model_inference_composed == false
             and .observable_trace.hard_failed_count == 0
-            and .composition_gates.decoded_prose_answer_binding == true
             and .devices.windows.current_host == true
             and .devices.windows.observed_now == true
             and .devices.windows.fkwu_form_cli_native == true

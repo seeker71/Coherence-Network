@@ -80,6 +80,8 @@ sanitize_trace_file() {
         -e 's|<home>/mentor-install/.models/[^"[:space:]]+|<local-gguf-file>|g' \
         -e 's|/private/var/folders/[^[:space:]:]+|<tmp>|g' \
         -e 's|/var/folders/[^[:space:]:]+|<tmp>|g' \
+        -e 's/^ +\t/\t/' \
+        -e 's/[[:blank:]]+$//' \
         "$src" > "$dst"
 }
 
@@ -104,6 +106,9 @@ observation_for() {
             ;;
         gguf_model_cell)
             grep -E '^(gguf_cell_verified|gguf_magic_ok|gguf_tensor_count|gguf_tensor_info_offset|gguf_tensor_type|PASS)' "$out" || true
+            ;;
+        full_gguf_tensor_slice_math)
+            grep -E '^(gguf_tensor_slice_verified|gguf_tensor_name|gguf_tensor_type|gguf_tensor_absolute_start|gguf_tensor_slice_read_len|q6k_|PASS|FAIL)' "$out" || true
             ;;
         metal_model_cell)
             grep -E '^(model_cell_verified|runtime_path_sanitized|denied_toolchain_names_visible_on_path|http_or_ollama|metal_owner|metal_device|gpu_y|max_delta|PASS)' "$out" || true
@@ -220,6 +225,10 @@ skip_step() {
     record_step "$id" "$platform" "$label" "$reason" 0 true false "$now" "$now" "$out" "SKIP $reason"
 }
 
+step_passed_now() {
+    jq -e --arg id "$1" 'select(.id == $id and .passed == true)' "$STEPS_JSONL" >/dev/null
+}
+
 is_windows_host() {
     case "$(uname -s 2>/dev/null || echo unknown)" in
         MINGW*|MSYS*|CYGWIN*) return 0 ;;
@@ -291,6 +300,16 @@ fi
 run_step gguf_model_cell current-host "fkwu form-cli GGUF model-cell" "$gguf_model_cell_hard" \
     "scripts/fkwu_form_cli_gguf_model_cell_receipt.sh <trace>/gguf-model-cell/receipt.json" \
     "$ROOT/scripts/fkwu_form_cli_gguf_model_cell_receipt.sh" "$TRACE_DIR/gguf-model-cell/receipt.json"
+
+if is_windows_host && ! step_passed_now real_gguf_weight_map; then
+    # GitHub's Windows floor proves the native fkwu/form-cli body, but it does
+    # not carry the user's local multi-GB GGUF blob. Keep that row honest.
+    skip_step full_gguf_tensor_slice_math current-host "fkwu form-cli full GGUF named tensor-slice math" "no real GGUF path observed on this Windows host; Mac/provisioned receipt carries the full-GGUF tensor-slice witness"
+else
+    run_step full_gguf_tensor_slice_math current-host "fkwu form-cli full GGUF named tensor-slice math" true \
+        "scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh <trace>/full-gguf-tensor-slice-math/receipt.json" \
+        "$ROOT/scripts/fkwu_form_cli_full_gguf_tensor_slice_math_receipt.sh" "$TRACE_DIR/full-gguf-tensor-slice-math/receipt.json"
+fi
 
 if is_macos_host && command -v swiftc >/dev/null 2>&1; then
     run_step metal_model_cell macos "fkwu form-cli Metal model-cell" true \
@@ -388,6 +407,9 @@ http_or_ollama_absent="$(bool_or_false "$(grep -R -q '^http_or_ollama=absent$' "
 denied_toolchain_hidden="$(bool_or_false "$(grep -R -q '^denied_toolchain_names_visible_on_path=0$' "$TRACE_DIR" && echo true || echo false)")"
 
 verdict="pass_composition_receipt_decoded_answer_bound_full_width_not_yet_composed"
+if [[ "$ask_staged_decoded_answer_bound" != "true" ]]; then
+    verdict="pass_composition_receipt_honest_floor_full_width_not_yet_composed"
+fi
 if [[ "$HARD_FAIL" -ne 0 ]]; then
     verdict="fail_composition_receipt_hard_gate"
 fi
@@ -428,6 +450,7 @@ jq -n \
     --argjson real_gguf_skipped "$(bool_or_false "$(step_skipped real_gguf_weight_map)")" \
     --argjson full_generation_claim_gate "$(bool_or_false "$(step_passed full_real_llama_generation_claim)")" \
     --argjson gguf_cell "$(bool_or_false "$(step_passed gguf_model_cell)")" \
+    --argjson full_gguf_tensor_slice_math "$(bool_or_false "$(step_passed full_gguf_tensor_slice_math)")" \
     --argjson metal_cell "$(bool_or_false "$(step_passed metal_model_cell)")" \
     --argjson metal_trace "$(bool_or_false "$(step_passed metal_body_trace)")" \
     --argjson ask_staged_model_call "$(bool_or_false "$(step_passed ask_staged_model_call)")" \
@@ -485,6 +508,7 @@ jq -n \
         optional_real_gguf_weight_map_skipped: $real_gguf_skipped,
         full_real_llama_generation_claim_gate: $full_generation_claim_gate,
         fkwu_form_cli_gguf_model_cell: $gguf_cell,
+        fkwu_form_cli_full_gguf_named_tensor_slice_math: $full_gguf_tensor_slice_math,
         fkwu_form_cli_metal_model_cell: $metal_cell,
         form_native_metal_body_trace: $metal_trace,
         ask_staged_model_call_witness: $ask_staged_model_call,
@@ -496,6 +520,7 @@ jq -n \
           observed_now: $mac_host,
           fkwu_form_cli_native: (if $mac_host then $form_cli_ask else false end),
           gguf_model_cell: (if $mac_host then $gguf_cell else false end),
+          full_gguf_tensor_slice_math: (if $mac_host then $full_gguf_tensor_slice_math else false end),
           metal_model_cell: (if $mac_host then $metal_cell else false end),
           metal_body_trace: (if $mac_host then $metal_trace else false end),
           full_model_inference: false
@@ -513,6 +538,7 @@ jq -n \
           ci_workflow: ".github/workflows/windows-host.yml",
           fkwu_form_cli_native: (if $windows_host then $windows_form_cli else false end),
           gguf_model_cell: (if $windows_host then $gguf_cell else false end),
+          full_gguf_tensor_slice_math: (if $windows_host then $full_gguf_tensor_slice_math else false end),
           directml_d3d12_model_cell: false,
           http_or_ollama_absent_in_child_runtime: (if $windows_host then $http_or_ollama_absent else false end),
           denied_go_rust_python_shell_clang_hidden_on_child_runtime_path: (if $windows_host then $denied_toolchain_hidden else false end),

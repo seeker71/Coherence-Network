@@ -1,0 +1,10 @@
+emitted decode-step MSL: 6416 bytes  |  full causal MSL: 7023 bytes (both reused verbatim per layer)
+Form recipe lblk-stack-causal (fp64, four-way proven, 2 layers) y*1e6: 1936158 1074888 893061 2391277 -1145553 207914 1944810 -837534 541056 1972790 -201723 310833
+── running the multi-layer causal llama decode stack on the M4 Max GPU ──
+decode depth stack: 3 positions × 2 layers, 2.183 ms total
+  y_recompute (full causal per layer, 2 dispatches)        = [1.936158, 1.074888, 0.893061, 2.391277, -1.145553, 0.207914, 1.944810, -0.837534, 0.541056, 1.972790, -0.201723, 0.310833]
+  y_decode    (KV-cached, 3×2 dispatches, per-layer cache) = [1.936158, 1.074888, 0.893061, 2.391277, -1.145553, 0.207914, 1.944810, -0.837534, 0.541056, 1.972790, -0.201723, 0.310833]
+EQUIVALENCE (decode depth stack vs recompute depth stack on the GPU): ✓ BIT-FOR-BIT identical — the multi-layer KV cache reproduces the recompute exactly across depth on silicon
+RECIPE (GPU fp32 2-layer stack vs fp64 lblk-stack-causal *1e6): max|Δ|=0.4  ✓ tracks the proven four-way recipe within fp32 epsilon
+DEPTH (2-layer token-0 *1e6 = 1936158): ✓ matches the independent libm reference; the stack is not one block applied once (libm pin 1936158, ≠ 1-layer 1893731 → depth threaded per-layer weights)
+✓ the MULTI-LAYER causal llama DECODE STACK runs on the M4 Max GPU — the depth structure of real local llama inference on silicon, the per-layer KV caches bit-identical to the full recompute, tracking the proven four-way recipe

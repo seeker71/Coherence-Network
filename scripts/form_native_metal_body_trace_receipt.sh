@@ -72,6 +72,8 @@ sanitize_trace_file() {
         -e "s|$HOME|<home>|g" \
         -e 's|/private/var/folders/[^[:space:]:]+|<tmp>|g' \
         -e 's|/var/folders/[^[:space:]:]+|<tmp>|g' \
+        -e 's/^ +\t/\t/' \
+        -e 's/[[:blank:]]+$//' \
         "$src" > "$dst"
 }
 

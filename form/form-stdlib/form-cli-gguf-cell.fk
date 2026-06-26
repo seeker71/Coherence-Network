@@ -3,7 +3,7 @@
 ; This mirrors the proven gguf-read.fk integer reader in the form-cli module
 ; graph so the REPL band stays a thin native wrapper.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/str-byte-at.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/form-cli.fk
+; preludes: form-stdlib/core.fk form-stdlib/str-byte-at.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/form-cli.fk
 (do
     (defn fc-gg-strip-last-byte-if (s code)
         (do
@@ -126,6 +126,110 @@
                                                     (fc-gguf-cell-report actual-sha gguf-bytes tensor-index ti))))))
                                 (str_concat "FAIL gguf-cell sha256 mismatch\ngguf_cell_verified=false\ngguf_cell_expected_sha256="
                                     (str_concat expected-sha
-                                        (str_concat "\ngguf_cell_sha256=" actual-sha)))))
+                                    (str_concat "\ngguf_cell_sha256=" actual-sha)))))
                         (str_concat "FAIL gguf-cell manifest kind=" kind))))))
+
+    (defn fc-gg-bool (flag)
+        (if (eq flag 1) "true" "false"))
+
+    (defn fc-gg-micro (x)
+        (round (mul x 1000000.0)))
+
+    (defn fc-gg-q6k-dot4 (bytes)
+        (add (mul (wl-q6k-at bytes 0 0) 1.0)
+        (add (mul (wl-q6k-at bytes 0 1) -0.5)
+        (add (mul (wl-q6k-at bytes 0 2) 0.5)
+             (mul (wl-q6k-at bytes 0 3) 2.0)))))
+
+    (defn fc-gguf-tensor-slice-report
+        (ok expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len q0 q31 q255 dot1 dot4 full-len exp-q0 exp-q31 exp-q255 exp-dot1 exp-dot4)
+        (do
+            (let out0 (fc-kv-line "gguf_tensor_slice_verified" (fc-gg-bool ok)))
+            (let out1 (str_concat out0 (fc-kv-line "gguf_tensor_slice_source" "content-addressed-full-gguf-slice-manifest")))
+            (let out2 (str_concat out1 (fc-kv-line "gguf_tensor_math_source" "fkwu-read_file_slice-to-form-q6k-math")))
+            (let out3 (str_concat out2 (fc-kv-line "gguf_tensor_slice_sha256" actual-sha)))
+            (let out4 (str_concat out3 (fc-kv-line "gguf_tensor_slice_expected_sha256" expected-sha)))
+            (let out5 (str_concat out4 (fc-kv-line "gguf_tensor_path" gguf-path)))
+            (let out6 (str_concat out5 (fc-kv-line "gguf_tensor_name" tensor-name)))
+            (let out7 (str_concat out6 (fc-kv-line "gguf_tensor_index" (int_to_str tensor-index))))
+            (let out8 (str_concat out7 (fc-kv-line "gguf_tensor_type" (int_to_str tensor-type))))
+            (let out9 (str_concat out8 (fc-kv-line "gguf_tensor_dim0" (int_to_str dim0))))
+            (let out10 (str_concat out9 (fc-kv-line "gguf_tensor_absolute_start" (int_to_str absolute-start))))
+            (let out11 (str_concat out10 (fc-kv-line "gguf_tensor_slice_len" (int_to_str slice-len))))
+            (let out12 (str_concat out11 (fc-kv-line "gguf_tensor_slice_read_len" (int_to_str actual-len))))
+            (let out13 (str_concat out12 (fc-kv-line "gguf_file_size_expected" (int_to_str file-size))))
+            (let out14 (str_concat out13 (fc-kv-line "gguf_file_size_observed" (int_to_str actual-file-size))))
+            (let out15 (str_concat out14 (fc-kv-line "q6k_sample0_micro" (int_to_str q0))))
+            (let out16 (str_concat out15 (fc-kv-line "q6k_sample31_micro" (int_to_str q31))))
+            (let out17 (str_concat out16 (fc-kv-line "q6k_sample255_micro" (int_to_str q255))))
+            (let out18 (str_concat out17 (fc-kv-line "q6k_dot1_micro" (int_to_str dot1))))
+            (let out19 (str_concat out18 (fc-kv-line "q6k_dot4_micro" (int_to_str dot4))))
+            (let out20 (str_concat out19 (fc-kv-line "q6k_expected_sample0_micro" (int_to_str exp-q0))))
+            (let out21 (str_concat out20 (fc-kv-line "q6k_expected_sample31_micro" (int_to_str exp-q31))))
+            (let out22 (str_concat out21 (fc-kv-line "q6k_expected_sample255_micro" (int_to_str exp-q255))))
+            (let out23 (str_concat out22 (fc-kv-line "q6k_expected_dot1_micro" (int_to_str exp-dot1))))
+            (let out24 (str_concat out23 (fc-kv-line "q6k_expected_dot4_micro" (int_to_str exp-dot4))))
+            (let out25 (str_concat out24 (fc-kv-line "q6k_full_load_len" (int_to_str full-len))))
+            (str_concat out25
+                (if (eq ok 1)
+                    "PASS fkwu-form-cli-full-gguf-tensor-slice-math"
+                    "FAIL fkwu-form-cli-full-gguf-tensor-slice-math"))))
+
+    (defn fc-gguf-tensor-slice-fail
+        (expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len)
+        (fc-gguf-tensor-slice-report 0 expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len 0 0 0 0 0 0 0 0 0 0 0))
+
+    (defn fc-gguf-tensor-slice-math (arg)
+        (if (str_eq arg "")
+            "usage: gguf-tensor-slice-math <manifest-path>"
+            (do
+                (let manifest (fc-gg-strip-eol (read_file arg)))
+                (let parts (split-on manifest " "))
+                (let kind (fc-part parts 0 ""))
+                (let expected-sha (fc-part parts 1 ""))
+                (let gguf-path (fc-part parts 2 ""))
+                (let tensor-name (fc-part parts 3 ""))
+                (let tensor-index (fc-part-int parts 4 0))
+                (let tensor-type (fc-part-int parts 5 0))
+                (let dim0 (fc-part-int parts 6 0))
+                (let absolute-start (fc-part-int parts 7 0))
+                (let slice-len (fc-part-int parts 8 0))
+                (let file-size (fc-part-int parts 9 0))
+                (let exp-q0 (fc-part-int parts 10 0))
+                (let exp-q31 (fc-part-int parts 11 0))
+                (let exp-q255 (fc-part-int parts 12 0))
+                (let exp-dot1 (fc-part-int parts 13 0))
+                (let exp-dot4 (fc-part-int parts 14 0))
+                (if (or (or (str_eq kind "") (str_eq expected-sha ""))
+                        (or (str_eq gguf-path "") (str_eq tensor-name "")))
+                    "FAIL gguf-tensor-slice manifest expected: gguf-tensor-slice-math-v1 <slice-sha256> <gguf-path> <tensor-name> <tensor-index> <tensor-type> <dim0> <absolute-start> <slice-len> <file-size> <q0-micro> <q31-micro> <q255-micro> <dot1-micro> <dot4-micro>"
+                    (if (str_eq kind "gguf-tensor-slice-math-v1")
+                        (do
+                            (let actual-file-size (file_size gguf-path))
+                            (let slice-raw (read_file_slice gguf-path absolute-start slice-len))
+                            (let actual-len (str_len slice-raw))
+                            (let actual-sha (fc-gg-cell-digest slice-raw))
+                            (if (or (not (str_eq expected-sha actual-sha))
+                                    (or (not (eq actual-len slice-len))
+                                    (or (not (eq actual-file-size file-size))
+                                    (or (not (eq tensor-type 14))
+                                        (lt actual-len 210)))))
+                                (fc-gguf-tensor-slice-fail expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len)
+                                (do
+                                    (let bytes (fc-gg-string-bytes slice-raw))
+                                    (let full (wl-load-q6k bytes 0))
+                                    (let q0 (fc-gg-micro (wl-q6k-at bytes 0 0)))
+                                    (let q31 (fc-gg-micro (wl-q6k-at bytes 0 31)))
+                                    (let q255 (fc-gg-micro (wl-q6k-at bytes 0 255)))
+                                    (let dot1 (fc-gg-micro (wl-q6k-at bytes 0 0)))
+                                    (let dot4 (fc-gg-micro (fc-gg-q6k-dot4 bytes)))
+                                    (let full-len (len full))
+                                    (let math-ok (if (and (eq q0 exp-q0)
+                                                    (and (eq q31 exp-q31)
+                                                    (and (eq q255 exp-q255)
+                                                    (and (eq dot1 exp-dot1)
+                                                    (and (eq dot4 exp-dot4)
+                                                         (eq full-len 256)))))) 1 0))
+                                    (fc-gguf-tensor-slice-report math-ok expected-sha actual-sha gguf-path tensor-name tensor-index tensor-type dim0 absolute-start slice-len file-size actual-file-size actual-len q0 q31 q255 dot1 dot4 full-len exp-q0 exp-q31 exp-q255 exp-dot1 exp-dot4))))
+                        (str_concat "FAIL gguf-tensor-slice manifest kind=" kind))))))
     0)
