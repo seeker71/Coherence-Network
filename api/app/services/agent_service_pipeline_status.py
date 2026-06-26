@@ -207,7 +207,7 @@ def _followthrough_action(detail: dict[str, Any], check_errors: list[str]) -> tu
     if check_errors:
         return "failing_check", "inspect failing checks and rerun after repair"
     if merge_state == "CLEAN":
-        return "stale_pr", "merge or close stale green PR"
+        return "stale_pr", "merge or close stale green PR through the GitHub API"
     return "stale_pr", f"rebase or resolve merge state {merge_state or 'UNKNOWN'}"
 
 
@@ -246,7 +246,8 @@ def _followthrough_blocker_from_pr(
     kind, action = _followthrough_action(detail, check_errors)
     url = str(row.get("url") or "").strip()
     command = (
-        f"gh pr merge {number} --repo {repo} --merge --delete-branch"
+        f"gh api -X PUT repos/{repo}/pulls/{number}/merge -f merge_method=rebase && "
+        f"gh api -X DELETE repos/{repo}/git/refs/heads/{head}"
         if kind == "stale_pr" and action.startswith("merge")
         else f"gh pr checks {number} --repo {repo}"
     )
