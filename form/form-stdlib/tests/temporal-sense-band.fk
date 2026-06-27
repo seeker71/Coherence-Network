@@ -1,0 +1,14 @@
+; tests/temporal-sense-band.fk — the new time-perception organ, proven four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/temporal-sense.fk
+;
+; Band verdict 111111 when the organ proves, on Go / Rust / TypeScript / fkwu:
+;   a named time-lane is found in the reading                  ->      1
+;   dilation sema:wall = 4000 milli (sema flows 4.000x wall)   ->     10
+;   prediction-rate over the window = 80% (4 of 5 landed)      ->    100
+;   sense a named dimension (coherence) projects its value     ->   1000
+;   an unnamed dimension (mass) returns honest silence         ->  10000
+;   a future-event carries its horizon (3 ticks ahead)         -> 100000
+
+(do
+    (temporal-sense-check))
