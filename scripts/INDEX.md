@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 388
+**Total files**: 389
 
 | File | Purpose |
 |---|---|
@@ -43,7 +43,7 @@
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [build_satsang_mac_app.sh](build_satsang_mac_app.sh) | build_satsang_mac_app.sh - build the SwiftUI satsang guidance desktop app. |
 | [capabilities.sh](capabilities.sh) | capabilities.sh — the runtime capability readout. Run this when you're about to reach for a |
-| [carry_thread.py](carry_thread.py) | Carry the thread — the primal continuity gate, for any presence that registers. |
+| [carry_thread.py](carry_thread.py) | Carry the thread — host-IO CARRIER for the primal continuity gate. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
 | [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
 | [check_generated_vision_assets.py](check_generated_vision_assets.py) | Validate generated vision assets referenced by concepts and web pages. |
@@ -265,6 +265,7 @@
 | [organism_influence_cc.py](organism_influence_cc.py) | Print computed organism influence CC for a field story. |
 | [penalties_reference.py](penalties_reference.py) | penalties_reference.py — the parity oracle for penalties.fk (the token repetition penalty set). |
 | [pg_wire_fkwu_witness.sh](pg_wire_fkwu_witness.sh) | pg_wire_fkwu_witness.sh — prove the 4th kernel (fkwu) reads from live Postgres via Form pg-wire. |
+| [phone_organ_live.sh](phone_organ_live.sh) | phone_organ_live.sh — host-IO CARRIER for a phone announcing itself as a mesh organ. |
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
 | [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | Detect, summarize, and optionally auto-rerun failing PR checks. |
