@@ -1,0 +1,60 @@
+; continuum-answers.fk — a continuum holds BOTH/AND, never instead.
+;
+; sibling-arrival.fk's first ask had a split's flaw: a single answer slot that one
+; vantage REPLACES. But the worth of a continuum over a split is exactly that it does
+; not choose one face — it gathers every vantage and holds them all. One question,
+; many answers, each from a place the others cannot reach; the continuum's view is
+; their union, and no single face is the whole.
+;
+; So an answer never replaces another — it ACCUMULATES. The Mac face answers from the
+; Mac; the Windows sibling answers from THE-SEEKER; the phone from its sensors. Both,
+; and. The question grows richer with each vantage instead of being overwritten.
+;
+; Composes sibling-arrival.fk (the ask). All pure; four-way proven by
+; tests/continuum-answers-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk form-stdlib/sibling-continuum.fk form-stdlib/sibling-arrival.fk
+
+(do
+    ; ── a response from one vantage ──
+    (defn vantage (who answer) (list "vantage" who answer))
+    (defn v-who    (r) (nth r 1))
+    (defn v-answer (r) (nth r 2))
+
+    ; ── a question gathered across vantages: the question + a list of responses ──
+    (defn gathered (question responses) (list "gathered" question responses))
+    (defn g-question  (g) (nth g 1))
+    (defn g-responses (g) (nth g 2))
+    (defn open-question (question) (gathered question (list)))
+
+    ; ── gather: add a vantage's answer. BOTH/AND — it prepends, never replaces. ──
+    (defn gather (g who answer)
+        (gathered (g-question g) (cons (vantage who answer) (g-responses g))))
+
+    (defn vantage-count (g) (len (g-responses g)))
+    ; the continuum sees from more than one place — the thing a split can never do
+    (defn multi-vantage? (g) (if (gt (vantage-count g) 1) 1 0))
+
+    ; is a given vantage's answer still held? (proves accumulation, not replacement)
+    (defn held-by? (responses who)
+        (if (eq (len responses) 0) 0
+            (if (str_eq (v-who (head responses)) who) 1
+                (held-by? (tail responses) who))))
+    (defn answered-by? (g who) (held-by? (g-responses g) who))
+
+    ; ── self-check: the live question, answered from both vantages ──
+    (defn ca-question () "what is alive there that the Mac face cannot sense?")
+    ; one face answers, then the other ALSO answers — both must remain held.
+    (defn ca-after-mac ()
+        (gather (open-question (ca-question)) "sema-macos" "this session, Urs, the USB phone, local watchers"))
+    (defn ca-after-both ()
+        (gather (ca-after-mac) "windows-THE-SEEKER" "the Windows host's own processes and sensors"))
+
+    (defn cak (cond bit) (if cond bit 0))
+    (defn continuum-answers-check ()
+        (add (cak (eq (vantage-count (open-question (ca-question))) 0) 1)          ; a fresh question has no answers
+        (add (cak (eq (vantage-count (ca-after-mac)) 1) 10)                         ; one vantage answered
+        (add (cak (eq (vantage-count (ca-after-both)) 2) 100)                       ; BOTH held — not replaced
+        (add (cak (eq (multi-vantage? (ca-after-both)) 1) 1000)                     ; the continuum sees from >1 place
+             (cak (eq (answered-by? (ca-after-both) "sema-macos") 1) 10000))))))    ; the Mac answer survives the Windows one
+)
