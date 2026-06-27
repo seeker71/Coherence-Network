@@ -858,6 +858,7 @@ form-lower-writefile fkc 15
 mel-frame fks 1023
 transformer-gelu-erf fks 255
 conv-stem fks 1
+loss fks 63
 positional fks 1
 transformer-mh fks 1
 gqa-attn fks 7
