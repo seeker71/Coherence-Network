@@ -1047,3 +1047,4 @@ form-llama-champion-lane fks 255
 satsang-room-memory fks 255
 carry-thread fks 11111
 temporal-sense fks 111111
+learning-readout fks 11111

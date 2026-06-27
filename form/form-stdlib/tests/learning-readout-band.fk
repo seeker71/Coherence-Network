@@ -1,0 +1,14 @@
+; tests/learning-readout-band.fk — the unified learning readout, proven four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/temporal-sense.fk form-stdlib/learning-readout.fk
+;
+; Band verdict 11111 when the readout proves, on Go / Rust / TypeScript / fkwu,
+; reading THIS session's real events as data:
+;   success-rate = 50%  (3 of 6 landed)                     ->     1
+;   oracle-rate  = 0%   (nothing left the body this session) ->    10
+;   surprises    = 3    (three recipe/dialect misses)        ->   100
+;   failures-to-gold = 3 (every miss left a lesson)          ->  1000
+;   learning-rate 0%->100% = +100 (a window that improved)   -> 10000
+
+(do
+    (learning-readout-check))
