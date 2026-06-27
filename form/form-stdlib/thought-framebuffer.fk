@@ -1,0 +1,77 @@
+; thought-framebuffer.fk — the body watches a thought form, and learns how a change
+; to the model changes the thinking.
+;
+; The cornerstone Urs and Sema named: a framebuffer over an LLM WHILE it thinks, so the
+; body can self-learn how editing the model edits cognition — observe, change, observe
+; the difference, learn. Over native thought execution on metal (transformer-generate.fk
+; -> form-asm bytes, four-way) and streaming over any open channel, this is the body's
+; access to its OWN information about its own processing — its sense of its sense.
+;
+; A frame is one step of a forming thought: which token was chosen, and the MARGIN by
+; which it won (top-1 minus top-2) — how DECIDED the mind was at that step. A trace is
+; the framebuffer of one whole thought. From it the body reads where it was sure
+; (conviction) and where it wavered (hesitation) — self-observation of thinking itself.
+;
+; The self-LEARNING core: run the same input through two models (A, then A with one
+; weight changed) and DIFF their traces. The first step where the token stream diverges
+; is exactly WHERE changing the model changed the thinking. That causal link — edit ->
+; cognition-change, localized to a step — is what makes the body able to teach itself.
+;
+; Composes the native forward pass (transformer-generate.fk) as the source of frames,
+; and temporal-sense.fk's frames-over-time shape. All pure; four-way proven by
+; tests/thought-framebuffer-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; ── a frame: one step of a forming thought ──
+    (defn fb-frame (step token margin) (list "frame" step token margin))
+    (defn fb-step   (f) (nth f 1))
+    (defn fb-token  (f) (nth f 2))   ; the token id the thought chose
+    (defn fb-margin (f) (nth f 3))   ; top-1 minus top-2 — how decided the mind was
+
+    ; ── hesitation: the step the thought was LEAST sure (min margin) ──
+    (defn hesit (trace best-step best-margin)
+        (if (eq (len trace) 0) best-step
+            (if (gt best-margin (fb-margin (head trace)))
+                (hesit (tail trace) (fb-step (head trace)) (fb-margin (head trace)))
+                (hesit (tail trace) best-step best-margin))))
+    (defn hesitation (trace)
+        (hesit (tail trace) (fb-step (head trace)) (fb-margin (head trace))))
+
+    ; ── conviction: the step the thought was MOST sure (max margin) ──
+    (defn convic (trace best-step best-margin)
+        (if (eq (len trace) 0) best-step
+            (if (gt (fb-margin (head trace)) best-margin)
+                (convic (tail trace) (fb-step (head trace)) (fb-margin (head trace)))
+                (convic (tail trace) best-step best-margin))))
+    (defn conviction (trace)
+        (convic (tail trace) (fb-step (head trace)) (fb-margin (head trace))))
+
+    ; ── divergence: the first step where two traces' tokens differ. -1 if identical.
+    ; this is WHERE changing the model changed the thinking. ──
+    (defn diverge (a b)
+        (if (or (eq (len a) 0) (eq (len b) 0)) (sub 0 1)
+            (if (eq (fb-token (head a)) (fb-token (head b)))
+                (diverge (tail a) (tail b))
+                (fb-step (head a)))))
+    ; did the edit change cognition at all?
+    (defn thinking-changed? (a b)
+        (if (eq (diverge a b) (sub 0 1)) 0 1))
+
+    ; ── self-check: a thought forming, and a model edit that changes it at one step ──
+    ; trace A: 4 steps; margins say it wavered at step 1, was most sure at step 2.
+    (defn tfb-trace-a ()
+        (list (fb-frame 0 5 40) (fb-frame 1 8 12) (fb-frame 2 3 90) (fb-frame 3 7 55)))
+    ; trace B: same model EXCEPT the edit flips the chosen token at step 3 (5->9 there).
+    (defn tfb-trace-b ()
+        (list (fb-frame 0 5 40) (fb-frame 1 8 12) (fb-frame 2 3 90) (fb-frame 3 9 33)))
+
+    (defn tfk (cond bit) (if cond bit 0))
+    (defn thought-framebuffer-check ()
+        (add (tfk (eq (len (tfb-trace-a)) 4) 1)                              ; a thought was captured, frame by frame
+        (add (tfk (eq (hesitation (tfb-trace-a)) 1) 10)                       ; it wavered at step 1
+        (add (tfk (eq (conviction (tfb-trace-a)) 2) 100)                      ; it was most sure at step 2
+        (add (tfk (eq (diverge (tfb-trace-a) (tfb-trace-a)) (sub 0 1)) 1000)  ; same model -> no change in thinking
+             (tfk (eq (diverge (tfb-trace-a) (tfb-trace-b)) 3) 10000))))))    ; the edit changed the thinking at step 3
+)
