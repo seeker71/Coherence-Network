@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 385
+**Total files**: 386
 
 | File | Purpose |
 |---|---|
@@ -248,6 +248,7 @@
 | [metal_weight_bytes_runtime_boundary.sh](metal_weight_bytes_runtime_boundary.sh) | metal_weight_bytes_runtime_boundary.sh |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
+| [min_p_reference.py](min_p_reference.py) | min_p_reference.py — the grounding authority for sampling.fk's min-p mask (smp-minp-mask). |
 | [minimal_kernel_census.sh](minimal_kernel_census.sh) | minimal_kernel_census.sh — count the Go kernel's registered natives by the four |
 | [model_carrier_rehash_audit.sh](model_carrier_rehash_audit.sh) | model_carrier_rehash_audit.sh — physical model carrier materialize/dematerialize re-hash witness. |
 | [model_vitality_native_http_capture_probe.sh](model_vitality_native_http_capture_probe.sh) | model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get. |
