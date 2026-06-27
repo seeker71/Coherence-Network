@@ -893,7 +893,7 @@ kv-gqa-llama-block fks 255
 multi-layer-stack fks 255
 gqa-multi-layer-stack fks 255
 llama-generate fks 255
-sampling fks 65535
+sampling fks 2097151
 penalties fks 63
 llama-sample-generate fks 255
 llama-penalize-generate fks 255

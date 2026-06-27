@@ -39,6 +39,14 @@
 ;   8192  draw-seq(P, seed1, 6)   = [0,1,2,1,1,1]   (inverse-CDF on cumulative [0.1,0.6,0.9,1.0])
 ;   16384 draw-seq(PEAK, seed1,6) = [2,2,2,2,2,2]   (all mass on idx2 → greedy argmax, no parallel path)
 ;   32768 draw-seq([.5,.5],s1,6)  = [0,0,1,0,1,0]   (u<0.5→0, u>=0.5→1; the binary draw)
+;   --- min-p (llama.cpp's relative-to-peak sampler; thr = p·max, keep >= thr; max(P)=0.5) ---
+;   65536  minp-mask(P, 0.0)      = [100000,500000,300000,100000]  (thr 0 → keep all → identity)
+;   131072 minp-mask(P, 0.3)      = [0, 625000, 375000, 0]         (thr 0.15 → drop both 0.1; renorm)
+;   262144 minp-mask(P, 0.7)      = [0, 1000000, 0, 0]             (thr 0.35 → 0.3 leaves too; only peak)
+;   524288 minp-mask(P, 0.3) sums to 1 = 1000000                   (a renormalized distribution)
+;  1048576 draw-seq(minp(P,1.0),s1,6) = [1,1,1,1,1,1]              (p=1 → peak only → greedy, no parallel path)
+; Reference: scripts/min_p_reference.py (llama.cpp min_p formula, self-checked: p=0 identity, p=1 peak).
+; Verdict 2097151 (=2^21-1) when all 21 claims land.
 (do
     ; --- value reducer: a vec → flat list of (round (x·1e6)) integers ---
     (defn spb-ints (v)
@@ -94,6 +102,17 @@
     (let drawBIN (smp-draw-seq BIN 1 6))
     (let drawBIN-want (list 0 0 1 0 1 0))
 
+    ; --- min-p: keep prob >= p·max(P), renormalize (relative-to-peak, llama.cpp min_p) ---
+    (let mp0 (smp-minp-mask P 0.0))
+    (let mp0-want (list 100000 500000 300000 100000))
+    (let mp3 (smp-minp-mask P 0.3))
+    (let mp3-want (list 0 625000 375000 0))
+    (let mp7 (smp-minp-mask P 0.7))
+    (let mp7-want (list 0 1000000 0 0))
+    (let mp1 (smp-minp-mask P 1.0))
+    (let drawMP1 (smp-draw-seq mp1 1 6))
+    (let drawMP1-want (list 1 1 1 1 1 1))
+
     ; --- claims ---
     (let c0  (if (spb-ieq (spb-ints temp) temp-want) 1 0))
     (let c1  (if (spb-ieq (spb-ints sm) sm-want) 2 0))
@@ -111,6 +130,12 @@
     (let c13 (if (spb-ieq drawP drawP-want) 8192 0))
     (let c14 (if (spb-ieq drawPEAK drawPEAK-want) 16384 0))
     (let c15 (if (spb-ieq drawBIN drawBIN-want) 32768 0))
+    (let c16 (if (spb-ieq (spb-ints mp0) mp0-want) 65536 0))
+    (let c17 (if (spb-ieq (spb-ints mp3) mp3-want) 131072 0))
+    (let c18 (if (spb-ieq (spb-ints mp7) mp7-want) 262144 0))
+    (let c19 (if (eq (round (mul (tn-sum mp3) 1000000.0)) 1000000) 524288 0))
+    (let c20 (if (spb-ieq drawMP1 drawMP1-want) 1048576 0))
 
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
-    (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 c15))))))))))))))))
+    (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15
+    (add c16 (add c17 (add c18 (add c19 c20)))))))))))))))))))))
