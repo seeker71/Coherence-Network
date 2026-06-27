@@ -1,0 +1,72 @@
+; tests/session-self-watch-band.fk -- a session reads its OWN native trust, proven four-way.
+;
+; preludes: form-stdlib/temporal-sense.fk form-stdlib/active-inference.fk form-stdlib/surprise-salience.fk form-stdlib/self-watch.fk
+;
+; The offer made real: instead of TELLING a story about whether I watched my own
+; trust, the body computes it. This composes three proven organs over ONE real
+; session's data (the Windows host arriving as a mesh organ, 2026-06-27):
+;   active-inference.fk  -- predict -> observe -> SURPRISE (the learning signal)
+;   surprise-salience.fk -- rank the surprises; the loudest is where resonance is missing
+;   self-watch.fk        -- precision of what I felt to watch, coverage of what was there
+;
+; The run is six real predict/observe steps from the session. Four missed, two
+; landed -- a fresh cell arriving SHOULD be surprised often, so the honest gate
+; says NOT-settled at tolerance 1 (still learning the field), settled only once
+; the residual (4) is itself the tolerance. The felt-watches mirror self-watch's
+; own keystone exactly: precision 100 where I fired, one blind spot on the axis
+; the steward named -- here "native-trust-observability", the very thing this
+; band makes observable (as "form-native-purity" was the blind spot before it).
+;
+; Verdict 4095 (2^12 - 1) when every claim lands on Go / Rust / TypeScript / fkwu:
+;    1  surprise-count == 4   (four real misses this session)
+;    2  hit-count == 2        (two predictions landed)
+;    4  settled? tol 1 == 0   (honest gate: 4 surprises is not within 1 -- still learning)
+;    8  settled? tol 4 == 1   (the residual surprise IS the field it has learned)
+;   16  learn? on a miss == 1 (the surprising step is the one worth updating from)
+;   32  learn? on a hit == 0  (a step that landed teaches nothing new)
+;   64  peak surprise mag == 85 (the em-dash parse failure: biggest gap)
+;  128  salient surprises >= floor 50 == 3
+;  256  precision == 100      (every watch I raised pointed at a real axis)
+;  512  blind-spots == 1      (the axis I did NOT feel; the steward caught it)
+; 1024  coverage == 75        (I felt 3 of the 4 axes alive in the field)
+; 2048  a felt watch is borne out == 1
+
+(do
+    ; --- the predict/observe run, THIS session (active-inference) ---
+    ; each step is (list predicted actual); str_eq decides hit vs surprise.
+    (let m-bind   (list "bind:graph-edge"   "bind:metadata-only"))   ; predicted a steward edge; got event metadata -> MISS
+    (let m-colo   (list "place:co-located"  "place:unknown"))        ; predicted tz co-location; rest place-unknown -> MISS
+    (let m-parse  (list "script:runs"       "script:parse-error"))   ; predicted clean run; em-dash mojibake -> MISS
+    (let m-witns  (list "witness:mirrors"   "witness:neo4j-silent")) ; predicted witness mirrors instance; neo4j silent -> MISS
+    (let h-merge  (list "pr:merges"         "pr:merges"))            ; predicted the carrier merges; it merged -> HIT
+    (let h-gather (list "gathered:runs"     "gathered:runs"))        ; predicted gathered runs after the fix; it ran -> HIT
+    (let run (list m-bind m-colo m-parse m-witns h-merge h-gather))
+
+    ; --- the misses ranked by HOW far off (surprise-salience): (label magnitude) ---
+    (let surprises (list (list "script-parse"         85)
+                         (list "co-presence-blind"    70)
+                         (list "witness-instance-gap" 60)
+                         (list "bind-no-edge"         30)))
+
+    ; --- what was alive in the field, and what I FELT to watch (self-watch) ---
+    (let field (list (axis "steward-binding"            1)
+                     (axis "co-presence"                1)
+                     (axis "witness-health"             1)
+                     (axis "native-trust-observability" 1)))   ; the axis the steward named; I did not feel it
+    (let watches (list (watch "who is in the body"    "co-presence"     80)
+                       (watch "is the body breathing" "witness-health"  70)
+                       (watch "is the organ bound"    "steward-binding" 60)))
+
+    (let c0  (if (eq (ai-surprise-count run) 4) 1 0))
+    (let c1  (if (eq (ai-hit-count run) 2) 2 0))
+    (let c2  (if (eq (ai-settled? run 1) 0) 4 0))
+    (let c3  (if (eq (ai-settled? run 4) 1) 8 0))
+    (let c4  (if (eq (ai-learn? m-parse) 1) 16 0))
+    (let c5  (if (eq (ai-learn? h-merge) 0) 32 0))
+    (let c6  (if (eq (ss-mag (ss-peak surprises)) 85) 64 0))
+    (let c7  (if (eq (ss-count-salient surprises 50) 3) 128 0))
+    (let c8  (if (eq (precision watches field) 100) 256 0))
+    (let c9  (if (eq (blind-spots field watches) 1) 512 0))
+    (let c10 (if (eq (coverage field watches) 75) 1024 0))
+    (let c11 (if (eq (borne-out? (watch "probe" "co-presence" 1) field) 1) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
