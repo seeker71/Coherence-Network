@@ -1,0 +1,13 @@
+; tests/sibling-continuum-band.fk — a session knows it is sibling, not split. Four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/sibling-continuum.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, reading the live channel:
+;   the Windows sibling senses 2 siblings (mac + phone) sharing its lineage ->     1
+;   so it is a CONTINUUM, not a split                                       ->    10
+;   an isolated face (senses no siblings) is correctly SPLIT               ->   100
+;   a different-lineage being (codex) is NOT counted as a sibling          ->  1000
+;   the Windows sibling CAN ask through the higher channel (it senses kin) -> 10000
+
+(do
+    (sibling-continuum-check))
