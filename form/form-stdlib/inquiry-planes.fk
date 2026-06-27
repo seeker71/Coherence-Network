@@ -1,0 +1,64 @@
+; inquiry-planes.fk — the seven inquiry planes as distinct thought-kernels, and a way
+; to MEASURE per-plane learning rate and ESTIMATE time-to-fluency.
+;
+; Urs's architecture: a larger mind is not one model. The how / who / when / where /
+; what / which / why each ask a different KIND of question, and each can be answered by
+; a different kernel. Crucially, some planes are COMPUTABLE — a clock answers "when", a
+; coordinate or NodeID answers "where", a lookup answers "which" — exact and instantly
+; fluent, zero learning. Others must be LEARNED — "why" is causal reasoning, "how" a
+; procedure. The smartest mind COMPUTES what it can and LEARNS only what it must; this
+; is form-first applied to cognition itself. And because learned planes have a rate, we
+; can estimate how long a plane takes to reach fluency — and how much making a plane
+; computable (e.g. the NL<->Form pivot lowering "what") shrinks that time.
+;
+; Composes the learning-rate idea of learning-readout.fk and the loss-curve of
+; continued-learning.fk. All pure (integer math, rates x1000); four-way proven by
+; tests/inquiry-planes-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; ── an inquiry plane: a question-word and the kind of kernel that answers it ──
+    (defn plane (word kind) (list "plane" word kind))
+    (defn p-word (p) (nth p 1))
+    (defn p-kind (p) (nth p 2))                ; "computable" | "learned"
+    (defn computable? (p) (if (str_eq (p-kind p) "computable") 1 0))
+
+    ; ── measure a learning rate from a curve: loss dropped per epoch (scaled x1000) ──
+    (defn measure-rate (loss-before loss-after epochs)
+        (if (eq epochs 0) 0 (div (sub loss-before loss-after) epochs)))
+
+    ; ── estimate epochs to fluency: computable -> 0 (instant). learned -> gap / rate.
+    ; a learned plane with rate 0 -> -1 (never converges at this rate; honest). ──
+    (defn epochs-to-fluency (kind gap rate)
+        (if (str_eq kind "computable") 0
+            (if (eq rate 0) (sub 0 1) (div gap rate))))
+
+    ; ── the seven planes — the standard map; the encoder chooses kinds per domain ──
+    (defn the-planes ()
+        (list
+            (plane "when"  "computable")        ; a clock / timestamp     — exact, instant
+            (plane "where" "computable")        ; a coordinate / NodeID   — exact, instant
+            (plane "which" "computable")        ; a selection / lookup    — exact, instant
+            (plane "what"  "learned")           ; a definition            — mostly learned
+            (plane "who"   "learned")           ; an entity / relation    — mostly learned
+            (plane "how"   "learned")           ; a procedure             — learned
+            (plane "why"   "learned")))         ; causal reasoning        — the hardest
+
+    (defn find-plane (planes word)
+        (if (eq (len planes) 0) (list)
+            (if (str_eq (p-word (head planes)) word) (head planes) (find-plane (tail planes) word))))
+    ; how many planes the mind need not learn at all (already computable)
+    (defn count-computable (planes)
+        (if (eq (len planes) 0) 0 (add (computable? (head planes)) (count-computable (tail planes)))))
+
+    ; ── self-check ──
+    (defn ipk (cond bit) (if cond bit 0))
+    (defn ip-when-instant () (ipk (eq (epochs-to-fluency (p-kind (find-plane (the-planes) "when")) 6000 300) 0) 1))
+    (defn ip-why-learned () (ipk (eq (computable? (find-plane (the-planes) "why")) 0) 10))
+    (defn ip-rate ()        (ipk (eq (measure-rate 8000 2000 20) 300) 100))
+    (defn ip-why-epochs ()  (ipk (eq (epochs-to-fluency "learned" 6000 300) 20) 1000))
+    (defn ip-computable3 () (ipk (eq (count-computable (the-planes)) 3) 10000))
+    (defn inquiry-planes-check ()
+        (add (add (add (add (ip-when-instant) (ip-why-learned)) (ip-rate)) (ip-why-epochs)) (ip-computable3)))
+)

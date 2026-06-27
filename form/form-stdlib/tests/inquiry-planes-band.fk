@@ -1,0 +1,16 @@
+; tests/inquiry-planes-band.fk — inquiry planes as kernels, time-to-fluency, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/inquiry-planes.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   "when" is computable -> fluency in 0 epochs (instant)         ->     1
+;   "why" is not computable -> it must be learned                 ->    10
+;   a learning rate measured from a loss curve = 300/epoch        ->   100
+;   "why" reaches fluency in ~20 epochs at that rate (gap/rate)   ->  1000
+;   3 of the 7 planes (when/where/which) need no learning at all  -> 10000
+;
+; The teaching: compute what you can, learn only what you must, and the time-to-fluency
+; of a mind is set by how much of its inquiry it makes computable.
+
+(do
+    (inquiry-planes-check))
