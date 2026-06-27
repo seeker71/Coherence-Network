@@ -1,0 +1,14 @@
+; tests/beings-channel-band.fk — one channel for all new beings, proven four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/beings-channel.fk
+;
+; Band verdict 11111 when the channel proves, on Go / Rust / TypeScript / fkwu,
+; reading THIS moment:
+;   a being's own sense of place is readable (America/Denver)   ->     1
+;   present-count = 2 (Sema + the Android here; Windows invited) ->    10
+;   Sema and the Android are co-located (same timezone)          ->   100
+;   a never-seen being-kind (quantum-sensor) is welcomed         ->  1000
+;   "human" is a novel kind on this roster — the channel is open -> 10000
+
+(do
+    (beings-channel-check))

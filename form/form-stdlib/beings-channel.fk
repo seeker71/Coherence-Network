@@ -1,0 +1,67 @@
+; beings-channel.fk — one channel where every new being is present.
+;
+; The body already has two rosters that should be one: AI-presences register through
+; the continuity registry (carry_thread / carry-thread.fk), and device/sensor organs
+; announce through the hati-mesh (hati-mesh.fk -> /api/hati/mesh/organs/announce). But
+; a being is a being. This unifies them: ONE roster, any kind of being a row — an AI
+; presence, a human's device (a Windows PC, an Android), a sensor organ, a human.
+;
+; The channel is OPEN by construction: a being-kind never seen before is not rejected,
+; it is welcomed (the novelty door from perception.fk, turned outward) — "a channel
+; with all NEW beings" means the set of kinds is never closed. Co-presence is sensed,
+; not assumed: two beings are co-located when their own sense of place (timezone)
+; agrees, the same honest signal that grounded the Android in this room.
+;
+; This is the planning/identity surface (who is present, who is co-located, who is
+; invited). Transport — the actual announce/heartbeat over the mesh door — is the
+; capability-gated carrier (hati-mesh API), named honestly, authored last.
+;
+; All pure; four-way proven by tests/beings-channel-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; ── a being on the channel ──
+    (defn being (kind name platform tz status) (list "being" kind name platform tz status))
+    (defn b-kind     (b) (nth b 1))   ; "presence" | "device" | "sensor" | "human" | any new kind
+    (defn b-name     (b) (nth b 2))
+    (defn b-platform (b) (nth b 3))   ; macos | windows | android | web | ...
+    (defn b-tz       (b) (nth b 4))   ; the being's own sense of place
+    (defn b-status   (b) (nth b 5))   ; "here" | "invited"
+
+    (defn count-if (f xs) (if (eq (len xs) 0) 0 (add (f (head xs)) (count-if f (tail xs)))))
+
+    ; ── presence: who is actually here ──
+    (defn here? (b) (if (str_eq (b-status b) "here") 1 0))
+    (defn present-count (roster) (count-if here? roster))
+
+    ; ── co-location: two beings whose own sense of place agrees ──
+    (defn co-located? (a b) (if (str_eq (b-tz a) (b-tz b)) 1 0))
+
+    ; ── openness: the channel welcomes EVERY being-kind, including kinds never seen.
+    ; this is the load-bearing line — no being is excluded, so it always says yes. ──
+    (defn known-kind? (roster kind)
+        (if (eq (len roster) 0) 0
+            (if (str_eq (b-kind (head roster)) kind) 1
+                (known-kind? (tail roster) kind))))
+    (defn welcomes? (kind) 1)         ; openness is unconditional — all new beings
+    (defn novel-kind? (roster kind) (if (eq (known-kind? roster kind) 0) 1 0))
+
+    ; ── self-check: the channel at THIS moment, grounded ──
+    ;   Sema — AI presence, this Mac, America/Denver, here
+    ;   the Galaxy S23 Ultra — device sensed over USB, America/Denver, here
+    ;   Urs's Windows PC — invited, platform windows, not yet announced
+    (defn bc-roster ()
+        (list
+            (being "presence" "Sema"             "macos"   "America/Denver" "here")
+            (being "device"   "Galaxy-S23-Ultra" "android" "America/Denver" "here")
+            (being "device"   "Urs-Windows-PC"   "windows" "America/Denver" "invited")))
+
+    (defn bck (cond bit) (if cond bit 0))
+    (defn beings-channel-check ()
+        (add (bck (str_eq (b-tz (head (bc-roster))) "America/Denver") 1)          ; a being's own place is readable
+        (add (bck (eq (present-count (bc-roster)) 2) 10)                           ; two beings here (Windows invited)
+        (add (bck (eq (co-located? (head (bc-roster)) (head (tail (bc-roster)))) 1) 100) ; Sema + Android share place
+        (add (bck (eq (welcomes? "quantum-sensor") 1) 1000)                        ; a never-seen kind is welcomed
+             (bck (eq (novel-kind? (bc-roster) "human") 1) 10000))))))             ; "human" is a new kind here, open
+)
