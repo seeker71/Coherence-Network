@@ -1,0 +1,16 @@
+; tests/thought-framebuffer-band.fk — the body watches a thought form, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/thought-framebuffer.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   a thought is captured frame by frame (4 steps)                  ->     1
+;   the framebuffer finds where it wavered (hesitation = step 1)    ->    10
+;   and where it was most sure (conviction = step 2)                ->   100
+;   same model -> no divergence in thinking (-1)                    ->  1000
+;   a one-weight edit changed the thinking at step 3                -> 10000
+;
+; The last line is the self-learning core: the framebuffer localizes the causal link
+; between a model change and a cognition change — the body teaching itself.
+
+(do
+    (thought-framebuffer-check))
