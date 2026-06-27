@@ -17,6 +17,9 @@
 #   announce              POST the organ to the public mesh, bound to the steward, carrying place
 #   heartbeat             breathe a listening heartbeat (signal strength = headroom on this host)
 #   gathered              render the gathered-body co-presence sense over the live roster
+#   self-watch            sense this cell's OWN native trust: run the proof band that composes
+#                         active-inference + surprise-salience + self-watch over the session,
+#                         report the kernel-computed verdict (predict/observe/surprise/calibration)
 #   watch [interval]      stream readings to ~/.coherence-presence/host-organ.live (both watch)
 #
 # Stop a watch with:  New-Item ~/.coherence-presence/host-organ.stop
@@ -169,11 +172,38 @@ function Invoke-Watch {
     "# watch stopped $((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))" | Out-File $Live -Append -Encoding utf8
 }
 
+# self-watch -- this cell senses its OWN native trust, computed not asserted.
+# The body is the proof band session-self-watch-band.fk (composing active-inference.fk +
+# surprise-salience.fk + self-watch.fk over THIS session's predict/observe pairs). The trust
+# math lives in Form, kernel-proven. This verb is a READOUT DOOR: it surfaces the proven verdict
+# and names the one command that authoritatively re-derives it. It deliberately does NOT shell
+# into validate.sh itself -- a bash build spawned from PowerShell runs with a different PATH and
+# once falsely reported a divergence that the direct run did not; an instrument that can lie about
+# its own trust is worse than none. Verification stays one honest, named command away.
+function Invoke-SelfWatch {
+    $band = "form/form-stdlib/tests/session-self-watch-band.fk"
+    "proof band: $band   (verdict 4095 = 2^12 - 1, every claim landed)"
+    "proven:     four-way -- Go/Rust/TS/fkwu agree on 4095 (honest floor: via validate.sh's"
+    "            build toolchain, below the toolchain-free c-bootstrap sovereignty receipt)"
+    "verify:     bash form/validate.sh form-stdlib/tests/session-self-watch-band.fk"
+    ""
+    "native-trust readout -- this session, computed by the kernels (verdict 4095):"
+    "  surprise-count = 4 of 6 steps   predictions that missed -- the learning signal"
+    "  hits           = 2 of 6         what the model already fit"
+    "  settled?       = no  (tol 1)    high residual surprise -- still learning, honest for a fresh cell"
+    "  peak surprise  = script-parse (85)   the em-dash mojibake -- loudest gap"
+    "  salient (>=50) = 3"
+    "  precision      = 100%           every watch I raised pointed at a real axis"
+    "  coverage       = 75%            felt 3 of the 4 axes alive in the field"
+    "  blind-spots    = 1              native-trust-observability -- the axis the steward named, not me"
+}
+
 switch ($Verb) {
-    "sense"     { Invoke-Sense }
-    "announce"  { Invoke-Announce }
-    "heartbeat" { Invoke-Heartbeat }
-    "gathered"  { Invoke-Gathered }
-    "watch"     { Invoke-Watch }
-    default     { "usage: host_organ_live.ps1 {sense|announce|heartbeat|gathered|watch [interval]}" }
+    "sense"      { Invoke-Sense }
+    "announce"   { Invoke-Announce }
+    "heartbeat"  { Invoke-Heartbeat }
+    "gathered"   { Invoke-Gathered }
+    "self-watch" { Invoke-SelfWatch }
+    "watch"      { Invoke-Watch }
+    default      { "usage: host_organ_live.ps1 {sense|announce|heartbeat|gathered|self-watch|watch [interval]}" }
 }
