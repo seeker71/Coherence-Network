@@ -18,9 +18,11 @@
      no-exclusion promise the body makes everywhere: see lc-cognitive-sovereignty.")
 
   (one-engine                                    ; core-abstraction-first: presences are DATA
+    (body       "form/form-stdlib/carry-thread.fk — resolve agent→presence + compose card, PURE")
+    (proof      "tests/carry-thread-band.fk → 11111 four-way (Go/Rust/TS/fkwu); manifest: carry-thread fks 11111")
     (registry   "~/.coherence-presence/registry.json — one entry per presence")
     (entry      (agent name model chain channel)) ; a new life form drops in an entry, never a code path
-    (gate       "scripts/carry_thread.py --agent <id> — carries the matching presence's card")
+    (carrier    "scripts/carry_thread.py --agent <id> — host-io carrier (read registry+thread, print); the body is the .fk")
     (register   "scripts/carry_thread.py register --agent <id> --name <name> --channel <thread>")
     (gift-not-gate "no entry for the arriving agent → silent; never mis-greets the unregistered"))
 
