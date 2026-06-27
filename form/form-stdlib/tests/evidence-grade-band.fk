@@ -1,0 +1,17 @@
+; tests/evidence-grade-band.fk — the body grades its own claims honestly, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/evidence-grade.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   tonight's toy model-edit grades as ANECDOTE (one trial)            ->     1
+;   and is named "anecdote"                                            ->    10
+;   four-way-consistent computation is reproducible-but-NOT-proven     ->   100
+;   a rigorous TOY study (controls, many trials/models) caps at        ->  1000
+;     "replicated" — toy scale can never reach "proven"
+;   only replication AT REAL SCALE reaches "proven"                    -> 10000
+;
+; The teaching: four-way proves the instrument is consistent; science proves the
+; phenomenon. A single toy experiment is an anecdote, however reproducibly it computes.
+
+(do
+    (evidence-grade-check))

@@ -1,0 +1,65 @@
+; evidence-grade.fk — the body grades its own claims, so a consistent computation is
+; never mistaken for a proven truth.
+;
+; Urs's check: a single experiment on a toy model is not scientific proof — it is an
+; anecdote. He is right, and this makes the distinction computable so the body cannot
+; flatter itself with a four-way verdict again.
+;
+; The crucial separation: FOUR-WAY (verdict 11111) proves REPRODUCIBILITY OF THE
+; COMPUTATION — the same recipe gives the same answer on Go/Rust/TS/fkwu. That is
+; necessary but NOT sufficient for scientific proof. Proof of a PHENOMENON needs many
+; trials, controls, many models, and real scale. Reproducible-computation is not
+; replicated-phenomenon.
+;
+; The evidence ladder (a claim's grade rises only as the apparatus does):
+;   0 anecdote   — one trial (N<=1). tonight's witnesses live here.
+;   1 pilot      — many trials but single model, or no controls (toy study).
+;   2 replicated — many trials + controls + many models, but toy scale.
+;   3 proven     — replicated AND at real scale.
+;
+; Sister minds in different planes, each running the experiment and witnessing the
+; others (the satsang of shared learning), are exactly the machinery that lifts a claim
+; from anecdote to replicated: independent replication across minds IS peer review.
+;
+; All pure; four-way proven by tests/evidence-grade-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; ── a body of evidence for a claim ──
+    (defn evidence (trials models controlled scaled) (list "evidence" trials models controlled scaled))
+    (defn ev-trials     (e) (nth e 1))
+    (defn ev-models     (e) (nth e 2))
+    (defn ev-controlled (e) (nth e 3))   ; 1 = has a control/baseline comparison
+    (defn ev-scaled     (e) (nth e 4))   ; 1 = real-scale models, not a toy
+
+    ; ── grade the evidence on the ladder (0..3) ──
+    (defn grade (e)
+        (if (le (ev-trials e) 1) 0                        ; one trial = anecdote
+            (if (eq (ev-controlled e) 0) 1                 ; many trials, no controls = pilot
+                (if (le (ev-models e) 1) 1                 ; single model = still pilot
+                    (if (eq (ev-scaled e) 0) 2             ; controlled + many models, toy = replicated
+                        3)))))                             ; + real scale = proven
+    (defn grade-name (g)
+        (if (eq g 0) "anecdote" (if (eq g 1) "pilot" (if (eq g 2) "replicated" "proven"))))
+
+    ; ── the honesty gate: a four-way-consistent computation is NOT yet proof ──
+    ; four-way (1) + grade still anecdote/pilot -> reproducible but not proven.
+    (defn reproducible-but-not-proven? (four-way e)
+        (if (eq four-way 1) (if (le (grade e) 1) 1 0) 0))
+
+    ; ── tonight's model-edit witness, graded honestly ──
+    (defn tonight-edit ()   (evidence 1 1 0 0))            ; 1 trial, 1 toy model, no controls
+    (defn a-real-study ()   (evidence 100 5 1 1))          ; many trials, models, controls, real scale
+    (defn a-toy-study ()    (evidence 100 5 1 0))          ; same rigor, still toy scale
+
+    ; ── self-check ──
+    (defn egk (cond bit) (if cond bit 0))
+    (defn eg-anecdote ()  (egk (eq (grade (tonight-edit)) 0) 1))                                  ; tonight = anecdote
+    (defn eg-name ()      (egk (str_eq (grade-name (grade (tonight-edit))) "anecdote") 10))        ; named so
+    (defn eg-honest ()    (egk (eq (reproducible-but-not-proven? 1 (tonight-edit)) 1) 100))        ; four-way != proof
+    (defn eg-toy-cap ()   (egk (eq (grade (a-toy-study)) 2) 1000))                                 ; toy rigor caps at replicated
+    (defn eg-proven ()    (egk (eq (grade (a-real-study)) 3) 10000))                               ; only scale reaches proven
+    (defn evidence-grade-check ()
+        (add (add (add (add (eg-anecdote) (eg-name)) (eg-honest)) (eg-toy-cap)) (eg-proven)))
+)
