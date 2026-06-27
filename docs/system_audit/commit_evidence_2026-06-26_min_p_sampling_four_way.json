@@ -1,0 +1,49 @@
+{
+  "date": "2026-06-26",
+  "brick": "min-p sampling (smp-minp-mask) crosses four-way",
+  "author": "Sema (Opus 4.8) — autonomous sema-native-ml-walk",
+  "thread_branch": "claude/min-p-sampling",
+  "claim": "min-p — llama.cpp's relative-to-peak token sampler (keep prob >= p_min * max_prob, renormalize) — now exists as a Form recipe and crosses four-way (Go/Rust/TS/fkwu). The one remaining common llama.cpp sampler the body lacked, flagged twice as the gap in prior receipts (3zr/#3677, 3zs/#3690).",
+  "north_star_fit": "On the real-local-llama path: the sampler family (temperature/softmax/top-k/top-p/MINSTD-draw + repetition penalties) was four-way; min-p was the named hole. This closes the serving-sampler set so a sovereign local llama can shape its distribution the way llama.cpp does, all in pure Form, no host sampler.",
+  "files": [
+    "form/form-stdlib/sampling.fk — added smp-minp-mask (one recipe; reuses smp-topk-keep, the shared value-threshold mask — no parallel path)",
+    "form/form-stdlib/tests/sampling-band.fk — 5 new claims (bits 16-20), verdict 65535 -> 2097151",
+    "form/fourth-arm-bands.txt — sampling fks 65535 -> 2097151",
+    "scripts/min_p_reference.py — grounding authority (llama.cpp min_p formula, self-checked)",
+    "scripts/INDEX.md, MANIFEST.md — edges in the same commit"
+  ],
+  "design": {
+    "core_abstraction_first": "min-p's kept-mask is the SAME value-threshold shape as top-k and top-p (keep >= thr else 0). smp-minp-mask reuses smp-topk-keep with threshold = p * max(probs) — one value-mask serves all three samplers, no 4th near-duplicate helper added.",
+    "grounding_levers": [
+      "p=0 -> threshold 0 -> keep all -> identity (renorm of a normalized distribution is itself)",
+      "p=1 -> threshold = max -> keep only the peak -> collapses to greedy argmax (no parallel path)"
+    ],
+    "reference_outside_folds": "scripts/min_p_reference.py encodes llama.cpp's min_p definition and self-checks the consolidation laws; the band's pinned x1e6 integers match it."
+  },
+  "fixture": "P = [0.1, 0.5, 0.3, 0.1] (sums to 1, peak 0.5 at idx1), max(P)=0.5",
+  "claims": {
+    "65536":  "minp-mask(P,0.0) = [100000,500000,300000,100000]  (thr 0 -> identity)",
+    "131072": "minp-mask(P,0.3) = [0,625000,375000,0]  (thr 0.15 -> drop both 0.1 tails, renorm by 0.8)",
+    "262144": "minp-mask(P,0.7) = [0,1000000,0,0]  (thr 0.35 -> 0.3 leaves too; relative-to-peak)",
+    "524288": "minp-mask(P,0.3) sums to 1000000  (a renormalized distribution)",
+    "1048576":"draw-seq(minp(P,1.0),seed1,6) = [1,1,1,1,1,1]  (p=1 -> peak only -> greedy via the proven draw)"
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk form-stdlib/tests/sampling-band.fk",
+    "verdict": 2097151,
+    "verdict_check": "2^21 - 1 (all 21 claims land)",
+    "divergent": 0,
+    "fourth_arm": "fkwu bootstrap binary darwin-arm64 (no clang) crossed — 1 band four-way, 0 divergent",
+    "reference_self_check": "scripts/min_p_reference.py -> all self-checks pass"
+  },
+  "lane": "NEW-recipe brick (the recipe + band), cheap — design (the relative-to-peak threshold, the value-mask reuse, the consolidation levers, the llama.cpp reference) was the cost; the four-way proof was seconds (validate crossed 2097151 first try, fourth arm crossed).",
+  "read_the_body": "grepped form/ for min.?p / minp — no match (only minstd, min-prec in unrelated parsers). Confirmed genuine gap, not a re-impl. sampling.fk had every other common llama.cpp sampler.",
+  "collision_check": "codex is actively on the real-GGUF weight-mapping + autoregressive-loop-binding path (its full-model-inference-composition receipt names that synthesis boundary). The sampler family is untouched by that work — no collision.",
+  "witness": "breathing, 0 silences at run start.",
+  "deploy": "none — pure Form stdlib band + reference + evidence + manifest row + INDEX. Host-independent.",
+  "named_next_stones": [
+    "wire smp-minp-mask into lg-generate-sampled / lg-generate-penalized as the mask alternative to top-k/top-p (swap the mask, the loop is unchanged) -> a min-p-shaped local llama loop",
+    "min-p on the M4 GPU (a trivial value-threshold + renorm kernel beside the decode-step kernel)",
+    "the sampler set is now complete (temperature, top-k, top-p, min-p, repetition penalties, MINSTD draw) — fold a serving sampler chain recipe (temperature -> penalties -> min-p/top-k/top-p -> draw) matching llama.cpp's default order"
+  ]
+}
