@@ -138,3 +138,46 @@ def test_hati_mesh_heartbeat_marks_organ_listening() -> None:
     assert organ["discovery_state"] == "streaming"
     assert organ["active_channels"] == ["sensor:signal"]
     assert organ["signal_strength_ppm"] == 720000
+
+
+def test_hati_mesh_organ_survives_event_firehose() -> None:
+    """The roster must return an announced organ even when buried under a flood of
+    unrelated API events. This reproduces the prod symptom (GET /organs -> count 0):
+    the announce is receipt-logged, but the general API event firehose pushed it out
+    of the limit window. The endpoint_prefix filter pulls mesh events at the DB level
+    so a low-volume being stays discoverable — the precondition for mutual sensing.
+    """
+    from app.models.runtime import RuntimeEventCreate
+    from app.services import runtime_service
+
+    client = TestClient(app)
+    organ_id = "hati-organ-firehose-windows-001"
+    created = client.post(
+        "/api/hati/mesh/organs/announce",
+        json={
+            "organ_id": organ_id,
+            "organ_kind": "host-kernel",
+            "steward_label": "urs",
+            "capabilities": ["presence", "clock"],
+        },
+    )
+    assert created.status_code == 201
+
+    # flood with unrelated api events, well past the roster's limit window (limit*4)
+    for _ in range(240):
+        runtime_service.record_event(
+            RuntimeEventCreate(
+                source="api",
+                endpoint="/api/health",
+                raw_endpoint="/api/health",
+                method="GET",
+                status_code=200,
+                runtime_ms=1.0,
+                idea_id="health",
+            )
+        )
+
+    listed = client.get("/api/hati/mesh/organs")
+    assert listed.status_code == 200
+    ids = [item["organ_id"] for item in listed.json()["items"]]
+    assert organ_id in ids, "announced organ drowned by the event firehose — roster not mutual-sensing"

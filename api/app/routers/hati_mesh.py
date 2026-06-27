@@ -292,7 +292,11 @@ async def heartbeat_organ(payload: OrganHeartbeatIn) -> dict[str, Any]:
     summary="List recently announced Hati mesh sensing organs",
 )
 async def list_organs(limit: int = Query(default=50, ge=1, le=200)) -> dict[str, Any]:
-    rows = runtime_service.list_events(limit=max(limit * 4, 100), source="api")
+    rows = runtime_service.list_events(
+        limit=max(limit * 4, 100),
+        source="api",
+        endpoint_prefix="/api/hati/mesh/organs",
+    )
     by_id: dict[str, dict[str, Any]] = {}
     order: list[str] = []
     for row in rows:
@@ -393,7 +397,11 @@ async def list_channels(
     organ_id: str | None = Query(default=None, min_length=8, max_length=160),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> dict[str, Any]:
-    rows = runtime_service.list_events(limit=max(limit * 4, 100), source="api")
+    rows = runtime_service.list_events(
+        limit=max(limit * 4, 100),
+        source="api",
+        endpoint_prefix="/api/hati/mesh/channels",
+    )
     items: list[dict[str, Any]] = []
     for row in rows:
         if row.endpoint != "/api/hati/mesh/channels/offer":
