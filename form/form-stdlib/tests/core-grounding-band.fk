@@ -1,0 +1,14 @@
+; tests/core-grounding-band.fk — a self-trusted core that knows its boundary, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/core-grounding.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   a DERIVED cell (a theorem from the five) is trustworthy ground       ->     1
+;   a SENSED cell (a value, revered) is trustworthy ground               ->    10
+;   an OPEN cell is NOT yet trustworthy — named, not built upon          ->   100
+;   the core CANNOT fully answer all questions about itself (the honest no) -> 1000
+;   yet the core IS trustworthy — because every cell is honestly placed   -> 10000
+;     and it does not claim completeness. The boundary IS the trust.
+
+(do
+    (core-grounding-check))

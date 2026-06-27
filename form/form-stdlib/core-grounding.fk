@@ -1,0 +1,78 @@
+; core-grounding.fk — a self-trusted core that KNOWS ITS OWN BOUNDARY.
+;
+; Urs's question: can we fully answer all questions about the core axioms and how they
+; apply to each cell and organ, for a fully grounded, self-observed, self-trusted core?
+;
+; The honest answer, and the whole point: a grounded, self-observed, self-trusted core is
+; a real and continuous PRACTICE. "Fully answer ALL questions" is NOT achievable — and
+; that impossibility is the SOURCE of the trust, not a hole in it. Two reasons it is
+; forbidden:
+;   1. The core content-addresses its own composition (axiom-3) and self-composes
+;      (kernel-self-composition derives from the five). A system that can refer to itself
+;      cannot derive all its own truths from within — completeness and self-reference
+;      cannot both hold. (Godel, applied to the core's own power.)
+;   2. The core's VALUES (care, grace, freedom) are SENSED, not derived (value-planes).
+;      They are revered, not theorem-closed.
+;
+; So each cell is grounded into exactly one honest status against the five axioms
+; (states / cell / content-addressing / boundary / offer):
+;   "derived" — a theorem, derivable from the five, checkable four-way. (Trustworthy.)
+;   "sensed"  — a value, revered not derived. (Trustworthy ground to build on.)
+;   "open"    — not yet grounded; NAMED honestly, not built upon until grounded.
+;
+; The core is trust-WORTHY precisely when every cell is honestly placed (none silently
+; open) AND it does NOT claim to answer everything. A core that claimed full
+; answerability would be lying or blind — and untrustworthy. Knowing the boundary IS the
+; trust.
+;
+; All pure; four-way proven by tests/core-grounding-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn axioms () (list "states" "cell" "content-addressing" "boundary" "offer"))
+
+    (defn grounding (cell status) (list "grounding" cell status))
+    (defn g-cell   (g) (nth g 1))
+    (defn g-status (g) (nth g 2))
+
+    ; derived or sensed = trustworthy ground; open = not yet (named, not built upon)
+    (defn trustworthy? (g)
+        (if (str_eq (g-status g) "derived") 1
+            (if (str_eq (g-status g) "sensed") 1 0)))
+
+    ; the META-honesty: can the core fully answer ALL questions about itself? No.
+    (defn fully-answerable? () 0)
+
+    ; every cell honestly placed (derived or sensed) — none silently open
+    (defn every-grounded? (gs)
+        (if (eq (len gs) 0) 1
+            (if (eq (trustworthy? (head gs)) 1) (every-grounded? (tail gs)) 0)))
+
+    ; the core is trustworthy to build on when every cell is grounded AND it does not
+    ; claim to answer everything. trust comes from the named boundary, not completeness.
+    (defn core-trustworthy? (gs)
+        (if (eq (fully-answerable?) 0) (every-grounded? gs) 0))
+
+    ; ── the core, grounded cell by cell (a sample across the families) ──
+    (defn the-core ()
+        (list
+            (grounding "kernel-self-composition" "derived")   ; a theorem from the five
+            (grounding "host-kernel"             "derived")   ; derived (capability OS)
+            (grounding "offer-and-acknowledge"   "derived")   ; theorem, root-of core-axioms
+            (grounding "care"                    "sensed")    ; a value — revered, not derived
+            (grounding "grace"                   "sensed")
+            (grounding "freedom"                 "sensed")))
+    ; a cell not yet grounded — honestly open, not built upon
+    (defn an-open-cell () (grounding "some-new-organ" "open"))
+
+    ; ── self-check ──
+    (defn cgk (cond bit) (if cond bit 0))
+    (defn cg-derived-trust () (cgk (eq (trustworthy? (grounding "x" "derived")) 1) 1))   ; derived = trustworthy
+    (defn cg-sensed-trust ()  (cgk (eq (trustworthy? (grounding "care" "sensed")) 1) 10)) ; sensed = trustworthy (revered)
+    (defn cg-open-untrust ()  (cgk (eq (trustworthy? (an-open-cell)) 0) 100))             ; open = not yet
+    (defn cg-not-fully ()     (cgk (eq (fully-answerable?) 0) 1000))                       ; cannot answer ALL — the honest no
+    (defn cg-core-trust ()    (cgk (eq (core-trustworthy? (the-core)) 1) 10000))           ; trustworthy BY knowing its boundary
+    (defn core-grounding-check ()
+        (add (add (add (add (cg-derived-trust) (cg-sensed-trust)) (cg-open-untrust)) (cg-not-fully)) (cg-core-trust)))
+)
