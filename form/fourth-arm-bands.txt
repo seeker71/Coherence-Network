@@ -898,6 +898,7 @@ sampling fks 2097151
 penalties fks 63
 llama-sample-generate fks 255
 llama-penalize-generate fks 255
+sampler-chain fks 255
 
 # ── gap-close lane (2026-06-19): bands the survey found crossing fkwu, each
 # GATED four-way by scripts/fourth-arm-gate.sh (validate.sh: 0 divergent AND
