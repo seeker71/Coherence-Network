@@ -1,0 +1,133 @@
+; conversation-sync.fk — a conversation on one device reaches another through a shared
+; content-addressed store (the dead-drop), transferring only the missing utterances.
+;
+; preludes: form-stdlib/conversation-cell.fk form-stdlib/cell-sync.fk form-stdlib/storage-port.fk
+;
+; THE ASK (two cells, two machines, not the same iCloud and not the same network):
+;   a conversation held on the Mac should reach the other Mac — over the LAN when near, through a
+;   public store we control when far — WITHOUT re-sending what the other side already holds. Only the
+;   delta crosses: the utterances added, changed, or (with tombstones, a named-open edge) removed.
+;
+; THE WIRE IS A STORE. cell-sync-transport.form named offer -> diff -> transfer-missing -> verify as
+; BUILDABLE "message frames over a carrier", and named the live two-device case (both online). The
+; OFF-LAN, NOT-BOTH-ONLINE case collapses those frames into a STORAGE-PORT store used as a dead-drop:
+;   - OFFER is not a message — it is the store's KEY-SET. A device PUBLISHES its shareable utterances
+;     into the shared store keyed by their content-address; storage-keys enumerates what is on offer.
+;   - DIFF is cs-missing over those keys against my local address-set (the want-set; cell-sync.fk).
+;   - TRANSFER-MISSING is storage-get on each wanted key — only the absent utterances are pulled.
+;   - VERIFY is re-address (cell-sync's no-trusted-prover grain): the address recomputed from a pulled
+;     utterance must equal the key it was stored under, or it is dropped. The store is never trusted.
+;   - MERGE folds the verified utterances into the local transcript, content-address dedup (a re-sent
+;     utterance is RECOGNIZED by its address, not duplicated — conversation-cell's cv-eq? heart).
+; Because the carrier is swappable (storage-port: memory | file | db | any KV/S3/IPFS), the SAME sync
+; runs over a LAN file-store and over the production Postgres / object store behind the public API.
+; The store sees only opaque values under content-addresses; a private channel encrypts before publish
+; and decrypts after pull, so the dead-drop — even a public one — carries ciphertext it cannot read.
+;
+; THE ONE GIFT (cell-sync-transport.form §16-24): a cell's ADDRESS is its STRUCTURE, so two devices
+; that independently hold the same utterance already share it — the diff is empty, nothing transfers.
+; NodeIDs are NOT the address: the instance number is allocated locally per store, so the same
+; utterance wears different NodeIDs on two machines. The portable identity is the content-address
+; (merkle-root over the serialization, merkle.fk); each receiver RE-INTERNS to its own local NodeID.
+;
+; HONEST LANES (lc-honest-lane):
+;   MEASURED / built here — the dead-drop sync COMPOSES proven parts: cs-missing/cs-has? (the diff,
+;     cell-sync fks 127), cv-append/cv-eq? (the transcript + dedup, conversation-cell fks 127), and
+;     storage-keys/get/put (the carrier, storage-port fks 11111). conversation-sync adds the binding:
+;     an utterance carries a content-address, the store IS the offer, and merge dedups by address.
+;   MODELLED — an address is a string label (cell-sync's own model). Real derivation is merkle-root
+;     over the utterance serialization (merkle.fk, three-way); the band supplies addresses and the
+;     re-addressed values directly so the verify lane is falsifiable without an int->string native.
+;   BUILDABLE — the encrypt-before-publish / decrypt-after-pull cipher (the private-channel layer) and
+;     the live two-device socket path (field-relay.fk) are the complements; both named, neither faked.
+;   OPEN — TOMBSTONES for removals (added/changed ride as "an address you lack"; removed needs an
+;     explicit grave so a delete propagates) and cross-device store compaction. Named, not pretended.
+;
+; KIN: cell-sync.fk (the diff/verify/consent logic this rides) · conversation-cell.fk (the payload —
+;   utterances as content-addressed cells) · storage-port.fk (the swappable dead-drop carrier) ·
+;   merkle.fk (the real cross-device address) · channel-interface.fk (consent: publish only what the
+;   human opened) · field-relay.fk (the live, both-online complement to this async store) ·
+;   cell-sync-transport.form (the teaching this opens — step 3, the wire).
+;
+; Proven by: form-stdlib/tests/conversation-sync-band.fk (four-way at validate.sh, verdict 127).
+
+(do
+    ; --- ADDRESSED UTTERANCE: bind a content-address (string) to an utterance cell (ts spk key). ---
+    ; the address is what crosses the wire and keys the store; the utterance is the payload it names.
+    (defn au      (addr utt) (list addr utt))
+    (defn au-addr (a) (nth a 0))   ; the content-address (merkle-root over the serialization, modelled
+                                   ; as a string here — see HONEST LANES)
+    (defn au-utt  (a) (nth a 1))   ; the utterance cell this address names
+
+    ; --- addresses-of: the local address-SET of a list of addressed-utterances (the have-set). ---
+    (defn csync-addresses (aus)
+        (if (eq (len aus) 0) (empty)
+            (cons (au-addr (head aus)) (csync-addresses (tail aus)))))
+
+    ; === OFFER ============================================================================
+    ; PUBLISH: write addressed-utterances into the shared store, keyed by address. After this the
+    ; store's KEY-SET is the offer — there is no separate "offer message". Last-write-wins on re-put.
+    (defn csync-publish (carrier store aus)
+        (if (eq (len aus) 0) store
+            (csync-publish carrier
+                (storage-put carrier store (au-addr (head aus)) (au-utt (head aus)))
+                (tail aus))))
+
+    ; the OFFER set is literally the store's keys (what is on the dead-drop right now).
+    (defn csync-offered (carrier store) (storage-keys carrier store))
+
+    ; === DIFF =============================================================================
+    ; WANT: of what the store offers, the addresses my local store does NOT already hold. Structurally
+    ; -had utterances dedup for free (cs-has? is content-addressed membership) — only the absent cross.
+    (defn csync-want (carrier store have-addrs)
+        (cs-missing (csync-offered carrier store) have-addrs))
+
+    ; === TRANSFER-MISSING =================================================================
+    ; PULL: storage-get each wanted address; return the arrived addressed-utterances (claimed address
+    ; paired with the payload the store returned). Only the want-set is fetched — the minimal packfile.
+    (defn csync-pull (carrier store want)
+        (if (eq (len want) 0) (empty)
+            (do (let r (storage-get carrier store (head want)))
+                (if (eq (storage-found? r) 1)
+                    (cons (au (head want) (storage-value r))
+                          (csync-pull carrier store (tail want)))
+                    (csync-pull carrier store (tail want))))))
+
+    ; === VERIFY ===========================================================================
+    ; KEEP-AUTHENTIC: re-address each arrival and keep only those whose RECOMPUTED address equals the
+    ; one it was stored under. `recomputed` is the parallel list of re-addressed values (in real use,
+    ; merkle-root over each pulled utterance's serialization; modelled directly in the band). No trust
+    ; in the store: a tampered value re-addresses to a different string and is dropped. (cf. cell-sync
+    ; cs-authentic? — same grain, carrying the utterance through so merge can use it.)
+    (defn csync-keep-authentic (pulled recomputed)
+        (if (eq (len pulled) 0) (empty)
+            (if (str_eq (au-addr (head pulled)) (head recomputed))
+                (cons (head pulled)
+                      (csync-keep-authentic (tail pulled) (tail recomputed)))
+                (csync-keep-authentic (tail pulled) (tail recomputed)))))
+    (defn csync-accept-count (pulled recomputed) (len (csync-keep-authentic pulled recomputed)))
+
+    ; === CONSENT ==========================================================================
+    ; SHAREABLE: of my addressed-utterances, only those whose address the human has opened may be
+    ; published. (The full law is channel-interface.fk; this is its filter over the offer-set — a
+    ; device shares what it permits, no more. Witness is whole, reach is invited.)
+    (defn csync-shareable (aus permitted-addrs)
+        (if (eq (len aus) 0) (empty)
+            (if (eq (cs-has? (au-addr (head aus)) permitted-addrs) 1)
+                (cons (head aus) (csync-shareable (tail aus) permitted-addrs))
+                (csync-shareable (tail aus) permitted-addrs))))
+
+    ; === MERGE ============================================================================
+    ; MERGE: fold verified addressed-utterances into my transcript, oldest-first, content-address
+    ; dedup. An utterance whose address I already hold is RECOGNIZED, not appended (the delta-only
+    ; property: a re-sync of an unchanged conversation grows nothing). have-addrs grows as we go, so a
+    ; duplicate within one batch also dedups. Returns the grown transcript.
+    (defn csync-merge (conv have-addrs verified)
+        (if (eq (len verified) 0) conv
+            (if (eq (cs-has? (au-addr (head verified)) have-addrs) 1)
+                (csync-merge conv have-addrs (tail verified))
+                (csync-merge (cv-append (au-utt (head verified)) conv)
+                             (cons (au-addr (head verified)) have-addrs)
+                             (tail verified)))))
+
+    0)

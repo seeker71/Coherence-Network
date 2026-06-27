@@ -412,6 +412,7 @@ colearning-retire fks 127
 compression-fold fks 111111
 conversation-cell fks 127
 conversation-context fks 127
+conversation-sync fks 127
 evidence-grounding fks 127
 forget-stale fks 127
 asm-pl-human-emit fks 31
