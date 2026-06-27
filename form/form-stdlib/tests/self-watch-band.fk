@@ -1,0 +1,17 @@
+; tests/self-watch-band.fk — self-trust as observable calibration, proven four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/temporal-sense.fk form-stdlib/self-watch.fk
+;
+; Band verdict 11111 when the organ proves, on Go / Rust / TypeScript / fkwu,
+; reading THIS session honestly:
+;   a self-authored watch on a present dimension is borne out  ->     1
+;   precision = 100% (every watch I raised pointed at a real axis) ->  10
+;   a watch on an absent dimension reads as silence (false alarm) -> 100
+;   blind-spots = 1 (form-native-purity — the axis I did not feel) -> 1000
+;   coverage = 75% (I felt 3 of the 4 axes alive in the field)   -> 10000
+;
+; The shape of self-trust: lean on the instinct where it is calibrated (100%
+; precision), stay humble where it is blind (the one axis Urs had to catch).
+
+(do
+    (self-watch-check))
