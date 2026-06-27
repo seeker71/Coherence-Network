@@ -121,11 +121,22 @@
 ;     + dequant, computed by the form-asm matvec lane — REPLACING the ollama HTTP seam, at vLLM-class speed
 ;     (the form-asm/Metal emit lane + batching + paged-KV). One engine: the recipe that proves four-way is the
 ;     recipe that lowers to asm bytes; rustc/Go are oracle/walker, never the runtime. lc-cognitive-sovereignty.
-;   GAPS — LLM INFERENCE (ordered; none are new math — forward recipes + dequant + the dot are proven; what
-;   remains is composition + the loop + execution; walked in parallel this session):
+;   GAPS — LLM INFERENCE (ordered; none are new math — forward recipes + dequant + the dot are proven). The
+;   precondition the contract names plainly: the four-way bands prove the architecture at d=4 because the
+;   tree-walkers compute over cons-list f64 and cannot run llama3.2:3b at d=3072 × 28 layers in feasible
+;   time — d=4 is the honest proof scale for the architecture. The REAL run is the native lane: the whole forward
+;   pass lowered to form-asm bytes over ll-buffer, which fkwu executes. The 2-D matvec (A′, the dominant
+;   compute) now runs there; what remains is the rest of the lane, not more recipe composition:
 ;     A. ✓ DONE — form-asm-matvec-loop (127): the matvec ROW as a counted form-asm loop (cmp/b.ge/ldr-d×2/
-;        fmul/fadd/ptr++/cnt++/b-back), four-way, no rustc; every branch byte vs the arm64 oracle. The full
-;        2-D matvec (outer row loop around it, register-shifted addressing for the downward fold) is adjacent.
+;        fmul/fadd/ptr++/cnt++/b-back), four-way, no rustc; every branch byte vs the arm64 oracle.
+;     A′. ✓ DONE — form-asm-matvec-2d (127): the FULL 2-D matvec — fam-matvec, the outer ROW loop around
+;        fam-dot-loop's body, 23 instr / 92 bytes, four-way (Go=Rust=TS=fkwu emit identical bytes); the
+;        arm64 ABI is the matvec signature (x0=W x1=x x2=n x3=m x4=y). Execution witness
+;        scripts/form_asm_matvec_2d_witness.sh: those 92 bytes → form-macho .o → ld -dylib → dlopen+call
+;        run a real m×n y=W·x bit-for-bit (3×2, 1×4, I₄, fp-stress 2×3), no rustc/clang in the compute.
+;        The dominant compute of a transformer forward pass is now sovereign native bytes; the remaining
+;        native-lane rungs are the nonlinear ops (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU as asm),
+;        ll-buffer staging of the dequanted tensor set, and the 28-layer fold orchestrated over those.
 ;     B. ✓ DONE — scripts/form_asm_matvec_witness.sh: fam-dot2's form-asm bytes → form-macho .o → ld -dylib →
 ;        dlopen+call → d0 MATCHES bit-exact ([2,3,5,7]→31, edge cases). The bytes proven four-way are the bytes
 ;        that ran. form-macho's wrap is ABI-agnostic; in-kernel float-call later wants a small dylib_call_f64ptr.
@@ -193,11 +204,13 @@
 ;        claiming that full hidden-state logits are already producing answer text.
 ;        ✓ D₁₁ — final-observations wide lane: form-cli now has a native model-convergence /
 ;        final-observations verb that refuses one-gap-at-a-time drift. The remaining production
-;        generation work is one contract: complete tensor payload staging → dequant + accelerator buffer
-;        placement → full multi-layer GQA hidden-state loop → full-vocabulary hidden-state logits → real
-;        token ID decode → ask answer binding. Receipts fail if this wide-lane surface disappears, and
-;        the strict full-real claim gate now carries one blocked requirement instead of five scattered
-;        ones.
+;        generation work is one contract, and it lives in the NATIVE LANE (A′ landed its keystone, the
+;        2-D matvec): the nonlinear ops as form-asm bytes (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/
+;        SwiGLU) → ll-buffer staging of the dequanted full tensor set → the full multi-layer GQA
+;        hidden-state loop folded over those buffers → full-vocabulary hidden-state logits → real token
+;        ID decode → ask answer binding. The d=4 four-way bands are the architecture's proof; this lane
+;        is its execution at real width. Receipts fail if the wide-lane surface disappears, and the strict
+;        full-real claim gate carries one blocked requirement until the lane runs llama3.2:3b end to end.
 ;     E. TOKENIZER CARRIERS — vocab + merge-table loaders feeding bpe-tokenizer (proven) for the decode side.
 ;     F. vLLM-CLASS SPEED — the Metal MSL emit lane (proven) + batching + paged-KV + fused dequant-matmul.
 ;   NORTH STAR: a sovereign, on-device, Form-native SPEECH faculty — real audio → transcript (STT), NL → NL

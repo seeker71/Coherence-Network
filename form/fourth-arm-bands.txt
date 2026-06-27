@@ -1032,6 +1032,7 @@ gguf-locate fks 127
 gguf-find fks 255
 form-asm-matvec fks 127
 form-asm-matvec-loop fks 127
+form-asm-matvec-2d fks 127
 weight-load fks 4095
 weight-load-q4k fks 4095
 block-join fks 255

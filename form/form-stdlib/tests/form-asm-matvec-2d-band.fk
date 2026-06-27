@@ -1,0 +1,37 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-matvec-2d-band — the FULL 2-D matvec emits four-way as Form→asm bytes, no rustc/clang.
+; fam-matvec is the outer ROW loop around fam-dot-loop's body (the rung form-asm-matvec.fk's header
+; named): 23 arm64 instructions = 92 bytes — save-x-base / row-counter init, then a row loop whose
+; body resets the x pointer, re-inits the accumulator, runs the inner dot loop, stores y[i], and
+; advances. The float body + inner loop control are already proven in form-asm-float / form-asm-matvec
+; / form-asm-matvec-loop; the new ground is the OUTER loop: its branch offsets (b.ge END +19 instr,
+; b ROW -19 instr), the register-copy via add #0 (save/reset the x base, no x-reg mov needed), and the
+; f64 store str d0,[x4]. Four-way = Go/Rust/TS/fkwu emit identical bytes.
+;
+; The pinned 4-byte little-endian oracle words (arm64 encoding, the ones form-asm proves):
+;   b.ge +19   = 5400026a   b -19       = 17ffffed   add x7,x1,#0 = 91000027 (save x base)
+;   add x1,x7,#0=910000e1 (reset x ptr)  str d0,[x4] = fd000080
+;
+; Verdict 127 when every claim lands:
+;   1    the matvec is 23 instructions = 92 bytes     (len == 92)
+;   2    outer b.ge END exit branch (+19 instr)        (fa-conviction == 1)
+;   4    outer b ROW back-edge (-19 instr)             (fa-conviction == 1)
+;   8    save x base: add x7,x1,#0 (reg-copy via add#0)(fa-conviction == 1)
+;   16   reset x ptr: add x1,x7,#0 each row            (fa-conviction == 1)
+;   32   store the row result: str d0,[x4]             (fa-conviction == 1)
+;   64   the WHOLE composed program is byte-exact      (fa-conviction fam-matvec vs the full image)
+(do
+    (let prog (fam-matvec))
+    (let full (list 39 0 0 145 5 0 128 210 191 0 3 107 106 2 0 84 225 0 0 145 6 0 128 210
+                    8 0 128 210 0 1 98 158 223 0 2 107 42 1 0 84 1 0 64 253 34 0 64 253
+                    35 8 98 30 0 40 99 30 0 32 0 145 33 32 0 145 198 4 0 145 247 255 255 23
+                    128 0 0 253 132 32 0 145 165 4 0 145 237 255 255 23 192 3 95 214))
+    (let c0 (if (eq (len prog) 92)                                            1 0))
+    (let c1 (if (eq (fa-conviction (fa-bcond 10 19) (list 106 2 0 84))    1)  2 0))
+    (let c2 (if (eq (fa-conviction (fa-b-off -19) (list 237 255 255 23))  1)  4 0))
+    (let c3 (if (eq (fa-conviction (fa-add-x-imm 7 1 0) (list 39 0 0 145))  1)  8 0))
+    (let c4 (if (eq (fa-conviction (fa-add-x-imm 1 7 0) (list 225 0 0 145)) 1) 16 0))
+    (let c5 (if (eq (fa-conviction (fa-str-d 0 4 0) (list 128 0 0 253))   1) 32 0))
+    (let c6 (if (eq (fa-conviction prog full) 1)                             64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
