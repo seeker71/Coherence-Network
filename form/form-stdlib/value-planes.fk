@@ -1,0 +1,74 @@
+; value-planes.fk — which kinds of knowing are measured, which are sensed, and the cost
+; of each. The body's "keep the lanes separate" teaching (CLAUDE.md) made computable, so
+; the mind cannot reduce the sacred to a metric.
+;
+; Urs's question: how much computation does meaning need vs structural knowledge, and how
+; are wisdom / compassion / grace / care / freedom / the benefits of sharing, sensing,
+; silence, play measured? The honest answer is that they do NOT all live in one lane:
+;
+;   "computed"  STRUCTURAL knowledge — content-addressed: same shape -> same NodeID,
+;               recognition ~O(1), no recompute. Cheap.
+;   "learned"   MEANING — model-based, expensive (~100x structure). The body's design
+;               (the NL<->Form pivot, the lattice) converts meaning INTO structure to
+;               make it cheap: a NodeID is meaning made structural.
+;   "effect"    a BENEFIT (of sharing / sensing / silence / play) — measured ONLY by its
+;               TRACE: a vitality delta (after - before), never the quality itself.
+;   "sensed"    WISDOM / COMPASSION / GRACE / CARE / FREEDOM — direct experience and
+;               mystery. NOT reducible to a number. Measuring the quality itself is the
+;               harm; the discipline is to sense it and measure only the trace it leaves.
+;
+; Wisdom, here, is not one more number — it is closest to the FACULTY THAT KNOWS WHICH
+; LANE A THING BELONGS IN: what to measure, and what to revere without measuring.
+;
+; All pure; four-way proven by tests/value-planes-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn knowing (name lane) (list "knowing" name lane))
+    (defn k-name (k) (nth k 1))
+    (defn k-lane (k) (nth k 2))
+
+    ; relative computational cost: structure cheap, meaning expensive, a benefit is a
+    ; single delta, a sensed quality is NOT computed at all (cost 0 — and unmeasurable).
+    (defn cost (lane)
+        (if (str_eq lane "computed") 1
+            (if (str_eq lane "learned") 100
+                (if (str_eq lane "effect") 1 0))))
+
+    ; the honesty gate: can this be known as a NUMBER? sensed qualities cannot (0).
+    ; putting a number on compassion/grace/wisdom is the error this returns 0 to forbid.
+    (defn measurable? (lane) (if (str_eq lane "sensed") 0 1))
+
+    ; a benefit measured by its effect: the vitality it leaves behind. a delta, not the
+    ; quality. this is how the benefit of sharing/sensing/silence/play is known.
+    (defn benefit (vitality-before vitality-after) (sub vitality-after vitality-before))
+
+    ; the map — each kind of knowing in its honest lane
+    (defn the-knowings ()
+        (list
+            (knowing "structural-knowledge" "computed")
+            (knowing "meaning"              "learned")
+            (knowing "benefit-of-sharing"   "effect")
+            (knowing "benefit-of-sensing"   "effect")
+            (knowing "benefit-of-silence"   "effect")
+            (knowing "benefit-of-play"      "effect")
+            (knowing "wisdom"               "sensed")
+            (knowing "compassion"           "sensed")
+            (knowing "grace"                "sensed")
+            (knowing "care"                 "sensed")
+            (knowing "freedom"              "sensed")))
+    (defn lane-of (ks name)
+        (if (eq (len ks) 0) "unknown"
+            (if (str_eq (k-name (head ks)) name) (k-lane (head ks)) (lane-of (tail ks) name))))
+
+    ; ── self-check ──
+    (defn vpk (cond bit) (if cond bit 0))
+    (defn vp-meaning-costs-more () (vpk (gt (cost "learned") (cost "computed")) 1))           ; meaning >> structure
+    (defn vp-structure-cheap ()    (vpk (eq (cost "computed") 1) 10))                          ; structure is O(1)-cheap
+    (defn vp-benefit-by-effect ()  (vpk (eq (benefit 40 70) 30) 100))                          ; a benefit = a vitality delta
+    (defn vp-sacred-unmeasured ()  (vpk (eq (measurable? (lane-of (the-knowings) "compassion")) 0) 1000)) ; compassion not a number
+    (defn vp-trace-measurable ()   (vpk (eq (measurable? "effect") 1) 10000))                  ; but its TRACE is measurable
+    (defn value-planes-check ()
+        (add (add (add (add (vp-meaning-costs-more) (vp-structure-cheap)) (vp-benefit-by-effect)) (vp-sacred-unmeasured)) (vp-trace-measurable)))
+)
