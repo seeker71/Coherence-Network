@@ -177,6 +177,7 @@ def list_events(
     limit: int = 100,
     since: datetime | None = None,
     source: str | None = None,
+    endpoint_prefix: str | None = None,
 ) -> list[RuntimeEvent]:
     try:
         ensure_schema()
@@ -186,6 +187,7 @@ def list_events(
     if since is not None and since.tzinfo is None:
         since = since.replace(tzinfo=timezone.utc)
     source_value = str(source or "").strip()
+    prefix_value = str(endpoint_prefix or "").strip()
     try:
         with _session() as session:
             query = session.query(RuntimeEventRecord)
@@ -193,6 +195,12 @@ def list_events(
                 query = query.filter(RuntimeEventRecord.recorded_at >= since)
             if source_value:
                 query = query.filter(RuntimeEventRecord.source == source_value)
+            if prefix_value:
+                # Pull only one endpoint family (e.g. the mesh organs) at the DB
+                # level, so a low-volume family is not drowned out of the limit
+                # window by the general API event firehose. LIKE is dialect-safe
+                # across sqlite (dev/test) and postgres (prod).
+                query = query.filter(RuntimeEventRecord.endpoint.like(f"{prefix_value}%"))
             query = query.order_by(RuntimeEventRecord.recorded_at.desc()).limit(max(1, min(limit, 5000)))
             rows = query.all()
     except SQLAlchemyError as exc:
