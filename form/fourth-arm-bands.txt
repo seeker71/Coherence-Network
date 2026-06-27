@@ -877,7 +877,7 @@ trivial-typed-leaf fks 1111111
 json-codec-bml fks 8191
 whisper-block0 fks 1023
 json-meaning-ingestion fks 1000
-form-cli fks 65535
+form-cli fks 131071
 json-emitter fks 31
 json-promoted-types fks 115
 form-cli-band fks 16383

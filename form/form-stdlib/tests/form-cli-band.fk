@@ -1,9 +1,10 @@
 ; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/current-branch-landing.fk form-stdlib/form-cli.fk
 ;
 ; form-cli-band — native form-cli dispatch + fnri catalog on fkwu (source walk).
-; Verdict 65535 = 4095 dispatch/fnri + 4096 ask reaches grounded lane
+; Verdict 131071 = 4095 dispatch/fnri + 4096 ask reaches grounded lane
 ; + 8192 synthesis-status names the observed model-lane pieces and the decoded
-; answer binding + 49152 current-branch landing readiness dispatch.
+; answer binding + 49152 current-branch landing readiness dispatch
+; + 65536 final-observations/model-convergence keeps all remaining bridges in one lane.
 
 (do
     (let c0 (if (str_eq (fc-respond "ping") "pong") 1 0))
@@ -22,10 +23,15 @@
     (let c12 (if (str_eq (fc-respond "ask standard receipt") "[ask: local fkwu RAG index has no grounded hit]") 4096 0))
     (let synth (fc-respond "synthesis-status"))
     (let c13 (if (and (not (lt (str_find synth "fkwu-metal-answer-bound" 0) 0))
-                      (and (not (lt (str_find synth "available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,gguf-tensor-set-cell,gguf-semantic-token-generation,gguf-fullwidth-logit-generation,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding" 0) 0))
-                      (and (not (lt (str_find synth "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" 0) 0))
+                      (and (not (lt (str_find synth "available:gguf-locate,gguf-model-cell,gguf-tensor-slice-math,gguf-tensor-set-cell,gguf-semantic-token-generation,gguf-fullwidth-logit-generation,sampler-min-p-four-way,weight-load,block-join,real-gguf-tensor-math-four-way,metal-matvec,metal-model-cell,metal-decode-step,tokenizer-carrier-four-way,llama3-pretokenizer-four-way,real-gguf-tensor-map,metal-weight-bytes-runtime,autoregressive-loop-four-way,ask-staged-model-call-witness,decoded-prose-answer-binding" 0) 0))
+                      (and (not (lt (str_find synth "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,sampler-min-p-four-way,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" 0) 0))
                       (and (not (lt (str_find synth "missing:full-real-llama-gguf-token-generation" 0) 0))
                            (not (lt (str_find (fc-respond "decoded-answer") "prose-generation:observed-decoded-prose-answer-binding" 0) 0)))))) 8192 0))
     (let c14 (if (str_eq (fc-respond "land-readiness OPEN 0 none CLEAN 3 0 0 0") "ready") 16384 0))
     (let c15 (if (str_eq (fc-respond "land-readiness OPEN 0 none CLEAN 3 1 0 0 1") "waiting") 32768 0))
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
+    (let convergence (fc-respond "final-observations"))
+    (let c16 (if (and (not (lt (str_find convergence "model-lane-convergence:one-wide-move" 0) 0))
+                      (and (not (lt (str_find convergence "wide-move:complete-full-width-tensor-payload-staging,dequant-and-accelerator-buffer-placement,full-multilayer-gqa-hidden-state-loop,full-vocabulary-hidden-state-logits,real-token-id-decode,ask-answer-binding" 0) 0))
+                      (and (not (lt (str_find convergence "pending:full-real-llama-gguf-token-generation" 0) 0))
+                           (not (lt (str_find convergence "method:move-all-remaining-bridges-together-under-one-receipt" 0) 0))))) 65536 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16)))

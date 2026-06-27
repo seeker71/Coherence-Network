@@ -1,0 +1,213 @@
+{
+  "date": "2026-06-27",
+  "thread_branch": "codex/final-witnessed-observations-d617",
+  "commit_scope": "Add a native form-cli final-observations/model-convergence surface and receipts that move the remaining full-real Llama generation bridges as one wide lane instead of one gap at a time.",
+  "files_owned": [
+    "bin/form-cli",
+    "docs/coherence-substrate/form-native-models.form",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/native/GPU_GAPS.md",
+    "scripts/INDEX.md",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/form_cli_preflight.sh",
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh",
+    "docs/system_audit/commit_evidence_2026-06-27_final_witnessed_observations_wide_lane.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide -> passed before edits",
+      "make wellness -> passed before edits; no core blockers",
+      "bin/form-cli ask \"Should final witnessed observations surface min-p sampler four-way status in form-cli synthesis/model-lane receipts, and what should remain blocked for full real Llama GGUF local generation?\" -> native miss, model-call observed, full-real generation pending",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk form-stdlib/tests/sampling-band.fk -> 2097151, fourth arm: 1 band(s) four-way",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk form-stdlib/rag-index-codec.fk form-stdlib/rag-retrieve.fk form-stdlib/rag-ask.fk form-stdlib/form-cli-ask.fk form-stdlib/line-grammar.fk form-stdlib/voice-traits.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/mesh-dispatch.fk form-stdlib/surprise-salience.fk form-stdlib/host-sense-organ.fk form-stdlib/speech-organ.fk form-stdlib/native-host-instance.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/hati-os-targets.fk form-stdlib/form-native-resource-interfaces.fk form-stdlib/form-fs.fk form-stdlib/storage-port.fk form-stdlib/host-kernel-carrier.fk form-stdlib/fnri-standin.fk form-stdlib/fnri-receipt.fk form-stdlib/current-branch-landing.fk form-stdlib/form-cli.fk form-stdlib/tests/form-cli-band.fk -> 131071, fourth arm: 1 band(s) four-way",
+      "bash scripts/fnri_fkwu_witness.sh -> PASS: fnri form-cli-band 131071",
+      "scripts/regen_form_cli_bootstrap.sh -> regenerated form-cli-emitted.c and form-cli-table.txt with stamp acbf7095b3f72380",
+      "FORM_CLI_FORCE_LINK=1 ./build-form-cli.sh in form/ -> built standalone form-cli; build-time bridge only",
+      "FORM_STANDARD_LANE=1 ./build-form-cli.sh /tmp/form-cli-standard-check in form/ -> copied bootstrap/darwin-arm64 with no clang; final-observations observed",
+      "bin/form-cli final-observations -> model-lane-convergence:one-wide-move; pending:full-real-llama-gguf-token-generation",
+      "bin/form-cli synthesis-status -> observed sampler-min-p-four-way and missing full-real-llama-gguf-token-generation",
+      "scripts/validate_form_cli_full_real_llama_generation_claim.sh .cache/body-test-receipts/current-full-real-llama-generation-claim.json -> verdict blocked_full_real_llama_generation_pending; grounded-decoded-answer:true; blocked-requirements:1",
+      "bin/form-cli model-gap-receipt .cache/body-test-receipts/current-model-lane-gap-receipt.json -> verdict observed-grounded-decoded-answer-fullwidth-logits-full-real-llama-pending",
+      "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh .cache/body-test-receipts/current-full-model-inference-composition.json -> verdict pass_composition_receipt_fullwidth_logits_bound_full_real_generation_pending",
+      "scripts/form_cli_preflight.sh -> READY, 9 passed, 0 gaps",
+      "scripts/validate_form_cli_local_receipts.sh substrate -> PASS: local grounded ask, semantic-token generation, full-width logit generation, sampler, and grounded decoded-answer receipts are honest"
+    ],
+    "results": [
+      "form-cli now has native model-convergence and final-observations verbs that report one wide remaining model-lane move.",
+      "The form-cli four-way band increased from 65535 to 131071 and proves the wide-lane native dispatch.",
+      "The FNRI fkwu witness now reads the expected form-cli verdict from form/fourth-arm-bands.txt so Windows floor follows the native manifest.",
+      "The sampler/min-p lane is part of synthesis-status, model-gap receipts, local receipts, and the full composition receipt.",
+      "The full-real Llama claim gate now records one blocked requirement: tensor payload staging -> dequant/buffer placement -> hidden-state loop -> hidden-state logits -> real token ID decode -> ask binding.",
+      "The model-lane gap receipt observes full GGUF map, semantic token decode, full-width logits over 128256 vocabulary rows, sampler min-p, Metal GQA loop, ask-staged model-call, and decoded prose binding.",
+      "Full real Llama GGUF token generation remains pending and unclaimed."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "GitHub Actions after PR"
+    ],
+    "notes": "Local proof passed; CI will run after push/PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "reason": "No public web/API deploy surface changed. This is local form-cli/runtime receipt work."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local receipts pass; PR CI is still pending until the branch is pushed."
+  },
+  "idea_ids": [
+    "cognitive-sovereignty",
+    "form-native-model-execution",
+    "toolchain-free-agent-loop"
+  ],
+  "spec_ids": [
+    "form-cli-fkwu-metal-llm-lane",
+    "full-model-inference-composition-receipt",
+    "final-witnessed-observations-wide-lane"
+  ],
+  "task_ids": [
+    "task-2026-06-27-final-witnessed-observations-wide-lane"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "native-first-standard",
+        "wide-lane-correction"
+      ]
+    },
+    {
+      "contributor_id": "openai-gpt-5-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "evidence_refs": [
+    ".cache/body-test-receipts/current-full-real-llama-generation-claim.json",
+    ".cache/body-test-receipts/current-model-lane-gap-receipt.json",
+    ".cache/body-test-receipts/current-full-model-inference-composition.json",
+    ".cache/body-test-receipts/current-gguf-semantic-token-generation-receipt.json",
+    ".cache/body-test-receipts/current-gguf-fullwidth-logits-receipt.json",
+    ".cache/body-test-receipts/current-model-cell-receipt.json",
+    "/tmp/form-cli-standard-check",
+    "/Users/ursmuff/.coherence-network/ask-staged-model-call/current-receipt.json"
+  ],
+  "change_files": [
+    "bin/form-cli",
+    "docs/coherence-substrate/form-native-models.form",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64",
+    "form/form-stdlib/bootstrap/form-cli-darwin-arm64.stamp",
+    "form/form-stdlib/bootstrap/form-cli-emitted.c",
+    "form/form-stdlib/bootstrap/form-cli-table.txt",
+    "form/form-stdlib/bootstrap/form-cli.stamp",
+    "form/form-stdlib/form-cli.fk",
+    "form/form-stdlib/tests/form-cli-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/native/GPU_GAPS.md",
+    "scripts/INDEX.md",
+    "scripts/fnri_fkwu_witness.sh",
+    "scripts/fkwu_form_cli_full_model_inference_composition_receipt.sh",
+    "scripts/form_cli_preflight.sh",
+    "scripts/validate_form_cli_full_real_llama_generation_claim.sh",
+    "scripts/validate_form_cli_local_receipts.sh",
+    "scripts/validate_form_cli_model_lane_gap_receipts.sh",
+    "docs/system_audit/commit_evidence_2026-06-27_final_witnessed_observations_wide_lane.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-cli gains a native final-observations/model-convergence command and receipt gates that bundle all remaining full-real generation work into one wide path while observing sampler-min-p and keeping full real Llama GGUF generation pending.",
+    "public_endpoints": [
+      "local fkwu form-cli final-observations",
+      "local fkwu form-cli synthesis-status",
+      "local receipt scripts under scripts/"
+    ],
+    "test_flows": [
+      "native final-observations command observed from refreshed standalone form-cli",
+      "standard-lane bootstrap copy observed with no clang",
+      "full composition receipt with native_final_observations_wide_model_lane=true",
+      "strict full-real claim gate blocked with one wide requirement"
+    ]
+  },
+  "body_trace": {
+    "native_status": "synthesis-lane:fkwu-metal-answer-bound",
+    "final_observations": "model-lane-convergence:one-wide-move",
+    "observed": [
+      "grounded-rag",
+      "gguf-model-cell",
+      "full-gguf-weight-map",
+      "named-real-gguf-tensor-math",
+      "full-gguf-named-tensor-slice-math",
+      "full-gguf-required-tensor-set-materialization",
+      "real-gguf-tokenizer-token-decode",
+      "semantic-token-generation",
+      "full-width-model-logit-generation",
+      "sampler-min-p-four-way",
+      "metal-weight-bytes-runtime",
+      "autoregressive-loop",
+      "ask-staged-model-call",
+      "decoded-prose-answer-binding"
+    ],
+    "wide_move": [
+      "complete-full-width-tensor-payload-staging",
+      "dequant-and-accelerator-buffer-placement",
+      "full-multilayer-gqa-hidden-state-loop",
+      "full-vocabulary-hidden-state-logits",
+      "real-token-id-decode",
+      "ask-answer-binding"
+    ],
+    "missing": [
+      "full-real-llama-gguf-token-generation"
+    ],
+    "boundary": "The remaining work is one wide native path, not five isolated gap rows. Full hidden-state Llama generation remains pending and unclaimed."
+  },
+  "bridge_tools": {
+    "build_time_bridge_used": true,
+    "observed_on_host": [
+      "go",
+      "clang",
+      "jq",
+      "swiftc"
+    ],
+    "purpose": "Maintainer bootstrap regeneration and local standalone binary link after changing the baked form-cli source.",
+    "runtime_claim": "Standard-lane child receipts copy the refreshed bootstrap with no clang; proof binaries run with denied toolchain names hidden from PATH and http_or_ollama absent.",
+    "remaining_gap": "Self-host flatten/emit/bootstrap refresh is still the build-time bridge to retire; it is not claimed as runtime-native in this evidence."
+  },
+  "sovereignty_receipt": {
+    "generated_by": "OpenAI GPT-5 Codex in Codex",
+    "native_body_share": "form-cli final-observations, synthesis-status, model-gap receipt, full-real claim gate, GGUF receipts, Form bands, and Metal witnesses were observed locally",
+    "rented_oracle_share": "patch selection, orchestration, and this evidence wording were generated by the rented frontier model",
+    "trust_matrix": {
+      "path": "native/local receipt proof with rented orchestration",
+      "grounded": "receipt artifacts and command outputs are grounded",
+      "freq": "clear-not-fear; not machine-measured",
+      "suffic": "sufficient for final witnessed observations and the wide-lane contract; not sufficient for full real Llama hidden-state generation",
+      "observed": false
+    }
+  }
+}
