@@ -1,0 +1,67 @@
+; preludes: form-stdlib/conversation-cell.fk form-stdlib/cell-sync.fk form-stdlib/storage-port.fk form-stdlib/conversation-sync.fk
+;
+; conversation-sync-band — a conversation crosses from one device to another through a shared
+; content-addressed store (the dead-drop), transferring ONLY the utterances the other side lacks.
+;
+; THE STORY (two Macs, not the same iCloud, not the same network — a store between them):
+;   Device A holds a 3-utterance conversation, each addressed by its content-address:
+;     ("h1", (10 0 100))  human, tick 10        ("a1", (20 1 200))  agent, tick 20
+;     ("h2", (30 0 300))  human, tick 30
+;   A PUBLISHES all three into a shared memory-carrier store — the off-LAN dead-drop. After publish
+;   the store's KEY-SET is the offer; there is no separate offer message.
+;   Device B already holds the opening utterance ("h1") from an earlier sync: its local transcript is
+;   [(10 0 100)] and its have-set is ("h1"). B syncs: it WANTS only what it lacks, PULLS only those,
+;   VERIFIES each by re-address, MERGES into its transcript, and a RE-SYNC then wants nothing — the
+;   delta-only property: an unchanged conversation re-syncs to a no-op.
+;
+; Verdict 127 when every claim lands:
+;   1   the dead-drop carries A's 3 utterances      (offered key-set count == 3)
+;   2   the diff is exactly what B lacks            (want-count over have ("h1") == 2)
+;   4   the want-set names the right cell           ("a1" is wanted; "h1" is not re-fetched)
+;   8   transfer-missing pulls only the absent      (pull returns 2 addressed-utterances)
+;   16  re-addressing accepts the authentic         (keep-authentic of 2 matching == 2)
+;   32  re-addressing drops the tampered            (one recomputed address != its key -> dropped)
+;   64  merge yields the union AND re-sync is empty  (merged count == 3 AND second want-count == 0)
+(do
+    ; --- Device A's addressed conversation ---
+    (let aus (list (au "h1" (utt 10 0 100))
+                   (au "a1" (utt 20 1 200))
+                   (au "h2" (utt 30 0 300))))
+
+    ; --- the shared dead-drop: a memory carrier; A publishes its conversation into it ---
+    (let mem   (carrier-memory))
+    (let store (csync-publish mem (storage-open mem (empty)) aus))
+
+    ; --- Device B's local state before sync ---
+    (let convB     (list (utt 10 0 100)))   ; B already heard the opening utterance
+    (let haveB     (list "h1"))             ; ...so it holds address "h1"
+
+    ; --- DIFF: what B wants from the dead-drop ---
+    (let offered (csync-offered mem store))
+    (let want    (csync-want mem store haveB))
+
+    ; --- TRANSFER-MISSING: pull only the wanted addresses ---
+    (let pulled (csync-pull mem store want))
+
+    ; --- VERIFY fixtures: two arrivals, re-addressed. The OK pair re-addresses to its own key;
+    ;     the TAMPERED list re-addresses one value to a wrong string ("BAD") -> that one is dropped. ---
+    (let arrivals     (list (au "a1" (utt 20 1 200)) (au "h2" (utt 30 0 300))))
+    (let recomputedOK (list "a1" "h2"))    ; both re-address to their keys -> both authentic
+    (let recomputedBAD(list "a1" "BAD"))   ; "h2" arrival re-addresses to "BAD" -> dropped
+
+    ; --- MERGE the verified arrivals into B's transcript, content-address dedup ---
+    (let convB2 (csync-merge convB haveB (csync-keep-authentic arrivals recomputedOK)))
+
+    ; --- RE-SYNC: B now holds all three addresses; a second want must be empty (delta-only) ---
+    (let haveB2 (list "h1" "a1" "h2"))
+    (let want2  (csync-want mem store haveB2))
+
+    (let c0 (if (eq (len offered) 3) 1 0))
+    (let c1 (if (eq (cs-want-count offered haveB) 2) 2 0))
+    (let c2 (if (eq (cs-has? "a1" want) 1) 4 0))
+    (let c3 (if (eq (len pulled) 2) 8 0))
+    (let c4 (if (eq (csync-accept-count arrivals recomputedOK) 2) 16 0))
+    (let c5 (if (eq (csync-accept-count arrivals recomputedBAD) 1) 32 0))
+    (let c6 (if (eq (cv-count convB2) 3) (if (eq (len want2) 0) 64 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
