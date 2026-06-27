@@ -1,0 +1,50 @@
+{
+  "date": "2026-06-27",
+  "brick": "the COMPLETE llama.cpp serving sampler chain (smp-chain) crosses four-way",
+  "author": "Sema (Opus 4.8) — autonomous sema-native-ml-walk",
+  "thread_branch": "claude/sampler-chain",
+  "claim": "the whole serving sampler pipeline — penalties -> temperature -> softmax -> top-k -> top-p -> min-p -> draw, in llama.cpp's default order — now exists as ONE Form recipe (smp-chain-logits / smp-chain-probs / smp-chain-draw) and crosses four-way (Go/Rust/TS/fkwu). The literal named-next-stone from min-p (#3700/3zt): 'the sampler set is now complete -- fold a serving sampler chain recipe ... matching llama.cpp's default order.'",
+  "north_star_fit": "Core-lift consolidation on the real-local-llama path. The sampler family was complete (temperature/softmax/top-k/top-p/min-p + MINSTD draw #3651/#3700 + repetition penalties #3677), and the generation loops (#3654 sampled, #3690 penalized) each wired ONE filter at a time. This folds the WHOLE set into the single generic serving pipeline llama.cpp applies per step — fewer special cases, one recipe of which every existing loop variant (greedy, sampled, penalized, min-p) is a special case at its identity knobs. No parallel paths.",
+  "files": [
+    "form/form-stdlib/sampler-chain.fk — NEW: smp-chain-logits (penalties->temperature), smp-chain-probs (->softmax->top-k->top-p->min-p), smp-chain-draw (->MINSTD draw). Preludes sampling.fk + penalties.fk. Pure composition, no new arithmetic.",
+    "form/form-stdlib/tests/sampler-chain-band.fk — NEW: 8 strange-minimal claims, verdict 255, grounded by EQUIVALENCE to already-four-way recipes plus the libm-grounded softmax pin.",
+    "form/fourth-arm-bands.txt — added 'sampler-chain fks 255'"
+  ],
+  "design": {
+    "core_abstraction_first": "ONE chain in llama.cpp order. Penalties + temperature shape LOGITS; softmax converts to PROBS; the masks filter PROBS in order (each renormalizes); the draw maps a uniform MINSTD sample to a token id. The off-value of every stage is its identity: penalties (1,0,0)/window 0, temperature t=1.0, top-k k=|V|, top-p p=1.0, min-p p=0.0 — so the all-identity chain reduces to smp-softmax, and greedy is the chain whose result is peaked (min-p p=1 keeps only the argmax).",
+    "grounding_levers": [
+      "all-identity chain == smp-softmax(logits) bit-for-bit at the 1e-6 pin (bit1, pinned to the standalone sampling band's libm-grounded softmax integers [224208,609460,135989,30343])",
+      "each remaining claim turns ONE knob and shows the chain == applying that one standalone four-way stage, threaded in llama.cpp order (equivalence)",
+      "min-p p=1.0 -> peak only -> the draw returns the argmax (idx1) for every seed -> greedy is the chain's special case, no parallel path (bit128, 3 distinct seeds)"
+    ],
+    "no_new_reference_needed": "the chain adds no arithmetic, so the band grounds it by EQUIVALENCE to its hand-composed parts (already four-way: sampling fks 2097151, penalties fks 63) — the 3zn/3zp/3zs lane. The softmax magnitude itself is libm-grounded via the standalone sampling band."
+  },
+  "fixture": "L = [1.0, 2.0, 0.5, -1.0] (logits, |V|=4 so k=4 is the top-k identity); IDS = [1] (one-token history for the penalty stage); identity knobs win=0, pr=1.0 pf=0.0 pp=0.0, t=1.0, k=4, ptop=1.0, pmin=0.0",
+  "claims": {
+    "1":   "chain(L, identity) = softmax(L) = [224208,609460,135989,30343]  (every stage off -> softmax)",
+    "2":   "chain(L, t=0.5) == softmax(temperature(L,0.5))  (temperature stage threads)",
+    "4":   "chain(L, k=2) == topk-mask(softmax(L),2)  (top-k stage threads, in order)",
+    "8":   "chain(L, ptop=0.5) == topp-mask(softmax(L),0.5)  (top-p stage threads, in order)",
+    "16":  "chain(L, pmin=0.5) == minp-mask(softmax(L),0.5)  (min-p stage threads, in order)",
+    "32":  "chain(L, ids=[1], pr=2.0) == softmax(pen-apply(L,[1],2,0,0))  (penalty stage threads at the front; token 1's logit 2.0 -> /2.0)",
+    "64":  "chain-draw(L, identity, seed 1) == smp-draw(softmax(L),1) == token 0  (the draw threads)",
+    "128": "chain-draw(L, pmin=1.0, seed) = 1 for seeds {1,100000,127000}  (peak-only -> greedy argmax idx1, no parallel path)"
+  },
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/sampling.fk form-stdlib/penalties.fk form-stdlib/sampler-chain.fk form-stdlib/tests/sampler-chain-band.fk",
+    "verdict": 255,
+    "verdict_check": "2^8 - 1 (all 8 claims land)",
+    "divergent": 0,
+    "fourth_arm": "fkwu bootstrap binary darwin-arm64 (no clang) crossed — 1 band four-way, 0 divergent"
+  },
+  "lane": "recipe-altitude composition-by-REUSE (like multi-layer-stack #3423, tokenize #3550, the sampled/penalized loops #3654/#3690) — NO new algorithm, NO numeric change. Design (the llama.cpp order mapped onto our logit-stage vs prob-mask shapes, the per-stage identity knobs, the equivalence-grounded band) was the cost; the four-way proof was seconds (validate crossed 255 first try, fourth arm crossed).",
+  "read_the_body": "grepped form/ for smp-chain / sampler-chain / chain — none existed. Confirmed the genuine gap min-p's receipt named: the sampler family was complete but never folded into one serving pipeline.",
+  "collision_check": "codex is on the real-GGUF weight-mapping + autoregressive-loop-binding path; the sampler family + its composition is untouched there. No collision (the sampling .fk files belong to the claude/sema sampler lane).",
+  "witness": "breathing, 0 silences at run start.",
+  "deploy": "none — pure Form stdlib recipe + band + manifest row + evidence. Host-independent.",
+  "named_next_stones": [
+    "wire smp-chain-draw into the llama generation loop as the ONE selection step replacing the per-loop ad-hoc filter ordering — lg-generate-chain, of which lg-generate / -sampled / -penalized are identity-knob special cases (the loop-level core-lift)",
+    "emit the prob-mask + draw chain to the M4 GPU beside the decode-step kernel (the logit vector is vocab-sized; a trivial threshold+renorm+CDF kernel)",
+    "feed real llama3.2:3b GGUF weights through the GQA decode loop + this serving chain -> the first end-to-end native local llama token, sampled in llama.cpp's serving order (load path q4k/q6k/f16 + gguf find-by-name #3671 already Form-native; real-weight carrier is codex's active lane)"
+  ]
+}

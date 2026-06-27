@@ -1,0 +1,44 @@
+; sampler-chain.fk — the COMPLETE llama.cpp serving sampler chain as ONE Form recipe:
+;   penalties → temperature → softmax → top-k → top-p → min-p → draw, in llama.cpp's default order.
+;
+; preludes: form-stdlib/sampling.fk form-stdlib/penalties.fk
+;
+; The sampler family is complete: sampling.fk carries temperature / softmax / top-k / top-p / min-p +
+; the MINSTD inverse-CDF draw (#3651 / #3700); penalties.fk carries the repetition + frequency +
+; presence penalty pass llama.cpp applies BEFORE temperature (#3677). Each was proven four-way
+; STANDALONE, and the generation loops (#3654 sampled, #3690 penalized) each wire ONE filter at a time.
+; This stone folds the WHOLE set into the single serving pipeline llama.cpp runs per step, in its
+; canonical order — ONE generic recipe of which every existing loop variant (greedy, sampled,
+; penalized, min-p) is a special case at its identity knobs (core-abstraction-first, no parallel path).
+;
+; NO new arithmetic: pure composition over already-four-way recipes, so the band grounds the whole
+; chain by EQUIVALENCE to its hand-composed parts (the 3zn / 3zp / 3zs lane) — at the ×1e6 pin, against
+; recipes already proven four-way (sampling fks 2097151, penalties fks 63), the softmax magnitude
+; itself libm-grounded by the standalone sampling band.
+;
+; llama.cpp order (llama_sampler_chain default): penalties → temperature → softmax → top_k → top_p →
+; min_p → dist(draw). Penalties + temperature shape LOGITS; softmax converts logits → probs; the masks
+; filter PROBS in that order (each renormalizes the kept mass); the draw maps a uniform MINSTD sample
+; to a token id. The OFF-value of every stage is its identity — so the all-identity chain reduces to
+; smp-softmax(logits), and greedy is the chain whose result is peaked (min-p p=1 keeps only the peak):
+;   penalties (pr 1.0, pf 0.0, pp 0.0) or window 0 ; temperature t=1.0 ;
+;   top-k k=|V| ; top-p p=1.0 ; min-p p=0.0
+; teaching: lc-cognitive-sovereignty
+
+; --- the LOGIT stage: penalize over the last-n window, then temperature. (1,0,0)/win0/t1 == identity. ---
+(defn smp-chain-logits (logits ids win pr pf pp t)
+  (smp-temperature (pen-apply logits (pen-last-n ids win) pr pf pp) t))
+
+; --- the full filtered distribution: logit stage → softmax → top-k → top-p → min-p (llama.cpp order). ---
+;     k=|logits| / ptop=1.0 / pmin=0.0 leave each mask an identity, so the off-chain == smp-softmax. ---
+(defn smp-chain-probs (logits ids win pr pf pp t k ptop pmin)
+  (smp-minp-mask
+    (smp-topp-mask
+      (smp-topk-mask (smp-softmax (smp-chain-logits logits ids win pr pf pp t)) k)
+      ptop)
+    pmin))
+
+; --- the draw: the filtered serving distribution → an actual token id via the MINSTD PRNG state. ---
+;     A peaked result (e.g. pmin=1.0 keeps only the argmax) draws that index for every state → greedy. ---
+(defn smp-chain-draw (logits ids win pr pf pp t k ptop pmin state)
+  (smp-draw (smp-chain-probs logits ids win pr pf pp t k ptop pmin) state))

@@ -1,0 +1,87 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/sampling.fk form-stdlib/penalties.fk form-stdlib/sampler-chain.fk
+;
+; sampler-chain-band — the COMPLETE llama.cpp serving sampler chain (penalties → temperature → softmax
+; → top-k → top-p → min-p → draw) as ONE Form recipe, proven four-way. The chain adds NO new
+; arithmetic: it composes recipes already proven four-way (sampling fks 2097151, penalties fks 63), so
+; every claim grounds the chain by EQUIVALENCE (at the ×1e6 pin) to its hand-composed parts — the
+; 3zn / 3zp / 3zs lane. The off-value of every stage is its identity, so the all-identity chain reduces
+; to smp-softmax (bit1, pinned to the standalone sampling band's libm-grounded softmax integers); each
+; remaining claim turns ONE knob and shows the chain equals applying that one standalone four-way stage,
+; threaded in llama.cpp order; the last claim is the greedy CONSOLIDATION (min-p p=1 → only the peak →
+; the draw returns the argmax for every seed → greedy is the chain's special case, no parallel path).
+;
+; Fixtures:
+;   L   = [1.0, 2.0, 0.5, -1.0]      (raw logits; |V|=4 so k=4 is the top-k identity)
+;   IDS = [1]                         (a one-token history, for the penalty stage)
+;   identity knobs: win=0, pr=1.0 pf=0.0 pp=0.0, t=1.0, k=4, ptop=1.0, pmin=0.0
+;
+; Verdict 255 when all 8 claims land:
+;   1   chain(L, identity)          = softmax(L) = [224208,609460,135989,30343]   (every stage off → softmax)
+;   2   chain(L, t=0.5)             == softmax(temperature(L,0.5))                 (temperature stage threads)
+;   4   chain(L, k=2)               == topk-mask(softmax(L),2)                     (top-k stage threads, in order)
+;   8   chain(L, ptop=0.5)          == topp-mask(softmax(L),0.5)                   (top-p stage threads, in order)
+;   16  chain(L, pmin=0.5)          == minp-mask(softmax(L),0.5)                   (min-p stage threads, in order)
+;   32  chain(L, ids=[1],pr=2.0)    == softmax(pen-apply(L,[1],2,0,0))            (penalty stage threads at the front)
+;   64  chain-draw(L, identity, s1) == smp-draw(softmax(L),1) == 0                 (the draw threads; seed 1 → token 0)
+;   128 chain-draw(L, pmin=1.0, sN) = 1 for seeds {1,100000,127000}                (peak-only → greedy argmax idx1, no parallel path)
+(do
+    ; --- value reducer: a vec → flat list of (round (x·1e6)) integers ---
+    (defn scb-ints (v)
+      (if (eq (len v) 0) (empty) (cons (round (mul (head v) 1000000.0)) (scb-ints (tail v)))))
+    ; exact integer-list equality
+    (defn scb-ieq (a b)
+      (if (eq (len a) 0) (eq (len b) 0)
+          (if (eq (len b) 0) false
+              (if (eq (head a) (head b)) (scb-ieq (tail a) (tail b)) false))))
+
+    ; --- fixtures ---
+    (let L (list 1.0 2.0 0.5 -1.0))
+    (let IDS (list 1))
+
+    ; --- the chain stages, each composed from the standalone four-way recipes (the equivalence sides) ---
+    (let sm (smp-softmax L))                                          ; softmax(L)
+
+    ; bit1 — identity chain reduces to softmax (libm-pinned via the sampling band's softmax integers)
+    (let ch-id (smp-chain-probs L (empty) 0 1.0 0.0 0.0 1.0 4 1.0 0.0))
+    (let sm-want (list 224208 609460 135989 30343))
+    (let c0 (if (scb-ieq (scb-ints ch-id) sm-want) 1 0))
+
+    ; bit2 — temperature stage threads: chain(t=0.5) == softmax(temperature(L,0.5))
+    (let ch-t (smp-chain-probs L (empty) 0 1.0 0.0 0.0 0.5 4 1.0 0.0))
+    (let want-t (smp-softmax (smp-temperature L 0.5)))
+    (let c1 (if (scb-ieq (scb-ints ch-t) (scb-ints want-t)) 2 0))
+
+    ; bit4 — top-k stage threads in order: chain(k=2) == topk-mask(softmax(L),2)
+    (let ch-k (smp-chain-probs L (empty) 0 1.0 0.0 0.0 1.0 2 1.0 0.0))
+    (let want-k (smp-topk-mask sm 2))
+    (let c2 (if (scb-ieq (scb-ints ch-k) (scb-ints want-k)) 4 0))
+
+    ; bit8 — top-p stage threads in order: chain(ptop=0.5) == topp-mask(softmax(L),0.5)
+    (let ch-p (smp-chain-probs L (empty) 0 1.0 0.0 0.0 1.0 4 0.5 0.0))
+    (let want-p (smp-topp-mask sm 0.5))
+    (let c3 (if (scb-ieq (scb-ints ch-p) (scb-ints want-p)) 8 0))
+
+    ; bit16 — min-p stage threads in order: chain(pmin=0.5) == minp-mask(softmax(L),0.5)
+    (let ch-m (smp-chain-probs L (empty) 0 1.0 0.0 0.0 1.0 4 1.0 0.5))
+    (let want-m (smp-minp-mask sm 0.5))
+    (let c4 (if (scb-ieq (scb-ints ch-m) (scb-ints want-m)) 16 0))
+
+    ; bit32 — penalty stage threads at the FRONT: chain(ids=[1],pr=2.0) == softmax(pen-apply(L,[1],2,0,0))
+    ;   (token 1's logit 2.0>0 → /2.0 = 1.0; window 4 >= len so the whole history is used)
+    (let ch-pen (smp-chain-probs L IDS 4 2.0 0.0 0.0 1.0 4 1.0 0.0))
+    (let want-pen (smp-softmax (pen-apply L IDS 2.0 0.0 0.0)))
+    (let c5 (if (scb-ieq (scb-ints ch-pen) (scb-ints want-pen)) 32 0))
+
+    ; bit64 — the DRAW threads: chain-draw(identity, seed 1) == smp-draw(softmax(L),1) == token 0
+    (let d-id (smp-chain-draw L (empty) 0 1.0 0.0 0.0 1.0 4 1.0 0.0 1))
+    (let d-want (smp-draw sm 1))
+    (let c6 (if (if (eq d-id d-want) (eq d-id 0) false) 64 0))
+
+    ; bit128 — greedy CONSOLIDATION: pmin=1.0 keeps only the peak (argmax idx1) → draw returns 1 for
+    ;   EVERY seed → greedy is the chain's special case, no parallel path.
+    (let g1  (smp-chain-draw L (empty) 0 1.0 0.0 0.0 1.0 4 1.0 1.0 1))
+    (let g2  (smp-chain-draw L (empty) 0 1.0 0.0 0.0 1.0 4 1.0 1.0 100000))
+    (let g3  (smp-chain-draw L (empty) 0 1.0 0.0 0.0 1.0 4 1.0 1.0 127000))
+    (let c7 (if (if (eq g1 1) (if (eq g2 1) (eq g3 1) false) false) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
