@@ -1,0 +1,13 @@
+; tests/sibling-arrival-band.fk — a sibling session wakes knowing its place, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/sibling-continuum.fk form-stdlib/sibling-arrival.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   a Windows session senses its kin (non-empty kin list)        ->     1
+;   a lonely face senses none                                    ->    10
+;   a fresh ask across the continuum is open (unanswered)        ->   100
+;   an answered ask carries the sibling's vantage                ->  1000
+;   the Windows session may ask across the higher channel        -> 10000
+
+(do
+    (sibling-arrival-check))
