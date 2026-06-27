@@ -1063,3 +1063,4 @@ self-image fks 11111
 evidence-grade fks 11111
 value-planes fks 11111
 model-compare fks 11111
+guru-moment fks 11111

@@ -1,0 +1,14 @@
+; tests/guru-moment-band.fk — the imagined state as one shape, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guru-moment.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   TODAY a thought is observable + guru-fit + witnessed, but NOT yet a guru moment   ->     1
+;     because reasoning is still rented (internal = 0)
+;   the IMAGINED thought IS a true guru moment (internal + observable + guru)         ->    10
+;   today's single witness grades as anecdote                                         ->   100
+;   the imagined thought witnessed by 5 sister minds grades as replicated             ->  1000
+;   the one bit between them is INTERNAL — bringing the reasoning home                -> 10000
+
+(do
+    (guru-moment-check))
