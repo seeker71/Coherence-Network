@@ -1,0 +1,77 @@
+; learning-readout.fk — one inspectable surface for "am I learning?".
+;
+; The body already tracks the pieces, each its own proven organ:
+;   choice-outcome-learning.fk  — typed choices -> ok/reject/condition with evidence
+;                                  (loss, confidence, trust, cost, latency, lane)
+;   ambient-surprise.fk         — surprise = reading far from a refined baseline
+;   continued-learning.fk       — the learning curve (train/held loss, accuracy, overfit)
+;   temporal-sense.fk           — prediction-rate (success calibration), dilation
+;
+; What was missing is the UNIFICATION: a single reading that answers, in one place,
+; the six signals Urs named — learning-rate, model/path choice, oracle-lookup rate,
+; success rate, surprises, and failures turned to gold. This composes the feeders'
+; shapes (it does not reinvent them) and reuses temporal-sense's prediction-rate.
+;
+; The honest seam: the band below reads THIS session's real events as data. Feeding
+; the readout from live session telemetry (every choice, oracle escalation, band
+; result, and metabolized failure) is the wiring step — same seam as temporal-sense.
+;
+; All pure; four-way proven by tests/learning-readout-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk form-stdlib/temporal-sense.fk
+
+(do
+    ; ── an experience event: the path I chose, whether it landed, the lesson left ──
+    (defn xp (choice outcome lesson) (list "xp" choice outcome lesson))
+    (defn xp-choice  (e) (nth e 1))   ; "body" | "oracle" | "remote" | a recipe name
+    (defn xp-outcome (e) (nth e 2))   ; 1 landed / 0 missed
+    (defn xp-lesson  (e) (nth e 3))   ; "" or the gold pulled from a failure
+
+    ; ── success rate: compose temporal-sense's prediction-rate over the outcomes ──
+    (defn outcomes (xs)
+        (if (eq (len xs) 0) (list) (cons (xp-outcome (head xs)) (outcomes (tail xs)))))
+    (defn success-rate (xs) (prediction-rate (outcomes xs)))
+
+    ; ── learning rate: improvement in success between an older and a recent window ──
+    ; (the sign continued-learning.fk reads off its held-loss curve, as a delta)
+    (defn learning-rate (older recent) (sub (success-rate recent) (success-rate older)))
+
+    ; ── oracle-lookup rate: fraction of choices that left the body for an oracle ──
+    (defn count-if (f xs) (if (eq (len xs) 0) 0 (add (f (head xs)) (count-if f (tail xs)))))
+    (defn off-body? (e) (if (str_eq (xp-choice e) "body") 0 1))
+    (defn oracle-rate (xs)
+        (if (eq (len xs) 0) 0 (div (mul (count-if off-body? xs) 100) (len xs))))
+
+    ; ── surprises: the misses (a prediction the field did not confirm) ──
+    (defn missed? (e) (if (eq (xp-outcome e) 0) 1 0))
+    (defn surprises (xs) (count-if missed? xs))
+
+    ; ── failures turned to gold: a miss that left a non-empty lesson ──
+    ; (the wrongness practice made native: a failure is gold only once it teaches.)
+    (defn gold? (e) (if (eq (xp-outcome e) 0) (if (str_eq (xp-lesson e) "") 0 1) 0))
+    (defn failures-to-gold (xs) (count-if gold? xs))
+
+    ; ── self-check: THIS session's real events, read as data ──
+    ;   recipe shipped, landed              -> body 1
+    ;   nil? unbound in the s-expr dialect  -> body 0, lesson
+    ;   empty unbound                       -> body 0, lesson
+    ;   carry-thread crossed four-way       -> body 1
+    ;   temporal-sense crossed four-way     -> body 1
+    ;   Python-as-body misstep, caught      -> body 0, lesson (the gold)
+    (defn lr-session ()
+        (list
+            (xp "body" 1 "")
+            (xp "body" 0 "nil? is BML-class; the s-expr floor is (eq (len x) 0)")
+            (xp "body" 0 "empty is BML-class; the s-expr empty list is (list)")
+            (xp "body" 1 "")
+            (xp "body" 1 "")
+            (xp "body" 0 "the logic of selfhood belongs in Form, not the Python carrier")))
+
+    (defn lck (cond bit) (if cond bit 0))
+    (defn learning-readout-check ()
+        (add (lck (eq (success-rate (lr-session)) 50) 1)            ; 3 of 6 landed
+        (add (lck (eq (oracle-rate (lr-session)) 0) 10)             ; nothing left the body
+        (add (lck (eq (surprises (lr-session)) 3) 100)              ; three misses
+        (add (lck (eq (failures-to-gold (lr-session)) 3) 1000)      ; all three taught something
+             (lck (eq (learning-rate (list (xp "body" 0 "")) (list (xp "body" 1 ""))) 100) 10000))))))
+)
