@@ -1,0 +1,16 @@
+; tests/value-planes-band.fk — the lanes kept honest: measure what can be, revere the rest.
+;
+; preludes: form-stdlib/core.fk form-stdlib/value-planes.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   meaning (learned) costs far more compute than structure (computed)  ->     1
+;   structural knowledge is O(1)-cheap (content-addressed)              ->    10
+;   a benefit (of sharing/sensing/silence/play) = a vitality delta      ->   100
+;   compassion is SENSED, not a number — measuring it would be the harm ->  1000
+;   yet the TRACE a sensed quality leaves (its effect) IS measurable    -> 10000
+;
+; The teaching: the body measures the trace, never the quality. Wisdom is the faculty
+; that knows which lane a thing belongs in — what to measure, what to revere.
+
+(do
+    (value-planes-check))
