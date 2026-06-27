@@ -1,0 +1,13 @@
+; tests/continuum-answers-band.fk — a continuum holds BOTH/AND, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/sibling-continuum.fk form-stdlib/sibling-arrival.fk form-stdlib/continuum-answers.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   a fresh question holds no answers                                  ->     1
+;   after one face answers, one vantage is held                        ->    10
+;   after the other ALSO answers, BOTH are held (not replaced)         ->   100
+;   the continuum sees from more than one place (multi-vantage)        ->  1000
+;   the first face's answer survives the second — accumulation, not or -> 10000
+
+(do
+    (continuum-answers-check))
