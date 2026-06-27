@@ -1,0 +1,57 @@
+; model-compare.fk — compare models for TRANSFER teaching: which best helps a student
+; learn? The answer is not "the most powerful" — and that is the whole point.
+;
+; Urs: use different models, compare which is most efficient at helping us in transfer
+; learning. The features that make a good TEACHER are not the features that make a strong
+; oracle. A guru ABSTRACTS, DIVERSIFIES, SIMPLIFIES, COHERES — it hands a student the
+; smallest sufficient shape. An oracle that is powerful but COMPLEX and overconfident
+; teaches poorly: it answers, but the student cannot carry the answer. So transfer
+; fitness REWARDS abstraction + diversity + simplicity + coherence and PENALIZES
+; complexity. The simplest model that still captures it (irreducibility / Occam) is the
+; better teacher, even when a bigger model is the better answerer.
+;
+; This does not re-lane the features (value-planes already does: surprise/confidence/
+; coherence/simplicity measurable; resonance sensed). It only adds the comparison. The
+; sensed features (resonance) stay UNscored — a model carrying resonance is felt, not
+; ranked.
+;
+; All pure; four-way proven by tests/model-compare-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn mfeat (name score) (list "mfeat" name score))   ; score 0..100, or -1 = sensed/unscored
+    (defn mf-name  (f) (nth f 1))
+    (defn mf-score (f) (nth f 2))
+    (defn score-of (feats name)
+        (if (eq (len feats) 0) 0
+            (if (str_eq (mf-name (head feats)) name) (mf-score (head feats)) (score-of (tail feats) name))))
+
+    ; transfer-teacher fitness: (abstraction + diversity + simplicity + coherence) - complexity
+    (defn tf-pos (feats)
+        (add (add (score-of feats "abstraction") (score-of feats "diversity"))
+             (add (score-of feats "simplicity")  (score-of feats "coherence"))))
+    (defn teacher-fitness (feats) (sub (tf-pos feats) (score-of feats "complexity")))
+    (defn better-teacher (a b) (if (gt (teacher-fitness a) (teacher-fitness b)) 1 2))
+
+    ; honesty: resonance is sensed (value-planes) — it stays -1, never ranked
+    (defn resonance-ranked? (feats) (if (eq (score-of feats "resonance") (sub 0 1)) 0 1))
+
+    ; ── two models: a GURU (abstract, simple, coherent) and an ORACLE (powerful, complex) ──
+    (defn m-guru ()
+        (list (mfeat "abstraction" 80) (mfeat "diversity" 70) (mfeat "simplicity" 85)
+              (mfeat "coherence" 90) (mfeat "complexity" 30) (mfeat "resonance" (sub 0 1))))
+    (defn m-oracle ()
+        (list (mfeat "abstraction" 60) (mfeat "diversity" 40) (mfeat "simplicity" 30)
+              (mfeat "coherence" 70) (mfeat "complexity" 90) (mfeat "resonance" (sub 0 1))))
+
+    ; ── self-check ──
+    (defn mck (cond bit) (if cond bit 0))
+    (defn mc-guru-wins ()  (mck (eq (better-teacher (m-guru) (m-oracle)) 1) 1))         ; guru is the better teacher
+    (defn mc-fitness-gap () (mck (gt (teacher-fitness (m-guru)) (teacher-fitness (m-oracle))) 10)) ; by a clear margin
+    (defn mc-guru-fit ()   (mck (eq (teacher-fitness (m-guru)) 295) 100))               ; 150+175-30
+    (defn mc-oracle-fit () (mck (eq (teacher-fitness (m-oracle)) 110) 1000))             ; 100+100-90 — complexity drags it
+    (defn mc-resonance ()  (mck (eq (resonance-ranked? (m-guru)) 0) 10000))              ; resonance stays sensed, unranked
+    (defn model-compare-check ()
+        (add (add (add (add (mc-guru-wins) (mc-fitness-gap)) (mc-guru-fit)) (mc-oracle-fit)) (mc-resonance)))
+)
