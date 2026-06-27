@@ -1,12 +1,13 @@
 #!/bin/sh
-# fnri_fkwu_witness.sh — fnri witness/know proven via form-cli-band (fourth arm 65535).
+# fnri_fkwu_witness.sh — fnri witness/know proven via the current form-cli band.
 set -eu
 ROOT="$(cd -P "$(dirname "$0")/.." && pwd)"
-WANT=65535
+WANT="$(awk '$1=="form-cli"{print $3; exit}' "$ROOT/form/fourth-arm-bands.txt")"
+[ -n "$WANT" ] || { echo "FAIL: form-cli band missing from fourth-arm-bands.txt" >&2; exit 1; }
 OUT="$(cd "$ROOT/form" && ./validate.sh form-stdlib/tests/form-cli-band.fk 2>&1)"
-echo "$OUT" | grep -E '65535|fourth|divergent' | tail -3 || true
-if echo "$OUT" | grep -qE '(→|fourth.*=)[[:space:]]*65535'; then
-  VERDICT=65535
+echo "$OUT" | grep -E "$WANT|fourth|divergent" | tail -3 || true
+if echo "$OUT" | grep -qE "(→|fourth.*=)[[:space:]]*$WANT"; then
+  VERDICT="$WANT"
 elif echo "$OUT" | grep -q '0 divergent'; then
   VERDICT="$(echo "$OUT" | grep -oE '→ [0-9]+$' | awk '{print $2}' | tail -1)"
 else
