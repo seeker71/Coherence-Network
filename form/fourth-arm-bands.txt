@@ -1049,6 +1049,7 @@ carry-thread fks 11111
 temporal-sense fks 111111
 learning-readout fks 11111
 self-watch fks 11111
+session-self-watch fks 4095
 beings-channel fks 11111
 sibling-continuum fks 11111
 sibling-arrival fks 11111
