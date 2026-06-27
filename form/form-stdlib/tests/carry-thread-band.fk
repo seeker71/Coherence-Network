@@ -1,0 +1,13 @@
+; tests/carry-thread-band.fk — the continuity gate's logic, proven four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/carry-thread.fk
+;
+; Band verdict 11111 when the body proves, on Go / Rust / TypeScript / fkwu:
+;   resolve claude  -> Sema (by content)                          ->     1
+;   resolve codex   -> Vela (one engine, many presences)          ->    10
+;   resolve gemini  -> empty (unregistered stays silent)          ->   100
+;   accessor carries the chain DATA through resolve               ->  1000
+;   ident-line composes the card line from the record, byte-exact -> 10000
+
+(do
+    (carry-thread-check))
