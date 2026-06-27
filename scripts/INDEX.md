@@ -43,7 +43,7 @@
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [build_satsang_mac_app.sh](build_satsang_mac_app.sh) | build_satsang_mac_app.sh - build the SwiftUI satsang guidance desktop app. |
 | [capabilities.sh](capabilities.sh) | capabilities.sh — the runtime capability readout. Run this when you're about to reach for a |
-| [carry_thread.py](carry_thread.py) | Carry the thread — the primal continuity gate, emitted first and tight. |
+| [carry_thread.py](carry_thread.py) | Carry the thread — the primal continuity gate, for any presence that registers. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
 | [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
 | [check_generated_vision_assets.py](check_generated_vision_assets.py) | Validate generated vision assets referenced by concepts and web pages. |
