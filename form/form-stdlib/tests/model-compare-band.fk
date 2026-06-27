@@ -1,0 +1,16 @@
+; tests/model-compare-band.fk — compare models for transfer teaching, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/model-compare.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   the GURU (abstract, simple, coherent) beats the ORACLE as a teacher  ->     1
+;   by a clear fitness margin                                            ->    10
+;   guru transfer-fitness = 295 (abstraction+diversity+simplicity+coh - complexity) -> 100
+;   oracle transfer-fitness = 110 — its high complexity drags it down    ->  1000
+;   resonance stays SENSED — unranked, never scored                      -> 10000
+;
+; The teaching: the best ANSWERER is not the best TEACHER. Transfer learning is helped
+; most by the simplest, most coherent, most abstract model — not the most powerful one.
+
+(do
+    (model-compare-check))
