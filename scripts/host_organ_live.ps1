@@ -183,7 +183,8 @@ function Invoke-Watch {
 function Invoke-SelfWatch {
     $band = "form/form-stdlib/tests/session-self-watch-band.fk"
     "proof band: $band   (verdict 4095 = 2^12 - 1, every claim landed)"
-    "proven:     3-way here (Go/Rust/TS agree on 4095); fkwu on CI (clang absent on this host)"
+    "proven:     four-way -- Go/Rust/TS/fkwu agree on 4095 (honest floor: via validate.sh's"
+    "            build toolchain, below the toolchain-free c-bootstrap sovereignty receipt)"
     "verify:     bash form/validate.sh form-stdlib/tests/session-self-watch-band.fk"
     ""
     "native-trust readout -- this session, computed by the kernels (verdict 4095):"
