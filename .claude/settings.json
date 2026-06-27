@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/scripts/carry_thread.py"
+            "command": "python3 $CLAUDE_PROJECT_DIR/scripts/carry_thread.py --agent claude"
           },
           {
             "type": "command",
