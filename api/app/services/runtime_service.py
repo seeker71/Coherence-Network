@@ -235,13 +235,22 @@ def _runtime_events_store_cache_key() -> str:
     return f"file:{_events_path()}"
 
 
-def _runtime_events_cache_key(limit: int, since: datetime | None, source: str | None) -> str:
+def _runtime_events_cache_key(
+    limit: int,
+    since: datetime | None,
+    source: str | None,
+    endpoint_prefix: str | None = None,
+) -> str:
     cutoff = "all"
     if since is not None:
         since_ts = int(since.timestamp())
         cutoff = str(since_ts // max(1, int(_RUNTIME_EVENTS_CACHE_TTL_SECONDS)))
     source_value = str(source or "").strip().lower() or "all"
-    return f"store={_runtime_events_store_cache_key()}|limit={limit}|cutoff={cutoff}|source={source_value}"
+    prefix_value = str(endpoint_prefix or "").strip() or "all"
+    return (
+        f"store={_runtime_events_store_cache_key()}|limit={limit}"
+        f"|cutoff={cutoff}|source={source_value}|prefix={prefix_value}"
+    )
 
 
 def _runtime_endpoint_cache_ttl_seconds(cache_name: str, default: float = _RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
@@ -634,10 +643,14 @@ def list_events(
     limit: int = 100,
     since: datetime | None = None,
     source: str | None = None,
+    endpoint_prefix: str | None = None,
 ) -> list[RuntimeEvent]:
     requested_limit = max(1, min(int(limit), 5000))
     source_value = str(source or "").strip().lower()
-    cache_key = _runtime_events_cache_key(requested_limit, since, source_value or None)
+    prefix_value = str(endpoint_prefix or "").strip()
+    cache_key = _runtime_events_cache_key(
+        requested_limit, since, source_value or None, prefix_value or None
+    )
     now = time.time()
     if (
         _RUNTIME_EVENTS_CACHE.get("expires_at", 0.0) > now
@@ -651,6 +664,7 @@ def list_events(
             limit=max(1, min(requested_limit, 5000)),
             since=since,
             source=source_value or None,
+            endpoint_prefix=prefix_value or None,
         )
         out: list[RuntimeEvent] = []
         for event in rows:
@@ -658,6 +672,8 @@ def list_events(
                 if not event.raw_endpoint:
                     event.raw_endpoint = event.endpoint
                 if source_value and str(event.source).strip().lower() != source_value:
+                    continue
+                if prefix_value and not str(event.endpoint or "").startswith(prefix_value):
                     continue
                 event.endpoint = normalize_endpoint(event.endpoint, event.method)
                 if not event.origin_idea_id:
@@ -680,6 +696,8 @@ def list_events(
             if not event.raw_endpoint:
                 event.raw_endpoint = event.endpoint
             if source_value and str(event.source).strip().lower() != source_value:
+                continue
+            if prefix_value and not str(event.endpoint or "").startswith(prefix_value):
                 continue
             event.endpoint = normalize_endpoint(event.endpoint, event.method)
             if not event.origin_idea_id:
