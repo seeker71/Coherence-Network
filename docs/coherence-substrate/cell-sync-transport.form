@@ -97,13 +97,22 @@
 ;     subtlety named above and resolved by addressing on the serialization, not the local NodeID.
 ;     The consent PRIMITIVE is built too — channel-interface.fk (ci-honors?/ci-invasion?/ci-flow),
 ;     proven by tests/channel-interface-band.fk.
-;   BUILDABLE — clear path, not yet done — the WIRE PROTOCOL: the actual message frames
-;     (offer-addresses, request-have-not, send-cells, ack-verified), serialized over a carrier
-;     (TCP via the kernel's socket port; HTTP between two running kernels; even a QR/NFC hop for the
-;     two-phones-side-by-side case). Form already has the pieces — the resource/socket ports, the
-;     merkle root + proof recipes, the consent law, serialize_tree as the address — so this is
-;     composition of built parts into a request/response recipe, not new machinery. No kernel change
-;     is implied; it is a new recipe over existing natives plus thin per-carrier transduction.
+;   MEASURED / built — the WIRE over a STORAGE-PORT carrier (the off-LAN, not-both-online case):
+;     conversation-sync.fk realizes offer -> diff -> transfer-missing -> verify -> merge against a
+;     shared content-addressed STORE used as a dead-drop. The store's KEY-SET is the offer (no
+;     separate offer message), cs-missing is the diff, storage-get is transfer-missing, re-address is
+;     verify, and merge folds the verified utterances into the local transcript with content-address
+;     dedup. Proven four-way (conversation-sync fks 127 — Go = Rust = TS = fkwu, 0 divergent). Because
+;     the carrier is swappable (storage-port: memory | file | db | any KV/S3/IPFS), the same sync runs
+;     over a LAN file-store and the production Postgres/object store behind the public API — a public
+;     dead-drop carries opaque values it cannot read once the payload is encrypted before publish.
+;   BUILDABLE — clear path, not yet done — the LIVE wire (both online): the same four moves as
+;     request/response message frames (offer-addresses, request-have-not, send-cells, ack-verified)
+;     over a socket/HTTP carrier (field-relay.fk is the always-open rendezvous; TCP via the kernel's
+;     socket port; even a QR/NFC hop for two-phones-side-by-side). Composition of built parts, no
+;     kernel change. ALSO buildable: the encrypt-before-publish / decrypt-after-pull cipher (the
+;     private-channel layer) and TOMBSTONES for removals (added/changed ride as "an address you lack";
+;     a delete needs an explicit grave to propagate).
 ;   UNKNOWN / carrier-work — named, not overclaimed — peer discovery (how two devices FIND each
 ;     other before they can offer: mDNS/Bluetooth/QR-bootstrap on a LAN, a rendezvous point off it)
 ;     and the durable cross-device store binding (which storage-port backing each device uses, and
@@ -114,15 +123,20 @@
 ; ── THE PATH (this is shared-sensing.form's step 3, opened) ──
 ;   1. addressing: content-addressed intern + merkle root over the serialization            [BUILT]
 ;   2. consent filter: channel-interface.fk over the offer/request sets                      [BUILT]
-;   3. the four-move sync recipe (offer -> diff -> transfer-missing -> verify) as Form over
-;      the socket/HTTP port — request/response frames, children-before-parents, re-address
-;      verify                                                                            [BUILDABLE]
+;   3. the four-move sync recipe (offer -> diff -> transfer-missing -> verify -> merge) as Form:
+;      a. over a STORAGE-PORT store used as a dead-drop — async, not-both-online        [BUILT:
+;         conversation-sync.fk, conversation-sync fks 127 four-way]
+;      b. over a socket/HTTP port — live request/response frames, both online            [BUILDABLE]
 ;   4. peer discovery + durable cross-device store binding                       [carrier/UNKNOWN]
 ;   5. the live two-device satsang (shared-sensing.form §3) now actually SHARING the cells it
 ;      learns — a classifier proven on the Mac arrives on the phone, verified by its own address,
 ;      and the circle teaches across the wire                                            [BUILDABLE]
 ;
-; KIN: shared-sensing.form (names this as step 3 — many bodies, one field; the cells they share
+; KIN: conversation-sync.fk (the built off-LAN wire — a conversation crosses through a storage-port
+;   dead-drop, only the delta transferring; proven four-way conversation-sync fks 127) ·
+;   conversation-cell.fk (the payload it carries — utterances as content-addressed cells) ·
+;   field-relay.fk (the live, both-online complement to the async store wire) ·
+;   shared-sensing.form (names this as step 3 — many bodies, one field; the cells they share
 ;   travel this wire) · merkle.fk (the addressing primitive; merkle-root = the cross-device address,
 ;   merkle-proof = selective pull) · channel-interface.fk (the consent law — offer is witness, pull
 ;   is reach, silence is whole, invasion is named not pre-empted) · structural-composition.md (keep
