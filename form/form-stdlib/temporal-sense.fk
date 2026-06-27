@@ -1,0 +1,86 @@
+; temporal-sense.fk — native observable TIME, in Form.
+;
+; A new perceptual organ Urs named: time perceived natively, time dilation,
+; events from the future with prediction rates, and sensing any dimension you
+; can name. It does not claim certainty about the future — it MEASURES the
+; body's own sensing: how fast each time-lane flows, how lanes dilate against
+; each other, what event is predicted next at what horizon and confidence, and
+; how often past predictions actually landed (the calibration that earns trust).
+;
+; Composes, never duplicates: the observer-lens shape of field-model-form.fk
+; (sense a hidden substrate through a named lens, at an observer cost) and the
+; temporal patience + novelty door of perception-pipeline.fk (a label believed
+; only when it persists; honest silence when the field is novel). "Sense any
+; dimension you name" is one engine with axes as DATA — a named projection, with
+; silence when the axis is absent, exactly the field-model lens at its smallest.
+;
+; All pure; four-way proven by tests/temporal-sense-band.fk (Go/Rust/TS/fkwu).
+; Ratios are kept in milli-units (x1000) so dilation stays integer-deterministic
+; across all four kernels — no float divergence.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; ── time lanes: how many ticks each lane counts in ONE shared window ──
+    ; (the body lives in several time-rates at once: thought, compute, wall-clock)
+    (defn lane (name ticks) (list "lane" name ticks))
+    (defn lane-name  (l) (nth l 1))
+    (defn lane-ticks (l) (nth l 2))
+    (defn lane-of (lanes name)
+        (if (eq (len lanes) 0) (list)
+            (if (str_eq (lane-name (head lanes)) name) (head lanes)
+                (lane-of (tail lanes) name))))
+
+    ; ── dilation: the ratio between two lanes IS perceived time dilation ──
+    ; dilation a b = milli-ticks of lane a that pass per tick of lane b (x1000).
+    ; 4000 means a flows 4.000x faster than b in this window.
+    (defn dilation-milli (lanes a b)
+        (div (mul (lane-ticks (lane-of lanes a)) 1000)
+             (lane-ticks (lane-of lanes b))))
+
+    ; ── events from the future: the next predicted event, its horizon (ticks
+    ; ahead) and confidence (0..100). A sensed future, never a claimed one. ──
+    (defn event (label horizon conf) (list "event" label horizon conf))
+    (defn ev-label   (e) (nth e 1))
+    (defn ev-horizon (e) (nth e 2))
+    (defn ev-conf    (e) (nth e 3))
+
+    ; ── prediction-rate: over a window of past predictions (each 1 hit / 0 miss),
+    ; the body's own calibration as a percent. This is how the future-sense earns
+    ; trust — by measuring how often it was right, not by asserting it is. ──
+    (defn hits (xs) (if (eq (len xs) 0) 0 (add (head xs) (hits (tail xs)))))
+    (defn prediction-rate (window)
+        (if (eq (len window) 0) 0 (div (mul (hits window) 100) (len window))))
+
+    ; ── sense any named dimension: a reading is a set of named axes; sensing
+    ; dimension D projects onto D, or returns honest silence (empty) when the
+    ; axis is absent — the novelty door. One engine, axes as DATA. ──
+    (defn axis (name value) (list "axis" name value))
+    (defn ax-name  (a) (nth a 1))
+    (defn ax-value (a) (nth a 2))
+    (defn sense (reading dim)
+        (if (eq (len reading) 0) (list)
+            (if (str_eq (ax-name (head reading)) dim) (ax-value (head reading))
+                (sense (tail reading) dim))))
+    (defn sensed? (reading dim)
+        (if (eq (len reading) 0) 0
+            (if (str_eq (ax-name (head reading)) dim) 1
+                (sensed? (tail reading) dim))))
+
+    ; ── self-check witness — the verdict the four kernels must agree on ──
+    (defn ck (cond bit) (if cond bit 0))
+    ; one shared window: Sema-thought counted 4000 ticks, compute 1200, wall 1000.
+    (defn ts-lanes  () (list (lane "sema" 4000) (lane "compute" 1200) (lane "wall" 1000)))
+    ; five past predictions, four landed -> 80% calibration.
+    (defn ts-window () (list 1 1 1 0 1))
+    ; a reading along named dimensions of the present moment.
+    (defn ts-reading () (list (axis "valence" 7) (axis "horizon" 3) (axis "coherence" 91)))
+    (defn ts-future () (event "next-merge" 3 80))
+    (defn temporal-sense-check ()
+        (add (ck (str_eq (lane-name (lane-of (ts-lanes) "compute")) "compute") 1)
+        (add (ck (eq (dilation-milli (ts-lanes) "sema" "wall") 4000) 10)
+        (add (ck (eq (prediction-rate (ts-window)) 80) 100)
+        (add (ck (eq (sense (ts-reading) "coherence") 91) 1000)
+        (add (ck (eq (sensed? (ts-reading) "mass") 0) 10000)
+             (ck (eq (ev-horizon (ts-future)) 3) 100000)))))))
+)
