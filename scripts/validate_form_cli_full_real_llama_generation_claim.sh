@@ -25,6 +25,7 @@ fi
 TRACE_DIR="${RECEIPT_PATH%.json}_trace"
 rm -rf "$TRACE_DIR"
 mkdir -p "$TRACE_DIR" "$(dirname "$RECEIPT_PATH")"
+mkdir -p "$TRACE_DIR/isolated-home" "$TRACE_DIR/tmp"
 
 sanitize_trace_file() {
     local src="$1"
@@ -60,16 +61,23 @@ run_capture() {
 }
 
 run_capture ask_full_real_claim \
-    "$ROOT/bin/form-cli" ask "full real Llama GGUF token generation claim gate $STAMP"
+    env HOME="$TRACE_DIR/isolated-home" TMPDIR="$TRACE_DIR/tmp" \
+    "$ROOT/bin/form-cli" ask "full real Llama GGUF token generation claim gate isolated model call $STAMP"
 
 run_capture model_status \
     "$ROOT/bin/form-cli" model-status
+
+run_capture final_observations \
+    "$ROOT/bin/form-cli" final-observations
 
 run_capture real_gguf_weight_map \
     python3 "$ROOT/scripts/gguf_weight_map_receipt.py" --json "$TRACE_DIR/real-gguf-weight-map.json"
 
 run_capture real_gguf_fullwidth_logits \
     "$ROOT/scripts/fkwu_form_cli_gguf_fullwidth_logits_receipt.sh" "$TRACE_DIR/fullwidth-logits.json"
+
+run_capture sampler_min_p_band \
+    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk form-stdlib/tests/sampling-band.fk"
 
 sanitize_trace_tree
 
@@ -119,6 +127,7 @@ def rel(path: Path) -> str:
 
 ask = read_text("ask_full_real_claim")
 status = read_text("model_status")
+final_observations = read_text("final_observations")
 gguf_map_path = trace_dir / "real-gguf-weight-map.json"
 gguf_map = {}
 if gguf_map_path.exists():
@@ -134,7 +143,7 @@ observed_grounded_answer = (
 )
 status_names_full_real_gap = (
     read_rc("model_status") == 0
-    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
+    and "observed:tokenizer-carrier,full-gguf-weight-map,named-real-gguf-tensor-math,full-gguf-named-tensor-slice-math,full-gguf-required-tensor-set-materialization,real-gguf-tokenizer-token-decode,semantic-token-generation,full-width-model-logit-generation,sampler-min-p-four-way,metal-weight-bytes-runtime,autoregressive-loop,ask-staged-model-call,decoded-prose-answer-binding" in status
     and "missing:full-real-llama-gguf-token-generation" in status
 )
 status_names_semantic_token_generation = (
@@ -142,6 +151,11 @@ status_names_semantic_token_generation = (
     and "real-gguf-tokenizer-token-decode,semantic-token-generation" in status
 )
 ask_names_full_real_gap = "full-real-llama-gguf-generation:pending" in ask
+final_observations_wide_lane = (
+    read_rc("final_observations") == 0
+    and "model-lane-convergence:one-wide-move" in final_observations
+    and "pending:full-real-llama-gguf-token-generation" in final_observations
+)
 real_gguf_map_observed = read_rc("real_gguf_weight_map") == 0 and gguf_map.get("verdict") == "pass"
 fullwidth_path = trace_dir / "fullwidth-logits.json"
 fullwidth_json = {}
@@ -158,6 +172,7 @@ real_gguf_fullwidth_logits_observed = (
     and fullwidth_observed.get("full_width_logits_generated_in_form") is True
     and fullwidth_observed.get("full_vocabulary_logits") is True
 )
+sampler_min_p_observed = read_rc("sampler_min_p_band") == 0
 
 claim_allowed = (
     observed_grounded_answer
@@ -192,6 +207,9 @@ receipt = {
         "model_status_names_full_real_generation_gap": status_names_full_real_gap,
         "model_status_names_semantic_token_generation": status_names_semantic_token_generation,
         "model_status_names_fullwidth_logit_generation": "full-width-model-logit-generation" in status,
+        "model_status_names_sampler_min_p": "sampler-min-p-four-way" in status,
+        "final_observations_wide_lane": final_observations_wide_lane,
+        "sampler_min_p_four_way_observed": sampler_min_p_observed,
         "ask_trace_names_full_real_generation_gap": ask_names_full_real_gap,
         "real_gguf_weight_map_observed": real_gguf_map_observed,
         "real_gguf_fullwidth_logits_observed": real_gguf_fullwidth_logits_observed,
@@ -202,18 +220,16 @@ receipt = {
         "real_gguf_architecture": ((gguf_map.get("metadata") or {}).get("architecture")),
     },
     "blocked_requirements": [] if claim_allowed else [
-        "promote the witnessed required tensor-set byte-window materialization into complete full-width Llama tensor payload staging in the fkwu-controlled model-cell path",
-        "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
-        "run the full multi-layer GQA autoregressive loop over those real tensors",
-        "promote the witnessed full-width token-embedding projection logits into full hidden-state Llama logits over the full real vocabulary",
-        "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle",
+        "complete one wide native path: tensor payload staging -> dequant and accelerator buffer placement -> full multi-layer GQA hidden-state loop -> full-vocabulary hidden-state logits -> real token ID decode -> form-cli ask answer binding",
     ],
     "artifacts": {
         "trace_dir": rel(trace_dir),
         "ask_full_real_claim": rel(trace_dir / "ask_full_real_claim.out"),
         "model_status": rel(trace_dir / "model_status.out"),
+        "final_observations": rel(trace_dir / "final_observations.out"),
         "real_gguf_weight_map": rel(gguf_map_path),
         "real_gguf_fullwidth_logits": rel(fullwidth_path),
+        "sampler_min_p_band": rel(trace_dir / "sampler_min_p_band.out"),
     },
 }
 

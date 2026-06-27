@@ -7,8 +7,8 @@
 # full-generation boundary explicit:
 #
 #   proven pieces: fkwu form-cli ask/status, GGUF find/model-cell,
-#                  tokenizer/loop bands, full-width GGUF token-embedding logits,
-#                  Metal model-cell/body trace on macOS.
+#                  tokenizer/loop/sampler bands, full-width GGUF token-embedding
+#                  logits, Metal model-cell/body trace on macOS.
 #   now bound:     ask-staged model-call witness -> decoded local answer receipt.
 #   still open:    full real Llama GGUF token generation produced by real prompt text,
 #                  real GGUF tokenizer arrays, real GGUF hidden-state logits,
@@ -104,6 +104,9 @@ observation_for() {
             ;;
         synthesis_status|model_status)
             grep -E '^(synthesis-lane:|reason:|available:|observed:|missing:|boundary:|ask-staged-model-call-receipt:|prose-generation:)' "$out" || true
+            ;;
+        model_convergence)
+            grep -E '^(model-lane-convergence:|observed:|wide-move:|pending:|claim:|receipt:|method:)' "$out" || true
             ;;
         gguf_model_cell)
             grep -E '^(gguf_cell_verified|gguf_magic_ok|gguf_tensor_count|gguf_tensor_info_offset|gguf_tensor_type|PASS)' "$out" || true
@@ -266,6 +269,10 @@ run_step model_status current-host "model status binding" true \
     "bin/form-cli model-status" \
     "$ROOT/bin/form-cli" model-status
 
+run_step model_convergence current-host "native final-observations wide model-lane receipt" true \
+    "bin/form-cli final-observations" \
+    "$ROOT/bin/form-cli" final-observations
+
 run_step decoded_answer current-host "native decoded answer binding" true \
     "form/form-cli decoded-answer" \
     bash -lc "printf 'decoded-answer\nquit\n' | '$ROOT/form/form-cli' | sed '/^null$/d'"
@@ -289,6 +296,10 @@ run_step llama3_pretokenizer_four_way current-host "Llama 3 pretokenizer four-wa
 run_step autoregressive_loop_four_way current-host "Form autoregressive generation loop four-way" true \
     "cd form && ./validate.sh ... llama-generate-band.fk" \
     bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk form-stdlib/kv-cache.fk form-stdlib/kv-llama-block.fk form-stdlib/kv-gqa-llama-block.fk form-stdlib/multi-layer-stack.fk form-stdlib/gqa-multi-layer-stack.fk form-stdlib/greedy-decode.fk form-stdlib/llama-generate.fk form-stdlib/tests/llama-generate-band.fk"
+
+run_step sampler_min_p_four_way current-host "Form sampler min-p and seeded draw four-way" true \
+    "cd form && ./validate.sh ... sampling-band.fk" \
+    bash -lc "cd '$ROOT/form' && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-generate.fk form-stdlib/sampling.fk form-stdlib/tests/sampling-band.fk"
 
 if command -v python3 >/dev/null 2>&1; then
     run_step real_gguf_weight_map current-host "optional real GGUF tensor map witness" false \
@@ -386,6 +397,7 @@ android_device="$(bool_or_false "$(command -v adb >/dev/null 2>&1 && adb devices
 synthesis_out="$(jq -r 'select(.id == "synthesis_status") | .output_file' "$STEPS_JSONL" | tail -1)"
 decoded_answer_out="$(jq -r 'select(.id == "decoded_answer") | .output_file' "$STEPS_JSONL" | tail -1)"
 ask_staged_out="$(jq -r 'select(.id == "ask_staged_model_call") | .output_file' "$STEPS_JSONL" | tail -1)"
+model_convergence_out="$(jq -r 'select(.id == "model_convergence") | .output_file' "$STEPS_JSONL" | tail -1)"
 available=""
 missing=""
 if [[ -n "$synthesis_out" && -f "$ROOT/$synthesis_out" ]]; then
@@ -410,6 +422,16 @@ if [[ "$ask_staged_decoded_answer_bound" == "true" ]] ||
      grep -q '^prose-generation:observed-decoded-prose-answer-binding$' "$ROOT/$decoded_answer_out"; }; then
     decoded_answer_observed=true
 fi
+model_convergence_observed=false
+if [[ -n "$model_convergence_out" && -f "$ROOT/$model_convergence_out" ]] &&
+   grep -q '^model-lane-convergence:one-wide-move$' "$ROOT/$model_convergence_out" &&
+   grep -q '^wide-move:complete-full-width-tensor-payload-staging,dequant-and-accelerator-buffer-placement,full-multilayer-gqa-hidden-state-loop,full-vocabulary-hidden-state-logits,real-token-id-decode,ask-answer-binding$' "$ROOT/$model_convergence_out" &&
+   grep -q '^pending:full-real-llama-gguf-token-generation$' "$ROOT/$model_convergence_out"; then
+    model_convergence_observed=true
+fi
+if [[ "$model_convergence_observed" != "true" ]]; then
+    HARD_FAIL=1
+fi
 
 trace_sha="$(hash_file "$STEPS_JSONL")"
 branch="$(cd "$ROOT" && git branch --show-current 2>/dev/null || echo unknown)"
@@ -428,6 +450,7 @@ nonhard_failed_count="$(jq -s '[.[] | select(.hard_gate == false and .status != 
 http_or_ollama_absent="$(bool_or_false "$(grep -R -q '^http_or_ollama=absent$' "$TRACE_DIR" && echo true || echo false)")"
 denied_toolchain_hidden="$(bool_or_false "$(grep -R -q '^denied_toolchain_names_visible_on_path=0$' "$TRACE_DIR" && echo true || echo false)")"
 fullwidth_model_logits_bound="$(bool_or_false "$(step_passed gguf_fullwidth_logits)")"
+sampler_min_p_four_way="$(bool_or_false "$(step_passed sampler_min_p_four_way)")"
 
 verdict="pass_composition_receipt_fullwidth_logits_bound_full_real_generation_pending"
 if [[ "$ask_staged_decoded_answer_bound" != "true" ]]; then
@@ -467,11 +490,13 @@ jq -n \
     --argjson windows_host "$windows_host" \
     --argjson android_device "$android_device" \
     --argjson form_cli_ask "$(bool_or_false "$(step_passed form_cli_ask)")" \
+    --argjson model_convergence "$(bool_or_false "$model_convergence_observed")" \
     --argjson gguf_find "$(bool_or_false "$(step_passed gguf_find_four_way)")" \
     --argjson real_gguf_tensor_math "$(bool_or_false "$(step_passed real_gguf_tensor_math_four_way)")" \
     --argjson tokenizer "$(bool_or_false "$(step_passed tokenizer_compose_four_way)")" \
     --argjson pretokenizer "$(bool_or_false "$(step_passed llama3_pretokenizer_four_way)")" \
     --argjson autoregressive_loop "$(bool_or_false "$(step_passed autoregressive_loop_four_way)")" \
+    --argjson sampler_min_p_four_way "$sampler_min_p_four_way" \
     --argjson real_gguf_weight_map "$(bool_or_false "$(step_passed real_gguf_weight_map)")" \
     --argjson real_gguf_skipped "$(bool_or_false "$(step_skipped real_gguf_weight_map)")" \
     --argjson full_generation_claim_gate "$(bool_or_false "$(step_passed full_real_llama_generation_claim)")" \
@@ -504,7 +529,7 @@ jq -n \
       ask_staged_decoded_answer_bound: $ask_staged_decoded_answer,
       semantic_token_generation_bound: $gguf_semantic_token_generation,
       fullwidth_model_logits_bound: $fullwidth_model_logits_bound,
-      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli, one semantic token can be selected by Form argmax and decoded from real GGUF tokenizer bytes, and a full-width token-embedding model-logit projection row is generated inside fkwu/Form; the answer is not yet produced by full real Llama hidden-state logits over complete tensor payloads in accelerator buffers, autoregressive token IDs, and decoded text in one native form-cli path",
+      reason_full_inference_not_claimed: "decoded answer binding is observed through native form-cli, one semantic token can be selected by Form argmax and decoded from real GGUF tokenizer bytes, a full-width token-embedding model-logit projection row is generated inside fkwu/Form, and the min-p sampler/draw path is four-way; the answer is not yet produced by full real Llama hidden-state logits over complete tensor payloads in accelerator buffers, autoregressive token IDs, and decoded text in one native form-cli path",
       host: {
         os: $host_os,
         arch: $host_arch
@@ -531,11 +556,13 @@ jq -n \
       },
       composition_gates: {
         native_fkwu_ask_grounded: $form_cli_ask,
+        native_final_observations_wide_model_lane: $model_convergence,
         gguf_find_by_name_absolute_offset_four_way: $gguf_find,
         named_real_gguf_tensor_math_four_way: $real_gguf_tensor_math,
         tokenizer_carrier_four_way: $tokenizer,
         llama3_pretokenizer_four_way: $pretokenizer,
         autoregressive_generation_loop_four_way: $autoregressive_loop,
+        sampler_min_p_four_way: $sampler_min_p_four_way,
         optional_real_gguf_weight_map_observed: $real_gguf_weight_map,
         optional_real_gguf_weight_map_skipped: $real_gguf_skipped,
         full_real_llama_generation_claim_gate: $full_generation_claim_gate,
@@ -589,12 +616,7 @@ jq -n \
         }
       },
       open_bridges: [
-        "promote the witnessed full-width token-embedding projection logits into full hidden-state Llama logits",
-        "promote required tensor-set byte-window materialization to complete full-width tensor payload staging",
-        "dequant and place the complete full-width Llama tensor set into Metal/accelerator buffers",
-        "run the full multi-layer GQA autoregressive loop over those real tensors",
-        "bind full-vocabulary token IDs and decoded text from the real tokenizer arrays to the ask answer",
-        "bind that decoded text as the form-cli ask answer without HTTP, Ollama, MLX serving, or a proxy oracle",
+        "complete one wide native path: tensor payload staging -> dequant and accelerator buffer placement -> full multi-layer GQA hidden-state loop -> full-vocabulary hidden-state logits -> real token ID decode -> form-cli ask answer binding",
         "add Android Vulkan/NNAPI and Windows DirectML/D3D12 model-cell carriers matching the macOS Metal model-cell receipt"
       ],
       steps: $steps

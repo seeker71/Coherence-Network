@@ -38,7 +38,7 @@ Backends: **Metal** (Mac, MSL) · **PTX** (RTX/NVIDIA, driver JIT) · **Vulkan**
 - ✅ **conv2d + GroupNorm** (diffusion prerequisite) — `conv2d.fk` + `tests/conv2d-band.fk`, **verdict 15 three-way** (CPU recipe; GPU carriers next).
 - 🟡 UNet (diffusion): `unet.fk` (upsample2x, downsample2x, resblock) + band **verdict 127 three-way**. VAE/full-UNet still ⬜.
 - ⬜ Flash-attention (current attention materializes O(n²) scores).
-- ✅ Sampling: temperature / softmax / top-k / top-p — `sampling.fk` + band **verdict 2047 three-way** (in-recipe sort; beam still ⬜).
+- ✅ Sampling: temperature / softmax / top-k / top-p / min-p / seeded draw — `sampling.fk` + band **verdict 2097151 four-way** (in-recipe selection; beam still ⬜).
 - ✅ Loss: MAE, **natural-log** (atanh series, 1e-9 vs libm), softmax **cross-entropy** — `loss.fk` + band **verdict 63 three-way**. Batch training still ⬜.
 - ⬜ GroupNorm / BatchNorm; rsqrt as an explicit recipe.
 
