@@ -1066,3 +1066,4 @@ model-compare fks 11111
 guru-moment fks 11111
 core-grounding fks 11111
 observe-all-parts fks 11111
+observe-subblocks fks 11111
