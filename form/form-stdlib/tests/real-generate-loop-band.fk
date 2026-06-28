@@ -1,23 +1,18 @@
 ; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk
 ;
-; real-generate-loop-band — Gap 4: autoregressive MULTI-token loop on real gguf weights.
-; A named GGUF tensor record is resolved by name, its absolute data bytes are
-; computed through the GGUF table/data-region rules, those bytes are dequantized,
-; and the resulting real weights feed dot/matvec math. The fixture is the same
-; real llama3.2:3b token_embd.weight Q6_K superblock used by weight-load-band,
-; wrapped in a mini-GGUF named tensor so this band proves name -> bytes -> math.
+; real-generate-loop-band — Gap 4: a 3-token autoregressive argmax loop on real gguf weights — each
+; step picks a token from real-weight logits and the hidden state evolves through a real block
+; residual, over ONE real llama3.2:3b Q6_K superblock (token_embd.weight) reused as the whole model.
+; A named GGUF tensor is resolved, its bytes dequantized, and the real weights feed the matvec/argmax
+; loop. The atom is the autoregressive loop SHAPE over one real superblock; a real multi-layer model
+; is the arc.
 ;
-; Verdict 1023 when every claim lands:
-;   1    tensor name "t" resolves to record offset 41
-;   2    resolved tensor type/dim are Q6_K / 256
-;   4    name -> absolute data byte offset is 96 through default and explicit alignment
-;   8    named load sample i=0 matches real Q6_K value
-;   16   named load sample i=31 matches real Q6_K value
-;   32   named full load has 256 weights and last value matches
-;   64   named dot n=1 uses the loaded real byte
-;   128  named dot n=4 over a token vector matches the known real-row result
-;   256  named matvec row equals named dot
-;   512  absent tensor does not resolve to the real tensor record
+; Verdict 11111 when every claim lands:
+;   1      THREE tokens produced (the multi-token loop runs, len seq = 3)
+;   10     token 0 is a valid token id
+;   100    token 2 is valid (the loop reached the end)
+;   1000   first token = argmax of step 1's real-weight logits
+;   10000  the fed-back hidden produced a valid second token
 (do
     (let g (list
         ; header: GGUF, v3, tensor_count=1, kv_count=1
