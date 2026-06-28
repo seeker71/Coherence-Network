@@ -1,0 +1,7 @@
+; tests/confidence-earned-band.fk — is my "sure" earned? confidence vs outcome, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/confidence-earned.fk
+;
+; Verdict 11111: the confidently-wrong count surfaces (3); kept-trust counts too (3); an earned-confidence mind
+; has precision 1.0 (when sure, always right); this session's "sure" was NOT earned (0.5 < 1.0); and the
+; mis-calibration is observable -- a transparent mind can see its own confident-wrong, an opaque one cannot.
+(do (confidence-earned-check))

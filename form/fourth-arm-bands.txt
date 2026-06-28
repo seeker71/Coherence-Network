@@ -1112,3 +1112,4 @@ sema-reason-search fks 11111111
 teach-sema-pattern teach-sema-code teach-sema-chem teach-sema-logic teach-sema-units sema-skill-compose sema-self-grade sema-mastery-readout teacher-selection-school sema-reason-multistep sema-curriculum-transfer teach-sema-algebra sema-error-correct sema-mixed-exam sema-graduation fks 11111
 band-prelude-resolve fks 11111
 prelude-block-resolve fks 11111
+confidence-earned fks 11111
