@@ -1,0 +1,8 @@
+; tests/capture-correction-band.fk — the reflex-as-combinator auto-captures and auto-corrects, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/capture-correction.fk
+;
+; Verdict 11111: a right claim auto-logs transiently-correct; a wrong claim auto-logs transiently-wrong
+; (detected, not hand-labeled); the wrapper commits the verified truth not the wrong claim (auto-correction);
+; the wrong claim is caught (the wrapper is the reflex); and committed equals truth regardless of the claim --
+; wrap any decision and the transient log fills itself with real correction events.
+(do (capture-correction-check))
