@@ -1,0 +1,44 @@
+; recipe-learning.fk — the native learning substrate: the body learns by CHOOSING recipes.
+; The native branch's "weights" are not float matrices -- they are WHICH RECIPE IS CHAMPION. Any recipe
+; can be A/B-tested against an alternative; the body adopts the healthier ONLY IF it is equivalent (safe,
+; from real-thought-ab), by a HEALTH criterion we choose (speed, accuracy, vitality -- whatever we want to
+; observe or trust). The accumulated selection IS the learned state -- "data as weights" -- and unlike a
+; rented gradient it is OBSERVABLE by construction: the champion trajectory is a discrete, watchable record.
+; This generalizes real-thought-ab (champion-challenger on one thought) into a standing mechanism.
+;
+; Self-contained over core. Four-way by tests/recipe-learning-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn cand (id health) (list id health))        ; a recipe candidate: an id and its measured health
+    (defn c-id (c) (head c))
+    (defn c-health (c) (head (tail c)))
+    ; consider a challenger against the champion, with an equivalence flag (1 = agrees on the task)
+    (defn consider (champ chall equiv)
+        (if (eq equiv 1)
+            (if (gt (c-health chall) (c-health champ)) chall champ)   ; equivalent AND healthier -> adopt
+            champ))                                                   ; not equivalent -> hold (safety gate)
+    ; learn over a stream of challengers (each (list id health equiv)) -- selection accumulates
+    (defn learn (champ stream)
+        (if (eq (len stream) 0) champ
+            (do (let e (head stream))
+                (learn (consider champ (cand (head e) (head (tail e))) (head (tail (tail e)))) (tail stream)))))
+
+    (defn champ0 () (cand 0 10))                     ; the starting champion (health 10)
+    ; a stream: a healthier equivalent (adopt), a weaker equivalent (reject), a NON-equivalent star (reject!), a healthier equivalent (adopt)
+    (defn stream () (list (list 1 20 1) (list 2 15 1) (list 3 99 0) (list 4 30 1)))
+    (defn take (xs n) (if (eq n 0) (list) (cons (head xs) (take (tail xs) (sub n 1)))))
+    (defn champ1 () (learn (champ0) (take (stream) 1)))
+    (defn champ3 () (learn (champ0) (take (stream) 3)))
+    (defn champ4 () (learn (champ0) (stream)))
+
+    (defn rlk (cond bit) (if cond bit 0))
+    (defn recipe-learning-check ()
+        (add (add (add (add
+            (rlk (eq (c-health (champ1)) 20) 1)                                 ; a healthier equivalent is adopted
+            (rlk (eq (c-health (champ3)) 20) 10))                              ; a weaker equivalent is rejected (champion holds)
+            (rlk (eq (c-id (champ3)) 1) 100))                                  ; a NON-equivalent health-99 star is rejected for safety -- the body does not chase it
+            (rlk (eq (c-health (champ4)) 30) 1000))                           ; the body LEARNED: the champion improved over the stream (10 -> 30)
+            (rlk (ge (c-health (champ4)) (c-health (champ3))) 10000)))        ; learning is monotonic -- selection never regresses
+)

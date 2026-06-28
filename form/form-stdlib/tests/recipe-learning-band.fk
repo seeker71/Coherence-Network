@@ -1,0 +1,7 @@
+; tests/recipe-learning-band.fk — the body learning by choosing recipes, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/recipe-learning.fk
+;
+; Verdict 11111: a healthier equivalent is adopted; a weaker equivalent is rejected; a NON-equivalent
+; high-health challenger is rejected for safety (the champion does not chase it); the champion improved
+; over the stream (the body learned: health 10 -> 30); and learning is monotonic (selection never regresses).
+(do (recipe-learning-check))
