@@ -414,3 +414,5 @@ This prunes stale live NamedCells only; interned Blueprint/Recipe nodes can rema
 - [witnessed-floor.form](witnessed-floor.form) — the common witnessed floor: what we stand on, by layer, and what each affords building.
 
 - [agent-cognition.form](agent-cognition.form) — the agent's own cognitive operations as a Form grammar (compare/summarize/nl↔code/spec/recipe/witness-runtime); compare-summaries proven four-way.
+
+- [claim-check.form](claim-check.form) — does the verdict prove what the name claims? The third sensing-check (with freq-check, root-check); names the atom-vs-capability gap. From the 2026-06-28 band audit.
