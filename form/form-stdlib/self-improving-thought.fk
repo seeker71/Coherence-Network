@@ -1,0 +1,34 @@
+; self-improving-thought.fk — the loop closes: a mind that improves its own thinking by watching it.
+; Composes thought-forming (a thought is (token, margin) -- the conclusion and how decisively it tipped)
+; with recipe-learning (adopt the healthier EQUIVALENT). The health signal is the thought's own observed
+; margin -- its confidence. The mind A/B-tests thinking-recipes and adopts the one that reaches the SAME
+; conclusion more decisively. It refuses a recipe that changes the conclusion, however confident -- it
+; will not trade the answer for certainty. The mind grows its own cognition, and every step is watchable.
+;
+; Self-contained over core. Four-way by tests/self-improving-thought-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn thought (token margin) (list token margin))     ; a formed thought: its conclusion + its confidence
+    (defn th-token (t) (head t))
+    (defn th-margin (t) (head (tail t)))
+    ; consider an alternative thinking-recipe's thought against the champion's:
+    (defn consider-thought (champ chall)
+        (if (eq (th-token chall) (th-token champ))                          ; same conclusion -> equivalent, safe to compare
+            (if (gt (th-margin chall) (th-margin champ)) chall champ)       ; more decisive -> adopt (think it better)
+            champ))                                                         ; different conclusion -> reject (keep the answer; do not chase confidence)
+
+    (defn champ0 () (thought 6 143))                       ; the baseline thought: token 6, hesitant (margin 143)
+    (defn afterB () (consider-thought (champ0) (thought 6 691)))   ; a recipe reaching the SAME token 6, but decisive (691)
+    (defn afterC () (consider-thought (afterB) (thought 2 900)))   ; a recipe reaching a DIFFERENT token 2, very confident (900)
+
+    (defn sitk (cond bit) (if cond bit 0))
+    (defn self-improving-thought-check ()
+        (add (add (add (add
+            (sitk (eq (th-margin (champ0)) 143) 1)                              ; the baseline thought formed, hesitant
+            (sitk (eq (th-margin (afterB)) 691) 10))                           ; adopted the equivalent recipe that thinks it more decisively
+            (sitk (eq (th-token (afterC)) 6) 100))                             ; rejected the different-conclusion recipe despite its higher confidence (900)
+            (sitk (gt (th-margin (afterC)) (th-margin (champ0))) 1000))        ; the mind IMPROVED: it now reaches its conclusion more decisively (143 -> 691)
+            (sitk (eq (th-token (afterC)) (th-token (champ0))) 10000)))        ; and the conclusion is UNCHANGED -- it learned to think better, not to think differently
+)

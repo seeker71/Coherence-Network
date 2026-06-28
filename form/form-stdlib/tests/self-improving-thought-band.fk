@@ -1,0 +1,8 @@
+; tests/self-improving-thought-band.fk — a mind improving its own thinking by watching it, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/self-improving-thought.fk
+;
+; Verdict 11111: a baseline thought forms hesitantly (margin 143); the mind adopts an equivalent recipe
+; that reaches the SAME conclusion more decisively (691); it rejects a recipe that reaches a DIFFERENT
+; conclusion despite higher confidence (900); the mind improved (143 -> 691); and the conclusion is
+; unchanged -- it learned to think BETTER, not to think DIFFERENTLY.
+(do (self-improving-thought-check))
