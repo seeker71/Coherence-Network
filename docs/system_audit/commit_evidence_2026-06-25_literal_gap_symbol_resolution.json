@@ -1,0 +1,195 @@
+{
+  "date": "2026-06-25",
+  "thread_branch": "codex/literal-gap-symbols-20260625",
+  "commit_scope": "Resolve literal source-map drift around named Form/BML/emitted-C symbols by teaching wellness symbol resolution the declaration shapes already used in the repo, adding a literal platforms row to the standard receipt, and regenerating stale repository indexes.",
+  "files_owned": [
+    "scripts/wellness_check.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/coherence-substrate/standard-receipt.form",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json"
+  ],
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "fkwu-native-host-resources",
+    "fkwu-native-host-platform",
+    "form-native-resource-interfaces",
+    "fkwu-only-kernel-collapse",
+    "liteparse-pdf-native"
+  ],
+  "task_ids": [
+    "task-2026-06-25-literal-gap-symbols"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance-criteria"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "verification",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Before this change, make wellness reported 13 active target symbols pending even though IFormFilesystem, IPlatformHostCarrier, HostResourceObservable, port, act, sense, prim, and inflate already existed in their source files.",
+    "scripts/wellness_check.py now recognizes BML interface and enum declarations, parenthesized Form defn declarations, and emitted static C function declarations inside Form emitter payloads.",
+    "docs/coherence-substrate/standard-receipt.form now has a literal form platforms row for the mac, windows, and android receipt evidence references.",
+    "api/tests/test_edge_cases_regression.py includes a synthetic repo regression proving BML interface, Form defn, emitted-C fk_walk, and form platforms symbols resolve.",
+    "make wellness now reports every claimed symbol resolves in its file: 1061 symbols across 130 specs checked.",
+    "python3 scripts/generate_repo_indexes.py repaired stale scripts, specs, and manifest indexes after wellness reported specs/INDEX.md drift.",
+    "mac local proof for this branch ran on macOS 26.3.1 arm64 and included make wellness, focused pytest, ruff, evidence validation, and git diff checks.",
+    "windows proof for this branch passed in PR #3664 Windows Host Floor: https://github.com/seeker71/Coherence-Network/actions/runs/28203799556/job/83549631530.",
+    "android platform receipt is the existing standard-receipt runtime row: docs/system_audit/commit_evidence_2026-06-23_fkwu_field_android_row.json, Samsung SM-S918U1 / Android 16 / arm64-v8a fkwu standalone 511/127/127. This process-only PR did not rerun an Android device."
+  ],
+  "literal_symbols_observed": [
+    {
+      "symbol": "IFormFilesystem",
+      "file": "form/form-stdlib/bml/form-fs.bml",
+      "shape": "BML interface"
+    },
+    {
+      "symbol": "IPlatformHostCarrier",
+      "file": "form/form-stdlib/bml/fkwu-platform-host.bml",
+      "shape": "BML interface"
+    },
+    {
+      "symbol": "HostResourceObservable",
+      "file": "form/form-stdlib/bml/host-kernel-interface.bml",
+      "shape": "BML interface"
+    },
+    {
+      "symbol": "platforms",
+      "file": "docs/coherence-substrate/standard-receipt.form",
+      "shape": "Form receipt row"
+    },
+    {
+      "symbol": "port",
+      "file": "form/form-stdlib/resource-port.fk",
+      "shape": "Form defn"
+    },
+    {
+      "symbol": "act",
+      "file": "form/form-stdlib/resource-port.fk",
+      "shape": "Form defn"
+    },
+    {
+      "symbol": "sense",
+      "file": "form/form-stdlib/resource-port.fk",
+      "shape": "Form defn"
+    },
+    {
+      "symbol": "fk_walk",
+      "file": "form/form-stdlib/hati-os-kernel-emit.fk",
+      "shape": "emitted C static function inside Form emitter payload"
+    },
+    {
+      "symbol": "prim",
+      "file": "form/form-stdlib/primitive-registry.fk",
+      "shape": "Form defn"
+    },
+    {
+      "symbol": "inflate",
+      "file": "form/form-stdlib/inflate.fk",
+      "shape": "Form defn"
+    }
+  ],
+  "platform_receipts": {
+    "mac": {
+      "status": "observed",
+      "evidence": [
+        "local branch validation on macOS 26.3.1 arm64: make wellness reports every claimed symbol resolves in its file",
+        "docs/system_audit/commit_evidence_2026-06-23_fkwu_mac_platform_row.json"
+      ],
+      "honest_scope": "This branch's process checks ran on mac; the standard-receipt mac row is the existing fkwu runtime receipt."
+    },
+    "windows": {
+      "status": "observed",
+      "evidence": [
+        "PR #3664 Windows Host Floor passed: https://github.com/seeker71/Coherence-Network/actions/runs/28203799556/job/83549631530",
+        "docs/system_audit/commit_evidence_2026-06-23_fkwu_windows_row.json"
+      ],
+      "honest_scope": "This branch's remote Windows process check passed; the standard-receipt windows row is the existing fkwu runtime receipt."
+    },
+    "android": {
+      "status": "observed-runtime-row",
+      "evidence": [
+        "docs/system_audit/commit_evidence_2026-06-23_fkwu_field_android_row.json"
+      ],
+      "honest_scope": "Android was not rerun for this process-only branch; the cited standard-receipt row observes Samsung SM-S918U1 / Android 16 fkwu standalone runtime."
+    }
+  },
+  "change_files": [
+    "scripts/wellness_check.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/coherence-substrate/standard-receipt.form",
+    "scripts/INDEX.md",
+    "specs/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py::test_wellness_symbol_resolution_recognizes_form_bml_and_emitted_c",
+      "python3 - <<'PY' ... w.sense_spec_symbols() ... PY",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/wellness_check.py tests/test_edge_cases_regression.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json",
+      "git diff --check"
+    ],
+    "notes": "Initial make prompt-guide failed on continuity because a sibling Codex worktree was locally ahead/no-upstream after squash merge; the prompt guide itself allowed PROMPT_GATE_SKIP_CONTINUITY=1 for this temporary bypass. The focused pytest passed with existing deprecation warnings only."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "commands": [
+      "PR #3664 validate-thread-process",
+      "PR #3664 windows-floor",
+      "PR #3664 GitGuardian Security Checks"
+    ],
+    "notes": "All PR #3664 checks passed on head a6d2cbd12a3416c2736d213b8b228c83dcd12e82 before this evidence refresh. Updating this evidence file will rerun CI on the new head."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed-process-and-doc-check-change",
+    "notes": "No public runtime endpoint changed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof and the first PR CI run passed; this evidence refresh must rerun PR CI, and merge validation remains pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Wellness no longer reports already-realized Form/BML/emitted-C symbols as active pending target symbols. The larger active specs remain active, but their source symbol rows now reflect what is literally present.",
+    "public_endpoints": [
+      "none changed; wellness/source-map process only"
+    ],
+    "test_flows": [
+      "make wellness reports every claimed symbol resolves in its file.",
+      "The targeted regression test resolves BML interface, Form defn, emitted-C fk_walk, and standard-receipt platforms rows in a synthetic repo."
+    ]
+  }
+}

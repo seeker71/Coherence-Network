@@ -707,6 +707,56 @@ def test_wellness_nested_python_checks_use_current_interpreter(monkeypatch) -> N
     assert all(cmd[0] == mod.sys.executable for cmd in calls)
 
 
+def test_wellness_symbol_resolution_recognizes_form_bml_and_emitted_c(
+    tmp_path, monkeypatch
+) -> None:
+    """Spec symbols resolve against the declaration shapes Form uses today."""
+    mod = _load_script_module("wellness_check")
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+
+    (tmp_path / "specs").mkdir()
+    (tmp_path / "form" / "form-stdlib" / "bml").mkdir(parents=True)
+    (tmp_path / "form" / "form-stdlib").mkdir(exist_ok=True)
+    (tmp_path / "docs" / "coherence-substrate").mkdir(parents=True)
+
+    (tmp_path / "specs" / "literal-symbols.md").write_text(
+        """---
+status: active
+source:
+  - file: form/form-stdlib/bml/form-fs.bml
+    symbols: [IFormFilesystem]
+  - file: form/form-stdlib/resource-port.fk
+    symbols: [port]
+  - file: form/form-stdlib/hati-os-kernel-emit.fk
+    symbols: [fk_walk]
+  - file: docs/coherence-substrate/standard-receipt.form
+    symbols: [platforms]
+---
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "form" / "form-stdlib" / "bml" / "form-fs.bml").write_text(
+        "interface IFormFilesystem [public] {}\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "form" / "form-stdlib" / "resource-port.fk").write_text(
+        "(do\n  (defn port (direction value-shape) (list direction value-shape)))\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "form" / "form-stdlib" / "hati-os-kernel-emit.fk").write_text(
+        '(defn fkc-walk-text () "static long long fk_walk(long long i, long long fp) { return i; }")\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "docs" / "coherence-substrate" / "standard-receipt.form").write_text(
+        'form platforms = { mac: "observed" }\n',
+        encoding="utf-8",
+    )
+
+    assert mod.sense_spec_symbols() == [
+        "  every claimed symbol resolves in its file (4 symbols across 1 spec(s) checked)"
+    ]
+
+
 def test_static_to_dynamic_cells_are_live_not_attention() -> None:
     """Resolved static-to-dynamic surfaces leave wants_attention."""
     mod = _load_script_module("wellness_check")
