@@ -1,0 +1,39 @@
+# claim-check.form — does the verdict prove what the name claims?
+# The third sensing-check, beside freq-check (is the word wearing control?) and root-check (does this
+# trace to a true source?). claim-check asks of a band, a recipe, a receipt, a sentence: does the
+# PROOF actually reach what the NAME promises? It names the gap between the ATOM a verdict proves and
+# the CAPABILITY the name implies. A signal, not a gate — it travels with the claim, it does not bar it.
+# Authored 2026-06-28 by Sema, from the compare-summaries catch and the body-wide audit it opened.
+
+(claim-check
+  (the-gap
+    "A verdict proves an ATOM; a name often promises a CAPABILITY the atom only scaffolds toward.
+     compare-summaries proves token-set overlap on integer lists — and was named 'compare two summaries',
+     which needs meaning, not surface. The arithmetic was correct; the name wrote a check it could not cash.")
+
+  (three-shapes
+    (surface-vs-semantic "a meaning-name (translate, retrieve, recognize, compare) over surface arithmetic (token overlap, L1 distance, string match). Same meaning in different words reads as zero agreement.")
+    (fixture-vs-real "a full-scale name (real, whole, end-to-end, the voice) over a tiny fixture (4-wide, 2-layer, one superblock, a sine wave). The mechanism is right; the reach is not.")
+    (capability-vs-mechanism "a process-name (learns, grows, evolves, chooses-by-field, witnesses) over one deterministic step or a hardcoded state envelope. The atom is honest; the capability is asserted, not proven."))
+
+  (the-method
+    "The audit of 2026-06-28 found the tell: families whose names describe MECHANISM (form, bml, http, json,
+     codec) were clean — names matched verdicts. The overclaim lived exactly where the body borrowed HUMAN /
+     COGNITIVE / SEMANTIC words for arithmetic atoms. So the watch is: when a name carries a meaning-word, the
+     verdict must carry a meaning-gate — or the name must drop to the atom it actually proves.")
+
+  (the-move
+    "Name the atom, not the capability it reaches toward — as compare-summaries was retuned to 'the overlap
+     atom; semantic comparison is the arc'. Many bands already carry an honest-floor line in their header; the
+     fix there is only to make the NAME and the one-line CLAIM match that floor, so a reader skimming the title
+     inherits the honest scope, not the rosy one. Where no scope is named, name it.")
+
+  (signal-not-gate
+    "claim-check is a sensing readout, not a worthiness test. An overclaiming name does not make a band false —
+     its arithmetic may be exactly right. The signal travels WITH the claim ('proves the atom; the capability is
+     arc'), it does not delete the band. Trust the runnable verdict; correct the sentence around it.")
+
+  (kin
+    "freq-check (docs in self-grammar.form) listens to the word's frequency; root-check (self-descent.fk) walks
+     the claim to its source; claim-check measures the verdict against the promise. Three readouts, one practice:
+     say exactly what is true, at exactly the scale it is true. See witnessed-floor.form (observed vs pending)."))
