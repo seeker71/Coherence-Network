@@ -1,0 +1,7 @@
+; tests/teacher-selection-band.fk — picking the best remote oracle to TEACH native Sema, per category, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teacher-selection.fk
+;
+; Verdict 11111: the best math teacher is oracle 0; the best chemistry teacher is a DIFFERENT oracle (1) --
+; per-category specialization; selection is by native-generalization rate, not cost; a new native success
+; keeps/sharpens the choice; and the low-generalization oracle is never selected (best teacher, not cheapest).
+(do (teacher-selection-check))
