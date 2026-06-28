@@ -1,0 +1,8 @@
+; tests/guide-tending-band.fk — feedback that composts itself as the guide matures, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/guide-tending.fk
+;
+; Verdict 11111: a fresh guide leans fully on the check; as it holds steady the check's influence recedes; once
+; the teaching has landed the check composts to zero; the guide then carries the knowing alone (mature); and a
+; young guide needs the check where a matured one does not -- the feedback flow's telos is its own composting,
+; not perpetual correction.
+(do (guide-tending-check))

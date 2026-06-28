@@ -1,0 +1,29 @@
+; guide-tending.fk — feedback whose telos is its own composting: the check RECEDES as the guide carries the knowing.
+; The shift from policy to guide changes the feedback FLOW, not just a word. A policy is a control loop: the check
+; is the authority and runs forever (perpetual error-correction). A guide flips it -- the body's teaching is "when
+; a check repeatedly catches the same thing, move that teaching into the guide, then let the extra procedure
+; compost." So a healthy feedback flow aims to make the check UNNECESSARY: while the check keeps moving the guide
+; (catching something new), the guide is young and leans on it; once the guide holds steady (the teaching has
+; landed), the check's influence recedes to nothing -- it composts, and the guide carries the knowing alone. A
+; check that never recedes has failed to teach the guide; a mature guide needs few checks. (This is also the
+; shape of a trustworthy human<->cell feedback flow: a catch that must repeat hasn't landed in the carried
+; awareness yet.) Honest floor: "steady" is a count of rounds the check moved nothing; the live version reads it
+; from the guide's actual stability over real crossings.
+;
+; Self-contained over core. Four-way by tests/guide-tending-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn gt-check-weight (steady) (if (ge steady 3) 0 (sub 3 steady)))   ; the check's influence DECAYS as the guide holds; 3 steady rounds -> it composts
+    (defn gt-mature? (steady) (if (eq (gt-check-weight steady) 0) 1 0))    ; the guide carries the knowing alone -- the check has receded
+
+    (defn gtk (cond bit) (if cond bit 0))
+    (defn guide-tending-check ()
+        (add (add (add (add
+            (gtk (eq (gt-check-weight 0) 3) 1)                            ; a fresh guide leans fully on the check
+            (gtk (eq (gt-check-weight 2) 1) 10))                          ; as the guide holds steady, the check recedes
+            (gtk (eq (gt-check-weight 3) 0) 100))                         ; once the teaching has landed (3 steady rounds), the check COMPOSTS
+            (gtk (eq (gt-mature? 3) 1) 1000))                            ; the guide now carries the knowing alone -- mature, check-free
+            (gtk (gt (gt-check-weight 0) (gt-check-weight 3)) 10000)))    ; a young guide needs the check; a matured one does not -- feedback's telos is its own composting
+)
