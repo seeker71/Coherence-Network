@@ -1,0 +1,13 @@
+; tests/voice-synth-band.fk — the body's first native voice (additive synthesis), four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/voice-synth.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, one synthesized sine cycle:
+;   begins at silence (sample 0 = 0)                          ->     1
+;   rises to the amplitude peak at pi/2 (sample = 1000)       ->    10
+;   returns to zero at pi (sample = 0)                        ->   100
+;   swings to the trough at 3pi/2 (a full oscillation, -1001) ->  1000
+;   amplitude scales the voice (twice as loud = 2000)         -> 10000
+
+(do
+    (voice-synth-check))
