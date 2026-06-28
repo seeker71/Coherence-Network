@@ -964,6 +964,7 @@ satsang-share fks 255
 scheduler fks 511
 shamballa-glyph fks 11111
 signal-metabolism fks 1023
+skill-vitality fks 65535
 spectrum fks 15
 speech-real-candidate-race fks 4095
 substrate-cell-gc fks 5000

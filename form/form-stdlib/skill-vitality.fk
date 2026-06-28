@@ -1,0 +1,280 @@
+; skill-vitality.fk - generic skill teaching, carrier execution, vitality,
+; auto-research, and earned upgrade rows.
+;
+; A skill is a body-readable cell, not a prompt cache. It names the grammar that
+; teaches it, the recipe that runs it, the proof that bounds it, the carriers
+; and metals that can execute it, and the vitality rows that decide when a
+; challenger version is better. Auto-research proposes candidates; receipts
+; decide promotion.
+;
+; Floor: one Form loop can represent skill cells, metal carriers, execution
+; readiness, vitality focus, auto-research candidates, and upgrade decisions.
+; Source truth is the explicit row and its proof; files, GPUs, APIs, and LLMs
+; are carriers whose measurements must return as receipts.
+;
+; North star: any skill the body can imagine becomes teachable, executable on
+; supported metal, measurable, auto-researchable, AutoML-tunable, and replaceable
+; when a challenger earns the body by measured vitality.
+
+(do
+    (defn sv-floor () (list
+        "skill-cell"
+        "grammar"
+        "recipe"
+        "proof"
+        "carrier-receipts"
+        "vitality-focus"
+        "auto-research"
+        "earned-upgrade"))
+
+    (defn sv-north-star () (list
+        "any-skill-can-be-taught"
+        "any-supported-metal-can-execute"
+        "receipts-measure-vitality"
+        "auto-research-proposes-challengers"
+        "automl-tunes-candidates"
+        "promotion-is-earned-by-proof"))
+
+    (defn sv-row? (value tag arity)
+        (if (eq (len value) arity)
+            (if (str_eq (nth value 0) tag) 1 0)
+            0))
+    (defn sv-nonempty? (value) (if (str_eq value "") 0 1))
+    (defn sv-positive? (value) (if (gt value 0) 1 0))
+    (defn sv-ge? (a b) (if (ge a b) 1 0))
+    (defn sv-gt? (a b) (if (gt a b) 1 0))
+    (defn sv-all? (values)
+        (if (eq (len values) 0)
+            1
+            (if (eq (head values) 1)
+                (sv-all? (tail values))
+                0)))
+    (defn sv-any? (values)
+        (if (eq (len values) 0)
+            0
+            (if (eq (head values) 1)
+                1
+                (sv-any? (tail values)))))
+    (defn sv-score-valid? (score)
+        (if (and (ge score 0) (ge 100 score)) 1 0))
+    (defn sv-scores-valid? (scores)
+        (if (eq (len scores) 0)
+            1
+            (if (eq (sv-score-valid? (head scores)) 1)
+                (sv-scores-valid? (tail scores))
+                0)))
+
+    (defn sv-skill (id version grammar recipe proof interfaces carriers)
+        (list "SkillCell" id version grammar recipe proof interfaces carriers))
+    (defn sv-skill-id (skill) (nth skill 1))
+    (defn sv-skill-version (skill) (nth skill 2))
+    (defn sv-skill-grammar (skill) (nth skill 3))
+    (defn sv-skill-recipe (skill) (nth skill 4))
+    (defn sv-skill-proof (skill) (nth skill 5))
+    (defn sv-skill-interfaces (skill) (nth skill 6))
+    (defn sv-skill-carriers (skill) (nth skill 7))
+    (defn sv-skill-valid? (skill)
+        (if (eq (sv-row? skill "SkillCell" 8) 1)
+            (sv-all? (list
+                (sv-nonempty? (sv-skill-id skill))
+                (sv-nonempty? (sv-skill-version skill))
+                (sv-nonempty? (sv-skill-grammar skill))
+                (sv-nonempty? (sv-skill-recipe skill))
+                (sv-nonempty? (sv-skill-proof skill))
+                (sv-positive? (len (sv-skill-interfaces skill)))
+                (sv-positive? (len (sv-skill-carriers skill)))))
+            0))
+
+    (defn sv-carrier (id metal locality tokens energy latency memory successes failures proof)
+        (list "SkillCarrier" id metal locality tokens energy latency memory successes failures proof))
+    (defn sv-carrier-id (carrier) (nth carrier 1))
+    (defn sv-carrier-metal (carrier) (nth carrier 2))
+    (defn sv-carrier-locality (carrier) (nth carrier 3))
+    (defn sv-carrier-tokens (carrier) (nth carrier 4))
+    (defn sv-carrier-energy (carrier) (nth carrier 5))
+    (defn sv-carrier-latency (carrier) (nth carrier 6))
+    (defn sv-carrier-memory (carrier) (nth carrier 7))
+    (defn sv-carrier-successes (carrier) (nth carrier 8))
+    (defn sv-carrier-failures (carrier) (nth carrier 9))
+    (defn sv-carrier-proof (carrier) (nth carrier 10))
+    (defn sv-carrier-terminal (carrier)
+        (add (sv-carrier-successes carrier) (sv-carrier-failures carrier)))
+    (defn sv-carrier-ready? (carrier)
+        (if (eq (sv-row? carrier "SkillCarrier" 11) 1)
+            (sv-all? (list
+                (sv-nonempty? (sv-carrier-id carrier))
+                (sv-nonempty? (sv-carrier-metal carrier))
+                (sv-nonempty? (sv-carrier-proof carrier))
+                (sv-ge? (sv-carrier-terminal carrier) 5)
+                (sv-ge?
+                    (sv-carrier-successes carrier)
+                    (add (sv-carrier-failures carrier) 3))))
+            0))
+    (defn sv-carrier-lower-cost? (candidate best)
+        (if (gt (sv-carrier-tokens best) (sv-carrier-tokens candidate))
+            1
+            (if (eq (sv-carrier-tokens best) (sv-carrier-tokens candidate))
+                (if (gt (sv-carrier-energy best) (sv-carrier-energy candidate))
+                    1
+                    (if (eq (sv-carrier-energy best) (sv-carrier-energy candidate))
+                        (if (gt (sv-carrier-latency best) (sv-carrier-latency candidate))
+                            1
+                            (if (eq (sv-carrier-latency best) (sv-carrier-latency candidate))
+                                (if (gt (sv-carrier-memory best) (sv-carrier-memory candidate)) 1 0)
+                                0))
+                        0))
+                0)))
+    (defn sv-carrier-winner-loop (carriers best)
+        (if (eq (len carriers) 0)
+            best
+            (if (eq (len best) 0)
+                (if (eq (sv-carrier-ready? (head carriers)) 1)
+                    (sv-carrier-winner-loop (tail carriers) (head carriers))
+                    (sv-carrier-winner-loop (tail carriers) best))
+                (if (and
+                        (eq (sv-carrier-ready? (head carriers)) 1)
+                        (eq (sv-carrier-lower-cost? (head carriers) best) 1))
+                    (sv-carrier-winner-loop (tail carriers) (head carriers))
+                    (sv-carrier-winner-loop (tail carriers) best)))))
+    (defn sv-carrier-winner (carriers)
+        (sv-carrier-winner-loop carriers (empty)))
+    (defn sv-carrier-metal-supported? (carriers metal)
+        (if (eq (len carriers) 0)
+            0
+            (if (str_eq (sv-carrier-metal (head carriers)) metal)
+                1
+                (sv-carrier-metal-supported? (tail carriers) metal))))
+    (defn sv-skill-can-run-on? (skill metal)
+        (if (eq (sv-skill-valid? skill) 1)
+            (sv-carrier-metal-supported? (sv-skill-carriers skill) metal)
+            0))
+
+    (defn sv-vitality
+        (skill-id version accuracy trust sovereignty coverage freshness energy latency memory proof-count sample-count residual-count)
+        (list
+            "SkillVitality"
+            skill-id
+            version
+            accuracy
+            trust
+            sovereignty
+            coverage
+            freshness
+            energy
+            latency
+            memory
+            proof-count
+            sample-count
+            residual-count))
+    (defn sv-vitality-skill-id (vitality) (nth vitality 1))
+    (defn sv-vitality-version (vitality) (nth vitality 2))
+    (defn sv-vitality-accuracy (vitality) (nth vitality 3))
+    (defn sv-vitality-trust (vitality) (nth vitality 4))
+    (defn sv-vitality-sovereignty (vitality) (nth vitality 5))
+    (defn sv-vitality-coverage (vitality) (nth vitality 6))
+    (defn sv-vitality-freshness (vitality) (nth vitality 7))
+    (defn sv-vitality-energy (vitality) (nth vitality 8))
+    (defn sv-vitality-latency (vitality) (nth vitality 9))
+    (defn sv-vitality-memory (vitality) (nth vitality 10))
+    (defn sv-vitality-proof-count (vitality) (nth vitality 11))
+    (defn sv-vitality-sample-count (vitality) (nth vitality 12))
+    (defn sv-vitality-residual-count (vitality) (nth vitality 13))
+    (defn sv-vitality-valid? (vitality)
+        (if (eq (sv-row? vitality "SkillVitality" 14) 1)
+            (sv-all? (list
+                (sv-nonempty? (sv-vitality-skill-id vitality))
+                (sv-nonempty? (sv-vitality-version vitality))
+                (sv-scores-valid? (list
+                    (sv-vitality-accuracy vitality)
+                    (sv-vitality-trust vitality)
+                    (sv-vitality-sovereignty vitality)
+                    (sv-vitality-coverage vitality)
+                    (sv-vitality-freshness vitality)
+                    (sv-vitality-energy vitality)
+                    (sv-vitality-latency vitality)
+                    (sv-vitality-memory vitality)))
+                (sv-positive? (sv-vitality-proof-count vitality))
+                (sv-positive? (sv-vitality-sample-count vitality))
+                (sv-ge? (sv-vitality-residual-count vitality) 0)))
+            0))
+    (defn sv-resource-pressure? (vitality)
+        (sv-any? (list
+            (sv-gt? (sv-vitality-energy vitality) 80)
+            (sv-gt? (sv-vitality-latency vitality) 80)
+            (sv-gt? (sv-vitality-memory vitality) 80))))
+    (defn sv-focus (vitality)
+        (if (gt 70 (sv-vitality-trust vitality))
+            "teach-trust"
+            (if (gt 70 (sv-vitality-sovereignty vitality))
+                "restore-sovereignty"
+                (if (gt 70 (sv-vitality-coverage vitality))
+                    "learn-more-samples"
+                    (if (gt 70 (sv-vitality-freshness vitality))
+                        "refresh-sources"
+                        (if (gt (sv-vitality-residual-count vitality) 0)
+                            "answer-residuals"
+                            (if (eq (sv-resource-pressure? vitality) 1)
+                                "compress-or-route"
+                                "serve-and-watch")))))))
+
+    (defn sv-research-candidate (skill-id version source evidence-count residual-count expected-lift risk)
+        (list "SkillResearchCandidate" skill-id version source evidence-count residual-count expected-lift risk))
+    (defn sv-research-skill-id (research) (nth research 1))
+    (defn sv-research-version (research) (nth research 2))
+    (defn sv-research-source (research) (nth research 3))
+    (defn sv-research-evidence-count (research) (nth research 4))
+    (defn sv-research-residual-count (research) (nth research 5))
+    (defn sv-research-expected-lift (research) (nth research 6))
+    (defn sv-research-risk (research) (nth research 7))
+    (defn sv-research-valid? (research)
+        (if (eq (sv-row? research "SkillResearchCandidate" 8) 1)
+            (sv-all? (list
+                (sv-nonempty? (sv-research-skill-id research))
+                (sv-nonempty? (sv-research-version research))
+                (sv-nonempty? (sv-research-source research))
+                (sv-ge? (sv-research-evidence-count research) 2)
+                (sv-positive? (sv-research-residual-count research))
+                (sv-gt? (sv-research-expected-lift research) (sv-research-risk research))))
+            0))
+    (defn sv-research-next-question (research)
+        (list
+            "SkillResearchQuestion"
+            (sv-research-skill-id research)
+            (sv-research-version research)
+            (sv-research-residual-count research)))
+
+    (defn sv-vitality-better? (incumbent challenger)
+        (sv-all? (list
+            (sv-vitality-valid? incumbent)
+            (sv-vitality-valid? challenger)
+            (sv-gt? (sv-vitality-trust challenger) (sv-vitality-trust incumbent))
+            (sv-ge? (sv-vitality-sovereignty challenger) (sv-vitality-sovereignty incumbent))
+            (sv-gt? (sv-vitality-coverage challenger) (sv-vitality-coverage incumbent))
+            (sv-gt? (sv-vitality-proof-count challenger) (sv-vitality-proof-count incumbent))
+            (sv-ge? (sv-vitality-residual-count incumbent) (sv-vitality-residual-count challenger)))))
+
+    (defn sv-upgrade (skill incumbent-vitality challenger-vitality incumbent-carrier challenger-carrier research)
+        (list "SkillUpgrade" skill incumbent-vitality challenger-vitality incumbent-carrier challenger-carrier research))
+    (defn sv-upgrade-skill (upgrade) (nth upgrade 1))
+    (defn sv-upgrade-incumbent-vitality (upgrade) (nth upgrade 2))
+    (defn sv-upgrade-challenger-vitality (upgrade) (nth upgrade 3))
+    (defn sv-upgrade-incumbent-carrier (upgrade) (nth upgrade 4))
+    (defn sv-upgrade-challenger-carrier (upgrade) (nth upgrade 5))
+    (defn sv-upgrade-research (upgrade) (nth upgrade 6))
+    (defn sv-upgrade-promote? (upgrade)
+        (if (eq (sv-row? upgrade "SkillUpgrade" 7) 1)
+            (sv-all? (list
+                (sv-skill-valid? (sv-upgrade-skill upgrade))
+                (sv-vitality-better?
+                    (sv-upgrade-incumbent-vitality upgrade)
+                    (sv-upgrade-challenger-vitality upgrade))
+                (sv-research-valid? (sv-upgrade-research upgrade))
+                (sv-carrier-ready? (sv-upgrade-challenger-carrier upgrade))
+                (sv-carrier-lower-cost?
+                    (sv-upgrade-challenger-carrier upgrade)
+                    (sv-upgrade-incumbent-carrier upgrade))))
+            0))
+    (defn sv-upgrade-decision (upgrade)
+        (if (eq (sv-upgrade-promote? upgrade) 1) "promote" "keep-learning"))
+
+    0)
