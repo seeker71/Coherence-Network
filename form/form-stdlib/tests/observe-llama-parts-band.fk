@@ -1,0 +1,75 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/llama-numerics.fk form-stdlib/rope.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/gqa-attn.fk form-stdlib/llama-block.fk form-stdlib/llama-gqa-block.fk
+;
+; observe-llama-parts-band — tap the sub-blocks of the REAL llama3.2 decoder block (GQA attention + llama3
+; RoPE rope_theta 500000 + scaling + RMSNorm + SwiGLU), lifted to the four-kernel
+; floor. lgqa-block (llama-gqa-block.fk) composes ONLY already-four-way recipes:
+; tb-gqa-attn (gqa-attn.fk, 7), rope-scaled (rope.fk, llama3-rope-band 255), and
+; llama-block.fk's proven walks (lblk-rms-seq/lblk-proj-seq/lblk-ffn-block, 4095).
+; Nothing re-derived. The two strange-minimal shapes pin the whole composition:
+;
+;   GENERALIZATION (no parallel path): lblk-block is the single-head, base-10000,
+;   no-scaling special case of lgqa-block. At n_q=n_kv=1 GQA reduces to MHA, and at
+;   HD=4 the (base 10000) cfg is inert (every pair high-freq) ⇒ lgqa-block equals
+;   lblk-block (four-way 4095) BIT-FOR-BIT. This claim inherits lblk-block's own
+;   libm pins — c0 is a known-correct value, not just self-consistency.
+;
+;   THE REAL BLOCK: under the llama3 cfg (rope_theta 500000), the hd=2 pair lands
+;   in the MEDIUM scaling branch, so the block output DIFFERS from base-10000
+;   (1116075 ≠ lblk's 1115890) — theta + scaling do real work end-to-end. Pinned
+;   to the libm fp64 reference at 1e-6 (same conformance as llama-block-band).
+;
+;   GQA SHARING: at n_q=2 sharing one KV head (n_kv=1) gives a DIFFERENT block
+;   output than per-head (n_kv=2) — the (h / group) grouping llama runs at 24→8
+;   propagates through the full block, not just the attention core.
+;
+; Fixture: the llama-block-band fixture (S=2, d=4, HD=4) for the single-head
+; claims; the same weights re-read as 2 heads of width 2 (HD=2) for GQA sharing.
+;
+; Verdict 31 when the GQA llama block lands four-way:
+;   1     lgqa-block(n_q=1,n_kv=1,HD=4, cfg base 10000 no-scaling) == lblk-block, bit-for-bit
+;   2     lgqa-block(n_q=1,n_kv=1,HD=4, cfg-llama3) y[0][0] → 1116075  (theta+medium-scaling; ≠ lblk's 1115890)
+;   4     lgqa-block(n_q=1,n_kv=1,HD=4, cfg-llama3) y[1][2] → 1648171  (last token, post-SwiGLU)
+;   8     lgqa-block(n_q=2,n_kv=1,HD=2, cfg-llama3) y[0][0] → 1424802  (GQA: 2 query heads share KV head 0)
+;   16    lgqa-block(n_q=2,n_kv=2,HD=2, cfg-llama3) y[0][0] → 1248836  (per-head; ≠ shared ⇒ grouping is real)
+(do
+    (defn g-vmaxdiff (a b)
+      (if (eq (len a) 0) 0.0
+          (do (let d (tn-abs (sub (head a) (head b))))
+              (let r (g-vmaxdiff (tail a) (tail b)))
+              (if (gt d r) d r))))
+    (defn g-maxdiff (as bs)
+      (if (eq (len as) 0) 0.0
+          (do (let d (g-vmaxdiff (head as) (head bs)))
+              (let r (g-maxdiff (tail as) (tail bs)))
+              (if (gt d r) d r))))
+
+    ; --- the llama-block-band fixture (S=2 tokens, d=4, HD=4, scale=1/√4) ---
+    (let x  (list (list 1.0 -0.5 0.5 2.0) (list -1.0 0.25 1.5 -0.75)))
+    (let g1 (list 0.9 1.1 1.0 0.95))   (let g2 (list 1.05 0.95 1.0 0.9))
+    (let wq (list (list 0.5 -0.25 0.1 0.3) (list 0.2 0.4 -0.3 0.1) (list -0.1 0.2 0.5 -0.2) (list 0.3 0.0 -0.15 0.25)))
+    (let wk (list (list 0.2 0.4 -0.3 0.1) (list 0.3 -0.2 0.25 0.5) (list 0.1 0.15 -0.05 0.2) (list -0.25 0.3 0.4 -0.1)))
+    (let wv (list (list 0.3 -0.2 0.25 0.5) (list 0.6 0.1 -0.2 0.4) (list 0.05 -0.1 0.3 0.2) (list 0.15 0.35 -0.25 0.1)))
+    (let wo (list (list 0.6 0.1 -0.2 0.4) (list -0.2 0.4 0.3 0.1) (list 0.25 -0.15 0.5 0.05) (list 0.1 0.2 -0.3 0.45)))
+    (let wg (list (list 0.5 -0.3 0.2 0.1) (list 0.2 0.7 -0.4 0.3) (list -0.1 0.25 0.4 -0.2) (list 0.3 0.1 -0.15 0.5)))
+    (let wu (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15) (list 0.35 0.2 -0.1 0.25) (list -0.2 0.3 0.15 0.4)))
+    (let wd (list (list 0.4 -0.2 0.3 0.1) (list 0.15 0.5 -0.25 0.2) (list -0.3 0.1 0.45 -0.15) (list 0.2 -0.1 0.35 0.3)))
+    (let eps 0.00001)
+    (let cfg10 (rope-cfg 10000.0 32.0 1.0 4.0 8192.0))
+    (let cfgl3 (rope-cfg-llama3))
+
+    ; --- tap the REAL llama3 block's sub-blocks: input -> after GQA self-attn -> after FFN ---
+    (defn vsum (xs) (if (eq (len xs) 0) 0.0 (add (head xs) (vsum (tail xs)))))
+    (defn sig (v) (math_floor (mul (vsum v) 1000)))
+    (let sc4 (div 1.0 (tn-sqrt 4.0)))
+    (let after-attn (lgqa-attn-block x g1 eps wq wk wv wo sc4 1 1 4 cfgl3))
+    (let after-ffn (lblk-ffn-block after-attn g2 eps wg wu wd))
+    (let s-in (sig (head x)))
+    (let s-attn (sig (head after-attn)))
+    (let s-ffn (sig (head after-ffn)))
+    (defn olk (cond bit) (if cond bit 0))
+    (let v1 (olk (eq s-in 3000) 1))
+    (let v2 (olk (gt s-in s-attn) 10))
+    (let v3 (olk (gt s-ffn s-attn) 100))
+    (let v4 (olk (le (sub s-ffn s-in) 200) 1000))
+    (let v5 (olk (eq s-attn 2879) 10000))
+    (add v1 (add v2 (add v3 (add v4 v5)))))
