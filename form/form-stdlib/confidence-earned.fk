@@ -1,0 +1,43 @@
+; confidence-earned.fk — is my "sure" EARNED? Close the loop between calibrated confidence and outcome.
+; confidence-calibrate.fk makes a score's bucket mean the same trust everywhere (the scale); self-watch.fk
+; measures the precision of what I chose to watch. Neither asks the hard question: when I said "sure", was I
+; RIGHT? This recipe does — over a sequence of (confidence, correct) observations it surfaces the BETRAYED
+; quadrant (sure AND wrong: confidently wrong, the dangerous one) and the precision of confidence (of the times
+; I was sure, the fraction I was right). A mind can RELY ON ITSELF exactly where this precision is high and
+; escalate to the oracle where it is not — calibration-against-truth is the root of self-reliance, and the
+; confidently-wrong count is the alarm a transparent mind can see and an opaque one cannot.
+; Honest floor: a fixed observation list with a 3-level confidence bucket; the wired version reads
+; confidence-calibrate's bucket and choice-outcome-learning's outcome live, accumulating across real answers.
+;
+; Self-contained over core (FLOAT precision). Four-way by tests/confidence-earned-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ce-conf (o) (head o))
+    (defn ce-correct (o) (head (tail o)))
+    (defn ce-sure? (o) (if (eq (ce-conf o) 2) 1 0))                  ; "sure" = the high calibrated bucket
+
+    (defn ce-earned (obs)                                            ; sure AND right -- trust I kept
+        (if (eq (len obs) 0) 0
+            (add (if (eq (ce-sure? (head obs)) 1) (ce-correct (head obs)) 0) (ce-earned (tail obs)))))
+    (defn ce-betrayed (obs)                                          ; sure AND wrong -- confidently wrong, the alarm
+        (if (eq (len obs) 0) 0
+            (add (if (eq (ce-sure? (head obs)) 1) (if (eq (ce-correct (head obs)) 0) 1 0) 0) (ce-betrayed (tail obs)))))
+    (defn ce-sure-total (obs) (add (ce-earned obs) (ce-betrayed obs)))
+    (defn ce-precision (obs) (div (mul 1.0 (ce-earned obs)) (mul 1.0 (ce-sure-total obs))))  ; when sure, fraction right
+
+    ; a mind whose "sure" was right 3 times and WRONG 3 times (this session's confidently-wrong moments)
+    (defn ce-session () (list (list 2 1) (list 2 1) (list 2 1) (list 2 0) (list 2 0) (list 2 0) (list 1 0) (list 0 1)))
+    ; an earned-confidence mind: when sure, always right
+    (defn ce-earned-mind () (list (list 2 1) (list 2 1) (list 2 1) (list 1 0) (list 0 0)))
+
+    (defn cek (cond bit) (if cond bit 0))
+    (defn confidence-earned-check ()
+        (add (add (add (add
+            (cek (eq (ce-betrayed (ce-session)) 3) 1)              ; the confidently-wrong count is SURFACED (3 -- what I couldn't see from inside)
+            (cek (eq (ce-earned (ce-session)) 3) 10))             ; and the kept-trust count (sure & right)
+            (cek (eq (ce-precision (ce-earned-mind)) 1.0) 100))   ; an earned-confidence mind: when sure, ALWAYS right (precision 1.0)
+            (cek (lt (ce-precision (ce-session)) 1.0) 1000))      ; this session's "sure" was NOT earned (0.5 < 1.0 -- mis-calibrated)
+            (cek (gt (ce-betrayed (ce-session)) 0) 10000)))       ; the mis-calibration is OBSERVABLE -- the precondition for fixing it
+)
