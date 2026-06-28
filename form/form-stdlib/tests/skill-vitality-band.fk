@@ -1,0 +1,231 @@
+; preludes: form-stdlib/core.fk form-stdlib/skill-vitality.fk
+;
+; skill-vitality-band - generic skill teaching, carrier execution, vitality,
+; auto-research, and earned upgrades.
+;
+; Verdict 65535 when every claim lands:
+;   1      floor and north-star rows name the loop
+;   2      a skill with grammar, recipe, proof, interfaces, and carriers is valid
+;   4      a skill without proof is refused
+;   8      carrier readiness needs enough terminal receipts and success margin
+;   16     young carriers below the receipt floor are not ready
+;   32     winner picks a ready lower-cost local metal carrier
+;   64     carrier lookup proves supported metal can be named per skill
+;   128    low trust focuses on teaching trust
+;   256    low sovereignty focuses on restoring sovereignty
+;   512    low coverage focuses on learning more samples
+;   1024   open residuals focus on auto-research questions
+;   2048   resource pressure focuses on compression or routing
+;   4096   strong vitality serves and watches
+;   8192   auto-research candidates require evidence, residuals, and lift over risk
+;   16384  valid research emits a next-question row
+;   32768  a better challenger with ready cheaper carrier earns promotion
+
+(do
+    (let remote
+        (sv-carrier
+            "agent:codex"
+            "remote-llm"
+            "remote"
+            600
+            70
+            90
+            60
+            9
+            1
+            "proof:remote-baseline"))
+    (let mac
+        (sv-carrier
+            "form-native:skill"
+            "macos-arm64"
+            "local"
+            0
+            20
+            25
+            30
+            8
+            2
+            "proof:form-native-mac"))
+    (let android
+        (sv-carrier
+            "form-native:skill-android"
+            "android-arm64"
+            "local"
+            0
+            28
+            35
+            40
+            7
+            1
+            "proof:form-native-android"))
+    (let gpu
+        (sv-carrier
+            "form-native:skill-gpu"
+            "metal-gpu"
+            "local"
+            0
+            18
+            20
+            42
+            6
+            1
+            "proof:form-native-metal"))
+    (let young
+        (sv-carrier
+            "form-native:young"
+            "macos-arm64"
+            "local"
+            0
+            15
+            20
+            25
+            3
+            1
+            "proof:too-young"))
+    (let carriers (list remote mac android gpu young))
+    (let skill
+        (sv-skill
+            "skill:anything-arrives"
+            "v1"
+            "grammar:teaching-to-recipe"
+            "recipe:skill-vitality"
+            "proof:skill-vitality-band"
+            (list "ask" "execute" "measure" "upgrade")
+            carriers))
+    (let no-proof
+        (sv-skill
+            "skill:no-proof"
+            "v0"
+            "grammar:x"
+            "recipe:x"
+            ""
+            (list "execute")
+            (list remote)))
+
+    (let c0
+        (if (and (eq (len (sv-floor)) 8) (eq (len (sv-north-star)) 6)) 1 0))
+    (let c1 (if (eq (sv-skill-valid? skill) 1) 2 0))
+    (let c2 (if (eq (sv-skill-valid? no-proof) 0) 4 0))
+    (let c3
+        (if (and
+                (eq (sv-carrier-ready? remote) 1)
+                (eq (sv-carrier-ready? mac) 1))
+            8
+            0))
+    (let c4 (if (eq (sv-carrier-ready? young) 0) 16 0))
+    (let winner (sv-carrier-winner carriers))
+    (let c5
+        (if (str_eq (sv-carrier-id winner) "form-native:skill-gpu") 32 0))
+    (let c6
+        (if (and
+                (eq (sv-skill-can-run-on? skill "android-arm64") 1)
+                (and
+                    (eq (sv-skill-can-run-on? skill "metal-gpu") 1)
+                    (eq (sv-skill-can-run-on? skill "quantum-moon") 0)))
+            64
+            0))
+
+    (let low-trust
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            88 42 90 86 91 20 25 30 3 12 0))
+    (let low-sovereignty
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            88 90 50 86 91 20 25 30 3 12 0))
+    (let low-coverage
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            88 90 90 52 91 20 25 30 3 12 0))
+    (let residual
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            88 90 90 86 91 20 25 30 3 12 2))
+    (let pressured
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            88 90 90 86 91 88 25 30 3 12 0))
+    (let strong
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            90 91 92 87 93 20 25 30 4 16 0))
+
+    (let c7 (if (str_eq (sv-focus low-trust) "teach-trust") 128 0))
+    (let c8 (if (str_eq (sv-focus low-sovereignty) "restore-sovereignty") 256 0))
+    (let c9 (if (str_eq (sv-focus low-coverage) "learn-more-samples") 512 0))
+    (let c10 (if (str_eq (sv-focus residual) "answer-residuals") 1024 0))
+    (let c11 (if (str_eq (sv-focus pressured) "compress-or-route") 2048 0))
+    (let c12 (if (str_eq (sv-focus strong) "serve-and-watch") 4096 0))
+
+    (let research
+        (sv-research-candidate
+            "skill:anything-arrives"
+            "v2"
+            "source:auto-research+automl"
+            3
+            2
+            18
+            5))
+    (let weak-research
+        (sv-research-candidate
+            "skill:anything-arrives"
+            "v2"
+            ""
+            1
+            0
+            2
+            5))
+    (let c13
+        (if (and
+                (eq (sv-research-valid? research) 1)
+                (eq (sv-research-valid? weak-research) 0))
+            8192
+            0))
+    (let question (sv-research-next-question research))
+    (let c14
+        (if (and
+                (str_eq (nth question 0) "SkillResearchQuestion")
+                (and
+                    (str_eq (nth question 1) "skill:anything-arrives")
+                    (eq (nth question 3) 2)))
+            16384
+            0))
+
+    (let incumbent-vitality
+        (sv-vitality
+            "skill:anything-arrives" "v1"
+            86 78 83 72 88 70 90 60 3 14 2))
+    (let challenger-vitality
+        (sv-vitality
+            "skill:anything-arrives" "v2"
+            90 88 86 82 92 20 25 30 5 20 1))
+    (let upgrade
+        (sv-upgrade
+            skill
+            incumbent-vitality
+            challenger-vitality
+            remote
+            mac
+            research))
+    (let c15
+        (if (and
+                (eq (sv-upgrade-promote? upgrade) 1)
+                (str_eq (sv-upgrade-decision upgrade) "promote"))
+            32768
+            0))
+
+    (add c0
+    (add c1
+    (add c2
+    (add c3
+    (add c4
+    (add c5
+    (add c6
+    (add c7
+    (add c8
+    (add c9
+    (add c10
+    (add c11
+    (add c12
+    (add c13
+    (add c14 c15))))))))))))))))

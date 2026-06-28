@@ -1,0 +1,13 @@
+{
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/skill-vitality.fk form-stdlib/tests/skill-vitality-band.fk"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added skill-vitality.fk and skill-vitality-band.fk as a generic Form-native skill teaching/execution/vitality/autoresearch/upgrade floor. The focused proof returned verdict 65535 with fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables), 1 ok, 0 divergent. The recipe validates skill cells, carrier readiness, supported metal lookup, vitality focus routing, auto-research candidate evidence, and earned promotion of a better challenger on a ready cheaper carrier."
+}

@@ -1,0 +1,43 @@
+; skill-vitality.form
+;
+; A skill is a teachable cell with a grammar, a runnable recipe, a proof row,
+; supported carrier/metal rows, vitality receipts, auto-research questions, and
+; an earned upgrade gate.
+;
+; The loop:
+;
+;   skill cell
+;     -> carrier execution receipt
+;     -> vitality row
+;     -> focus route
+;     -> auto-research candidate
+;     -> challenger execution receipt
+;     -> promote only when measured vitality improves
+;
+; Carriers are not authority. A Mac CPU, Android arm64 binary, Metal GPU lane,
+; MLX buffer, remote LLM, API route, or file cache can execute a skill, but each
+; must return measured receipts. The source truth is the skill row plus proof.
+;
+; Vitality is not a single score. The row keeps accuracy, trust, sovereignty,
+; coverage, freshness, energy, latency, memory, proof count, sample count, and
+; residual questions separate so the focus stays honest: teach trust, restore
+; sovereignty, learn samples, refresh sources, answer residuals, compress or
+; route, or serve and watch.
+;
+; Auto-research does not promote by imagination. It may propose a challenger
+; when evidence, residual questions, expected lift, and risk are visible. The
+; challenger earns the body only when its receipts show better vitality and a
+; ready cheaper carrier.
+;
+; Carrier:
+;   form/form-stdlib/skill-vitality.fk
+;
+; Proof:
+;   form/form-stdlib/tests/skill-vitality-band.fk -> 65535 four-way
+;
+; Kin:
+;   code-tool-learning.form
+;   tool-embodiment.form
+;   model-vitality.form
+;   autoresearch-runtime.form
+;   real-mesh-training-carrier.form
