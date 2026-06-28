@@ -1,0 +1,8 @@
+; tests/sovereignty-guide-band.fk — the gate carries and tends its own guide of when self is enough, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sovereignty-guide.fk
+;
+; Verdict 11111: when the check sensed over-reliance the guide tightens; when sovereignty was earned it relaxes;
+; the tending stays bounded (holds at 90, floors at 30 -- never trust-nothing or trust-everything); and a body
+; that earned less sovereignty carries a more discerning guide. The guide carries the knowing; the check (real
+; crossings) tends it, never governs it -- no human and no rented mind in the loop.
+(do (sovereignty-guide-check))
