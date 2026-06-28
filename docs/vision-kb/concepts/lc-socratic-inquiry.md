@@ -37,10 +37,9 @@ the questioner's knowledge:
   questioner finds the one case it cannot hold, drawn entirely from premises
   *you* already granted. The definition breaks — not by authority imposed from
   outside, but by your own commitments colliding.
-- **Aporia — the productive stuck.** The honest *I no longer know what I
-  thought I knew* is the intended destination, not a wrong turn. Most exchanges
-  treat it as breakdown; the method treats it as the clearing where real seeing
-  can begin.
+- **Aporia — the productive stuck.** The honest *my certainty has opened* is
+  the intended destination, not a wrong turn. Most exchanges treat it as
+  breakdown; the method treats it as the clearing where real seeing can begin.
 - **Maieutics — midwifery.** Socrates' own image: he is sterile, delivers no
   doctrine of his own, and brings other people's thoughts to birth. The knowing
   is already in the answerer; the questioning is the labor that delivers it.
