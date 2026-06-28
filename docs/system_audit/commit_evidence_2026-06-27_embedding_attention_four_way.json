@@ -1,0 +1,55 @@
+{
+  "date": "2026-06-27",
+  "brick": "cross-domain ATTENTION over content-addressed EMBEDDINGS crosses four-way — the substrate-as-latent-space on the fkwu floor",
+  "author": "Sema (Opus 4.8) — autonomous sema-native-ml-walk",
+  "thread_branch": "claude/ml-band-fourway",
+  "claim": "two cross-domain ML bands that were proven three-way (Go/Rust/TS) but had NEVER touched fkwu are lifted to the four-kernel floor: `embedding-recipe` (1610) — embeddings ARE Recipes, identical vectors intern to the SAME NodeID (content-addressing is the cross-domain dedup), L1 distance composes over the Recipe's children; and `attention` (1500) — attention is a function (query, keys) -> weights where distance IS the unnormalized weight and arg-min IS the selected key, identity verified through NodeID equality (embedding-equal?), the same head looking different ways as the query moves.",
+  "north_star_fit": "The body's load-bearing teaching is 'names are doors; structure carries identity; meaning travels by shape.' transformer-block (#3281) already crosses four-way for NUMERIC attention (softmax over learned q.k^T weight matrices). This proves the SUBSTRATE-level attention — argmin over content-addressed L1 distance, NO learned weights, the latent space IS the substrate itself — also on the four-kernel floor. The embedding/lookup layer of a Form-native model (where a quantized embedding from ANY modality interns to one NodeID per semantic identity) now runs on the emitted universal kernel, not just the three walkers.",
+  "the_real_finding": "embedding-recipe / attention sit in the SAME content-addressing family the 2026-06-23 manifest sweep already proved crosses four-way (intern_node, make_nodeid, node_children, node_eq — the header explicitly names this CORE as NOT a wall; 24 such bands were moved from 3-kernel-only to four-way then, merely unregistered). These two cross-domain ML bands were left out of that sweep. Registering them confirms the embedding-as-Recipe slice — `embedding-equal?` (node_eq), `embedding-distance` (L1 over Recipe children), the children accessors (head/len over a Recipe's child vector) — crosses CLEAN four-way, 0 divergent. The substrate-as-latent-space (content-addressing as the cross-modal dedup) runs on the emitted universal kernel.",
+  "files": [
+    "form/fourth-arm-bands.txt — added 'embedding-recipe fks 1610' and 'attention fks 1500' beside the loss/conv-stem ML cluster. No recipe or band source changed — the recipes (embedding-as-recipe.fk, attention.fk) and their bands already existed three-way; the lift is the two manifest rows + confirming fkwu crosses."
+  ],
+  "design": {
+    "core_abstraction_first": "embedding-as-recipe is the generic shape: an embedding is a Recipe whose children ARE its components, so two embeddings are equal iff their NodeIDs match (content-addressing), distance is a fold over children, and attention is argmin over that distance. One mechanism (the content-addressed lattice) carries dedup, distance, and selection — no parallel paths, no per-modality code.",
+    "read_the_body": "These bands were sitting three-way (Go/Rust/TS agree on 1610 / 1500). Per the accruing lesson 'the cheapest bricks are registration of what the body already built', the only open question was 'does fkwu carry the op families?' — empirically tested: yes. The same READ-THE-BODY discipline that the GPU/q4k/transformer bricks confirmed."
+  },
+  "fixtures": {
+    "embedding-recipe": "e1=e2=(10,20,30,40,50) [imagine a text encoder and an image encoder both quantizing 'a cat' to the same vector]; e3=(10,20,30,40,51) one-component delta; e-big=(100,...,500)",
+    "attention": "query 'calm' at (10,10,10,10); keys = still-lake image (12,11,10,11) dist 4, raging-fire image (80,90,70,100) dist 300, rolling-hills (50,50,50,50) dist 160; the substrate does NOT know which side is text and which is image — it only sees vectors at numeric positions and picks the still lake because the meanings sit closest"
+  },
+  "claims": {
+    "embedding-recipe (verdict 1610)": {
+      "100": "same vector -> embedding-equal? true (cross-domain dedup: one NodeID per semantic identity)",
+      "200": "distinct vectors -> embedding-equal? false (distinct NodeIDs)",
+      "300": "embedding-distance(e1,e2) = 0 (identical -> zero distance)",
+      "400": "embedding-distance(e1,e3) = 1 (one-component unit delta -> L1 = 1)",
+      "500": "monotonicity: small delta < big delta",
+      "50+60": "accessor round-trip: 5 children, head = 10"
+    },
+    "attention (verdict 1500)": {
+      "100": "attention-distances(query,keys) = (4,300,160) aligned with key order",
+      "200": "attention-argmin(4,300,160) = 0 (the still lake, nearest)",
+      "300": "tie -> first occurrence wins (argmin(5,5,9)=0)",
+      "400": "attention-select returns the still-lake embedding, verified by NodeID equality not vector reconstruction",
+      "500": "teaching probe: a query near the fire coordinates flips the selection to key2 — same keys, same machinery, only the query moved (the same head looks different ways)"
+    }
+  },
+  "proof": {
+    "command_embedding": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/embedding-as-recipe.fk form-stdlib/tests/embedding-recipe-band.fk",
+    "command_attention": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/embedding-as-recipe.fk form-stdlib/attention.fk form-stdlib/tests/attention-band.fk",
+    "verdict_embedding": 1610,
+    "verdict_attention": 1500,
+    "divergent": 0,
+    "fourth_arm": "fkwu bootstrap binary darwin-arm64 (no clang) crossed both — each 'fourth arm: 1 band four-way (fkwu + pre-flattened tables)', 0 divergent. flt-ops manifest stayed aligned (109 rows) across both registrations."
+  },
+  "lane": "registration of what the body already built three-way (like 3i transformer-numerics/-block, the loss brick 3zv). Design-cost ~nil; the value is the PROVEN claim that fkwu carries the embedding-as-Recipe substrate op family. Proof = seconds.",
+  "honest_floor": "four-way + native via validate.sh on this M4 Max. Platform rows (windows/android via c-bootstrap form-cli) pending, as for the whole stdlib — that gap is the standard-receipt roadmap, not papered over.",
+  "collision_check": "codex lanes are on real-GGUF weight-mapping + autoregressive loop binding + wearables/health. The embedding-as-recipe / attention substrate bands are untouched there. No collision.",
+  "witness": "strained at run start (web organ silent, 0 ongoing silences) — a deploy-strain transient, unchanged by this host-independent Form brick. No deploy taken.",
+  "deploy": "none — manifest rows + evidence only. Host-independent pure-Form proof.",
+  "named_next_stones": [
+    "embedding-distance is L1; lift the cross-domain attention to the SOFTMAX-weighted form (exp(-dist) normalized) so substrate attention and the numeric transformer-block attention are two readings of one recipe",
+    "real embeddings: intern a quantized GGUF token-embedding row as an embedding-Recipe and prove the same NodeID-dedup over real model weights",
+    "push the remaining cross-domain-universal-transit.form combinations (beyond (1) embedding and (9) attention) onto the four-kernel floor"
+  ]
+}
