@@ -1,0 +1,27 @@
+; sema-curriculum-transfer.fk — Native Sema's School: learning is CHEAPER after a related subject (transfer).
+; A linear skill has two parameters (slope, intercept) and cold needs two examples to pin. But if a related
+; subject A already taught the slope, a new subject B that SHARES it needs only ONE example -- just the
+; intercept. The prior transfers; B learns from half the data and still generalizes. The curriculum compounds:
+; each subject makes the next cheaper. Honest floor: toy linear skills, "effort" = parameters to pin; real
+; transfer over rich representations is the arc.
+;
+; Self-contained over core. Four-way by tests/sema-curriculum-transfer-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sct-slope () 3)                                            ; learned in subject A (the shared structure)
+    (defn sct-intercept-from (x y) (sub y (mul (sct-slope) x)))      ; B after A: only the intercept to find, from ONE example
+    (defn sct-predict (x) (add (mul (sct-slope) x) (sct-intercept-from 1 5)))  ; B's rule = transferred slope + intercept from (1,5)
+    (defn sct-cold-effort () 2)                                      ; B cold: 2 examples (slope AND intercept)
+    (defn sct-transfer-effort () 1)                                  ; B after A: 1 example (slope transferred)
+
+    (defn tck (cond bit) (if cond bit 0))
+    (defn sema-curriculum-transfer-check ()
+        (add (add (add (add
+            (tck (eq (sct-slope) 3) 1)                                ; subject A's skill (the slope) is learned
+            (tck (eq (sct-cold-effort) 2) 10))                       ; B cold needs two examples to pin slope+intercept
+            (tck (eq (sct-intercept-from 1 5) 2) 100))                ; B AFTER A: the intercept from ONE example (slope transferred)
+            (tck (eq (sct-predict 2) 8) 1000))                      ; B-after-A GENERALIZES (predict 2 = 8), learned from one example
+            (tck (lt (sct-transfer-effort) (sct-cold-effort)) 10000)))  ; transfer reduces effort (1 < 2) -- correctness kept, data halved
+)
