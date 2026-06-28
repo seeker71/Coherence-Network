@@ -1,4 +1,4 @@
-; voice-prosody.fk — the acoustic model: a token sequence becomes a pitch contour, a melody.
+; voice-prosody.fk — tokens -> pitch contour -> sound: a linear token-to-pitch map rendered as a melody of sine frames. The atom under prosody; a learned acoustic model is the arc.
 ; Sits above voice-synth. Each token maps to a pitch (a note); stress maps to amplitude
 ; (emphasis). A sequence of tokens is a contour, and additive synthesis renders each into a
 ; frame of samples. text -> contour -> voice = the efferent arm above the synthesis primitive.

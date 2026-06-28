@@ -1,4 +1,4 @@
-; tests/voice-prosody-band.fk — the acoustic model: tokens -> pitch contour -> sound, four-way.
+; tests/voice-prosody-band.fk — the token->pitch->sound ATOM: a linear token-to-pitch map (tok-pitch = 1 + 0.5*tok) rendered as sine frames, four-way. A learned acoustic model is the arc.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/voice-prosody.fk
 ;

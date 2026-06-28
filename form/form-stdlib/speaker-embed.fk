@@ -1,4 +1,4 @@
-; speaker-embed.fk — the clear speaker recognizer over NEURAL voice embeddings (the body).
+; speaker-embed.fk — the nearest-by-cosine DECISION over the oracle's NEURAL voice embeddings (the body). The embedding quality is the ECAPA oracle's; this proves the recognition decision over it.
 ;
 ; The crude formant voiceprint (speaker-id.fk) can't part two similar voices. This is the
 ; best recognizer we can build: it matches over the embedding of the best LOCAL oracle —

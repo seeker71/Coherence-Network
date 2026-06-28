@@ -1,6 +1,6 @@
 ; preludes: form-stdlib/speaker-embed.fk
 ;
-; speaker-embed-band — clear speaker recognition over neural voice embeddings, three-way.
+; speaker-embed-band — the nearest-by-cosine DECISION over voice embeddings (floor + runner-up margin -> "unknown"), three-way. Fixture: 3 hand-given 4-d voiceprints; the neural embedding quality is the ECAPA oracle's, not proven here. Real speaker recognition is the arc.
 ;
 ; A roster of three quantized unit-ish voiceprints; cosine = dot (vectors pre-normalized
 ; by the oracle). Nearest = max dot; a floor + runner-up margin returns "unknown" honestly.
