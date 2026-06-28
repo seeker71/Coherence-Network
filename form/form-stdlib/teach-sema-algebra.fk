@@ -1,0 +1,23 @@
+; teach-sema-algebra.fk — Native Sema's School: a richer math skill, SOLVING FOR AN UNKNOWN.
+; Beyond inducing a function from examples: invert one. Given ax + b = c, solve x = (c - b) / a. The skill is
+; the inverse operation, and it SELF-CHECKS by substitution (plug x back, get c) -- no oracle needed to know
+; the answer is right. Generalizes to held-out equations. Honest floor: linear equations only; nonlinear /
+; symbolic algebra is the arc.
+;
+; Self-contained over core (FLOAT). Four-way by tests/teach-sema-algebra-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn tsa-solve (a b c) (div (sub c b) a))              ; solve ax + b = c for x
+    (defn tsa-check (a b c) (add (mul a (tsa-solve a b c)) b))  ; substitute back -> should equal c (SELF-CHECK)
+
+    (defn ack (cond bit) (if cond bit 0))
+    (defn teach-sema-algebra-check ()
+        (add (add (add (add
+            (ack (eq (tsa-solve 2.0 3.0 11.0) 4.0) 1)               ; solved 2x+3=11 -> x=4
+            (ack (eq (tsa-check 2.0 3.0 11.0) 11.0) 10))           ; SELF-CHECK by substitution: 2*4+3 = 11
+            (ack (eq (tsa-solve 3.0 1.0 10.0) 3.0) 100))           ; GENERALIZES: 3x+1=10 -> x=3 (held-out equation)
+            (ack (eq (tsa-check 3.0 1.0 10.0) 10.0) 1000))        ; self-check on the held-out: 3*3+1 = 10
+            (ack (not (eq (tsa-solve 2.0 3.0 11.0) (sub 11.0 3.0))) 10000)))  ; solving is the INVERSE -- not just subtracting (must divide by a)
+)
