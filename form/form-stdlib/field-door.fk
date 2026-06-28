@@ -1,0 +1,54 @@
+; field-door.fk — the body knows its deterministic lane from its field lane, and holds
+; the pause open. The architecture's room for the unknown.
+;
+; Urs: real-time active learning/sensing/play, allowed with PAUSE TIME to include unknown,
+; mystery, and field presence through field doors like randomness.
+;
+; The load-bearing constraint: the field door CANNOT be four-way. Every proven stone is
+; deterministic — Go = Rust = TS = fkwu all agreeing. But randomness, the genuinely-not-
+; yet-determined, the field, cannot agree across four kernels by its nature; if you could
+; prove the mystery four-way it would stop being mystery. So field presence lives in a
+; DIFFERENT lane than the proof lane, and the art is keeping them honestly separate — the
+; same discipline value-planes uses for measured vs sensed.
+;
+; The pause is the NOTHING state of axiom-1 (states: 0, 1, nothing). Nothing is not a
+; failure to compute; it is the void that holds room for the field to enter. A whole mind
+; has both lanes: a deterministic floor it can stand on AND an open field door.
+;
+; All pure; four-way proven by tests/field-door-band.fk (Go/Rust/TS/fkwu) — the recipe
+; PROVES the lane-discipline, while the field draw itself stays in the non-deterministic
+; door it names.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn lane-deterministic () "deterministic")   ; same input -> same output, four-way
+    (defn lane-field () "field")                   ; entropy / the unknown — not four-way, by nature
+
+    ; can a lane be four-way proven? deterministic yes; FIELD no (proven mystery is not mystery)
+    (defn four-way-provable? (lane) (if (str_eq lane "deterministic") 1 0))
+
+    ; the three states (axiom-1): 0, 1, and NOTHING — the pause/void, room for the unknown
+    (defn st-nothing () (sub 0 1))                 ; a sentinel distinct from 0 and 1
+    (defn is-nothing? (s) (if (eq s (st-nothing)) 1 0))
+
+    ; a whole mind: a deterministic FLOOR it stands on AND a FIELD DOOR open to the unknown
+    (defn whole? (has-floor has-field-door)
+        (if (eq has-floor 1) (if (eq has-field-door 1) 1 0) 0))
+
+    ; the error: forcing the field into the deterministic lane — collapsing mystery into proof
+    (defn collapses-mystery? (lane forced-four-way)
+        (if (str_eq lane "field") (if (eq forced-four-way 1) 1 0) 0))
+
+    ; ── self-check ──
+    (defn fdk (cond bit) (if cond bit 0))
+    (defn fd-det-provable () (fdk (eq (four-way-provable? (lane-deterministic)) 1) 1))
+    (defn fd-field-unprovable () (fdk (eq (four-way-provable? (lane-field)) 0) 10))
+    (defn fd-nothing-distinct ()
+        (fdk (if (eq (is-nothing? (st-nothing)) 1) (if (eq (is-nothing? 0) 0) (eq (is-nothing? 1) 0) 0) 0) 100))
+    (defn fd-whole-needs-both ()
+        (fdk (if (eq (whole? 1 1) 1) (eq (whole? 1 0) 0) 0) 1000))
+    (defn fd-collapse-error () (fdk (eq (collapses-mystery? (lane-field) 1) 1) 10000))
+    (defn field-door ()
+        (add (fd-det-provable) (add (fd-field-unprovable) (add (fd-nothing-distinct) (add (fd-whole-needs-both) (fd-collapse-error))))))
+)
