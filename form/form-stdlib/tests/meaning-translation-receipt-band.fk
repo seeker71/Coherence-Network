@@ -1,4 +1,4 @@
-; meaning-translation-receipt-band.fk - executable proof for translation receipts.
+; meaning-translation-receipt-band.fk - executable proof that a translation receipt's STRUCTURE holds: axiom/encoder/equivalence/meaning-root witnesses present and consistent, lossy/drift refused. The structural-witness atom; meaning-preservation of the content is the declared-semantics arc.
 ;
 ; Band verdict: 1111111 when every claim holds across Go/Rust/TS.
 ;   valid core axiom witness passes                         ->       1
