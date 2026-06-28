@@ -1,0 +1,41 @@
+; band-prelude-resolve.fk — the resolution-walk applied to a band's prelude tokens.
+; The Form-native shape of what the fourth-arm bash harness did with `[[ -f "$f" ]] || return 0`:
+; it resolved prelude tokens LAZILY and BAILED (silently, return 0) on the first one that wasn't a file —
+; so a slurped prose comment ("Verdict 11111: ...") silently dropped the band file (see PR #3814). This recipe
+; is name-resolution-as-recipe.form's third walk for preludes: it ACCUMULATES every unresolved token instead
+; of bailing, so the failure is LEGIBLE before the flatten runs. A prelude token resolves iff it ends in ".fk".
+; Honest floor: toy token lists + a ".fk" suffix predicate; the wired Form-native band-source resolver (reading
+; the header via host-io, resolving against real source cells) is the adoption step that retires the bash path.
+;
+; Self-contained over core (char_at/str_len/str_eq primitives). Four-way by tests/band-prelude-resolve-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; a token resolves to a prelude path iff it ends in ".fk" (built from primitives, not shim substring)
+    (defn bpr-path? (s)
+        (if (gt (str_len s) 2)
+            (if (str_eq (char_at s (sub (str_len s) 1)) "k")
+            (if (str_eq (char_at s (sub (str_len s) 2)) "f")
+            (if (str_eq (char_at s (sub (str_len s) 3)) ".") 1 0) 0) 0) 0))
+
+    ; the resolution-walk: accumulate, never bail on the first miss
+    (defn bpr-unresolved (toks)
+        (if (eq (len toks) 0) 0
+            (add (if (eq (bpr-path? (head toks)) 1) 0 1) (bpr-unresolved (tail toks)))))
+    (defn bpr-paths (toks)
+        (if (eq (len toks) 0) 0
+            (add (bpr-path? (head toks)) (bpr-paths (tail toks)))))
+
+    (defn bpr-clean () (list "form-stdlib/core.fk" "form-stdlib/sema-skill-compose.fk"))
+    (defn bpr-slurped () (list "form-stdlib/sema-skill-compose.fk" "Verdict" "11111:" "taught"))  ; the bug shape
+
+    (defn brk (cond bit) (if cond bit 0))
+    (defn band-prelude-resolve-check ()
+        (add (add (add (add
+            (brk (eq (bpr-unresolved (bpr-clean)) 0) 1)            ; a clean prelude list: zero unresolved
+            (brk (eq (bpr-paths (bpr-clean)) 2) 10))               ; both real paths resolve
+            (brk (eq (bpr-unresolved (bpr-slurped)) 3) 100))       ; the slurped prose SURFACES as 3 unresolved -- not silently dropped
+            (brk (eq (bpr-paths (bpr-slurped)) 1) 1000))           ; the real path still resolves alongside (accumulate, don't bail)
+            (brk (gt (bpr-unresolved (bpr-slurped)) 0) 10000)))    ; the failure is LEGIBLE before the flatten -- what bash's return-0 swallowed
+)
