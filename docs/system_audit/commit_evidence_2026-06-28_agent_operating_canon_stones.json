@@ -1,0 +1,84 @@
+{
+  "date": "2026-06-28",
+  "thread_branch": "codex/local-env-953b",
+  "commit_scope": "Add a Form-owned agent operating canon with explicit gap stones, refresh prompt entry guidance, and make PATH wrapper refresh atomic so form-cli cannot be read half-written during prompt-guide.",
+  "files_owned": [
+    "docs/coherence-substrate/agent-operating-canon.form",
+    "scripts/ensure_coord_cli.sh",
+    "scripts/prompt_entry_gate.sh",
+    "docs/system_audit/commit_evidence_2026-06-28_agent_operating_canon_stones.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form-cli ask \"merge validate fix merge\"",
+      "bash -n scripts/ensure_coord_cli.sh && scripts/ensure_coord_cli.sh --quiet && bash -n ~/.local/bin/form-cli && form-cli ask+ \"agent operating canon wrapper refresh atomicity\"",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "form-cli ask+ \"agent operating canon public health timeout\"",
+      "make setup",
+      "api/.venv/bin/python --version && api/.venv/bin/pytest --version && api/.venv/bin/python -c 'import fastapi, uvicorn, pytest; print(\"api-venv-imports-ok\")'",
+      "bash -n scripts/ensure_coord_cli.sh && bash -n scripts/prompt_entry_gate.sh && bash -n ~/.local/bin/form-cli",
+      "make wellness"
+    ],
+    "notes": [
+      "Form-first exact merge phrase had no grounded RAG hit and escalated to native model-cell receipt; subsequent canon queries returned docs/coherence-substrate/agent-operating-canon.form with grounded yes and suffic yes.",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 was used as a named bridge because sibling worktree continuity blockers remain outside this branch.",
+      "make wellness passed but public substrate/witness/API health reads timed out or returned HTTP 502; the public-health-timeout stone records that missing remote evidence.",
+      "make setup created ignored local api/.venv; Python 3.14.4, pytest 9.1.1, and fastapi/uvicorn/pytest import smoke passed.",
+      "Local RAG bridge rows were added to ~/.coherence-network/rag-index/index.jsonl as machine-local cache stones until rag-heal/T_flat can carry the canon natively."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Awaiting branch push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Process and local tooling change; public health reads timed out or returned HTTP 502 during wellness, so no deploy health claim is made."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI validation, PR review, and remote merge/deploy verification are pending."
+  },
+  "idea_ids": [
+    "agent-cli",
+    "thread-workflow-hardening"
+  ],
+  "spec_ids": [
+    "form-first-reasoning",
+    "trust-matrix",
+    "sovereignty-receipt"
+  ],
+  "task_ids": [
+    "task_2026_06_28_agent_operating_canon_stones"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "workflow-hardening"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/agent-operating-canon.form",
+    "scripts/ensure_coord_cli.sh",
+    "scripts/prompt_entry_gate.sh",
+    "form-cli ask+ trust rows: path native, grounded yes, freq no, suffic yes",
+    "make wellness output: pass with public health timeout/502 stones"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/agent-operating-canon.form",
+    "scripts/ensure_coord_cli.sh",
+    "scripts/prompt_entry_gate.sh",
+    "docs/system_audit/commit_evidence_2026-06-28_agent_operating_canon_stones.json"
+  ],
+  "change_intent": "process_only"
+}

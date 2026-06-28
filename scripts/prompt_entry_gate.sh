@@ -167,6 +167,7 @@ echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
 echo "prompt-entry-guide: coordination path:"
 echo "  form-cli is on PATH; route structural/default asks through form-cli ask first."
+echo "  canonical operating query: form-cli ask+ \"agent operating canon\""
 echo "  coord join already ran at SessionStart; this shell now has PATH wrappers in ~/.local/bin"
 echo "  use coord claim/release for scope, coord watch/view for sibling awareness,"
 echo "  and coord-heartbeat <agent> in a spare tab while this session is actively working"
