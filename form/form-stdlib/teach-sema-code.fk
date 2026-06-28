@@ -1,0 +1,29 @@
+; teach-sema-code.fk — Native Sema's School, subject 3: coding, SELF-GRADED.
+; The deeper sovereignty: a coding answer is verified by RUNNING it against test cases -- no oracle opinion
+; needed. The oracle gives the spec (input->output test cases); Sema induces the program (picks the transform
+; that passes the tests), and the scorer is EXECUTION: run the candidate, compare to expected. Generalizes
+; when it passes a held-out test it was not selected on. Same one engine, grammar = elementwise transforms,
+; scorer = test-cases-pass (an invariant the body checks itself).
+;
+; Self-contained over core. Four-way by tests/teach-sema-code-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn csc-op (cid x) (if (eq cid 0) x (if (eq cid 1) (add x 1) (mul x 2))))     ; candidate per-element transforms: id, +1, x2
+    (defn csc-map (cid xs) (if (eq (len xs) 0) (list) (cons (csc-op cid (head xs)) (csc-map cid (tail xs)))))
+    (defn csc-leq (a b) (if (eq (len a) 0) (if (eq (len b) 0) 1 0) (if (eq (head a) (head b)) (csc-leq (tail a) (tail b)) 0)))
+    (defn csc-pass (cid inp exp) (csc-leq (csc-map cid inp) exp))                   ; SELF-GRADE: run it, compare -- no oracle
+    ; the oracle's spec (train test cases) -- the hidden program is "+1 each"
+    (defn csc-train (cid) (add (csc-pass cid (list 1 2 3) (list 2 3 4)) (csc-pass cid (list 5) (list 6))))
+    (defn csc-held (cid) (csc-pass cid (list 10 20) (list 11 21)))                  ; a held-out test, never used to select
+
+    (defn cck (cond bit) (if cond bit 0))
+    (defn teach-sema-code-check ()
+        (add (add (add (add
+            (cck (eq (csc-train 1) 2) 1)                          ; the +1 program passes both training tests (induced)
+            (cck (lt (csc-train 0) 2) 10))                       ; identity fails to fit -- not selected
+            (cck (lt (csc-train 2) 2) 100))                      ; x2 fails to fit -- so +1 is the unique winner
+            (cck (eq (csc-held 1) 1) 1000))                     ; GENERALIZES: passes a held-out test it was not selected on
+            (cck (eq (csc-held 0) 0) 10000)))                   ; SELF-GRADING catches the wrong program on held-out -- verified by running, no oracle
+)
