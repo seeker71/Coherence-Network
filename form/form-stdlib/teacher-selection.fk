@@ -1,6 +1,7 @@
 ; teacher-selection.fk — the inversion: pick which remote oracle best TEACHES native Sema, per cell-category.
 ; The existing scaffolding (api/config/model_routing.json, the routers) routes WORK to the best model. This
-; routes TEACHING to the best oracle, and the reward is not task-success -- it is how well native Sema
+; routes TEACHING to the best oracle. The inversion needs NO new sampler -- it is slot_selection_service used
+; with slot-key "teach:<category>", slots = oracles, and the reward is not task-ROI -- it is how well native Sema
 ; GENERALIZED after that oracle taught it (teach-native-sema / oracle-taught-learning measure exactly this).
 ; Each (oracle x cell-category) arm tracks (successes, trials) of native generalization. The best teacher
 ; for a category is the arm with the highest generalization rate -- and different categories pick DIFFERENT
