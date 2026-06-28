@@ -9,9 +9,10 @@
   (operations
 
     (compare-summaries
-      (does "measure what two summaries agree carries (overlap) and disagree on (divergence); order-free")
+      (does "the SCORING ATOM: token-set overlap (agreement) and symmetric difference (divergence), order-free")
       (carrier-runnable form-stdlib/compare-summaries.fk)
-      (proof "compare-summaries fks 11111 — four-way today"))
+      (proof "compare-summaries fks 11111 — the surface overlap/divergence atom, NOT semantic comparison")
+      (arc "true paraphrase-aware comparison (same meaning, different words) needs the embedding/WORD-domain layer; the atom is its scorer, not the operation — the same surface-vs-semantic gap as Blueprint structural-equivalence"))
 
     (summarize
       (does "distill a cell-set down to its load-bearing tokens — the inverse of compare")
@@ -57,5 +58,5 @@
 
   (north-star
     "Nine operations, one grammar, parsed and run by the body itself — the agent's cognition authored
-     in Form, not rented. compare-summaries crosses four-way today; the rest bind to real tissue or name
-     the arc honestly. The body learns to think about its own thinking, one proven production at a time."))
+     in Form, not rented. compare-summaries' overlap atom crosses four-way today; the operation itself (semantic) and the
+     rest bind to real tissue or name the arc honestly. The body learns to think about its own thinking, one proven production at a time."))
