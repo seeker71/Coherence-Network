@@ -1,0 +1,5 @@
+; tests/teach-sema-logic-band.fk — teaching Sema a logic test by boolean rule induction, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-sema-logic.fk
+; Verdict 11111: XOR fits the shown rows; AND does not; XOR generalizes to both held-out rows; AND fails them;
+; and XOR is the unique winner (beats OR too) -- the rule inferred from a partial truth table, not memorized.
+(do (teach-sema-logic-check))

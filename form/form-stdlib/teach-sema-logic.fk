@@ -1,0 +1,30 @@
+; teach-sema-logic.fk — Native Sema's School, subject 5: logic (boolean rule induction).
+; Same one engine, grammar = boolean gates, scorer = truth-table agreement. The oracle shows some rows of a
+; hidden 2-input function; Sema selects the gate that fits and GENERALIZES to the rows it was never shown --
+; the logic-test skill: infer the rule from a partial truth table. Hidden function here is XOR.
+;
+; Self-contained over core. Four-way by tests/teach-sema-logic-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; gates: id 0 = AND, id 1 = OR, else = XOR
+    (defn tsl-gate (id a b)
+        (if (eq id 0) (if (eq a 1) (if (eq b 1) 1 0) 0)
+        (if (eq id 1) (if (eq (add a b) 0) 0 1)
+                      (if (eq a b) 0 1))))
+    (defn tsl-eqb (x y) (if (eq x y) 1 0))
+    ; the oracle's SHOWN rows (train): (0,0)->0 and (1,1)->0  -- consistent with XOR
+    (defn tsl-train (id) (add (tsl-eqb (tsl-gate id 0 0) 0) (tsl-eqb (tsl-gate id 1 1) 0)))
+    ; held-out rows never shown: (0,1)->1 and (1,0)->1
+    (defn tsl-held (id) (add (tsl-eqb (tsl-gate id 0 1) 1) (tsl-eqb (tsl-gate id 1 0) 1)))
+
+    (defn lck (cond bit) (if cond bit 0))
+    (defn teach-sema-logic-check ()
+        (add (add (add (add
+            (lck (eq (tsl-train 2) 2) 1)                          ; XOR fits both shown rows
+            (lck (lt (tsl-train 0) 2) 10))                       ; AND does not fit -- distinguishable
+            (lck (eq (tsl-held 2) 2) 100))                       ; XOR GENERALIZES to both held-out rows
+            (lck (lt (tsl-held 0) 2) 1000))                     ; AND fails the held-out rows
+            (lck (gt (tsl-train 2) (tsl-train 1)) 10000)))      ; XOR is the unique winner (beats OR on the shown rows too)
+)
