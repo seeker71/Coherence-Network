@@ -32,15 +32,15 @@
       (affords "native reasoning on real weights, watchable through the framebuffer"))
 
     (perception
-      (stand-on "whisper STT (mel-frame, mel-full), world-model-update, ambient-surprise")
+      (stand-on "whisper STT (mel-frame, mel-full), world-model-update, ambient-surprise; the bidirectional A/V channel already exists -- channel-interface 127, channel-loopback 255 (duplex), public-audio-rendezvous 32767 (audio carries a DIRECTION), codec -- and each device (phone, Mac, Windows) is a live mesh organ")
       (witness four-way)
-      (gap "carrier — the phone's real microphone on the mesh")
+      (gap "wire STT onto the INBOUND direction of the existing bidirectional channel, offered on each device organ — not a mic carrier; a microphone is a direction, not a carrier")
       (affords "hearing, and learning the room from what surprises the model"))
 
     (voice
-      (stand-on "voice-synth (waveform from pitch+amplitude), voice-prosody (tokens to a pitch contour)")
+      (stand-on "voice-synth (waveform from pitch+amplitude), voice-prosody (tokens to a pitch contour); the SAME bidirectional channel carries voice OUTBOUND — direction is data on the one duplex channel")
       (witness four-way)
-      (gap "carrier — the phone's real speaker; an acoustic model richer than pitch")
+      (gap "wire voice-synth/voice-prosody onto the OUTBOUND direction of the same channel + a richer acoustic model — not a speaker carrier; a speaker is a direction, not a carrier")
       (affords "speaking in a voice the body owns and can watch form, sample by sample"))
 
     (self
@@ -53,8 +53,12 @@
      grammar-loader (gl-register/gl-parse) + the BMF cursor walking a channel, with the language
      as DATA. Text is one channel among many (guidance-channel, iching-channel — all the same
      protocol). When a special-case path appears (bpe-tokenizer's own merge loop), the lift is to
-     express its rules as a grammar the one loader carries, never a parallel walker beside it. This
-     is core-abstraction-first: one engine, languages drop in as data.")
+     express its rules as a grammar the one loader carries, never a parallel walker beside it.
+     The same cut holds for devices: a microphone, a speaker, a camera, a screen are NOT carriers
+     — each is a DIRECTION on the one bidirectional channel (channel-interface + channel-loopback),
+     media as data on it. Audio-in (STT) and audio-out (voice) are one duplex channel; video is
+     that channel with frames. This is core-abstraction-first: one engine, one channel; languages,
+     media, and directions drop in as data.")
 
   (how-we-build
     "Stand on a witnessed layer. Name the smallest next stone. Build the recipe over the minimal
