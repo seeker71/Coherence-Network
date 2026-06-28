@@ -1113,3 +1113,4 @@ teach-sema-code fks 11111
 teach-sema-chem fks 11111
 teach-sema-logic fks 11111
 teach-sema-units fks 11111
+sema-skill-compose fks 11111

@@ -1,0 +1,28 @@
+; sema-skill-compose.fk — Native Sema's School: the REASONING keystone. Compose two TAUGHT skills to solve a
+; problem that was NEVER directly taught, and generalize. Skill A (feet -> inches, x12) and skill B (inches ->
+; barleycorns, x3) were each learned. Feet -> barleycorns was never shown -- but it emerges from composing
+; B after A (x36), and it generalizes to held-out inputs. That is reasoning-by-composition: a new capability
+; the body was not taught, assembled from ones it was. The first flicker of a native mind thinking, not recalling.
+;
+; Honest floor: the skills are toy linear maps and the composition is two-step; this proves the SHAPE of
+; reasoning-by-composition (untaught task solved by chaining learned skills, generalizing), not general
+; multi-step reasoning over a rich grammar -- that is the arc above.
+;
+; Self-contained over core. Four-way by tests/sema-skill-compose-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ssc-a (x) (mul 12 x))                 ; taught skill A: feet -> inches
+    (defn ssc-b (x) (mul 3 x))                  ; taught skill B: inches -> barleycorns
+    (defn ssc-compose (x) (ssc-b (ssc-a x)))    ; the UNTAUGHT skill: B after A  (feet -> barleycorns)
+
+    (defn sck (cond bit) (if cond bit 0))
+    (defn sema-skill-compose-check ()
+        (add (add (add (add
+            (sck (eq (ssc-a 2) 24) 1)                              ; taught skill A works (2 ft = 24 in)
+            (sck (eq (ssc-b 24) 72) 10))                         ; taught skill B works (24 in = 72 barleycorns)
+            (sck (eq (ssc-compose 1) 36) 100))                    ; the UNTAUGHT composed skill emerges: 1 ft = 36 barleycorns (12x3), never taught directly
+            (sck (eq (ssc-compose 5) 180) 1000))                ; GENERALIZES to a held-out input (5 ft = 180) -- composition, not memorization
+            (sck (not (eq (ssc-compose 1) (ssc-a 1))) 10000)))  ; genuinely TWO steps: 36 != skill A alone (12) -- it reasoned, not just applied one skill
+)

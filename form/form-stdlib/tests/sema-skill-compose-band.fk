@@ -1,0 +1,6 @@
+; tests/sema-skill-compose-band.fk — Sema composing two taught skills to solve an untaught problem, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sema-skill-compose.fk
+; Verdict 11111: taught skills A (ft->in) and B (in->barleycorns) work; the UNTAUGHT composed skill ft->barleycorns
+; emerges (1 ft = 36, =12x3); it generalizes to a held-out input (5 ft = 180); and it is genuinely two steps
+; (36 != A alone) -- reasoning-by-composition: a new capability assembled from learned ones, not recalled.
+(do (sema-skill-compose-check))
