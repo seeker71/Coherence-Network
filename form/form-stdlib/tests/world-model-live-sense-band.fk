@@ -1,6 +1,6 @@
 ; preludes: form-stdlib/core.fk form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/model-vitality.fk form-stdlib/world-model-live-sense.fk
 ;
-; world-model-live-sense-band - live mesh/model receipts feed growth.
+; world-model-live-sense-band - mesh/model receipt SHAPES convert to sense rows and feed one growth step. The receipt->sense->grow atom on fixtures; continuous live witness loops are the arc.
 ;
 ; Verdict 524287 when every claim lands:
 ;   1     valid active samples become observed wmg-sense rows

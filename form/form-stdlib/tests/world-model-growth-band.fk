@@ -1,9 +1,9 @@
 ; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk
 ;
-; world-model-growth-band — a world model grows by ingesting sensed readings,
-; digesting verified truth into blueprint/recipe/named-cell parts, embodying
-; only when the trusted core follows, and storing the embodied parts as a
-; content-addressed root.
+; world-model-growth-band — ONE ingest -> digest -> embody -> store pass: sensed
+; readings ingested, verified truth digested into blueprint/recipe/named-cell parts,
+; embodied only when the trusted core follows, stored as a content-addressed root.
+; The pipeline-step atom; growth across repeated cycles is the arc.
 ;
 ; Verdict 4095 when every claim lands:
 ;   1     all senses are ingested
