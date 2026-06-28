@@ -1,0 +1,13 @@
+; tests/selective-ssm-band.fk — the selective (input-dependent) SSM step, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/selective-ssm.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, given a faint/LOUD/faint input:
+;   the gate responds to CONTENT (loud salience > faint salience)   ->     1
+;   the SELECTIVE final state = 2.012 (it focused on the loud token)->    10
+;   the non-selective final state = 1.125 (it weighted all equally) ->   100
+;   the selective state remembers the salient token MORE strongly   ->  1000
+;   the gate is content-dependent by 20x (loud vs faint)            -> 10000
+
+(do
+    (selective-ssm-check))
