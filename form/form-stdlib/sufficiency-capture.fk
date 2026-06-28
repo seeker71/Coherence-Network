@@ -1,0 +1,39 @@
+; sufficiency-capture.fk — the auto-capture hook wired into the REAL sufficiency gate (form-cli-sufficiency.fk).
+; The integration that closes the self-reliance loop. fsuf-verdict decides accept(0)/retry(1)/escalate(2):
+; an ACCEPT is the gate's confident claim "local was enough, I rely on myself." Wrap it -- this recipe reads
+; the gate's real verdict on real signals and emits a transient event (sure=accepted, tcorrect=was-local-right,
+; caught=1). Over a stream of decisions, the gate's ACCEPT-PRECISION (of the times it relied on self, how often
+; local was actually right) is its measured self-reliance trustworthiness -- the number to GATE ON: if it drops,
+; the gate is over-relying and should escalate more; if it holds at 1.0, self-reliance is earned and the gate
+; can lean local further. The gate gating itself on its own measured reflex. Honest floor: the (signals,
+; local-right) decisions are constructed; the live version reads them from form-cli-membrane's actual crossings.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk
+
+(do
+    (defn sc-accepted (s) (if (eq (fsuf-verdict s) 0) 1 0))                 ; the gate relied on self (real fsuf-verdict)
+    (defn sc-event (s local-right) (list (sc-accepted s) local-right 1))    ; the transient-log event the gate emits
+
+    (defn sc-strong () (fsuf-signals 1 1 90 80 80 1))                       ; a strong local answer -> accept
+    (defn sc-weak   () (fsuf-signals 1 1 20 80 80 1))                       ; a weak local answer -> escalate
+
+    (defn sc-d-sig (d) (head d))
+    (defn sc-d-right (d) (head (tail d)))
+    (defn sc-accepts (log) (if (eq (len log) 0) 0 (add (sc-accepted (sc-d-sig (head log))) (sc-accepts (tail log)))))
+    (defn sc-accept-right (log) (if (eq (len log) 0) 0 (add (if (eq (sc-accepted (sc-d-sig (head log))) 1) (sc-d-right (head log)) 0) (sc-accept-right (tail log)))))
+    (defn sc-accept-prec (log) (div (mul 1.0 (sc-accept-right log)) (mul 1.0 (sc-accepts log))))   ; the gate's self-reliance precision
+
+    ; a decision stream: 4 accepts (local right twice, wrong twice) + 1 escalate
+    (defn sc-log () (list (list (sc-strong) 1) (list (sc-strong) 1) (list (sc-strong) 0) (list (sc-strong) 0) (list (sc-weak) 0)))
+    ; a calibrated gate that accepts only when local was right
+    (defn sc-calibrated () (list (list (sc-strong) 1) (list (sc-strong) 1) (list (sc-weak) 0)))
+
+    (defn sck (cond bit) (if cond bit 0))
+    (defn sufficiency-capture-check ()
+        (add (add (add (add
+            (sck (eq (sc-accepted (sc-strong)) 1) 1)                       ; strong signals -> the real gate relies on self
+            (sck (eq (sc-accepted (sc-weak)) 0) 10))                       ; weak signals -> the real gate escalates (no self-sufficiency claim)
+            (sck (eq (sc-accept-prec (sc-log)) 0.5) 100))                  ; accepted 4x, local right 2x -> self-reliance 50% earned
+            (sck (lt (sc-accept-prec (sc-log)) 1.0) 1000))                 ; over-relying -> the signal to escalate more
+            (sck (eq (sc-accept-prec (sc-calibrated)) 1.0) 10000)))        ; a gate that accepts only when right has earned full self-reliance
+)

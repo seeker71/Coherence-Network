@@ -1117,3 +1117,4 @@ conviction-curve fks 11111
 correction-reflex fks 11111
 transient-log fks 11111
 capture-correction fks 11111
+sufficiency-capture fks 11111

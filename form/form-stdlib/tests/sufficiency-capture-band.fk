@@ -1,0 +1,8 @@
+; tests/sufficiency-capture-band.fk — the auto-capture hook wired into the real sufficiency gate, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-router.fk form-stdlib/form-cli-judge.fk form-stdlib/form-cli-sufficiency.fk form-stdlib/sufficiency-capture.fk
+;
+; Verdict 11111: strong signals make the real fsuf-verdict accept (rely on self); weak signals escalate; the
+; gate's accept-precision over a decision stream reads 0.5 (relied on self 4x, right 2x); that is under 1.0 (a
+; signal to escalate more); and a gate that accepts only when right reads 1.0 -- self-reliance the gate measures
+; on its own decisions and gates on.
+(do (sufficiency-capture-check))
