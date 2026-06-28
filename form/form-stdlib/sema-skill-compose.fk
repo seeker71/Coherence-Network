@@ -8,7 +8,7 @@
 ; reasoning-by-composition (untaught task solved by chaining learned skills, generalizing), not general
 ; multi-step reasoning over a rich grammar -- that is the arc above.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-skill-compose-band.fk.
+; Self-contained over core. Four-way by tests/sema-skill-compose-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

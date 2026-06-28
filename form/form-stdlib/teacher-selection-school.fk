@@ -2,9 +2,9 @@
 ; Builds on teacher-selection: across Native Sema's School, each subject keeps its own bandit over oracles,
 ; and the best teacher is the one whose teaching makes Sema GENERALIZE most. Different subjects pick DIFFERENT
 ; oracles -- no single frontier mind is the best teacher of everything; we rent the winner PER subject.
-; Deterministic selection core, three-kernel (Go=Rust=TS); the Thompson exploration draw on top is field-lane (named).
+; Deterministic selection core, four-way; the Thompson exploration draw on top is field-lane (named).
 ;
-; Self-contained over core (FLOAT rates). Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teacher-selection-school-band.fk.
+; Self-contained over core (FLOAT rates). Four-way by tests/teacher-selection-school-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

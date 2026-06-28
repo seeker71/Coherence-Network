@@ -4,7 +4,7 @@
 ; conserves; ADOPT it; VERIFY. The body moves itself from wrong to right with no oracle -- error-correction by
 ; the invariant alone. Honest floor: a tiny candidate set; general search over a large space is the arc.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-error-correct-band.fk.
+; Self-contained over core. Four-way by tests/sema-error-correct-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

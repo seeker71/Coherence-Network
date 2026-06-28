@@ -59,19 +59,24 @@
 #          not alone: it asks the part of the mind that knows, and answers when
 #          asked.
 #
-# THE SURFACE DISCIPLINE (why this matters — the lesson that named this cell).
-#   The overnight School built 17 native bands; 15 used gt / lt / not (and one a
-#   `global` form) and so did NOT cross the fourth arm — fkwu's self-host flatten
-#   emits a table for eq/if/list/arith but not yet for those. The WRONG fix is to
-#   grow the flatten surface ad-hoc, one op at a time, as bands happen to need
-#   them. The RIGHT fix is this north star: decide what is genuinely a CORE
-#   PRIMITIVE (comparison is host-CPU-native — gt/lt/not belong IN the minimal
-#   primitive set, mapped to the host's compare, covered by the flatten once and
-#   for all) versus what is a BLOCK (composed over the surface). Then the flatten
-#   covers exactly the frozen primitive set, and every living block — however
-#   smart — is just a recipe over it. Grow the surface only by a deliberate
-#   primitive decision, never by convenience. (See the honest correction:
-#   commit attune(form) School manifest honesty, 2026-06-28.)
+# THE SURFACE DISCIPLINE (why this matters — keep the primitive set frozen and small).
+#   The north star: decide what is genuinely a CORE PRIMITIVE (comparison is
+#   host-CPU-native — gt/lt/not belong IN the minimal primitive set, mapped to the
+#   host's compare) versus what is a BLOCK (composed over the surface). The flatten
+#   covers exactly the frozen primitive set, and every living block — however smart —
+#   is just a recipe over it. Grow the surface only by a deliberate primitive
+#   decision, never by convenience: a block that needs an op composes it from
+#   primitives or earns the op a place in the frozen set; it never grows the surface
+#   ad-hoc.
+#   (Provenance note, 2026-06-28: this cell was first written believing 15 overnight
+#   School bands failed the fourth arm because fkwu's flatten lacked gt/lt/not. That
+#   was wrong twice over — the ops were always in the flattener and fkwu always
+#   computed them right. The real cause was a greedy bash prelude-parser in
+#   scripts/fourth-arm.sh that slurped a band's "; Verdict ..." comment as bogus
+#   prelude paths, dropping the band file so the flatten carried no (check) call and
+#   fkwu's fn-0 returned 0 — a false divergence. Fixed by making the parser emit only
+#   real source-path tokens; all 15 cross four-way. The discipline above stands on
+#   its own; the example that birthed it was a harness bug, not a kernel gap.)
 #
 # HONEST FLOOR.
 #   SHIPPED + proven three-way (Go=Rust=TS), cited: resource-port.fk,
@@ -81,10 +86,10 @@
 #   1, 3, 4 have running carriers.
 #   NAMED, NOT YET BUILT: faculty 2 (the micro/macro time budget for thinking) as
 #   a Form carrier; and the SYNTHESIS — one block holding all four faculties at
-#   once, over the frozen surface, proven four-way. That synthesis waits behind
-#   the surface discipline above: the flatten must cover the core primitive set
-#   (gt/lt/not as primitives, the fourth-arm follow-up) before a four-faculty
-#   block crosses four-way. The step on the path, not a leap past it.
+#   once, over the frozen surface, proven four-way. The primitive set already
+#   covers what these faculties need (comparison, branch, arithmetic all flatten
+#   and cross four-way today); the synthesis is composition work over the surface,
+#   not a kernel gap. The step on the path, not a leap past it.
 #
 # Lineage: core-axioms.form -> host-kernel.form -> minimal-surface.fk -> here.
 # Kin: kernel-self-composition.form, open-primitive-set.form, substrate-thermodynamics.form.
