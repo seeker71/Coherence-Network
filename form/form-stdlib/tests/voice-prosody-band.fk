@@ -1,0 +1,13 @@
+; tests/voice-prosody-band.fk — the acoustic model: tokens -> pitch contour -> sound, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/voice-prosody.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, the utterance [token0, token2]:
+;   token 0 maps to pitch 1.0                                       ->     1
+;   token 2 maps to a higher pitch 2.0                              ->    10
+;   distinct tokens give a rising melody (pitch 2 > pitch 0)        ->   100
+;   the low-pitch token's frame peaks at sample 2 (rendered sound)  ->  1000
+;   the high-pitch token peaks EARLIER, at sample 1 (faster cycle)  -> 10000
+
+(do
+    (voice-prosody-check))
