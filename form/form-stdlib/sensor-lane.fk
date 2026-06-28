@@ -1,0 +1,48 @@
+; sensor-lane.fk — ONE engine for an end-to-end lane of ANY sensor/modality: encode -> pivot -> reason -> decode.
+; The north-star generalization (Urs 2026-06-28: "end-to-end lanes for any sensor, especially TTS, STT, LLM,
+; reasoning"). The body already holds the architecture -- translation-pipeline-pivot.form (one generic-meaning
+; pivot, independently-improvable codec arms), encoder-decoder-as-recipe.form (encoder/decoder are two arms of
+; one R_Codec), universal-translator.form (the pivot is the Blueprint, not the symbol). This is the engine that
+; makes every modality an INSTANCE of one shape: a lane is DATA -- (encode-arm, reason-arm, decode-arm) over the
+; shared pivot -- and ONE generic lane-run carries them all. STT = audio-encode + pass-through + text-decode;
+; TTS = text-encode + pass-through + audio-decode; LLM/reasoning = text-encode + TRANSFORM-on-pivot + text-decode.
+; A new modality or task is a new ARM, never a new end-to-end model (the translation-pivot teaching, generalized
+; to every sensor). The reasoning happens ON the pivot -- shared by all lanes. core-abstraction-first: the engine
+; is data-driven; the modality drops in as data. Honest floor: the arms here are arithmetic stand-ins for the
+; real codec carriers (whisper STT four-way, the form-asm transformer for LLM-reasoning, native say() for TTS);
+; the ENGINE is the real generic shape, and those separately-proven carriers are the heavy arms that plug in.
+;
+; Self-contained over core. Four-way by tests/sensor-lane-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; an ARM is DATA: (op, param). a generic apply runs ANY arm -- one engine, arms drop in as data.
+    (defn sl-apply (op param x)
+        (if (eq op 0) x                       ; 0 = pass-through (identity reason: STT/TTS carry the pivot unchanged)
+            (if (eq op 1) (add x param)       ; 1 = shift (a codec arm: surface<->pivot offset)
+                (if (eq op 2) (mul x param) x))))  ; 2 = transform (reasoning on the pivot: the LLM arm)
+    (defn sl-arm-op (a) (head a))
+    (defn sl-arm-p (a) (head (tail a)))
+    (defn sl-run-arm (a x) (sl-apply (sl-arm-op a) (sl-arm-p a) x))
+    ; a LANE = (encode-arm, reason-arm, decode-arm). ONE engine runs every modality's lane.
+    (defn sl-enc (lane) (head lane))
+    (defn sl-reason (lane) (head (tail lane)))
+    (defn sl-dec (lane) (head (tail (tail lane))))
+    (defn sl-run (lane x) (sl-run-arm (sl-dec lane) (sl-run-arm (sl-reason lane) (sl-run-arm (sl-enc lane) x))))
+
+    ; three modalities as DATA through the SAME engine
+    (defn sl-stt () (list (list 1 10) (list 0 0) (list 1 5)))    ; audio-encode -> pass-through -> text-decode
+    (defn sl-tts () (list (list 1 100) (list 0 0) (list 1 1)))   ; text-encode -> pass-through -> audio-decode
+    (defn sl-llm () (list (list 1 10) (list 2 3) (list 1 0)))    ; text-encode -> REASON (x3) on pivot -> text-decode
+    (defn sl-llm-noreason () (list (list 1 10) (list 0 0) (list 1 0)))  ; same lane, reasoning removed
+
+    (defn slk (cond bit) (if cond bit 0))
+    (defn sensor-lane-check ()
+        (add (add (add (add
+            (slk (eq (sl-run (sl-stt) 0) 15) 1)                              ; the STT lane runs end-to-end through the generic engine
+            (slk (not (eq (sl-run (sl-tts) 0) (sl-run (sl-stt) 0))) 10))     ; TTS is a DIFFERENT lane through the SAME engine (modality is data)
+            (slk (eq (sl-run (sl-llm) 0) 30) 100))                           ; the LLM lane REASONS on the pivot (x3) where STT/TTS pass through
+            (slk (not (eq (sl-run (sl-llm) 0) (sl-run (sl-llm-noreason) 0))) 1000))  ; reasoning happens ON the pivot: 30 != 10
+            (slk (eq (sl-run (list (list 1 1) (list 2 2) (list 1 1)) 0) 3) 10000)))  ; a brand-new lane runs through the UNCHANGED engine -- new modality = new data, not new code
+)
