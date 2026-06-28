@@ -1105,3 +1105,4 @@ thought-forming fks 11111
 recipe-learning fks 11111
 self-improving-thought fks 11111
 oracle-taught-learning fks 11111
+teach-native-sema fks 11111
