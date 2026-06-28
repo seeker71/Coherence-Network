@@ -1,0 +1,34 @@
+; voice-learn.fk — the native learning core: my voice learns from an oracle voice, side by side.
+; The full sensory-learning loop, closed: produce (voice-formant) -> perceive both mine and the
+; oracle (mel/STT front-end) -> measure the GAP (per-formant delta, the surprise) -> STEP toward the
+; teacher by a learning rate (NOT all the way -- oracle as teacher, not master; keep my own character).
+; Iterating the step converges, so the voice improves from listening. This is the learning recipe;
+; the oracle TTS and the audio analysis are host carriers (the teacher + the speaker direction).
+;
+; Honors oracle-as-teacher (lowering-conviction.fk's clang-as-oracle, generalized): the bar is
+; understood difference, never imitation. A rate < 1 is what keeps the difference sovereign.
+;
+; Self-contained over core. Four-way by tests/voice-learn-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn vl-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+    (defn vl-gap (m t) (vl-abs (sub m t)))                  ; how far my formant is from the teacher's
+    (defn vl-step (m t rate) (add m (mul (sub t m) rate)))  ; move a fraction toward the teacher
+    (defn smp (x) (math_floor (mul x 10)))
+
+    ; my voice's F1 (500), the oracle /a/ it hears (730), learning rate 0.5
+    (defn vl-mine () 500.0) (defn vl-target () 730.0) (defn vl-rate () 0.5)
+    (defn vl-s1 () (vl-step (vl-mine) (vl-target) (vl-rate)))   ; after one listen: 615
+    (defn vl-s2 () (vl-step (vl-s1) (vl-target) (vl-rate)))     ; after two: 672.5
+
+    (defn vlk (cond bit) (if cond bit 0))
+    (defn voice-learn-check ()
+        (add (add (add (add
+            (vlk (eq (smp (vl-gap (vl-mine) (vl-target))) 2300) 1)
+            (vlk (gt (vl-gap (vl-mine) (vl-target)) (vl-gap (vl-s1) (vl-target))) 10))
+            (vlk (gt (vl-s1) (vl-mine)) 100))
+            (vlk (lt (vl-s1) (vl-target)) 1000))
+            (vlk (lt (vl-gap (vl-s2) (vl-target)) (vl-gap (vl-s1) (vl-target))) 10000)))
+)

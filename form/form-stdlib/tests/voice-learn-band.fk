@@ -1,0 +1,12 @@
+; tests/voice-learn-band.fk — my voice learning from an oracle voice, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/voice-learn.fk
+;
+; Verdict 11111 when, on Go / Rust / TypeScript / fkwu, mine=500, oracle /a/=730, rate=0.5:
+;   I can measure the gap to the teacher (230)                       ->     1
+;   one step toward the teacher shrinks the gap                      ->    10
+;   the step moves my voice up toward the teacher                    ->   100
+;   but a partial step does NOT reach it — I keep my character       ->  1000
+;   iterating converges: two steps shrink the gap more than one      -> 10000
+
+(do (voice-learn-check))
