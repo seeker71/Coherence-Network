@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-28",
+  "thread_branch": "codex/dependabot-leftovers-20260628",
+  "commit_scope": "Consolidate remaining Dependabot leftovers: actions/setup-go v6 with the Windows Go toolchain aligned to repo go 1.26.3, and @types/node 26.0.1 in the web package lock.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-28_go_node_dependabot_leftovers.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-28_go_node_dependabot_leftovers.json",
+      "cd web && npm install --ignore-scripts",
+      "cd web && npm run build"
+    ],
+    "summary": "Prompt guide passed after clearing the merged literal-symbol and skill-vitality local worktree blockers. Web install passed with existing peer/audit warnings; Next.js production build passed with existing middleware, module type, NFT, and localStorage warnings."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "GitHub Actions after PR"
+    ],
+    "summary": "The original Dependabot PRs had stale failing Windows checks; this branch is the fresh current-main proof path."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "production",
+    "summary": "No public runtime endpoint changed; deploy proof remains tied to the normal merge/deploy flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation, PR checks, and merge proof remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "worktree-continuity",
+    "fkwu-native-host-platform"
+  ],
+  "task_ids": [
+    "task-2026-06-28-dependabot-leftover-resolution"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "integration",
+        "validation",
+        "receipt-authoring"
+      ]
+    },
+    {
+      "contributor_id": "dependabot",
+      "contributor_type": "machine",
+      "roles": [
+        "dependency-update"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Dependabot PR #3547 proposed actions/setup-go v5 to v6; its old Windows failure used go-version 1.22 while form/form-kernel-go/go.mod requires go 1.26.3.",
+    "Dependabot PR #3653 proposed @types/node 26.0.0 to 26.0.1 in web/package-lock.json; its old Windows failure was in a Form witness step, not the lockfile update.",
+    "This branch applies both updates on current origin/main with a fresh PR check path.",
+    "make prompt-guide: passed after removing two clean, merged local worktrees that had no remote upstream.",
+    "cd web && npm install --ignore-scripts: passed; existing peer and audit warnings remained.",
+    "cd web && npm run build: passed; existing Next.js warnings remained."
+  ],
+  "change_files": [
+    ".github/workflows/windows-host.yml",
+    "web/package-lock.json",
+    "docs/system_audit/commit_evidence_2026-06-28_go_node_dependabot_leftovers.json"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Windows CI uses setup-go v6 with the Go version required by the current Form Go module, and web lockfile carries @types/node 26.0.1.",
+    "public_endpoints": [
+      "none changed"
+    ],
+    "test_flows": [
+      "Evidence validation",
+      "Web install/build",
+      "Windows floor PR check"
+    ]
+  }
+}
