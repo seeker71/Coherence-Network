@@ -1115,3 +1115,4 @@ teach-sema-logic fks 11111
 teach-sema-units fks 11111
 sema-skill-compose fks 11111
 sema-self-grade fks 11111
+sema-mastery-readout fks 11111

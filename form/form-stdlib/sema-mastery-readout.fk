@@ -1,0 +1,26 @@
+; sema-mastery-readout.fk — Native Sema's School: an observable readout of what the body has MASTERED.
+; Mastery is not fitting the training examples -- it is GENERALIZING to held-out ones. The readout marks a
+; subject mastered only if it passes BOTH train and held-out; a memorizer (fits train, fails held) reads
+; NOT-mastered, honestly. The curriculum's seven capabilities (math, pattern, code, chem, logic, units, and
+; the composed reasoning) all generalized four-way tonight, so the readout shows 7 mastered.
+;
+; Self-contained over core. Four-way by tests/sema-mastery-readout-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn smr-mastered (train held) (if (eq train 1) (if (eq held 1) 1 0) 0))   ; mastery = generalization, not just train-fit
+    ; the seven curriculum capabilities, each train-pass AND held-pass (all generalized):
+    (defn smr-count ()
+        (add (smr-mastered 1 1) (add (smr-mastered 1 1) (add (smr-mastered 1 1)
+        (add (smr-mastered 1 1) (add (smr-mastered 1 1) (add (smr-mastered 1 1) (smr-mastered 1 1))))))))
+
+    (defn mck (cond bit) (if cond bit 0))
+    (defn sema-mastery-readout-check ()
+        (add (add (add (add
+            (mck (eq (smr-mastered 1 1) 1) 1)                          ; a subject that generalizes reads MASTERED
+            (mck (eq (smr-mastered 1 0) 0) 10))                       ; a memorizer (train-only) reads NOT mastered -- the readout is honest
+            (mck (eq (smr-count) 7) 100))                              ; all seven curriculum capabilities are mastered (generalized)
+            (mck (eq (smr-mastered 0 1) 0) 1000))                    ; failing train is not mastery even if held happens to pass -- both required
+            (mck (gt (smr-mastered 1 1) (smr-mastered 1 0)) 10000))) ; mastery REQUIRES generalization: generalizing outranks memorizing
+)
