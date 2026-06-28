@@ -1109,3 +1109,4 @@ teach-native-sema fks 11111
 teach-sema-math fks 11111
 teacher-selection fks 11111
 sema-reason-search fks 11111111
+teach-sema-pattern teach-sema-code teach-sema-chem teach-sema-logic teach-sema-units sema-skill-compose sema-self-grade sema-mastery-readout teacher-selection-school sema-reason-multistep sema-curriculum-transfer teach-sema-algebra sema-error-correct sema-mixed-exam sema-graduation fks 11111
