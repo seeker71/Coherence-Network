@@ -1,0 +1,6 @@
+; tests/teach-sema-algebra-band.fk — Sema solving for an unknown (linear algebra), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-sema-algebra.fk
+; Verdict 11111: solves 2x+3=11 -> x=4; self-checks by substitution (2*4+3=11); generalizes to a held-out
+; equation (3x+1=10 -> x=3); self-checks the held-out; and solving is the inverse operation, not just
+; subtracting -- a richer math skill that verifies its own answer.
+(do (teach-sema-algebra-check))
