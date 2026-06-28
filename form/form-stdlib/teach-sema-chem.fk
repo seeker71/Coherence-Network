@@ -4,7 +4,7 @@
 ; Sema finds the coefficients, and the scorer is CONSERVATION (left atoms == right atoms, per element). A
 ; balancing is correct iff mass conserves -- the body grades its own chemistry against physics itself.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-chem-band.fk.
+; Self-contained over core. Four-way by tests/teach-sema-chem-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

@@ -279,22 +279,32 @@ fourth_band_stem() {
 # fallback when no prelude is declared).
 # fourth_band_prelude_mods — every module path from a band's ; preludes: header,
 # including continuation lines that start with "; " (multi-line prelude blocks).
+# Emits ONLY source-path tokens (ending in .fk/.bml/.form/.grammar); a continuation
+# comment line that yields no path token (e.g. "; Verdict 11111: taught skills ...")
+# STOPS the block instead of being slurped as bogus prelude paths — otherwise the
+# first non-file token makes fourth_prep_srcs bail and silently drop the band file,
+# flattening a table with no top-level (check) call → fkwu fn-0 = 0 (a false divergence).
 fourth_band_prelude_mods() {
     local band="$1"
     awk '
+        function emit_paths(line,   i, n, a, got) {
+            n = split(line, a, /[[:space:]]+/)
+            got = 0
+            for (i = 1; i <= n; i++)
+                if (a[i] ~ /\.(fk|bml|form|grammar)$/) { print a[i]; got = 1 }
+            return got
+        }
         /^; preludes:/ {
-            sub(/^; preludes:[[:space:]]*/, "")
-            if (length($0) > 0) print
-            cont = 1
-            next
+            s = $0; sub(/^; preludes:[[:space:]]*/, "", s)
+            emit_paths(s); cont = 1; next
         }
         cont && /^;[[:space:]]/ {
-            sub(/^;[[:space:]]*/, "")
-            if (length($0) > 0) print
+            s = $0; sub(/^;[[:space:]]*/, "", s)
+            if (emit_paths(s) == 0) cont = 0   # prose line (no path token) ends the block
             next
         }
         { cont = 0 }
-    ' "$band" 2>/dev/null | tr ' ' '\n' | grep -vE '(^|/)core\.fk$' | grep . || true
+    ' "$band" 2>/dev/null | grep -vE '(^|/)core\.fk$' | grep . || true
 }
 
 fourth_band_srcs() {

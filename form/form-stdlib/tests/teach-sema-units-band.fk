@@ -1,4 +1,4 @@
-; tests/teach-sema-units-band.fk — teaching Sema units/dimensional analysis, three-kernel (Go=Rust=TS).
+; tests/teach-sema-units-band.fk — teaching Sema units/dimensional analysis, four-way.
 ; preludes: form-stdlib/core.fk form-stdlib/teach-sema-units.fk
 ; Verdict 11111: Sema induces the conversion factor (12); the examples are dimensionally consistent (a valid
 ; conversion); it generalizes (10 ft -> 120 in); a non-proportional mapping is rejected as a dimensional error;
