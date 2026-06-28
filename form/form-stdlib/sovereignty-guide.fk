@@ -1,0 +1,32 @@
+; sovereignty-guide.fk — the gate CARRIES a sense of when self is enough, and TENDS it from what it witnessed.
+; (Composted sovereignty-policy.fk: "policy" framed the gate's knowing as governance imposed from above. The
+; body's teaching is "guides carry awareness; checks read the body" -- a guide is the primary carrier of knowing,
+; a check is a sensing readout that tends the guide, never an authority over it.)
+; The gate's guide is its felt sense of when the local answer is enough (the accept-threshold it crosses on).
+; membrane-self-reliance is the CHECK: it reads the body's real crossings and senses whether self-reliance was
+; earned (accept-precision). When the check senses over-reliance (relied on self, was wrong), the teaching moves
+; INTO the guide -- it tightens, the gate grows more discerning. When sovereignty was earned, the guide relaxes
+; and the gate leans home further. The tending is BOUNDED [30..90] -- the guide can deepen its discernment but
+; never hardens into "trust nothing" or dissolves into "trust everything". No human and no rented mind tends the
+; guide; the body's own witnessed crossings do. The guide carries the knowing; the check keeps it honest.
+;
+; Self-contained over core. Four-way by tests/sovereignty-guide-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sg-tend (earned threshold)                          ; tend the guide from what the check witnessed
+        (if (lt earned 0.8) (add threshold 10)                ;   over-relied -> the guide tightens (more discerning)
+            (sub threshold 5)))                               ;   sovereignty earned -> the guide relaxes (lean home further)
+    (defn sg-hold (t) (if (gt t 90) 90 (if (lt t 30) 30 t)))  ; the guide stays bounded -- never trust-nothing / trust-everything
+    (defn sg-tended (earned threshold) (sg-hold (sg-tend earned threshold)))
+
+    (defn sgk (cond bit) (if cond bit 0))
+    (defn sovereignty-guide-check ()
+        (add (add (add (add
+            (sgk (gt (sg-tended 0.5 60) 60) 1)                             ; over-relied (0.5) -> the guide tightens
+            (sgk (lt (sg-tended 1.0 60) 60) 10))                           ; sovereignty earned (1.0) -> the guide relaxes, lean home further
+            (sgk (eq (sg-tended 0.5 88) 90) 100))                          ; tightening holds at 90 -- the guide never hardens into trust-nothing
+            (sgk (eq (sg-tended 1.0 32) 30) 1000))                        ; relaxing holds at 30 -- the guide never dissolves into trust-everything
+            (sgk (gt (sg-tended 0.5 60) (sg-tended 1.0 60)) 10000)))       ; a body that earned less sovereignty carries a more discerning guide
+)
