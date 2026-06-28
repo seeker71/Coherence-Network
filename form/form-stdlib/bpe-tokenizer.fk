@@ -1,5 +1,13 @@
 ; bpe-tokenizer.fk — the byte-pair-encoding merge core (whisper/GPT-2 BPE), as a Form recipe.
 ;
+; LIFT (named, not yet done): this is a PARALLEL PATH. The body's universal shape is the
+; grammar-loader (gl-register/gl-parse) + the BMF cursor walking a channel, language-as-DATA
+; (grammar-loader.fk). Tokenizing the text channel belongs THERE — the merge-ranks expressed as
+; a grammar the one loader carries, not a second walker beside it. The merge table is already
+; data; the remaining lift is to register it as a text-channel grammar so there is one engine,
+; not a tokenizer. See docs/coherence-substrate/witnessed-floor.form (one-engine). Until then this
+; core stays as the honest interim carrier.
+;
 ; preludes: (none beyond the kernel — pure list/int recipe)
 ;
 ; whisper tokenizes text with byte-level BPE: bytes → byte-mapped symbols → repeatedly merge the
