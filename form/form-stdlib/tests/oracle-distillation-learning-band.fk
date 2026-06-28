@@ -1,6 +1,6 @@
 ; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/form-freq-check.fk form-stdlib/oracle-distillation-learning.fk
 ;
-; oracle-distillation-learning-band - actual oracle-to-native learning floor.
+; oracle-distillation-learning-band - the receipt-and-routing floor for oracle->native distillation: five lanes' exemplars classify heldout rows and receipts gate the oracle-budget drop. One step of the loop; iterated training that retires the oracle is the arc.
 ;
 ; Floor: five concrete learning lanes train as native exemplars, heldout rows are
 ; classified, oracle/native outputs are captured into receipts, and the oracle
