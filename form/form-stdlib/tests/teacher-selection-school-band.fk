@@ -1,0 +1,6 @@
+; tests/teacher-selection-school-band.fk — best oracle teacher per curriculum subject, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teacher-selection-school.fk
+; Verdict 11111: math's best teacher is oracle 0; code's is oracle 1; chem's is oracle 2 (per-subject
+; specialization); selection is by generalization rate; and different subjects pick different teachers --
+; rent the winner per subject, no single frontier mind is best at everything.
+(do (teacher-selection-school-check))
