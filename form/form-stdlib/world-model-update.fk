@@ -1,0 +1,34 @@
+; world-model-update.fk — observe how a perception shifts the world model.
+; The afferent effect, made measurable. The world model holds a baseline expectation; a
+; perception arrives; the SURPRISE (delta from baseline) is the observable effect, and the
+; refine step moves the baseline toward the reading. A familiar perception (near baseline)
+; barely moves the model; a novel one (far) moves it far -- the body learning the room. This
+; is the same sign-step sense ambient-surprise carries, here as the observable update law:
+; sense IN (whisper STT) -> world-model shift -> observable surprise, the loop's afferent arm.
+;
+; All pure; four-way proven by tests/world-model-update-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn wm-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+    (defn surprise (baseline reading) (wm-abs (sub reading baseline)))   ; the effect of the perception
+    (defn refine (baseline reading rate) (add baseline (div (sub reading baseline) rate))) ; the model moves toward it
+    (defn shift (baseline reading rate) (sub (refine baseline reading rate) baseline))      ; how far the model moved
+    (defn smp (x) (math_floor (mul x 1000)))
+
+    ; ── baseline 100; a familiar reading (105) vs a novel one (200); rate 4 ──
+    (defn wm-base () 100.0)
+    (defn wm-familiar () 105.0)
+    (defn wm-novel () 200.0)
+    (defn wm-rate () 4.0)
+
+    (defn wmk (cond bit) (if cond bit 0))
+    (defn world-model-update-check ()
+        (add (add (add (add
+            (wmk (eq (smp (surprise (wm-base) (wm-familiar))) 5000) 1)
+            (wmk (eq (smp (surprise (wm-base) (wm-novel))) 100000) 10))
+            (wmk (gt (surprise (wm-base) (wm-novel)) (surprise (wm-base) (wm-familiar))) 100))
+            (wmk (eq (smp (shift (wm-base) (wm-familiar) (wm-rate))) 1250) 1000))
+            (wmk (gt (shift (wm-base) (wm-novel) (wm-rate)) (shift (wm-base) (wm-familiar) (wm-rate))) 10000)))
+)
