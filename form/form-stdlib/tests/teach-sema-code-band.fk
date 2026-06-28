@@ -1,0 +1,6 @@
+; tests/teach-sema-code-band.fk — teaching Sema a coding test, self-graded by execution, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-sema-code.fk
+; Verdict 11111: the +1 program passes both training tests; identity and x2 fail to fit (so +1 is the unique
+; winner); +1 generalizes to a held-out test; and self-grading (running the program) catches the wrong one --
+; verified by execution, no oracle in the loop.
+(do (teach-sema-code-check))
