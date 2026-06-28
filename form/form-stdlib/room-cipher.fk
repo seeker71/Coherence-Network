@@ -1,0 +1,69 @@
+; room-cipher.fk — end-to-end authenticated encryption for the room dead-drop, pure Form.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk
+;
+; The carrier (storage-port / the sovereign API KV / any public store) must hold ONLY
+; ciphertext it cannot read, so a leak there exposes no content. This is the private-channel
+; layer conversation-sync.fk names as BUILDABLE: "a private channel encrypts before publish and
+; decrypts after pull, so the dead-drop — even a public one — carries ciphertext it cannot read."
+;
+; Construction: encrypt-then-MAC over an HMAC-SHA256 keystream (counter mode). No new crypto is
+; invented — it composes the body's proven sha256 + hmac-sha256 + the bxor primitive:
+;   keystream block i = hmac-sha256(key, nonce ++ [i])         (32 bytes per block)
+;   ciphertext        = plaintext XOR keystream[0..len)
+;   tag               = hmac-sha256(key, nonce ++ ciphertext)   (encrypt-then-MAC)
+;   sealed blob       = nonce(8) ++ tag(32) ++ ciphertext
+; Decrypt recomputes the tag and refuses (sentinel 999) on any mismatch — so a tampered blob or a
+; wrong key yields rejection, never silent garbage. Same key + same nonce + same plaintext gives the
+; same blob on every kernel (content-addressed), so it rides the dead-drop's re-address verify.
+;
+; NONCE DISCIPLINE: a (key, nonce) pair must seal at most one plaintext — reuse leaks the XOR of two
+; plaintexts. A publisher derives a fresh nonce per sealed value (e.g. from the content-address); the
+; recipe takes the nonce as an argument and does not invent one, so the caller owns that uniqueness.
+;
+; Proven by: form-stdlib/tests/room-cipher-band.fk
+
+(do
+    ; --- list helpers (byte lists) ---
+    (defn rc-take (xs n) (if (eq n 0) (list) (cons (head xs) (rc-take (tail xs) (sub n 1)))))
+    (defn rc-drop (xs n) (if (eq n 0) xs (rc-drop (tail xs) (sub n 1))))
+    (defn rc-eqb (a b)
+        (if (eq (len a) 0) (eq (len b) 0)
+            (if (eq (len b) 0) 0
+                (if (eq (head a) (head b)) (rc-eqb (tail a) (tail b)) 0))))
+
+    ; --- string <-> bytes (ord of each char) ---
+    (defn rc-sb (s i n acc)
+        (if (ge i n) acc
+            (rc-sb s (add i 1) n (append-list acc (list (ord (substring s i (add i 1))))))))
+    (defn rc-str-bytes (s) (rc-sb s 0 (str_len s) (list)))
+
+    ; --- XOR two byte lists, truncated to the first (plaintext) length ---
+    (defn rc-xor (a b)
+        (if (eq (len a) 0) (list)
+            (cons (bxor (head a) (head b)) (rc-xor (tail a) (tail b)))))
+
+    ; --- HMAC-SHA256 keystream (counter mode): concat blocks until >= n bytes, take n ---
+    (defn rc-ks (key nonce n i acc)
+        (if (ge (len acc) n) acc
+            (rc-ks key nonce n (add i 1)
+                (append-list acc (hmac-sha256 key (append-list nonce (list i)))))))
+    (defn rc-keystream (key nonce n) (rc-take (rc-ks key nonce n 0 (list)) n))
+
+    ; --- seal: blob = nonce ++ tag ++ ciphertext (encrypt-then-MAC) ---
+    (defn rc-encrypt (key nonce pt)
+        (do (let ct (rc-xor pt (rc-keystream key nonce (len pt))))
+            (let tag (hmac-sha256 key (append-list nonce ct)))
+            (append-list nonce (append-list tag ct))))
+
+    ; --- open: verify tag, then XOR back; (list 999) on auth failure (tamper or wrong key) ---
+    (defn rc-decrypt (key blob)
+        (do (let nonce (rc-take blob 8))
+            (let rest (rc-drop blob 8))
+            (let tag (rc-take rest 32))
+            (let ct (rc-drop rest 32))
+            (if (eq (rc-eqb tag (hmac-sha256 key (append-list nonce ct))) 1)
+                (rc-xor ct (rc-keystream key nonce (len ct)))
+                (list 999))))
+
+    0)

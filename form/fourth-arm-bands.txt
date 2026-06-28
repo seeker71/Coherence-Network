@@ -518,6 +518,7 @@ sanskrit-roots fks 111111
 satsang fks 127
 schema fks 10
 sha256 fks 2
+room-cipher fks 15
 shared-heart fks 31
 shamballa-codes fks 11111
 shamballa-light-codes fks 111111

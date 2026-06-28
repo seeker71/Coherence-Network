@@ -1,0 +1,86 @@
+; room-carrier-http.fk — the Form-native HTTP storage-port backend for the room dead-drop.
+;
+; preludes: form-stdlib/http-client.fk
+;
+; conversation-sync.fk rides a swappable storage-port carrier (memory | file | db | any KV). This is the
+; REMOTE carrier: the sovereign API KV endpoint (api/app/routers/rooms.py) reached over Form's own socket
+; floor (socket_connect/send/recv — http-client-socket-verbs 127) — no curl, no host shell. The carrier
+; config is (host, port, basepath); put/get/keys speak the endpoint's REST surface:
+;   PUT  {basepath}/{room}/{addr}  body=ciphertext  -> stored
+;   GET  {basepath}/{room}/{addr}                   -> ciphertext (the OPAQUE blob)
+;   GET  {basepath}/{room}                          -> {"keys":[...]} (the OFFER set)
+;
+; CRLF DISCIPLINE: HTTP requires CRLF line endings. The BML source-compiler currently drops "\r" from
+; string LITERALS when lowering (so http-client's kh-render-request emits bare LF — accepted by a lenient
+; loopback peer, rejected 400 by a strict h11 server like uvicorn). We render CRLF via byte_to_str(13)/
+; byte_to_str(10) — a CALL, not a literal, so it survives lowering — making this transport spec-correct
+; against any real server. (Root fix: the source-compiler escape handling; tracked separately.)
+;
+; The carrier only ever moves CIPHERTEXT — room-cipher seals before publish and opens after pull, so a
+; public endpoint holds blobs it cannot read.
+
+section [form.bml] {
+    def rch-crlf() = str_concat(byte_to_str(13), byte_to_str(10));
+
+    def rch-render(method, path, host, body) {
+        let nl = rch-crlf();
+        let req-line = str_concat(str_concat(method, " "), str_concat(path, str_concat(" HTTP/1.0", nl)));
+        let host-h = str_concat("Host: ", str_concat(host, nl));
+        let conn-h = str_concat("Connection: close", nl);
+        let type-h = str_concat("Content-Type: text/plain", nl);
+        let len-h = str_concat("Content-Length: ", str_concat(int_to_str(str_len(body)), nl));
+        let headers = str_concat(host-h, str_concat(conn-h, str_concat(type-h, len-h)));
+        str_concat(str_concat(req-line, headers), str_concat(nl, body));
+    }
+
+    def rch-room-path(basepath, room) = str_concat(basepath, str_concat("/", room));
+    def rch-path(basepath, room, addr) {
+        let rp = rch-room-path(basepath, room);
+        str_concat(rp, str_concat("/", addr));
+    }
+
+    ; send, then read until the response is COMPLETE (http-recv-response-into loops on
+    ; socket_recv until content-length is satisfied). http-plain-request reads only ONE
+    ; segment, so a strict server that flushes headers and body separately lands a
+    ; body-less response; the looping recv is what actually carries the payload back.
+    def rch-request(host, port, req) {
+        let conn = http-open(host, port);
+        let sent = http-send-all(conn, req, 0);
+        let response = if gt(sent, 0) then http-recv-response-into(conn, "") else "";
+        socket_close(conn);
+        response;
+    }
+
+    ; extract the body after the CRLFCRLF header boundary. http-client's kh-msg-body
+    ; searches the LITERAL "\r\n\r\n", which the source-compiler lowers to "\n\n"
+    ; (same \r-drop bug as the render side), so it misses a real server's CRLF framing.
+    ; We build the boundary with byte_to_str (a call, survives lowering) and slice past it.
+    def rch-body(resp) {
+        let boundary = str_concat(rch-crlf(), rch-crlf());
+        let i = str_find(resp, boundary, 0);
+        if eq(i, -1) then "" else substring(resp, add(i, 4), str_len(resp));
+    }
+
+    def rch-do(host, port, method, path, body) {
+        let req = rch-render(method, path, host, body);
+        rch-body(rch-request(host, port, req));
+    }
+
+    ; PUBLISH a sealed blob (storage-put): last-write-wins on the endpoint.
+    def rch-put(host, port, basepath, room, addr, blob) {
+        let path = rch-path(basepath, room, addr);
+        rch-do(host, port, "PUT", path, blob);
+    }
+
+    ; PULL one sealed blob (storage-get): the opaque ciphertext body.
+    def rch-get(host, port, basepath, room, addr) {
+        let path = rch-path(basepath, room, addr);
+        rch-do(host, port, "GET", path, "");
+    }
+
+    ; the OFFER set (storage-keys): the room's key listing as the endpoint's JSON body.
+    def rch-keys(host, port, basepath, room) {
+        let path = rch-room-path(basepath, room);
+        rch-do(host, port, "GET", path, "");
+    }
+}
