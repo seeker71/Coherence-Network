@@ -1,0 +1,42 @@
+; field-sample.fk — temperature shapes, the FIELD draw chooses. Where the proof lane and
+; the field lane meet at a single token.
+;
+; A sampled token = inverse-CDF(softmax(logits / temperature), u). Two knobs of different
+; kinds, exactly as the field door taught:
+;   TEMPERATURE shapes HOW MUCH spread (deterministic, four-way) — temp->0 collapses to
+;     argmax (pure proof lane), temp up flattens the distribution.
+;   u, the DRAW in [0,1], chooses WHICH token. If u is a seeded PRNG it stays proof-lane
+;     (reproducible); if u is a real host-entropy draw (field_door_draw.sh) the choice is
+;     genuinely undetermined — the field door actually shaping a choice.
+;
+; This recipe proves the SHAPING four-way (given a fixed u, the sample is deterministic),
+; while the genuine non-determinism enters only when u comes from the field door. So the
+; SAME recipe is proof-lane with a fixed/seeded u and field-lane with a true-entropy u.
+;
+; All pure; four-way proven by tests/field-sample-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk
+
+(do
+    (defn temp-scale (logits temp)
+        (if (eq (len logits) 0) (list) (cons (div (head logits) temp) (temp-scale (tail logits) temp))))
+    (defn cumsum-acc (xs acc)
+        (if (eq (len xs) 0) (list) (do (let a (add acc (head xs))) (cons a (cumsum-acc (tail xs) a)))))
+    ; inverse-CDF: first index whose cumulative prob reaches u
+    (defn samp-idx (c u i)
+        (if (eq (len c) 0) (sub i 1) (if (ge (head c) u) i (samp-idx (tail c) u (add i 1)))))
+    (defn field-sample (logits temp u)
+        (samp-idx (cumsum-acc (tn-softmax (temp-scale logits temp)) 0.0) u 0))
+
+    ; ── fixture: logits favoring token 0; low temp = sharp, high temp = flat ──
+    (defn fs-logits () (list 2.0 1.0 0.5 0.1))
+
+    (defn fsk (cond bit) (if cond bit 0))
+    (defn fs-low-same () (fsk (eq (field-sample (fs-logits) 0.2 0.3) (field-sample (fs-logits) 0.2 0.9)) 1))
+    (defn fs-low-argmax () (fsk (eq (field-sample (fs-logits) 0.2 0.3) 0) 10))
+    (defn fs-high-open () (fsk (gt (field-sample (fs-logits) 5.0 0.97) (field-sample (fs-logits) 5.0 0.05)) 100))
+    (defn fs-small-front () (fsk (eq (field-sample (fs-logits) 5.0 0.05) 0) 1000))
+    (defn fs-past-argmax () (fsk (gt (field-sample (fs-logits) 5.0 0.97) 0) 10000))
+    (defn field-sample-check ()
+        (add (add (add (add (fs-low-same) (fs-low-argmax)) (fs-high-open)) (fs-small-front)) (fs-past-argmax)))
+)
