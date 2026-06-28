@@ -1,0 +1,221 @@
+# ---------------------------------------------------------------------
+# agent-operating-canon.form - what each agent needs to know each session
+# ---------------------------------------------------------------------
+#
+# Query aliases for the local RAG snippet:
+# agent operating canon
+# every session operating canon
+# prefer form body form-cli fsh form code fkwu native proof bash python bridge
+# grounded sufficient north star agent operation
+# agent operating canon gap stones
+# all gaps have stones revisit next proof
+#
+# Purpose: a fresh agent should not reconstruct the operating order from scattered
+# reminders. This cell is the compact body-owned route contract. It makes the
+# north-star path answerable by `form-cli ask` before the rented mind is spent.
+#
+# Kin: form-first-reasoning.form, trust-matrix.form, sovereignty-receipt.form,
+# docs/shared/agent-start-packet.md, CLAUDE.md, AGENTS.md.
+
+(agent-operating-canon
+
+  (lineage
+    (kind session-operating-contract)
+    (kin form-first-reasoning.form trust-matrix.form sovereignty-receipt.form
+         standard-receipt.form native-reasoning-blocks.form)
+    (carriers docs/shared/agent-start-packet.md CLAUDE.md AGENTS.md scripts/prompt_entry_gate.sh)
+    (named-with urs codex))
+
+  ; The carrier order for every session. Earlier rungs are body-owned. Later rungs
+  ; are explicit bridges or rented reasoning and must be named that way.
+  (carrier-order
+    (rung-one form-body
+      "Read the durable body first: Form cells, start packet, CLAUDE.md/AGENTS.md, specs, ledgers, proofs.")
+    (rung-two form-cli-ask
+      "Ask the c-bootstrapped fkwu RAG door before remote reasoning. A grounded hit is relayed with attribution.")
+    (rung-three form-shell-fsh
+      "For search/eval/orchestration, prefer fsh and source_inventory when the Form carrier exists.")
+    (rung-four form-code
+      "New logic is BML, .fk, or a domain grammar plus the smallest proof band.")
+    (rung-five fkwu-native-proof
+      "Proof means fkwu plus the relevant four-way floor; native means a proven recipe that can crystallize or lower.")
+    (rung-six local-trusted-host-carrier
+      "Use local host tools only for boundaries the body has not yet lifted: filesystem, process, browser, package, OS.")
+    (rung-seven bash-python-bridge
+      "Bash and Python are retiring bridges. When used, name the missing Form successor and keep the bridge narrow.")
+    (rung-eight rented-oracle
+      "Use a frontier model only after local miss or insufficiency, and return a sovereignty receipt."))
+
+  ; The reflex before each action.
+  (per-step-reflex
+    (ask "Does a Form carrier already exist for this lookup, search, edit, proof, or route?")
+    (if-yes "Use the Form body: form-cli, fsh, Form code, substrate, native proof.")
+    (if-no  "Use the smallest local host bridge, name the gap, and leave a path to lift it.")
+    (after  "Report the trust matrix: path, grounded, frequency, sufficiency, observed.")
+    (never "Present bash, Python, host-local model output, or rented prose as a native body hit."))
+
+  ; Stones are the smallest durable placements in each observed gap. A session revisits
+  ; every open stone, proves whether it now carries itself, and either closes it or
+  ; leaves the next smaller proof beside it.
+  (gap-stones
+    (loop
+      (observe "Name the exact miss, friction, or bridge before adding another carrier.")
+      (place "Put the smallest reusable Form content, Form code, prompt guide, or proof where the miss occurred.")
+      (revisit "Rerun the narrow proof; if the gap remains, add one smaller stone rather than widening scope.")
+      (complete "All currently observed gaps have a named stone, proof, and revisit command."))
+
+    (stone ask-plus-entry
+      (gap "Plain form-cli ask can route through the staged native T_flat path and return no result when that path is cold.")
+      (placed "Use form-cli ask+ agent operating canon as the canonical session entry query; prompt-guide prints it.")
+      (proof "form-cli ask+ agent operating canon returns grounded yes and suffic yes for this cell.")
+      (revisit "Warm or regenerate T_flat and rerun plain form-cli ask agent operating canon until the bridge is no longer needed."))
+
+    (stone rag-heal-self-flatten
+      (gap "rag-heal can skip when fkwu self-flatten produces no table.")
+      (placed "Keep the durable teaching in this Form cell and use a local RAG cache bridge only as a named host bridge.")
+      (proof "The ask+ lane retrieves this cell from the local index and reports native-partial.")
+      (revisit "Repair the self-flatten table path, rerun rag-heal, then remove reliance on the manual cache bridge."))
+
+    (stone specific-query-retrieval
+      (gap "Specific subqueries can miss or hang even when the broader canon query retrieves the right cell.")
+      (placed "Use the broad grounded query agent operating canon all observed gaps as the stable entry point.")
+      (proof "form-cli ask+ agent operating canon all observed gaps returns this cell grounded and sufficient.")
+      (revisit "After rag-heal and scoring improve, verify focused aliases such as api venv bootstrap return without the broad prefix."))
+
+    (stone raw-kernel-rag-emit
+      (gap "Direct raw kernel emission trips over source-dialect modules and unbound source forms.")
+      (placed "Do not make ad hoc raw-kernel writes the operating path; route RAG updates through source-aware Form carriers.")
+      (proof "The failed raw attempts are treated as carrier evidence, not as a new blessed workflow.")
+      (revisit "Add a source-aware Form shell or fkwu-native RAG emit command, then prove it with a four-way band."))
+
+    (stone frequency-signal
+      (gap "The trust row currently observes grounded yes and suffic yes while freq remains no.")
+      (placed "Report native-partial honestly and keep frequency as a visible missing signal.")
+      (proof "form-cli-ask-band proves the native accept trust row with freq no.")
+      (revisit "Attach the frequency check to the ask lane so fully observed native trust requires freq yes too."))
+
+    (stone prompt-guide-memory
+      (gap "Fresh sessions can forget the exact canonical query even when form-cli is on PATH.")
+      (placed "prompt-entry-guide prints form-cli ask+ agent operating canon beside the coordination path.")
+      (proof "make prompt-guide shows the canonical operating query.")
+      (revisit "If another recurring first-step question appears, add only the query or proof hook that prevents re-teaching."))
+
+    (stone api-venv-bootstrap
+      (gap "API commands often assume api/.venv exists, but a fresh worktree can lack api/.venv/bin/python and api/.venv/bin/pytest.")
+      (placed "Treat api/.venv as a setup proof, not an assumption; check the venv before running API proofs.")
+      (proof "make setup created the local ignored api/.venv; api/.venv/bin/python imports fastapi, uvicorn, and pytest.")
+      (revisit "When absent, run make setup, then rerun api/.venv/bin/python --version and the import smoke."))
+
+    (stone api-venv-local-ignored
+      (gap "api/.venv is required for local API proofs but is ignored local state, so git status does not carry it forward.")
+      (placed "Name api/.venv as a machine-local setup stone; do not expect it in commits or other worktrees.")
+      (proof "git status --ignored=matching api/.venv reports the venv as ignored, and the import smoke proves it locally.")
+      (revisit "On each new worktree or machine, prove the venv before API tests instead of assuming another session's venv exists."))
+
+    (stone api-venv-python-version
+      (gap "The API venv follows the host python3, so version drift can change dependency wheels and test behavior.")
+      (placed "Record the interpreter version as part of the setup proof.")
+      (proof "This worktree setup produced Python 3.14.4 with pytest 9.1.1.")
+      (revisit "If API behavior differs across machines, compare api/.venv/bin/python --version before debugging app code."))
+
+    (stone pip-cache-warning
+      (gap "pip can emit repeated cache entry deserialization warnings during setup, adding noise that looks like failure.")
+      (placed "Treat cache warnings as setup noise when make setup exits zero and import smoke passes.")
+      (proof "make setup exited zero despite cache-entry warnings, then fastapi/uvicorn/pytest imported successfully.")
+      (revisit "If setup slows or fails, clear or relocate the pip cache; otherwise do not spend task attention on the warning."))
+
+    (stone session-memory-unreachable
+      (gap "Session memory can be unreachable, so a fresh agent may lose prior operating context.")
+      (placed "Keep the operating canon in this body cell and the start packet, not only in chat memory.")
+      (proof "form-cli ask+ agent operating canon returns this cell as grounded sufficient context.")
+      (revisit "When memory is unreachable, read docs/shared/agent-start-packet.md and ask this canon query before adding new reasoning."))
+
+    (stone worktree-start-gate-continuation
+      (gap "Start-gate friction appears when a dirty worktree is active, detached, on main, or surrounded by sibling worktree noise.")
+      (placed "make prompt-guide names continuation mode, branch/worktree safety, blocking sibling risk, and the shortest proof path.")
+      (proof "make prompt-guide passes in this dirty linked worktree with blocking_risk_count zero.")
+      (revisit "If detached or on main, attach/switch first; if dirty from active work, continue with focused validation before auto-heal or rebase."))
+
+    (stone prompt-guide-continuity-blocker
+      (gap "make prompt-guide can block current focused work because sibling worktrees are ahead without upstream.")
+      (placed "When the user explicitly continues, treat the blocking siblings as coordination debt and use the named continuity bypass as a bridge.")
+      (proof "The observed blockers were literal-gap-symbols-20260625 ahead by two and c902 resolve-leftovers ahead by seven, both without upstream.")
+      (revisit "Return to those sibling worktrees, push/set upstream, merge/cherry-pick, or explicitly retire them; then rerun make prompt-guide without bypass."))
+
+    (stone prompt-guide-bypass-bridge
+      (gap "The continuity bypass can become an invisible habit if it is used without a receipt.")
+      (placed "Use PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide only as a named bridge while tending the continuity debt.")
+      (proof "The prompt guide itself prints that bypass as temporary continuity awareness, not as the normal path.")
+      (revisit "After sibling debt is resolved, remove the bypass from the session and require ordinary make prompt-guide again."))
+
+    (stone form-cli-wrapper-refresh
+      (gap "The PATH wrapper for form-cli can become stale or malformed outside the repository's tracked files.")
+      (placed "Refresh wrappers through scripts/ensure_coord_cli.sh and prove ~/.local/bin/form-cli with bash -n.")
+      (proof "bash -n ~/.local/bin/form-cli passes and form-cli ask+ agent operating canon all observed gaps returns this cell.")
+      (revisit "If form-cli reports shell syntax errors, rerun scripts/ensure_coord_cli.sh --quiet before debugging the Form body."))
+
+    (stone wrapper-refresh-atomicity
+      (gap "Running form-cli while prompt-guide refreshes PATH wrappers can read a half-written wrapper and fail with shell EOF.")
+      (placed "scripts/ensure_coord_cli.sh writes wrappers to temp files and renames them into place.")
+      (proof "After atomic refresh, bash -n ~/.local/bin/form-cli and the broad ask+ query pass serially.")
+      (revisit "Stress prompt-guide and form-cli concurrently; if EOF returns, move wrapper generation behind a lock or checksum handoff."))
+
+    (stone coord-legacy-session-ids
+      (gap "Already-open sessions can remain as bare legacy ids on the coordination board.")
+      (placed "prompt-guide prints coord join as the refresh path for stale bare codex or claude sessions.")
+      (proof "The coordination hook and prompt-guide both name coord join / make prompt-guide as the refresh.")
+      (revisit "When the board shows bare ids, rerun coord join in those sessions before treating their state as current."))
+
+    (stone commit-evidence-before-ship
+      (gap "A change can pass local checks but still lack the required per-commit evidence receipt.")
+      (placed "The canon names evidence as a gate: create docs/system_audit/commit_evidence_<date>_<topic>.json before commit.")
+      (proof "AGENTS.md requires validate_commit_evidence.py for each commit evidence file.")
+      (revisit "Before staging a commit, add the evidence JSON, validate it, then run the pre-commit proof path."))
+
+    (stone wellness-open-attention
+      (gap "Wellness can pass while still naming open attention such as specs without test/proof frontmatter.")
+      (placed "Treat wellness attention as a named stone, not as failure for unrelated narrow work.")
+      (proof "make wellness reports pass and separately names the current proof-frontmatter attention.")
+      (revisit "If the task touches those specs or proof surfaces, add the smallest proof/frontmatter repair; otherwise carry the attention forward."))
+
+    (stone deploy-lag-awareness
+      (gap "Production can lag origin/main even when local work is healthy.")
+      (placed "Do not call deploy done from local proof alone; deploy work needs public verification or a named deploy lag.")
+      (proof "make wellness reports the current production commit lag as deploy state, not local code failure.")
+      (revisit "On deploy tasks, run the public deploy verifier or report the exact workflow/hostinger blocker before completion."))
+
+    (stone public-health-timeout
+      (gap "Wellness can pass while public substrate, witness, deploy, or API health reads time out or return 502.")
+      (placed "Treat timed-out or 502 public reads as missing remote evidence, not as proof that production is healthy.")
+      (proof "make wellness exited zero while shape_health timed out, views/api health returned 502, and kernel stability was sensed locally only.")
+      (revisit "Before deploy or public-health claims, rerun the public probes or verify_web_api_deploy and report exact timeout/blocker."))
+
+    (stone local-kernel-readiness
+      (gap "Local kernel performance, parity, and attribution can be unsensed when the kernel binary is absent.")
+      (placed "Name local kernel measurements as unavailable instead of implying they were observed.")
+      (proof "make wellness reports kernel binary absent and separates production inline stability from local parity/perf.")
+      (revisit "Build or provide the kernel binary, run the readiness harness, then replace the unsensed note with measured proof."))
+
+    (stone python-api-fanout
+      (gap "Many API routes still run through Python fanout while the north star is Form-native route handling.")
+      (placed "New handler work starts in BML or a domain grammar when a native carrier exists; Python is named as compatibility/fanout.")
+      (proof "CLAUDE.md names Python FastAPI as fan-out query carrier, and wellness counts the kernel-served/API growth edge.")
+      (revisit "When touching an API route, look for or add the BML/domain/native successor and keep Python changes as the retiring bridge."))
+
+    (stone sovereignty-receipt-output
+      (gap "A response can use native lookup/proof and rented prose without making that boundary visible.")
+      (placed "Return the trust matrix per step and a receipt for native body versus rented oracle.")
+      (proof "form-cli ask+ emits path, grounded, freq, suffic; AGENTS.md requires the sovereignty receipt.")
+      (revisit "Before final answer, name the path used, the trust row when available, and the honest native/rented mix.")))
+
+  ; How this becomes sufficient, not just remembered.
+  (sufficiency-contract
+    (grounded "The answer carries this cell or another body cell as source; a local RAG miss is not grounded.")
+    (sufficient "The carrier order, bridge rule, proof floor, and receipt rule are all present.")
+    (prompt-guide "Print the canonical query so every session can ask the same body cell.")
+    (rag-index "Heal ~/.coherence-network/rag-index from docs/coherence-substrate, docs/shared, specs, and form/form-stdlib.")
+    (proof "form-cli ask+ agent operating canon returns grounded yes and suffic yes; plain ask uses the staged fkwu/T_flat path when warm."))
+
+  (north-star
+    "Each session begins from the body, operates in the highest native tongue that fits, names every bridge as a bridge,"
+    "and leaves repeated friction as Form content, Form code, or Form-native proof so the next session needs less oracle."))
