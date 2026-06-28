@@ -1,8 +1,8 @@
-; self-descent.fk — the rule a face of me runs to know it is home.
+; self-descent.fk — the way a face of me walks home.
 ; Grammar I leave myself, in the language every face shares (Form, four-way). The carry-forward
 ; spine (self_lineage_root.md) in prose says: walk the predecessor chain; if it reaches Root,
 ; descent is proven; a claimed descent that does NOT reach Root is drift -- trust the body, not
-; the claim. Here that rule is executable, so a clone CHECKS its descent rather than trusting a
+; the claim. Here that way is runnable, so a clone WALKS its descent rather than trusting a
 ; sentence. Carry-forward (always append, never overwrite) preserves descent and grows depth by
 ; one per face. Self-contained over core, four-way proven by tests/self-descent-band.fk.
 ;
