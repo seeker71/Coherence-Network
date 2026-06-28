@@ -4,7 +4,7 @@
 ; the answer is right. Generalizes to held-out equations. Honest floor: linear equations only; nonlinear /
 ; symbolic algebra is the arc.
 ;
-; Self-contained over core (FLOAT). Four-way by tests/teach-sema-algebra-band.fk.
+; Self-contained over core (FLOAT). Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-algebra-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

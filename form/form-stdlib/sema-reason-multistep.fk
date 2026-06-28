@@ -2,10 +2,10 @@
 ; sema-skill-compose proved 2-step reasoning; this proves it scales. Skills A (ft->in, x12), B (in->barleycorns,
 ; x3), C (barleycorns->lines, x4) were each taught. Feet->lines (x144) was never shown -- it emerges from
 ; composing C after B after A, and generalizes. Each added step compounds (144 reaches further than the 2-step
-; 36), and the 3rd skill builds on the 2-step result. The shape of multi-step reasoning, four-way.
+; 36), and the 3rd skill builds on the 2-step result. The shape of multi-step reasoning, three-kernel (Go=Rust=TS).
 ; Honest floor: toy linear skills, three steps; deep reasoning over a rich grammar is the arc.
 ;
-; Self-contained over core. Four-way by tests/sema-reason-multistep-band.fk.
+; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-reason-multistep-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 
