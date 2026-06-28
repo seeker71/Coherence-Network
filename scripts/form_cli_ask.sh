@@ -10,7 +10,7 @@
 # sufficiency / ask-gate), and invokes the kernel on the recipe. The decision math is
 # the gate's, proven four-way; this shell marshals args and wires the carriers.
 #
-# Usage: form_cli_ask.sh [-m local-model] [-j judge] [--remote "claude -p"] [--trust N] [--retries N] [--judge-gate] "question..."
+# Usage: form_cli_ask.sh [-m local-model] [-j judge] [--remote "claude -p"] [--trust N] [--retries N] [--judge-gate] [--timeout N] "question..."
 #   By default the local body is trusted (sovereignty-first): a grounded local hit
 #   stands, and only a local MISS escalates to the oracle. --judge-gate is kept as
 #   a compatibility flag; until the fkwu+Metal generator is wired, the judge lane
@@ -23,7 +23,7 @@ GO_ABS="$FORM/form-kernel-go/bin-go"
 GO="$GO_ABS"; STD="$FORM/form-stdlib"
 cd "${HOME:-$ROOT}"
 
-MODEL="coder"; JUDGE="llama3.2:3b"; REMOTE="claude -p"; TRUST=60; RETRIES=1; JUDGE_GATE=0
+MODEL="coder"; JUDGE="llama3.2:3b"; REMOTE="claude -p"; TRUST=60; RETRIES=1; JUDGE_GATE=0; ASK_TIMEOUT=30
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -m|--model)  MODEL="$2"; shift 2 ;;
@@ -31,12 +31,19 @@ while [[ $# -gt 0 ]]; do
     --remote)    REMOTE="$2"; shift 2 ;;
     --trust)     TRUST="$2"; shift 2 ;;
     --retries)   RETRIES="$2"; shift 2 ;;
+    --timeout)   ASK_TIMEOUT="$2"; shift 2 ;;
     --judge-gate) JUDGE_GATE=1; shift ;;
     *)           break ;;
   esac
 done
 Q="$*"
 [[ -n "$Q" ]] || { echo "usage: form-cli ask+ [-m model] [-j judge] [--remote CMD] \"question\"" >&2; exit 2; }
+case "$ASK_TIMEOUT" in
+  ''|*[!0-9.]*)
+    echo "form-cli ask+: --timeout must be numeric seconds" >&2
+    exit 2
+    ;;
+esac
 
 work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
 
@@ -88,8 +95,39 @@ esc(){ printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 printf '(print (fca-ask-plus-traced "%s" "%s" "%s" "%s" %s %s %s))\n' \
   "$(esc "$Q")" "$(esc "$MODEL")" "$(esc "$JUDGE")" "$(esc "$REMOTE")" "$TRUST" "$RETRIES" "$JUDGE_GATE" > "$work/ask.fk"
 
-out="$("$GO" "$CORE" "$STD/text-tokenize.fk" "$STD/rag-embed.fk" "$STD/rag-index-codec.fk" "$STD/rag-retrieve.fk" "$STD/rag-ask.fk" "$ASK" \
+run_with_timeout() {
+  python3 - "$ASK_TIMEOUT" "$@" <<'PY'
+import subprocess
+import sys
+
+timeout = float(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    proc = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout)
+except subprocess.TimeoutExpired as exc:
+    if exc.stdout:
+        sys.stdout.write(exc.stdout if isinstance(exc.stdout, str) else exc.stdout.decode(errors="replace"))
+    if exc.stderr:
+        sys.stderr.write(exc.stderr if isinstance(exc.stderr, str) else exc.stderr.decode(errors="replace"))
+    sys.stderr.write(f"form-cli ask+: timeout after {timeout:g}s (nothing)\n")
+    raise SystemExit(124)
+
+sys.stdout.write(proc.stdout)
+sys.stderr.write(proc.stderr)
+raise SystemExit(proc.returncode)
+PY
+}
+
+raw="$work/out"; err="$work/run.err"
+run_with_timeout "$GO" "$CORE" "$STD/text-tokenize.fk" "$STD/rag-embed.fk" "$STD/rag-index-codec.fk" "$STD/rag-retrieve.fk" "$STD/rag-ask.fk" "$ASK" \
   "$STD/form-cli-router.fk" "$STD/form-cli-judge.fk" "$STD/form-cli-sufficiency.fk" "$STD/trust-row.fk" "$STD/form-cli-ask-gate.fk" \
-  "$ASKPLUS" "$work/ask.fk" | sed '/^null$/d')"
+  "$ASKPLUS" "$work/ask.fk" >"$raw" 2>"$err"
+rc=$?
+if [[ "$rc" -ne 0 ]]; then
+  cat "$err" >&2
+  exit "$rc"
+fi
+cat "$err" >&2
+out="$(sed '/^null$/d' "$raw")"
 printf '%s\n' "$out" | sed -n '1p' >&2   # line 1: the live trust row -> stderr
 printf '%s\n' "$out" | sed '1d'          # the answer -> stdout

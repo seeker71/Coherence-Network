@@ -1,0 +1,28 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-cli-repl-control.fk
+;
+; form-cli-repl-control-band — proves the host carrier's launch and line
+; classification decisions without entering the fkwu-only interactive REPL.
+;
+; Verdict 1023:
+;   1    bare TTY opens the REPL
+;   2    print mode answers once
+;   4    piped input answers once
+;   8    no TTY and no input shows usage
+;   16   TTY with an explicit question answers once
+;   32   blank line is ignored
+;   64   parenthesized line is Form eval
+;   128  slash line is a meta-command
+;   256  ordinary text is a question
+;   512  print mode wins even on a TTY with no input
+(do
+    (let c0 (if (eq (frepl-mode 0 1 0) 0) 1 0))
+    (let c1 (if (eq (frepl-mode 1 0 1) 1) 2 0))
+    (let c2 (if (eq (frepl-mode 0 0 1) 1) 4 0))
+    (let c3 (if (eq (frepl-mode 0 0 0) 2) 8 0))
+    (let c4 (if (eq (frepl-mode 0 1 1) 1) 16 0))
+    (let c5 (if (eq (frepl-classify 1 0 0) 3) 32 0))
+    (let c6 (if (eq (frepl-classify 0 1 0) 0) 64 0))
+    (let c7 (if (eq (frepl-classify 0 0 1) 1) 128 0))
+    (let c8 (if (eq (frepl-classify 0 0 0) 2) 256 0))
+    (let c9 (if (eq (frepl-mode 1 1 0) 1) 512 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))
