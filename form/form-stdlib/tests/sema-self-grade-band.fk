@@ -1,6 +1,9 @@
-; tests/sema-self-grade-band.fk — Sema's self-grading is sound (verifies its own answer, no oracle), three-kernel (Go=Rust=TS).
-; preludes: form-stdlib/core.fk form-stdlib/sema-self-grade.fk
+; tests/sema-self-grade-band.fk — Sema's self-grading is sound (verifies its own answer, no oracle), four-way.
 ; Verdict 11111: the correct answer passes; an unbalanced one fails; a plausible-but-wrong one fails (not
-; fooled); no wrong answer false-passes (sound); and self-grade separates correct from wrong -- all by the
-; conservation invariant, no oracle consulted. The student can mark its own exam, faithfully.
+; fooled); no wrong answer false-passes (sound); and self-grade separates correct from wrong (the ordering
+; routed through cmp-core's cmp-gt over the eq/if/sub floor) -- all by the conservation invariant, no oracle
+; consulted. The student can mark its own exam, faithfully. Header kept ABOVE the preludes line: fkwu's
+; pre-flatten folds post-preludes comment text into the table, shifting node offsets (brick sema-reason-search).
+;
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk form-stdlib/sema-self-grade.fk
 (do (sema-self-grade-check))

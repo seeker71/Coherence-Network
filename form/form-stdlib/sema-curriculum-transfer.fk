@@ -5,9 +5,9 @@
 ; each subject makes the next cheaper. Honest floor: toy linear skills, "effort" = parameters to pin; real
 ; transfer over rich representations is the arc.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-curriculum-transfer-band.fk.
+; Self-contained over core. Four-way by tests/sema-curriculum-transfer-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn sct-slope () 3)                                            ; learned in subject A (the shared structure)
@@ -23,5 +23,5 @@
             (tck (eq (sct-cold-effort) 2) 10))                       ; B cold needs two examples to pin slope+intercept
             (tck (eq (sct-intercept-from 1 5) 2) 100))                ; B AFTER A: the intercept from ONE example (slope transferred)
             (tck (eq (sct-predict 2) 8) 1000))                      ; B-after-A GENERALIZES (predict 2 = 8), learned from one example
-            (tck (lt (sct-transfer-effort) (sct-cold-effort)) 10000)))  ; transfer reduces effort (1 < 2) -- correctness kept, data halved
+            (tck (cmp-lt (sct-transfer-effort) (sct-cold-effort)) 10000)))  ; transfer reduces effort (1 < 2) -- correctness kept, data halved
 )

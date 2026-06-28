@@ -1,0 +1,21 @@
+; tests/cmp-core-band.fk — integer ordering induced over the eq/if/sub floor crosses four-way (incl. fkwu).
+; The point: a comparison the fourth arm's self-host flatten does NOT yet carry as a primitive (gt/lt) is
+; carried here as a RECIPE over ops it does carry -- so it proves on all four kernels today, no kernel change.
+;
+; Verdict 11111111: strictly-greater holds (7>4); strictly-lesser is not greater (4>7 false); the TIE is the
+; boundary -- equal is NOT greater (5>5 false) yet equal IS >= and IS <= (the inclusive split at a==b); the
+; zero floor where the recursion terminates behaves (9>0 true, 0>0 false); and negation flips a comparison
+; (not(4>7) is true). The strange-minimal cases that pin the ordering boundary in the fewest expressions.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
+(do
+    (defn cck (cond bit) (if cond bit 0))
+    (add (add (add (add (add (add (add
+        (cck (eq (cmp-gt 7 4) 1) 1)            ; strictly greater
+        (cck (eq (cmp-gt 4 7) 0) 10))          ; strictly lesser is not greater
+        (cck (eq (cmp-gt 5 5) 0) 100))         ; TIE: equal is not greater (the boundary)
+        (cck (eq (cmp-ge 5 5) 1) 1000))        ; TIE: equal IS >= (boundary inclusive)
+        (cck (eq (cmp-le 5 5) 1) 10000))       ; TIE: equal IS <= (boundary inclusive)
+        (cck (eq (cmp-gt 9 0) 1) 100000))      ; zero floor: positive > 0
+        (cck (eq (cmp-gt 0 0) 0) 1000000))     ; double-zero floor: 0 is not > 0
+        (cck (eq (cmp-not (cmp-gt 4 7)) 1) 10000000)))  ; negation flips a comparison: not(4>7) is true

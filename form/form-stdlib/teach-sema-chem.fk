@@ -4,9 +4,9 @@
 ; Sema finds the coefficients, and the scorer is CONSERVATION (left atoms == right atoms, per element). A
 ; balancing is correct iff mass conserves -- the body grades its own chemistry against physics itself.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-chem-band.fk.
+; Self-contained over core. Four-way by tests/teach-sema-chem-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     ; atom counts [H, O]:  H2 = (2,0)  O2 = (0,2)  H2O = (2,1)
@@ -23,7 +23,7 @@
         (add (add (add (add
             (hck (tsh-consH 2 1 2) 1)                              ; 2 H2 + 1 O2 -> 2 H2O conserves hydrogen
             (hck (tsh-consO 2 1 2) 10))                           ; ...and oxygen
-            (hck (not (tsh-consO 1 1 1)) 100))                    ; the unbalanced 1,1,1 violates oxygen conservation
+            (hck (cmp-not (tsh-consO 1 1 1)) 100))                    ; the unbalanced 1,1,1 violates oxygen conservation
             (hck (eq (tsh-balanced 2 1 2) 1) 1000))             ; the body verifies its OWN answer: fully conserved
             (hck (eq (tsh-balanced 1 1 1) 0) 10000)))           ; SELF-GRADING rejects the unbalanced one -- by physics, no oracle
 )

@@ -4,9 +4,9 @@
 ; conserves; ADOPT it; VERIFY. The body moves itself from wrong to right with no oracle -- error-correction by
 ; the invariant alone. Honest floor: a tiny candidate set; general search over a large space is the arc.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-error-correct-band.fk.
+; Self-contained over core. Four-way by tests/sema-error-correct-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn sec-cons (a b c)                                  ; conservation invariant (a H2 + b O2 -> c H2O)
@@ -22,6 +22,6 @@
             (eck (eq (sec-cons 1 1 1) 0) 1)                       ; DETECT: the start guess (1,1,1) is wrong (oxygen unbalanced)
             (eck (eq (sec-correct) 1) 10))                      ; SEARCH: finds the correct candidate (index 1 = 2,1,2)
             (eck (eq (sec-cons 2 1 2) 1) 100))                   ; VERIFY: the corrected answer conserves
-            (eck (gt (sec-cons 2 1 2) (sec-cons 1 1 1)) 1000))  ; the loop moved WRONG -> RIGHT (1 > 0)
+            (eck (cmp-gt (sec-cons 2 1 2) (sec-cons 1 1 1)) 1000))  ; the loop moved WRONG -> RIGHT (1 > 0)
             (eck (eq (sec-corrected-cons) 1) 10000)))           ; SOUND: it only adopts an answer that passes the invariant
 )

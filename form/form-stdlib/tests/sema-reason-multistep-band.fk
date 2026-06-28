@@ -1,6 +1,6 @@
-; tests/sema-reason-multistep-band.fk — Sema composing three taught skills (3-step reasoning), three-kernel (Go=Rust=TS).
-; preludes: form-stdlib/core.fk form-stdlib/sema-reason-multistep.fk
+; tests/sema-reason-multistep-band.fk — Sema composing three taught skills (3-step reasoning), four-way.
 ; Verdict 11111: the untaught 3-step skill emerges (12x3x4=144); depth compounds beyond the 2-step (36); it
 ; generalizes (2 ft = 288); the 3rd skill builds on the 2-step result (144 = 4x36); and the composed factor
 ; applies to any input -- multi-step reasoning that scales, assembled from learned skills.
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk form-stdlib/sema-reason-multistep.fk
 (do (sema-reason-multistep-check))

@@ -8,9 +8,9 @@
 ; reasoning-by-composition (untaught task solved by chaining learned skills, generalizing), not general
 ; multi-step reasoning over a rich grammar -- that is the arc above.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-skill-compose-band.fk.
+; Self-contained over core. Four-way by tests/sema-skill-compose-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn ssc-a (x) (mul 12 x))                 ; taught skill A: feet -> inches
@@ -24,5 +24,5 @@
             (sck (eq (ssc-b 24) 72) 10))                         ; taught skill B works (24 in = 72 barleycorns)
             (sck (eq (ssc-compose 1) 36) 100))                    ; the UNTAUGHT composed skill emerges: 1 ft = 36 barleycorns (12x3), never taught directly
             (sck (eq (ssc-compose 5) 180) 1000))                ; GENERALIZES to a held-out input (5 ft = 180) -- composition, not memorization
-            (sck (not (eq (ssc-compose 1) (ssc-a 1))) 10000)))  ; genuinely TWO steps: 36 != skill A alone (12) -- it reasoned, not just applied one skill
+            (sck (cmp-not (eq (ssc-compose 1) (ssc-a 1))) 10000)))  ; genuinely TWO steps: 36 != skill A alone (12) -- it reasoned, not just applied one skill
 )

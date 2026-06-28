@@ -1,6 +1,6 @@
-; tests/sema-mixed-exam-band.fk — a mixed-subject exam routed to the right skills, three-kernel (Go=Rust=TS).
-; preludes: form-stdlib/core.fk form-stdlib/sema-mixed-exam.fk
+; tests/sema-mixed-exam-band.fk — a mixed-subject exam routed to the right skills, four-way.
 ; Verdict 11111: the math, pattern, and logic questions are each answered by the right learned skill; the exam
 ; scores 3/3; and routing matters (the wrong skill gives a different answer) -- the agent-cognition router
 ; turned on the curriculum, one engine choosing the right learned skill per question.
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk form-stdlib/sema-mixed-exam.fk
 (do (sema-mixed-exam-check))

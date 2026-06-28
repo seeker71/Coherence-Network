@@ -4,9 +4,11 @@
 ; plausible-but-wrong answer -- all by the conservation invariant, with no oracle consulted at grade time.
 ; That soundness is what lets the oracle leave the room: the student keeps the skill AND the ability to mark it.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-self-grade-band.fk.
+; Over core + cmp-core. Four-way by tests/sema-self-grade-band.fk. The separation check (correct > wrong)
+; routes its ordering through cmp-core's cmp-gt -- the comparison induced over the eq/if/sub floor -- so the
+; band crosses the fourth arm (fkwu) today, without the primitive `gt` the self-host flatten does not yet emit.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     ; conservation invariant for a H2 + b O2 -> c H2O  (H2=(2,0) O2=(0,2) H2O=(2,1))
@@ -21,5 +23,5 @@
             (gck (eq (ssg-cons 1 1 1) 0) 10))                                  ; an unbalanced answer fails
             (gck (eq (ssg-cons 2 2 2) 0) 100))                                  ; a plausible-but-wrong answer fails too -- the invariant is not fooled
             (gck (eq (add (ssg-cons 1 1 1) (ssg-cons 2 2 2)) 0) 1000))        ; NO false-pass across the wrong answers -- the grader is sound
-            (gck (gt (ssg-cons 2 1 2) (ssg-cons 1 1 1)) 10000)))             ; self-grade SEPARATES correct from wrong, with no oracle in the loop
+            (gck (cmp-gt (ssg-cons 2 1 2) (ssg-cons 1 1 1)) 10000)))         ; self-grade SEPARATES correct from wrong (ordering over the proven floor), no oracle in the loop
 )

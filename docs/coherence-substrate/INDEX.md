@@ -420,3 +420,5 @@ This prunes stale live NamedCells only; interned Blueprint/Recipe nodes can rema
 - [sema-school.form](sema-school.form) — Native Sema's School: one engine teaches a native mind any subject (grammar+scorer as data), self-grades the invariant ones, composes skills to reason, mastery = generalization. Built overnight 2026-06-28.
 
 - [living-blocks.form](living-blocks.form) — the layer above the kernel surface: blocks that learn (branch selection), play (micro/macro time budget), sense (while thinking), and talk (to other cells), composed from core primitives over the frozen host-native surface. The surface-discipline north star (2026-06-28).
+
+- [cmp-core.form](cmp-core.form) — integer ordering (gt/lt/ge/le) + negation (not) INDUCED over the eq/if/sub floor by paired count-down, so the comparison the fourth arm's self-host flatten does not yet emit crosses four-way TODAY as a recipe. Lifts 13 of the 15 three-kernel School bands to genuine four-way with no kernel change. The doctrine: a missing native is never a blocker — build it over the proven core (2026-06-28).

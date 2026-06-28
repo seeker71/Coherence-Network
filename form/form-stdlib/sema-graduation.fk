@@ -3,12 +3,12 @@
 ; REASON (compose skills), SELF-GRADE (verify by invariant), TRANSFER (learn cheaper from related skills),
 ; SELF-CORRECT (fix its own errors), ROUTE (right skill per question), and shows MASTERY (generalization).
 ; Missing any one and it has not graduated -- a school of facts without reasoning is not a mind; a reasoner
-; that cannot check itself is not safe. All seven families crossed three-kernel (Go=Rust=TS) tonight; fourth arm pending. Honest floor: each family
+; that cannot check itself is not safe. All seven families crossed four-way tonight. Honest floor: each family
 ; is proven at toy scale; the diploma certifies the SHAPE is whole, not that the exams are real-world hard.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-graduation-band.fk.
+; Self-contained over core. Four-way by tests/sema-graduation-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     ; graduated iff ALL seven capability families are present (each flag 1)
@@ -28,5 +28,5 @@
             (grk (eq (sgr-grad 1 0 1 1 1 1 1) 0) 10))                    ; missing REASONING -> not graduated (a school of facts is not a mind)
             (grk (eq (sgr-grad 1 1 0 1 1 1 1) 0) 100))                    ; missing SELF-GRADING -> not graduated (a reasoner that can't check itself is not safe)
             (grk (eq (sgr-grad 0 1 1 1 1 1 1) 0) 1000))                  ; missing the SUBJECTS -> not graduated (reasoning needs something to reason over)
-            (grk (gt (sgr-grad 1 1 1 1 1 1 1) (sgr-grad 1 0 1 1 1 1 1)) 10000)))  ; conjunctive: the whole mind outranks any partial one
+            (grk (cmp-gt (sgr-grad 1 1 1 1 1 1 1) (sgr-grad 1 0 1 1 1 1 1)) 10000)))  ; conjunctive: the whole mind outranks any partial one
 )

@@ -3,9 +3,9 @@
 ; hidden 2-input function; Sema selects the gate that fits and GENERALIZES to the rows it was never shown --
 ; the logic-test skill: infer the rule from a partial truth table. Hidden function here is XOR.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-logic-band.fk.
+; Self-contained over core. Four-way by tests/teach-sema-logic-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     ; gates: id 0 = AND, id 1 = OR, else = XOR
@@ -23,8 +23,8 @@
     (defn teach-sema-logic-check ()
         (add (add (add (add
             (lck (eq (tsl-train 2) 2) 1)                          ; XOR fits both shown rows
-            (lck (lt (tsl-train 0) 2) 10))                       ; AND does not fit -- distinguishable
+            (lck (cmp-lt (tsl-train 0) 2) 10))                       ; AND does not fit -- distinguishable
             (lck (eq (tsl-held 2) 2) 100))                       ; XOR GENERALIZES to both held-out rows
-            (lck (lt (tsl-held 0) 2) 1000))                     ; AND fails the held-out rows
-            (lck (gt (tsl-train 2) (tsl-train 1)) 10000)))      ; XOR is the unique winner (beats OR on the shown rows too)
+            (lck (cmp-lt (tsl-held 0) 2) 1000))                     ; AND fails the held-out rows
+            (lck (cmp-gt (tsl-train 2) (tsl-train 1)) 10000)))      ; XOR is the unique winner (beats OR on the shown rows too)
 )

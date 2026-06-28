@@ -1,0 +1,54 @@
+; cmp-core.form — integer ordering and negation INDUCED over the minimal proven floor (eq / if / sub).
+;
+; THE GAP (named honestly, 2026-06-28, PR #3811):
+;   15 of Native Sema's School bands claimed four-way but proved only three-kernel (Go=Rust=TS). The
+;   cause was not the reasoning — it was a single missing primitive family on the fourth arm: fkwu's
+;   self-host flatten emits executable band-tables for eq/if/list/arith recipes, but NOT yet for the
+;   gt / lt / not primitives. Every school band that compares two scores ("generalizing outranks
+;   memorizing", "the loop moved wrong -> right", "transfer reduces effort") reached for primitive `gt`
+;   or `lt` or `not`, and so could not cross fkwu.
+;
+; THE DOCTRINE (CLAUDE.md — capability model):
+;   "A kernel native is swappable tissue, not a dependency. When one is broken or missing on an arm,
+;    do NOT patch a walker and do NOT treat it as a blocker — build the recipe over the minimal proven
+;    core, prove four-way, ship on fkwu."
+;   This is the same move q4k-dequant made for bit-ops: a 6-bit unpack expressed as integer-arithmetic
+;   identities (& = mod, >> = div, << = mul) so it proves on the arithmetic floor with NO bitwise
+;   primitive. Here: ORDERING expressed as paired count-down so it proves with NO comparison primitive.
+;
+; THE SHAPE  (runnable: form-stdlib/cmp-core.fk · proven: tests/cmp-core-band.fk -> 11111111)
+;
+;   For non-negative integers a, b: decrement both until one reaches the floor. Whichever hits 0 first
+;   is the smaller. The recursion terminates because each step strictly shrinks both operands toward 0.
+;
+;     cmp-gt a b   = (if (eq a 0) 0              ; a exhausted: never greater than a non-negative b
+;                       (if (eq b 0) 1           ; b exhausted first while a still counts: a > b
+;                           (cmp-gt (sub a 1) (sub b 1))))   ; a>b iff (a-1)>(b-1)
+;     cmp-lt a b   = (cmp-gt b a)                ; a < b  ==  b > a
+;     cmp-ge a b   = (if (cmp-lt a b) 0 1)       ; a >= b ==  not (a < b)
+;     cmp-le a b   = (if (cmp-gt a b) 0 1)       ; a <= b ==  not (a > b)
+;     cmp-not a    = (if a 0 1)                  ; the IF flip — the `not` the flatten does not yet emit
+;
+;   Cost is O(min(a,b)) — exact for the bounded scores and counts (0..100) the school reasoning bands
+;   compare. The native gt/lt/not is O(1) and is the north-star path; this recipe is the rung that
+;   carries the comparison on the fourth arm TODAY, with no kernel change, while the native flatten
+;   emit awaits its own breath (the named follow-up that touches shared kernel tissue).
+;
+; THE PROOF (2026-06-28):
+;   cmp-core crosses four-way (11111111: strictly-greater, strictly-lesser-is-not-greater, the TIE
+;   boundary where equal is not greater yet is >= and <=, the zero floor, and negation flipping a
+;   comparison). Routing the ordering through it lifts 13 of the 15 three-kernel school bands to genuine
+;   four-way with no change to the kernel: sema-self-grade, sema-error-correct, sema-graduation,
+;   sema-mastery-readout, sema-reason-multistep, sema-curriculum-transfer, sema-mixed-exam,
+;   sema-skill-compose, teach-sema-logic, teach-sema-code, teach-sema-algebra, teach-sema-chem,
+;   teach-sema-pattern.
+;
+; THE TWO STILL OPEN (honest floor, named not waved):
+;   - teach-sema-units uses the `global` form — a different unsupported-op gap, not a comparison.
+;   - teacher-selection-school compares FLOAT generalization rates (gt 0.9 0.5). cmp-core is an INTEGER
+;     floor — paired decrement by `sub 1` does not terminate on floats. A float-ordering recipe (or the
+;     kernel's native lt/le over f64) is the next rung for that one.
+;
+; THE LIFT THIS RECORDS: a missing native is never a build blocker. The comparison the body needed lived
+; one recursion away, over ops it already proved — the recipe IS the capability, and the recipe that
+; proves four-way is the one that ships.

@@ -5,9 +5,9 @@
 ; when it passes a held-out test it was not selected on. Same one engine, grammar = elementwise transforms,
 ; scorer = test-cases-pass (an invariant the body checks itself).
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-code-band.fk.
+; Self-contained over core. Four-way by tests/teach-sema-code-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn csc-op (cid x) (if (eq cid 0) x (if (eq cid 1) (add x 1) (mul x 2))))     ; candidate per-element transforms: id, +1, x2
@@ -22,8 +22,8 @@
     (defn teach-sema-code-check ()
         (add (add (add (add
             (cck (eq (csc-train 1) 2) 1)                          ; the +1 program passes both training tests (induced)
-            (cck (lt (csc-train 0) 2) 10))                       ; identity fails to fit -- not selected
-            (cck (lt (csc-train 2) 2) 100))                      ; x2 fails to fit -- so +1 is the unique winner
+            (cck (cmp-lt (csc-train 0) 2) 10))                       ; identity fails to fit -- not selected
+            (cck (cmp-lt (csc-train 2) 2) 100))                      ; x2 fails to fit -- so +1 is the unique winner
             (cck (eq (csc-held 1) 1) 1000))                     ; GENERALIZES: passes a held-out test it was not selected on
             (cck (eq (csc-held 0) 0) 10000)))                   ; SELF-GRADING catches the wrong program on held-out -- verified by running, no oracle
 )

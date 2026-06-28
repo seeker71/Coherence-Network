@@ -3,9 +3,9 @@
 ; The oracle shows a sequence; Sema INDUCES the rule (common difference) and continues it on terms it was
 ; never shown -- the IQ-test skill: see the pattern, extend it. Pass = correct on held-out indices.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-pattern-band.fk.
+; Self-contained over core. Four-way by tests/teach-sema-pattern-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn sp-data () (list 2 4 6 8))                 ; the oracle's shown sequence (arithmetic, d=2)
@@ -24,5 +24,5 @@
             (tpk (eq (sub (sp-3) (sp-2)) (sp-d)) 10))            ; the rule is CONSISTENT across the sequence (truly arithmetic)
             (tpk (eq (sp-next) 10) 100))                           ; continues correctly: next element is 10
             (tpk (eq (sp-term 6) 14) 1000))                       ; GENERALIZES to a held-out index (term 6 = 14)
-            (tpk (not (eq (sp-3) (sp-next))) 10000)))             ; a "repeat-last" rule (8) is wrong -- Sema extends, not memorizes
+            (tpk (cmp-not (eq (sp-3) (sp-next))) 10000)))             ; a "repeat-last" rule (8) is wrong -- Sema extends, not memorizes
 )

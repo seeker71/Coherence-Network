@@ -4,9 +4,9 @@
 ; the answer is right. Generalizes to held-out equations. Honest floor: linear equations only; nonlinear /
 ; symbolic algebra is the arc.
 ;
-; Self-contained over core (FLOAT). Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-algebra-band.fk.
+; Self-contained over core (FLOAT). Four-way by tests/teach-sema-algebra-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn tsa-solve (a b c) (div (sub c b) a))              ; solve ax + b = c for x
@@ -19,5 +19,5 @@
             (ack (eq (tsa-check 2.0 3.0 11.0) 11.0) 10))           ; SELF-CHECK by substitution: 2*4+3 = 11
             (ack (eq (tsa-solve 3.0 1.0 10.0) 3.0) 100))           ; GENERALIZES: 3x+1=10 -> x=3 (held-out equation)
             (ack (eq (tsa-check 3.0 1.0 10.0) 10.0) 1000))        ; self-check on the held-out: 3*3+1 = 10
-            (ack (not (eq (tsa-solve 2.0 3.0 11.0) (sub 11.0 3.0))) 10000)))  ; solving is the INVERSE -- not just subtracting (must divide by a)
+            (ack (cmp-not (eq (tsa-solve 2.0 3.0 11.0) (sub 11.0 3.0))) 10000)))  ; solving is the INVERSE -- not just subtracting (must divide by a)
 )

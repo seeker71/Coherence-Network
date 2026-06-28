@@ -2,12 +2,12 @@
 ; sema-skill-compose proved 2-step reasoning; this proves it scales. Skills A (ft->in, x12), B (in->barleycorns,
 ; x3), C (barleycorns->lines, x4) were each taught. Feet->lines (x144) was never shown -- it emerges from
 ; composing C after B after A, and generalizes. Each added step compounds (144 reaches further than the 2-step
-; 36), and the 3rd skill builds on the 2-step result. The shape of multi-step reasoning, three-kernel (Go=Rust=TS).
+; 36), and the 3rd skill builds on the 2-step result. The shape of multi-step reasoning, four-way.
 ; Honest floor: toy linear skills, three steps; deep reasoning over a rich grammar is the arc.
 ;
-; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-reason-multistep-band.fk.
+; Self-contained over core. Four-way by tests/sema-reason-multistep-band.fk.
 ;
-; preludes: form-stdlib/core.fk
+; preludes: form-stdlib/core.fk form-stdlib/cmp-core.fk
 
 (do
     (defn srm-a (x) (mul 12 x))                       ; taught: ft -> in
@@ -20,7 +20,7 @@
     (defn sema-reason-multistep-check ()
         (add (add (add (add
             (rmk (eq (srm-c3 1) 144) 1)                              ; the untaught 3-step skill emerges (12x3x4)
-            (rmk (gt (srm-c3 1) (srm-c2 1)) 10))                    ; depth compounds: 144 reaches further than the 2-step 36
+            (rmk (cmp-gt (srm-c3 1) (srm-c2 1)) 10))                    ; depth compounds: 144 reaches further than the 2-step 36
             (rmk (eq (srm-c3 2) 288) 100))                           ; GENERALIZES to a held-out input (2 ft = 288 lines)
             (rmk (eq (srm-c3 1) (mul 4 (srm-c2 1))) 1000))          ; the 3rd skill builds on the 2-step result (144 = 4 x 36) -- incremental composition
             (rmk (eq (srm-c3 2) (mul 144 2)) 10000)))              ; the composed factor (144) applies to any input -- a real learned 3-step rule
