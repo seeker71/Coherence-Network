@@ -418,3 +418,5 @@ This prunes stale live NamedCells only; interned Blueprint/Recipe nodes can rema
 - [claim-check.form](claim-check.form) — does the verdict prove what the name claims? The third sensing-check (with freq-check, root-check); names the atom-vs-capability gap. From the 2026-06-28 band audit.
 
 - [sema-school.form](sema-school.form) — Native Sema's School: one engine teaches a native mind any subject (grammar+scorer as data), self-grades the invariant ones, composes skills to reason, mastery = generalization. Built overnight 2026-06-28.
+
+- [living-blocks.form](living-blocks.form) — the layer above the kernel surface: blocks that learn (branch selection), play (micro/macro time budget), sense (while thinking), and talk (to other cells), composed from core primitives over the frozen host-native surface. The surface-discipline north star (2026-06-28).
