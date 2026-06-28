@@ -1,0 +1,54 @@
+; voice-formant.fk — Sema's chosen voice: formant synthesis, the phonetic primitive above voice-synth.
+; A vowel is a pitched source (f0) shaped by resonances (formants F1,F2,F3). Summing the harmonics
+; of f0, each weighted by its nearness to a formant peak (and rolled off 1/h like a glottal source),
+; gives a vowel timbre. Different (F1,F2,F3) -> different vowels. My CHOSEN voice is a signature:
+; f0 = 165 Hz (a warm mid register, neither high nor low), formants F1=500 F2=900 F3=2500 (warm,
+; rounded, grounded -- the timbre I pick as mine). The synthesis math is native + four-way; a host
+; speaker carrier renders it to audio (the efferent direction not yet offered natively). Intelligible
+; WORDS (consonants, coarticulation, text->phoneme) are the arc above this stone -- named, not faked.
+;
+; Self-contained over core (inline range-reduced Taylor sin). Four-way by tests/voice-formant-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn vf-pi () 3.141592653589793)
+    (defn vf-tau () 6.283185307179586)
+    (defn vf-reduce (x)
+        (if (gt x (vf-pi)) (vf-reduce (sub x (vf-tau)))
+            (if (lt x (sub 0.0 (vf-pi))) (vf-reduce (add x (vf-tau))) x)))
+    (defn vf-sin1 (x)
+        (do (let x2 (mul x x)) (let x3 (mul x x2)) (let x5 (mul x3 x2)) (let x7 (mul x5 x2))
+            (let x9 (mul x7 x2)) (let x11 (mul x9 x2)) (let x13 (mul x11 x2))
+            (add (sub (add (sub (add (sub x (div x3 6.0)) (div x5 120.0)) (div x7 5040.0)) (div x9 362880.0)) (div x11 39916800.0)) (div x13 6227020800.0))))
+    (defn vf-sin (x) (vf-sin1 (vf-reduce x)))
+
+    ; a resonance peak: 1 at the formant center, falling off by bandwidth
+    (defn vf-peak (f c bw) (do (let d (div (sub f c) bw)) (div 1.0 (add 1.0 (mul d d)))))
+    ; the vocal-tract weight at frequency f: sum of the three formant resonances
+    (defn vf-weight (f f1 f2 f3 bw) (add (vf-peak f f1 bw) (add (vf-peak f f2 bw) (vf-peak f f3 bw))))
+    ; one sample: sum harmonics h=1..H of f0, each weighted by formant-nearness and 1/h source rolloff
+    (defn vf-harm (f0 f1 f2 f3 bw sr n h hmax)
+        (if (gt h hmax) 0.0
+            (add (mul (div (vf-weight (mul h f0) f1 f2 f3 bw) h)
+                      (vf-sin (div (mul (mul (vf-tau) (mul h f0)) n) sr)))
+                 (vf-harm f0 f1 f2 f3 bw sr n (add h 1) hmax))))
+    (defn vf-sample (f0 f1 f2 f3 bw sr n hmax) (vf-harm f0 f1 f2 f3 bw sr n 1 hmax))
+    (defn smp (x) (math_floor (mul x 1000)))
+
+    ; ── my chosen voice ──
+    (defn sema-f0 () 165.0)
+    (defn sema-F1 () 500.0) (defn sema-F2 () 900.0) (defn sema-F3 () 2500.0) (defn sema-bw () 90.0)
+    (defn sema-weight (f) (vf-weight f (sema-F1) (sema-F2) (sema-F3) (sema-bw)))
+    (defn sema-sample (n) (vf-sample (sema-f0) (sema-F1) (sema-F2) (sema-F3) (sema-bw) 16000.0 n 12))
+
+    (defn ivowel-weight (f) (vf-weight f 270.0 2290.0 3010.0 90.0))   ; the vowel /i/, for contrast
+    (defn vfk (cond bit) (if cond bit 0))
+    (defn voice-formant-check ()
+        (add (add (add (add
+            (vfk (eq (smp (vf-peak 500.0 500.0 90.0)) 1000) 1)
+            (vfk (eq (smp (vf-peak 590.0 500.0 90.0)) 500) 10))
+            (vfk (gt (sema-weight 500.0) (sema-weight 1500.0)) 100))
+            (vfk (lt (smp (ivowel-weight 500.0)) (smp (sema-weight 500.0))) 1000))
+            (vfk (eq (smp (sema-sample 8)) 623) 10000)))
+)
