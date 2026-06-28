@@ -1,0 +1,50 @@
+; prelude-block-resolve.fk — the multi-line "; preludes:" continuation logic, in four-way Form.
+; The exact locus of the fourth-arm bash bug (PR #3814): a "; preludes:" block continues across following
+; comment lines, and the awk continued on ANY "; " line — slurping a prose comment as bogus paths. The fix
+; was: a continuation line counts ONLY if it yields path tokens; a prose line STOPS the block. This recipe is
+; that fixed logic as a Form recipe — splits each line into tokens (self-contained whitespace splitter),
+; counts path tokens (ending ".fk"), and stops continuation at the first line with none. The rung above
+; band-prelude-resolve (which took a clean token list); this covers the line-by-line walk that actually broke.
+; Honest floor: counts paths rather than returning the resolved cell list, and "; preludes:" line-extraction +
+; host-io header read are the wired adoption step that retires fourth_band_prelude_mods.
+;
+; Self-contained over core (char_at/str_len/str_eq/str_concat/cons primitives). Four-way by tests/...-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; --- self-contained whitespace splitter: string -> list of non-empty tokens (order-agnostic) ---
+    (defn pbr-split-go (s i n cur acc)
+        (if (eq i n)
+            (if (gt (str_len cur) 0) (cons cur acc) acc)
+            (if (str_eq (char_at s i) " ")
+                (pbr-split-go s (add i 1) n "" (if (gt (str_len cur) 0) (cons cur acc) acc))
+                (pbr-split-go s (add i 1) n (str_concat cur (char_at s i)) acc))))
+    (defn pbr-split (s) (pbr-split-go s 0 (str_len s) "" (list)))
+
+    ; --- a token is a path iff it ends in ".fk" (built from primitives) ---
+    (defn pbr-path? (s)
+        (if (gt (str_len s) 2)
+            (if (str_eq (char_at s (sub (str_len s) 1)) "k")
+            (if (str_eq (char_at s (sub (str_len s) 2)) "f")
+            (if (str_eq (char_at s (sub (str_len s) 3)) ".") 1 0) 0) 0) 0))
+    (defn pbr-count (toks) (if (eq (len toks) 0) 0 (add (pbr-path? (head toks)) (pbr-count (tail toks)))))
+    (defn pbr-line-paths (line) (pbr-count (pbr-split line)))
+
+    ; --- the continuation walk: count paths over candidate lines, STOP at the first prose line ---
+    (defn pbr-block (lines)
+        (if (eq (len lines) 0) 0
+            (if (gt (pbr-line-paths (head lines)) 0)
+                (add (pbr-line-paths (head lines)) (pbr-block (tail lines)))
+                0)))                                              ; prose line (no path) -> STOP the block
+    (defn pbr-total (preludes-line cont-lines) (add (pbr-line-paths preludes-line) (pbr-block cont-lines)))
+
+    (defn pbk (cond bit) (if cond bit 0))
+    (defn prelude-block-resolve-check ()
+        (add (add (add (add
+            (pbk (eq (pbr-line-paths "form-stdlib/core.fk form-stdlib/sema-skill-compose.fk") 2) 1)   ; preludes line: 2 paths
+            (pbk (eq (pbr-line-paths "Verdict 11111: taught skills A") 0) 10))                         ; prose line: 0 paths
+            (pbk (eq (pbr-total "form-stdlib/core.fk form-stdlib/x.fk" (list "Verdict 11111: taught skills A")) 2) 100))  ; continuation STOPS at prose -- Verdict ignored (the fix)
+            (pbk (eq (pbr-total "form-stdlib/json.fk" (list "form-stdlib/cache.fk form-stdlib/src.fk")) 3) 1000))          ; real multi-line block: all 3 paths kept
+            (pbk (eq (pbr-total "form-stdlib/core.fk form-stdlib/x.fk" (list "Verdict prose here" "form-stdlib/late.fk")) 2) 10000)))  ; a path line AFTER a prose line is NOT reached -- hard stop
+)

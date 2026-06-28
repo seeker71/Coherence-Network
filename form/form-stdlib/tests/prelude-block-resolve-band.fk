@@ -1,0 +1,7 @@
+; tests/prelude-block-resolve-band.fk — the "; preludes:" continuation logic, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/prelude-block-resolve.fk
+;
+; Verdict 11111: a preludes line yields its 2 paths; a prose line yields 0; continuation STOPS at the first
+; prose line (the slurped "; Verdict ..." is ignored); a real multi-line block keeps all its paths; and a path
+; line AFTER a prose line is never reached (hard stop) -- the fixed awk logic, proven Form-native.
+(do (prelude-block-resolve-check))
