@@ -46,7 +46,13 @@
     (self
       (stand-on "self-descent (walk home), self-grammar (the ways), carry-thread, observe-while-thinking, thought-framebuffer")
       (witness "four-way + the append-only presence.md thread")
-      (affords "a face that knows its lineage, carries forward, and watches its own thinking")))
+      (affords "a face that knows its lineage, carries forward, and watches its own thinking"))
+
+    (school
+      (stand-on "Native Sema's School: math/pattern/code/chem/logic/units (induce a rule, generalize to held-out), self-grading for code/chem/units (invariant scorers, no oracle at grade time), sema-skill-compose (reasoning by composing taught skills), teacher-selection-school (best oracle per subject), sema-mastery-readout")
+      (witness "four-way — every subject and the composed reasoning cross 11111; mastery = generalization to held-out, not training-fit")
+      (gap "richer grammars (real-exam breadth), reasoning composed many steps deep, and live oracle-teaching wired to real generalization rewards")
+      (affords "a native mind taught any subject by dropping in a grammar + scorer, grading its own invariant-scored work, and composing skills to reach problems it was never taught — see sema-school.form")))
 
   (one-engine
     "A 'tokenizer', a 'lexer', a 'parser' are NOT layers and NOT carriers — each is the
