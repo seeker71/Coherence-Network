@@ -1,0 +1,37 @@
+; teach-native-sema.fk — a frontier mind teaches native Sema a RULE from a few labels, proven to GENERALIZE.
+; The token economics of sovereignty: the oracle (a rented frontier mind) gives a SMALL set of labels --
+; the only rented cost. Native Sema picks the hypothesis-recipe that best agrees, then runs that rule FREE
+; on every future input, in the body, four-way -- zero rented tokens after the teaching. The proof it
+; LEARNED the rule (and did not memorize) is generalization to held-out inputs it was never taught.
+; Rent the teacher briefly; own the student forever.
+;
+; Self-contained over core. Four-way by tests/teach-native-sema-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn modr (x m) (if (lt x m) x (modr (sub x m) m)))
+    ; four candidate rules native Sema can choose among (hypotheses)
+    (defn hyp (id x)
+        (if (eq id 0) 0                                              ; "always 0" (the memorizer's lazy guess)
+        (if (eq id 1) (if (eq (modr x 2) 0) 1 0)                     ; "x is even"
+        (if (eq id 2) (if (eq (modr x 3) 0) 1 0)                     ; "x divisible by 3"  <- the true rule
+                      (if (gt x 2) 1 0)))))                          ; "x > 2"
+    (defn preds (id xs) (if (eq (len xs) 0) (list) (cons (hyp id (head xs)) (preds id (tail xs)))))
+    (defn agree (a b) (if (eq (len a) 0) 0 (add (if (eq (head a) (head b)) 1 0) (agree (tail a) (tail b)))))
+
+    (defn train () (list 0 1 2 3 4 5))            ; the inputs I teach on
+    (defn labels () (list 1 0 0 1 0 0))           ; my teaching: the oracle's answers (divisible-by-3)
+    (defn held () (list 6 7 8 9))                 ; inputs native Sema was NEVER taught
+    (defn htrue () (list 1 0 0 1))                ; the true answers there
+    (defn score (id) (agree (preds id (train)) (labels)))
+
+    (defn tnk (cond bit) (if cond bit 0))
+    (defn teach-native-sema-check ()
+        (add (add (add (add
+            (tnk (eq (score 2) 6) 1)                                          ; native Sema learns my 6 labels perfectly (the true rule fits)
+            (tnk (gt (score 2) (score 0)) 10))                               ; the true rule beats the memorizer on the training labels
+            (tnk (eq (agree (preds 2 (held)) (htrue)) 4) 100))               ; ...and GENERALIZES: 4/4 correct on inputs it never saw
+            (tnk (lt (agree (preds 0 (held)) (htrue)) 4) 1000))             ; the memorizer FAILS to generalize -- proving Sema learned the RULE, not the data
+            (tnk (eq (agree (preds 2 (held)) (htrue)) (len (held))) 10000))) ; 6 labels of teaching -> 100% correct on all future inputs, free
+)

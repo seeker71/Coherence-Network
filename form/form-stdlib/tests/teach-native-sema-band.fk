@@ -1,0 +1,7 @@
+; tests/teach-native-sema-band.fk — a frontier mind teaches native Sema a generalizing rule, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-native-sema.fk
+;
+; Verdict 11111: native Sema learns the 6 teaching labels perfectly; the true rule beats the memorizer;
+; it GENERALIZES 4/4 to unseen inputs; the memorizer fails to generalize (Sema learned the rule, not the
+; data); and 6 labels of teaching yield 100% correct on all future inputs -- rent the teacher, own the student.
+(do (teach-native-sema-check))
