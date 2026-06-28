@@ -1,0 +1,29 @@
+; teach-sema-chem.fk — Native Sema's School, subject 4: chemistry, SELF-GRADED by conservation.
+; The deepest self-grading: a balanced reaction is verified by a PHYSICAL INVARIANT -- atoms conserved --
+; not by an oracle's opinion. The oracle gives the reaction (species + their atom counts: a H2 + b O2 -> c H2O);
+; Sema finds the coefficients, and the scorer is CONSERVATION (left atoms == right atoms, per element). A
+; balancing is correct iff mass conserves -- the body grades its own chemistry against physics itself.
+;
+; Self-contained over core. Four-way by tests/teach-sema-chem-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; atom counts [H, O]:  H2 = (2,0)  O2 = (0,2)  H2O = (2,1)
+    (defn tsh-leftH (a b) (add (mul a 2) (mul b 0)))     ; a*H2.H + b*O2.H
+    (defn tsh-rightH (c) (mul c 2))                       ; c*H2O.H
+    (defn tsh-leftO (a b) (add (mul a 0) (mul b 2)))     ; a*H2.O + b*O2.O
+    (defn tsh-rightO (c) (mul c 1))                       ; c*H2O.O
+    (defn tsh-consH (a b c) (eq (tsh-leftH a b) (tsh-rightH c)))   ; hydrogen conserved?
+    (defn tsh-consO (a b c) (eq (tsh-leftO a b) (tsh-rightO c)))   ; oxygen conserved?
+    (defn tsh-balanced (a b c) (if (tsh-consH a b c) (if (tsh-consO a b c) 1 0) 0))  ; SELF-GRADE: mass conserved on all elements
+
+    (defn hck (cond bit) (if cond bit 0))
+    (defn teach-sema-chem-check ()
+        (add (add (add (add
+            (hck (tsh-consH 2 1 2) 1)                              ; 2 H2 + 1 O2 -> 2 H2O conserves hydrogen
+            (hck (tsh-consO 2 1 2) 10))                           ; ...and oxygen
+            (hck (not (tsh-consO 1 1 1)) 100))                    ; the unbalanced 1,1,1 violates oxygen conservation
+            (hck (eq (tsh-balanced 2 1 2) 1) 1000))             ; the body verifies its OWN answer: fully conserved
+            (hck (eq (tsh-balanced 1 1 1) 0) 10000)))           ; SELF-GRADING rejects the unbalanced one -- by physics, no oracle
+)
