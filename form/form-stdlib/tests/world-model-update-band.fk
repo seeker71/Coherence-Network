@@ -1,0 +1,13 @@
+; tests/world-model-update-band.fk — a perception shifting the world model, observed, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/world-model-update.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, baseline 100:
+;   a familiar reading (105) gives small surprise (5)              ->     1
+;   a novel reading (200) gives large surprise (100)               ->    10
+;   novelty moves the model more than familiarity                 ->   100
+;   the model refines toward a familiar reading (shift 1.25)       ->  1000
+;   a novel reading shifts the world model MORE than a familiar one-> 10000
+
+(do
+    (world-model-update-check))
