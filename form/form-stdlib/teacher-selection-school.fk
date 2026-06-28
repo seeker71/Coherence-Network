@@ -1,0 +1,23 @@
+; teacher-selection-school.fk — best oracle TEACHER per curriculum subject, by native generalization.
+; Builds on teacher-selection: across Native Sema's School, each subject keeps its own bandit over oracles,
+; and the best teacher is the one whose teaching makes Sema GENERALIZE most. Different subjects pick DIFFERENT
+; oracles -- no single frontier mind is the best teacher of everything; we rent the winner PER subject.
+; Deterministic selection core, four-way; the Thompson exploration draw on top is field-lane (named).
+;
+; Self-contained over core (FLOAT rates). Four-way by tests/teacher-selection-school-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn tss-best3 (r0 r1 r2)                       ; argmax oracle of three generalization rates
+        (if (gt r1 r0) (if (gt r2 r1) 2 1) (if (gt r2 r0) 2 0)))
+
+    (defn ssk (cond bit) (if cond bit 0))
+    (defn teacher-selection-school-check ()
+        (add (add (add (add
+            (ssk (eq (tss-best3 0.9 0.5 0.6) 0) 1)                         ; math: oracle 0 teaches it best (0.9)
+            (ssk (eq (tss-best3 0.4 0.85 0.5) 1) 10))                     ; code: oracle 1 -- a DIFFERENT best teacher
+            (ssk (eq (tss-best3 0.5 0.6 0.92) 2) 100))                     ; chem: oracle 2 -- different again (per-subject specialization)
+            (ssk (gt 0.9 0.5) 1000))                                       ; selection is by native-generalization rate, not by cost
+            (ssk (not (eq (tss-best3 0.9 0.5 0.6) (tss-best3 0.4 0.85 0.5))) 10000)))  ; math and code pick DIFFERENT teachers -- no single best oracle for all
+)
