@@ -891,9 +891,16 @@ run_substrate_ingest() {
     return 0
   fi
 
+  # Ingestable tissue: the .md content domains PLUS the substrate's own
+  # shape-files (docs/coherence-substrate/*.form) and stdlib recipes
+  # (form/form-stdlib/**/*.fk). The latter two land as ARTIFACT cells so
+  # form-first attribution can resolve their NodeIDs from the live lattice
+  # instead of from memory. They reach the substrate only through
+  # ingest-paths (the `ingest`/`ingest --all` commands skip non-.md), so
+  # the per-file loop below dispatches every path through ingest-paths.
   local changed
   changed="$(cd "$REPO_DIR" && git diff --name-only "$from".."$to" 2>/dev/null \
-              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$' \
+              | grep -E '^(specs|ideas|docs/vision-kb|docs/presences|docs/lineage|docs/breath)/.*\.md$|^docs/coherence-substrate/.*\.form$|^form/form-stdlib/.*\.fk$' \
               || true)"
   if [[ -z "$changed" ]]; then
     ended="$(date +%s)"
@@ -910,8 +917,12 @@ run_substrate_ingest() {
   local rc=0
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
-    run_with_timeout "${SUBSTRATE_INGEST_FILE_TIMEOUT_SECONDS:-120}" \
-      docker compose exec -T api sh -lc "cd /app && python3 scripts/coh_substrate.py ingest '/app/$path' --structured" \
+    # ingest-paths (not `ingest`) so .form/.fk land as ARTIFACT cells and
+    # .md still routes to its domain ingester. Structured CTOR is the
+    # default; the 300s ceiling covers a concept's word-cell interning
+    # against prod Postgres (120s dropped lc-cognitive-sovereignty).
+    run_with_timeout "${SUBSTRATE_INGEST_FILE_TIMEOUT_SECONDS:-300}" \
+      docker compose exec -T api sh -lc "cd /app && python3 scripts/coh_substrate.py ingest-paths '/app/$path'" \
       2>&1 | tee -a "$LOG_FILE"
     local file_rc=$?
     if [[ "$file_rc" -ne 0 ]]; then

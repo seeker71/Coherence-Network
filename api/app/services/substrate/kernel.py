@@ -606,18 +606,27 @@ def annotate_path(session: Session, path: str) -> PathAnnotation:
     """Return substrate context for a file path.
 
     The lookup is by source_path — the path stored when the cell was
-    ingested. If multiple cells point at the same path (rare; possible
-    if the same file is ingested under multiple domains), only the first
-    is returned.
+    ingested. Cells are stored under the container-absolute path
+    (`/app/<repo-relative>`), but callers naturally hold the repo-relative
+    path (form-first attribution, the read-hook). So the lookup tries both
+    the path as given and the `/app/`-prefixed form, in cell_id order, so a
+    repo-relative query resolves the same cell a container-absolute one does.
+    If multiple cells point at the same path (rare; possible if the same
+    file is ingested under multiple domains), only the first is returned.
 
     Agents call this when they read a file and want to know:
     - what cell this file is in the substrate
     - what Blueprint shape it has
     - what other cells share that shape (structural equivalents)
     """
+    candidates = [path]
+    if path.startswith("/app/"):
+        candidates.append(path[len("/app/"):])
+    else:
+        candidates.append("/app/" + path.lstrip("/"))
     cell_orm = (
         session.query(SubstrateNamedCellORM)
-        .filter_by(source_path=path)
+        .filter(SubstrateNamedCellORM.source_path.in_(candidates))
         .order_by(SubstrateNamedCellORM.cell_id)
         .first()
     )
