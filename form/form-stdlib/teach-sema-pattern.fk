@@ -3,7 +3,7 @@
 ; The oracle shows a sequence; Sema INDUCES the rule (common difference) and continues it on terms it was
 ; never shown -- the IQ-test skill: see the pattern, extend it. Pass = correct on held-out indices.
 ;
-; Self-contained over core. Four-way by tests/teach-sema-pattern-band.fk.
+; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-pattern-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

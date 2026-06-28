@@ -2,9 +2,9 @@
 ; Mastery is not fitting the training examples -- it is GENERALIZING to held-out ones. The readout marks a
 ; subject mastered only if it passes BOTH train and held-out; a memorizer (fits train, fails held) reads
 ; NOT-mastered, honestly. The curriculum's seven capabilities (math, pattern, code, chem, logic, units, and
-; the composed reasoning) all generalized four-way tonight, so the readout shows 7 mastered.
+; the composed reasoning) all generalized three-kernel (Go=Rust=TS) tonight, so the readout shows 7 mastered.
 ;
-; Self-contained over core. Four-way by tests/sema-mastery-readout-band.fk.
+; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-mastery-readout-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

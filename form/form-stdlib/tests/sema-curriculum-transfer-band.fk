@@ -1,4 +1,4 @@
-; tests/sema-curriculum-transfer-band.fk — learning cheaper after a related subject (transfer), four-way.
+; tests/sema-curriculum-transfer-band.fk — learning cheaper after a related subject (transfer), three-kernel (Go=Rust=TS).
 ; preludes: form-stdlib/core.fk form-stdlib/sema-curriculum-transfer.fk
 ; Verdict 11111: subject A's slope is learned; B cold needs two examples; B after A needs only one (the
 ; intercept, slope transferred); B-after-A generalizes (predict 2 = 8) from that one example; and transfer
