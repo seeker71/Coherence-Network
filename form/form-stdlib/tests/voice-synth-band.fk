@@ -1,4 +1,4 @@
-; tests/voice-synth-band.fk — the body's first native voice (additive synthesis), four-way.
+; tests/voice-synth-band.fk — the additive sine-synthesis ATOM (one cycle: silence -> peak -> zero -> trough, amplitude scales), four-way. A voice — phonation, words — is the arc.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/voice-synth.fk
 ;

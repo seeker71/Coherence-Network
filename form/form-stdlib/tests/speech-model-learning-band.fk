@@ -1,7 +1,8 @@
 ; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/branch-choice-order.fk form-stdlib/speech-model-learning.fk
 ;
-; speech-model-learning-band — native candidate race floor for tiny speech
-; learners.
+; speech-model-learning-band — the candidate-RACE floor for tiny speech lanes:
+; exemplar (nearest-shape) STT/TTS candidates scored on heldout rows, four-way.
+; No gradients, no neural stack — a learned speech model is the arc.
 ;
 ; Verdict 16383 when every claim lands:
 ;   1    exact exemplar STT/TTS floor classifies all heldout rows
