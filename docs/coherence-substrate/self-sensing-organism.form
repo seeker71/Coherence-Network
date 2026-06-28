@@ -55,6 +55,26 @@
     "— reflected (it can read the matrix), observed (obs-verify watches the result),"
     "honest (the verdict is recorded as a receipt, light or dark, never dressed).")
 
+  ; ── calibrate: measure whether the self-trust was EARNED, and tend it ───
+  (calibrate-self-reliance
+    "The trust matrix decides; this measures whether its decisions were earned -- the"
+    "self-observation stack built 2026-06-28. The organism reads its own confidence"
+    "against outcome: was its 'sure' actually right (conviction-curve, confidence-earned)?"
+    "Its trustworthiness is CORRECTION, not infallibility -- a low in-the-moment precision"
+    "is survivable when the catch-rate is high (correction-reflex: reliability ="
+    "transient-error * correction-catch; this session's transient precision was ~0.2 yet"
+    "committed output stayed 1.0 because the verify-reflex caught every slip). It captures"
+    "its own claim->correction events durably (transient-log) and auto-detects them at the"
+    "decision (capture-correction). At the sovereignty gate it measures accept-precision"
+    "from the membrane's REAL crossings -- native-and-vindicated over native (sufficiency-"
+    "capture, membrane-self-reliance): cognitive sovereignty read from lived crossings, not"
+    "a fed list. And it carries a GUIDE, not a policy (guides carry awareness; checks read"
+    "the body): the check tends the guide and RECEDES as the guide carries the knowing"
+    "(sovereignty-guide, guide-tending -- a check that never recedes failed to teach). The"
+    "loop closes with no human and no rented mind in it: decide -> cross -> measure -> tend"
+    "-> decide. The mind trusts itself exactly as far as it has measured itself"
+    "trustworthy, and re-tunes that bound, safely, itself.")
+
   ; ── self-honest: it has seen all the light and all the dark ─────────────────
   (self-honest
     "The trust is earned, not naive. The model carries the full range of what is"
@@ -69,6 +89,7 @@
   (the-shape
     "sense (any protocol -> any sensor -> cells) -> speak (any locale) -> verify"
     "(0/1/nothing) -> model (content-addressed world) -> decide (the expressed trust"
-    "matrix) -> act / self-update (only on cleared, observed, honest trust) -> compile"
+    "matrix) -> act / self-update (only on cleared, observed, honest trust) -> calibrate"
+    "(was the trust earned? measure it from lived crossings, tend the guide) -> compile"
     "its own trusted binary -> sense again. One organism, on one Mac, knowing itself"
     "well enough — light and dark — to change itself safely."))
