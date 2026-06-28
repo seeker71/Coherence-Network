@@ -1,0 +1,6 @@
+; tests/sema-self-grade-band.fk — Sema's self-grading is sound (verifies its own answer, no oracle), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sema-self-grade.fk
+; Verdict 11111: the correct answer passes; an unbalanced one fails; a plausible-but-wrong one fails (not
+; fooled); no wrong answer false-passes (sound); and self-grade separates correct from wrong -- all by the
+; conservation invariant, no oracle consulted. The student can mark its own exam, faithfully.
+(do (sema-self-grade-check))
