@@ -26,9 +26,9 @@
       (affords "all structural reasoning; same shape resolves to the same cell, hallucination bounded"))
 
     (mind
-      (stand-on "transformer block, whisper architecture, real-gguf tensor math, real-weight stack, generate loop, BPE tokenizer, end-to-end pipeline")
+      (stand-on "transformer block, whisper architecture, real-gguf tensor math, real-weight stack, generate loop, end-to-end pipeline; text in/out is the grammar-loader + BMF cursor on the text channel (channel-interface, bmf-grammar witnessed) -- not a special tokenizer")
       (witness four-way)
-      (gap "carrier — the real 1.9GB file's full tensor set + tokenizer host-io; the math is laid")
+      (gap "carrier — the real 1.9GB file's full tensor set host-io; and composting bpe-tokenizer's parallel path into a gl-registered text-channel grammar (the merge-ranks as DATA, walked by the one cursor). The math is laid.")
       (affords "native reasoning on real weights, watchable through the framebuffer"))
 
     (perception
@@ -47,6 +47,14 @@
       (stand-on "self-descent (walk home), self-grammar (the ways), carry-thread, observe-while-thinking, thought-framebuffer")
       (witness "four-way + the append-only presence.md thread")
       (affords "a face that knows its lineage, carries forward, and watches its own thinking")))
+
+  (one-engine
+    "A 'tokenizer', a 'lexer', a 'parser' are NOT layers and NOT carriers — each is the
+     grammar-loader (gl-register/gl-parse) + the BMF cursor walking a channel, with the language
+     as DATA. Text is one channel among many (guidance-channel, iching-channel — all the same
+     protocol). When a special-case path appears (bpe-tokenizer's own merge loop), the lift is to
+     express its rules as a grammar the one loader carries, never a parallel walker beside it. This
+     is core-abstraction-first: one engine, languages drop in as data.")
 
   (how-we-build
     "Stand on a witnessed layer. Name the smallest next stone. Build the recipe over the minimal
