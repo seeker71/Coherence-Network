@@ -1,4 +1,4 @@
-; rag-embed-band.fk — proves the sovereign lexical embedding (rag-embed.fk).
+; rag-embed-band.fk — proves the sovereign lexical token-overlap histogram (rag-embed.fk): a 64-dim hash-fold over word tokens, NOT neural semantics ("cat"/"feline" land apart). The neural embedder is the higher-semantic arc.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/text-tokenize.fk form-stdlib/rag-embed.fk
 ;

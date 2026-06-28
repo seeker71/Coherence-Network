@@ -1,4 +1,4 @@
-; rag-retrieve.fk — offline semantic retrieval over the body, as a Form recipe.
+; rag-retrieve.fk — offline nearest-vector retrieval over the body (L1 over quantized bins), as a Form recipe. "Semantic" rides on the embeddings passed in; this ranks by distance.
 ;
 ; preludes: form-stdlib/core.fk
 ;

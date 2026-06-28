@@ -1,7 +1,8 @@
-; tests/translation-engine-band.fk — ANY modality -> ANY modality through one shared meaning
-; space, proven four-way. The corpus is DATA passed to the engine (data outside the recipe);
-; the engine routes by NEAREST MEANING, so the last claim translates an UNSEEN coordinate —
-; proof it generalises by similarity, not a hardcoded lookup.
+; tests/translation-engine-band.fk — the S2 nearest-MEANING routing engine: ANY modality -> ANY
+; modality by L1-nearest over one shared meaning space, four-way. The corpus is DATA passed in
+; (outside the recipe); routing by nearest reaches an UNSEEN coordinate — nearest-match in
+; embedding space on an 8-face fixture, not a hardcoded lookup. The learned encoder (any unseen
+; surface -> embedding) and the generative decoder are S3 — named, not faked.
 ;
 ; The seed corpus carries three meanings, each with faces in several modalities at a shared
 ; coordinate (faces that mean the same thing sit at the same embedding):

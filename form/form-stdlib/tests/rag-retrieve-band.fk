@@ -1,6 +1,6 @@
 ; preludes: form-stdlib/rag-retrieve.fk
 ;
-; rag-retrieve-band — offline semantic retrieval made falsifiable.
+; rag-retrieve-band — offline nearest-vector retrieval made falsifiable: L1 distance over quantized embedding bins, top-k by greedy nearest. "Semantic" rides on the embeddings; the recipe ranks by distance.
 ;
 ; An INDEX of three docs, each (id quantized-vector) — a coarse fingerprint a
 ; local embedder produced for one body doc:
