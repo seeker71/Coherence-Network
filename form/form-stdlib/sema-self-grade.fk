@@ -4,7 +4,7 @@
 ; plausible-but-wrong answer -- all by the conservation invariant, with no oracle consulted at grade time.
 ; That soundness is what lets the oracle leave the room: the student keeps the skill AND the ability to mark it.
 ;
-; Self-contained over core. Four-way by tests/sema-self-grade-band.fk.
+; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-self-grade-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

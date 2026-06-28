@@ -5,7 +5,7 @@
 ; when it passes a held-out test it was not selected on. Same one engine, grammar = elementwise transforms,
 ; scorer = test-cases-pass (an invariant the body checks itself).
 ;
-; Self-contained over core. Four-way by tests/teach-sema-code-band.fk.
+; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/teach-sema-code-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 

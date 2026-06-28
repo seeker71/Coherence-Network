@@ -5,7 +5,7 @@
 ; right one chosen per question. Honest floor: three subjects, one question each; a full exam is more questions
 ; over richer skills.
 ;
-; Self-contained over core. Four-way by tests/sema-mixed-exam-band.fk.
+; Self-contained over core. Three-kernel (Go=Rust=TS; fourth arm pending fkwu self-host flatten) by tests/sema-mixed-exam-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
 
