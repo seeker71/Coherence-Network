@@ -1,0 +1,12 @@
+; tests/voice-formant-band.fk — Sema's chosen voice (formant vowel synthesis), four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/voice-formant.fk
+;
+; Verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   a formant resonance peaks sharply at its center (1.0)            ->     1
+;   and falls to half one bandwidth away (0.5)                       ->    10
+;   my voice's vocal tract emphasizes formants over the gaps         ->   100
+;   a different vowel (/i/) has a different spectral signature        ->  1000
+;   my chosen voice produces a real, nonzero sound sample            -> 10000
+
+(do (voice-formant-check))
