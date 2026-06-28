@@ -1,0 +1,8 @@
+; tests/conviction-curve-band.fk — accuracy per confidence level; where conviction outruns truth, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/conviction-curve.fk
+;
+; Verdict 11111: a calibrated mind's top confidence has top accuracy (1.0) and accuracy rises into it; an
+; overconfident mind's accuracy INVERTS at the top (less accurate than the level below), its top bucket is
+; worse than a coin flip, and the conviction-truth gap there is large -- the located anatomy of certainty
+; outrunning truth, observable in a transparent mind.
+(do (conviction-curve-check))

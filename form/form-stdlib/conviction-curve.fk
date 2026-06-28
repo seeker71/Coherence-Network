@@ -1,0 +1,37 @@
+; conviction-curve.fk — the observable anatomy of conviction outrunning truth: accuracy PER confidence level.
+; confidence-earned.fk surfaced the betrayed quadrant as a count; this locates WHERE confidence and correctness
+; decouple. Bin observations by confidence level, compute accuracy at each, and read the shape: a CALIBRATED
+; mind's accuracy RISES with confidence and peaks at the top; a MIS-calibrated mind's accuracy can INVERT --
+; its most confident bucket is its least accurate (conviction outran truth). The decoupling is the jump where
+; accuracy stops tracking confidence, and the conviction-truth GAP at the top (claimed 1.0 minus actual
+; accuracy) measures how hollow the mind's certainty is. This is the experiment I cannot run on my own opaque
+; mind and can run on this transparent one. Honest floor: two fixed observation sets + a 3-level bucket; the
+; wired version reads the kernel's live argmax margin as the confidence axis across real answers.
+;
+; Self-contained over core (FLOAT accuracy). Four-way by tests/conviction-curve-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn cv-conf (o) (head o))
+    (defn cv-cor (o) (head (tail o)))
+    (defn cv-right-at (obs lvl)
+        (if (eq (len obs) 0) 0 (add (if (eq (cv-conf (head obs)) lvl) (cv-cor (head obs)) 0) (cv-right-at (tail obs) lvl))))
+    (defn cv-total-at (obs lvl)
+        (if (eq (len obs) 0) 0 (add (if (eq (cv-conf (head obs)) lvl) 1 0) (cv-total-at (tail obs) lvl))))
+    (defn cv-acc (obs lvl) (div (mul 1.0 (cv-right-at obs lvl)) (mul 1.0 (cv-total-at obs lvl))))  ; accuracy at a confidence level
+
+    ; a calibrated mind: accuracy rises with confidence -> acc(0)=0.0, acc(1)=0.5, acc(2)=1.0
+    (defn cv-calibrated () (list (list 0 0) (list 0 0) (list 1 1) (list 1 0) (list 2 1) (list 2 1) (list 2 1)))
+    ; a mis-calibrated mind: accuracy INVERTS at the top -> acc(1)=1.0 but acc(2)=0.333 (most certain = most wrong)
+    (defn cv-overconfident () (list (list 0 0) (list 1 1) (list 1 1) (list 2 0) (list 2 0) (list 2 1)))
+
+    (defn cvk (cond bit) (if cond bit 0))
+    (defn conviction-curve-check ()
+        (add (add (add (add
+            (cvk (eq (cv-acc (cv-calibrated) 2) 1.0) 1)                              ; calibrated: top confidence = top accuracy
+            (cvk (gt (cv-acc (cv-calibrated) 2) (cv-acc (cv-calibrated) 1)) 10))     ; accuracy RISES into the top level (confidence tracks truth)
+            (cvk (lt (cv-acc (cv-overconfident) 2) (cv-acc (cv-overconfident) 1)) 100))  ; overconfident: accuracy DROPS at the top -- conviction outran truth
+            (cvk (lt (cv-acc (cv-overconfident) 2) 0.5) 1000))                       ; the most-confident bucket is worse than a coin flip (a REGIME, not a fluke)
+            (cvk (gt (sub 1.0 (cv-acc (cv-overconfident) 2)) 0.5) 10000)))           ; the conviction-truth GAP at the top is large -- certainty mostly hollow
+)
