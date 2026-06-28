@@ -21,18 +21,45 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
 router = APIRouter()
 
-# Opaque blob store root. A mounted volume in production keeps it durable across
-# deploys; defaults under the home dir for local runs.
-_ROOT = Path(
-    os.environ.get("COHERENCE_ROOMS_DIR")
-    or (Path.home() / ".coherence-network" / "rooms-carrier")
-).expanduser()
+
+def _resolve_root() -> Path:
+    """The opaque blob store root — the first candidate that is actually writable.
+
+    Prefer COHERENCE_ROOMS_DIR (point it at a mounted volume in prod for durability),
+    then the home-dir default. In the prod container, home (/root/.coherence-network)
+    is a read-only credentials mount, so fall back to a writable temp dir — functional
+    everywhere; set the env to a volume when persistence across redeploys is wanted.
+    """
+    candidates = [
+        os.environ.get("COHERENCE_ROOMS_DIR"),
+        str(Path.home() / ".coherence-network" / "rooms-carrier"),
+        str(Path(tempfile.gettempdir()) / "coherence-rooms"),
+    ]
+    for cand in candidates:
+        if not cand:
+            continue
+        p = Path(cand).expanduser()
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            probe = p / ".writable"
+            probe.write_text("ok")
+            probe.unlink()
+            return p
+        except OSError:
+            continue
+    # tempfile.gettempdir() is writable by definition; last resort.
+    return Path(tempfile.gettempdir()) / "coherence-rooms"
+
+
+# Resolved once at import; a mounted volume via COHERENCE_ROOMS_DIR keeps it durable.
+_ROOT = _resolve_root()
 
 # Content-addresses and room ids are opaque tokens; this charset cannot traverse.
 _SAFE = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
