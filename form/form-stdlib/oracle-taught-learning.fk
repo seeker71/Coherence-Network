@@ -1,0 +1,40 @@
+; oracle-taught-learning.fk — the native mind learns a task FROM an oracle, by recipe-selection.
+; We have every frontier model on tap (the oracle) and a self-learning mind (recipe-learning). This
+; composes them: the oracle gives reference labels; candidate recipes each predict; the body adopts the
+; candidate that AGREES MORE with the oracle (health = oracle-agreement) -- but ONLY IF it does not
+; REGRESS on any case the champion already gets right. So the mind learns from the teacher without
+; breaking what it already knows. The agreement trajectory is observable: this is the mind coming home,
+; a stone, not a star. (oracle-as-teacher from voice-learn; selection from recipe-learning.)
+;
+; Self-contained over core. Four-way by tests/oracle-taught-learning-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn agree (p o) (if (eq (len p) 0) 0 (add (if (eq (head p) (head o)) 1 0) (agree (tail p) (tail o)))))  ; cases the recipe matches the oracle
+    ; does the challenger keep EVERY case the champion already gets right? (the no-regression gate)
+    (defn keeps (champ chall o)
+        (if (eq (len o) 0) 1
+            (if (eq (head champ) (head o))                                   ; champ is correct here
+                (if (eq (head chall) (head o)) (keeps (tail champ) (tail chall) (tail o)) 0)   ; chall must be too, or it regresses
+                (keeps (tail champ) (tail chall) (tail o)))))                ; champ wrong here -> no constraint
+    ; adopt the challenger if it keeps all the champion's right answers AND agrees with the oracle more
+    (defn consider (champ chall o)
+        (if (eq (keeps champ chall o) 1)
+            (if (gt (agree chall o) (agree champ o)) chall champ)
+            champ))
+
+    (defn oracle () (list 1 0 1 1 0))            ; the teacher's labels for 5 inputs
+    (defn cand-a () (list 1 0 0 0 0))            ; baseline champion: right on inputs 0,1 (agreement 2)
+    (defn cand-b () (list 1 0 1 1 0))            ; matches the oracle fully (agreement 5), keeps a's right ones
+    (defn cand-d () (list 0 0 1 1 0))            ; agreement 4 (higher than a's 3) BUT wrong on input 0 -> regresses
+
+    (defn otk (cond bit) (if cond bit 0))
+    (defn oracle-taught-check ()
+        (add (add (add (add
+            (otk (eq (agree (cand-a) (oracle)) 3) 1)                                          ; baseline agrees on 3 cases
+            (otk (eq (agree (consider (cand-a) (cand-b) (oracle)) (oracle)) 5) 10))           ; adopts b: learns from the oracle, no regression (2 -> 5)
+            (otk (eq (agree (consider (cand-a) (cand-d) (oracle)) (oracle)) 3) 100))          ; REJECTS d despite its higher raw agreement (4) -- it regressed on input 0
+            (otk (eq (agree (consider (consider (cand-a) (cand-b) (oracle)) (cand-d) (oracle)) (oracle)) 5) 1000))  ; champion holds at 5: learning kept its integrity
+            (otk (gt (agree (cand-d) (oracle)) (agree (cand-a) (oracle))) 10000)))            ; d LOOKED like an improvement (3 > 2) -- and was correctly refused
+)
