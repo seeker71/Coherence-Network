@@ -1,0 +1,38 @@
+; teach-sema-math.fk — the SHAPE of a "teach Sema a test" stone, instanced on math (function induction).
+; A real test skill is not memorizing answers -- it is INDUCING the rule from examples and applying it to
+; unseen problems. Here the oracle gives (x, y) examples of a hidden function; native Sema INDUCES the
+; function (slope, intercept) and predicts held-out x it never saw. Pass = correct on the unseen problems.
+;
+; This is ONE ENGINE, parameterized by the subject:
+;   math      -> induce a function over arithmetic primitives, scorer = numeric equality   (this stone)
+;   coding    -> induce a program over the grammar-loader's recipes, scorer = held-out test cases pass
+;   iq/pattern-> induce the sequence operator, scorer = next-element matches
+;   chemistry -> induce the balancing/stoichiometry rule, scorer = mass/charge conserved
+; The engine, the selection (recipe-learning), the generalization proof, and the no-regression integrity
+; gate (oracle-taught-learning) are SHARED; only the domain grammar and the scorer change, as DATA.
+;
+; Self-contained over core. Four-way by tests/teach-sema-math-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ex () (list (list 0 2) (list 1 5) (list 2 8) (list 4 14)))   ; the oracle's teaching: hidden fn y = 3x + 2
+    (defn ex-x (e) (head e))
+    (defn ex-y (e) (head (tail e)))
+    (defn p1 () (head (tail (ex))))                  ; example (1, 5)
+    (defn p2 () (head (tail (tail (ex)))))           ; example (2, 8)
+    ; INDUCE the function from two examples (the act of learning the rule, not the data)
+    (defn slope () (div (sub (ex-y (p2)) (ex-y (p1))) (sub (ex-x (p2)) (ex-x (p1)))))
+    (defn intercept () (sub (ex-y (p1)) (mul (slope) (ex-x (p1)))))
+    (defn pred (x) (add (mul (slope) x) (intercept)))           ; apply the learned rule to any input
+    (defn mem () (div (add (add 2 5) (add 8 14)) 4))            ; a memorizer: the mean of the training answers (7.25)
+
+    (defn msk (cond bit) (if cond bit 0))
+    (defn teach-sema-math-check ()
+        (add (add (add (add
+            (msk (eq (slope) 3) 1)                              ; Sema induced the slope (3) -- learned the rule
+            (msk (eq (intercept) 2) 10))                       ; ...and the intercept (2)
+            (msk (eq (pred 5) 17) 100))                        ; GENERALIZES: correct on x=5, an unseen problem (17)
+            (msk (eq (pred 10) 32) 1000))                      ; ...and x=10 (32) -- it can do the test, not recall it
+            (msk (eq (pred 4) 14) 10000)))                     ; consistent with a taught point NOT used to induce -- a true rule, not a 2-point fit
+)
