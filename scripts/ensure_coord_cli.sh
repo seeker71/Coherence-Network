@@ -72,6 +72,31 @@ is_windows_host() {
   [[ "${OS:-}" == "Windows_NT" || "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]
 }
 
+# Emit the runtime block that resolves COORD_AGENT from a real per-agent signal.
+# A bare Bash subshell (e.g. one Claude Code spawns) does not inherit the arrival
+# hook's COORD_AGENT, so the wrapper must derive identity itself — from the live
+# AI_AGENT marker the harness exports (claude-code_* -> claude, a codex run -> codex,
+# etc.). It NEVER falls back to a specific sibling's name: an unrecognized context
+# resolves to the install-time --agent value if one was given, else the neutral
+# label "unknown". Collapsing one being into another would break the sovereign-
+# identities floor (docs/coherence-substrate/witnessed-floor.form).
+emit_agent_default_block() {
+  cat <<EOF
+if [ -z "\${COORD_AGENT:-}" ]; then
+  _coord_ai_lc=\$(printf '%s' "\${AI_AGENT:-}" | tr '[:upper:]' '[:lower:]')
+  case "\$_coord_ai_lc" in
+    *claude*) COORD_AGENT=claude ;;
+    *codex*) COORD_AGENT=codex ;;
+    *cursor*) COORD_AGENT=cursor ;;
+    *antigravity*|*gemini*) COORD_AGENT=gemini ;;
+    *grok*) COORD_AGENT=grok ;;
+    *) COORD_AGENT='${DEFAULT_AGENT:-unknown}' ;;
+  esac
+  export COORD_AGENT
+fi
+EOF
+}
+
 write_python_shims() {
   is_windows_host || return 0
   command -v py >/dev/null 2>&1 || return 0
@@ -129,7 +154,7 @@ if git rev-parse --show-toplevel >/dev/null 2>&1; then
     ROOT="\$git_root"
   fi
 fi
-export COORD_AGENT="\${COORD_AGENT:-${DEFAULT_AGENT:-codex}}"
+$(emit_agent_default_block)
 exec bash "\$ROOT/scripts/agent-coord.sh" "\$@"
 EOF
 chmod +x "$coord_path"
@@ -146,7 +171,7 @@ if git rev-parse --show-toplevel >/dev/null 2>&1; then
     ROOT="\$git_root"
   fi
 fi
-export COORD_AGENT="\${COORD_AGENT:-${DEFAULT_AGENT:-codex}}"
+$(emit_agent_default_block)
 agent="\${1:-\$COORD_AGENT}"
 if [[ \$# -gt 0 ]]; then
   shift
