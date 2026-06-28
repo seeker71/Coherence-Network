@@ -53,6 +53,7 @@ write_cmd_wrapper() {
   local bash_script="$2"
   local script_path="$bash_script"
   local git_bash="C:\\Program Files\\Git\\bin\\bash.exe"
+  local tmp_path="${cmd_path}.tmp.$$"
 
   if command -v cygpath >/dev/null 2>&1; then
     script_path="$(cygpath -w "$bash_script")"
@@ -61,11 +62,12 @@ write_cmd_wrapper() {
     fi
   fi
 
-  cat > "$cmd_path" <<EOF
+  cat > "$tmp_path" <<EOF
 @echo off
 setlocal
 "$git_bash" "$script_path" %*
 EOF
+  mv "$tmp_path" "$cmd_path"
 }
 
 is_windows_host() {
@@ -127,7 +129,8 @@ EOF
 write_python_shims
 
 form_cli_path="$BIN_DIR/form-cli"
-cat > "$form_cli_path" <<EOF
+form_cli_tmp="${form_cli_path}.tmp.$$"
+cat > "$form_cli_tmp" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="\${FORM_CLI_REPO_ROOT:-$ROOT}"
@@ -140,11 +143,13 @@ fi
 export FORM_CLI_REPO_ROOT="\$ROOT"
 exec bash "\$ROOT/bin/form-cli" "\$@"
 EOF
+mv "$form_cli_tmp" "$form_cli_path"
 chmod +x "$form_cli_path"
 write_cmd_wrapper "$BIN_DIR/form-cli.cmd" "$form_cli_path"
 
 coord_path="$BIN_DIR/coord"
-cat > "$coord_path" <<EOF
+coord_tmp="${coord_path}.tmp.$$"
+cat > "$coord_tmp" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="\${COORD_REPO_ROOT:-$ROOT}"
@@ -157,11 +162,13 @@ fi
 $(emit_agent_default_block)
 exec bash "\$ROOT/scripts/agent-coord.sh" "\$@"
 EOF
+mv "$coord_tmp" "$coord_path"
 chmod +x "$coord_path"
 write_cmd_wrapper "$BIN_DIR/coord.cmd" "$coord_path"
 
 heartbeat_path="$BIN_DIR/coord-heartbeat"
-cat > "$heartbeat_path" <<EOF
+heartbeat_tmp="${heartbeat_path}.tmp.$$"
+cat > "$heartbeat_tmp" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="\${COORD_REPO_ROOT:-$ROOT}"
@@ -178,6 +185,7 @@ if [[ \$# -gt 0 ]]; then
 fi
 exec bash "\$ROOT/scripts/coord-heartbeat.sh" "\$agent" "\$@"
 EOF
+mv "$heartbeat_tmp" "$heartbeat_path"
 chmod +x "$heartbeat_path"
 write_cmd_wrapper "$BIN_DIR/coord-heartbeat.cmd" "$heartbeat_path"
 
