@@ -412,3 +412,5 @@ This prunes stale live NamedCells only; interned Blueprint/Recipe nodes can rema
 - Phase 4 — REST API, Neo4j integration, agent-context auto-annotation, first-class KB surface coverage, backfill, and higher-order extraction (in progress)
 
 - [witnessed-floor.form](witnessed-floor.form) — the common witnessed floor: what we stand on, by layer, and what each affords building.
+
+- [agent-cognition.form](agent-cognition.form) — the agent's own cognitive operations as a Form grammar (compare/summarize/nl↔code/spec/recipe/witness-runtime); compare-summaries proven four-way.

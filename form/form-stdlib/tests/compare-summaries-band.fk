@@ -1,0 +1,3 @@
+; tests/compare-summaries-band.fk — comparing two summaries, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/compare-summaries.fk
+(do (compare-summaries-check))
