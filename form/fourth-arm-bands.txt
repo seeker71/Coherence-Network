@@ -1080,3 +1080,4 @@ observe-gqa-grouping fks 11111
 ssm-scan fks 11111
 field-sample fks 11111
 selective-ssm fks 11111
+field-choice fks 11111
