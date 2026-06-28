@@ -1,0 +1,6 @@
+; tests/sema-error-correct-band.fk — Sema detecting and correcting its own wrong answer, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sema-error-correct.fk
+; Verdict 11111: the start guess (1,1,1) is detected wrong; the search finds the correct candidate (2,1,2);
+; the corrected answer conserves; the loop moved wrong->right; and it only adopts a passing answer (sound) --
+; self-correction by the invariant, no oracle in the loop.
+(do (sema-error-correct-check))

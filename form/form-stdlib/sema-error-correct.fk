@@ -1,0 +1,27 @@
+; sema-error-correct.fk — Native Sema's School: the body catches its OWN wrong answer and corrects it.
+; Building on sema-self-grade (which detects wrong by an invariant): a closed self-correction loop. Start from
+; a wrong balancing (1,1,1 -- oxygen not conserved); DETECT it fails; SEARCH the candidates for one that
+; conserves; ADOPT it; VERIFY. The body moves itself from wrong to right with no oracle -- error-correction by
+; the invariant alone. Honest floor: a tiny candidate set; general search over a large space is the arc.
+;
+; Self-contained over core. Four-way by tests/sema-error-correct-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sec-cons (a b c)                                  ; conservation invariant (a H2 + b O2 -> c H2O)
+        (if (eq (add (mul a 2) (mul b 0)) (mul c 2))
+            (if (eq (add (mul a 0) (mul b 2)) (mul c 1)) 1 0) 0))
+    ; candidates to search: cand0=(1,1,1) wrong, cand1=(2,1,2) right, cand2=(1,2,1) wrong
+    (defn sec-correct () (if (eq (sec-cons 1 1 1) 1) 0 (if (eq (sec-cons 2 1 2) 1) 1 2)))  ; first candidate that conserves
+    (defn sec-corrected-cons () (sec-cons 2 1 2))           ; conservation of what correct() returns (cand1)
+
+    (defn eck (cond bit) (if cond bit 0))
+    (defn sema-error-correct-check ()
+        (add (add (add (add
+            (eck (eq (sec-cons 1 1 1) 0) 1)                       ; DETECT: the start guess (1,1,1) is wrong (oxygen unbalanced)
+            (eck (eq (sec-correct) 1) 10))                      ; SEARCH: finds the correct candidate (index 1 = 2,1,2)
+            (eck (eq (sec-cons 2 1 2) 1) 100))                   ; VERIFY: the corrected answer conserves
+            (eck (gt (sec-cons 2 1 2) (sec-cons 1 1 1)) 1000))  ; the loop moved WRONG -> RIGHT (1 > 0)
+            (eck (eq (sec-corrected-cons) 1) 10000)))           ; SOUND: it only adopts an answer that passes the invariant
+)

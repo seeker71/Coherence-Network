@@ -1121,3 +1121,4 @@ sema-reason-multistep fks 11111
 sema-curriculum-transfer fks 11111
 teach-sema-algebra fks 11111
 sema-reason-search fks 11111111
+sema-error-correct fks 11111
