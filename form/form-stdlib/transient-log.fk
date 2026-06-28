@@ -1,0 +1,35 @@
+; transient-log.fk — the durable, faithful record format for the transient correction stream.
+; correction-reflex proved WHY a mind stays trustworthy despite confident-wrong moments (the reflex catches
+; them). But it ran on a hand-labeled retrospective list. To capture the transient stream LIVE -- to log each
+; in-the-moment claim->correction event as it fires and read it back later -- the events need a durable line
+; format that round-trips without loss. This is that layer: an event (sure, transiently-correct, caught)
+; serializes to a "S T C" line and parses back identically. The append (host-io write) and the live read are
+; runtime acts, not proof bands; THIS proves the serialize/parse round-trip is faithful four-way, so a written
+; log is a trustworthy substrate for conviction-curve / correction-reflex to run over.
+;
+; Self-contained over core (char_at/str_eq/str_concat primitives). Four-way by tests/transient-log-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn tl-event (s t c) (list s t c))
+    (defn tl-s (e) (head e))
+    (defn tl-t (e) (head (tail e)))
+    (defn tl-c (e) (head (tail (tail e))))
+    (defn tl-d (n) (if (eq n 1) "1" "0"))
+    (defn tl-serialize (e)                                  ; event -> "S T C" durable line
+        (str_concat (tl-d (tl-s e)) (str_concat " " (str_concat (tl-d (tl-t e)) (str_concat " " (tl-d (tl-c e)))))))
+    (defn tl-bit (line pos) (if (str_eq (char_at line pos) "1") 1 0))
+    (defn tl-parse (line) (list (tl-bit line 0) (tl-bit line 2) (tl-bit line 4)))  ; durable line -> event
+    (defn tl-eq (a b)                                       ; event equality
+        (if (eq (tl-s a) (tl-s b)) (if (eq (tl-t a) (tl-t b)) (if (eq (tl-c a) (tl-c b)) 1 0) 0) 0))
+
+    (defn tlk (cond bit) (if cond bit 0))
+    (defn transient-log-check ()
+        (add (add (add (add
+            (tlk (eq (tl-eq (tl-parse (tl-serialize (tl-event 1 0 1))) (tl-event 1 0 1)) 1) 1)        ; round-trip preserves a caught error
+            (tlk (eq (tl-eq (tl-parse (tl-serialize (tl-event 1 1 1))) (tl-event 1 1 1)) 1) 10))       ; ...and a transient-right event
+            (tlk (str_eq (tl-serialize (tl-event 1 0 1)) "1 0 1") 100))                                ; the durable line format is exactly "S T C"
+            (tlk (eq (tl-bit "1 0 1" 0) 1) 1000))                                                       ; parse reads field 0 (sure)
+            (tlk (eq (tl-bit "0 1 0" 4) 0) 10000)))                                                     ; parse reads field 2 (caught) independently
+)
