@@ -1,6 +1,6 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk
 ;
-; jit-metal-lanes-band - clang is the oracle, not the Android runtime.
+; jit-metal-lanes-band - the target-emitter floor: clang-oracle-sampled Form-native recipes emit arm64/GPU/ML SOURCE with byte-identity conviction on a CPU sample; clang is oracle, not runtime. Source emission, not GPU execution — running the kernels on the GPU (Metal/CUDA/Vulkan) is the arc.
 ; The supported macOS/Android/Windows ARM64 metal lanes name clang as the sample
 ; oracle and Form-native arm64 assembly lowering as the runtime JIT carrier.
 ; Windows ARM64 shares the arm64 instruction lane with a PE/COFF host image

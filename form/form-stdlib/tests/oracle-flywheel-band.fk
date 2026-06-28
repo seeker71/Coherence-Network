@@ -1,8 +1,9 @@
 ; preludes: form-stdlib/core.fk form-stdlib/affine-train.fk form-stdlib/affine-corpus-fit.fk form-stdlib/oracle-flywheel.fk
 ;
-; oracle-flywheel-band — the closed flywheel, four-way in pure Form: ask native
-; first, fall to the oracle only when unsure, and training on SAMPLES drops oracle
-; reliance to zero. This connects the night's training loop to the body's routing
+; oracle-flywheel-band — one closure of the loop, four-way in pure Form: ask native
+; first, fall to the oracle only when unsure, and ONE training pass on SAMPLES drops
+; oracle reliance for the class to zero. The single-iteration closure; the continuously
+; spinning flywheel is the arc. This connects the night's training loop to the body's routing
 ; (android-mesh-learning / form-cli-router) — the two halves the body had apart.
 ;
 ; Fixture: the real i18n EN->FR length task (FX=50, from affine-corpus-fit).

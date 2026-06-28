@@ -1,10 +1,11 @@
 ; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/form-llama-champion-lane.fk
 ;
-; form-llama-champion-lane-band — the local Form-knowledge model can become
-; authority only with a full freedom/trust eval window: Form syntax, substrate
-; concepts, spec lookup, route reasoning, multimodal witness, and form-first
-; routing are all present, source-backed, local-device capable, held out, and
-; the challenger reaches the incumbent.
+; form-llama-champion-lane-band — the eval-window GATE and promotion logic: the local
+; Form-knowledge model takes authority only when six lanes (Form syntax, substrate
+; concepts, spec lookup, route reasoning, multimodal witness, form-first routing) are
+; all present, source-backed, local-device capable, held out, and a heldout trial shows
+; the challenger reaching the incumbent. Over a trial FIXTURE; real model training and
+; inference is the arc.
 ;
 ; Verdict 255 when:
 ;   1   all six required lanes are present
