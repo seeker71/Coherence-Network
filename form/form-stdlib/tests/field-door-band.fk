@@ -1,0 +1,13 @@
+; tests/field-door-band.fk — the deterministic lane and the field door, kept honest, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-door.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   the deterministic lane is four-way provable                         ->     1
+;   the FIELD lane is NOT four-way provable (mystery can't be proven)    ->    10
+;   the NOTHING state is distinct from 0 and 1 (the pause is a real third) ->  100
+;   a whole mind needs BOTH a deterministic floor and a field door       ->  1000
+;   forcing the field into the proof lane collapses mystery (the error)  -> 10000
+
+(do
+    (field-door))
