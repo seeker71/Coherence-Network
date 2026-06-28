@@ -1,0 +1,5 @@
+; tests/teach-sema-pattern-band.fk — teaching Sema an IQ/pattern test by sequence induction, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-sema-pattern.fk
+; Verdict 11111: induces the rule d=2; the rule is consistent across the sequence; continues correctly
+; (next=10); generalizes to a held-out index (term 6 = 14); and a repeat-last memorizer is wrong.
+(do (teach-sema-pattern-check))

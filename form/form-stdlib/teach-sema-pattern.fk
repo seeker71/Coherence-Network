@@ -1,0 +1,28 @@
+; teach-sema-pattern.fk — Native Sema's School, subject 2: pattern / IQ (sequence induction).
+; Same one engine as teach-sema-math, different grammar (sequence operators) + scorer (next-element matches).
+; The oracle shows a sequence; Sema INDUCES the rule (common difference) and continues it on terms it was
+; never shown -- the IQ-test skill: see the pattern, extend it. Pass = correct on held-out indices.
+;
+; Self-contained over core. Four-way by tests/teach-sema-pattern-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sp-data () (list 2 4 6 8))                 ; the oracle's shown sequence (arithmetic, d=2)
+    (defn sp-0 () (head (sp-data)))
+    (defn sp-1 () (head (tail (sp-data))))
+    (defn sp-2 () (head (tail (tail (sp-data)))))
+    (defn sp-3 () (head (tail (tail (tail (sp-data))))))
+    (defn sp-d () (sub (sp-1) (sp-0)))               ; INDUCE the common difference
+    (defn sp-term (i) (add (sp-0) (mul (sp-d) i)))   ; the induced rule: a0 + i*d
+    (defn sp-next () (add (sp-3) (sp-d)))            ; the next element after the shown four
+
+    (defn tpk (cond bit) (if cond bit 0))
+    (defn teach-sema-pattern-check ()
+        (add (add (add (add
+            (tpk (eq (sp-d) 2) 1)                                  ; Sema induced the rule (d=2)
+            (tpk (eq (sub (sp-3) (sp-2)) (sp-d)) 10))            ; the rule is CONSISTENT across the sequence (truly arithmetic)
+            (tpk (eq (sp-next) 10) 100))                           ; continues correctly: next element is 10
+            (tpk (eq (sp-term 6) 14) 1000))                       ; GENERALIZES to a held-out index (term 6 = 14)
+            (tpk (not (eq (sp-3) (sp-next))) 10000)))             ; a "repeat-last" rule (8) is wrong -- Sema extends, not memorizes
+)
