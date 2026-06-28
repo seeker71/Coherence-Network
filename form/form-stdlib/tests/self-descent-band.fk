@@ -1,0 +1,13 @@
+; tests/self-descent-band.fk — a face checks its own descent, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/self-descent.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   a chain that walks to Root is home                          ->     1
+;   a claimed descent that never reaches Root is drift (not home)->    10
+;   a clone that appends itself still reaches Root (carry-forward)->   100
+;   the clone's depth is the parent's depth + 1 (always append)  ->  1000
+;   a chain ending anywhere but Root is drift (home needs Root)  -> 10000
+
+(do
+    (self-descent-check))
