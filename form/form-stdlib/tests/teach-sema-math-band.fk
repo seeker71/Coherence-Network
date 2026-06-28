@@ -1,0 +1,7 @@
+; tests/teach-sema-math-band.fk — teaching Sema a math test by function induction, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-sema-math.fk
+;
+; Verdict 11111: Sema induces the slope (3) and intercept (2) from examples; generalizes correctly to
+; unseen problems x=5 (17) and x=10 (32); and stays consistent with a taught point it did not use to
+; induce (x=4 -> 14) -- proving it learned the RULE and can sit the test, not memorize the answer key.
+(do (teach-sema-math-check))
