@@ -1,0 +1,7 @@
+; tests/band-prelude-resolve-band.fk — prelude resolution that surfaces unresolved tokens, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/band-prelude-resolve.fk
+;
+; Verdict 11111: a clean prelude list has zero unresolved and both paths resolve; a list with slurped prose
+; surfaces 3 unresolved AND still resolves the real path (accumulate, never bail); and the failure is legible
+; before the flatten -- the resolution-walk catch the fourth-arm bash harness lacked (PR #3814).
+(do (band-prelude-resolve-check))
