@@ -1,7 +1,8 @@
 ; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/diffusion-q-learning.fk form-stdlib/preference-learning.fk form-stdlib/diffusion-q-autoresearch.fk
 ;
-; diffusion-q-autoresearch-band — GAP-Q4: the autoresearch keep-or-rollback loop evolves the q-tilt
-; GENE, four-way. The pref-loss coordinate is a pl_qam row whose mutable gene is its beta; the evaluator
+; diffusion-q-autoresearch-band — GAP-Q4: ONE keep-or-rollback search picks the q-tilt GENE from
+; candidates against a heldout critic, four-way; iterated autoresearch over experiment-cell history
+; is the arc (named in the body). The pref-loss coordinate is a pl_qam row whose mutable gene is its beta; the evaluator
 ; is pl-fitness (value vs a served target); keep-or-rollback is higher-better. The fold IS one_iteration's
 ; keep-or-rollback core: the candidate stream stands in for agent_propose; governance/never-stop and the
 ; experiment-cell history are the named remaining wiring (autoresearch-runtime.form GAP-A1/A5). The

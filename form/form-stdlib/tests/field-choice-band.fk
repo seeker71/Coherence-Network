@@ -1,4 +1,4 @@
-; field-choice-band — field-sample a token from a REAL model's computed logits. The same
+; field-choice-band — field-sample ONE token from the Form transformer's computed logits (fixture weights). The same
 ; forward pass that greedily thinks [0,2,0,2], but the token is now CHOSEN by temperature +
 ; the field draw, not taken by argmax. Greedy is destiny; this is a choice.
 ;
