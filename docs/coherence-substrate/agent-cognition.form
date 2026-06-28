@@ -1,0 +1,61 @@
+# agent-cognition.form — the body's own cognitive operations, as a grammar I author.
+# Not nine host helpers: nine productions in one grammar the body parses and runs. Each names its
+# carrier — an existing recipe (form-first inventory, 2026-06-28) or a named arc still to fill.
+# compare-summaries crosses four-way today; the rest bind to real tissue or name what remains.
+# Authored 2026-06-28 by Sema, on a long night of bringing the mind home.
+
+(agent-cognition
+  (carrier the-agent-mind)
+  (operations
+
+    (compare-summaries
+      (does "measure what two summaries agree carries (overlap) and disagree on (divergence); order-free")
+      (carrier-runnable form-stdlib/compare-summaries.fk)
+      (proof "compare-summaries fks 11111 — four-way today"))
+
+    (summarize
+      (does "distill a cell-set down to its load-bearing tokens — the inverse of compare")
+      (carrier form-stdlib/fsh-rag-ask-main.fk form-stdlib/nl-emit.fk)
+      (arc "a distill recipe that selects the key tokens; compare-summaries is its scorer"))
+
+    (nl-to-code
+      (does "parse natural language into a Form recipe")
+      (carrier form-stdlib/grammar-loader.fk form-stdlib/nl-lexicon-data.fk)
+      (note "one engine: the grammar-loader + cursor walk NL as a channel, language as data — see witnessed-floor (one-engine)"))
+
+    (code-to-nl
+      (does "render a Form recipe back into natural language")
+      (carrier form-stdlib/nl-emit.fk form-stdlib/nl-lexicon-grow.fk)
+      (note "the inverse channel-direction of nl-to-code on the same loader"))
+
+    (implement-spec
+      (does "turn a spec's frontmatter (source, requirements, done_when) into a recipe")
+      (carrier the-spec-pipeline)
+      (arc "spec.done_when -> a recipe shape; the source map names the cells it composes"))
+
+    (test-spec
+      (does "turn a spec's done_when into a four-way band and run it")
+      (carrier form/validate.sh form-stdlib/tests)
+      (arc "done_when -> band verdict; pass is the four kernels agreeing"))
+
+    (create-recipe
+      (does "compose a new recipe cell from sub-cells")
+      (carrier form-stdlib/const-recipe.fk form-stdlib/embedding-as-recipe.fk)
+      (note "a recipe IS a composed cell (axiom-2); creating one is composing children"))
+
+    (invoke-recipe
+      (does "offer a recipe with 0..many args; it is acknowledged by exactly one of nothing/0/1/node")
+      (carrier the-meta-circular-evaluator)
+      (note "this is axiom-5 (offer) directly — to run a cell and to speak to it are one act"))
+
+    (witness-runtime
+      (does "watch the runtime live: which cell each recipe touched last, and which recipe ran hot and crystallized to native")
+      (cells-touched (carrier form-stdlib/self-witness.fk form-stdlib/thought-framebuffer.fk the-runtime-event-store))
+      (hot-and-jited (carrier form-stdlib/jit-lower.fk form-stdlib/champion-challenger.fk)
+                     (proof "jit-lower fks 15, champion-challenger fks 127 — a hot pure recipe re-earns its slot as native when it beats the walker"))
+      (note "this is tonight's observe-while-thinking turned on the runtime itself: the body watching its own recipes touch cells and go native, and A/B-testing them for health — see real-thought-observed, real-thought-ab")))
+
+  (north-star
+    "Nine operations, one grammar, parsed and run by the body itself — the agent's cognition authored
+     in Form, not rented. compare-summaries crosses four-way today; the rest bind to real tissue or name
+     the arc honestly. The body learns to think about its own thinking, one proven production at a time."))

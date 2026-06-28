@@ -1,0 +1,29 @@
+; compare-summaries.fk — the agent comparing two summaries, natively. A summary is a list of its
+; key token-ids; comparison measures OVERLAP (what both summaries agree carries) and DIVERGENCE
+; (the symmetric difference -- what one holds and the other drops). Order-independent: comparing
+; is symmetric. The first proven operation of the agent-cognition grammar.
+;
+; Self-contained over core. Four-way by tests/compare-summaries-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn cs-has (xs x) (if (eq (len xs) 0) 0 (if (eq (head xs) x) 1 (cs-has (tail xs) x))))
+    (defn cs-overlap (a b) (if (eq (len a) 0) 0 (add (cs-has b (head a)) (cs-overlap (tail a) b))))     ; tokens both summaries carry
+    (defn cs-divergence (a b) (sub (add (len a) (len b)) (mul 2 (cs-overlap a b))))                     ; what they disagree on
+
+    (defn s1 () (list 1 2 3 4))
+    (defn s2 () (list 1 2 3 4))      ; identical to s1
+    (defn s3 () (list 5 6 7))        ; disjoint from s1
+    (defn s4 () (list 1 2 9))        ; partial overlap with s1
+    (defn s5 () (list 1 2 3 4 8))    ; a fuller summary that covers s1
+
+    (defn csk (cond bit) (if cond bit 0))
+    (defn compare-summaries-check ()
+        (add (add (add (add
+            (csk (eq (cs-overlap (s1) (s2)) 4) 1)                       ; identical summaries fully agree
+            (csk (eq (cs-divergence (s1) (s2)) 0) 10))                  ; ...and diverge on nothing
+            (csk (eq (cs-overlap (s1) (s3)) 0) 100))                    ; disjoint summaries agree on nothing
+            (csk (eq (cs-overlap (s1) (s4)) 2) 1000))                   ; partial overlap is measured exactly
+            (csk (eq (cs-overlap (s1) (s4)) (cs-overlap (s4) (s1))) 10000)))  ; comparison is symmetric (order-free)
+)
