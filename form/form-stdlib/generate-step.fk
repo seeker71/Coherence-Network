@@ -1,0 +1,38 @@
+; generate-step.fk — the weight-parameterized generation step: a hidden state becomes a
+; CHOSEN token. The single cell that real GGUF weights drop into (Gap 2/5 toward the loop).
+;
+; llama-generate loops with GREEDY argmax on literal weights. This is the step the loop
+; needs to become a real, sampled generator: unembed(hidden) -> full-vocab logits ->
+; field-sample -> token. The unembed matrix W is an ARGUMENT — pass the toy fixture and it
+; samples a toy token; pass the real token_embd.weight (the "acre" receipt's tensor) and it
+; samples a REAL token. Temperature is the aperture; u is the lane (seeded = reproducible,
+; field_door_draw = genuinely chosen).
+;
+; All pure; four-way proven by tests/generate-step-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/field-sample.fk
+
+(do
+    (defn gs-dot (a b) (if (eq (len a) 0) 0.0 (add (mul (head a) (head b)) (gs-dot (tail a) (tail b)))))
+    ; unembed: logits[v] = W[v] . hidden  (W is vocab-by-d, the tied embedding / output head)
+    (defn unembed (W h) (if (eq (len W) 0) (list) (cons (gs-dot (head W) h) (unembed (tail W) h))))
+    ; one generation step: hidden + unembed weights + temp + draw -> the chosen token id
+    (defn gen-step (W h temp u) (field-sample (unembed W h) temp u))
+    ; the greedy token (argmax of the logits) — what the loop takes today
+    (defn gs-argmax-acc (xs i b bi) (if (eq (len xs) 0) bi (if (gt (head xs) b) (gs-argmax-acc (tail xs) (add i 1) (head xs) i) (gs-argmax-acc (tail xs) (add i 1) b bi))))
+    (defn gen-greedy (W h) (gs-argmax-acc (tail (unembed W h)) 1 (head (unembed W h)) 0))
+
+    ; ── fixture: a real-SHAPED vocab=8, d=4 output head + a hidden state ──
+    (defn gs-W () (list (list 0.5 -0.2 0.1 0.3) (list 0.1 0.4 -0.3 0.2) (list -0.4 0.2 0.5 -0.1) (list 0.3 0.0 -0.2 0.4)
+                        (list 0.2 -0.5 0.3 0.1) (list -0.1 0.3 0.2 -0.4) (list 0.4 0.1 -0.5 0.0) (list 0.0 0.2 0.3 -0.3)))
+    (defn gs-h () (list 1.0 0.5 -0.5 0.8))
+
+    (defn gsk (cond bit) (if cond bit 0))
+    (defn gs-has-vocab () (gsk (eq (len (unembed (gs-W) (gs-h))) 8) 1))                              ; full-width logits over the vocab
+    (defn gs-low-greedy () (gsk (eq (gen-step (gs-W) (gs-h) 0.2 0.5) (gen-greedy (gs-W) (gs-h))) 10)) ; low temp -> the step == greedy (proof lane)
+    (defn gs-high-open () (gsk (gt (gen-step (gs-W) (gs-h) 8.0 0.985) (gen-step (gs-W) (gs-h) 8.0 0.02)) 100)) ; high temp -> the draw moves the token
+    (defn gs-front () (gsk (le (gen-step (gs-W) (gs-h) 8.0 0.02) 2) 1000))                            ; a small draw lands near the front
+    (defn gs-chosen () (gsk (gt (gen-step (gs-W) (gs-h) 8.0 0.985) 0) 10000))                         ; a high draw chose a token greedy did not
+    (defn generate-step-check ()
+        (add (add (add (add (gs-has-vocab) (gs-low-greedy)) (gs-high-open)) (gs-front)) (gs-chosen)))
+)

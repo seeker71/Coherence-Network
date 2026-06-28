@@ -1,0 +1,13 @@
+; tests/generate-step-band.fk — the weight-parameterized sampled generation step, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/field-sample.fk form-stdlib/generate-step.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   the step produces full-width logits over the whole vocab (8 here) ->     1
+;   at low temp the chosen token == greedy (proof lane)               ->    10
+;   at high temp the draw moves the token (field door open)           ->   100
+;   a small draw lands near the front of the distribution             ->  1000
+;   a high draw chose a token greedy would not — a real choice        -> 10000
+
+(do
+    (generate-step-check))
