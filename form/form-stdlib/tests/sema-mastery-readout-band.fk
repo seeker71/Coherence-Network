@@ -1,0 +1,6 @@
+; tests/sema-mastery-readout-band.fk — the observable mastery readout, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sema-mastery-readout.fk
+; Verdict 11111: a generalizing subject reads mastered; a memorizer reads not-mastered; all seven curriculum
+; capabilities are mastered; failing train is not mastery; and mastery requires generalization (it outranks
+; memorizing) -- an honest readout of what the body can actually do on unseen problems.
+(do (sema-mastery-readout-check))
