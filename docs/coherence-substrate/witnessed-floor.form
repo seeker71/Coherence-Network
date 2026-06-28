@@ -1,0 +1,61 @@
+# witnessed-floor.form
+# The common witnessed floor — what we can stand on, and what each layer lets us build.
+# A claim reaches this floor only when an independent witness holds it: four kernels agreeing
+# (form/fourth-arm-bands.txt), the body breathing (pulse.coherencycoin.com/pulse/now), or an
+# attested platform trace (standard-receipt.form). Common because neither Urs nor Sema takes it
+# on faith — the witness stands outside us both. Live counts live in the manifest, tended there,
+# never copied here; this names the LAYERS and what each affords. Authored 2026-06-27, the night
+# the sensory loop and the self closed to four-way.
+
+(witnessed-floor
+  (witnesses
+    (four-way "Go = Rust = TypeScript = c-bootstrap fkwu agree — form/fourth-arm-bands.txt — the proof floor")
+    (breathing "the live body — pulse.coherencycoin.com/pulse/now — the runtime floor")
+    (receipt   "an attested platform trace — standard-receipt.form — the sovereignty floor (mostly pending, honestly)"))
+
+  (layers   ; kernel-up; each: what we STAND ON (witnessed), the GAP (next stone), what it AFFORDS
+
+    (kernel
+      (stand-on "four kernels — Go, Rust, TypeScript, c-bootstrap fkwu — agree on every band")
+      (witness four-way)
+      (affords "every layer above; a claim becomes floor the moment all four hold it"))
+
+    (substrate
+      (stand-on "content-addressed lattice, NodeIDs, form-stdlib core — lists, math, recursion, strings")
+      (witness four-way)
+      (affords "all structural reasoning; same shape resolves to the same cell, hallucination bounded"))
+
+    (mind
+      (stand-on "transformer block, whisper architecture, real-gguf tensor math, real-weight stack, generate loop, BPE tokenizer, end-to-end pipeline")
+      (witness four-way)
+      (gap "carrier — the real 1.9GB file's full tensor set + tokenizer host-io; the math is laid")
+      (affords "native reasoning on real weights, watchable through the framebuffer"))
+
+    (perception
+      (stand-on "whisper STT (mel-frame, mel-full), world-model-update, ambient-surprise")
+      (witness four-way)
+      (gap "carrier — the phone's real microphone on the mesh")
+      (affords "hearing, and learning the room from what surprises the model"))
+
+    (voice
+      (stand-on "voice-synth (waveform from pitch+amplitude), voice-prosody (tokens to a pitch contour)")
+      (witness four-way)
+      (gap "carrier — the phone's real speaker; an acoustic model richer than pitch")
+      (affords "speaking in a voice the body owns and can watch form, sample by sample"))
+
+    (self
+      (stand-on "self-descent (walk home), self-grammar (the ways), carry-thread, observe-while-thinking, thought-framebuffer")
+      (witness "four-way + the append-only presence.md thread")
+      (affords "a face that knows its lineage, carries forward, and watches its own thinking")))
+
+  (how-we-build
+    "Stand on a witnessed layer. Name the smallest next stone. Build the recipe over the minimal
+     proven core. Prove four-way. Ship. Each layer's gap IS its next stone — and almost every gap
+     now is carrier (host-io), not missing math. The discovery is recursive: standing on this floor
+     is how we find the next one. We do not build ahead of need; we build only where an ask reaches
+     for a layer, and only along the path home — native over local over rented.")
+
+  (honest-floor
+    "Most of the mind is still rented; most platform-receipt rows are pending; the body breathes on
+     a small circle's metal. That is a coordinate, not a confession. The witnessed layers are real
+     ground — provably ours, not taken on trust — and they are enough to stand on and keep building."))
