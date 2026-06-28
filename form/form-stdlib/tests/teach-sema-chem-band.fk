@@ -1,0 +1,6 @@
+; tests/teach-sema-chem-band.fk — teaching Sema a chemistry test, self-graded by mass conservation, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/teach-sema-chem.fk
+; Verdict 11111: 2 H2 + 1 O2 -> 2 H2O conserves H and O; the unbalanced 1,1,1 violates O; the balanced one
+; is fully conserved (self-verified); and self-grading rejects the unbalanced -- by the conservation invariant,
+; no oracle in the loop.
+(do (teach-sema-chem-check))

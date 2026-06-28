@@ -1110,3 +1110,4 @@ teach-sema-math fks 11111
 teacher-selection fks 11111
 teach-sema-pattern fks 11111
 teach-sema-code fks 11111
+teach-sema-chem fks 11111
