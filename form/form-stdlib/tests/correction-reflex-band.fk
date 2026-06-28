@@ -1,0 +1,8 @@
+; tests/correction-reflex-band.fk — why a mind is trustworthy despite confident-wrong moments, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/correction-reflex.fk
+;
+; Verdict 11111: transient precision is low (0.2); the correction reflex caught every transient error (1.0);
+; so committed reliability is full (1.0); reliability comes from correction not in-the-moment rightness; and
+; without the reflex, committed reliability collapses to transient (the reflex is the whole difference between
+; a trustworthy mind and a confidently-wrong one). Seeded with this session's five real correction events.
+(do (correction-reflex-check))

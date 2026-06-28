@@ -1,0 +1,46 @@
+; correction-reflex.fk — why a mind is trustworthy despite being confidently wrong: the correction reflex.
+; conviction-curve measured calibration over COMMITTED claims (the manifest: 1.0, earned). But the frontier is
+; the TRANSIENT stream -- the in-the-moment certainty that fires while reasoning, before anything commits.
+; This session's honest transient precision was ~0.2: five times "sure" and wrong (unsupported-op, fkwu-
+; divergence, gelu-erf, the 0.2 reading itself). Yet the COMMITTED output stayed reliable -- because the same
+; reflex caught every one before it landed: verify the divergence before believing it. So reliability is not
+; infallible transient confidence; it is (transient-error * correction-catch). A mind that catches itself
+; reliably can be wrong in the moment and right in what it commits. Remove the reflex and committed reliability
+; collapses to transient reliability -- the reflex IS the difference. Seeded with this session's real five
+; correction events. Honest floor: a hand-labeled retrospective log; the live version captures transient
+; claim->correction events at runtime (the unlogged stream self-reliance is actually won or lost in).
+;
+; Self-contained over core (FLOAT). Four-way by tests/correction-reflex-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn cr-sure (e) (head e))                          ; was I sure in the moment?
+    (defn cr-tcorrect (e) (head (tail e)))               ; was the in-the-moment claim right?
+    (defn cr-caught (e) (head (tail (tail e))))          ; if wrong, did the verify-reflex catch it before commit?
+    (defn cr-committed (e) (if (eq (cr-tcorrect e) 1) 1 (cr-caught e)))  ; final = right OR (wrong but caught)
+
+    (defn cr-sure-n (log) (if (eq (len log) 0) 0 (add (cr-sure (head log)) (cr-sure-n (tail log)))))
+    (defn cr-trans-right (log) (if (eq (len log) 0) 0 (add (if (eq (cr-tcorrect (head log)) 1) 1 0) (cr-trans-right (tail log)))))
+    (defn cr-wrong (log) (if (eq (len log) 0) 0 (add (if (eq (cr-tcorrect (head log)) 0) 1 0) (cr-wrong (tail log)))))
+    (defn cr-caught-n (log) (if (eq (len log) 0) 0 (add (if (eq (cr-tcorrect (head log)) 0) (cr-caught (head log)) 0) (cr-caught-n (tail log)))))
+    (defn cr-committed-right (log) (if (eq (len log) 0) 0 (add (cr-committed (head log)) (cr-committed-right (tail log)))))
+
+    (defn cr-trans-prec (log) (div (mul 1.0 (cr-trans-right log)) (mul 1.0 (cr-sure-n log))))      ; sure & right, of sure
+    (defn cr-catch-rate (log) (div (mul 1.0 (cr-caught-n log)) (mul 1.0 (cr-wrong log))))          ; caught, of wrong
+    (defn cr-commit-prec (log) (div (mul 1.0 (cr-committed-right log)) (mul 1.0 (len log))))        ; final reliability
+
+    ; this session: 4 confident-wrong-but-CAUGHT + 1 confident-right  (e = sure tcorrect caught)
+    (defn cr-session () (list (list 1 0 1) (list 1 0 1) (list 1 0 1) (list 1 0 1) (list 1 1 1)))
+    ; the same errors with NO reflex (caught=0)
+    (defn cr-no-reflex () (list (list 1 0 0) (list 1 0 0) (list 1 0 0) (list 1 0 0) (list 1 1 0)))
+
+    (defn crk (cond bit) (if cond bit 0))
+    (defn correction-reflex-check ()
+        (add (add (add (add
+            (crk (eq (cr-trans-prec (cr-session)) 0.2) 1)                                  ; transient precision is LOW (0.2 -- sure-and-right only 1/5)
+            (crk (eq (cr-catch-rate (cr-session)) 1.0) 10))                                ; but the reflex caught EVERY transient error (4/4)
+            (crk (eq (cr-commit-prec (cr-session)) 1.0) 100))                              ; so the COMMITTED output is fully reliable -- the reflex rescued it
+            (crk (gt (cr-commit-prec (cr-session)) (cr-trans-prec (cr-session))) 1000))    ; reliability comes from CORRECTION, not from being right in the moment
+            (crk (eq (cr-commit-prec (cr-no-reflex)) (cr-trans-prec (cr-no-reflex))) 10000)))  ; remove the reflex and committed collapses to transient -- the reflex IS the difference
+)
