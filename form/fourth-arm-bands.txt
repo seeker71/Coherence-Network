@@ -1089,3 +1089,4 @@ real-block-step fks 11111
 real-generate-loop fks 11111
 real-layer-stack fks 11111
 real-end-to-end fks 11111
+voice-synth fks 11111

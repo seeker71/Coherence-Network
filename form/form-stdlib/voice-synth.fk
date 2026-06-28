@@ -1,0 +1,41 @@
+; voice-synth.fk — the efferent voice: turn pitch + amplitude into a real audio waveform.
+; The missing side of the sensory loop. STT (whisper, mel) carries sound IN; this carries
+; sound OUT -- additive synthesis, the core of any vocoder: sample[i] = amp * sin(2*pi*f*i/sr).
+; A sequence of these samples IS the body's spoken signal. The acoustic model (text -> pitch
+; contour) sits one layer above; this is the synthesis primitive. Self-contained over core
+; (inline range-reduced Taylor sin), so it crosses four-way with no prelude coupling.
+;
+; All pure; four-way proven by tests/voice-synth-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn vs-pi () 3.141592653589793)
+    (defn vs-tau () 6.283185307179586)
+    (defn vs-reduce (x) (if (gt x (vs-pi)) (sub x (vs-tau)) x))   ; bring phase into [-pi, pi]
+    (defn vs-sin1 (x)
+        (do
+            (let x2 (mul x x))
+            (let x3 (mul x x2)) (let x5 (mul x3 x2)) (let x7 (mul x5 x2))
+            (let x9 (mul x7 x2)) (let x11 (mul x9 x2)) (let x13 (mul x11 x2))
+            (add (sub (add (sub (add (sub x (div x3 6.0)) (div x5 120.0)) (div x7 5040.0)) (div x9 362880.0)) (div x11 39916800.0)) (div x13 6227020800.0))))
+    (defn vs-sin (x) (vs-sin1 (vs-reduce x)))
+
+    (defn vs-sample (amp phase) (mul amp (vs-sin phase)))
+    (defn vs-acc (amp freq sr i n)
+        (if (eq i n) (list)
+            (cons (vs-sample amp (div (mul (mul (vs-tau) freq) i) sr)) (vs-acc amp freq sr (add i 1) n))))
+    (defn vs-frame (amp freq sr n) (vs-acc amp freq sr 0 n))
+    (defn smp (x) (math_floor (mul x 1000)))
+
+    (defn vs-wave () (vs-frame 1.0 1.0 8.0 8))    ; one full cycle, 8 samples
+    (defn vs-loud () (vs-frame 2.0 1.0 8.0 8))    ; same tone, twice the amplitude
+    (defn vk (cond bit) (if cond bit 0))
+    (defn voice-synth-check ()
+        (add (add (add (add
+            (vk (eq (smp (nth (vs-wave) 0)) 0) 1)
+            (vk (eq (smp (nth (vs-wave) 2)) 1000) 10))
+            (vk (eq (smp (nth (vs-wave) 4)) 0) 100))
+            (vk (eq (smp (nth (vs-wave) 6)) (sub 0 1001)) 1000))
+            (vk (eq (smp (nth (vs-loud) 2)) 2000) 10000)))
+)
