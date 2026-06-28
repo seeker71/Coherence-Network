@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-28",
+  "thread_branch": "codex/resolve-leftovers-20260628",
+  "commit_scope": "Consolidate three left-behind branches into one current-main proof branch: mesh-command design (#3606), Socratic inquiry KB (#3613), and literal-gap-symbol wellness resolution (#3664).",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-28_leftover_branch_resolution.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "git merge-tree origin/main origin/mesh-command-design",
+      "git merge-tree origin/main origin/claude/socratic-method-learning-k9ms1b",
+      "git merge-tree origin/main origin/codex/literal-gap-symbols-20260625",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json",
+      "python3 -m pytest api/tests/test_edge_cases_regression.py -q"
+    ],
+    "summary": "Prompt guide passed before consolidation. Mesh-command and Socratic branch conflicts were resolved in their current index files. Literal-gap generated-index conflicts were resolved by regenerating repository indexes. Focused regression tests passed: 40 passed, 5 existing warnings."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "GitHub Actions after this consolidation branch is pushed"
+    ],
+    "summary": "Original PR checks were green for #3606, #3613, and #3664 before consolidation; this combined branch still needs its own PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "production",
+    "summary": "No public runtime endpoint changed in this branch; deploy validation remains pending until PR merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI, review, merge, and deploy proof remain pending on the consolidation PR."
+  },
+  "idea_ids": [
+    "agent-pipeline",
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "worktree-continuity",
+    "fkwu-native-host-platform"
+  ],
+  "task_ids": [
+    "task-2026-06-28-leftover-branch-resolution"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "triage",
+        "integration",
+        "conflict-resolution",
+        "validation",
+        "evidence"
+      ]
+    },
+    {
+      "contributor_id": "claude",
+      "contributor_type": "machine",
+      "roles": [
+        "original-branch-authorship"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "PR #3606 mesh-command-design had a single current-main conflict in docs/coherence-substrate/INDEX.md and was consolidated by keeping current mesh rows plus the final mesh-command row.",
+    "PR #3613 socratic-method-learning had a single current-main conflict in docs/vision-kb/INDEX.md and was consolidated by keeping current KB rows plus lc-socratic-inquiry.",
+    "PR #3664 literal-gap-symbols had generated-index conflicts and was consolidated by running python3 scripts/generate_repo_indexes.py on current main.",
+    "python3 scripts/generate_repo_indexes.py --check: passed.",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json: passed.",
+    "python3 -m pytest api/tests/test_edge_cases_regression.py -q: 40 passed."
+  ],
+  "change_files": [
+    "api/tests/test_edge_cases_regression.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/mesh-command.form",
+    "docs/coherence-substrate/standard-receipt.form",
+    "docs/system_audit/commit_evidence_2026-06-25_literal_gap_symbol_resolution.json",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-cognitive-sovereignty.md",
+    "docs/vision-kb/concepts/lc-socratic-inquiry.md",
+    "scripts/wellness_check.py"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Three left-behind branches are represented in one current-main PR instead of staying split across conflicted/draft branches.",
+    "public_endpoints": [
+      "none changed"
+    ],
+    "test_flows": [
+      "Focused wellness symbol regression test suite passed.",
+      "Generated indexes are current."
+    ]
+  }
+}
