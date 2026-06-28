@@ -22,7 +22,7 @@
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
-    "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-query": "^5.101.1",
     "@types/three": "^0.185.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -34,7 +34,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.185.0",
-    "viem": "^2.52.2",
+    "viem": "^2.53.1",
     "wagmi": "^2.14.0"
   },
   "devDependencies": {
