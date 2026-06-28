@@ -326,6 +326,22 @@ if [[ $# -gt 0 ]]; then
             explicit_args=(form-stdlib/core.fk $preludes "$f")
         fi
     fi
+    # A missing input file is not a kernel divergence. Without this guard the
+    # three walkers each open the absent path and emit a DIFFERENT file-not-found
+    # string while fkwu emits nothing, so the verdict reads "kernels disagree —
+    # investigate which is correct" — a phantom divergence that has cost real
+    # diagnostic effort (e.g. running `gelu-erf-band.fk` when the band is named
+    # `transformer-gelu-erf-band.fk`). Name the absent path plainly instead.
+    missing=()
+    for f in "${explicit_args[@]}"; do
+        [[ -f "$f" ]] || missing+=("$f")
+    done
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        printf "  ✗  input file(s) not found — this is a missing file, not a kernel divergence.\n" >&2
+        printf "      kernel input paths resolve relative to the form/ directory (e.g. form-stdlib/core.fk):\n" >&2
+        for f in "${missing[@]}"; do printf "        %s\n" "$f" >&2; done
+        exit 2
+    fi
     label=""
     for f in "${explicit_args[@]}"; do
         base="$(basename "$f")"
