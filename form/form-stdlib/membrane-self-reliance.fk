@@ -1,0 +1,38 @@
+; membrane-self-reliance.fk — the LIVE outcome feed: the body's self-reliance measured from its real crossings.
+; sufficiency-capture wired the reflex into the gate's decision but over constructed outcomes. This reads the
+; truth from form-cli-membrane's crossing ledger: every crossing has a surface (native = stayed sovereign =
+; the body relied on itself; remote/local-oracle = escalated) and an outcome (success/fail/silence). A native
+; crossing that SUCCEEDED is an EARNED accept; native-but-FAILED is a BETRAYED one (relied on local, was wrong).
+; So accept-precision over the real ledger -- native-and-succeeded / native crossings -- is the body's measured
+; cognitive sovereignty, read from lived crossings, not a fed list. Under 1.0 means the body over-relies on
+; native where it fails and should escalate more there; 1.0 means its self-reliance is earned. This closes the
+; loop sufficiency-capture opened: the gate's self-reliance number now comes from the membrane the gate crosses.
+;
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/form-cli-membrane.fk
+
+(do
+    (defn msr-accept? (x) (if (eq (fcm-surface-crossed? (fcm-x-surface x)) 0) 1 0))          ; native crossing = relied on self
+    (defn msr-vindicated? (x) (if (str_eq (fcm-x-outcome x) (cr-outcome-success)) 1 0))      ; the crossing succeeded
+
+    (defn msr-accepts (led) (if (eq (len led) 0) 0 (add (msr-accept? (head led)) (msr-accepts (tail led)))))
+    (defn msr-earned (led) (if (eq (len led) 0) 0 (add (if (eq (msr-accept? (head led)) 1) (msr-vindicated? (head led)) 0) (msr-earned (tail led)))))
+    (defn msr-accept-prec (led) (div (mul 1.0 (msr-earned led)) (mul 1.0 (msr-accepts led))))  ; measured sovereignty from real crossings
+
+    ; real crossing rows (op capability surface native-avail note outcome certainty cost)
+    (defn msr-native-ok () (fcm-crossing "ask" "cap" (fcm-surface-native) 1 "n" (cr-outcome-success) 90 0))
+    (defn msr-native-bad () (fcm-crossing "ask" "cap" (fcm-surface-native) 1 "n" (cr-outcome-fail) 30 0))
+    (defn msr-remote-ok () (fcm-crossing "ask" "cap" (fcm-surface-remote-oracle) 0 "n" (cr-outcome-success) 80 0))
+    ; a lived ledger: relied on self 4x (vindicated twice, betrayed twice) + escalated once
+    (defn msr-ledger () (list (msr-native-ok) (msr-native-ok) (msr-native-bad) (msr-native-bad) (msr-remote-ok)))
+    ; a sovereign-earned ledger: every native crossing succeeded
+    (defn msr-earned-ledger () (list (msr-native-ok) (msr-native-ok) (msr-remote-ok)))
+
+    (defn msrk (cond bit) (if cond bit 0))
+    (defn membrane-self-reliance-check ()
+        (add (add (add (add
+            (msrk (eq (msr-accept? (msr-native-ok)) 1) 1)                          ; a native crossing = the body relied on itself
+            (msrk (eq (msr-accept? (msr-remote-ok)) 0) 10))                        ; a remote crossing = it escalated (not a self-reliance claim)
+            (msrk (eq (msr-accept-prec (msr-ledger)) 0.5) 100))                    ; over real crossings: relied on self 4x, vindicated 2x -> 50% earned
+            (msrk (lt (msr-accept-prec (msr-ledger)) 1.0) 1000))                   ; the body over-relies on native where it fails -> escalate more there
+            (msrk (eq (msr-accept-prec (msr-earned-ledger)) 1.0) 10000)))          ; a ledger where every native crossing succeeded -> sovereignty fully earned
+)

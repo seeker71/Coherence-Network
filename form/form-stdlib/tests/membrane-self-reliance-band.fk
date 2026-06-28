@@ -1,0 +1,8 @@
+; tests/membrane-self-reliance-band.fk — self-reliance measured from the real crossing ledger, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/form-cli-membrane.fk form-stdlib/membrane-self-reliance.fk
+;
+; Verdict 11111: a native crossing reads as relied-on-self; a remote crossing reads as escalated; accept-precision
+; over a lived ledger is 0.5 (relied on self 4x, vindicated 2x); that is under 1.0 (over-relying where native
+; fails); and a ledger of only-successful native crossings reads 1.0 -- the body's cognitive sovereignty measured
+; from the membrane it actually crosses.
+(do (membrane-self-reliance-check))
