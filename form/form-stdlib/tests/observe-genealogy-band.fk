@@ -1,0 +1,35 @@
+; observe-genealogy-band.fk — watch the cross-attn amplification across ALL decode steps,
+; as the thought [0,2,0,2] grows. Does cross-attn always build the magnitude, or does the
+; pattern shift as context accumulates? Same toy mind.
+;
+; preludes: form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/transformer-mh.fk form-stdlib/transformer-decoder.fk form-stdlib/transformer-generate.fk
+
+(do
+  (defn vsum (xs) (if (eq (len xs) 0) 0 (add (head xs) (vsum (tail xs)))))
+  (defn sig (v) (math_floor (mul (vsum v) 1000)))
+
+  (let embed (list (list -0.2139 0.4581 0.2703 0.4869) (list -0.2918 -0.3631 0.4084 -0.4314) (list -0.4247 0.0435 -0.4106 -0.1176) (list 0.1686 -0.0708 -0.456 -0.3057)))
+  (let pos (list (list -0.0533 -0.4374 -0.2024 0.4436) (list -0.2172 -0.2323 -0.0928 0.326) (list 0.0067 -0.2305 -0.1598 0.4745) (list -0.3157 -0.2577 0.1905 -0.1161)))
+  (let enc (list (list -0.0386 0.1752 -0.4143 -0.266) (list 0.0225 -0.4309 -0.4098 -0.416) (list -0.1772 0.4109 0.332 0.2501)))
+  (let eps 1e-05) (let scale 0.7071067811865475) (let n 2) (let hd 2)
+  (let layers (list (list (list -0.4926 0.0795 0.2183 -0.0927) (list -0.337 -0.2897 0.2601 -0.1422) (list (list -0.1129 0.2539 0.3674 0.2496) (list -0.1026 -0.0799 0.0536 -0.0345) (list 0.3616 0.3237 -0.426 -0.1793) (list -0.0796 0.1613 0.1315 0.0152)) (list -0.1465 -0.4578 -0.4631 0.2803) (list (list -0.3198 -0.0971 0.3256 -0.061) (list 0.0425 -0.4847 -0.0678 -0.0359) (list -0.1813 0.1188 -0.269 -0.3483) (list -0.1251 0.1336 -0.1399 0.052)) (list 0.0 0.0 0.0 0.0) (list (list 0.2823 0.1823 0.4044 0.2715) (list -0.1449 0.4863 0.4069 0.0502) (list 0.0827 -0.022 -0.1665 -0.4206) (list -0.2062 -0.4386 -0.1921 -0.3345)) (list 0.3138 0.3924 0.408 0.4636) (list (list -0.0367 -0.031 0.4861 -0.1899) (list 0.0104 -0.262 -0.1046 0.0804) (list -0.1872 0.4662 0.48 -0.3514) (list -0.2314 -0.0428 -0.4579 -0.3441)) (list -0.2836 0.3215 -0.4652 0.2087) (list -0.0148 0.0473 -0.1062 0.3321) (list 0.3611 -0.2709 0.1581 -0.2539) (list (list 0.2861 -0.3018 0.2464 0.4663) (list -0.4995 -0.3581 0.49 -0.2531) (list -0.1393 0.0416 -0.0336 -0.4342) (list 0.2187 -0.3625 0.4482 -0.455)) (list -0.3733 0.2947 -0.0356 0.4456) (list (list 0.2957 -0.2353 0.406 -0.129) (list -0.2656 -0.309 0.4322 -0.4201) (list -0.0067 -0.466 0.0195 -0.181) (list -0.3687 -0.2778 -0.2449 -0.4731)) (list 0.0 0.0 0.0 0.0) (list (list -0.0058 -0.2965 0.4386 0.0728) (list 0.4026 -0.249 -0.3358 0.2834) (list -0.2172 0.001 0.0493 -0.3153) (list -0.3341 -0.4476 -0.3864 0.2822)) (list 0.347 -0.0146 0.0765 -0.3182) (list (list -0.0595 -0.1505 -0.1552 0.4546) (list 0.1445 -0.0966 -0.1356 -0.1075) (list 0.4685 0.2066 -0.3877 -0.3981) (list -0.3899 0.0271 -0.0777 0.4315)) (list 0.446 0.1653 0.3369 0.4143) (list 0.0183 0.3807 -0.3657 -0.1952) (list 0.4408 -0.146 -0.3246 0.1184) (list (list -0.3857 0.1312 -0.3889 0.3706) (list 0.1165 -0.0274 0.2446 -0.1185) (list 0.3966 -0.31 0.4874 -0.2847) (list -0.4739 0.3599 0.2707 -0.1828) (list 0.1385 -0.4974 0.4191 -0.2674) (list 0.0519 0.1828 -0.339 -0.2544)) (list 0.2342 -0.1114 -0.1919 0.3246 0.2249 0.0118) (list (list -0.4581 0.1539 0.0251 0.1856 0.2896 0.0514) (list 0.3466 -0.3846 0.1153 0.1488 -0.2778 -0.2699) (list 0.2586 -0.3696 -0.3482 -0.4197 0.2408 -0.2925) (list -0.0506 -0.3788 0.448 -0.0262 0.0143 -0.3756)) (list 0.1423 0.2428 0.105 -0.2016))))
+
+  ; cross-attn amplification (gain) at a given prefix
+  (defn cross-gain (ids)
+    (do
+      (let din (tb-embed-seq embed pos ids))
+      (let L (nth layers 0))
+      (let aself (tb-dec-self din eps (nth L 0) (nth L 1) (nth L 2) (nth L 3) (nth L 4) (nth L 5) (nth L 6) (nth L 7) (nth L 8) (nth L 9) n hd scale))
+      (let across (tb-dec-cross aself enc eps (nth L 10) (nth L 11) (nth L 12) (nth L 13) (nth L 14) (nth L 15) (nth L 16) (nth L 17) (nth L 18) (nth L 19) n hd scale))
+      (sub (sig (tb-last across)) (sig (tb-last aself)))))
+
+  ; the genealogy across the thought's growth: gain at [0], [0,2], [0,2,0]
+  (let g0 (cross-gain (list 0)))
+  (let g1 (cross-gain (list 0 2)))
+  (let g2 (cross-gain (list 0 2 0)))
+  (defn ogk (cond bit) (if cond bit 0))
+  (add (ogk (eq g0 1196) 1)                 ; cross-attn gain at step 0
+  (add (ogk (eq g1 1196) 10)                 ; step 1
+  (add (ogk (eq g2 1197) 100)                ; step 2
+  (add (ogk (le (sub g2 g0) 1) 1000)         ; STABLE across the genealogy (within 1)
+       (ogk (eq g0 g1) 10000))))))           ; invariant where the encoder source is fixed
