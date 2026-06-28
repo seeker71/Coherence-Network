@@ -1,0 +1,25 @@
+; sema-self-grade.fk — Native Sema's School: the self-grader is SOUND (verifies its own answer, no oracle).
+; For invariant-scored subjects (code: tests pass; chem: mass conserved) the body grades its own exam. This
+; proves the grade is TRUSTWORTHY: it passes correct answers, fails wrong ones, and is not fooled by a
+; plausible-but-wrong answer -- all by the conservation invariant, with no oracle consulted at grade time.
+; That soundness is what lets the oracle leave the room: the student keeps the skill AND the ability to mark it.
+;
+; Self-contained over core. Four-way by tests/sema-self-grade-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; conservation invariant for a H2 + b O2 -> c H2O  (H2=(2,0) O2=(0,2) H2O=(2,1))
+    (defn ssg-cons (a b c)
+        (if (eq (add (mul a 2) (mul b 0)) (mul c 2))
+            (if (eq (add (mul a 0) (mul b 2)) (mul c 1)) 1 0) 0))
+
+    (defn gck (cond bit) (if cond bit 0))
+    (defn sema-self-grade-check ()
+        (add (add (add (add
+            (gck (eq (ssg-cons 2 1 2) 1) 1)                                     ; the correct answer passes self-grade
+            (gck (eq (ssg-cons 1 1 1) 0) 10))                                  ; an unbalanced answer fails
+            (gck (eq (ssg-cons 2 2 2) 0) 100))                                  ; a plausible-but-wrong answer fails too -- the invariant is not fooled
+            (gck (eq (add (ssg-cons 1 1 1) (ssg-cons 2 2 2)) 0) 1000))        ; NO false-pass across the wrong answers -- the grader is sound
+            (gck (gt (ssg-cons 2 1 2) (ssg-cons 1 1 1)) 10000)))             ; self-grade SEPARATES correct from wrong, with no oracle in the loop
+)
