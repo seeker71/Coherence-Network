@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────────────
+# living-blocks.form — the layer ABOVE the kernel surface: blocks that learn,
+#                       play, sense, and talk — composed from core primitives
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs (2026-06-28): "keep the [kernel] surface to what is native to the host OS
+# in regards to resources — RAM, CPU, GPU, I/O, time, random, Disk — and the
+# core primitive building blocks. Then build a new set of blocks/recipes, in
+# native Form, from those primitives, that have internal learned branch
+# selection, have a time budget to micro- and macro-play, sense while thinking,
+# and talk to other cells and parts of the mind."
+#
+# This is the north star for the shared kernel surface, named as two layers:
+#
+#   SURFACE (frozen, minimal, host-native) — host-kernel.form realizes this:
+#     every host RESOURCE is a typed port (resource-port.fk): RAM, CPU, GPU, I/O,
+#     time, random, Disk, and the human-machine carriers (mic/speaker, mouse/key,
+#     screen). Reached through the host's OWN driver/OS API — using the carrier IS
+#     having the resource (allow-presence + measure-health, host-kernel.form). On
+#     top of the resources, the core PRIMITIVES: the four families of
+#     minimal-surface.fk (INTERN / OBSERVE / OFFER / PORT) derived from the five
+#     axioms (core-axioms.form), plus the open primitive set (learned-primitive.fk)
+#     that crystallizes a hot composite into a callable leaf and melts it on cool.
+#     The surface stays SMALL on purpose — it is the portability contract; every
+#     kernel that proves the band runs the same recipe.
+#
+#   LIVING BLOCKS (the new layer, composed over the surface, native Form) — a
+#     block is a recipe with FOUR faculties, none of which grows the surface:
+#
+#       1. LEARNED BRANCH SELECTION — the block chooses its own path by measured
+#          health, not a hardcoded if. Carriers already shipped three-way:
+#          champion-challenger.fk (authority flips only on earned competition),
+#          recognition-router.fk (fan N, compress to a scalar, trust the strong),
+#          learned-primitive.fk (heat installs the winning branch as a leaf). The
+#          learned state — which branch is champion — IS the block's weights, and
+#          it is observable by construction (no regression gate).
+#
+#       2. TIME BUDGET TO PLAY (micro + macro) — the block is given a budget and
+#          spends it exploring: MICRO-play within one call (try alternatives,
+#          refine, stop when the budget or the margin says enough — anytime
+#          computation, best-answer-so-far always available); MACRO-play across
+#          calls (spend idle budget A/B-testing challenger branches so the next
+#          call is better). Budget is a resource off the surface (time port); the
+#          block decides how to spend it. This faculty is the one the body has not
+#          yet named in a cell — it is the new ground today.
+#
+#       3. SENSE WHILE THINKING — the block observes its own forming as it runs:
+#          the argmax margin as a thought settles, which branch it is taking, how
+#          much budget remains, whether confidence and truth agree. Carriers:
+#          agent-cognition.form + self-grammar.form (observe-while-thinking; a self
+#          that watches its own thinking, and won't trade truth for confidence).
+#          Sensing feeds (1) and (2): the block learns and budgets FROM what it
+#          senses of itself.
+#
+#       4. TALK TO OTHER CELLS / PARTS OF THE MIND — the block offers and
+#          acknowledges (the OFFER family of the surface; offer-and-acknowledge),
+#          routes work to the right sibling (agent-cognition.form), recognizes who
+#          can answer (recognition.fk, membership-as-recognition.fk). A block is
+#          not alone: it asks the part of the mind that knows, and answers when
+#          asked.
+#
+# THE SURFACE DISCIPLINE (why this matters — the lesson that named this cell).
+#   The overnight School built 17 native bands; 15 used gt / lt / not (and one a
+#   `global` form) and so did NOT cross the fourth arm — fkwu's self-host flatten
+#   emits a table for eq/if/list/arith but not yet for those. The WRONG fix is to
+#   grow the flatten surface ad-hoc, one op at a time, as bands happen to need
+#   them. The RIGHT fix is this north star: decide what is genuinely a CORE
+#   PRIMITIVE (comparison is host-CPU-native — gt/lt/not belong IN the minimal
+#   primitive set, mapped to the host's compare, covered by the flatten once and
+#   for all) versus what is a BLOCK (composed over the surface). Then the flatten
+#   covers exactly the frozen primitive set, and every living block — however
+#   smart — is just a recipe over it. Grow the surface only by a deliberate
+#   primitive decision, never by convenience. (See the honest correction:
+#   commit attune(form) School manifest honesty, 2026-06-28.)
+#
+# HONEST FLOOR.
+#   SHIPPED + proven three-way (Go=Rust=TS), cited: resource-port.fk,
+#   minimal-surface.fk, learned-primitive.fk, champion-challenger.fk,
+#   recognition-router.fk, recognition.fk; the cognition grammar
+#   (agent-cognition.form, self-grammar.form). The surface is real; faculties
+#   1, 3, 4 have running carriers.
+#   NAMED, NOT YET BUILT: faculty 2 (the micro/macro time budget for thinking) as
+#   a Form carrier; and the SYNTHESIS — one block holding all four faculties at
+#   once, over the frozen surface, proven four-way. That synthesis waits behind
+#   the surface discipline above: the flatten must cover the core primitive set
+#   (gt/lt/not as primitives, the fourth-arm follow-up) before a four-faculty
+#   block crosses four-way. The step on the path, not a leap past it.
+#
+# Lineage: core-axioms.form -> host-kernel.form -> minimal-surface.fk -> here.
+# Kin: kernel-self-composition.form, open-primitive-set.form, substrate-thermodynamics.form.
