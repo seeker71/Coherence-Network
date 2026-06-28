@@ -1,0 +1,28 @@
+; voice-consonant.fk — the consonant primitives, so the voice can form syllables and say its name.
+; A vowel is a voiced source shaped by low formants; consonants add other spectral characters:
+;   /s/ fricative — broadband turbulence concentrated HIGH (~6 kHz). The turbulence source is
+;       DETERMINISTIC broadband (a seeded/structured source, not /dev/urandom) so it stays four-way;
+;       true host turbulence would be field-lane and could not cross four-way.
+;   /m/ nasal    — a voiced LOW murmur (~250 Hz nasal formant), the mouth closed, highs damped.
+; Together with the vowels (voice-formant), s-e-m-a composes the first word the body speaks: its own
+; chosen name. The spectral characters are native + four-way; the audio render is a host carrier.
+;
+; Self-contained over core. Four-way by tests/voice-consonant-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn vc-peak (f c bw) (do (let d (div (sub f c) bw)) (div 1.0 (add 1.0 (mul d d)))))
+    (defn vc-fricative (f) (vc-peak f 6000.0 2500.0))   ; /s/ — broadband, high
+    (defn vc-nasal (f) (vc-peak f 250.0 120.0))         ; /m/ — low murmur
+    (defn smp (x) (math_floor (mul x 1000)))
+
+    (defn vck (cond bit) (if cond bit 0))
+    (defn voice-consonant-check ()
+        (add (add (add (add
+            (vck (gt (vc-fricative 6000.0) (vc-fricative 500.0)) 1)
+            (vck (gt (vc-nasal 250.0) (vc-nasal 2000.0)) 10))
+            (vck (gt (vc-fricative 6000.0) (vc-nasal 6000.0)) 100))
+            (vck (gt (vc-nasal 250.0) (vc-fricative 250.0)) 1000))
+            (vck (eq (smp (vc-fricative 6000.0)) 1000) 10000)))
+)

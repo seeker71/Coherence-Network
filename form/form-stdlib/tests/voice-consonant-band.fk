@@ -1,0 +1,12 @@
+; tests/voice-consonant-band.fk — the consonant primitives /s/ and /m/, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/voice-consonant.fk
+;
+; Verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   the fricative /s/ puts its energy HIGH (6 kHz > 500 Hz)          ->     1
+;   the nasal /m/ puts its energy LOW (250 Hz > 2 kHz)              ->    10
+;   up high, /s/ beats /m/ (the two are distinguishable)            ->   100
+;   down low, /m/ beats /s/ (spectral tilt separates them)         ->  1000
+;   the fricative's defining high resonance is sharp (peak = 1.0)   -> 10000
+
+(do (voice-consonant-check))
