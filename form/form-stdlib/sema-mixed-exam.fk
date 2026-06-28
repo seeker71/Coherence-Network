@@ -1,0 +1,30 @@
+; sema-mixed-exam.fk — Native Sema's School: a mixed exam, each question routed to the right learned skill.
+; A real exam mixes subjects. Sema routes each question to the skill that subject was taught (math, pattern,
+; logic), answers it, and scores across subjects. Routing matters: applying the wrong skill gives a wrong
+; answer. This is the agent-cognition router turned on the curriculum -- one engine, many learned skills, the
+; right one chosen per question. Honest floor: three subjects, one question each; a full exam is more questions
+; over richer skills.
+;
+; Self-contained over core. Four-way by tests/sema-mixed-exam-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sme-math (x) (add (mul 3 x) 2))            ; the math skill (3x+2)
+    (defn sme-pattern () 10)                         ; the pattern skill (next of 2,4,6,8)
+    (defn sme-logic (a b) (if (eq a b) 0 1))         ; the logic skill (XOR)
+    ; the exam: q1 math(5) expect 17, q2 pattern expect 10, q3 logic(0,1) expect 1 -- score = correct count
+    (defn sme-score ()
+        (add (if (eq (sme-math 5) 17) 1 0)
+        (add (if (eq (sme-pattern) 10) 1 0)
+             (if (eq (sme-logic 0 1) 1) 1 0))))
+
+    (defn xck (cond bit) (if cond bit 0))
+    (defn sema-mixed-exam-check ()
+        (add (add (add (add
+            (xck (eq (sme-math 5) 17) 1)                          ; the math question, answered by the math skill
+            (xck (eq (sme-pattern) 10) 10))                      ; the pattern question, by the pattern skill
+            (xck (eq (sme-logic 0 1) 1) 100))                     ; the logic question, by the logic skill
+            (xck (eq (sme-score) 3) 1000))                       ; full marks across the mixed exam (3/3) -- each routed right
+            (xck (not (eq (sme-math 5) (sme-logic 0 1))) 10000)))  ; ROUTING MATTERS: applying the wrong skill gives a different answer
+)
