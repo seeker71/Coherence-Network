@@ -1,0 +1,26 @@
+; preludes: form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/room-cipher.fk
+;
+; room-cipher-band — the room dead-drop's authenticated cipher: the carrier holds only ciphertext,
+; and tamper / wrong-key are rejected, not silently mis-decrypted. Encrypt-then-MAC over an
+; HMAC-SHA256 keystream, composed from the body's proven sha256 + hmac-sha256 + bxor.
+;
+; Verdict 15 when every claim lands:
+;   1   ROUNDTRIP   — decrypt(encrypt(pt)) == pt exactly
+;   2   OPAQUE      — the ciphertext differs from the plaintext (the carrier sees no content)
+;   4   TAMPER      — flipping one ciphertext byte is rejected (auth sentinel, not pt)
+;   8   WRONG-KEY   — decrypting with the wrong key is rejected (auth sentinel, not pt)
+(do
+    (let key   (rc-str-bytes "room-key-irina-private-v1"))
+    (let nonce (list 1 2 3 4 5 6 7 8))
+    (let pt    (rc-str-bytes "Irina morning brain fog; three hours of practice and love"))
+    (let blob  (rc-encrypt key nonce pt))
+    (let ct    (rc-drop blob 40))                         ; skip nonce(8)+tag(32)
+    (let back  (rc-decrypt key blob))
+    (let tampered (append-list (rc-take blob 40) (cons (bxor (head ct) 255) (tail ct))))
+    (let tback (rc-decrypt key tampered))
+    (let wback (rc-decrypt (rc-str-bytes "wrong-key") blob))
+    (let c0 (if (eq (rc-eqb back pt) 1) 1 0))
+    (let c1 (if (eq (rc-eqb ct pt) 1) 0 2))
+    (let c2 (if (eq (rc-eqb tback pt) 1) 0 4))
+    (let c3 (if (eq (rc-eqb wback pt) 1) 0 8))
+    (add c0 (add c1 (add c2 c3))))

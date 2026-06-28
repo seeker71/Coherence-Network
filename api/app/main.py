@@ -58,6 +58,7 @@ from app.routers import (
 )
 from app.routers import cc_economics as cc_economics_router
 from app.routers import cc_exchange as cc_exchange_router
+from app.routers import rooms as rooms_router
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
@@ -726,6 +727,7 @@ app.include_router(contributors_portfolio.router, prefix="/api", tags=["contribu
 app.include_router(me_portfolio.router, prefix="/api")
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
+app.include_router(rooms_router.router, prefix="/api/rooms", tags=["rooms"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])
 app.include_router(contributor_identity.router, prefix="/api", tags=["identity"])
 app.include_router(distributions.router, prefix="/api", tags=["distributions"])
