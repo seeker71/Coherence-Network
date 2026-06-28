@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-26",
+  "thread_branch": "codex/form-cli-hang-bounds-20260626",
+  "commit_scope": "Bound form-cli ask carriers and stop host carriers from loading the fkwu-only interactive REPL in the Go proof walker.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-26_form_cli_hang_bounds.json"
+  ],
+  "idea_ids": [
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "form-cli-self-healing-memory",
+    "fkwu-native-host-resources"
+  ],
+  "task_ids": [
+    "task-2026-06-26-form-cli-hang-bounds"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "OpenAI GPT-5 Codex"
+  },
+  "change_intent": "runtime_fix",
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_form_cli_carriers.py",
+    "bin/form-cli",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/form-cli-repl-control.fk",
+    "form/form-stdlib/tests/form-cli-repl-control-band.fk",
+    "scripts/form_cli_ask.sh",
+    "scripts/form_cli_ask_smart.py",
+    "scripts/form_cli_rag.py"
+  ],
+  "evidence_refs": [
+    "FORM-FIRST MISS: the first bounded form-cli ask diagnosis in the older linked worktree timed out after 20s with no stdout/stderr.",
+    "ROOT CAUSE: scripts/form_cli_ask_smart.py loaded form-cli-repl.fk, which immediately enters the fkwu-only read_line/isatty loop and crashes on the Go walker.",
+    "CURRENT MAIN BASELINE: bin/form-cli already keeps ask on the native local-only staged RAG path; this branch preserves that and bounds the explicit ask+ carrier.",
+    "ROOT CAUSE: scripts/form_cli_ask.sh had no wall-clock bound around the final kernel ask+ path; native deadline support is still a carrier gap.",
+    "FOUR-WAY: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-repl-control.fk form-stdlib/tests/form-cli-repl-control-band.fk -> 1023, 1 ok, 0 divergent.",
+    "SMOKE: form-cli ask+ --timeout 2 and direct scripts/form_cli_ask_smart.py -p --timeout 2 both exit 124 with 'timeout after 2s (nothing)'; fresh ask+ source compilation can add setup time before the bounded kernel ask.",
+    "SMOKE: form-cli ask \"reply with one word: ok\" stays on the native local-only path and returns a trust row plus native miss instead of entering the Python RAG bridge.",
+    "RAG BRIDGE: form-cli rag-ask --no-heal -k 1 \"health check\" returns grounded context only; embedding calls are now bounded at 30s."
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "python3 -m py_compile scripts/form_cli_ask_smart.py scripts/form_cli_rag.py",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/form_cli_ask_smart.py ../scripts/form_cli_rag.py tests/test_form_cli_carriers.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_form_cli_carriers.py tests/test_form_cli_ask.py tests/test_form_cli_capture.py tests/test_form_cli_mcp_tools.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-cli-repl-control.fk form-stdlib/tests/form-cli-repl-control-band.fk",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "fourth_arm_outputs": [
+      "form-cli-repl-control-band fks 1023",
+      "1 ok, 0 divergent"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes; CI/deploy are pending until this branch is published from a live upstream branch."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "form-cli ask remains native local-only, while ask+ and the direct smart carrier terminate within the configured timeout and report timeout as first-class nothing instead of hanging or crashing.",
+    "public_endpoints": [
+      "bin/form-cli ask",
+      "bin/form-cli ask+",
+      "bin/form-cli -p",
+      "bin/form-cli rag-ask"
+    ],
+    "test_flows": [
+      "python3 scripts/form_cli_ask_smart.py -p --timeout 2 \"health check\"",
+      "form-cli ask+ --timeout 2 \"health check\"",
+      "form-cli ask \"reply with one word: ok\"",
+      "form-cli rag-ask --no-heal -k 1 \"health check\""
+    ]
+  }
+}

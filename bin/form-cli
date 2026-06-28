@@ -48,7 +48,7 @@ form-cli — the one door (local-first, Form-native)
   form-cli ask "<question>"
         default ask path: Form-native local-only staged RAG through the c-bootstrapped
         fkwu binary; no hidden HTTP/Ollama/subscription fallback
-  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate]
+  form-cli ask+ "<question>" [-m LOCAL] [-j JUDGE] [--remote "claude -p"] [--judge-gate] [--timeout N]
         explicit escalating ask: local-first, then the four-way-proven sufficiency gate
         (form-cli-sufficiency.fk via form-cli-ask-gate.fk) escalates to the
         subscription oracle when local is not enough. Sovereignty-first by default

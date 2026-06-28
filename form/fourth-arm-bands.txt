@@ -886,6 +886,7 @@ form-cli fks 131071
 json-emitter fks 31
 json-promoted-types fks 115
 form-cli-band fks 16383
+form-cli-repl-control-band fks 1023
 http-client-render fks 2047
 socket-loopback fks 111111
 http-client-socket-verbs fks 127
