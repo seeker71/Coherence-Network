@@ -1,0 +1,15 @@
+; tests/field-sample-band.fk — temperature shapes, the field draw chooses, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/transformer-numerics.fk form-stdlib/field-sample.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu:
+;   LOW temp: two different draws (u=0.3, u=0.9) pick the SAME token   ->     1
+;     — the field door is nearly closed, the choice collapses to argmax
+;   and that token is argmax (token 0) — the proof lane                ->    10
+;   HIGH temp: a high draw reaches a LATER token than a low draw       ->   100
+;     — the field door is open, u now changes the choice
+;   a small draw still lands at the front of the distribution          ->  1000
+;   the field door reached PAST argmax — a non-greedy token chosen     -> 10000
+
+(do
+    (field-sample-check))
