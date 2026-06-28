@@ -1,0 +1,76 @@
+{
+  "date": "2026-06-28",
+  "thread_branch": "codex/consolidate-left-behind-20260628",
+  "commit_scope": "Consolidate two conflicted Dependabot web dependency branches by applying the React Query and Viem bumps on top of the current merged dependency state.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-28_dependency_branch_consolidation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm install @tanstack/react-query@5.101.1 viem@2.53.1 --package-lock-only --ignore-scripts",
+      "cd web && npm install --ignore-scripts",
+      "cd web && npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-28_dependency_branch_consolidation.json"
+    ],
+    "summary": "npm updated package.json and package-lock.json only; install completed with existing peer/deprecation warnings; Next.js production build passed; evidence validation passed locally."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "GitHub Actions after PR"
+    ],
+    "summary": "PR checks have not run yet for this consolidation commit."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "production",
+    "summary": "No deploy performed for this dependency consolidation commit."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation remain pending until the consolidation PR is pushed and checked."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "worktree-continuity"
+  ],
+  "task_ids": [
+    "task-2026-06-28-branch-consolidation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "integration",
+        "validation",
+        "receipt-authoring"
+      ]
+    },
+    {
+      "contributor_id": "dependabot",
+      "contributor_type": "machine",
+      "roles": [
+        "dependency-update"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Dependabot PR #3618: @tanstack/react-query 5.101.0 to 5.101.1",
+    "Dependabot PR #3549: viem 2.52.2 to 2.53.1",
+    "Local package-lock-only npm update on current origin/main after PRs #3676, #3617, #3548, and #3530 merged",
+    "cd web && npm run build: passed"
+  ],
+  "change_files": [
+    "web/package.json",
+    "web/package-lock.json"
+  ],
+  "change_intent": "process_only"
+}
