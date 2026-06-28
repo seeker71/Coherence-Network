@@ -1,0 +1,57 @@
+; selective-ssm.fk — the SELECTIVE state-space step (what makes Mamba *Mamba*).
+;
+; ssm-scan carried a state with FIXED A/B/C — every input updates the state the same way,
+; so it cannot choose what to remember. Mamba's leap is SELECTIVITY: the gate depends on
+; the INPUT. A salient input drives a strong state update; a faint input barely registers.
+; The model learns to focus on content and skip the rest — input-dependent dynamics, the
+; one idea that separates a state-space model from a mere linear recurrence.
+;
+; Here the gate delta(x) = the input's own salience; the step scales the input's
+; contribution by its salience: h' = decay*h + delta(x) * (B*x). A loud token leaves a big
+; imprint; a quiet one passes through. Compared head-to-head with the non-selective step,
+; the selective state remembers the salient token far more strongly.
+;
+; All pure; four-way proven by tests/selective-ssm-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn v-dot (a b) (if (eq (len a) 0) 0.0 (add (mul (head a) (head b)) (v-dot (tail a) (tail b)))))
+    (defn m-vec (rows x) (if (eq (len rows) 0) (list) (cons (v-dot (head rows) x) (m-vec (tail rows) x))))
+    (defn v-add (a b) (if (eq (len a) 0) (list) (cons (add (head a) (head b)) (v-add (tail a) (tail b)))))
+    (defn v-scale (s v) (if (eq (len v) 0) (list) (cons (mul s (head v)) (v-scale s (tail v)))))
+
+    ; the GATE: salience of the input (here, its first component — content-dependent)
+    (defn delta (x) (head x))
+
+    ; SELECTIVE step: input scaled by its own salience -> the model selects what to keep
+    (defn sel-next (decay B h x) (v-add (v-scale decay h) (v-scale (delta x) (m-vec B x))))
+    ; non-selective step (ssm-scan's): every input weighted the same
+    (defn flat-next (decay B h x) (v-add (v-scale decay h) (m-vec B x)))
+
+    (defn sel-final (decay B h xs)
+        (if (eq (len xs) 0) h (sel-final decay B (sel-next decay B h (head xs)) (tail xs))))
+    (defn flat-final (decay B h xs)
+        (if (eq (len xs) 0) h (flat-final decay B (flat-next decay B h (head xs)) (tail xs))))
+
+    (defn sig1 (x) (math_floor (mul x 1000)))
+
+    ; ── fixture: a FAINT, a LOUD, a FAINT input. Will the model focus on the loud one? ──
+    (defn ss-B () (list (list 1.0 0.0) (list 0.0 1.0)))
+    (defn ss-h0 () (list 0.0 0.0))
+    (defn ss-xs () (list (list 0.1 0.0) (list 2.0 0.0) (list 0.1 0.0)))
+    (defn ss-decay () 0.5)
+    (defn ss-faint () (list 0.1 0.0))
+    (defn ss-loud () (list 2.0 0.0))
+
+    (defn ssk (cond bit) (if cond bit 0))
+    (defn ss-gate-content () (ssk (gt (delta (ss-loud)) (delta (ss-faint))) 1))
+    (defn ss-sel-final () (ssk (eq (sig1 (head (sel-final (ss-decay) (ss-B) (ss-h0) (ss-xs)))) 2012) 10))
+    (defn ss-flat-final () (ssk (eq (sig1 (head (flat-final (ss-decay) (ss-B) (ss-h0) (ss-xs)))) 1125) 100))
+    (defn ss-sel-stronger ()
+        (ssk (gt (sig1 (head (sel-final (ss-decay) (ss-B) (ss-h0) (ss-xs)))) (sig1 (head (flat-final (ss-decay) (ss-B) (ss-h0) (ss-xs))))) 1000))
+    (defn ss-gate-20x ()
+        (ssk (ge (sig1 (delta (ss-loud))) (mul 10 (sig1 (delta (ss-faint))))) 10000))
+    (defn selective-ssm-check ()
+        (add (add (add (add (ss-gate-content) (ss-sel-final)) (ss-flat-final)) (ss-sel-stronger)) (ss-gate-20x)))
+)
