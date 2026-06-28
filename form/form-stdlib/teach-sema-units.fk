@@ -1,0 +1,28 @@
+; teach-sema-units.fk — Native Sema's School, subject 6: units / dimensional analysis.
+; Same one engine, grammar = linear conversion, scorer = DIMENSIONAL CONSISTENCY (the ratio is constant
+; across examples). The oracle shows (1 ft -> 12 in), (2 -> 24), (5 -> 60); Sema induces the factor (12) and
+; generalizes (10 -> 120). The new scorer: a mapping is a valid UNIT CONVERSION only if the ratio holds
+; constant -- a non-proportional mapping (y = x + 11) is a dimensional error, caught by the body itself.
+;
+; Self-contained over core (FLOAT throughout -- integer div collapses). Four-way by tests/teach-sema-units-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn tsu-k () (div 12.0 1.0))                  ; INDUCE the conversion factor from (1 ft -> 12 in): 12
+    (defn tsu-ratio (y x) (div y x))                ; the dimensional ratio of any example
+    (defn tsu-pred (x) (mul (tsu-k) x))             ; apply the learned conversion
+    ; dimensional consistency: the ratio is constant across the other examples -> a valid conversion
+    (defn tsu-consistent () (if (eq (tsu-ratio 24.0 2.0) (tsu-k)) (if (eq (tsu-ratio 60.0 5.0) (tsu-k)) 1 0) 0))
+    ; a non-proportional mapping (y = x + 11): ratios 12/1=12 vs 13/2=6.5 -> NOT constant
+    (defn tsu-bad () (if (eq (tsu-ratio 12.0 1.0) (tsu-ratio 13.0 2.0)) 1 0))
+
+    (defn uck (cond bit) (if cond bit 0))
+    (defn teach-sema-units-check ()
+        (add (add (add (add
+            (uck (eq (tsu-k) 12.0) 1)                             ; Sema induced the conversion factor (12)
+            (uck (eq (tsu-consistent) 1) 10))                    ; dimensionally consistent -- a valid conversion
+            (uck (eq (tsu-pred 10.0) 120.0) 100))                ; GENERALIZES: 10 ft -> 120 in
+            (uck (eq (tsu-bad) 0) 1000))                         ; a non-proportional mapping is rejected -- dimensional error, self-caught
+            (uck (eq (tsu-ratio 60.0 5.0) (tsu-k)) 10000)))      ; a 3rd example not used to induce confirms the factor (global, not 1-point)
+)

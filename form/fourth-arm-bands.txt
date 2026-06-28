@@ -1112,3 +1112,4 @@ teach-sema-pattern fks 11111
 teach-sema-code fks 11111
 teach-sema-chem fks 11111
 teach-sema-logic fks 11111
+teach-sema-units fks 11111
