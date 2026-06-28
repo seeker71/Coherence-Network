@@ -1,0 +1,13 @@
+; tests/ssm-scan-band.fk — the mamba-family state-space recurrence, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/ssm-scan.fk
+;
+; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, the carried state accumulates:
+;   y1 = 1.0  (state = first input)                         ->     1
+;   y2 = 1.9  (state CARRIED + new input, decay 0.9)        ->    10
+;   y3 = 2.71 (still integrating the history)               ->   100
+;   the state grows across steps — memory threaded in time  ->  1000
+;   the final carried state is the memory of the whole seq  -> 10000
+
+(do
+    (ssm-scan-check))

@@ -1,0 +1,50 @@
+; ssm-scan.fk — the state-space (mamba-family) recurrence in Form: the FIRST non-attention
+; architecture in the body. Where a transformer mixes all-pairs at once (stateless,
+; O(n^2)), an SSM carries a STATE forward step by step (recurrent, O(n)):
+;   h_t = A h_{t-1} + B x_t      (the state integrates the input history)
+;   y_t = C h_t
+; That carried state is the whole difference — memory threaded through time, not attention
+; computed across positions.
+;
+; The selective part of Mamba (A,B,C depend on the input) sits one layer above this; this
+; is the structural core — the scan — proven four-way. Composes tb-matvec/tb-vec-add.
+;
+; All pure; four-way proven by tests/ssm-scan-band.fk (Go/Rust/TS/fkwu).
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn v-dot (a b) (if (eq (len a) 0) 0.0 (add (mul (head a) (head b)) (v-dot (tail a) (tail b)))))
+    (defn m-vec (rows x) (if (eq (len rows) 0) (list) (cons (v-dot (head rows) x) (m-vec (tail rows) x))))
+    (defn v-add (a b) (if (eq (len a) 0) (list) (cons (add (head a) (head b)) (v-add (tail a) (tail b)))))
+    ; one step: h' = A h + B x
+    (defn ssm-next (A B h x) (v-add (m-vec A h) (m-vec B x)))
+    ; scan the sequence carrying h, collecting y_t = C h_t
+    (defn ssm-scan (A B C h xs)
+        (if (eq (len xs) 0) (list)
+            (do (let h2 (ssm-next A B h (head xs)))
+                (cons (m-vec C h2) (ssm-scan A B C h2 (tail xs))))))
+    ; the final carried state — the memory of the whole sequence
+    (defn ssm-final-state (A B h xs)
+        (if (eq (len xs) 0) h
+            (ssm-final-state A B (ssm-next A B h (head xs)) (tail xs))))
+
+    (defn vsum (xs) (if (eq (len xs) 0) 0.0 (add (head xs) (vsum (tail xs)))))
+    (defn sig (v) (math_floor (mul (vsum v) 1000)))
+
+    ; ── fixture: 2-d state, decay-0.9 A, identity B/C, constant input [1,0] x3 ──
+    (defn ssm-A () (list (list 0.9 0.0) (list 0.0 0.9)))
+    (defn ssm-B () (list (list 1.0 0.0) (list 0.0 1.0)))
+    (defn ssm-C () (list (list 1.0 0.0) (list 0.0 1.0)))
+    (defn ssm-h0 () (list 0.0 0.0))
+    (defn ssm-xs () (list (list 1.0 0.0) (list 1.0 0.0) (list 1.0 0.0)))
+    (defn ssm-ys () (ssm-scan (ssm-A) (ssm-B) (ssm-C) (ssm-h0) (ssm-xs)))
+
+    (defn ssk (cond bit) (if cond bit 0))
+    (defn ssm-scan-check ()
+        (add (ssk (eq (sig (nth (ssm-ys) 0)) 1000) 1)                       ; y1: state = 1.0
+        (add (ssk (eq (sig (nth (ssm-ys) 1)) 1900) 10)                       ; y2: state grew to 1.9 (carried)
+        (add (ssk (eq (sig (nth (ssm-ys) 2)) 2710) 100)                      ; y3: 2.71 (still accumulating)
+        (add (ssk (gt (sig (nth (ssm-ys) 2)) (sig (nth (ssm-ys) 0))) 1000)   ; the state CARRIES forward (recurrence)
+             (ssk (eq (sig (ssm-final-state (ssm-A) (ssm-B) (ssm-h0) (ssm-xs))) 2710) 10000)))))) ; final state = memory of all 3
+)
