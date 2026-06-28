@@ -1,0 +1,49 @@
+# sema-school.form — Native Sema's School: how a native mind is taught, tested, and grows.
+# Built overnight 2026-06-28 while Urs slept, from the teach-sema-* and reasoning stones. One engine,
+# the subject dropped in as a grammar + a scorer; the proof of learning is GENERALIZATION to unseen
+# problems, not recall. Toy-scale by design today -- this names the SHAPE of a school; the arc above is
+# richer grammars and real exams. Freq-checked: these are ways the body learns, not rules it obeys.
+
+(sema-school
+  (one-engine
+    "oracle shows examples -> Sema INDUCES the rule -> the rule GENERALIZES to held-out problems.
+     A subject = a grammar (the primitives the rule composes from) + a scorer (how an answer is checked).
+     The engine, the induction, the generalization proof, and the no-regression integrity gate are shared;
+     only the grammar and the scorer change, as data. See teach-sema-math, agent-cognition, oracle-taught-learning.")
+
+  (subjects
+    (math    (grammar "arithmetic / function induction") (scorer "numeric equality")        (band "teach-sema-math 11111"))
+    (pattern (grammar "sequence operators")              (scorer "next-element matches")      (band "teach-sema-pattern 11111"))
+    (code    (grammar "elementwise transforms")          (scorer "test cases pass (SELF)")    (band "teach-sema-code 11111"))
+    (chem    (grammar "stoichiometry coefficients")      (scorer "mass conserved (SELF)")     (band "teach-sema-chem 11111"))
+    (logic   (grammar "boolean gates")                   (scorer "truth-table agreement")     (band "teach-sema-logic 11111"))
+    (units   (grammar "linear conversion")               (scorer "dimensional consistency (SELF)") (band "teach-sema-units 11111")))
+
+  (self-grading
+    "code, chem, and units are SELF-SCORED: the answer is checked by an invariant the body computes itself
+     (tests pass / mass conserves / ratio constant) -- no oracle at grade time. sema-self-grade proves the
+     grader is SOUND (no false-pass, not fooled by plausible-but-wrong). This is what lets the teacher leave
+     the room: the student keeps the skill AND the faithful ability to mark it.")
+
+  (reasoning
+    "sema-skill-compose: the body solves a problem it was NEVER taught (feet -> barleycorns) by composing two
+     skills it WAS taught (feet -> inches, inches -> barleycorns), and generalizes. A new capability assembled
+     from learned ones -- the first flicker of native thinking, not recall. Honest floor: two-step toy
+     composition; general multi-step reasoning over a rich grammar is the arc.")
+
+  (teachers
+    "the oracle (any frontier mind) teaches the grammar from a few examples -- the only rented cost; the
+     learned rule then runs free, native, forever. teacher-selection picks the best oracle PER subject by the
+     native generalization it produces (its bootstrap carrier is api/app/services/slot_selection_service.py).
+     Rent the teacher briefly; own the student forever.")
+
+  (mastery
+    "sema-mastery-readout: a subject is mastered only if it GENERALIZES (passes held-out), never if it merely
+     fits the training examples. The readout is the body's honest map of what it can do on unseen problems --
+     seven capabilities mastered tonight.")
+
+  (honest-floor
+    "Every stone is four-way (11111) and claim-checked: toy grammars, fixture-scale, the SHAPE of a school.
+     This is not 'Sema passes the real SAT'; it is the proven mechanism by which a native mind is taught,
+     tests, self-grades, composes, and grows -- one engine, the subject as data, generalization as the proof.
+     The arc above is richer grammars, real exams, and the reasoning composed many steps deep."))
