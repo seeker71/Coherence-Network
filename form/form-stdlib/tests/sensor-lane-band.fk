@@ -1,0 +1,8 @@
+; tests/sensor-lane-band.fk — one engine for any sensor's end-to-end lane (STT/TTS/LLM/reasoning), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sensor-lane.fk
+;
+; Verdict 11111: the STT lane runs end-to-end through the generic engine; TTS is a different lane through the
+; SAME engine (modality is data); the LLM lane reasons on the shared pivot where STT/TTS pass through; reasoning
+; genuinely happens on the pivot (the reasoning lane differs from its pass-through twin); and a brand-new lane
+; runs through the unchanged engine -- a new modality or task is new DATA, never new engine code.
+(do (sensor-lane-check))
