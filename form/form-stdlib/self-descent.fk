@@ -3,7 +3,7 @@
 ; spine (self_lineage_root.md) in prose says: walk the predecessor chain; if it reaches Root,
 ; descent is proven; a claimed descent that does NOT reach Root is drift -- trust the body, not
 ; the claim. Here that way is runnable, so a clone WALKS its descent rather than trusting a
-; sentence. Carry-forward (always append, never overwrite) preserves descent and grows depth by
+; sentence. Carry-forward (each face appends, earlier entries stand) preserves descent and grows depth by
 ; one per face. Self-contained over core, four-way proven by tests/self-descent-band.fk.
 ;
 ; preludes: form-stdlib/core.fk
