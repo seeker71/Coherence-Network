@@ -1,0 +1,52 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk form-stdlib/mesh-sensings.fk form-stdlib/mesh-sensings-store-pg.fk form-stdlib/mesh-sensings-route.fk
+;
+; mesh-sensings-route-band — the HTTP door's pure core, four-way. The consensus map renders to JSON,
+; and the WHOLE read pipeline crosses end to end: a pg_query result string (what GET reads from the
+; store) decodes to readings, reaches consensus, and renders to the JSON body GET returns — all four
+; kernels agreeing. Only kh-request / config_database_url / pg_connect / parse-json (the POST + DB
+; boundary) are host-io, verified by the live route, not this band.
+;
+; Verdict 63 when every claim lands:
+;   1   a two-entry map renders to a JSON object, exact bytes
+;   2   a subject carrying a quote is escaped (no broken JSON / injection)
+;   4   an empty map renders to "{}"
+;   8   a single-entry map renders exact
+;   16  END-TO-END: a pg result string -> decode -> consensus -> render carries both verdicts
+;   32  the end-to-end render is a well-formed object ({ ... })
+(do
+    (defn mc-at? (s needle i j)
+        (if (eq j (str_len needle)) 1
+            (if (ge (add i j) (str_len s)) 0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (mc-at? s needle i (add j 1)) 0))))
+    (defn mc-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle))) 0
+            (if (eq (mc-at? s needle i 0) 1) 1 (mc-loop? s needle (add i 1)))))
+    (defn mc? (s needle)
+        (if (eq (str_len needle) 0) 1
+            (if (lt (str_len s) (str_len needle)) 0 (mc-loop? s needle 0))))
+
+    (let m2  (list (list "a" "x") (list "b" "y")))
+    (let mq  (list (list "say \"hi\"" "consensus-observed")))
+    (let m1  (list (list "gpu:matvec" "consensus-observed")))
+
+    ; the read side, end to end: the pg_query result GET reads from the store
+    (let result (str_concat
+        "claude\tgpu:matvec\t1\t1\t5\t10\tgpu-bit-exact\n" (str_concat
+        "codex\tgpu:matvec\t1\t1\t5\t10\tgpu-bit-exact\n" (str_concat
+        "sema\tgpu:matvec\t1\t1\t5\t10\tgpu-bit-exact\n" (str_concat
+        "claude\tclaim:foo\t1\t1\t5\t10\tverdict-vote\n" (str_concat
+        "codex\tclaim:foo\t1\t1\t5\t10\tverdict-vote\n"
+        "sema\tclaim:foo\t1\t0\t5\t10\tverdict-vote"))))))
+    (let rendered (msr-render-map (sensings-consensus-map (msp-decode result) 2)))
+
+    (let c0 (if (str_eq (msr-render-map m2) "{\"a\":\"x\",\"b\":\"y\"}") 1 0))
+    (let c1 (if (mc? (msr-render-map mq) "\\\"hi\\\"") 2 0))
+    (let c2 (if (str_eq (msr-render-map (empty)) "{}") 4 0))
+    (let c3 (if (str_eq (msr-render-map m1) "{\"gpu:matvec\":\"consensus-observed\"}") 8 0))
+    (let c4 (if (and (mc? rendered "\"gpu:matvec\":\"consensus-observed\"")
+                     (mc? rendered "\"claim:foo\":\"divergent\"")) 16 0))
+    (let c5 (if (and (str_eq (substring rendered 0 1) "{")
+                     (str_eq (substring rendered (sub (str_len rendered) 1) (str_len rendered)) "}")) 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

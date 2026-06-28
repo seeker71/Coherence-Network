@@ -1,0 +1,71 @@
+; mesh-sensings-route.fk — the HTTP door onto the cross-machine sensings store. A presence on ANY
+; machine POSTs a reading; GET returns the consensus map every presence shares. This is what makes
+; the durable Postgres backend (mesh-sensings-store-pg.fk) reachable across machines — the last carrier
+; the .fkb / pg store headers named.
+;
+; The route BODY is the already-proven contract: msp-* (the Postgres store) + sensings-consensus-map
+; (mesh-sensings). The handler is the thin carrier — read the request, touch Postgres at the host-io
+; boundary, render the verdict. The pure piece — msr-render-map (consensus map -> JSON) — is four-way
+; (Go/Rust/TS/fkwu); the kernel/host boundary (kh-request, config_database_url, pg_connect/exec/query,
+; parse-json of the POST body) is verified by the live route responding, the observe-end-to-end arc
+; every native route follows.
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/mesh-quorum.fk form-stdlib/mesh-sensings.fk form-stdlib/mesh-sensings-store-pg.fk
+;
+; Proven by: form-stdlib/tests/mesh-sensings-route-band.fk
+
+(do
+    ; ── render a consensus map (list of (subject, verdict) pairs) as a JSON object (pure, four-way) ──
+    (defn msr-jesc-loop (s i n acc)
+        (if (ge i n)
+            acc
+            (do
+                (let c (substring s i (add i 1)))
+                (msr-jesc-loop s (add i 1) n
+                    (str_concat acc
+                        (if (str_eq c "\"") "\\\""
+                            (if (str_eq c "\\") "\\\\" c)))))))
+    (defn msr-jesc (s) (msr-jesc-loop s 0 (str_len s) ""))
+    (defn msr-jstr (s) (str_concat "\"" (str_concat (msr-jesc s) "\"")))
+    (defn msr-pair-json (p)
+        (str_concat (msr-jstr (head p)) (str_concat ":" (msr-jstr (head (tail p))))))
+    (defn msr-map-join (m)
+        (if (nil? m)
+            ""
+            (if (nil? (tail m))
+                (msr-pair-json (head m))
+                (str_concat (msr-pair-json (head m))
+                    (str_concat "," (msr-map-join (tail m)))))))
+    (defn msr-render-map (m) (str_concat "{" (str_concat (msr-map-join m) "}")))
+
+    ; ── GET /api/mesh/sensings — the shared consensus map every presence reads ──
+    ; ?k= sets the quorum threshold (minimum witnesses to call a subject), default 2.
+    (defn sensings-get-handler (request)
+        (do
+            (let k (kh-query-int-or request "k" 2))
+            (let conn (pg_connect (config_database_url)))
+            (kh-response 200
+                (list (kh-header "Content-Type" "application/json"))
+                (msr-render-map (msp-durable-map conn k)))))
+
+    ; ── POST /api/mesh/sensings — a presence on any machine appends one reading ──
+    ; body: {"presence","subject","kind","answered","ok","when","deadline"}. UPSERT is last-write-wins
+    ; per (presence, subject) in the store, so re-reporting supersedes and a new presence is a witness.
+    (defn sensings-post-handler (request)
+        (do
+            (let root (parse-json "body" (kh-request-body request)))
+            (let presence (json-string-value (json-object-get root "presence")))
+            (let rd (organ-reading
+                        (json-string-value (json-object-get root "subject"))
+                        (json-string-value (json-object-get root "kind"))
+                        (json-int-value (json-object-get root "answered"))
+                        (json-int-value (json-object-get root "ok"))
+                        (json-int-value (json-object-get root "when"))
+                        (json-int-value (json-object-get root "deadline"))
+                        (list "live")))
+            (let conn (pg_connect (config_database_url)))
+            (let e1 (msp-ensure-table conn))
+            (let e2 (msp-persist conn presence rd))
+            (kh-response 200
+                (list (kh-header "Content-Type" "application/json"))
+                "{\"ok\":true}"))))
