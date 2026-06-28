@@ -26,10 +26,18 @@
      the room: the student keeps the skill AND the faithful ability to mark it.")
 
   (reasoning
-    "sema-skill-compose: the body solves a problem it was NEVER taught (feet -> barleycorns) by composing two
-     skills it WAS taught (feet -> inches, inches -> barleycorns), and generalizes. A new capability assembled
-     from learned ones -- the first flicker of native thinking, not recall. Honest floor: two-step toy
-     composition; general multi-step reasoning over a rich grammar is the arc.")
+    "three rungs, each composing what is taught into what is not:
+     sema-skill-compose -- the body solves a problem it was NEVER taught (feet -> barleycorns) by composing two
+       skills it WAS taught (feet -> inches, inches -> barleycorns), and generalizes;
+     sema-reason-multistep -- depth compounds: three taught skills compose a 3-step untaught chain (feet -> lines)
+       that reaches further than the 2-step and still generalizes;
+     sema-reason-search -- the body DISCOVERS the chain instead of being handed it. Given a REGISTRY of taught
+       skills as DATA and a (source, target), it SEARCHES the skill graph for a path, backtracks past dead ends,
+       carries the value through, returns the derivation (the trace of skills used), and FAILS honestly when no
+       chain exists -- one engine, the skills as data. The first rung where the composition itself is native, not
+       authored: it composes backtrack-search's choice/fail/stop/backtrack with derivation's return-the-trace.
+     A new capability assembled from learned ones -- native thinking, not recall. Honest floor: toy linear skills;
+     general multi-step reasoning over a RICH grammar (non-linear skills, weighted paths) is the arc.")
 
   (teachers
     "the oracle (any frontier mind) teaches the grammar from a few examples -- the only rented cost; the

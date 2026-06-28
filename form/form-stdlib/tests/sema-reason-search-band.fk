@@ -1,0 +1,9 @@
+; tests/sema-reason-search-band.fk — Sema DISCOVERS a multi-step skill chain over a registry-as-data, four-way.
+; The untaught ft->lines chain emerges by SEARCH (backtracking past a dead-end decoy) and generalizes to a
+; held-out input; the derivation is exactly 3 skills; the same engine finds the right-length sub-path (ft->barley);
+; it FAILS honestly with -1 on an unreachable goal (refusing to invent a chain); a direct edge is a 1-step base
+; case; and a cyclic registry still terminates. Reasoning the body was never handed: the chain is found, the value
+; carried, the trace returned, the absence of a chain admitted. Verdict 11111111.
+; (Header kept ABOVE the preludes line: fkwu's fourth-arm pre-flatten folds post-preludes comments into the table.)
+; preludes: form-stdlib/core.fk form-stdlib/sema-reason-search.fk
+(do (sema-reason-search-check))

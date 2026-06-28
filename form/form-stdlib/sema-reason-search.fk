@@ -1,0 +1,118 @@
+; sema-reason-search.fk — Native Sema's School: the body DISCOVERS a multi-step chain, it does not get told it.
+;
+; sema-skill-compose and sema-reason-multistep proved reasoning-by-composition — but the chain was
+; HAND-WRITTEN: a human composed (srm-c (srm-b (srm-a x))). The reasoning was real; the COMPOSITION was
+; not native. This cell closes that gap: given a REGISTRY of taught skills (typed conversion edges, as DATA)
+; and a (source, target, value), the engine SEARCHES the skill graph for a path, carries the value through
+; the discovered chain, and returns the derivation (the trace of skills it used). One engine; the skills and
+; the goal drop in as data; the chain is FOUND, not authored. This is "general multi-step reasoning over a
+; grammar" at its first honest rung — the named arc of sema-school.form.
+;
+; It composes the body's own shapes, nothing re-derived: backtrack-search.fk's choice/fail/stop/backtrack
+; (here choice = which edge out of the current unit, fail = a dead-end unit, stop = reached the target,
+; backtrack = try the next edge), and derivation.fk's discipline of RETURNING the trace, not just a verdict.
+; Unlike forward-chaining.fk (propositional: which FACTS follow, 1/0) this carries a VALUE through the path —
+; the quantitative sibling of the deductive reasoner. Pure integer/list arithmetic (unit = an integer atom,
+; exactly as forward-chaining's atoms), so it crystallizes to native asm and lives in the fourth-friendly
+; subset (no floats, no host I/O, small tables).
+;
+; Termination is honest two ways: a VISITED guard refuses any unit already on the current path (so cycles
+; cannot spin), and fuel = (len reg)+1 bounds depth as a belt-and-suspenders. A disconnected goal returns the
+; FAIL tag — the reasoning knows when it CANNOT reason and refuses to invent a chain.
+;
+; A skill (edge)  = (list from-unit to-unit factor)        from/to are integer unit-atoms; factor an int
+; A registry      = (list skill ...)                        the taught skills, as data
+; A search result = (list 1 path) on success | (list 0) on fail   (status-tagged, like derivation.fk)
+;   where path    = (list skill ...)  the discovered chain, in order — the attributed derivation
+;
+; Honest floor: toy linear skills (integer factors), single best-first path. Richer grammars (non-linear
+; skills, weighted/shortest paths, multiple goals) are the arc. The SHAPE — discover-the-chain, carry-the-
+; value, return-the-trace, fail-honestly — is what this proves four-way.
+;
+; Self-contained over core. Four-way by tests/sema-reason-search-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; --- skill (edge) accessors ---
+    (defn skill-from (s) (nth s 0))
+    (defn skill-to (s) (nth s 1))
+    (defn skill-factor (s) (nth s 2))
+
+    ; --- result accessors (status-tagged, mirroring derivation.fk's proof tags) ---
+    (defn cf-ok? (r) (eq (nth r 0) 1))
+    (defn cf-path (r) (nth r 1))
+
+    ; --- is unit x already on the current path? (the cycle guard) ---
+    (defn cf-member? (x xs)
+        (if (eq (len xs) 0) 0
+            (if (eq (head xs) x) 1 (cf-member? x (tail xs)))))
+
+    ; --- cf-search: ONE self-recursive search engine (choice / fail / stop / backtrack in one body). ---
+    ; STOP at the goal (an empty further path). Otherwise scan `todo` (the edges still to try from `cur`):
+    ;   CHOICE    — an edge out of `cur` to an unvisited unit, with depth fuel left: DESCEND (todo resets to
+    ;               the whole registry from the new unit, fuel drops one, `cur` joins the visited path).
+    ;   BACKTRACK — that descent dead-ended: try the NEXT edge (todo shrinks, fuel unchanged — the scan is
+    ;               bounded by todo, only descent is bounded by fuel).
+    ;   FAIL      — todo exhausted with no edge leading home.
+    ; Kept ONE function (not the mutually-recursive cf-go/cf-scan pair) so no forward cross-reference exists:
+    ; fkwu's flattener resolves fn refs positionally, and mutual recursion always forward-references one side.
+    (defn cf-search (cur goal visited todo reg fuel)
+        (if (eq cur goal)
+            (list 1 (list))                                  ; STOP — reached: zero more edges needed
+            (if (eq (len todo) 0)
+                (list 0)                                      ; FAIL — no edge from here leads home
+                (do (let e (head todo))
+                    (if (and (and (eq (skill-from e) cur)
+                                  (eq (cf-member? (skill-to e) visited) 0))
+                             (gt fuel 0))
+                        (do (let sub (cf-search (skill-to e) goal (cons cur visited) reg reg (sub fuel 1)))
+                            (if (cf-ok? sub)
+                                (list 1 (cons e (cf-path sub)))   ; this edge leads home — prepend it
+                                (cf-search cur goal visited (tail todo) reg fuel)))  ; BACKTRACK — next edge
+                        (cf-search cur goal visited (tail todo) reg fuel))))))       ; skip — not a usable edge
+
+    ; --- chain-find: the discovered chain (or the fail tag) from `from` to `to`. ---
+    (defn chain-find (reg from to) (cf-search from to (list) reg reg (add (len reg) 1)))
+
+    ; --- chain-apply: carry a value through the discovered chain, multiplying each factor. ---
+    (defn chain-apply (path v)
+        (if (eq (len path) 0) v
+            (chain-apply (tail path) (mul v (skill-factor (head path))))))
+
+    ; --- reason: discover the chain and carry the value; -1 is the honest no-path answer. ---
+    (defn reason (reg from to v)
+        (do (let r (chain-find reg from to))
+            (if (cf-ok? r) (chain-apply (cf-path r) v) -1)))
+
+    ; --- reason-len: the length of the discovered derivation (how many skills were composed); -1 if none. ---
+    (defn reason-len (reg from to)
+        (do (let r (chain-find reg from to))
+            (if (cf-ok? r) (len (cf-path r)) -1)))
+
+    ; --- the band's fixtures, as DATA the one engine reasons over ---
+    ; units: ft=0  in=1  barley=2  lines=3  cubits=4 (a dead end)  furlongs=9 (unreachable)
+    ; the decoy ft->cubits is listed FIRST, so a correct search must try it, hit the dead end, and BACKTRACK.
+    (defn srs-reg () (list
+        (list 0 4 7)                                         ; ft -> cubits   DECOY (cubits has no outgoing edge)
+        (list 0 1 12)                                        ; ft -> in
+        (list 1 2 3)                                         ; in -> barleycorns
+        (list 2 3 4)))                                       ; barleycorns -> lines
+    ; a registry with a CYCLE: a<->b, plus b->target. The visited guard must keep it terminating.
+    (defn srs-regc () (list
+        (list 0 1 2)                                         ; a -> b
+        (list 1 0 5)                                         ; b -> a   (the cycle)
+        (list 1 3 4)))                                       ; b -> target
+
+    (defn srsk (cond bit) (if cond bit 0))
+    (defn sema-reason-search-check ()
+        (add (add (add (add (add (add (add
+            (srsk (eq (reason (srs-reg) 0 3 1) 144) 1)               ; the UNTAUGHT ft->lines emerges by SEARCH (12x3x4), backtracking past the cubits decoy
+            (srsk (eq (reason (srs-reg) 0 3 2) 288) 10))            ; GENERALIZES to a held-out input (2 ft = 288 lines)
+            (srsk (eq (reason-len (srs-reg) 0 3) 3) 100))           ; the DERIVATION is exactly 3 skills (the attributed trace) — not the decoy
+            (srsk (eq (reason (srs-reg) 0 2 1) 36) 1000))          ; the SAME engine finds the right-LENGTH sub-path (ft->barley, 2 steps) — not a fixed depth
+            (srsk (eq (reason (srs-reg) 0 9 1) -1) 10000))         ; HONEST no-path: furlongs unreachable, the reasoning refuses to invent a chain
+            (srsk (eq (reason (srs-reg) 0 1 5) 60) 100000))        ; base case: a direct edge is a 1-step chain (5 ft = 60 in)
+            (srsk (eq (reason-len (srs-reg) 0 1) 1) 1000000))      ; base-case derivation length is 1
+            (srsk (eq (reason (srs-regc) 0 3 1) 8) 10000000)))    ; CYCLE-SAFE: a<->b cycle still terminates and finds a->target (2x4)
+)
