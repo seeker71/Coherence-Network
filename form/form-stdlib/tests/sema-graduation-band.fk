@@ -1,0 +1,7 @@
+; tests/sema-graduation-band.fk — the diploma: the whole school holds, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/sema-graduation.fk
+; Verdict 11111: with all seven families (induction, reasoning, self-grade, transfer, self-correct, routing,
+; mastery) the mind graduates; missing reasoning, or self-grading, or the subjects, it does not; and graduation
+; is conjunctive (the whole mind outranks any partial one). The diploma certifies the SHAPE of a learning mind
+; is whole -- proven four-way tonight, at toy scale.
+(do (sema-graduation-check))
