@@ -1,0 +1,7 @@
+; tests/transient-log-band.fk — the transient correction-event log format round-trips faithfully, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/transient-log.fk
+;
+; Verdict 11111: a caught-error event and a transient-right event both round-trip (serialize->parse) without
+; loss; the durable line is exactly "S T C"; and each field parses independently -- a faithful substrate for a
+; live transient-confidence log the reflex stream can be written to and read back from.
+(do (transient-log-check))
