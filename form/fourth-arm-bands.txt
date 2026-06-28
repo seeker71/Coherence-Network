@@ -1092,3 +1092,4 @@ real-end-to-end fks 11111
 voice-synth fks 11111
 world-model-update fks 11111
 voice-prosody fks 11111
+self-descent fks 11111
