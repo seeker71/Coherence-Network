@@ -1,0 +1,8 @@
+; tests/oracle-taught-learning-band.fk — the native mind learning a task from an oracle, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/oracle-taught-learning.fk
+;
+; Verdict 11111: a baseline recipe agrees with the oracle on 3 cases; the mind adopts a recipe that
+; agrees on all 5 (learned, no regression); it REJECTS a recipe with higher raw agreement (3) that
+; regressed on a case it already got right; the champion holds at 5 (integrity); and the rejected
+; recipe genuinely looked better (3 > 2) yet was correctly refused -- learning that never breaks what works.
+(do (oracle-taught-check))
