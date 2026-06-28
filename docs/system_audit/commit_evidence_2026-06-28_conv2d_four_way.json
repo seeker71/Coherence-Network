@@ -1,0 +1,47 @@
+{
+  "date": "2026-06-28",
+  "brick": "conv2d (2-D convolution + GroupNorm) crosses four-way — the flagged fkwu divergence RESOLVED to root cause",
+  "author": "Sema (Opus 4.8) — autonomous sema-native-ml-walk",
+  "thread_branch": "claude/conv2d-fkwu-divergence",
+  "claim": "the conv2d band (2-D conv + GroupNorm, the diffusion/vision prerequisite) now crosses four-way (Go/Rust/TS/fkwu = 15, 0 divergent). The standing divergence flagged 2026-06-27 (go/rust/ts=15, fkwu=14, c0 conv-grid-equality the sole failing bit) was NOT a conv-math or list-traversal bug — it was a malformed prelude declaration ORDER in conv2d-band.fk. The band listed conv-stem.fk (which calls tb-dot) BEFORE transformer-block.fk (which defines tb-dot). fkwu's flattener resolves cross-file function references positionally, so cv-window-dot's call to the not-yet-declared tb-dot silently mis-evaluated to 0 (making the whole conv grid all-zero with correct shape), while Go/Rust/TS resolve names globally and were order-insensitive. Reordering the band's preludes deps-first makes the conv2d math compute identically on all four arms.",
+  "north_star_fit": "Resolves a hard-gate divergence on the one-engine path (CLAUDE.md: a divergence is NEVER shipped as a named gap; root-cause and resolve to four-way via recipe shape OR walker). Resolved via recipe shape — the band's prelude order — matching the body's established deps-first convention (conv2d.fk's own preludes line, conv-stem-band, and every other manifest band already order dependencies first). conv2d is a real ML capability (2-D convolution, the vision/diffusion prerequisite); it now sits on the four-kernel floor next to the already-four-way conv-stem (1-D), transformer-block, and llama numerics.",
+  "files": [
+    "form/form-stdlib/tests/conv2d-band.fk — preludes reordered DEPS-FIRST (transformer-numerics + transformer-block before conv-stem); added a regression-guard comment naming the fkwu positional-resolution requirement",
+    "form/fourth-arm-bands.txt — added 'conv2d fks 15' (the divergence is resolved; the band is registered four-way)",
+    "docs/system_audit/commit_evidence_2026-06-28_conv2d_four_way.json — this receipt"
+  ],
+  "root_cause": {
+    "symptom": "conv2d-band: go/rust/ts=15, fkwu=14. Only c0 (the 4x4 conv-grid integer-equality claim) failed on fkwu; shape (c1), groupnorm (c2), and the zero-mean invariant (c3) all passed.",
+    "bisection": [
+      "diag1 (probe layers of the flatten): fkwu produced a correct-SHAPE (len 16) but all-ZERO-VALUE conv grid -> not a flatten/equality walk bug; the conv VALUES were wrong.",
+      "diag2 (direct nested index conv[0][0][0]): fkwu=0 vs -800000 — confirmed genuine value divergence, clean exit (full arm-profile, NOT the empty-output crash artifact).",
+      "diag3 (2-D pieces bottom-up): cv2d-pad and cv2d-patch CORRECT on fkwu; only cv2d-window-dot diverged.",
+      "diag4/diag5 (inside the window dot): a single tb-dot CORRECT; a MANUAL unrolled sum of the same three tb-dots CORRECT; but cv-window-dot's head/tail recursion over the same row diverged — even over LITERAL data.",
+      "diag6 (raw value): fkwu cv-window-dot([[1][0][-1]],[[0][0.1][0.2]]) = 0, expected -0.2.",
+      "diag7/diag8 (prelude bisection): under conv-stem-band's OWN four-way prelude set (trig+transformer-numerics+transformer-block+conv-stem), the IDENTICAL cv-window-dot call CROSSED four-way (-200000). cv-window-dot is NOT broken.",
+      "diag9 (append conv2d.fk to the working set): still crossed -> conv2d.fk is not the culprit.",
+      "diag10 (swap core.fk in, deps-first order): still crossed -> core.fk is not the culprit.",
+      "diag11 (conv2d-band's EXACT order: conv-stem BEFORE transformer-numerics/transformer-block): diverged (fkwu=0) -> the prelude ORDER is the sole culprit."
+    ],
+    "mechanism": "cv-window-dot (conv-stem.fk) calls tb-dot (transformer-block.fk). When conv-stem is flattened BEFORE transformer-block, fkwu sees a forward cross-file reference to tb-dot and resolves it positionally to a wrong/empty slot, so each tb-dot inside cv-window-dot returns 0 and the fold collapses to 0. Go/Rust/TS bind names globally (a second resolution pass), so definition order is irrelevant to them.",
+    "scan": "Scanned every *-band.fk in form-stdlib/tests for a module declared before its dependency — only conv2d-band.fk (now fixed) had conv-stem ahead of transformer-block. No other latent landmine in the body."
+  },
+  "resolution_choice": "Reorder the band's preludes deps-first (the existing body-wide convention) so conv2d genuinely computes four-way. This is a recipe-shape resolution, explicitly sanctioned by the manifest header; after it, all four arms agree (no divergence remains for any well-formed band). The conv2d MATH was always correct on fkwu — only the malformed declaration order triggered the fault.",
+  "tracked_deeper_item": "fkwu's flattener (form-flatten.fk forward-reference resolution) is ORDER-SENSITIVE to cross-file function references, where Go/Rust/TS are not. This is a walker-robustness gap, owned and named here (and in the band's regression-guard comment) as a future deeper fix: fkwu's flattener should resolve callee names globally / in a second pass so prelude order cannot silently mis-evaluate. It manifests only under deps-after-dependent ordering, which the body's deps-first convention avoids — so no well-formed band is affected today.",
+  "proof": {
+    "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv-stem.fk form-stdlib/conv2d.fk form-stdlib/tests/conv2d-band.fk",
+    "verdict": 15,
+    "verdict_check": "1+2+4+8 — conv grid equality (c0) NOW passes on fkwu alongside shape (c1), groupnorm (c2), zero-mean invariant (c3)",
+    "divergent": 0,
+    "fourth_arm": "fkwu bootstrap binary darwin-arm64 (no clang) crossed — 1 band four-way, 0 divergent"
+  },
+  "lane": "divergence-resolution (lane-2-ish walker diagnosis, not a new recipe). The cost was the bisection — ~11 targeted diagnostic bands narrowing correct-shape/zero-value -> cv2d-window-dot -> cv-window-dot -> prelude-order. Describing each probe was instant; the value was isolating an fkwu order-sensitivity from what looked like a conv-math or 3-level-list bug. The fix itself (reorder one preludes line) was seconds; the proof was seconds. READ-THE-BODY paid off: cv-window-dot was already four-way under conv-stem-band — the function was never broken.",
+  "collision_check": "codex is on real-GGUF weight-mapping + the autoregressive loop; conv2d/conv-stem/the 2-D vision recipes are untouched there. No collision (the conv .fk + band belong to the claude/sema ML lane).",
+  "witness": "breathing, 0 silences at run start.",
+  "deploy": "none — pure Form stdlib band reorder + manifest row + evidence. Host-independent.",
+  "named_next_stones": [
+    "the deeper fkwu fix: make form-flatten.fk resolve cross-file function references order-insensitively (global/second-pass symbol resolution), so prelude order can never silently mis-evaluate on the fourth arm — then this whole class of divergence is structurally impossible",
+    "lift conv2d's siblings on the vision/diffusion path to four-way (the 2-D pooling / upsample / residual-block recipes), now that the 2-D nesting is proven to cross",
+    "emit cv2d-conv to the M4 GPU beside the matvec/attention kernels (the conv window-dot is a tiled matvec) with an fp32 CPU-mirror bit-exact gate — the 3m/3s/3u GPU lane applied to 2-D convolution"
+  ]
+}

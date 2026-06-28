@@ -1,4 +1,11 @@
-; preludes: form-stdlib/core.fk form-stdlib/conv-stem.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv2d.fk
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk form-stdlib/conv-stem.fk form-stdlib/conv2d.fk
+;
+; Preludes are DEPS-FIRST: transformer-block (defines tb-dot) precedes conv-stem (calls tb-dot).
+; fkwu's flattener resolves cross-file function references positionally, so a module listed before
+; the prelude that defines its callee silently mis-evaluates on the fourth arm (conv-stem→tb-dot
+; computed 0 instead of the dot) while Go/Rust/TS resolve names globally. Keep dependencies ahead
+; of their dependents in this list. (Resolved 2026-06-28; the deeper fkwu order-insensitivity is a
+; tracked walker-robustness item — form-flatten.fk forward-reference resolution.)
 ;
 ; conv2d-band — 2-D convolution + GroupNorm as Form, proven three-way (Go/Rust/TS): every value is
 ; reduced to an integer at 1e-6 and pinned by EQUALITY, so the native result is the recipe's result
