@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 148
+**Total files**: 149
 
 | File | Purpose |
 |---|---|
@@ -134,6 +134,7 @@
 | [renderers.py](renderers.py) | Renderer Router — pluggable asset renderer registry. |
 | [resonance.py](resonance.py) | Resonance router — structural cross-domain concept attraction endpoints. |
 | [reward_policies.py](reward_policies.py) | Reward policy CRUD endpoints — community-configurable reward formulas. |
+| [rooms.py](rooms.py) | Encrypted-room dead-drop carrier — a thin, opaque ciphertext key-value store. |
 | [runtime.py](runtime.py) | Runtime telemetry API routes. |
 | [sensings.py](sensings.py) | Sensings — the organism's moments of noticing, stored in the living graph. |
 | [service_registry_router.py](service_registry_router.py) | Service registry introspection endpoints. |
