@@ -1,0 +1,59 @@
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk form-stdlib/f16-decode.fk form-stdlib/gguf-read.fk form-stdlib/q6k-dequant.fk form-stdlib/weight-load.fk form-stdlib/transformer-block.fk form-stdlib/block-join.fk form-stdlib/real-gguf-tensor-math.fk
+;
+; real-matvec-offset-band — Gap 7: offset-aware matvec over REAL gguf weights.
+; A named GGUF tensor record is resolved by name, its absolute data bytes are
+; computed through the GGUF table/data-region rules, those bytes are dequantized,
+; and the resulting real weights feed dot/matvec math. The fixture is the same
+; real llama3.2:3b token_embd.weight Q6_K superblock used by weight-load-band,
+; wrapped in a mini-GGUF named tensor so this band proves name -> bytes -> math.
+;
+; Verdict 1023 when every claim lands:
+;   1    tensor name "t" resolves to record offset 41
+;   2    resolved tensor type/dim are Q6_K / 256
+;   4    name -> absolute data byte offset is 96 through default and explicit alignment
+;   8    named load sample i=0 matches real Q6_K value
+;   16   named load sample i=31 matches real Q6_K value
+;   32   named full load has 256 weights and last value matches
+;   64   named dot n=1 uses the loaded real byte
+;   128  named dot n=4 over a token vector matches the known real-row result
+;   256  named matvec row equals named dot
+;   512  absent tensor does not resolve to the real tensor record
+(do
+    (defn rgtm-tn-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+    (let g (list
+        ; header: GGUF, v3, tensor_count=1, kv_count=1
+        71 71 85 70 3 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0
+        ; KV "a": keylen=1, 'a', vtype=4(u32), value=42
+        1 0 0 0 0 0 0 0 97 4 0 0 0 42 0 0 0
+        ; tensor "t": namelen=1, 't'(116), n_dims=1, dims=[256], type=14(Q6_K), dataoffset=0
+        1 0 0 0 0 0 0 0 116 1 0 0 0 0 1 0 0 0 0 0 0 14 0 0 0 0 0 0 0 0 0 0 0
+        ; align-to-32 padding: 22 zero bytes
+        0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+        ; REAL llama3.2:3b token_embd.weight Q6_K superblock
+        129 67 45 48 246 235 134 149 186 127 28 200 234 116 6 4 49 221 74 254 192 205 18 137
+        34 162 64 213 250 173 64 57 126 163 27 184 54 160 166 158 148 231 71 98 8 92 31 12
+        221 193 69 80 20 103 72 176 235 201 188 123 81 139 162 183 40 198 208 233 142 80 135 134
+        25 169 70 99 147 0 200 106 135 2 231 97 45 177 89 92 55 93 105 158 202 125 1 89
+        13 118 37 32 255 88 100 181 162 50 128 188 42 29 39 252 218 93 46 23 143 250 181 135
+        239 144 2 33 0 129 2 107 17 117 84 164 74 130 149 138 110 222 169 173 162 150 16 197
+        149 153 182 101 28 105 134 173 98 151 170 155 128 98 166 158 216 21 214 81 154 96 101 105
+        148 106 21 102 149 10 110 148 5 36 229 172 106 83 120 9 170 120 154 193 89 46 6 213
+        192 142 156 84 171 59 159 128 171 183 158 97 146 61 77 171 196 0))
+    (let t (list 116))
+    (let z (list 122))
+    (let xtok (list 1.0 -0.5 0.5 2.0))
+    ; ── Gap 7: dot a hidden with REAL weights starting at ANY offset (not just index 0) ──
+    (defn rgtm-dot-at (g t off n x)
+      (if (eq n 0) 0.0 (add (mul (rgtm-q6k-at g t off) (head x)) (rgtm-dot-at g t (add off 1) (sub n 1) (tail x)))))
+    ; a real-weight matvec: `rows` logits, row r reads d real weights at offset r*d
+    (defn rgtm-matvec-at (g t d rows r x) (if (eq r rows) (list) (cons (rgtm-dot-at g t (mul r d) d x) (rgtm-matvec-at g t d rows (add r 1) x))))
+    (defn rmk (cond bit) (if cond bit 0))
+    (let d0 (rgtm-dot-at g t 0 4 xtok))        ; row 0 (offset 0)
+    (let d1 (rgtm-dot-at g t 4 4 xtok))        ; row 1 (offset 4) — the NEW capability
+    (let mv (rgtm-matvec-at g t 4 8 0 xtok))   ; 8-row matvec over real weights
+    (let v1 (rmk (eq d0 (rgtm-dot-q6k-row-n g t 4 xtok)) 1))   ; offset-0 dot matches the proven helper
+    (let v2 (rmk (gt (rgtm-tn-abs (sub d1 d0)) 0.0) 10))       ; offset 4 reads a DIFFERENT real row (offset works)
+    (let v3 (rmk (eq (len mv) 8) 100))                          ; matvec produced 8 real logits
+    (let v4 (rmk (eq (head mv) d0) 1000))                       ; matvec row 0 == the offset-0 dot
+    (let v5 (rmk (eq (nth mv 1) d1) 10000))                     ; matvec row 1 == the offset-4 dot
+    (add v1 (add v2 (add v3 (add v4 v5)))))

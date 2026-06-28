@@ -1084,3 +1084,4 @@ selective-ssm fks 11111
 field-choice fks 11111
 generate-step fks 11111
 real-token-choice fks 11111
+real-matvec-offset fks 11111
