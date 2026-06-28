@@ -1,4 +1,4 @@
-; tests/translation-learn-band.fk — native translation learned from the oracle's pairs.
+; tests/translation-learn-band.fk — native translation by exemplar LOOKUP over the oracle's pairs (28 curated en->zh/ja, grounded in cjk-channel), with a champion-challenger A/B retirement gate. The lookup + A/B atom; an adaptive learning loop is the arc.
 ;
 ; The loop, proven: the native recipe translates en->zh and en->ja from the learned
 ; pairs (no oracle call), stays honest where it has not learned, preserves meaning by

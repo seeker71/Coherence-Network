@@ -1,4 +1,4 @@
-; translation-learn.fk — native Form translation that learns from a 3rd-party oracle.
+; translation-learn.fk — native Form translation from a 3rd-party oracle's pairs: exemplar lookup + champion-challenger A/B. Meaning preserved by content-addressing. The lookup/retirement atom; an adaptive learner is the arc.
 ;
 ; The ask (Urs): add Chinese and Japanese, and use those translations as training
 ; material for native Form translation. The body already holds every part but the one

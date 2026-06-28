@@ -1,4 +1,4 @@
-; meaning-translation-receipt.fk - proof receipt for meaning-preserving translation.
+; meaning-translation-receipt.fk - the structural proof-receipt for translation: meaning-preservation is guaranteed only inside the declared-semantics witnesses (axioms, encoder, equivalence, meaning-root), refused otherwise.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/compiler-lens.fk
 ;
