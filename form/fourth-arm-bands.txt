@@ -1097,3 +1097,4 @@ conv2d fks 15
 voice-formant fks 11111
 voice-learn fks 11111
 voice-consonant fks 11111
+real-thought-observed fks 11111
