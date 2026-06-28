@@ -1108,3 +1108,4 @@ oracle-taught-learning fks 11111
 teach-native-sema fks 11111
 teach-sema-math fks 11111
 teacher-selection fks 11111
+teach-sema-pattern fks 11111
