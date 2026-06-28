@@ -1119,4 +1119,4 @@ transient-log fks 11111
 capture-correction fks 11111
 sufficiency-capture fks 11111
 membrane-self-reliance fks 11111
-sovereignty-policy fks 11111
+sovereignty-guide fks 11111

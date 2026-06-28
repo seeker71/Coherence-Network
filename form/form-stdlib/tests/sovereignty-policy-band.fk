@@ -1,9 +1,0 @@
-; tests/sovereignty-policy-band.fk — the gate safely tunes its own escalation threshold, four-way.
-; preludes: form-stdlib/core.fk form-stdlib/sovereignty-policy.fk
-;
-; Verdict 11111: low measured sovereignty raises the accept-threshold (escalate more); high sovereignty lowers
-; it (rely more); the raise is clamped at 90 and the lower floored at 30 (a self that changes itself but stays
-; bounded -- never trust-nothing or trust-everything); and a less-sovereign body escalates more than a
-; more-sovereign one. The autonomous self-reliance loop: the gate learns its own escalation from its lived
-; sovereignty, no human and no rented mind in the loop.
-(do (sovereignty-policy-check))
