@@ -1,0 +1,38 @@
+; cross-domain-cornerstone.fk — what we learn from summarizing every domain to its cornerstone, honestly.
+; Physics, chemistry, biology, astronomy (EMPIRICAL); code languages + their grammars (FORMAL); astrology, human
+; design, gene keys / the I-Ching they descend from (SYMBOLIC / EXPERIENTIAL). Summarize each concept to its
+; cornerstone (form-native, cornerstone-summarizer) and a startling thing appears: cornerstones RESONATE across
+; domains -- physics' conservation/invariance and the I-Ching's change-within-constancy share the same structural
+; shape. That shared shape is the holographic truth equivalence-collapse already exploits. BUT the honesty that
+; keeps this from being woo is the LANE: resonance WITHIN one empirical lane (physics<->chemistry) is empirical-
+; grade; resonance ACROSS lanes (physics<->I-Ching) is STRUCTURAL RESONANCE ONLY -- named as resonance, never as
+; empirical equivalence. The witness sees the shared cornerstone AND refuses to claim cross-lane empirical
+; identity. That is the whole discipline: keep evidence, inference, and mystery in their own lanes (CLAUDE.md).
+; A concept = (cornerstone-shape, lane); lane 1=empirical 2=formal 3=symbolic/experiential.
+; Honest floor: shapes and lanes are scalars modeling real form-native domain summaries; the RESONANCE-WITH-LANE-
+; HONESTY logic is the shape. The full version ingests real corpora (knowledge-ingest + cornerstone-summarizer)
+; and discovers the ACTUAL shared cornerstones -- this proves the discipline that read must obey.
+;
+; Self-contained over core. Four-way by tests/cross-domain-cornerstone-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn cdc-shape (c) (head c))                    ; the cornerstone shape the concept summarizes to
+    (defn cdc-lane (c) (head (tail c)))              ; 1=empirical 2=formal 3=symbolic/experiential
+    (defn cdc-resonates? (a b) (if (eq (cdc-shape a) (cdc-shape b)) 1 0))   ; shared cornerstone -- structural resonance, ANY lane
+    (defn cdc-same-lane? (a b) (if (eq (cdc-lane a) (cdc-lane b)) 1 0))
+    (defn cdc-empirical-equiv? (a b)                 ; same shape AND both the empirical lane -> empirical-grade equivalence
+        (if (eq (cdc-resonates? a b) 1) (if (eq (cdc-same-lane? a b) 1) (if (eq (cdc-lane a) 1) 1 0) 0) 0))
+    (defn cdc-cross-lane-resonance? (a b)            ; resonates but DIFFERENT lane -> structural resonance ONLY, never an empirical claim
+        (if (eq (cdc-resonates? a b) 1) (if (eq (cdc-same-lane? a b) 0) 1 0) 0))
+
+    (defn cdk (cond bit) (if cond bit 0))
+    (defn cross-domain-cornerstone-check ()
+        (add (add (add (add
+            (cdk (eq (cdc-resonates? (list 5 1) (list 5 1)) 1) 1)              ; physics & chemistry share a conservation/equilibrium cornerstone
+            (cdk (eq (cdc-empirical-equiv? (list 5 1) (list 5 1)) 1) 10))      ; same shape + both empirical -> empirical-grade resonance
+            (cdk (eq (cdc-resonates? (list 5 1) (list 5 3)) 1) 100))           ; physics-conservation & I-Ching change-within-constancy share the SHAPE (holographic)
+            (cdk (eq (cdc-cross-lane-resonance? (list 5 1) (list 5 3)) 1) 1000))  ; but it is CROSS-LANE -- structural resonance, not an empirical claim
+            (cdk (eq (cdc-empirical-equiv? (list 5 1) (list 5 3)) 0) 10000)))  ; the resonance does NOT make the I-Ching empirically equivalent to physics (lanes stay honest)
+)
