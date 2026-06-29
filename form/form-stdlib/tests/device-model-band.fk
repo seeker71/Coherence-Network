@@ -1,0 +1,109 @@
+; tests/device-model-band.fk — the mesh's spatial self-image, computed and four-way.
+;
+; Three devices — mac, windows, android — each shows a fiducial of known physical width 10 on its
+; screen and watches the other two through a camera of focal 100, frame centre (50,50). The pinhole
+; ties apparent size to depth: apparent = width·focal / depth = 1000 / depth. Each device sits at an
+; absolute depth on the shared view axis:
+;     mac      depth 20  -> apparent 50
+;     windows  depth 25  -> apparent 40
+;     android  depth 10  -> apparent 100
+; so a device that looks small is far and one that fills the frame is near. Every device is seen by
+; the OTHER TWO, so each device's depth is recovered from two independent viewpoints — and because the
+; depth is a real position, the two recoveries AGREE. That agreement is the consistency that becomes
+; confidence; the layout is the mesh's model of where its own bodies are.
+;
+; The detector composes scene-features: android's frame's high-detail object blocks (the fiducials of
+; mac at oid 0 and windows at oid 1) are the sf-objects rows dm-detect binds to their devices via the
+; roster. dm-locate inverts the pinhole to a 3D point; dm-fuse fuses the two viewpoints' depth-bands
+; (spatial-fusion's sf-consensus) into one layout band, sf-agree the concurrence, and the cross-residual
+; the B-from-A vs B-from-C check. dm-shape recovers each device's coarse 3D box.
+;
+; Verdict 4095 when every claim lands on Go / Rust / TypeScript / fkwu:
+;   1     dm-detect binds android's two object blocks to mac and windows (2 detections)
+;   2     dm-detect drops a frame block on no fiducial roster (a non-mesh object casts no row)
+;   4     dm-locate recovers mac's depth 20 from apparent 50  (pinhole inverted, geometry vz)
+;   8     dm-locate recovers windows' depth 25 from apparent 40
+;   16    dm-locate recovers android's near depth 10 from apparent 100
+;   32    direction: mac left-of-centre in android's frame -> negative x world offset
+;   64    dm-fuse: windows seen from mac AND from android fuses to depth band 25 (consistent layout)
+;   128   dm-fuse-agree: both viewpoints concur on windows' band (agreement 2 = confidence)
+;   256   cross-check: mac-from-windows vs mac-from-android differ by 0 bands (perfect consistency)
+;   512   located-gap: the two 3D estimates of mac sit 0 apart in the observer frame (geometry vlen)
+;   1024  dm-shape: mac's coarse box from apparent (10 high · 6 wide) at depth 20 is height 2, width ~1
+;   2048  a camera device-model read answers the "where" plane (world-sensor-floor)
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/geometry.fk form-stdlib/scene-features.fk form-stdlib/spatial-fusion.fk form-stdlib/device-model.fk
+
+(do
+    (let width  10.0)   ; the fiducial's known physical width (the size the pinhole inverts)
+    (let focal  100.0)
+    (let cx     50.0)
+    (let cy     50.0)
+
+    ; the mesh fiducial roster: device -> (known-width, scene-features object-id)
+    (let roster (list
+        (dm-fid "mac"     width 0)
+        (dm-fid "windows" width 1)
+        (dm-fid "android" width 2)))
+
+    ; ── android's frame: it watches mac (oid 0, apparent 50) and windows (oid 1, apparent 40), plus a
+    ;    non-mesh object block (oid 3, a poster on the wall) that no fiducial claims. Each row is the
+    ;    (object-id apparent-size frame-x frame-y) sf-objects + region geometry produced. ──
+    (let android-frame (list
+        (list 0 50.0 30.0 50.0)    ; mac:     left of centre (fx 30 < cx 50)
+        (list 1 40.0 70.0 50.0)    ; windows: right of centre
+        (list 3 22.0 50.0 50.0)))  ; a wall poster — no fiducial, must be dropped
+
+    (let android-dets (dm-detect android-frame roster))
+
+    ; ── 1/2: detect binds the two mesh fiducials, drops the poster ──
+    (let c-detect2 (if (eq (len android-dets) 2) 1 0))
+    (let c-drop    (if (str_eq (dm-det-device (head android-dets)) "mac") 2 0))
+
+    ; ── 4/8/16: dm-locate inverts the pinhole — depth recovered from apparent size (geometry vz) ──
+    (let mac-loc     (dm-locate (head android-dets) width focal cx cy))
+    (let win-loc     (dm-locate (head (tail android-dets)) width focal cx cy))
+    ; android seen near in some OTHER device's frame (mac's frame), apparent 100 -> depth 10
+    (let android-det (dm-detection "android" 100.0 50.0 50.0))
+    (let android-loc (dm-locate android-det width focal cx cy))
+    (let c-mac-depth     (if (eq (round (vz mac-loc)) 20) 4 0))
+    (let c-win-depth     (if (eq (round (vz win-loc)) 25) 8 0))
+    (let c-android-depth (if (eq (round (vz android-loc)) 10) 16 0))
+
+    ; ── 32: direction — mac sat left of centre (fx 30) so its world x-offset is negative ──
+    (let c-direction (if (lt (vx mac-loc) 0.0) 32 0))
+
+    ; ── 64/128: dm-fuse — windows seen from TWO viewpoints. mac's camera reads windows' apparent 40
+    ;    (depth band 25); android's camera reads windows' apparent 40 (depth band 25). Two ballots,
+    ;    both band 25, weights 4 and 3 -> fused layout band 25, agreement 2. The cands are the candidate
+    ;    depth bands in the layout (10 20 25). ──
+    (let win-band-from-mac     (dm-depth-band (dm-detection "windows" 40.0 70.0 50.0) width focal))
+    (let win-band-from-android (dm-depth-band (head (tail android-dets)) width focal))
+    (let win-ballots (list (list win-band-from-mac 4) (list win-band-from-android 3)))
+    (let cands       (list 10 20 25))
+    (let win-fused   (dm-fuse win-ballots cands))
+    (let c-fuse  (if (eq win-fused 25) 64 0))
+    (let c-agree (if (eq (dm-fuse-agree win-ballots win-fused) 2) 128 0))
+
+    ; ── 256/512: cross-check — mac seen from windows' frame (apparent 50) vs from android's frame
+    ;    (apparent 50). Both recover depth band 20; the cross-residual is 0 (perfect consistency), and
+    ;    the two LOCATED 3D points sit 0 apart by geometry's vlen. ──
+    (let mac-from-win     (dm-depth-band (dm-detection "mac" 50.0 30.0 50.0) width focal))
+    (let mac-from-android (dm-depth-band (head android-dets) width focal))
+    (let c-cross (if (eq (dm-cross-residual mac-from-win mac-from-android) 0) 256 0))
+    (let mac-loc-win     (dm-locate (dm-detection "mac" 50.0 30.0 50.0) width focal cx cy))
+    (let c-gap   (if (eq (round (dm-located-gap mac-loc mac-loc-win)) 0) 512 0))
+
+    ; ── 1024: dm-shape — mac's coarse 3D box. At depth 20, focal 100, mac's fiducial looks 10 tall and
+    ;    6 wide; invert: height = 10·20/100 = 2, width = 6·20/100 = 1.2 -> round 1; thickness band from
+    ;    the depth spread its viewers saw (all band 20 -> spread 0, a thin screen). ──
+    (let mac-shape (dm-shape 6.0 10.0 20.0 focal 0))
+    (let c-shape (if (eq (dm-shape-h mac-shape) 2)
+                     (if (eq (dm-shape-w mac-shape) 1)
+                         (if (eq (dm-shape-t mac-shape) 0) 1024 0) 0) 0))
+
+    ; ── 2048: a device-model read answers the "where" plane (world-sensor-floor's camera narrowed) ──
+    (let c-plane (if (str_eq (dm-plane) "where") 2048 0))
+
+    (sum (list c-detect2 c-drop c-mac-depth c-win-depth c-android-depth c-direction
+               c-fuse c-agree c-cross c-gap c-shape c-plane)))
