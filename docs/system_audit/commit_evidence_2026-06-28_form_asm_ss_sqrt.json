@@ -1,0 +1,32 @@
+{
+  "title": "fam-ss-sqrt — the RMSNorm/LayerNorm reduction core as Form->asm BYTES, four-way + run on M4",
+  "date": "2026-06-28",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "stone": "The first NONLINEAR op on the native asm lane after the 2-D matvec. fam-ss-sqrt computes sqrt(sum_j x[j]^2) — the L2 norm = sqrt(n)*RMS, the denominator-root every normalization layer needs (RMSNorm = x[i]*w[i]/RMS). Advances form-native-models.form 'GAPS — LLM INFERENCE' A' note: 'the remaining native-lane rungs are the nonlinear ops (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU) as asm'.",
+  "recipe": "form/form-stdlib/form-asm-matvec.fk :: fam-ss-sqrt — 13 arm64 instructions / 52 bytes; a counted square-accumulate loop (fam-dot-loop's twin, one buffer squared in place via fmul d2,d1,d1) that ENDS in a transcendental, fsqrt d0,d0 OUTSIDE the loop. ABI: x0 = x base, w1 = n, returns d0 = sqrt(sum x^2). New ground vs form-asm-matvec-loop: the in-place square, accumulate-into-d0, and the trailing nonlinear fsqrt; the float ops are already byte-identical to the clang/LLVM oracle in form-asm-float (2047).",
+  "four_way": {
+    "band": "form/form-stdlib/tests/form-asm-ss-sqrt-band.fk",
+    "manifest_row": "form-asm-ss-sqrt fks 127",
+    "verdict": 127,
+    "claims": "1 len==52  +2 FULL 52-byte program byte-equals the clang oracle (fa-conviction)  +4 fsqrt d0,d0  +8 fmul d2,d1,d1  +16 fadd d0,d0,d2  +32 b.ge +7  +64 b -7",
+    "result": "Go = Rust = TS = fkwu = 127, 0 divergent. fourth arm: 1 band four-way (fkwu + pre-flattened tables).",
+    "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-ss-sqrt-band.fk"
+  },
+  "oracle": "clang -c -arch arm64 + otool -tvVj — the 13-word image the recipe must match byte-for-byte: d2800003 mov x3,#0 / d2800004 mov x4,#0 / 9e620080 scvtf d0,x4 / 6b01007f cmp w3,w1 / 540000ea b.ge +7 / fd400001 ldr d1,[x0] / 1e610822 fmul d2,d1,d1 / 1e622800 fadd d0,d0,d2 / 91002000 add x0,#8 / 91000463 add x3,#1 / 17fffff9 b -7 / 1e61c000 fsqrt d0,d0 / d65f03c0 ret. clang is the teacher that confirmed the bytes once, not the runtime.",
+  "hardware_witness": {
+    "script": "scripts/form_asm_ss_sqrt_witness.sh",
+    "device": "Apple M4 Max, arm64 Darwin",
+    "path": "Form kernel emits fam-ss-sqrt's 52 bytes -> form-macho mo-object-sym wraps a Mach-O .o exporting _recipe -> ld -dylib + ad-hoc sign (no clang in the link) -> C harness dlopen+call as double recipe(const double *x, long n)",
+    "compute_toolchain_free": "no rustc/clang in the COMPUTE; clang only builds the dumb dlopen loader",
+    "results": [
+      {"case": "3-4",   "n": 2, "got": 5.0, "expected": 5.0, "match": true},
+      {"case": "ones4", "n": 4, "got": 2.0, "expected": 2.0, "match": true},
+      {"case": "zeros", "n": 3, "got": 0.0, "expected": 0.0, "match": true},
+      {"case": "mixed", "n": 4, "got": 100000000.00000001, "expected": 100000000.00000001, "match": true},
+      {"case": "rms6",  "n": 6, "got": 0.95393920141694566, "expected": 0.95393920141694566, "match": true}
+    ],
+    "parity": "bit-for-bit == vs the reference (same upward fold j=0..n-1, then sqrt); the fp-stress case (1e8+1e-8 mixed) matches to the last bit."
+  },
+  "reading": "The reduction-with-a-transcendental — the literal RMSNorm/LayerNorm denominator-root — is now sovereign native arm64 bytes, proven byte-identical across all four kernels AND executed on the M4. After the 2-D matvec (form-asm-matvec-2d 127) this is the second load-bearing forward-pass kernel on the native lane: the dominant linear compute and the first nonlinear reduction are both Form->asm bytes. Remaining nonlinear rungs named in form-native-models.form: exp (softmax), sin/cos (RoPE), the reciprocal in rsqrt (1/RMS, fdiv is already an encoder), then ll-buffer staging + the 28-layer fold.",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-ss-sqrt-band.fk && bash ../scripts/form_asm_ss_sqrt_witness.sh"
+}

@@ -1,0 +1,40 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-ss-sqrt-band — the RMSNorm/LayerNorm reduction core emits four-way as Form->asm bytes, no rustc.
+; fam-ss-sqrt computes sqrt(sum_j x[j]^2) — the L2 norm, the denominator-root every normalization layer
+; needs (RMS = ss-sqrt / sqrt(n); RMSNorm = x[i] * w[i] / RMS). It is the FIRST nonlinear op on the native
+; lane after the 2-D matvec (form-asm-matvec-2d 127): a counted accumulate loop (the matvec-loop discipline)
+; that ENDS in a transcendental — fsqrt d0,d0 OUTSIDE the loop — rather than just folding a linear dot.
+;
+; The new ground vs form-asm-matvec-loop: the square in place (fmul d2,d1,d1, both operands one register),
+; the accumulate-into-d0 (fadd d0,d0,d2), and the trailing fsqrt — the float ops are proven byte-identical
+; to the clang/LLVM oracle in form-asm-float (2047); here the new claim is the COMPOSITION emits the exact
+; 52-byte arm64 program four-way. ABI: x0 = x base, w1 = n, returns d0 = sqrt(sum x^2).
+;
+; The 13-instruction program, otool -tvVj of the clang oracle (the reference each byte must match):
+;   d2800003 mov x3,#0    d2800004 mov x4,#0    9e620080 scvtf d0,x4   6b01007f cmp w3,w1
+;   540000ea b.ge +7      fd400001 ldr d1,[x0]  1e610822 fmul d2,d1,d1  1e622800 fadd d0,d0,d2
+;   91002000 add x0,#8    91000463 add x3,#1    17fffff9 b -7           1e61c000 fsqrt d0,d0   d65f03c0 ret
+;
+; Verdict 127 when every claim lands:
+;   1    the program is 13 instructions = 52 bytes              (len == 52)
+;   2    the FULL program byte-equals the 52-byte clang oracle  (fa-conviction == 1)
+;   4    fsqrt d0,d0 — the nonlinear reduction tail             (fa-conviction == 1)
+;   8    fmul d2,d1,d1 — the square in place                    (fa-conviction == 1)
+;   16   fadd d0,d0,d2 — accumulate into d0                     (fa-conviction == 1)
+;   32   b.ge +7 exit branch (scaled offset to the fsqrt)       (fa-conviction == 1)
+;   64   b -7 back-edge (26-bit signed offset to the compare)   (fa-conviction == 1)
+(do
+    (let prog (fam-ss-sqrt))
+    (let oracle (list
+        3 0 128 210    4 0 128 210    128 0 98 158   127 0 1 107
+        234 0 0 84     1 0 64 253     34 8 97 30     0 40 98 30
+        0 32 0 145     99 4 0 145     249 255 255 23 0 192 97 30   192 3 95 214))
+    (let c0 (if (eq (len prog) 52)                                            1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                          1)   2 0))
+    (let c2 (if (eq (fa-conviction (fa-fsqrt 0 0)   (list 0 192 97 30))  1)   4 0))
+    (let c3 (if (eq (fa-conviction (fa-fmul 2 1 1)  (list 34 8 97 30))   1)   8 0))
+    (let c4 (if (eq (fa-conviction (fa-fadd 0 0 2)  (list 0 40 98 30))   1)  16 0))
+    (let c5 (if (eq (fa-conviction (fa-bcond 10 7)  (list 234 0 0 84))   1)  32 0))
+    (let c6 (if (eq (fa-conviction (fa-b-off -7)    (list 249 255 255 23)) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
