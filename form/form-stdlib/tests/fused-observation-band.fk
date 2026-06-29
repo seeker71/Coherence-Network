@@ -1,0 +1,65 @@
+; preludes: form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk
+;
+; fused-observation-band — fuse ALL the native presence-organs into ONE coherent observed cell, then show
+; the cross-witness confidence rise with agreement and the conflict coin fire when organs disagree. Made
+; falsifiable: a fixed observation set, a stable integer verdict.
+;
+; CASE A — a presence SEEN and IDENTIFIED and HEARD and LOCATED by AGREEING organs -> one fused cell, high
+; cross-witness confidence. Two independent organs report each plane and they AGREE:
+;   present (banded — pf-present? occupancy 1/0): camera band 1 conf 4, motion band 1 conf 3
+;             -> fused band 1 (present), summed confidence 7, two organs agree
+;   who     (named — im-match identity label):    face "ilena" conf 3, voice "ilena" conf 2
+;             -> fused "ilena", summed trust 5, two organs contribute
+;   what    (named — sc-classify sound label):    mic "voice" conf 4, mic2 "voice" conf 2
+;             -> fused "voice", summed trust 6, two organs contribute
+;   where   (banded — scene-features room bucket): scene band 2 conf 3, scene2 band 2 conf 2
+;             -> fused band 2, summed confidence 5, two organs agree
+;   cross-witness confidence = 7 + 5 + 6 + 5 = 23 (the redundancy summed across every plane).
+;   conflict? = 0 — every organ that spoke on a plane agreed; the mesh is its own teacher.
+;
+; CASE B — two organs DISAGREE on WHO -> lower confidence on that plane + conflict coin = 1. One organ on
+; each of present/what/where (no contest), but on WHO the face says "ilena" (conf 3) and the voice says
+; "axiel" (conf 1): the winner is "ilena" (3 > 1) but only ONE of the two organs that spoke named it, so
+; the WHO plane is contested. who confidence drops to 3 (only ilena's trust), and fo-conflict? fires.
+;
+; Verdict 255 when every claim lands:
+;   1    A: present fuses to band 1 (someone is THERE)            (fo-o-present  obsA == 1)
+;   2    A: who fuses to the identified presence "ilena"          (str_eq (fo-o-who  obsA) "ilena")
+;   4    A: what fuses to the heard sound "voice"                 (str_eq (fo-o-what obsA) "voice")
+;   8    A: where fuses to the located room band 2                (fo-o-where   obsA == 2)
+;   16   A: cross-witness confidence is the summed 23             (fo-o-confidence obsA == 23)
+;   32   A: agreeing organs -> NO conflict                        (fo-conflict? readingsA == 0)
+;   64   B: the disagreeing WHO plane fires the conflict coin     (fo-conflict? readingsB == 1)
+;   128  B: the contested WHO confidence dropped to lone 3        (fo-plane-confidence readingsB "who" == 3)
+(do
+    ; ── CASE A: every plane reported by two AGREEING organs ──
+    (let readingsA (list
+        (fo-reading "present" 1 "camera" 4)
+        (fo-reading "present" 1 "motion" 3)
+        (fo-reading "who"   "ilena" "face"  3)
+        (fo-reading "who"   "ilena" "voice" 2)
+        (fo-reading "what"  "voice" "mic"   4)
+        (fo-reading "what"  "voice" "mic2"  2)
+        (fo-reading "where" 2 "scene"  3)
+        (fo-reading "where" 2 "scene2" 2)))
+
+    (let obsA (fo-fuse readingsA))
+
+    ; ── CASE B: single organs everywhere EXCEPT a WHO disagreement (face says ilena, voice says axiel) ──
+    (let readingsB (list
+        (fo-reading "present" 1 "camera" 4)
+        (fo-reading "who"   "ilena" "face"  3)
+        (fo-reading "who"   "axiel" "voice" 1)
+        (fo-reading "what"  "voice" "mic"   4)
+        (fo-reading "where" 2 "scene" 3)))
+
+    (let c0 (if (eq (fo-o-present obsA) 1)                          1 0))
+    (let c1 (if (str_eq (fo-o-who  obsA) "ilena")                  2 0))
+    (let c2 (if (str_eq (fo-o-what obsA) "voice")                  4 0))
+    (let c3 (if (eq (fo-o-where obsA) 2)                           8 0))
+    (let c4 (if (eq (fo-o-confidence obsA) 23)                    16 0))
+    (let c5 (if (eq (fo-conflict? readingsA) 0)                   32 0))
+    (let c6 (if (eq (fo-conflict? readingsB) 1)                   64 0))
+    (let c7 (if (eq (fo-plane-confidence readingsB "who") 3)     128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
