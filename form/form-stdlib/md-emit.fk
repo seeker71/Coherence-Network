@@ -1,0 +1,20 @@
+; md-emit.fk — a form-native Markdown emitter (recipe -> markdown text), the str_concat text-emitter pattern
+; (like form-glsl / svg-emit) applied to Markdown — the lingua franca of human/agent communication. The reading
+; direction (markdown surface -> recipe) is a BMF cursor grammar, separate. Honest floor: heading level is a small
+; if-ladder (1-3) here; deeper structure (nested lists, code fences, tables) composes as more emitters later.
+; preludes: form-stdlib/core.fk
+(do
+    (defn md-heading (level text)
+        (str_concat (if (eq level 1) "# " (if (eq level 2) "## " "### ")) (str_concat text "\n")))
+    (defn md-bold (text) (str_concat "**" (str_concat text "**")))
+    (defn md-link (text url) (str_concat "[" (str_concat text (str_concat "](" (str_concat url ")")))))
+    (defn md-item (text) (str_concat "- " (str_concat text "\n")))
+    (defn mek (cond bit) (if cond bit 0))
+    (defn md-emit-check ()
+        (add (add (add (add
+            (mek (str_eq (md-heading 1 "Hi") "# Hi\n") 1)
+            (mek (str_eq (md-heading 2 "Yo") "## Yo\n") 10))
+            (mek (str_eq (md-bold "x") "**x**") 100))
+            (mek (str_eq (md-link "a" "u") "[a](u)") 1000))
+            (mek (str_eq (md-item "z") "- z\n") 10000)))
+)
