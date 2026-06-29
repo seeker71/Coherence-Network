@@ -1184,3 +1184,4 @@ trust-climb fks 8
 scene-features fks 255
 sound-classify fks 63
 voice-self-learn fks 127
+identity-home fks 127
