@@ -1,0 +1,83 @@
+; tests/motion-sense-band.fk — LOCATION, DIRECTION, SPEED, ACCELERATION from the
+; device's motion world-sensors (accelerometer / gyroscope / gps), four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/geometry.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/world-sensor-floor.fk form-stdlib/motion-sense.fk
+;
+; The accelerometer/gyroscope sample is a v3 (geometry.fk); magnitude is vlen,
+; speed integrates |a| over the window, direction is a heading octant, location
+; folds gps to a "where" band. The readings route via wsf-route and fuse via
+; fo-fuse — gps lands on the where plane of the ONE observed cell. Floats scale
+; to ints the band way (round(mul 100.0 x)).
+;
+; A 3-sample accel history of CONSTANT (3,4,0) m/s² (|a| = 5.0), gyro yaw +,
+; gps near (lat 0, lon 0), dt = 1.0:
+;   1     acceleration magnitude of (3,4,0) is 5.00  -> round(mul 100.0)=500
+;   2     constant |a|=5 over dt=1 for 3 samples integrates to speed 15.00
+;   4     speed RISES with the window: 3 samples > 1 sample (15 > 5)
+;   8     direction of accel (3,4,0): horizontal (3,4) is octant 1 (NE), gyro
+;         yaw + nudges it to 2 (N) — a stable heading band
+;   16    location of gps (0.0,0.0) folds to the where band (0+90)*360+(0+180)=32580
+;   32    the gps reading routes to the "where" plane (an fo-reading row)
+;   64    the accel reading routes to the "motion" plane carrying the heading band
+;   128   the routed readings fuse via fo-fuse into ONE observed cell
+;   256   the fused observed cell names the located place on its where plane (32580)
+
+(do
+    ; ── a motion observation: gps near origin, 3 constant accel samples, + yaw ──
+    (let accel  (v3 3.0 4.0 0.0))                 ; |a| = 5.0 m/s²
+    (let hist3  (list accel accel accel))         ; constant over the window
+    (let hist1  (list accel))                     ; one sample
+    (let gyro   (v3 0.0 0.0 1.0))                 ; positive yaw rate
+    (let gps    (v3 0.0 0.0 0.0))                 ; lat 0, lon 0 (z unused)
+    (let dt     1.0)
+
+    ; ── 1: ACCELERATION magnitude of (3,4,0) is 5.00 ──
+    (let acc      (ms-acceleration accel))
+    (let acc-ok   (if (eq (round (mul 100.0 (ms-acc-magnitude acc))) 500) 1 0))
+
+    ; ── 2: SPEED integrates |a|*dt over the 3-sample window: 5*1 + 5*1 + 5*1 = 15 ──
+    (let speed3   (ms-speed hist3 dt))
+    (let speed-ok (if (eq (round (mul 100.0 speed3)) 1500) 2 0))
+
+    ; ── 4: speed RISES with the window — 3 samples integrate to more than 1 ──
+    (let speed1   (ms-speed hist1 dt))
+    (let rise-ok  (if (gt speed3 speed1) 4 0))
+
+    ; ── 8: DIRECTION of accel (3,4,0) — horizontal (3,4) octant 1, gyro + -> 2 ──
+    (let dir      (ms-direction accel gyro))
+    (let dir-ok   (if (eq dir 2) 8 0))
+
+    ; ── 16: LOCATION of gps (0,0) folds to (0+90)*360 + (0+180) = 32580 ──
+    (let loc      (ms-location gps))
+    (let loc-ok   (if (eq loc 32580) 16 0))
+
+    ; ── route the motion observation to its planes ──
+    (let motion   (motion-obs gps hist3 gyro dt 800))
+    (let routed   (ms-route motion))
+    (let gps-read (head routed))
+    (let acc-read (head (tail routed)))
+
+    ; ── 32: gps routes to the "where" plane (an fo-reading row) ──
+    (let where-ok (if (and (str_eq (rd-plane gps-read) "where")
+                           (and (eq (rd-value gps-read) 32580)
+                                (str_eq (rd-source gps-read) "gps"))) 32 0))
+
+    ; ── 64: accel routes to the "motion" plane carrying the heading band ──
+    (let motion-ok (if (and (str_eq (rd-plane acc-read) "motion")
+                            (and (eq (rd-value acc-read) 2)
+                                 (str_eq (rd-source acc-read) "accelerometer"))) 64 0))
+
+    ; ── 128/256: the routed readings fuse into ONE observed cell naming the place ──
+    (let fused     (ms-fuse motion))
+    (let fuse-ok   (if (str_eq (head fused) "observed") 128 0))
+    (let place-ok  (if (eq (fo-o-where fused) 32580) 256 0))
+
+    (add acc-ok
+    (add speed-ok
+    (add rise-ok
+    (add dir-ok
+    (add loc-ok
+    (add where-ok
+    (add motion-ok
+    (add fuse-ok
+        place-ok)))))))))
