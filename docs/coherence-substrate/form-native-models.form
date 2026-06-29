@@ -137,6 +137,14 @@
 ;        The dominant compute of a transformer forward pass is now sovereign native bytes; the remaining
 ;        native-lane rungs are the nonlinear ops (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU as asm),
 ;        ll-buffer staging of the dequanted tensor set, and the 28-layer fold orchestrated over those.
+;     A''. ✓ DONE — form-asm-ss-sqrt (127): the FIRST nonlinear op on the native lane — fam-ss-sqrt emits
+;        sqrt(sum_j x[j]^2), the RMSNorm/LayerNorm denominator-root (L2 norm = sqrt(n)*RMS), as 52 arm64
+;        bytes four-way (Go=Rust=TS=fkwu byte-identical to the clang oracle): a counted square-accumulate
+;        loop closed by fsqrt OUTSIDE the loop. Execution witness scripts/form_asm_ss_sqrt_witness.sh runs
+;        those bytes on the M4 (form-macho .o -> ld -dylib -> dlopen+call) bit-exact vs sqrt(sum x^2),
+;        fp-stress included, no rustc/clang in the compute. Remaining nonlinear rungs: exp (softmax),
+;        sin/cos (RoPE), the 1/RMS reciprocal (fdiv is already an encoder). Receipt:
+;        commit_evidence_2026-06-28_form_asm_ss_sqrt.json.
 ;     B. ✓ DONE — scripts/form_asm_matvec_witness.sh: fam-dot2's form-asm bytes → form-macho .o → ld -dylib →
 ;        dlopen+call → d0 MATCHES bit-exact ([2,3,5,7]→31, edge cases). The bytes proven four-way are the bytes
 ;        that ran. form-macho's wrap is ABI-agnostic; in-kernel float-call later wants a small dylib_call_f64ptr.

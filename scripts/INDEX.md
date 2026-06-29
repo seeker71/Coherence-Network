@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 390
+**Total files**: 391
 
 | File | Purpose |
 |---|---|
@@ -112,6 +112,7 @@
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_asm_matvec_2d_witness.sh](form_asm_matvec_2d_witness.sh) | form_asm_matvec_2d_witness.sh — the EXECUTION WITNESS for fam-matvec: the Form-emitted |
 | [form_asm_matvec_witness.sh](form_asm_matvec_witness.sh) | form_asm_matvec_witness.sh — the EXECUTION WITNESS for fam-dot2: the Form-emitted |
+| [form_asm_ss_sqrt_witness.sh](form_asm_ss_sqrt_witness.sh) | form_asm_ss_sqrt_witness.sh — the EXECUTION WITNESS for fam-ss-sqrt: the Form-emitted RMSNorm/LayerNorm |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cat_demo.sh](form_cat_demo.sh) | form_cat_demo.sh — `cat`, a real unix command, built with ZERO clang and direct |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
