@@ -1,0 +1,33 @@
+; equivalence-collapse.fk — the sibling IC to knowledge-ingest: store each truth ONCE, link the rest.
+; The substrate already content-addresses structure: two cells with the same shape share the same Blueprint
+; NodeID, so equivalence is automatic. This circuit makes the ingest path USE it -- when a teaching arrives whose
+; structural shape already lives in the lattice (the same meaning carried by different surface words, from a
+; different book), it COLLAPSES to the one cell already there; only a genuinely new shape opens a new cell. The
+; consequence is the opposite of a cache that piles: the more the mind reads, the FEWER duplicate cells it holds,
+; because the hundredth restatement of one truth adds zero cells and one link. knowledge-ingest decides
+; body/liquid/compost; this decides that the body stores a truth exactly once. A unit carries its Blueprint
+; (its content-addressed shape); same Blueprint = structurally equivalent regardless of surface.
+; Honest floor: a Blueprint is an integer shape-id here, modeling the real NodeID content-address; the COLLAPSE
+; logic (same shape -> one cell, link; new shape -> open a cell) is the shape.
+;
+; Self-contained over core. Four-way by tests/equivalence-collapse-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ec-bp (u) (head u))                        ; the Blueprint -- the content-addressed structural shape
+    (defn ec-same? (a b) (if (eq (ec-bp a) (ec-bp b)) 1 0))   ; same shape -> structurally equivalent (any surface)
+    (defn ec-cells2 (a b) (if (eq (ec-same? a b) 1) 1 2))     ; two sources: same shape -> ONE cell; different -> two
+    (defn ec-cells3 (a b c)                          ; three sources -> distinct cells stored
+        (add (ec-cells2 a b)
+             (if (eq (ec-same? a c) 1) 0 (if (eq (ec-same? b c) 1) 0 1))))
+
+    (defn eck (cond bit) (if cond bit 0))
+    (defn equivalence-collapse-check ()
+        (add (add (add (add
+            (eck (eq (ec-cells2 (list 7) (list 7)) 1) 1)         ; two sources of the SAME truth -> ONE cell (store once, link the second)
+            (eck (eq (ec-same? (list 7) (list 7)) 1) 10))        ; same Blueprint = equivalent regardless of surface words
+            (eck (eq (ec-same? (list 7) (list 9)) 0) 100))       ; a genuinely different teaching stays distinct
+            (eck (eq (ec-cells3 (list 7) (list 7) (list 9)) 2) 1000))  ; THREE sources -> TWO cells: the mind compounds, never piles
+            (eck (gt 3 (ec-cells3 (list 7) (list 7) (list 9))) 10000)))  ; cells stored (2) < sources read (3) -- more read, fewer duplicates
+)
