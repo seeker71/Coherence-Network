@@ -171,6 +171,11 @@
     (defn fa-fmul (rd rn rm) (fa-asm 509609984 (list 1 32 65536) (list rd rn rm)))
     ; fdiv d<rd>, d<rn>, d<rm> : base 0x1E601800                         (oracle 1e621820)
     (defn fa-fdiv (rd rn rm) (fa-asm 509614080 (list 1 32 65536) (list rd rn rm)))
+    ; fmadd d<rd>, d<rn>, d<rm>, d<ra> (rd = rn*rm + ra, one rounding) : base 0x1F400000 | rm<<16 | ra<<10 | rn<<5 | rd
+    ; the fused multiply-add — the workhorse clang fuses every dot/Horner step to (oracle 1f420401 = fmadd d1,d0,d2,d1).
+    ; one hardware op = one rounding, so a polynomial folded with it is byte-distinct from fmul-then-fadd. Horner over
+    ; this IS the eval engine of every transcendental (exp/sin/cos): p(x) = ((c_n*x + c_{n-1})*x + ...) is n fmadds.
+    (defn fa-fmadd (rd rn rm ra) (fa-asm 524288000 (list 1 32 65536 1024) (list rd rn rm ra)))
     ; fsqrt d<rd>, d<rn> : base 0x1E61C000 | rn<<5 | rd                  (oracle 1e61c020)
     (defn fa-fsqrt (rd rn) (fa-asm 509722624 (list 1 32) (list rd rn)))
     ; fmov d<rd>, d<rn> : base 0x1E604000                               (oracle 1e604020)

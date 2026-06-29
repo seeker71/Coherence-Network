@@ -1,0 +1,36 @@
+; form-asm-horner-band — a degree-2 Horner polynomial p(x)=((2x+3)x+4) emits four-way as Form->asm bytes, no rustc.
+; fam-horner2 is the FIRST use of fa-fmadd (fused multiply-add) on the witnessed native lane, and the literal eval
+; engine of every transcendental still to come: exp/sin/cos/gelu on the native lane are all polynomial (or rational)
+; approximations, and Horner folds a degree-n poly into n fused multiply-adds (one rounding each). This proves the
+; 2-step fold byte-exact, the floor under emitting a real exp/softmax kernel next. It is the next nonlinear rung after
+; fam-rsqrt (form-asm-rsqrt 31): where rsqrt opened the first float constant + first fdiv, this opens the first fmadd.
+;
+; The new ground vs fam-rsqrt: (1) fa-fmadd — the fused multiply-add clang emits for every dot/Horner step; one
+; hardware op = one rounding, so a poly folded with it is byte-DISTINCT from fmul-then-fadd. (2) two fmadds chained
+; (the Horner recurrence) over three fmov-imm coefficients. The float ops are proven byte-identical to the clang/LLVM
+; oracle in form-asm-float (2047); the new claim is that the COMPOSITION emits the exact 24-byte arm64 program
+; four-way. ABI: d0 = x, returns d0 = p(x).
+;
+; The 6-instruction program, otool -tvVj of the clang -O2 oracle (`__builtin_fma(__builtin_fma(2.0,x,3.0),x,4.0)`):
+;   1e611001 fmov d1,#3.0   1e601002 fmov d2,#2.0   1f420401 fmadd d1,d0,d2,d1
+;   1e621002 fmov d2,#4.0   1f400820 fmadd d0,d1,d0,d2   d65f03c0 ret
+;
+; Verdict 31 when every claim lands:
+;   1    the program is 6 instructions = 24 bytes                       (len == 24)
+;   2    the FULL program byte-equals the 24-byte clang oracle          (fa-conviction == 1)
+;   4    fmadd d1,d0,d2,d1 — the FIRST fused multiply-add (new encoder) (fa-conviction == 1)
+;   8    fmadd d0,d1,d0,d2 — the Horner reduction second step           (fa-conviction == 1)
+;   16   fmov d2,#4.0 — a polynomial coefficient as a float constant    (fa-conviction == 1)
+;
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+(do
+    (let prog (fam-horner2))
+    (let oracle (list
+        1 16 97 30      2 16 96 30      1 4 66 31
+        2 16 98 30      32 8 64 31      192 3 95 214))
+    (let c0 (if (eq (len prog) 24)                                            1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                          1)   2 0))
+    (let c2 (if (eq (fa-conviction (fa-fmadd 1 0 2 1) (list 1 4 66 31))  1)   4 0))
+    (let c3 (if (eq (fa-conviction (fa-fmadd 0 1 0 2) (list 32 8 64 31)) 1)   8 0))
+    (let c4 (if (eq (fa-conviction (fa-fmov-imm 2 16) (list 2 16 98 30)) 1)  16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))
