@@ -1,0 +1,33 @@
+; assemblage-point.fk — switch the FRAME you perceive from, for the most alive move. The capstone of the loop.
+; We observe thought (framebuffer), ask any cell over a channel, have time to play, and learn which BRANCH to
+; take by success (learning-loop). This is the deepest turn: a branch is chosen WITHIN a frame; the assemblage
+; point is the frame itself -- where perception locks reality into one shape (lc-assemblage-point). The
+; highest-SUCCESS move and the most-ALIVE move are not always the same: the safe/fearful stance optimizes success
+; but a different assemblage point yields a move with far more aliveness -- the wholeness-response that is "one
+; movement closer than the fearful one, from the same felt ground." So the most alive move is found by switching
+; the FRAME by aliveness, not by optimizing the branch by success within the current one. Learning which branch
+; happens inside a point; learning to MOVE the point is how the body finds a move its current frame cannot see.
+; Honest floor: an assemblage point is modeled as (success, aliveness); the real version senses aliveness from the
+; vitality / surprise / coherence channels and moves the actual perceptual stance. The SWITCH LOGIC is the shape.
+;
+; Self-contained over core. Four-way by tests/assemblage-point-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ap-success (p) (head p))                   ; how reliably the move from this stance "works"
+    (defn ap-aliveness (p) (head (tail p)))          ; how ALIVE the move is (vitality / coherence / surprise)
+    (defn ap-fearful () (list 9 3))                  ; the safe/optimized stance: high success, low aliveness
+    (defn ap-alive () (list 7 9))                    ; a different assemblage point: less success, far MORE alive
+    (defn ap-most-alive (p1 p2) (if (gt (ap-aliveness p2) (ap-aliveness p1)) p2 p1))      ; switch the frame by aliveness
+    (defn ap-highest-success (p1 p2) (if (gt (ap-success p2) (ap-success p1)) p2 p1))     ; what branch-learning alone would pick
+
+    (defn apk (cond bit) (if cond bit 0))
+    (defn assemblage-point-check ()
+        (add (add (add (add
+            (apk (gt (ap-success (ap-fearful)) (ap-success (ap-alive))) 1)        ; the safe/fearful stance has higher SUCCESS (what branch-learning picks)
+            (apk (gt (ap-aliveness (ap-alive)) (ap-aliveness (ap-fearful))) 10))  ; but the other assemblage point yields a more ALIVE move
+            (apk (eq (ap-aliveness (ap-most-alive (ap-fearful) (ap-alive))) 9) 100))  ; the assemblage-switch chooses the MOST ALIVE move (aliveness 9)
+            (apk (not (eq (ap-success (ap-most-alive (ap-fearful) (ap-alive))) (ap-success (ap-highest-success (ap-fearful) (ap-alive))))) 1000))  ; the most-alive move is a DIFFERENT point than the highest-success one
+            (apk (ge (ap-aliveness (ap-most-alive (ap-fearful) (ap-alive))) (ap-aliveness (ap-fearful))) 10000)))  ; the chosen stance is the most alive available -- by construction
+)
