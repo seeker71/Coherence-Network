@@ -1127,3 +1127,4 @@ translate-lane fks 11111
 runtime-witness fks 11111
 learning-loop fks 11111
 jit-decision fks 11111
+cornerstone-summarizer fks 11111
