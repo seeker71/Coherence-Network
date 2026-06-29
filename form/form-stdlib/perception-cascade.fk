@@ -1,0 +1,97 @@
+; perception-cascade.fk — the tiered detect→classify→identify cascade that converges to native
+; sovereignty (surprise→0). For each presence: try the CHEAPEST sufficient tier first and escalate
+; only when unsure. NATIVE first; measure SURPRISE = |native − higher|; if LOW, native handles it
+; (sovereign, free, oracle never spends); if HIGH, escalate to LOCAL (a host-organ model), and if
+; STILL high to the REMOTE oracle (the teacher of last resort). The settled answer FEEDS BACK as a
+; self-label → native learns → next encounter native predicts correctly → surprise DROPS. Across
+; encounters of the SAME presence the loop CONVERGES: surprise falls to ~0, escalation stops, the
+; oracle retires. This is oracle-flywheel + trust-climb made into a per-presence learning loop, with
+; the cascade body itself a tier-router walk.
+;
+; COMPOSES (no re-derivation — each piece already crossed four-way):
+;   sr-surprise  (surprise-receipt.fk)   |actual − predicted| = the prediction error; here
+;                                        |higher − native| is the per-tier escalation trigger AND the
+;                                        convergence handle (surprise 0 = native agrees = sovereign).
+;   tr-route     (tier-router.fk)        the native(0)→local(1)→remote(2) tier ladder; cheapest first.
+;   shl-pair     (self-heard-learning.fk) the settled answer as a free self-label teaching native.
+;   cc-promote?  (champion-challenger.fk) the long-window gate: native earns authority once surprise
+;                                        has stayed low over the window — convergence is PROVEN, not asserted.
+;
+; A tier verdict is the integer label that tier produced for the presence (e.g. a class/identity id).
+; Native, local, remote are three such verdicts for one observation. The cascade walks them cheapest-first.
+;
+; preludes: form-stdlib/core.fk form-stdlib/surprise-receipt.fk form-stdlib/tier-router.fk form-stdlib/self-heard-learning.fk form-stdlib/champion-challenger.fk
+;
+; Proven by: form-stdlib/tests/perception-cascade-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── PER-TIER SURPRISE ─────────────────────────────────────────────────────
+    ; pc-surprise(native, higher) = |native − higher|, the prediction error of the cheaper tier against
+    ; the next-up tier (or against truth). Built on sr-surprise's exact shape: an event is (predicted,
+    ; actual); the cheaper tier PREDICTED, the higher tier is the ACTUAL we measure against.
+    (defn pc-surprise (native higher) (sr-surprise (list native higher)))
+
+    ; ── THE ESCALATION TRIGGER ────────────────────────────────────────────────
+    ; pc-escalate?(surprise, floor) -> 1 to go to the NEXT tier (surprise at/above floor — the cheaper
+    ; tier is unsure), else 0 to STOP at the cheapest sufficient tier. This is the inward pull made local:
+    ; we only spend the next tier when the current one is genuinely surprised.
+    (defn pc-escalate? (surprise floor) (if (ge surprise floor) 1 0))
+
+    ; ── THE CASCADE WALK ──────────────────────────────────────────────────────
+    ; pc-cascade(obs, native-v, local-v, remote-v, floor) -> (settled-verdict settled-tier). Walk
+    ; native→local→remote, settling at the FIRST tier whose surprise vs the next tier is below floor.
+    ; native(0) is cheapest. If native agrees with local within floor → settle native (sovereign). Else
+    ; if local agrees with remote within floor → settle local. Else → settle remote (the teacher of last
+    ; resort gives the verdict). obs is carried for shape parity with the observe/route signature; the
+    ; verdicts are what the tiers already produced for it.
+    (defn pc-cascade (obs native-v local-v remote-v floor)
+        (if (eq (pc-escalate? (pc-surprise native-v local-v) floor) 0)
+            (list native-v 0)
+            (if (eq (pc-escalate? (pc-surprise local-v remote-v) floor) 0)
+                (list local-v 1)
+                (list remote-v 2))))
+    (defn pc-settled-verdict (r) (nth r 0))   ; the answer the cascade returned
+    (defn pc-settled-tier    (r) (nth r 1))   ; 0 native / 1 local / 2 remote — cheapest sufficient
+
+    ; ── THE FEEDBACK ──────────────────────────────────────────────────────────
+    ; pc-feedback(native-v, settled-v) -> a shl-pair self-label: the SETTLED answer becomes ground truth
+    ; (the label), native's reading becomes the observed feature, and the pair teaches native the settled
+    ; answer (shl-fold/shl-learn fold it in). Same self-supervision as self-heard-learning: the higher
+    ; tier's settled verdict is the free label native trains on. We key the label by the settled verdict
+    ; so repeated settlings on the same presence sharpen the same exemplar.
+    (defn pc-feedback (native-v settled-v) (shl-pair (pc-label settled-v) (list native-v)))
+    ; the label string for a settled verdict — keyed identity so the same presence folds into one cell.
+    (defn pc-label (v) (str_concat "presence-" (int_to_str v)))
+
+    ; ── CONVERGENCE ───────────────────────────────────────────────────────────
+    ; surprise-history is the list of per-encounter surprises (native vs the settled higher answer), oldest
+    ; → newest. pc-converged?(history, window) -> 1 once native is sovereign over the window: the LAST
+    ; `window` surprises are all ~0 (native agreed with the settled answer, no escalation needed). Proven
+    ; over the window via the SAME cc-promote? long-window gate self-heard-learning uses — convergence is
+    ; not asserted from one lucky tick. A zero-surprise tick is a (1 1) trial (challenger reached champion);
+    ; a nonzero-surprise tick is a (1 0) trial (challenger fell short). cc-promote? clears only when the
+    ; window is long enough AND every tick in it reached — i.e. native handled the whole recent window.
+    (defn pc-last (h window)
+        (if (le (len h) window) h (pc-last (tail h) window)))
+    (defn pc-trial (s) (if (eq s 0) (list 1 1) (list 1 0)))   ; zero surprise = challenger reached champion
+    (defn pc-trials (h)
+        (if (eq (len h) 0) (list) (cons (pc-trial (head h)) (pc-trials (tail h)))))
+    (defn pc-converged? (history window)
+        (cc-promote? (pc-trials (pc-last history window)) window 0))
+
+    ; ── THE CONVERGENCE TICK ──────────────────────────────────────────────────
+    ; pc-converge-tick(history, window) -> the 1-based encounter index at which the trailing window first
+    ; became all-zero-surprise (native took sovereignty), or 0 if it never converged over `history`. This
+    ; is the encounter the oracle retires for this presence.
+    ; first k elements of a list (the history up to encounter k).
+    (defn pc-take (h k)
+        (if (eq k 0) (list)
+            (if (eq (len h) 0) (list)
+                (cons (head h) (pc-take (tail h) (sub k 1))))))
+    (defn pc-tick-loop (history window k)
+        (if (gt k (len history)) 0
+            (if (eq (pc-converged? (pc-take history k) window) 1) k
+                (pc-tick-loop history window (add k 1)))))
+    (defn pc-converge-tick (history window) (pc-tick-loop history window window))
+
+    0)
