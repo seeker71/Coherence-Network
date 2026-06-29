@@ -1,0 +1,3 @@
+; tests/oracle-distill-band.fk — distillation from an oracle: error drops, generalize->sovereign, mimic->copy, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/oracle-distill.fk
+(do (oracle-distill-check))
