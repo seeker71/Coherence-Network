@@ -1,0 +1,42 @@
+; softmax.fk — numerically-stable softmax as a first-class Form recipe, the
+; attention block's normalizer surfaced from transformer-numerics.fk's core.
+;
+; preludes: form-stdlib/transformer-numerics.fk
+;
+; Softmax and layernorm are the classic GPU / numeric divergence sites: a naive
+; exp(x_i)/Σexp(x_j) overflows on large logits, and the order of the reduction
+; decides the low bits. The stable form subtracts the row max BEFORE exp — the
+; result is identical in exact arithmetic, finite in float — and the recipe
+; PINS the reduction order, so every kernel (Go=Rust=TS=fkwu) computes the same
+; bits. That determinism is what lets a four-way-proven softmax stand under a
+; full decoder forward where the FFN sublayer is already GPU-bit-exact.
+;
+; The whole walk already lives in transformer-numerics.fk as tn-softmax; this
+; cell names it as the decoder sub-rung it is and adds the two shapes an
+; attention block actually asks for: a temperature-scaled softmax (logit /
+; temperature before the max-subtract — the sampling/distillation knob) and a
+; single-probe accessor (the i-th probability without materializing siblings).
+
+; sm-stable: the canonical stable softmax over a value list.
+;   p_i = exp(x_i − max(x)) / Σ_j exp(x_j − max(x))
+; Composed on transformer-numerics.fk: tn-max (the row max), tn-sub-scalar
+; (shift), tn-exp-map (Taylor exp, square-and-reduce), tn-sum / tn-scale (the
+; pinned-order normalize). Identical recipe to tn-softmax — named for the lane.
+(defn sm-stable (xs) (tn-softmax xs))
+
+; sm-temp: temperature-scaled stable softmax. T>1 flattens, T<1 sharpens; the
+; division rides INSIDE the stable path (scale, then max-subtract), so it stays
+; overflow-safe for any logit magnitude.
+(defn sm-temp (xs t) (tn-softmax (tn-scale xs (div 1.0 t))))
+
+; sm-denom: the stable normalizer Σ_j exp(x_j − max(x)) on its own — the cross
+; an attention block divides every probe by. Surfaced so a probe need not
+; rebuild the whole distribution.
+(defn sm-denom (xs) (tn-sum (tn-exp-map (tn-sub-scalar xs (tn-max xs)))))
+
+; sm-nth: the i-th softmax probability without materializing the sibling list.
+;   p_i = exp(x_i − max(x)) / sm-denom(xs)
+(defn sm-nth-of (xs i m d)
+  (if (eq i 0) (div (tn-exp (sub (head xs) m)) d)
+      (sm-nth-of (tail xs) (sub i 1) m d)))
+(defn sm-nth (xs i) (sm-nth-of xs i (tn-max xs) (sm-denom xs)))
