@@ -1,0 +1,119 @@
+; world-sensor-floor.fk — the standing FLOOR every platform and every sensor stands on.
+;
+; PR #12 (coherence-kernel) wired Windows wifi/bt/battery/memory as host sensors. This
+; canonicalizes that one-platform pattern into the INVARIANT contract, so adding ANY sensor
+; on ANY platform is "implement the carrier, the rest is already proven."
+;
+; THE CONTRACT (host-kernel.form organs-and-ports · sensor-organ-channel.fk · inquiry-planes.fk
+; · fused-observation.fk):
+;   A world resource is a VIA-HOST afferent PORT (world-sensors / world-audio / world-video,
+;   direction afferent: world -> cell). It MAPS to an INQUIRY-PLANE (the kind of question it
+;   answers). It produces a MESH-SAFE READING that fuses and streams.
+;
+;   INVARIANT: port (afferent) + plane + reading-shape + fusion.
+;   PER-PLATFORM: the carrier (the OS API) — the only thing a new platform implements.
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - the READING is fused-observation.fk's `fo-reading (plane value source-cell confidence)` —
+;     the narrowed organ row the mesh already fuses (no new reading engine).
+;   - the FUSION is fused-observation.fk's `fo-fuse` — the SAME per-plane fusion that collapses
+;     all senses into ONE observed cell (observed PRESENT WHO WHAT WHERE CONFIDENCE).
+;   - the PLANES are inquiry-planes.fk's words. where/who/what already fuse via fo-fuse;
+;     "vitality" extends the seven with the body's own health plane — battery/memory answer
+;     "how alive is the carrier right now", which IS host-resource-access condition-2
+;     (measure-its-health-on-the-body). A vitality reading rides the same reading shape and
+;     streams; the four-plane fuse stays exactly fo-fuse.
+;
+; Integers + strings only; confidences are counts on a scale (the carrier's own trust weight).
+;
+; preludes: form-stdlib/core.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk
+;
+; Proven by: form-stdlib/tests/world-sensor-floor-band.fk
+
+(do
+    ; ── a world-sensor spec: an afferent VIA-HOST port routed to its inquiry plane ──
+    ; The port is invariant (direction afferent, organ world-sensors); the carrier varies
+    ; per platform. The spec names what a sensor IS, before any carrier exists.
+    (defn wsf-sensor (name plane)
+        (list "world-sensor" name "afferent" plane))
+    (defn wsf-name   (s) (nth s 1))
+    (defn wsf-dir    (s) (nth s 2))            ; always "afferent" — world -> cell
+    (defn wsf-plane  (s) (nth s 3))            ; the inquiry plane the sensor answers
+    (defn wsf-afferent? (s) (if (str_eq (wsf-dir s) "afferent") 1 0))
+
+    ; ── the canonical floor roster — standard world-sensors mapped to inquiry planes ──
+    ; where: position/place sensors. who: identity/presence sensors. what: scene sensors.
+    ; vitality: the carrier's own health (host-resource-access condition-2).
+    (defn wsf-roster ()
+        (list
+            (wsf-sensor "wifi"         "where")     ; nearby networks -> place
+            (wsf-sensor "bluetooth"    "who")       ; nearby devices  -> who is present
+            (wsf-sensor "gps"          "where")     ; coordinate      -> place
+            (wsf-sensor "camera"       "what")      ; image scene     -> what is here
+            (wsf-sensor "mic"          "who")       ; voices          -> who is speaking
+            (wsf-sensor "battery"      "vitality")  ; charge          -> body health
+            (wsf-sensor "memory"       "vitality")  ; free RAM        -> body health
+            (wsf-sensor "proximity"    "where")     ; near/far        -> place
+            (wsf-sensor "magnetometer" "where")     ; heading         -> place
+            (wsf-sensor "barometer"    "where")))   ; altitude        -> place
+
+    (defn wsf-find (roster name)
+        (if (eq (len roster) 0) (empty)
+            (if (str_eq (wsf-name (head roster)) name) (head roster)
+                (wsf-find (tail roster) name))))
+
+    ; the plane a named sensor answers, looked up in a roster ("" if not on the floor)
+    (defn wsf-plane-of (roster name)
+        (do (let found (wsf-find roster name))
+            (if (eq (len found) 0) "" (wsf-plane found))))
+
+    ; ── a mesh-safe reading routed to its plane ──
+    ; THIS IS fused-observation.fk's fo-reading: (reading plane value source "organ" confidence) —
+    ; the plane it answers, the value sensed, the carrier source-cell, and the carrier's confidence.
+    ; The floor produces exactly the row the mesh already fuses; no new reading engine.
+    (defn wsf-route (sensor value confidence)
+        (fo-reading (wsf-plane sensor) value (wsf-name sensor) confidence))
+
+    ; ── per-platform floor state: which floor sensors a platform carries vs is missing ──
+    ; platform-sensors is the list of sensor NAMES the platform's carriers actually provide.
+    (defn wsf-has? (names name)
+        (if (eq (len names) 0) 0
+            (if (str_eq (head names) name) 1 (wsf-has? (tail names) name))))
+
+    ; how many roster sensors the platform carries
+    (defn wsf-carried-count (platform-sensors roster)
+        (if (eq (len roster) 0) 0
+            (add (wsf-has? platform-sensors (wsf-name (head roster)))
+                 (wsf-carried-count platform-sensors (tail roster)))))
+
+    ; the names of the roster sensors the platform is missing
+    (defn wsf-missing (platform-sensors roster)
+        (if (eq (len roster) 0) (empty)
+            (if (eq (wsf-has? platform-sensors (wsf-name (head roster))) 1)
+                (wsf-missing platform-sensors (tail roster))
+                (cons (wsf-name (head roster))
+                      (wsf-missing platform-sensors (tail roster))))))
+
+    ; floor-complete? -> a state row (state carried total missing).
+    ; state is "floor-complete" when every roster sensor is carried, else "floor-partial".
+    (defn wsf-floor-complete? (platform-sensors roster)
+        (do (let carried (wsf-carried-count platform-sensors roster))
+            (let total (len roster))
+            (list
+                (if (eq carried total) "floor-complete" "floor-partial")
+                carried
+                total
+                (wsf-missing platform-sensors roster))))
+    (defn wfc-state    (f) (nth f 0))
+    (defn wfc-carried  (f) (nth f 1))
+    (defn wfc-total    (f) (nth f 2))
+    (defn wfc-missing  (f) (nth f 3))
+    (defn wfc-complete? (f) (if (str_eq (wfc-state f) "floor-complete") 1 0))
+
+    ; ── fuse the routed readings into ONE observed cell ──
+    ; THIS IS fused-observation.fk's fo-fuse: the SAME per-plane fusion that collapses all senses
+    ; into one (observed PRESENT WHO WHAT WHERE CONFIDENCE). The floor's readings become the one
+    ; observed cell the mesh already understands — no second fusion engine. where/who/what fuse
+    ; directly; vitality readings ride the same shape and stream alongside.
+    (defn wsf-fuse (routed) (fo-fuse routed))
+)

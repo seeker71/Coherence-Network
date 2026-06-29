@@ -1,0 +1,83 @@
+; tests/world-sensor-floor-band.fk — the floor every platform and sensor stands on, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/world-sensor-floor.fk
+;
+; The floor: a world resource is an afferent port, mapped to an inquiry plane, producing a
+; mesh-safe reading that fuses (fused-observation.fk's fo-reading + fo-fuse). The roster maps
+; each standard sensor to the RIGHT plane; a full platform routes + fuses; a partial platform
+; names what it is missing.
+;
+; Verdict 4095 when every claim lands on Go / Rust / TypeScript / fkwu:
+;   1     wifi routes to the "where" plane (place)
+;   2     bluetooth routes to "who" (who is present)
+;   4     battery routes to "vitality" (the carrier's own health — host-resource-access cond-2)
+;   8     mic routes to "who" (who is speaking) and camera to "what"
+;   16    a routed reading is an fo-reading row carrying its plane, value, source, confidence
+;   32    windows (wifi/bt/battery/memory/camera/mic) carries 6 floor sensors
+;   64    windows floor state is floor-partial (gps/proximity/magnetometer/barometer missing)
+;   128   windows names exactly 4 missing floor sensors
+;   256   mac (camera/mic) is floor-partial carrying 2
+;   512   mac names "gps" among its missing floor sensors
+;   1024  the windows routed where/who/what readings fuse into ONE observed cell (fo-fuse)
+;   2048  the fused observed cell names the located place, the present who, and the seen what
+
+(do
+    (let roster (wsf-roster))
+
+    ; ── 1/2/4/8: the roster maps each standard sensor to the RIGHT inquiry plane ──
+    (let wifi-where (if (str_eq (wsf-plane-of roster "wifi") "where") 1 0))
+    (let bt-who     (if (str_eq (wsf-plane-of roster "bluetooth") "who") 2 0))
+    (let bat-vital  (if (str_eq (wsf-plane-of roster "battery") "vitality") 4 0))
+    (let mic-cam    (if (and (str_eq (wsf-plane-of roster "mic") "who")
+                             (str_eq (wsf-plane-of roster "camera") "what")) 8 0))
+
+    ; ── 16: a routed reading is an fo-reading row (plane value source confidence) ──
+    (let wifi-sensor (wsf-find roster "wifi"))
+    (let wifi-read   (wsf-route wifi-sensor 2 900))
+    (let row-shaped  (if (and (str_eq (rd-plane wifi-read) "where")
+                              (and (eq (rd-value wifi-read) 2)
+                                   (and (str_eq (rd-source wifi-read) "wifi")
+                                        (eq (rd-confidence wifi-read) 900)))) 16 0))
+
+    ; ── windows: a full platform — wifi/bt/battery/memory/camera/mic ──
+    (let windows (list "wifi" "bluetooth" "battery" "memory" "camera" "mic"))
+    (let win-floor (wsf-floor-complete? windows roster))
+    (let win-carried (if (eq (wfc-carried win-floor) 6) 32 0))
+    (let win-partial (if (str_eq (wfc-state win-floor) "floor-partial") 64 0))
+    (let win-missing (if (eq (len (wfc-missing win-floor)) 4) 128 0))
+
+    ; ── mac: a partial platform — camera/mic only — with the missing sensors named ──
+    (let mac (list "camera" "mic"))
+    (let mac-floor (wsf-floor-complete? mac roster))
+    (let mac-partial (if (and (str_eq (wfc-state mac-floor) "floor-partial")
+                              (eq (wfc-carried mac-floor) 2)) 256 0))
+    (let mac-names-gps (if (eq (wsf-has? (wfc-missing mac-floor) "gps") 1) 512 0))
+
+    ; ── the windows routed readings fuse into ONE observed cell (fo-fuse) ──
+    ; where <- wifi (band 2), who <- bluetooth+mic (label "ilena"), what <- camera ("face").
+    ; battery/memory ride the vitality plane alongside — same reading shape, streaming.
+    (let routed (list
+        (wsf-route (wsf-find roster "wifi")      2       800)
+        (wsf-route (wsf-find roster "bluetooth") "ilena" 600)
+        (wsf-route (wsf-find roster "mic")       "ilena" 700)
+        (wsf-route (wsf-find roster "camera")    "face"  900)
+        (wsf-route (wsf-find roster "battery")   77      1000)
+        (wsf-route (wsf-find roster "memory")    40      1000)))
+    (let fused (wsf-fuse routed))
+    (let fused-one (if (and (str_eq (head fused) "observed")
+                            (eq (fo-o-where fused) 2)) 1024 0))
+    (let fused-named (if (and (str_eq (fo-o-who fused) "ilena")
+                              (str_eq (fo-o-what fused) "face")) 2048 0))
+
+    (add wifi-where
+    (add bt-who
+    (add bat-vital
+    (add mic-cam
+    (add row-shaped
+    (add win-carried
+    (add win-partial
+    (add win-missing
+    (add mac-partial
+    (add mac-names-gps
+    (add fused-one
+        fused-named))))))))))))
