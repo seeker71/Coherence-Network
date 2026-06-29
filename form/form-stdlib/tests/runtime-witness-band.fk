@@ -1,0 +1,7 @@
+; tests/runtime-witness-band.fk — the eyes-on-execution: watch the running kernel, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/runtime-witness.fk
+;
+; Verdict 11111: the witness sees which recipe fired last; counts a recipe's fires; marks the hot one (a JIT
+; candidate) and the cold one (tree-walked); and reads the JIT hit-rate (4/5 native). The running kernel made
+; observable -- completing the observe stack (thoughts + trust + execution) of a core we can observe and trust.
+(do (runtime-witness-check))
