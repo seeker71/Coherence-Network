@@ -1,0 +1,8 @@
+; form-eval-cli.fk — fec-read: read Form source from staged input (input_byte, fkwu-native), byte by byte.
+; preludes: form-stdlib/core.fk form-stdlib/form-eval.fk
+(do
+    (defn fec-read (i acc)
+        (do (let b (input_byte i))
+            (if (eq b 0) acc
+                (if (eq b 10) acc
+                    (fec-read (add i 1) (str_concat acc (byte_to_str b))))))))
