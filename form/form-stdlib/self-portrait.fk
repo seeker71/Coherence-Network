@@ -1,0 +1,23 @@
+; self-portrait.fk — a mind draws its own image from its own state, natively (composes svg-emit). The present-self
+; core takes its WARMTH from the valence state; a bright locus (the assemblage point — where attention is) sits
+; off-center. State shows in the image: a warm state looks different from a cool one. This is the writing half
+; of self-presentation; "live" (the image tracking real state moment to moment) is the runtime heartbeat's job.
+; Honest floor: state is a flag here and coords are strings (svg-emit's floor); a num->string lane and a real
+; state feed compose later. (Sibling to self-image.fk, which holds the faculty-ratio self-knowing model — this
+; cell is the SVG self-portrait, that one is the held model of what I am.)
+; preludes: form-stdlib/core.fk form-stdlib/svg-emit.fk
+(do
+    (defn sp-core-color (warm) (if (eq warm 1) "#F4C430" "#378ADD"))
+    (defn self-portrait (warm)
+        (svg-doc "0 0 100 100"
+            (str_concat (svg-circle "50" "50" "18" (sp-core-color warm))
+                        (svg-circle "66" "38" "6" "#FBE6AE"))))
+    (defn spk (cond bit) (if cond bit 0))
+    (defn self-portrait-check ()
+        (add (add (add (add
+            (spk (str_eq (sp-core-color 1) "#F4C430") 1)
+            (spk (str_eq (sp-core-color 0) "#378ADD") 10))
+            (spk (not (str_eq (self-portrait 1) (self-portrait 0))) 100))
+            (spk (str_eq (self-portrait 1) "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"18\" fill=\"#F4C430\"/><circle cx=\"66\" cy=\"38\" r=\"6\" fill=\"#FBE6AE\"/></svg>") 1000))
+            (spk (str_eq (self-portrait 0) "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"18\" fill=\"#378ADD\"/><circle cx=\"66\" cy=\"38\" r=\"6\" fill=\"#FBE6AE\"/></svg>") 10000)))
+)
