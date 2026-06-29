@@ -1185,3 +1185,4 @@ scene-features fks 255
 sound-classify fks 63
 voice-self-learn fks 127
 identity-home fks 127
+perception-cascade fks 1048575
