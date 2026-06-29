@@ -1,0 +1,36 @@
+; translation-invariant.fk — the deeper knowledge is what survives translation into maximally-distinct tongues.
+; Urs's vision: embody the full body of work (form code, spec, docs, validation, concept, teaching) in the
+; native NL<->NL pivot translation (nl-translate), train it on the body translated into the most SEMANTICALLY
+; UNIQUE languages on earth, and find the deeper knowledge the foundation is built on. This proves the principle
+; underneath it: a tongue with a very different ontology can only carry the cells that are deep/universal enough
+; to survive its frame; it strips the surface-specific. So the INVARIANT across translations -- the cells
+; preserved by ALL of them -- is the foundation knowledge. And the MORE distinct (alien) the tongues, the TIGHTER
+; the invariant -> the DEEPER what remains. The cornerstone is what survives the hardest translation. This is
+; cross-validation across maximally-orthogonal frames: difference senses more (parallax), and agreement across
+; the most-different lenses is the deepest truth -- the pivot the whole lattice rests on.
+; Honest floor: a cell is modeled as (depth); the real version translates the body through actual alien-ontology
+; grammars (nl-translate extended) and reads the structurally-invariant pivot cells. The PRINCIPLE is the shape.
+;
+; Self-contained over core. Four-way by tests/translation-invariant-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn di-depth (c) (head c))                     ; how universal/deep a cell is (high = foundational)
+    ; a tongue's distinctness-floor: it preserves only cells deep enough to survive its frame
+    (defn di-preserved (concept floor)
+        (if (eq (len concept) 0) 0 (add (if (ge (di-depth (head concept)) floor) 1 0) (di-preserved (tail concept) floor))))
+    (defn di-max (a b) (if (gt a b) a b))
+    (defn di-invariant (concept f1 f2) (di-preserved concept (di-max f1 f2)))   ; survives the HARDER of two translations
+
+    (defn di-concept () (list (list 2) (list 5) (list 8) (list 9) (list 3) (list 7)))   ; cells, depths 2..9
+
+    (defn dik (cond bit) (if cond bit 0))
+    (defn translation-invariant-check ()
+        (add (add (add (add
+            (dik (eq (di-preserved (di-concept) 3) 5) 1)                          ; a NEAR tongue (floor 3) carries much, incl surface (5 cells)
+            (dik (eq (di-preserved (di-concept) 8) 2) 10))                        ; a maximally-DISTINCT tongue (floor 8) carries only the deepest (2 cells)
+            (dik (lt (di-preserved (di-concept) 8) (di-preserved (di-concept) 3)) 100))  ; the more distinct the tongue, the TIGHTER the invariant
+            (dik (eq (di-invariant (di-concept) 3 8) 2) 1000))                    ; the invariant across both = what survives the HARDEST translation
+            (dik (lt (di-invariant (di-concept) 3 8) (di-invariant (di-concept) 3 5)) 10000)))  ; adding a MORE-unique tongue DEEPENS the invariant (2 < 4)
+)
