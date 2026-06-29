@@ -1,0 +1,31 @@
+; four-way-verdict.fk — the heart of the clean kernel's OWN four-way proof: given the four results
+; (go, rust, ts, fkwu) for a recipe, diagnose them. This encodes what the history actually showed about the
+; native walker: it is rarely the odd one. So the verdict distinguishes the two kinds of disagreement, because
+; they are NOT the same and only one is acceptable to ignore:
+;   - FOUR-WAY: all four agree. The capability is proven.
+;   - FKWU-SUSPECT: the three foreign walkers agree among themselves and fkwu differs. RARE and IMPORTANT --
+;     this is the only shape that points at the native runtime (the scientific-notation float class). Investigate.
+;   - WALKER-SUSPECT: not four-way, and not fkwu-suspect -- one walker disagrees while fkwu and the others agree
+;     (or scattered). COMMON, and a proof-note: a foreign walker's own bug, never gates a feature.
+; The runner (fsh, no bash) host-execs the three minimal walkers + fkwu and feeds their results here.
+; Self-contained over core. Four-way by tests/four-way-verdict-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn fwv-walkers-eq (g r t) (if (eq g r) (if (eq r t) 1 0) 0))   ; the three foreign walkers agree among themselves
+    (defn fwv-four-way? (g r t f) (if (eq (fwv-walkers-eq g r t) 1) (if (eq t f) 1 0) 0))   ; all four agree -> proven
+    (defn fwv-fkwu-suspect? (g r t f) (if (eq (fwv-walkers-eq g r t) 1) (if (eq t f) 0 1) 0))  ; walkers agree, fkwu odd -> investigate the native
+    (defn fwv-walker-suspect? (g r t f)                              ; not four-way and not fkwu-suspect -> a foreign walker's note
+        (if (eq (fwv-four-way? g r t f) 1) 0
+            (if (eq (fwv-fkwu-suspect? g r t f) 1) 0 1)))
+
+    (defn fwk (cond bit) (if cond bit 0))
+    (defn four-way-verdict-check ()
+        (add (add (add (add
+            (fwk (eq (fwv-four-way? 42 42 42 42) 1) 1)              ; all four agree -> four-way (proven)
+            (fwk (eq (fwv-fkwu-suspect? 42 42 42 43) 1) 10))        ; walkers agree, fkwu odd -> fkwu-suspect (rare, investigate the native)
+            (fwk (eq (fwv-walker-suspect? 43 42 42 42) 1) 100))     ; one walker odd, fkwu+others agree -> walker-suspect (common, a note)
+            (fwk (eq (fwv-four-way? 42 42 42 43) 0) 1000))          ; any disagreement is NOT four-way
+            (fwk (eq (fwv-walker-suspect? 42 42 42 43) 0) 10000)))  ; the fkwu-odd case is NOT blamed on a walker -- the diagnosis routes it right
+)

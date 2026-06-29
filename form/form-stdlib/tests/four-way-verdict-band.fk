@@ -1,0 +1,7 @@
+; tests/four-way-verdict-band.fk — the four-way verdict + native-vs-walker diagnosis, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/four-way-verdict.fk
+;
+; Verdict 11111: four agreeing -> four-way; walkers-agree-fkwu-odd -> fkwu-suspect (rare, investigate the native);
+; one-walker-odd -> walker-suspect (common, a note); a disagreement is not four-way; and the fkwu-odd case is
+; never blamed on a walker. The clean kernel can now diagnose its own four-way, encoding the history's lesson.
+(do (four-way-verdict-check))
