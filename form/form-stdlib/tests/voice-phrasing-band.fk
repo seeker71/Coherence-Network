@@ -1,0 +1,8 @@
+; tests/voice-phrasing-band.fk — where the pause lands and which word carries the point, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/voice-phrasing.fk
+;
+; Verdict 11111: a grounded clause (substrate-hit) breaks SHORTER than an ungrounded one (the pause lands by what was
+; actually hard, never a constant tempo); the escalation clause gets the LONGEST break; the new/contrastive word is
+; emphasized; the old/given word is not; the escalation clause is flagged the hardest. Phrasing is state -> WHERE in
+; the line -- the audible thinking made a placement decision, not a global pace.
+(do (voice-phrasing-check))

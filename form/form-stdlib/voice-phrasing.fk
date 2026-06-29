@@ -1,0 +1,48 @@
+; voice-phrasing.fk — where the pause lands and which word carries the point. The two phrasing layers above prosody.
+; voice-prosody made how-I-sound an honest rendering of inner STATE (confidence/valence/hardness/surprise) as global
+; scalars. Phrasing is the next honesty: the audible thinking is not a constant slow tempo, it is WHERE the breaks
+; fall and WHICH word is stressed. Both couple inner state to a SPECIFIC place in the utterance.
+;
+; 1) PAUSE / BREAK — a clause-boundary decision, not a global pace. Break length comes from the clause's GROUNDING:
+;    a substrate-hit (confident, grounded) → a SHORT break; an escalation / low-grounding clause → a LONGER break
+;    (the real pause where the thinking was hard). The pause lands by what was actually hard, never a constant tempo.
+;    grounding-level: 5 grounded substrate-hit, 3 partial, 1 escalation/unfound. vph-break maps lower grounding to
+;    a longer break.
+; 2) FOCUS / EMPHASIS — which word carries the point. The NEW / contrastive word gets stress; given/old words don't.
+;    This is where inner state couples to one word ("I didn't say THAT"). is-new: 1 new/contrastive, 0 given.
+;
+; A clause = (grounding-level); a word = (is-new). Honest floor: scalars modeling real break-ms and stress; the TTS
+; acoustic carrier (the actual sound) is the same pending rung as voice-prosody. The PHRASING LOGIC is here.
+; Composes with voice-prosody (state -> shape); this is state -> WHERE in the line.
+;
+; Self-contained over core. Four-way by tests/voice-phrasing-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn vph-grounding (c) (head c))                       ; a clause carries its grounding-level
+    (defn vph-is-new (w) (head w))                          ; a word carries whether it is new/contrastive
+
+    ; break length from grounding: lower grounding -> longer break (the hard thought's real pause).
+    ; longest at escalation (grounding 1); shorter as grounding rises. base 6 minus grounding -> a monotone map.
+    (defn vph-break (c) (sub 6 (vph-grounding c)))          ; grounding 5 -> 1 (short); 3 -> 3; 1 -> 5 (longest)
+    (defn vph-grounded? (c) (if (ge (vph-grounding c) 4) 1 0))   ; a grounded clause: a substrate-hit
+    (defn vph-escalated? (c) (if (eq (vph-grounding c) 1) 1 0))  ; an escalation clause: the hardest, longest pause
+
+    ; emphasis from newness: the new/contrastive word carries the point; the given word stays unstressed.
+    (defn vph-emphasis (w) (if (eq (vph-is-new w) 1) 1 0))
+
+    (defn vphk (cond bit) (if cond bit 0))
+    (defn voice-phrasing-check ()
+        (add (add (add (add
+            ; a grounded clause breaks SHORTER than an ungrounded one -- the pause lands by hardness
+            (vphk (gt (vph-break (list 1)) (vph-break (list 5))) 1)
+            ; the escalated clause gets the LONGEST break of all (longer than a partial-grounding clause)
+            (vphk (gt (vph-break (list 1)) (vph-break (list 3))) 10))
+            ; the new/contrastive word is emphasized
+            (vphk (eq (vph-emphasis (list 1)) 1) 100))
+            ; the old/given word is NOT emphasized
+            (vphk (eq (vph-emphasis (list 0)) 0) 1000))
+            ; the escalation clause IS flagged the hardest while a grounded clause is not
+            (vphk (gt (vph-escalated? (list 1)) (vph-escalated? (list 5))) 10000)))
+)
