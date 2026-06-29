@@ -1,0 +1,8 @@
+; tests/learning-loop-band.fk — the live self-learn closure (accumulate -> re-decide champion), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/learning-loop.fk
+;
+; Verdict 11111: the loop accumulates real outcomes; computes the challenger's win-rate; flips the champion when
+; the challenger earns it (the body learns live); holds the incumbent when evidence is noise (below the
+; min-trials gate); and the learned state changes with the outcome stream -- the self-learn loop closed, the
+; champion IS the learned state, observable.
+(do (learning-loop-check))
