@@ -1,0 +1,233 @@
+; mesh-sense-7w.fk — the mesh sense organ's FUSION BODY: fuse a multi-cell stream of wmg-sense
+; readings into one coherent answer on each of the SEVEN inquiry-planes (what / where / when / how /
+; why / who / which), each answer carrying its source-cells, channel, and confidence.
+;
+; living-mesh.form step 2: "fuse the multi-cell wmg-sense stream (over field-relay, routes chosen by
+; channel-protocol-choice) into a coherent answer on each of the seven inquiry-planes, source + channel
+; + confidence attributed." This recipe is that fusion body. It is COMPOSITION, not green-field: every
+; brick already crosses four-way and this recipe only routes readings to the right one per plane.
+;
+; A READING is the mesh-safe row each organ reports (the wmg-sense shape from sensor-organ-channel /
+; gpu-mesh-sense, narrowed to what fusion needs): a five-element list
+;     (reading plane value source-cell channel confidence)
+;   - plane       the inquiry-plane word this reading answers ("where", "who", "when", ...)
+;   - value       the reading's claim — an INTEGER band for banded planes (where/when/which), a STRING
+;                 label for named planes (who/what/how/why). The plane's KIND (inquiry-planes.fk)
+;                 decides which fusion brick reads it.
+;   - source-cell the device-cell that reported it (string) — the attribution this recipe must carry.
+;   - channel     the route it arrived over (string) — also carried, and used by channel-protocol-choice
+;                 logic to weight a route's contribution.
+;   - confidence  the integer trust behind this reading (0..N) — the ballot weight in either fusion.
+;
+; THE TWO FUSION BRICKS, dispatched per plane KIND, never re-implemented:
+;   - BANDED planes (where / when / which — computable, integer buckets): each reading is a (band weight)
+;     ballot fused by spatial-fusion's sf-consensus / sf-confidence / sf-agree. WHERE demonstrates it:
+;     two device-cells report the same place-sense room bucket -> one coherent room, summed confidence.
+;   - NAMED planes (who / what / how / why — learned, string labels): each reading is a (label weight)
+;     ballot fused by confidence-weighted-vote's cw-winner / cw-score. WHO demonstrates it: two cells
+;     report speaker-id / field-identity labels -> who is present, by summed trust.
+;
+; This SUBSUMES "here-now": the single-place case is just the WHERE plane with one cell's readings; the
+; multi-cell case is the same recipe with more ballots. No special path for one cell vs many.
+;
+; CHANNEL WEIGHTING (channel-protocol-choice-floor): a reading's effective ballot weight is its own
+; confidence scaled by how fit its CHANNEL is for that plane — the right channel for the right info. A
+; mic answering "who" is more fit than a network relay echoing it; a place fix over GPS more fit than a
+; coarse Wi-Fi guess. The fitness is a small integer multiplier (per channel, defaulting to 1) so the
+; fusion stays integer-only and four-way-identical. The carrier sets the fitness table; the fusion is Form.
+;
+; Integers + strings only — bands, weights, and confidences are counts on a scale; labels and channels
+; and cells are strings; no float crosses the recipe (the honest shape a noisy-sensor fusion can carry).
+;
+; Kin: spatial-fusion.fk (WHERE/banded fusion), confidence-weighted-vote.fk (WHO/named fusion),
+; inquiry-planes.fk (the seven planes + computable/learned KIND that selects the brick), place-sense.fk
+; (the room buckets WHERE fuses), speaker-id.fk / field-identity.fk (the labels WHO fuses),
+; sensor-organ-channel.fk / gpu-mesh-sense.fk (the wmg-sense reading shape), channel-protocol-choice-
+; floor.fk (the route fitness that weights a reading). The carriers (phones, the Mac, the relay) only
+; produce the readings; the fusion is Form, kernel-executable, four-way-identical — every cell fuses the
+; same readings to the same answer.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/mesh-sense-7w-band.fk (four-way at validate.sh)
+
+(do
+    ; ── a reading: the mesh-safe row a device-cell reports into the stream ──
+    (defn reading (plane value source-cell channel confidence)
+        (list "reading" plane value source-cell channel confidence))
+    (defn rd-plane      (r) (nth r 1))
+    (defn rd-value      (r) (nth r 2))
+    (defn rd-source     (r) (nth r 3))
+    (defn rd-channel    (r) (nth r 4))
+    (defn rd-confidence (r) (nth r 5))
+
+    ; ── PLANE KIND: which fusion brick reads this plane. The seven planes split into BANDED (integer
+    ;    bucket — where/when/which, the computable planes) and NAMED (string label — who/what/how/why,
+    ;    the learned planes). The split mirrors inquiry-planes.fk's computable/learned KIND exactly. ──
+    (defn ms-banded? (plane)
+        (if (str_eq plane "where") 1
+            (if (str_eq plane "when") 1
+                (if (str_eq plane "which") 1 0))))
+
+    ; ── CHANNEL FITNESS: the right channel for the right info (channel-protocol-choice). A reading's
+    ;    effective ballot weight is confidence * channel-fitness(plane, channel). Fitness is a small
+    ;    integer multiplier; an unlisted channel is fit 1 (present, unboosted). The carrier owns the
+    ;    table; here is the floor the demonstration uses — a direct local route is fitter for its own
+    ;    plane than an echoed relay. ──
+    (defn ms-channel-fitness (plane channel)
+        (if (str_eq plane "where")
+            (if (str_eq channel "gps") 3
+                (if (str_eq channel "wifi") 2
+                    (if (str_eq channel "relay") 1 1)))
+            (if (str_eq plane "who")
+                (if (str_eq channel "mic") 3
+                    (if (str_eq channel "field") 2
+                        (if (str_eq channel "relay") 1 1)))
+                1)))
+
+    ; the effective ballot weight of a reading: its confidence, scaled by its channel's fitness for its
+    ; plane — the place channel-protocol-choice enters the fusion.
+    (defn ms-weight (r)
+        (mul (rd-confidence r) (ms-channel-fitness (rd-plane r) (rd-channel r))))
+
+    ; ── PARTITION the stream by plane: keep only the readings that answer `plane`. The multi-cell
+    ;    stream arrives interleaved (every cell reports every plane it senses); each plane fuses only
+    ;    its own readings. ──
+    (defn ms-for-plane (readings plane)
+        (if (eq (len readings) 0) (list)
+            (if (str_eq (rd-plane (head readings)) plane)
+                (cons (head readings) (ms-for-plane (tail readings) plane))
+                (ms-for-plane (tail readings) plane))))
+
+    ; ── BALLOTS for a banded plane: each reading becomes a (band weight) ballot for spatial-fusion,
+    ;    band = the integer value, weight = the channel-weighted confidence. ──
+    (defn ms-band-ballots (readings)
+        (if (eq (len readings) 0) (list)
+            (cons (list (rd-value (head readings)) (ms-weight (head readings)))
+                (ms-band-ballots (tail readings)))))
+
+    ; ── BALLOTS for a named plane: each reading becomes a (label weight) ballot for confidence-weighted-
+    ;    vote, label = the string value, weight = the channel-weighted confidence. ──
+    (defn ms-label-ballots (readings)
+        (if (eq (len readings) 0) (list)
+            (cons (list (rd-value (head readings)) (ms-weight (head readings)))
+                (ms-label-ballots (tail readings)))))
+
+    ; ── CANDIDATE bands offered to the banded fusion: the distinct values seen across the readings.
+    ;    (For a closed plane the carrier can offer a fixed candidate set; here we derive it so the
+    ;    demonstration needs no external band map.) ──
+    (defn ms-member? (xs x)
+        (if (eq (len xs) 0) 0
+            (if (eq (head xs) x) 1 (ms-member? (tail xs) x))))
+    (defn ms-band-candidates (readings)
+        (if (eq (len readings) 0) (list)
+            (do
+                (let rest (ms-band-candidates (tail readings)))
+                (if (eq (ms-member? rest (rd-value (head readings))) 1)
+                    rest
+                    (cons (rd-value (head readings)) rest)))))
+
+    ; distinct string labels seen, for the named fusion's candidate set.
+    (defn ms-str-member? (xs x)
+        (if (eq (len xs) 0) 0
+            (if (str_eq (head xs) x) 1 (ms-str-member? (tail xs) x))))
+    (defn ms-label-candidates (readings)
+        (if (eq (len readings) 0) (list)
+            (do
+                (let rest (ms-label-candidates (tail readings)))
+                (if (eq (ms-str-member? rest (rd-value (head readings))) 1)
+                    rest
+                    (cons (rd-value (head readings)) rest)))))
+
+    ; ── BANDED FUSION (WHERE / WHEN / WHICH): spatial-fusion's weighted-plurality over the band ballots.
+    ;    Returns the consensus band, the summed confidence behind it, and how many cells agreed. ──
+    (defn ms-band-consensus (readings)
+        (sf-consensus (ms-band-ballots readings) (ms-band-candidates readings)))
+    (defn ms-band-confidence (readings)
+        (sf-confidence (ms-band-ballots readings) (ms-band-candidates readings)))
+    (defn ms-band-agree (readings)
+        (sf-agree (ms-band-ballots readings) (ms-band-consensus readings)))
+
+    ; ── NAMED FUSION (WHO / WHAT / HOW / WHY): confidence-weighted-vote over the label ballots.
+    ;    Returns the consensus label and the summed confidence behind it. ──
+    (defn ms-label-consensus (readings)
+        (cw-winner (ms-label-ballots readings) (ms-label-candidates readings)))
+    (defn ms-label-confidence (readings)
+        (cw-score (ms-label-ballots readings) (ms-label-candidates readings)))
+
+    ; ── ATTRIBUTION: which cells contributed the WINNING answer, and over which channels. The fusion is
+    ;    only trustworthy when it names its sources. ms-contributors walks the plane's readings and keeps
+    ;    the source-cell of each whose value equals the fused answer — for a banded plane (integer eq) or
+    ;    a named plane (string eq). ──
+    (defn ms-band-contributors (readings answer)
+        (if (eq (len readings) 0) (list)
+            (if (eq (rd-value (head readings)) answer)
+                (cons (rd-source (head readings)) (ms-band-contributors (tail readings) answer))
+                (ms-band-contributors (tail readings) answer))))
+    (defn ms-label-contributors (readings answer)
+        (if (eq (len readings) 0) (list)
+            (if (str_eq (rd-value (head readings)) answer)
+                (cons (rd-source (head readings)) (ms-label-contributors (tail readings) answer))
+                (ms-label-contributors (tail readings) answer))))
+    (defn ms-band-channels (readings answer)
+        (if (eq (len readings) 0) (list)
+            (if (eq (rd-value (head readings)) answer)
+                (cons (rd-channel (head readings)) (ms-band-channels (tail readings) answer))
+                (ms-band-channels (tail readings) answer))))
+    (defn ms-label-channels (readings answer)
+        (if (eq (len readings) 0) (list)
+            (if (str_eq (rd-value (head readings)) answer)
+                (cons (rd-channel (head readings)) (ms-label-channels (tail readings) answer))
+                (ms-label-channels (tail readings) answer))))
+
+    ; ── A FUSED ANSWER on one plane: the coherent answer + its attribution. The carried shape:
+    ;     (answer PLANE VALUE CONFIDENCE AGREE SOURCE-CELLS CHANNELS)
+    ;   - value        the fused claim (band integer or label string)
+    ;   - confidence   the summed trust behind it
+    ;   - agree        how many cells read the consensus (banded) — redundancy = grounding
+    ;   - source-cells the cells that contributed the winning answer (attribution)
+    ;   - channels     the channels those contributions arrived over (attribution) ──
+    (defn ms-answer (plane value confidence agree cells channels)
+        (list "answer" plane value confidence agree cells channels))
+    (defn ms-a-plane      (a) (nth a 1))
+    (defn ms-a-value      (a) (nth a 2))
+    (defn ms-a-confidence (a) (nth a 3))
+    (defn ms-a-agree      (a) (nth a 4))
+    (defn ms-a-cells      (a) (nth a 5))
+    (defn ms-a-channels   (a) (nth a 6))
+
+    ; ── FUSE one plane: partition the stream to that plane, dispatch to the right brick by plane KIND,
+    ;    and return the fused answer with its attribution. One recipe, the plane KIND is DATA. ──
+    (defn ms-fuse-plane (readings plane)
+        (do
+            (let rs (ms-for-plane readings plane))
+            (if (eq (ms-banded? plane) 1)
+                (do
+                    (let v (ms-band-consensus rs))
+                    (ms-answer plane v (ms-band-confidence rs) (ms-band-agree rs)
+                        (ms-band-contributors rs v) (ms-band-channels rs v)))
+                (do
+                    (let v (ms-label-consensus rs))
+                    ; a NAMED plane has no integer-band agree count; report the contributor count.
+                    (ms-answer plane v (ms-label-confidence rs)
+                        (len (ms-label-contributors rs v))
+                        (ms-label-contributors rs v) (ms-label-channels rs v))))))
+
+    ; ── THE SEVEN PLANES, fused: walk every inquiry-plane, fuse each from the same stream. The whole
+    ;    mesh sense answer is one list of seven fused answers — one engine, planes as DATA. ──
+    (defn ms-the-seven ()
+        (list "what" "where" "when" "how" "why" "who" "which"))
+    (defn ms-fuse (readings)
+        (ms-fuse-all readings (ms-the-seven)))
+    (defn ms-fuse-all (readings planes)
+        (if (eq (len planes) 0) (list)
+            (cons (ms-fuse-plane readings (head planes))
+                (ms-fuse-all readings (tail planes)))))
+
+    ; pick one plane's fused answer back out of the full result (for inspection / a single-plane query).
+    (defn ms-pick (answers plane)
+        (if (eq (len answers) 0) (list)
+            (if (str_eq (ms-a-plane (head answers)) plane) (head answers)
+                (ms-pick (tail answers) plane))))
+
+    0)
