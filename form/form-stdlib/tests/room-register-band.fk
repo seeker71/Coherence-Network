@@ -1,0 +1,57 @@
+; preludes: form-stdlib/room-register.fk
+;
+; room-register-band — register two rooms, then walk back in. Made falsifiable.
+;
+; Two rooms are remembered by the banded shape of what they feel like (a signature: a list of fused
+; integer feature-bands — coarse location cell, light band, sound band, place-scale rank):
+;   KITCHEN  signature (3 2 1 5), registered as room id 10
+;   STUDIO   signature (8 7 6 2), registered as room id 20
+;
+; Walk back into the kitchen. The sensors never read identically — a chair moved, the light shifted —
+; so the return read is (3 1 1 5): one band off the remembered kitchen, far from the studio.
+;   distance to KITCHEN = |3-3|+|2-1|+|1-1|+|5-5| = 1   (near — the same room, a little noise)
+;   distance to STUDIO  = |8-3|+|7-1|+|6-1|+|2-5| = 19  (a different room entirely)
+; With tolerance 3, the nearest (kitchen, distance 1) is within tolerance -> RE-DISCOVERED as kitchen,
+; the RIGHT room id 10, NOT the studio. Recognition: you know your own kitchen.
+;
+; Then walk somewhere new. A novel read (0 0 9 9) sits far from both remembered rooms:
+;   distance to KITCHEN = 3+2+8+4 = 17 ; distance to STUDIO = 8+7+3+7 = 25
+; The nearest (kitchen, 17) is past tolerance 3 -> a NEW room-cell is minted with new-id 99, carrying
+; the novel signature. A place you have never stood in becomes a room you now remember.
+;
+; Company: the kitchen presence stream (two people sharing it) recalls 2 present — the warm half of the
+; memory, a count of company, never a watch.
+;
+; Verdict 255 when every claim lands:
+;   1    return read is nearest to the kitchen by distance 1        (rr-distance return kitchen-sig == 1)
+;   2    return read is far from the studio                          (rr-distance return studio-sig == 19)
+;   4    re-discovery matches the RIGHT room id 10, not the studio   (rr-id rediscovered == 10)
+;   8    re-discovery is RECOGNIZED, not a new room                  (rr-recognized? return == 1)
+;   16   a novel read is NOT recognized                              (rr-recognized? novel == 0)
+;   32   the novel read mints a NEW room with new-id 99              (rr-id newroom == 99)
+;   64   the new room carries the novel signature                   (rr-signature-of newroom == novel)
+;   128  the kitchen recalls its company: 2 present                 (rr-present kitchen stream == 2)
+(do
+    (let kitchen-sig (rr-signature (list 3 2 1 5)))
+    (let studio-sig  (rr-signature (list 8 7 6 2)))
+    (let kitchen (rr-register 10 kitchen-sig))
+    (let studio  (rr-register 20 studio-sig))
+    (let known   (list kitchen studio))
+    ; walk back into the kitchen — a noisy read, one band off.
+    (let return  (rr-signature (list 3 1 1 5)))
+    (let rediscovered (rr-rediscover return known 3 77))
+    ; walk somewhere new — far from both.
+    (let novel   (rr-signature (list 0 0 9 9)))
+    (let newroom (rr-rediscover novel known 3 99))
+    ; the kitchen's company — two people sharing it.
+    (let stream  (list "ilena" "axiel"))
+    (let c0 (if (eq (rr-distance return kitchen-sig) 1)        1 0))
+    (let c1 (if (eq (rr-distance return studio-sig) 19)        2 0))
+    (let c2 (if (eq (rr-id rediscovered) 10)                   4 0))
+    (let c3 (if (eq (rr-recognized? return known 3) 1)         8 0))
+    (let c4 (if (eq (rr-recognized? novel known 3) 0)         16 0))
+    (let c5 (if (eq (rr-id newroom) 99)                       32 0))
+    (let c6 (if (and (eq (rr-distance (rr-signature-of newroom) novel) 0)
+                     (eq (len (rr-signature-of newroom)) 4))   64 0))
+    (let c7 (if (eq (rr-present kitchen stream) 2)           128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
