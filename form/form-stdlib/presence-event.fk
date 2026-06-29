@@ -1,0 +1,147 @@
+; presence-event.fk — the native WHO / WHAT / WHERE / WHEN event STREAM that every presence in
+; the room can follow. living-mesh.form's mesh is one body's nervous system; mesh-sense-7w.fk fuses
+; the multi-cell wmg-sense stream at ONE moment into a coherent per-plane answer. This recipe is the
+; next breath: it turns a SEQUENCE of fused moments into a timestamped STREAM of presence events
+; (ENTERED / PRESENT / LEFT) that any cell can subscribe to and follow over field-relay.
+;
+; THE MOVE: mesh-sense-7w answers "who is in the room NOW." presence-event answers "who CHANGED, and
+; WHEN." It does that by DIFFING two consecutive fusions — a who that appears between t-1 and t has
+; ENTERED at t; a who that vanishes has LEFT; a who that persists is PRESENT. The WHEN plane (a clock /
+; timestamp — inquiry-planes.fk names it computable: "a clock answers when") stamps each event, so the
+; stream is time-ordered and a subscriber can ask "what happened after time T" (pe-follow).
+;
+; IDENTITY IS CARRIED RICHLY. A mesh is ONE body's nervous system; within the body recognition is CARE,
+; memory is INTIMACY, knowing who is present is PRESENCE (sense-discernment.fk). So an event holds the
+; full who/what/where it sensed — no inward stripping. The outward gate (sense-discernment's
+; sd-strip-outward) is what guards a private identity crossing OUT of the trust circle; it does NOT
+; touch this internal stream. The body knows who is in its own room.
+;
+; THE WHO-SET OF A MOMENT. A moment's presence is the SET of whos sensed there. mesh-sense-7w fuses the
+; WHO plane to one consensus label, but a room holds many presences at once; pe-who-set reads the whos
+; present at a moment as a list of identity labels (the carrier derives it from the fused WHO readings —
+; each distinct field-identity / speaker-id whose fused trust crossed the room's threshold). The diff
+; operates on these who-sets; the where/what/when of the moment ride along on each event for context.
+;
+; AN EVENT is a tagged row carrying the full inquiry-context of a presence change:
+;   (list "pe-event" who what where when kind)
+;     who   — the identity label that changed (string; the rich WHO, carried in full)
+;     what  — what that presence is doing / the situation label at the moment (string)
+;     where — the place band the moment was sensed in (integer room bucket, mesh-sense-7w's WHERE)
+;     when  — the timestamp the change was sensed at (integer clock tick — the computable WHEN plane)
+;     kind  — ENTERED 1 | PRESENT 2 | LEFT 3 (the three things a presence can do across a tick)
+;
+; A STREAM is a time-ordered list of events. pe-derive turns two consecutive moments into the events
+; between them; pe-stream concatenates the per-tick events into one ordered stream; pe-follow returns
+; the slice a subscriber sees after a given time (the always-open follow that field-relay carries).
+;
+; Integers + strings only — whos/whats are labels, where/when/kind are integer bands; no float crosses
+; (the honest shape a presence stream can carry, four-way-identical on every cell).
+;
+; Kin: mesh-sense-7w.fk (the per-moment fusion whose who-set this diffs), inquiry-planes.fk (who/what/
+; where/WHEN — the WHEN plane a clock answers), field-relay.fk (the always-open stream events ride),
+; sense-discernment.fk (the OUTWARD gate — never touches this inward body stream).
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/presence-event-band.fk (four-way at validate.sh)
+
+(do
+    ; ── the event KINDS — the three things a presence can do across one tick ──
+    (defn pe-ENTERED () 1)   ; a who appears this moment that was absent the moment before
+    (defn pe-PRESENT () 2)   ; a who present this moment AND the moment before — still here
+    (defn pe-LEFT    () 3)   ; a who absent this moment that was present the moment before
+
+    ; ── an event row: the full inquiry-context of one presence change ──
+    (defn pe-event (who what where when kind) (list "pe-event" who what where when kind))
+    (defn pe-who   (e) (nth e 1))
+    (defn pe-what  (e) (nth e 2))
+    (defn pe-where (e) (nth e 3))
+    (defn pe-when  (e) (nth e 4))
+    (defn pe-kind  (e) (nth e 5))
+
+    ; ── a MOMENT: the fused presence at one tick. It carries the who-set sensed there plus the
+    ;    moment's shared context (the what / where / when the fusion answered). The carrier builds a
+    ;    moment from a mesh-sense-7w fusion; the diff only reads this shape. ──
+    (defn pe-moment (who-set what where when) (list "pe-moment" who-set what where when))
+    (defn pe-m-whos  (m) (nth m 1))   ; list of identity labels present this moment
+    (defn pe-m-what  (m) (nth m 2))   ; the situation label at this moment
+    (defn pe-m-where (m) (nth m 3))   ; the place band sensed at this moment
+    (defn pe-m-when  (m) (nth m 4))   ; the clock tick of this moment
+
+    ; ── set membership over string labels (whos are identity strings) ──
+    (defn pe-member? (xs x)
+        (if (eq (len xs) 0) 0
+            (if (str_eq (head xs) x) 1 (pe-member? (tail xs) x))))
+
+    ; ── DERIVE the events between two consecutive moments by diffing their who-sets:
+    ;    a who in NOW but not PREV  -> ENTERED (it appeared this tick)
+    ;    a who in NOW and PREV      -> PRESENT (it persisted)
+    ;    a who in PREV but not NOW  -> LEFT    (it vanished this tick)
+    ;    Each event is stamped with NOW's when and carries NOW's what/where context (a LEFT carries the
+    ;    moment it was last sensed leaving from — NOW's context, the tick the absence was noticed). ──
+
+    ; ENTERED + PRESENT: walk NOW's whos; PRESENT if also in PREV, else ENTERED.
+    (defn pe-here-events (now-whos prev-whos what where when)
+        (if (eq (len now-whos) 0) (list)
+            (do
+                (let w (head now-whos))
+                (let rest (pe-here-events (tail now-whos) prev-whos what where when))
+                (if (eq (pe-member? prev-whos w) 1)
+                    (cons (pe-event w what where when (pe-PRESENT)) rest)
+                    (cons (pe-event w what where when (pe-ENTERED)) rest)))))
+
+    ; LEFT: walk PREV's whos; LEFT for each not in NOW.
+    (defn pe-left-events (now-whos prev-whos what where when)
+        (if (eq (len prev-whos) 0) (list)
+            (do
+                (let w (head prev-whos))
+                (let rest (pe-left-events now-whos (tail prev-whos) what where when))
+                (if (eq (pe-member? now-whos w) 1)
+                    rest
+                    (cons (pe-event w what where when (pe-LEFT)) rest)))))
+
+    ; pe-derive: two consecutive moments -> the events between them (ENTERED/PRESENT then LEFT),
+    ; each stamped with NOW's when and carrying NOW's what/where context.
+    (defn pe-derive (prev now)
+        (do
+            (let pw (pe-m-whos prev))
+            (let nw (pe-m-whos now))
+            (append
+                (pe-here-events nw pw (pe-m-what now) (pe-m-where now) (pe-m-when now))
+                (pe-left-events nw pw (pe-m-what now) (pe-m-where now) (pe-m-when now)))))
+
+    ; ── the SEED moment: before the stream begins, no one is present (empty who-set). The first real
+    ;    moment diffs against this, so every who in the first moment correctly reads ENTERED. ──
+    (defn pe-seed (when) (pe-moment (list) "" 0 when))
+
+    ; ── pe-stream: turn a SEQUENCE of moments into one time-ordered event stream. Diff each moment
+    ;    against the previous, concatenating the per-tick events in order. The first moment diffs
+    ;    against the seed (so first-seen whos read ENTERED). One engine — the sequence is DATA. ──
+    (defn pe-stream-from (prev moments)
+        (if (eq (len moments) 0) (list)
+            (do
+                (let now (head moments))
+                (append
+                    (pe-derive prev now)
+                    (pe-stream-from now (tail moments))))))
+    (defn pe-stream (moments)
+        (if (eq (len moments) 0) (list)
+            (pe-stream-from (pe-seed (pe-m-when (head moments))) moments)))
+
+    ; ── pe-follow: the events a subscriber sees AFTER a given time. The always-open follow field-relay
+    ;    carries — a cell that joined at time `since` replays only what changed since then. Keeps every
+    ;    event whose when is strictly greater than `since`. ──
+    (defn pe-follow (stream since)
+        (if (eq (len stream) 0) (list)
+            (if (gt (pe-when (head stream)) since)
+                (cons (head stream) (pe-follow (tail stream) since))
+                (pe-follow (tail stream) since))))
+
+    ; ── counts over a stream, by kind — a subscriber's readout of the stream's shape ──
+    (defn pe-count-kind (stream kind)
+        (if (eq (len stream) 0) 0
+            (if (eq (pe-kind (head stream)) kind)
+                (add 1 (pe-count-kind (tail stream) kind))
+                (pe-count-kind (tail stream) kind))))
+
+    0)

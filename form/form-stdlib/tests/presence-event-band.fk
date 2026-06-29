@@ -1,0 +1,81 @@
+; preludes: form-stdlib/presence-event.fk
+;
+; presence-event-band — a SEQUENCE of fused presence moments diffed into a timestamped event STREAM,
+; the who/what/where/WHEN event flow that mesh-sense-7w's per-moment fusion feeds. Made falsifiable.
+;
+; THE MOMENTS — three consecutive fused snapshots of one room (where band 2 = "study"), each a who-set
+; the mesh sensed at that clock tick. The whos are carried as rich identity labels (no inward stripping):
+;
+;   t0 (when 0): {Urs}          — Urs alone in the study
+;   t1 (when 1): {Urs, guest}   — a guest joins; Urs stays
+;   t2 (when 2): {Urs}          — the guest leaves; Urs stays
+;
+; THE DERIVED STREAM — pe-stream diffs each moment against the previous (the first against an empty
+; seed), in time order:
+;   t0 vs {}        -> Urs ENTERED @0
+;   t1 vs {Urs}     -> Urs PRESENT @1, guest ENTERED @1
+;   t2 vs {Urs,guest} -> Urs PRESENT @2, guest LEFT @2
+; so: Urs ENTERED@0, guest ENTERED@1, guest LEFT@2, and Urs PRESENT throughout (PRESENT@1, PRESENT@2).
+;
+; Verdict 16383 when every claim lands on Go / Rust / TypeScript / fkwu:
+;   1      the stream holds 5 events total                              (len stream == 5)
+;   2      2 ENTERED events (Urs@0, guest@1)                            (count ENTERED == 2)
+;   4      2 PRESENT events (Urs@1, Urs@2 — Urs present throughout)     (count PRESENT == 2)
+;   8      1 LEFT event (guest@2)                                       (count LEFT    == 1)
+;   16     the FIRST event is Urs ENTERED                              (who "Urs", kind ENTERED)
+;   32     the first event is stamped at when 0                         (when == 0)
+;   64     guest's ENTERED is stamped at when 1 (it joined at t1)       (guest ENTERED when == 1)
+;   128    guest's LEFT is stamped at when 2 (it left at t2)            (guest LEFT when == 2)
+;   256    the event carries WHERE context (study, band 2)              (where == 2)
+;   512    the event carries WHAT context ("gathering")                 (str_eq what "gathering")
+;   1024   a subscriber following since when 0 sees the 4 later events  (len follow(0) == 4)
+;   2048   a subscriber following since when 1 sees the 2 t2 events     (len follow(1) == 2)
+;   4096   Urs is PRESENT (kind 2) at t1 — persisted, not re-ENTERED    (Urs@t1 kind == PRESENT)
+;   8192   guest's LEFT carries Urs's room (where 2) — last-sensed ctx  (guest LEFT where == 2)
+;
+; The teaching: a single fusion answers "who is here now"; the STREAM answers "who changed, and when" —
+; recognition over time, carried as care, that any cell can subscribe to and follow.
+(do
+    ; ── the three fused moments (who-set, what, where, when). where 2 = study; what = "gathering". ──
+    (let m0 (pe-moment (list "Urs")         "gathering" 2 0))
+    (let m1 (pe-moment (list "Urs" "guest") "gathering" 2 1))
+    (let m2 (pe-moment (list "Urs")         "gathering" 2 2))
+    (let moments (list m0 m1 m2))
+
+    ; ── derive the time-ordered event stream ──
+    (let stream (pe-stream moments))
+
+    ; ── pick specific events back out for the stamped-WHEN / context claims ──
+    ; the first event (Urs ENTERED @0)
+    (defn first-of (s) (head s))
+    ; find the first event matching a who AND kind
+    (defn find-wk (s who kind)
+        (if (eq (len s) 0) (list)
+            (if (and (str_eq (pe-who (head s)) who) (eq (pe-kind (head s)) kind))
+                (head s)
+                (find-wk (tail s) who kind))))
+
+    (let e-first       (first-of stream))
+    (let e-guest-enter (find-wk stream "guest" (pe-ENTERED)))
+    (let e-guest-left  (find-wk stream "guest" (pe-LEFT)))
+    (let e-urs-t1      (find-wk stream "Urs"   (pe-PRESENT)))  ; first Urs-PRESENT is @t1
+
+    (let c0  (if (eq (len stream) 5)                              1 0))
+    (let c1  (if (eq (pe-count-kind stream (pe-ENTERED)) 2)       2 0))
+    (let c2  (if (eq (pe-count-kind stream (pe-PRESENT)) 2)       4 0))
+    (let c3  (if (eq (pe-count-kind stream (pe-LEFT))    1)       8 0))
+    (let c4  (if (and (str_eq (pe-who e-first) "Urs")
+                      (eq (pe-kind e-first) (pe-ENTERED)))       16 0))
+    (let c5  (if (eq (pe-when e-first) 0)                        32 0))
+    (let c6  (if (eq (pe-when e-guest-enter) 1)                  64 0))
+    (let c7  (if (eq (pe-when e-guest-left) 2)                  128 0))
+    (let c8  (if (eq (pe-where e-first) 2)                      256 0))
+    (let c9  (if (str_eq (pe-what e-first) "gathering")        512 0))
+    (let c10 (if (eq (len (pe-follow stream 0)) 4)            1024 0))
+    (let c11 (if (eq (len (pe-follow stream 1)) 2)            2048 0))
+    (let c12 (if (eq (pe-kind e-urs-t1) (pe-PRESENT))         4096 0))
+    (let c13 (if (eq (pe-where e-guest-left) 2)               8192 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6
+        (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 c13)))))))))))))
+)
