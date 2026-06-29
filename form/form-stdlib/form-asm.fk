@@ -194,6 +194,13 @@
     (defn fa-ldr-d (rt rn imm) (fa-asm 4248829952 (list 1 32 1024) (list rt rn imm)))
     ; str d<rt>, [x<rn>, #imm] (f64 store; caller passes imm/8) : base 0xFD000000                       (oracle fd000420)
     (defn fa-str-d (rt rn imm) (fa-asm 4244635648 (list 1 32 1024) (list rt rn imm)))
+    ; ldr d<rt>, <pcrel> (PC-relative LITERAL load: opc=01 V=1) : base 0x5C000000 | imm19<<5 | rt
+    ; imm19 = (pool_byte_offset - this_instr_byte_offset)/4, the WORD distance from THIS instruction to the
+    ; pooled f64. This is the SELF-CONTAINED CONSTANT POOL: a function carries its OWN real coefficients
+    ; (1/6, 1/120, ln2, the RoPE base) appended after `ret`, loaded position-independently with NO relocation.
+    ; fa-fmov-imm (the VFP modified-immediate) reaches only ~64 constants; this reaches ALL of them — the
+    ; precondition for emitting real exp/sin/cos/gelu. (oracle 5c000081 = ldr d1, +16 ; 5c0000a2 = ldr d2, +20)
+    (defn fa-ldr-d-lit (rt imm19) (fa-asm 1543503872 (list 1 32) (list rt imm19)))
 
     (defn fa-conviction (cand ref)
         (if (eq (len cand) (len ref))
