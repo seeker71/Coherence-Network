@@ -1047,6 +1047,7 @@ form-asm-matvec-2d fks 127
 form-asm-ss-sqrt fks 127
 form-asm-rsqrt fks 31
 form-asm-horner fks 31
+form-asm-poly-pool fks 31
 weight-load fks 4095
 weight-load-q4k fks 4095
 block-join fks 255
