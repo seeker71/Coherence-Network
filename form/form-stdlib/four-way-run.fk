@@ -1,0 +1,7 @@
+; four-way-run.fk — the kernel's own four-way RUNNER: host-exec the three minimal walkers on a recipe,
+; parse their values, and diagnose with four-way-verdict. fkwu orchestrates its own proof -- no bash, no validate.sh.
+; fkwu-native (host-exec); the verdict logic it feeds is four-way. preludes: form-stdlib/core.fk form-stdlib/four-way-verdict.fk
+(do
+    (defn fr-run (cmd) (str_to_int (host-exec cmd "")))
+    (defn fr-diagnose (gocmd rustcmd tscmd fkwu-v)
+        (fwv-verdict (fr-run gocmd) (fr-run rustcmd) (fr-run tscmd) fkwu-v)))
