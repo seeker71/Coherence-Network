@@ -35,8 +35,12 @@ final class SenseModel: NSObject, ObservableObject {
     @Published var sceneNote: String = "a lit/dark field (no VLM yet)"
 
     // Gate parameters — the same thresholds the phone used.
-    let presenceThreshold = 50
+    let presenceThreshold = 50      // luma cut for the scene/confidence bands (NOT presence)
     let surpriseTolerance = 18
+    // Presence OCCUPANCY floor: pf-occupancy must meet-or-exceed this for present=1. The
+    // spatial-variance excess (lower-center MAD minus wall baseline) a real body lifts;
+    // a covered camera's uniform auto-exposed grid stays under it. Mirrors the android floor.
+    let presenceFloor = 20
 
     // The capture session lives on the eye queue, not the main actor — its mutating
     // calls (configure/start/stop) all run there.
@@ -136,8 +140,10 @@ extension SenseModel: AVCaptureVideoDataOutputSampleBufferDelegate {
             sal = s / grid.count
         }
 
-        // The two DECISIONS run in fkwu on metal.
-        let pres = FkwuSense.sensePresence(luma: avgBrightness, threshold: self.presenceThreshold)
+        // The two DECISIONS run in fkwu on metal. Presence is the OCCUPANCY decision over
+        // the FULL 16x16 grid (pf-present? / pf-occupancy) — structure, not brightness — so a
+        // covered camera's auto-exposed uniform grid correctly reads NO presence.
+        let pres = FkwuSense.sensePresence(grid: grid, n: G, floor: self.presenceFloor)
         let surp = FkwuSense.senseSurprise(salience: sal, tolerance: self.surpriseTolerance)
 
         // ambient-surprise as-refine: step the baseline one toward the reading (queue-local).
@@ -157,13 +163,15 @@ extension SenseModel: AVCaptureVideoDataOutputSampleBufferDelegate {
             self.frameCount += 1
             self.brightness = avgBrightness
             self.surprise = sal
-            self.present = (pres.value == 1)
+            self.present = pres.present
             self.surprised = surprised
             self.recipeNative = pres.native && surp.native
             self.lastExpr = surp.expr
-            self.sceneNote = avgBrightness >= self.presenceThreshold
-                ? "a lit field, presence likely (brightness \(avgBrightness)/255)"
-                : "a dim/dark field (brightness \(avgBrightness)/255)"
+            // Scene note reads the OCCUPANCY now, not just brightness — a body breaks the
+            // room's uniformity (occupancy lifts) where a covered lens stays uniform.
+            self.sceneNote = pres.present
+                ? "a body breaks the room's uniformity (occupancy \(pres.occupancy), brightness \(avgBrightness)/255)"
+                : "uniform field, no body (occupancy \(pres.occupancy), brightness \(avgBrightness)/255)"
 
             if let ev = newEvent {
                 self.events.insert(ev, at: 0)
