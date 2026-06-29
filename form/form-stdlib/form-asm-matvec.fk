@@ -100,4 +100,31 @@
                                                                                             (append (fa-b-off -19)
                                                                                                 (fa-ret))))))))))))))))))))))))
 
+    ; fam-ss-sqrt: the RMSNorm / LayerNorm reduction CORE as Form->asm bytes — sqrt(sum_j x[j]^2),
+    ; the L2 norm (= sqrt(n) * RMS). This is the first NONLINEAR op on the native lane after the matvec:
+    ; the gap form-native-models.form names ("exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU as asm").
+    ; The accumulator loop is fam-dot-loop's twin with ONE buffer squared in place (fmul d2,d1,d1), and the
+    ; new ground is the trailing fsqrt OUTSIDE the loop (fa-fsqrt, proven byte-exact in form-asm-float 2047)
+    ; — a reduction that ends in a transcendental, not just the linear dot. ABI: x0 = x base, w1 = n (the
+    ; counter compare rides the 32-bit fa-cmp-r, a count is small), returns d0 = sqrt(sum x^2). 13 arm64
+    ; instructions = 52 bytes; branch offsets in INSTRUCTIONS (lo-streq discipline): b.ge exits +7 to the
+    ; fsqrt, b loops -7 back to the compare.
+    ;   0 movz x3,#0 (j)   1 movz x4,#0   2 scvtf d0,x4 (acc=0.0)
+    ;   3 cmp w3,w1   4 b.ge +7(end)   5 ldr d1,[x0]   6 fmul d2,d1,d1 (x^2)   7 fadd d0,d0,d2
+    ;   8 add x0,#8   9 add x3,#1   10 b -7(loop)   11 fsqrt d0,d0   12 ret
+    (defn fam-ss-sqrt ()
+        (append (fa-movz-x 3 0)
+            (append (fa-movz-x 4 0)
+                (append (fa-scvtf 0 4)
+                    (append (fa-cmp-r 3 1)
+                        (append (fa-bcond 10 7)
+                            (append (fa-ldr-d 1 0 0)
+                                (append (fa-fmul 2 1 1)
+                                    (append (fa-fadd 0 0 2)
+                                        (append (fa-add-x-imm 0 0 8)
+                                            (append (fa-add-x-imm 3 3 1)
+                                                (append (fa-b-off -7)
+                                                    (append (fa-fsqrt 0 0)
+                                                        (fa-ret))))))))))))))
+
     0)
