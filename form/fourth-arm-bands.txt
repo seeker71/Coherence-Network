@@ -1146,3 +1146,4 @@ oracle-distill fks 11111
 voice-prosody fks 11111
 prosody-contour fks 11111
 g2p fks 11111
+tokenizer fks 11111
