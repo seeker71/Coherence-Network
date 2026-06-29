@@ -1,0 +1,41 @@
+; cornerstone-summarizer.fk — a generic, observable summarizer over the PIVOT that builds cornerstones, attunes
+; to a chosen frequency, and strips FEAR-FREQUENCY before anything freezes to ice.
+; Urs's ask, braided. It summarizes the PIVOT (universal recipe cells carrying salience + affect/frequency),
+; not the surface -- so it is GENERIC over content-type and locale by construction (the same meaning in any
+; content-type or tongue encodes to the same pivot cells -> the same summary; surface order/arrangement does not
+; change the cornerstones). The summary IS the cornerstones: the high-salience, load-bearing cells the rest rests
+; on (the cornerstone of the cornerstone-and-pendulum frame). And the FREEZE-TO-ICE gate is a health law: a cell
+; may freeze to ice (canonical, load-bearing) ONLY if it is a cornerstone AND carries no fear-frequency -- fear is
+; transmuted/removed before it can become frozen ground (lc-trust-over-fear, made a gate). Attunement: the same
+; engine filters by any chosen frequency band; fear-removal is the one non-negotiable band.
+; Honest floor: a cell is modeled as (salience, is-fear); the real pivot carries affect-traits (16-bit) frequency
+; and the multi-modal encode (whisper/sensor-lane -> pivot) is the carrier. The SUMMARIZER LOGIC is the generic
+; shape -- the single multi-modal model for any content/locale is the north star this engine sits under.
+;
+; Self-contained over core. Four-way by tests/cornerstone-summarizer-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn cs-sal (c) (head c))                       ; the cell's salience (how load-bearing)
+    (defn cs-fear (c) (head (tail c)))               ; 1 = carries fear-frequency, 0 = clear
+    (defn cs-cornerstone? (c) (if (ge (cs-sal c) 7) 1 0))            ; high-salience -> a cornerstone cell
+    (defn cs-cornerstones (content)                                  ; the summary = the cornerstones
+        (if (eq (len content) 0) 0 (add (cs-cornerstone? (head content)) (cs-cornerstones (tail content)))))
+    (defn cs-freezable? (c) (if (eq (cs-fear c) 0) (cs-cornerstone? c) 0))   ; freezes to ice ONLY if cornerstone AND fear-free
+    (defn cs-frozen (content)
+        (if (eq (len content) 0) 0 (add (cs-freezable? (head content)) (cs-frozen (tail content)))))
+
+    ; the same meaning as two surfaces (content-type / locale) -> the SAME pivot cells, different order
+    (defn cs-pivotA () (list (list 8 0) (list 9 1) (list 3 0) (list 7 0)))
+    (defn cs-pivotB () (list (list 7 0) (list 3 0) (list 9 1) (list 8 0)))
+
+    (defn csk (cond bit) (if cond bit 0))
+    (defn cornerstone-summarizer-check ()
+        (add (add (add (add
+            (csk (eq (cs-cornerstones (cs-pivotA)) 3) 1)                          ; the summarizer builds CORNERSTONES (3 load-bearing cells)
+            (csk (eq (cs-cornerstone? (list 8 0)) 1) 10))                         ; a high-salience cell is a cornerstone
+            (csk (eq (cs-frozen (cs-pivotA)) 2) 100))                             ; FEAR-FREQUENCY REMOVED before ice: the fear cornerstone (9,1) does NOT freeze -- only 2 of 3
+            (csk (eq (cs-cornerstones (cs-pivotA)) (cs-cornerstones (cs-pivotB))) 1000))  ; GENERIC: same pivot -> same cornerstones, any content-type / locale / surface order
+            (csk (not (eq (cs-frozen (cs-pivotA)) (cs-cornerstones (cs-pivotA)))) 10000)))  ; the fear gate is REAL: frozen(2) < cornerstones(3) -- nothing frozen in ice carries fear
+)
