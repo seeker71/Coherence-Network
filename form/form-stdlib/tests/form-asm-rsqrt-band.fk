@@ -1,0 +1,34 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-rsqrt-band — the reciprocal-sqrt 1/sqrt(x) emits four-way as Form->asm bytes, no rustc.
+; fam-rsqrt is the RMSNorm/RoPE/SwiGLU normalizer core (RMSNorm scale = g/sqrt(mean(x^2)+eps); RoPE
+; inv-freq = 1/base^(2i/d) — rsqrt is the shared reciprocal-of-a-root). It is the next nonlinear rung on
+; the native lane after fam-ss-sqrt (sqrt(sum x^2), form-asm-ss-sqrt 127): where ss-sqrt ENDED in fsqrt,
+; this one closes the transcendental in a RECIPROCAL.
+;
+; The new ground vs fam-ss-sqrt: (1) the FIRST fa-fmov-imm — a FLOAT CONSTANT (#1.0) materialized into a
+; register, the missing primitive every later nonlinear op needs (ln2/RoPE-base/poly coeffs); clang emits
+; exactly this (fmov d1,#1.00000000 = 1e6e1001) rather than an int->float scvtf. (2) the FIRST fa-fdiv on
+; the witnessed native lane — a reciprocal division, not just fmul/fadd. The float ops are proven
+; byte-identical to the clang/LLVM oracle in form-asm-float (2047); the new claim is that the COMPOSITION
+; emits the exact 16-byte arm64 program four-way. ABI: d0 = x, returns d0 = 1/sqrt(x).
+;
+; The 4-instruction program, otool -tvVj of the clang -O2 oracle (`double r(double x){return 1.0/sqrt(x);}`):
+;   1e61c000 fsqrt d0,d0     1e6e1001 fmov d1,#1.0     1e601820 fdiv d0,d1,d0     d65f03c0 ret
+;
+; Verdict 31 when every claim lands:
+;   1    the program is 4 instructions = 16 bytes                 (len == 16)
+;   2    the FULL program byte-equals the 16-byte clang oracle    (fa-conviction == 1)
+;   4    fmov d1,#1.0 — the FIRST float constant (new encoder)    (fa-conviction == 1)
+;   8    fdiv d0,d1,d0 — the FIRST reciprocal on the lane         (fa-conviction == 1)
+;   16   fsqrt d0,d0 — the root being reciprocated                (fa-conviction == 1)
+(do
+    (let prog (fam-rsqrt))
+    (let oracle (list
+        0 192 97 30     1 16 110 30     32 24 96 30     192 3 95 214))
+    (let c0 (if (eq (len prog) 16)                                           1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                         1)   2 0))
+    (let c2 (if (eq (fa-conviction (fa-fmov-imm 1 112) (list 1 16 110 30)) 1) 4 0))
+    (let c3 (if (eq (fa-conviction (fa-fdiv 0 1 0)  (list 32 24 96 30))  1)   8 0))
+    (let c4 (if (eq (fa-conviction (fa-fsqrt 0 0)   (list 0 192 97 30))  1)  16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

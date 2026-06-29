@@ -1,0 +1,36 @@
+{
+  "title": "fam-rsqrt — the reciprocal-sqrt 1/sqrt(x) as Form->asm BYTES, four-way + run on M4 (+ the fa-fmov-imm float-constant encoder)",
+  "date": "2026-06-29",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "stone": "The NEXT nonlinear rung on the native asm lane after fam-ss-sqrt: where ss-sqrt ENDED in fsqrt, fam-rsqrt closes the transcendental in a RECIPROCAL. 1/sqrt(x) is the shared core of the RMSNorm scale (g/sqrt(mean(x^2)+eps)), the RoPE inverse frequency (1/base^(2i/d)), and SwiGLU normalization. Advances form-native-models.form 'GAPS — LLM INFERENCE' A'/D11 note: 'the nonlinear ops as form-asm bytes (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU)'. It lands the explicitly-named rsqrt rung AND the missing primitive every later nonlinear op needs: a FLOAT CONSTANT materialized into a register.",
+  "new_encoder": "form/form-stdlib/form-asm.fk :: fa-fmov-imm (rd imm) — fmov d<rd>, #imm8 (the VFP modified-immediate form): base 0x1E601000 | imm8<<13 | rd. The genuinely-missing primitive: form-asm had only register-to-register fmov; every constant-bearing nonlinear op (1.0 for the reciprocal, later ln2/RoPE-base/poly coeffs) needs the immediate form. clang emits exactly this (fmov d1,#1.00000000 = 1e6e1001, imm8=0x70) rather than an int->float scvtf, so the byte-exact path requires it.",
+  "recipe": "form/form-stdlib/form-asm-matvec.fk :: fam-rsqrt — 4 arm64 instructions / 16 bytes, scalar (no loop). ABI: d0 = x, returns d0 = 1/sqrt(x). Program: fsqrt d0,d0 (1e61c000) ; fmov d1,#1.0 (1e6e1001) ; fdiv d0,d1,d0 (1e601820) ; ret (d65f03c0). New ground vs fam-ss-sqrt: the FIRST fa-fmov-imm (a float constant) and the FIRST fa-fdiv (a reciprocal division) on the witnessed native lane.",
+  "four_way": {
+    "band": "form/form-stdlib/tests/form-asm-rsqrt-band.fk",
+    "manifest_row": "form-asm-rsqrt fks 31",
+    "verdict": 31,
+    "claims": "1 len==16  +2 FULL 16-byte program byte-equals the clang oracle (fa-conviction)  +4 fmov d1,#1.0 (the FIRST float constant, new encoder)  +8 fdiv d0,d1,d0 (the FIRST reciprocal on the lane)  +16 fsqrt d0,d0",
+    "result": "Go = Rust = TS = fkwu = 31, 0 divergent. fourth arm: 1 band four-way (fkwu + pre-flattened tables).",
+    "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-rsqrt-band.fk"
+  },
+  "oracle": "clang -O2 -c -target arm64-apple-macos + otool -tvVj of `double r(double x){return 1.0/__builtin_sqrt(x);}` — the exact 4-word image the recipe matches byte-for-byte: 1e61c000 fsqrt d0,d0 / 1e6e1001 fmov d1,#1.00000000 / 1e601820 fdiv d0,d1,d0 / d65f03c0 ret. clang is the teacher that confirmed the bytes once, dropped from the runtime by fa-conviction's byte-identity gate.",
+  "hardware_witness": {
+    "script": "scripts/form_asm_rsqrt_witness.sh",
+    "device": "Apple M4 Max, arm64 Darwin",
+    "path": "Form kernel emits fam-rsqrt's 16 bytes -> form-macho mo-object-sym wraps a Mach-O .o exporting _recipe -> ld -dylib + ad-hoc sign (no clang in the link) -> C harness dlopen+call as double recipe(double x)",
+    "emitted_bytes": "00c0611e 01106e1e 2018601e c0035fd6",
+    "compute_toolchain_free": "no rustc/clang in the COMPUTE; clang only builds the dumb dlopen loader",
+    "results": [
+      {"case": "4.0",   "x": 4.0,   "got": 0.5,                  "expected": 0.5,                  "match": true},
+      {"case": "1.0",   "x": 1.0,   "got": 1.0,                  "expected": 1.0,                  "match": true},
+      {"case": "0.25",  "x": 0.25,  "got": 2.0,                  "expected": 2.0,                  "match": true},
+      {"case": "100.0", "x": 100.0, "got": 0.10000000000000001,  "expected": 0.10000000000000001,  "match": true},
+      {"case": "2.0",   "x": 2.0,   "got": 0.70710678118654746,  "expected": 0.70710678118654746,  "match": true},
+      {"case": "1e8",   "x": 1e8,   "got": 0.0001,               "expected": 0.0001,               "match": true},
+      {"case": "1e-8",  "x": 1e-8,  "got": 10000.0,              "expected": 10000.0,              "match": true}
+    ],
+    "parity": "bit-for-bit == vs 1.0/sqrt(x); the irrational case 1/sqrt(2)=0.70710678118654746 matches to the full mantissa, and the fp-stress 1e8/1e-8 cases match to the last bit."
+  },
+  "reading": "The reciprocal-of-a-root — the literal RMSNorm/RoPE normalizer core — is now sovereign native arm64 bytes, proven byte-identical across all four kernels AND executed on the M4. The native lane now carries the 2-D matvec (dominant linear compute), the L2-norm reduction (fam-ss-sqrt), and the reciprocal-sqrt normalizer, plus the float-constant materialization (fa-fmov-imm) that unblocks the remaining nonlinear rungs. Next named rungs in form-native-models.form: exp (softmax — needs range reduction over the now-present fcvtzs/scvtf + a Horner polynomial using fa-fmov-imm coefficients), sin/cos (RoPE), then ll-buffer staging of the dequanted tensor set + the 28-layer fold.",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-rsqrt-band.fk && bash ../scripts/form_asm_rsqrt_witness.sh"
+}
