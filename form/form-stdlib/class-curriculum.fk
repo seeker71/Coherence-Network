@@ -1,0 +1,165 @@
+; class-curriculum.fk — the mesh GRADUALLY grows how many classes it can detect ON DEVICE, ON METAL,
+; taught by the REMOTE MIND and gated by CROSS-MESH STABILITY. The oracle-flywheel turned onto the
+; CLASS VOCABULARY itself: the rented mind teaches FEWER classes over time as the device learns more
+; natively. "The remote mind carries the syllabus; the cameras prove each lesson; a class joins the
+; on-device vocabulary only once the mesh AGREES it has been learned."
+;
+; THE ARC (Urs). A remote-mind cell (remote-mind-sensors.fk — mind-rich, sensor-poor) has no eyes or
+; ears, but it KNOWS the taxonomy: how many classes exist and what they are called (the syllabus). The
+; device cells have the metal — real cameras, real mics — but start blank: zero classes detectable.
+; The remote mind TEACHES one class at a time by labelling exemplars the device captured on real frames;
+; the device ENROLLS the class (sound-classify's sc-enroll, generalized kind-agnostic); but a class only
+; JOINS the on-device vocabulary once the CAMERAS CROSS-MESH AGREE on it — the same cross-witness
+; confidence the mesh already produces for free, gated by the champion-challenger PROVEN window. The
+; count grows MONOTONICALLY: adding a class never forgets the prior ones (no catastrophic forgetting — a
+; re-encounter of an old class still classifies). An unknown region escalates back to the remote mind —
+; the next lesson the flywheel feeds.
+;
+; THE ONE ENGINE — kind as DATA. The SAME curriculum grows the stable vocabulary for OBJECTS, SOUNDS,
+; and PRESENCES. A class is (kind label exemplar) — the kind word ("object" / "sound" / "presence") is a
+; FIELD on the row, never three recipes. "chair" (object) and "birdsong" (sound) enroll, stabilize, and
+; classify through the IDENTICAL walk; only the kind-field differs. This mirrors how sc-enroll already
+; enrolls a NEW class and how world-model.fk carries kind on the entity row — we generalize that one
+; pattern, we do not fork it. The classifier itself is sound-classify's nearest-exemplar by cosine
+; (se-dot), kind-agnostic by construction.
+;
+; COMPOSED, never re-derived:
+;   sound-classify.fk        sc-enroll — the ENROLL-a-new-class pattern (add (label features) to a
+;                            roster); generalized here to (kind label features). se-nearest / se-dot is
+;                            the nearest-exemplar classifier the detect step routes on.
+;   cross-witness-economy.fk cwe-confidence / cwe-spend-oracle? — the cross-mesh AGREEMENT = the
+;                            STABILITY signal. When N independent cameras agree on a class their summed
+;                            trust is high; that high agreement IS the proof the class has been learned.
+;                            An unknown region is the low-agreement frontier that escalates to the mind.
+;   champion-challenger.fk   cc-promote? — earned authority over a WINDOW: a class is stable only when
+;                            the cross-mesh agreement holds over a long-enough window (never one frame's
+;                            say). The promotion gate. (prefix ccur- — NOT cc-, no clash.)
+;   remote-mind-sensors.fk   the remote mind as TEACHER — its labels are the syllabus; rms-sensor-names
+;                            shape names what a bodiless mind carries (here: the taxonomy it teaches).
+;   world-model.fk           wm-* — where the classified entities live; a stable class is what the world
+;                            model can now name on its own, off the oracle.
+;
+; A CLASS row is (kind label exemplar):
+;   kind      "object" / "sound" / "presence" — DATA, the only thing that differs across the three.
+;   label     the class name the remote mind taught (the syllabus entry) — "chair", "birdsong", ...
+;   exemplar  a quantized feature vector (sc-features' sound-print / an embedding) — the recognition
+;             signal the nearest-exemplar classifier matches over. Kind-agnostic: object texture today,
+;             sound-print tomorrow, the dot is the same.
+;
+; All integer/string/list on the surface, so every row crosses all four kernels deterministically. The
+; embeddings ride the carrier's organs exactly as sound-classify and identity-match do; the curriculum
+; DECISION — what is in the stable vocabulary, is a class stable, does a region escalate — is the body's.
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/sound-classify.fk form-stdlib/champion-challenger.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/colearning-retire.fk form-stdlib/cross-witness-economy.fk
+;
+; Proven by: form-stdlib/tests/class-curriculum-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── A CLASS row (kind as DATA — the only per-kind difference) ──────────────────────────────────
+    (defn ccur-class (kind label exemplar) (list kind label exemplar))
+    (defn ccur-class-kind     (c) (nth c 0))
+    (defn ccur-class-label    (c) (nth c 1))
+    (defn ccur-class-exemplar (c) (nth c 2))
+
+    ; ── ccur-syllabus: the ordered classes the remote mind KNOWS to teach — how many there are to
+    ;    classify, and their labels. The remote mind (mind-rich, sensor-poor) carries the taxonomy; the
+    ;    syllabus IS that taxonomy as the ordered class rows. The labels are the lessons; the device
+    ;    learns them one at a time. taxonomy is a list of (kind label exemplar) the mind holds. ──
+    (defn ccur-syllabus (taxonomy) taxonomy)
+    ; how many classes the syllabus still holds to teach — the count the flywheel drives DOWN as the
+    ; device learns more natively (the remote mind teaches FEWER over time).
+    (defn ccur-syllabus-count (taxonomy) (len taxonomy))
+    ; the labels the syllabus carries — what the mind can name (its sparse taxonomy roster).
+    (defn ccur-syllabus-labels (taxonomy)
+        (if (eq (len taxonomy) 0) (empty)
+            (cons (ccur-class-label (head taxonomy))
+                  (ccur-syllabus-labels (tail taxonomy)))))
+
+    ; ── ccur-enroll: enroll a NEW class from remote-mind-labelled exemplars — the sc-enroll
+    ;    GENERALIZATION, kind as DATA. sc-enroll adds (label features) to a roster; we add
+    ;    (kind label exemplar), so the SAME enroll grows the OBJECT, SOUND, or PRESENCE roster — the kind
+    ;    is a field, not a branch. The label came from the remote mind (the syllabus); the exemplar was
+    ;    captured on a real device frame. This is enrollment off any oracle: the recognition stays HERE,
+    ;    the label only seeds the roster. ──
+    (defn ccur-enroll (vocab kind label exemplar)
+        (cons (ccur-class kind label exemplar) vocab))
+
+    ; ── ccur-stable?: is the class CROSS-MESH stable — the PROMOTION GATE. The cameras/cells produce
+    ;    witness ballots (label weight) for the class; cross-witness confidence (cwe-confidence, the SAME
+    ;    summed-trust fusion the mesh routes on) measures their AGREEMENT. High agreement over a
+    ;    long-enough WINDOW is the proof the class is learned — exactly cc-promote?'s earned-authority
+    ;    shape: the cross-mesh history is the head-to-head window, min-samples the trust floor, margin the
+    ;    slack. A class is stable iff (a) the cross-mesh confidence clears the floor (cwe is NOT spending
+    ;    the oracle — the mesh already agrees) AND (b) the agreement holds over the proven window. Never
+    ;    one frame's say; the cameras must AGREE, over time. ──
+    ;   witnesses : (history candidates floor min-samples margin) — the cross-mesh evidence for the class:
+    ;     history    the cross-mesh agreement window (each trial (oracle-correct native-correct))
+    ;     ballots    the per-camera (label weight) votes for THIS class
+    ;     candidates the labels the ballots range over (for cwe-confidence's fusion)
+    ;     floor      the cross-witness confidence floor (agreement must clear it — else the oracle spends)
+    ;     min-samples / margin  the champion-challenger proven-window gate
+    (defn ccur-stable-history    (w) (nth w 0))
+    (defn ccur-stable-ballots    (w) (nth w 1))
+    (defn ccur-stable-candidates (w) (nth w 2))
+    (defn ccur-stable-floor      (w) (nth w 3))
+    (defn ccur-stable-min        (w) (nth w 4))
+    (defn ccur-stable-margin     (w) (nth w 5))
+
+    (defn ccur-stable? (class witnesses)
+        (do
+            (let conf  (cwe-confidence (ccur-stable-ballots witnesses)
+                                       (ccur-stable-candidates witnesses)))
+            ; the mesh AGREES (cross-witness confidence clears the floor — cwe self-labels, no oracle
+            ; spend) AND the agreement is PROVEN over the champion-challenger window.
+            (if (and (eq (cwe-self-label? conf (ccur-stable-floor witnesses)) 1)
+                     (eq (cc-promote? (ccur-stable-history witnesses)
+                                      (ccur-stable-min witnesses)
+                                      (ccur-stable-margin witnesses)) 1)) 1 0)))
+
+    ; ── ccur-vocab membership: is a label already in the on-device vocabulary? The monotonic guard reads
+    ;    it — a class already learned is never re-added (and never forgotten). ──
+    (defn ccur-has? (vocab label)
+        (if (eq (len vocab) 0) 0
+            (if (str_eq (ccur-class-label (head vocab)) label) 1
+                (ccur-has? (tail vocab) label))))
+
+    ; ── ccur-grow: add a STABLE class to the on-device vocabulary, MONOTONIC. A new stable class is
+    ;    CONSED on; prior classes are conserved unchanged (no catastrophic forgetting — every old class
+    ;    still classifies). If the label is ALREADY in the vocabulary the vocab is returned unchanged (a
+    ;    re-teach never duplicates and never forgets). Growth only ever ADDS. ──
+    (defn ccur-grow (vocab class)
+        (if (eq (ccur-has? vocab (ccur-class-label class)) 1)
+            vocab
+            (cons class vocab)))
+
+    ; ── ccur-count: how many classes the device detects stably NOW — the growing number. The count the
+    ;    flywheel drives UP (more native classes) as the syllabus count falls (fewer oracle lessons). ──
+    (defn ccur-count (vocab) (len vocab))
+
+    ; ── ccur-detect: classify a region into the STABLE vocabulary by nearest-exemplar (sound-classify's
+    ;    se-nearest / se-dot decision, kind-AGNOSTIC), OR "unknown" -> escalate to the remote mind (the
+    ;    next lesson the flywheel feeds). The vocab carries (kind label exemplar) rows; we match the
+    ;    region's feature vector against the exemplars, return the nearest class's label if it clears the
+    ;    floor, else "unknown". The kind rides along on the matched row (one engine over all kinds). ──
+    ;   The roster for se-nearest is (label exemplar) — project the (kind label exemplar) rows down to it.
+    (defn ccur-roster (vocab)
+        (if (eq (len vocab) 0) (empty)
+            (cons (list (ccur-class-label (head vocab)) (ccur-class-exemplar (head vocab)))
+                  (ccur-roster (tail vocab)))))
+
+    (defn ccur-detect (region vocab floor)
+        (if (eq (len vocab) 0) "unknown"
+            (do
+                (let roster (ccur-roster vocab))
+                (if (ge (se-sim region roster) floor)
+                    (nth (se-nearest region roster) 0)
+                    "unknown"))))
+
+    ; did the region land in the stable vocabulary (1) or escalate to the remote mind (0)? The escalate
+    ; coin — an "unknown" is the low-agreement frontier cross-witness-economy spends the oracle on.
+    (defn ccur-known? (region vocab floor)
+        (if (str_eq (ccur-detect region vocab floor) "unknown") 0 1))
+    (defn ccur-escalate? (region vocab floor)
+        (if (eq (ccur-known? region vocab floor) 1) 0 1))
+
+    0)

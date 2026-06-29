@@ -1,0 +1,126 @@
+; tests/class-curriculum-band.fk — the mesh GRADUALLY grows its on-device class vocabulary, taught by
+; the remote mind, gated by cross-mesh stability — and four-way.
+;
+; The device starts BLANK: ZERO stable classes. The remote mind (the syllabus) knows three classes to
+; teach — "chair" (object), "lamp" (object), "birdsong" (SOUND). Each lesson runs the IDENTICAL walk
+; (kind as DATA — object and sound through ONE engine): the mind labels exemplars the device captured;
+; the device ENROLLS the class; the cameras CROSS-MESH AGREE over a champion-challenger window; only then
+; does the class JOIN the on-device vocabulary. The count grows 0 -> 1 -> 2 -> 3 MONOTONICALLY — adding a
+; class never forgets the prior ones (a "chair" re-encounter still classifies after "lamp" was added). An
+; unknown region escalates back to the remote mind (the next lesson the flywheel feeds).
+;
+; Verdict 8191 when every claim lands on Go / Rust / TypeScript / fkwu (numeric — labels are carrier-read):
+;   1     the device starts with ZERO stable classes (ccur-count empty vocab = 0)
+;   2     the remote mind's syllabus carries the 3 classes to teach (ccur-syllabus-count = 3)
+;   4     "chair" is cross-mesh STABLE (cameras agree over the proven window) — the promotion gate opens
+;   8     ccur-grow adds "chair" -> ON-DEVICE count is 1
+;   16    "lamp" is cross-mesh STABLE -> grow -> count is 2 (monotonic +1)
+;   32    after "lamp", a "chair" RE-ENCOUNTER STILL classifies "chair" — NO catastrophic forgetting
+;   64    a "birdsong" SOUND class (kind=sound, the SAME engine) is stable -> grow -> count is 3
+;   128   the count grew 0 -> 1 -> 2 -> 3 MONOTONICALLY (each step strictly +1, never a forget)
+;   256   an UNKNOWN region -> "unknown" -> escalates to the remote mind (ccur-escalate? = 1)
+;   512   objects AND sounds classify through the ONE engine (the sound class detects to its own label)
+;   1024  a class NOT yet stable does NOT join (ccur-stable? = 0 when the cameras disagree)
+;   2048  re-teaching a class already in the vocab does NOT duplicate it (ccur-grow is idempotent)
+;   4096  an old class ("chair") still classifies AFTER the sound class joined (no forgetting, kind-mixed)
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/sound-classify.fk form-stdlib/champion-challenger.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/colearning-retire.fk form-stdlib/cross-witness-economy.fk form-stdlib/class-curriculum.fk
+
+(do
+    ; ── the remote mind's SYLLABUS: the three classes it knows to teach, each (kind label exemplar).
+    ;    The exemplars are quantized feature vectors (sc-features' sound-print shape / an embedding) the
+    ;    device captured on real frames; the mind only supplied the LABEL. Object and sound rows differ
+    ;    ONLY in the kind field — one engine. ──
+    (let chair-ex (list 10 0 0 0))    ; chair  : object texture exemplar
+    (let lamp-ex  (list 0 10 0 0))    ; lamp   : object texture exemplar
+    (let bird-ex  (list 0 0 10 0))    ; birdsong: SOUND-print exemplar — SAME row shape, kind="sound"
+
+    (let taxonomy (list (ccur-class "object" "chair"    chair-ex)
+                        (ccur-class "object" "lamp"     lamp-ex)
+                        (ccur-class "sound"  "birdsong" bird-ex)))
+    (let syllabus (ccur-syllabus taxonomy))
+
+    ; ── the on-device classify floor (a region must clear it to be a class, else "unknown") ──
+    (let floor 50)
+
+    ; ── 1: the device starts BLANK — zero stable classes ──
+    (let vocab0 (list))
+    (let c0 (if (eq (ccur-count vocab0) 0) 1 0))
+
+    ; ── 2: the remote mind's syllabus carries the 3 classes to teach ──
+    (let c1 (if (eq (ccur-syllabus-count syllabus) 3) 2 0))
+
+    ; ── cross-mesh AGREEMENT evidence for a learned class: the cameras AGREE (ballots all name the class,
+    ;    high summed trust) over a PROVEN window (the native challenger reached the oracle). ──
+    ;    witnesses = (history ballots candidates floor min-samples margin)
+    (let agree-ballots    (list (list "chair" 4) (list "chair" 3) (list "chair" 3)))  ; 3 cameras agree
+    (let agree-candidates (list "chair" "unknown"))
+    (let agree-history    (list (list 1 1) (list 1 1) (list 1 1) (list 1 1)))          ; native reaches oracle
+    (let conf-floor 5)   ; cross-witness confidence floor — summed trust 10 clears it
+    (let min-samples 4)  ; champion-challenger trusted-window floor
+    (let margin 0)
+    (let chair-witnesses (list agree-history agree-ballots agree-candidates conf-floor min-samples margin))
+
+    ; ── 4: "chair" is cross-mesh STABLE — the promotion gate opens ──
+    (let chair-class (ccur-class "object" "chair" chair-ex))
+    (let c2 (if (eq (ccur-stable? chair-class chair-witnesses) 1) 4 0))
+
+    ; ── 8: grow -> on-device count is 1 ──
+    (let vocab1 (if (eq (ccur-stable? chair-class chair-witnesses) 1)
+                    (ccur-grow vocab0 chair-class) vocab0))
+    (let c3 (if (eq (ccur-count vocab1) 1) 8 0))
+
+    ; ── 16: "lamp" is cross-mesh STABLE -> grow -> count is 2 (monotonic +1) ──
+    (let lamp-ballots    (list (list "lamp" 4) (list "lamp" 3) (list "lamp" 3)))
+    (let lamp-candidates (list "lamp" "unknown"))
+    (let lamp-witnesses  (list agree-history lamp-ballots lamp-candidates conf-floor min-samples margin))
+    (let lamp-class (ccur-class "object" "lamp" lamp-ex))
+    (let vocab2 (if (eq (ccur-stable? lamp-class lamp-witnesses) 1)
+                    (ccur-grow vocab1 lamp-class) vocab1))
+    (let c4 (if (eq (ccur-count vocab2) 2) 16 0))
+
+    ; ── 32: after "lamp" joined, a "chair" RE-ENCOUNTER STILL classifies "chair" — NO forgetting ──
+    (let chair-region (list 9 1 0 0))   ; a fresh frame of a chair, near its exemplar
+    (let c5 (if (str_eq (ccur-detect chair-region vocab2 floor) "chair") 32 0))
+
+    ; ── 64: a "birdsong" SOUND class (kind=sound, the SAME engine) is stable -> grow -> count is 3 ──
+    (let bird-ballots    (list (list "birdsong" 4) (list "birdsong" 3) (list "birdsong" 3)))
+    (let bird-candidates (list "birdsong" "unknown"))
+    (let bird-witnesses  (list agree-history bird-ballots bird-candidates conf-floor min-samples margin))
+    (let bird-class (ccur-class "sound" "birdsong" bird-ex))
+    (let vocab3 (if (eq (ccur-stable? bird-class bird-witnesses) 1)
+                    (ccur-grow vocab2 bird-class) vocab2))
+    (let c6 (if (eq (ccur-count vocab3) 3) 64 0))
+
+    ; ── 128: the count grew 0 -> 1 -> 2 -> 3 MONOTONICALLY (each step strictly +1) ──
+    (let c7 (if (and (eq (ccur-count vocab0) 0)
+                (and (eq (ccur-count vocab1) 1)
+                (and (eq (ccur-count vocab2) 2)
+                     (eq (ccur-count vocab3) 3)))) 128 0))
+
+    ; ── 256: an UNKNOWN region -> "unknown" -> escalates to the remote mind ──
+    (let unknown-region (list 0 0 0 10))   ; far from every stable exemplar
+    (let c8 (if (and (str_eq (ccur-detect unknown-region vocab3 floor) "unknown")
+                     (eq (ccur-escalate? unknown-region vocab3 floor) 1)) 256 0))
+
+    ; ── 512: objects AND sounds classify through the ONE engine — the sound class detects to its label ──
+    (let bird-region (list 0 0 9 0))   ; a sound-print near birdsong's exemplar
+    (let c9 (if (str_eq (ccur-detect bird-region vocab3 floor) "birdsong") 512 0))
+
+    ; ── 1024: a class NOT yet stable does NOT join — the cameras DISAGREE (split ballots, low trust) ──
+    (let split-ballots    (list (list "door" 1) (list "window" 1) (list "unknown" 1)))
+    (let split-candidates (list "door" "window" "unknown"))
+    (let split-history    (list (list 1 0)))   ; one trial, native lost — window too short anyway
+    (let split-witnesses  (list split-history split-ballots split-candidates conf-floor min-samples margin))
+    (let door-class (ccur-class "object" "door" (list 5 5 0 0)))
+    (let c10 (if (eq (ccur-stable? door-class split-witnesses) 0) 1024 0))
+
+    ; ── 2048: re-teaching a class ALREADY in the vocab does NOT duplicate it (ccur-grow idempotent) ──
+    (let vocab-retry (ccur-grow vocab3 chair-class))   ; "chair" already in vocab3
+    (let c11 (if (eq (ccur-count vocab-retry) 3) 2048 0))
+
+    ; ── 4096: an OLD class ("chair") STILL classifies AFTER the sound class joined — no forgetting,
+    ;    kinds mixed in one vocabulary ──
+    (let c12 (if (str_eq (ccur-detect chair-region vocab3 floor) "chair") 4096 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12)))
