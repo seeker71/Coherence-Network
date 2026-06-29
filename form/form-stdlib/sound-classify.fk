@@ -1,0 +1,84 @@
+; sound-classify.fk — classify ambient sound into categories (bird-call, human-voice, music,
+; ambient/silence) from a frequency spectrum. "The bird noises we can identify."
+;
+; The body already lifts the spectrum (spectrum.fk: Goertzel filterbank, mic -> 8 band powers /
+; levels) and the mel front-end (mel-frame.fk / mel-full.fk: STFT + mel filterbank). This stone is
+; the DECISION over that spectrum: a small feature vector, then nearest-class by the SAME integer-
+; cosine match speaker-embed.fk uses to part voices (se-dot / se-best). A voiceprint and a sound-
+; print are the same shape — a quantized vector whose direction carries identity — so recognizing
+; "this is a bird" reuses se-nearest verbatim; only the roster changes (sound classes, not speakers).
+;
+; sc-features turns an 8-band spectrum (spectrum.fk's spectrum-levels granularity, 0..9 per band)
+; into a 5-d feature vector that separates the four classes by SHAPE, with one absolute axis so a
+; quiet flat spectrum (ambient) parts from a loud structured one (voice). The three band ratios are
+; normalized to a fixed budget (30) so DIRECTION decides — exactly speaker-embed.fk's reliance on a
+; unit-vector roster, done here in integer arithmetic instead of the carrier's L2-normalize:
+;   low    = bands 0..2 (100..400 Hz), ·30/total   — voice/ambient body sits here
+;   mid    = bands 3..5 (800..3200 Hz), ·30/total  — formants, music structure
+;   high   = bands 6..7 (5k..7k Hz), ·30/total      — bird chirps ride up here
+;   chirp  = high·high / (low+1), capped 30         — a periodicity/peakiness proxy: a tonal high-
+;            band chirp scores high; a flat/low spectrum scores ~0 (bird-like vs not)
+;   loud   = total band energy, capped 30           — the absolute axis: ambient sits LOW here, so a
+;            quiet flat spectrum can't masquerade as a loud low-dominated voice.
+;
+; The roster carries one EXEMPLAR feature vector per class; nearest by se-dot (cosine over the
+; quantized vectors) is the verdict, with a floor that returns "unknown" rather than forcing every
+; sound onto a class. sc-enroll adds an exemplar — so self-heard learning enrolls a NEW exemplar from
+; a heard-and-labeled sound (a label from agreement), and the classifier comes home off any oracle:
+; the recognition decision is always HERE, the label only seeds the roster.
+;
+; Builtins + speaker-embed.fk's se-dot/se-best/se-nearest + str_eq. Proven by
+; form-stdlib/tests/sound-classify-band.fk. Preludes form-stdlib/speaker-embed.fk.
+
+(do
+    ; --- features from an 8-band spectrum (a list of 8 integer band levels, 0..9 each) -----------
+    (defn sc-sum3 (xs a b c) (add (nth xs a) (add (nth xs b) (nth xs c))))
+    (defn sc-sum2 (xs a b)   (add (nth xs a) (nth xs b)))
+
+    (defn sc-low   (xs) (sc-sum3 xs 0 1 2))                 ; 100..400 Hz
+    (defn sc-mid   (xs) (sc-sum3 xs 3 4 5))                 ; 800..3200 Hz
+    (defn sc-high  (xs) (sc-sum2 xs 6 7))                   ; 5k..7k Hz
+    (defn sc-total (xs) (add (sc-low xs) (add (sc-mid xs) (sc-high xs))))
+
+    ; clamp a value to a cap (keeps every axis on a comparable scale)
+    (defn sc-cap (v c) (if (gt v c) c v))
+
+    ; chirp / peakiness: a tonal high band over a quiet low band scores high (bird-like);
+    ; a flat or low-dominated spectrum scores ~0. Capped to band-comparable scale.
+    (defn sc-chirp (xs)
+        (do (let h (sc-high xs))
+            (sc-cap (div (mul h h) (add (sc-low xs) 1)) 30)))
+
+    ; normalize a band sum to the 30 budget by total (direction, loudness-agnostic);
+    ; total 0 -> 0 (no divide-by-zero)
+    (defn sc-frac (part total) (if (eq total 0) 0 (div (mul part 30) total)))
+
+    ; the 5-d feature vector — the sound-print, same shape as a voiceprint (se-dot matches over it):
+    ;   [low·30/T, mid·30/T, high·30/T, chirp, loud]
+    (defn sc-features (xs)
+        (do (let t (sc-total xs))
+            (list (sc-frac (sc-low xs) t)
+                  (sc-frac (sc-mid xs) t)
+                  (sc-frac (sc-high xs) t)
+                  (sc-chirp xs)
+                  (sc-cap t 30))))
+
+    ; --- the roster: (label feature-vector) cells, exactly speaker-embed.fk's (name vec) shape ----
+    (defn sc-label (c) (nth c 0))
+    (defn sc-vec   (c) (nth c 1))
+
+    ; nearest class by se-dot (cosine over quantized vectors) — speaker-embed.fk's decision, verbatim
+    (defn sc-nearest (q roster) (se-nearest q roster))
+    (defn sc-sim     (q roster) (se-sim q roster))
+
+    ; the call: nearest class's label, but only if the alignment clears the floor — else "unknown"
+    ; (honest no-match instead of forcing every sound onto a class).
+    (defn sc-classify (features roster floor)
+        (if (ge (sc-sim features roster) floor)
+            (sc-label (sc-nearest features roster))
+            "unknown"))
+
+    ; enroll a new exemplar: add (label features) to the roster. self-heard learning calls this with
+    ; a label it earned from agreement, growing the roster from heard-and-labeled sound.
+    (defn sc-enroll (roster label features)
+        (cons (list label features) roster)))
