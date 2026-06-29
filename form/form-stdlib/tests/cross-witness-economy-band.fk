@@ -1,0 +1,68 @@
+; preludes: form-stdlib/core.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/cross-witness-economy.fk
+;
+; cross-witness-economy-band — the active-learning bring-home loop for a 24/7 sense mesh, made falsifiable.
+; The mesh's own redundancy is its teacher: where independent witnesses AGREE, that agreement is free
+; supervision (self-label, no oracle); where they SPLIT, the rented oracle is spent. The native challenger
+; trains on the self-labels and RETIRES the oracle once it wins — so rent FALLS. We prove each rung.
+;
+; A witness ballot is (label weight): the (device × organ) witness's named presence and its proven
+; reliability. cwe-confidence is the SUMMED trust behind the cross-agreed label (confidence-weighted-vote).
+;
+;   agree — three independent witnesses all name "alice" (weights 5 4 3). Summed trust 12, far above the
+;           floor 6: the mesh AGREES. confidence >= floor -> self-label, oracle NOT spent. The agreed
+;           "alice" becomes a free training pair (cwe-self-label "alice" == ("alice" 1)).
+;   split — three witnesses disagree: "alice"(5) "bob"(4) "carol"(3). The winner "alice" carries only 5,
+;           below the floor 6: the mesh is UNSURE. confidence < floor -> SPEND the oracle. This is the
+;           low-confidence frontier, the one place a bought label is worth its rent.
+;
+; BRING-HOME — over a long window of self-labeled trials (history = (oracle-correct native-correct)) the
+; native challenger reaches the rented oracle, so it is promoted and the oracle RETIRES (composed from
+; champion-challenger + colearning-retire). `home`: 12 trials, oracle 10 / native 10 -> reaches at margin 0
+; over the 12-floor -> brought home, oracle retired, authority "native". `early`: 5 trials -> below the
+; floor -> NOT brought home, oracle kept, authority "third-party" (the long-window safety against
+; premature retirement).
+;
+; RENT FALLS — the flywheel. A spend-history is 1 = a decision that spent the oracle, 0 = a free self-label.
+; `rent-early`: 4 of 5 decisions spent the oracle (share 0.8 — the native is untrained, the mesh leans on
+; rent). `rent-late`: 1 of 5 spent (share 0.2 — the native now carries most decisions for free). rent FELL
+; (0.2 < 0.8): the bring-home is paying off, rent is heading to the floor.
+;
+; Verdict 255 when every rung lands:
+;   1    high agreement -> self-label, NO oracle spent       (cwe-spend-oracle? agree-conf 6 == 0)
+;   2    ... and the cross-agreed verdict is "alice"          (cwe-verdict agree == "alice")
+;   4    low agreement -> SPEND the rented oracle             (cwe-spend-oracle? split-conf 6 == 1)
+;   8    the high-agreement verdict is a free self-label      (cwe-self-label "alice" == ("alice" 1))
+;   16   enough self-labels -> native brought home            (cwe-bring-home home 12 0 == 1)
+;   32   ... and the rented oracle retires (authority native) (cwe-authority home 12 0 == "native")
+;   64   too few self-labels -> NOT yet home, oracle kept     (cwe-bring-home early 12 0 == 0 AND authority third-party)
+;   128  rent-share FELL as the native learned (the flywheel) (cwe-rent-fell? rent-early rent-late == 1)
+(do
+    ; --- the witness ballots: (device × organ) -> (label weight) ---
+    (let agree (list (list "alice" 5) (list "alice" 4) (list "alice" 3)))   ; three witnesses agree
+    (let split (list (list "alice" 5) (list "bob" 4) (list "carol" 3)))     ; three witnesses disagree
+    (let cands (list "alice" "bob" "carol"))
+    (let floor 6)
+    (let agree-conf (cwe-confidence agree cands))                            ; summed trust 12
+    (let split-conf (cwe-confidence split cands))                            ; summed trust 5
+
+    ; --- the bring-home competition windows: (oracle-correct native-correct) per trial ---
+    (let home (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 0 0) (list 0 0))) ; 12 trials, native reaches oracle
+    (let early (list (list 0 1) (list 0 1) (list 0 1) (list 0 1) (list 1 1))) ; only 5 — below the floor
+
+    ; --- the spend-histories: 1 = spent the oracle, 0 = free self-label ---
+    (let rent-early (list 1 1 1 1 0))   ; share 0.8 — native untrained, leans on rent
+    (let rent-late  (list 1 0 0 0 0))   ; share 0.2 — native carries most decisions free
+
+    (let c0 (if (eq (cwe-spend-oracle? agree-conf floor) 0) 1 0))
+    (let c1 (if (str_eq (cwe-verdict agree cands) "alice") 2 0))
+    (let c2 (if (eq (cwe-spend-oracle? split-conf floor) 1) 4 0))
+    (let lbl (cwe-self-label "alice"))
+    (let c3 (if (and (str_eq (nth lbl 0) "alice") (eq (nth lbl 1) 1)) 8 0))
+    (let c4 (if (eq (cwe-bring-home home 12 0) 1) 16 0))
+    (let c5 (if (str_eq (cwe-authority home 12 0) "native") 32 0))
+    (let c6 (if (and (eq (cwe-bring-home early 12 0) 0)
+                     (str_eq (cwe-authority early 12 0) "third-party")) 64 0))
+    (let c7 (if (eq (cwe-rent-fell? rent-early rent-late) 1) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

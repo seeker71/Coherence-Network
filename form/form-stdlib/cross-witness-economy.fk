@@ -1,0 +1,90 @@
+; cross-witness-economy.fk — the active-learning bring-home loop for a 24/7 sense mesh: the mesh's own
+; REDUNDANCY is its teacher. Where many independent witnesses (devices × sense organs) AGREE on a presence
+; or identity, that agreement IS high-confidence supervision — no rented oracle needed, and the agreed
+; verdict is a FREE self-label. The rented oracle is spent ONLY at the low-confidence frontier (where the
+; witnesses disagree). The native challenger trains on the self-labels and RETIRES the oracle once it wins
+; over a trusted window — so rent FALLS over time toward minimal. Active inference, made economic.
+;
+; preludes: form-stdlib/core.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk
+;
+; THE ARC (Urs): a mesh of cells, each carrying several sense organs (speech / music / face / motion),
+; observes the same room 24/7. For a given presence, each (device × organ) witness casts a weighted
+; ballot (label weight) — weight = that witness's proven reliability. When N independent witnesses AGREE,
+; the summed trust behind the winning label is HIGH: cross-witness confidence. That high agreement IS
+; supervision the mesh produced for free — no rented frontier model was asked. We SPEND the rented oracle
+; only where the witnesses split (low summed trust), exactly the active-learning frontier where a label is
+; actually worth buying. Every high-agreement verdict becomes a self-label the native challenger trains on;
+; once the challenger reaches the oracle over a trusted window, the oracle RETIRES and rent goes to the
+; floor. The flywheel: more self-labels -> stronger native -> fewer oracle spends -> rent falls.
+;
+; COMPOSED, never re-derived:
+;   confidence-weighted-vote.fk  cw-winner / cw-score — fuse the independent witness ballots into the
+;                                cross-witness label + its summed-trust confidence (the SAME fusion
+;                                identity-match already routes on). N agreeing witnesses -> high score.
+;   champion-challenger.fk       cc-promote? — the native challenger takes authority only on PROVEN
+;                                head-to-head competition over a long-enough window (never asserted).
+;   colearning-retire.fk         clr-retire? / clr-authority — once the native reaches the oracle the
+;                                expensive oracle STOPS RUNNING; the body hears on its own.
+;
+; The spend gate (cwe-spend-oracle?) is the oracle-ensure.fk shape — a pure list/threshold DECISION about
+; which oracle calls the body still needs — re-asked per observation against the cross-witness confidence:
+; spend iff the mesh's own agreement is below the trust floor. Pure integer logic on the spend/self-label
+; lane (no ratio); rent-share is a FLOAT fraction (learning-loop.fk's accumulated-rate shape). Both cross
+; four-way (float compare -> tests/float-compare-band.fk). The oracle call itself is a host-io carrier; the
+; ECONOMIC DECISION — spend or self-label, bring-home, retire, measure rent — is this recipe.
+;
+; Honest lane: this recipe decides the ECONOMY from honest inputs (witness ballots, a competition history,
+; a spend history). It does not run an organ, query the rented oracle, or train the native arm — those are
+; upstream carriers. Given honest inputs it answers deterministically: spend only at the disagreement
+; frontier, self-label only on earned agreement, retire only on proven competition, and rent must fall.
+;
+; Proven by: form-stdlib/tests/cross-witness-economy-band.fk (four-way at validate.sh, incl. fkwu).
+
+(do
+    ; --- CROSS-WITNESS CONFIDENCE — fuse the independent witnesses (device × organ) into one verdict.
+    ;     Each ballot is (label weight): the witness's named presence/identity and its proven reliability.
+    ;     We COMPOSE confidence-weighted-vote: cw-winner is the cross-agreed label, cw-score is the summed
+    ;     trust behind it — N independent witnesses naming the same label accumulate to a HIGH score, a
+    ;     split field stays LOW. The summed trust IS the cross-witness confidence; the mesh's redundancy,
+    ;     measured. Re-uses the SAME fusion identity-match already routes on — never re-derived. ---
+    (defn cwe-verdict (organ-verdicts candidates) (cw-winner organ-verdicts candidates))
+    (defn cwe-confidence (organ-verdicts candidates) (cw-score organ-verdicts candidates))
+
+    ; --- THE ACTIVE-LEARNING GATE — spend the rented oracle, or trust the mesh + self-label?
+    ;     The oracle-ensure decision shape (a pure threshold over a need): SPEND (1) only when the
+    ;     cross-witness confidence is BELOW the floor — the low-agreement frontier, the one place a bought
+    ;     label is worth its rent. At/above the floor the witnesses already agree: trust native, self-label,
+    ;     spend NOTHING. This is active inference economics — buy supervision only where the mesh is unsure. ---
+    (defn cwe-spend-oracle? (confidence floor) (if (lt confidence floor) 1 0))
+    ; the strict inverse — when the mesh's own agreement is sufficient, the verdict is free supervision.
+    (defn cwe-self-label? (confidence floor) (if (eq (cwe-spend-oracle? confidence floor) 1) 0 1))
+
+    ; --- THE FREE SELF-LABEL — when agreement is high, the cross-agreed verdict IS the training label.
+    ;     A self-label pair is (label 1): the agreed presence/identity, tagged as a supervision example the
+    ;     mesh produced at zero rent. No oracle was asked; the redundancy taught. ---
+    (defn cwe-self-label (agreed-verdict) (list agreed-verdict 1))
+
+    ; --- BRING-HOME — fold the self-labels into the native challenger and decide if it has earned authority.
+    ;     `history` is the head-to-head over the self-labeled window: each trial (oracle-correct native-correct),
+    ;     the oracle = the rented champion, the native arm = the challenger trained on the cross-witness
+    ;     self-labels. We COMPOSE champion-challenger's cc-promote?: the native takes over only when the window
+    ;     is long enough (>= min-samples) AND it reaches the oracle within margin — PROVEN competition, never
+    ;     asserted. More self-labels -> a longer, stronger window -> the native crosses the gate. ---
+    (defn cwe-bring-home (history min-samples margin) (cc-promote? history min-samples margin))
+
+    ; --- RETIRE — once the native has been brought home, the expensive rented oracle STOPS RUNNING.
+    ;     COMPOSE colearning-retire: retirement IS the proven promotion gate, re-asked as "may the oracle
+    ;     stop?". clr-authority names who hears now — "native" once retired, "third-party" while still rented. ---
+    (defn cwe-retire-oracle? (history min-samples margin) (clr-retire? history min-samples margin))
+    (defn cwe-authority (history min-samples margin) (clr-authority history min-samples margin))
+
+    ; --- RENT-SHARE — the fraction of decisions that still SPENT the rented oracle. This is the flywheel
+    ;     read: it must FALL as the native learns. A spend-history is a list of 1/0 (1 = a decision that
+    ;     spent the oracle, 0 = a free self-label). The share is the accumulated mean (learning-loop's
+    ;     accumulated-rate shape, a FLOAT). cwe-rent-fell? proves the flywheel: rent over the LATE window
+    ;     is strictly less than over the EARLY window — rent is falling, the bring-home is paying off. ---
+    (defn cwe-spends (h) (if (eq (len h) 0) 0 (add (head h) (cwe-spends (tail h)))))
+    (defn cwe-rent-share (h) (div (mul 1.0 (cwe-spends h)) (mul 1.0 (len h))))
+    (defn cwe-rent-fell? (early late) (if (lt (cwe-rent-share late) (cwe-rent-share early)) 1 0))
+
+    0)
