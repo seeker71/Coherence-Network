@@ -1,0 +1,152 @@
+; device-model.fk — the mesh's spatial SELF-IMAGE: the cells seeing their own forms through each
+; other's eyes. Many devices, each showing a known FIDUCIAL on its screen (a unique pattern that
+; names the device + a known physical size), each watching the others through its camera. From the
+; cross-observations a consistent spatial LAYOUT (where each device is) and each device's coarse 3D
+; SHAPE fall out — the mesh's model of its own bodies in space.
+;
+; The pinhole is the whole physics, and it is geometry: a fiducial of known WIDTH w at distance d
+; subtends an APPARENT size a = w·f / d on a sensor of focal f. Invert it and depth is recovered from
+; nothing but the apparent size — depth = w·f / a. A device that LOOKS small is FAR; one that fills the
+; frame is NEAR. Its position in the frame is its DIRECTION (left/right, up/down). Apparent size is
+; depth; in-frame position is bearing; together they place the seen device in the observer's own space.
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - geometry.fk is the floor: v3/vscale/vlen place the located device at a real 3D point along the
+;     observer's view ray, and vsub/vlen measure how far two located estimates of ONE device sit apart
+;     — the cross-check distance is geometry's own |a - b|, the same metric ray-sphere-t computes depth in.
+;   - scene-features.fk's sf-objects is the detector: a fiducial on a screen is a high-detail block in
+;     the frame grid, exactly the THING sf-objects already finds. dm-detect reads those object blocks and
+;     binds each to the device whose fiducial it carries — sf-objects says WHERE a thing is, the roster
+;     says WHICH device it is.
+;   - spatial-fusion.fk is the fuser: A's depth-band for B and C's depth-band for B are two CALIBRATED
+;     ballots for one spatial quantity. sf-consensus fuses them to one rough layout band, sf-agree counts
+;     how many viewpoints concur (the confidence), sf-residual is how far a viewpoint sits from consensus
+;     — the same train-from-each-other signal, now between CAMERAS observing one device instead of sensors
+;     reading one speed. B seen from A ≈ B seen from C is consistency; consistency is confidence.
+;   - world-sensor-floor.fk is the plane router: a camera is a "what/where" afferent sensor (wsf-sensor
+;     "camera" "what"); a device-model read is that camera answering WHERE the other cells are — the same
+;     afferent port, narrowed to the mesh's own bodies. dm-plane names the plane this read fuses on.
+;
+; A DETECTION row is (device apparent-size frame-x frame-y): which device's fiducial, how big it looks
+; (depth proxy), and where in the frame (direction proxy). A LOCATED device is a geometry v3 point in the
+; observer's space. All depths/positions scale to integer BANDS (round of the float, as every numeric band
+; does) so the verdict is a stable integer and the layout fuses as calibrated bands. Floats only inside the
+; pinhole and the geometry; the body's surface is integer bands, exact on every arm.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/geometry.fk form-stdlib/scene-features.fk form-stdlib/spatial-fusion.fk
+;
+; Proven by: form-stdlib/tests/device-model-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── a FIDUCIAL roster entry: (device known-width object-id) — the device whose screen shows this
+    ;    fiducial, the fiducial's true physical width (the known size the pinhole inverts), and the
+    ;    scene-features object-id (by*2+bx) the fiducial occupies when sf-objects finds it. The roster is
+    ;    the mesh's table of who-shows-what; a detection is a lookup against it. ──
+    (defn dm-fid (device known-width object-id) (list device known-width object-id))
+    (defn dm-fid-device (f) (nth f 0))
+    (defn dm-fid-width  (f) (nth f 1))
+    (defn dm-fid-oid    (f) (nth f 2))
+
+    (defn dm-fid-by-oid (roster oid)
+        (if (eq (len roster) 0) (empty)
+            (if (eq (dm-fid-oid (head roster)) oid) (head roster)
+                (dm-fid-by-oid (tail roster) oid))))
+
+    ; ── a DETECTION row: (device apparent-size frame-x frame-y) ──
+    (defn dm-detection (device apparent-size fx fy) (list device apparent-size fx fy))
+    (defn dm-det-device (d) (nth d 0))
+    (defn dm-det-size   (d) (nth d 1))
+    (defn dm-det-x      (d) (nth d 2))
+    (defn dm-det-y      (d) (nth d 3))
+
+    ; ── DETECT: the devices visible in a frame. sf-objects finds the high-detail blocks (the fiducials
+    ;    on the watched screens); each object block, looked up in the roster by its object-id, names the
+    ;    device it carries. The apparent-size + in-frame (fx,fy) come paired with each object from the
+    ;    detector's geometry (the band supplies them per object). A block whose object-id is on no roster
+    ;    fiducial is not a mesh device — it is dropped (cast no row), the same silent-vote degradation. ──
+    ;    `objects` is the (object-id apparent-size fx fy) rows the frame's sf-objects + region geometry
+    ;    produced; dm-detect binds each to its device.
+    (defn dm-detect (objects roster)
+        (if (eq (len objects) 0) (empty)
+            (do
+                (let o    (head objects))
+                (let oid  (nth o 0))
+                (let fid  (dm-fid-by-oid roster oid))
+                (let rest (dm-detect (tail objects) roster))
+                (if (eq (len fid) 0) rest
+                    (cons (dm-detection (dm-fid-device fid) (nth o 1) (nth o 2) (nth o 3))
+                          rest)))))
+
+    ; ── LOCATE: the device's position relative to the observer, from one detection.
+    ;    DEPTH is the pinhole inverted: depth = known-width · focal / apparent-size (geometry's own
+    ;    similar-triangles — the seen device sits where a screen of true width `known-width` would have to
+    ;    be to project to `apparent-size` pixels through a lens of `focal`). The smaller it looks, the
+    ;    farther it is. DIRECTION is the in-frame offset from centre: (fx-cx, fy-cy) scaled by depth/focal
+    ;    gives the lateral/vertical world offset (same triangles, the other way). The device is placed at
+    ;    the geometry v3 point (x-off, y-off, depth) in the observer's own frame — a real 3D coordinate. ──
+    (defn dm-depth (known-width focal apparent-size)
+        (div (mul known-width focal) apparent-size))
+
+    ; the located 3D point (v3) of a detection in the observer's space, given focal + frame-centre cx,cy.
+    (defn dm-locate (detection known-width focal cx cy)
+        (do
+            (let a     (dm-det-size detection))
+            (let depth (dm-depth known-width focal a))
+            ; lateral world offset = (frame-offset / focal) · depth  — similar triangles, inverted.
+            (let xoff  (mul (div (sub (dm-det-x detection) cx) focal) depth))
+            (let yoff  (mul (div (sub (dm-det-y detection) cy) focal) depth))
+            (v3 xoff yoff depth)))
+
+    ; the scalar depth band of a detection (round of the pinhole) — the calibrated quantity the fuse votes.
+    (defn dm-depth-band (detection known-width focal)
+        (round (dm-depth known-width focal (dm-det-size detection))))
+
+    ; ── FUSE: collapse several viewpoints' depth-bands for ONE device into a single layout band.
+    ;    Each viewpoint that sees the device casts a ballot (depth-band weight) weighted by its confidence;
+    ;    sf-consensus returns the band the most trusted viewpoints agree on — the device's fused position.
+    ;    sf-agree counts the concurring viewpoints (redundancy = confidence); sf-cross-residual is how far
+    ;    one viewpoint's band sits from the consensus — B-from-A vs B-from-C, the consistency cross-check.
+    ;    `ballots` is a list of (depth-band weight); `cands` the candidate depth-bands to score. ──
+    (defn dm-fuse (ballots cands)
+        (sf-consensus ballots cands))
+    (defn dm-fuse-confidence (ballots cands)
+        (sf-confidence ballots cands))
+    (defn dm-fuse-agree (ballots consensus)
+        (sf-agree ballots consensus))
+    ; cross-check: how far one viewpoint's depth-band sits from the fused consensus (geometry's |a-b|,
+    ; here on the scalar band). 0 = the two cameras place the device at the same depth — perfect agreement.
+    (defn dm-cross-residual (viewpoint-band consensus)
+        (sf-residual viewpoint-band consensus))
+
+    ; geometry cross-check: the world distance between two LOCATED v3 estimates of one device (vsub+vlen),
+    ; in the SAME observer frame. Small distance = the two viewpoints agree on where the device IS in 3D.
+    (defn dm-located-gap (p q) (vlen (vsub p q)))
+
+    ; ── SHAPE: each device's coarse 3D bounding box, from its apparent extent across views. A device of
+    ;    true width w and true height h at depth d looks (w·f/d) wide and (h·f/d) tall; given the fused
+    ;    depth, invert each apparent extent back to a true dimension — width = apparent-w · depth / focal,
+    ;    height = apparent-h · depth / focal, and the thickness band from the depth spread the views see
+    ;    (a device seen at a consistent depth from every side is THIN; a varying depth means bulk). The
+    ;    coarse shape is the (width height thickness) box band — geometry's depth/shape, recovered. ──
+    (defn dm-extent->dim (apparent-extent depth focal)
+        (div (mul apparent-extent depth) focal))
+
+    ; coarse 3D shape box of a device: (width-band height-band thickness-band), each a rounded dimension.
+    ; apparent-w / apparent-h are the device's apparent extents in the frame; depth is its fused depth;
+    ; depth-spread is max-min of the depth-bands across the views (its bulk along the view axis).
+    (defn dm-shape (apparent-w apparent-h depth focal depth-spread)
+        (list
+            (round (dm-extent->dim apparent-w depth focal))
+            (round (dm-extent->dim apparent-h depth focal))
+            depth-spread))
+    (defn dm-shape-w (s) (nth s 0))
+    (defn dm-shape-h (s) (nth s 1))
+    (defn dm-shape-t (s) (nth s 2))
+
+    ; ── PLANE: a device-model read is a camera answering WHERE the mesh's own bodies are. The camera is
+    ;    world-sensor-floor's afferent "what/where" sensor; this read narrows it to the mesh self-image. ──
+    (defn dm-plane () "where")
+
+    (defn device-model-teaching () "lc-cross-modal-unity")
+
+    0)

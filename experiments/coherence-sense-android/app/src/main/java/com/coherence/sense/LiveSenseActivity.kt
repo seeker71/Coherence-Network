@@ -62,6 +62,7 @@ class LiveSenseActivity : AppCompatActivity() {
     private lateinit var headline: TextView   // PRESENCE verdict (native fkwu)
     private lateinit var detail: TextView     // luminance line
     private lateinit var sensedBlock: TextView // WHAT IS BEING SENSED
+    private lateinit var otherCells: TextView   // OTHER CELLS (cross-device roster + fusion)
     private lateinit var planeReading: TextView // current probed plane reading
     private lateinit var surpriseLog: TextView  // scrolling surprise events
     private lateinit var surpriseScroll: ScrollView
@@ -98,6 +99,22 @@ class LiveSenseActivity : AppCompatActivity() {
     // + where are native here; who/what un-witnessed on a camera-only frame.
     @Volatile private var lastObs: FkwuSense.Observation? = null
     private val gridN = 4             // 4x4 downsampled luminance grid the camera-eye feeds fkwu
+
+    // Cross-device live loop — the keystone. The phone exchanges its reading with the
+    // Mac relay over `adb reverse tcp:8777` every few seconds, then feeds the COMBINED
+    // (this device + the nearest other) readings into native fkwu for the cross-device
+    // fused observation and the cross-device SURPRISE (how much the two views disagree).
+    private val exchangeEveryMs = 3000L
+    @Volatile private var lastCrossSurprise = -1
+    @Volatile private var crossSurpriseFell = false
+    private val crossThread = HandlerThread("fkwu-mesh").also { it.start() }
+    private val crossHandler = Handler(crossThread.looper)
+    private val crossRunnable = object : Runnable {
+        override fun run() {
+            if (!stopped) doExchange()
+            crossHandler.postDelayed(this, exchangeEveryMs)
+        }
+    }
 
     private val clock = SimpleDateFormat("HH:mm:ss", Locale.US)
 
@@ -174,6 +191,16 @@ class LiveSenseActivity : AppCompatActivity() {
             setPadding(8, 8, 8, 8)
         }
 
+        // 2b. OTHER CELLS — the cross-device roster + native fused/surprise (the keystone).
+        val otherTitle = sectionLabel("— other cells (cross-device) —")
+        otherCells = TextView(this).apply {
+            text = "OTHER CELLS: …\n(reach the Mac relay via: adb reverse tcp:8777 tcp:8777)"
+            setTextColor(Color.parseColor("#B9A6FF"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            gravity = Gravity.START
+            setPadding(8, 8, 8, 8)
+        }
+
         // 4. INQUIRY-PLANE PROBES — the seven inquiry-planes as six probing paths.
         val planesTitle = sectionLabel("— inquiry-plane probes —")
         val planeRow1 = LinearLayout(this).apply {
@@ -220,6 +247,8 @@ class LiveSenseActivity : AppCompatActivity() {
         root.addView(detail, wrap())
         root.addView(sensedTitle, wrap())
         root.addView(sensedBlock, wrap())
+        root.addView(otherTitle, wrap())
+        root.addView(otherCells, wrap())
         root.addView(planesTitle, wrap())
         root.addView(planeRow1, wrap())
         root.addView(planeRow2, wrap())
@@ -555,6 +584,83 @@ class LiveSenseActivity : AppCompatActivity() {
         maybeSpeakRhythm()
     }
 
+    // The cross-device live loop (runs on the mesh thread every exchangeEveryMs).
+    // EXCHANGE: POST this device's current native reading to the Mac relay over the
+    // adb-reverse tunnel and GET the OTHER cells' readings. FUSE: feed this device's
+    // luma/presence + the nearest other cell's into native fkwu for the cross-device
+    // fused observation and the cross-device SURPRISE. LEARN: track whether that
+    // surprise FELL since last exchange (the trust-climb across real devices).
+    private fun doExchange() {
+        if (lastLuma < 0) return  // nothing real to share yet
+        val ex = FieldRelay.exchange(this, lastPresent, lastLuma, lastSurprise)
+        if (!ex.reached) {
+            ui.post {
+                otherCells.text = "OTHER CELLS: relay unreachable\n" +
+                    "(${ex.error ?: "no response"} — run: adb reverse tcp:8777 tcp:8777)"
+                otherCells.setTextColor(Color.parseColor("#FF9B8A"))
+            }
+            return
+        }
+        if (ex.others.isEmpty()) {
+            ui.post {
+                otherCells.text = "OTHER CELLS: none yet\n" +
+                    "(relay reached — sharing as ${FieldRelay.deviceId(this)}; " +
+                    "waiting for the Mac to POST)"
+                otherCells.setTextColor(Color.parseColor("#B9A6FF"))
+            }
+            return
+        }
+        // The nearest other cell (freshest reading) is the one we fuse with.
+        val other = ex.others.minByOrNull { it.ageMs } ?: return
+        // NATIVE fkwu: cross-device fused observation + cross-device surprise + trust.
+        val fused = FkwuSense.fusedPresence(this, lastPresent, other.present)
+        val xSurprise = FkwuSense.crossDeviceSurprise(this, lastLuma, other.luma)
+        val xVal = xSurprise.value?.toInt() ?: -1
+        val trust = if (xVal >= 0) FkwuSense.trustClimb(this, xVal, attend) else null
+
+        val fell = lastCrossSurprise in 0 until Int.MAX_VALUE &&
+            xVal in 0 until lastCrossSurprise
+        if (xVal >= 0) {
+            crossSurpriseFell = fell
+            lastCrossSurprise = xVal
+        }
+
+        ui.post {
+            val rosterLines = ex.others.joinToString("\n") { o ->
+                "  ${o.device}: presence ${if (o.present) "yes" else "no"} · " +
+                    "luma ${o.luma} · surprise ${o.surprise} · ${o.ageMs}ms ago"
+            }
+            val fusedTxt = if (fused.native && fused.value != null)
+                (if (fused.value == 1L) "yes" else "no") + "  (native fkwu)"
+            else "unreachable"
+            val xTxt = if (xSurprise.native && xVal >= 0)
+                "$xVal  (native fkwu: |${lastLuma}-${other.luma}|)" else "unreachable"
+            val trustTxt = when {
+                trust?.native != true || trust.value == null -> "—"
+                trust.value == 1L -> "still disagree (surprise ≥ attend $attend)"
+                else -> "CONVERGED (surprise < attend $attend) — trust climbed"
+            }
+            val fellTxt = when {
+                lastCrossSurprise < 0 -> "first exchange"
+                crossSurpriseFell -> "↓ FELL (was higher last exchange)"
+                else -> "steady/rose"
+            }
+            otherCells.text = buildString {
+                append("OTHER CELLS (this device = ${FieldRelay.deviceId(this@LiveSenseActivity)}):\n")
+                append(rosterLines).append("\n")
+                append("— cross-device fusion (native fkwu) —\n")
+                append("fused presence:    $fusedTxt\n")
+                append("cross-dev surprise: $xTxt\n")
+                append("trust-climb:       $trustTxt\n")
+                append("convergence:       $fellTxt")
+            }
+            otherCells.setTextColor(Color.parseColor("#B9A6FF"))
+            if (speaking && xVal >= 0) {
+                speak("Cross device surprise $xVal.", flush = false)
+            }
+        }
+    }
+
     private fun appendSurprise(delta: Int) {
         val line = "surprise $surpriseCount — ${clock.format(Date())}   (Δ$delta)"
         val cur = surpriseLog.text.toString()
@@ -597,12 +703,16 @@ class LiveSenseActivity : AppCompatActivity() {
             retryAttempt = 0
             startCamera()
         }
+        // Start the cross-device exchange loop (idempotent: clear any pending first).
+        crossHandler.removeCallbacks(crossRunnable)
+        crossHandler.postDelayed(crossRunnable, exchangeEveryMs)
     }
 
     override fun onPause() {
         super.onPause()
         stopped = true
         ui.removeCallbacks(retryRunnable)
+        crossHandler.removeCallbacks(crossRunnable)
         releaseCamera()
     }
 
@@ -610,6 +720,8 @@ class LiveSenseActivity : AppCompatActivity() {
         super.onDestroy()
         stopped = true
         ui.removeCallbacks(retryRunnable)
+        crossHandler.removeCallbacks(crossRunnable)
+        crossThread.quitSafely()
         releaseCamera()
         cameraThread?.quitSafely()
         cameraThread = null

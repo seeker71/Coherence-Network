@@ -171,4 +171,35 @@ object FkwuSense {
             Observation(false, 0, 0, -1, 0, raw = "", native = false, error = "${e.javaClass.simpleName}:${e.message}")
         }
     }
+
+    // ---- CROSS-DEVICE recipes: fuse THIS device's reading with another device's ----
+    // These are the keystone. Two cells that sensed the SAME room now compute, in
+    // native fkwu, a shared observation and the surprise BETWEEN their views. The
+    // numbers (luma here, luma there) come from real exchanged readings; the DECISION
+    // is fkwu's. Tagged to real devices by FieldRelay.deviceId (device-identity).
+
+    // fused-observation: presence across the two cells is the OR of their presences.
+    // If EITHER device sensed presence, the fused cell holds presence.
+    //   (if (le 1 (add pHere pThere)) 1 0)
+    fun fusedPresence(context: Context, presentHere: Boolean, presentThere: Boolean): Verdict {
+        val a = if (presentHere) 1 else 0
+        val b = if (presentThere) 1 else 0
+        return evaluate(context, "(if (le 1 (add $a $b)) 1 0)")
+    }
+
+    // cross-device SURPRISE: how much the two devices' views of the room DISAGREE,
+    // |lumaHere - lumaThere|, computed natively as the abs of their difference.
+    // As the two cells converge on the same room, this number FALLS — the trust-climb.
+    //   (if (le 0 (sub a b)) (sub a b) (sub b a))
+    fun crossDeviceSurprise(context: Context, lumaHere: Int, lumaThere: Int): Verdict =
+        evaluate(
+            context,
+            "(if (le 0 (sub $lumaHere $lumaThere)) (sub $lumaHere $lumaThere) (sub $lumaThere $lumaHere))",
+        )
+
+    // trust-climb verdict: does the cross-device surprise still cross attend (the two
+    // cells still disagree) or has it fallen below (they have converged — trust climbed)?
+    //   (if (le attend xSurprise) 1 0)   1 = still disagree, 0 = converged
+    fun trustClimb(context: Context, crossSurprise: Int, attend: Int = 18): Verdict =
+        evaluate(context, "(if (le $attend $crossSurprise) 1 0)")
 }
