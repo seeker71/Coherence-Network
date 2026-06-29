@@ -1155,3 +1155,4 @@ self-portrait fks 11111
 speak-compose fks 11111
 speak-locale fks 11111
 opencode-loop fks 1111111
+form-eval fks 42

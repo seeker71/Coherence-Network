@@ -1,0 +1,7 @@
+; tests/form-eval-band.fk — the source tree-walk: Form source evaluated directly by the cursor, no flatten, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/form-eval.fk
+;
+; One representative source string exercises the whole core grammar — add, sub, le, if, and nesting — evaluated
+; straight off the cursor with no flatten table. (if (le (add 40 2) 50) (sub 50 8) 0): le(42,50)=true -> sub(50,8) -> 42.
+; If this crosses four-way (including fkwu, our c-bootstrap), Form source RUNS without flattening: the knot is cut.
+(do (fe-eval "(if (le (add 40 2) 50) (sub 50 8) 0)"))
