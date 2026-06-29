@@ -1,0 +1,14 @@
+; tests/opencode-loop-band.fk — opencode's real agent loop translated form-native, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/opencode-loop.fk
+;
+; Verdict 1111111 witnesses the translated logic on a representative coding-task trajectory:
+;   1       — continue,continue,continue,stop drives busy -> stopped (the turn loop keeps feeding tool
+;             results back, then breaks on the final stop; prompt.ts runLoop).
+;   10      — a bare provider "stop" with tool calls still pending is NOT done (prompt.ts:1103 surprise).
+;   100     — finish=="tool-calls" is NOT done either (prompt.ts:1113).
+;   1000    — finished + real finish reason + no pending tools IS the genuine exit (prompt.ts:1116).
+;   10000   — a context-overflow compact mid-task resumes the loop, stopping only on the later real stop
+;             (prompt.ts:1319 + 1149-1158; the three-valued Result: continue|stop|compact).
+;   100000  — the doom-loop guard fires at exactly 3 identical repeats (DOOM_LOOP_THRESHOLD, processor.ts:29).
+;   1000000 — maxSteps is reached at/over the cap, injecting MAX_STEPS_PROMPT (prompt.ts:1178).
+(do (opencode-loop-check))
