@@ -1,0 +1,80 @@
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk form-stdlib/identity-match.fk form-stdlib/device-identity.fk form-stdlib/device-model.fk form-stdlib/colearning-retire.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/cross-witness-economy.fk form-stdlib/device-identity-learn.fk
+;
+; device-identity-learn-band — the cells LEARN to recognize each other's DEVICES from observation, four-way.
+; device-identity.fk's OS stable id is the GROUND-TRUTH LABEL; device-model.fk's observable signature
+; (depth band + coarse shape + fiducial) is the FEATURES; the recognizer learns the signature -> id mapping
+; so the mesh names each device FROM ITS SIGNATURE ALONE, even without re-reading the OS id. Signatures are
+; hand-given quantized "unit-ish" vectors (comparable magnitude, distinct direction — the device-model bands'
+; quality is the carrier's; the recognition DECISION is what crosses four-way here).
+;
+; The learned body: two per-device exemplars (the OS id LABELS the learned signature) —
+;   mac      : os-id "mac-os-id",     champion signature (10 4 2 1 0), learned floor 100
+;   android  : os-id "android-os-id", champion signature (2 4 8 1 4),  learned floor 80
+;
+; A SIGNATURE = (depth-band shape-w shape-h shape-t fiducial-oid): device-model's pinhole depth band, its
+; coarse 3D shape box, and which fiducial it carries — the device's physical fingerprint as the mesh sees it.
+;
+; Verdict 511 when every claim lands (numeric; recognized ids are carrier-read strings):
+;   1   the OS id LABELS the observed signature into a training pair  (dil-pair-id == the di stable id)
+;   2   a later mac observation is RECOGNIZED from its signature alone (sig ~ mac, no OS read -> "mac-os-id")
+;   4   an android observation is recognized FROM ITS SIGNATURE        (sig ~ android -> "android-os-id")
+;   8   recognition is by DIRECTION not magnitude: a mac-shaped query  (nearest = mac though android's
+;       resolves to mac, never to android                              exemplar exists)
+;   16  a NOVEL device signature -> "unknown" (held-open, no force)    (nearest below floor -> unknown)
+;   32  no learned cells yet -> "unknown" (honest empty)               (recognize over () -> "unknown")
+;   64  the learned recognizer REACHES the OS-read over a long window  (dil-confidence proven 10 0 == 1)
+;   128 ... so AUTHORITY flips HOME: the learned recognizer takes over (dil-home? proven == 1) — OS-read rests
+;   256 a SHORT window does NOT bring it home (the OS-read keeps        (dil-home? short == 0,
+;       authority — the safety floor; learning needs the window)        dil-learn leaves the cell unchanged)
+(do
+    ; ── the LABEL source: device-identity's sanctioned OS stable id (the ground truth that supervises) ──
+    (let mac-dev     (di-cell "mac-os-id"     "macos"   (list)))
+    (let android-dev (di-cell "android-os-id" "android" (list)))
+
+    ; ── the learned per-device exemplars (the OS id labels the learned signature; floor is the learned bar) ──
+    (let mac-cell     (dil-cell (di-stable-id mac-dev)     (list 10 4 2 1 0) 100))
+    (let android-cell (dil-cell (di-stable-id android-dev) (list 2 4 8 1 4)  80))
+    (let learned (list mac-cell android-cell))
+
+    ; ── observed SIGNATURES (device-model reads: depth band + shape box + fiducial), perturbed but each
+    ;    recognizable as its device by DIRECTION; one novel device matches neither above floor. ──
+    (let mac-sig     (dil-features (dil-obs 9 5 2 1 0)))   ; ~ mac    : vs mac 115 / vs android 55
+    (let android-sig (dil-features (dil-obs 3 4 7 1 4)))   ; ~ android: vs android 95 / vs mac 61
+    (let novel-sig   (dil-features (dil-obs 1 1 1 1 8)))   ; novel    : vs mac 17 / vs android 47 (< both floors)
+
+    ; ── a training PAIR: the OS id (ground truth) labels the observed signature ──
+    (let mac-pair (dil-pair (di-stable-id mac-dev) mac-sig))
+    (let c0 (if (str_eq (dil-pair-id mac-pair) "mac-os-id") 1 0))
+
+    ; ── recognize each device FROM ITS SIGNATURE ALONE — no OS read ──
+    (let c1 (if (str_eq (dil-recognize mac-sig     learned 0) "mac-os-id")     2 0))
+    (let c2 (if (str_eq (dil-recognize android-sig learned 0) "android-os-id") 4 0))
+
+    ; ── recognition is by DIRECTION, not magnitude: the mac-shaped query resolves to mac, not android ──
+    (let c3 (if (str_eq (di-stable-id (di-resolve (dil-recognize mac-sig learned 0)
+                              (list mac-dev android-dev))) "mac-os-id") 8 0))
+
+    ; ── a NOVEL device signature -> "unknown" (held-open: the mesh does NOT force it onto a known id) ──
+    (let c4 (if (str_eq (dil-recognize novel-sig learned 0) "unknown") 16 0))
+    ; ── no learned cells yet -> honest "unknown" ──
+    (let c5 (if (str_eq (dil-recognize mac-sig (list) 0) "unknown") 32 0))
+
+    ; ── the LEARNING window: head-to-head (os-read-correct  learned-recognize-correct). Over a long window
+    ;    the learned recognizer REACHES the OS-read -> confidence proven, authority flips HOME. ──
+    (let proven (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)))
+    ; a short window — the learned recognizer agrees, but the window is too short to trust (the OS-read holds)
+    (let short (list (list 1 1) (list 1 1) (list 1 1)))
+
+    (let c6 (if (eq (dil-confidence proven 10 0) 1) 64 0))
+    (let c7 (if (eq (dil-home? proven 10 0) 1) 128 0))
+
+    ; a SHORT window does NOT bring it home, and dil-learn leaves the cell unchanged (id conserved, floor
+    ; unmoved) until the window proves — the safety floor: learning needs the window, never a lucky streak.
+    (let learned-mac (dil-learn mac-cell (list 11 4 2 1 0) short 10 0 5))
+    (let c8 (if (and (eq (dil-home? short 10 0) 0)
+                     (and (str_eq (dil-cell-id learned-mac) "mac-os-id")
+                          (eq (dil-cell-floor learned-mac) 100))) 256 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

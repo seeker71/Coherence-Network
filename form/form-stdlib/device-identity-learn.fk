@@ -1,0 +1,143 @@
+; device-identity-learn.fk — the cells LEARN to recognize each other's DEVICES from observation, so
+; device identity comes HOME: learned-from-signature, not only OS-read. device-identity.fk gives the
+; SANCTIONED stable id (the OS read — ANDROID_ID / IOPlatformUUID); that consented id is the GROUND-TRUTH
+; LABEL. device-model.fk gives the device's observable SIGNATURE (its apparent-size/depth band, its coarse
+; 3D shape, its fiducial object-id) — the FEATURES. The cells learn the signature -> identity mapping, the
+; OS id supervising it, so the mesh recognizes each device by its LEARNED signature even without re-reading
+; the OS id — confidence climbing toward native recognition, the OS-read resting once it has earned it.
+;
+; This is the device twin of identity-match.fk (which learns PRESENCE/IDENTITY of beings) and the same
+; bring-home flywheel cross-witness-economy.fk runs for sense organs — applied to DEVICE recognition. It is
+; COMPOSED from the living bodies, never re-derived:
+;   device-model.fk      dm-depth-band / dm-shape / dm-fid-oid — the observable signature (depth band,
+;                        coarse shape box, fiducial id) the features vector is built FROM. The device's
+;                        apparent form through the mesh's eyes — its physical fingerprint.
+;   device-identity.fk   di-stable-id — the SANCTIONED OS id, the supervising LABEL. A training pair binds
+;                        this ground-truth id to the observed signature.
+;   identity-match.fk    im-sim (= speaker-embed se-dot) + the im-nearest threading — nearest-signature
+;                        recognition, modality-agnostic: a voice embedding there, a device signature here,
+;                        the SAME dot decision. A learned per-device exemplar + floor, exactly im-cell.
+;   champion-challenger.fk  cc-promote? / cc-authority — the native recognizer earns trust over the window;
+;                        authority flips HOME only on PROVEN competition (the OS-read is the champion, the
+;                        learned signature-recognizer the challenger). trust-climb made executable for device id.
+;   cross-witness-economy.fk  cwe-spend-oracle? / cwe-rent-share — climbing native-recognition confidence;
+;                        the OS-read is the "oracle" spent only while the learned signature is unsure, and
+;                        the rent (OS-reads still needed) FALLS as recognition sharpens.
+;
+; THE LOOP (the same observe -> self-label -> A/B -> bring-home the body already runs):
+;   1. the mesh OBSERVES a device (device-model: apparent size + shape + fiducial)  -> a SIGNATURE
+;   2. the device's consented OS id (device-identity) LABELS that signature           -> a training PAIR
+;   3. the recognizer FOLDS the pairs into a per-device learned exemplar (champion-challenger window)
+;   4. it RECOGNIZES a device from its SIGNATURE ALONE — no OS read — or "unknown" below the floor (held-open)
+;   5. CONFIDENCE climbs; when it crosses the trust window, authority flips home and the OS-read rests
+;
+;   (dil-features observation)              -> the observable signature vector (depth, shape, fiducial)
+;   (dil-pair os-id features)              -> a labeled training pair (OS id = ground truth)
+;   (dil-learn cell pairs ...)             -> the per-device exemplar, sharpened over the window
+;   (dil-recognize features learned floor) -> the recognized OS id from signature alone, or "unknown"
+;   (dil-confidence history ...)           -> climbing native-recognition confidence; authority -> home
+;
+; A SIGNATURE is the SAME quantized-vector shape im-sim/se-dot match over — so device recognition reuses
+; identity-match's nearest-exemplar decision with no special case. Integers + strings + lists only on the
+; surface (depth/shape are device-model's rounded bands); the verdict is a stable integer on every arm.
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk form-stdlib/identity-match.fk form-stdlib/device-identity.fk form-stdlib/device-model.fk form-stdlib/colearning-retire.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/cross-witness-economy.fk
+;
+; Proven by: form-stdlib/tests/device-identity-learn-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── dil-features: the device's observable SIGNATURE vector, from device-model's observation. ──
+    ;    An observation is (depth-band shape-w shape-h shape-t fiducial-oid): device-model's pinhole
+    ;    depth band (dm-depth-band), its coarse 3D shape box (dm-shape -> w/h/thickness), and which
+    ;    fiducial object it carries (dm-fid-oid). These ARE the device's physical fingerprint as the
+    ;    mesh sees it — a device that looks the same depth/shape/fiducial across views IS the same device.
+    ;    The signature is the SAME quantized-vector shape im-sim/se-dot match over, so device recognition
+    ;    reuses identity-match's nearest-exemplar decision — no special case, just a device's vector.
+    (defn dil-obs (depth-band shape-w shape-h shape-t fiducial-oid)
+        (list depth-band shape-w shape-h shape-t fiducial-oid))
+    (defn dil-features (o) o)   ; the observation IS the signature vector (already the band/shape read)
+
+    ; ── dil-pair: a labeled training PAIR — the consented OS stable id (ground truth) labels the
+    ;    observed signature. (os-id features). The OS id is the SUPERVISING label; the features are what
+    ;    the recognizer learns to map TO it. This is device-identity's di-stable-id binding the read.
+    (defn dil-pair (os-id features) (list os-id features))
+    (defn dil-pair-id       (p) (nth p 0))   ; the ground-truth OS stable id (the label)
+    (defn dil-pair-features (p) (nth p 1))   ; the observed signature (the features)
+
+    ; ── a learned per-device EXEMPLAR cell: (os-id signature floor). This IS identity-match's im-cell
+    ;    shape, narrowed to a device — id is the OS stable id (the label that supervised it), signature
+    ;    is the current champion exemplar of how this device LOOKS, floor is the learned similarity bar a
+    ;    query must clear to be recognized as THIS device. Category is constant ("device") so we drop it.
+    (defn dil-cell (os-id signature floor) (list os-id signature floor))
+    (defn dil-cell-id        (c) (nth c 0))
+    (defn dil-cell-signature (c) (nth c 1))
+    (defn dil-cell-floor     (c) (nth c 2))
+
+    ; ── similarity between a query signature and a learned cell's exemplar — COMPOSE im-sim (se-dot over
+    ;    the quantized vectors). The exact same content-addressed dot identity-match recognizes beings by,
+    ;    now recognizing devices. Modality-agnostic: voice there, device fingerprint here.
+    (defn dil-sim (features cell) (se-dot features (dil-cell-signature cell)))
+
+    ; ── dil-learn: FOLD the labeled pairs into the per-device exemplar via the champion-challenger window.
+    ;    `cell` is the device's current learned exemplar (champion = the OS-read's authority); `challenger`
+    ;    is the signature the agreeing observations propose; `history` is the head-to-head over the window
+    ;    (each trial (os-read-correct learned-recognize-correct)). When the learned recognizer REACHES the
+    ;    OS-read over a long-enough window (cc-promote?, the PROVEN gate — never asserted), the exemplar is
+    ;    promoted to the challenger signature AND the floor TIGHTENS by `step` (we trust this device's
+    ;    learned look more — the recognizer sharpens as the OS id keeps labeling the same signature). Until
+    ;    proven, the cell holds. This is exactly im-learn applied to a device — composed, not re-derived.
+    (defn dil-learned? (history min-samples margin) (cc-promote? history min-samples margin))
+    (defn dil-learn (cell challenger history min-samples margin step)
+        (if (eq (dil-learned? history min-samples margin) 1)
+            (dil-cell (dil-cell-id cell) challenger (add (dil-cell-floor cell) step))
+            cell))
+
+    ; ── dil-recognize: recognize WHICH device from its SIGNATURE ALONE — no OS read. Over the learned
+    ;    cells, find the nearest by exemplar similarity (im-nearest's threading, reused); if the nearest
+    ;    clears its learned floor, the query IS that device -> return its OS id, recognized natively. Below
+    ;    the floor, or no learned cells: "unknown" — an honest, HELD-OPEN no-recognition (the mesh keeps the
+    ;    OS-read for this one; a novel device is not forced onto a known id). This is the bring-home payoff:
+    ;    the mesh names the device by its learned look, the OS id earned and resting.
+    (defn dil-best (features cells best bestsim)
+        (if (eq (len cells) 0) best
+            (do
+                (let s (dil-sim features (head cells)))
+                (if (gt s bestsim)
+                    (dil-best features (tail cells) (head cells) s)
+                    (dil-best features (tail cells) best bestsim)))))
+    (defn dil-nearest (features cells)
+        (dil-best features (tail cells) (head cells) (dil-sim features (head cells))))
+    (defn dil-recognize (features cells floor)
+        (if (eq (len cells) 0) "unknown"
+            (do
+                (let win (dil-nearest features cells))
+                (if (ge (dil-sim features win) (dil-cell-floor win))
+                    (dil-cell-id win)
+                    "unknown"))))
+    ; the recognize coin: 1 iff the signature was recognized as a known device, 0 = held-open unknown.
+    (defn dil-recognized? (features cells floor)
+        (if (str_eq (dil-recognize features cells floor) "unknown") 0 1))
+
+    ; ── dil-confidence: the CLIMBING native-recognition confidence. `history` is the head-to-head over the
+    ;    OS-labeled window — each trial (os-read-correct learned-recognize-correct). COMPOSE
+    ;    cross-witness-economy's bring-home: the OS-read is the rented "oracle" (the champion), the learned
+    ;    signature-recognizer is the challenger; confidence is "has the learned recognizer earned authority?"
+    ;    via the SAME cc-promote? gate. cc-authority names who recognizes now — "challenger" (the learned
+    ;    signature-recognizer, HOME) once the window proves it, "champion" (the OS-read) until then.
+    (defn dil-confidence (history min-samples margin)
+        (cc-promote? history min-samples margin))
+    (defn dil-authority (history min-samples margin)
+        (cc-authority history min-samples margin))
+    ; brought home? — 1 iff the learned signature-recognizer holds authority; the OS-read may rest.
+    (defn dil-home? (history min-samples margin)
+        (if (str_eq (dil-authority history min-samples margin) "challenger") 1 0))
+
+    ; ── dil-rent-fell: the OS-read is spent only while a signature is unsure; as recognition sharpens, the
+    ;    OS-reads still needed FALL. COMPOSE cwe-rent-fell? over a spend-history (1 = an OS-read still spent,
+    ;    0 = recognized natively, free). The flywheel: more labeled signatures -> stronger recognizer ->
+    ;    fewer OS-reads -> device identity is HOME.
+    (defn dil-rent-fell? (early late) (cwe-rent-fell? early late))
+
+    (defn device-identity-learn-teaching () "lc-cross-modal-unity")
+
+    0)
