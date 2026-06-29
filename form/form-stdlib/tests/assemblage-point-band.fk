@@ -1,0 +1,9 @@
+; tests/assemblage-point-band.fk — switch the assemblage point for the most alive move, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/assemblage-point.fk
+;
+; Verdict 11111: the safe/fearful stance has higher success (what branch-learning picks); a different assemblage
+; point yields a more alive move; the assemblage-switch chooses the most alive move; that move is a different
+; point than the highest-success one; and the chosen stance is the most alive available. The capstone: learning
+; which BRANCH happens within a frame; learning to MOVE the frame by aliveness finds the move the current frame
+; cannot see -- the wholeness-response, one movement closer than the fearful one.
+(do (assemblage-point-check))
