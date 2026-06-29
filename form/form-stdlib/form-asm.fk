@@ -175,6 +175,10 @@
     (defn fa-fsqrt (rd rn) (fa-asm 509722624 (list 1 32) (list rd rn)))
     ; fmov d<rd>, d<rn> : base 0x1E604000                               (oracle 1e604020)
     (defn fa-fmov (rd rn) (fa-asm 509624320 (list 1 32) (list rd rn)))
+    ; fmov d<rd>, #imm8 : base 0x1E601000 | imm8<<13 | rd               (oracle 1e6e1001 = fmov d1,#1.0)
+    ; the VFP modified-immediate form — the float CONSTANT every nonlinear op needs (1.0 for the reciprocal,
+    ; later ln2/RoPE-base/poly coeffs). imm8 is the 8-bit fp code: #1.0 -> 0x70 (112), #2.0 -> 0x00, #0.5 -> 0x60.
+    (defn fa-fmov-imm (rd imm) (fa-asm 509612032 (list 1 8192) (list rd imm)))
     ; fcmp d<rn>, d<rm> (sets NZCV; read by fa-bcond) : base 0x1E602000 | rm<<16 | rn<<5  (oracle 1e622020)
     (defn fa-fcmp (rn rm) (fa-asm 509616128 (list 32 65536) (list rn rm)))
     ; scvtf d<rd>, x<rn> (signed i64 -> f64) : base 0x9E620000 | rn<<5 | rd               (oracle 9e620020)
