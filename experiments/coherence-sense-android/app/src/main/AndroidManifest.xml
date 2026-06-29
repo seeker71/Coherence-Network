@@ -47,6 +47,13 @@
         <activity
             android:name=".SemaVoiceActivity"
             android:label="Sema"
+            android:exported="true" />
+
+        <!-- The thinnest live sense: pick up the phone and SEE fkwu detect presence
+             on metal. The native verdict on screen is the body; this is the door. -->
+        <activity
+            android:name=".LiveSenseActivity"
+            android:label="fkwu Sense"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
