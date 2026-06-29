@@ -1,0 +1,50 @@
+; preludes: form-stdlib/presence-feature.fk form-stdlib/scene-features.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/live-observe.fk
+;
+; live-observe-band — the camera-native fused observation: one downsampled n=4 luminance grid (16 ints,
+; row-major) read into PRESENT (occupancy) and WHERE (object inventory), then carried through fo-fuse into
+; the observed cell. Falsifiable: a fixed grid, a stable integer verdict.
+;
+; PRESENT grid — uniform upper rows (100) + a high-variance lower-center body block (10/250/250/10), plus a
+; textured object in the bottom-right block. floor 20, detail-floor 30, edge n=4 (2x2 coarse blocks):
+;     100 100 100 100
+;     100 100 100 100
+;     100  10 250 100
+;     100 250  10 100
+;   present : body region {10,250,250,10} mean 130, MAD 120; wall row MAD 0; occupancy 120 >= 20 -> 1.
+;   where   : the lower-center texture spans the two BOTTOM coarse blocks (ids 2 and 3) — both clear the
+;             detail floor — so lo-where reads (2 3): two places located, the lower thing across both.
+;   observe : fo-fuse over (present ballot + the where ballots for blocks 2 and 3) -> present 1, where 2
+;             (the banded consensus of the placed blocks); who/what un-witnessed (no organ this frame) -> 0.
+;
+; VACANT grid — uniform throughout (all 100): occupancy 0 < 20 -> present 0; no block clears the detail
+;   floor -> lo-where () empty -> where-count 0. An empty room: nobody THERE, nowhere placed.
+;
+; Verdict 127 when every camera-native claim lands:
+;   1   a present frame reads occupied                         (lo-present? present 4 20 == 1)
+;   2   an empty room reads unoccupied                         (lo-present? vacant  4 20 == 0)
+;   4   the present frame locates two places (both lower blocks)(lo-where-count present 4 30 == 2)
+;   8   the empty frame locates nowhere                        (lo-where-count vacant  4 30 == 0)
+;   16  the first located place is the lower-left block (id 2)  (nth (lo-where present 4 30) 0 == 2)
+;   32  fo-fuse carries the present verdict into the cell      (fo-o-present (lo-observe present 4 20 30) == 1)
+;   64  fo-fuse carries the located place into the cell        (fo-o-where   (lo-observe present 4 20 30) == 2)
+(do
+    (let present (list 100 100 100 100
+                       100 100 100 100
+                       100  10 250 100
+                       100 250  10 100))
+    (let vacant  (list 100 100 100 100
+                       100 100 100 100
+                       100 100 100 100
+                       100 100 100 100))
+
+    (let obs (lo-observe present 4 20 30))
+
+    (let c0 (if (eq (lo-present? present 4 20) 1)              1 0))
+    (let c1 (if (eq (lo-present? vacant  4 20) 0)              2 0))
+    (let c2 (if (eq (lo-where-count present 4 30) 2)           4 0))
+    (let c3 (if (eq (lo-where-count vacant  4 30) 0)           8 0))
+    (let c4 (if (eq (nth (lo-where present 4 30) 0) 2)        16 0))
+    (let c5 (if (eq (fo-o-present obs) 1)                     32 0))
+    (let c6 (if (eq (fo-o-where obs) 2)                       64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

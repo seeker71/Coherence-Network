@@ -1,0 +1,85 @@
+; live-observe-cli.fk — the on-device entry that reads a LIVE luminance grid from staged input and runs the
+; camera-native fused observation (live-observe.fk) over it, printing each plane on its own line. This is the
+; fkwu host-io shell around live-observe — the same shape form-eval-cli-loop is around fef-eval: the eval is
+; the four-way recipe (live-observe-band proves it), the loop is the staged-input + output carrier only fkwu
+; carries (input_byte tag 17, print_str tag 115).
+;
+; THE STAGED INPUT (the android eye writes it, fkwu reads it via input_byte): whitespace-separated integers,
+; the grid first then three trailing params, in order:
+;     <n*n grid ints, row-major>  <n>  <floor>  <detail-floor>
+; e.g. a 4x4 grid is 16 ints then 4 20 30. The reader is position-free: it folds every integer token in the
+; stream into a list, then peels the last three as (n floor detail-floor) and the leading n*n as the grid.
+;
+; THE OUTPUT (the five native planes on ONE space-joined line, in order — the Kotlin carrier takes the first
+; non-empty line and splits by space, labelling each "native fkwu", never faked):
+;     present occupancy where-count where-first fused-where
+;   - present     pf-present? over the grid            (1 = someone is THERE, 0 = empty)
+;   - occupancy   pf-occupancy magnitude               (the spatial-variance strength behind present)
+;   - where-count len of the placed-object inventory   (how many places the frame located)
+;   - where-first the first located block id, or -1    (where the nearest thing sits; -1 = nowhere)
+;   - fused-where fo-o-where of the fused cell          (the fused place consensus the mesh agrees on)
+; present + where are the camera-native planes; who/what stay un-witnessed on a camera-only frame and are
+; NOT printed as a value (the screen names them un-witnessed, not 0-as-answer). One line keeps the read clean
+; past the flattener-entry's trailing fn-0/counter noise (the named android-runtime EOF tail).
+;
+; preludes: form-stdlib/core.fk form-stdlib/input-stream.fk form-stdlib/presence-feature.fk form-stdlib/scene-features.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/live-observe.fk
+(do
+    ; ── a byte is an ASCII digit (48..57). ──
+    (defn loc-digit? (b) (if (ge b 48) (if (ge 57 b) 1 0) 0))
+
+    ; ── read the integer starting at byte i (digits until the first non-digit), as (value . next-index).
+    ;    Returns a 2-list (val nexti). Bounded by the token's digit count. ──
+    (defn loc-int (i acc)
+        (do (let b (input_byte i))
+            (if (eq (loc-digit? b) 1)
+                (loc-int (add i 1) (add (mul acc 10) (sub b 48)))
+                (list acc i))))
+
+    ; ── advance past any run of non-digit bytes (spaces, newlines), stopping at a digit or EOF (byte 0). ──
+    (defn loc-skip (i)
+        (do (let b (input_byte i))
+            (if (eq b 0) i
+                (if (eq (loc-digit? b) 1) i (loc-skip (add i 1))))))
+
+    ; ── fold every integer token in the staged stream into a list, in order. Tail over tokens, bounded by
+    ;    token count, not byte count. ──
+    (defn loc-tokens (i acc)
+        (do (let j (loc-skip i))
+            (if (eq (input_byte j) 0) acc
+                (do (let r (loc-int j 0))
+                    (loc-tokens (nth r 1) (cons (nth r 0) acc))))))
+
+    ; loc-tokens accumulates reversed (cons at head); restore stream order.
+    (defn loc-rev (xs acc) (if (eq (len xs) 0) acc (loc-rev (tail xs) (cons (head xs) acc))))
+    (defn loc-read () (loc-rev (loc-tokens 0 (list)) (list)))
+
+    ; ── peel the trailing three params and the leading grid. toks = grid... n floor detail-floor. ──
+    (defn loc-take (xs k acc) (if (eq k 0) (loc-rev acc (list)) (loc-take (tail xs) (sub k 1) (cons (head xs) acc))))
+    (defn loc-n           (toks) (nth toks (sub (len toks) 3)))
+    (defn loc-floor       (toks) (nth toks (sub (len toks) 2)))
+    (defn loc-detailfloor (toks) (nth toks (sub (len toks) 1)))
+    (defn loc-grid        (toks) (loc-take toks (sub (len toks) 3) (list)))
+
+    ; ── the first located block id, or -1 when nothing is placed (an empty room: nowhere). ──
+    (defn loc-where-first (objs) (if (eq (len objs) 0) (sub 0 1) (head objs)))
+
+    ; ── render an integer with a trailing space (the field separator on the one output line). ──
+    (defn loc-field (v) (str_concat (int_to_str v) " "))
+
+    ; ── the run: read the grid + params, compute every native plane, print them all on ONE line. ──
+    (defn loc-run ()
+        (do (let toks (loc-read))
+            (let n     (loc-n toks))
+            (let floor (loc-floor toks))
+            (let df    (loc-detailfloor toks))
+            (let grid  (loc-grid toks))
+            (let objs  (lo-where grid n df))
+            (let obs   (lo-observe grid n floor df))
+            (print_str (str_concat (loc-field (lo-present? grid n floor))
+                (str_concat (loc-field (lo-occupancy grid n))
+                    (str_concat (loc-field (len objs))
+                        (str_concat (loc-field (loc-where-first objs))
+                            (str_concat (int_to_str (fo-o-where obs)) "\n"))))))
+            0))
+
+    (loc-run))

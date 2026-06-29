@@ -1,0 +1,76 @@
+; live-observe.fk — the on-device fused observation over a LIVE downsampled luminance grid: presence +
+; place, computed natively from the SAME NxN grid the camera sensor-organ port produces, then carried into
+; the fused-observation cell so the phone reads who/what/where through the one engine, never a faked label.
+;
+; The android eye produces a downsampled NxN row-major luminance grid (a flat list of ints, as every numeric
+; band does). presence-feature.fk already reads that grid into a PRESENT verdict (lower-center occupancy
+; above a wall baseline); scene-features.fk reads the SAME grid into a WHERE inventory (the coarse blocks
+; whose detail clears a floor — the things in the place). live-observe COMPOSES those two camera-native
+; organs into the planes fused-observation needs, then runs fo-fuse so the observed cell is built by the
+; proven fusion, not re-derived here.
+;
+; THE CAMERA-NATIVE PLANES (what one frame can honestly answer):
+;   present  <- pf-present?  (occupancy 1/0 — someone is THERE)                       — REAL from the grid
+;   where    <- sf-objects   (the coarse-block inventory — where the detail sits)      — REAL from the grid
+; The who (identity) and what (sound) planes need organs this camera-only frame does not carry (a face
+; matcher, a microphone); lo-observe leaves them un-witnessed rather than inventing a label — the honest
+; floor the screen shows. When those organs arrive their readings drop into the SAME fo-fuse with no new
+; path (the plane KIND is data), exactly as fused-observation promises.
+;
+; THE READINGS lo-readings builds are fused-observation's own (plane value source-cell confidence) rows:
+;   - present: one banded ballot from the camera, value = pf-present?, confidence = the occupancy magnitude
+;              (a stronger occupancy is a more confident presence) clamped to a small positive weight.
+;   - where:   one banded ballot per object block the scene read found, value = the block id, so a placed
+;              thing votes its location; an empty frame contributes no where ballot (nothing to place).
+; fo-fuse then collapses them to (observed PRESENT WHO WHAT WHERE CONFIDENCE) — present and where carried
+; by the camera, who/what the un-witnessed planes (fo-fuse returns the empty consensus there, honestly 0).
+;
+; lo-present? / lo-where / lo-occupancy expose each native plane directly for the screen; lo-observe is the
+; whole fused cell. All integer; the grid is pre-scaled ints, the floors are the same hard ge-cutoffs the
+; organs draw.
+;
+; preludes: form-stdlib/core.fk form-stdlib/presence-feature.fk form-stdlib/scene-features.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk
+;
+; Proven by: form-stdlib/tests/live-observe-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── the occupancy magnitude as a small positive confidence weight: a present body carries a stronger
+    ;    occupancy, so a higher magnitude is a more confident presence ballot. Clamp at 1 so a just-present
+    ;    frame still casts a real ballot; the raw magnitude (already small, MAD-scaled) IS the weight. ──
+    (defn lo-conf (mag) (if (le mag 1) 1 mag))
+
+    ; ── PRESENT plane: the camera's occupancy verdict as one banded reading. value = pf-present? (1/0),
+    ;    weight = the occupancy magnitude (clamped). source-cell "camera-eye" — the organ + independent
+    ;    witness id fused-observation counts. ──
+    (defn lo-present-reading (grid n floor)
+        (fo-reading "present" (pf-present? grid n floor) "camera-eye"
+            (lo-conf (pf-occupancy grid n))))
+
+    ; ── WHERE plane: one banded ballot per object block the scene read placed — a thing in block id b votes
+    ;    its location b. An empty frame (no block clears the detail floor) yields no where ballot: nothing to
+    ;    place, so the where plane stays un-witnessed (honestly 0), not a fabricated room. ──
+    (defn lo-where-readings (objs)
+        (if (eq (len objs) 0) (list)
+            (cons (fo-reading "where" (head objs) "camera-eye" 1)
+                (lo-where-readings (tail objs)))))
+
+    ; ── the full reading stream for one frame: the present ballot, then the where ballots (one per placed
+    ;    object). who/what cast no ballot — no organ on this frame answers them. ──
+    (defn lo-readings (grid n floor detail-floor)
+        (cons (lo-present-reading grid n floor)
+            (lo-where-readings (sf-objects grid n detail-floor))))
+
+    ; ── lo-observe: the fused observed cell, built by fo-fuse over the camera readings — the SAME fusion
+    ;    proven four-way, fed the live grid. (observed PRESENT WHO WHAT WHERE CONFIDENCE). ──
+    (defn lo-observe (grid n floor detail-floor)
+        (fo-fuse (lo-readings grid n floor detail-floor)))
+
+    ; ── the native planes, exposed directly for the screen. Each is the organ's own verdict over the grid. ──
+    (defn lo-present?  (grid n floor)        (pf-present? grid n floor))     ; 1/0 — someone is THERE
+    (defn lo-occupancy (grid n)              (pf-occupancy grid n))          ; the occupancy magnitude
+    (defn lo-where     (grid n detail-floor) (sf-objects grid n detail-floor)) ; the placed-object block ids
+
+    ; ── lo-where-count: how many places the frame located (the where plane's witness count). 0 = empty room. ──
+    (defn lo-where-count (grid n detail-floor) (len (sf-objects grid n detail-floor)))
+
+    0)
