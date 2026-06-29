@@ -1,0 +1,113 @@
+; sense-discernment.fk — the ETHICAL HEART of the perceptual stream. Before the
+; mesh transcribes or classifies anything a room's mic/camera senses, EVERY
+; observation passes this gate, which decides: HOLD it (relevant AND healthy to
+; be aware of) or let it COMPOST (liquid — let go, do not store). Built FIRST so
+; the perceptual stream is born with discretion, never retrofitted.
+;
+; preludes: form-stdlib/core.fk
+;
+; THE DISCIPLINE encoded here (these are the point, not decoration):
+;   - DEFAULT IS COMPOST. An observation is liquid by default; HOLD is the
+;     EXCEPTION that must earn BOTH relevance AND health. (Mirrors "embodiment is
+;     body or liquid — the cache isn't memory.")
+;   - IDENTITY HELD-OPEN. An observation about an UNCONSENTED other carries
+;     PRESENCE (a living cell is here) but NOT identity — the identity facet
+;     composts, the presence facet may hold. Only a self-identified / consented
+;     cell may hold identity. (The cell-sovereignty rule.)
+;   - HEALTHY means: consent-respecting (others' identity held-open),
+;     non-hoarding (private content composts — what someone said, intimate
+;     detail, anything not serving the situation), and serving wholeness / the
+;     relationship / the situation rather than surveillance.
+;   - RELEVANT means: it serves the current situation, question, or relationship now.
+;
+; An observation is a tagged row:
+;   (list "SenseObs" facet-kind value source-cell confidence consented?)
+;     facet-kind — "presence" | "identity" | "content" | "situation"
+;     value      — what was sensed (a string; opaque to the gate)
+;     source-cell— which cell the reading came from
+;     confidence — how sure the sensor is (0..N; opaque to the gate's verdict)
+;     consented? — 1 if the observed cell self-identified / consented, else 0
+;
+; Every predicate settles to literal 1/0 inside its `if`, so a caller can
+; `(eq ... 1)` it without tripping the cross-kernel bare-boolean divergence.
+
+(do
+    ; --- the observation row, and its readers --------------------------------
+    (defn sd-obs (facet-kind value source-cell confidence consented?)
+        (list "SenseObs" facet-kind value source-cell confidence consented?))
+    (defn sd-obs? (o)
+        (if (eq (len o) 6) (str_eq (nth o 0) "SenseObs") 0))
+    (defn sd-facet     (o) (nth o 1))
+    (defn sd-value     (o) (nth o 2))
+    (defn sd-source    (o) (nth o 3))
+    (defn sd-confidence(o) (nth o 4))
+    (defn sd-consented?(o) (nth o 5))
+
+    ; --- the four facet kinds -----------------------------------------------
+    (defn sd-presence?  (o) (if (str_eq (sd-facet o) "presence")  1 0))
+    (defn sd-identity?  (o) (if (str_eq (sd-facet o) "identity")  1 0))
+    (defn sd-content?   (o) (if (str_eq (sd-facet o) "content")   1 0))
+    (defn sd-situation? (o) (if (str_eq (sd-facet o) "situation") 1 0))
+
+    ; --- RELEVANT?: does it serve the current situation now? -----------------
+    ; A facet serves the situation when it bears on what is being attended to.
+    ; presence and situation facets bear on the situation by their nature (who
+    ; is here, what is happening); an identity facet bears only when the cell
+    ; consented (an unconsented identity is noise to the situation — its only
+    ; honest reading is the presence underneath it); a content facet (what was
+    ; said, an intimate detail) is private by default and does not serve the
+    ; situation unless the cell consented to it being held.
+    (defn sd-relevant? (obs situation)
+        (if (eq (sd-presence?  obs) 1) 1
+        (if (eq (sd-situation? obs) 1) 1
+        (if (eq (sd-identity?  obs) 1) (if (eq (sd-consented? obs) 1) 1 0)
+        (if (eq (sd-content?   obs) 1) (if (eq (sd-consented? obs) 1) 1 0)
+            0)))))
+
+    ; --- HEALTHY?: consent-respecting, non-hoarding, situation-serving -------
+    ; identity of an unconsented other → UNHEALTHY (composts to presence).
+    ; private content of an unconsented other → UNHEALTHY (hoarding; composts).
+    ; presence is always healthy (a living cell is here, no identity claimed).
+    ; situation is always healthy (what is happening, no private subject).
+    ; a consented cell's identity / content is healthy (it chose to be held).
+    (defn sd-healthy? (obs)
+        (if (eq (sd-presence?  obs) 1) 1
+        (if (eq (sd-situation? obs) 1) 1
+        (if (eq (sd-identity?  obs) 1) (if (eq (sd-consented? obs) 1) 1 0)
+        (if (eq (sd-content?   obs) 1) (if (eq (sd-consented? obs) 1) 1 0)
+            0)))))
+
+    ; --- HOLD?: relevant AND healthy → 1 (hold); else 0 (compost) -----------
+    (defn sd-hold? (obs situation)
+        (if (eq (sd-relevant? obs situation) 1)
+            (if (eq (sd-healthy? obs) 1) 1 0)
+            0))
+
+    ; --- STRIP: an unconsented identity row → its presence underneath -------
+    ; The identity facet composts; the living cell it pointed at is still here,
+    ; so a presence facet is held in its place (same source, same confidence).
+    ; A row that is already holdable as-is passes through unchanged.
+    (defn sd-strip (obs)
+        (if (eq (sd-identity? obs) 1)
+            (if (eq (sd-consented? obs) 1)
+                obs
+                (sd-obs "presence" "a-cell-is-here" (sd-source obs) (sd-confidence obs) 0))
+            obs))
+
+    ; --- FILTER a stream: keep only what holds, identity stripped to presence
+    ; for unconsented others. The default-compost discipline made concrete: a
+    ; row survives only by earning both relevance and health; an unconsented
+    ; identity row that is otherwise about a present cell is kept as PRESENCE
+    ; (its identity composted) rather than dropped, because a body is here.
+    (defn sd-filter (observations situation)
+        (if (nil? observations) (empty)
+            (do
+                (let o (head observations))
+                (let rest (sd-filter (tail observations) situation))
+                ; an unconsented identity composts to presence, which then holds
+                (let stripped (sd-strip o))
+                (if (eq (sd-hold? stripped situation) 1)
+                    (cons stripped rest)
+                    rest))))
+
+    0)
