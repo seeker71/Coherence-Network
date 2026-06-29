@@ -1,0 +1,3 @@
+; tests/tokenizer-band.fk — text<->token round-trip (BPE merge), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/tokenizer.fk
+(do (tokenizer-check))
