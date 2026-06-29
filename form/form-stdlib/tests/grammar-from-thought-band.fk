@@ -1,0 +1,8 @@
+; tests/grammar-from-thought-band.fk — a grammar rule induced from the thought-stream, generalizing, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/grammar-from-thought.fk
+;
+; Verdict 11111: the induced rule lifts the op and left operand from an observed surface (reproduces the thought);
+; generalizes to an unseen surface; generalizes to a different operator (learned the structure, not one case);
+; and the induced node always has the universal recipe shape (op + two children). A grammar learned from how we
+; think -- a door derived from watching the thought-stream, not authored by hand.
+(do (grammar-from-thought-check))
