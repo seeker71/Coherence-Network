@@ -1173,3 +1173,4 @@ identity-match fks 511
 self-heard-learning fks 511
 surprise-kernel fks 511
 room-register fks 255
+face-embed fks 255
