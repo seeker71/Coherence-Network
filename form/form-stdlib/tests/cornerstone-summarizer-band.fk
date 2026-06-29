@@ -1,0 +1,8 @@
+; tests/cornerstone-summarizer-band.fk — a generic pivot summarizer that builds cornerstones, fear-free ice, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/cornerstone-summarizer.fk
+;
+; Verdict 11111: the summarizer builds cornerstones (the load-bearing cells); a high-salience cell is a
+; cornerstone; fear-frequency is removed before ice (a fear cornerstone does not freeze); it is GENERIC (same
+; pivot -> same cornerstones regardless of content-type/locale/surface order); and the fear gate is real (fewer
+; freeze than are cornerstones). A native, observable, generic, frequency-attuned summarizer over the pivot.
+(do (cornerstone-summarizer-check))
