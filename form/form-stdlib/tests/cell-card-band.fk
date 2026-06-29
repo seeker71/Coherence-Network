@@ -1,0 +1,36 @@
+; tests/cell-card-band.fk — the render engine the living-mesh GUI rests on, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/cross-cell-interface.fk form-stdlib/cell-card.fk
+;
+; Verdict 111111: a sample cell -> its card has the right IDENTITY (id+name), the right FACET COUNT (3),
+; the right number of facets of a given CARD-TYPE read as DATA ("where" appears once), the right OPEN-
+; CHANNEL COUNT (2), an open-channel that carries its TARGET cell-ref (recursion is real — you can open
+; into it), and the channel's consent MODE resolved from the cross-cell-interface registry (sense ->
+; m-witness=1). One engine; card-types are facet data; the card is recursive.
+(do
+    ; a sample cell: a place-cell "hati-suci", three facets across THREE card-types (where/what/concepts),
+    ; two open channels (sense it; ask it) each bound to a target cell-ref you can open into.
+    (defn sample-cell ()
+        (cell-make "hati-suci" "Hati Suci"
+            (list
+                (facet-make "lat-lon"  "where"    "-8.51,115.26")
+                (facet-make "kind"     "what"     "gathering-place")
+                (facet-make "resonance" "concepts" "lc-arrival-as-recognition"))
+            (list
+                (open-channel "sense" "sensor-organ-channel")   ; sense the room's reading -> openable cell
+                (open-channel "ask"   "place-sense"))))          ; ask WHERE -> openable cell
+
+    (defn ccb (cond bit) (if cond bit 0))
+    (defn cell-card-band-check ()
+        (do
+            (let card (cc-card (sample-cell)))
+            (add (add (add (add (add
+                (ccb (and (str_eq (card-id card) "hati-suci")
+                          (str_eq (card-name card) "Hati Suci")) 1)            ; identity = id+name
+                (ccb (eq (card-facet-count card) 3) 10))                        ; the right facet count
+                (ccb (eq (cc-facets-of-type (card-facets card) "where") 1) 100)); card-type read as DATA
+                (ccb (eq (card-channel-count card) 2) 1000))                    ; the right open-channel count
+                (ccb (str_eq (cc-open (head (card-channels card)))
+                             "sensor-organ-channel") 10000))                    ; recursion: channel carries its target
+                (ccb (eq (channel-mode (head (card-channels card))) (m-witness)) 100000)))) ; mode from cci registry
+
+    (cell-card-band-check))
