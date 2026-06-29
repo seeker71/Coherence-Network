@@ -1,0 +1,60 @@
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk form-stdlib/self-heard-learning.fk
+;
+; self-heard-learning-band — the body learns from its OWN actions, no human labels, four-way. The device
+; EMITS a song with a known label and OBSERVES it back through the mic; each (observed-features ->
+; emitted-label) pair is FREE supervised training data. We train the matcher on the body's own playback,
+; then prove inference: NEW unlabeled audio of a heard song is correctly ID'd, and audio unlike anything
+; heard returns "unknown". Features are small int vectors standing in for spectrum/mel observations; the
+; recognition DECISION (se-dot cosine) + the learning GATE (cc-promote? long-window) are what cross
+; four-way. Labels are SELF-GENERATED from own playback — no annotator anywhere.
+;
+; THE SELF-HEARD LIFE (each pair = we played a song, the mic heard it back):
+;   song-a, heard once : features (10 0 0 0)   (a clean hearing of A through our speakers)
+;   song-a, heard again: features ( 8 2 0 0)   (a second hearing — slightly colored by the room)
+;   song-b, heard once : features ( 0 9 1 0)   (a hearing of B — a different song)
+; After folding, A's exemplar sums to (18 2 0 0) over 2 self-hearings (its DIRECTION is the centroid of
+; how A sounds to us); B's exemplar is (0 9 1 0) over 1.
+;
+; Verdict 511 when every claim lands (numeric; predicted labels are carrier-read strings):
+;   1   training mints both labels from the body's own playback     (matcher has song-a AND song-b)
+;   2   A's exemplar SHARPENED over two self-hearings: summed dir    (exemplar (18 2 0 0), count 2)
+;   4   B's exemplar is the single hearing                          (exemplar (0 9 1 0), count 1)
+;   8   INFERENCE: a NEW, unlabeled clip close to A -> "song-a"      (held-out (9 1 0 0): dot A 164 > B 9)
+;   16  INFERENCE: a NEW clip shaped like B -> "song-b"             (held-out (1 8 0 0): dot B 72 > A 34)
+;   32  HELD-OUT A is ID'd by MARGIN, not luck: nearer A than B      (A 164 strictly > B 9)
+;   64  audio UNLIKE anything heard -> "unknown" (honest no-match)  (orthogonal (0 0 9 9): dot A 0, B 9 < floor)
+;   128 an EMPTY matcher names nothing -> "unknown"                 (no labels learned yet)
+;   256 A's self-heard window is TRUSTED once long enough; one       (count>=min trusted; count<min not)
+;       hearing is NOT (the long-window gate, self-generated)
+(do
+    ; the body's own playback, observed back through the mic — the free self-labeled pairs
+    (let p-a1 (shl-pair "song-a" (list 10 0 0 0)))
+    (let p-a2 (shl-pair "song-a" (list  8 2 0 0)))
+    (let p-b1 (shl-pair "song-b" (list  0 9 1 0)))
+    (let pairs (list p-a1 p-a2 p-b1))
+
+    ; train on the body's own life — no human labels touched
+    (let m (shl-learn (list) pairs))
+    (let cell-a (shl-find m "song-a"))
+    (let cell-b (shl-find m "song-b"))
+
+    ; held-out, UNLABELED observations the matcher has never folded in (inference targets)
+    (let new-a   (list 9 1 0 0))    ; a fresh hearing of A -> should ID as song-a
+    (let new-b   (list 1 8 0 0))    ; a fresh hearing of B -> should ID as song-b
+    (let new-x   (list 0 0 9 9))    ; orthogonal to everything heard -> should be "unknown"
+
+    (let floor 50)                  ; the cosine·scale² a query must clear to be named
+
+    (let c0 (if (and (eq (shl-has? m "song-a") 1) (eq (shl-has? m "song-b") 1)) 1 0))
+    (let c1 (if (and (eq (shl-cell-count cell-a) 2)
+                     (eq (head (shl-cell-exemplar cell-a)) 18)) 2 0))
+    (let c2 (if (and (eq (shl-cell-count cell-b) 1)
+                     (eq (head (tail (shl-cell-exemplar cell-b))) 9)) 4 0))
+    (let c3 (if (str_eq (shl-match m new-a floor) "song-a") 8 0))
+    (let c4 (if (str_eq (shl-match m new-b floor) "song-b") 16 0))
+    (let c5 (if (gt (shl-sim new-a cell-a) (shl-sim new-a cell-b)) 32 0))
+    (let c6 (if (str_eq (shl-match m new-x floor) "unknown") 64 0))
+    (let c7 (if (str_eq (shl-match (list) new-a floor) "unknown") 128 0))
+    (let c8 (if (and (eq (shl-trusted? (shl-cell "song-a" (list 18 2 0 0) 8) 8 0) 1)
+                     (eq (shl-trusted? (shl-cell "song-a" (list 10 0 0 0) 1) 8 0) 0)) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
