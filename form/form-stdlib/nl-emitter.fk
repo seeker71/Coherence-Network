@@ -1,0 +1,22 @@
+; nl-emitter.fk — the natural-language emitter shape: greedy argmax decode + end-of-sequence stop.
+; The shape rung of native text generation: from a logit vector over the vocab, pick the next token (argmax for
+; greedy decode), stop at EOS. Honest floor: a fixed 3-token vocab here; the DECODE logic is the shape the real
+; trained decoder's logits will drive. preludes: form-stdlib/core.fk
+(do
+    (defn ne-l0 (lg) (head lg))
+    (defn ne-l1 (lg) (head (tail lg)))
+    (defn ne-l2 (lg) (head (tail (tail lg))))
+    (defn ne-argmax (lg)
+        (if (gt (ne-l0 lg) (ne-l1 lg))
+            (if (gt (ne-l0 lg) (ne-l2 lg)) 0 2)
+            (if (gt (ne-l1 lg) (ne-l2 lg)) 1 2)))
+    (defn ne-eos? (tok) (if (eq tok 2) 1 0))
+    (defn nek (cond bit) (if cond bit 0))
+    (defn nl-emitter-check ()
+        (add (add (add (add
+            (nek (eq (ne-argmax (list 1 9 1)) 1) 1)
+            (nek (eq (ne-argmax (list 9 1 1)) 0) 10))
+            (nek (eq (ne-argmax (list 1 9 1)) (ne-argmax (list 1 9 1))) 100))
+            (nek (eq (ne-eos? 2) 1) 1000))
+            (nek (eq (ne-eos? 1) 0) 10000)))
+)
