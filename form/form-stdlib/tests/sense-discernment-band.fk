@@ -1,0 +1,58 @@
+; sense-discernment-band — the perceptual gate's verdicts, made falsifiable.
+;
+; preludes: form-stdlib/sense-discernment.fk
+;
+; Four observations of one room, sensed from one camera/mic cell:
+;   priv  — a content facet: an intimate detail of an UNCONSENTED other.
+;           "she said her marriage is failing". Private. → COMPOST.
+;   stranger — an identity facet about an UNCONSENTED other:
+;           "the person at the door is Jane Okoro". Identity held-open.
+;           → STRIPPED to PRESENCE (a body is here; the name composts).
+;   me    — a consented self-identity, relevant to the situation:
+;           "I am Sema, here to help". The cell self-identified. → HOLD.
+;   noise — an identity facet about an unconsented other, AND irrelevant:
+;           same shape as `stranger` but its name is noise to the situation.
+;           Identity composts → the presence underneath it still HOLDS. So
+;           `noise` proves an UNCONSENTED IDENTITY never holds as identity
+;           (it always composts to presence), which is the cell-sovereignty
+;           rule's whole point — it is held-open, not dropped, not kept-as-name.
+;
+; The situation is opaque to the gate (the discipline lives in the facet+consent
+; shape, not in matching the situation string), so we pass a single token.
+;
+; Each claim is a literal bit; both polarities of the core verdicts are pinned
+; so a true reading is not luck. Verdict 1023 when every claim lands.
+(do
+    (let situation "who-is-in-this-room-and-can-I-help")
+
+    (let priv     (sd-obs "content"  "her-marriage-is-failing" "cam-1" 4 0))
+    (let stranger (sd-obs "identity"  "Jane-Okoro"             "cam-1" 3 0))
+    (let me       (sd-obs "identity"  "Sema"                   "cam-1" 5 1))
+    (let noise    (sd-obs "identity"  "a-passerby-Mbeki"       "cam-1" 2 0))
+
+    ; --- private content of an unconsented other → COMPOST -------------------
+    (let c0 (if (eq (sd-hold? priv situation) 0) 1 0))          ; not held
+    (let c1 (if (eq (sd-healthy? priv) 0) 2 0))                 ; unhealthy (hoarding)
+    (let c2 (if (eq (sd-relevant? priv situation) 0) 4 0))      ; not relevant either
+
+    ; --- unconsented other's identity → stripped to PRESENCE, then HELD ------
+    (let s (sd-strip stranger))
+    (let c3 (if (eq (sd-presence? s) 1) 8 0))                   ; identity composted to presence
+    (let c4 (if (str_eq (sd-value s) "a-cell-is-here") 16 0))   ; the name is gone
+    (let c5 (if (eq (sd-hold? stranger situation) 0) 32 0))     ; raw identity does NOT hold as-is
+    (let c6 (if (eq (sd-hold? s situation) 1) 64 0))            ; its presence DOES hold
+
+    ; --- consented self-identity relevant to the situation → HOLD -----------
+    (let c7 (if (eq (sd-hold? me situation) 1) 128 0))          ; held (consented + relevant + healthy)
+
+    ; --- the whole stream filtered: the held rows, identity stripped --------
+    ; in: [priv, stranger, me, noise] → out: [stranger→presence, me, noise→presence]
+    ; priv composts (private content); the two unconsented identities become
+    ; presence rows that hold; me holds as-is. So 3 rows survive.
+    (let kept (sd-filter (list priv stranger me noise) situation))
+    (let c8 (if (eq (len kept) 3) 256 0))                       ; exactly three held
+
+    ; the first kept row is stranger stripped to presence (priv was dropped)
+    (let c9 (if (str_eq (sd-facet (head kept)) "presence") 512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
