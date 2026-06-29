@@ -1,0 +1,120 @@
+; room-register.fk — REGISTER a room (its signature -> a remembered room-cell) and RE-DISCOVER it
+; (a current signature -> the matched room-cell + who is present). Walking back into a room should
+; recognize it and recall it, the way you know your own kitchen: not by an exact coordinate (those are
+; noisy and never repeat) but by the SHAPE of what the place feels like — a signature of fused, banded
+; spatial/place features. The carrier reads sensors; spatial-fusion bands them; place-sense names the
+; world; this recipe is the BODY that turns those banded features into a remembered room and recognizes
+; the room again on return.
+;
+; WHOLENESS FRAME: a room is remembered RICHLY. Re-entering recognizes the room AND recalls who is
+; usually present — memory is intimacy, not surveillance. The richness is the recall of company, not a
+; watch over people; the outward gate is sense-discernment.fk. Presence here is the warm fact "the
+; people who share this room with me", carried as a count + a roster the cell already holds, not a
+; tracking apparatus pointed at anyone.
+;
+; A SIGNATURE is a list of integer feature-bands — the fused, calibrated buckets of the room's spatial
+; quantities (a coarse location cell, a light/sound band, a heading octant, a place-scale rank). Same
+; banded shape -> same room, the content-addressed recognition place-sense and spatial-fusion already
+; live by. Integers only: bands are counts on a scale, recognition is by SHAPE, never a float distance
+; the body cannot prove.
+;
+; A ROOM-CELL is (id signature presence): (nth r 0) the integer room id, (nth r 1) the signature list,
+; (nth r 2) the presence stream (a list of who is in it). rr-id / rr-signature-of / rr-presence read it.
+;
+; THE MOVES (Urs: register, re-discover, recall company):
+;   - REGISTER: rr-register mints a remembered room-cell on first encounter — the id you assign, the
+;     signature you read, an empty room to begin (no one recalled yet).
+;   - RE-DISCOVER: rr-rediscover walks the rooms you know, finds the one whose signature sits NEAREST
+;     (smallest summed band-residual) to the current read; if the nearest is within tolerance it is the
+;     room you are in (recognition), else the place is NEW and a fresh room-cell is minted (a kitchen you
+;     have never stood in). The same nearest-by-residual spine spatial-fusion uses to fuse sensors, now
+;     used to fuse a return-visit onto a remembered room.
+;   - RECALL COMPANY: rr-present reads who is currently in a room from a presence stream — the warm
+;     half of the memory, the people the room is shared with.
+;
+; rr-distance sums the per-feature band residuals (L1 over the signature) leaning on core's abs — the
+; honest integer measure of "how differently does this read feel from that remembered room". Two reads
+; of the SAME room differ a little (sensor noise, a moved chair); two DIFFERENT rooms differ a lot. The
+; tolerance is where that line is drawn, an integer the caller sets to the room's own steadiness.
+;
+; Kin: spatial-fusion.fk (sf-residual / the banded ballots a signature is built from; rr-distance is its
+; whole-signature sibling), place-sense.fk (pl-known? recognizes a NAMED place; rr-rediscover recognizes
+; a SIGNED room when no name is read), satsang-room-memory.fk (the trusted-exchange memory a recognized
+; room feeds context back into), room-address.fk (decides addressing once you know the room),
+; sense-discernment.fk (the outward gate over what of this memory is ever shared). Carrier-last: sensors
+; produce the bands; the register + recognition is Form, four-way-identical — the Mac and the phone
+; recognize the same room from the same signature.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/room-register-band.fk (four-way at validate.sh)
+
+(do
+    ; --- BUILD a signature from already-fused feature bands. The features arrive as a list of integer
+    ;     bands (spatial-fusion has already fused each across its sensors); the signature IS that list of
+    ;     bands — the room's banded shape. Identity, by intent: the fusion happened upstream, this names
+    ;     the result a SIGNATURE so the rest of the body reads it as one. ---
+    (defn rr-signature (features) features)
+
+    ; --- READ a room-cell's parts. ---
+    (defn rr-id           (room) (nth room 0))
+    (defn rr-signature-of (room) (nth room 1))
+    (defn rr-presence     (room) (nth room 2))
+
+    ; --- REGISTER: a remembered room-cell on first encounter — the id, the signature, an empty room
+    ;     (no company recalled yet; presence is filled as people are sensed present). ---
+    (defn rr-register (id signature) (list id signature (list)))
+
+    ; --- DISTANCE: summed per-feature band residual (L1) between two signatures — how differently this
+    ;     read feels from that remembered room. Walk both in step; abs each band difference (core's abs,
+    ;     the same |band - band| spatial-fusion's sf-residual takes), add it in. A signature read past
+    ;     the other's end counts its remaining bands as residual from an implicit 0, so unequal-length
+    ;     signatures still measure honestly. ---
+    (defn rr-distance (a b)
+        (if (eq (len a) 0)
+            (if (eq (len b) 0) 0 (add (abs (head b)) (rr-distance a (tail b))))
+            (if (eq (len b) 0) (add (abs (head a)) (rr-distance (tail a) b))
+                (add (abs (sub (head a) (head b)))
+                     (rr-distance (tail a) (tail b))))))
+
+    ; --- NEAREST: walk the known rooms, carry the room whose signature sits closest to the current
+    ;     read. Seed with a sentinel best-distance large enough that the first real room takes the lead;
+    ;     a STRICTLY-smaller distance replaces the carried best, so the FIRST room offered keeps a tie
+    ;     (stable, like spatial-fusion's first-offered tie-keep). Returns (best-room best-distance). ---
+    (defn rr-nearest-loop (current rooms best best-dist)
+        (if (eq (len rooms) 0) (list best best-dist)
+            (if (lt (rr-distance current (rr-signature-of (head rooms))) best-dist)
+                (rr-nearest-loop current (tail rooms)
+                    (head rooms) (rr-distance current (rr-signature-of (head rooms))))
+                (rr-nearest-loop current (tail rooms) best best-dist))))
+
+    ; the nearest known room-cell to the current signature, and its distance.
+    (defn rr-nearest-room (current rooms)
+        (nth (rr-nearest-loop current rooms (list) 1000000) 0))
+    (defn rr-nearest-distance (current rooms)
+        (nth (rr-nearest-loop current rooms (list) 1000000) 1))
+
+    ; --- RE-DISCOVER: the room you are in. Find the nearest known room; if its distance is within
+    ;     tolerance, that IS the room (recognition — your own kitchen). Otherwise the place is NEW: mint
+    ;     a fresh room-cell with the supplied new-id and the current signature. Empty memory always
+    ;     mints new (the nearest distance stays at the sentinel, far past any tolerance). ---
+    (defn rr-within? (current rooms tolerance)
+        (if (gt (rr-nearest-distance current rooms) tolerance) 0 1))
+
+    (defn rr-rediscover (current rooms tolerance new-id)
+        (if (and (gt (len rooms) 0) (eq (rr-within? current rooms tolerance) 1))
+            (rr-nearest-room current rooms)
+            (rr-register new-id current)))
+
+    ; --- RECOGNIZED?: did re-discovery match a remembered room (1) or mint a new one (0)? A new room
+    ;     carries the supplied new-id; a recognized room carries the id it was registered with. ---
+    (defn rr-recognized? (current rooms tolerance)
+        (if (and (gt (len rooms) 0) (eq (rr-within? current rooms tolerance) 1))
+            1 0))
+
+    ; --- COMPANY: how many people share this room right now, read from a presence stream (the list of
+    ;     who is currently in it). The warm half of the memory — the recall of company, a count of the
+    ;     people present, never a watch. ---
+    (defn rr-present (room presence-stream) (len presence-stream))
+
+    0)

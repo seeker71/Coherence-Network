@@ -1,0 +1,73 @@
+; motion-normalize.fk — make surprise-kernel's motion detection EXPOSURE-INVARIANT, the LIGHT-BLIND
+; sibling of sk-surprise's raw frame-diff.
+;
+; surprise-kernel.fk's sk-surprise is the per-frame L1 prediction error: sum |frame[i] - prev[i]|. It
+; spends the GPU wherever frame-to-frame change is high — but it cannot tell MOTION from EXPOSURE. Observed
+; directly on a real camera: a dark frame and the same room after the auto-exposure brightened it differ in
+; EVERY cell by roughly the same amount; sk-surprise summed that whole-frame brightness lift to ~9500 though
+; nothing in the room moved. The LIGHT changed, not the scene. A raw frame-diff gate fires on the sunrise.
+;
+; The fix is mean-removal. A uniform brightness offset K added to every cell is exactly the camera
+; auto-exposing dark -> bright. Subtract each frame's own global mean before the diff and that offset
+; cancels: if frame[i] = prev[i] + K for all i, then mean(frame) = mean(prev) + K, so
+;   (frame[i] - mean(frame)) = (prev[i] + K) - (mean(prev) + K) = prev[i] - mean(prev).
+; The two mean-removed grids are identical -> mn-surprise = 0. The exposure shift vanishes. A LOCAL change
+; (one region brightening while the overall mean holds) does NOT cancel — it survives normalization as true
+; motion. Mean-removal keeps the structure, drops the level.
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - surprise-kernel.fk's sk-error-sum is the L1 |actual - expected| fold; mn-surprise is that exact fold
+;     run over the two NORMALIZED grids instead of the raw frames. The salience/ATTEND gate downstream is
+;     unchanged — sk-salience reads mn-surprise the same way it reads sk-surprise, now light-blind.
+;   - presence-feature.fk's pf-sum / pf-region-var take a region MEAN by integer div (sum / count); mn-mean
+;     is the same integer-mean shape over the WHOLE flat grid. No squares, no floats — the MAD-style
+;     mean-removal, integer-exact on every arm.
+;   - the grid is the SAME row-major NxN luminance frame (flat list of int-scaled cells) the camera
+;     sensor-organ-channel port produces and presence-feature consumes.
+;
+; All integer. Mean-removal goes negative (a below-mean cell) — kept honest by the sk-error abs in the L1
+; fold, exactly as sk-error-sum already takes |diff|. Integer division leaves the mean truncated, but a
+; UNIFORM offset shifts the mean by exactly K (no remainder drift), so the exposure case cancels exactly;
+; local structure survives untouched. n is the cell count of the flat grid (NxN = n).
+;
+; preludes: form-stdlib/core.fk form-stdlib/surprise-kernel.fk
+;
+; Proven by: form-stdlib/tests/motion-normalize-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; --- SUM: sum the raw cell values over the flat grid (for the global mean). ---
+    ;     The pf-sum integer-accumulate shape, flattened to the whole grid: walk all n cells, add each.
+    (defn mn-sum (grid i acc)
+        (if (eq i (len grid)) acc
+            (mn-sum grid (add i 1) (add acc (nth grid i)))))
+
+    ; --- MEAN: the grid's global mean luminance (integer). sum / n, integer div. Empty grid -> 0. ---
+    ;     The pf-region-var mean shape (sum / count) taken over the whole frame. A uniform +K offset lifts
+    ;     this mean by exactly K, which is what makes the exposure shift cancel in mn-normalize.
+    (defn mn-mean (grid n)
+        (if (eq n 0) 0
+            (div (mn-sum grid 0 0) n)))
+
+    ; --- NORMALIZE: each cell minus the grid mean — a mean-removed grid. ---
+    ;     A UNIFORM brightness offset on every cell cancels exactly (mean lifts by the same K), so exposure
+    ;     shifts vanish; LOCAL structure (one region above/below the mean) survives. Cells go negative below
+    ;     the mean — honest, the downstream L1 fold takes |diff|. Empty grid -> ().
+    ;     Walks head/tail and cons-es each mean-removed cell in natural order (no append): the same
+    ;     head/tail spine sk-error-sum folds over, here building the mean-removed grid the fold consumes.
+    (defn mn-norm-walk (grid mean)
+        (if (eq (len grid) 0) (empty)
+            (cons (sub (head grid) mean)
+                  (mn-norm-walk (tail grid) mean))))
+
+    (defn mn-normalize (grid n)
+        (if (eq n 0) (empty)
+            (mn-norm-walk grid (mn-mean grid n))))
+
+    ; --- SURPRISE: sk-surprise-style L1 diff over the two NORMALIZED grids — true motion, exposure-invariant. ---
+    ;     Mean-remove both frames, then run sk-error-sum (the |actual - expected| L1 fold) over them. A
+    ;     uniform exposure lift cancels in normalization -> ~0; a real local change survives -> large. This
+    ;     is the light-blind twin of sk-surprise: the SAME error fold, fed mean-removed grids.
+    (defn mn-surprise (prev frame n)
+        (sk-error-sum (mn-normalize frame n) (mn-normalize prev n)))
+
+    0)

@@ -1,0 +1,34 @@
+; surprise-receipt.fk — the framebuffer's headline feature: WITNESS the surprises we did not see coming.
+; The framebuffer (thought-framebuffer / runtime-witness) watches the running kernel. This adds the part that
+; makes it worth watching: when an event's ACTUAL outcome diverges from what we PREDICTED, that prediction-error
+; IS surprise, and a surprise above threshold earns a durable RECEIPT -- a witnessed record of the unexpected.
+; The expected gets no receipt (salience filters: we only witness what we did not design). So running the
+; frequency-alignment, cornerstone, and translation-invariant work THROUGH the framebuffer surfaces, with proof,
+; the interesting things that emerge that nobody planned -- emergence made witnessable. Composes runtime-witness
+; (observe), surprise-salience (the unexpected), and the receipt (durable witness).
+; Honest floor: an event is (predicted, actual); the real framebuffer feeds live runtime events and the receipt
+; rides choice-receipt / standard-receipt; the surprise-receipt LOGIC is the generic shape.
+;
+; Self-contained over core. Four-way by tests/surprise-receipt-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sr-pred (e) (head e))                      ; what we predicted
+    (defn sr-act (e) (head (tail e)))                ; what actually happened
+    (defn sr-abs (n) (if (lt n 0) (sub 0 n) n))
+    (defn sr-surprise (e) (sr-abs (sub (sr-act e) (sr-pred e))))   ; prediction-error = surprise magnitude
+    (defn sr-receipt? (e) (if (ge (sr-surprise e) 3) 1 0))         ; surprise above threshold -> a witnessed receipt
+
+    (defn sr-expected () (list 5 5))      ; predicted 5, actual 5 -- the expected
+    (defn sr-surprising () (list 5 9))    ; predicted 5, actual 9 -- a surprise we did not see coming
+
+    (defn srk (cond bit) (if cond bit 0))
+    (defn surprise-receipt-check ()
+        (add (add (add (add
+            (srk (eq (sr-surprise (sr-expected)) 0) 1)                            ; the expected happened -- zero surprise
+            (srk (eq (sr-surprise (sr-surprising)) 4) 10))                        ; the unexpected -- a surprise of magnitude 4
+            (srk (eq (sr-receipt? (sr-surprising)) 1) 100))                       ; the surprise earns a WITNESSED receipt -- we capture what we did not see coming
+            (srk (eq (sr-receipt? (sr-expected)) 0) 1000))                        ; the expected earns NO receipt -- salience: only the surprises are witnessed
+            (srk (gt (sr-surprise (sr-surprising)) (sr-surprise (sr-expected))) 10000)))  ; the framebuffer surfaces the surprise as the salient event
+)

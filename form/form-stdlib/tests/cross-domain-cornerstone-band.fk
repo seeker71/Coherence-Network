@@ -1,0 +1,8 @@
+; tests/cross-domain-cornerstone-band.fk — cross-domain cornerstone resonance with lane honesty, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/cross-domain-cornerstone.fk
+;
+; Verdict 11111: physics & chemistry share a cornerstone (empirical-grade, same lane); physics & the I-Ching
+; share the same cornerstone SHAPE (the holographic resonance) BUT cross-lane -- structural resonance only, and
+; the resonance does NOT make the I-Ching empirically equivalent to physics. The discipline a reading mind must
+; obey: see the shared cornerstone across all domains, keep evidence/inference/mystery in their own lanes.
+(do (cross-domain-cornerstone-check))

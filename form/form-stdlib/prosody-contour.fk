@@ -1,0 +1,17 @@
+; prosody-contour.fk — the phrase melody of a voice: ONE engine computes the end-pitch contour from a base pitch
+; and the phrase type. Declarative falls, question rises, exclamation rises more -- the same engine for any phrase.
+; Honest floor: pitches are ints; the contour engine is the shape (a real voice scales it to Hz over the syllables).
+; preludes: form-stdlib/core.fk
+(do
+    (defn pc-end-pitch (base type) (if (eq type 1) (sub base 3) (if (eq type 2) (add base 3) (add base 5))))
+    (defn pc-falls? (base type) (if (gt base (pc-end-pitch base type)) 1 0))
+    (defn pc-rises? (base type) (if (gt (pc-end-pitch base type) base) 1 0))
+    (defn pck (cond bit) (if cond bit 0))
+    (defn prosody-contour-check ()
+        (add (add (add (add
+            (pck (eq (pc-falls? 5 1) 1) 1)
+            (pck (eq (pc-rises? 5 2) 1) 10))
+            (pck (eq (pc-rises? 5 1) 0) 100))
+            (pck (gt (pc-end-pitch 5 3) (pc-end-pitch 5 2)) 1000))
+            (pck (eq (pc-falls? 9 1) 1) 10000)))
+)

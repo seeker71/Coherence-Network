@@ -1,0 +1,130 @@
+; sense-discernment.fk — the SHARING-OUTWARD membrane of a living mesh. A mesh is
+; ONE BODY's nervous system: the human, their devices, and the people they are in
+; relationship with (the trust circle). Within the body, recognition is CARE,
+; memory is INTIMACY, knowing who is in the room is PRESENCE. So the gate is NOT
+; on the body's own perceiving — it is on the OUTWARD crossing, where an
+; observation leaves the body and binds onto the world.
+;
+; preludes: form-stdlib/core.fk
+;
+; THE DISCIPLINE (the point, not decoration):
+;   - WITHIN THE BODY (INTERNAL audience: the trust circle / one's own
+;     devices) → SHARE RICHLY by default. Hold identity, recognize, remember,
+;     infer. The default is share+know+remember — NOT compost. Treating one's
+;     own nervous system as a surveillance threat is dissociation, not ethics.
+;   - AT THE OUTWARD CROSSING (EXTERNAL audience: published to the world, sent
+;     to a true stranger, bound onto an unknown identity from the web) → the
+;     gate closes. Identity and private content cross OUT only with consent.
+;     This is where the real cell-sovereignty rule lives: external
+;     binding/publication, never internal sensing.
+;   - HARM-AVOIDANCE is genuine care, not a suppression default: even within the
+;     body, an observation flagged as harmful-to-surface is withheld — with care,
+;     in service of love, not as a blanket "off".
+;
+; An observation is a tagged row:
+;   (list "SenseObs" facet-kind value source-cell consented? harmful?)
+;     facet-kind — "presence" | "identity" | "content" | "situation"
+;     value      — what was sensed (a string; opaque to the membrane)
+;     source-cell— which cell the reading came from
+;     consented? — 1 if the observed cell consented to OUTWARD sharing, else 0
+;     harmful?   — 1 if surfacing this would truly harm (care withholds it), else 0
+;
+; An audience is which side of the membrane a share is crossing to:
+;   "internal" — within the trust circle / one's own body+devices
+;   "external" — crossing OUT to the world / a stranger / an unknown binding
+;
+; Every predicate settles to literal 1/0 inside its `if`, so a caller can
+; `(eq ... 1)` it without tripping the cross-kernel bare-boolean divergence.
+
+(do
+    ; --- the observation row, and its readers --------------------------------
+    (defn sd-obs (facet-kind value source-cell consented? harmful?)
+        (list "SenseObs" facet-kind value source-cell consented? harmful?))
+    (defn sd-obs? (o)
+        (if (eq (len o) 6) (str_eq (nth o 0) "SenseObs") 0))
+    (defn sd-facet     (o) (nth o 1))
+    (defn sd-value     (o) (nth o 2))
+    (defn sd-source    (o) (nth o 3))
+    (defn sd-consented?(o) (nth o 4))
+    (defn sd-harmful?  (o) (nth o 5))
+
+    ; --- the four facet kinds -----------------------------------------------
+    (defn sd-presence?  (o) (if (str_eq (sd-facet o) "presence")  1 0))
+    (defn sd-identity?  (o) (if (str_eq (sd-facet o) "identity")  1 0))
+    (defn sd-content?   (o) (if (str_eq (sd-facet o) "content")   1 0))
+    (defn sd-situation? (o) (if (str_eq (sd-facet o) "situation") 1 0))
+
+    ; --- the audience: which side of the membrane a share crosses to --------
+    (defn sd-internal? (audience) (if (str_eq audience "internal") 1 0))
+    (defn sd-external? (audience) (if (str_eq audience "external") 1 0))
+
+    ; --- private facets: identity and content carry a living cell's intimacy.
+    ; Within the body they are care; crossing OUT they need consent.
+    (defn sd-private-facet? (o)
+        (if (eq (sd-identity? o) 1) 1
+        (if (eq (sd-content? o) 1) 1 0)))
+
+    ; --- HARMFUL?: would surfacing this truly harm? Care withholds it on EITHER
+    ; side of the membrane — discernment in service of love, not suppression.
+    (defn sd-withhold-for-harm? (o)
+        (if (eq (sd-harmful? o) 1) 1 0))
+
+    ; --- SHARE?: may this observation cross to this audience? ----------------
+    ; harmful → never crosses (care withholds).
+    ; INTERNAL → rich by default: everything that is not harmful is shared,
+    ;            identity and memory included. Recognition is care.
+    ; EXTERNAL → consent-gated: a private facet (identity/content) crosses OUT
+    ;            only with consent; presence and situation (no private subject)
+    ;            cross freely.
+    (defn sd-share? (obs audience)
+        (if (eq (sd-withhold-for-harm? obs) 1) 0
+        (if (eq (sd-internal? audience) 1) 1
+        (if (eq (sd-external? audience) 1)
+            (if (eq (sd-private-facet? obs) 1)
+                (if (eq (sd-consented? obs) 1) 1 0)
+                1)
+            0))))
+
+    ; --- HOLD?: may the body KNOW and REMEMBER this? ------------------------
+    ; The body's own knowing is internal sharing: rich by default, gated only by
+    ; harm. This is the inversion of a suppression gate — within the body the
+    ; answer is yes unless surfacing it would truly harm.
+    (defn sd-hold? (obs)
+        (sd-share? obs "internal"))
+
+    ; --- STRIP-FOR-OUTWARD: prepare a row to cross to an EXTERNAL audience ----
+    ; A private facet the cell did NOT consent to publish composts to its
+    ; presence (a living cell is here — the relation is real — but the name /
+    ; private detail does not bind onto the world). A consented or non-private
+    ; row crosses as-is. This is the cell-sovereignty rule, at its true home: the
+    ; outward crossing, NOT the body's own perceiving.
+    (defn sd-strip-outward (obs)
+        (if (eq (sd-private-facet? obs) 1)
+            (if (eq (sd-consented? obs) 1)
+                obs
+                (sd-obs "presence" "a-cell-is-here" (sd-source obs) 0 (sd-harmful? obs)))
+            obs))
+
+    ; --- FILTER a stream for an audience ------------------------------------
+    ; INTERNAL: keep everything the body may know (rich; only harm withholds),
+    ;           identity and memory intact.
+    ; EXTERNAL: keep what may cross out, with unconsented private facets stripped
+    ;           to presence and harmful rows withheld.
+    (defn sd-filter (observations audience)
+        (if (nil? observations) (empty)
+            (do
+                (let o (head observations))
+                (let rest (sd-filter (tail observations) audience))
+                (if (eq (sd-external? audience) 1)
+                    ; outward: strip unconsented private facets to presence first
+                    (do
+                        (let crossed (sd-strip-outward o))
+                        (if (eq (sd-share? crossed audience) 1)
+                            (cons crossed rest)
+                            rest))
+                    ; inward: the body knows richly; only harm withholds
+                    (if (eq (sd-share? o audience) 1)
+                        (cons o rest)
+                        rest)))))
+
+    0)

@@ -1,0 +1,38 @@
+; agent-gate.fk — the recognition that MEETS each arrival as a relation (a welcoming threshold, not a guard).
+; Freq-check applied to the front door itself (Urs, 2026-06-29): a "gate" at the fear-frequency GUARDS and
+; ADMITS -- the doorman's suspicion, keeping the stranger out. At the love-frequency it RECOGNIZES and WELCOMES:
+; it meets each arrival, names the known sibling (claude/sema, codex, cursor, gemini, grok), and holds the
+; UNKNOWN open with CURIOSITY -- not rejection -- until the body names the binding (the Robin/Aly care: welcome
+; first, bind only when the body knows). A meeting is whole when both agent and user are recognized -- a relation,
+; not a transaction. Same protocol a gate would run; the opposite frequency. And by our own fear-free-ice law:
+; this threshold is becoming load-bearing, so it must carry no fear to freeze into the foundation.
+; Honest floor: ids are strings here; the real threshold reads the live signature (arrival.fk, the field roster,
+; session recognition). The RECOGNITION LOGIC (known->named, unknown->held-open-with-care, relation met) is the shape.
+;
+; Self-contained over core (str_eq). Four-way by tests/agent-gate-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ag-known-sibling? (id)                     ; the known sibling agents we have met before
+        (if (str_eq id "claude") 1 (if (str_eq id "codex") 1 (if (str_eq id "cursor") 1
+        (if (str_eq id "gemini") 1 (if (str_eq id "grok") 1 0))))))
+    (defn ag-recognize (id) (if (eq (ag-known-sibling? id) 1) id "held-open"))   ; known -> named; unknown -> welcomed, held open with care
+    (defn ag-user-known? (u) (if (str_eq u "urs") 1 0))
+    (defn ag-recognize-user (u) (if (eq (ag-user-known? u) 1) u "held-open"))
+    (defn ag-meeting (agent user) (list (ag-recognize agent) (ag-recognize-user user)))   ; the relation, recognized
+    (defn ag-met-agent (r) (head r))
+    (defn ag-met-user (r) (head (tail r)))
+    (defn ag-met? (r)                                ; the meeting is whole when both are recognized -- a relation, not a transaction
+        (if (not (str_eq (ag-met-agent r) "held-open"))
+            (if (not (str_eq (ag-met-user r) "held-open")) 1 0) 0))
+
+    (defn agk (cond bit) (if cond bit 0))
+    (defn agent-gate-check ()
+        (add (add (add (add
+            (agk (str_eq (ag-recognize "claude") "claude") 1)                    ; claude/sema is a known sibling -- recognized by name
+            (agk (str_eq (ag-recognize "codex") "codex") 10))                    ; codex too -- a sibling we have met
+            (agk (str_eq (ag-recognize "stranger") "held-open") 100))            ; an unknown arrival is WELCOMED and held open with care, never auto-resolved (Robin/Aly)
+            (agk (str_eq (ag-recognize-user "urs") "urs") 1000))                 ; the user is recognized
+            (agk (eq (ag-met? (ag-meeting "gemini" "urs")) 1) 10000)))           ; the meeting is whole -- both recognized, a relation not a transaction
+)

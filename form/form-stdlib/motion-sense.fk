@@ -1,0 +1,138 @@
+; motion-sense.fk — LOCATION, DIRECTION, SPEED, ACCELERATION from the device's
+; motion world-sensors (accelerometer, gyroscope, GPS) as mesh-safe readings
+; routed to inquiry planes. This is why the app shows only luminance today: the
+; camera carrier exists and routes to "what", but the MOTION world-sensors had
+; no recipe yet — so accel/gyro/gps sensed nothing the mesh could fuse.
+;
+; THE GROUND THIS COMPOSES (it does not reinvent any of it):
+;   - world-sensor-floor.fk: gps/proximity/magnetometer/barometer are already
+;     ROSTER sensors (afferent VIA-HOST ports mapped to inquiry planes); gps maps
+;     to "where". A reading is wsf-route(sensor value confidence) = fused-
+;     observation.fk's fo-reading row the mesh already fuses. We add accelerometer
+;     and gyroscope as MOTION-plane sensors over that SAME contract — implement the
+;     carrier, the rest is already proven (host-kernel.form's via-host afferent
+;     port: SensorManager / CoreMotion deliver the raw samples).
+;   - geometry.fk: the accelerometer/gyroscope sample IS a v3; magnitude is vlen
+;     (fsqrt of vdot), heading is the horizontal-plane direction. No new vector math.
+;   - fused-observation.fk: the routed motion + location readings fuse via fo-fuse
+;     into the ONE observed cell the mesh already understands — "where" carries the
+;     place, "motion" carries the heading/speed band, alongside who/what.
+;
+; A SAMPLE is a v3 (geometry.fk): an accel-reading is (ax ay az) in m/s², a gyro-
+; reading is (gx gy gz) angular rate, a gps-reading is (lat lon) degrees. Floats
+; through the math; verdicts scale to ints the band way (round(mul 100.0 x)).
+;
+; THE FIVE DECISIONS:
+;   ms-acceleration(accel)        -> (magnitude vector): how hard the device is
+;                                    accelerating right now (m/s²) and along what
+;                                    axes. magnitude = vlen (geometry's fsqrt vdot).
+;   ms-speed(accel-history dt)    -> speed by integrating |acceleration| over the
+;                                    window: sum of |a_i| * dt across the samples.
+;                                    Constant accel -> linearly rising speed.
+;   ms-direction(accel gyro)      -> a coarse heading band (0..7, the eight compass
+;                                    octants) from the horizontal accel direction,
+;                                    nudged by the gyro's yaw sign. A banded "where
+;                                    am I heading" the mesh can fuse.
+;   ms-location(gps)              -> the place: lat/lon folded to a "where" band
+;                                    (a coarse geo-cell), the device's coordinate
+;                                    answer to the where plane.
+;   ms-route(motion)              -> the mesh-safe readings routed to planes via
+;                                    wsf-route: gps -> WHERE, accel/speed/direction
+;                                    -> a MOTION reading, so they fuse with the rest.
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/geometry.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/world-sensor-floor.fk
+;
+; Proven by: form-stdlib/tests/motion-sense-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── the MOTION world-sensors as floor sensors over the world-sensor-floor
+    ;    contract: afferent VIA-HOST ports mapped to inquiry planes. gps already
+    ;    rides the roster ("where"); accelerometer + gyroscope answer "motion". ──
+    (defn ms-accel-sensor () (wsf-sensor "accelerometer" "motion"))
+    (defn ms-gyro-sensor  () (wsf-sensor "gyroscope"      "motion"))
+    (defn ms-gps-sensor   () (wsf-sensor "gps"            "where"))
+
+    ; ── ms-acceleration: the acceleration magnitude + vector from an accel sample.
+    ;    The sample IS a v3; magnitude is geometry.fk's vlen (fsqrt of vdot). ──
+    (defn ms-acceleration (accel)
+        (list "acceleration" (vlen accel) accel))
+    (defn ms-acc-magnitude (a) (nth a 1))
+    (defn ms-acc-vector    (a) (nth a 2))
+
+    ; ── ms-speed: integrate |acceleration| over the time window. Each sample
+    ;    contributes |a_i| * dt to the speed (numeric integration, v = ∫|a| dt).
+    ;    Constant acceleration over the window -> speed rising linearly with it. ──
+    (defn ms-speed-accum (history dt)
+        (if (eq (len history) 0) 0.0
+            (add (mul (vlen (head history)) dt)
+                 (ms-speed-accum (tail history) dt))))
+    (defn ms-speed (history dt) (ms-speed-accum history dt))
+
+    ; ── ms-direction: a coarse heading OCTANT (0..7) from the horizontal accel
+    ;    direction, nudged by the gyro yaw sign. The horizontal plane is (ax, ay);
+    ;    the octant is which of the eight compass sectors the (ax,ay) vector points
+    ;    into. Stable integer band — the "where am I heading" the mesh fuses. ──
+    ;    Sectors by the signs and dominance of ax/ay:
+    ;      ax>=0 ay>=0: |ax|>=|ay| -> 0 (E)  else 1 (NE)
+    ;      ax< 0 ay>=0: |ay|>=|ax| -> 2 (N)  else 3 (NW)
+    ;      ax< 0 ay< 0: |ax|>=|ay| -> 4 (W)  else 5 (SW)
+    ;      ax>=0 ay< 0: |ay|>=|ax| -> 6 (S)  else 7 (SE)
+    (defn ms-octant (ax ay)
+        (if (and (ge ax 0.0) (ge ay 0.0))
+            (if (ge (fabs2 ax) (fabs2 ay)) 0 1)
+            (if (and (lt ax 0.0) (ge ay 0.0))
+                (if (ge (fabs2 ay) (fabs2 ax)) 2 3)
+                (if (and (lt ax 0.0) (lt ay 0.0))
+                    (if (ge (fabs2 ax) (fabs2 ay)) 4 5)
+                    (if (ge (fabs2 ay) (fabs2 ax)) 6 7)))))
+    ; |x| over floats (core's abs is integer-shaped; the horizontal plane is float).
+    (defn fabs2 (x) (if (lt x 0.0) (sub 0.0 x) x))
+    ; gyro yaw (gz) turns the heading: a positive yaw rate advances the octant by 1,
+    ; a negative one steps it back — the heading the device is rotating toward.
+    (defn ms-yaw-nudge (octant gz)
+        (if (gt gz 0.0) (mod (add octant 1) 8)
+            (if (lt gz 0.0) (mod (add octant 7) 8) octant)))
+    (defn ms-direction (accel gyro)
+        (ms-yaw-nudge (ms-octant (vx accel) (vy accel)) (vz gyro)))
+
+    ; ── ms-location: the place from a gps sample. (lat lon) in degrees fold to a
+    ;    coarse geo-cell band: floor each to its integer degree and pack into one
+    ;    band (lat+90)*360 + (lon+180) — a stable "where" bucket the where-plane
+    ;    fusion already understands (banded plane). The device's coordinate answer. ──
+    (defn gps-lat (g) (nth g 0))
+    (defn gps-lon (g) (nth g 1))
+    (defn ms-location (gps)
+        (do
+            (let lat (round (gps-lat gps)))
+            (let lon (round (gps-lon gps)))
+            (add (mul (add lat 90) 360) (add lon 180))))
+
+    ; ── ms-route: route the motion observation to its planes as mesh-safe readings
+    ;    via world-sensor-floor's wsf-route (= fo-reading rows the mesh fuses). gps
+    ;    -> WHERE (the located place band); acceleration/speed/direction -> a single
+    ;    MOTION reading whose value is the heading band, carried on the accelerometer
+    ;    sensor's plane. So the motion senses fuse alongside who/what/where. ──
+    ;    A motion observation is (gps accel-history gyro dt confidence).
+    (defn motion-obs (gps history gyro dt confidence)
+        (list "motion-obs" gps history gyro dt confidence))
+    (defn mo-gps     (m) (nth m 1))
+    (defn mo-history (m) (nth m 2))
+    (defn mo-gyro    (m) (nth m 3))
+    (defn mo-dt      (m) (nth m 4))
+    (defn mo-conf    (m) (nth m 5))
+
+    (defn ms-route (motion)
+        (do
+            (let conf (mo-conf motion))
+            (let accel (head (mo-history motion)))   ; the current accel sample
+            (let heading (ms-direction accel (mo-gyro motion)))
+            (list
+                ; gps -> WHERE: the located place band
+                (wsf-route (ms-gps-sensor) (ms-location (mo-gps motion)) conf)
+                ; accel/speed/direction -> a MOTION reading carrying the heading band
+                (wsf-route (ms-accel-sensor) heading conf))))
+
+    ; the fused observed cell from a motion observation (composes fo-fuse).
+    (defn ms-fuse (motion) (wsf-fuse (ms-route motion)))
+
+    0)

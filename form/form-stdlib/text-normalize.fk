@@ -1,0 +1,97 @@
+; text-normalize.fk — the named missing first-class layer BEFORE g2p on the voice
+; path. g2p assumes clean graphemes; numbers, acronyms, punctuation, heteronyms,
+; and loanwords need explicit data first. This is the smallest honest step on that
+; path: integer -> words (42 -> "forty-two", 105 -> "one hundred five",
+; 1000 -> "one thousand"), with LOCALE-AS-DATA — the one-engine pattern the rest of
+; the voice/i18n body already holds (i18n.fk locale-pairs, nl-emit-all over
+; (list (list "en" en-recipe) ...)). The number-word vocabulary IS data; the
+; normalization engine is ONE recipe that walks any locale. en is the first locale
+; instance; de/es/fr/id/pt-br drop in as more data rows, never parallel code.
+;
+; The locale recipe is an association list of named vocabulary sections:
+;   ("zero" <word>)            — the word for 0
+;   ("ones" <list of 0..9>)    — index 0 unused ("") , 1..9 the digit words
+;   ("teens" <list of 10..19>) — index 0 = ten, 1 = eleven, ... 9 = nineteen
+;   ("tens"  <list of 0..9>)   — index 2 = twenty ... 9 = ninety (0,1 unused)
+;   ("hundred" <word>)         — the scale word for 100
+;   ("thousand" <word>)        — the scale word for 1000
+;   ("join" <sep>)             — separator between tens-word and ones-word (en: "-")
+;   ("space" <sep>)            — separator between groups (en: " ")
+;
+; Engine recipe family (locale passed as first arg everywhere — locale is data):
+;   tn-vocab        — assoc lookup of a named section in the locale
+;   tn-2digit       — 0..99  -> words   (ones / teens / tens[+join+ones])
+;   tn-3digit       — 0..999 -> words   (hundreds [+space+ tn-2digit])
+;   int->words      — 0..999999 -> words (thousands group [+space+ tn-3digit])
+;
+; Self-contained over core (div, mod, nth, str_concat, str_eq — all four-way on
+; fkwu per fourth-shim.fk). Four-way proven by tests/text-normalize-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ;; ── locale-as-data: the en number-word vocabulary ──────────────
+    ;; One row per section; index discipline matches the engine's lookups.
+    (defn tn-locale-en ()
+        (list
+            (list "zero" "zero")
+            (list "ones" (list "" "one" "two" "three" "four" "five" "six" "seven" "eight" "nine"))
+            (list "teens" (list "ten" "eleven" "twelve" "thirteen" "fourteen" "fifteen" "sixteen" "seventeen" "eighteen" "nineteen"))
+            (list "tens" (list "" "" "twenty" "thirty" "forty" "fifty" "sixty" "seventy" "eighty" "ninety"))
+            (list "hundred" "hundred")
+            (list "thousand" "thousand")
+            (list "join" "-")
+            (list "space" " ")))
+
+    ;; ── the engine: locale is the first argument everywhere ────────
+    ;; tn-vocab — assoc lookup of a named section in the locale recipe.
+    (defn tn-vocab (loc name)
+        (if (eq (len loc) 0) ""
+            (if (str_eq (head (head loc)) name)
+                (head (tail (head loc)))
+                (tn-vocab (tail loc) name))))
+
+    ;; tn-2digit — 0..99 -> words.
+    (defn tn-2digit (loc n)
+        (if (lt n 10)
+            (nth (tn-vocab loc "ones") n)
+            (if (lt n 20)
+                (nth (tn-vocab loc "teens") (sub n 10))
+                (do
+                    (let t (nth (tn-vocab loc "tens") (div n 10)))
+                    (let o (mod n 10))
+                    (if (eq o 0) t
+                        (str_concat t (str_concat (tn-vocab loc "join") (nth (tn-vocab loc "ones") o))))))))
+
+    ;; tn-3digit — 0..999 -> words. Hundreds prefix + space + remainder.
+    (defn tn-3digit (loc n)
+        (if (lt n 100)
+            (tn-2digit loc n)
+            (do
+                (let h (div n 100))
+                (let r (mod n 100))
+                (let head-words
+                    (str_concat (nth (tn-vocab loc "ones") h)
+                        (str_concat (tn-vocab loc "space") (tn-vocab loc "hundred"))))
+                (if (eq r 0) head-words
+                    (str_concat head-words
+                        (str_concat (tn-vocab loc "space") (tn-3digit loc r)))))))
+
+    ;; int->words — 0..999999 -> words. Thousands group + space + 3-digit remainder.
+    ;; Zero is its own word; the recursive arms never emit "zero" mid-number.
+    (defn int->words (loc n)
+        (if (eq n 0) (tn-vocab loc "zero")
+            (if (lt n 1000) (tn-3digit loc n)
+                (do
+                    (let th (div n 1000))
+                    (let r (mod n 1000))
+                    (let head-words
+                        (str_concat (tn-3digit loc th)
+                            (str_concat (tn-vocab loc "space") (tn-vocab loc "thousand"))))
+                    (if (eq r 0) head-words
+                        (str_concat head-words
+                            (str_concat (tn-vocab loc "space") (tn-3digit loc r))))))))
+
+    ;; Convenience: normalize an integer in the en locale.
+    (defn tn-en (n) (int->words (tn-locale-en) n))
+)

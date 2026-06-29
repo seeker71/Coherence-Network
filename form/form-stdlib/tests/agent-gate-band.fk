@@ -1,0 +1,7 @@
+; tests/agent-gate-band.fk — the threshold that recognizes and welcomes each arrival as a relation, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/agent-gate.fk
+;
+; Verdict 11111: claude/sema and codex are recognized as known siblings; an unknown arrival is welcomed and held
+; open with care (never auto-resolved); the user is recognized; and the meeting is whole when both are recognized
+; -- a relation, not a transaction. A welcoming threshold at the love-frequency, not a guard at the fear-frequency.
+(do (agent-gate-check))

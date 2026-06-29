@@ -1,0 +1,148 @@
+; sense-loop.fk — the 24/7 sense loop as ONE Form recipe: the always-on attention spine.
+;
+; A presence that is always sensing cannot afford to FUSE + RECOGNIZE every frame — that is the
+; expensive path, and a quiet world is mostly frames that change nothing. So the loop is gated by
+; SURPRISE: take the next frame-reading off a sensor-organ stream, predict against the running
+; baseline, and only when the reading SURPRISES (deviates past the tolerance band) does it pay for
+; the deep path — fuse the frame into the uniform organ-reading the mesh already speaks, recognize
+; the identity behind it, and emit a presence-event. A quiet frame costs only a cheap-persist marker
+; and a one-step baseline refine. Listen → predict → surprise? → (ATTEND: fuse + recognize + emit |
+; QUIET: persist) → refine → continue. The salience that gates the expense IS the prediction-error
+; magnitude — the same as-salience speak-turn weighs.
+;
+; This stone is the LOOP LOGIC over staged readings. It composes the already-four-way bodies and
+; adds NO new sensing engine:
+;   - ambient-surprise.fk  predict→surprise→salience  (as-surprise? / as-salience / as-refine)
+;   - field-identity.fk    recognize a presented identity  (fiv-verdict / fiv-accept?)
+;   - organ-reading.fk      the one fused reading shape every organ speaks (organ-reading + accessors)
+;
+; THE THIN EDGE CARRIER, named here, authored later: the REAL camera/mic byte-read — a frame of
+; pixels or a window of PCM samples turned into one staged reading (level + the presented identity
+; bools) — is a `sensor-organ-channel.fk` carrier at the device edge (ss-* sample → reading). The
+; loop never touches a device; it folds over readings the carrier already produced, exactly the
+; fsh-main / shell-exec orchestration grain (policy in Form, I/O at the edge). Pixels and PCM stay
+; in the carrier; the surprise-gated attention spine is this Form recipe, four-way honest on every
+; kernel fkwu emits to.
+;
+; A staged reading is (list level present-id nodeid-match sig-ok deleg-ok pin-state when):
+;   level         the ambient frame level the carrier measured (sound energy, motion, light, ...)
+;   present-id    the identity name the frame presents ("ana", "" when no claim / pure motion)
+;   nodeid/sig/deleg/pin  the crypto RESULTS the carrier fed in (field-identity.fk's inputs)
+;   when          the tick the frame was read
+;
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/ambient-surprise.fk form-stdlib/field-identity.fk
+;
+; Proven by: form-stdlib/tests/sense-loop-band.fk (four-way at validate.sh)
+
+(do
+    ; ── a staged frame-reading off the sensor-organ stream ────────────────
+    (defn sl-reading (level present-id nodeid-match sig-ok deleg-ok pin-state when)
+        (list "sl-reading" level present-id nodeid-match sig-ok deleg-ok pin-state when))
+    (defn slr-level   (r) (nth r 1))
+    (defn slr-present (r) (nth r 2))
+    (defn slr-nodeid  (r) (nth r 3))
+    (defn slr-sig     (r) (nth r 4))
+    (defn slr-deleg   (r) (nth r 5))
+    (defn slr-pin     (r) (nth r 6))
+    (defn slr-when    (r) (nth r 7))
+
+    ; ── loop state: the running baseline the prediction is measured against ──
+    ; The state is just the learned expectation — the cheapest possible memory of "the room's normal".
+    (defn sl-state (baseline) (list "sl-state" baseline))
+    (defn sl-baseline (s) (nth s 1))
+
+    ; ── ATTEND gate: predict against the baseline, surprise past the tolerance band ──
+    ; Pure delegation to ambient-surprise.fk — the surprise bit IS the attention gate.
+    (defn sl-attend? (state reading tol)
+        (as-surprise? (slr-level reading) (sl-baseline state) tol))
+    (defn sl-salience (state reading)
+        (as-salience (slr-level reading) (sl-baseline state)))
+
+    ; ── the DEEP path, paid only on ATTEND ───────────────────────────────
+    ; FUSE: the surprising frame becomes the uniform organ-reading the mesh already understands.
+    ;   answered = 1 (the carrier produced a frame), ok = recognized? (an authentic presence is the
+    ;   positive/observed truth; an unverified/forged claim is a verified-absent reading the mesh holds
+    ;   differently). The deadline rides the frame's freshness; payload carries the inspectable salience.
+    (defn sl-fuse (reading recognized salience)
+        (organ-reading
+            (str_concat "sense:" (slr-present reading))
+            "presence-frame"
+            1
+            recognized
+            (slr-when reading)
+            (add (slr-when reading) 100)
+            (list "salience" salience "level" (slr-level reading))))
+
+    ; RECOGNIZE: the field-identity verdict over the crypto results the carrier fed in.
+    (defn sl-verdict (reading)
+        (fiv-verdict (slr-nodeid reading) (slr-sig reading) (slr-deleg reading) (slr-pin reading)))
+    (defn sl-recognized? (reading) (fiv-accept? (sl-verdict reading)))
+
+    ; ── presence-event: what the loop EMITS when it attended ─────────────
+    ; transition: ENTERED when an identity is present and authentic, LEFT when the surprising frame
+    ; carries NO identity claim (the empty present-id) — a known presence's absence registering as the
+    ; surprise. UNVERIFIED-PRESENCE when a claim is present but not authentic (routed, not trusted).
+    (defn sl-transition (reading)
+        (if (str_eq (slr-present reading) "")
+            "LEFT"
+            (if (eq (sl-recognized? reading) 1) "ENTERED" "UNVERIFIED-PRESENCE")))
+
+    ; (presence-event transition who verdict salience fused-reading when)
+    (defn sl-event (reading salience)
+        (list "presence-event"
+              (sl-transition reading)
+              (slr-present reading)
+              (sl-verdict reading)
+              salience
+              (sl-fuse reading (sl-recognized? reading) salience)
+              (slr-when reading)))
+    (defn pev-transition (e) (nth e 1))
+    (defn pev-who        (e) (nth e 2))
+    (defn pev-verdict    (e) (nth e 3))
+    (defn pev-salience   (e) (nth e 4))
+    (defn pev-reading    (e) (nth e 5))
+    (defn pev-when       (e) (nth e 6))
+
+    ; ── the cheap path, paid on a QUIET frame ────────────────────────────
+    ; No fuse, no recognize, no event — just a persist marker the carrier appends to the segmented log.
+    (defn sl-persist (reading)
+        (list "persist" (slr-level reading) (slr-when reading)))
+    (defn sl-emission? (em) (str_eq (head em) "presence-event"))
+
+    ; ── ONE STEP: prev state + next reading → (new-state emission) ────────
+    ; ATTEND  → (new-baseline, presence-event)   ; pay the deep path
+    ; QUIET   → (new-baseline, persist-marker)    ; pay only the cheap path
+    ; Either way the baseline refines ONE step toward the reading — the loop keeps learning the normal
+    ; so tomorrow's surprise is measured against today's learning. The state never resets; it only
+    ; tracks. The result is (list new-state emission) so a fold can thread it without mutation.
+    (defn sl-step (prev reading tol)
+        (do
+            (let next-state (sl-state (as-refine (sl-baseline prev) (slr-level reading))))
+            (let emission
+                (if (eq (sl-attend? prev reading tol) 1)
+                    (sl-event reading (sl-salience prev reading))
+                    (sl-persist reading)))
+            (list next-state emission)))
+    (defn slstep-state    (sr) (nth sr 0))
+    (defn slstep-emission (sr) (nth sr 1))
+
+    ; ── THE 24/7 RUN: fold over the reading stream, accumulating the event stream ──
+    ; Thread the state through every frame; collect ONLY the presence-events (the attended frames) into
+    ; the stream — quiet frames cheap-persist and add nothing. Events accumulate newest-first as we
+    ; walk, so the run reverses once at the end to hand back arrival order. Pure: the whole 24/7 loop is
+    ; a fold returning (final-state event-stream), no hidden state, four-way identical on every kernel.
+    (defn sl-run-go (state readings tol events)
+        (if (eq (len readings) 0)
+            (list state (reverse events))
+            (do
+                (let sr (sl-step state (head readings) tol))
+                (let st2 (slstep-state sr))
+                (let em (slstep-emission sr))
+                (sl-run-go st2 (tail readings) tol
+                    (if (eq (sl-emission? em) 1) (cons em events) events)))))
+    (defn sl-run (state0 readings tol) (sl-run-go state0 readings tol (empty)))
+    (defn slrun-state  (rr) (nth rr 0))
+    (defn slrun-events (rr) (nth rr 1))
+    (defn sl-event-count (rr) (len (slrun-events rr)))
+
+    0)

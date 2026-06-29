@@ -1,0 +1,7 @@
+; tests/equivalence-collapse-band.fk — store each truth once, link the rest, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/equivalence-collapse.fk
+;
+; Verdict 11111: two sources of the same truth collapse to ONE cell; same Blueprint means equivalent regardless
+; of surface words; a different teaching stays distinct; three sources become two cells; and cells stored is
+; fewer than sources read -- the mind compounds, it does not pile. The sibling IC to knowledge-ingest.
+(do (equivalence-collapse-check))

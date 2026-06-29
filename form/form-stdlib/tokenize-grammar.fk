@@ -1,0 +1,81 @@
+; tokenize-grammar.fk — BPE tokenization expressed as a GRAMMAR-as-DATA over the
+; one BMF cursor, not as a second walker beside it.
+;
+; The one-engine lift named in bpe-tokenizer.fk's own header: "the merge-ranks
+; expressed as a grammar the one loader carries, not a second walker beside it."
+; This is that grammar. tokenizer.fk (a hardcoded 2-rule merge) and bpe-tokenizer.fk
+; (a hand-written merge loop) are PARALLEL PATHS; this cell composts them into the
+; cursor — surface ─▶ cursor ─▶ match(pattern) ─▶ build(template) ─▶ token node.
+;
+; The BPE insight in grammar terms: a merge "grapheme pair `ab` → token N" IS a
+; rule `(p-lit "ab") → (t-emit "TOK" [(t-const-int N)])`. The merge TABLE is the
+; alt over all such rules, longest-literal-first so a 2-grapheme merge wins over
+; the single-grapheme fallback at the same cursor — exactly BPE's "prefer the
+; merge." A whole text tokenizes as `rep` of one token rule. The merge ranks and
+; ids are DATA in the grammar's rules; the kernel never learns "tokenizer", it
+; runs the same g-parse it runs for shell, arith, and form.bml.
+;
+; A token node reuses the ONE universal op the shell grammar reuses for the same
+; reason — new blueprint names can't be minted without rebuilding every kernel,
+; so a token is fncall("__tok__", int-id). The reserved "__"-tag cannot collide
+; with a real word; node_children reads the id leaf back, and the whole token
+; stream is the rep node-list the cursor already produces.
+;
+; Honest floor: the grammar here carries a tiny demonstration merge table (the
+; shape, four-way-proven). The real version loads whisper's merge rows as rules
+; the SAME way — one rule per merge — so scaling to the 50k table is more DATA,
+; not more code. Ranking (lowest-rank-pair-first) becomes rule ORDER under the
+; cursor's longest-first alt; that ordering pass is the next step, not this cell.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk
+
+(do
+    ;; one merge rule: a grapheme run (1 or 2 chars) → a token node carrying its
+    ;; vocab id. Built as data so a caller assembles a table by listing rules.
+    ;;   tkg-merge "ab" 100  ≡  (p-lit "ab") emits fncall("__tok__", 100)
+    (defn tkg-merge (grapheme id)
+        (rule3 (str_concat "m-" grapheme)
+            (list "lit" grapheme)
+            (t-emit "fncall" (list (t-const "__tok__") (t-const-int id)))))
+
+    ;; the alt over a list of merge-rule NAMES — the cursor tries each in order,
+    ;; longest-literal-first = "prefer the merge" (BPE's core choice).
+    (defn tkg-alt-refs (names)
+        (if (nil? names) (empty)
+            (cons (list "ref" (head names)) (tkg-alt-refs (tail names)))))
+
+    ;; a token node carrying vocab id `n` — for assertions / decode.
+    ;;   fncall("__tok__", n) ; head-child is the "__tok__" tag, second is the id.
+    (defn tkg-tok (n)
+        (intern_node (bp "fncall")
+            (list (intern_trivial_string "__tok__") (intern_trivial_int n))))
+
+    ;; assemble a tokenization grammar from (grapheme id) merge rows.
+    ;; rows : list of (grapheme id). The "tokens" start rule reps one "token";
+    ;; "token" is the alt over every merge rule (longest grapheme first wins
+    ;; because the caller lists 2-char merges before their 1-char fallbacks).
+    ;; Emits fncall("__toks__", tok...) so the stream is one node the cursor built.
+    (defn tkg-grammar (rows)
+        (grammar "tokens"
+            (cons
+                (rule3 "tokens"
+                    (p-cap "ts" (p-rep (p-ref "token")))
+                    (t-emit "fncall" (list (t-const "__toks__") (t-splices "ts"))))
+                (cons
+                    (rule3 "token"
+                        (p-cap "v" (cons "alt" (tkg-alt-refs (tkg-row-names rows))))
+                        (t-splice "v"))
+                    (tkg-row-rules rows)))))
+
+    ;; rows → the per-merge rule names (parallel to tkg-row-rules order).
+    (defn tkg-row-names (rows)
+        (if (nil? rows) (empty)
+            (cons (str_concat "m-" (head (head rows)))
+                  (tkg-row-names (tail rows)))))
+
+    ;; rows → the per-merge rules.
+    (defn tkg-row-rules (rows)
+        (if (nil? rows) (empty)
+            (cons (tkg-merge (head (head rows)) (head (tail (head rows))))
+                  (tkg-row-rules (tail rows)))))
+)

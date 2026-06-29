@@ -1,0 +1,3 @@
+; tests/self-portrait-band.fk — a mind emits its own image from its state (composes svg-emit), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/svg-emit.fk form-stdlib/self-portrait.fk
+(do (self-portrait-check))

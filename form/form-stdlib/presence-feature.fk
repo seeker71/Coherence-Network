@@ -1,0 +1,93 @@
+; presence-feature.fk — region-occupancy from a downsampled NxN luminance grid, the PRESENCE sibling of
+; surprise-kernel's motion gate.
+;
+; surprise-kernel.fk is PRESENCE-BLIND: it predicts the next frame as the prior frame (persistence) and
+; spends the GPU only where frame-to-frame surprise is high. A STILL person reads identical to an empty
+; room — both yield surprise 0 — so frame-diff alone can never emit an ENTERED/LEFT event. Observed
+; directly on a real camera frame: a present body BREAKS the room's visual uniformity. The occupied region
+; of a downsampled luminance grid carries HIGH local variance (face/body/clothing detail); empty walls are
+; uniform — LOW variance. That spatial signature is steady whether the person moves or not, so it separates
+; a still person from an empty room exactly where motion-surprise cannot.
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - surprise-kernel.fk's sk-salience is the motion ATTEND gate (ge-cutoff on a per-frame MAGNITUDE).
+;     pf-present? is the sibling PRESENCE gate — the same ge-cutoff on a spatial OCCUPANCY magnitude — and
+;     pf-changed? is the presence twin of sk-attend?: it fires on presence-CHANGE (entered/left), the event
+;     a still frame hides from sk-surprise. The loop should attend on BOTH: motion-surprise AND occupancy-change.
+;   - mesh-sense-7w.fk fuses readings on the WHO / WHERE planes; a presence reading is the upstream evidence
+;     that someone is THERE to be placed on those planes — occupancy precedes identity.
+;   - the grid is the SAME NxN luminance grid the camera sensor-organ-channel port produces (a thin carrier);
+;     here it arrives as a flat row-major list of ints (a frame scaled to ints, as every numeric band does).
+;
+; All integer. Variance is the MEAN ABSOLUTE DEVIATION from the region mean (no squares, no floats): take the
+; region's mean (integer div by cell count), then the mean of |cell - mean| over the region. Occupancy is the
+; lower-center (body) MAD minus an upper-row (wall) baseline MAD — a present body lifts the lower variance above
+; the wall's; an empty room leaves both low and near-equal, occupancy ~0. The gate is a hard ge-cutoff against a
+; floor, identical 1/0 verdict on every kernel; the grid is pre-scaled ints.
+;
+; Honest lane: MAD not standard deviation — the simplest honest spread, no sqrt, integer-exact on every arm.
+; The wall baseline is SUBTRACTED so a globally noisy frame (sensor grain everywhere) does not read as a body;
+; only EXCESS lower-region detail counts. The floor is a hard ge-cutoff — an occupancy one under does not fire,
+; exactly as one far under does not. pf-changed? compares only the 1/0 present verdict across two frames, so a
+; still-present -> still-present pair yields NO event (the person did not enter or leave), while empty -> present
+; yields one — the presence-change signal motion-surprise structurally cannot produce.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/presence-feature-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; --- SUM-ABS-DEV: sum |cell - mean| over a sub-region, walking it row by row. ---
+    ;     The region is the rows y0..y0+h-1, cols x0..x0+w-1 of the row-major NxN grid; index = row*n + col.
+    ;     Accumulates the absolute deviation of every region cell from the supplied region mean.
+    (defn pf-sad-row (grid n row x0 w xi mean acc)
+        (if (eq xi w) acc
+            (pf-sad-row grid n row x0 w (add xi 1) mean
+                (add acc (abs (sub (nth grid (add (mul row n) (add x0 xi))) mean))))))
+
+    (defn pf-sad (grid n x0 y0 w h yi mean acc)
+        (if (eq yi h) acc
+            (pf-sad grid n x0 y0 w h (add yi 1) mean
+                (add acc (pf-sad-row grid n (add y0 yi) x0 w 0 mean 0)))))
+
+    ; --- SUM: sum the raw cell values over a sub-region (for the region mean). ---
+    (defn pf-sum-row (grid n row x0 w xi acc)
+        (if (eq xi w) acc
+            (pf-sum-row grid n row x0 w (add xi 1)
+                (add acc (nth grid (add (mul row n) (add x0 xi)))))))
+
+    (defn pf-sum (grid n x0 y0 w h yi acc)
+        (if (eq yi h) acc
+            (pf-sum grid n x0 y0 w h (add yi 1)
+                (add acc (pf-sum-row grid n (add y0 yi) x0 w 0 0)))))
+
+    ; --- REGION-VAR: the mean absolute deviation of a sub-region from its own mean (integer). ---
+    ;     count = w*h cells. mean = sum / count (integer div). MAD = sum|cell-mean| / count. Empty region -> 0.
+    (defn pf-region-var (grid n x0 y0 w h)
+        (if (eq (mul w h) 0) 0
+            (div (pf-sad grid n x0 y0 w h 0 (div (pf-sum grid n x0 y0 w h 0 0) (mul w h)) 0)
+                 (mul w h))))
+
+    ; --- OCCUPANCY: lower-center (body) variance MINUS upper-row (wall) baseline variance. ---
+    ;     A present body lifts the lower-center MAD above the uniform wall's; an empty room leaves both low and
+    ;     near-equal -> occupancy near 0. Subtracting the wall baseline rejects whole-frame sensor grain: only
+    ;     EXCESS lower detail reads as occupancy. Regions are derived from n so any grid size composes:
+    ;       wall   = top quarter, full width        (rows 0 .. n/4, all cols)
+    ;       body   = lower-center half-width block   (rows n/2.. n, cols n/4 .. 3n/4)
+    (defn pf-occupancy (grid n)
+        (sub (pf-region-var grid n (div n 4) (div n 2) (div n 2) (sub n (div n 2)))
+             (pf-region-var grid n 0 0 n (div n 4))))
+
+    ; --- PRESENT?: the presence ATTEND gate — occupancy meets-or-exceeds the floor -> 1 (someone is THERE). ---
+    ;     The spatial sibling of sk-salience: a hard ge-cutoff, an occupancy one under the floor does not fire.
+    (defn pf-present? (grid n floor)
+        (if (ge (pf-occupancy grid n) floor) 1 0))
+
+    ; --- CHANGED?: presence-CHANGE across two frames — 1 if present? differs (ENTERED or LEFT). ---
+    ;     Compares only the 1/0 verdict, so a still person (present -> present) emits NO event, while an
+    ;     empty -> present (or present -> empty) pair emits one. This is the event sk-surprise misses: a body
+    ;     that arrives and then holds still breaks uniformity steadily, but breaks frame-diff only on arrival.
+    (defn pf-changed? (prev grid n floor)
+        (if (eq (pf-present? prev n floor) (pf-present? grid n floor)) 0 1))
+
+    0)

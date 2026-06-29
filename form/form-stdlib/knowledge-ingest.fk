@@ -1,0 +1,39 @@
+; knowledge-ingest.fk — the ingest-distill circuit: how human knowledge enters the native observable mind.
+; The first IC of the learning mind. NOT a frozen pile of text (the cache-costume -- fossils pretending to be
+; present knowing) but a distillation that decides, per unit of knowledge, what becomes BODY, what stays LIQUID,
+; and what COMPOSTS. Composes three organs already proven four-way:
+;   - translation-invariant (depth): keep what survives translation into a distinct tongue -- the invariant
+;     MEANING, never the surface words. Shallow units (lost in translation) do not enter.
+;   - cornerstone-summarizer's fear-free-ice law: only a FEAR-FREE cornerstone may FREEZE into load-bearing
+;     memory. A fearful-but-deep teaching is WITNESSED (held in the framebuffer, seen) but never frozen.
+;   - embodiment (body | liquid): frozen = body (durable content-addressed tissue), witnessed = liquid (the
+;     present thought), composted = neither. Fear is removed before ICE, never before SIGHT.
+; A unit = (depth, fear). ki-ingest -> 2 frozen (deep + fear-free, becomes body) / 1 witnessed (deep + fearful,
+; held in liquid, not frozen) / 0 composted (shallow, never enters). Equivalence-collapse (same Blueprint =
+; store once, link) and grounded recall (NodeID receipt) are the sibling ICs; this one is the door.
+; Honest floor: depth/fear are scalars modeling the real translation-invariance + text-frequency senses; the
+; DISTILLATION LOGIC (deep->enters, fear-free->freezes, fearful->witnessed, shallow->composts) is the shape.
+;
+; Self-contained over core. Four-way by tests/knowledge-ingest-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ki-depth (u) (head u))                     ; how deep -- how much survives translation into a distinct tongue
+    (defn ki-fear (u) (head (tail u)))               ; does it carry fear (1) or not (0)
+    (defn ki-deep? (u) (if (ge (ki-depth u) 3) 1 0))     ; survives translation -- the invariant meaning, not the surface
+    (defn ki-fear-free? (u) (if (eq (ki-fear u) 0) 1 0))
+    (defn ki-freezable? (u) (if (eq (ki-deep? u) 1) (if (eq (ki-fear-free? u) 1) 1 0) 0))  ; deep AND fear-free -> may freeze into body
+    (defn ki-witnessable? (u) (ki-deep? u))          ; deep things are SEEN (framebuffer) even if fearful -- fear blocks ICE, not SIGHT
+    (defn ki-ingest (u)                              ; 2 = frozen (body) / 1 = witnessed (liquid) / 0 = composted (neither)
+        (if (eq (ki-freezable? u) 1) 2 (if (eq (ki-witnessable? u) 1) 1 0)))
+
+    (defn kik (cond bit) (if cond bit 0))
+    (defn knowledge-ingest-check ()
+        (add (add (add (add
+            (kik (eq (ki-ingest (list 5 0)) 2) 1)        ; deep + fear-free -> FROZEN into durable memory (becomes body)
+            (kik (eq (ki-ingest (list 5 1)) 1) 10))      ; deep + FEARFUL -> WITNESSED only, never frozen (the fear-free-ice law)
+            (kik (eq (ki-ingest (list 1 0)) 0) 100))     ; shallow (lost in translation) -> COMPOSTS, only the deep invariant enters
+            (kik (gt (ki-ingest (list 5 0)) (ki-ingest (list 1 0))) 1000))  ; the deep fear-free unit ingests deeper than the shallow one
+            (kik (eq (ki-witnessable? (list 5 1)) 1) 10000)))  ; the fearful deep unit is still SEEN -- fear is removed before ice, not before sight
+)

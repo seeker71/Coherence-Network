@@ -1,0 +1,3 @@
+; tests/md-emit-band.fk — form-native markdown emitter (recipe -> markdown text), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/md-emit.fk
+(do (md-emit-check))

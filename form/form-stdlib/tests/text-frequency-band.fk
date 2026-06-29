@@ -1,0 +1,8 @@
+; tests/text-frequency-band.fk — read a passage's fear<->love frequency spectrum from text, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/text-frequency.fk
+;
+; Verdict 11111: the most-open belief system reads positive (love-frequency); a wrath/judgment passage reads
+; negative (fear-frequency); the open baseline carries no fear-band words; the fear passage holds more; and the
+; organ separates the two spectra -- the text-frequency organ that lets us frequency-align any belief system's
+; corpus, starting from the most open and adding one by one.
+(do (text-frequency-check))

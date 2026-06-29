@@ -1,0 +1,44 @@
+; preludes: form-stdlib/stt-agree.fk form-stdlib/champion-challenger.fk form-stdlib/voice-self-learn.fk
+;
+; voice-self-learn-band — the mesh learns its OWN voice, made falsifiable.
+;
+; The body EMITS a known utterance truth = "we are the iris" through TTS. Three mics (mac/android/windows)
+; hear it back from three angles and the native STT transcribes each:
+;   mic-a (we are the iris)   -> 100  heard it exactly
+;   mic-b (we are the iris)   -> 100  heard it exactly
+;   mic-c (we are an  iris)   ->  75  one word off — the error signal
+; At floor 80, vsl-agree = 2 (two mics matched the emission, the erroring mic flagged out). The emission
+; is the FREE label: no oracle was asked, the body already knew what it said.
+;
+; Then a sequence of emit-hear ticks. Each tick is a champion-challenger trial (oracle=1, native=win?):
+; over a window the native arm keeps reaching quorum on its own voice, vsl-confidence climbs, and authority
+; FLIPS to native (the rented STT/TTS retires) — trust-climb mirrored.
+;
+; Verdict 127 when every claim lands:
+;   1    two mics matched the emission, the erroring mic flagged out   (vsl-agree mics truth 80 == 2)
+;   2    a mic that heard exactly passes the floor                     (vsl-mic-ok? mic-a truth 80 == 1)
+;   4    the one-word-off mic is the error signal (below floor)        (vsl-mic-ok? mic-c truth 80 == 0)
+;   8    the emission is the self-label of the pair                    (vsl-said (vsl-pair truth mic-c) == truth)
+;   16   a 2-of-3 quorum tick is a win for the native arm             (vsl-tick-win? mics truth 80 2 == 1)
+;   32   native voice confidence climbs over the agreeing window       (vsl-confidence history == 6)
+;   64   over a long-enough proven window authority comes HOME         (vsl-learn history 6 0 == "challenger")
+(do
+    (let truth (list "we" "are" "the" "iris"))
+    (let mic-a (list "we" "are" "the" "iris"))   ; mac     — exact
+    (let mic-b (list "we" "are" "the" "iris"))   ; windows — exact
+    (let mic-c (list "we" "are" "an"  "iris"))   ; android — one word off (the error)
+    (let mics  (list mic-a mic-b mic-c))
+
+    ; a window of emit-hear ticks: this tick (2-of-3 quorum, won) plus five more that the native arm won,
+    ; the oracle assumed correct on its own emission. champion 6 / native 6 over six ticks.
+    (let tick    (vsl-trial mics truth 80 2))     ; (1 1) — native reached quorum on what we said
+    (let history (list tick tick tick tick tick tick))
+
+    (let c0 (if (eq (vsl-agree mics truth 80) 2) 1 0))
+    (let c1 (if (eq (vsl-mic-ok? mic-a truth 80) 1) 2 0))
+    (let c2 (if (eq (vsl-mic-ok? mic-c truth 80) 0) 4 0))
+    (let c3 (if (str_eq (head (vsl-said (vsl-pair truth mic-c))) (head truth)) 8 0))
+    (let c4 (if (eq (vsl-tick-win? mics truth 80 2) 1) 16 0))
+    (let c5 (if (eq (vsl-confidence history) 6) 32 0))
+    (let c6 (if (str_eq (vsl-learn history 6 0) "challenger") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

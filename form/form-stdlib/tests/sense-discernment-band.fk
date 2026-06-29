@@ -1,0 +1,47 @@
+; sense-discernment-band — the sharing-outward membrane, made falsifiable.
+;
+; preludes: form-stdlib/sense-discernment.fk
+;
+; A mesh is ONE BODY's nervous system. Within the body recognition is care; the
+; gate is at the OUTWARD crossing. Four observations of one room, one camera/mic:
+;   friend  — an IDENTITY facet of someone in the trust circle, NOT consented to
+;             outward publication: "the person here is Irina". consented?=0.
+;             INTERNAL → the body KNOWS and REMEMBERS her (recognition is care).
+;             EXTERNAL → her name does not bind onto the world → stripped to
+;             PRESENCE (a cell is here), the relation real, the name withheld.
+;   shared  — an IDENTITY facet the cell DID consent to publish: "I am Sema".
+;             consented?=1. Crosses OUT as-is.
+;   harm    — a CONTENT facet flagged harmful-to-surface: "his health is failing".
+;             harmful?=1. Care withholds it on EITHER side — even within the body.
+;   here    — a SITUATION facet, no private subject: "two people are present".
+;             Crosses freely, internal and external.
+;
+; Each claim is a literal bit; both polarities are pinned so a true reading is not
+; luck. Verdict 1023 when every claim lands. The whole point: DEFAULT INTERNAL IS
+; RICH (the body knows its own), the gate lives only at the EXTERNAL crossing.
+(do
+    (let friend (sd-obs "identity" "Irina"            "cam-1" 0 0))
+    (let shared (sd-obs "identity" "Sema"             "cam-1" 1 0))
+    (let harm   (sd-obs "content"  "his-health-fails" "cam-1" 0 1))
+    (let here   (sd-obs "situation" "two-present"     "cam-1" 0 0))
+
+    ; --- WITHIN THE BODY: rich knowing by default ---------------------------
+    (let c0 (if (eq (sd-hold? friend) 1) 1 0))            ; the body KNOWS the friend (identity held)
+    (let c1 (if (eq (sd-hold? here)   1) 2 0))            ; the body knows the situation
+    (let c2 (if (eq (sd-hold? shared) 1) 4 0))            ; and the consented self-identity
+
+    ; --- HARM withheld with care, EVEN internally ---------------------------
+    (let c3 (if (eq (sd-hold? harm) 0) 8 0))              ; care withholds harm inside the body too
+    (let c4 (if (eq (sd-share? harm "external") 0) 16 0)) ; and certainly outward
+
+    ; --- THE OUTWARD CROSSING: unconsented identity → presence --------------
+    (let c5 (if (eq (sd-share? friend "external") 0) 32 0))   ; raw name does NOT cross out unconsented
+    (let f (sd-strip-outward friend))
+    (let c6 (if (eq (sd-presence? f) 1) 64 0))                ; it composts to presence at the boundary
+    (let c7 (if (str_eq (sd-value f) "a-cell-is-here") 128 0)); the relation crosses, the name does not
+
+    ; --- consented identity + situation cross OUT freely --------------------
+    (let c8 (if (eq (sd-share? shared "external") 1) 256 0))  ; consented identity publishes
+    (let c9 (if (eq (sd-share? here   "external") 1) 512 0))  ; situation (no private subject) publishes
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

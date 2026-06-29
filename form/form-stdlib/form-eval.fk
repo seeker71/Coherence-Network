@@ -1,0 +1,52 @@
+; form-eval.fk — the source tree-walk, in Form, on the BMF cursor: Form source string -> value, evaluated AS it
+; is read, with NO flatten table. This dissolves the flatten knot for the core grammar: running a recipe no longer
+; REQUIRES flattening — the cursor reads and computes directly; flatten becomes optional SPEED (the JIT path).
+; Mirrors form-parse.fk's recursive-descent over the cursor (no tokenizer, the BMF discipline), but each node
+; returns its VALUE instead of a cell. Grammar (the first stone): expr := integer | '(' op a (b) ')'; op := add|sub|le|if.
+; State threads as (value, end-pos). Completion to full Form (defn/let/user-calls) extends this same shape; this
+; proves the principle four-way on our own kernel. Self-contained over core.
+;
+; Four-way by tests/form-eval-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn fe-fst (pr) (head pr))
+    (defn fe-snd (pr) (head (tail pr)))
+    (defn fe-at (s pos) (ord (char_at s pos)))
+    (defn fe-len (s) (str_len s))
+    (defn fe-isdigit (c) (and (ge c 48) (ge 57 c)))
+    (defn fe-isws (c) (if (eq c 32) 1 (if (eq c 10) 1 (if (eq c 13) 1 (if (eq c 9) 1 0)))))
+    (defn fe-isdelim (c) (if (eq (fe-isws c) 1) 1 (if (eq c 40) 1 (if (eq c 41) 1 0))))
+    (defn fe-skip (s pos)
+        (if (ge pos (fe-len s)) pos
+            (if (eq (fe-isws (fe-at s pos)) 1) (fe-skip s (add pos 1)) pos)))
+    (defn fe-digits (s pos acc)
+        (if (ge pos (fe-len s)) (list acc pos)
+            (if (fe-isdigit (fe-at s pos))
+                (fe-digits s (add pos 1) (add (mul acc 10) (sub (fe-at s pos) 48)))
+                (list acc pos))))
+    (defn fe-sym-end (s pos)
+        (if (ge pos (fe-len s)) pos
+            (if (eq (fe-isdelim (fe-at s pos)) 1) pos (fe-sym-end s (add pos 1)))))
+    (defn fe-expr (s pos) (fe-expr2 s (fe-skip s pos)))
+    (defn fe-expr2 (s pos)
+        (if (eq (fe-at s pos) 40) (fe-list s (add pos 1)) (fe-digits s pos 0)))
+    (defn fe-list (s pos) (fe-op s pos (fe-sym-end s pos)))
+    (defn fe-op (s a b) (fe-byop (substring s a b) s b))
+    (defn fe-byop (op s pos) (if (str_eq op "if") (fe-if s pos) (fe-bin op s pos)))
+    (defn fe-bin (op s pos) (fe-bin-a op s (fe-expr s pos)))
+    (defn fe-bin-a (op s ae) (fe-bin-b op s (fe-fst ae) (fe-expr s (fe-snd ae))))
+    (defn fe-bin-b (op s a be) (list (fe-apply op a (fe-fst be)) (fe-close s (fe-snd be))))
+    (defn fe-apply (op a b)
+        (if (str_eq op "add") (add a b)
+            (if (str_eq op "sub") (sub a b)
+                (if (str_eq op "le") (if (le a b) 1 0) (add a b)))))
+    (defn fe-if (s pos) (fe-if-c s (fe-expr s pos)))
+    (defn fe-if-c (s ce) (fe-if-t s (fe-fst ce) (fe-expr s (fe-snd ce))))
+    (defn fe-if-t (s c te) (fe-if-e s c (fe-fst te) (fe-expr s (fe-snd te))))
+    (defn fe-if-e (s c t ee) (list (if (eq c 0) (fe-fst ee) t) (fe-close s (fe-snd ee))))
+    (defn fe-close (s pos)
+        (if (ge (fe-skip s pos) (fe-len s)) (fe-skip s pos) (add (fe-skip s pos) 1)))
+    (defn fe-eval (s) (fe-fst (fe-expr s 0)))
+)
