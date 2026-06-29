@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleExecutable</key><string>CoherenceSense</string>
+  <key>CFBundleIdentifier</key><string>com.coherence.sense</string>
+  <key>CFBundleName</key><string>Coherence Sense</string>
+  <key>CFBundleDisplayName</key><string>Coherence Sense</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>0.1</string>
+  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSCameraUsageDescription</key><string>Coherence Sense perceives the living presences in your room, with you — the eye runs the fkwu sensing recipes on this Mac's metal.</string>
+</dict></plist>

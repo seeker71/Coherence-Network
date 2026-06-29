@@ -1,0 +1,3 @@
+# Build output — the .app is reproducible from build.sh + Sources + Resources.
+build/
+*.app
