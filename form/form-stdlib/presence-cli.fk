@@ -1,0 +1,75 @@
+; presence-cli.fk — the on-device entry that reads a LIVE downsampled luminance grid from staged input and
+; runs the camera-native OCCUPANCY decision (presence-feature.fk) over it, printing the verdict + magnitude
+; on one line. This is the fkwu host-io shell around pf-present? / pf-occupancy — the same shape
+; live-observe-cli is around lo-observe: the eval is the four-way recipe (presence-feature-band proves it),
+; the loop is the staged-input + output carrier only fkwu carries (input_byte tag 17, print_str tag 115).
+;
+; WHY OCCUPANCY, NOT LUMINANCE: a naive luminance gate ((le thr luma) 1 0) measures BRIGHTNESS, not a body.
+; A camera auto-exposes — a covered lens cranks gain, so the average luma stays high → the luma gate reads a
+; FALSE presence. pf-occupancy reads spatial STRUCTURE instead: a present body breaks the room's uniformity
+; (lower-center region variance lifts above the wall baseline); a covered camera's auto-exposed grain averages
+; OUT across the coarse grid → uniform → occupancy ~0 → correctly NO presence. Robust to auto-exposure because
+; it ignores absolute brightness. This is the spatial sibling of the android observe path (live-observe-cli),
+; reduced to the presence plane the Mac eye needs — the SAME presence-feature recipe, no new logic.
+;
+; THE STAGED INPUT (the mac eye writes it, fkwu reads it via input_byte): whitespace-separated integers, the
+; grid first then two trailing params, in order:
+;     <n*n grid ints, row-major>  <n>  <floor>
+; e.g. a 4x4 grid is 16 ints then 4 20. The reader is position-free: it folds every integer token in the
+; stream into a list, then peels the last two as (n floor) and the leading n*n as the grid.
+;
+; THE OUTPUT (the two native planes on ONE space-joined line, in order — the Swift carrier takes the first
+; non-empty line and splits by space, labelling each "native fkwu", never faked):
+;     present occupancy
+;   - present    pf-present? over the grid     (1 = someone is THERE, 0 = empty/covered)
+;   - occupancy  pf-occupancy magnitude        (the spatial-variance strength behind present)
+; One line keeps the read clean past the flattener-entry's trailing fn-0/counter noise (the EOF tail).
+;
+; preludes: form-stdlib/core.fk form-stdlib/presence-feature.fk
+(do
+    ; ── a byte is an ASCII digit (48..57). ──
+    (defn pc-digit? (b) (if (ge b 48) (if (ge 57 b) 1 0) 0))
+
+    ; ── read the integer starting at byte i (digits until the first non-digit), as (value nexti). ──
+    (defn pc-int (i acc)
+        (do (let b (input_byte i))
+            (if (eq (pc-digit? b) 1)
+                (pc-int (add i 1) (add (mul acc 10) (sub b 48)))
+                (list acc i))))
+
+    ; ── advance past any run of non-digit bytes (spaces, newlines), stopping at a digit or EOF (byte 0). ──
+    (defn pc-skip (i)
+        (do (let b (input_byte i))
+            (if (eq b 0) i
+                (if (eq (pc-digit? b) 1) i (pc-skip (add i 1))))))
+
+    ; ── fold every integer token in the staged stream into a list, in order (reversed by cons-at-head). ──
+    (defn pc-tokens (i acc)
+        (do (let j (pc-skip i))
+            (if (eq (input_byte j) 0) acc
+                (do (let r (pc-int j 0))
+                    (pc-tokens (nth r 1) (cons (nth r 0) acc))))))
+
+    (defn pc-rev (xs acc) (if (eq (len xs) 0) acc (pc-rev (tail xs) (cons (head xs) acc))))
+    (defn pc-read () (pc-rev (pc-tokens 0 (list)) (list)))
+
+    ; ── peel the trailing two params and the leading grid. toks = grid... n floor. ──
+    (defn pc-take (xs k acc) (if (eq k 0) (pc-rev acc (list)) (pc-take (tail xs) (sub k 1) (cons (head xs) acc))))
+    (defn pc-n     (toks) (nth toks (sub (len toks) 2)))
+    (defn pc-floor (toks) (nth toks (sub (len toks) 1)))
+    (defn pc-grid  (toks) (pc-take toks (sub (len toks) 2) (list)))
+
+    ; ── render an integer with a trailing space (the field separator on the one output line). ──
+    (defn pc-field (v) (str_concat (int_to_str v) " "))
+
+    ; ── the run: read the grid + params, compute the native presence plane, print on ONE line. ──
+    (defn pc-run ()
+        (do (let toks  (pc-read))
+            (let n     (pc-n toks))
+            (let floor (pc-floor toks))
+            (let grid  (pc-grid toks))
+            (print_str (str_concat (pc-field (pf-present? grid n floor))
+                (str_concat (int_to_str (pf-occupancy grid n)) "\n")))
+            0))
+
+    (pc-run))
