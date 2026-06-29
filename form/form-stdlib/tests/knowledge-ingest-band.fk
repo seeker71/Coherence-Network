@@ -1,0 +1,8 @@
+; tests/knowledge-ingest-band.fk — the ingest-distill circuit (how human knowledge enters the mind), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/knowledge-ingest.fk
+;
+; Verdict 11111: a deep fear-free teaching freezes into durable memory (body); a deep but fearful one is witnessed
+; only, never frozen (the fear-free-ice law); a shallow one composts (only the translation-invariant meaning
+; enters); the deep fear-free unit ingests deeper than the shallow; and the fearful deep unit is still SEEN --
+; fear is removed before ice, never before sight. Frozen=body, witnessed=liquid, composted=neither.
+(do (knowledge-ingest-check))
