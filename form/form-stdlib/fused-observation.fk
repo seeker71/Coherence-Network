@@ -1,0 +1,152 @@
+; fused-observation.fk — fuse ALL the native classifiers into ONE coherent observed set per presence:
+; "all senses fusing together to a single set of native observed senses." Each organ already answers ONE
+; question of one presence — presence-feature says someone is THERE (present), identity-match says WHO,
+; sound-classify says WHAT (the sound), scene-features says WHERE (the room/objects). This stone is the
+; fusion that takes those independent organ answers and returns ONE observed cell:
+;     (observed PRESENT WHO WHAT WHERE CONFIDENCE)
+; the confidence rising with cross-witness agreement — more independent organs/devices naming the same
+; thing on a plane raises the trust; organs that disagree on a plane lower it and name the frontier.
+;
+; This COMPOSES the existing tissue, it does not reinvent it. mesh-sense-7w.fk already fuses a multi-cell
+; reading stream into a coherent per-plane answer (ms-fuse-plane dispatches BANDED vs NAMED planes to
+; spatial-fusion / confidence-weighted-vote and carries source-cell attribution). fused-observation maps
+; each presence-organ to its inquiry-plane and runs that SAME per-plane fusion, then gathers the four
+; planes a presence-observation needs into one cell:
+;   - present  <- presence-feature.fk's pf-present? (occupancy -> 1/0 someone is THERE). A BANDED plane:
+;                 each organ's 1/0 occupancy verdict is a band ballot; the fused band is "is anyone here".
+;   - who      <- identity-match.fk's im-match / im-category (the matched persistent identity / kind). A
+;                 NAMED plane: each organ casts a (label weight) ballot, cw-winner fuses them.
+;   - what     <- sound-classify.fk's sc-classify (the sound label: voice / music / bird / ambient). NAMED.
+;   - where    <- scene-features.fk's room/objects banded read (the place bucket). A BANDED plane.
+; The carriers (presence-feature, identity-match, sound-classify, scene-features) RUN the organs and
+; produce the per-organ readings; THIS recipe only routes each reading to its plane and fuses — one engine,
+; the plane KIND is DATA (mesh-sense-7w's ms-banded? table), no per-organ special path.
+;
+; A READING is the narrowed organ row a presence-observation needs (the mesh wmg-sense shape minus the
+; channel, since cross-witness confidence here counts independent organs/devices, not route fitness):
+;     (reading plane value source-cell confidence)
+;   - plane       the observation plane this organ answers ("present" / "who" / "what" / "where")
+;   - value       the organ's claim — an INTEGER band for present/where, a STRING label for who/what
+;   - source-cell the organ/device that reported it (string) — the attribution + the independent-witness id
+;   - confidence  the organ's own integer trust behind this reading (the ballot weight)
+; A reading composes ms-fuse's `reading` with channel "organ" (an unlisted channel = fitness 1, so the
+; organ's own confidence IS its ballot weight — cross-witness counting, not channel weighting).
+;
+; THE THREE DECISIONS:
+;   fo-fuse(readings)       -> one observed cell (observed PRESENT WHO WHAT WHERE CONFIDENCE): route each
+;                              reading to its plane via ms-fuse-plane, take the agreed value per plane, and
+;                              attach the cross-witness confidence. The single set of native observed senses.
+;   fo-confidence(readings) -> the cross-witness confidence: how many independent organs/devices AGREE,
+;                              summed across the planes (more agreeing senses -> higher confidence). This is
+;                              cross-witness-economy's cwe-confidence read (cw-score, summed trust) lifted
+;                              over every plane of the observation — the mesh's own redundancy, measured.
+;   fo-conflict?(readings)  -> 1 if organs DISAGREE on any plane (two organs name different values for the
+;                              same plane). The disagreement is the low-agreement frontier: the confidence
+;                              drops there, and this coin is the escalation signal (the one place a rented
+;                              oracle is worth its rent — cross-witness-economy's spend frontier).
+;
+; All integer for the verdict; bands and confidences are counts on a scale, labels and cells are strings.
+;
+; preludes: form-stdlib/core.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk
+;
+; Proven by: form-stdlib/tests/fused-observation-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── a presence-observation reading: the narrowed organ row (channel dropped; cross-witness here
+    ;    counts independent organs, so the organ's confidence IS its ballot weight). Composes ms-fuse's
+    ;    `reading` shape with the neutral channel "organ" (unlisted -> ms-channel-fitness 1). ──
+    (defn fo-reading (plane value source-cell confidence)
+        (reading plane value source-cell "organ" confidence))
+
+    ; ── THE OBSERVATION PLANES a presence-observation needs, in cell order. present + where are BANDED
+    ;    (integer bucket — ms-banded? already names "where"); who + what are NAMED (string label). The
+    ;    plane KIND is DATA: ms-banded? routes the right fusion brick, never re-implemented here. present
+    ;    is added to the banded set below; where/who/what already fall on the right side of ms-banded?. ──
+    (defn fo-banded? (plane)
+        (if (str_eq plane "present") 1 (ms-banded? plane)))
+
+    ; ── FUSE ONE PLANE: the SAME per-plane fusion mesh-sense-7w runs, with present routed banded. Partition
+    ;    the stream to the plane, dispatch by KIND, return the fused ms-answer (value + summed confidence +
+    ;    agree count + contributing cells). One engine; we only widen ms-banded? to include "present". ──
+    (defn fo-fuse-plane (readings plane)
+        (do
+            (let rs (ms-for-plane readings plane))
+            (if (eq (fo-banded? plane) 1)
+                (do
+                    (let v (ms-band-consensus rs))
+                    (ms-answer plane v (ms-band-confidence rs) (ms-band-agree rs)
+                        (ms-band-contributors rs v) (ms-band-channels rs v)))
+                (do
+                    (let v (ms-label-consensus rs))
+                    (ms-answer plane v (ms-label-confidence rs)
+                        (len (ms-label-contributors rs v))
+                        (ms-label-contributors rs v) (ms-label-channels rs v))))))
+
+    ; the fused VALUE on one plane (the agreed band or label) — the plane's coherent answer.
+    (defn fo-plane-value (readings plane) (ms-a-value (fo-fuse-plane readings plane)))
+    ; the fused CONFIDENCE on one plane (the summed trust behind the agreed value).
+    (defn fo-plane-confidence (readings plane) (ms-a-confidence (fo-fuse-plane readings plane)))
+
+    ; ── THE OBSERVED CELL: one coherent set of native observed senses for the presence. present/who/what/
+    ;    where each fused from the SAME stream, plus the cross-witness confidence across all of them. The
+    ;    "single set of native observed senses" fo-fuse promises — all the organs collapsed into one cell. ──
+    (defn fo-observed (present who what where confidence)
+        (list "observed" present who what where confidence))
+    (defn fo-o-present    (o) (nth o 1))
+    (defn fo-o-who        (o) (nth o 2))
+    (defn fo-o-what       (o) (nth o 3))
+    (defn fo-o-where      (o) (nth o 4))
+    (defn fo-o-confidence (o) (nth o 5))
+
+    ; ── fo-fuse: route each reading to its plane and take the agreed value per plane, into ONE observed
+    ;    cell carrying the cross-witness confidence. The fusion of all senses into a single native observed
+    ;    set. ──
+    (defn fo-fuse (readings)
+        (fo-observed
+            (fo-plane-value readings "present")
+            (fo-plane-value readings "who")
+            (fo-plane-value readings "what")
+            (fo-plane-value readings "where")
+            (fo-confidence readings)))
+
+    ; ── CROSS-WITNESS CONFIDENCE: how many independent organs/devices AGREE, summed across the planes.
+    ;    Each plane's fused confidence is the summed trust behind its agreed value (cross-witness-economy's
+    ;    cwe-confidence = cw-score, the SAME summed-trust read); the observation's confidence is the sum
+    ;    over the four planes — more agreeing senses on more planes -> higher confidence. A presence seen
+    ;    AND identified AND heard AND located by agreeing organs accumulates a HIGH cross-witness confidence;
+    ;    a thin or split observation accumulates little. ──
+    (defn fo-confidence (readings)
+        (add (fo-plane-confidence readings "present")
+            (add (fo-plane-confidence readings "who")
+                (add (fo-plane-confidence readings "what")
+                    (fo-plane-confidence readings "where")))))
+
+    ; ── PLANE CONFLICT: do the organs that reported this plane DISAGREE? The plane's readings are a (value
+    ;    weight) ballot field; the AGREE count of the winning value is how many organs named it. If FEWER
+    ;    organs named the winner than reported the plane, at least one organ named something else — a
+    ;    conflict. For a banded plane the agree count is ms-band-agree; for a named plane it is the count of
+    ;    winning-label contributors. fo-plane-agree reads whichever the plane's KIND uses. ──
+    (defn fo-plane-agree (readings plane)
+        (do
+            (let rs (ms-for-plane readings plane))
+            (if (eq (fo-banded? plane) 1)
+                (ms-band-agree rs)
+                (len (ms-label-contributors rs (ms-label-consensus rs))))))
+
+    (defn fo-plane-conflict? (readings plane)
+        (do
+            (let rs (ms-for-plane readings plane))
+            (if (lt (fo-plane-agree readings plane) (len rs)) 1 0)))
+
+    ; ── fo-conflict?: 1 if organs disagree on ANY plane — the observation has a contested plane. The
+    ;    disagreement is named (which plane lost agreement) and the confidence there is lower (fewer
+    ;    summed-trust ballots backed the winner); this coin is the escalation frontier — the one place a
+    ;    rented oracle earns its rent (cross-witness-economy's spend gate). No conflict = every organ that
+    ;    spoke on a plane agreed; the mesh is its own teacher and nothing need escalate. ──
+    (defn fo-conflict? (readings)
+        (if (eq (fo-plane-conflict? readings "present") 1) 1
+            (if (eq (fo-plane-conflict? readings "who") 1) 1
+                (if (eq (fo-plane-conflict? readings "what") 1) 1
+                    (if (eq (fo-plane-conflict? readings "where") 1) 1 0)))))
+
+    0)
