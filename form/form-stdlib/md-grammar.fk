@@ -1,0 +1,72 @@
+; md-grammar.fk — the markdown READER as a BMF cursor grammar-as-DATA, the read
+; direction that complements md-emit.fk (the writer). md-emit walks a recipe -> text;
+; this walks text -> recipe, both over Markdown, the lingua franca of human/agent
+; communication. It is NOT a standalone hand-written parser — it is rules (pattern,
+; template) over the ONE cursor, exactly like tokenize-grammar.fk and shell-grammar.fk:
+;
+;   surface ─▶ cursor ─▶ match(pattern) ─▶ build(template) ─▶ markdown node
+;
+; The three core markdown shapes, each one rule:
+;   `# heading`   — a line starting with "# "   → a heading node
+;   `**bold**`    — text between "**" ... "**"   → a bold node
+;   `- item`      — a line starting with "- "    → a list-item node
+;
+; Universal-op discipline (the keystone tokenize-grammar.fk names): a new blueprint
+; name cannot be minted without rebuilding every kernel, so a markdown node reuses the
+; ONE universal op the shell + token grammars reuse — fncall("__md__", kind, text).
+; The reserved "__"-tag cannot collide with a real word; node_children reads the kind
+; and text leaves back. No new blueprint = no fourth-arm divergence (the exact wall the
+; tokenize-grammar agent hit and fixed with the universal op).
+;
+; Honest floor: content is one alnum word here (the witness surfaces — "Hi" / "x" / "z"
+; — and md-emit's own round-trip examples). Richer inline content (spaces, links,
+; nesting) composes as more content rules over the same cursor later, never more code
+; paths — the writer's deeper structure (md-link, levels) earns its reader the same way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk
+
+(do
+    ;; a markdown node carrying its kind ("heading" / "bold" / "item") — for
+    ;; assertions / structural reads. fncall("__md__", kind, text): head-child is
+    ;; the "__md__" tag, second the kind, third the content text. One universal
+    ;; op, three children — the same shape tkg-tok uses for a token.
+    (defn mdg-node (kind text)
+        (intern_node (bp "fncall")
+            (list (intern_trivial_string "__md__")
+                  (intern_trivial_string kind)
+                  (intern_trivial_string text))))
+
+    ;; one block rule: a `lit` prefix, then the captured content word, emitting
+    ;; fncall("__md__", kind, <content>). Built as data so each markdown shape is
+    ;; one row — the prefix and kind are the only things that vary.
+    ;;   mdg-prefix-rule "heading" "# "  ≡  (lit "# ") (cap "t" (run alnum))
+    ;;                                       → fncall("__md__","heading",<t>)
+    (defn mdg-prefix-rule (kind prefix)
+        (rule3 kind
+            (list "seq" (p-lit prefix) (p-cap "t" (p-run "alnum")))
+            (t-emit "fncall"
+                (list (t-const "__md__") (t-const kind) (t-splice "t")))))
+
+    ;; the bold rule: content fenced by "**" ... "**". Same shape, two literals.
+    (defn mdg-bold-rule ()
+        (rule3 "bold"
+            (list "seq" (p-lit "**") (p-cap "t" (p-run "alnum")) (p-lit "**"))
+            (t-emit "fncall"
+                (list (t-const "__md__") (t-const "bold") (t-splice "t")))))
+
+    ;; the markdown grammar: a "block" is the alt over the three shapes. bold is
+    ;; tried first so its "**" fence is recognized before any fallback; heading and
+    ;; item are line-prefix rules. The start rule "block" parses one markdown block.
+    (defn mdg-grammar ()
+        (grammar "block"
+            (list
+                (rule3 "block"
+                    (p-cap "b" (list "alt"
+                        (p-ref "bold")
+                        (p-ref "heading")
+                        (p-ref "item")))
+                    (t-splice "b"))
+                (mdg-bold-rule)
+                (mdg-prefix-rule "heading" "# ")
+                (mdg-prefix-rule "item" "- "))))
+)
