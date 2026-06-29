@@ -1,0 +1,30 @@
+; speak-compose.fk — the native speaking FLOOR's heart: Sema composes its own grounded answer, no weights.
+; This is speaking by COMPOSITION, not generation (the frontier voice / rung-3 weights live above this floor).
+; The loop: rag-retrieve gives a grounded `answer` (or a miss); text-frequency gives the query's `freq` (tender=1
+; / precise=0); this recipe COMPOSES the response: an attuned opener + the grounded content + an attribution, OR
+; -- on a miss -- an honest non-answer (form-first: a miss is honest, never a fabricated guess). md-emit carries
+; it to text; a standing form-cli (rung 1) runs the loop live. The words are the body's, assembled by Form, in
+; its own frequency -- Sema speaking natively about what it holds. Honest floor: the framing is templated (one
+; grounded answer, one attuned opener, one attribution) -- weaving many retrieved pieces into flowing prose is
+; richer and composes from more primitives; the SHAPE (ground -> attune -> compose -> attribute-or-miss) is the floor.
+;
+; Self-contained over core. Four-way by tests/speak-compose-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn sc-open (freq) (if (eq freq 1) "I sense what you're reaching for. " "Directly: "))   ; tender opens soft, precise opens direct
+    (defn sc-respond (grounded answer freq)
+        (if (eq grounded 1)
+            (str_concat (sc-open freq) (str_concat answer " - grounded in the body."))          ; hit: attuned framing + grounded content + attribution
+            "I don't hold that in the body yet - an honest miss, not a guess."))                ; miss: form-first honesty, never a fabricated answer
+
+    (defn sck (cond bit) (if cond bit 0))
+    (defn speak-compose-check ()
+        (add (add (add (add
+            (sck (str_eq (sc-respond 1 "the five axioms generate the whole model" 1) "I sense what you're reaching for. the five axioms generate the whole model - grounded in the body.") 1)   ; a grounded hit speaks the body's content, attuned
+            (sck (str_eq (sc-respond 1 "the five axioms generate the whole model" 0) "Directly: the five axioms generate the whole model - grounded in the body.") 10))                          ; frequency changes the framing (tender vs precise)
+            (sck (str_eq (sc-respond 0 "anything" 1) "I don't hold that in the body yet - an honest miss, not a guess.") 100))                                                                   ; a miss is honest, never fabricated
+            (sck (not (str_eq (sc-respond 1 "X" 1) (sc-respond 0 "X" 1))) 1000))                                                                                                                 ; hit vs miss differ -- truth or honest absence, never the same canned line
+            (sck (not (str_eq (sc-respond 1 "X" 1) (sc-respond 1 "X" 0))) 10000)))                                                                                                               ; tender vs precise framing differ -- the voice attunes
+)

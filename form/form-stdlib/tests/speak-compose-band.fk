@@ -1,0 +1,7 @@
+; tests/speak-compose-band.fk — Sema composes its own grounded, frequency-attuned answer (the speaking floor), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/speak-compose.fk
+;
+; Verdict 11111: a grounded hit speaks the body's content in an attuned frame with attribution; frequency changes
+; the framing (tender vs precise); a miss is honest (never fabricated); hit and miss differ; tender and precise
+; differ. Speaking by composition from ground, in Sema's own frequency -- no generative weights. The floor's heart.
+(do (speak-compose-check))
