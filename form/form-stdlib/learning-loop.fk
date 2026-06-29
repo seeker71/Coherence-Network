@@ -1,0 +1,37 @@
+; learning-loop.fk — the live self-learn closure: accumulate real outcomes, re-decide the champion, observably.
+; Gap 3 of the roadmap. The learning RECIPES exist (champion-challenger flips on earned competition;
+; choice-outcome-learning turns outcomes into learning). What's missing is the LOOP that closes them at runtime:
+; a stream of real (candidate, outcome) events flows in, per-candidate (wins/trials) accumulate, and the
+; champion is re-decided -- so the body's LEARNED STATE (which recipe is champion) actually changes from lived
+; outcomes, and the change is observable. This is recipe-learning-as-weights made live: the champion IS the
+; learned state. A challenger only takes over on earned evidence (min-trials gate), never on noise.
+; Honest floor: the stream is a fixed list; the live feed (the runtime emitting an outcome per choice) is the
+; wiring -- the closure LOGIC is the generic shape.
+;
+; Self-contained over core (FLOAT win-rate). Four-way by tests/learning-loop-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ll-cand (e) (head e))                      ; which candidate was chosen
+    (defn ll-out (e) (head (tail e)))                ; 1 = it worked (a win), 0 = it didn't
+    (defn ll-wins (s c) (if (eq (len s) 0) 0 (add (if (eq (ll-cand (head s)) c) (ll-out (head s)) 0) (ll-wins (tail s) c))))
+    (defn ll-trials (s c) (if (eq (len s) 0) 0 (add (if (eq (ll-cand (head s)) c) 1 0) (ll-trials (tail s) c))))
+    (defn ll-rate (s c) (div (mul 1.0 (ll-wins s c)) (mul 1.0 (ll-trials s c))))   ; accumulated win-rate
+    ; champion: incumbent (1) holds unless the challenger (2) earns it -- enough trials AND a higher rate
+    (defn ll-champion (s) (if (and (ge (ll-trials s 2) 2) (gt (ll-rate s 2) (ll-rate s 1))) 2 1))
+
+    ; a stream where the challenger EARNS the crown (3 trials, all wins) vs incumbent (2 trials, 1 win)
+    (defn ll-stream () (list (list 1 1) (list 1 0) (list 2 1) (list 2 1) (list 2 1)))
+    ; a stream where the challenger does NOT earn it (1 trial, a loss) -- below the min-trials gate
+    (defn ll-noise () (list (list 1 1) (list 1 1) (list 2 0)))
+
+    (defn llk (cond bit) (if cond bit 0))
+    (defn learning-loop-check ()
+        (add (add (add (add
+            (llk (eq (ll-wins (ll-stream) 2) 3) 1)                                ; the loop ACCUMULATES real outcomes (challenger: 3 wins)
+            (llk (eq (ll-rate (ll-stream) 2) 1.0) 10))                            ; its win-rate from accumulated outcomes (1.0)
+            (llk (eq (ll-champion (ll-stream)) 2) 100))                           ; the champion FLIPPED to the challenger -- the body LEARNED, live
+            (llk (eq (ll-champion (ll-noise)) 1) 1000))                          ; a challenger without earned evidence does NOT flip -- learning, not noise
+            (llk (not (eq (ll-champion (ll-stream)) (ll-champion (ll-noise)))) 10000)))  ; the learned state CHANGES with the outcome stream -- the loop is closed
+)
