@@ -1,0 +1,82 @@
+; preludes: form-stdlib/scene-features.fk
+;
+; scene-features-band — read the SHAPE of a room, the OBJECTS in it, and which are COMMON vs UNIQUE from
+; one downsampled n=4 luminance grid (16 ints, row-major; 2x2 coarse blocks, each block 2x2). Falsifiable.
+;
+; BASELINE frame — a remembered room: the whole top half and the bottom-left block are uniform wall (100);
+; one textured OBJECT sits in the bottom-right block (a top buffer row 100,100 then a texture row 250,10):
+;     100 100 100 100
+;     100 100 100 100
+;     100 100 100 100
+;     100 100 250  10
+;   Coarse blocks (raster TL,TR,BL,BR = ids 0,1,2,3):
+;     edge(summed gradient): TL 0   TR 0   BL 150  BR 480     detail(MAD): TL 0  TR 0  BL 0  BR 67
+;   The BL edge 150 is the object's left boundary bleeding one cell left (honest forward-difference); its
+;   block interior is still uniform wall so its DETAIL is 0 — BL is flat wall, BR is the one thing.
+;
+; SHAPE (edge-floor 300): only BR clears the floor -> (0 0 0 1): top wall + bottom-left wall are FLAT
+;   PLANES, the bottom-right object corner is the one EDGE region. The room's coarse layout signature.
+;
+; OBJECTS (detail-floor 30): baseline -> only BR (id 3) clears the detail floor -> (3): one thing, in the
+;   bottom-right, against three uniform wall blocks.
+;
+; SCENE frame — the same room, but a NEW object has appeared in the bottom-left block:
+;     100 100 100 100
+;     100 100 100 100
+;     100 100 100 100
+;     250  10 250  10
+;   Now BL detail lifts to 67 too. OBJECTS -> (2 3): the new bottom-left thing AND the stable
+;   bottom-right thing.
+;
+; COMMON vs UNIQUE (block residual vs the baseline frame at the same block, tolerance 30):
+;   BL: baseline-vs-baseline residual 0 -> COMMON (the wall that was always there matches itself).
+;   BL: scene-vs-baseline residual 67 -> UNIQUE (a new thing the baseline never held).
+;   BR: scene-vs-baseline residual 0 -> COMMON (the furniture that is always in the room).
+;
+; sf-edge sees the object corner directly: at cell (2,3) the gradient is 240 (>0); a flat wall block's
+; summed gradient is 0 — the gradient IS the flat-plane / edge distinction at the cell scale.
+;
+; Verdict 255 when every claim lands:
+;   1    SHAPE distinguishes flat plane vs edge: baseline shape == (0 0 0 1)
+;   2    OBJECTS finds the one baseline thing: baseline objects == (3)
+;   4    OBJECTS finds the new thing in the scene: scene objects == (2 3)
+;   8    a region matching the baseline is COMMON: sf-common? baseline BL == 1
+;   16   a novel region is UNIQUE: sf-unique? scene BL == 1
+;   32   stable furniture stays COMMON: sf-common? scene BR == 1
+;   64   sf-edge sees the object corner: sf-edge at (2,3) > 0
+;   128  a flat wall block has zero gradient: block-edge TL == 0
+(do
+    (let baseline (list 100 100 100 100
+                        100 100 100 100
+                        100 100 100 100
+                        100 100 250  10))
+    (let scene    (list 100 100 100 100
+                        100 100 100 100
+                        100 100 100 100
+                        250  10 250  10))
+
+    ; SHAPE of the baseline room — flat planes vs the one edge region.
+    (let shp (sf-shape baseline 4 300))
+    (let c0 (if (and (eq (nth shp 0) 0)
+                (and (eq (nth shp 1) 0)
+                (and (eq (nth shp 2) 0)
+                     (eq (nth shp 3) 1)))) 1 0))
+
+    ; OBJECTS — the baseline holds one thing (block 3); the scene holds two (blocks 2 and 3).
+    (let objs-base  (sf-objects baseline 4 30))
+    (let objs-scene (sf-objects scene 4 30))
+    (let c1 (if (and (eq (len objs-base) 1) (eq (nth objs-base 0) 3)) 2 0))
+    (let c2 (if (and (eq (len objs-scene) 2)
+                (and (eq (nth objs-scene 0) 2) (eq (nth objs-scene 1) 3))) 4 0))
+
+    ; COMMON vs UNIQUE — the bottom-left block matches the baseline wall (common), the scene's
+    ; bottom-left is novel (unique), the bottom-right furniture stays stable (common).
+    (let c3 (if (eq (sf-common? baseline baseline 4 0 1 30) 1) 8 0))
+    (let c4 (if (eq (sf-unique? scene    baseline 4 0 1 30) 1) 16 0))
+    (let c5 (if (eq (sf-common? scene    baseline 4 1 1 30) 1) 32 0))
+
+    ; sf-edge sees the object corner; a flat wall block has zero summed gradient.
+    (let c6 (if (gt (sf-edge baseline 4 2 3) 0) 64 0))
+    (let c7 (if (eq (sf-block-edge baseline 4 0 0) 0) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
