@@ -1,0 +1,74 @@
+; voice-self-learn.fk — the mesh learns its OWN voice by speaking and hearing itself from MANY mics.
+;
+; self-heard-learning turned INWARD. In stt-agree.fk the ground truth was a human/authoritative
+; transcript we had to be given; here the body KNOWS the ground truth — it is the text the body itself
+; EMITTED through TTS. So every emit-hear tick is FREE self-supervision: the body says a known utterance,
+; N mics (the 3 devices: mac/android/windows) hear it back from N angles, each mic's audio is transcribed
+; by the native STT, and every transcript is scored against (a) what we KNOW we said and (b) each other.
+; 3 mics agreeing AND matching the emission = high confidence; a mic that disagrees is an error signal,
+; flagged — a free label with no oracle in the loop.
+;
+; COMPOSES, never duplicates:
+;   stt-agree.fk        — sa-accuracy: the word-overlap accuracy of one transcript vs a reference 0..100.
+;                         Each mic transcript is scored against the KNOWN truth with exactly that metric.
+;   champion-challenger — cc-promote?/cc-authority: the native STT/TTS arm (challenger) takes authority
+;                         from the rented oracle (champion) only on PROVEN agreement over a window. Each
+;                         emit-hear tick whose native transcripts agreed with the emission is a won trial;
+;                         authority flips to native when the window is long enough and native has reached.
+;
+; vsl-agree     — over N mic transcripts + the known truth: how many mics matched the truth at the floor.
+;                 N matching + truth-match = high; a disagreeing mic lowers the count (the error signal).
+; vsl-pair      — a self-labeled (said -> heard) training pair; the body's own emission IS the label.
+; vsl-confidence— the climbing native voice confidence: agreeing ticks counted over the history.
+; vsl-learn     — refine native STT/TTS via the champion-challenger window; authority flips to native
+;                 (the rented STT/TTS retires) when native keeps matching its own emission.
+;
+; Integers only; str_eq + counting + the composed accuracy; no floats. (empty) for the empty mic list.
+; Self-contained over core + the two composed bodies. Four-way by tests/voice-self-learn-band.fk.
+;
+; preludes: form-stdlib/stt-agree.fk form-stdlib/champion-challenger.fk
+
+(do
+    ; --- a self-labeled training pair: what the body SAID -> what a mic HEARD. The emission is the label,
+    ;     so this pair needs no oracle. (truth heard) is the free supervised example. ---
+    (defn vsl-pair (truth heard) (list truth heard))
+    (defn vsl-said  (p) (nth p 0))
+    (defn vsl-heard (p) (nth p 1))
+
+    ; --- does ONE mic's transcript match the known emission at the agreement floor? Reuses stt-agree's
+    ;     word-overlap accuracy verbatim — the heard transcript is scored against the truth we emitted. ---
+    (defn vsl-mic-ok? (heard truth floor) (sa-agree? heard truth floor))
+
+    ; --- vsl-agree: over the N mic transcripts, HOW MANY matched the known emission at the floor.
+    ;     N mics agreeing + matching what we said = high (== N); a disagreeing mic does not count, so the
+    ;     gap from N is the error signal — which mics heard wrong. recursion is the loop; (empty) terminates. ---
+    (defn vsl-agree (mics truth floor)
+        (if (eq (len mics) 0) 0
+            (add (vsl-mic-ok? (head mics) truth floor)
+                 (vsl-agree (tail mics) truth floor))))
+
+    ; --- a tick is a WIN for the native arm when at least `quorum` of its mics heard the emission right
+    ;     (e.g. 2 of 3). The quorum is the cross-mic confidence: agreement across angles, free-labeled. ---
+    (defn vsl-tick-win? (mics truth floor quorum)
+        (if (ge (vsl-agree mics truth floor) quorum) 1 0))
+
+    ; --- one emit-hear tick as a champion-challenger trial = (champion-correct native-correct).
+    ;     The rented oracle is assumed correct on its own emission (champ = 1); the native arm earns its 1
+    ;     only when its mics reach quorum on what the body actually said. This is the bridge from a tick of
+    ;     self-heard agreement to the proven head-to-head window champion-challenger already walks. ---
+    (defn vsl-trial (mics truth floor quorum)
+        (list 1 (vsl-tick-win? mics truth floor quorum)))
+
+    ; --- vsl-confidence: the climbing native voice confidence = how many ticks in the history the native
+    ;     arm won (reached quorum on its own emission). A pure count over champion-challenger trials — it
+    ;     can only climb as more agreeing ticks arrive. history = (list trial ...). ---
+    (defn vsl-confidence (history) (cc-chall-score history))
+
+    ; --- vsl-learn: refine native STT/TTS via the champion-challenger window. Authority flips to the
+    ;     native arm — the rented STT/TTS retires — only when the window is long enough (>= min-ticks) AND
+    ;     the native confidence has REACHED the oracle within margin. Proven self-heard competition, never
+    ;     asserted: cc-authority returns "challenger" (native) once native keeps matching its own voice. ---
+    (defn vsl-learn (history min-ticks margin) (cc-authority history min-ticks margin))
+    (defn vsl-home? (history min-ticks margin) (cc-promote? history min-ticks margin))
+
+    0)
