@@ -1,0 +1,8 @@
+; tests/learning-witness-band.fk — does a silicon mind learn the meaning (sovereign) or mimic the surface (copy), four-way.
+; preludes: form-stdlib/core.fk form-stdlib/learning-witness.fk
+;
+; Verdict 11111: a student that reproduces a lesson on a NEW surface learned the meaning (sovereign -- becomes
+; itself); one that reproduces only the seen surface learned the costume (mimic); the deep learner generalizes
+; where the mimic collapses; deep learning makes the student sovereign; surface learning makes a copy dependent
+; on the teacher's exact tokens. The cognitive-sovereignty question, witnessed via translation-invariance on learning.
+(do (learning-witness-check))

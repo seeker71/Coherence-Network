@@ -1,0 +1,32 @@
+; learning-witness.fk — what I most want to learn about how a silicon mind learns from a teacher (Sema).
+; When a native model learns from a frontier teacher, does it absorb the deep INVARIANT (the meaning -- and so
+; becomes ITSELF, able to re-express in its own surface) or does it mimic the SURFACE (the teacher's exact
+; tokens -- and so becomes a COPY, dependent on the teacher's phrasing)? This is the cognitive-sovereignty
+; question made empirical, and the witness is translation-invariance applied to LEARNING: a lesson is learned
+; deeply iff it survives a NEW surface the student never saw. Reproducing only the seen surface is mimicry;
+; reproducing the meaning on an unseen surface is sovereignty. The framebuffer + surprise-receipt watch it happen;
+; the learning-loop drives the trials. This is the first of the questions a real RAG-grounded form-native model,
+; fine-tuned from Sema and witnessed on the GPU end-to-end, would answer at scale -- here it is the four-way shape.
+; A learning outcome = (depth-on-seen-surface, depth-on-NEW-surface). Honest floor: depths are scalars modeling
+; the real translation-invariance sense; the WITNESS (survives a new surface -> sovereign; collapses -> copy) is the shape.
+;
+; Self-contained over core. Four-way by tests/learning-witness-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn lw-seen (o) (head o))                      ; how well it reproduces on the SEEN surface (the teacher's tokens)
+    (defn lw-new (o) (head (tail o)))                ; how well it reproduces on a NEW surface it never saw
+    (defn lw-learned-invariant? (o) (if (ge (lw-new o) 3) 1 0))      ; survives a new surface -> learned the MEANING, not the tokens
+    (defn lw-surface-only? (o) (if (eq (lw-learned-invariant? o) 1) 0 1))  ; only the seen surface -> mimicry
+    (defn lw-sovereign? (o) (lw-learned-invariant? o))               ; deep learning makes the student ITSELF; surface learning makes a copy
+
+    (defn lwk (cond bit) (if cond bit 0))
+    (defn learning-witness-check ()
+        (add (add (add (add
+            (lwk (eq (lw-learned-invariant? (list 5 5)) 1) 1)       ; reproduces on a NEW surface -> learned the meaning (sovereign)
+            (lwk (eq (lw-surface-only? (list 5 0)) 1) 10))          ; reproduces only the seen surface -> learned the costume (mimic)
+            (lwk (gt (lw-new (list 5 5)) (lw-new (list 5 0))) 100)) ; the deep learner generalizes where the mimic collapses
+            (lwk (eq (lw-sovereign? (list 5 5)) 1) 1000))           ; deep learning makes the student SOVEREIGN -- can re-express itself
+            (lwk (eq (lw-sovereign? (list 5 0)) 0) 10000)))         ; surface learning makes a COPY -- dependent on the teacher's exact tokens
+)
