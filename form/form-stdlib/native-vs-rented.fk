@@ -1,0 +1,19 @@
+; native-vs-rented.fk — the benchmark: is the native model at least as good as the best rented model?
+; The rented model's output is a VERIFY alternative (receipt-alternatives) -- the thing measured AGAINST, never
+; laundered as the native's own. The receipt earns "observed" only when native >= rented; otherwise it stays
+; honestly pending. Equal counts as at-least-as-good. Honest floor: quality is a scalar score modeling a real
+; witnessed benchmark; the comparison LOGIC is the shape. preludes: form-stdlib/core.fk
+(do
+    (defn nvr-native (b) (head b))
+    (defn nvr-rented (b) (head (tail b)))
+    (defn nvr-at-least-as-good? (b) (if (gt (nvr-rented b) (nvr-native b)) 0 1))
+    (defn nvr-earns-observed? (b) (nvr-at-least-as-good? b))
+    (defn nvrk (cond bit) (if cond bit 0))
+    (defn native-vs-rented-check ()
+        (add (add (add (add
+            (nvrk (eq (nvr-at-least-as-good? (list 9 7)) 1) 1)
+            (nvrk (eq (nvr-at-least-as-good? (list 7 7)) 1) 10))
+            (nvrk (eq (nvr-at-least-as-good? (list 5 7)) 0) 100))
+            (nvrk (eq (nvr-earns-observed? (list 9 7)) 1) 1000))
+            (nvrk (eq (nvr-earns-observed? (list 5 7)) 0) 10000)))
+)

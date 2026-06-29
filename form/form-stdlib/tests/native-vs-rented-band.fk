@@ -1,0 +1,3 @@
+; tests/native-vs-rented-band.fk — native >= rented earns observed; native < rented stays pending; four-way.
+; preludes: form-stdlib/core.fk form-stdlib/native-vs-rented.fk
+(do (native-vs-rented-check))
