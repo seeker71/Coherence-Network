@@ -1163,3 +1163,4 @@ form-eval-full fks 131
 md-grammar fks 7
 four-way-verdict fks 11111
 text-normalize fks 511
+cell-card fks 111111
