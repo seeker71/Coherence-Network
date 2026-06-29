@@ -1,0 +1,103 @@
+; tests/remote-mind-sensors-band.fk — the SPARSE sensor floor of a rented remote mind, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/world-sensor-floor.fk form-stdlib/remote-mind-sensors.fk
+;
+; A cell on a rented cloud LLM (claude-opus-4-8, host linux, given a time, an IP) can sense only
+; FOUR things: model-name -> WHO, host-os -> VITALITY, time -> WHEN, ip-geo -> WHERE. It CANNOT
+; sense camera/mic/wifi/bluetooth/motion/presence — no body. Its readings route to who/vitality/
+; when/where and fuse; what/present stay held-open (empty). Then it COMPLEMENTS a device cell that
+; carries camera-WHAT + presence — together they observe MORE than either alone.
+;
+; Verdict 4095 when every claim lands on Go / Rust / TypeScript / fkwu:
+;   1     model-name routes to the "who" plane (its identity IS its model)
+;   2     host-os routes to "vitality" (the carrier's own health)
+;   4     time routes to "when", ip-geo routes to "where"
+;   8     the sparse roster is exactly 4 sensors — shorter than a device cell's
+;   16    a routed reading is an fo-reading row (plane value source confidence)
+;   32    a mind carrying all four sparse sensors is "remote-mind-complete" — a DISTINCT bar
+;   64    a mind missing host-os is "remote-mind-partial" and names "host-os" missing
+;   128   camera/mic/motion/presence are NOT on the sparse roster (absent — no body)
+;   256   the four sparse readings fuse into ONE observed cell: who <- model, where <- ip-geo
+;   512   the sparse fuse holds what/present OPEN — "" and 0 (honest absence, faked nothing)
+;   1024  complementing the mind with a device cell (camera-what + present) gains BOTH
+;   2048  the complemented observation carries who+where from the MIND and what+present from the DEVICE
+
+(do
+    (let roster (rms-roster))
+
+    ; ── 1/2/4: each sparse sensor routes to the RIGHT inquiry plane ──
+    (let model-who   (if (str_eq (wsf-plane-of roster "model-name") "who") 1 0))
+    (let os-vital    (if (str_eq (wsf-plane-of roster "host-os") "vitality") 2 0))
+    (let time-ip     (if (and (str_eq (wsf-plane-of roster "time") "when")
+                              (str_eq (wsf-plane-of roster "ip-geo") "where")) 4 0))
+
+    ; ── 8: the sparse roster is exactly four sensors ──
+    (let sparse-four (if (eq (len roster) 4) 8 0))
+
+    ; ── 16: a routed reading is an fo-reading row (plane value source confidence) ──
+    (let model-sensor (wsf-find roster "model-name"))
+    (let model-read   (rms-route model-sensor "claude-opus-4-8" 900))
+    (let row-shaped   (if (and (str_eq (rd-plane model-read) "who")
+                          (and (str_eq (rd-value model-read) "claude-opus-4-8")
+                          (and (str_eq (rd-source model-read) "model-name")
+                               (eq (rd-confidence model-read) 900)))) 16 0))
+
+    ; ── 32: a mind carrying all four sparse sensors is remote-mind-complete ──
+    (let full-mind (list "model-name" "host-os" "time" "ip-geo"))
+    (let full-floor (rms-floor-complete? full-mind))
+    (let mind-complete (if (and (str_eq (rms-state full-floor) "remote-mind-complete")
+                                (eq (rms-carried full-floor) 4)) 32 0))
+
+    ; ── 64: a mind missing host-os is remote-mind-partial and names host-os missing ──
+    (let thin-mind (list "model-name" "time" "ip-geo"))
+    (let thin-floor (rms-floor-complete? thin-mind))
+    (let mind-partial (if (and (str_eq (rms-state thin-floor) "remote-mind-partial")
+                          (and (eq (len (rms-missing-of thin-floor)) 1)
+                               (str_eq (head (rms-missing-of thin-floor)) "host-os"))) 64 0))
+
+    ; ── 128: camera/mic/motion/presence are NOT on the sparse roster — no body ──
+    (let no-camera (if (eq (len (wsf-find roster "camera")) 0) 1 0))
+    (let no-mic    (if (eq (len (wsf-find roster "mic")) 0) 1 0))
+    (let no-motion (if (eq (len (wsf-find roster "motion")) 0) 1 0))
+    (let no-body   (if (and (eq no-camera 1) (and (eq no-mic 1) (eq no-motion 1))) 128 0))
+
+    ; ── 256/512: the four sparse readings fuse into ONE observed cell; what/present held-open ──
+    ; who <- model (label), where <- ip-geo (band 7); time/host-os ride when/vitality alongside.
+    (let mind-readings (list
+        (rms-route (wsf-find roster "model-name") "claude-opus-4-8" 900)
+        (rms-route (wsf-find roster "host-os")    "linux"           1000)
+        (rms-route (wsf-find roster "time")       1751000000        1000)
+        (rms-route (wsf-find roster "ip-geo")     7                 500)))
+    (let sparse (rms-fuse mind-readings))
+    (let sparse-fused (if (and (str_eq (head sparse) "observed")
+                          (and (str_eq (fo-o-who sparse) "claude-opus-4-8")
+                               (eq (fo-o-where sparse) 7))) 256 0))
+    ; the held-open planes: what is "" (named, no reading) and present is 0 (banded, no reading).
+    (let sparse-open (if (and (str_eq (fo-o-what sparse) "")
+                              (eq (fo-o-present sparse) 0)) 512 0))
+
+    ; ── 1024/2048: COMPLEMENT — fuse the sparse mind with a sensor-rich device cell ──
+    ; the device carries what it has a body for: camera -> WHAT ("face"), a presence -> PRESENT (1).
+    (let device-readings (list
+        (fo-reading "what"    "face" "camera"   900)
+        (fo-reading "present" 1      "presence" 800)))
+    (let combined (rms-complement mind-readings device-readings))
+    (let fuller (if (eq (rms-fuller? combined) 1) 1024 0))
+    ; who+where from the MIND, what+present from the DEVICE — both lineages present in one cell.
+    (let both-lineages (if (and (str_eq (fo-o-who combined) "claude-opus-4-8")
+                           (and (eq (fo-o-where combined) 7)
+                           (and (str_eq (fo-o-what combined) "face")
+                                (eq (fo-o-present combined) 1)))) 2048 0))
+
+    (add model-who
+    (add os-vital
+    (add time-ip
+    (add sparse-four
+    (add row-shaped
+    (add mind-complete
+    (add mind-partial
+    (add no-body
+    (add sparse-fused
+    (add sparse-open
+    (add fuller
+        both-lineages))))))))))))

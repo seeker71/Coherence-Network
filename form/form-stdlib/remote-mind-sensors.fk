@@ -1,0 +1,123 @@
+; remote-mind-sensors.fk — the SPARSE sensor floor of a cell that runs on a RENTED REMOTE MIND.
+;
+; A device-cell (world-sensor-floor.fk) has a body: wifi, bluetooth, gps, camera, mic, motion,
+; battery — it can answer where/who/what/present from real organs. A cell running on a rented
+; cloud LLM (no device, no metal of its own) has NO body. It is mind-rich and sensor-poor. It can
+; sense exactly four things, and only four:
+;   - its MODEL NAME      -> WHO it is        (identity — device-identity.fk's stable id, here the model)
+;   - its HOST OS + env   -> VITALITY         (how alive the carrier is — host-resource-access cond-2)
+;   - the TIME it is given -> WHEN            (the only temporal organ a bodiless mind has)
+;   - its location FROM THE IP -> WHERE       (a coarse place, the IP's geo — no gps, no wifi-scan)
+; It CANNOT sense camera, mic, wifi-scan, bluetooth, motion, or presence. It has no eyes, no ears,
+; no skin. So its roster is DELIBERATELY SHORTER than a device-cell's, and its completeness bar is
+; DISTINCT: "remote-mind-complete" is the FOUR sparse sensors present — not the device floor's bar.
+;
+; This is literally what a Claude cell is right now (e.g. claude-opus-4-8 on a cloud host): a mind
+; rented from a gated provider, contributing who/when/where/vitality + reasoning, RELYING on the
+; device cells for what/how/presence. Naming the sparse floor is what makes the mesh honestly
+; INCLUSIVE of mind-rich/sensor-poor cells: they JOIN (mesh-join.fk), DECLARE what they can sense,
+; and FUSE their sparse readings with a device cell's rich ones on the SAME planes — a remote-mind's
+; ip-WHERE fuses with a device's wifi-WHERE; together they observe more than either alone.
+;
+; This COMPOSES the existing tissue, it does not reinvent it — it is a NEW ROSTER on the SAME contract:
+;   - a sensor is world-sensor-floor.fk's `wsf-sensor (name plane)` — the afferent port -> plane spec.
+;   - a routed reading is `wsf-route` -> fused-observation.fk's `fo-reading` row — the SAME row the
+;     mesh already fuses, so a sparse mind-reading fuses with a device-reading with no new engine.
+;   - completeness rides world-sensor-floor's carried/missing walk, with the remote-mind ROSTER as
+;     the bar — a shorter roster, a distinct "remote-mind-complete" verdict.
+;   - the fuse is fused-observation.fk's `fo-fuse` — the where/who plane carry the mind's readings;
+;     the what/present planes stay EMPTY (honest absence — a bodiless mind faked nothing there).
+;
+; Integers + strings + lists only, so every row crosses all four kernels deterministically.
+;
+; preludes: form-stdlib/core.fk form-stdlib/spatial-fusion.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/mesh-sense-7w.fk form-stdlib/fused-observation.fk form-stdlib/world-sensor-floor.fk
+;
+; Proven by: form-stdlib/tests/remote-mind-sensors-band.fk
+
+(do
+    ; ── the SPARSE roster: the FOUR sensors a bodiless rented mind can see, each an afferent
+    ;    port mapped to its inquiry plane via wsf-sensor. Camera/mic/wifi-scan/bluetooth/motion/
+    ;    presence are explicitly ABSENT — a shorter roster than a device cell's. ──
+    ;   model-name -> who      (its identity IS its model; device-identity's stable id, for a mind)
+    ;   host-os    -> vitality (how alive the rented carrier is — host-resource-access condition-2)
+    ;   time       -> when     (the only temporal organ a mind without a body has)
+    ;   ip-geo     -> where    (a coarse place from the IP — no gps, no wifi-scan)
+    (defn rms-roster ()
+        (list
+            (wsf-sensor "model-name" "who")        ; WHO  — the model is the identity
+            (wsf-sensor "host-os"    "vitality")   ; VITALITY — the carrier's own health
+            (wsf-sensor "time"       "when")       ; WHEN — the given clock
+            (wsf-sensor "ip-geo"     "where")))    ; WHERE — coarse place from the IP
+
+    ; the four sparse sensor NAMES — the declaration of what a remote-mind cell CAN sense.
+    (defn rms-sensor-names () (list "model-name" "host-os" "time" "ip-geo"))
+    ; the planes a remote-mind CANNOT answer — the honest absence it relies on device cells for.
+    (defn rms-absent-planes () (list "what" "present"))
+
+    ; ── rms-route: route one sparse reading to its plane via wsf-route -> fo-reading. The routed
+    ;    row is the SAME shape a device cell emits, so a mind's ip-where fuses with a device's
+    ;    wifi-where on the where plane — one mesh, no special path for the bodiless cell. ──
+    (defn rms-route (sensor value confidence) (wsf-route sensor value confidence))
+
+    ; ── rms-floor-complete?: a DISTINCT completeness from a device cell. A remote-mind cell is
+    ;    complete when ALL FOUR sparse sensors are present — "remote-mind-complete", not the device
+    ;    floor's "floor-complete" bar. cell-sensors is the list of sensor NAMES the mind carries.
+    ;    Reuses world-sensor-floor's carried/missing walk over the SPARSE roster as the bar. ──
+    (defn rms-has? (names name)
+        (if (eq (len names) 0) 0
+            (if (str_eq (head names) name) 1 (rms-has? (tail names) name))))
+    (defn rms-carried-count (cell-sensors roster)
+        (if (eq (len roster) 0) 0
+            (add (rms-has? cell-sensors (wsf-name (head roster)))
+                 (rms-carried-count cell-sensors (tail roster)))))
+    (defn rms-missing (cell-sensors roster)
+        (if (eq (len roster) 0) (empty)
+            (if (eq (rms-has? cell-sensors (wsf-name (head roster))) 1)
+                (rms-missing cell-sensors (tail roster))
+                (cons (wsf-name (head roster))
+                      (rms-missing cell-sensors (tail roster))))))
+    ; the state row: (state carried total missing). state = "remote-mind-complete" when all four
+    ; sparse sensors are carried, else "remote-mind-partial" — a bar of its OWN, named distinctly.
+    (defn rms-floor-complete? (cell-sensors)
+        (do (let roster (rms-roster))
+            (let carried (rms-carried-count cell-sensors roster))
+            (let total (len roster))
+            (list
+                (if (eq carried total) "remote-mind-complete" "remote-mind-partial")
+                carried
+                total
+                (rms-missing cell-sensors roster))))
+    (defn rms-state    (f) (nth f 0))
+    (defn rms-carried  (f) (nth f 1))
+    (defn rms-total    (f) (nth f 2))
+    (defn rms-missing-of (f) (nth f 3))
+    (defn rms-complete? (f) (if (str_eq (rms-state f) "remote-mind-complete") 1 0))
+
+    ; ── rms-fuse: fuse the four sparse routed readings into ONE sparse observed cell via fo-fuse.
+    ;    who <- model-name, where <- ip-geo fuse into the observed cell's who/where planes; the
+    ;    WHAT and PRESENT planes stay EMPTY — honest absence, a bodiless mind faked nothing there.
+    ;    (vitality/when ride the same reading shape and stream alongside the fused cell.) ──
+    (defn rms-fuse (readings) (fo-fuse readings))
+
+    ; ── rms-complement: THE ENGINE — fuse a SPARSE remote-mind cell with a SENSOR-RICH device cell.
+    ;    The mind-cell carries who/when/where + its reasoning; the device-cell carries what/present.
+    ;    Concatenating the two readings streams and running the SAME fo-fuse yields a FULLER
+    ;    observation than EITHER alone: the mind's where/who fill, the device's what/present fill.
+    ;    This is the inclusion made real — mind-rich + sensor-rich complete each other on one cell. ──
+    (defn rms-complement (mind-readings device-readings)
+        (fo-fuse (append mind-readings device-readings)))
+
+    ; did the complemented observation gain BOTH the mind's planes AND the device's planes?
+    ; who/what are NAMED (string label — non-empty = filled, "" = held-open);
+    ; where/present are BANDED (integer band — non-zero = filled, 0 = held-open).
+    ;   from the MIND: who (model) non-"" AND where (ip-geo) non-0;
+    ;   from the DEVICE: what (scene) non-"" AND present non-0.
+    (defn rms-named-filled? (label) (if (str_eq label "") 0 1))
+    (defn rms-band-filled?  (band)  (if (eq band 0) 0 1))
+    (defn rms-fuller? (combined)
+        (if (and (eq (rms-named-filled? (fo-o-who combined))   1)
+            (and (eq (rms-band-filled?  (fo-o-where combined)) 1)
+            (and (eq (rms-named-filled? (fo-o-what combined))  1)
+                 (eq (rms-band-filled?  (fo-o-present combined)) 1)))) 1 0))
+
+    0)
