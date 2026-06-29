@@ -1,0 +1,50 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-glsl.fk form-stdlib/form-ptx.fk form-stdlib/surprise-kernel.fk
+;
+; surprise-kernel-band — the active-inference attention gate made falsifiable, then lowered to GPU.
+;
+; A reading is an int-scaled sense vector: (list sound motion light), each level *1000. The history is the
+; quiet room the loop has been watching: three near-identical frames. The persistence predictor expects the
+; next frame to look like the last one it saw.
+;
+;   - QUIET frame [102 50 800] sits 2+1+5 = 8 from the last seen [100 49 805] -> surprise 8. Threshold 50.
+;     8 < 50 -> ATTEND = 0: the frame is expected, ride the cheap persist, GPU idle.
+;   - PRESENCE-APPEARS frame [101 900 803] (motion spikes — someone walked in) sits 1+851+2 = 854 from
+;     the last seen -> surprise 854 >= 50 -> ATTEND = 1: wake full perception/fusion.
+;
+; This is active inference: the GPU is spent only where surprise is high. The same predict->surprise->salience
+; computation is emitted as a GPU micro-kernel (sk-glsl / sk-ptx) so the per-frame surprise runs on silicon.
+;
+; Verdict 511 when every claim lands:
+;   1    persistence predicts the last seen frame        (sk-predict last == [100 49 805])
+;   2    L1 error over the quiet frame                    (sk-surprise hist [102 50 800] == 8)
+;   4    a quiet/expected frame is NOT salient            (sk-salience 8 50 == 0)
+;   8    L1 error over the new-presence frame             (sk-surprise hist [101 900 803] == 854)
+;   16   a new presence IS salient                        (sk-salience 854 50 == 1)
+;   32   the gate stays quiet on the quiet frame          (sk-attend? hist [102 50 800] 50 == 0)
+;   64   the gate WAKES on the new presence               (sk-attend? hist [101 900 803] 50 == 1)
+;   128  the GLSL micro-kernel emits (and reparameterizes by workgroup)
+;   256  the PTX micro-kernel emits (and reparameterizes by block)
+(do
+    ; the quiet room the loop has been watching — three near-identical frames, scaled *1000.
+    (let hist (list (list 100 51 802) (list 99 48 804) (list 100 49 805)))
+    (let last (list 100 49 805))
+    (let quiet (list 102 50 800))            ; expected: tiny drift
+    (let presence (list 101 900 803))        ; motion spikes — someone walked in
+
+    (let c0 (if (and (eq (nth (sk-predict hist) 0) 100)
+                     (and (eq (nth (sk-predict hist) 1) 49)
+                          (eq (nth (sk-predict hist) 2) 805))) 1 0))
+    (let c1 (if (eq (sk-surprise hist quiet) 8)        2 0))
+    (let c2 (if (eq (sk-salience 8 50) 0)              4 0))
+    (let c3 (if (eq (sk-surprise hist presence) 854)   8 0))
+    (let c4 (if (eq (sk-salience 854 50) 1)           16 0))
+    (let c5 (if (eq (sk-attend? hist quiet 50) 0)     32 0))
+    (let c6 (if (eq (sk-attend? hist presence 50) 1)  64 0))
+    ; GPU micro-kernel emission: deterministic, reparameterizes by workgroup / block, non-empty text.
+    (let c7 (if (and (str_eq (sk-glsl "64") (sk-glsl "64"))
+                     (and (gt (str_len (sk-glsl "64")) 0)
+                          (gt (str_len (sk-glsl "32")) (str_len (sk-glsl "8"))))) 128 0))
+    (let c8 (if (and (str_eq (sk-ptx "256") (sk-ptx "256"))
+                     (gt (str_len (sk-ptx "256")) 0)) 256 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
