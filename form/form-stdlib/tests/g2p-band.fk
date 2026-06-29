@@ -1,0 +1,3 @@
+; tests/g2p-band.fk — grapheme->phoneme, one engine, locales as data, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/g2p.fk
+(do (g2p-check))
