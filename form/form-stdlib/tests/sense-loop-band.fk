@@ -1,0 +1,73 @@
+; preludes: form-stdlib/obs-verify.fk form-stdlib/trust-decay.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/persistence.fk form-stdlib/world-module-model.fk form-stdlib/world-model-growth.fk form-stdlib/organ-reading.fk form-stdlib/ambient-surprise.fk form-stdlib/field-identity.fk form-stdlib/sense-loop.fk
+;
+; sense-loop-band — the 24/7 surprise-gated attention loop, made falsifiable.
+;
+; A presence runs over a staged frame stream (the carrier would feed real camera/mic readings here).
+; Baseline starts at 5, tolerance band = 3 — a frame must deviate MORE than 3 from the learned normal
+; to earn the deep (fuse + recognize + emit) path; everything else cheap-persists and refines the
+; baseline one step. The staged stream:
+;
+;   r0 still   level 5,  no claim     -> salience 0,  QUIET  -> persist        ; baseline 5 -> 5
+;   r1 still   level 6,  no claim     -> salience 1,  QUIET  -> persist        ; baseline 5 -> 6
+;   r2 MOTION  level 40, "ana" auth   -> salience 34, ATTEND -> ENTERED        ; baseline 6 -> 7
+;   r3 still   level 8,  no claim     -> salience 1,  QUIET  -> persist        ; baseline 7 -> 8
+;   r4 LEFT    level 40, "" no claim  -> salience 32, ATTEND -> LEFT           ; baseline 8 -> 9
+;
+; The loop attends ONLY on the two surprising frames (r2, r3-is-quiet, r4), emits the right
+; ENTERED/LEFT transitions, and persists (no event) on the three quiet frames. "ana" presents a
+; first-contact authentic identity (nodeid-match, signed, delegated, no pin) -> field-identity verdict
+; FIRST_USE_PIN (2), accepted -> ENTERED. The LEFT frame surprises with an EMPTY identity claim -> a
+; known presence's absence registering as the surprise -> LEFT. The final baseline has learned to 9.
+;
+; Verdict 8191 when every claim lands:
+;   1     r0 quiet frame persists (not a presence-event)        (sl-emission? of r0 step == 0)
+;   2     r1 quiet frame persists                               (sl-emission? of r1 step == 0)
+;   4     r2 motion frame ATTENDS (is a presence-event)         (sl-emission? of r2 step == 1)
+;   8     r3 quiet frame persists                               (sl-emission? of r3 step == 0)
+;   16    r4 left frame ATTENDS                                 (sl-emission? of r4 step == 1)
+;   32    exactly TWO events over the whole run                 (sl-event-count == 2)
+;   64    r2 salience is the deviation from the learned baseline (sl-salience == 34)
+;   128   first event is ENTERED                                (pev-transition e0 ENTERED)
+;   256   first event names who entered                         (pev-who e0 == "ana")
+;   512   first event recognized (field-identity FIRST_USE_PIN) (pev-verdict e0 == 2)
+;   1024  second event is LEFT                                  (pev-transition e1 LEFT)
+;   2048  second event carries no claim                         (pev-who e1 == "")
+;   4096  the run learned the baseline to 9                     (final baseline == 9)
+(do
+    (let b0 (sl-state 5))
+    (let r0 (sl-reading 5  ""    0 0 0 0 100))
+    (let r1 (sl-reading 6  ""    0 0 0 0 101))
+    (let r2 (sl-reading 40 "ana" 1 1 1 0 102))
+    (let r3 (sl-reading 8  ""    0 0 0 0 103))
+    (let r4 (sl-reading 40 ""    0 0 0 0 104))
+    (let stream (list r0 r1 r2 r3 r4))
+
+    ; per-frame step emissions (thread the baseline by hand to read each frame's verdict)
+    (let s0 (sl-step b0 r0 3))
+    (let s1 (sl-step (slstep-state s0) r1 3))
+    (let s2 (sl-step (slstep-state s1) r2 3))
+    (let s3 (sl-step (slstep-state s2) r3 3))
+    (let s4 (sl-step (slstep-state s3) r4 3))
+
+    ; the whole 24/7 run as a fold
+    (let run (sl-run b0 stream 3))
+    (let events (slrun-events run))
+    (let e0 (head events))
+    (let e1 (head (tail events)))
+
+    (let c0  (if (eq (sl-emission? (slstep-emission s0)) 0) 1    0))
+    (let c1  (if (eq (sl-emission? (slstep-emission s1)) 0) 2    0))
+    (let c2  (if (eq (sl-emission? (slstep-emission s2)) 1) 4    0))
+    (let c3  (if (eq (sl-emission? (slstep-emission s3)) 0) 8    0))
+    (let c4  (if (eq (sl-emission? (slstep-emission s4)) 1) 16   0))
+    (let c5  (if (eq (sl-event-count run) 2)                32   0))
+    (let c6  (if (eq (sl-salience (slstep-state s1) r2) 34) 64   0))
+    (let c7  (if (str_eq (pev-transition e0) "ENTERED")    128  0))
+    (let c8  (if (str_eq (pev-who e0) "ana")               256  0))
+    (let c9  (if (eq (pev-verdict e0) 2)                   512  0))
+    (let c10 (if (str_eq (pev-transition e1) "LEFT")       1024 0))
+    (let c11 (if (str_eq (pev-who e1) "")                  2048 0))
+    (let c12 (if (eq (sl-baseline (slrun-state run)) 9)    4096 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6
+        (add c7 (add c8 (add c9 (add c10 (add c11 c12)))))))))))))
