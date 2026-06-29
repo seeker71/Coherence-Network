@@ -7,19 +7,24 @@ package com.coherence.sense
 // device's own metal — no Go, Rust, clang, python, or remote call in the loop.
 //
 // The pipe (carrier, thin):
-//   camera2 YUV frame  ->  one luminance number (0..255)  ->  fkwu evaluates
-//   (if (le <thr> <luma>) 1 0)  ->  first line read back  ->  drawn on screen.
-// Surprise is the same shape: the frame-to-frame |Δluma| is measured by Kotlin, but
-// the decision "did it cross the attend threshold?" is fkwu's own (le attend delta).
-// All sensing DECISIONS run in fkwu. Kotlin only measures the byte, draws the answer,
+//   camera2 YUV frame  ->  a downsampled NxN luminance grid  ->  fkwu runs the fused
+//   observation (live-observe: pf-present? · pf-occupancy · sf-objects · fo-fuse) over
+//   the grid through the observe-table  ->  the native planes read back  ->  drawn.
+// Presence is now the rich SPATIAL verdict (lower-center occupancy variance above a wall
+// baseline) — a still person reads present where the average-luma threshold could not.
+// where is the scene's object-block inventory fused to a place. who/what need organs a
+// camera-only frame does not carry (face-match, microphone) — named un-witnessed, never
+// faked. Surprise is the same shape: Kotlin measures |Δluma|, fkwu decides (le attend Δ).
+// All sensing DECISIONS run in fkwu. Kotlin only averages grid blocks, draws the answer,
 // speaks it (host TextToSpeech — the bring-home is a native voice), and toggles.
 //
 // The UI carrier adds four faces over that body, none of which compute a verdict:
 //   1. SPEAKING TOGGLE — host TTS reads the summary + surprise spikes aloud on a rhythm.
-//   2. WHAT IS BEING SENSED — live presence / luminance (native), who/what/where pending.
+//   2. WHAT IS BEING SENSED — presence / occupancy / where (all native fkwu); who/what
+//      named un-witnessed (no organ this frame).
 //   3. SURPRISE EVENTS — a scrolling log appended when fkwu says a Δ crossed attend.
 //   4. INQUIRY-PLANE PROBES — six buttons (WHAT WHEN WHERE HOW WHO WHY) that report each
-//      plane's current reading, labelled native-fkwu vs pending-flatten. Never faked.
+//      plane's current reading from the fused observation. Never faked.
 
 import android.Manifest
 import android.content.Context
@@ -88,6 +93,11 @@ class LiveSenseActivity : AppCompatActivity() {
     @Volatile private var lastSurprise = 0
     @Volatile private var surpriseCount = 0L
     @Volatile private var presenceNative = false
+    // The rich fused observation, computed by fkwu over the live luminance grid through
+    // the observe-table (presence-feature + scene-features + fused-observation). present
+    // + where are native here; who/what un-witnessed on a camera-only frame.
+    @Volatile private var lastObs: FkwuSense.Observation? = null
+    private val gridN = 4             // 4x4 downsampled luminance grid the camera-eye feeds fkwu
 
     private val clock = SimpleDateFormat("HH:mm:ss", Locale.US)
 
@@ -265,32 +275,34 @@ class LiveSenseActivity : AppCompatActivity() {
         setOnClickListener { probePlane(plane) }
     }
 
-    // The seven inquiry-planes as probing paths. Each reports the CURRENT reading,
-    // honestly labelled native-fkwu vs pending-flatten. Never invents a value.
+    // The seven inquiry-planes as probing paths. Each reports the CURRENT reading from the
+    // fused observation fkwu computed over the live grid. present + where are native here;
+    // who/what are un-witnessed (no organ on a camera-only frame) — named so, never faked.
     private fun probePlane(plane: String) {
         val now = clock.format(Date())
+        val obs = lastObs
         val reading = when (plane) {
             "WHEN" ->
-                "WHEN · $now\n(host clock — pending native time carrier)"
+                "WHEN · $now\n(host clock — a native time carrier is a separate organ)"
             "WHERE" ->
-                if (lastLuma >= 0)
-                    "WHERE · luminance $lastLuma / 255 — ${lumaContext(lastLuma)}\n" +
-                        "(native fkwu: presence ${if (lastPresent) "yes" else "no"} · place name pending flatten)"
+                if (obs != null)
+                    "WHERE · ${placeName(obs.fusedWhere)} · ${obs.whereCount} place(s) located\n" +
+                        "(native fkwu · sf-objects → fo-fuse over the luminance grid)"
                 else "WHERE · sensing not started yet"
             "WHAT" ->
-                if (lastLuma >= 0)
-                    "WHAT · a luminance field at $lastLuma; presence ${if (lastPresent) "yes" else "no"}\n" +
-                        "(native fkwu presence · scene/object recognition pending flatten)"
+                if (obs != null)
+                    "WHAT · ${if (obs.whereCount > 0) "${obs.whereCount} object block(s), nearest ${placeName(obs.whereFirst)}" else "uniform field, no object"}\n" +
+                        "(native fkwu · sf-objects detail bands over the grid)"
                 else "WHAT · sensing not started yet"
             "WHO" ->
-                "WHO · not yet inferred\n(identity needs the fused-observation recipe — pending flatten)"
+                "WHO · un-witnessed\n(identity needs a face-match organ this camera-only frame does not carry)"
             "HOW" ->
-                if (lastLuma >= 0)
-                    "HOW · by luminance over a 160×120 Y-grid → fkwu (if (le $threshold luma) 1 0)\n" +
-                        "(native fkwu decision · richer how pending flatten)"
+                if (obs != null)
+                    "HOW · spatial occupancy ${obs.occupancy} → pf-present? ${if (obs.present) "1" else "0"}\n" +
+                        "(native fkwu · region-variance over the ${gridN}×${gridN} luminance grid)"
                 else "HOW · sensing not started yet"
             "WHY" ->
-                "WHY · not yet inferred\n(intent/causal plane needs the fused-observation recipe — pending flatten)"
+                "WHY · un-witnessed\n(intent/causal plane needs a reading no single frame carries)"
             else -> "$plane · —"
         }
         planeReading.text = reading
@@ -330,8 +342,14 @@ class LiveSenseActivity : AppCompatActivity() {
             setOnImageAvailableListener({ r ->
                 val image = r.acquireLatestImage() ?: return@setOnImageAvailableListener
                 try {
-                    val luma = averageLuma(image.planes[0].buffer, image.planes[0].rowStride, image.width, image.height)
-                    onLuma(luma)
+                    val y = image.planes[0].buffer
+                    val stride = image.planes[0].rowStride
+                    val luma = averageLuma(y, stride, image.width, image.height)
+                    // The downsampled NxN luminance grid the camera-eye hands fkwu: each cell is
+                    // the mean luminance of one NxN block of the frame. fkwu reads the SPATIAL
+                    // signature (occupancy variance, object detail) — far richer than one average.
+                    val grid = lumaGrid(y, stride, image.width, image.height, gridN)
+                    onLuma(luma, grid)
                 } finally {
                     image.close()
                 }
@@ -419,43 +437,89 @@ class LiveSenseActivity : AppCompatActivity() {
         return if (count == 0L) 0 else (sum / count).toInt()
     }
 
-    // Hand the luminance to fkwu ~3x/sec; fkwu decides presence AND surprise; draw both.
-    private fun onLuma(luma: Int) {
+    // Downsample the Y plane to an NxN row-major grid: cell (gx,gy) is the mean luminance
+    // of its frame block. This is the carrier shape every sense recipe reads — fkwu does the
+    // spatial sensing (variance/occupancy/object-detail) over it, Kotlin only averages blocks.
+    private fun lumaGrid(y: ByteBuffer, rowStride: Int, w: Int, h: Int, n: Int): IntArray {
+        val grid = IntArray(n * n)
+        val bw = w / n
+        val bh = h / n
+        for (gy in 0 until n) {
+            for (gx in 0 until n) {
+                var sum = 0L
+                var count = 0L
+                var row = gy * bh
+                val rowEnd = if (gy == n - 1) h else (gy + 1) * bh
+                val colStart = gx * bw
+                val colEnd = if (gx == n - 1) w else (gx + 1) * bw
+                val rstep = maxOf(1, bh / 8)
+                val cstep = maxOf(1, bw / 8)
+                while (row < rowEnd) {
+                    var col = colStart
+                    while (col < colEnd) {
+                        sum += (y.get(row * rowStride + col).toInt() and 0xFF)
+                        count++
+                        col += cstep
+                    }
+                    row += rstep
+                }
+                grid[gy * n + gx] = if (count == 0L) 0 else (sum / count).toInt()
+            }
+        }
+        return grid
+    }
+
+    // Hand the luminance + grid to fkwu ~3x/sec; fkwu runs the fused observation (presence
+    // from spatial occupancy, where from object detail) AND the surprise decision; draw both.
+    private fun onLuma(luma: Int, grid: IntArray) {
         val now = System.currentTimeMillis()
         if (senseInFlight || now - lastSenseAt < 300) return
         lastSenseAt = now
         senseInFlight = true
         val prev = lastLuma
         cameraHandler?.post {
-            val presence = FkwuSense.sensePresence(this, luma, threshold)
+            // The RICH fused observation over the live grid: present / occupancy / where, all
+            // computed natively by fkwu through the observe-table. This is the presence verdict.
+            val obs = FkwuSense.observe(this, grid, gridN)
             // Frame-to-frame |Δluma| is the measured byte; fkwu owns the crossing decision.
             val delta = if (prev < 0) 0 else kotlin.math.abs(luma - prev)
             val surprise = if (prev < 0) null else FkwuSense.senseSurprise(this, delta, attend)
             ui.post {
-                renderVerdict(luma, presence, delta, surprise)
+                renderVerdict(luma, obs, delta, surprise)
                 senseInFlight = false
             }
         }
     }
 
-    private fun renderVerdict(luma: Int, v: FkwuSense.Verdict, delta: Int, s: FkwuSense.Verdict?) {
+    // Name the place from the fused where-plane: the coarse-block id (0..3, raster TL/TR/BL/BR)
+    // fkwu's scene read located the nearest thing in. -1 = nowhere placed (an empty frame).
+    private fun placeName(blockId: Int): String = when (blockId) {
+        0 -> "upper-left"
+        1 -> "upper-right"
+        2 -> "lower-left"
+        3 -> "lower-right"
+        else -> "nowhere"
+    }
+
+    private fun renderVerdict(luma: Int, obs: FkwuSense.Observation, delta: Int, s: FkwuSense.Verdict?) {
         prevLuma = lastLuma
         lastLuma = luma
 
-        if (!v.native || v.value == null) {
+        if (!obs.native) {
             headline.text = "fkwu unreachable"
             headline.setTextColor(Color.parseColor("#FF7B7B"))
-            detail.text = v.error ?: "no verdict"
-            proof.text = "expr: ${v.expr}"
+            detail.text = obs.error ?: "no observation"
+            proof.text = "observe-table (live-observe-cli)"
             presenceNative = false
             return
         }
-        val present = v.value == 1L
+        val present = obs.present
         lastPresent = present
+        lastObs = obs
         presenceNative = true
         headline.text = if (present) "PRESENCE: yes" else "PRESENCE: no"
         headline.setTextColor(if (present) Color.parseColor("#5BE3A7") else Color.parseColor("#8896AC"))
-        detail.text = "luminance: $luma   (threshold $threshold)"
+        detail.text = "occupancy: ${obs.occupancy}   (native fkwu · pf-occupancy)"
 
         // fkwu's surprise verdict — append an event when it says the Δ crossed attend.
         val surprised = s?.native == true && s.value == 1L
@@ -467,17 +531,23 @@ class LiveSenseActivity : AppCompatActivity() {
             if (speaking) speak("Surprise. Delta $delta.", flush = true)
         }
 
-        // WHAT IS BEING SENSED — the live block (native readings + honest pending labels).
+        val where = if (obs.whereFirst >= 0)
+            "${placeName(obs.whereFirst)} (${obs.whereCount} placed)" else "nowhere placed"
+
+        // WHAT IS BEING SENSED — every value here is computed by fkwu over the live grid through
+        // the observe-table. who/what have no organ on a camera-only frame: named un-witnessed.
         sensedBlock.text = buildString {
-            append("presence:  ${if (present) "yes" else "no"}   (native fkwu)\n")
-            append("luminance: $luma / 255  ·  ${lumaContext(luma)}   (native)\n")
+            append("presence:  ${if (present) "yes" else "no"}   (native fkwu · pf-present?)\n")
+            append("occupancy: ${obs.occupancy}  ·  ${lumaContext(luma)}   (native · pf-occupancy)\n")
             append("surprise:  Δ$delta vs attend $attend  ·  ${if (surprised) "ATTEND" else "calm"}   (native fkwu)\n")
-            append("who:       pending flatten (fused-observation recipe)\n")
-            append("what:      pending flatten   ·   where: pending flatten")
+            append("where:     $where   (native fkwu · sf-objects → fo-fuse)\n")
+            append("who:       un-witnessed (no face organ on a camera-only frame)\n")
+            append("what:      un-witnessed (no microphone organ this frame)")
         }
 
         proof.text = buildString {
-            append("native fkwu presence verdict: ${v.raw}   ·   Form: ${v.expr}\n")
+            append("native fkwu observation: ${obs.raw}   ·   present occupancy where-count where-first fused-where\n")
+            append("recipe: live-observe (pf-present? · sf-objects · fo-fuse) — four-way 127, native on metal\n")
             if (s != null) append("native fkwu surprise verdict: ${s.raw}   ·   Form: ${s.expr}\n")
             append("body: C-bootstrap fkwu on Galaxy S23 Ultra · no go/rust/clang/python")
         }
