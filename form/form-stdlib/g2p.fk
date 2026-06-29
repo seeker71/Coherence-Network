@@ -1,0 +1,18 @@
+; g2p.fk — grapheme->phoneme: ONE engine, locales as DATA. The reading layer of a voice. The same lookup engine
+; fed a different locale's rule-table yields that locale's phonemes -- so adding a tongue is a data drop-in, never
+; new code (core-abstraction-first). Honest floor: graphemes/phonemes are ints, table fixed-size; the engine is the shape.
+; preludes: form-stdlib/core.fk
+(do
+    (defn g2p-p1 (t) (head t))
+    (defn g2p-p2 (t) (head (tail t)))
+    (defn g2p-p3 (t) (head (tail (tail t))))
+    (defn g2p-lookup (g t) (if (eq g 1) (g2p-p1 t) (if (eq g 2) (g2p-p2 t) (g2p-p3 t))))
+    (defn g2pk (cond bit) (if cond bit 0))
+    (defn g2p-check ()
+        (add (add (add (add
+            (g2pk (eq (g2p-lookup 1 (list 10 20 30)) 10) 1)
+            (g2pk (eq (g2p-lookup 1 (list 11 20 33)) 11) 10))
+            (g2pk (eq (g2p-lookup 2 (list 10 20 30)) (g2p-lookup 2 (list 11 20 33))) 100))
+            (g2pk (not (eq (g2p-lookup 3 (list 10 20 30)) (g2p-lookup 3 (list 11 20 33)))) 1000))
+            (g2pk (eq (g2p-lookup 3 (list 10 20 30)) 30) 10000)))
+)
