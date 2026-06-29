@@ -1183,3 +1183,4 @@ presence-feature fks 15
 trust-climb fks 8
 scene-features fks 255
 sound-classify fks 63
+voice-self-learn fks 127
