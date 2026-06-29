@@ -1,0 +1,62 @@
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk form-stdlib/identity-match.fk
+;
+; identity-match-band — cross-device, LEARNED, persistent identity matching, four-way. mesh-sense-7w
+; de-dups within ONE moment; this proves de-dup across DEVICES and across TIME into one persistent
+; identity-cell, at two granularities (CATEGORY + IDENTITY), and that cross-device AGREEMENT refines the
+; match (champion/challenger). Embeddings are hand-given quantized unit-ish vectors — the neural quality is
+; the oracle's (speaker-embed's ECAPA today, a face model tomorrow as just another row); the recognition
+; DECISION is what crosses four-way here.
+;
+; The known body: two persistent cells in two categories —
+;   alice : human, champion embedding (10 0 0 0), learned floor 60
+;   rex   : pet,   champion embedding (0 10 0 0), learned floor 50
+;
+; Verdict 511 when every claim lands (numeric; matched ids are carrier-read strings):
+;   1   im-category reads the coarse kind off an observation        (human)
+;   2   device-1 sees alice -> matches the alice cell               (dot 90 >= 60)
+;   4   device-2 sees alice later, different vector -> SAME id       (dot 80 >= 60) de-dup across device+time
+;   8   a genuinely different human presence -> NEW cell            (dot 20 < 60 -> "new")
+;   16  identity matching is WITHIN a kind: a rex-shaped query in    (pet nearest = rex, never alice)
+;       the pet category resolves to rex, never to alice
+;   32  an empty category mints a new cell                          (no known cats -> "new")
+;   64  cross-device AGREEMENT over a long window is proven         (im-agreed? agree 8 0 == 1)
+;   128 ... and refines the cell: floor TIGHTENS, champion promoted (floor 60 -> 70, embedding replaced)
+;   256 a SINGLE device's lucky streak does NOT refine (long-window (im-agreed? lonely 8 0 == 0,
+;       floor is the safety; the cell is unchanged)                  cell unchanged)
+(do
+    (let alice (im-cell "alice" "human" (list 10 0 0 0) 60))
+    (let rex   (im-cell "rex"   "pet"   (list 0 10 0 0) 50))
+    (let known (list alice rex))
+
+    ; two devices, two times, the SAME human presence — near-identical embeddings
+    (let d1-alice (im-obs "human" (list 9 1 0 0) "mac"     1000))
+    (let d2-alice (im-obs "human" (list 8 2 0 0) "android" 2000))
+    ; a genuinely different human presence (far from alice's champion)
+    (let other    (im-obs "human" (list 2 0 0 0) "mac"     3000))
+    ; a pet presence shaped like rex (and far from alice) — category isolation demonstrator
+    (let a-pet    (im-obs "pet"   (list 1 9 0 0) "android" 4000))
+
+    ; cross-device agreement window: champion (cell exemplar) vs challenger (agreeing devices' shared
+    ; exemplar). 8 trials, the challenger reaches the champion at margin 0 -> proven over the window.
+    (let agree (list (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+                     (list 1 1) (list 1 1) (list 1 1) (list 1 1)))
+    ; one device's lucky streak: only 3 trials, below the 8-sample long-window floor -> NOT proven.
+    (let lonely (list (list 0 1) (list 0 1) (list 1 1)))
+
+    ; the agreeing devices' shared exemplar that gets promoted to champion on a proven agreement
+    (let shared (list 10 1 0 0))
+
+    (let c0 (if (str_eq (im-category d1-alice) "human") 1 0))
+    (let c1 (if (str_eq (im-match d1-alice known) "alice") 2 0))
+    (let c2 (if (str_eq (im-match d2-alice known) "alice") 4 0))
+    (let c3 (if (str_eq (im-match other known) "new") 8 0))
+    (let c4 (if (str_eq (im-match a-pet known) "rex") 16 0))
+    (let c5 (if (str_eq (im-match d1-alice (list)) "new") 32 0))
+    (let c6 (if (eq (im-agreed? agree 8 0) 1) 64 0))
+    (let learned (im-learn alice shared agree 8 0 10))
+    (let c7 (if (and (eq (im-cell-floor learned) 70)
+                     (str_eq (im-cell-id learned) "alice")) 128 0))
+    (let held (im-learn alice shared lonely 8 0 10))
+    (let c8 (if (and (eq (im-cell-floor held) 60)
+                     (eq (im-agreed? lonely 8 0) 0)) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

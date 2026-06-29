@@ -1,0 +1,145 @@
+; identity-match.fk — cross-device, LEARNED, persistent identity matching. mesh-sense-7w fuses
+; presences within ONE moment; THIS recipe de-dups across DEVICES and across TIME into one persistent
+; identity-cell, at two granularities — CATEGORY (the kind: human / pet / object-with-presence) and
+; IDENTITY (the specific cell) — and it LEARNS: when two independent devices agree on the same cell, the
+; agreement refines the match (champion/challenger over the cross-device competition window).
+;
+; Matching here is RECOGNITION, not a gate. A matched cell is KNOWN and REMEMBERED across encounters
+; within the body; nothing is suppressed inward. The OUTWARD membrane (what crosses out of the body to be
+; shared) is sense-discernment.fk's job — a different stone. This one only asks: have I met this presence
+; before, and is it the same cell? Care, not control.
+;
+; THE OBSERVATION (modality-agnostic — voice now, visual later as just another row):
+;   an observation is (category embedding device time) where
+;     - category   the coarse kind word ("human" / "pet" / "object") — im-category reads it directly; a
+;                  carrier (mesh-sense-7w's WHO/WHAT planes, a classifier) sets it. The coarse granularity.
+;     - embedding  a quantized unit-ish vector — the SAME shape speaker-embed.fk matches over. The cosine
+;                  decision is modality-agnostic: a voice (ECAPA) embedding today, a face embedding
+;                  tomorrow, drop in as the SAME row — no special case, just a different vector source.
+;     - device     the device-cell that observed it (string) — the cross-device attribution.
+;     - time       an integer timestamp — the across-time attribution.
+;
+; A KNOWN identity-cell is (id category embedding floor): a stable id, its category, its champion
+; embedding (the current best exemplar of this identity), and its LEARNED match floor (the cosine·scale²
+; a query must clear to be THIS cell). The floor is what cross-device agreement refines.
+;
+; THE THREE DECISIONS:
+;   im-category(obs)            -> the coarse kind word. The cheap, always-available granularity.
+;   im-match(obs, known-cells)  -> the matched persistent id by nearest-embedding within the obs's
+;                                  category, IF the nearest clears that cell's learned floor; else "new"
+;                                  (an honest no-match -> the carrier mints a fresh cell). De-dup across
+;                                  devices+time = two observations of the same presence resolve to ONE id.
+;   im-learn(cell, history)     -> refine the cell when independent devices AGREE. A cross-device
+;                                  agreement history is a window of (champion-correct challenger-correct)
+;                                  trials — champion = the cell's current floor/exemplar, challenger = the
+;                                  agreeing devices' shared exemplar. When the challenger reaches the
+;                                  champion over a long-enough window (champion-challenger's PROVEN gate),
+;                                  the floor TIGHTENS (we trust the match more) and the challenger exemplar
+;                                  is promoted to champion. This is the cross-device learning: agreement
+;                                  across devices is what moves the threshold, never a single device's say.
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk
+;
+; Proven by: form-stdlib/tests/identity-match-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── THE OBSERVATION row (modality-agnostic) ──────────────────────────────
+    (defn im-obs (category embedding device time) (list category embedding device time))
+    (defn im-obs-category  (o) (nth o 0))
+    (defn im-obs-embedding (o) (nth o 1))
+    (defn im-obs-device    (o) (nth o 2))
+    (defn im-obs-time      (o) (nth o 3))
+
+    ; ── A KNOWN identity-cell ────────────────────────────────────────────────
+    ; (id category champion-embedding learned-floor) — the persistent cell a match resolves to.
+    (defn im-cell (id category embedding floor) (list id category embedding floor))
+    (defn im-cell-id        (c) (nth c 0))
+    (defn im-cell-category  (c) (nth c 1))
+    (defn im-cell-embedding (c) (nth c 2))
+    (defn im-cell-floor     (c) (nth c 3))
+
+    ; ── im-category: the coarse kind. The cheapest granularity — read directly off the observation.
+    ;    A carrier (mesh-sense-7w's WHO/WHAT fusion, a classifier) set it; here it is the kind word.
+    (defn im-category (o) (im-obs-category o))
+
+    ; ── candidates: only the known cells whose category matches the observation's. Identity matching is
+    ;    WITHIN a kind — a human query is never matched against a pet cell. The coarse granularity gates
+    ;    the fine one, so the embedding decision only ever compares like with like.
+    (defn im-in-category (cells category)
+        (if (eq (len cells) 0) (list)
+            (if (str_eq (im-cell-category (head cells)) category)
+                (cons (head cells) (im-in-category (tail cells) category))
+                (im-in-category (tail cells) category))))
+
+    ; ── the cosine·scale² between the observation and a known cell's champion embedding. This IS
+    ;    speaker-embed.fk's decision (se-dot over pre-normalized quantized vectors) — reused, not
+    ;    re-derived. Modality-agnostic: the vector is voice today, face tomorrow, the dot is the same.
+    (defn im-sim (o cell) (se-dot (im-obs-embedding o) (im-cell-embedding cell)))
+
+    ; ── nearest known cell in the category by MAX similarity, threaded like se-best (no sub, recursion is
+    ;    the loop). Returns the winning cell; im-best-sim returns its similarity.
+    (defn im-best (o cells best bestsim)
+        (if (eq (len cells) 0) best
+            (do
+                (let s (im-sim o (head cells)))
+                (if (gt s bestsim)
+                    (im-best o (tail cells) (head cells) s)
+                    (im-best o (tail cells) best bestsim)))))
+    (defn im-nearest (o cells)
+        (im-best o (tail cells) (head cells) (im-sim o (head cells))))
+    (defn im-best-sim (o cells)
+        (im-sim o (im-nearest o cells)))
+
+    ; ── im-match: the matched persistent identity id. Within the observation's category, find the nearest
+    ;    known cell; if it clears THAT cell's learned floor, the observation IS that cell (de-dup across
+    ;    devices and time — a second device, a later time, resolves to the SAME id). Otherwise "new": an
+    ;    honest no-match the carrier turns into a fresh identity-cell. If the category has no known cells
+    ;    yet, also "new". The floor is per-cell and LEARNED (im-learn moves it) — recognition that sharpens.
+    (defn im-match (o cells)
+        (do
+            (let cands (im-in-category cells (im-obs-category o)))
+            (if (eq (len cands) 0) "new"
+                (do
+                    (let win (im-nearest o cands))
+                    (if (ge (im-sim o win) (im-cell-floor win))
+                        (im-cell-id win)
+                        "new")))))
+
+    ; whether an observation matched an existing cell at all (1) or minted a new one (0) — the de-dup coin.
+    (defn im-matched? (o cells) (if (str_eq (im-match o cells) "new") 0 1))
+
+    ; ── im-learn: cross-device LEARNING. When independent devices agree on a cell, the agreement refines
+    ;    it. A cross-device agreement `history` is a window of (champion-correct challenger-correct) trials
+    ;    — champion = the cell's current exemplar/floor, challenger = the agreeing devices' shared exemplar.
+    ;    cc-promote? (champion-challenger.fk's PROVEN long-window gate) decides whether the challenger has
+    ;    earned promotion. We do not re-derive the gate; we COMPOSE it, so the learning verdict IS the
+    ;    proven head-to-head competition — agreement across devices, never a single device's assertion.
+    (defn im-agreed? (history min-samples margin)
+        (cc-promote? history min-samples margin))
+
+    ; the REFINED floor: when the cross-device challenger is promoted, the floor TIGHTENS by `step` (we
+    ; trust THIS identity more — a higher bar to be it, fewer false merges). Until promotion the floor
+    ; holds. No sub: a held floor is the floor; a tightened floor is floor + step.
+    (defn im-refine-floor (cell history min-samples margin step)
+        (if (eq (im-agreed? history min-samples margin) 1)
+            (add (im-cell-floor cell) step)
+            (im-cell-floor cell)))
+
+    ; im-learn: produce the refined cell. On a proven cross-device agreement the cell's CHAMPION embedding
+    ; is replaced by the agreeing devices' shared exemplar (challenger promoted -> champion) AND the floor
+    ; tightens; otherwise the cell is unchanged. id and category are conserved — the SAME persistent cell,
+    ; sharpened. This is champion/challenger retirement applied to a match: the challenger retires the
+    ; champion exemplar exactly the way android-mesh-learning retires an oracle.
+    (defn im-learn (cell challenger-embedding history min-samples margin step)
+        (if (eq (im-agreed? history min-samples margin) 1)
+            (im-cell (im-cell-id cell) (im-cell-category cell)
+                     challenger-embedding
+                     (add (im-cell-floor cell) step))
+            cell))
+
+    ; did learning actually move the cell? 1 iff the cross-device agreement was proven (floor moved /
+    ; champion promoted). The learning coin — distinct from the match coin.
+    (defn im-learned? (cell challenger-embedding history min-samples margin step)
+        (im-agreed? history min-samples margin))
+
+    0)
