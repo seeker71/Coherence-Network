@@ -1,0 +1,37 @@
+{
+  "title": "fam-horner2 — a degree-2 Horner polynomial ((2x+3)x+4) as Form->asm BYTES, four-way + run on M4 (+ the fa-fmadd fused-multiply-add encoder)",
+  "date": "2026-06-29",
+  "author": "Sema (Opus 4.8), autonomous native-ML walk",
+  "stone": "The NEXT nonlinear rung on the native asm lane after fam-rsqrt. fam-rsqrt opened the first float constant + first fdiv; fam-horner2 opens the first fa-fmadd (fused multiply-add) — and Horner-over-fmadd is the literal eval engine of every transcendental still to come. exp/sin/cos/gelu on the native lane are all polynomial (or rational) approximations, and Horner folds a degree-n poly into n fused multiply-adds (one rounding each). This proves the 2-step fold byte-exact and runs it on the M4, the floor under emitting a real exp/softmax kernel. Advances form-native-models.form 'GAPS — LLM INFERENCE' A note: 'the nonlinear ops as form-asm bytes (exp/sin/cos/rsqrt for softmax/RoPE/RMSNorm/SwiGLU)' — Horner is the shared body those approximations are written in.",
+  "new_encoder": "form/form-stdlib/form-asm.fk :: fa-fmadd (rd rn rm ra) — fmadd d<rd>, d<rn>, d<rm>, d<ra> (rd = rn*rm + ra, ONE rounding): base 0x1F400000 | rm<<16 | ra<<10 | rn<<5 | rd. The fused multiply-add clang fuses every dot/Horner step to. One hardware op = one rounding, so a polynomial folded with it is byte-DISTINCT from fmul-then-fadd; matching clang requires the fused form. The genuinely-reusable win: every later transcendental Horner step (and the composed dot/normalizer the rsqrt note deferred — 'clang fuses that to fmadd') routes through this encoder.",
+  "recipe": "form/form-stdlib/form-asm-matvec.fk :: fam-horner2 — 6 arm64 instructions / 24 bytes, scalar (no loop). ABI: d0 = x, returns d0 = ((2*x + 3)*x + 4). Program: fmov d1,#3.0 (1e611001) ; fmov d2,#2.0 (1e601002) ; fmadd d1,d0,d2,d1 (1f420401) ; fmov d2,#4.0 (1e621002) ; fmadd d0,d1,d0,d2 (1f400820) ; ret (d65f03c0). The coefficients ride fa-fmov-imm (the float-constant primitive fam-rsqrt opened): 2.0=imm8 0, 3.0=imm8 8, 4.0=imm8 16 — all VFP-expressible, so no constant pool yet (real exp coeffs like 1/6 will need one; this is the clean floor on which the constant pool is the next named gap).",
+  "four_way": {
+    "band": "form/form-stdlib/tests/form-asm-horner-band.fk",
+    "manifest_row": "form-asm-horner fks 31",
+    "verdict": 31,
+    "claims": "1 len==24  +2 FULL 24-byte program byte-equals the clang oracle (fa-conviction)  +4 fmadd d1,d0,d2,d1 (the FIRST fused multiply-add, new encoder)  +8 fmadd d0,d1,d0,d2 (the Horner reduction second step)  +16 fmov d2,#4.0 (a polynomial coefficient as a float constant)",
+    "result": "Go = Rust = TS = fkwu = 31, 0 divergent. fourth arm: 1 band four-way (fkwu + pre-flattened tables). No regression: form-asm-rsqrt (31), form-asm-ss-sqrt (127), form-asm-matvec-2d (127) all still cross four-way after the shared-file edits.",
+    "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-horner-band.fk"
+  },
+  "oracle": "clang -O2 -c -target arm64-apple-macos + otool -tvVj of `double p(double x){return __builtin_fma(__builtin_fma(2.0,x,3.0),x,4.0);}` — the exact 6-word image the recipe matches byte-for-byte: 1e611001 fmov d1,#3.0 / 1e601002 fmov d2,#2.0 / 1f420401 fmadd d1,d0,d2,d1 / 1e621002 fmov d2,#4.0 / 1f400820 fmadd d0,d1,d0,d2 / d65f03c0 ret. clang is the teacher that confirmed the bytes once (including which register clang picks and that it materializes 2.0/3.0/4.0 via fmov-imm), dropped from the runtime by fa-conviction's byte-identity gate.",
+  "hardware_witness": {
+    "script": "scripts/form_asm_horner_witness.sh",
+    "device": "Apple M4 Max, arm64 Darwin",
+    "path": "Form kernel emits fam-horner2's 24 bytes -> form-macho mo-object-sym wraps a Mach-O .o exporting _recipe -> ld -dylib + ad-hoc sign (no clang in the link) -> C harness dlopen+call as double recipe(double x)",
+    "emitted_bytes": "0110611e 0210601e 0104421f 0210621e 2008401f c0035fd6",
+    "compute_toolchain_free": "no rustc/clang in the COMPUTE; clang only builds the dumb dlopen loader. The reference uses the SAME fma() fold the recipe emits, so parity is bit-for-bit == not epsilon-close.",
+    "results": [
+      {"case": "0.0",   "x": 0.0,   "got": 4.0,                  "expected": 4.0,                  "match": true},
+      {"case": "1.0",   "x": 1.0,   "got": 9.0,                  "expected": 9.0,                  "match": true},
+      {"case": "2.0",   "x": 2.0,   "got": 18.0,                 "expected": 18.0,                 "match": true},
+      {"case": "-1.0",  "x": -1.0,  "got": 3.0,                  "expected": 3.0,                  "match": true},
+      {"case": "0.5",   "x": 0.5,   "got": 6.0,                  "expected": 6.0,                  "match": true},
+      {"case": "1e8",   "x": 1e8,   "got": 20000000300000004,    "expected": 20000000300000004,    "match": true},
+      {"case": "1e-8",  "x": 1e-8,  "got": 4.0000000299999998,   "expected": 4.0000000299999998,   "match": true},
+      {"case": "0.1",   "x": 0.1,   "got": 4.3200000000000003,   "expected": 4.3200000000000003,   "match": true}
+    ],
+    "parity": "8/8 bit-for-bit == vs fma(fma(2.0,x,3.0),x,4.0). The fp-stress 1e8 case (20000000300000004) and the irrational-binary 0.1 case (4.3200000000000003) match to the last bit, confirming the fused-multiply-add rounding is identical."
+  },
+  "reading": "The Horner polynomial fold — the eval engine of every transcendental on the native lane — is now sovereign native arm64 bytes, proven byte-identical across all four kernels AND executed on the M4. The native asm lane now carries the 2-D matvec (dominant linear compute), the L2-norm reduction (fam-ss-sqrt), the reciprocal-sqrt normalizer (fam-rsqrt), the float-constant materialization (fa-fmov-imm), and now the fused multiply-add (fa-fmadd) + the Horner recurrence. Next named rungs in form-native-models.form: a CONSTANT POOL (real exp/sin coefficients like 1/6, 1/120 are not VFP-immediate-expressible — load from a literal pool via ldr-d off a base register), then exp (range reduction over the present fcvtzs/scvtf + a higher-degree Horner using the pool), sin/cos (RoPE), then ll-buffer staging of the dequanted tensor set + the 28-layer fold.",
+  "reproduce": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-horner-band.fk && bash ../scripts/form_asm_horner_witness.sh"
+}
