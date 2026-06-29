@@ -34,9 +34,31 @@ final class SenseModel: NSObject, ObservableObject {
     // Inquiry-plane probe readings (filled live so a tap shows the current sense).
     @Published var sceneNote: String = "a lit/dark field (no VLM yet)"
 
+    // RICH PAYLOAD surfaces this Mac SHARES + SPEAKS (native bands rendered to words).
+    @Published var sceneClass: String = "scene: …"
+    @Published var summaryLine: String = "warming the eye…"
+    @Published var surpriseWord: String = "—"
+    @Published var oracleTier: String = "(local)"
+    let transcriptPending = "(pending — no on-device STT recipe yet)"
+
+    // CROSS-DEVICE (the keystone): the OTHER cells' rich readings + native fusion.
+    @Published var others: [FieldRelay.Other] = []
+    @Published var relayReached = false
+    @Published var relayNote = "OTHER CELLS: reaching the relay…"
+    @Published var fusedPresence = "—"
+    @Published var crossSurprise = -1
+    @Published var crossNote = "first exchange"
+    private var lastCrossSurprise = -1
+    // Voice the OTHER cell only when its summary changes (no chatter).
+    var lastSpokenOther = ""
+
     // Gate parameters — the same thresholds the phone used.
-    let presenceThreshold = 50
+    let presenceThreshold = 50      // luma cut for the scene/confidence bands (NOT presence)
     let surpriseTolerance = 18
+    // Presence OCCUPANCY floor: pf-occupancy must meet-or-exceed this for present=1. The
+    // spatial-variance excess (lower-center MAD minus wall baseline) a real body lifts;
+    // a covered camera's uniform auto-exposed grid stays under it. Mirrors the android floor.
+    let presenceFloor = 20
 
     // The capture session lives on the eye queue, not the main actor — its mutating
     // calls (configure/start/stop) all run there.
@@ -91,6 +113,72 @@ final class SenseModel: NSObject, ObservableObject {
     func stop() {
         queue.async { [weak self] in self?.session.stopRunning() }
     }
+
+    // The cross-device exchange queue (blocking HTTP off the main actor).
+    private let relayQueue = DispatchQueue(label: "earth.hati.coherence-sense.relay")
+    private var relayTimer: Timer?
+
+    // Start the standing mesh: bring up the mDNS advertise + /sense HTTP server + peer
+    // browse (FieldRelay.shared.start), then every few seconds PUBLISH this Mac's RICH
+    // reading for peers to GET and POLL the discovered peers' /sense, then FUSE in native
+    // fkwu. The DECISIONS (fused presence, cross-device surprise) run on this Mac's metal;
+    // mDNS + HTTP are the named carriers (the Windows-sibling's hati mesh, no central
+    // relay). The loop and the mesh persist while the app runs.
+    func startExchangeLoop() {
+        FieldRelay.shared.start()
+        relayTimer?.invalidate()
+        let t = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            self?.doExchange()
+        }
+        RunLoop.main.add(t, forMode: .common)
+        relayTimer = t
+    }
+
+    private func doExchange() {
+        // Snapshot the current native readings on the main actor, PUBLISH them for peers
+        // to GET at /sense, then poll the discovered peers off the main actor.
+        let reading = FieldRelay.Reading(
+            present: present, luma: brightness, surprise: surprise,
+            summary: summaryLine, transcript: transcriptPending,
+            cls: sceneClass, surpriseWord: surpriseWord, oracle: oracleTier)
+        FieldRelay.shared.publish(reading)
+        let myPresent = present, myLuma = brightness
+        relayQueue.async { [weak self] in
+            guard let self else { return }
+            let ex = FieldRelay.shared.exchange()
+            // Native fkwu fusion with the freshest other cell (off the main actor).
+            var fusedTxt = "—"
+            var xVal = -1
+            if let other = ex.others.min(by: { $0.ageMs < $1.ageMs }) {
+                let fused = FkwuSense.fusedPresence(here: myPresent, there: other.present)
+                if fused.native, let v = fused.value {
+                    fusedTxt = (v == 1 ? "yes" : "no") + "  (native fkwu)"
+                }
+                let xs = FkwuSense.crossDeviceSurprise(here: myLuma, there: other.luma)
+                if xs.native, let v = xs.value { xVal = v }
+            }
+            Task { @MainActor in
+                self.relayReached = ex.reached
+                self.others = ex.others
+                if !ex.reached {
+                    self.relayNote = "MESH down — \(ex.error ?? "server not bound")"
+                } else if ex.others.isEmpty {
+                    self.relayNote = "OTHER CELLS: none discovered yet — advertising \(FieldRelay.serviceName) (\(FieldRelay.deviceId)) over \(FieldRelay.serviceType), browsing for peers"
+                } else {
+                    self.relayNote = "OTHER CELLS (this device = \(FieldRelay.deviceId), mDNS-discovered + /sense-streaming):"
+                }
+                self.fusedPresence = fusedTxt
+                if xVal >= 0 {
+                    let fell = self.lastCrossSurprise >= 0 && xVal < self.lastCrossSurprise
+                    self.crossNote = self.lastCrossSurprise < 0 ? "first exchange"
+                        : (fell ? "↓ FELL (was higher last exchange)" : "steady/rose")
+                    self.lastCrossSurprise = xVal
+                    self.crossSurprise = xVal
+                }
+                NotificationCenter.default.post(name: .meshUpdated, object: nil)
+            }
+        }
+    }
 }
 
 extension SenseModel: AVCaptureVideoDataOutputSampleBufferDelegate {
@@ -136,8 +224,10 @@ extension SenseModel: AVCaptureVideoDataOutputSampleBufferDelegate {
             sal = s / grid.count
         }
 
-        // The two DECISIONS run in fkwu on metal.
-        let pres = FkwuSense.sensePresence(luma: avgBrightness, threshold: self.presenceThreshold)
+        // The two DECISIONS run in fkwu on metal. Presence is the OCCUPANCY decision over
+        // the FULL 16x16 grid (pf-present? / pf-occupancy) — structure, not brightness — so a
+        // covered camera's auto-exposed uniform grid correctly reads NO presence.
+        let pres = FkwuSense.sensePresence(grid: grid, n: G, floor: self.presenceFloor)
         let surp = FkwuSense.senseSurprise(salience: sal, tolerance: self.surpriseTolerance)
 
         // ambient-surprise as-refine: step the baseline one toward the reading (queue-local).
@@ -157,13 +247,26 @@ extension SenseModel: AVCaptureVideoDataOutputSampleBufferDelegate {
             self.frameCount += 1
             self.brightness = avgBrightness
             self.surprise = sal
-            self.present = (pres.value == 1)
+            self.present = pres.present
             self.surprised = surprised
             self.recipeNative = pres.native && surp.native
             self.lastExpr = surp.expr
-            self.sceneNote = avgBrightness >= self.presenceThreshold
-                ? "a lit field, presence likely (brightness \(avgBrightness)/255)"
-                : "a dim/dark field (brightness \(avgBrightness)/255)"
+            // Scene note reads the OCCUPANCY now, not just brightness — a body breaks the
+            // room's uniformity (occupancy lifts) where a covered lens stays uniform.
+            self.sceneNote = pres.present
+                ? "a body breaks the room's uniformity (occupancy \(pres.occupancy), brightness \(avgBrightness)/255)"
+                : "uniform field, no body (occupancy \(pres.occupancy), brightness \(avgBrightness)/255)"
+
+            // RICH surfaces — native bands rendered to the words this Mac shares + speaks.
+            let (sceneWord, _) = FkwuSense.sceneClass(luma: avgBrightness)
+            self.sceneClass = sceneWord
+            let sceneShort = sceneWord
+                .replacingOccurrences(of: "scene: ", with: "")
+                .components(separatedBy: " (native").first ?? sceneWord
+            self.summaryLine = FkwuSense.summaryLine(
+                present: self.present, sceneWord: sceneShort, surprised: surprised)
+            self.surpriseWord = FkwuSense.surpriseContent(salience: sal, surprised: surprised)
+            self.oracleTier = FkwuSense.oracleTier(luma: avgBrightness, threshold: self.presenceThreshold)
 
             if let ev = newEvent {
                 self.events.insert(ev, at: 0)
@@ -176,4 +279,5 @@ extension SenseModel: AVCaptureVideoDataOutputSampleBufferDelegate {
 
 extension Notification.Name {
     static let surpriseSpike = Notification.Name("earth.hati.coherence-sense.surpriseSpike")
+    static let meshUpdated = Notification.Name("earth.hati.coherence-sense.meshUpdated")
 }
