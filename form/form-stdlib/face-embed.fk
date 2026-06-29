@@ -1,0 +1,55 @@
+; face-embed.fk — the nearest-by-cosine DECISION over the oracle's NEURAL face embeddings (the body). The VISUAL sibling of speaker-embed (voice). The embedding quality is the ArcFace-class oracle's; this proves the recognition decision over it.
+;
+; A face is recognized the same way a voice is: not by hand-built geometry (eye spacing,
+; jaw curve) — those can't part two similar faces — but by matching over the embedding of
+; the best LOCAL oracle. An ArcFace-class face-recognition model maps a cropped face to a
+; 512-d vector where same-person vectors point the same way and different people point apart.
+; The carrier runs that oracle and L2-normalizes + quantizes the embedding to ints; EVERY
+; recognition decision is HERE, native and four-way. The embedding rides the oracle exactly
+; as speaker-embed rides ECAPA — that is the honest floor: the vector is the oracle's, the
+; DECISION is the body's.
+;
+; Metric: cosine similarity. Because the carrier L2-normalizes both vectors, cosine is just
+; their dot product — nearest face = the enrolled vector with the MAX dot. A floor on that
+; max returns "unknown" rather than forcing every face onto someone (recognition is care;
+; this matches INWARD — the outward gate is sense-discernment).
+;
+; This drops into identity-match as just another modality row: an observation is
+; (category embedding device time), and a face embedding is interchangeable with a voice one.
+;
+; Builtins only (mul/add/gt/ge/nth/len/head/tail/cons). Proven by
+; form-stdlib/tests/face-embed-band.fk.
+
+(do
+    (defn fc-id  (s) (nth s 0))      ; roster cell = (id embedding-vector)
+    (defn fc-vec (s) (nth s 1))
+
+    ; integer dot product over two equal-length quantized unit vectors = cosine·scale²
+    (defn fe-dot (a b)
+        (if (eq (len a) 0) 0
+            (add (mul (head a) (head b)) (fe-dot (tail a) (tail b)))))
+
+    ; nearest enrolled face cell by MAX dot (most-aligned face)
+    (defn fe-best (q enrolled best bestsim)
+        (if (eq (len enrolled) 0) best
+            (do
+                (let s (fe-dot q (fc-vec (head enrolled))))
+                (if (gt s bestsim)
+                    (fe-best q (tail enrolled) (head enrolled) s)
+                    (fe-best q (tail enrolled) best bestsim)))))
+    (defn fe-nearest (q enrolled)
+        (fe-best q (tail enrolled) (head enrolled) (fe-dot q (fc-vec (head enrolled)))))
+
+    ; the similarity behind the call (cosine·scale²)
+    (defn fe-sim (q enrolled) (fe-dot q (fc-vec (fe-nearest q enrolled))))
+
+    ; the call: nearest enrolled face's id if it clears the floor, else "unknown"
+    ; (honest no-match instead of a forced guess)
+    (defn fe-match (q enrolled floor)
+        (if (ge (fe-sim q enrolled) floor)
+            (fc-id (fe-nearest q enrolled))
+            "unknown"))
+
+    ; add a face exemplar to the roster — a new (id embedding) cell at the head
+    (defn fe-enroll (roster id embedding)
+        (cons (list id embedding) roster)))
