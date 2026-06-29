@@ -1,0 +1,153 @@
+; self-heard-learning.fk — the body learns from its OWN actions, no human labels. When the device
+; EMITS something with a KNOWN label (it plays song X — X is ground truth, we chose it) and then
+; OBSERVES it back (the mic hears that playback through the car / speakers / room; features via
+; spectrum.fk + mel-frame.fk), the pair (observed-features -> known-label) is FREE labeled training
+; data. No annotator, no cross-device handshake — the label is what WE emitted, the features are what
+; WE heard. The native song-ID (and beyond) trains on the body's own life.
+;
+; THE GENERAL PRINCIPLE (modality-agnostic): any (emit X, observe Y) yields the supervised pair
+; (Y -> X). Play a tone, hear it -> (heard-tone -> tone-id). Speak a word, hear it -> (heard -> word).
+; Move a motor a known amount, sense the result -> (sensed -> command). "Learn by listening to what we
+; hear" made into a recipe — self-supervision from the body's own emissions.
+;
+; WHAT THIS COMPOSES (no re-derivation — the decisions already crossed four-way):
+;   se-dot (speaker-embed.fk)         the MATCH decision: cosine·scale² over quantized unit-ish vectors;
+;                                     nearest exemplar = most-aligned = the predicted label.
+;   cc-promote? (champion-challenger) the LEARNING gate: the SAME proven long-window competition that
+;                                     identity-match.fk uses cross-device — but HERE the agreement is
+;                                     SELF-GENERATED. Each self-pair is a trial where the new observed
+;                                     features (challenger) reach the label's current exemplar (champion);
+;                                     enough self-heard repetitions clear the window and the exemplar
+;                                     SHARPENS toward what we keep hearing our own playback sound like.
+;   im-cell shape (identity-match.fk) a known label-cell mirrors a persistent identity-cell — but keyed
+;                                     by the SELF-EMITTED label, not minted from an unknown presence.
+;
+; HOW THE EXEMPLAR SHARPENS (no human labels, no float divide): a label's exemplar is the running SUM of
+; every self-heard feature vector we've folded in for that label (component-wise add over equal-length
+; quantized vectors). The cosine DECISION (se-dot, max-dot nearest) is invariant to the exemplar's
+; magnitude — only its DIRECTION matters — so summing the self-heard observations pulls the exemplar's
+; direction toward the centroid of how that song actually sounds through our own ears, and more hearings
+; pull it harder. The champion/challenger gate is what AUTHORIZES the fold: a label only sharpens once its
+; self-heard window is long enough to trust (the proven min-samples floor), never on a single lucky echo.
+;
+; A label-cell is (label exemplar count): the self-emitted ground-truth label, its summed self-heard
+; exemplar (champion direction), and how many self-pairs have been folded in (the self-heard window len).
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk
+;
+; Proven by: form-stdlib/tests/self-heard-learning-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── THE SELF-LABELED PAIR ────────────────────────────────────────────────
+    ; shl-pair(emitted-label, observed-features) -> (label features). The label is ground truth BECAUSE
+    ; we emitted it; the features are what we observed back. This is the free supervised pair (Y -> X)
+    ; turned around to (label, features) for folding. No annotation — emission IS the label.
+    (defn shl-pair (emitted-label observed-features) (list emitted-label observed-features))
+    (defn shl-pair-label    (p) (nth p 0))
+    (defn shl-pair-features (p) (nth p 1))
+
+    ; ── A KNOWN LABEL-CELL ───────────────────────────────────────────────────
+    ; (label summed-exemplar fold-count) — the running self-heard model of one label.
+    (defn shl-cell (label exemplar count) (list label exemplar count))
+    (defn shl-cell-label    (c) (nth c 0))
+    (defn shl-cell-exemplar (c) (nth c 1))
+    (defn shl-cell-count    (c) (nth c 2))
+
+    ; ── component-wise vector add: fold an observed feature vector into a label's summed exemplar. The
+    ;    sum's DIRECTION is the centroid the cosine decision reads; magnitude is irrelevant to se-dot.
+    (defn shl-vadd (a b)
+        (if (eq (len a) 0) (list)
+            (cons (add (head a) (head b)) (shl-vadd (tail a) (tail b)))))
+
+    ; ── find the cell for a label in the matcher (a list of label-cells); the matcher is keyed by the
+    ;    SELF-EMITTED label, so the lookup is by string identity.
+    (defn shl-find (matcher label)
+        (if (eq (len matcher) 0) (list)
+            (if (str_eq (shl-cell-label (head matcher)) label)
+                (head matcher)
+                (shl-find (tail matcher) label))))
+    (defn shl-has? (matcher label)
+        (if (eq (len (shl-find matcher label)) 0) 0 1))
+
+    ; ── the SELF-HEARD WINDOW for one label: each fold already done is a trial where the self-heard
+    ;    challenger reached the label's champion exemplar (we heard our OWN playback of a known song, so
+    ;    by construction the observation agrees with the label). A window of `n` such (1 1) trials is the
+    ;    cross-time self-agreement champion-challenger gates. We do NOT re-derive the gate; we build the
+    ;    window the new count implies and ask cc-promote?.
+    (defn shl-window (n)
+        (if (le n 0) (list) (cons (list 1 1) (shl-window (sub n 1)))))
+
+    ; ── shl-trusted?: a label's exemplar is trusted (its self-heard window is long enough to lean on)
+    ;    iff cc-promote? clears over the window its fold-count implies. min-samples is the proven
+    ;    long-window floor (same gate identity-match.fk uses cross-device), margin the slack (0 = the
+    ;    self-heard challenger must equal-or-reach). The SAME proven competition — agreement here is
+    ;    SELF-GENERATED across time, not across devices.
+    (defn shl-trusted? (cell min-samples margin)
+        (cc-promote? (shl-window (shl-cell-count cell)) min-samples margin))
+
+    ; ── FOLD ONE SELF-PAIR ───────────────────────────────────────────────────
+    ; shl-fold(matcher, pair) -> the matcher with this self-pair folded in. If the pair's label is already
+    ; known, its observed features are added into that label's summed exemplar and the fold-count rises
+    ; (the exemplar SHARPENS — more self-hearings of song X pull X's direction toward the centroid of how
+    ; X actually sounds through our ears). If the label is new, a fresh cell is born from this first
+    ; self-hearing (exemplar = the first observation, count 1). Either way the label is ground truth from
+    ; our own emission. Order is conserved; only the matching cell changes.
+    (defn shl-fold-cells (cells label features)
+        (if (eq (len cells) 0) (list)
+            (if (str_eq (shl-cell-label (head cells)) label)
+                (cons (shl-cell label
+                                (shl-vadd (shl-cell-exemplar (head cells)) features)
+                                (add (shl-cell-count (head cells)) 1))
+                      (tail cells))
+                (cons (head cells) (shl-fold-cells (tail cells) label features)))))
+    (defn shl-fold (matcher pair)
+        (do
+            (let label    (shl-pair-label pair))
+            (let features (shl-pair-features pair))
+            (if (eq (shl-has? matcher label) 1)
+                (shl-fold-cells matcher label features)
+                (cons (shl-cell label features 1) matcher))))
+
+    ; ── shl-learn: the refined matcher. Fold EVERY self-pair (each from our own playback) into the
+    ;    matcher, left to right. The result is the matcher whose exemplars have sharpened with every
+    ;    self-hearing — the body's song model trained on its own life, no human in the loop.
+    (defn shl-learn (matcher pairs)
+        (if (eq (len pairs) 0) matcher
+            (shl-learn (shl-fold matcher (head pairs)) (tail pairs))))
+
+    ; ── THE MATCH (inference) ────────────────────────────────────────────────
+    ; the self-heard similarity between a query and a label-cell's exemplar = se-dot (cosine·scale²,
+    ; reused from speaker-embed.fk — the exemplar's direction is the centroid of our self-hearings).
+    (defn shl-sim (features cell) (se-dot features (shl-cell-exemplar cell)))
+
+    ; nearest label-cell by MAX self-heard similarity, threaded like se-best (no sub; recursion is the loop)
+    (defn shl-best (features cells best bestsim)
+        (if (eq (len cells) 0) best
+            (do
+                (let s (shl-sim features (head cells)))
+                (if (gt s bestsim)
+                    (shl-best features (tail cells) (head cells) s)
+                    (shl-best features (tail cells) best bestsim)))))
+    (defn shl-nearest (features cells)
+        (shl-best features (tail cells) (head cells) (shl-sim features (head cells))))
+    (defn shl-best-sim (features cells)
+        (shl-sim features (shl-nearest features cells)))
+
+    ; shl-match(matcher, features) -> the predicted label for NEW, UNLABELED audio (the actual song-ID at
+    ; inference): the nearest learned exemplar, IF that nearest clears the floor — else "unknown" (an
+    ; honest no-match instead of forcing every clip onto some song). An empty matcher is "unknown".
+    ; This is the inference the whole self-heard loop exists to make better: the more of its own playback
+    ; the body has heard, the sharper each exemplar, the more confidently NEW audio gets named.
+    (defn shl-match (matcher features floor)
+        (if (eq (len matcher) 0) "unknown"
+            (do
+                (let win (shl-nearest features matcher))
+                (if (ge (shl-sim features win) floor)
+                    (shl-cell-label win)
+                    "unknown"))))
+
+    ; whether NEW audio cleared the floor (1) or fell through to "unknown" (0) — the inference coin.
+    (defn shl-named? (matcher features floor)
+        (if (str_eq (shl-match matcher features floor) "unknown") 0 1))
+
+    0)

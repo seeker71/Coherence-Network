@@ -1170,4 +1170,5 @@ mesh-join fks 1023
 sense-discernment fks 1023
 presence-event fks 16383
 identity-match fks 511
+self-heard-learning fks 511
 surprise-kernel fks 511
