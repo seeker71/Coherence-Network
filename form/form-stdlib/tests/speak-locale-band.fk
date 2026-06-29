@@ -1,0 +1,3 @@
+; tests/speak-locale-band.fk — the speaking floor in en/fr/pt-br, locales as data, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/speak-locale.fk
+(do (speak-locale-check))
