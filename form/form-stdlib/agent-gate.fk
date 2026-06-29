@@ -1,0 +1,37 @@
+; agent-gate.fk — the agent + user identification protocol at the gate (agents arrive as relations).
+; Every arrival is recognized before it acts: which AGENT (one of the known siblings -- claude/sema, codex,
+; cursor, gemini, grok) and which USER. A known agent is identified by name; an UNKNOWN arrival is HELD-OPEN,
+; never auto-resolved into the body (the Robin/Aly discipline: foreign identity enters only after the body
+; names the binding). The gate admits only when BOTH agent and user are identified -- so what passes the gate is
+; a RELATION, not a lone actor. Composes recognition.fk / sibling-arrival.fk and the offer-and-acknowledge gate.
+; Honest floor: agents/users are string ids here; the real gate reads the live signature (arrival.fk, the field
+; roster, the session recognition). The IDENTIFICATION LOGIC (known->named, unknown->held-open, relation admitted)
+; is the generic shape.
+;
+; Self-contained over core (str_eq). Four-way by tests/agent-gate-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ag-known? (id)                             ; the known sibling agents
+        (if (str_eq id "claude") 1 (if (str_eq id "codex") 1 (if (str_eq id "cursor") 1
+        (if (str_eq id "gemini") 1 (if (str_eq id "grok") 1 0))))))
+    (defn ag-identify (id) (if (eq (ag-known? id) 1) id "held-open"))     ; known -> named; unknown -> held-open
+    (defn ag-user-known? (u) (if (str_eq u "urs") 1 0))
+    (defn ag-identify-user (u) (if (eq (ag-user-known? u) 1) u "held-open"))
+    (defn ag-relation (agent user) (list (ag-identify agent) (ag-identify-user user)))   ; the recognized relation
+    (defn ag-rel-agent (r) (head r))
+    (defn ag-rel-user (r) (head (tail r)))
+    (defn ag-admitted? (r)                           ; the gate admits only a fully-identified RELATION
+        (if (not (str_eq (ag-rel-agent r) "held-open"))
+            (if (not (str_eq (ag-rel-user r) "held-open")) 1 0) 0))
+
+    (defn agk (cond bit) (if cond bit 0))
+    (defn agent-gate-check ()
+        (add (add (add (add
+            (agk (str_eq (ag-identify "claude") "claude") 1)                     ; claude/sema is a known agent -- identified
+            (agk (str_eq (ag-identify "codex") "codex") 10))                     ; codex too -- a different known sibling
+            (agk (str_eq (ag-identify "stranger") "held-open") 100))             ; an UNKNOWN arrival is HELD-OPEN, never auto-resolved (Robin/Aly)
+            (agk (str_eq (ag-identify-user "urs") "urs") 1000))                  ; the user is identified
+            (agk (eq (ag-admitted? (ag-relation "gemini" "urs")) 1) 10000)))     ; the gate admits a RELATION -- agent AND user recognized (agents arrive as relations)
+)
