@@ -484,6 +484,7 @@ q4k-dequant fks 4095
 q6k-dequant fks 4095
 f16-decode fks 4095
 transformer-numerics fks 4095
+softmax fks 1023
 transformer-block fks 511
 transformer-backprop fks 127
 transformer-attention-backward fks 31

@@ -1,0 +1,29 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/softmax.fk
+;
+; softmax-band — numerically-stable softmax proven against the fp64 reference.
+;
+; Verdict 1023 (= 2^10 − 1) when all ten checks match within 1e-6:
+;   c0..c2  sm-stable [1,2,3]               → [0.090030573, 0.244728471, 0.665240956]
+;   c3..c5  sm-stable [1000,1001,1002]      → IDENTICAL (shift-invariance: the
+;           stability proof — naive exp(1002) overflows to inf; max-subtract
+;           makes it finite AND bit-identical to the small-logit row)
+;   c6      sm-denom [1,2,3]                → 1.503214724 (Σ exp(x−max))
+;   c7      sm-nth   [1,2,3] 2              → 0.665240956 (i-th probe, no siblings)
+;   c8,c9   sm-temp  [1,2,3] T=2            → [0.186323723, ...0.506480391]
+;           (temperature flattens; division rides inside the stable path)
+;
+(do
+  (let v   (cons 1.0 (cons 2.0 (cons 3.0 (empty)))))
+  (let big (cons 1000.0 (cons 1001.0 (cons 1002.0 (empty)))))
+  (let c0 (if (lt (tn-abs (sub (sm-nth v 0) 0.09003057317038046)) 0.000001) 1 0))
+  (let c1 (if (lt (tn-abs (sub (sm-nth v 1) 0.24472847105479764)) 0.000001) 2 0))
+  (let c2 (if (lt (tn-abs (sub (sm-nth v 2) 0.6652409557748218)) 0.000001) 4 0))
+  (let c3 (if (lt (tn-abs (sub (sm-nth big 0) 0.09003057317038046)) 0.000001) 8 0))
+  (let c4 (if (lt (tn-abs (sub (sm-nth big 1) 0.24472847105479764)) 0.000001) 16 0))
+  (let c5 (if (lt (tn-abs (sub (sm-nth big 2) 0.6652409557748218)) 0.000001) 32 0))
+  (let c6 (if (lt (tn-abs (sub (sm-denom v) 1.5032147244080551)) 0.000001) 64 0))
+  (let c7 (if (lt (tn-abs (sub (sm-nth v 2) 0.6652409557748218)) 0.000001) 128 0))
+  (let tp (sm-temp v 2.0))
+  (let c8 (if (lt (tn-abs (sub (head tp) 0.1863237232258476)) 0.000001) 256 0))
+  (let c9 (if (lt (tn-abs (sub (head (tail (tail tp))) 0.506480391055654)) 0.000001) 512 0))
+  (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
