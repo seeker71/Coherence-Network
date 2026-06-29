@@ -1,0 +1,84 @@
+; cell-card.fk — the render engine the whole living-mesh GUI rests on (living-mesh.form step 1).
+;
+; ONE recipe: any cell -> a CARD = { identity, facets, open-channels }, where the card is RECURSIVE
+; — each open-channel names another cell you can open into its own card. The card-TYPES
+; (where / what / when / concepts / siblings / attribution / self-image / …) are FACET DATA on the
+; cell, NEVER parallel card recipes. One engine; a new card-type is a facet ROW, not code.
+;
+; A cell, as this engine reads it, is uniform data:
+;   cell = (id, name, facets, channels)
+;     id       — the cell's address (a string slug here; a NodeID at the host carrier)
+;     name     — its display name
+;     facets   — a list of facet rows (key, card-type, value). card-type is DATA: "where"/"what"/…
+;     channels — a list of OPEN cross-cell-interface rows toward other cells. Each carries the
+;                target cell-ref, so the card is openable -> recursion: open a channel -> render that
+;                cell's card. The five ways a cell reaches another (sense/ask/share/learn/build) are
+;                cross-cell-interface ROWS read by ONE engine (cross-cell-interface.fk); the open-
+;                channels of a card ARE those rows, each bound to a target.
+;
+; The card the engine produces is itself uniform structured data — (identity, facets, channels) —
+; so a carrier (GUI) renders ANY card with one renderer, and recursion is just: take a channel's
+; target cell and run cc-card on it again. No card is special-cased; a new face is a facet row.
+;
+; Self-contained over core (list traversal) + the channel tissue (channel-interface modes via
+; cross-cell-interface rows). Four-way by tests/cell-card-band.fk.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/cross-cell-interface.fk
+
+(do
+    ; ── the cell shape (uniform data; constructors + readers) ───────────────
+    (defn cell-make (id name facets channels) (list id name facets channels))
+    (defn cell-id       (c) (nth c 0))
+    (defn cell-name     (c) (nth c 1))
+    (defn cell-facets   (c) (nth c 2))
+    (defn cell-channels (c) (nth c 3))
+
+    ; ── a FACET row = (key, card-type, value). card-type is DATA, never code. ─
+    ; A new card-type (where/what/when/concepts/siblings/attribution/self-image/…) is just another
+    ; value in the type slot of a facet row — the engine never branches on it.
+    (defn facet-make (key card-type value) (list key card-type value))
+    (defn facet-key   (f) (nth f 0))
+    (defn facet-type  (f) (nth f 1))
+    (defn facet-value (f) (nth f 2))
+
+    ; ── an OPEN CHANNEL = a cross-cell-interface row bound to a TARGET cell-ref.
+    ; (verb mode payload merges target) — the first four are exactly a cci-row (the five ways a cell
+    ; reaches another); the fifth is the target cell-ref that makes the card openable -> recursion.
+    (defn open-channel (verb target)
+        (do
+            (let row (cci-find (cci-registry) verb))
+            (list (cci-row-verb row) (cci-row-mode row) (cci-row-payload row) (cci-row-merges row) target)))
+    (defn channel-verb   (ch) (nth ch 0))
+    (defn channel-mode   (ch) (nth ch 1))
+    (defn channel-target (ch) (nth ch 4))   ; the cell-ref you OPEN into -> recursion
+
+    ; ── THE ONE ENGINE: cell -> card. card = (identity, facets, channels). ──
+    ; identity = (id, name); facets = the cell's facet rows verbatim (each carrying its card-type as
+    ; data); channels = the cell's open cross-cell-interface rows verbatim (each carrying a target).
+    (defn cc-identity (cell) (list (cell-id cell) (cell-name cell)))
+    (defn cc-facets   (cell) (cell-facets cell))
+    (defn cc-channels (cell) (cell-channels cell))
+
+    (defn cc-card (cell)
+        (list (cc-identity cell) (cc-facets cell) (cc-channels cell)))
+
+    ; ── card readers (a carrier renders ANY card through these) ─────────────
+    (defn card-identity (card) (nth card 0))
+    (defn card-facets   (card) (nth card 1))
+    (defn card-channels (card) (nth card 2))
+    (defn card-id   (card) (nth (card-identity card) 0))
+    (defn card-name (card) (nth (card-identity card) 1))
+    (defn card-facet-count   (card) (len (card-facets card)))
+    (defn card-channel-count (card) (len (card-channels card)))
+
+    ; the count of facets of a given card-type — proves card-types are queryable DATA, not branches
+    (defn cc-facets-of-type (facets card-type)
+        (if (eq (len facets) 0) 0
+            (add (if (str_eq (facet-type (head facets)) card-type) 1 0)
+                 (cc-facets-of-type (tail facets) card-type))))
+
+    ; ── RECURSION: open a channel -> the target cell-ref you render next ─────
+    ; The carrier calls cc-card on the resolved target; here the openable handle is the target ref.
+    (defn cc-open (channel) (channel-target channel))
+
+    0)
