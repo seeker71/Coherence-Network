@@ -1,0 +1,17 @@
+; tokenizer.fk — the text<->token-id bridge a real NL emitter needs: a BPE-style merge encodes a grapheme pair to
+; one token and decodes it back, round-trip exact. Honest floor: a fixed 2-rule merge table here; the real version
+; uses the whisper BPE table (proven against the real tokenizer) + a zh vocab. The encode/decode/round-trip is the shape.
+; preludes: form-stdlib/core.fk
+(do
+    (defn tk-encode (a b) (if (eq a 1) (if (eq b 2) 100 0) (if (eq a 3) (if (eq b 4) 101 0) 0)))
+    (defn tk-decode-a (tok) (if (eq tok 100) 1 (if (eq tok 101) 3 0)))
+    (defn tk-decode-b (tok) (if (eq tok 100) 2 (if (eq tok 101) 4 0)))
+    (defn tkk (cond bit) (if cond bit 0))
+    (defn tokenizer-check ()
+        (add (add (add (add
+            (tkk (eq (tk-encode 1 2) 100) 1)
+            (tkk (eq (tk-decode-a 100) 1) 10))
+            (tkk (eq (tk-decode-a (tk-encode 1 2)) 1) 100))
+            (tkk (not (eq (tk-encode 3 4) (tk-encode 1 2))) 1000))
+            (tkk (eq (tk-encode 1 4) 0) 10000)))
+)
