@@ -15,8 +15,9 @@
 ;     reused as the per-frame ATTEND gate.
 ;   - world-model-live-sense.fk's wmls reading is the frame shape the loop consumes; the kernel runs upstream
 ;     of it, deciding whether a frame is even worth sensing fully.
-;   - form-glsl.fk / form-ptx.fk are the lowering lanes; sk-glsl / sk-ptx emit the predict+surprise compute
-;     shader directly from Form, the same DOWNWARD serial fold as the matvec lanes (no FMA, bit-exact to CPU).
+;   - form-glsl.fk / form-ptx.fk / jit-tensor-emit.fk (MSL) are the lowering lanes; sk-glsl / sk-ptx / sk-msl
+;     emit the predict+surprise compute shader directly from Form, the same DOWNWARD serial fold as the matvec
+;     lanes (no FMA, bit-exact to CPU) — Vulkan/Android (GLSL), CUDA (PTX), Apple-GPU (Metal).
 ;
 ; All integer, no division. A reading is a vector of ints (a frame scaled to ints, as every numeric band does:
 ; e.g. a sound/motion/light level *1000). The predictor is persistence: expected[i] = last[i]. Surprise is the
@@ -87,5 +88,16 @@
     ;     serial |diff| reduce -> the surprise and ATTEND verdict are bit-identical to sk-glsl and sk-error-sum.
     (defn sk-ptx (block)
         (str_concat "// form-native surprise micro-kernel (active-inference attention gate, CUDA/PTX lane).\n// Per-frame: predict (persistence: expected[] = prior frame) -> surprise (L1 |actual-expected| serial\n// DOWNWARD reduce j=n-1..0, same op order as fptx-matvec) -> salience (>= threshold -> ATTEND).\n// One block reduces one frame in thread 0; serial fold keeps the op order bit-exact to sk-glsl/CPU.\nextern \"C\" __global__ void sk_surprise(const int* actual, const int* expected, int* out, unsigned int n, int threshold) {\n    if (threadIdx.x != 0 || blockIdx.x != 0) return;\n    int surprise = 0;\n    for (int j = (int)n - 1; j >= 0; --j) {\n        int d = actual[j] - expected[j];\n        int ad = d < 0 ? -d : d;\n        surprise = ad + surprise;\n    }\n    out[0] = surprise;\n    out[1] = (surprise >= threshold) ? 1 : 0;\n}\n// launch: <<<1, " (str_concat block ">>>\n")))
+
+    ; --- GPU MICRO-KERNEL (MSL): the Metal twin of sk-glsl / sk-ptx. Same predict+surprise+salience, emitted ---
+    ;     as Metal Shading Language the Apple-GPU lane compiles to a .metallib (the jte-matvec-msl authoring
+    ;     shape: `kernel void`, `device const int*` buffers, `[[thread_position_in_grid]]`). Same DOWNWARD
+    ;     serial |diff| reduce j=n-1..0 -> the surprise and ATTEND verdict are bit-identical to sk-glsl, sk-ptx,
+    ;     and sk-error-sum. The persistence predictor is expected[] = the prior frame, bound at buffer(1); the
+    ;     salience gate is the final ge against the pushed threshold, writing res[0]=surprise / res[1]=ATTEND.
+    ;     thread_position_in_grid 0 does the serial fold so the op order stays exact — no FMA, no fusion. The
+    ;     threadgroup width is the only parameter (the .metallib dispatch grid); the body is the proven reduce.
+    (defn sk-msl (tg)
+        (str_concat "#include <metal_stdlib>\nusing namespace metal;\n\n// form-native surprise micro-kernel (active-inference attention gate, Metal/Apple-GPU lane).\n// Per-frame: predict (persistence: expected[] = prior frame) -> surprise (L1 |actual-expected| serial\n// DOWNWARD reduce j=n-1..0, same op order as jte-matvec-msl) -> salience (>= threshold -> ATTEND).\n// Thread 0 of the grid does the serial fold; the op order stays bit-exact to sk-glsl/sk-ptx/CPU.\n// dispatch: one threadgroup of " (str_concat tg " reduces one frame.\nkernel void sk_surprise(device const int* actual [[buffer(0)]], device const int* expected [[buffer(1)]], device int* res [[buffer(2)]], constant uint& n [[buffer(3)]], constant int& threshold [[buffer(4)]], uint i [[thread_position_in_grid]]) {\n    if (i != 0u) return;\n    int surprise = 0;\n    for (int j = int(n) - 1; j >= 0; --j) {\n        int d = actual[j] - expected[j];\n        int ad = d < 0 ? -d : d;\n        surprise = ad + surprise;\n    }\n    res[0] = surprise;\n    res[1] = (surprise >= threshold) ? 1 : 0;\n}\n")))
 
     0)

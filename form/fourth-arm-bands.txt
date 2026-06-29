@@ -1176,3 +1176,4 @@ surprise-kernel fks 511
 room-register fks 255
 face-embed fks 255
 context-signature fks 255
+sk-msl fks 127
