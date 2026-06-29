@@ -1,0 +1,38 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-glsl.fk form-stdlib/form-ptx.fk form-stdlib/surprise-kernel.fk
+;
+; sk-msl-band — the Metal Shading Language sibling of sk-glsl / sk-ptx made falsifiable.
+;
+; sk-msl emits the SAME predict->surprise->salience micro-kernel as sk-glsl / sk-ptx, lowered to Metal
+; Shading Language (the Apple-GPU lane: `#include <metal_stdlib>`, `kernel void`, `device const int*`
+; buffers, `[[thread_position_in_grid]]`). Today's GPU witness used a hand-written MSL string; this band
+; makes the EMITTER the source — the four kernels emit the IDENTICAL Metal string, the way form-glsl is.
+;
+; The band runs four-way at validate.sh: Go, Rust, TypeScript, fkwu each evaluate sk-msl and must produce
+; the bit-identical string -> the same integer verdict here. String checks -> a stable integer verdict.
+;
+; Verdict 127 when every claim lands:
+;   1    the MSL pulls in metal_stdlib                       (#include <metal_stdlib> present)
+;   2    the MSL declares the Metal kernel entry signature   (kernel void sk_surprise(...) present)
+;   4    the persistence predictor is the prior-frame buffer (device const int* expected [[buffer(1)]])
+;   8    the serial DOWNWARD reduce loop is present          (for (int j = int(n) - 1; j >= 0; --j) present)
+;   16   the salience ge-cutoff writes the ATTEND verdict    (res[1] = (surprise >= threshold) ...)
+;   32   the emitter reparameterizes by threadgroup width    (sk-msl "64" != sk-msl "8", and longer)
+;   64   sk-msl is deterministic (same arg -> same string)   (sk-msl "64" == sk-msl "64")
+(do
+    ; has-sub: 1 if needle occurs in hay, else 0. str_find returns the index or -1.
+    (defn has-sub (hay needle) (if (ge (str_find hay needle 0) 0) 1 0))
+
+    (let msl (sk-msl "64"))
+
+    (let c0 (if (eq (has-sub msl "#include <metal_stdlib>") 1)                               1 0))
+    (let c1 (if (eq (has-sub msl "kernel void sk_surprise(") 1)                              2 0))
+    (let c2 (if (eq (has-sub msl "device const int* expected [[buffer(1)]]") 1)              4 0))
+    (let c3 (if (eq (has-sub msl "for (int j = int(n) - 1; j >= 0; --j)") 1)                 8 0))
+    (let c4 (if (eq (has-sub msl "res[1] = (surprise >= threshold) ? 1 : 0;") 1)           16 0))
+    ; reparameterizes by threadgroup width: the "8" emit differs from "64" and is shorter.
+    (let c5 (if (and (if (str_eq (sk-msl "64") (sk-msl "8")) 0 1)
+                     (gt (str_len (sk-msl "64")) (str_len (sk-msl "8")))) 32 0))
+    ; deterministic: same threadgroup arg -> the bit-identical string.
+    (let c6 (if (str_eq (sk-msl "64") (sk-msl "64")) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
