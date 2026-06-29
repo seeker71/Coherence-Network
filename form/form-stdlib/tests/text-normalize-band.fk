@@ -1,0 +1,37 @@
+; text-normalize-band.fk — four-way proof that integer -> words normalizes
+; identically on Go, Rust, TS, and fkwu, driven by the en locale-as-DATA
+; vocabulary in text-normalize.fk (the layer before g2p on the voice path).
+;
+; Each case asserts the engine's word string against the expected en surface via
+; str_eq (the string-membership/nl-emit verdict pattern — string results verify by
+; equality and fold to one stable integer). A weighted sum makes kernel agreement a
+; single number; any digit→word divergence (div/mod/nth/str_concat across kernels)
+; shifts the total, so the bit-for-byte four-way is the proof the layer is sound.
+;
+; Cases span every magnitude boundary the engine recurses across:
+;   0      -> "zero"                                  (the standalone zero word)
+;   7      -> "seven"                                 (ones)
+;   19     -> "nineteen"                              (teens, the 10..19 table)
+;   42     -> "forty-two"                             (tens + join + ones)
+;   100    -> "one hundred"                           (exact hundred, no remainder)
+;   105    -> "one hundred five"                      (hundred + space + ones)
+;   999    -> "nine hundred ninety-nine"              (hundred + tens + join + ones)
+;   1000   -> "one thousand"                          (exact thousand, no remainder)
+;   12345  -> "twelve thousand three hundred forty-five"  (thousands group + 3-digit)
+;
+; preludes: form-stdlib/text-normalize.fk
+
+(do
+    (defn case (n expected weight)
+        (if (str_eq (tn-en n) expected) weight 0))
+
+    ;; Expected total = 1+2+4+8+16+32+64+128+256 = 511
+    (add (case 0 "zero" 1)
+    (add (case 7 "seven" 2)
+    (add (case 19 "nineteen" 4)
+    (add (case 42 "forty-two" 8)
+    (add (case 100 "one hundred" 16)
+    (add (case 105 "one hundred five" 32)
+    (add (case 999 "nine hundred ninety-nine" 64)
+    (add (case 1000 "one thousand" 128)
+         (case 12345 "twelve thousand three hundred forty-five" 256))))))))))
