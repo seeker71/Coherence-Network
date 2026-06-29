@@ -158,4 +158,23 @@
                         (append (fa-fmadd 0 1 0 2)
                             (fa-ret)))))))
 
+    ; fam-poly-pool: a Horner step p(x) = x*(1/6) + 1/120 as Form->asm bytes — the FIRST self-contained
+    ; CONSTANT POOL on the witnessed native lane. fam-horner2 proved the fmadd fold but with VFP-expressible
+    ; coefficients (2.0/3.0/4.0); the REAL transcendental coefficients exp/sin/cos need (1/6, 1/120, 1/5040 …)
+    ; are NOT VFP-immediate-expressible, so they must live in a literal pool the function carries itself. This
+    ; emits two real coefficients appended after `ret` and loads them position-independently via fa-ldr-d-lit
+    ; (PC-relative literal load), then folds them with the proven fa-fmadd — the genuine Horner step over a pool,
+    ; the thing fam-horner2's own note deferred. ABI: d0 = x, returns d0 = fma(x, 1/6, 1/120). 4 instructions
+    ; (16 bytes) + a 16-byte pool of two f64 = 32 bytes, byte-identical to the as/clang assembler oracle:
+    ;   0 ldr d1,Lc0 (5c000081, +16)   1 ldr d2,Lc1 (5c0000a2, +20)   2 fmadd d0,d0,d1,d2 (1f410800)   3 ret
+    ;   16 .quad 0x3fc5555555555555 (1/6, LE 55 55 55 55 55 55 c5 3f)   24 .quad 0x3f81111111111111 (1/120)
+    ; imm19 is the WORD distance from each ldr to its pool slot: d1 @0 -> c0 @16 = 4 words; d2 @4 -> c1 @24 = 5.
+    (defn fam-poly-pool ()
+        (append (fa-ldr-d-lit 1 4)
+            (append (fa-ldr-d-lit 2 5)
+                (append (fa-fmadd 0 0 1 2)
+                    (append (fa-ret)
+                        (append (list 85 85 85 85 85 85 197 63)
+                                (list 17 17 17 17 17 17 129 63)))))))
+
     0)
