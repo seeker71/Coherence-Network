@@ -1,0 +1,8 @@
+; tests/translation-invariant-band.fk — deeper knowledge = translation-invariant across maximal-distinctness, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/translation-invariant.fk
+;
+; Verdict 11111: a near tongue carries much (surface included); a maximally-distinct tongue carries only the
+; deepest cells; the more distinct, the tighter the invariant; the invariant across translations is what survives
+; the hardest one; and adding a more-unique tongue deepens the invariant. The deeper knowledge the foundation is
+; built on is what survives translation into the most semantically distinct tongues -- the pivot the lattice rests on.
+(do (translation-invariant-check))
