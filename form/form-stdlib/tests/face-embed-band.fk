@@ -1,0 +1,35 @@
+; preludes: form-stdlib/face-embed.fk
+;
+; face-embed-band — the nearest-by-cosine DECISION over face embeddings (floor -> "unknown"),
+; four-way. The VISUAL sibling of speaker-embed-band. Fixture: two hand-given 4-d faceprints;
+; the neural embedding quality is the ArcFace-class oracle's, not proven here. Real face
+; recognition is the arc. Drops into identity-match as just another modality row.
+;
+; A roster of two quantized unit-ish faceprints; cosine = dot (vectors pre-normalized by the
+; oracle). Nearest = max dot; a floor returns "unknown" honestly. fe-enroll added BOTH faces.
+;
+; Verdict 255 when every claim lands (numeric — the id string is carrier-read):
+;   1   identical faceprints align fully     (dot = 100)
+;   2   orthogonal faceprints don't          (dot = 0)
+;   4   roster grew to 2 by fe-enroll        (len = 2)
+;   8   query near A resolves to A           (top sim 90)
+;   16  query near B resolves to B           (top sim 90)
+;   32  query near A matches id "a"          (str_eq -> "a")
+;   64  query near B matches id "b"          (str_eq -> "b")
+;   128 a far/weak query is "unknown"        (top 18 < floor 50 -> "unknown")
+(do
+    (let empty-roster (empty))
+    (let r1 (fe-enroll empty-roster "a" (list 10 0 0 0)))
+    (let roster (fe-enroll r1 "b" (list 0 10 0 0)))
+    (let qA (list 9 1 0 0))
+    (let qB (list 1 9 0 0))
+    (let qFar (list 1 1 1 1))
+    (let c0 (if (eq (fe-dot (list 10 0 0 0) (list 10 0 0 0)) 100) 1 0))
+    (let c1 (if (eq (fe-dot (list 10 0 0 0) (list 0 10 0 0)) 0) 2 0))
+    (let c2 (if (eq (len roster) 2) 4 0))
+    (let c3 (if (eq (fe-sim qA roster) 90) 8 0))
+    (let c4 (if (eq (fe-sim qB roster) 90) 16 0))
+    (let c5 (if (str_eq (fe-match qA roster 50) "a") 32 0))
+    (let c6 (if (str_eq (fe-match qB roster 50) "b") 64 0))
+    (let c7 (if (str_eq (fe-match qFar roster 50) "unknown") 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
