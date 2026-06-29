@@ -1149,3 +1149,4 @@ prosody-contour fks 11111
 g2p fks 11111
 tokenizer fks 11111
 tokenize-grammar fks 400
+svg-emit fks 11111
