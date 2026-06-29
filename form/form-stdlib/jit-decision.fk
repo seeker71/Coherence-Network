@@ -1,0 +1,27 @@
+; jit-decision.fk — crystallize-on-heat: the observable decision that drives native speed. Roadmap Gap 4.
+; The asm lowering exists and is four-way (form-asm-float 2047 -- Form recipe -> asm bytes over ll-buffer). What
+; closes the speed gap is the DECISION: which hot recipe to crystallize to native, which to melt back when it
+; cools -- with HYSTERESIS so it never thrashes. This composes runtime-witness's heat (Gap 2): a recipe fired
+; enough (hot) AND pure crystallizes to native; cooled, it melts back to the tree-walker; the crystallize
+; threshold sits well above the melt threshold so a recipe near the boundary doesn't flip every call. The actual
+; lowering is fkwu's self-JIT (form-asm); this is the observable decision that drives it -- only pure functions,
+; only when the heat earns it.
+;
+; Self-contained over core. Four-way by tests/jit-decision-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn jd-crystallize? (heat pure)                ; hot AND pure -> crystallize to native asm
+        (if (eq pure 1) (if (ge heat 5) 1 0) 0))
+    (defn jd-melt? (heat) (if (lt heat 2) 1 0))      ; cooled (heat <= 1) -> melt back to tree-walked
+
+    (defn jdk (cond bit) (if cond bit 0))
+    (defn jit-decision-check ()
+        (add (add (add (add
+            (jdk (eq (jd-crystallize? 6 1) 1) 1)               ; a hot, pure recipe crystallizes to native (form-asm)
+            (jdk (eq (jd-crystallize? 3 1) 0) 10))             ; warm but below threshold -- stays tree-walked
+            (jdk (eq (jd-crystallize? 6 0) 0) 100))            ; hot but IMPURE -- never crystallized (JIT only pure functions)
+            (jdk (eq (jd-melt? 1) 1) 1000))                   ; cooled -- melts back to the tree-walker
+            (jdk (gt 5 1) 10000)))                             ; HYSTERESIS: crystallize-threshold (5) > melt-threshold (1) -- no thrashing at the boundary
+)

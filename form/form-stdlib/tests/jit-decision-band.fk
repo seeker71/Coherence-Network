@@ -1,0 +1,8 @@
+; tests/jit-decision-band.fk — crystallize-on-heat, the decision that drives native speed, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/jit-decision.fk
+;
+; Verdict 11111: a hot pure recipe crystallizes to native; a warm one stays tree-walked; a hot IMPURE one never
+; crystallizes (pure functions only); a cooled one melts back; and the crystallize threshold sits above the melt
+; threshold (hysteresis, no thrashing). The observable JIT decision that drives fkwu's form-asm lowering --
+; composing runtime-witness's heat into native speed, only when earned.
+(do (jit-decision-check))
