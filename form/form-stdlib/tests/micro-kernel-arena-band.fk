@@ -1,0 +1,106 @@
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/runtime-witness.fk form-stdlib/micro-kernel-arena.fk
+;
+; micro-kernel-arena-band — the native-advantage discovery instrument, four-way. Two candidate
+; micro-kernels of DIFFERENT architecture race head-to-head on the SAME labeled inputs; they DISAGREE on
+; some samples; the arena runs the A/B transparently, scores each, surfaces each one's WHY, finds the
+; regime split (when A wins vs when B wins), and promotes the window winner. This is the scientific harness
+; for finding which native architecture wins, when, and why — never a CNN rebuild.
+;
+; THE TWO CANDIDATE ARCHITECTURES (kernel-as-DATA rows the arena dispatches on `kind`, never special-cases):
+;
+;   PROTO  — kind "proto-vote": a PROTOTYPE-VOTE kernel. The input is (point prior); it reads the POINT.
+;            Two static prototypes: "lo" @(0 0), "hi" @(10 10). Label = nearest by L1; WHY = matched
+;            prototype id; confidence = vote margin. A STATIC-position architecture, blind to motion.
+;
+;   SURP   — kind "surprise-ai": an ACTIVE-INFERENCE kernel. The SAME (point prior); it PREDICTS the next
+;            point as the prior (persistence) and measures SURPRISE = L1 prediction error. Label "hi" when
+;            surprise >= threshold (the point MOVED — salient), else "lo". WHY = surprise level; confidence
+;            = distance from threshold. A MOTION architecture, blind to position.
+;
+; These two architectures DISAGREE by construction — PROTO reads position, SURP reads motion — so each
+; wins a regime the other loses. That split is the whole point of the instrument.
+;
+; Verdict 8191 when every claim lands (numeric):
+;   1    mka-candidate runs PROTO transparently: a point near (10 10) -> label "hi", why names "hi"
+;   2    mka-candidate runs SURP transparently: a moved point -> label "hi" (surprise high)
+;   4    mka-ab on a sample where they AGREE ("hi") -> winner "both"
+;   8    mka-ab on a sample where ONLY PROTO is right -> winner "A"   (a still point near (10 10): position=hi, motion=lo)
+;   16   mka-ab on a sample where ONLY SURP is right -> winner "B"    (a big move ending near (0 0): position=lo, motion=hi)
+;   32   mka-measure: PROTO scores 4 of 6 on the labeled set
+;   64   mka-measure: SURP  scores 4 of 6 on the labeled set        (equal aggregate — the SPLIT is the story, not the score)
+;   128  mka-observe surfaces PROTO's WHY (the matched prototype id is inspectable — transparency a forward lacks)
+;   256  mka-observe surfaces SURP's WHY  (the surprise value is inspectable)
+;   512  mka-when finds A-only > 0      (PROTO wins a regime SURP loses)
+;   1024 mka-when finds B-only > 0      (SURP wins a regime PROTO loses)
+;   2048 mka-when-split? == 1           (a genuine regime split — different architectures, different regimes)
+;   4096 mka-promote over the window names the challenger (SURP) — on the even aggregate (4=4) with
+;        margin 0 the challenger REACHES the incumbent, so the proven head-to-head gate flips authority.
+;        The aggregate tie is exactly when the gate's window matters: equal scores, the challenger earns it.
+(do
+    ; ── the two candidate rows: DATA (id kind). The arena dispatches classify/why on kind. ──────────
+    (let PROTO (mka-kernel "proto-vote"  "proto-vote"))
+    (let SURP  (mka-kernel "surprise-ai" "surprise-ai"))
+
+    ; ── the labeled set. input = (point prior), truth = the mesh-agreed label. Tuned for a clean
+    ;    equal-aggregate split — PROTO 4/6, SURP 4/6, with A-only=1, B-only=1, both=3, neither=1. The two
+    ;    architectures reach the same total accuracy yet WIN DIFFERENT SAMPLES: that disagreement is the
+    ;    discovery (position-architecture vs motion-architecture, each winning the other's blind spot).
+    ;  s0  near hi, still           -> truth "hi" : PROTO right (pos hi), SURP wrong (no motion)    [A-only]
+    ;  s1  big move -> near lo       -> truth "hi" : PROTO wrong (pos lo), SURP right (moved)        [B-only]
+    ;  s2  big move -> near hi       -> truth "hi" : PROTO right, SURP right                         [both]
+    ;  s3  still at lo               -> truth "lo" : PROTO right (pos lo), SURP right (no motion)     [both]
+    ;  s4  big move -> near hi       -> truth "hi" : PROTO right, SURP right                          [both]
+    ;  s5  big move -> mid-hi        -> truth "lo" : PROTO wrong (pos hi), SURP wrong (moved)         [neither]
+    (let s0 (mka-sample (list (list 10 9) (list 10 9)) "hi"))   ; still near hi:   PROTO hi (ok),  SURP lo (miss)
+    (let s1 (mka-sample (list (list 1 0)  (list 9 9))  "hi"))   ; moved to lo:     PROTO lo (miss), SURP hi (ok)
+    (let s2 (mka-sample (list (list 9 10) (list 0 0))  "hi"))   ; moved to hi:     PROTO hi (ok),  SURP hi (ok)
+    (let s3 (mka-sample (list (list 0 1)  (list 0 1))  "lo"))   ; still at lo:     PROTO lo (ok),  SURP lo (ok)
+    (let s4 (mka-sample (list (list 9 9)  (list 0 0))  "hi"))   ; moved to hi:     PROTO hi (ok),  SURP hi (ok)
+    (let s5 (mka-sample (list (list 8 8)  (list 0 0))  "lo"))   ; moved to mid-hi: PROTO hi (miss), SURP hi (miss)
+    (let dataset (list s0 s1 s2 s3 s4 s5))
+
+    ; ── claim 1: mka-candidate runs PROTO transparently on a near-hi point (still) ──
+    (let dProto (mka-candidate PROTO (list (list 9 10) (list 9 10))))
+    (let c0 (if (and (str_eq (mka-dec-label dProto) "hi")
+                     (str_eq (mka-observe-why dProto) "proto:hi")) 1 0))
+
+    ; ── claim 2: mka-candidate runs SURP transparently on a moved point ──
+    (let dSurp (mka-candidate SURP (list (list 9 9) (list 0 0))))
+    (let c1 (if (str_eq (mka-dec-label dSurp) "hi") 2 0))
+
+    ; ── claim 4: A/B where they AGREE -> "both" (s2: both right) ──
+    (let abBoth (mka-ab PROTO SURP (mka-sample-input s2) (mka-sample-truth s2)))
+    (let c2 (if (str_eq (mka-ab-winner abBoth) "both") 4 0))
+
+    ; ── claim 8: A/B where ONLY PROTO is right (s0) -> "A" ──
+    (let abA (mka-ab PROTO SURP (mka-sample-input s0) (mka-sample-truth s0)))
+    (let c3 (if (str_eq (mka-ab-winner abA) "A") 8 0))
+
+    ; ── claim 16: A/B where ONLY SURP is right (s1) -> "B" ──
+    (let abB (mka-ab PROTO SURP (mka-sample-input s1) (mka-sample-truth s1)))
+    (let c4 (if (str_eq (mka-ab-winner abB) "B") 16 0))
+
+    ; ── claim 32 / 64: each candidate's accuracy over the set (equal aggregate, the split is the story) ──
+    (let protoScore (mka-measure PROTO dataset))
+    (let surpScore  (mka-measure SURP  dataset))
+    (let c5 (if (eq protoScore 4) 32 0))
+    (let c6 (if (eq surpScore  4) 64 0))
+
+    ; ── claim 128 / 256: mka-observe surfaces each one's WHY (transparency a forward pass lacks) ──
+    (let c7 (if (str_eq (mka-observe-why (mka-candidate PROTO (mka-sample-input s0))) "proto:hi") 128 0))
+    (let surpObs (mka-observe (mka-candidate SURP (mka-sample-input s1))))
+    (let c8 (if (str_eq (head surpObs) "hi") 256 0))   ; SURP's decision on the big-move sample is inspectable
+
+    ; ── claim 512 / 1024 / 2048: the regime split — A wins a regime, B wins a regime ──
+    (let w (mka-when PROTO SURP dataset))
+    (let c9  (if (gt (mka-when-a-only w) 0) 512 0))
+    (let c10 (if (gt (mka-when-b-only w) 0) 1024 0))
+    (let c11 (if (eq (mka-when-split? w) 1) 2048 0))
+
+    ; ── claim 4096: mka-promote names the window winner. On the even aggregate (PROTO 4 = SURP 4) with
+    ;    margin 0, the challenger (SURP) REACHES the incumbent over a trusted 6-sample window, so the
+    ;    proven cc gate flips authority to "surprise-ai" — competition earned, never asserted. ──
+    (let winner (mka-promote PROTO SURP dataset 6 0))
+    (let c12 (if (str_eq winner "surprise-ai") 4096 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 c12)))))))))))))
