@@ -1,0 +1,155 @@
+; world-model.fk — the mesh's TRUE NATIVE WORLD MODEL: a persistent map of the room as recognized,
+; located, named ENTITIES — people (Urs), devices (mac / android / windows), and the common objects
+; (chair, lamp, door, landmarks) that anchor a place. With it the mesh ORIENTS: it knows who is present,
+; where the devices are, and what the room is hung on.
+;
+; THE ONE ENGINE — the whole discipline is here. A world entity is recognized by ONE walk, whatever it
+; is: a detected region -> EMBED it -> MATCH it against the persistent world (persist + de-dup) -> a
+; world-cell whose KIND ∈ {person, device, object} is DATA on the row, never a parallel recipe. A face,
+; a phone, and a chair travel the SAME path; only the kind-field differs. There is no per-kind branch in
+; the recognition — the kind is carried, the engine is shared. This is the holographic promise: same
+; shape, many fillings.
+;
+; This COMPOSES the existing tissue, it does not reinvent it:
+;   - identity-match.fk (im-*) is THE matcher — modality- and kind-AGNOSTIC nearest-embedding persist +
+;     de-dup. A world entity IS an im-obs (category=kind, embedding, device=viewpoint, time); persistence
+;     is im-match against the known world-cells, exactly the cross-device/cross-time de-dup it already
+;     proves. A person seen by two cameras resolves to ONE im id; a device, an object, the same. We do
+;     not re-derive matching — we narrow im's `category` to the entity KIND and let it run.
+;   - face-embed.fk (fe-dot) is the embedding DECISION — nearest-by-cosine over a quantized unit vector.
+;     It is modality-agnostic by construction (the comment says so: voice today, face tomorrow, the dot
+;     is the same). So the region->embedding step here is GENERIC: wm-entity-embed embeds ANY region the
+;     same way a face is embedded — a person region, a device fiducial region, an object region all carry
+;     a quantized embedding the SAME fe-dot compares. No face-only path; one embedder over the carrier's
+;     vector, whatever organ produced it.
+;   - scene-features.fk (sf-objects) is the region DETECTOR — the high-detail blocks in a frame grid are
+;     the candidate regions. People-faces, device-screens, and object-textures are ALL high-detail blocks;
+;     sf-objects finds them without caring which kind they are. wm-observe reads those blocks as regions.
+;   - device-model.fk (dm-*) supplies the DEVICE entities and their located positions (the pinhole depth),
+;     so a device row's position is dm-locate's, not re-derived.
+;   - spatial-fusion.fk (sf-consensus) FUSES an entity's position across viewpoints — a person or object
+;     seen from two cameras has its position fused to one band the same way device depths fuse.
+;   - room-register.fk (rr-*) is the ROOM the model lives in: the persistent world is the company + the
+;     anchoring objects of a remembered room; wm-model is the navigable shape rr recognizes a room by.
+;
+; A WORLD ENTITY row is (kind embedding position persistence id):
+;   kind         "person" / "device" / "object" — DATA, the only thing that differs across the three.
+;   embedding    the quantized unit-ish vector (fe-dot's shape) — the recognition signal, kind-agnostic.
+;   position     the located/fused position (a band, or a v3 from dm-locate / sf-consensus).
+;   persistence  how many frames/cameras have confirmed this cell — the de-dup confidence (1 = held-open
+;                novel, >1 = persisted across encounters).
+;   id           the persistent world-cell id im-match resolves to, or "new" for a held-open novel cell
+;                (namable, unnamed until named — cell-sovereignty: a novel cell is held open, never auto-named).
+;
+; All integer on the surface (positions are bands, persistence a count); embeddings ride the carrier's
+; oracle exactly as face-embed and identity-match do. The recognition decision is the body's, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/champion-challenger.fk form-stdlib/identity-match.fk form-stdlib/face-embed.fk form-stdlib/spatial-fusion.fk
+;
+; Proven by: form-stdlib/tests/world-model-band.fk (four-way at validate.sh, incl. fkwu)
+
+(do
+    ; ── THE WORLD ENTITY row (kind as DATA — the only per-kind difference) ────────────────────────────
+    (defn wm-ent (kind embedding position persistence id) (list kind embedding position persistence id))
+    (defn wm-ent-kind        (e) (nth e 0))
+    (defn wm-ent-embedding   (e) (nth e 1))
+    (defn wm-ent-position    (e) (nth e 2))
+    (defn wm-ent-persistence (e) (nth e 3))
+    (defn wm-ent-id          (e) (nth e 4))
+
+    ; ── EMBED: the GENERIC region->embedding step. A region arrives as (kind embedding position) from a
+    ;    detector (sf-objects block + the carrier's oracle vector for that block, device-model for a
+    ;    device, a face organ for a person). wm-entity-embed names it a recognized entity, embedding
+    ;    UNCHANGED — the embedding is the oracle's quantized unit vector, the SAME shape fe-dot/im-sim
+    ;    compare, whatever kind the region is. This is the one embedder: face, phone, chair embed alike.
+    ;    Persistence seeds at 1 (one sighting) and id at "new" (unrecognized until matched). ──
+    (defn wm-region-kind      (r) (nth r 0))
+    (defn wm-region-embedding (r) (nth r 1))
+    (defn wm-region-position  (r) (nth r 2))
+
+    (defn wm-entity-embed (region)
+        (wm-ent (wm-region-kind region) (wm-region-embedding region)
+                (wm-region-position region) 1 "new"))
+
+    ; ── wm-entity(region, kind): recognize + embed ONE region into a world entity under a given kind.
+    ;    The kind is DATA — passed in, written on the row, never branched on. A face region with kind
+    ;    "person", a fiducial region with kind "device", a texture region with kind "object" all run this
+    ;    one recipe; only the kind-field on the produced row differs. ──
+    (defn wm-entity (region kind)
+        (wm-ent kind (wm-region-embedding region) (wm-region-position region) 1 "new"))
+
+    ; ── OBSERVE: ALL entities in a frame in ONE walk. The frame is the list of detector regions — people
+    ;    (face-organ blocks), devices (device-model detections), objects (sf-objects texture blocks) —
+    ;    each already carrying its (kind embedding position). wm-observe embeds every region through the
+    ;    ONE engine; the roster is along for attribution but the walk does not branch on kind. People,
+    ;    devices, and objects are not three code paths — they are three values of the kind field on rows
+    ;    flowing through the same map. ──
+    (defn wm-observe-acc (regions)
+        (if (eq (len regions) 0) (empty)
+            (cons (wm-entity-embed (head regions)) (wm-observe-acc (tail regions)))))
+
+    (defn wm-observe (frame roster) (wm-observe-acc frame))
+
+    ; ── PERSIST: de-dup an observed entity into the persistent world via identity-match. Build the
+    ;    entity's im-obs (category = its kind, embedding = its embedding, device = viewpoint, time), match
+    ;    it against the world's known im-cells. A HIT (im-match != "new") means we have met this entity
+    ;    before — same person across two cameras, same device across frames — so it resolves to the SAME
+    ;    persistent cell (de-dup) with its persistence bumped. A MISS means a NOVEL entity: a fresh
+    ;    HELD-OPEN cell, persistence 1, id "new" — namable but UNNAMED until named (cell-sovereignty: the
+    ;    body never auto-names a novel presence; it holds the cell open until a name is offered).
+    ;    Kind-agnostic: im-match already gates within category, so a person query never merges onto an
+    ;    object cell — the kind separation is im's, not a branch here. ──
+    (defn wm-persist (entity viewpoint time world-cells)
+        (do
+            (let obs (im-obs (wm-ent-kind entity) (wm-ent-embedding entity) viewpoint time))
+            (let matched-id (im-match obs world-cells))
+            (if (str_eq matched-id "new")
+                ; novel -> held-open cell: persistence 1, id "new" (unnamed, namable)
+                (wm-ent (wm-ent-kind entity) (wm-ent-embedding entity)
+                        (wm-ent-position entity) 1 "new")
+                ; recognized -> the SAME persistent cell, persistence bumped (one more confirmation)
+                (wm-ent (wm-ent-kind entity) (wm-ent-embedding entity)
+                        (wm-ent-position entity)
+                        (add (wm-ent-persistence entity) 1) matched-id))))
+
+    ; did persistence resolve to a known cell (de-dup, 1) or a held-open novel cell (0)? The de-dup coin.
+    (defn wm-persisted? (entity viewpoint time world-cells)
+        (im-matched? (im-obs (wm-ent-kind entity) (wm-ent-embedding entity) viewpoint time) world-cells))
+
+    ; a held-open entity is one that matched nothing — namable, unnamed. The cell-sovereignty read.
+    (defn wm-held-open? (entity) (if (str_eq (wm-ent-id entity) "new") 1 0))
+
+    ; ── LOCATE: an entity's position fused across viewpoints. Each viewpoint that sees the entity casts a
+    ;    (position-band weight) ballot; spatial-fusion's sf-consensus collapses them to one fused position
+    ;    band — a person, a device, or an object located the SAME way (cross-camera agreement). cands are
+    ;    the candidate position bands. ──
+    (defn wm-locate (viewpoint-ballots cands) (sf-consensus viewpoint-ballots cands))
+    (defn wm-locate-agree (viewpoint-ballots fused) (sf-agree viewpoint-ballots fused))
+
+    ; ── MODEL: the persistent room map — the set of (kind id position persistence) entities the world
+    ;    holds. wm-model projects each full entity row down to its navigable tuple; the list IS the native
+    ;    world model the mesh navigates. ──
+    (defn wm-entry (e) (list (wm-ent-kind e) (wm-ent-id e) (wm-ent-position e) (wm-ent-persistence e)))
+    (defn wm-model (world)
+        (if (eq (len world) 0) (empty)
+            (cons (wm-entry (head world)) (wm-model (tail world)))))
+
+    ; ── ORIENT: answer the room from the model. ALL three answers are ONE filter over the kind field —
+    ;    the same wm-of-kind walk, a different kind value. Who is present = the person entities; where the
+    ;    devices are = the device entities; what anchors the room = the object entities. No per-kind
+    ;    recipe; the plane (kind) is the argument. ──
+    (defn wm-of-kind (world kind)
+        (if (eq (len world) 0) (empty)
+            (if (str_eq (wm-ent-kind (head world)) kind)
+                (cons (head world) (wm-of-kind (tail world) kind))
+                (wm-of-kind (tail world) kind))))
+
+    ; wm-orient(world, plane): the entities on a plane. plane is the kind asked of the room — "person"
+    ;   (who is present), "device" (where the devices are), "object" (what anchors the room). One door,
+    ;   three questions, kind as data.
+    (defn wm-orient (world plane) (wm-of-kind world plane))
+
+    ; how many entities of a kind the model holds — the count behind an orient answer.
+    (defn wm-orient-count (world plane) (len (wm-orient world plane)))
+
+    0)

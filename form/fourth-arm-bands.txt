@@ -1197,3 +1197,4 @@ motion-sense fks 511
 device-model fks 4095
 device-identity-learn fks 511
 remote-mind-sensors fks 4095
+world-model fks 8191
