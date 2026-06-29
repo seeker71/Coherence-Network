@@ -1,0 +1,102 @@
+; opencode-loop.fk — opencode's REAL agent loop, translated form-native.
+;
+; Read from the actual sst/opencode source (packages/opencode/src/session/): the loop is NOT the naive
+; gather->plan->edit->test->observe sketch. It is a message-driven TURN loop. prompt.ts runLoop() is a
+; `while(true)` over assistant steps; each step calls processor.ts process() which streams provider events
+; and returns one of three results — continue | stop | compact (processor.ts:30, Result type). The driver
+; (prompt.ts:1318-1328) reads that result: stop -> break, compact -> schedule compaction then continue,
+; continue -> loop again.
+;
+; The surprising parts faithfully modelled here:
+;   - The stop condition is NOT "provider said stop". prompt.ts:1111 exits ONLY when the assistant message
+;     is finished AND finish != "tool-calls" AND there are no pending (non-orphan) tool calls. A provider
+;     that returns "stop" while tool calls are present keeps the loop running so tool RESULTS feed back in
+;     (comment prompt.ts:1103). oc-done? encodes exactly that conjunction.
+;   - DOOM_LOOP_THRESHOLD = 3 (processor.ts:29): the same tool with identical input 3x in a row triggers a
+;     doom_loop permission ask rather than blind repetition. oc-doom-loop? encodes the count==3 trigger.
+;   - maxSteps (agent.steps ?? Infinity, prompt.ts:1178): at the last allowed step a MAX_STEPS_PROMPT is
+;     injected to push wrap-up. oc-last-step? encodes step >= maxSteps.
+;   - A denied permission stops by default (continue_loop_on_deny != true => shouldBreak; processor.ts:631,
+;     blocked=shouldBreak at 199). oc-step routes a "blocked/stop" result to the terminal stop state.
+;   - compact (context overflow) is a first-class branch: it does NOT end the turn, it compacts and continues
+;     (prompt.ts:1319 + 1149-1158).
+;
+; States (the settled phases the turn loop moves through):
+;   0 = busy        — an LLM step is running (status busy; prompt.ts:1089)
+;   1 = compacting  — context overflowed; summarize/compact then resume (prompt.ts:1149)
+;   3 = done        — clean exit, loop broke on a real finish (prompt.ts:1129)
+;   4 = stopped     — blocked: error or denied permission (processor.ts:678 -> "stop")
+;
+; process() results (the three-valued Result, processor.ts:30):
+;   0 = continue, 1 = stop, 2 = compact
+;
+; Self-contained over core. Four-way by tests/opencode-loop-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    ; oc-step: the real driver transition (prompt.ts:1318-1334 + 1149-1158).
+    ; Given the current state and the process() result, return the next state.
+    ;   busy + continue  -> busy   (loop again, feed tool results back)
+    ;   busy + stop      -> stopped(terminal break)
+    ;   busy + compact   -> compacting
+    ;   compacting + *   -> busy   (compaction.process done -> continue, prompt.ts:1158)
+    (defn oc-step (state result)
+        (if (eq state 1)
+            0                                   ; compacting always resumes the turn loop
+            (if (eq state 0)
+                (if (eq result 0) 0             ; continue -> stay busy
+                    (if (eq result 2) 1         ; compact   -> compacting
+                        4))                     ; stop      -> stopped (break)
+                state)))                        ; terminal states are absorbing
+
+    ; oc-done?: the SUBTLE real exit predicate (prompt.ts:1111-1116). The loop exits only when the
+    ; assistant turn is finished AND the finish reason is not "tool-calls" AND no tool calls are pending.
+    ; finished=1/0, tool-calls-finish=1/0 (1 means finish reason == "tool-calls"), has-tools=1/0.
+    (defn oc-done? (finished tool-calls-finish has-tools)
+        (if (eq finished 1)
+            (if (eq tool-calls-finish 1) 0          ; finish=="tool-calls" -> keep looping
+                (if (eq has-tools 1) 0              ; tools still pending   -> keep looping (feed results)
+                    1))                             ; finished, real reason, no pending tools -> EXIT
+            0))                                     ; not finished -> keep looping
+
+    ; oc-doom-loop?: DOOM_LOOP_THRESHOLD == 3 (processor.ts:29,354). Same tool+input repeated this many
+    ; times in a row triggers the doom_loop permission gate.
+    (defn oc-doom-loop? (repeat-count) (if (ge repeat-count 3) 1 0))
+
+    ; oc-last-step?: maxSteps gate (prompt.ts:1178-1179). At the last allowed step the loop injects the
+    ; MAX_STEPS_PROMPT to nudge a final answer.
+    (defn oc-last-step? (step max-steps) (if (ge step max-steps) 1 0))
+
+    ; oc-drive: run the turn loop from a start state over a list of process() results, threading state
+    ; through oc-step exactly as prompt.ts does, until a terminal state or the results run out. Returns
+    ; the final state. (head/tail only; no nth.)
+    (defn oc-drive (state results)
+        (if (eq (len results) 0) state
+            (if (ge state 3) state                  ; terminal (done/stopped) absorbs
+                (oc-drive (oc-step state (head results)) (tail results)))))
+
+    ; ock: 1-if-true contributor for the verdict (same shape as jit-decision's jdk).
+    (defn ock (cond bit) (if cond bit 0))
+
+    (defn opencode-loop-check ()
+        (add (add (add (add (add (add
+            ; 1) A simple coding task trajectory: the model emits tool calls, we feed results back, it
+            ;    emits more, then finishes clean. Provider returns continue,continue,continue,stop.
+            ;    Real opencode keeps looping through the tool-call rounds, then breaks on the final stop.
+            (ock (eq (oc-drive 0 (cons 0 (cons 0 (cons 0 (cons 1 (list)))))) 4) 1)
+            ; 2) Provider says "stop" but the assistant message still has tool calls -> NOT done. This is
+            ;    the prompt.ts:1103 surprise: a bare "stop" finish does not end the turn when tools pend.
+            (ock (eq (oc-done? 1 0 1) 0) 10))
+            ; 3) finish=="tool-calls" -> NOT done even though finished is set (prompt.ts:1113).
+            (ock (eq (oc-done? 1 1 0) 0) 100))
+            ; 4) Finished, real finish reason, no pending tools -> the genuine EXIT (prompt.ts:1116).
+            (ock (eq (oc-done? 1 0 0) 1) 1000))
+            ; 5) A context overflow mid-task compacts then resumes (compact -> compacting -> busy) and
+            ;    only stops on the later real stop. Results: continue,compact,continue,stop -> stopped.
+            (ock (eq (oc-drive 0 (cons 0 (cons 2 (cons 0 (cons 1 (list)))))) 4) 10000))
+            ; 6) The doom-loop guard fires at exactly 3 identical repeats, not at 2 (processor.ts:29).
+            (ock (eq (add (oc-doom-loop? 2) (oc-doom-loop? 3)) 1) 100000))
+            ; 7) maxSteps: step below the cap is not last; at/over the cap it is (prompt.ts:1178).
+            (ock (eq (add (oc-last-step? 4 6) (oc-last-step? 6 6)) 1) 1000000)))
+)

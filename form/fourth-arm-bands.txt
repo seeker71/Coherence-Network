@@ -1154,3 +1154,4 @@ md-emit fks 11111
 self-portrait fks 11111
 speak-compose fks 11111
 speak-locale fks 11111
+opencode-loop fks 1111111
