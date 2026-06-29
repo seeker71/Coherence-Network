@@ -1181,3 +1181,4 @@ sk-msl fks 127
 sense-loop fks 8191
 presence-feature fks 15
 trust-climb fks 8
+scene-features fks 255
