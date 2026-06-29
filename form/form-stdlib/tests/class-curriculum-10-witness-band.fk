@@ -1,0 +1,68 @@
+; tests/class-curriculum-10-witness-band.fk — the WITNESS: the on-device class count after EACH of the
+; first-ten lessons, packed into one native-readable number. Same engine, same gate as the 10-band; this
+; band PRINTS the growth curve so a human reads it off the native fkwu output line.
+;
+; The remote-mind syllabus (in order): person, chair, table, door, window, lamp, cup, book, laptop, plant.
+; The device starts BLANK; each class is taught -> enrolled -> cross-mesh stable -> grown; the count climbs
+; 0 -> 1 -> ... -> 10. The curve is packed base-11 (each count 0..10 is one base-11 digit — and the whole
+; pack stays under 2^53, so the TypeScript walker's f64 ints carry it exactly, four-way):
+;
+;   curve = c0·11^10 + c1·11^9 + ... + c9·11^1 + c10·11^0
+;
+; For a clean monotone 0,1,2,...,10 the native fkwu output line is the witness: 2853116705. Decode it by
+; repeated %11 / //11 (low digit first): 10 9 8 7 6 5 4 3 2 1 0 — i.e. the curve climbed 0,1,2,...,10.
+;
+; This is the curriculum ENGINE grown to 10 taught classes — remote-mind teaching + cross-mesh stability
+; gate + monotonic no-forgetting growth, four-way on metal. It is NOT 10 real objects detected on a live
+; camera (that needs the 3-camera stream, currently down). 10 taught + grown + stable in the engine.
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/sound-classify.fk form-stdlib/champion-challenger.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/colearning-retire.fk form-stdlib/cross-witness-economy.fk form-stdlib/class-curriculum.fk
+
+(do
+    (let conf-floor 5)
+    (let min-samples 4)
+    (let margin 0)
+    (let agree-history (list (list 1 1) (list 1 1) (list 1 1) (list 1 1)))
+    (let ex-person  (list 10 0 0 0 0 0 0 0 0 0))
+    (let ex-chair   (list 0 10 0 0 0 0 0 0 0 0))
+    (let ex-table   (list 0 0 10 0 0 0 0 0 0 0))
+    (let ex-door    (list 0 0 0 10 0 0 0 0 0 0))
+    (let ex-window  (list 0 0 0 0 10 0 0 0 0 0))
+    (let ex-lamp    (list 0 0 0 0 0 10 0 0 0 0))
+    (let ex-cup     (list 0 0 0 0 0 0 10 0 0 0))
+    (let ex-book    (list 0 0 0 0 0 0 0 10 0 0))
+    (let ex-laptop  (list 0 0 0 0 0 0 0 0 10 0))
+    (let ex-plant   (list 0 0 0 0 0 0 0 0 0 10))
+
+    (defn witnesses-for (label)
+        (list agree-history
+              (list (list label 4) (list label 3) (list label 3))
+              (list label "unknown")
+              conf-floor min-samples margin))
+    (defn teach (vocab class)
+        (if (eq (ccur-stable? class (witnesses-for (ccur-class-label class))) 1)
+            (ccur-grow vocab class)
+            vocab))
+
+    (let v0 (list))
+    (let v1  (teach v0  (ccur-class "object" "person" ex-person)))
+    (let v2  (teach v1  (ccur-class "object" "chair"  ex-chair)))
+    (let v3  (teach v2  (ccur-class "object" "table"  ex-table)))
+    (let v4  (teach v3  (ccur-class "object" "door"   ex-door)))
+    (let v5  (teach v4  (ccur-class "object" "window" ex-window)))
+    (let v6  (teach v5  (ccur-class "object" "lamp"   ex-lamp)))
+    (let v7  (teach v6  (ccur-class "object" "cup"    ex-cup)))
+    (let v8  (teach v7  (ccur-class "object" "book"   ex-book)))
+    (let v9  (teach v8  (ccur-class "object" "laptop" ex-laptop)))
+    (let v10 (teach v9  (ccur-class "object" "plant"  ex-plant)))
+
+    ; pack the growth curve base-11: each count 0..10 is one base-11 digit, high field first. Base-11 keeps
+    ; the whole pack under 2^53 so every walker (incl. TypeScript's f64 ints) carries it exactly.
+    (defn pack (acc c) (add (mul acc 11) c))
+    (let curve
+        (pack (pack (pack (pack (pack (pack (pack (pack (pack (pack (pack
+            0
+            (ccur-count v0))  (ccur-count v1))  (ccur-count v2))  (ccur-count v3))
+            (ccur-count v4))  (ccur-count v5))  (ccur-count v6))  (ccur-count v7))
+            (ccur-count v8))  (ccur-count v9))  (ccur-count v10)))
+    curve)

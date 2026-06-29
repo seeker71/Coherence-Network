@@ -272,6 +272,9 @@ world-module-model fks 1023
 world-model-growth fks 4095
 world-model-live-sense fks 524287
 class-curriculum fks 8191
+class-curriculum-10 fks 16383
+class-curriculum-10-witness fks 2853116705
+class-curriculum-10-vocab fks 1023
 form-freq-check fks 31
 form-agent-protocol fks 31
 form-agent-tree fks 31

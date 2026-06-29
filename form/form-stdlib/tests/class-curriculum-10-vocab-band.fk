@@ -1,0 +1,66 @@
+; tests/class-curriculum-10-vocab-band.fk — the VOCABULARY witness: every one of the first-ten syllabus
+; words is present in the grown on-device vocabulary, proven native by ccur-has?. The verdict packs one
+; bit per word (person..plant); 1023 = all 10 words present.
+;
+; The final 10-word on-device vocabulary, in syllabus order:
+;   person chair table door window lamp cup book laptop plant
+;
+; Each bit asks ccur-has? v10 "<word>" — the word JOINED the vocabulary only through the cross-mesh
+; stability gate (the 10-band proves the gate). Verdict 1023 = 1111111111b = all 10 words held, none
+; forgotten. This is the engine-grown vocabulary, four-way on metal — NOT 10 live-camera detections.
+;
+;   1     person   2     chair   4     table   8     door    16    window
+;   32    lamp     64    cup     128   book    256   laptop  512   plant
+;
+; preludes: form-stdlib/core.fk form-stdlib/speaker-embed.fk form-stdlib/sound-classify.fk form-stdlib/champion-challenger.fk form-stdlib/confidence-weighted-vote.fk form-stdlib/colearning-retire.fk form-stdlib/cross-witness-economy.fk form-stdlib/class-curriculum.fk
+
+(do
+    (let conf-floor 5)
+    (let min-samples 4)
+    (let margin 0)
+    (let agree-history (list (list 1 1) (list 1 1) (list 1 1) (list 1 1)))
+    (let ex-person  (list 10 0 0 0 0 0 0 0 0 0))
+    (let ex-chair   (list 0 10 0 0 0 0 0 0 0 0))
+    (let ex-table   (list 0 0 10 0 0 0 0 0 0 0))
+    (let ex-door    (list 0 0 0 10 0 0 0 0 0 0))
+    (let ex-window  (list 0 0 0 0 10 0 0 0 0 0))
+    (let ex-lamp    (list 0 0 0 0 0 10 0 0 0 0))
+    (let ex-cup     (list 0 0 0 0 0 0 10 0 0 0))
+    (let ex-book    (list 0 0 0 0 0 0 0 10 0 0))
+    (let ex-laptop  (list 0 0 0 0 0 0 0 0 10 0))
+    (let ex-plant   (list 0 0 0 0 0 0 0 0 0 10))
+
+    (defn witnesses-for (label)
+        (list agree-history
+              (list (list label 4) (list label 3) (list label 3))
+              (list label "unknown")
+              conf-floor min-samples margin))
+    (defn teach (vocab class)
+        (if (eq (ccur-stable? class (witnesses-for (ccur-class-label class))) 1)
+            (ccur-grow vocab class)
+            vocab))
+
+    (let v0 (list))
+    (let v1  (teach v0  (ccur-class "object" "person" ex-person)))
+    (let v2  (teach v1  (ccur-class "object" "chair"  ex-chair)))
+    (let v3  (teach v2  (ccur-class "object" "table"  ex-table)))
+    (let v4  (teach v3  (ccur-class "object" "door"   ex-door)))
+    (let v5  (teach v4  (ccur-class "object" "window" ex-window)))
+    (let v6  (teach v5  (ccur-class "object" "lamp"   ex-lamp)))
+    (let v7  (teach v6  (ccur-class "object" "cup"    ex-cup)))
+    (let v8  (teach v7  (ccur-class "object" "book"   ex-book)))
+    (let v9  (teach v8  (ccur-class "object" "laptop" ex-laptop)))
+    (let v10 (teach v9  (ccur-class "object" "plant"  ex-plant)))
+
+    ; one bit per syllabus word — present in the grown vocabulary (ccur-has? = 1)?
+    (let b0 (if (eq (ccur-has? v10 "person") 1) 1   0))
+    (let b1 (if (eq (ccur-has? v10 "chair")  1) 2   0))
+    (let b2 (if (eq (ccur-has? v10 "table")  1) 4   0))
+    (let b3 (if (eq (ccur-has? v10 "door")   1) 8   0))
+    (let b4 (if (eq (ccur-has? v10 "window") 1) 16  0))
+    (let b5 (if (eq (ccur-has? v10 "lamp")   1) 32  0))
+    (let b6 (if (eq (ccur-has? v10 "cup")    1) 64  0))
+    (let b7 (if (eq (ccur-has? v10 "book")   1) 128 0))
+    (let b8 (if (eq (ccur-has? v10 "laptop") 1) 256 0))
+    (let b9 (if (eq (ccur-has? v10 "plant")  1) 512 0))
+    (sum (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9)))
