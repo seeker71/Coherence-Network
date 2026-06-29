@@ -1,0 +1,3 @@
+; tests/phoneme-timing-band.fk — the rhythm, one engine, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/phoneme-timing.fk
+(do (phoneme-timing-check))

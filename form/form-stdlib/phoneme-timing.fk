@@ -1,0 +1,16 @@
+; phoneme-timing.fk — the rhythm of a voice: ONE engine times each phoneme from (stress, base). A stressed
+; phoneme is held longer; the same engine times any phoneme. Honest floor: durations are ints; the engine is the
+; shape (a real voice scales it to milliseconds). preludes: form-stdlib/core.fk
+(do
+    (defn pt-stress (ph) (head ph))
+    (defn pt-base (ph) (head (tail ph)))
+    (defn pt-duration (ph) (if (eq (pt-stress ph) 1) (mul (pt-base ph) 2) (pt-base ph)))
+    (defn ptk (cond bit) (if cond bit 0))
+    (defn phoneme-timing-check ()
+        (add (add (add (add
+            (ptk (gt (pt-duration (list 1 4)) (pt-duration (list 0 4))) 1)
+            (ptk (eq (pt-duration (list 0 4)) 4) 10))
+            (ptk (eq (pt-duration (list 1 4)) 8) 100))
+            (ptk (gt (pt-duration (list 1 6)) (pt-duration (list 1 4))) 1000))
+            (ptk (eq (pt-duration (list 0 6)) 6) 10000)))
+)
