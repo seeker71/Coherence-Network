@@ -1,0 +1,50 @@
+; tokenize-grammar-band.fk — proves BPE tokenization runs as a grammar over the
+; one BMF cursor: a grapheme PAIR merges into a single token node, and the merge
+; is preferred over the single-grapheme fallback (BPE's core choice), all as DATA.
+;
+; This is the one-engine lift bpe-tokenizer.fk named: tokenizing the text channel
+; is g-parse over a tokenization grammar, not a second walker. The cursor that
+; parses shell / arith / form.bml parses the token stream too.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/grammar-loader.fk form-stdlib/tokenize-grammar.fk
+
+(do
+    ;; expected stream node: fncall("__toks__", toks...)
+    (defn tgb-stream (toks) (intern_node (bp "fncall") (cons (intern_trivial_string "__toks__") toks)))
+
+    ;; ── A merge table with two 2-grapheme merges and single-char fallbacks.
+    ;;    "ab" → 100, "cd" → 101 ; "a"→1 "b"→2 "c"→3 "d"→4.
+    ;;    2-char rows FIRST so longest-first alt prefers the merge.
+    (let rows (list
+        (list "ab" 100) (list "cd" 101)
+        (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4)))
+    (let g (tkg-grammar rows))
+
+    ;; 1. the PAIR merges: "ab" → __toks__[ TOK[100] ]  (one token, not two)
+    (let s-merge
+        (if (node_eq (g-parse g "ab")
+                     (tgb-stream (list (tkg-tok 100))))
+            100 0))
+
+    ;; 2. merge PREFERRED over fallback, and a second merge follows:
+    ;;    "abcd" → __toks__[ TOK[100], TOK[101] ]
+    (let s-prefer
+        (if (node_eq (g-parse g "abcd")
+                     (tgb-stream (list (tkg-tok 100) (tkg-tok 101))))
+            100 0))
+
+    ;; 3. fallback to single graphemes where no merge applies, mixed with a merge:
+    ;;    "acd" → __toks__[ TOK[1], TOK[101] ]   (a alone, then cd merged)
+    (let s-mix
+        (if (node_eq (g-parse g "acd")
+                     (tgb-stream (list (tkg-tok 1) (tkg-tok 101))))
+            100 0))
+
+    ;; 4. the token node carries its vocab id as a readable integer leaf:
+    ;;    children of fncall("__tok__", 100) are ["__tok__", 100]; second is the id.
+    (let s-readback
+        (if (node_eq (head (tail (node_children (tkg-tok 100)))) (intern_trivial_int 100))
+            100 0))
+
+    ; Expected total: 400
+    (add s-merge (add s-prefer (add s-mix s-readback))))
