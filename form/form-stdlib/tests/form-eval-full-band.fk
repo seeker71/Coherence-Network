@@ -1,0 +1,14 @@
+; tests/form-eval-full-band.fk — the source tree-walk extended to full Form, evaluated directly by the cursor,
+; no flatten, four-way. Three source strings exercise the new constructs:
+;   (let x 6 (mul x 7))                               -> 42   (let + mul)
+;   (do (defn sq (x) (mul x x)) (sq 7))               -> 49   (do + defn + user call)
+;   (do (defn dbl (n) (add n n)) (dbl (dbl 10)))      -> 40   (nested user call)
+; Verdict is their sum: 42 + 49 + 40 = 131. If 131 crosses four-way (incl fkwu, our c-bootstrap), full Form
+; source RUNS off the cursor with no flatten table — defn/let/calls and mul/eq all evaluate as they are read.
+; preludes: form-stdlib/core.fk form-stdlib/form-eval-full.fk
+(do
+    (add
+        (fef-eval "(let x 6 (mul x 7))")
+        (add
+            (fef-eval "(do (defn sq (x) (mul x x)) (sq 7))")
+            (fef-eval "(do (defn dbl (n) (add n n)) (dbl (dbl 10)))"))))
