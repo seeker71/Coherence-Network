@@ -1,0 +1,130 @@
+; mesh-join.fk — how a device becomes a live MEMBER of the device mesh.
+;
+; The living mesh (coherence-kernel/docs/living-mesh.form) already holds Mac + Android.
+; This recipe adds the membership BODY: a device-cell is one DATA ROW
+;   { identity, organs (the sensors it can see), channels (the cross-cell-interface
+;     routes it can talk on) }
+; registered as a member into the always-open field-relay. A new device is a ROW,
+; never a new recipe — Mac, Android, and Windows all read through the SAME engine.
+; Windows joins here as the third device-cell so it can be sensed and fuse.
+;
+; The pieces it composes from (already proven four-way):
+;   - organs   ride the (name kind surface status trust) shape of android-mesh-learning.fk
+;   - channels ride the (verb mode payload merges) cross-cell-interface ROW
+;   - membership is the field-relay registry pattern: a member entry is
+;       (nodeid connected? interface) — interface = the offered channel verbs (consent).
+;     mj-join builds that entry and fr-route already routes to it. A member is PRESENT
+;     when its registry entry says connected.
+;
+; Integers + strings + lists only, so the row crosses all four kernels deterministically.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/mesh-join-band.fk
+
+(do
+    ; --- an organ: one sensor the device can see (android-mesh-learning shape) ----
+    (defn mj-organ (name kind) (list name kind))
+    (defn mj-organ-name (o) (nth o 0))
+    (defn mj-organ-kind (o) (nth o 1))
+
+    ; --- a channel: one cross-cell-interface ROW the device can talk on ----------
+    ; (verb mode payload merges) — verb is the leading word that selects the route.
+    (defn mj-channel (verb mode payload merges) (list verb mode payload merges))
+    (defn mj-channel-verb    (c) (nth c 0))
+    (defn mj-channel-mode    (c) (nth c 1))
+    (defn mj-channel-payload (c) (nth c 2))
+    (defn mj-channel-merges  (c) (nth c 3))
+
+    ; the five cross-cell-interface channel rows every device speaks (sense/ask/
+    ; share/learn/build) — the uniform consent vocabulary, as DATA.
+    (defn mj-cci-channels ()
+        (list
+            (mj-channel "sense" "witness" "reading"  0)
+            (mj-channel "ask"   "ask"     "question" 0)
+            (mj-channel "share" "offer"   "recipe"   1)
+            (mj-channel "learn" "reflect" "exemplar" 1)
+            (mj-channel "build" "invite"  "cell"     1)))
+
+    ; --- a device-cell: ONE ROW { identity, organs, channels } ------------------
+    (defn mj-device (name organs channels) (list name organs channels))
+    (defn mj-device-name     (d) (nth d 0))
+    (defn mj-device-organs   (d) (nth d 1))
+    (defn mj-device-channels (d) (nth d 2))
+    (defn mj-device-organ-count   (d) (len (mj-device-organs d)))
+    (defn mj-device-channel-count (d) (len (mj-device-channels d)))
+
+    ; --- THE ROSTER: Mac + Android + Windows, each a row over the same shape -----
+    (defn mj-mac ()
+        (mj-device "macos-binary"
+            (list (mj-organ "mic" "audio") (mj-organ "speaker" "audio")
+                  (mj-organ "camera" "video") (mj-organ "screen" "display")
+                  (mj-organ "network" "transport"))
+            (mj-cci-channels)))
+    (defn mj-android ()
+        (mj-device "android-phone"
+            (list (mj-organ "mic" "audio") (mj-organ "speaker" "audio")
+                  (mj-organ "camera" "video") (mj-organ "screen" "display")
+                  (mj-organ "network" "transport"))
+            (mj-cci-channels)))
+    ; Windows joins as the third device-cell — same organs, same channels, a ROW.
+    (defn mj-windows ()
+        (mj-device "windows-binary"
+            (list (mj-organ "mic" "audio") (mj-organ "speaker" "audio")
+                  (mj-organ "camera" "video") (mj-organ "screen" "display")
+                  (mj-organ "network" "transport"))
+            (mj-cci-channels)))
+
+    (defn mj-roster () (list (mj-mac) (mj-android) (mj-windows)))
+    (defn mj-roster-size () (len (mj-roster)))
+
+    ; find a device-cell in the roster by identity name; (empty) when absent.
+    (defn mj-roster-find (devices name)
+        (if (eq (len devices) 0) (empty)
+            (if (str_eq (mj-device-name (head devices)) name) (head devices)
+                (mj-roster-find (tail devices) name))))
+
+    ; --- JOIN: a device-cell becomes a field-relay MEMBER -----------------------
+    ; The field-relay registry entry is (nodeid connected? interface). The offered
+    ; interface = the verbs of the device's channels (consent: reachable only through
+    ; the channels it offers). mj-join folds a device-cell into that registry shape,
+    ; marked present (connected? = 1). One engine; every device joins the same way.
+    (defn mj-channel-verbs (channels)
+        (if (eq (len channels) 0) (list)
+            (cons (mj-channel-verb (head channels))
+                  (mj-channel-verbs (tail channels)))))
+    (defn mj-member (nodeid connected iface) (list nodeid connected iface))
+    (defn mj-member-id    (m) (nth m 0))
+    (defn mj-member-conn  (m) (nth m 1))
+    (defn mj-member-iface (m) (nth m 2))
+
+    ; register a device-cell into the relay: a connected member entry whose offered
+    ; interface is the device's channel verbs.
+    (defn mj-join (device)
+        (mj-member (mj-device-name device) 1 (mj-channel-verbs (mj-device-channels device))))
+
+    ; a device is a live member when its entry is connected and offers at least one channel.
+    (defn mj-member? (m)
+        (if (and (eq (mj-member-conn m) 1) (gt (len (mj-member-iface m)) 0)) 1 0))
+    (defn mj-present? (device) (mj-member? (mj-join device)))
+
+    ; the whole roster joined: the membership board (one member entry per device).
+    (defn mj-board (devices)
+        (if (eq (len devices) 0) (list)
+            (cons (mj-join (head devices)) (mj-board (tail devices)))))
+    (defn mj-board-size () (len (mj-board (mj-roster))))
+    ; how many of the joined members are live (all of them, when the roster is healthy).
+    (defn mj-live-count (members)
+        (if (eq (len members) 0) 0
+            (add (mj-member? (head members)) (mj-live-count (tail members)))))
+    (defn mj-all-present? () (eq (mj-live-count (mj-board (mj-roster))) (mj-roster-size)))
+
+    ; does a member offer a given channel verb? (consent reachability)
+    (defn mj-offers? (m verb)
+        (if (eq (len (mj-member-iface m)) 0) 0
+            (mj-iface-has? (mj-member-iface m) verb)))
+    (defn mj-iface-has? (iface verb)
+        (if (eq (len iface) 0) 0
+            (if (str_eq (head iface) verb) 1 (mj-iface-has? (tail iface) verb))))
+
+    0)
