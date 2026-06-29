@@ -1,0 +1,8 @@
+; tests/surprise-receipt-band.fk — the framebuffer witnesses surprises we didn't see coming, with receipts, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/surprise-receipt.fk
+;
+; Verdict 11111: the expected event has zero surprise; the unexpected has a measurable surprise; the surprise
+; earns a witnessed receipt; the expected earns none (salience: only surprises witnessed); and the framebuffer
+; surfaces the surprise as the salient event. The framebuffer feature that captures, with proof, the interesting
+; things that emerge that nobody designed.
+(do (surprise-receipt-check))
