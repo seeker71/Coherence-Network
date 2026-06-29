@@ -1,0 +1,42 @@
+; form-eval-cli-loop.fk — the STANDING read-eval-print loop on the emitted walker (fkwu).
+;
+; The single-file runner (form-eval-cli.fk's fec-read) reads ONE expression from staged input and
+; evaluates it once. This is the interactive loop: read a line, eval it, print the value, recurse to
+; the next line, until EOF. It is the live shape of a REPL over staged input — pipe N expression lines
+; into fkwu's input_byte channel (argv[3] / fk_src) and get N values back, one per line, in order.
+;
+;   line i      = is-line i            — the bytes of the line at byte i, up to '\n' or NUL (input-stream.fk)
+;   next i      = is-next i            — the byte index just past that line's '\n' (or at NUL)
+;   eval line   = fef-eval line        — the FULL grammar tree-walk (do/let/defn/user-calls/if/binops),
+;                                        evaluated AS read with no flatten table (form-eval-full.fk)
+;   print value = print_str (...)      — write the rendered value + newline to fd 1 (walker tag 115)
+;
+; The read+next pair rides input-stream.fk's bounded-depth line readers (recursion bounded by LINE
+; length, never the whole input — the O(n^2) char-accumulate reader stack-overflows on large input).
+; The eval it rides (fef-eval) is four-way proven (tests/form-eval-full-band.fk). Blank lines (e.g. the
+; empty final line after a trailing newline) are skipped so a clean transcript stays clean.
+;
+; fkwu-NATIVE: input_byte (tag 17) and print_str (tag 115) are the staged-input + output ops only the
+; emitted universal walker carries — they are not in the three host walkers. The proof is the native run
+; (fkwu <table> 0 <input-file>), not a four-way band: the loop is the host-io shell, the eval underneath
+; it is the four-way recipe.
+;
+; preludes: form-stdlib/core.fk form-stdlib/input-stream.fk form-stdlib/form-eval-full.fk
+(do
+    ; render one line's value: evaluate the line's source through the full grammar, render to text,
+    ; append a newline, and print it. Returns the printed string (value of this step).
+    (defn fecl-emit (line)
+        (print_str (str_concat (int_to_str (fef-eval line)) "\n")))
+
+    ; the loop: read the line starting at byte i. At EOF (input_byte i = 0) stop. Skip an empty line
+    ; (str_len 0 — a blank or the trailing-newline tail) without evaluating; otherwise eval+print it.
+    ; Either way recurse to the next line (is-next i). Recursion is bounded by LINE COUNT, tail-position.
+    (defn fecl-loop (i)
+        (if (eq (input_byte i) 0) 0
+            (do (let line (is-line i))
+                (if (eq (str_len line) 0) 0 (fecl-emit line))
+                (fecl-loop (is-next i)))))
+
+    ; entry: read-eval-print from the first staged byte to EOF.
+    (defn fecl-repl () (fecl-loop 0))
+    (fecl-repl))
