@@ -1,0 +1,3 @@
+; tests/prosody-contour-band.fk — the phrase melody, one engine, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/prosody-contour.fk
+(do (prosody-contour-check))
