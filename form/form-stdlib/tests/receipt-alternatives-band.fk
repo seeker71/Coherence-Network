@@ -1,0 +1,8 @@
+; tests/receipt-alternatives-band.fk — every receipt carries alternatives for verify/improve/play/learn, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/receipt-alternatives.fk
+;
+; Verdict 11111: a verify-alternative with the same result confirms the receipt; a verify-alternative with a
+; different result flags a divergence; an improve-alternative (same result, lower cost) is promotable; a
+; play-alternative is always admissible; a learn-alternative records its outcome whether it succeeded or failed.
+; A receipt becomes a living seed for the four moves the mind makes on its own work.
+(do (receipt-alternatives-check))

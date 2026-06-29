@@ -1,0 +1,40 @@
+; receipt-alternatives.fk — every receipt carries alternatives, each tagged by its role. A receipt stops being a
+; dead record of what happened and becomes a living seed for four moves the mind makes on its own work:
+;   - VERIFY  : an alternative path that should give the SAME result -> a cross-check. Same -> confirmed; different
+;               -> a divergence flagged (a bug caught). Tonight's GPU receipt already had one: the CPU twin.
+;   - IMPROVE : an alternative that gives the same result at LOWER cost -> promotable self-improvement (the recipe
+;               that lowers to asm, the JIT crystallization -- the oracle-as-teacher path, kept only if cheaper).
+;   - PLAY    : an alternative explored for its own sake -> always admissible, needs no justification (the micro/
+;               macro time-budget play; the assemblage-point tried just to see).
+;   - LEARN   : an alternative tried whose outcome is recorded whether it SUCCEEDED or FAILED -> the learning-loop's
+;               fuel; failures are kept, not discarded, because the branch-when-and-why lives in both.
+; primary = (result, cost); alternative = (role, result, cost); role 1=verify 2=improve 3=play 4=learn.
+; Honest floor: result/cost are scalars; the ROLE LOGIC (verify->same-or-divergent, improve->same-and-cheaper,
+; play->free, learn->keeps-both) is the shape every real receipt's alternative-set obeys.
+;
+; Self-contained over core. Four-way by tests/receipt-alternatives-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn ra-p-result (p) (head p))
+    (defn ra-p-cost (p) (head (tail p)))
+    (defn ra-role (a) (head a))                      ; 1=verify 2=improve 3=play 4=learn
+    (defn ra-result (a) (head (tail a)))
+    (defn ra-cost (a) (head (tail (tail a))))
+    (defn ra-verifies? (p a) (if (eq (ra-role a) 1) (if (eq (ra-result a) (ra-p-result p)) 1 0) 0))      ; same result -> confirmed
+    (defn ra-divergence? (p a) (if (eq (ra-role a) 1) (if (not (eq (ra-result a) (ra-p-result p))) 1 0) 0))  ; different result -> bug caught
+    (defn ra-improves? (p a) (if (eq (ra-role a) 2)
+        (if (eq (ra-result a) (ra-p-result p)) (if (gt (ra-p-cost p) (ra-cost a)) 1 0) 0) 0))             ; same result, lower cost -> promote
+    (defn ra-play? (a) (if (eq (ra-role a) 3) 1 0))                                                       ; always admissible
+    (defn ra-learns? (a) (if (eq (ra-role a) 4) 1 0))                                                     ; records outcome, success or failure
+
+    (defn rak (cond bit) (if cond bit 0))
+    (defn receipt-alternatives-check ()
+        (add (add (add (add
+            (rak (eq (ra-verifies? (list 42 10) (list 1 42 12)) 1) 1)        ; a VERIFY alt with the same result confirms the receipt (GPU==CPU)
+            (rak (eq (ra-divergence? (list 42 10) (list 1 99 12)) 1) 10))     ; a VERIFY alt with a DIFFERENT result flags a divergence (a bug caught)
+            (rak (eq (ra-improves? (list 42 10) (list 2 42 6)) 1) 100))       ; an IMPROVE alt -- same result, lower cost -> promotable self-improvement
+            (rak (eq (ra-play? (list 3 7 99)) 1) 1000))                       ; a PLAY alt is always admissible -- exploration needs no justification
+            (rak (eq (ra-learns? (list 4 0 5)) 1) 10000)))                    ; a LEARN alt records its outcome -- success or failure, learning keeps both
+)
