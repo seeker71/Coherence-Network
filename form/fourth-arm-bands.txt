@@ -1130,3 +1130,4 @@ learning-loop fks 11111
 jit-decision fks 11111
 cornerstone-summarizer fks 11111
 translation-invariant fks 11111
+text-frequency fks 11111
