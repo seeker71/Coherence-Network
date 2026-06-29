@@ -1,0 +1,22 @@
+; oracle-distill.fk — learn from an oracle (local or remote teacher) by distillation.
+; The student's error to the teacher drops over distillation; a student whose error on UNSEEN input is also low
+; learned the MEANING (sovereign), one whose unseen-error stays high only mimicked the seen (a copy). A local
+; oracle and a remote oracle are both valid teachers. Honest floor: errors are scalars modeling the real
+; distillation; the LOGIC (error-drops, generalizes->sovereign, mimics->copy) is the shape. preludes: form-stdlib/core.fk
+(do
+    (defn od-kind (d) (head d))
+    (defn od-before (d) (head (tail d)))
+    (defn od-after (d) (head (tail (tail d))))
+    (defn od-new (d) (head (tail (tail (tail d)))))
+    (defn od-distills? (d) (if (gt (od-before d) (od-after d)) 1 0))
+    (defn od-sovereign? (d) (if (gt 3 (od-new d)) 1 0))
+    (defn od-oracle-ok? (d) (if (gt (od-kind d) 0) 1 0))
+    (defn odk (cond bit) (if cond bit 0))
+    (defn oracle-distill-check ()
+        (add (add (add (add
+            (odk (eq (od-distills? (list 1 8 2 2)) 1) 1)
+            (odk (eq (od-sovereign? (list 1 8 2 2)) 1) 10))
+            (odk (eq (od-sovereign? (list 1 8 2 9)) 0) 100))
+            (odk (eq (od-oracle-ok? (list 1 8 2 2)) 1) 1000))
+            (odk (eq (od-oracle-ok? (list 2 8 2 2)) 1) 10000)))
+)
