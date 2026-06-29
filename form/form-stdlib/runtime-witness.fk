@@ -1,0 +1,37 @@
+; runtime-witness.fk — the eyes-on-execution: watch the kernel RUN, not just think.
+; Gap 2 of the observe stack. thought-framebuffer watches a thought form; the calibration stack judges whether
+; the confidence was earned. Neither watches EXECUTION itself. This does: over a trace of fire-events
+; (recipe-id, jit-hit), it sees which recipe fired LAST, which is HOT (a JIT candidate), which is cold
+; (tree-walked), and the JIT hit-rate — the running kernel made observable. With the framebuffer (thoughts) and
+; the calibration stack (trust), this completes "a core we can observe and trust" at the execution layer.
+; Honest floor: the trace is a fixed list; the live feed (fkwu emitting a fire-event per recipe call + JIT
+; hit/miss) is the wiring that depends on the runtime emitting it — the witness LOGIC is the generic shape.
+;
+; Self-contained over core (FLOAT hit-rate). Four-way by tests/runtime-witness-band.fk.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn rw-rid (e) (head e))                       ; the recipe that fired
+    (defn rw-jit (e) (head (tail e)))                ; 1 = ran JITed/native, 0 = tree-walked
+    (defn rw-fires (trace rid)                       ; how many times a recipe fired
+        (if (eq (len trace) 0) 0 (add (if (eq (rw-rid (head trace)) rid) 1 0) (rw-fires (tail trace) rid))))
+    (defn rw-jit-hits (trace)
+        (if (eq (len trace) 0) 0 (add (rw-jit (head trace)) (rw-jit-hits (tail trace)))))
+    (defn rw-last (trace)                            ; which recipe was touched LAST
+        (if (eq (len trace) 1) (rw-rid (head trace)) (rw-last (tail trace))))
+    (defn rw-hot? (trace rid) (if (ge (rw-fires trace rid) 3) 1 0))   ; fired >= heat threshold -> a JIT candidate
+    (defn rw-hit-rate (trace) (div (mul 1.0 (rw-jit-hits trace)) (mul 1.0 (len trace))))  ; fraction running native
+
+    ; a live trace: recipe 1 fired 4x (hot, all JITed), recipe 2 fired once (cold, tree-walked)
+    (defn rw-trace () (list (list 1 1) (list 1 1) (list 2 0) (list 1 1) (list 1 1)))
+
+    (defn rwk (cond bit) (if cond bit 0))
+    (defn runtime-witness-check ()
+        (add (add (add (add
+            (rwk (eq (rw-last (rw-trace)) 1) 1)                  ; the witness sees which recipe fired LAST -- execution is observable
+            (rwk (eq (rw-fires (rw-trace) 1) 4) 10))             ; recipe 1 fired 4 times -- the hot one
+            (rwk (eq (rw-hot? (rw-trace) 1) 1) 100))             ; recipe 1 is HOT -- a JIT candidate
+            (rwk (eq (rw-hot? (rw-trace) 2) 0) 1000))            ; recipe 2 is COLD -- fired once, tree-walked
+            (rwk (eq (rw-hit-rate (rw-trace)) 0.8) 10000)))      ; the JIT hit-rate is observable: 4/5 fired native
+)
