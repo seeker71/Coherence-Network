@@ -1,0 +1,123 @@
+; context-signature.fk — a CONTEXT signature from NETWORK presence, and a robust match to known
+; contexts. room-register recognizes a room by the banded SHAPE of fused spatial features; this is its
+; sibling for the contexts that have no clean spatial band but a sharp NETWORK fingerprint: the set of
+; WiFi SSIDs in the air + the set of Bluetooth device IDs in range + (optionally) a coarse location cell.
+; "We're in the car" falls straight out of the car's unique WiFi SSID + Bluetooth MAC set, even with no
+; GPS at all — the place is named by WHO ELSE is on the air, not by a coordinate.
+;
+; WHOLENESS FRAME: a context is remembered RICHLY — its whole network set is held so re-entering it is
+; recognized warmly, the way the car knows it is the car. The richness is recognition of a shared place,
+; not a watch over the devices around you; the outward gate over what of this memory is ever shared stays
+; sense-discernment.fk. The set of nearby device-ids is the warm fact "the things that share this place
+; with me", held by the cell, never a tracking apparatus pointed at anyone.
+;
+; A SIGNATURE is (wifi-set bt-set loc): (cs-wifi s) the list of WiFi SSID strings in the air, (cs-bt s)
+; the list of Bluetooth device-id strings in range, (cs-loc s) a coarse integer location cell (or the
+; no-fix sentinel -1 when there is no GPS). The sets are the load-bearing identity; loc is a coarse hint
+; that is allowed to be absent. Strings for the network ids (str_eq matches them), an integer for loc.
+;
+; THE MATCHER IS SET-OVERLAP, NOT EXACT EQUALITY. Networks are noisy: a phone drops off, a neighbour's
+; SSID appears, one BT device is asleep. So a context is identified by how MUCH of its remembered network
+; set the current read shares — a Jaccard overlap over the pooled (wifi + bt) id-sets, scaled to an
+; integer percent 0..100. Even a PARTIAL match identifies the context: walk into the car with only its
+; head-unit BT seen and half its usual SSIDs, and the overlap to "car" still dwarfs the overlap to "home".
+; Integers only: the overlap is a count-ratio percent, recognition is by SHARED MEMBERSHIP, never a float.
+;
+; A CONTEXT-CELL is (name signature): (cs-name c) the context id string, (cs-sig c) its remembered
+; signature. cs-register mints one; cs-match walks them and returns the best-overlapping name (or "new").
+;
+; THE MOVES (build a signature, score overlap, match, remember):
+;   - cs-signature: build a signature from a wifi-set, a bt-set, and a loc cell.
+;   - cs-overlap: the Jaccard-ish overlap percent (0..100) between two signatures over their pooled
+;     network id-sets — the robust matcher. |A ∩ B| * 100 / |A ∪ B|; an empty pool on both sides is 0.
+;   - cs-match: the known context whose signature overlaps the current read most; below a floor percent,
+;     the place is "new" (a context never met before).
+;   - cs-register: a remembered context-cell — a name bound to the signature you read.
+;
+; Kin: room-register.fk (rr-rediscover recognizes a SIGNED room by nearest banded distance; cs-match
+; recognizes a CONTEXT by best set-overlap — the same recognize-on-return spine, a set metric where the
+; band metric does not fit), spatial-fusion.fk (fuses the sensors a band-signature is built from),
+; place-sense.fk (names the world a context sits in), sense-discernment.fk (the outward gate over what of
+; this memory is ever shared). Carrier-last: the radio reads the SSID/BT sets; the signature, overlap,
+; and match are Form, four-way-identical — the Mac and the phone name the same context from the same sets.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/context-signature-band.fk (four-way at validate.sh)
+
+(do
+    ; --- BUILD a signature from already-read network sets + a coarse loc cell. wifi-set / bt-set are
+    ;     lists of id strings; loc is an integer location cell (-1 = no fix). The signature IS the triple;
+    ;     this names the result so the rest of the body reads it as one. ---
+    (defn cs-signature (wifi-set bt-set loc) (list wifi-set bt-set loc))
+
+    ; --- READ a signature's parts. ---
+    (defn cs-wifi (s) (nth s 0))
+    (defn cs-bt   (s) (nth s 1))
+    (defn cs-loc  (s) (nth s 2))
+
+    ; --- READ a context-cell's parts. ---
+    (defn cs-name (c) (nth c 0))
+    (defn cs-sig  (c) (nth c 1))
+
+    ; --- REGISTER: a remembered context-cell — a name bound to the signature you read. ---
+    (defn cs-register (signature name) (list name signature))
+
+    ; --- SET membership over string ids: is x one of the ids in set? str_eq compares the ids (they are
+    ;     strings — SSIDs, BT MACs), eq would coerce to int and collapse them. ---
+    (defn cs-member? (x set)
+        (if (eq (len set) 0) 0
+            (if (str_eq x (head set)) 1
+                (cs-member? x (tail set)))))
+
+    ; --- INTERSECTION COUNT: how many ids of set-a also appear in set-b. Walk a, count each that is a
+    ;     member of b. The shared membership both reads agree on. ---
+    (defn cs-inter-count (a b)
+        (if (eq (len a) 0) 0
+            (add (cs-member? (head a) b)
+                 (cs-inter-count (tail a) b))))
+
+    ; --- UNION COUNT: |A ∪ B| = |A| + |B| - |A ∩ B|. The whole pool of distinct ids across both reads
+    ;     (assumes each set carries distinct ids, as a sensed id-set does). ---
+    (defn cs-union-count (a b)
+        (sub (add (len a) (len b)) (cs-inter-count a b)))
+
+    ; --- POOL the network sets of a signature: wifi ids followed by bt ids — the one combined id-set the
+    ;     overlap is scored over, so a strong WiFi match and a strong BT match both lift the same score. ---
+    (defn cs-pool (s) (append (cs-wifi s) (cs-bt s)))
+
+    ; --- OVERLAP: Jaccard percent (0..100) between two signatures over their pooled network id-sets.
+    ;     |A ∩ B| * 100 / |A ∪ B|, integer division — the robust matcher: even a partial network match
+    ;     scores high enough to identify the context. An empty pool on both sides (no network read at all)
+    ;     overlaps 0 — nothing shared, so nothing recognized; the floor sends it to "new". ---
+    (defn cs-overlap (a b)
+        (if (eq (cs-union-count (cs-pool a) (cs-pool b)) 0) 0
+            (div (mul (cs-inter-count (cs-pool a) (cs-pool b)) 100)
+                 (cs-union-count (cs-pool a) (cs-pool b)))))
+
+    ; --- BEST: walk the known contexts, carry the one whose signature overlaps the current read most.
+    ;     Seed best-overlap at -1 so the first real context takes the lead; a STRICTLY-greater overlap
+    ;     replaces the carried best, so the FIRST context offered keeps a tie (stable, like
+    ;     room-register's first-offered tie-keep). Returns (best-cell best-overlap). ---
+    (defn cs-best-loop (current contexts best best-ov)
+        (if (eq (len contexts) 0) (list best best-ov)
+            (if (gt (cs-overlap current (cs-sig (head contexts))) best-ov)
+                (cs-best-loop current (tail contexts)
+                    (head contexts) (cs-overlap current (cs-sig (head contexts))))
+                (cs-best-loop current (tail contexts) best best-ov))))
+
+    (defn cs-best-cell (current contexts)
+        (nth (cs-best-loop current contexts (list) (sub 0 1)) 0))
+    (defn cs-best-overlap (current contexts)
+        (nth (cs-best-loop current contexts (list) (sub 0 1)) 1))
+
+    ; --- MATCH: the known context whose signature overlaps the current read most, IF that best overlap
+    ;     meets the floor percent. Below the floor — or with no contexts known — the place is "new", a
+    ;     context never met before. Returns the matched context-id string, or "new". ---
+    (defn cs-match (current contexts floor)
+        (if (and (gt (len contexts) 0)
+                 (gt (cs-best-overlap current contexts) (sub floor 1)))
+            (cs-name (cs-best-cell current contexts))
+            "new"))
+
+    0)

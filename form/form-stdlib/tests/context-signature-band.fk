@@ -1,0 +1,55 @@
+; preludes: form-stdlib/context-signature.fk
+;
+; context-signature-band — register two contexts by their NETWORK fingerprint, then read the air and
+; name where we are. Made falsifiable.
+;
+; Two contexts are remembered by the SET of network ids in the air — the WiFi SSIDs around plus the
+; Bluetooth devices in range (a coarse loc cell rides along; here -1, no GPS, to prove the SETS carry it):
+;   HOME  wifi {"home-5g" "home-2g"}            bt {"echo" "tv" "thermostat"}     loc -1
+;   CAR   wifi {"car-audio"}                    bt {"car-headunit" "phone"}       loc -1
+; The car's network set is UNIQUE — its own head-unit WiFi + its head-unit BT, nothing the home shares.
+;
+; Now read the air while sitting in the car. The radio never reads identically — the phone is paired but
+; one BT device is asleep, and a neighbour's "home-2g" leaks faintly into range:
+;   CAR READ  wifi {"car-audio" "home-2g"}      bt {"car-headunit"}               loc -1
+;     pool(car-read)  = {car-audio home-2g car-headunit}
+;     pool(CAR)       = {car-audio car-headunit phone}    -> ∩ = {car-audio car-headunit} = 2
+;                                                             ∪ = 4   -> overlap = 2*100/4 = 50
+;     pool(HOME)      = {home-5g home-2g echo tv thermostat} -> ∩ = {home-2g} = 1
+;                                                             ∪ = 7   -> overlap = 1*100/7 = 14
+;   The car read overlaps CAR (50) far more than HOME (14). With floor 30, it is matched to "car",
+;   NOT "home", even though a home SSID leaked into the read. Even a partial network match names the place.
+;
+; Then read the air somewhere never met — a cafe, a wholly novel network set:
+;   NOVEL READ wifi {"cafe-guest"}              bt {"barista-speaker"}            loc -1
+;     overlap to CAR  = 0  (nothing shared) ; overlap to HOME = 0  (nothing shared)
+;   The best overlap (0) is below floor 30 -> "new". A place we have never sat in.
+;
+; Verdict 255 when every claim lands:
+;   1    car read overlaps CAR by 50                        (cs-overlap car-read CAR-sig == 50)
+;   2    car read overlaps HOME by only 14                  (cs-overlap car-read HOME-sig == 14)
+;   4    car read is matched to "car"                       (cs-match car-read known 30 str= "car")
+;   8    car read is NOT matched to "home"                  (cs-match != "home")
+;   16   the novel read overlaps CAR by 0                   (cs-overlap novel CAR-sig == 0)
+;   32   the novel read is matched to "new"                 (cs-match novel known 30 str= "new")
+;   64   the car read carries its read loc (-1, no GPS)     (cs-loc car-read == -1)
+;   128  the car context recalls its whole bt set: 2 ids    (len (cs-bt CAR-sig) == 2)
+(do
+    (let home-sig (cs-signature (list "home-5g" "home-2g") (list "echo" "tv" "thermostat") (sub 0 1)))
+    (let car-sig  (cs-signature (list "car-audio") (list "car-headunit" "phone") (sub 0 1)))
+    (let home (cs-register home-sig "home"))
+    (let car  (cs-register car-sig  "car"))
+    (let known (list home car))
+    ; read the air in the car — a partial, noisy network set.
+    (let car-read (cs-signature (list "car-audio" "home-2g") (list "car-headunit") (sub 0 1)))
+    ; read the air somewhere never met.
+    (let novel (cs-signature (list "cafe-guest") (list "barista-speaker") (sub 0 1)))
+    (let c0 (if (eq (cs-overlap car-read car-sig) 50)                  1 0))
+    (let c1 (if (eq (cs-overlap car-read home-sig) 14)                 2 0))
+    (let c2 (if (str_eq (cs-match car-read known 30) "car")            4 0))
+    (let c3 (if (str_eq (cs-match car-read known 30) "home")          0 8))
+    (let c4 (if (eq (cs-overlap novel car-sig) 0)                     16 0))
+    (let c5 (if (str_eq (cs-match novel known 30) "new")             32 0))
+    (let c6 (if (eq (cs-loc car-read) (sub 0 1))                      64 0))
+    (let c7 (if (eq (len (cs-bt car-sig)) 2)                         128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
