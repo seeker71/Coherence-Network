@@ -20,14 +20,23 @@ in the gate loop.
 
 | reading | who computes it |
 |---------|-----------------|
-| presence (`(if (le threshold luma) 1 0)`) | **recipe-run** — fkwu on metal (`presence-feature` gate) |
+| presence (`pf-present?` over the 16×16 luminance grid) | **recipe-run** — fkwu on metal (`presence-feature` OCCUPANCY decision) |
 | surprise (`(if (le tol salience) 1 0)`) | **recipe-run** — fkwu on metal (`ambient-surprise` `as-surprise?` gate) |
 | grid-average brightness | carrier-computed (thin reduction in Swift) |
 | salience magnitude `abs(reading − baseline)` | carrier-computed — the curated `loop-table` vocabulary carries `le`/`sub`, not `abs`/`gt`, so the magnitude is Swift's and the **decision** is fkwu's |
 
-The native body is bundled in `Resources/native/`: `fkwu-mac` (the arm64 C-bootstrap kernel)
-and `loop-table.txt` (the byte-identical flattened `form-eval-full` table that ran four-way
-at `validate.sh` and shipped to the Galaxy S23, `FkwuSense.kt`).
+Presence reads **structure, not brightness.** A Mac camera auto-exposes — a covered lens cranks
+gain, so the average luminance stays high. A naive `(if (le threshold luma) 1 0)` gate would read
+a false always-YES with the lens covered. `pf-occupancy` (region variance — a present body breaks
+the room's uniformity) is robust to auto-exposure: a covered camera's grain averages out across the
+coarse grid → uniform → occupancy ~0 → correctly NO presence; a real body breaks the lower-center
+uniformity → presence. Swift extracts the grid (thin carrier); fkwu runs the occupancy decision.
+
+The native body is bundled in `Resources/native/`: `fkwu-mac` (the arm64 C-bootstrap kernel),
+`loop-table.txt` (the flattened `form-eval-full` table for the surprise/scene gates), and
+`presence-table.txt` (`presence-cli` flattened with `presence-feature`, the occupancy decision).
+`presence-feature` crosses four-way at `validate.sh` → band 15; the android sibling runs the same
+recipe through `live-observe-cli` (`FkwuSense.kt`).
 
 ## Build & run
 
