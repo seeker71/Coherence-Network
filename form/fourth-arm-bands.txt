@@ -1190,3 +1190,4 @@ motion-normalize fks 63
 fused-observation fks 255
 speaking-mesh fks 255
 world-sensor-floor fks 4095
+same-room fks 255

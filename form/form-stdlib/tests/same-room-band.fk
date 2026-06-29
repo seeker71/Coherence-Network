@@ -1,0 +1,80 @@
+; preludes: form-stdlib/core.fk form-stdlib/context-signature.fk form-stdlib/room-register.fk form-stdlib/same-room.fk
+;
+; same-room-band — three devices read their room signatures; decide which room each is in, whether they
+; share a room or not, and report the evidence. Made falsifiable. Composes context-signature (the network
+; set fingerprint, the sharpest same-room signal) and room-register (the banded room-naming).
+;
+; THREE DEVICES, each carrying a NETWORK context-signature (its WiFi-SSID + Bluetooth set) AND standing on
+; a BANDED spatial signature it can name a registered room by. loc rides along as -1 (no GPS — the SETS
+; carry it):
+;   A  ctx wifi {"office-5g"}     bt {"deskcam" "kbd"}     ; in the office
+;   B  ctx wifi {"office-5g"}     bt {"deskcam"}           ; in the office too — same WiFi, shared BT
+;   C  ctx wifi {"lobby-guest"}   bt {"frontdesk"}         ; down in the lobby — a wholly different network
+;
+; NETWORK OVERLAP (the same/different signal), floor 30:
+;   A vs B  pool(A)={office-5g deskcam kbd} pool(B)={office-5g deskcam} -> ∩={office-5g deskcam}=2 ∪=3
+;           overlap = 2*100/3 = 66  ≥ 30  -> SAME room  (same WiFi SSID + shared BT)
+;   A vs C  pool(A)={office-5g deskcam kbd} pool(C)={lobby-guest frontdesk} -> ∩=0 ∪=5
+;           overlap = 0           < 30  -> DIFFERENT room  (no shared network at all)
+;
+; GROUPING (greedy by the same-room relation, floor 30):
+;   A seeds a group. B shares a room with A (66 ≥ 30) -> joins A's group. C shares with neither (0 < 30)
+;   -> opens its own group.  ->  partition  {A B}  and  {C}  : two devices together, one apart. 2 rooms.
+;
+; WHICH ROOM (banded spatial signatures, room-register's rr-rediscover, tolerance 3):
+;   known rooms:  OFFICE id 10 sig (4 2 7)   LOBBY id 20 sig (1 6 3)
+;   A's band read (4 2 8) -> nearest OFFICE, distance |4-4|+|2-2|+|8-7| = 1 ≤ 3 -> OFFICE (room id 10)
+;   C's band read (1 6 4) -> nearest LOBBY,  distance |1-1|+|6-6|+|4-3| = 1 ≤ 3 -> LOBBY  (room id 20)
+;
+; WHY / HOW (the evidence rows):
+;   sr-why(A,B,30) = ("network-overlap" "same-room" 66 30)       agreeing signal -> same room
+;   sr-why(A,C,30) = ("network-overlap" "different-room" 0 30)   disagreeing signal -> different rooms
+;
+; Verdict 255 when every claim lands:
+;   1    A and B are in the SAME room                       (sr-same? ctxA ctxB 30 == 1)
+;   2    A and C are in DIFFERENT rooms                     (sr-same? ctxA ctxC 30 == 0)
+;   4    the grouping puts A with B (group of two)          (len (head grouping) == 2)
+;   8    the grouping leaves C apart (two groups total)     (len grouping == 2)
+;   16   A names the OFFICE room (id 10)                    (sr-which-room-id A-band rooms 3 99 == 10)
+;   32   C names the LOBBY room (id 20)                     (sr-which-room-id C-band rooms 3 99 == 20)
+;   64   sr-why(A,B) reports the agreeing signal            (verdict "same-room", overlap 66)
+;   128  sr-why(A,C) reports the disagreeing signal         (verdict "different-room", overlap 0)
+(do
+    ; --- three devices, each with its network context-signature (loc -1, no GPS) ---
+    (let ctxA (cs-signature (list "office-5g")   (list "deskcam" "kbd") (sub 0 1)))
+    (let ctxB (cs-signature (list "office-5g")   (list "deskcam")       (sub 0 1)))
+    (let ctxC (cs-signature (list "lobby-guest") (list "frontdesk")     (sub 0 1)))
+    (let devA (sr-device "A" ctxA))
+    (let devB (sr-device "B" ctxB))
+    (let devC (sr-device "C" ctxC))
+    (let devices (list devA devB devC))
+
+    ; --- the registered rooms (banded spatial signatures), and each device's banded read ---
+    (let office (rr-register 10 (list 4 2 7)))
+    (let lobby  (rr-register 20 (list 1 6 3)))
+    (let rooms  (list office lobby))
+    (let A-band (list 4 2 8))
+    (let C-band (list 1 6 4))
+
+    ; --- same / different ---
+    (let c0 (if (eq (sr-same? ctxA ctxB 30) 1) 1 0))          ; A,B same room
+    (let c1 (if (eq (sr-same? ctxA ctxC 30) 0) 2 0))          ; A,C different rooms
+
+    ; --- grouping: {A B} and {C} ---
+    (let grouping (sr-grouping devices 30))
+    (let c2 (if (eq (len (head grouping)) 2) 4 0))            ; first group has two devices (A,B)
+    (let c3 (if (eq (len grouping) 2) 8 0))                   ; two groups total (C apart)
+
+    ; --- which room each device names ---
+    (let c4 (if (eq (sr-which-room-id A-band rooms 3 99) 10) 16 0))   ; A in OFFICE
+    (let c5 (if (eq (sr-which-room-id C-band rooms 3 99) 20) 32 0))   ; C in LOBBY
+
+    ; --- the evidence: the agreeing and disagreeing signal ---
+    (let whyAB (sr-why ctxA ctxB 30))
+    (let whyAC (sr-why ctxA ctxC 30))
+    (let c6 (if (and (str_eq (sr-why-verdict whyAB) "same-room")
+                     (eq (sr-why-overlap whyAB) 66)) 64 0))
+    (let c7 (if (and (str_eq (sr-why-verdict whyAC) "different-room")
+                     (eq (sr-why-overlap whyAC) 0)) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

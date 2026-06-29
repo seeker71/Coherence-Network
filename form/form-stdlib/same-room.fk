@@ -1,0 +1,145 @@
+; same-room.fk — given several devices' room signatures, decide WHICH room each device is in, whether
+; two devices are in the SAME room or DIFFERENT rooms, and the EVIDENCE (the signal that agreed or
+; disagreed — the why/how). "See which room each device is at, same or different room, why and how."
+;
+; THE GROUND THIS COMPOSES — it invents no new metric, it reads the two recognition spines the body
+; already proves and the where-plane floor they stand on:
+;   - context-signature.fk: cs-signature / cs-overlap — the WiFi-SSID + Bluetooth id set fingerprint and
+;     its Jaccard overlap percent. This is the STRONGEST same-room signal: two devices on the SAME WiFi
+;     SSID with the same BT devices in range are in the same room, even with no coordinate at all. Set
+;     overlap is robust to the noise (a device asleep, a neighbour's SSID leaking) that defeats coords.
+;   - room-register.fk: rr-rediscover / rr-distance — the banded spatial signature and nearest-room match.
+;     This is how a device names WHICH registered room it stands in (its own kitchen), by banded distance.
+;   - world-sensor-floor.fk: the where-plane — wifi/bt/gps/proximity all answer "where". The signals
+;     same-room reads are exactly the where-plane sensors, fused upstream into the two signatures.
+;
+; WHOLENESS FRAME: knowing two devices share a room is the warm fact "we are together" — the basis of a
+; shared exchange, not a watch over anyone. The signatures are sensed by the devices' own carriers; this
+; body only compares them. The outward gate over what of this co-location is ever shared stays
+; sense-discernment.fk. Co-location is a relation BETWEEN consenting cells, never a position pinned ON one.
+;
+; TWO SIGNALS, ONE VERDICT. A device's room signature carries both faces: a NETWORK context-signature
+; (the set fingerprint) and a BANDED spatial signature (the where-bands). same-room leans on the network
+; overlap for the same/different verdict (the sharpest co-location signal) and on the banded distance to
+; NAME the registered room. sr-why reports which face agreed or disagreed, so the verdict is legible:
+; "same WiFi SSID set, overlap 100 ≥ floor → SAME room" / "no shared network, overlap 0 < floor →
+; DIFFERENT rooms". Integers only: overlap is a count-ratio percent, the verdict an integer 0/1, the
+; evidence an explicit (signal verdict overlap floor) row — never a float the body cannot prove.
+;
+; A DEVICE is (id ctx-sig): (sr-dev-id d) the device id string, (sr-dev-ctx d) its network
+; context-signature (a cs-signature). sr-device mints one; the grouping partitions a list of them.
+;
+; THE MOVES (Urs: which room is each device in, same or different, why and how):
+;   - sr-same?: do two devices' context-signatures overlap at or above the floor → same room (1) or not (0).
+;   - sr-which-room: which REGISTERED room a device's banded spatial signature sits in, via rr-rediscover.
+;   - sr-grouping: partition the devices into co-located groups — who is together, who is apart.
+;   - sr-why: the evidence — the agreeing/disagreeing signal, its overlap, the floor, and the SAME/DIFFERENT
+;     verdict it carries. The why/how, as a row the caller can read or relay.
+;
+; Kin: context-signature.fk (the set overlap same-room leans on), room-register.fk (the banded room-naming),
+; world-sensor-floor.fk (the where-plane the signals ride), satsang-room-memory.fk (a recognized shared
+; room feeds the trusted exchange), sense-discernment.fk (the outward gate over what co-location is shared).
+; Carrier-last: the radios read the SSID/BT sets and the where-bands; the same/different verdict, the
+; room-naming, the grouping, and the evidence are Form, four-way-identical — two phones and a Mac in the
+; same room reach the same verdict from the same signatures.
+;
+; preludes: form-stdlib/core.fk form-stdlib/context-signature.fk form-stdlib/room-register.fk
+;
+; Proven by: form-stdlib/tests/same-room-band.fk (four-way at validate.sh)
+
+(do
+    ; --- a DEVICE: an id bound to its network context-signature. The id names the device; the ctx-sig is
+    ;     the cs-signature its radio read (wifi-set bt-set loc). The grouping partitions a list of these. ---
+    (defn sr-device  (id ctx-sig) (list id ctx-sig))
+    (defn sr-dev-id  (d) (nth d 0))
+    (defn sr-dev-ctx (d) (nth d 1))
+
+    ; --- SAME ROOM?: do two devices' network context-signatures overlap at or above the floor percent.
+    ;     cs-overlap is the Jaccard percent over the pooled WiFi+BT id-sets — the sharpest same-room signal.
+    ;     At or above the floor → same room (1); below → different rooms (0). Two devices on the same WiFi
+    ;     SSID with the same BT devices in range overlap high; two in different rooms share little or none. ---
+    (defn sr-same? (ctx-a ctx-b floor)
+        (if (gt (cs-overlap ctx-a ctx-b) (sub floor 1)) 1 0))
+
+    ; --- WHICH ROOM: which REGISTERED room a device's BANDED spatial signature sits in, via room-register's
+    ;     rr-rediscover. Finds the nearest known room within tolerance (recognition) or mints a fresh
+    ;     room-cell with new-id (a room never stood in). Returns the room-cell; rr-id reads its room id. ---
+    (defn sr-which-room (band-sig known-rooms tolerance new-id)
+        (rr-rediscover band-sig known-rooms tolerance new-id))
+
+    ; the integer room id a device's banded signature names (recognized id, or the supplied new-id).
+    (defn sr-which-room-id (band-sig known-rooms tolerance new-id)
+        (rr-id (sr-which-room band-sig known-rooms tolerance new-id)))
+
+    ; --- GROUPING: partition the devices into co-located groups — who is together, who is apart. Greedy
+    ;     by the same-room relation: the first device seeds a group; every later device joins the FIRST
+    ;     existing group whose seed it shares a room with (sr-same? at the floor), else it opens a new group.
+    ;     A group is a list of device-ids; the grouping is the list of groups. The first-fit, first-group-
+    ;     keeps-the-tie spine the recognition recipes already lean on. ---
+
+    ; does device d share a room with the seed (head) of group g? g is a list of devices; compare ctx-sigs.
+    (defn sr-joins? (d g floor)
+        (if (eq (len g) 0) 0
+            (sr-same? (sr-dev-ctx d) (sr-dev-ctx (head g)) floor)))
+
+    ; walk the groups; if d joins one, cons d onto the FIRST it joins; else leave groups unchanged and
+    ; signal "did not join" by returning the groups untouched (the caller appends a fresh group).
+    (defn sr-place-loop (d groups floor placed)
+        (if (eq (len groups) 0) (empty)
+            (if (and (eq placed 0) (eq (sr-joins? d (head groups) floor) 1))
+                (cons (cons d (head groups)) (sr-place-loop d (tail groups) floor 1))
+                (cons (head groups) (sr-place-loop d (tail groups) floor placed)))))
+
+    ; did d join any existing group? (used to decide whether to open a fresh one).
+    (defn sr-any-join? (d groups floor)
+        (if (eq (len groups) 0) 0
+            (if (eq (sr-joins? d (head groups) floor) 1) 1
+                (sr-any-join? d (tail groups) floor))))
+
+    ; add one device to the running groups: into the first group it joins, or a fresh group of its own.
+    (defn sr-add (d groups floor)
+        (if (eq (sr-any-join? d groups floor) 1)
+            (sr-place-loop d groups floor 0)
+            (append groups (list (list d)))))
+
+    ; fold the devices into groups, one at a time.
+    (defn sr-group-loop (devices groups floor)
+        (if (eq (len devices) 0) groups
+            (sr-group-loop (tail devices) (sr-add (head devices) groups floor) floor)))
+
+    ; the grouping as groups-of-devices.
+    (defn sr-grouping-cells (devices floor) (sr-group-loop devices (empty) floor))
+
+    ; one group's device-ids (strip the ctx-sigs — the warm roster of who is together).
+    (defn sr-ids (g)
+        (if (eq (len g) 0) (empty)
+            (cons (sr-dev-id (head g)) (sr-ids (tail g)))))
+
+    ; the grouping as groups-of-ids — who is together, who is apart.
+    (defn sr-grouping-ids-loop (groups)
+        (if (eq (len groups) 0) (empty)
+            (cons (sr-ids (head groups)) (sr-grouping-ids-loop (tail groups)))))
+    (defn sr-grouping (devices floor)
+        (sr-grouping-ids-loop (sr-grouping-cells devices floor)))
+
+    ; how many distinct rooms the devices occupy (the count of co-located groups).
+    (defn sr-room-count (devices floor) (len (sr-grouping-cells devices floor)))
+
+    ; --- WHY / HOW: the evidence row for a same/different verdict between two context-signatures.
+    ;     (signal verdict overlap floor): the SIGNAL that decided it ("network-overlap"), the VERDICT it
+    ;     carries ("same-room" / "different-room"), the OVERLAP percent measured, and the FLOOR it was
+    ;     judged against. Reads as "network-overlap 100 ≥ floor 30 → same-room" /
+    ;     "network-overlap 0 < floor 30 → different-room" — the why and how, legible to caller and relay. ---
+    (defn sr-why (ctx-a ctx-b floor)
+        (do (let ov (cs-overlap ctx-a ctx-b))
+            (list
+                "network-overlap"
+                (if (gt ov (sub floor 1)) "same-room" "different-room")
+                ov
+                floor)))
+    (defn sr-why-signal  (w) (nth w 0))
+    (defn sr-why-verdict (w) (nth w 1))
+    (defn sr-why-overlap (w) (nth w 2))
+    (defn sr-why-floor   (w) (nth w 3))
+
+    0)
