@@ -1,0 +1,3 @@
+; tests/nl-emitter-band.fk — greedy argmax decode + EOS stop, four-way.
+; preludes: form-stdlib/core.fk form-stdlib/nl-emitter.fk
+(do (nl-emitter-check))
