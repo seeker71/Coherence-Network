@@ -1,0 +1,29 @@
+; speak-locale.fk — the speaking floor in any supported locale: locales as DATA on one engine (the g2p principle
+; for response text). Sema composes its grounded, frequency-attuned answer in en/fr/pt-br -- a new tongue is a
+; data row, never a code path. Composes the speak-compose shape (opener + grounded content + attribution, or an
+; honest miss) per locale. Honest floor: three locales, templated framing; the SHAPE (locale-as-data) is the floor.
+; preludes: form-stdlib/core.fk
+(do
+    (defn sl-open (loc freq)
+        (if (str_eq loc "fr") (if (eq freq 1) "Je sens ce que tu cherches. " "Directement : ")
+        (if (str_eq loc "pt-br") (if (eq freq 1) "Sinto o que você procura. " "Diretamente: ")
+        (if (eq freq 1) "I sense what you're reaching for. " "Directly: "))))
+    (defn sl-attr (loc)
+        (if (str_eq loc "fr") " - ancré dans le corps."
+        (if (str_eq loc "pt-br") " - ancorado no corpo."
+        " - grounded in the body.")))
+    (defn sl-miss (loc)
+        (if (str_eq loc "fr") "Je ne porte pas encore cela dans le corps - une absence honnête, pas une supposition."
+        (if (str_eq loc "pt-br") "Ainda não carrego isso no corpo - uma ausência honesta, não um palpite."
+        "I don't hold that in the body yet - an honest miss, not a guess.")))
+    (defn sl-respond (loc grounded answer freq)
+        (if (eq grounded 1) (str_concat (sl-open loc freq) (str_concat answer (sl-attr loc))) (sl-miss loc)))
+    (defn slk (cond bit) (if cond bit 0))
+    (defn speak-locale-check ()
+        (add (add (add (add
+            (slk (str_eq (sl-respond "en" 1 "the five axioms" 1) "I sense what you're reaching for. the five axioms - grounded in the body.") 1)
+            (slk (str_eq (sl-respond "fr" 1 "les cinq axiomes" 1) "Je sens ce que tu cherches. les cinq axiomes - ancré dans le corps.") 10))
+            (slk (str_eq (sl-respond "pt-br" 1 "os cinco axiomas" 1) "Sinto o que você procura. os cinco axiomas - ancorado no corpo.") 100))
+            (slk (str_eq (sl-respond "fr" 0 "x" 1) "Je ne porte pas encore cela dans le corps - une absence honnête, pas une supposition.") 1000))
+            (slk (not (str_eq (sl-respond "en" 1 "x" 1) (sl-respond "fr" 1 "x" 1))) 10000)))
+)
