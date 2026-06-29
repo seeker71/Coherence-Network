@@ -1,13 +1,7 @@
-; tests/voice-prosody-band.fk — the token->pitch->sound ATOM: a linear token-to-pitch map (tok-pitch = 1 + 0.5*tok) rendered as sine frames, four-way. A learned acoustic model is the arc.
-;
+; tests/voice-prosody-band.fk — the voice as an honest rendering of inner state, four-way.
 ; preludes: form-stdlib/core.fk form-stdlib/voice-prosody.fk
 ;
-; Band verdict 11111 when, on Go / Rust / TypeScript / fkwu, the utterance [token0, token2]:
-;   token 0 maps to pitch 1.0                                       ->     1
-;   token 2 maps to a higher pitch 2.0                              ->    10
-;   distinct tokens give a rising melody (pitch 2 > pitch 0)        ->   100
-;   the low-pitch token's frame peaks at sample 2 (rendered sound)  ->  1000
-;   the high-pitch token peaks EARLIER, at sample 1 (faster cycle)  -> 10000
-
-(do
-    (voice-prosody-check))
+; Verdict 11111: a harder thought is paced slower (audible thinking); earned confidence sounds steady; unearned
+; confidence sounds uncertain (the voice never performs certainty it hasn't earned); warmth tracks the love-
+; frequency; surprise lifts the voice. The prosody is the soul of a voice -- the sound (TTS) is the pending carrier.
+(do (voice-prosody-check))
