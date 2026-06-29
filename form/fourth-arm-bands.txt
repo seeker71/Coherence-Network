@@ -1137,3 +1137,4 @@ assemblage-point fks 11111
 agent-gate fks 11111
 knowledge-ingest fks 11111
 learning-witness fks 11111
+equivalence-collapse fks 11111
