@@ -1192,3 +1192,4 @@ speaking-mesh fks 255
 world-sensor-floor fks 4095
 same-room fks 255
 motion-sense fks 511
+device-model fks 4095
