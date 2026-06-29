@@ -1,0 +1,53 @@
+; tests/identity-home-band.fk — bring "who" home from the rented oracle to native, made falsifiable.
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/identity-home.fk
+;
+; Two sequences of ticks = (remote-id native-id) — the oracle's verdict and the native arm's verdict
+; on the same presence, over a window. min-samples 8, margin 0 (mirror of the trust-climb: the native
+; arm must equal-or-exceed the always-correct oracle over a window >= 8 to take "who" home).
+;
+;   homed     — 8 ticks where the native id MATCHES the oracle ("ilena" == "ilena") every time. The
+;               native arm is correct 8/8, the window is long enough (>= 8) and reaches the champion
+;               at margin 0, so authority FLIPS to "challenger" at tick 8 — "who" is now native, rent
+;               falls. ih-confidence climbs to 8. This is the bring-home.
+;   rented    — 8 ticks where the native id keeps DISAGREEING with the oracle ("ilena" vs "axiel"…).
+;               native correct 0/8, never reaches the champion, so authority STAYS "champion" — "who"
+;               is still rented to the oracle. ih-confidence stays 0.
+;   climbing  — the flip is at the WINDOW, not before: the same homed history truncated to 7 ticks is
+;               NOT yet promoted (window too short), proving min-samples is load-bearing — the trust is
+;               earned over the window, never asserted early.
+; Ids compared by str_eq; counts are exact integers — identical on every kernel.
+;
+; Verdict 127 when every claim lands:
+;   1    the witness names both arms' verdicts          (ih-witness on a tick == (remote native))
+;   2    a matching tick is native-correct, a mismatch is not  (ih-correct? matched==1, mismatched==0)
+;   4    native confidence climbs to the full window    (ih-confidence homed == 8)
+;   8    earned over the window -> "who" goes NATIVE     (ih-home? homed==1 AND authority=="challenger")
+;   16   native keeps disagreeing -> "who" stays RENTED  (ih-home? rented==0 AND authority=="champion")
+;   32   rented confidence never climbs                  (ih-confidence rented == 0)
+;   64   the flip is at the WINDOW, not one tick early   (authority over 7 ticks == "champion")
+(do
+    ; 8 ticks: native id == oracle id every time -> native earns "who"
+    (let homed (list
+        (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena")
+        (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena")))
+    ; 8 ticks: native id never matches the oracle -> "who" stays rented
+    (let rented (list
+        (list "ilena" "axiel") (list "ilena" "axiel") (list "ilena" "urs")   (list "ilena" "axiel")
+        (list "ilena" "urs")   (list "ilena" "axiel") (list "ilena" "axiel") (list "ilena" "urs")))
+    ; the homed history one tick short of the trust window
+    (let almost (list
+        (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena")
+        (list "ilena" "ilena") (list "ilena" "ilena") (list "ilena" "ilena")))
+
+    (let w (ih-witness (head homed)))
+    (let c0 (if (and (str_eq (nth w 0) "ilena") (str_eq (nth w 1) "ilena")) 1 0))
+    (let c1 (if (and (eq (ih-correct? (head homed)) 1)
+                     (eq (ih-correct? (head rented)) 0)) 2 0))
+    (let c2 (if (eq (ih-confidence homed) 8) 4 0))
+    (let c3 (if (and (eq (ih-home? homed 8 0) 1)
+                     (str_eq (ih-authority homed 8 0) "challenger")) 8 0))
+    (let c4 (if (and (eq (ih-home? rented 8 0) 0)
+                     (str_eq (ih-authority rented 8 0) "champion")) 16 0))
+    (let c5 (if (eq (ih-confidence rented) 0) 32 0))
+    (let c6 (if (str_eq (ih-authority almost 8 0) "champion") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,71 @@
+; identity-home.fk — bring identity recognition HOME from the rented oracle to native, via the
+; trust-climb. Today "who" is oracle-rented everywhere (the windows sense-stream reads rem=9 conf=0
+; sov=0; face-embed/speaker-embed make the native DECISION but ride the ORACLE's embedding). This
+; recipe makes "who" become CONFIDENTLY NATIVE over a window instead of rented — the exact flip
+; champion-challenger.fk proves, applied to identity. The native arm takes authority over "who is
+; present" only when it has PROVEN, over a trusted window, that its verdict matches the oracle's.
+;
+; The flip, not asserted: authority is the SAME competition champion-challenger runs. The champion is
+; the remote oracle's id (the incumbent, treated as ground truth); the challenger is the native arm's
+; id (face-embed / speaker-embed's nearest-by-cosine call). Per tick the native arm is "correct" iff
+; its id equals the oracle's — a FREE self-label (cross-witness-economy's bring-home loop: agreement
+; IS supervision, no rent spent to make it). Run cc-authority over that native-correct history and
+; authority flips to the native arm once it earns it; until then "who" stays rented to the champion.
+; The climbing native-correct count is the earned confidence (confidence-earned: is my "sure" earned —
+; here, has the native arm been right enough, over a long enough window, to be trusted with "who").
+;
+; COMPOSED, never re-derived:
+;   champion-challenger.fk  cc-authority / cc-promote? — authority flips to the native challenger only on
+;                           PROVEN head-to-head over a long-enough window (min-samples), never asserted.
+;   face-embed.fk / speaker-embed.fk — the native id is their nearest-by-cosine DECISION (oracle embedding);
+;                           this recipe is the modality-agnostic trust-climb ABOVE that decision.
+;   cross-witness-economy.fk — oracle-agreement is a free self-label; rent falls as native earns trust.
+;   confidence-earned.fk — the earned-correct count is the self-reliance the native arm has banked.
+;
+; Honest floor: a tick is a (remote-id native-id) string pair (the two arms' verdicts on one presence);
+; the wired version reads the oracle id and the native face/speaker id live per window. Ids compared by
+; str_eq; the history maps to champion-challenger trials (champion always correct = the oracle is ground
+; truth; challenger correct = the native id matched it), so the flip is the SAME proven count, four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk
+;
+; Self-contained over core + champion-challenger. Four-way by tests/identity-home-band.fk.
+
+(do
+    (defn ih-remote (tick) (nth tick 0))   ; the oracle's id on this presence (the rented champion)
+    (defn ih-native (tick) (nth tick 1))   ; the native arm's id on the same presence (the challenger)
+
+    ; --- WITNESS: a tick's (remote-id native-id) pair — the two arms' verdicts on one presence. The
+    ;     identity passes through unchanged; naming the pair is the witness an opaque arm can't show. ---
+    (defn ih-witness (obs) (list (ih-remote obs) (ih-native obs)))
+
+    ; --- CORRECT?: 1 iff the native id matches the oracle's — the FREE self-label. Native correctness
+    ;     is self-supervised by agreement with the champion (cross-witness-economy): no rent spent. ---
+    (defn ih-correct? (tick)
+        (if (str_eq (ih-native tick) (ih-remote tick)) 1 0))
+
+    ; --- map the (remote native) history into champion-challenger trials: champion (oracle) is always
+    ;     correct = 1 (it is ground truth here); challenger (native) correct = ih-correct?. This is the
+    ;     SAME (list champ-correct chall-correct) shape cc-* scores, so the flip is the proven count. ---
+    (defn ih-trials (history)
+        (if (eq (len history) 0) (empty)
+            (cons (list 1 (ih-correct? (head history)))
+                  (ih-trials (tail history)))))
+
+    ; --- CONFIDENCE: the climbing native correct-count over the window — the earned confidence. As the
+    ;     native id increasingly matches the oracle this rises; it is the banked self-reliance. ---
+    (defn ih-confidence (history)
+        (cc-chall-score (ih-trials history)))
+
+    ; --- AUTHORITY: who owns "who is present" right now. "challenger" (NATIVE, trusted, rent falls to the
+    ;     floor) once the native arm has matched the oracle over a long-enough window (>= min-samples,
+    ;     within margin); "champion" (REMOTE, still rented) until that competition is proven. The flip is
+    ;     cc-authority — identity is brought home only on earned trust, never asserted. ---
+    (defn ih-authority (history min-samples margin)
+        (cc-authority (ih-trials history) min-samples margin))
+
+    ; --- HOME?: 1 once "who" is native (authority flipped to the challenger) — the bring-home verdict. ---
+    (defn ih-home? (history min-samples margin)
+        (cc-promote? (ih-trials history) min-samples margin))
+
+    0)
