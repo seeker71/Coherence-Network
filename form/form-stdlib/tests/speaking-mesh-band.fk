@@ -1,0 +1,76 @@
+; preludes: form-stdlib/fused-observation.fk form-stdlib/surprise-kernel.fk form-stdlib/stt-agree.fk form-stdlib/champion-challenger.fk form-stdlib/speaking-mesh.fk
+;
+; speaking-mesh-band — the talking-learning loop made falsifiable: the body's parts SPEAK their summary +
+; surprise, the mics HEAR it back, and said≈heard agreement is free self-supervision that climbs the
+; spoken mesh's trust until authority flips home. A fixed cycle, a fixed sequence of cycles, a stable
+; integer verdict.
+;
+; THE CYCLE. One fused observation (fo-observed cell) + the cycle's surprise:
+;   obs = (observed present=1 who="ilena" what="voice" where=2 confidence=23)  — someone present, named,
+;          heard, located, by a high cross-witness confidence (the fused-observation CASE A shape).
+;   surprise = 3 (a "few"-band prediction error this cycle), confidence-so-far = 1.
+; sm-utterance(obs, 3, 1) -> the parts' four voiced lines, in order:
+;   summary  ("present" "one" "who" "ilena" "what" "voice" "where" "few")   — the observed set, voiced
+;   surprise ("surprise" "few")                                              — what was not expected
+;   learning ("confidence" "one")                                           — self-trust so far
+;   mesh     ("mesh" "many")                                                 — cross-device agreement
+; flattened to the SPOKEN stream of 13 words the room hears.
+;
+; HEARD BACK. heard-clean = the spoken stream transcribed nearly verbatim (every spoken word present) ->
+; sm-witness-score = 100, sm-witness clears any reasonable floor (the mics heard the voice). heard-noisy =
+; a transcript that DROPPED most of the spoken words (only 4 of the 13 land) -> low score, sm-witness 0 at
+; the floor: the learning frontier, the cycle the mesh did NOT trust its own voice.
+;
+; THE TRUST CLIMB. A sequence of cycles, each a sm-trial = (oracle-correct spoken-mesh-correct). Early the
+; spoken mesh misses; late it is heard right every cycle. Over the 10-cycle window the spoken mesh REACHES
+; the oracle (cc-reaches? margin 0) and sm-learn flips authority to "challenger" — the mesh trusts its own
+; voice, the oracle rests. A SHORT window (one good cycle) does NOT promote: trust is earned over the
+; window, never asserted from a single heard-right cycle.
+;
+; Verdict 255 when every claim lands:
+;   1    the utterance has the four parts' lines               (len (sm-utterance obs 3 1) == 4)
+;   2    the first line is the summary, voiced from the obs     (str_eq (sm-part (head ...)) "summary")
+;   4    the surprise line voices the "few"-band surprise       (sm-words surprise-line == ("surprise" "few"))
+;   8    the mics heard the clean voice back: said≈heard 100    (sm-witness-score utt heard-clean == 100)
+;   16   clean cycle clears the floor -> a won self-supervision (sm-witness utt heard-clean 80 == 1)
+;   32   noisy cycle is the learning frontier: below floor -> 0 (sm-witness utt heard-noisy 80 == 0)
+;   64   over the window confidence climbed + authority flipped (sm-confidence hist == 7 AND home, "challenger")
+;   128  a single heard-right cycle does NOT promote (earned)   (sm-home? short 10 0 == 0)
+(do
+    ; ── one cycle: the fused observation + this cycle's surprise + confidence-so-far ──
+    (let obs (fo-observed 1 "ilena" "voice" 2 23))
+    (let utt (sm-utterance obs 3 1))
+
+    ; ── the SPOKEN stream the room hears: the four lines flattened in voice order ──
+    (let said (sm-spoken utt))
+
+    ; ── heard-clean: the mics transcribed every spoken word back (verbatim, same 13 words) ──
+    (let heard-clean said)
+    ; ── heard-noisy: most of the voice was lost — only 4 of the 13 spoken words landed ──
+    (let heard-noisy (list "present" "who" "voice" "mesh"))
+
+    ; ── the trust window: 10 cycles. Early the spoken mesh is missed (heard wrong); late it is heard right
+    ;    every cycle. The oracle (champ) is right on its own emission throughout. Over the window the spoken
+    ;    mesh reaches the oracle -> authority flips home. Each trial = (oracle-correct spoken-mesh-correct). ──
+    (let hist (list
+        (list 1 0) (list 1 0) (list 1 0) (list 1 1) (list 1 1)
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)))
+    ; a single heard-right cycle is NOT a trusted window
+    (let short (list (list 1 1)))
+
+    (let surprise-line (sm-surprise-line 3))
+
+    (let c0 (if (eq (len utt) 4) 1 0))
+    (let c1 (if (str_eq (sm-part (head utt)) "summary") 2 0))
+    (let c2 (if (and (str_eq (nth (sm-words surprise-line) 0) "surprise")
+                     (str_eq (nth (sm-words surprise-line) 1) "few")) 4 0))
+    (let c3 (if (eq (sm-witness-score utt heard-clean) 100) 8 0))
+    (let c4 (if (eq (sm-witness utt heard-clean 80) 1) 16 0))
+    (let c5 (if (eq (sm-witness utt heard-noisy 80) 0) 32 0))
+    ; the window is long enough (10) and the spoken mesh reached the oracle (7 >= the oracle's 10? no —
+    ; the oracle scored 10, the mesh 7; margin 3 lets 7+3 >= 10 reach) -> authority flips to "challenger".
+    (let c6 (if (and (eq (sm-confidence hist) 7)
+                     (str_eq (sm-learn hist 10 3) "challenger")) 64 0))
+    (let c7 (if (eq (sm-home? short 10 0) 0) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
