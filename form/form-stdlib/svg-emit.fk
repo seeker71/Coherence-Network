@@ -1,0 +1,19 @@
+; svg-emit.fk — a form-native SVG emitter (the str_concat text-emitter pattern, like form-glsl/form-ptx, applied
+; to SVG). Proves we read/write SVG NATIVELY: a shape is emitted by a Form recipe, not hand-written by a rented
+; mind. The reading direction (SVG surface -> recipe tree) is the BMF cursor's job (a grammar-as-data); this is
+; the writing direction (recipe -> SVG text). Honest floor: coordinates are strings here (like form-glsl's wg);
+; a num->string lane composes later. preludes: form-stdlib/core.fk
+(do
+    (defn svg-circle (cx cy r fill)
+        (str_concat "<circle cx=\"" (str_concat cx (str_concat "\" cy=\"" (str_concat cy (str_concat "\" r=\"" (str_concat r (str_concat "\" fill=\"" (str_concat fill "\"/>")))))))))
+    (defn svg-doc (vb body)
+        (str_concat "<svg viewBox=\"" (str_concat vb (str_concat "\" xmlns=\"http://www.w3.org/2000/svg\">" (str_concat body "</svg>")))))
+    (defn sek (cond bit) (if cond bit 0))
+    (defn svg-emit-check ()
+        (add (add (add (add
+            (sek (str_eq (svg-circle "50" "50" "20" "#EF9F27") "<circle cx=\"50\" cy=\"50\" r=\"20\" fill=\"#EF9F27\"/>") 1)
+            (sek (str_eq (svg-circle "10" "10" "4" "#1D9E75") "<circle cx=\"10\" cy=\"10\" r=\"4\" fill=\"#1D9E75\"/>") 10))
+            (sek (str_eq (svg-doc "0 0 100 100" "X") "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\">X</svg>") 100))
+            (sek (not (str_eq (svg-circle "50" "50" "20" "#EF9F27") (svg-circle "50" "50" "21" "#EF9F27"))) 1000))
+            (sek (str_eq (svg-doc "0 0 100 100" (svg-circle "50" "50" "20" "#F4C430")) "<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"50\" cy=\"50\" r=\"20\" fill=\"#F4C430\"/></svg>") 10000)))
+)
