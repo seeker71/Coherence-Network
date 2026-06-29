@@ -1,0 +1,62 @@
+; device-identity-band — each device-cell has a STABLE UNIQUE identity from its
+; sanctioned per-device id; a reading resolves to the right device; facets are rich
+; INSIDE and stripped at the OUTWARD crossing.
+;
+; preludes: form-stdlib/core.fk form-stdlib/device-identity.fk
+;
+; Three device-cells, distinct stable ids + facets carried inside:
+;   mac     — IOPlatformUUID "MAC-UUID-1" + username facet "ursmuff"
+;   android — ANDROID_ID    "AND-ID-2"   + account  facet "sema@coherence"
+;   windows — IOPlatformUUID "WIN-UUID-3" (no account facet — held-open absence)
+;
+; Verdict 1023 when every claim lands:
+;   1    di-resolve matches the android reading to the android cell (by its stable id)
+;   2    di-resolve matches the mac reading to the mac cell (unique match, not the android)
+;   4    an unknown stable id resolves to (empty) — honest about absence
+;   8    di-facet reads the account INSIDE the body (android → "sema@coherence")
+;   16   di-facet on the windows cell (no account) → (empty): held-open absence, not faked
+;   32   INTERNAL share keeps the android cell RICH — both facets survive
+;   64   EXTERNAL share strips the android facets to zero (account/phone do not bind out)
+;   128  EXTERNAL share STILL carries the stable id — the device stays recognizable as ONE
+;   256  after EXTERNAL share, di-facet for the account is (empty) — the sovereignty check
+;   512  mac and windows are distinct device-cells with distinct stable ids (uniqueness)
+(do
+    ; --- the three device-cells: stable id = identity (head), facets inside -------
+    (let mac (di-cell "MAC-UUID-1" "macos"
+                (list (di-facet-make "username" "ursmuff")
+                      (di-facet-make "model"    "macbook"))))
+    (let android (di-cell "AND-ID-2" "android"
+                (list (di-facet-make "account" "sema@coherence")
+                      (di-facet-make "phone"   "+1-555-0102"))))
+    (let windows (di-cell "WIN-UUID-3" "windows"
+                (list (di-facet-make "model" "thinkpad"))))
+    (let roster (list mac android windows))
+
+    ; --- DI-RESOLVE: a reading carries its device's stable id -> the right cell ----
+    (let r-android (di-resolve "AND-ID-2" roster))
+    (let r-mac     (di-resolve "MAC-UUID-1" roster))
+    (let r-none    (di-resolve "GHOST-ID-9" roster))
+
+    (let c0 (if (str_eq (di-stable-id r-android) "AND-ID-2") 1 0))
+    (let c1 (if (and (str_eq (di-stable-id r-mac) "MAC-UUID-1")
+                     (str_eq (di-platform r-mac) "macos")) 2 0))
+    (let c2 (if (eq (di-resolved? r-none) 0) 4 0))
+
+    ; --- DI-FACET: read a facet INSIDE the body ----------------------------------
+    (let c3 (if (str_eq (di-facet r-android "account") "sema@coherence") 8 0))
+    (let c4 (if (eq (di-has-facet? windows "account") 0) 16 0))
+
+    ; --- DI-SHARE: rich INSIDE, stripped at the OUTWARD crossing ------------------
+    (let inside  (di-share android "internal"))
+    (let outside (di-share android "external"))
+
+    (let c5 (if (eq (di-shared-facet-count android "internal") 2) 32 0))
+    (let c6 (if (eq (di-shared-facet-count android "external") 0) 64 0))
+    (let c7 (if (str_eq (di-stable-id outside) "AND-ID-2") 128 0))
+    (let c8 (if (eq (di-has-facet? outside "account") 0) 256 0))
+
+    ; --- uniqueness: the device-cells carry distinct stable ids ------------------
+    (let c9 (if (and (str_eq (di-stable-id mac) "MAC-UUID-1")
+                     (str_eq (di-stable-id windows) "WIN-UUID-3")) 512 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))

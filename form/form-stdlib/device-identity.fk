@@ -1,0 +1,95 @@
+; device-identity.fk — a STABLE UNIQUE identity for each device-cell, grounded in the
+; sanctioned per-device id, so a cell knows which physical device it runs inside (and,
+; with the spatial recipes, where it is).
+;
+; A device-cell EXTENDS the self-cell shape (identity-self.fk: isf-self / isf-identity —
+; identity is the head, everything else hangs off it). Here the head is the SANCTIONED
+; STABLE id the host carrier passes in: ANDROID_ID on Android, IOPlatformUUID on macOS,
+; identifierForVendor on iOS. That stable id IS the identity — it is what makes a reading
+; resolvable to one physical device across time, the same way mesh-join.fk gives the
+; device roster a name to find a member by.
+;
+; The id is grounded; the FACETS are carried INSIDE the body. A facet is an optional
+; (kind value) row — account, phone, model. Within the body these are rich (cell-card.fk
+; renders the cell + its facets; identity-self holds channels the same way). Crossing OUT,
+; the sense-discernment membrane gates them: an EXTERNAL audience sees only the stable id
+; (or a hash of it) — account and phone stripped. Identity facets are sovereign: rich
+; within the trust circle / one's own devices, consent-gated at the outward crossing.
+; This is exactly sense-discernment's rule — the gate lives at the OUTWARD binding, never
+; on the body's own knowing of its own device.
+;
+; Kin: identity-self.fk (the self-cell shape this extends), mesh-join.fk (the device
+; roster this gives a real per-device identity), cell-card.fk (renders the cell + facets),
+; sense-discernment.fk (the outward membrane — rich inside, stripped outside).
+;
+; Integers + strings + lists only, so the row crosses all four kernels deterministically.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proven by: form-stdlib/tests/device-identity-band.fk
+
+(do
+    ; --- a FACET: one optional (kind value) row carried INSIDE the body ----------
+    ; kind — "account" | "phone" | "model" | … (a string); value — the held datum.
+    (defn di-facet-make  (kind value) (list kind value))
+    (defn di-facet-kind  (f) (nth f 0))
+    (defn di-facet-value (f) (nth f 1))
+
+    ; --- a DEVICE-CELL: identity (the stable id) is the HEAD, facets hang off ----
+    ; Extends the self-cell shape (isf-self): head = identity. Here identity is the
+    ; SANCTIONED stable id; platform names the host; facets are the rich inside body.
+    ;   (stable-id platform facets)
+    (defn di-cell (stable-id platform facets) (list stable-id platform facets))
+    (defn di-stable-id (cell) (nth cell 0))   ; the stable per-device id — the IDENTITY (head)
+    (defn di-platform  (cell) (nth cell 1))   ; "android" | "macos" | "windows" | …
+    (defn di-facets    (cell) (nth cell 2))   ; the optional (kind value) rows, inside the body
+
+    ; --- DI-FACET: read a facet (e.g. account) — INSIDE the body -----------------
+    ; Walk the facet rows for one of the given kind; (empty) when absent. Same recursive
+    ; head/tail shape as mj-roster-find — one engine reads the rows.
+    (defn di-facets-find (facets kind)
+        (if (eq (len facets) 0) (empty)
+            (if (str_eq (di-facet-kind (head facets)) kind)
+                (di-facet-value (head facets))
+                (di-facets-find (tail facets) kind))))
+    (defn di-facet (cell kind) (di-facets-find (di-facets cell) kind))
+    ; does the cell hold a facet of this kind, inside the body?
+    (defn di-has-facet? (cell kind)
+        (if (gt (len (di-facet cell kind)) 0) 1 0))
+
+    ; --- DI-RESOLVE: which device-cell a reading is from, by the stable id -------
+    ; The stable id is the UNIQUE match: a reading carries the device's stable id, and
+    ; di-resolve returns the one device-cell in the roster whose head equals it; (empty)
+    ; when no device-cell carries that id. This is what lets a reading know which physical
+    ; device it ran inside — the mesh-join roster gains a real per-device identity.
+    (defn di-resolve (stable-id roster)
+        (if (eq (len roster) 0) (empty)
+            (if (str_eq (di-stable-id (head roster)) stable-id) (head roster)
+                (di-resolve stable-id (tail roster)))))
+    (defn di-resolved? (cell) (if (gt (len cell) 0) 1 0))
+
+    ; --- DI-SHARE: cross to an audience, via the sense-discernment rule ----------
+    ; INTERNAL audience (the trust circle / one's own devices) → the RICH cell:
+    ;   identity + platform + all facets intact. Recognition of one's own device is care.
+    ; EXTERNAL audience (published / a stranger / an unknown binding) → only the stable
+    ;   id survives (account/phone/model stripped). Identity facets are sovereign: they do
+    ;   not bind onto the world. The stable id is what crosses — the cell is still
+    ;   recognizable as ONE device, but its private facets stay inside.
+    (defn di-internal? (audience) (if (str_eq audience "internal") 1 0))
+    (defn di-external? (audience) (if (str_eq audience "external") 1 0))
+
+    ; the external face: a device-cell carrying ONLY the stable id (no facets, empty list).
+    ; The stable id is the head still, so it resolves; the inside is stripped.
+    (defn di-outward-face (cell)
+        (di-cell (di-stable-id cell) (di-platform cell) (list)))
+
+    (defn di-share (cell audience)
+        (if (eq (di-external? audience) 1)
+            (di-outward-face cell)   ; outward: only the stable id, facets stripped
+            cell))                   ; internal (and default): the rich cell, facets intact
+
+    ; how many facets survive a share to this audience? (0 outward, all inside)
+    (defn di-shared-facet-count (cell audience)
+        (len (di-facets (di-share cell audience))))
+
+    0)
