@@ -1,0 +1,30 @@
+; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+;
+; form-asm-frintn-band — round-to-nearest-integral (ties to even) emits four-way as Form->asm bytes, no rustc.
+; fam-frintn is the RANGE-REDUCTION rounding floor the native exp/softmax lane needs: exp(x) reduces as
+; k = round(x*log2e), r = x - k*ln2, exp(x) = 2^k * exp(r) with |r| <= ln2/2 so a degree-~6 Horner over the
+; pooled coefficients (fam-pool-fma carries ln2/log2e via f64-bytes) converges. The pooled-fma is on the lane;
+; the k = round(...) step was NOT — the only round op present was fcvtzs (truncate toward zero), which rounds
+; half-integers the wrong way for range reduction. This brick adds the FIRST fa-frintn (ties-to-even).
+;
+; The new ground vs the prior bricks: frintn is round-to-nearest TIES-TO-EVEN — the rounding mode exp wants —
+; and is a DISTINCT arm64 word from frinta's ties-AWAY (0x1E664000). clang lowers __builtin_roundeven to frintn
+; and __builtin_round to frinta; emitting the wrong word would round x.5 the wrong direction. The byte-match of
+; fam-frintn against clang's __builtin_roundeven oracle is therefore also the proof we emit ties-to-even, not
+; ties-away. ABI: d0 = x, returns d0 = roundeven(x).
+;
+; The 2-instruction program, otool -tvVj of the clang -O2 oracle (`double r(double x){return __builtin_roundeven(x);}`):
+;   1e644000 frintn d0,d0     d65f03c0 ret
+;
+; Verdict 7 when every claim lands:
+;   1    the program is 2 instructions = 8 bytes                       (len == 8)
+;   2    the FULL program byte-equals the 8-byte clang oracle          (fa-conviction == 1)
+;   4    frintn d0,d0 — the new round-to-nearest-even encoder (1e644000) (fa-conviction == 1)
+(do
+    (let prog (fam-frintn))
+    (let oracle (list
+        0 64 100 30    192 3 95 214))
+    (let c0 (if (eq (len prog) 8)                                           1 0))
+    (let c1 (if (eq (fa-conviction prog oracle)                        1)   2 0))
+    (let c2 (if (eq (fa-conviction (fa-frintn 0 0) (list 0 64 100 30)) 1)   4 0))
+    (add c0 (add c1 c2)))

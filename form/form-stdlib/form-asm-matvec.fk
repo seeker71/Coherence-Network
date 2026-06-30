@@ -189,4 +189,16 @@
     ; assembler oracle is unchanged); the proof that f64-bytes fills the pool correctly is that byte-identity holds.
     (defn fam-poly-pool () (fam-pool-fma (div 1.0 6.0) (div 1.0 120.0)))
 
+    ; fam-frintn: round-to-nearest-integral (ties to even) of d0 as Form->asm bytes — the range-reduction
+    ; ROUNDING floor that exp/softmax need. The native exp lane is k = round(x*log2e), r = x - k*ln2: the
+    ; pooled-coefficient fma (fam-pool-fma) carries ln2/log2e, but the k = round(...) step had no encoder —
+    ; the only round op on the lane was fcvtzs (truncate toward zero), which rounds half-integers the wrong
+    ; way for range reduction. fam-frintn closes that gap with the FIRST fa-frintn (ties-to-even), the
+    ; rounding mode exp wants (it keeps |r| <= ln2/2 so the Horner poly converges). ABI: d0 = x, returns
+    ; d0 = roundeven(x). 2 instructions = 8 bytes, byte-identical to the clang -O2 oracle for
+    ; `__builtin_roundeven(x)`:   0 frintn d0,d0 (1e644000)   1 ret (d65f03c0)
+    (defn fam-frintn ()
+        (append (fa-frintn 0 0)
+            (fa-ret)))
+
     0)

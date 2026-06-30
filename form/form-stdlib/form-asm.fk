@@ -190,6 +190,12 @@
     (defn fa-scvtf (rd rn) (fa-asm 2657222656 (list 1 32) (list rd rn)))
     ; fcvtzs x<rd>, d<rn> (f64 -> signed i64, toward zero) : base 0x9E780000 | rn<<5 | rd (oracle 9e780020)
     (defn fa-fcvtzs (rd rn) (fa-asm 2658664448 (list 1 32) (list rd rn)))
+    ; frintn d<rd>, d<rn> (round f64 to nearest INTEGRAL, ties to EVEN; result stays f64) :
+    ; base 0x1E644000 | rn<<5 | rd  (oracle 1e644000 = frintn d0,d0). The range-reduction rounding floor:
+    ; exp/softmax compute k = round(x*log2e), then r = x - k*ln2 over the pooled ln2/log2e (fam-pool-fma).
+    ; Ties-to-even (frintn), DISTINCT from frinta's ties-away (0x1E664000) — clang lowers __builtin_roundeven
+    ; here, __builtin_round to frinta; emitting the wrong word would round half-integers the wrong way.
+    (defn fa-frintn (rd rn) (fa-asm 509886464 (list 1 32) (list rd rn)))
     ; ldr d<rt>, [x<rn>, #imm] (f64 load; caller passes imm/8) : base 0xFD400000 | imm<<10 | rn<<5 | rt (oracle fd400420)
     (defn fa-ldr-d (rt rn imm) (fa-asm 4248829952 (list 1 32 1024) (list rt rn imm)))
     ; str d<rt>, [x<rn>, #imm] (f64 store; caller passes imm/8) : base 0xFD000000                       (oracle fd000420)
