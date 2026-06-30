@@ -169,12 +169,24 @@
     ;   0 ldr d1,Lc0 (5c000081, +16)   1 ldr d2,Lc1 (5c0000a2, +20)   2 fmadd d0,d0,d1,d2 (1f410800)   3 ret
     ;   16 .quad 0x3fc5555555555555 (1/6, LE 55 55 55 55 55 55 c5 3f)   24 .quad 0x3f81111111111111 (1/120)
     ; imm19 is the WORD distance from each ldr to its pool slot: d1 @0 -> c0 @16 = 4 words; d2 @4 -> c1 @24 = 5.
-    (defn fam-poly-pool ()
+    ;
+    ; fam-pool-fma: the COEFFICIENT-PARAMETERIZED engine — a Horner step fma(x, a, b) whose two pooled f64 are
+    ; COMPUTED FROM THE VALUES a, b by f64-bytes (f64-bytes 127), not hand-typed. This is the core-lift fam-poly-pool's
+    ; own kin named (f64-bytes.fk: "a HAND pattern only emits a KNOWN constant"): the coefficients become DATA, so the
+    ; pool can carry ANY value — including the irregular-mantissa transcendental constants exp/sin need (ln2, log2e,
+    ; 1/5040) that no repeating-nibble hand-pattern can produce. The 16 code bytes are the proven self-contained-pool
+    ; shape (ldr d1,+16 / ldr d2,+20 / fmadd d0,d0,d1,d2 / ret); the 16 pool bytes are (f64-bytes a) ++ (f64-bytes b).
+    ; ABI: d0 = x, returns d0 = fma(x, a, b). One engine; fam-poly-pool and the exp-coefficient pool are instances.
+    (defn fam-pool-fma (a b)
         (append (fa-ldr-d-lit 1 4)
             (append (fa-ldr-d-lit 2 5)
                 (append (fa-fmadd 0 0 1 2)
                     (append (fa-ret)
-                        (append (list 85 85 85 85 85 85 197 63)
-                                (list 17 17 17 17 17 17 129 63)))))))
+                        (append (f64-bytes a) (f64-bytes b)))))))
+
+    ; fam-poly-pool: the named 1/6,1/120 instance of fam-pool-fma — the coefficients now COMPUTED by f64-bytes,
+    ; not the hand byte-lists this once carried. The emitted 32-byte image is byte-identical to before (the
+    ; assembler oracle is unchanged); the proof that f64-bytes fills the pool correctly is that byte-identity holds.
+    (defn fam-poly-pool () (fam-pool-fma (div 1.0 6.0) (div 1.0 120.0)))
 
     0)
