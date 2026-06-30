@@ -1,0 +1,35 @@
+{
+ "title": "fam-frintn — round-to-nearest-integral (ties to EVEN) emits four-way as Form->asm bytes AND runs bit-exact on the M4; the range-reduction rounding floor exp/softmax need, + the missing fa-frintn encoder",
+ "date": "2026-06-30",
+ "author": "Sema (Opus 4.8), autonomous native-ML walk",
+ "stone": "The named next stone in fam-pool-fma's own receipt (commit_evidence_2026-06-30_fam_pool_fma_exp_coef.json, next_stones[3]: 'round-to-nearest-integer on the asm lane (frintn) for the range-reduction k'). The native exp lane reduces as k = round(x*log2e), r = x - k*ln2, exp(x) = 2^k * Horner(r) with |r| <= ln2/2 so the polynomial converges. The pooled coefficient fma (fam-pool-fma, carrying ln2/log2e via f64-bytes) is already on the lane (form-asm-exp-coef-pool 31); the k = round(...) step had NO encoder — the only round op present was fcvtzs (truncate toward zero, 9e780000), which rounds half-integers the wrong way for range reduction. This brick adds the FIRST fa-frintn (round to nearest, ties to EVEN). Advances form-native-models.form 'GAPS — LLM INFERENCE' rung A (the nonlinear ops as form-asm bytes): the rounding primitive exp range reduction and softmax need.",
+ "new_encoder": "fa-frintn (rd rn) — FRINTN d<rd>, d<rn> (round f64 to nearest integral, ties to EVEN; result stays f64). base 0x1E644000 | rn<<5 | rd, packed (1 32). Oracle: clang -O2 lowers __builtin_roundeven(x) to `1e644000 frintn d0,d0`. DISTINCT from frinta (ties-away, 0x1E664000, which clang emits for __builtin_round) — emitting the wrong word would round x.5 the wrong direction. This is the reusable win: the round-to-nearest-even primitive every range-reduction step needs.",
+ "recipe": "form/form-stdlib/form-asm-matvec.fk :: (defn fam-frintn () (append (fa-frintn 0 0) (fa-ret))) — ABI d0 = x, returns d0 = roundeven(x). 2 arm64 instructions = 8 bytes.",
+ "proof_four_way": [
+  {
+   "band": "form/form-stdlib/tests/form-asm-frintn-band.fk (NEW)",
+   "manifest_row": "form-asm-frintn fks 7",
+   "verdict": 7,
+   "oracle": "clang -O2 otool -tvVj of `double r(double x){return __builtin_roundeven(x);}` = `1e644000 frintn d0,d0` + `d65f03c0 ret` = 8 bytes, LE list (0 64 100 30 192 3 95 214).",
+   "claims": [
+    "1 — the program is 2 instructions = 8 bytes (len == 8)",
+    "2 — the FULL 8-byte program byte-equals the clang -O2 oracle (fa-conviction == 1)",
+    "4 — frintn d0,d0 (1e644000) — the new round-to-nearest-EVEN encoder, byte-exact, distinct from frinta's ties-away (fa-conviction == 1). Because clang emits frintn precisely for __builtin_roundeven, this byte-match is also the proof we emit ties-to-even."
+   ],
+   "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk form-stdlib/tests/form-asm-frintn-band.fk",
+   "result": "-> 7 ; fourth arm four-way (fkwu, bootstrap binary darwin-arm64, no clang) ; 1 ok, 0 divergent — Go=Rust=TS=fkwu agree on the 8-byte image. Crossed FIRST TRY (loop-free, no forward-reference/recursion surface)."
+  }
+ ],
+ "proof_on_hardware": {
+  "script": "scripts/form_asm_frintn_witness.sh",
+  "image": "0040641e (frintn d0,d0) c0035fd6 (ret) = 8 bytes",
+  "path": "Form kernel emits fam-frintn's 8-byte program -> form-macho mo-object-sym -> Mach-O .o (241 bytes) exporting _recipe -> ld -dylib + ad-hoc sign -> dlopen+call. No rustc/clang in the COMPUTE (clang only builds the dumb dlopen harness; the rounding is the Form-emitted frintn).",
+  "result": "8/8 MATCH on M4 (arm64 macOS): recipe(x) == __builtin_roundeven(x) bit-for-bit at x in {2.3->2, 2.7->3, 0.5->0, 1.5->2, 2.5->2, -0.5->-0, -2.5->-2, 1e8->1e8}. The half-integer cases PROVE ties-to-even (0.5->0 not 1, 2.5->2 not 3, -2.5->-2), distinguishing the emitted frintn from frinta's ties-away.",
+  "note": "The first fa-frintn on the witnessed native lane. The range-reduction rounding floor for exp/softmax (k = round(x*log2e)) is sovereign native bytes."
+ },
+ "no_regression": "fa-frintn is purely additive to form-asm.fk (a new encoder defn); fam-frintn is purely additive to form-asm-matvec.fk (a new recipe). Re-validated the form-asm-matvec.fk siblings four-way after the additive edits — form-asm-exp-coef-pool (31), form-asm-poly-pool (31), form-asm-horner (31), form-asm-rsqrt (31), form-asm-ss-sqrt (127), form-asm-matvec-2d (127) — all 0 divergent, fkwu crossed.",
+ "design_note": "Design-with-reference held: before authoring, clang -O2 was probed on all four round builtins (roundeven->frintn 1e644000, nearbyint->frinti 1e67c000, rint->frintx 1e674000, round->frinta 1e664000) to pin the EXACT byte-shape and confirm which builtin lowers to ties-to-even frintn. The bit-derived base (0x1E644000) matched the oracle exactly. The four-way proof and the hardware witness were both seconds; finding the named ripe stone (fam-pool-fma's next_stones[3]) and confirming the right rounding mode (ties-to-even, the one exp range reduction wants) was the cost.",
+ "toolchain_free_claim": "Honest floor: a Form recipe proven four-way (Go=Rust=TS=fkwu) through validate.sh (bash) PLUS an on-M4 execution witness (form-macho -> ld -dylib -> dlopen, no rustc/clang in the compute). bin-go is the bootstrap that runs the flattener/emitter. Platform rows (mac four-way + on-hardware observed; windows/android form-cli pending) per docs/coherence-substrate/standard-receipt.form.",
+ "next_stones": "(1) exp on the native lane is now UNBLOCKED end-to-end: k = round(x*log2e) via fam-frintn, r = x - k*ln2 over the pooled ln2/log2e (fam-pool-fma), 2^k * Horner(r) over a multi-coefficient pool. (2) generalize fam-pool-fma to an n-coefficient pool (a Horner fold over a list of computed f64) — the shape a degree-~6 exp/sin Taylor series needs. (3) ldexp / 2^k scaling on the asm lane — build the f64 from k's integer exponent field (fcvtzs k -> integer, shift into bits 52-62, or fmul by a pooled 2^k); the last range-reduction piece. (4) stage pool + matvec over ll-buffer for a real RMSNorm/SwiGLU layer.",
+ "witness_state": "pulse.coherencycoin.com at open: overall breathing, 0 silences. Brick is host-independent (Form recipe + encoder + band + witness + receipt + manifest row), no deploy taken."
+}
