@@ -26,7 +26,7 @@
 ;   8    fa-ldr-d-lit 2 5 — a SECOND pool entry at a DIFFERENT imm19 (layout)  (fa-conviction == 1)
 ;   16   fmadd d0,d0,d1,d2 — the fold over the two POOLED coefficients (proven fa-fmadd) (fa-conviction == 1)
 ;
-; preludes: form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
+; preludes: form-stdlib/format-arith.fk form-stdlib/f64-bytes.fk form-stdlib/form-asm.fk form-stdlib/form-asm-matvec.fk
 (do
     (let prog (fam-poly-pool))
     (let oracle (list
