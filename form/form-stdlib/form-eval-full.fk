@@ -63,19 +63,88 @@
         (if (eq (fef-at s pos) 40)
             (fef-list s (add pos 1) env)
             (fef-atom s pos env)))
-    ; atom: a digit-led token is an integer literal; anything else is a symbol reference (var lookup)
+    ; atom: a digit-led token is an integer literal; a keyword literal (true/false/nothing) is its
+    ; value; anything else is a symbol reference (var lookup). The literal keywords are DATA too — one
+    ; (name value) table, so a new literal is a row, not an if-branch.
     (defn fef-atom (s pos env)
         (if (eq (fef-isdigit (fef-at s pos)) 1)
             (fef-num s pos env)
-            (fef-symref s pos env)))
+            (fef-sym-or-lit s pos env)))
     (defn fef-num (s pos env) (fef-num2 (fef-digits s pos 0) env))
     (defn fef-num2 (dp env) (fef-res (head dp) (head (tail dp)) env))
+    ; literal-keyword table: (name value). nothing is the absence-as-zero floor here (a value the
+    ; reducer can carry); first-class `nothing` (the cell-level absence) is the next stone.
+    (defn fef-littable ()
+        (list (list "true" 1) (list "false" 0) (list "nothing" 0)))
+    (defn fef-litrow (name rows)
+        (if (eq (len rows) 0) (fef-empty)
+            (if (str_eq (head (head rows)) name) (head rows)
+                (fef-litrow name (tail rows)))))
+    (defn fef-sym-or-lit (s pos env)
+        (fef-sol2 (substring s pos (fef-sym-end s pos)) (fef-sym-end s pos) env))
+    (defn fef-sol2 (name endpos env)
+        (fef-sol3 name endpos env (fef-litrow name (fef-littable))))
+    ; a matched literal returns its table value; otherwise resolve the name as a variable.
+    (defn fef-sol3 (name endpos env row)
+        (if (fef-null row)
+            (fef-res (fef-ba (fef-lookup name env)) endpos env)
+            (fef-res (head (tail row)) endpos env)))
+    ; (kept for compatibility: the bare symref path, now reached only through fef-sol3's else)
     (defn fef-symref (s pos env)
         (fef-symref2 (substring s pos (fef-sym-end s pos)) (fef-sym-end s pos) env))
     (defn fef-symref2 (name endpos env)
         (fef-res (fef-ba (fef-lookup name env)) endpos env))
 
+    ; --- the op table: DATA, not a hand-written if-chain (HIGH-GRAMMAR LIFT) -----------------------
+    ; Each row is (name tag arity). One table drives BOTH the dispatch test (is this symbol an op?)
+    ; and the application (what does the op compute?), exactly as flt-ops is one tag->action map.
+    ; Adding an arithmetic/compare/logic op is now a ROW, never two parallel if-branches. tags are
+    ; stable small ints; fef-apply-tag is the single switch (one branch per primitive, the irreducible
+    ; floor — a primitive's action cannot itself be data without an eval-native apply, which is the
+    ; next stone). arity: 2 = binary (eval a, eval b); 1 = unary (eval a only).
+    (defn fef-optable ()
+        (list
+            (list "add" 1  2) (list "sub" 2  2) (list "mul" 3  2) (list "div" 4  2)
+            (list "mod" 5  2) (list "le"  6  2) (list "lt"  7  2) (list "gt"  8  2)
+            (list "ge"  9  2) (list "eq"  10 2) (list "ne"  11 2) (list "and" 12 2)
+            (list "or"  13 2) (list "not" 14 1)))
+    (defn fef-row-name  (r) (head r))
+    (defn fef-row-tag   (r) (head (tail r)))
+    (defn fef-row-arity (r) (head (tail (tail r))))
+    ; walk the table for a name -> its row, or the empty list if it is not an op.
+    (defn fef-oprow (name rows)
+        (if (eq (len rows) 0) (fef-empty)
+            (if (str_eq (fef-row-name (head rows)) name) (head rows)
+                (fef-oprow name (tail rows)))))
+    ; convenience reads over the table — keep callers from re-walking it three times.
+    (defn fef-optag (name) (fef-optag2 (fef-oprow name (fef-optable))))
+    (defn fef-optag2 (row) (if (fef-null row) 0 (fef-row-tag row)))
+    (defn fef-oparity (name) (fef-oparity2 (fef-oprow name (fef-optable))))
+    (defn fef-oparity2 (row) (if (fef-null row) 0 (fef-row-arity row)))
+    (defn fef-isbinop (k) (if (eq (fef-oparity k) 2) 1 0))
+    (defn fef-isunop (k)  (if (eq (fef-oparity k) 1) 1 0))
+    ; apply by TAG — the single primitive switch. b is ignored for unary ops.
+    (defn fef-apply-tag (tag a b)
+        (if (eq tag 1) (add a b)
+        (if (eq tag 2) (sub a b)
+        (if (eq tag 3) (mul a b)
+        (if (eq tag 4) (div a b)
+        (if (eq tag 5) (mod a b)
+        (if (eq tag 6) (if (le a b) 1 0)
+        (if (eq tag 7) (if (lt a b) 1 0)
+        (if (eq tag 8) (if (gt a b) 1 0)
+        (if (eq tag 9) (if (ge a b) 1 0)
+        (if (eq tag 10) (if (eq a b) 1 0)
+        (if (eq tag 11) (if (eq a b) 0 1)
+        (if (eq tag 12) (if (and a b) 1 0)
+        (if (eq tag 13) (if (or a b) 1 0)
+        (if (eq tag 14) (if (not a) 1 0) 0)))))))))))))))
+    (defn fef-apply (op a b) (fef-apply-tag (fef-optag op) a b))
+
     ; --- list head: dispatch on the operator/keyword symbol ---
+    ; The CONTROL forms (if/do/let/defn) stay a small keyword cond — they are not value ops, they
+    ; thread env and source position in ways a uniform (eval-args, apply) table cannot express. The
+    ; VALUE ops route through the data table above. Anything else is a user call.
     (defn fef-list (s pos env) (fef-key s pos (fef-sym-end s pos) env))
     (defn fef-key (s a b env) (fef-bykey (substring s a b) s b env))
     (defn fef-bykey (k s pos env)
@@ -83,26 +152,19 @@
             (if (str_eq k "do") (fef-do s pos env)
                 (if (str_eq k "let") (fef-let s pos env)
                     (if (str_eq k "defn") (fef-defn s pos env)
-                        (if (fef-isbinop k) (fef-bin k s pos env)
-                            (fef-call k s pos env)))))))
-    (defn fef-isbinop (k)
-        (if (str_eq k "add") 1
-            (if (str_eq k "sub") 1
-                (if (str_eq k "mul") 1
-                    (if (str_eq k "le") 1
-                        (if (str_eq k "eq") 1 0))))))
+                        (if (eq (fef-isbinop k) 1) (fef-bin k s pos env)
+                            (if (eq (fef-isunop k) 1) (fef-un k s pos env)
+                                (fef-call k s pos env))))))))
 
-    ; --- binary ops: eval a, eval b, apply, close ---
+    ; --- binary ops: eval a, eval b, apply via the table tag, close ---
     (defn fef-bin (op s pos env) (fef-bin-a op s (fef-expr s pos env)))
     (defn fef-bin-a (op s ar) (fef-bin-b op s (fef-v ar) (fef-expr s (fef-p ar) (fef-e ar))))
     (defn fef-bin-b (op s a br)
         (fef-res (fef-apply op a (fef-v br)) (fef-close s (fef-p br)) (fef-e br)))
-    (defn fef-apply (op a b)
-        (if (str_eq op "add") (add a b)
-            (if (str_eq op "sub") (sub a b)
-                (if (str_eq op "mul") (mul a b)
-                    (if (str_eq op "le") (if (le a b) 1 0)
-                        (if (str_eq op "eq") (if (eq a b) 1 0) (add a b)))))))
+    ; --- unary ops: eval a, apply (b unused), close ---
+    (defn fef-un (op s pos env) (fef-un-a op s (fef-expr s pos env)))
+    (defn fef-un-a (op s ar)
+        (fef-res (fef-apply op (fef-v ar) 0) (fef-close s (fef-p ar)) (fef-e ar)))
 
     ; --- if: eval cond, then both branches' source must be walked to find the close ---
     (defn fef-if (s pos env) (fef-if-c s (fef-expr s pos env)))
