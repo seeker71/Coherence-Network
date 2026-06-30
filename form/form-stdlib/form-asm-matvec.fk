@@ -201,4 +201,16 @@
         (append (fa-frintn 0 0)
             (fa-ret)))
 
+    ; fam-fmov-bits: REINTERPRET the i64 in x0 as the f64 it bit-encodes, as Form->asm bytes — the keystone
+    ; the native 2^k/ldexp step needs. exp(x) = 2^k * Horner(r); fam-frintn gives k = round(x*log2e), the
+    ; pooled fma gives r, the Horner poly is on the lane — the only missing piece is BUILDING 2^k, which is
+    ; (k+1023)<<52 assembled in an integer register then read as an f64. fa-scvtf would give the integer's
+    ; VALUE as a float (wrong); fa-fmov-d-x preserves the BITS, so the assembled exponent field becomes the
+    ; power of two. ABI: x0 = raw i64 bits, returns d0 = the f64 those bits encode. 2 instructions = 8 bytes,
+    ; byte-identical to clang -O2 for `double f(unsigned long x){double d;__builtin_memcpy(&d,&x,8);return d;}`:
+    ;   0 fmov d0,x0 (9e670000)   1 ret (d65f03c0)
+    (defn fam-fmov-bits ()
+        (append (fa-fmov-d-x 0 0)
+            (fa-ret)))
+
     0)
